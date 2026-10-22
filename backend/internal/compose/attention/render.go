@@ -11,6 +11,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -256,6 +257,10 @@ func approvalItem(approval crmcontracts.Approval, machine MachineSender) crmcont
 		Title:   approval.Summary,
 		Actions: []crmcontracts.AttentionItemActions{"decide"},
 	}
+	if approvals.PreviewRefusal(approval.Preview) != nil {
+		item.Actions = []crmcontracts.AttentionItemActions{}
+	}
+	item.RequestedDeciderId = approval.RequestedDeciderId
 	if approval.ExpiresAt != nil {
 		item.DueAt = approval.ExpiresAt
 	}
@@ -264,6 +269,12 @@ func approvalItem(approval crmcontracts.Approval, machine MachineSender) crmcont
 	}
 	if staged, ok := stagedFacts(approval, machine); ok {
 		item.Staged = &staged
+	}
+	if accountTerminationPreview(approval) && len(item.Actions) > 0 {
+		if item.Staged == nil {
+			item.Staged = &crmcontracts.AttentionStagedFacts{}
+		}
+		item.Staged.AccountTermination = new(true)
 	}
 	return item
 }
@@ -318,6 +329,12 @@ func taskItem(task Task, asOf, until time.Time, loc *time.Location) crmcontracts
 		Title:   &subject,
 		Subject: subjectOf(task.LinkType, task.LinkID),
 		Actions: []crmcontracts.AttentionItemActions{"complete", "snooze"},
+	}
+	if task.SourceActivityID != nil {
+		item.SourceRecord = subjectOf("activity", *task.SourceActivityID)
+	}
+	if len(task.Recipients) > 0 {
+		item.PromiseRecipients = &task.Recipients
 	}
 	// Both verbs PATCH the task, so a reader who may not change it is offered
 	// neither.
@@ -426,6 +443,9 @@ func commitmentItem(promise Commitment, asOf time.Time) crmcontracts.AttentionIt
 			crmcontracts.AttentionItemActionsComplete,
 			actionOpen,
 		},
+	}
+	if !promise.ActivityID.IsZero() {
+		item.SourceRecord = subjectOf("activity", promise.ActivityID)
 	}
 	if promise.ReadOnly {
 		item.Actions = []crmcontracts.AttentionItemActions{actionOpen}

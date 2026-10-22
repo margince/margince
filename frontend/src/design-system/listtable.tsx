@@ -1,37 +1,18 @@
-// The phone layout lays the table's own elements out as cards (listtable.css),
-// and a table element laid out as blocks loses its implicit ARIA roles in
-// Chrome and Safari. Naming every role explicitly is the fix, so the roles that
-// read as redundant in the markup are exactly what keeps the grid announceable
-// once the layout changes underneath it.
-// biome-ignore-all lint/a11y/noRedundantRoles: display:block drops implicit table roles
-// biome-ignore-all lint/a11y/useSemanticElements: the semantic element is already in use
-
-import { ChevronDown, SlidersHorizontal } from "lucide-react";
-import { type ReactNode, type RefObject, useRef, useState } from "react";
-import {
-  formatNumber,
-  identifierNumber,
-  ordinalNumber,
-} from "../format/format";
-import { useLocale, useT } from "../i18n";
-import { Button, Checkbox, useScrollRegion } from "./atoms";
+import { type ReactNode, useRef } from "react";
+import { EmptyState, useScrollRegion } from "./atoms";
 import {
   CountLine,
   type ListChip,
   ListSurface,
   type ListView,
-  Menu,
-  nextSortValue,
   type SortControl,
 } from "./listsurface";
 import {
-  type ColumnLayout,
-  type ColumnResize,
-  floorStyle,
+  useColumnDisplay,
   useColumnWidths,
   useFrozenEdge,
 } from "./listtable.layout";
-import { PAGE_SIZES, pagerSlots, usePaging } from "./listtable.paging";
+import { fitsOnePage, usePaging } from "./listtable.paging";
 import {
   applyView,
   clearAll,
@@ -40,9 +21,8 @@ import {
   type QueryDials,
   sortedColumn,
   sortOptionsOf,
-  sortState,
 } from "./listtable.query";
-import { Select } from "./select";
+import { Pager } from "./pager";
 import "./listtable.css";
 import { SelectionBar } from "./selectionbar";
 
@@ -68,139 +48,12 @@ export { narrowingSignature } from "./listtable.paging";
 //
 // Generic on purpose: nothing here knows what a CRM record is, which is why
 // contacts, companies, leads, deals, products and partners share it.
+import type { ListColumn, ListSelection } from "./listcolumn";
+import { DisplayMenu } from "./listdisplaymenu";
+import { EmptyRow, GridBody, ListGrid } from "./listgrid";
 
-export type ListColumn<Row> = {
-  key: string;
-  header: string;
-  cell: (row: Row) => ReactNode;
-  /**
-   * The server sort field behind this column. Its presence is what makes the
-   * header clickable — a column the API cannot order by stays inert rather
-   * than offering a control that would silently do nothing.
-   */
-  sort?: string;
-  /** Right-aligns, and makes the first sort click descending. */
-  numeric?: boolean;
-  /**
-   * Exempt from the Display menu's column list, and the card heading on a
-   * phone. The identity column has to stay: it is what makes a row
-   * recognisable.
-   */
-  fixed?: boolean;
-  /**
-   * This column holds the row's verbs, sized by its buttons rather than by a
-   * share of the width. A verb read in half cannot be used. "menu" is one "…"
-   * trigger, whose header only assistive technology reads.
-   */
-  verbs?: boolean | "menu";
-  /** Starts unticked in the Display menu: offered rather than drawn. */
-  initiallyHidden?: boolean;
-};
-
-export type ListSelection<Row> = {
-  /** Keys (rowKey) of the selected rows. */
-  selected: ReadonlySet<string>;
-  onToggle: (row: Row) => void;
-  /** The checkbox's accessible name for a row — "Select Anna Weber". */
-  label: (row: Row) => string;
-  /** Rows the verbs cannot act on carry no checkbox. Default: every row. */
-  selectable?: (row: Row) => boolean;
-  /** The bulk bar: the count and the verbs. Rendered while anything is selected. */
-  bar: ReactNode;
-};
-
-/**
- * The selection checkbox in the identity cell. Its click is its own: it must
- * not open the row.
- */
-function RowSelect<Row>({
-  row,
-  rowKey,
-  selection,
-}: Readonly<{
-  row: Row;
-  rowKey: (row: Row) => string;
-  selection?: ListSelection<Row>;
-}>) {
-  if (!selection || selection.selectable?.(row) === false) {
-    return null;
-  }
-  return (
-    <Checkbox
-      className="lt-select"
-      label={<span className="sr-only">{selection.label(row)}</span>}
-      checked={selection.selected.has(rowKey(row))}
-      onChange={() => selection.onToggle(row)}
-      onClick={(event) => event.stopPropagation()}
-    />
-  );
-}
-
-/**
- * The identity cell's own row: the selection box and the name side by side,
- * centred on each other.
- *
- * A row of its own because the two are otherwise an inline-grid label followed
- * by a link, and a name long enough to wrap put the checkbox on a line ABOVE the
- * name it selects — which reads as a control belonging to the row above it.
- *
- * The identity cell ONLY. Every other column returns whatever its own renderer
- * returns, blocks included, and a flex `<span>` around those would both invent a
- * layout contract they never asked for and put a `<div>` inside a `<span>`.
- */
-function IdentityCell<Row>({
-  row,
-  rowKey,
-  rowHref,
-  selection,
-  cell,
-}: Readonly<{
-  row: Row;
-  rowKey: (row: Row) => string;
-  rowHref?: (row: Row) => string;
-  selection?: ListSelection<Row>;
-  cell: (row: Row) => ReactNode;
-}>) {
-  return (
-    <span className="lt-identity-row">
-      <RowSelect row={row} rowKey={rowKey} selection={selection} />
-      {rowHref ? (
-        // The identity cell is a real link, so the row can be opened the ways a
-        // link can: a new tab, a new window, a bookmark, or the keyboard. Only
-        // the default click is stopped from reaching the row's own handler —
-        // preventing the anchor instead would navigate the current page while
-        // the new tab opens too.
-        <a
-          className="lt-cellink"
-          href={rowHref(row)}
-          onClick={(event) => event.stopPropagation()}
-        >
-          {cell(row)}
-        </a>
-      ) : (
-        cell(row)
-      )}
-    </span>
-  );
-}
-
-/**
- * Several pills in one cell, on the row's one line.
- *
- * It does NOT wrap, which is the whole of why it exists: a cell that grows a
- * second line pushes every row below it down, and a page of fifty rows stops
- * being a scannable grid — the reasoning `RowTags` already states for a tag
- * strip. What does not fit ends in an ellipsis, text before badges (why, in
- * listtable.css): the reader's answer to a strip cut short is to widen the
- * column, and every other answer costs the rows their rhythm.
- *
- * A `<span>`, so a column renderer can return it wherever it returns text.
- * Offered rather than applied: the table wraps the identity cell and nothing
- * else, so a column that carries one value keeps whatever layout it returns.
- */
-export function CellStrip({ children }: Readonly<{ children: ReactNode }>) {
-  return <span className="lt-strip">{children}</span>;
-}
+export type { ListColumn, ListSelection } from "./listcolumn";
+export { CellStrip } from "./listgrid";
 
 /** The bulk bar over the grid, while anything is selected. */
 function BulkBar<Row>({
@@ -211,12 +64,6 @@ function BulkBar<Row>({
   }
   return <SelectionBar>{selection.bar}</SelectionBar>;
 }
-
-/** Narrow enough to tuck a column away, wide enough to still read a header. */
-const MIN_COLUMN_WIDTH = 72;
-
-/** Placeholder rows while the first page loads: enough to read as a list. */
-const PLACEHOLDER_ROWS = [0, 1, 2, 3, 4];
 
 const EMPTY_FILTERS: Readonly<Record<string, string>> = {};
 
@@ -246,7 +93,7 @@ export function ListTable<Row>({
   footer,
   hasMore = false,
   onLoadMore,
-  hideShortPager = false,
+  hideShortChrome = false,
   total: serverTotal,
   perPage: controlledPerPage,
   onPerPage,
@@ -373,8 +220,11 @@ export function ListTable<Row>({
    */
   hasMore?: boolean;
   onLoadMore?: () => void;
-  /** No pager while every row fits the smallest page size, so a size the reader picked can always be undone. */
-  hideShortPager?: boolean;
+  /**
+   * No count, dials or pager while every row fits the smallest page and nothing
+   * narrows the list. A dial the reader set can then always be undone.
+   */
+  hideShortChrome?: boolean;
   /**
    * How many rows match on the server, when it counts them — the difference
    * between "1-25 of 8,372" and "1-25 of 200 loaded so far". Undefined means
@@ -484,6 +334,21 @@ export function ListTable<Row>({
     scroller,
   );
   const frozen = useFrozenEdge(scroller, shown.length, display.dense);
+  const short =
+    hideShortChrome &&
+    !pending &&
+    !narrowedBy(dials) &&
+    archived?.checked !== true &&
+    fitsOnePage(rows, serverTotal, hasMore);
+  const emptyLine = (
+    <EmptyRow
+      unit={unit}
+      narrowed={narrowedBy(dials)}
+      filtered={filteredBy(dials)}
+      onClear={() => clearAll(dials)}
+      emptyNote={emptyNote}
+    />
+  );
 
   return (
     <ListSurface
@@ -491,6 +356,7 @@ export function ListTable<Row>({
       views={views}
       activeView={activeView}
       onViewChange={(index) => applyView(dials, index)}
+      bare={short}
       count={
         bodyOwnsPaging
           ? bodyCount
@@ -539,647 +405,56 @@ export function ListTable<Row>({
       footer={
         <>
           {footer && <div className="lt-agg">{footer}</div>}
-          {!bodyOwnsPaging &&
-            !(hideShortPager && fitsOnePage(rows, serverTotal, hasMore)) && (
-              <Pager
-                current={paging.current}
-                lastPage={paging.lastPage}
-                hasMore={hasMore}
-                perPage={paging.perPage}
-                onGoto={paging.goto}
-                onPerPage={paging.setPerPage}
-              />
-            )}
+          {!bodyOwnsPaging && !short && (
+            <Pager
+              current={paging.current}
+              lastPage={paging.lastPage}
+              hasMore={hasMore}
+              perPage={paging.perPage}
+              onGoto={paging.goto}
+              onPerPage={paging.setPerPage}
+            />
+          )}
         </>
       }
     >
       <BulkBar selection={selection} />
-      {body ?? (
-        <ListGrid
-          scrollerRef={(node) => {
-            scroller.current = node;
-            if (bodyRef) {
-              bodyRef.current = node;
-            }
-          }}
-          region={region}
-          frozen={frozen}
-          head={head}
-          dense={display.dense}
-          layout={layout}
-          shown={shown}
-          sort={sort}
-        >
-          <GridBody
-            rows={rows}
-            pageRows={paging.pageRows}
+      {short && !problem && rows.length === 0 ? (
+        <div className="lt-emptyline">
+          <EmptyState>{emptyLine}</EmptyState>
+        </div>
+      ) : (
+        (body ?? (
+          <ListGrid
+            scrollerRef={(node) => {
+              scroller.current = node;
+              if (bodyRef) {
+                bodyRef.current = node;
+              }
+            }}
+            region={region}
+            frozen={frozen}
+            head={head}
+            dense={display.dense}
+            layout={layout}
             shown={shown}
-            rowKey={rowKey}
-            onRowClick={onRowClick}
-            rowHref={rowHref}
-            selection={selection}
-            pending={pending}
-            problem={problem}
-            empty={
-              <EmptyRow
-                unit={unit}
-                narrowed={narrowedBy(dials)}
-                filtered={filteredBy(dials)}
-                onClear={() => clearAll(dials)}
-                emptyNote={emptyNote}
-              />
-            }
-          />
-        </ListGrid>
-      )}
-    </ListSurface>
-  );
-}
-
-/**
- * The presentation dials of the Display menu: which optional columns stand,
- * and how tight the rows are. Local state, unlike the query dials.
- */
-function useColumnDisplay<Row>(columns: readonly ListColumn<Row>[]) {
-  const [hidden, setHidden] = useState<ReadonlySet<string>>(
-    () => new Set(columns.flatMap((c) => (c.initiallyHidden ? [c.key] : []))),
-  );
-  const [dense, setDense] = useState(false);
-  return {
-    hidden,
-    onToggleColumn: (key: string) =>
-      setHidden((prev) => {
-        const next = new Set(prev);
-        if (next.has(key)) {
-          next.delete(key);
-        } else {
-          next.add(key);
-        }
-        return next;
-      }),
-    dense,
-    onDense: () => setDense(!dense),
-  };
-}
-
-/**
- * The scrolling body and its table: the frozen edge, the column widths and the
- * header row. The rows come in as children.
- */
-function ListGrid<Row>({
-  scrollerRef,
-  region,
-  frozen,
-  head,
-  dense,
-  layout,
-  shown,
-  sort,
-  children,
-}: Readonly<{
-  scrollerRef: (node: HTMLDivElement | null) => void;
-  region: ReturnType<typeof useScrollRegion>;
-  frozen: ReturnType<typeof useFrozenEdge>;
-  head: RefObject<HTMLTableElement | null>;
-  dense: boolean;
-  layout: ColumnLayout & ColumnResize;
-  shown: readonly ListColumn<Row>[];
-  sort?: SortControl;
-  children: ReactNode;
-}>) {
-  return (
-    <div
-      className={`lt-scroll${frozen.shifted ? " shifted" : ""}`}
-      ref={scrollerRef}
-      {...region}
-      onScroll={frozen.onScroll}
-    >
-      {/* One element for the frozen edge's shadow. A shadow per cell starts and
-          stops at each cell's box, leaving a seam at every row divider. */}
-      <div className="lt-freeze" aria-hidden="true" />
-      <table
-        ref={head}
-        className={`lt-table${dense ? " dense" : ""}${
-          layout.resizing ? " is-resizing" : ""
-        }`}
-        role="table"
-        // A custom property rather than `min-width`: the phone layout drops
-        // this floor to lay the rows out as cards, and an inline width wins.
-        style={floorStyle(layout.floor)}
-      >
-        {/* Under fixed layout a col wins over the cell below it, so the widths
-            live here and a resized column cannot be quietly overruled. */}
-        <colgroup>
-          {shown.map((column) => (
-            <col key={column.key} style={{ width: layout.widthOf(column) }} />
-          ))}
-          <col style={{ width: layout.slack }} />
-        </colgroup>
-        <thead role="rowgroup">
-          <tr role="row">
-            {shown.map((column, index) => (
-              <HeaderCell
-                key={column.key}
-                column={column}
-                sort={sort}
-                state={sort ? sortState(column, sort.value) : null}
-                className={cellClass(column)}
-                resizable={index < shown.length - 1}
-                onResizeStart={layout.onResizeStart}
-                onResize={layout.onResize}
-                onResizeEnd={layout.onResizeEnd}
-              />
-            ))}
-            <td className="lt-slack" aria-hidden="true" />
-          </tr>
-        </thead>
-        <tbody role="rowgroup">{children}</tbody>
-      </table>
-    </div>
-  );
-}
-
-type RowProps<Row> = Readonly<{
-  shown: readonly ListColumn<Row>[];
-  rowKey: (row: Row) => string;
-  onRowClick?: (row: Row) => void;
-  rowHref?: (row: Row) => string;
-  selection?: ListSelection<Row>;
-}>;
-
-/** The body's rows: placeholders while loading, then the page, the problem or the empty line. */
-function GridBody<Row>({
-  rows,
-  pageRows,
-  pending,
-  problem,
-  empty,
-  ...row
-}: RowProps<Row> &
-  Readonly<{
-    rows: readonly Row[];
-    pageRows: readonly Row[];
-    pending: boolean;
-    problem?: ReactNode;
-    empty: ReactNode;
-  }>) {
-  const colSpan = row.shown.length + 1;
-  return (
-    <>
-      {pending &&
-        PLACEHOLDER_ROWS.map((placeholder) => (
-          <tr key={placeholder} className="lt-loading" role="row">
-            {row.shown.map((column) => (
-              <td key={column.key} role="cell">
-                <span className="skeleton lt-bone" />
-              </td>
-            ))}
-            <td className="lt-slack" aria-hidden="true" />
-          </tr>
-        ))}
-      {!pending &&
-        pageRows.map((one) => (
-          <DataRow key={row.rowKey(one)} row={one} {...row} />
-        ))}
-      {!pending && problem && (
-        <tr className="lt-empty" role="row">
-          <td colSpan={colSpan} role="cell">
-            {problem}
-          </td>
-        </tr>
-      )}
-      {!pending && !problem && rows.length === 0 && (
-        <tr className="lt-empty" role="row">
-          <td colSpan={colSpan} role="cell">
-            {empty}
-          </td>
-        </tr>
-      )}
-    </>
-  );
-}
-
-/** One record's row. */
-function DataRow<Row>({
-  row,
-  shown,
-  rowKey,
-  onRowClick,
-  rowHref,
-  selection,
-}: RowProps<Row> & Readonly<{ row: Row }>) {
-  return (
-    <tr
-      role="row"
-      className={onRowClick ? "lt-rowlink" : undefined}
-      onClick={onRowClick ? () => onRowClick(row) : undefined}
-    >
-      {shown.map((column) => (
-        <td
-          key={column.key}
-          role="cell"
-          className={cellClass(column)}
-          // On a phone the rows become cards and the header row is gone, so
-          // each value carries its own label. The identity cell is the heading.
-          data-label={column.fixed ? undefined : column.header}
-        >
-          {column.fixed ? (
-            <IdentityCell
-              row={row}
+            sort={sort}
+          >
+            <GridBody
+              rows={rows}
+              pageRows={paging.pageRows}
+              shown={shown}
               rowKey={rowKey}
+              onRowClick={onRowClick}
               rowHref={rowHref}
               selection={selection}
-              cell={column.cell}
+              pending={pending}
+              problem={problem}
+              empty={emptyLine}
             />
-          ) : (
-            column.cell(row)
-          )}
-        </td>
-      ))}
-      <td className="lt-slack" aria-hidden="true" />
-    </tr>
-  );
-}
-
-/**
- * The empty line has three states. What narrows the set decides the
- * sentence, and whether it is clearable decides whether Clear is offered.
- * A screen's own scope narrows the set and no button here can clear it.
- */
-function EmptyRow({
-  unit,
-  narrowed,
-  filtered,
-  onClear,
-  emptyNote,
-}: Readonly<{
-  unit: string;
-  narrowed: boolean;
-  filtered: boolean;
-  onClear: () => void;
-  emptyNote?: ReactNode;
-}>) {
-  const t = useT();
-  return (
-    <>
-      {narrowed ? t("table.noMatches", { unit }) : t("table.none", { unit })}
-      {filtered && (
-        <>
-          {" "}
-          <button type="button" className="lt-linkish" onClick={onClear}>
-            {t("table.clearFilters")}
-          </button>
-        </>
+          </ListGrid>
+        ))
       )}
-      {/* Under either line, because which emptiness a note explains is the
-          caller's to know. A "Mine" view for a reader who owns nothing is a
-          narrowed list. */}
-      {emptyNote && <p className="lt-empty-note">{emptyNote}</p>}
-    </>
-  );
-}
-
-/**
- * Numeric alignment, and the marker the phone layout uses to promote the
- * identity column to the card's heading. Spelled once so th and td agree.
- */
-function cellClass<Row>(column: ListColumn<Row>): string | undefined {
-  const names = [
-    column.numeric ? "lt-num" : column.verbs === "menu" ? "lt-rowmenu" : "",
-    column.fixed ? "lt-identity" : "",
-  ].filter(Boolean);
-  return names.length > 0 ? names.join(" ") : undefined;
-}
-
-/**
- * A column header. Sortable only when the column names a server sort field,
- * so the arrow never appears on a column the API cannot order by.
- */
-function HeaderCell<Row>({
-  column,
-  sort,
-  state,
-  className,
-  resizable,
-  onResizeStart,
-  onResize,
-  onResizeEnd,
-}: Readonly<{
-  column: ListColumn<Row>;
-  sort?: SortControl;
-  state: "asc" | "desc" | null;
-  className?: string;
-  // False on the trailing column, which carries no divider for the grip to
-  // light (`th:nth-last-child(2)` clears it) and no neighbour to take the
-  // width from. A grip there drew a line against nothing.
-  resizable: boolean;
-  onResizeStart: () => void;
-  onResize: (key: string, width: number) => void;
-  onResizeEnd: () => void;
-}>) {
-  const t = useT();
-  const grip = resizable ? (
-    <ResizeGrip
-      onStart={onResizeStart}
-      onResize={(next) => onResize(column.key, next)}
-      onEnd={onResizeEnd}
-    />
-  ) : null;
-  if (!column.sort || !sort) {
-    return (
-      <th className={className} role="columnheader">
-        {/* A menu column's heading is read, never drawn: forced colours would show any ink. */}
-        {column.verbs === "menu" ? (
-          <span className="sr-only">{column.header}</span>
-        ) : (
-          column.header
-        )}
-        {grip}
-      </th>
-    );
-  }
-  // The same arithmetic the sort menu presses, so a reader who flips a column
-  // here finds that direction there.
-  const next = nextSortValue(
-    { field: column.sort, numeric: column.numeric },
-    state,
-  );
-  return (
-    <th
-      className={className}
-      role="columnheader"
-      aria-sort={
-        state === "asc"
-          ? "ascending"
-          : state === "desc"
-            ? "descending"
-            : undefined
-      }
-    >
-      <button
-        type="button"
-        className={`lt-sort${state ? " on" : ""}`}
-        aria-label={t("table.sortBy", { column: column.header })}
-        onClick={() => sort.onChange(next)}
-      >
-        {column.header}
-        <ChevronDown
-          size={12}
-          strokeWidth={2}
-          aria-hidden="true"
-          className={`lt-arrow${state === "asc" ? " up" : ""}`}
-        />
-      </button>
-      {grip}
-    </th>
-  );
-}
-
-/**
- * The handle on a column's trailing edge, dragged with a pointer.
- *
- * It draws nothing at rest. The line a reader sees between two columns is the
- * cell's own `border-right`, already there for every column; a second line
- * inset beside it read as a rendering fault rather than as an affordance. The
- * grip lights THAT edge on hover, and keeps it lit for the length of a drag —
- * `is-dragging` rather than `:hover`, because a pointer dragged past the
- * neighbouring column is no longer over the element it is moving.
- *
- * Deliberately hidden from assistive technology. A labelled control inside a
- * `th` joins that header's accessible name, so every column would announce as
- * "Value, resize the Value column" — the price of a keyboard affordance here is
- * making every header read worse for the contacts who rely on the name most. The
- * Display menu already gives keyboard users control over what a table shows,
- * and a width is presentation rather than content.
- */
-function ResizeGrip({
-  onStart,
-  onResize,
-  onEnd,
-}: Readonly<{
-  onStart: () => void;
-  onResize: (width: number) => void;
-  onEnd: () => void;
-}>) {
-  const drag = useRef<{ startX: number; startWidth: number } | null>(null);
-  const self = useRef<HTMLSpanElement>(null);
-  const [dragging, setDragging] = useState(false);
-  const cellWidth = (target: HTMLElement) =>
-    target.closest("th")?.getBoundingClientRect().width ?? MIN_COLUMN_WIDTH;
-
-  return (
-    <span
-      className={`lt-grip${dragging ? " is-dragging" : ""}`}
-      ref={self}
-      aria-hidden="true"
-      // The grip lives inside the header button's cell; without this a drag or
-      // a click on it would also sort the column it is resizing.
-      onClick={(event) => event.stopPropagation()}
-      onPointerDown={(event) => {
-        event.stopPropagation();
-        event.preventDefault();
-        const target: HTMLElement = event.currentTarget;
-        target.setPointerCapture(event.pointerId);
-        drag.current = {
-          startX: event.clientX,
-          startWidth: cellWidth(target),
-        };
-        setDragging(true);
-        onStart();
-      }}
-      onPointerMove={(event) => {
-        const from = drag.current;
-        if (!from) {
-          return;
-        }
-        onResize(
-          Math.max(
-            MIN_COLUMN_WIDTH,
-            from.startWidth + event.clientX - from.startX,
-          ),
-        );
-      }}
-      onPointerUp={(event) => {
-        const wasDragging = drag.current !== null;
-        drag.current = null;
-        setDragging(false);
-        event.currentTarget.releasePointerCapture(event.pointerId);
-        if (wasDragging) {
-          onEnd();
-        }
-      }}
-      // A pointer cancelled mid-drag (a system gesture, a lost capture) never
-      // raises pointerup. Without this the table would stay in its dragging
-      // dress with nothing moving it — the state the user is looking at has to
-      // end wherever the drag did.
-      onPointerCancel={() => {
-        const wasDragging = drag.current !== null;
-        drag.current = null;
-        setDragging(false);
-        if (wasDragging) {
-          onEnd();
-        }
-      }}
-    />
-  );
-}
-
-/**
- * Everything that decides how the grid is DRAWN rather than what is in it: how
- * tight the rows are, and which optional columns stand. One menu, because the
- * two are one question to a reader — density and a hidden column both answer
- * "show me more of this at once" — and a toolbar that spends a trigger on each
- * spends its right half on dials with nothing grouping them. It goes in the
- * surface's `displayMenu` slot, which hands it the row's own open state: the
- * surface knows nothing of a column or a density, only that one menu on a row
- * is open at a time.
- */
-function DisplayMenu<Row>({
-  optional,
-  hidden,
-  onToggleColumn,
-  dense,
-  onDense,
-  open,
-  onToggle,
-}: Readonly<{
-  optional: readonly ListColumn<Row>[];
-  hidden: ReadonlySet<string>;
-  onToggleColumn: (key: string) => void;
-  dense: boolean;
-  onDense: () => void;
-  open: boolean;
-  onToggle: () => void;
-}>) {
-  const t = useT();
-  return (
-    <span className="lt-menu-wrap">
-      <Button aria-expanded={open} onClick={onToggle}>
-        <SlidersHorizontal strokeWidth={1.5} aria-hidden="true" />
-        {t("table.display")}
-        <ChevronDown className="lt-caret" aria-hidden="true" />
-      </Button>
-      <Menu open={open} head={t("table.display")} align="right">
-        {/* A group is named a rung under the menu's own head: the head says
-            which menu this is, a group says which part of it. */}
-        <div className="lt-mgroup t-caption">{t("table.density")}</div>
-        {/* Density and the column set are both sets the reader builds in one
-            visit, so every row is a `Checkbox` and the menu stays open. */}
-        <Checkbox
-          className="lt-mi"
-          checked={dense}
-          label={t("table.compact")}
-          onChange={onDense}
-        />
-        {optional.length > 0 && (
-          <>
-            <div className="lt-mgroup t-caption">{t("table.shownColumns")}</div>
-            {optional.map((column) => (
-              <Checkbox
-                key={column.key}
-                className="lt-mi"
-                checked={!hidden.has(column.key)}
-                label={column.header}
-                onChange={() => onToggleColumn(column.key)}
-              />
-            ))}
-          </>
-        )}
-      </Menu>
-    </span>
-  );
-}
-
-function fitsOnePage(
-  rows: readonly unknown[],
-  total: number | undefined,
-  hasMore: boolean,
-): boolean {
-  return !hasMore && (total ?? rows.length) <= PAGE_SIZES[0];
-}
-
-/**
- * The pager: the pages in hand as numbers, prev/next either side, and the page
- * size on the right. Next stays enabled on the last loaded page while the
- * cursor still has rows to give, which is how the set grows without a total.
- */
-function Pager({
-  current,
-  lastPage,
-  hasMore,
-  perPage,
-  onGoto,
-  onPerPage,
-}: Readonly<{
-  current: number;
-  lastPage: number;
-  hasMore: boolean;
-  perPage: number;
-  onGoto: (to: number) => void;
-  onPerPage: (next: number) => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  return (
-    <div className={`lt-foot${lastPage === 1 && !hasMore ? " single" : ""}`}>
-      {/* A landmark, because this is navigation and a reader who jumps by region
-          should find it as one. The numbers carry "Page 3" rather than a bare
-          "3": out of the row's context a digit names nothing, and the row's
-          context is exactly what a screen reader does not have. */}
-      <nav className="lt-pager" aria-label={t("table.pagination")}>
-        <button
-          type="button"
-          disabled={current === 1}
-          onClick={() => onGoto(current - 1)}
-        >
-          {t("table.prev")}
-        </button>
-        {pagerSlots(current, lastPage).map((slot, index) =>
-          typeof slot === "number" ? (
-            <button
-              type="button"
-              key={slot}
-              className={slot === current ? "on" : undefined}
-              aria-current={slot === current ? "page" : undefined}
-              // "page 1.234" would read as a fraction of a page rather than
-              // the 1234th of them.
-              aria-label={t("table.page", { number: ordinalNumber(slot) })}
-              onClick={() => onGoto(slot)}
-            >
-              {ordinalNumber(slot)}
-            </button>
-          ) : (
-            <span
-              // Slots are positional: two of them can hold the same kind of
-              // nothing, and neither carries an identity of its own.
-              // biome-ignore lint/suspicious/noArrayIndexKey: the position IS the identity
-              key={`${slot}-${index}`}
-              className="lt-gap"
-              aria-hidden="true"
-            >
-              {slot === "gap" ? "…" : ""}
-            </span>
-          ),
-        )}
-        <button
-          type="button"
-          disabled={current === lastPage && !hasMore}
-          onClick={() => onGoto(current + 1)}
-        >
-          {t("table.next")}
-        </button>
-      </nav>
-      <span className="lt-perpage">
-        <Select
-          aria-label={t("table.rowsPerPage")}
-          value={identifierNumber(perPage)}
-          onChange={(next) => onPerPage(Number(next))}
-          options={PAGE_SIZES.map((size) => ({
-            value: identifierNumber(size),
-            label: t("table.perPage", { count: formatNumber(size, locale) }),
-          }))}
-        />
-      </span>
-    </div>
+    </ListSurface>
   );
 }

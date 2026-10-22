@@ -198,18 +198,6 @@ func inboundMessageShape(kind string, direction *string) error {
 	return nil
 }
 
-// ensureInboundMessage is threadOf's shape check without the thread: Done is
-// offered on threadless waiting rows too.
-func ensureInboundMessage(ctx context.Context, tx pgx.Tx, id ids.ActivityID) error {
-	var kind string
-	var direction *string
-	if err := tx.QueryRow(ctx, `SELECT kind, direction FROM activity WHERE id = $1`,
-		id).Scan(&kind, &direction); err != nil {
-		return fmt.Errorf("activities: reading what the activity is: %w", err)
-	}
-	return inboundMessageShape(kind, direction)
-}
-
 // The other two halves of what the waiting lane reads. kindEmail is already
 // spelled in this package (pipelinefacts.go) and is reused rather than given a
 // second spelling here.
@@ -277,13 +265,20 @@ func (s *Store) SetMessageNotMine(ctx context.Context, id ids.ActivityID) error 
 // It carries no moment and nothing lifts it. The customer's next message is a
 // new activity with no state, so it reaches the list on its own.
 func (s *Store) MarkMessageHandled(ctx context.Context, id ids.ActivityID) error {
-	return s.setReaderState(ctx, id, stateHandled, nil, "", nil)
+	return s.judgeMessage(ctx, id, s.writeReaderState(id, stateHandled, nil, "", nil, ensureInboundMessage))
 }
 
 // ClearMessageDisposition picks a message back up — the undo behind every
 // set-aside verb.
 func (s *Store) ClearMessageDisposition(ctx context.Context, id ids.ActivityID) error {
-	return s.judgeMessage(ctx, id, func(ctx context.Context, tx pgx.Tx, _ string) error {
+	return s.judgeMessage(ctx, id, s.pickUp(id, ""))
+}
+
+// pickUp is ClearMessageDisposition's write, for a caller already inside the
+// judged transaction. A non-empty only clears that state alone, so the undo of
+// a Done cannot take back a snooze set after it.
+func (s *Store) pickUp(id ids.ActivityID, only string) judgement {
+	return func(ctx context.Context, tx pgx.Tx, _ string) error {
 		reader := readerOrNobody(ctx)
 		if reader.IsZero() {
 			return apperrors.ErrPermissionDenied
@@ -300,7 +295,12 @@ func (s *Store) ClearMessageDisposition(ctx context.Context, id ids.ActivityID) 
 			query, args := `DELETE FROM activity_reader_state WHERE activity_id = $1 AND reader_id = $2`,
 				[]any{message, reader}
 			if i > 0 {
-				query, args = query+` AND set_at = $3`, append(args, setAt)
+				args = append(args, setAt)
+				query += fmt.Sprintf(` AND set_at = $%d`, len(args))
+			}
+			if only != "" {
+				args = append(args, only)
+				query += fmt.Sprintf(` AND state = $%d`, len(args))
 			}
 			tag, err := tx.Exec(ctx, query, args...)
 			if err != nil {
@@ -316,7 +316,7 @@ func (s *Store) ClearMessageDisposition(ctx context.Context, id ids.ActivityID) 
 			}
 		}
 		return nil
-	})
+	}
 }
 
 // replaceReaderState is the upsert arm for the judgement a reader just made.
@@ -333,7 +333,17 @@ func (s *Store) setReaderState(
 	ctx context.Context, id ids.ActivityID, state string, until *time.Time,
 	on values.ReopenCondition, ref *ids.UUID,
 ) error {
-	return s.judgeMessage(ctx, id, func(ctx context.Context, tx pgx.Tx, capturedBy string) error {
+	return s.judgeMessage(ctx, id, s.writeReaderState(id, state, until, on, ref, nil))
+}
+
+// writeReaderState is setReaderState's write. shape, where set, refuses an
+// activity the judgement does not fit. Done names what was dealt with, so each
+// Worklist row passes the kind of activity it stands for.
+func (s *Store) writeReaderState(
+	id ids.ActivityID, state string, until *time.Time, on values.ReopenCondition, ref *ids.UUID,
+	shape func(context.Context, pgx.Tx, ids.ActivityID) error,
+) judgement {
+	return func(ctx context.Context, tx pgx.Tx, capturedBy string) error {
 		reader := readerOrNobody(ctx)
 		if reader.IsZero() {
 			// A reader-scoped judgement needs a reader. An agent or system
@@ -341,11 +351,8 @@ func (s *Store) setReaderState(
 			// the acting human's id would set aside work on their behalf.
 			return apperrors.ErrPermissionDenied
 		}
-		// Done says a customer's message was handled, so only such a message
-		// takes it. not_mine and snooze keep their wider reach: the meeting
-		// follow-up reminder reads them on a meeting.
-		if state == stateHandled {
-			if err := ensureInboundMessage(ctx, tx, id); err != nil {
+		if shape != nil {
+			if err := shape(ctx, tx, id); err != nil {
 				return err
 			}
 		}
@@ -390,13 +397,13 @@ func (s *Store) setReaderState(
 			}
 			return s.recordDisposition(ctx, tx, message, state, until, on)
 		}
-		if err := write(id, replaceReaderState); err != nil {
+		if err := write(id, replaceReaderState+sameStateWritesNothing(state)); err != nil {
 			return err
 		}
 		return s.setOnEarlierRequests(ctx, tx, id, func(earlier ids.ActivityID) error {
 			return write(earlier, replaceReaderState+earlierRequestKeeps(state))
 		})
-	})
+	}
 }
 
 // earlierRequestKeeps is the upsert guard for the card's earlier requests:
@@ -431,9 +438,7 @@ func earlierRequestKeeps(state string) string {
 //
 // An id the caller cannot read answers not-found, the same as one that does not
 // exist, so nothing here confirms a message is there.
-func (s *Store) judgeMessage(
-	ctx context.Context, id ids.ActivityID, write func(context.Context, pgx.Tx, string) error,
-) error {
+func (s *Store) judgeMessage(ctx context.Context, id ids.ActivityID, write judgement) error {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return err
 	}
@@ -448,6 +453,9 @@ func (s *Store) judgeMessage(
 		return write(ctx, tx, capturedBy)
 	})
 }
+
+// judgement is one disposition write, run inside the judged transaction.
+type judgement func(ctx context.Context, tx pgx.Tx, capturedBy string) error
 
 // recordDisposition is the write shape's second half: the audit row and the
 // announcement, in the same transaction as the judgement itself.

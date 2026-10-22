@@ -5,11 +5,8 @@ import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
-import {
-  filesMatching,
-  parseSource,
-  sourceFileAt,
-} from "../../scripts/lib/source-tree";
+import { parseSource, sourceFileAt } from "../../scripts/lib/source-tree";
+import { screenFiles } from "../testing/screenfiles";
 
 // A titled boxed surface standing in a page's column is a `Panel`, whatever
 // the page. A `Card` wearing a `title` is the same claim drawn by the other
@@ -37,7 +34,6 @@ import {
 
 const frontendRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 const sourceRoot = join(frontendRoot, "src");
-const screensRoot = join(sourceRoot, "screens");
 
 /**
  * The screens whose titled `Card` stands somewhere other than a page column,
@@ -54,11 +50,7 @@ const screensRoot = join(sourceRoot, "screens");
  */
 const notARecordZone = new Map<string, string>([
   [
-    "screens/brief.weekly.learnings.tsx",
-    "one learning of a list, titled by kind, inside the learnings panel's body",
-  ],
-  [
-    "screens/contactnetwork/edgedetail.tsx",
+    "features/contacts/contactnetwork/edgedetail.tsx",
     "the selected node's detail in the relationship map's own panel slot, level 3 under the map's heading",
   ],
 ]);
@@ -75,9 +67,7 @@ const OWNS_ITS_HEAD = new Set(["Card", "Panel", "RailPanel", "Modal"]);
 
 /** Every screen module, minus the two kinds of file that are not the screen. */
 function screenModules(): string[] {
-  return filesMatching(screensRoot, /\.tsx$/).filter(
-    (path) => !/\.(test|stories)\.tsx$/.test(path),
-  );
+  return screenFiles().map((path) => join(sourceRoot, path));
 }
 
 /** A path as the allowlist spells it: relative to `src/`, forward slashes. */
@@ -213,9 +203,10 @@ describe("a titled zone is a Panel", () => {
     // have reached — including one a directory deep, because a walk that
     // stopped at the top level clears any floor the flat screens supply.
     expect(modules.length).toBeGreaterThan(80);
-    expect(modules.map(pathOf)).toContain("screens/company360.tsx");
+    expect(modules.map(pathOf)).toContain("features/companies/company360.tsx");
+    expect(modules.map(pathOf)).toContain("components/recordfields.tsx");
     expect(modules.map(pathOf)).toContain(
-      "screens/contactnetwork/edgedetail.tsx",
+      "features/contacts/contactnetwork/edgedetail.tsx",
     );
   });
 

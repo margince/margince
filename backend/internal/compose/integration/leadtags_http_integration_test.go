@@ -79,11 +79,9 @@ func TestALeadCarriesATagAndTheListNarrowsToIt(t *testing.T) {
 	}
 }
 
-// A disqualified lead is archived and its page still opens, so its tag read
-// answers rather than hiding the panel behind a not-found. Disqualifying takes
-// the lead's taggings down with it (its audit row keeps them for a reopen), so
-// the answer is none. A record nobody holds is still not-found.
-func TestAClosedLeadsTagReadAnswersAndAMissingOneIsNotFound(t *testing.T) {
+// A disqualified lead is archived, and an archived record's tag read is
+// not-found as its lists are. A record nobody holds is not-found too.
+func TestAClosedLeadsTagReadIsNotFoundAsIsAMissingOne(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	lead := createQuickFindLead(t, e, "Anna Example", "Northwind Traders")
@@ -98,20 +96,15 @@ func TestAClosedLeadsTagReadAnswersAndAMissingOneIsNotFound(t *testing.T) {
 	}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("apply tag = %d", status)
 	}
+	if status := e.Call(t, "GET", "/v1/records/lead/"+lead+"/tags", nil, nil, nil); status != http.StatusOK {
+		t.Fatalf("GET a live lead's tags = %d, want 200", status)
+	}
 	if status := e.Call(t, "DELETE", "/v1/leads/"+lead, AnyMap{}, nil, nil); status != http.StatusOK {
 		t.Fatalf("disqualify lead = %d", status)
 	}
 
-	var onRecord struct {
-		Data []struct {
-			TagID string `json:"tag_id"`
-		} `json:"data"`
-	}
-	if status := e.Call(t, "GET", "/v1/records/lead/"+lead+"/tags", nil, nil, &onRecord); status != http.StatusOK {
-		t.Fatalf("GET a disqualified lead's tags = %d, want 200", status)
-	}
-	if len(onRecord.Data) != 0 {
-		t.Fatalf("a disqualified lead's tags = %+v, want none: disqualifying removes them", onRecord.Data)
+	if status := e.Call(t, "GET", "/v1/records/lead/"+lead+"/tags", nil, nil, nil); status != http.StatusNotFound {
+		t.Fatalf("GET a disqualified lead's tags = %d, want 404", status)
 	}
 	if status := e.Call(t, "GET", "/v1/records/lead/"+ids.NewV7().String()+"/tags", nil, nil, nil); status != http.StatusNotFound {
 		t.Fatalf("GET tags of a lead nobody holds = %d, want 404", status)

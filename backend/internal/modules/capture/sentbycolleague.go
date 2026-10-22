@@ -95,6 +95,9 @@ func colleagueTx(ctx context.Context, tx pgx.Tx, address string) (ids.UUID, erro
 func stampMessageEnds(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, seat ids.UUID, fields ActivityFields, counterparty connector.Counterparty,
 ) error {
+	if err := stampOwnMailRecipient(ctx, tx, id, fields); err != nil {
+		return err
+	}
 	if fields.SentByColleague.IsZero() {
 		return stampCaptureParticipants(ctx, tx, id, seat, fields.Kind, fields.Direction, counterparty)
 	}
@@ -122,6 +125,12 @@ func fromAuthenticated(rec connector.NormalizedRecord, from string) bool {
 	domain := domainOfAddress(from)
 	return rec.CapturedBy == "connector:"+providerGmail && auth.Server == gmailAuthServer &&
 		domain != "" && strings.EqualFold(auth.DMARCPassDomain, domain)
+}
+
+// inboundSenderAuthenticated is the activity's inbound_sender_authenticated
+// stamp: an inbound message whose From the receiving server authenticated.
+func inboundSenderAuthenticated(rec connector.NormalizedRecord, fields ActivityFields) bool {
+	return fields.Direction == connector.DirectionInbound && fromAuthenticated(rec, rec.Counterparty.Email)
 }
 
 // gmailAuthServer is the authserv-id Gmail names in its Authentication-Results.

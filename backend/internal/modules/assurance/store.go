@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -17,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -24,7 +26,8 @@ import (
 
 // Store owns the assurance tables.
 type Store struct {
-	db *database.DB
+	db             *database.DB
+	signalDecision SignalDecisionFunc
 }
 
 // NewStore wires the store to its pool.
@@ -197,11 +200,17 @@ func (s *Store) UpsertException(ctx context.Context, tx pgx.Tx, f Finding, owner
 	if err != nil {
 		return fmt.Errorf("assurance: finding names a subject id it cannot parse: %w", err)
 	}
+	kind := f.SubjectKind
+	if kind == "" {
+		kind = subjectKindDeal
+	}
+	var args []any
+	arg := func(value any) string { args = append(args, value); return fmt.Sprintf("$%d", len(args)) }
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO assurance_exception
 		    (logical_key, type, subject_kind, subject_id, claim, observed,
 		     severity, affected_minor, currency, owner_id, captured_by)
-		VALUES ($1, $2, 'deal', $3, $4, $5, $6, $7, $8, $9, $10)
+		VALUES (`+arg(LogicalKey(f))+`, `+arg(f.Type)+`, `+arg(kind)+`, `+arg(subjectID)+`, `+arg(claim)+`, `+arg(observed)+`, `+arg(f.Severity)+`, `+arg(f.AffectedMinor)+`, `+arg(nullIfEmpty(f.Currency))+`, `+arg(nullableID(owner))+`, `+arg(capturedBy)+`)
 		ON CONFLICT (logical_key) DO UPDATE
 		SET last_seen_at = now(),
 		    updated_at = now(),
@@ -221,9 +230,7 @@ func (s *Store) UpsertException(ctx context.Context, tx pgx.Tx, f Finding, owner
 		                    THEN EXCLUDED.observed ELSE assurance_exception.observed END,
 		    severity = CASE WHEN assurance_exception.status IN ('open', `+reopenableStatuses+`)
 		                    THEN EXCLUDED.severity ELSE assurance_exception.severity END`,
-		LogicalKey(f), f.Type, subjectID, claim, observed,
-		f.Severity, f.AffectedMinor, nullIfEmpty(f.Currency),
-		nullableID(owner), capturedBy); err != nil {
+		args...); err != nil {
 		return fmt.Errorf("assurance: recording the finding: %w", err)
 	}
 	return nil
@@ -294,6 +301,23 @@ func (s *Store) FinishRun(
 	return storekit.EmitEvent(ctx, tx, auditID, runID, event)
 }
 
+// noInputCheckYet answers before the first nightly input check. A bare
+// not-found would read as a check hidden from the caller, not one never run.
+// It is still ErrNotFound, so a caller asking "is there a run" reads it alike.
+type noInputCheckYet struct{ problem *httperr.DetailedError }
+
+func (e noInputCheckYet) Error() string   { return e.problem.Error() }
+func (e noInputCheckYet) Unwrap() []error { return []error{e.problem, apperrors.ErrNotFound} }
+
+func noInputCheckYetError() error {
+	return noInputCheckYet{problem: &httperr.DetailedError{
+		Status: http.StatusNotFound,
+		Code:   "no_input_check_yet",
+		Detail: "No input check has run yet, so no source has been read: the figures cover only " +
+			"what was typed into Margince by hand. The nightly check creates the first one.",
+	}}
+}
+
 // LatestRun answers the most recent completed pass.
 func (s *Store) LatestRun(ctx context.Context) (Run, error) {
 	if err := auth.Require(ctx, "forecast", principal.ActionRead); err != nil {
@@ -313,7 +337,7 @@ func (s *Store) LatestRun(ctx context.Context) (Run, error) {
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return Run{}, apperrors.ErrNotFound
+			return Run{}, noInputCheckYetError()
 		}
 		return Run{}, err
 	}

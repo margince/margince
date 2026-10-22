@@ -105,7 +105,8 @@ const MinimumPromptWindow = 32_768
 const roleUser = "user"
 
 // perCallOutputCeiling caps one completion; the remaining run budget
-// tightens it further.
+// tightens it further, and a step cut off at it is retried once at
+// raisedOutputCeiling.
 const perCallOutputCeiling = 4096
 
 // newWindow takes TWO catalogs, and the split is the point.
@@ -217,8 +218,7 @@ func (w *window) snapshot() []model.Message {
 
 //promptlang:exempt the rule IS present and is not visible here: it reaches this prompt as Job.LanguageRule, rendered by promptlang.Rule in compose/runnerservice.go, because a module may not import compose. The gate reads one file at a time and cannot follow a string across that boundary, so this waiver stands in for what it cannot see — systemPrompt writes the block it is given, and TestTheRunnerPromptCarriesTheLanguageItWasGiven holds that.
 //promptvoice:exempt the agent loop's output is a tool call, not prose; whatever it eventually writes for a contact is written by the surface that renders it.
-func (w *window) asRequest(remainingOutputTokens, promptWindow int) model.Request {
-	maxTokens := min(remainingOutputTokens, perCallOutputCeiling)
+func (w *window) asRequest(maxTokens, promptWindow int) model.Request {
 	return model.Request{
 		System:         w.system,
 		Messages:       w.bounded(promptWindow),

@@ -16,14 +16,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
-	"unicode/utf8"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/shared/kernel/currencylock"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
@@ -32,6 +33,9 @@ import (
 // settings surface. Read is broad — a rep seeing amounts in the base currency
 // benefits from knowing which one it is — and write is admin/ops.
 const installationSettingsObject = "installation_settings"
+
+// installationAuditVerb is the verb an installation setting's change is audited under.
+const installationAuditVerb = "update"
 
 // authenticationPolicyObject gates the sign-in half of the installation's
 // settings, read apart from the rest.
@@ -57,44 +61,28 @@ const authenticationPolicyObject = "authentication_policy"
 const SettingsObject = installationSettingsObject
 
 // Name is the company's display name. Seeded from margince.yaml at
-// bootstrap; the row is authoritative afterwards, so renaming the
-// company does not require a redeployment.
-//
-// The CEILING lives here because this entry is the only thing that governs the
-// value: without it the unauthenticated setup claim stores a name as large as
-// the body limit allows, and every screen that renders a company carries
-// it thereafter.
-//
-// 200 rather than the 63 an earlier bound happened to impose. That number was a
-// DNS label limit, inherited from a slug the name was once reduced to, and it
-// refused legitimate registered company names — the German ones this product
-// sells to routinely run past 63 characters with their legal form spelled out.
-// 200 is chosen for what a name is, not for what a subdomain was.
-const maxInstallationNameLen = 200
-
-var Name = settings.Define[string](
-	"installation.name",
-	installationSettingsObject,
-	"update",
-	"",
-	func(v string) error {
-		trimmed := strings.TrimSpace(v)
-		if trimmed == "" {
-			return errors.New("the company needs a name")
-		}
-		// Counted in RUNES, like every other length bound in this module: a name
-		// of 200 CJK characters is not three times too long.
-		if n := utf8.RuneCountInString(trimmed); n > maxInstallationNameLen {
-			return fmt.Errorf("a company name is at most %d characters; this one is %d",
-				maxInstallationNameLen, n)
+// bootstrap; an administrator saving the anchor company's display name writes it from
+// then on (compose/installationname.go).
+var Name = config.DefineStored(config.Spec[string]{
+	Key:  "installation.name",
+	Env:  "MARGINCE_INSTALLATION_NAME",
+	Type: config.String,
+	Validate: func(v string) error {
+		if code, why := values.CompanyNameFault(v); code != "" {
+			return errors.New(why)
 		}
 		return nil
 	},
-).AsInstallationIdentity()
+	Doc: "The company's name. Set at boot, it also refuses a different name on the company profile.",
+}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, MachineryApplied: true, SurvivesDataReset: true})
 
 // Timezone is the IANA reporting-period zone every period boundary is
 // computed in. Distinct from a user's own timezone (app_user.timezone), which
 // only affects how times are displayed to them.
+//
+// Database-only, unlike the settings beside it. SQL reads this row directly
+// (the brief-run local day, the share frame). A boot value would split Go from
+// SQL.
 var Timezone = settings.Define[string](
 	"installation.timezone",
 	installationSettingsObject,
@@ -130,6 +118,9 @@ var Timezone = settings.Define[string](
 // injects the probe, the way every cross-module edge is wired (ADR-0054).
 // Until it does, this setting is changeable — which is why the injection is
 // asserted by a fitness test rather than left to wiring discipline.
+//
+// Database-only like Timezone: rollup views and the freeze probe read this row
+// in SQL, so a boot value would split Go from SQL.
 var BaseCurrency = settings.Define[string](
 	"installation.base_currency",
 	installationSettingsObject,
@@ -147,6 +138,27 @@ var BaseCurrency = settings.Define[string](
 	// refuse a seat that may read the deals.
 	MachineryApplied()
 
+// baseCurrencyLockProbe is the deals module's answer to why BaseCurrency cannot
+// change. Nil until compose injects it, and nil reads as changeable.
+var baseCurrencyLockProbe func(context.Context, pgx.Tx) (currencylock.Lock, bool, error)
+
+// BaseCurrencyLockWired reports whether the read has a probe. HasFreezeProbe
+// sees only the write's slot, and a read without one reports "changeable".
+func BaseCurrencyLockWired() bool { return baseCurrencyLockProbe != nil }
+
+// LockBaseCurrencyWith wires one probe into both the read and the write, so a
+// client is shown the same facts a PATCH is refused on.
+func LockBaseCurrencyWith(probe func(context.Context, pgx.Tx) (currencylock.Lock, bool, error)) {
+	baseCurrencyLockProbe = probe
+	BaseCurrency.WithFreeze(func(ctx context.Context, tx pgx.Tx) (bool, string, error) {
+		lock, locked, err := probe(ctx, tx)
+		if err != nil || !locked {
+			return false, "", err
+		}
+		return true, lock.Refusal(), nil
+	})
+}
+
 // Country is where this installation is established, as a lower-case ISO
 // 3166-1 alpha-2 code. Empty means unstated, and unstated is the strict answer
 // rather than a permissive one: with no country to resolve, the outbound
@@ -163,12 +175,12 @@ var BaseCurrency = settings.Define[string](
 // Lower-case because that is the spelling jurisdiction.Code carries and a pack
 // declares; accepting either case here would make "DE" and "de" two
 // installations as far as rule lookup is concerned.
-var Country = settings.Define[string](
-	"installation.country",
-	installationSettingsObject,
-	"update",
-	"",
-	func(v string) error {
+var Country = config.DefineStored(config.Spec[string]{
+	Key:     "installation.country",
+	Env:     "MARGINCE_INSTALLATION_COUNTRY",
+	Type:    config.String,
+	Default: config.Some(""),
+	Validate: func(v string) error {
 		if v == "" {
 			return nil
 		}
@@ -183,6 +195,7 @@ var Country = settings.Define[string](
 		}
 		return nil
 	},
+	Doc: "Where the installation is established, as a two-letter ISO 3166-1 code in small letters; empty for none.",
 	// MachineryApplied because the outbound authorization engine reads it while
 	// applying the posture to its OWN write — the case that declaration exists
 	// for, and its doc's own words: "the posture must bind whoever the acting
@@ -198,29 +211,25 @@ var Country = settings.Define[string](
 	// It discloses a jurisdiction code through behaviour, which is the weakest
 	// thing this flag can leak and is already public: an installation's country
 	// is inferable from the rules its own outbound mail obeys.
-).AsInstallationIdentity().MachineryApplied()
+}, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, MachineryApplied: true, SurvivesDataReset: true})
 
-// Definitions is identity's contribution to the settings registry.
+// Definitions is identity's share of the settings registry that the
+// configuration registry does not hold.
 func Definitions() []settings.Definition {
-	return append([]settings.Definition{
-		Name,
-		Timezone,
-		BaseCurrency,
-		BaseLanguage,
-		DateFormat,
-		TimeFormat,
-		Country,
-		FiscalYearStartMonth,
-		DeadWorkBannerHours,
-		OAuthAccessTokenTTLMinutes,
-		ForecastForwardMeasure,
-		EnabledOidcProviders,
-		RequireSSO,
-		RequireMFA,
-		OidcGroupRoleMap,
-		SMTPPasswordRef,
-		LicenseTokenRef,
-	}, append(scheduleDefinitions(), sendPacingDefinitions()...)...)
+	return []settings.Definition{Timezone, BaseCurrency, AgentWindowNextHours, AgentWindowNextFrom, SMTPPasswordRef, LicenseTokenRef}
+}
+
+// Settings is identity's contribution to the configuration registry.
+func Settings() []config.Any {
+	out := []config.Any{
+		Name, Country, BaseLanguage, DateFormat, TimeFormat, FiscalYearStartMonth, DeadWorkBannerHours,
+		ForecastForwardMeasure, EnabledOidcProviders, RequireSSO, RequireMFA, OidcGroupRoleMap,
+		OAuthAccessTokenTTLMinutes, DynamicClientRegistration, MetadataDocumentClients,
+	}
+	for _, s := range ScheduleSettings() {
+		out = append(out, s)
+	}
+	return slices.Concat(out, sendPacingSettings(), agentAllowanceSettings())
 }
 
 // BaseCurrencyOf resolves the installation's reporting currency inside a
@@ -288,7 +297,7 @@ func TimezoneAppliedTx(ctx context.Context, tx pgx.Tx) (string, error) {
 // installation-identity settings are seeded together at bootstrap, so a tree
 // where one is unset has the other two unset as well.
 func NameOf(ctx context.Context, tx pgx.Tx) (string, error) {
-	return settings.RequireTx(ctx, tx, Name)
+	return config.StoredRequireTx(ctx, tx, config.Bound(), Name)
 }
 
 // InstallationNameOf reads the installation's own display label inside a
@@ -305,6 +314,10 @@ func NameOf(ctx context.Context, tx pgx.Tx) (string, error) {
 // stored name is a misconfiguration that must not turn a working page
 // into a 500.
 func InstallationNameOf(ctx context.Context, tx pgx.Tx) (string, error) {
+	// A name a boot source sets answers without the row.
+	if name, ok := config.BootVal(config.Bound(), Name); ok {
+		return name, nil
+	}
 	var name string
 	err := tx.QueryRow(
 		ctx,
@@ -338,7 +351,7 @@ func InstallationNameForPublicPage(ctx context.Context, pool *pgxpool.Pool) (str
 // string — which resolves to no jurisdiction and therefore adds no
 // jurisdiction-specific permission to anybody's mail.
 func CountryOf(ctx context.Context, tx pgx.Tx) (jurisdiction.Code, error) {
-	code, err := settings.ApplyTx(ctx, tx, Country)
+	code, err := config.StoredApplyTx(ctx, tx, config.Bound(), Country)
 	if err != nil {
 		return "", err
 	}
@@ -365,5 +378,5 @@ func CountryOf(ctx context.Context, tx pgx.Tx) (jurisdiction.Code, error) {
 // answer mailcopy falls back to, so an installation that has never chosen gets
 // what it got before this existed.
 func LanguageOf(ctx context.Context, tx pgx.Tx) (string, error) {
-	return settings.ApplyTx(ctx, tx, BaseLanguage)
+	return config.StoredApplyTx(ctx, tx, config.Bound(), BaseLanguage)
 }

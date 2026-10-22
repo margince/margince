@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -153,20 +152,24 @@ type SendSchedule struct {
 // gate an immediate send passes through.
 // ScheduledSend is one message waiting for its moment.
 type ScheduledSend struct {
-	ID          ids.UUID
-	Status      string
-	ScheduledAt time.Time
-	ScheduledTZ string
-	OriginKind  string
-	Anchor      ids.ActivityID
-	Subject     string
-	Recipients  []string
-	Cc          []string
-	Bcc         []string
-	Body        string
-	ScheduledBy ids.UUID
-	ActivityID  ids.UUID
-	HeldReason  string
+	frozen          scheduledPayload
+	PayloadVersion  int
+	PrincipalKind   string
+	additionalLinks []byte
+	ID              ids.UUID
+	Status          string
+	ScheduledAt     time.Time
+	ScheduledTZ     string
+	OriginKind      string
+	Anchor          ids.ActivityID
+	Subject         string
+	Recipients      []string
+	Cc              []string
+	Bcc             []string
+	Body            string
+	ScheduledBy     ids.UUID
+	ActivityID      ids.UUID
+	HeldReason      string
 	// ReviewID is the review standing over this message's refusal, when one
 	// does. Zero on every message nobody refused — and on a held row whose
 	// review has since been answered, which is a row a rep can only cancel or
@@ -224,6 +227,8 @@ const (
 	HeldMissedWindow    = "missed_window"
 	HeldTimerExhausted  = "timer_exhausted"
 	HeldSendRefused     = "send_refused"
+	HeldFollowupSettled = "followup_settled"
+	HeldMeetingCanceled = "meeting_canceled"
 )
 
 // InvalidScheduleError refuses a due moment the server will not accept. It maps

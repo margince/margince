@@ -30,11 +30,11 @@ import (
 // surface. agents.Registry satisfies it; nothing else may.
 type Invoker interface {
 	Invoke(ctx context.Context, name string, args json.RawMessage) (json.RawMessage, error)
-	// Offered is the catalog THIS caller may invoke — the scope-filtered set,
-	// which is what the run is shown. A run offered a verb its passport cannot
-	// spend is being asked to choose among names it will be refused for, and
-	// the whole listing rides in the system prompt, which elision never touches.
-	Offered(ctx context.Context) []mcp.ToolSpec
+	// Runnable is the catalog this caller may invoke: the scope-filtered set,
+	// listed externally or not. The job's allowlist narrows it to what the run
+	// is shown. A verb the passport cannot spend would only be refused, and the
+	// whole listing rides in the system prompt, which elision never touches.
+	Runnable(ctx context.Context) []mcp.ToolSpec
 	// Specs is the WHOLE catalog, and it is a separate question. It names which
 	// tools an observation may be attributed to, which is about what already
 	// happened rather than what may be chosen next — see sourceVocabulary.
@@ -157,7 +157,7 @@ func (r *Runner) Run(ctx context.Context, job Job) (Result, error) {
 	if len(job.Tools) == 0 {
 		return r.degrade(Result{}, unscopedJobReason), nil
 	}
-	admitted := r.tools.Offered(ctx)
+	admitted := r.tools.Runnable(ctx)
 	if missing := unfundedTools(job, admitted); len(missing) > 0 {
 		// Before the first completion, so a misconfigured agent costs no
 		// model spend on its way to failing.
@@ -184,7 +184,7 @@ func (r *Runner) Resume(ctx context.Context, job Job, dec Decision) (Result, err
 		return r.degrade(Result{StepsUsed: dec.Pending.StepsUsed, OutputTokens: dec.Pending.OutputTokens},
 			unscopedJobReason), nil
 	}
-	admitted := r.tools.Offered(ctx)
+	admitted := r.tools.Runnable(ctx)
 	// The same shortfall check Run makes, at the same strength. A resumed run
 	// whose entry the passport can no longer fund is as misconfigured as a
 	// fresh one, and a half-authorised resume is the worse of the two: it
@@ -253,13 +253,18 @@ func (r *Runner) Resume(ctx context.Context, job Job, dec Decision) (Result, err
 // (ai-operational-spec §5.2 — never a partial fabrication).
 const consecutiveInvalidLimit = 3
 
+// raisedOutputCeiling is the one larger cap a step cut off at the ordinary
+// ceiling is retried with. It mirrors the reasoning-output size the AI module
+// uses for its own long answers; a module may not import that sibling.
+const raisedOutputCeiling = 8192
+
 // maxToolNameLen bounds a proposed tool name. Generous next to the longest
 // registered name, short enough that the field cannot carry prose.
 const maxToolNameLen = 64
 
 func (r *Runner) loop(ctx context.Context, job Job, win *window, acc Result) (Result, error) {
 	budget := job.Budget.withDefaults()
-	invalidStreak := 0
+	retry := newOutputRetry()
 	for {
 		if err := ctx.Err(); err != nil {
 			// Wall clock is the third guarantee (§4): the scheduler cancels
@@ -274,8 +279,8 @@ func (r *Runner) loop(ctx context.Context, job Job, win *window, acc Result) (Re
 		}
 		acc.StepsUsed++
 
-		resp, meta, err := r.brain.Complete(ctx,
-			win.asRequest(budget.MaxOutputTokens-acc.OutputTokens, r.brain.PromptWindow()))
+		callCap := min(budget.MaxOutputTokens-acc.OutputTokens, retry.ceiling)
+		resp, meta, err := r.brain.Complete(ctx, win.asRequest(callCap, r.brain.PromptWindow()))
 		if err != nil {
 			return r.degradeFromCause(acc, job, modelCallReason(err), err), nil
 		}
@@ -286,14 +291,12 @@ func (r *Runner) loop(ctx context.Context, job Job, win *window, acc Result) (Re
 			if meta.Reject != nil {
 				meta.Reject()
 			}
-			invalidStreak++
-			if invalidStreak >= consecutiveInvalidLimit {
-				return r.degradeFromCause(acc, job, invalidOutputReason(invalidStreak), parseErr), nil
+			if reason, giveUp := retry.refuse(win, callCap, resp, parseErr); giveUp {
+				return r.degradeFromCause(acc, job, reason, parseErr), nil
 			}
-			win.observeThen(outputValidatorSource, "your previous output failed validation: "+parseErr.Error(), "Return ONLY the step JSON.")
 			continue
 		}
-		invalidStreak = 0
+		retry.accepted()
 
 		if step.Final != nil {
 			acc.Outcome = OutcomeCompleted

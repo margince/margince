@@ -18,6 +18,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/identity/internal/password"
 	"github.com/margince/margince/backend/internal/modules/identity/internal/policy"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -86,6 +87,9 @@ type Service struct {
 	// sealed rather than hashed. Nil when unwired, which is what the MFA methods
 	// check before they touch it. See mfa.go.
 	vault keyvault.Vault
+	// config answers the stored settings a boot source may set. Nil refuses an
+	// OAuth mint (settingsoauthtoken.go); nothing else here reads it.
+	config *config.Config
 }
 
 func NewService(pool *pgxpool.Pool) *Service {
@@ -343,6 +347,9 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 		}
 		if err != nil {
 			return err
+		}
+		if name, ok := config.BootVal(config.Bound(), Name); ok {
+			id.WorkspaceName = name
 		}
 		id.UserID = userID
 		// NULL stays empty: somebody who never chose a language is not somebody

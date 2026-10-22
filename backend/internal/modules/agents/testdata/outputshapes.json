@@ -60,7 +60,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -152,7 +153,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -247,7 +249,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -352,7 +355,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -452,7 +456,114 @@
             "type": "boolean"
           },
           "last_synced_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "authoritative"
+        ]
+      },
+      "schema_version": {
+        "type": "string"
+      },
+      "trace_id": {
+        "type": "string"
+      },
+      "trust": {
+        "type": "string"
+      },
+      "warnings": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "message"
+          ]
+        }
+      }
+    },
+    "required": [
+      "data",
+      "evidence",
+      "freshness",
+      "schema_version",
+      "trace_id",
+      "trust",
+      "warnings"
+    ]
+  },
+  "archive_tag": {
+    "type": "object",
+    "properties": {
+      "data": {
+        "type": "object",
+        "properties": {
+          "archived": {
+            "type": "boolean"
+          },
+          "carried_by": {
+            "type": "integer"
+          },
+          "color": {
             "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "tag_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "required": [
+          "name",
+          "tag_id"
+        ]
+      },
+      "evidence": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "captured_by": {
+              "type": "string"
+            },
+            "record_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "record_type": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "record_id",
+            "record_type"
+          ]
+        }
+      },
+      "freshness": {
+        "type": "object",
+        "properties": {
+          "authoritative": {
+            "type": "boolean"
+          },
+          "last_synced_at": {
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -626,7 +737,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -698,7 +810,8 @@
             "format": "uuid"
           },
           "created_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           },
           "entity_id": {
             "type": "string",
@@ -755,7 +868,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -847,7 +961,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -941,7 +1056,8 @@
             }
           },
           "expires_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           },
           "left_behind": {
             "type": "array",
@@ -1113,7 +1229,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -1209,7 +1326,8 @@
                         }
                       },
                       "occurred_at": {
-                        "type": "string"
+                        "type": "string",
+                        "format": "date-time"
                       },
                       "record_id": {
                         "type": "string",
@@ -1278,7 +1396,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -1323,7 +1442,7 @@
       "warnings"
     ]
   },
-  "change_lead_state": null,
+  "change_activities": null,
   "change_lists": {
     "type": "object",
     "properties": {
@@ -1374,7 +1493,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -1419,6 +1539,91 @@
       "warnings"
     ]
   },
+  "change_record_parts": {
+    "type": "object",
+    "properties": {
+      "data": {
+        "type": "object"
+      },
+      "evidence": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "captured_by": {
+              "type": "string"
+            },
+            "record_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "record_type": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "record_id",
+            "record_type"
+          ]
+        }
+      },
+      "freshness": {
+        "type": "object",
+        "properties": {
+          "authoritative": {
+            "type": "boolean"
+          },
+          "last_synced_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "authoritative"
+        ]
+      },
+      "schema_version": {
+        "type": "string"
+      },
+      "trace_id": {
+        "type": "string"
+      },
+      "trust": {
+        "type": "string"
+      },
+      "warnings": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "message"
+          ]
+        }
+      }
+    },
+    "required": [
+      "data",
+      "evidence",
+      "freshness",
+      "schema_version",
+      "trace_id",
+      "trust",
+      "warnings"
+    ]
+  },
+  "change_state": null,
   "change_tags": null,
   "check_availability": {
     "type": "object",
@@ -1435,10 +1640,12 @@
               "type": "object",
               "properties": {
                 "end": {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 },
                 "start": {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 }
               },
               "required": [
@@ -1489,7 +1696,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -1595,7 +1803,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -1807,7 +2016,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -1901,7 +2111,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -2079,7 +2290,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -2133,6 +2345,9 @@
           "archived": {
             "type": "boolean"
           },
+          "carried_by": {
+            "type": "integer"
+          },
           "color": {
             "type": "string"
           },
@@ -2181,7 +2396,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -2287,7 +2503,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -2404,7 +2621,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -2460,10 +2678,12 @@
             "format": "uuid"
           },
           "created_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           },
           "decided_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           },
           "decided_by": {
             "type": "string",
@@ -2494,7 +2714,8 @@
             }
           },
           "expires_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           },
           "kind": {
             "type": "string"
@@ -2563,7 +2784,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -2624,10 +2846,12 @@
                   "format": "uuid"
                 },
                 "created_at": {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 },
                 "decided_at": {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 },
                 "decided_by": {
                   "type": "string",
@@ -2658,7 +2882,8 @@
                   }
                 },
                 "expires_at": {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 },
                 "kind": {
                   "type": "string"
@@ -2737,7 +2962,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -2833,7 +3059,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -2928,7 +3155,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -3019,7 +3247,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -3198,7 +3427,124 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "authoritative"
+        ]
+      },
+      "schema_version": {
+        "type": "string"
+      },
+      "trace_id": {
+        "type": "string"
+      },
+      "trust": {
+        "type": "string"
+      },
+      "warnings": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "message"
+          ]
+        }
+      }
+    },
+    "required": [
+      "data",
+      "evidence",
+      "freshness",
+      "schema_version",
+      "trace_id",
+      "trust",
+      "warnings"
+    ]
+  },
+  "describe_list_filters": {
+    "type": "object",
+    "properties": {
+      "data": {
+        "type": "object",
+        "properties": {
+          "record_types": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "operand": {
+                    "type": "string"
+                  },
+                  "values": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "required": [
+                  "name",
+                  "operand"
+                ]
+              }
+            }
+          }
+        },
+        "required": [
+          "record_types"
+        ]
+      },
+      "evidence": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "captured_by": {
+              "type": "string"
+            },
+            "record_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "record_type": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "record_id",
+            "record_type"
+          ]
+        }
+      },
+      "freshness": {
+        "type": "object",
+        "properties": {
+          "authoritative": {
+            "type": "boolean"
+          },
+          "last_synced_at": {
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -3289,7 +3635,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -3380,7 +3727,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -3471,7 +3819,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -3562,7 +3911,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -3607,7 +3957,6 @@
       "warnings"
     ]
   },
-  "describe_vocabulary": null,
   "disqualify_lead": {
     "type": "object",
     "properties": {
@@ -3655,7 +4004,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -3792,7 +4142,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -3927,7 +4278,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -4011,7 +4363,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -4056,6 +4409,7 @@
       "warnings"
     ]
   },
+  "find_records": null,
   "forecast_input_checks": {
     "type": "object",
     "properties": {
@@ -4142,7 +4496,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -4299,7 +4654,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -4481,7 +4837,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -4605,7 +4962,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -4658,6 +5016,9 @@
         "properties": {
           "archived": {
             "type": "boolean"
+          },
+          "carried_by": {
+            "type": "integer"
           },
           "color": {
             "type": "string"
@@ -4723,7 +5084,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -4859,7 +5221,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -4914,7 +5277,8 @@
             "type": "string"
           },
           "end": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           },
           "id": {
             "type": "string",
@@ -4933,7 +5297,8 @@
             "type": "string"
           },
           "start": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           },
           "status": {
             "type": "string"
@@ -4993,7 +5358,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -5054,10 +5420,12 @@
                   "format": "uuid"
                 },
                 "created_at": {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 },
                 "decided_at": {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 },
                 "decided_by": {
                   "type": "string",
@@ -5088,7 +5456,8 @@
                   }
                 },
                 "expires_at": {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 },
                 "kind": {
                   "type": "string"
@@ -5166,7 +5535,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -5280,7 +5650,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -5348,6 +5719,9 @@
                 "seat_type": {
                   "type": "string"
                 },
+                "status": {
+                  "type": "string"
+                },
                 "user_id": {
                   "type": "string",
                   "format": "uuid"
@@ -5380,6 +5754,9 @@
                   "type": "boolean"
                 },
                 "seat_type": {
+                  "type": "string"
+                },
+                "status": {
                   "type": "string"
                 },
                 "user_id": {
@@ -5436,7 +5813,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -5513,7 +5891,8 @@
                   "format": "uuid"
                 },
                 "created_at": {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 },
                 "entity_id": {
                   "type": "string",
@@ -5579,7 +5958,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -5719,7 +6099,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -5775,6 +6156,9 @@
             "items": {
               "type": "object",
               "properties": {
+                "archived": {
+                  "type": "boolean"
+                },
                 "id": {
                   "type": "string",
                   "format": "uuid"
@@ -5866,7 +6250,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -6005,7 +6390,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -6064,6 +6450,9 @@
                 "archived": {
                   "type": "boolean"
                 },
+                "carried_by": {
+                  "type": "integer"
+                },
                 "color": {
                   "type": "string"
                 },
@@ -6121,7 +6510,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -6227,7 +6617,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -6327,7 +6718,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -6422,7 +6814,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -7131,7 +7524,8 @@
                             }
                           },
                           "occurred_at": {
-                            "type": "string"
+                            "type": "string",
+                            "format": "date-time"
                           },
                           "record_id": {
                             "type": "string",
@@ -7225,7 +7619,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -7277,7 +7672,8 @@
         "type": "object",
         "properties": {
           "as_of": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           },
           "company_id": {
             "type": "string",
@@ -7385,7 +7781,8 @@
                   "type": "integer"
                 },
                 "due_at": {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 },
                 "quote": {
                   "type": "string"
@@ -7458,10 +7855,12 @@
             }
           },
           "started_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           },
           "target_end_date": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -7508,7 +7907,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -7665,7 +8065,16 @@
                     "line": {
                       "type": "integer"
                     },
+                    "params": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      }
+                    },
                     "reason": {
+                      "type": "string"
+                    },
+                    "reason_code": {
                       "type": "string"
                     },
                     "value": {
@@ -7694,7 +8103,16 @@
                         "from": {
                           "type": "string"
                         },
+                        "params": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          }
+                        },
                         "reason": {
+                          "type": "string"
+                        },
+                        "reason_code": {
                           "type": "string"
                         },
                         "to": {
@@ -7725,6 +8143,12 @@
                 "items": {
                   "type": "object",
                   "properties": {
+                    "closed_lost": {
+                      "type": "integer"
+                    },
+                    "closed_won": {
+                      "type": "integer"
+                    },
                     "disposition": {
                       "type": "object",
                       "properties": {
@@ -7799,6 +8223,9 @@
                         },
                         "reason": {
                           "type": "string"
+                        },
+                        "reason_code": {
+                          "type": "string"
                         }
                       },
                       "required": [
@@ -7818,6 +8245,18 @@
                           "format": "uuid"
                         },
                         "object": {
+                          "type": "string"
+                        },
+                        "params": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          }
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "reason_code": {
                           "type": "string"
                         }
                       },
@@ -7928,7 +8367,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -8046,7 +8486,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -8164,7 +8605,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -8297,7 +8739,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -8512,7 +8955,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -8557,6 +9001,7 @@
       "warnings"
     ]
   },
+  "read_analytics": null,
   "read_approval": {
     "type": "object",
     "properties": {
@@ -8568,10 +9013,12 @@
             "format": "uuid"
           },
           "created_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           },
           "decided_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           },
           "decided_by": {
             "type": "string",
@@ -8602,7 +9049,8 @@
             }
           },
           "expires_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           },
           "kind": {
             "type": "string"
@@ -8671,7 +9119,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -8716,6 +9165,7 @@
       "warnings"
     ]
   },
+  "read_attention": null,
   "read_brief": {
     "type": "object",
     "properties": {
@@ -8723,7 +9173,8 @@
         "type": "object",
         "properties": {
           "as_of": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           },
           "brief_id": {
             "type": "string",
@@ -8739,7 +9190,8 @@
             }
           },
           "generated_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           },
           "items": {
             "type": "array",
@@ -8798,7 +9250,8 @@
                       "type": "string"
                     },
                     "returned_with_activity_at": {
-                      "type": "string"
+                      "type": "string",
+                      "format": "date-time"
                     }
                   },
                   "required": [
@@ -8820,13 +9273,15 @@
                   "format": "uuid"
                 },
                 "snoozed_until": {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 },
                 "state": {
                   "type": "string"
                 },
                 "state_at": {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 }
               },
               "required": [
@@ -8889,7 +9344,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -8934,7 +9390,7 @@
       "warnings"
     ]
   },
-  "read_directory": null,
+  "read_context": null,
   "read_forecast": null,
   "read_import": null,
   "read_import_report": {
@@ -8956,6 +9412,12 @@
               "properties": {
                 "file": {
                   "type": "string"
+                },
+                "mapping": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  }
                 },
                 "object": {
                   "type": "string"
@@ -9020,7 +9482,16 @@
                     "line": {
                       "type": "integer"
                     },
+                    "params": {
+                      "type": "object",
+                      "additionalProperties": {
+                        "type": "string"
+                      }
+                    },
                     "reason": {
+                      "type": "string"
+                    },
+                    "reason_code": {
                       "type": "string"
                     },
                     "value": {
@@ -9049,7 +9520,16 @@
                         "from": {
                           "type": "string"
                         },
+                        "params": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          }
+                        },
                         "reason": {
+                          "type": "string"
+                        },
+                        "reason_code": {
                           "type": "string"
                         },
                         "to": {
@@ -9080,6 +9560,12 @@
                 "items": {
                   "type": "object",
                   "properties": {
+                    "closed_lost": {
+                      "type": "integer"
+                    },
+                    "closed_won": {
+                      "type": "integer"
+                    },
                     "disposition": {
                       "type": "object",
                       "properties": {
@@ -9154,6 +9640,9 @@
                         },
                         "reason": {
                           "type": "string"
+                        },
+                        "reason_code": {
+                          "type": "string"
                         }
                       },
                       "required": [
@@ -9173,6 +9662,18 @@
                           "format": "uuid"
                         },
                         "object": {
+                          "type": "string"
+                        },
+                        "params": {
+                          "type": "object",
+                          "additionalProperties": {
+                            "type": "string"
+                          }
+                        },
+                        "reason": {
+                          "type": "string"
+                        },
+                        "reason_code": {
                           "type": "string"
                         }
                       },
@@ -9259,7 +9760,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -9304,7 +9806,6 @@
       "warnings"
     ]
   },
-  "read_input_checks": null,
   "read_lists": {
     "type": "object",
     "properties": {
@@ -9355,7 +9856,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -9426,7 +9928,8 @@
                       "type": "string"
                     },
                     "occurred_at": {
-                      "type": "string"
+                      "type": "string",
+                      "format": "date-time"
                     },
                     "subject": {
                       "type": "string"
@@ -9451,7 +9954,8 @@
             ]
           },
           "as_of": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           },
           "commitments": {
             "type": "object",
@@ -9498,7 +10002,8 @@
                       "type": "integer"
                     },
                     "due_at": {
-                      "type": "string"
+                      "type": "string",
+                      "format": "date-time"
                     },
                     "quote": {
                       "type": "string"
@@ -9573,10 +10078,12 @@
                       "type": "string"
                     },
                     "ends_on": {
-                      "type": "string"
+                      "type": "string",
+                      "format": "date-time"
                     },
                     "starts_on": {
-                      "type": "string"
+                      "type": "string",
+                      "format": "date-time"
                     },
                     "status": {
                       "type": "string"
@@ -9667,7 +10174,8 @@
                       "type": "string"
                     },
                     "created_at": {
-                      "type": "string"
+                      "type": "string",
+                      "format": "date-time"
                     },
                     "doc_state": {
                       "type": "string"
@@ -9744,7 +10252,8 @@
                   "type": "object",
                   "properties": {
                     "changed_at": {
-                      "type": "string"
+                      "type": "string",
+                      "format": "date-time"
                     },
                     "changed_by": {
                       "type": "string"
@@ -9792,7 +10301,8 @@
                 "type": "string"
               },
               "ended_at": {
-                "type": "string"
+                "type": "string",
+                "format": "date-time"
               },
               "key": {
                 "type": "string"
@@ -9812,10 +10322,12 @@
                 "format": "uuid"
               },
               "started_at": {
-                "type": "string"
+                "type": "string",
+                "format": "date-time"
               },
               "target_end_date": {
-                "type": "string"
+                "type": "string",
+                "format": "date-time"
               }
             },
             "required": [
@@ -9837,7 +10349,8 @@
                 "type": "string"
               },
               "last_activity_at": {
-                "type": "string"
+                "type": "string",
+                "format": "date-time"
               },
               "open_commitments": {
                 "type": "integer"
@@ -9935,7 +10448,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -10060,7 +10574,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -10135,6 +10650,9 @@
           },
           "comparison": {
             "type": "object"
+          },
+          "commission_summary": {
+            "type": "object"
           }
         },
         "additionalProperties": false
@@ -10171,7 +10689,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -10216,7 +10735,93 @@
       "warnings"
     ]
   },
+  "read_reports": null,
   "read_tags": null,
+  "read_view": {
+    "type": "object",
+    "properties": {
+      "data": {
+        "type": "object"
+      },
+      "evidence": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "captured_by": {
+              "type": "string"
+            },
+            "record_id": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "record_type": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "record_id",
+            "record_type"
+          ]
+        }
+      },
+      "freshness": {
+        "type": "object",
+        "properties": {
+          "authoritative": {
+            "type": "boolean"
+          },
+          "last_synced_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "authoritative"
+        ]
+      },
+      "schema_version": {
+        "type": "string"
+      },
+      "trace_id": {
+        "type": "string"
+      },
+      "trust": {
+        "type": "string"
+      },
+      "warnings": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "code": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "code",
+            "message"
+          ]
+        }
+      }
+    },
+    "required": [
+      "data",
+      "evidence",
+      "freshness",
+      "schema_version",
+      "trace_id",
+      "trust",
+      "warnings"
+    ]
+  },
+  "read_workspace": null,
   "relink_activities": {
     "type": "object",
     "properties": {
@@ -10263,7 +10868,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -10355,7 +10961,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -10446,7 +11053,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -10551,7 +11159,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -10703,7 +11312,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -10755,7 +11365,8 @@
         "type": "object",
         "properties": {
           "as_of": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           },
           "commitments": {
             "type": "array",
@@ -10799,7 +11410,8 @@
                   "type": "integer"
                 },
                 "due_at": {
-                  "type": "string"
+                  "type": "string",
+                  "format": "date-time"
                 },
                 "quote": {
                   "type": "string"
@@ -10868,7 +11480,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -10987,7 +11600,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -11114,7 +11728,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -11159,6 +11774,7 @@
       "warnings"
     ]
   },
+  "schedule_meeting": null,
   "search_context": {
     "type": "object",
     "properties": {
@@ -11288,7 +11904,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -11339,8 +11956,32 @@
       "data": {
         "type": "object",
         "properties": {
+          "coverage": {
+            "type": "string"
+          },
           "next_cursor": {
             "type": "string"
+          },
+          "notes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "detail": {
+                  "type": "string"
+                },
+                "path": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "code",
+                "detail"
+              ]
+            }
           },
           "records": {
             "type": "array",
@@ -11353,6 +11994,30 @@
                 "id": {
                   "type": "string",
                   "format": "uuid"
+                },
+                "match": {
+                  "type": "object",
+                  "properties": {
+                    "snippet": {
+                      "type": "string"
+                    },
+                    "works_at": {
+                      "type": "object",
+                      "properties": {
+                        "company_id": {
+                          "type": "string",
+                          "format": "uuid"
+                        },
+                        "company_name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "company_id",
+                        "company_name"
+                      ]
+                    }
+                  }
                 },
                 "owner": {
                   "type": "object",
@@ -11389,9 +12054,17 @@
                 "record_type"
               ]
             }
+          },
+          "types_with_more": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "required": [
+          "coverage",
+          "notes",
           "records"
         ]
       },
@@ -11427,7 +12100,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -11690,7 +12364,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -11792,7 +12467,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -11894,7 +12570,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -11990,7 +12667,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -12124,7 +12802,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -12178,6 +12857,9 @@
           "archived": {
             "type": "boolean"
           },
+          "carried_by": {
+            "type": "integer"
+          },
           "color": {
             "type": "string"
           },
@@ -12226,7 +12908,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -12362,7 +13045,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -12488,7 +13172,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [
@@ -12598,7 +13283,8 @@
             "type": "boolean"
           },
           "last_synced_at": {
-            "type": "string"
+            "type": "string",
+            "format": "date-time"
           }
         },
         "required": [

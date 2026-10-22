@@ -17,8 +17,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -44,7 +44,7 @@ func NewSeatBudget(pool *pgxpool.Pool) ai.BudgetPolicy { return seatBudget{pool:
 func (b seatBudget) MonthlyTokenBudget(ctx context.Context, workspaceID ids.WorkspaceID) (int64, error) {
 	var monthly int64
 	err := database.WithWorkspaceTx(principal.WithWorkspaceID(ctx, workspaceID.UUID), b.pool, func(tx pgx.Tx) error {
-		config, err := settings.ApplyTx(ctx, tx, ai.BudgetSettings)
+		budget, err := config.StoredApplyTx(ctx, tx, loadedConfig(), ai.BudgetSettings)
 		if err != nil {
 			return err
 		}
@@ -52,7 +52,7 @@ func (b seatBudget) MonthlyTokenBudget(ctx context.Context, workspaceID ids.Work
 		if err != nil {
 			return err
 		}
-		monthly, err = config.SaturatingMonthlyTokens(users)
+		monthly, err = budget.SaturatingMonthlyTokens(users)
 		return err
 	})
 	return monthly, err

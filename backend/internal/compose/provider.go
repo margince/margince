@@ -10,23 +10,29 @@ package compose
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/profileverdicts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/commissions"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
+	"github.com/margince/margince/backend/internal/modules/dealrooms"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/integrations"
 	"github.com/margince/margince/backend/internal/modules/introductions"
+	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/projects"
+	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -36,11 +42,13 @@ import (
 // authoritative (03e §2.3 — the overlay adapter is where that earns its
 // keep).
 type Provider struct {
-	contacts   *contacts.Provider
-	deals      *deals.Provider
-	projects   *projects.Provider
-	activities *activities.Provider
-	reports    *reportEngine
+	contacts    *contacts.Provider
+	deals       *deals.Provider
+	projects    *projects.Provider
+	activities  *activities.Provider
+	commissions *commissions.Provider
+	dealRooms   *dealrooms.Provider
+	reports     *reportEngine
 }
 
 func NewProvider(pool *pgxpool.Pool) *Provider {
@@ -61,54 +69,44 @@ func NewProviderFor(db *database.DB) *Provider {
 			WithFieldCatalog(customfields.NewService(pool, nil)).
 			WithStopCarrier(consent.NewStore(db)).
 			WithSatelliteCarriers(consent.NewStore(db), introductions.NewStore(db, time.Now)).
-			WithGrantCarrier(identity.NewServiceFor(db)),
-		deals:      deals.NewProvider(db, DealsInstallation()).WithFieldCatalog(customfields.NewService(pool, nil)),
-		projects:   projects.ProviderOver(ProjectsStoreOver(db)),
-		activities: activities.NewProvider(InstallationDB(pool)),
-		reports:    newReportEngine(pool),
+			WithParticipantRosterReader(activities.EnsureParticipantRosterVisibleTx).
+			WithProviderRunReader(integrations.ReadRunForContactTx).
+			WithMergeSignalReader(signals.PreviewSignalCarryTx).
+			WithMergeCommitmentReader(weeklyPlanStore(pool).PreviewCommitmentCarryTx).
+			WithMergeNoticeReader(notices.PreviewNoticeCarryTx).
+			WithMergeContentReader(activities.NewStore(db)).
+			WithProfileVerdictReader(profileverdicts.MergeReader(db)).
+			WithFeedbackCarryReader(ai.NewFeedbackStore(db)).
+			WithGrantCarrier(identity.NewServiceFor(db)).
+			WithInstallationRenamer(installationRenamer(pool)),
+		deals:       deals.NewProvider(db, DealsInstallation()).WithFieldCatalog(customfields.NewService(pool, nil)),
+		projects:    projects.ProviderOver(ProjectsStoreOver(db)),
+		activities:  activities.NewProvider(InstallationDB(pool)).WithFieldCatalog(customfields.NewService(pool, nil)),
+		commissions: commissions.NewProvider(db),
+		dealRooms:   dealrooms.NewProvider(db),
+		reports:     newReportEngine(pool),
 	}
 }
 
 var _ datasource.SystemOfRecordProvider = (*Provider)(nil)
 
-// searchable is the entity set Search sweeps when the query names none.
-// Activities are deliberately absent: the timeline is reached through
-// read_record/list on a named entity, not blind full-text sweep.
 // defaultSearchPageSize is the page a caller who named no limit gets: the
 // shared Limit parameter's own declared default (crm.yaml
-// components.parameters.Limit, `default: 50`), which /search refs like every
-// other paged operation.
-//
-// It is ONE number for both seams. This one answered 20 while the overlay
-// route answered the declared 50, so a query with no limit came back a
-// different size depending on which system of record served it — the same
-// divergence this file's sweep exists to close, in the parameter rather than
-// the page.
+// components.parameters.Limit, `default: 50`).
 const defaultSearchPageSize = 50
-
-// searchable is what an UNTYPED sweep visits, in the order it visits them.
-//
-// Partner is deliberately absent: a sweep carries no filters and matches on
-// text, and a partner has no text of its own — every word a caller would
-// search for lives on the company the partner row extends. Including it
-// would return the same companies twice under two type names.
-var searchable = []datasource.EntityType{datasource.EntityContact, datasource.EntityCompany, datasource.EntityDeal, datasource.EntityLead, datasource.EntityProject}
-
-// nameable is what a caller may ASK FOR BY NAME. It is a superset of
-// searchable, and the two are separate because they answer different
-// questions: "where does an unguided sweep look?" and "what may a caller
-// name?". Conflating them is how naming a type became impossible by the act
-// of keeping it out of the sweep — a type left out of the default set stopped
-// being reachable at all, which is the opposite of what excluding it meant.
-var nameable = append(append([]datasource.EntityType{}, searchable...), datasource.EntityPartner)
 
 func (p *Provider) Read(ctx context.Context, ref datasource.EntityRef) (datasource.Record, error) {
 	switch ref.Type {
 	case datasource.EntityContact, datasource.EntityCompany, datasource.EntityLead,
 		datasource.EntityRelationship, datasource.EntityPartner:
 		return p.contacts.Read(ctx, ref)
-	case datasource.EntityDeal:
+	case datasource.EntityDeal, datasource.EntityProduct, datasource.EntityOfferTemplate, datasource.EntityOffer:
 		return p.deals.Read(ctx, ref)
+	case datasource.EntityCommission:
+		return p.commissions.Read(ctx, ref)
+	case datasource.EntityDealRoom, datasource.EntityDealRoomThread, datasource.EntityDealRoomDocument,
+		datasource.EntityDealRoomParticipant, datasource.EntityDealRoomComment:
+		return p.dealRooms.Read(ctx, ref)
 	case datasource.EntityProject:
 		return p.projects.Read(ctx, ref)
 	case datasource.EntityActivity:
@@ -131,39 +129,39 @@ func (p *Provider) ListFilters(t datasource.EntityType) []string {
 	case datasource.EntityContact, datasource.EntityCompany, datasource.EntityLead,
 		datasource.EntityPartner:
 		return p.contacts.ListFilters(t)
-	case datasource.EntityDeal:
+	case datasource.EntityDeal, datasource.EntityProduct, datasource.EntityOfferTemplate, datasource.EntityOffer:
 		return p.deals.ListFilters(t)
+	case datasource.EntityCommission:
+		return p.commissions.ListFilters(t)
+	case datasource.EntityDealRoom, datasource.EntityDealRoomThread, datasource.EntityDealRoomComment, datasource.EntityDealRoomDocument, datasource.EntityDealRoomParticipant:
+		return p.dealRooms.ListFilters(t)
 	case datasource.EntityProject:
 		return p.projects.ListFilters(t)
+	case datasource.EntityActivity:
+		return p.activities.ListFilters(t)
 	default:
 		return nil
 	}
 }
 
-// Search answers one page of records: one entity type's, or a SWEEP across
-// several — which is what the tool surface advertises when a caller names no
-// record type, and what this provider must therefore be able to page.
+// Search answers one page of one record type's records, which is what
+// list_records asks for. Ranking by words is the search module's engine, which
+// search_records, an intent tool's record_name and GET /v1/search share.
 //
-// The page is bounded ONCE, across the whole walk. Charging each type the full
-// limit and concatenating would answer five times the ceiling the caller
-// named, on the surface where that context is paid for and displaces the run's
-// own observations.
-//
-// It is walked type by type rather than ranked across them, because the types
-// have no common score to interleave by. What makes that pageable is the
-// composite cursor: the position is the type plus that type's own keyset, so a
-// caller resumes where the page stopped. HasMore is true if and only if there
-// is such a position — a page that reports a remainder it cannot hand back
-// leaves those records unreachable, and one that reports completeness it has
-// not established stops the caller looking.
+// The cursor names the type it was minted for. A token presented on another
+// type's search is refused rather than resumed in the wrong table.
 func (p *Provider) Search(ctx context.Context, q datasource.SearchQuery) (datasource.SearchResult, error) {
-	types, err := sweepOrder(q.EntityTypes)
+	if len(q.EntityTypes) != 1 {
+		return datasource.SearchResult{}, fmt.Errorf(
+			"compose: Search pages exactly one record type, and this query names %d", len(q.EntityTypes))
+	}
+	et := q.EntityTypes[0]
+	position, err := storekit.DecodeSweepCursor(q.Cursor)
 	if err != nil {
 		return datasource.SearchResult{}, err
 	}
-	position, err := resumeStream(q.Cursor)
-	if err != nil {
-		return datasource.SearchResult{}, err
+	if position.Stream != "" && position.Stream != string(et) {
+		return datasource.SearchResult{}, &storekit.MalformedCursorError{}
 	}
 	text := &q.Text
 	if q.Text == "" {
@@ -173,42 +171,29 @@ func (p *Provider) Search(ctx context.Context, q datasource.SearchQuery) (dataso
 	if limit <= 0 {
 		limit = defaultSearchPageSize
 	}
-
-	out := datasource.SearchResult{Records: []datasource.Record{}}
-	inner := position.Inner
-	for i := resumeIndex(types, position.Stream); i < len(types); i++ {
-		et := types[i]
-		if string(et) != position.Stream {
-			// The stream the cursor was minted in is not this one, so this
-			// type starts at ITS beginning rather than inheriting a keyset
-			// from another.
-			inner = ""
-		}
-		records, next, err := p.searchOneType(ctx, et, text, limit-len(out.Records), inner, q.Filters, len(types) > 1)
-		if err != nil {
-			return datasource.SearchResult{}, err
-		}
-		out.Records = append(out.Records, records...)
-		if next != "" {
-			return sweepResumesAt(out, et, next)
-		}
-		inner = ""
-		if len(out.Records) >= limit && i+1 < len(types) {
-			return sweepResumesAt(out, types[i+1], "")
-		}
+	records, next, err := p.searchOneType(ctx, et, text, limit, position.Inner, q.Filters)
+	if err != nil {
+		return datasource.SearchResult{}, err
 	}
+	out := datasource.SearchResult{Records: records}
+	if out.Records == nil {
+		out.Records = []datasource.Record{}
+	}
+	if next == "" {
+		return out, nil
+	}
+	cursor, err := storekit.EncodeSweepCursor(storekit.SweepCursor{Stream: string(et), Inner: next})
+	if err != nil {
+		return datasource.SearchResult{}, err
+	}
+	out.NextCursor, out.HasMore = cursor, true
 	return out, nil
 }
 
-// searchOneType pages one entity type through the module that owns it.
-//
-// In a SWEEP a denied type is omitted; a caller who NAMED one type hears the
-// denial. Search shows a seat the object classes it can read and says nothing
-// about the rest — the posture ListObjects and the native /v1/search branches
-// already take — and refusing the whole walk for one missing grant would make
-// the advertised all-types sweep unusable for any seat that is not universal.
+// searchOneType pages one entity type through the module that owns it. A
+// denied type is the caller's to hear: an empty page would say it holds nothing.
 func (p *Provider) searchOneType(ctx context.Context, t datasource.EntityType, text *string, limit int,
-	cursor string, filters map[string]string, sweeping bool,
+	cursor string, filters map[string]string,
 ) ([]datasource.Record, string, error) {
 	var inner *string
 	if cursor != "" {
@@ -223,116 +208,20 @@ func (p *Provider) searchOneType(ctx context.Context, t datasource.EntityType, t
 	case datasource.EntityContact, datasource.EntityCompany, datasource.EntityLead,
 		datasource.EntityPartner:
 		records, next, _, err = p.contacts.SearchEntity(ctx, t, text, limit, inner, filters)
-	case datasource.EntityDeal:
+	case datasource.EntityDeal, datasource.EntityProduct, datasource.EntityOfferTemplate, datasource.EntityOffer:
 		records, next, _, err = p.deals.SearchEntity(ctx, t, text, limit, inner, filters)
+	case datasource.EntityCommission:
+		records, next, _, err = p.commissions.SearchEntity(ctx, t, text, limit, inner, filters)
+	case datasource.EntityDealRoom, datasource.EntityDealRoomThread, datasource.EntityDealRoomComment, datasource.EntityDealRoomDocument, datasource.EntityDealRoomParticipant:
+		records, next, _, err = p.dealRooms.SearchEntity(ctx, t, text, limit, inner, filters)
 	case datasource.EntityProject:
 		records, next, _, err = p.projects.SearchEntity(ctx, t, text, limit, inner, filters)
+	case datasource.EntityActivity:
+		records, next, _, err = p.activities.SearchEntity(ctx, t, text, limit, inner, filters)
 	default:
 		return nil, "", &datasource.UnsupportedEntityError{Type: string(t)}
 	}
-	if err != nil {
-		if sweeping && errors.Is(err, apperrors.ErrPermissionDenied) {
-			return nil, "", nil
-		}
-		return nil, "", err
-	}
-	return records, next, nil
-}
-
-// sweepOrder resolves the types one query walks: the ones it named, or every
-// SEARCHABLE type when it named none.
-//
-// A named type is admitted from NAMEABLE, which is wider — see the two vars
-// above. What a sweep visits by default and what a caller may name are
-// different questions, and answering both from one list makes every type kept
-// out of the sweep unreachable by name too.
-//
-// Always in one fixed order and always without repeats, whatever order the
-// caller listed them in and however many times — a stream walked twice serves
-// its records twice, and a cursor names the type rather than one of its
-// appearances, so a resumed walk would re-serve them forever.
-func sweepOrder(named []datasource.EntityType) ([]datasource.EntityType, error) {
-	if len(named) == 0 {
-		return searchable, nil
-	}
-	asked := make(map[datasource.EntityType]bool, len(named))
-	for _, et := range named {
-		if !slices.Contains(nameable, et) {
-			return nil, &datasource.UnsupportedEntityError{Type: string(et)}
-		}
-		asked[et] = true
-	}
-	walk := make([]datasource.EntityType, 0, len(asked))
-	for _, et := range nameable {
-		if asked[et] {
-			walk = append(walk, et)
-		}
-	}
-	return walk, nil
-}
-
-// resumeStream reads the position a cursor names, refusing one this seam could
-// not have minted: a token whose stream is not a type this provider searches
-// at all — an overlay mirror's `activity` position presented here after a
-// cutover, say. Resuming "past" a stream this provider does not know would
-// answer a complete empty page to a caller holding a real token, which is the
-// confident-wrong-answer shape a resumable walk exists to remove.
-//
-// Whether THIS request still walks a stream it does know is a different
-// question with a different answer — see resumeIndex.
-func resumeStream(cursor string) (storekit.SweepCursor, error) {
-	position, err := storekit.DecodeSweepCursor(cursor)
-	if err != nil {
-		return storekit.SweepCursor{}, err
-	}
-	if position.Stream == "" {
-		return position, nil
-	}
-	// NAMEABLE, not searchable: a partner page mints a cursor in its own
-	// stream, and judging it against the sweep's default set would refuse this
-	// seam's own token as malformed on the second page.
-	if !slices.Contains(nameable, datasource.EntityType(position.Stream)) {
-		return storekit.SweepCursor{}, &storekit.MalformedCursorError{}
-	}
-	return position, nil
-}
-
-// resumeIndex is where in this walk the cursor's stream resumes.
-//
-// The token names a stream, not an index into one request's slice, so it still
-// means the same place when the request presenting it is not the one that
-// minted it — a narrowed type list, or a grant lost between pages. A stream
-// this request no longer walks resumes at the next type PAST it: the records
-// between belong to a stream this request is not reading, and the contract
-// already says changing a filter mid-walk changes what the remaining pages
-// see.
-func resumeIndex(walk []datasource.EntityType, stream string) int {
-	if stream == "" {
-		return 0
-	}
-	// NAMEABLE, not searchable: it is the order every walk is built in, and a
-	// stream absent from the list Index is asked about answers -1 — which
-	// compares below every position and restarts the walk at its first type,
-	// re-serving records the caller already has.
-	at := slices.Index(nameable, datasource.EntityType(stream))
-	for i, et := range walk {
-		if slices.Index(nameable, et) >= at {
-			return i
-		}
-	}
-	return len(walk)
-}
-
-// sweepResumesAt finishes a page that stopped short of the walk's end: the
-// position to continue from, and the flag that says one exists. They are set
-// together and only together.
-func sweepResumesAt(out datasource.SearchResult, et datasource.EntityType, inner string) (datasource.SearchResult, error) {
-	cursor, err := storekit.EncodeSweepCursor(storekit.SweepCursor{Stream: string(et), Inner: inner})
-	if err != nil {
-		return datasource.SearchResult{}, err
-	}
-	out.NextCursor, out.HasMore = cursor, true
-	return out, nil
+	return records, next, err
 }
 
 func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datasource.EntityRef, error) {
@@ -340,8 +229,10 @@ func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datas
 	case datasource.EntityContact, datasource.EntityCompany, datasource.EntityLead,
 		datasource.EntityRelationship:
 		return p.contacts.Create(ctx, in)
-	case datasource.EntityDeal:
+	case datasource.EntityDeal, datasource.EntityProduct, datasource.EntityOfferTemplate, datasource.EntityOffer:
 		return p.deals.Create(ctx, in)
+	case datasource.EntityDealRoom, datasource.EntityDealRoomThread, datasource.EntityDealRoomComment:
+		return p.dealRooms.Create(ctx, in)
 	case datasource.EntityProject:
 		return p.projects.Create(ctx, in)
 	case datasource.EntityActivity:
@@ -356,7 +247,7 @@ func (p *Provider) Update(ctx context.Context, in datasource.UpdateInput) (datas
 	case datasource.EntityContact, datasource.EntityCompany, datasource.EntityLead,
 		datasource.EntityRelationship:
 		return p.contacts.Update(ctx, in)
-	case datasource.EntityDeal:
+	case datasource.EntityDeal, datasource.EntityProduct, datasource.EntityOfferTemplate, datasource.EntityOffer:
 		return p.deals.Update(ctx, in)
 	case datasource.EntityProject:
 		return p.projects.Update(ctx, in)
@@ -384,7 +275,7 @@ func (p *Provider) archiverFor(t datasource.EntityType) datasource.RecordArchive
 	switch t {
 	case datasource.EntityContact, datasource.EntityCompany, datasource.EntityRelationship:
 		return p.contacts
-	case datasource.EntityDeal:
+	case datasource.EntityDeal, datasource.EntityProduct, datasource.EntityOfferTemplate, datasource.EntityOffer:
 		return p.deals
 	case datasource.EntityProject:
 		return p.projects
@@ -435,65 +326,7 @@ func (p *Provider) ArchiveAt(ctx context.Context, in datasource.ArchiveInput) (d
 	return module.ArchiveAt(ctx, in)
 }
 
-func (p *Provider) Merge(ctx context.Context, in datasource.MergeInput) (datasource.EntityRef, error) {
-	switch in.Type {
-	case datasource.EntityContact, datasource.EntityCompany:
-		return p.contacts.Merge(ctx, in)
-	default:
-		return datasource.EntityRef{}, &datasource.UnsupportedEntityError{Type: string(in.Type)}
-	}
-}
-
-func (p *Provider) AdvanceDeal(ctx context.Context, in datasource.AdvanceDealInput) (datasource.EntityRef, error) {
-	return p.deals.AdvanceDeal(ctx, in)
-}
-
-// StageSemantic feeds the advance_deal tier resolver (interfaces.md
-// §2.1) — part of the frozen v1 seam, resolved from pipeline config,
-// never from labels or request args.
-func (p *Provider) StageSemantic(ctx context.Context, stageID ids.UUID) (semantic string, pipelineID ids.UUID, err error) {
-	return p.deals.StageSemantic(ctx, stageID)
-}
-
-// PromoteLead is the features/01 §6.4 graduation — a cross-module
-// orchestration verb of the frozen v1 seam (interfaces.md §3), owned by
-// the contacts module's transaction and dispatched here.
-func (p *Provider) PromoteLead(ctx context.Context, id ids.UUID, trigger string, evidenceNote *string, ifVersion *int64) (datasource.EntityRef, bool, error) {
-	return p.contacts.PromoteLead(ctx, id, trigger, evidenceNote, ifVersion)
-}
-
-// Freshness in SoR-mode is trivially authoritative: there is no mirror
-// to go stale.
-func (p *Provider) Freshness(_ context.Context, _ datasource.EntityRef) (datasource.FreshnessInfo, error) {
-	return datasource.FreshnessInfo{LastSyncedAt: time.Now().UTC(), Authoritative: true}, nil
-}
-
-// ListObjects/ListFields expose the SoR-mode schema descriptors
-// (interfaces.md §3): static, versioned with the code (P11).
-func (p *Provider) ListObjects(context.Context) ([]datasource.ObjectDef, error) {
-	return schemaObjects, nil
-}
-
-func (p *Provider) ListFields(_ context.Context, entity datasource.EntityType) ([]datasource.FieldDef, error) {
-	fields, ok := schemaFields(entity)
-	if !ok {
-		return nil, &datasource.UnsupportedEntityError{Type: string(entity)}
-	}
-	return fields, nil
-}
-
-// RunReport executes a seam-level plan against the descriptor
-// vocabulary — the same engine the HTTP surface and the run_report
-// tool ride.
-func (p *Provider) RunReport(ctx context.Context, plan datasource.ReportPlan) (datasource.ReportResult, error) {
-	return p.reports.runAdHocPlan(ctx, plan)
-}
-
-// WithTranscriptEnqueue lets a transcript CREATED over this seam start its own
-// reading, the way one created over REST does. Without it the tool surface can
-// store a transcript and nothing reads it — which is how the extraction lane
-// came to hold zero rows while being fully built.
-func (p *Provider) WithTranscriptEnqueue(enqueue activities.TranscriptReadEnqueue) *Provider {
-	p.activities = p.activities.WithTranscriptEnqueue(enqueue)
-	return p
+// ReadLeadForReversal retains native authorization for a promoted lead that ordinary reads hide.
+func (p *Provider) ReadLeadForReversal(ctx context.Context, id ids.UUID) (datasource.Record, error) {
+	return p.contacts.ReadLeadForReversal(ctx, id)
 }

@@ -16,6 +16,7 @@ package contacts
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -35,11 +36,12 @@ import (
 // it, and — for a company — the dossier to name the company from and fill
 // it with.
 type ResolveDomainTriageInput struct {
-	Domain   string
-	Status   string
-	Source   string
-	Evidence string
-	ReadID   ids.UUID
+	CompanyID *ids.CompanyID
+	Domain    string
+	Status    string
+	Source    string
+	Evidence  string
+	ReadID    ids.UUID
 
 	// DossierName is the company name the site stated. Empty falls back to the
 	// domain's registrable label, which is what the pre-triage path always
@@ -125,7 +127,13 @@ func (s *Store) resolveDomainTriageTx(ctx context.Context, tx pgx.Tx, in Resolve
 		return ResolveDomainTriageResult{}, err
 	}
 	if !known {
-		return ResolveDomainTriageResult{}, fmt.Errorf("contacts: %s has no open disposition to resolve", in.Domain)
+		return ResolveDomainTriageResult{}, fmt.Errorf("%w: no open question about %s", apperrors.ErrNotFound, in.Domain)
+	}
+	if in.Source == DomainSourceHuman && in.ReadID.IsZero() && prior.SiteReadID != nil {
+		in.ReadID = *prior.SiteReadID
+	}
+	if prior.PendingReason == PendingForwardedIdentity && in.Status == DomainCompany && in.CompanyID == nil {
+		return ResolveDomainTriageResult{}, fmt.Errorf("contacts: forwarded identity needs an explicit company match: %w", apperrors.ErrConflict)
 	}
 	if prior.Settled() {
 		// Already answered. A worker that resolved this and then died before
@@ -147,6 +155,13 @@ func (s *Store) resolveDomainTriageTx(ctx context.Context, tx pgx.Tx, in Resolve
 	}
 	if in.Status != DomainCompany {
 		return ResolveDomainTriageResult{}, settleDisposition(ctx, tx, in, nil)
+	}
+	if in.Source != DomainSourceHuman && DomainIdentityForwarded(in.Domain, in.SeedURL) {
+		evidence, err := json.Marshal(DomainForwardEvidence{RequestedDomain: in.Domain, EffectiveURL: in.SeedURL, ReadID: in.ReadID, RedirectChain: []string{TriageSeedURL(in.Domain), in.SeedURL}})
+		if err != nil {
+			return ResolveDomainTriageResult{}, err
+		}
+		return ResolveDomainTriageResult{}, withholdDomainTx(ctx, tx, in.Domain, PendingForwardedIdentity, string(evidence), in.ReadID)
 	}
 	// The crawl read the site as it stands TODAY. Evidence older than the
 	// threshold does not argue that this company is there now, so the question
@@ -198,6 +213,17 @@ func (s *Store) resolveDomainTriageTx(ctx context.Context, tx pgx.Tx, in Resolve
 // the crawl ran, and a second row for the same domain would be exactly the
 // duplicate the dedupe chokepoint exists to prevent.
 func (s *Store) adoptOrCreateTriagedCompany(ctx context.Context, tx pgx.Tx, in ResolveDomainTriageInput, prior DomainDisposition) (ResolveDomainTriageResult, error) {
+	if in.CompanyID != nil {
+		if in.Source != DomainSourceHuman {
+			return ResolveDomainTriageResult{}, apperrors.ErrPermissionDenied
+		}
+		by, err := storekit.CapturedBy(ctx)
+		if err != nil {
+			return ResolveDomainTriageResult{}, err
+		}
+		company, err := s.adoptDomainIntoCompany(ctx, tx, in, CompanyCandidateScore{CompanyID: *in.CompanyID}, by)
+		return ResolveDomainTriageResult{CompanyID: company}, err
+	}
 	if err := auth.Require(ctx, entityCompany, principal.ActionCreate); err != nil {
 		return ResolveDomainTriageResult{}, err
 	}
@@ -236,9 +262,9 @@ func (s *Store) adoptOrCreateTriagedCompany(ctx context.Context, tx pgx.Tx, in R
 	// refused without being told why — the rule withholdForStaleEvidence states
 	// for the same reason.
 	if in.Source != DomainSourceHuman {
-		adopted, held, err := s.adoptOrHoldForNameTwin(ctx, tx, in, match, by)
-		if err != nil || held || adopted != nil {
-			return ResolveDomainTriageResult{CompanyID: adopted}, err
+		held, err := withholdForNameTwin(ctx, tx, in, match)
+		if err != nil || held {
+			return ResolveDomainTriageResult{}, err
 		}
 	}
 
@@ -449,35 +475,6 @@ func declinedTriageBind(ctx context.Context, tx pgx.Tx, readID ids.UUID, wanted 
 		// the target_kind arm of the update is what checks.
 		return fmt.Errorf("%w: triage dossier %s", apperrors.ErrNotFound, readID)
 	}
-}
-
-// settleDisposition writes the answer and closes the retry cursor, so the domain
-// drops out of the sweep's due scan for good.
-//
-// Guarded on `status = 'pending'`: a verdict answers an OPEN question. A late
-// duplicate — a re-queued job, a sweep racing a trigger — must not overwrite the
-// answer that already landed, and must never undo a human who settled it by
-// hand (adoptDispositionForCompany, which is deliberately not guarded because
-// overriding is its whole job).
-func settleDisposition(ctx context.Context, tx pgx.Tx, in ResolveDomainTriageInput, companyID *ids.CompanyID) error {
-	var readID *ids.UUID
-	if !in.ReadID.IsZero() {
-		readID = &in.ReadID
-	}
-	if _, err := tx.Exec(ctx, `
-		UPDATE company_domain_disposition
-		   SET status = $2, source = $3, evidence = NULLIF($4, ''),
-		       company_id = $5, site_read_id = $6,
-		       -- The question is answered, so it is no longer waiting on
-		       -- evidence. Leaving the marker would keep a settled domain in
-		       -- the "needs a human" list for ever.
-		       pending_reason = NULL,
-		       next_attempt_at = NULL, updated_at = now()
-		 WHERE domain = $1 AND status = 'pending'`,
-		in.Domain, in.Status, in.Source, in.Evidence, companyID, readID); err != nil {
-		return fmt.Errorf("contacts: settling the disposition of %s: %w", in.Domain, err)
-	}
-	return nil
 }
 
 // The audit-payload keys a triage-created company carries. auditKeyDomain

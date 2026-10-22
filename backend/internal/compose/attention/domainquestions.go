@@ -12,6 +12,8 @@ package attention
 import (
 	"context"
 	"time"
+
+	"github.com/margince/margince/backend/internal/modules/contacts"
 )
 
 // DomainQuestions is the reader's OWN undecided domains: the triage found
@@ -19,8 +21,11 @@ import (
 // a record. The seam takes no owner argument because the read binds to the
 // acting human, which is what lets a row claim its reader as owner without a
 // second field saying so.
+const DomainQuestionLimit = contacts.DomainQuestionLimit
+
 type DomainQuestions interface {
 	OpenDomainQuestions(ctx context.Context) ([]DomainQuestion, error)
+	OwnsDomainQuestion(ctx context.Context, domain string) (bool, error)
 }
 
 // DomainQuestion is one domain waiting on a human answer.
@@ -29,7 +34,9 @@ type DomainQuestion struct {
 	Domain string
 	// Why the machine stopped, as prose rather than the stored token, so this
 	// lane and the capture-rules screen say one thing.
-	Reason string
-	// When the question was last opened or re-opened; orders and dates the row.
-	AskedAt time.Time
+	Reason     string
+	ReasonCode string
+	// The first question date stays stable across retries and pagination.
+	AskedAt    time.Time
+	EvidenceAt *time.Time
 }

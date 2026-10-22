@@ -1,0 +1,65 @@
+/* The two inspectors an automation row folds open below its head: run history
+   and the dry-run blast radius. Layout and the --space-* scale only — every
+   control comes from the design system, and every interval reads a token so
+   these panes cannot drift a step away from the settings surface holding
+   them. */
+
+/* Not a card: blocks on the opened row's ground. */
+.auto-inspector {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.auto-inspector + .auto-inspector {
+  margin-top: var(--space-4);
+}
+
+/* The outcome dial reads as one line: its word, then the choice. */
+.auto-run-filter {
+  inline-size: min(100%, 20rem);
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Runs read down as a list; a hairline parts one run from the next. */
+.auto-run-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.auto-run {
+  padding-block: var(--space-2);
+}
+.auto-run + .auto-run {
+  border-top: 1px solid var(--borderSubtle);
+}
+
+/* One run's headline — outcome, when, autonomy, whether it waited on a contact
+   — as a single line, with the labelled detail lines stacked under it. */
+.auto-run-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* The window picker and the word naming it read as one control. */
+.auto-preview-window {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* The estimate's lines sit tighter than prose: they are one figure read down,
+   not three paragraphs. */
+.auto-preview-figures {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* One labelled fact of a run, stepped off the line above it. */
+.auto-detail-line {
+  margin-top: var(--space-1);
+}

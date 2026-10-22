@@ -1,0 +1,571 @@
+/* SPDX-License-Identifier: BUSL-1.1
+ * SPDX-FileCopyrightText: 2026 Gradion */
+
+/* Settings → AI models. The providers status line, the providers list and
+ * its sheet, and the tier line that reports one binding under its health dot. */
+
+/* The providers status: its facts on one line, a dot between each. */
+.ai-providers-status {
+  margin: 0;
+}
+
+.ai-providers-status > span + span::before {
+  content: " · ";
+  color: var(--textSecondary);
+}
+
+/* The half of the providers reading that is bad news, in the tone the rest of
+ * the tree spells a warning in. It shares a line with the last-call note, so it
+ * carries the colour rather than the whole detail block. */
+.ai-settings-missing {
+  color: var(--dangerText);
+}
+
+/* The credential's verbs, pinned to the row's trailing edge. The slack lives
+ * HERE rather than in the variable name, so the pill that qualifies the key
+ * stays beside it instead of drifting across the row to sit against the
+ * button. */
+.ai-lane-open {
+  display: inline-flex;
+  gap: var(--space-2);
+  margin-inline-start: auto;
+}
+
+/* One provider credential, as a line: who, whether it is keyed, and the way to
+ * change that. */
+.ai-provider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+/* A provider's sheet is a stack of sections, each under a rule, so Connection
+ * and Prices read as two things rather than one run of controls. */
+.ai-sheet-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-block: var(--space-4);
+}
+
+/* A provider's own settings, under its key: separated from the key row by a
+   hairline, because they answer a different question (where, not who). */
+.ai-provider-settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--borderSubtle);
+}
+
+/* A known service's host, read rather than typed: the URL may be long and is
+   allowed to break anywhere rather than push the sheet wider. */
+.ai-provider-host {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.ai-provider-settings-foot {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--gapActions);
+}
+
+.ai-sheet-section + .ai-sheet-section {
+  border-top: 1px solid var(--borderSubtle);
+}
+
+/* The status line under a sheet's title: the pill and the sentence about it on
+ * one centre line, with air between them and the title above. */
+.ai-sheet-status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-block-start: var(--space-2);
+}
+
+/* The price table's cells carry their own inline padding, so its text starts
+ * that far inside the section's edge. Pulled out by exactly that much, the
+ * first column lines up with the headings above it and the Edit column's edge
+ * with Add price. */
+.ai-sheet-table {
+  margin-inline: calc(var(--space-3) * -1);
+}
+
+/* A model id with the mark that its price starts later, stacked so a long id
+ * keeps the width. */
+.ai-sheet-model {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}
+
+.ai-sheet-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+/* The vendor over the variable its key may also arrive in: two facts about one
+ * subject, so they stack into one column rather than competing for the row. */
+.ai-provider-who {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 0 0 14rem;
+  min-width: 0;
+}
+
+.ai-provider-env {
+  overflow-wrap: anywhere;
+}
+
+/* The paste field and the verbs that act on it, on one line: the box takes the
+ * width and Save sits at the end of it, where a reader's eye already is when
+ * they finish pasting. Removal follows Save because it is the rarer act and the
+ * destructive one, so it is never the button under the cursor.
+ *
+ * `align-items: start` rather than centre: the field can grow a validation line
+ * under it, and centred buttons would then drift down beside a box that has not
+ * moved. */
+.ai-key-entry {
+  display: flex;
+  align-items: start;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* The field takes the slack and the buttons take their own content. A floor, so
+ * a password box never squeezes to a width nothing can be pasted into — below
+ * it the row wraps and the buttons take a line of their own. */
+.ai-key-entry > :first-child {
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+/* A key file's verbs sit under its box rather than beside it, at their own
+ * width: the box is too tall to share a line with them. */
+.ai-key-verbs {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.ai-key-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* Under the lanes: what the model lists are as of, then the installation
+ * profile that limits which providers a tier may name. */
+.ai-sheet-age {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* The provider select with its lane's preset beside it. The select keeps the
+ * row's width; the preset sits on the select's baseline, not the label's. */
+.binding-provider-row {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.binding-provider-row > .field {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 11rem;
+}
+
+/* The preset's note belongs to the row above it, not to the next field. */
+.binding-preset-note {
+  margin-top: calc(var(--space-2) * -1);
+}
+
+.binding-preset-action {
+  flex: none;
+  padding-bottom: var(--space-1);
+}
+
+/* The gloss wraps at a reading width rather than widening a column the table
+ * keeps on one line. */
+.ai-tier-who {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+.ai-tier-gloss {
+  display: block;
+  min-inline-size: 12rem;
+  max-inline-size: 18rem;
+  white-space: normal;
+}
+
+/* Long ids and prices wrap rather than truncate: the whole id stays on screen. */
+.ai-tier-binding {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  overflow-wrap: anywhere;
+}
+
+.ai-tier-modelline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+
+.ai-tier-model {
+  min-inline-size: 0;
+}
+
+.ai-tier-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.ai-health-dot {
+  display: inline-block;
+  width: 0.625rem;
+  height: 0.625rem;
+  border-radius: 50%;
+  corner-shape: round;
+}
+
+.ai-health-dot-ok {
+  background: var(--success);
+}
+
+.ai-health-dot-bad {
+  background: var(--danger);
+}
+
+.ai-health-dot-idle {
+  background: color-mix(in srgb, var(--textSecondary) 40%, transparent);
+}
+
+.ai-panel-title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Sized to its cell rather than its text, so a long name ends in an ellipsis
+ * (its whole text is the title) instead of widening the table. */
+.ai-task-name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  inline-size: 0;
+  min-inline-size: 100%;
+}
+
+.ai-task-name > .ai-health-dot {
+  flex: none;
+}
+
+.ai-task-name .evmark-trigger,
+.ai-task-name > span:not(.ai-health-dot, .badge) {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ai-task-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ai-task-details-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}
+
+.ai-model-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+}
+
+.ai-model-facts dt {
+  color: var(--textSecondary);
+}
+
+.ai-model-facts dd {
+  margin: 0;
+}
+
+.ai-model-id {
+  overflow-wrap: anywhere;
+}
+
+/* One vendor's line of the last price sync: name in the providers' column, then what the run did. */
+.ai-price-sync-line {
+  display: grid;
+  grid-template-columns: 14rem minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
+}
+
+/* On a phone the vendor's name sits above what the run did for it. */
+@media (max-width: 720px) {
+  .ai-price-sync-line {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* A section head that carries dials or links on its trailing edge: the title
+ * and what acts on it on one line, wrapping under it on a narrow sheet. */
+.ai-figures-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-3);
+}
+
+.ai-figures-dials {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.ai-figures {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* A count that is a failure, in the danger ink: a figure, not a message. */
+.ai-figures-bad {
+  color: var(--dangerText);
+}
+
+/* The connection's privacy rules: four ticks in two columns, then the lists. */
+.ai-openrouter-settings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--borderSubtle);
+}
+
+.ai-openrouter-toggles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-3);
+}
+
+.ai-openrouter-toggle {
+  align-items: flex-start;
+}
+
+.ai-openrouter-help {
+  display: block;
+}
+
+/* The serving editor beside its field reference; the summary under both. */
+.ai-serving {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ai-serving-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: var(--space-4);
+}
+
+.ai-serving-summary {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* In a dialog the row below sets this space; the disclosure's margin would
+   add to it. */
+.modal .ai-serving-summary > .disclosure {
+  margin-bottom: 0;
+}
+
+@media (max-width: 720px) {
+  .ai-serving-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.ai-serving-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gapActions);
+}
+
+.ai-serving-note {
+  margin: 0;
+}
+
+.ai-serving-problems {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.ai-serving-lines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ai-serving-lines li {
+  display: grid;
+  grid-template-columns: 9rem minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-2);
+}
+
+.ai-serving-lines li > span:last-child {
+  display: flex;
+  flex-direction: column;
+}
+
+.ai-serving-reference {
+  max-height: 24rem;
+  overflow: auto;
+  padding: var(--space-3);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-sm);
+}
+
+.ai-serving-reference dl {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.ai-serving-reference dd {
+  margin: 0;
+}
+
+/* A task's outcome: the headline, the bar, then one card per step. */
+.ai-outcome-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ai-outcome-step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-sm);
+}
+
+.ai-outcome-big {
+  font-weight: var(--fontWeightMedium);
+}
+
+.ai-outcome-passed,
+.ai-latency-near {
+  color: var(--warningText);
+}
+
+/* Latency against the timeout: two marks and a limit line on one track. */
+.ai-latency {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.ai-latency-title {
+  font-weight: var(--fontWeightMedium);
+}
+
+.ai-latency-track {
+  position: relative;
+  height: var(--space-3);
+  border-radius: var(--r-sm);
+  background: var(--bgChip);
+}
+
+.ai-latency-mark {
+  position: absolute;
+  top: 50%;
+  width: var(--space-2);
+  height: var(--space-2);
+  border-radius: 50%;
+  corner-shape: round;
+  background: var(--accent);
+  transform: translate(-50%, -50%);
+}
+
+.ai-latency-p95 {
+  border-radius: 0;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.ai-latency-limit {
+  position: absolute;
+  top: calc(var(--space-1) * -1);
+  bottom: calc(var(--space-1) * -1);
+  width: 2px;
+  background: var(--danger);
+}
+
+.ai-latency-caption {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin: 0;
+}
+
+.ai-task-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+}
+
+.ai-task-facts dd {
+  margin: 0;
+}
+
+.ai-provider-badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+/* A provider's health: the badge above the two lines that explain it. */
+.ai-provider-health {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+}

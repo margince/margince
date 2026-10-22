@@ -126,6 +126,10 @@ func TestRecordReadAndListRoutesAnswerAsTheirTools(t *testing.T) {
 	lead := createdRecord(t, d.e, "/v1/leads", AnyMap{"source": "manual", "full_name": "Lena Lead"})
 	deal := openDeal(t, d.e, stages, "Door renewal")
 	project := createdRecord(t, d.e, "/v1/projects", AnyMap{"name": "Door rollout", "company_id": company, "source": "manual"})
+	product := createdRecord(t, d.e, "/v1/products", AnyMap{
+		"source": "manual", "name": "Door install", "unit_price_minor": 45000, "currency": "EUR",
+	})
+	template := createdRecord(t, d.e, "/v1/offer-templates", AnyMap{"name": "Door offer", "layout": AnyMap{}})
 	note := createdRecord(t, d.e, "/v1/activities", AnyMap{
 		"kind": "note", "source": "manual", "subject": "Door note",
 		"links": []AnyMap{{"entity_type": "contact", "entity_id": contact}},
@@ -140,7 +144,9 @@ func TestRecordReadAndListRoutesAnswerAsTheirTools(t *testing.T) {
 		{"lead", "leads", lead, true},
 		{"deal", "deals", deal, true},
 		{"project", "projects", project, true},
-		{"activity", "activities", note, false},
+		{"activity", "activities", note, true},
+		{"product", "products", product, true},
+		{"offer_template", "offer-templates", template, true},
 	} {
 		sameDoorRecords(t, "read "+c.kind,
 			d.rest(t, "GET", "/v1/"+c.route+"/"+c.id, nil),
@@ -151,36 +157,6 @@ func TestRecordReadAndListRoutesAnswerAsTheirTools(t *testing.T) {
 		sameDoorRecords(t, "list "+c.kind,
 			d.rest(t, "GET", "/v1/"+c.route+"?limit=10", nil),
 			d.tool(t, "list_records", map[string]any{"record_type": c.kind, "limit": 10}), c.id)
-	}
-}
-
-// GET /search and search_records find the same records for one query, with and
-// without naming a type.
-func TestSearchRouteAnswersAsSearchRecords(t *testing.T) {
-	d := newTwoDoors(t, "search-records-doors", "read")
-	hit := createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Quentin Zephyrwind"})
-	other := createdRecord(t, d.e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Bernd Unrelated"})
-
-	// The tool also names a hit's owner. So the answers are compared on the
-	// hit and on the record neither may return.
-	for _, c := range []struct {
-		what  string
-		route string
-		args  map[string]any
-	}{
-		{"search across types", "/v1/search?q=Zephyrwind&limit=10", map[string]any{"q": "Zephyrwind", "limit": 10}},
-		{
-			"search one type", "/v1/search?q=Zephyrwind&record_type=contact&limit=10",
-			map[string]any{"q": "Zephyrwind", "record_type": "contact", "limit": 10},
-		},
-	} {
-		rest, tool := d.rest(t, "GET", c.route, nil), d.tool(t, "search_records", c.args)
-		bothDoorsName(t, c.what, rest, tool, hit)
-		for door, answer := range map[string]json.RawMessage{"route": rest, "tool": tool} {
-			if slices.Contains(documentRecords(answer), other) {
-				t.Errorf("%s: the %s returns the contact the query does not match", c.what, door)
-			}
-		}
 	}
 }
 

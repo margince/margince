@@ -291,6 +291,45 @@ func TestStreamOpensGetTheirOwnTighterBudget(t *testing.T) {
 	}
 }
 
+// A refused call says when to come back, for each of the three ceilings. A
+// client then needs no guessed backoff.
+func TestEveryMCPCeilingAnswersWithItsWait(t *testing.T) {
+	const peer = "160.79.104.11"
+	cases := []struct {
+		name   string
+		method string
+		bearer string
+		served int
+		spend  int
+		limit  string
+	}{
+		{"tool calls", http.MethodPost, "passport-a", http.StatusOK, 240, "240"},
+		{"stream opens", http.MethodGet, "passport-a", http.StatusOK, 30, "30"},
+		{"rejected credentials", http.MethodPost, "forged", http.StatusUnauthorized, 60, ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			edge := mcpEdge(answering(tc.served), newMCPLimitersWithClock(newStepClock().now), "https://crm.example.com")
+			for range tc.spend {
+				serveStatus(edge, mcpRequest(tc.method, tc.bearer, peer))
+			}
+
+			rec := httptest.NewRecorder()
+			edge.ServeHTTP(rec, mcpRequest(tc.method, tc.bearer, peer))
+
+			if rec.Code != http.StatusTooManyRequests {
+				t.Fatalf("status = %d, want 429", rec.Code)
+			}
+			if got := rec.Header().Get("Retry-After"); got != "60" {
+				t.Fatalf("Retry-After = %q, want the 60-second window", got)
+			}
+			if body := rec.Body.String(); tc.limit != "" && !strings.Contains(body, "limit is "+tc.limit+" every 60 seconds") {
+				t.Fatalf("body does not name the ceiling (%s): %s", tc.limit, body)
+			}
+		})
+	}
+}
+
 // TestMCPEdgePreservesResponseControllerCapabilities is a fitness function:
 // the transport extends the write deadline for slow tool calls, which reaches
 // the connection through http.NewResponseController. The status-capturing

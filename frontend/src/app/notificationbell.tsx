@@ -9,21 +9,21 @@ import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
 import { usePortalPanelFocus } from "../design-system/portalfocus";
 import { LoadMoreButton, QueryStates } from "../design-system/querystates";
+import { approvalHref } from "../features/automations/approvaldrawer";
+import {
+  NOTIFICATIONS_KEY,
+  type NotificationItem,
+  useMarkAllNoticesRead,
+  useNotifications,
+} from "../features/settings/notifications.queries";
+import { useNoticeRead } from "../features/worklist/taskactions";
+import { worklistKey } from "../features/worklist/worklist.queries";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import { recordRoute } from "../lib/entity";
 import { problemMessageOf } from "../lib/problem";
 import { routeHash } from "../lib/router";
-import { approvalHref } from "../screens/approvaldrawer";
-import {
-  NOTIFICATIONS_KEY,
-  type NotificationItem,
-  useMarkAllNoticesRead,
-  useNotifications,
-} from "../screens/notifications.queries";
-import { useNoticeRead } from "../screens/taskactions";
-import { worklistKey } from "../screens/worklist.queries";
 import { noticeHeadline } from "./noticeheadline";
 import { usePopoverDismiss } from "./popover";
 import "./notificationbell.css";
@@ -86,7 +86,10 @@ export function NotificationBell() {
 
   return (
     <div className="notifbell">
+      {/* Bare, like the sidebar toggle and the narrow search glyph: the strip's
+          controls are glyphs, and a boxed one read as a field. */}
       <Button
+        variant="bare"
         iconOnly
         ref={trigger}
         // The count joins the NAME, not only the box. `aria-label` replaces the

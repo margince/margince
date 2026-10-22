@@ -17,16 +17,7 @@ import { SurfaceState } from "./surfacestate";
 import "./emaildetail.css";
 import { Heading } from "./heading";
 
-// One email, read whole, in the drawer form of the shared Modal.
-//
-// A drawer rather than a centred dialog because a reader opens a message FROM
-// a record and is still working on that record: the account stays legible
-// behind it, which is what the right placement is for. On a phone the same
-// Modal is a full-screen sheet, so nothing here decides that.
-//
-// It fetches on open and never before. A timeline row draws from the summary
-// its list already carried, so a page of twenty rows costs one request; asking
-// for a message nobody opened would undo exactly that.
+// The drawer keeps the originating record visible and fetches only when opened.
 
 type EmailPresentation = components["schemas"]["EmailPresentation"];
 type EmailParty = components["schemas"]["EmailParty"];
@@ -62,6 +53,7 @@ export function EmailDetail({
   renderAccess,
   renderRecords,
   renderReply,
+  renderRelated,
 }: Readonly<{
   activityId: string;
   /**
@@ -80,10 +72,10 @@ export function EmailDetail({
    * Who reads this message, and the control to change it — drawn under the
    * subject, before the message.
    *
-   * Passed in rather than mounted here because the editor performs WRITES: it
-   * reaches the audience service and the roster reads, which live in `screens/`
-   * where the app's queries do. A design-system component importing those would
-   * turn the catalog into a layer that talks to the API.
+   * Passed in rather than mounted here because the editor performs writes. It
+   * reaches the audience service and the roster reads, which live with the
+   * app's queries in `lib/` and the features. A design-system component
+   * importing those would turn the catalog into a layer that talks to the API.
    *
    * Optional, so a story or a preview can draw the message without wiring the
    * writes — and absent means no region, never an empty one.
@@ -109,6 +101,7 @@ export function EmailDetail({
    * composer that performs it lives with the app's other writes.
    */
   renderReply?: (presentation: EmailPresentation) => ReactNode;
+  renderRelated?: () => ReactNode;
 }>) {
   const t = useT();
   // Generated rather than fixed: two drawers mounted at once would otherwise
@@ -222,6 +215,7 @@ export function EmailDetail({
           presentation={read.data}
           formatWhen={formatWhen}
           renderRecords={renderRecords}
+          related={renderRelated}
         />
       )}
     </Modal>
@@ -240,10 +234,12 @@ function EmailBody({
   presentation,
   formatWhen,
   renderRecords,
+  related,
 }: Readonly<{
   presentation: EmailPresentation;
   formatWhen: (iso: string) => string;
   renderRecords?: (presentation: EmailPresentation) => ReactNode;
+  related?: () => ReactNode;
 }>) {
   const t = useT();
   if (presentation.access.content_state === "withheld") {
@@ -270,7 +266,8 @@ function EmailBody({
         <FiledUnder presentation={presentation} render={renderRecords} />
       </EmailEnvelope>
       <EmailText body={presentation.body ?? ""} />
-      <Attachments files={presentation.attachments} />
+      <EmailAttachments files={presentation.attachments} />
+      {related?.()}
     </div>
   );
 }
@@ -288,7 +285,9 @@ function EmailBody({
  * contract before the click. The href is the attachment endpoint that has
  * always served these bytes; nothing new is fetched here.
  */
-function Attachments({ files }: Readonly<{ files: EmailAttachmentSummary[] }>) {
+export function EmailAttachments({
+  files,
+}: Readonly<{ files: readonly EmailAttachmentSummary[] }>) {
   const { locale } = useLocale();
   const t = useT();
   if (files.length === 0) {

@@ -36,21 +36,31 @@ func (h Handlers) oauthToken(w http.ResponseWriter, r *http.Request) {
 		oauthError(w, http.StatusBadRequest, "invalid_request", "malformed form body")
 		return
 	}
-	switch r.PostForm.Get("grant_type") {
-	case oauthGrantAuthorizationCode:
-		h.tokenFromAuthCode(w, r)
-	case oauthRefreshToken:
-		h.tokenFromRefresh(w, r)
-	default:
+	grantType := r.PostForm.Get("grant_type")
+	if grantType != oauthGrantAuthorizationCode && grantType != oauthRefreshToken {
 		oauthError(w, http.StatusBadRequest, "unsupported_grant_type",
 			"only authorization_code and refresh_token")
+		return
 	}
+	// The client proves itself before either grant reads a code or a refresh
+	// token. A refresh without the secret must never reach reuse detection,
+	// which would let it end the connection it cannot renew.
+	clientID, _, refusal := h.authenticateClient(r.Context(), r.Header, r.PostForm)
+	if refusal != nil {
+		refusal.write(w)
+		return
+	}
+	if grantType == oauthRefreshToken {
+		h.tokenFromRefresh(w, r, clientID)
+		return
+	}
+	h.tokenFromAuthCode(w, r, clientID)
 }
 
 // tokenFromAuthCode ends the handshake: the code the human's consent produced
 // becomes the first passport and, when the grant allows it, the first refresh
 // token.
-func (h Handlers) tokenFromAuthCode(w http.ResponseWriter, r *http.Request) {
+func (h Handlers) tokenFromAuthCode(w http.ResponseWriter, r *http.Request, clientID string) {
 	code := r.PostForm.Get("code")
 	verifier := r.PostForm.Get("code_verifier")
 	if code == "" || verifier == "" {
@@ -58,7 +68,7 @@ func (h Handlers) tokenFromAuthCode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	issued, refresh, err := h.exchangeAuthCode(r, code, verifier)
+	issued, refresh, err := h.exchangeAuthCode(r, clientID, code, verifier)
 	switch {
 	// A code cannot exist in a workspace that doesn't resolve, and the
 	// answer must not distinguish that from a spent code. A code whose human
@@ -91,10 +101,10 @@ func (h Handlers) tokenFromAuthCode(w http.ResponseWriter, r *http.Request) {
 // presentation, invalid_scope for an over-wide one, a 403 for a revoked grant
 // — would leave the connector retrying a token that will never work again,
 // with no path back to a human.
-func (h Handlers) tokenFromRefresh(w http.ResponseWriter, r *http.Request) {
+func (h Handlers) tokenFromRefresh(w http.ResponseWriter, r *http.Request, clientID string) {
 	issued, refresh, err := h.svc.rotateRefreshToken(r.Context(), refreshRequest{
 		Token:             r.PostForm.Get(oauthRefreshToken),
-		ClientID:          r.PostForm.Get(oauthParamClientID),
+		ClientID:          clientID,
 		Scopes:            strings.Fields(r.PostForm.Get(oauthParamScope)),
 		Resource:          r.PostForm.Get(oauthParamResource),
 		CanonicalResource: h.mcpResource,
@@ -146,10 +156,10 @@ func writeTokenResponse(w http.ResponseWriter, issued IssuedPassport, refresh st
 // that does not exist, or a live passport no revocation can reach.
 //
 // refresh is empty unless the authorization carried offline_access.
-func (h Handlers) exchangeAuthCode(r *http.Request, code, verifier string) (issued IssuedPassport, refresh string, err error) {
+func (h Handlers) exchangeAuthCode(r *http.Request, clientID, code, verifier string) (issued IssuedPassport, refresh string, err error) {
 	ctx := r.Context()
 	err = h.svc.db.Tx(ctx, func(tx pgx.Tx) error {
-		redeemed, err := h.consumeAuthCode(r, tx, code, verifier)
+		redeemed, err := h.consumeAuthCode(r, tx, clientID, code, verifier)
 		if err != nil {
 			return err
 		}
@@ -185,7 +195,7 @@ func (h Handlers) exchangeAuthCode(r *http.Request, code, verifier string) (issu
 		// The label names the client the consent was for; the grant is what
 		// actually binds the passport to it.
 		label := oauthPassportLabel(redeemed.ClientID)
-		ttl, err := oauthAccessTokenTTL(ctx, tx)
+		ttl, err := h.svc.oauthAccessTokenTTL(ctx, tx)
 		if err != nil {
 			return err
 		}
@@ -214,7 +224,7 @@ type redeemedCode struct {
 // consumeAuthCode validates the exchange against the stored authorization
 // and consumes the single-use code, inside the caller's transaction so the
 // credentials issued against it commit with it.
-func (h Handlers) consumeAuthCode(r *http.Request, tx pgx.Tx, code, verifier string) (redeemedCode, error) {
+func (h Handlers) consumeAuthCode(r *http.Request, tx pgx.Tx, clientID, code, verifier string) (redeemedCode, error) {
 	// Read first, validate, and only then consume: a stranger who holds the
 	// code but not the verifier must not be able to BURN it for the
 	// legitimate client (denial-of-flow). The final conditional UPDATE keeps
@@ -254,7 +264,7 @@ func (h Handlers) consumeAuthCode(r *http.Request, tx pgx.Tx, code, verifier str
 	if err != nil {
 		return redeemedCode{}, err
 	}
-	if r.PostForm.Get(oauthParamClientID) != out.ClientID || !redirectURIMatches(redirectURI, r.PostForm.Get(oauthParamRedirectURI)) {
+	if clientID != out.ClientID || !redirectURIMatches(redirectURI, r.PostForm.Get(oauthParamRedirectURI)) {
 		return redeemedCode{}, errGrantMismatch
 	}
 	if !audienceMatches(r.PostForm.Get(oauthParamResource), h.mcpResource, out.Resource) {

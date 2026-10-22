@@ -29,6 +29,7 @@ export function ConfirmModal({
   intent = "confirm",
   returnFocusTo,
   initialFocusTo,
+  unsaved,
   children,
 }: Readonly<{
   open: boolean;
@@ -78,6 +79,8 @@ export function ConfirmModal({
   returnFocusTo?: () => HTMLElement | null;
   /** The writing field can take focus before supporting context controls. */
   initialFocusTo?: () => HTMLElement | null;
+  /** The caller holds a draft, so a close other than the confirm asks first. */
+  unsaved?: boolean;
   children: ReactNode;
 }>) {
   const t = useT();
@@ -96,6 +99,7 @@ export function ConfirmModal({
       closeDisabled={pending}
       returnFocusTo={returnFocusTo}
       initialFocusTo={initialFocusTo}
+      unsaved={unsaved}
     >
       <Heading size="large" id={headingId} className="t-h2 modal-title">
         {tier && (

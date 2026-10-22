@@ -82,6 +82,14 @@ func captureInboundThroughRealSinkAs(
 	ctx context.Context, t *testing.T, e *integration.Env, seatAddress, sourceID, counterparty, threadKey string,
 ) {
 	t.Helper()
+	captureNamedInbound(ctx, t, e, seatAddress, sourceID, counterparty, "Pat Counterparty", threadKey)
+}
+
+// captureNamedInbound is that capture with the sender's display name given.
+func captureNamedInbound(
+	ctx context.Context, t *testing.T, e *integration.Env, seatAddress, sourceID, counterparty, displayName, threadKey string,
+) {
+	t.Helper()
 	// Domain is populated the way mailmap populates it — the address's own
 	// host. Omitting it looks harmless and is not: the ledger row would carry
 	// no domain, and every effect keyed on the domain (the company refusal
@@ -92,7 +100,7 @@ func captureInboundThroughRealSinkAs(
 		EntityType: "activity",
 		NaturalKey: connector.NaturalKey{SourceSystem: connector.EmailSourceSystem, SourceID: sourceID},
 		Counterparty: connector.Counterparty{
-			Email: counterparty, DisplayName: "Pat Counterparty",
+			Email: counterparty, DisplayName: displayName,
 			Domain: domain, Direction: connector.DirectionInbound,
 		},
 		Fields: capture.ActivityFields{

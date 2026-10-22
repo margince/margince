@@ -30,6 +30,12 @@ func (w *csvWriters) isArchived(ctx context.Context, object string, id ids.UUID)
 	case migration.ObjectContact:
 		contact, err := w.contacts.GetContact(ctx, ids.From[ids.ContactKind](id), storekit.IncludeArchived)
 		return err == nil && contact.ArchivedAt != nil, err
+	case migration.ObjectDeal:
+		deal, err := w.deals.GetDeal(ctx, ids.From[ids.DealKind](id), storekit.IncludeArchived)
+		return err == nil && deal.ArchivedAt != nil, err
+	case migration.ObjectActivity:
+		activity, err := w.activities.GetActivity(ctx, ids.From[ids.ActivityKind](id), storekit.IncludeArchived)
+		return err == nil && activity.ArchivedAt != nil, err
 	default:
 		return false, fmt.Errorf("import: %q is not an importable object: %w", object, apperrors.ErrConflict)
 	}
@@ -38,9 +44,6 @@ func (w *csvWriters) isArchived(ctx context.Context, object string, id ids.UUID)
 // errBoundRecordArchived reports a key whose record was archived by anything
 // other than a finished undo of the run that landed it.
 var errBoundRecordArchived = errors.New("the record this row landed as is archived")
-
-// boundArchivedReason is what a row is told when its record is archived.
-const boundArchivedReason = "this row's record was archived, so it is not updated; restore the record to update it"
 
 // lookup resolves an external id to the record an earlier run landed for it.
 //

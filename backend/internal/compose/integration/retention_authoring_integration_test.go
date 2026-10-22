@@ -37,9 +37,9 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -205,7 +205,7 @@ func TestRetainOnlyPostureSuppressesDestructionButNotArchival(t *testing.T) {
 	// The posture is seeded the way bootstrap seeds it from margince.yaml, so
 	// the pass reads exactly what a `default_policy: retain_only` install has.
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		_, err := settings.SeedValue(context.Background(), tx, privacy.RetainOnly, true)
+		_, err := config.SeedTx(context.Background(), tx, nil, privacy.RetainOnly, true)
 		return err
 	}); err != nil {
 		t.Fatal(err)
@@ -281,7 +281,7 @@ func TestRetainOnlyPostureIsReportedOnEveryPolicyItOverrides(t *testing.T) {
 	store := privacy.NewPolicyStore(e.DB())
 	admin := retentionAdminCtx(e.WS, principal.ObjectGrant{Read: true, Update: true})
 
-	postures := privacy.NewPostureStore(compose.NewSettingsStore(e.Pool))
+	postures := privacy.NewPostureStore(compose.StoredConfig(e.Pool))
 	on := true
 	if _, err := postures.SetPosture(admin, &on); err != nil {
 		t.Fatal(err)
@@ -325,7 +325,7 @@ func bootstrapWithRetentionPosture(t *testing.T, retention *deployconfig.Retenti
 	if err := os.WriteFile(pwFile, []byte("correct-horse-battery"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	cfg := deployconfig.Config{
+	cfg := deployconfig.Bootstrap{
 		Version:   1,
 		Workspace: deployconfig.Workspace{Name: "Regulated Company", BaseCurrency: "EUR", Timezone: "Europe/Berlin"},
 		BootstrapAdmin: &deployconfig.BootstrapAdmin{
@@ -371,7 +371,7 @@ func TestBootstrapTakesItsRetentionPostureFromTheDeploymentConfiguration(t *test
 	// The seeded ladder is the data-model's pins under BOTH postures, so this is
 	// asserted per case rather than once: a posture that quietly planted fewer
 	// rows would hide the ladder an admin is entitled to see.
-	const seededPolicies = 8
+	const seededPolicies = 6
 
 	cases := []struct {
 		name      string
@@ -434,7 +434,7 @@ func TestRetainOnlyPostureDoesNotDestroyContentThroughTheEmbedCascade(t *testing
 	withContent := seedEmbedCallWithPayload(t, e, 91, "Marek Janetzke, Q3 renewal terms")
 
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		_, err := settings.SeedValue(context.Background(), tx, privacy.RetainOnly, true)
+		_, err := config.SeedTx(context.Background(), tx, nil, privacy.RetainOnly, true)
 		return err
 	}); err != nil {
 		t.Fatal(err)
@@ -549,9 +549,9 @@ func TestAPolicyWithNoExecutorCannotBeAuthoredAndCannotStopThePass(t *testing.T)
 	}
 }
 
-// TestRetentionAnonymizesAnUnattachedContactAndArchivesAnAgedNote covers the two
-// seeded policies the engine had no test for: contact/no_consent_no_deal
-// anonymize, and the bare activity/ archive at 1095 days.
+// TestRetentionAnonymizesAnUnattachedContactAndArchivesAnAgedNote covers two
+// policies: contact/no_consent_no_deal anonymize, which only an admin authors,
+// and the bare activity/ archive at 1095 days.
 //
 // Both destroy or retire real records, and contact/anonymize is the heavier of the
 // two — it deletes every satellite carrying the subject (emails, phones, socials,

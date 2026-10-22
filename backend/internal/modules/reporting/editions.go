@@ -84,7 +84,10 @@ func (s *Service) GetEditionTx(ctx context.Context, tx pgx.Tx, id ids.UUID) (crm
 		return crmcontracts.ReportingEdition{}, err
 	}
 	out, _, err := s.edition(ctx, tx, id)
-	return out, err
+	if err != nil {
+		return out, err
+	}
+	return out, s.editionQuestions(ctx, tx, &out)
 }
 
 // ListEditions projects retained editions through the current reader’s permissions.

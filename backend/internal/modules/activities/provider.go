@@ -16,6 +16,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
@@ -57,6 +58,37 @@ func (p *Provider) Read(ctx context.Context, r datasource.EntityRef) (datasource
 	return datasource.NewRecord(r, v, v.Version)
 }
 
+// SearchEntity pages the timeline under the shared search contract, through
+// the store read the HTTP door runs. A row is listed by the same DISCOVER gate,
+// and its content is withheld per row as there.
+func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, text *string, limit int, cursor *string,
+	filters map[string]string,
+) ([]datasource.Record, string, bool, error) {
+	if t != datasource.EntityActivity {
+		return nil, "", false, &datasource.UnsupportedEntityError{Type: string(t)}
+	}
+	in := ListActivitiesInput{Query: text, Limit: &limit, Cursor: cursor}
+	if err := activityListFilters.Apply(&in, filters); err != nil {
+		return nil, "", false, err
+	}
+	if err := httperr.RequirePair(filterEntityType, in.EntityType, filterEntityID, in.EntityID); err != nil {
+		return nil, "", false, err
+	}
+	rows, page, err := p.store.ListActivities(ctx, in)
+	if err != nil {
+		return nil, "", false, err
+	}
+	records := make([]datasource.Record, 0, len(rows))
+	for _, v := range rows {
+		rec, err := datasource.NewRecord(datasource.EntityRef{Type: t, ID: ids.UUID(v.Id)}, v, v.Version)
+		if err != nil {
+			return nil, "", false, err
+		}
+		records = append(records, rec)
+	}
+	return records, page.NextCursor, page.HasMore, nil
+}
+
 // Update patches an activity's own fields. UpdateActivityRequest carries no
 // link field, so this cannot change who an activity is about — only what it
 // says and when it happened; associations are the relink verb's, with its own
@@ -70,7 +102,7 @@ func (p *Provider) Update(ctx context.Context, in datasource.UpdateInput) (datas
 		return datasource.EntityRef{}, err
 	}
 	var req crmcontracts.UpdateActivityRequest
-	if err := datasource.StrictDecode(raw, &req); err != nil {
+	if err := datasource.StrictCustomFieldDecode(raw, &req); err != nil {
 		return datasource.EntityRef{}, err
 	}
 	update := activityUpdateInput(req, in.IfVersion)
@@ -148,7 +180,7 @@ func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datas
 		return datasource.EntityRef{}, err
 	}
 	var req crmcontracts.CreateActivityRequest
-	if err := datasource.StrictDecode(raw, &req); err != nil {
+	if err := datasource.StrictCustomFieldDecode(raw, &req); err != nil {
 		return datasource.EntityRef{}, err
 	}
 	req.Source = in.Source

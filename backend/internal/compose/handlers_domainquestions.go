@@ -18,15 +18,20 @@ package compose
 // their gates, their normalization and their audited writes.
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 type domainQuestionHandlers struct {
@@ -47,6 +52,12 @@ func (h domainQuestionHandlers) KeepDomainQuestion(w http.ResponseWriter, r *htt
 		httperr.Write(w, r, err)
 		return
 	}
+	// Taken before the question is read. Otherwise the refusal would depend on
+	// whether the domain is open, and tell a seat without the grant which are.
+	if err := auth.Require(r.Context(), "company", principal.ActionUpdate); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	// The NORMALIZED form is what travels on. Validating and then passing the
 	// raw string looks the same and is not: the disposition is keyed on the
 	// registrable domain, so `EXAMPLE.COM` would miss the row it was asked
@@ -57,9 +68,20 @@ func (h domainQuestionHandlers) KeepDomainQuestion(w http.ResponseWriter, r *htt
 			"expected a domain name like example.com; a full email address or a URL is not one"))
 		return
 	}
+	var input crmcontracts.KeepDomainQuestionJSONRequestBody
+	if err := httperr.DecodeOrRefusal(w, r, &input); err != nil && !errors.Is(err, io.EOF) {
+		httperr.Write(w, r, err)
+		return
+	}
+	var companyID *ids.CompanyID
+	if input.CompanyId != nil {
+		typed := ids.From[ids.CompanyKind](ids.UUID(*input.CompanyId))
+		companyID = &typed
+	}
 	res, err := h.contacts.ResolveDomainTriage(r.Context(), contacts.ResolveDomainTriageInput{
-		Domain: base,
-		Status: contacts.DomainCompany,
+		Domain:    base,
+		CompanyID: companyID,
+		Status:    contacts.DomainCompany,
 		// HUMAN, not heuristic: a colleague looked at the domain and said it is
 		// a company. The triage reads this too — a human answer is not withheld
 		// for stale evidence, because a human is exactly who that withholding
@@ -89,7 +111,7 @@ func (h domainQuestionHandlers) KeepDomainQuestion(w http.ResponseWriter, r *htt
 	// empty admission and an empty source — neither of which the contract
 	// publishes. It carries the company-update gate the contract promises for
 	// this endpoint, which RequireHuman alone does not.
-	stored, err := h.contacts.SetDomainAdmission(r.Context(), base, contacts.DomainAdmitted, contacts.KeptDomainReason)
+	stored, err := h.contacts.KeepDomainAsCompany(r.Context(), base)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

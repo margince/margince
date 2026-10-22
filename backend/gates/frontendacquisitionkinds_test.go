@@ -8,7 +8,7 @@ package gates
 // The browser knows every way the server says a contact was obtained, and no other.
 //
 // The privacy notice and the disclosure-duty queue label a kind only when
-// frontend/src/format/acquisitionkinds.ts lists it. A kind missing there shows a
+// frontend/src/lib/acquisitionkinds.ts lists it. A kind missing there shows a
 // stranger the general unknown sentence and an officer the raw token.
 
 import (
@@ -23,7 +23,7 @@ import (
 	"testing"
 )
 
-var frontendAcquisitionKinds = filepath.Join(repoRoot, "frontend", "src", "format", "acquisitionkinds.ts")
+var frontendAcquisitionKinds = filepath.Join(repoRoot, "frontend", "src", "lib", "acquisitionkinds.ts")
 
 var tsCommentInAcquisitionKinds = regexp.MustCompile(`(?s)//[^\n]*|/\*.*?\*/`)
 

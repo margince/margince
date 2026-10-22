@@ -7,23 +7,30 @@ import {
   PendingBody,
   SearchField,
 } from "../design-system/atoms";
+import { useBackdropDismiss } from "../design-system/backdrop";
 import { Callout } from "../design-system/callout";
 import { liveDialogs, useDialogFocus } from "../design-system/dialogfocus";
 import { usePresence } from "../design-system/presence";
+import { SCHEDULED_SCREEN } from "../features/mail/scheduledqueue";
+import { useVisibleSettingsPages } from "../features/settings/settingsnav";
+import { settingsPageKeywords } from "../features/settings/settingssearch";
+import { holdsEveryWord, searchWords } from "../format/collate";
 import { useLocale, useT } from "../i18n";
-import { useHoldsAdminRole } from "../lib/capability";
+import { useCompanyContextShown } from "../lib/companycontextreach";
+import { isImeCommit } from "../lib/imecommit";
 import { navigate, type Route } from "../lib/router";
-import { openAsk } from "../lib/urlstate";
-import { SCHEDULED_SCREEN } from "../screens/scheduledsends";
-import type { SettingsPageId } from "../screens/settingscatalog";
-import { useVisibleSettingsPages } from "../screens/settingsnav";
-import { settingsHref } from "../screens/settingsrouting";
+import { settingsHref } from "../lib/settingsrouting";
+import { openAsk, type UrlParams } from "../lib/urlstate";
 import {
   CUSTOM_SCREEN,
   customPaletteScreens,
   resolveCustomLabel,
 } from "./custom";
 import { CREATE_ID, NAV } from "./nav";
+import {
+  settingsCommandId,
+  useConfigurationCommand,
+} from "./paletteconfiguration";
 import { PaletteRow } from "./paletterow";
 import { SEARCH_PENDING_DELAY_MS, useSearchCommands } from "./palettesearch";
 
@@ -56,50 +63,27 @@ export type Command = {
   // instead of leaving it — asking does that, and a route it never follows
   // would be a claim about where the reader ends up that is simply untrue.
   route?: Route;
+  // How the page at `route` opens narrowed: the query half of the address.
+  dials?: UrlParams;
 };
 
-// The words a settings entry answers to beyond its own label. A reader types the
-// THING they are looking for — "webhook", "products", "password" — and almost
-// never the name of the page it was filed under, which is a shelving decision
-// they were not present for.
-//
-// Three of these carry words the product no longer prints anywhere: three
-// screens of their own collapsed into the data-model page and the automations
-// editor into the AI page, and somebody who learned "custom fields" or
-// "automations" must not be told the product no longer has one.
-const SETTINGS_ALIASES: Readonly<
-  Partial<Record<SettingsPageId, readonly string[]>>
-> = {
-  account: ["password", "profile", "language", "theme"],
-  voice: ["tone", "writing style"],
-  agents: ["passport", "api key", "token"],
-  connections: ["oauth", "mailbox", "calendar"],
-  "capture-activity": ["capture log", "trace"],
-  company: ["general", "currency", "workspace", "fx"],
-  authentication: ["sign-in", "sso", "oauth app", "login"],
-  members: ["users", "contacts", "roster", "invite"],
-  teams: ["team"],
-  seats: ["license", "billing", "plan", "subscription"],
-  pipelines: ["stages", "deal stages"],
-  leads: ["lead sources", "disqualify"],
-  fields: ["custom-fields", "data model", "schema"],
-  tags: ["labels", "vocabulary"],
-  products: ["price list", "rate card", "offer-templates"],
-  capture: ["email capture", "inbox"],
-  integrations: ["webhook", "api"],
-  knowledge: ["handbook", "corpus", "documents"],
-  import: ["csv", "upload", "migration"],
-  models: ["routing", "providers", "keys", "embeddings"],
-  automations: ["rules", "triggers"],
-  usage: ["spend", "cost", "budget", "tokens"],
-  "model-calls": ["logs", "trace", "calls"],
-  privacy: ["gdpr", "consent", "retention", "erasure"],
-  jurisdiction: ["country", "law", "legal"],
-  audit: ["trail", "log", "history"],
-  "system-health": ["jobs", "health", "reindex", "maintenance"],
-  extensions: ["units", "plugins"],
-  reset: ["danger", "wipe", "delete everything"],
-};
+/** The commands whose label, subtitle and keywords hold every query word. */
+export function matchingCommands(
+  commands: readonly Command[],
+  query: string,
+): readonly Command[] {
+  const words = searchWords(query);
+  if (words.length === 0) {
+    return commands;
+  }
+  return commands.filter((command) =>
+    holdsEveryWord(words, [
+      command.label,
+      command.subtitle ?? "",
+      ...(command.keywords ?? []),
+    ]),
+  );
+}
 
 export function useBuiltinCommands(): Command[] {
   const t = useT();
@@ -107,9 +91,9 @@ export function useBuiltinCommands(): Command[] {
   // The same table the settings rail walks, not a second opinion about it: a
   // palette reading its own list offers a page the rail no longer lists.
   const visible = useVisibleSettingsPages();
-  // Company profile draws its website card for an admin seat only, so only an
-  // admin finds the page by that card's words; any other seat would land on none.
-  const isAdmin = useHoldsAdminRole();
+  // Company profile draws its website card only where `companyContextShown`
+  // says, so only that reader finds the page by the card's words.
+  const seesCompanyContext = useCompanyContextShown();
   return useMemo(() => {
     const screens: Command[] = NAV.map((item) => ({
       id: `screen:${item.screen}`,
@@ -160,12 +144,12 @@ export function useBuiltinCommands(): Command[] {
     // an ungated command would be a shortcut to a refusal.
     // Only the admin half has a predicate; the `you` half is every reader's.
     const settingsScreens: Command[] = visible.map((page) => ({
-      id: `screen:settings-${page.id}`,
+      id: settingsCommandId(page.id),
       label: t(`settings.tab.${page.id}`),
       keywords: [
         page.id,
-        ...(SETTINGS_ALIASES[page.id] ?? []),
-        ...(page.id === "company" && isAdmin
+        ...settingsPageKeywords(page.id, t, { seesCompanyContext }),
+        ...(page.id === "company" && seesCompanyContext
           ? [t("settings.companyRefresh")]
           : []),
       ],
@@ -205,7 +189,7 @@ export function useBuiltinCommands(): Command[] {
       ...offRailScreens,
       ...settingsScreens,
     ];
-  }, [t, visible, locale, isAdmin]);
+  }, [t, visible, locale, seesCompanyContext]);
 }
 
 export function CommandPalette({
@@ -250,20 +234,12 @@ export function CommandPalette({
     }
   }, [open]);
 
-  const filtered = useMemo(() => {
-    const needle = query.trim().toLowerCase();
-    if (!needle) {
-      return commands;
-    }
-    return commands.filter(
-      (command) =>
-        command.label.toLowerCase().includes(needle) ||
-        (command.subtitle ?? "").toLowerCase().includes(needle) ||
-        (command.keywords ?? []).some((word) =>
-          word.toLowerCase().includes(needle),
-        ),
-    );
-  }, [commands, query]);
+  const matched = useMemo(
+    () => matchingCommands(commands, query),
+    [commands, query],
+  );
+  const setting = useConfigurationCommand(query, commands, matched);
+  const filtered = setting ? [...matched, setting] : matched;
 
   // RS-1: live record hits from /search, plus a "see all" row that lands
   // on the full results screen. Row order: builtin matches, then see-all,
@@ -297,14 +273,16 @@ export function CommandPalette({
       return;
     }
     if (command.route) {
-      navigate(command.route);
+      navigate(command.route, command.dials);
     }
   };
+
+  const leaving = state === "closing";
+  const backdrop = useBackdropDismiss(onClose, leaving);
 
   if (!mounted) {
     return null;
   }
-  const leaving = state === "closing";
 
   return (
     // The two a11y suppressions this element carried are gone rather than kept:
@@ -322,14 +300,7 @@ export function CommandPalette({
       inert={leaving}
       aria-hidden={leaving || undefined}
       ref={overlay}
-      onClick={(event) => {
-        if (leaving) {
-          return;
-        }
-        if (event.target === event.currentTarget) {
-          onClose();
-        }
-      }}
+      {...backdrop}
     >
       <div
         className="palette"
@@ -364,7 +335,11 @@ export function CommandPalette({
               } else if (event.key === "ArrowUp") {
                 event.preventDefault();
                 setPicked(clamp(selected - 1));
-              } else if (event.key === "Enter" && rows[selected]) {
+              } else if (
+                event.key === "Enter" &&
+                !isImeCommit(event) &&
+                rows[selected]
+              ) {
                 run(rows[selected]);
               }
             }}

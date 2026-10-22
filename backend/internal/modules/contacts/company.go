@@ -40,9 +40,8 @@ type CreateCompanyInput struct {
 	SourceSystem *string
 	// Author is who wrote it in the system it came from; zero when unknown.
 	Author storekit.SourceAuthorInput
-	// CustomFields carries the request body's extra top-level keys
-	// (additionalProperties); only active cf_* catalog columns land,
-	// drop-on-mismatch (customfields.go).
+	// CustomFields carries the request body's cf_* keys. A key no active catalog
+	// column takes is refused (storekit.CheckCustomValues).
 	CustomFields map[string]any
 	// CreateCompany writes one company and answers with the record as it now
 	// reads, so a caller never has to guess what the store derived.
@@ -132,6 +131,11 @@ func (s *Store) readyCompanyCreate(ctx context.Context, in *CreateCompanyInput) 
 	if err := parseCompanyDomains(in.Domains); err != nil {
 		return "", err
 	}
+	address, err := checkedAddress(in.Address)
+	if err != nil {
+		return "", err
+	}
+	in.Address = address
 	if in.LinkedInURL != nil {
 		normalized, err := NormalizeCompanyLinkedInURL(*in.LinkedInURL)
 		if err != nil {
@@ -161,25 +165,10 @@ func createCompanyInTx(ctx context.Context, tx pgx.Tx, in CreateCompanyInput, by
 	}
 	in.OwnerID = owner
 
-	if err := ensureCompanyDomainsUnclaimed(ctx, tx, in.Domains); err != nil {
-		return crmcontracts.Company{}, err
-	}
-
-	match, err := manualDedupeCompany(ctx, tx, in)
+	match, err := admitAndDedupeCompanyCreate(ctx, tx, in)
 	if err != nil {
 		return crmcontracts.Company{}, err
 	}
-
-	// Naming a parent is a read of the parent: the child discloses the
-	// hierarchy edge, so the target must be visible under the caller's
-	// row scope, not merely same-workspace (H1 — an FK argument to a
-	// row-scoped record is a read of that record).
-	if in.ParentCompanyID != nil {
-		if err := auth.EnsureLinkTarget(ctx, tx, "company", in.ParentCompanyID.UUID); err != nil {
-			return crmcontracts.Company{}, err
-		}
-	}
-
 	id, err := createCompany(ctx, tx, match, CompanySpec{
 		DisplayName:     in.DisplayName,
 		LegalName:       in.LegalName,
@@ -228,4 +217,26 @@ func createCompanyInTx(ctx context.Context, tx pgx.Tx, in CreateCompanyInput, by
 		return crmcontracts.Company{}, fmt.Errorf("read created company: %w", err)
 	}
 	return out, nil
+}
+
+func admitAndDedupeCompanyCreate(ctx context.Context, tx pgx.Tx, in CreateCompanyInput) (CompanyMatch, error) {
+	if err := ensureCompanyLinkedInUnclaimed(ctx, tx, in.LinkedInURL); err != nil {
+		return CompanyMatch{}, err
+	}
+	if err := ensureCompanyDomainsUnclaimed(ctx, tx, in.Domains); err != nil {
+		return CompanyMatch{}, err
+	}
+
+	match, err := manualDedupeCompany(ctx, tx, in)
+	if err != nil {
+		return CompanyMatch{}, err
+	}
+
+	if in.ParentCompanyID != nil {
+		if err := auth.EnsureReferenceTarget(ctx, tx, "parent_company_id", "company", in.ParentCompanyID.UUID); err != nil {
+			return CompanyMatch{}, err
+		}
+	}
+
+	return match, nil
 }

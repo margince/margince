@@ -3,7 +3,7 @@ openapi: 3.1.0
 info:
   title: Margince API
   version: 1.0.0-draft
-  summary: AI-native, open-source CRM core — contacts, companies, deals, pipelines, activities, leads, plus the agent/AI surface.
+  summary: AI-native, source-available CRM core — contacts, companies, deals, pipelines, activities, leads, plus the agent/AI surface.
   description: |-
     The V1 core CRM contract.
   license:
@@ -15,8 +15,6 @@ info:
 security:
   - bearerAuth: []
 tags:
-  - name: Webhooks
-    description: Outbound webhook subscriptions — signed, retried delivery of published domain events to a tenant-owned HTTPS endpoint.
   - name: Contacts
     description: Contact (contact) records, their emails and phones.
   - name: Companies
@@ -75,6 +73,23 @@ paths:
               schema: {$ref: '#/components/schemas/ActingIdentity'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+  /openapi.json:
+    get:
+      tags: [Identity]
+      operationId: getAgentOpenAPIDocument
+      summary: The OpenAPI 3.1 document of every operation a passport can call, as JSON.
+      description: |-
+        The same operations as `openapi.yaml` in the skill ZIP (`GET /agent-bundle`), as JSON, so
+        Swagger UI, Postman or a client generator can load it. `servers` names this install's API
+        address, the same value `GET /passports` answers as `api_base_url`. A passport and a session
+        both read it: the document says what a passport may call and holds no record data.
+      responses:
+        '200':
+          description: The OpenAPI 3.1 document.
+          content:
+            application/json:
+              schema: {type: object, additionalProperties: true}
+        '401': {$ref: '#/components/responses/Unauthorized'}
   /contacts/{id}/employment-import:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -380,28 +395,6 @@ paths:
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
-  /contacts/{id}/consent/guard:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    get:
-      tags: [Contacts]
-      operationId: getContactConsentGuard
-      security: [{bearerAuth: []}]
-      summary: May we write to this contact right now — per purpose and channel, with the reason.
-      description: |-
-        The readable half of the send gate. It answers `allowed | blocked |
-        unknown` per purpose × channel and says WHY in the reader's words, so a composer can
-        show the verdict before a word is typed.
-      responses:
-        '200':
-          description: The effective guard per purpose and channel.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/ContactConsentGuard'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
-        '422': {$ref: '#/components/responses/ValidationError'}
   /contacts/{id}/graph:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -419,31 +412,6 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/ContactGraph'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
-        '422': {$ref: '#/components/responses/ValidationError'}
-  /contacts/{id}/access:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    get:
-      tags: [Contacts]
-      operationId: getContactAccess
-      summary: Who can open this contact and who can change it, and why.
-      description: |-
-        Every live member who can open this contact, with whether they can also change it and the
-        reasons for both. Each member is judged by the same admission the contact read and edit
-        paths apply (object grant, row scope, capture privacy, shares, seat), under that member's
-        live authority, all in one snapshot.
-      parameters:
-        - $ref: '#/components/parameters/Cursor'
-        - $ref: '#/components/parameters/Limit'
-      responses:
-        '200':
-          description: The members who can open the contact, one page at a time.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/RecordAccess'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
@@ -576,6 +544,8 @@ paths:
       summary: Create a company.
       description: |-
         Domains are normalized/lowercased and unique per workspace (409 on collision).
+        A `parent_company_id` that names no company the caller can read answers 422 naming
+        `parent_company_id`, the same for a missing company and for one hidden by row scope.
 
         Needs the passport permission Change records.
 
@@ -628,6 +598,17 @@ paths:
       tags: [Companies]
       operationId: updateCompany
       summary: Update a company (partial).
+      description: |-
+        Renaming the installation's own company (`is_anchor`) renames the installation in the same
+        transaction, so only an administrator may: another human gets `403`, an agent `422
+        anchor_protected`. Its name is refused with `422` on `display_name` when blank (`required`) or
+        past 200 characters (`too_long`); other companies' names have no length cap.
+        A `parent_company_id` that names a company the caller cannot read answers 422 naming
+        `parent_company_id`, the same for a missing record and for one hidden by row scope.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/IfMatch'
@@ -642,15 +623,14 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/Company'}
+        '403': {$ref: '#/components/responses/PermissionDenied'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409':
+          description: 'A state conflict (a concurrent edit or a duplicate). Or the company is the installations anchor, its name changes, and a boot source sets `installation.name` (`code: setting_locked_by_boot_source`).'
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
         '422': {$ref: '#/components/responses/ValidationError'}
-      description: |-
-        Update a company (partial).
-
-        Needs the passport permission Change records.
-
-        Runs at once.
     delete:
       tags: [Companies]
       operationId: archiveCompany
@@ -1109,31 +1089,6 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
       description: One deep read's progress and outcome — pages read, pages skipped and WHY, what got staged.
-  /companies/{id}/access:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    get:
-      tags: [Companies]
-      operationId: getCompanyAccess
-      summary: Who can open this company and who can change it, and why.
-      description: |-
-        Every live member who can open this company, with whether they can also change it and the
-        reasons for both. Each member is judged by the same admission the company read and edit
-        paths apply (object grant, row scope, capture privacy, shares, seat), under that member's
-        live authority, all in one snapshot.
-      parameters:
-        - $ref: '#/components/parameters/Cursor'
-        - $ref: '#/components/parameters/Limit'
-      responses:
-        '200':
-          description: The members who can open the company, one page at a time.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/RecordAccess'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
-        '422': {$ref: '#/components/responses/ValidationError'}
   /companies/{id}/strength:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -1447,7 +1402,10 @@ paths:
       description: |-
         Amount is integer minor-units + ISO-4217 currency (no float money). The stage
         must belong to the deal's pipeline (422 otherwise). Deals attach to contact/company,
-        never to a raw lead.
+        never to a raw lead. An id in the body that names nothing the caller can
+        read (`company_id`, `partner_company_id`, `project_id`, `stage_id`) answers 422 naming
+        that field, the same for a missing record and for one hidden by row scope, so the answer
+        does not say which exists. An `amount_minor` below zero answers 422 `amount_negative`.
 
         Needs the passport permission Change records.
 
@@ -1598,6 +1556,15 @@ paths:
       tags: [Deals]
       operationId: updateDeal
       summary: Update a deal (partial). Closing is `POST /deals/{id}/advance`'s; a patch naming a closing field is refused 422 `set_by_advance`.
+      description: |-
+        A `company_id`, `partner_company_id` or `project_id` that names a record the caller cannot
+        read answers 422 naming that field, the same for a missing record and for one hidden by row
+        scope. An `amount_minor` below zero answers 422 `amount_negative`; a deal that already holds
+        one stays editable on its other fields.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/IfMatch'
@@ -1615,12 +1582,6 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
-      description: |-
-        Update a deal (partial). Closing is `POST /deals/{id}/advance`'s; a patch naming a closing field is refused 422 `set_by_advance`.
-
-        Needs the passport permission Change records.
-
-        Runs at once.
     delete:
       tags: [Deals]
       operationId: archiveDeal
@@ -1816,6 +1777,8 @@ paths:
         a caller can get wrong. A collision is resolved by taking the next number, never
         reported.
         The project starts in `initiative` and its creation row is appended to the phase history.
+        A `company_id` that names a company the caller cannot read answers 422 naming `company_id`,
+        the same for a missing record and for one hidden by row scope.
 
         Needs the passport permission Change records.
 
@@ -2502,6 +2465,7 @@ paths:
       tags: [Activities]
       operationId: listActivities
       summary: List activities (the timeline; cursor-paginated, filterable by type/entity).
+      description: A `cf_<slug>=<value>` query parameter narrows the list to activities whose custom field holds that value. It names an active activity custom field, and it reads content, so a row whose content the caller may not read is left out rather than listed withheld.
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
@@ -2536,6 +2500,10 @@ paths:
           schema: {type: string, format: uuid}
           description: >-
             Narrow the timeline sections to one body of work: what is filed under this project or under no project; correspondence filed under another project is left out.
+        - name: source_activity_id
+          in: query
+          schema: {type: string, format: uuid}
+          description: Tasks derived from this readable source activity, under current task visibility.
         - name: thread_key
           in: query
           schema: {type: string}
@@ -2570,7 +2538,6 @@ paths:
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
-      description: List activities (the timeline; cursor-paginated, filterable by type/entity).
     post:
       tags: [Activities]
       operationId: logActivity
@@ -2581,8 +2548,12 @@ paths:
         `source_system: email` + the RFC822 Message-ID, one identity shared by every mail
         transport, so the same message reaching two connected mailboxes is one activity —
         and that reserved value is refused here (422): only a connector, or this system's
-        own send, may claim a mail identity. An activity may link to >1 entity
-        (contact and deal). `log_activity` is (reversible).
+        own send, may claim a mail identity. A `note` or a `call` needs a non-blank `subject` or
+        `body`, on create and on an edit that would leave it with neither (422 naming `subject`);
+        a task needs its `subject`. An activity may link to >1 entity
+        (contact and deal). A link that names a record the caller cannot read answers 422
+        naming `links`, the same for a missing record and for one hidden by row scope. `log_activity` is
+        (reversible).
 
         Needs the passport permission Change records.
 
@@ -2646,6 +2617,7 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
+        '502': {$ref: '#/components/responses/CalendarUnavailable'}
       description: |-
         Update an activity (e.g. complete a task).
 
@@ -3104,6 +3076,7 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/MeetingInvitation'}
         '422': {$ref: '#/components/responses/ValidationError'}
+        '502': {$ref: '#/components/responses/CalendarUnavailable'}
       description: |-
         Reserve a meeting and request a calendar-native invitation.
 
@@ -3175,6 +3148,7 @@ paths:
                     description: |-
                       What these slots were computed FROM, which decides what an empty window means.
         '422': {$ref: '#/components/responses/ValidationError'}
+        '502': {$ref: '#/components/responses/CalendarUnavailable'}
   /bookings:
     post:
       tags: [Activities, AI]
@@ -3245,6 +3219,7 @@ paths:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
         '422': {$ref: '#/components/responses/ValidationError'}
+        '502': {$ref: '#/components/responses/CalendarUnavailable'}
   /automations/catalog:
     get:
       tags: [Automations]
@@ -3389,7 +3364,8 @@ paths:
         With name + email returns 201 + stable UUID; round-trips on GET.
         `company_name` is FREE TEXT — a lead has NO company FK. Lead-internal exact-email
         dedupe → 409 with existing lead id. Bulk/connector sourcing uses (source_system, source_id)
-        for idempotent re-import.
+        for idempotent re-import. A `project_id` that names no project the caller can read
+        answers 422 naming `project_id`, the same for a missing project and for one hidden by row scope.
 
         Needs the passport permission Change records.
 
@@ -3498,6 +3474,13 @@ paths:
       tags: [Leads]
       operationId: updateLead
       summary: Update a lead (partial).
+      description: |-
+        A `project_id` that names a project the caller cannot read answers 422 naming `project_id`,
+        the same for a missing record and for one hidden by row scope.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
         - $ref: '#/components/parameters/IfMatch'
@@ -3514,12 +3497,6 @@ paths:
               schema: {$ref: '#/components/schemas/Lead'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
-      description: |-
-        Update a lead (partial).
-
-        Needs the passport permission Change records.
-
-        Runs at once.
     delete:
       tags: [Leads]
       operationId: disqualifyLead
@@ -3810,6 +3787,10 @@ paths:
         — and an employment that has already ended never takes the flag. Send the
         field to decide it yourself. A later PATCH can change it on the same terms,
         the ended-employment rule included: see `updateRelationship`.
+        An endpoint id (`contact_id`, `counterparty_contact_id`, `company_id`,
+        `counterparty_company_id`, `deal_id`, `project_id`) that names a record the caller cannot
+        read answers 422 naming that field, the same for a missing record and for one hidden by row
+        scope.
 
         Needs the passport permission Change records.
 
@@ -4389,7 +4370,7 @@ paths:
     get:
       tags: [Reports]
       operationId: exportReportingEdition
-      summary: Export this edition's permitted frozen metrics and chart readings.
+      summary: Export this edition's permitted frozen metrics, chart readings and kept question answers.
       parameters:
         - $ref: '#/components/parameters/Id'
       responses:
@@ -4401,7 +4382,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
-      description: Export this edition's permitted frozen metrics and chart readings.
+      description: Export this edition's permitted frozen metrics, chart readings and kept question answers.
   /analytics/evaluate:
     get:
       tags:
@@ -5068,170 +5049,6 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
       description: Get reporting execution
-  /views:
-    get:
-      tags: [Views]
-      operationId: listSavedViews
-      summary: List the caller's saved views (per-user; optionally scoped to one resource).
-      parameters:
-        - name: resource
-          in: query
-          schema: {$ref: '#/components/schemas/SavedViewResource'}
-        - $ref: '#/components/parameters/IncludeArchived'
-      responses:
-        '200':
-          description: Saved views.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/SavedViewListResponse'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-      description: List the caller's saved views (per-user; optionally scoped to one resource).
-    post:
-      tags: [Views]
-      operationId: createSavedView
-      summary: Save a per-user view (columns, sort, filter state) for a resource.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: {$ref: '#/components/schemas/CreateSavedViewRequest'}
-      responses:
-        '201':
-          description: Created saved view.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/SavedView'}
-        '422': {$ref: '#/components/responses/ValidationError'}
-      description: |-
-        Save a per-user view (columns, sort, filter state) for a resource.
-
-        Needs the passport permission Change records.
-
-        Runs at once.
-  /views/{id}:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    get:
-      tags: [Views]
-      operationId: getSavedView
-      summary: Get one of the caller's saved views by id.
-      responses:
-        '200':
-          description: The saved view.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/SavedView'}
-        '404': {$ref: '#/components/responses/NotFound'}
-      description: Get one of the caller's saved views by id.
-    patch:
-      tags: [Views]
-      operationId: updateSavedView
-      summary: Update a saved view's name or query state.
-      parameters:
-        - $ref: '#/components/parameters/IfMatch'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: {$ref: '#/components/schemas/UpdateSavedViewRequest'}
-      responses:
-        '200':
-          description: Updated saved view.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/SavedView'}
-        '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
-        '422': {$ref: '#/components/responses/ValidationError'}
-      description: |-
-        Update a saved view's name or query state.
-
-        Needs the passport permission Change records.
-
-        Runs at once.
-    delete:
-      tags: [Views]
-      operationId: archiveSavedView
-      summary: Archive a saved view.
-      responses:
-        '200':
-          description: Archived saved view.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/SavedView'}
-        '404': {$ref: '#/components/responses/NotFound'}
-      description: |-
-        Archive a saved view.
-
-        Needs the passport permission Change records.
-
-        Runs at once.
-  /webhook-subscriptions:
-    post:
-      tags: [Webhooks]
-      operationId: createWebhookSubscription
-      summary: Register an outbound webhook subscription (returns the signing secret once).
-      description: |-
-        Registers a target URL + event-type subset. Registering outbound egress, so an agent
-        principal's call is — staged for human approval, then redeemed with the
-        `X-Approval-Token`; a human on a session registers directly. Every register/change/delete
-        is audited. The `signing_secret` in the response is shown EXACTLY ONCE — deliveries are
-        signed with it on the Standard Webhooks scheme (verify the `webhook-signature` header).
-        `target_url` must be https://.
-
-        Needs the passport permission Change records.
-
-        Waits for a human to approve.
-      parameters:
-        - $ref: '#/components/parameters/ApprovalToken'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: {$ref: '#/components/schemas/CreateWebhookSubscriptionRequest'}
-      responses:
-        '201':
-          description: Created subscription plus the one-time signing secret.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/WebhookSubscriptionCreated'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '422': {$ref: '#/components/responses/ValidationError'}
-  /webhook-subscriptions/{id}:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    patch:
-      tags: [Webhooks]
-      operationId: updateWebhookSubscription
-      summary: Pause/resume a subscription or re-target its event set.
-      description: |-
-        A partial update (pause/resume or re-target the event set). Re-targeting can widen
-        outbound egress, so an agent principal's call is — staged for approval and redeemed
-        with the `X-Approval-Token`; a human updates directly.
-
-        Needs the passport permission Change records.
-
-        Waits for a human to approve.
-      parameters:
-        - $ref: '#/components/parameters/ApprovalToken'
-        - $ref: '#/components/parameters/IfMatch'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: {$ref: '#/components/schemas/UpdateWebhookSubscriptionRequest'}
-      responses:
-        '200':
-          description: Updated subscription.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/WebhookSubscription'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
-        '422': {$ref: '#/components/responses/ValidationError'}
   /tags:
     get:
       tags: [Tags]
@@ -5802,12 +5619,30 @@ paths:
               schema: {$ref: '#/components/schemas/RecordFieldsVocabulary'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+  /list-filters:
+    get:
+      tags: [Search]
+      operationId: describeListFilters
+      security: [{bearerAuth: []}]
+      summary: The filters a record list may be narrowed by, for each record type.
+      description: |-
+        The answer the `describe_list_filters` agent tool gives, run by the same tool on
+        both doors: for each record type, the filters `list_records` takes (the list
+        route's own query parameters), the operand each takes and its closed values.
+      responses:
+        '200':
+          description: The record list filter vocabulary.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/ListFiltersVocabulary'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
   /search:
     get:
       tags: [Search]
       operationId: search
       summary: Cross-object search (contacts, companies, deals, activities, leads).
-      description: Hybrid full-text search. Results are scoped by RBAC; leads are a distinct result type.
+      description: 'Lexical full-text search, ranked by relevance: the query''s words and prefixes matched against each record''s own text, with no meaning match. Results are scoped by RBAC; leads are a distinct result type.'
       parameters:
         - name: q
           in: query
@@ -5849,25 +5684,42 @@ paths:
                     page: {next_cursor: null, has_more: false}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '422': {$ref: '#/components/responses/ValidationError'}
-  /installation/settings:
+  /dedupe/candidates:
     get:
-      tags: [Identity]
-      operationId: getInstallationSettings
-      summary: The installation's own settings.
-      description: |-
-        Reads the installation's identity and reporting basis: its name, the
-        IANA timezone every reporting period is computed in, and the ISO-4217 base currency
-        every money roll-up converts to. Every role may read them — a rep reading amounts
-        benefits from knowing which currency they are in — and only admin/ops may change them
-        (PATCH). Governed by the `installation_settings` RBAC object.
+      tags: [Contacts]
+      operationId: listDedupeCandidates
+      security: [{bearerAuth: []}]
+      summary: The dedupe review queue, confidence-sorted.
+      parameters:
+        - {name: status, in: query, schema: {type: string, enum: [open, merged, not_a_duplicate], default: open}}
+        - {name: entity_type, in: query, schema: {type: string, enum: [contact, company, lead]}}
+        - {name: cursor, in: query, schema: {type: string}, description: Opaque keyset cursor.}
+        - {name: limit, in: query, schema: {type: integer, minimum: 1, maximum: 100, default: 25}}
       responses:
         '200':
-          description: The installation settings.
+          description: One page of candidates.
           content:
             application/json:
-              schema: {$ref: '#/components/schemas/InstallationSettings'}
+              schema: {$ref: '#/components/schemas/DedupeCandidateListResponse'}
         '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
+      description: The dedupe review queue, confidence-sorted.
+  /dedupe/candidates/{id}:
+    parameters:
+      - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+    get:
+      tags: [Contacts]
+      operationId: getDedupeCandidate
+      security: [{bearerAuth: []}]
+      summary: One candidate with its full detection-time evidence.
+      responses:
+        '200':
+          description: The candidate.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/DedupeCandidate'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '404': {$ref: '#/components/responses/NotFound'}
+      description: One candidate with its full detection-time evidence.
   /dedupe/candidates/{id}/disposition:
     parameters:
       - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
@@ -5942,6 +5794,10 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
+        - name: include_muted
+          in: query
+          schema: {type: boolean, default: false}
+          description: Include the caller's muted pending proposals for explicit review; all existing visibility checks still apply. A filtered bundle can contain fewer members than its complete review.
         - name: status
           in: query
           schema: {type: string, enum: [pending, approved, rejected]}
@@ -6002,11 +5858,11 @@ paths:
     post:
       tags: [Approvals]
       operationId: approveApproval
-      summary: Approve a staged action (commits it; mints the approval token).
+      summary: Approve a staged action (commits it).
       description: |-
         Approving commits the proposed change in one audit transaction. The (optionally
-        edited) payload is what executes. Returns the approval with the resulting entity ref
-        + the `approval_token` that authorized the downstream operation.
+        edited) payload is what executes. Returns the approval with the resulting entity ref.
+        An agent that staged the call repeats it with `X-Approval-Token: <this approval's id>`.
 
         Needs the passport permission Change records.
 
@@ -6147,7 +6003,7 @@ paths:
         - name: object
           in: query
           required: true
-          schema: {type: string, enum: [contact, company, deal, lead, project, contract]}
+          schema: {type: string, enum: [contact, company, deal, lead, project, contract, activity]}
           description: Target core object.
         - name: status
           in: query
@@ -6164,181 +6020,6 @@ paths:
               schema: {$ref: '#/components/schemas/CustomFieldListResponse'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
-        '422': {$ref: '#/components/responses/ValidationError'}
-    post:
-      tags: [CustomFields]
-      operationId: createCustomField
-      summary: Define a new custom field on an existing core object (a schema change).
-      description: |-
-        Runs the governed engine's single-transaction add: schema
-        change + catalog row + one audit entry land or roll back together. Always —
-        a schema change is never — so an agent caller must supply `X-Approval-Token`,
-        exactly like `advanceDeal`'s closed-won transition; a human's direct call is
-        itself the approval. `column_name` is server-derived and never client-supplied —
-        immutable once live. When the requested `label`/`type`/`object` combination is
-        judged structural — a new object, a relationship, or logic, never one of the six
-        closed types on one of the five closed objects — the request is refused with a
-        `structural_change_refused` 422 (see the example below) and nothing is written:
-        a structural change ships as a reviewed source change, not a runtime column.
-
-        Needs the passport permission Change records.
-
-        Waits for a human to approve.
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/ApprovalToken'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: {$ref: '#/components/schemas/CreateCustomFieldRequest'}
-            examples:
-              text:
-                value:
-                  object: deal
-                  label: Renewal date
-                  type: date
-                  source: manual
-              currency:
-                value:
-                  object: deal
-                  label: Budget ceiling
-                  type: currency
-                  currency: USD
-                  source: manual
-              picklist:
-                value:
-                  object: deal
-                  label: Procurement route
-                  type: picklist
-                  options: [direct, reseller, marketplace]
-                  source: manual
-      responses:
-        '201':
-          description: The newly created custom field.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/CustomField'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '403':
-          description: RBAC denied, or an agent create attempted without an approval token.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
-              examples:
-                approvalRequired:
-                  value:
-                    type: 'https://errors.gradion.com/approval_required'
-                    title: Approval required
-                    status: 403
-                    code: approval_required
-                    detail: Adding a custom field is a schema change and is confirm-first; supply an approval token.
-        '409':
-          description: >-
-            The slug already exists in this workspace, the derived column name is taken platform-wide (the physical column namespace on a shared core table is global), or the target table is busy with concurrent activity — the last is retryable.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
-              examples:
-                duplicateSlug:
-                  summary: The same (object, slug) already exists in this workspace
-                  value:
-                    type: 'https://errors.gradion.com/conflict'
-                    title: Conflict
-                    status: 409
-                    code: conflict
-                    detail: 'a custom field named "renewal_date" already exists on deal in this workspace: conflict'
-                columnTaken:
-                  summary: Another workspace holds the derived column name
-                  value:
-                    type: 'https://errors.gradion.com/conflict'
-                    title: Conflict
-                    status: 409
-                    code: conflict
-                    detail: custom-field column "cf_renewal_date" is taken platform-wide; choose another label
-                tableBusy:
-                  summary: The bounded lock wait fired — retry the schema change
-                  value:
-                    type: 'https://errors.gradion.com/conflict'
-                    title: Conflict
-                    status: 409
-                    code: conflict
-                    detail: 'the target table is busy with concurrent activity; retry the schema change: conflict'
-        '422':
-          description: Field definition failed validation, or is judged structural (`structural_change_refused`).
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
-              examples:
-                validation:
-                  value:
-                    type: 'https://errors.gradion.com/validation_error'
-                    title: Validation failed
-                    status: 422
-                    code: validation_error
-                    detail: One or more fields are invalid.
-                    details:
-                      errors:
-                        - {field: currency, code: required_for_type_currency}
-                structuralChangeRefused:
-                  summary: The requested field is structural, not a bounded scalar attribute
-                  value:
-                    type: 'https://errors.gradion.com/structural_change_refused'
-                    title: Structural change refused
-                    status: 422
-                    code: structural_change_refused
-                    detail: This looks like a new object, relationship, or logic — not a scalar attribute on an existing object. Runtime custom fields only add bounded scalar columns; a structural change ships as a reviewed source change instead.
-                    details:
-                      route: source_development_path
-        '501':
-          description: >-
-            Schema changes are not enabled on this deployment — the schema-change pool (schema-dsn) is not mounted.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
-              examples:
-                schemaPoolUnmounted:
-                  value:
-                    type: 'https://errors.gradion.com/not_implemented'
-                    title: Not Implemented
-                    status: 501
-                    code: not_implemented
-                    detail: operation custom-field schema changes is specified but not yet implemented
-  /custom-fields/{id}:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    patch:
-      tags: [CustomFields]
-      operationId: renameCustomField
-      summary: Rename a custom field's display label (not a schema change).
-      description: |-
-        Audited catalog `label` update only; `column_name` never
-        moves — the physical column identity is stable across rename. Merge-PATCH:
-        `column_name`, `object`, and `type` are absent from the request schema entirely.
-        A retired field refuses rename with a 409 `conflict` — retirement is terminal,
-        so its label is frozen.
-
-        Needs the passport permission Change records.
-
-        Runs at once.
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/IfMatch'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: {$ref: '#/components/schemas/RenameCustomFieldRequest'}
-      responses:
-        '200':
-          description: The renamed custom field.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/CustomField'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '403': {$ref: '#/components/responses/Forbidden'}
-        '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /custom-fields/{id}/lists:
     parameters:
@@ -6361,165 +6042,6 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
-  /custom-fields/{id}/retire:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    post:
-      tags: [CustomFields]
-      operationId: retireCustomField
-      summary: Retire (soft-retire) a custom field — irreversible-feeling, confirm-first.
-      description: |-
-        Sets `status=retired`; hides the field from the API and
-        filtering while the column and every value in it are preserved — the engine never
-        drops a column as a side effect. (mirrors `archiveContact`'s
-        posture: an irreversible-feeling state change users must confirm) — an agent caller
-        must supply `X-Approval-Token`. Not the generic archive shape: this is a status flip
-        on a still-fetchable row, not `archived_at` (which stays null). Retiring is never
-        refused because a Live List filters on the field: the list keeps evaluating on the kept
-        values and reports health `retired_field`. Which lists those are is read, for the
-        caller's own visibility, from `listCustomFieldLiveLists` rather than carried here: a
-        replayed answer would otherwise repeat list names the caller may no longer find.
-
-        Needs the passport permission Change records.
-
-        Waits for a human to approve.
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/ApprovalToken'
-      responses:
-        '200':
-          description: >-
-            The retired custom field (`status: "retired"`, `archived_at` still null).
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/CustomField'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '403':
-          description: RBAC denied, or an agent retire attempted without an approval token.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
-              examples:
-                approvalRequired:
-                  value:
-                    type: 'https://errors.gradion.com/approval_required'
-                    title: Approval required
-                    status: 403
-                    code: approval_required
-                    detail: Retiring a custom field is confirm-first; supply an approval token.
-        '404': {$ref: '#/components/responses/NotFound'}
-  /custom-fields/{id}/options:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    patch:
-      tags: [CustomFields]
-      operationId: updateCustomFieldOptions
-      summary: Edit a picklist custom field's allowed options (regenerates the column's CHECK).
-      description: |-
-        Only valid for `type=picklist` fields (422 `not_picklist`
-        otherwise). Replaces the catalog's `options` array and regenerates the physical
-        column's CHECK constraint from the new set via the governed engine (the same
-        one-transaction owner-ALTER shape as `createCustomField` — this is the
-        one DDL path rename/retire never touch). Removing every option is refused (422,
-        detail "A picklist needs at least one option") — a picklist always keeps at least
-        one allowed value. like `retireCustomField`: this mutates a schema-adjacent CHECK
-        constraint, so an agent caller must supply `X-Approval-Token`. A retired field
-        refuses the edit with a 409 `conflict` — retirement is terminal, so its options
-        are frozen; removing an option that stored values still use is also a 409
-        (`ADD CONSTRAINT` validates existing rows — migrate the values first).
-
-        Needs the passport permission Change records.
-
-        Waits for a human to approve.
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-        - $ref: '#/components/parameters/ApprovalToken'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: {$ref: '#/components/schemas/UpdateCustomFieldOptionsRequest'}
-      responses:
-        '200':
-          description: The custom field with its regenerated option set.
-          content:
-            application/json:
-              schema: {$ref: '#/components/schemas/CustomField'}
-        '401': {$ref: '#/components/responses/Unauthorized'}
-        '403':
-          description: RBAC denied, or an agent options edit attempted without an approval token.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
-              examples:
-                approvalRequired:
-                  value:
-                    type: 'https://errors.gradion.com/approval_required'
-                    title: Approval required
-                    status: 403
-                    code: approval_required
-                    detail: Editing a picklist's options changes a schema-adjacent CHECK constraint and is confirm-first; supply an approval token.
-        '404': {$ref: '#/components/responses/NotFound'}
-        '409':
-          description: >-
-            Stored values still use a removed option, the field is retired (options are frozen — retirement is terminal), or the target table is busy with concurrent activity — the last is retryable.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
-              examples:
-                removedOptionInUse:
-                  summary: Records still carry an option the edit removes
-                  value:
-                    type: 'https://errors.gradion.com/conflict'
-                    title: Conflict
-                    status: 409
-                    code: conflict
-                    detail: 'existing deal values still use a removed option; migrate them first: conflict'
-                fieldRetired:
-                  summary: The field is retired — its options are frozen
-                  value:
-                    type: 'https://errors.gradion.com/conflict'
-                    title: Conflict
-                    status: 409
-                    code: conflict
-                    detail: 'the field is retired; a retired field cannot be renamed or have its options edited: conflict'
-        '422':
-          description: The field is not a picklist, or the edit would remove every option.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
-              examples:
-                notPicklist:
-                  value:
-                    type: 'https://errors.gradion.com/not_picklist'
-                    title: Validation failed
-                    status: 422
-                    code: not_picklist
-                    detail: Only a picklist field's options can be edited.
-                lastOption:
-                  value:
-                    type: 'https://errors.gradion.com/validation_error'
-                    title: Validation failed
-                    status: 422
-                    code: validation_error
-                    detail: A picklist needs at least one option
-                    details:
-                      errors:
-                        - {field: options, code: min_one_required}
-        '501':
-          description: >-
-            Schema changes are not enabled on this deployment — the schema-change pool (schema-dsn) is not mounted.
-          content:
-            application/problem+json:
-              schema: {$ref: '#/components/schemas/Problem'}
-              examples:
-                schemaPoolUnmounted:
-                  value:
-                    type: 'https://errors.gradion.com/not_implemented'
-                    title: Not Implemented
-                    status: 501
-                    code: not_implemented
-                    detail: operation custom-field schema changes is specified but not yet implemented
   /consent-purposes:
     get:
       tags: [Compliance]
@@ -6538,56 +6060,6 @@ paths:
                 required: [data, page]
                 properties:
                   data: {type: array, items: {$ref: '#/components/schemas/ConsentPurpose'}}
-                  page: {$ref: '#/components/schemas/PageInfo'}
-  /contacts/{id}/consent:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    get:
-      tags: [Compliance]
-      operationId: getContactConsent
-      summary: Read a contact's per-purpose consent state plus the append-only proof log.
-      description: |-
-        7 demonstrability). Read-only; never falls back to a
-        blanket flag.
-      responses:
-        '200':
-          description: Per-purpose consent state + proof log.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [state, events]
-                properties:
-                  state: {type: array, items: {$ref: '#/components/schemas/ContactConsentState'}}
-                  events: {type: array, items: {$ref: '#/components/schemas/ConsentEvent'}}
-        '404': {$ref: '#/components/responses/NotFound'}
-  /record-grants:
-    get:
-      tags: [Access]
-      operationId: listRecordGrants
-      summary: List manual per-record grants, filtered by record or by subject.
-      description: |-
-        Filter by a record (`record_type`+`record_id`) to answer
-        "who has been granted access to this record?", or by a subject (`subject_type`+`subject_id`) to
-        answer "what has this user/team been granted?". Read-only; tiered base scope (own/team/all) is
-        not returned here — this surfaces only the *manual* grants on top of it.
-      parameters:
-        - {name: record_type, in: query, schema: {type: string, enum: [deal, contact, company, lead, project]}}
-        - {name: record_id, in: query, schema: {type: string, format: uuid}}
-        - {name: subject_type, in: query, schema: {type: string, enum: [user, team]}}
-        - {name: subject_id, in: query, schema: {type: string, format: uuid}}
-        - $ref: '#/components/parameters/Cursor'
-        - $ref: '#/components/parameters/Limit'
-      responses:
-        '200':
-          description: A page of record grants.
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [data, page]
-                properties:
-                  data: {type: array, items: {$ref: '#/components/schemas/RecordGrant'}}
                   page: {$ref: '#/components/schemas/PageInfo'}
   /users:
     get:
@@ -6780,12 +6252,16 @@ paths:
       tags: [Offers]
       operationId: archiveProduct
       summary: Archive (soft-delete) a product. Lines referencing it survive with their snapshot.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
       responses:
         '200':
           description: Archived product.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/Product'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
         '404': {$ref: '#/components/responses/NotFound'}
       description: |-
         Archive (soft-delete) a product. Lines referencing it survive with their snapshot.
@@ -6952,8 +6428,8 @@ paths:
       summary: Open a thread as the seller's side — a question on a document, or a room-level update.
       description: |-
         The first comment is the body. Refused once the room can no longer reach a
-        buyer (closed, expired, archived). A document thread is pinned to the
-        document's current version.
+        buyer (closed, expired, archived): `409 deal_room_content_not_editable`. A
+        document thread is pinned to the document's current version.
 
         Needs the passport permission Change records.
 
@@ -6972,6 +6448,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /deal-rooms/{id}/threads/{threadId}/comments:
     parameters:
@@ -6985,7 +6462,9 @@ paths:
       operationId: replyDealRoomThread
       summary: Reply in a thread as the seller's side.
       description: |-
-        Refused on a resolved thread and in a room that can no longer reach a buyer.
+        Refused on a resolved thread (`409 deal_room_thread_resolved`: open a new
+        thread instead) and in a room that can no longer reach a buyer
+        (`409 deal_room_content_not_editable`).
 
         Needs the passport permission Change records.
 
@@ -7004,6 +6483,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /offer-templates:
     get:
@@ -7137,6 +6617,8 @@ paths:
         Needs the passport permission Change records.
 
         Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
       responses:
         '200':
           description: Archived offer template.
@@ -7145,6 +6627,8 @@ paths:
               schema: {$ref: '#/components/schemas/OfferTemplate'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
         '404': {$ref: '#/components/responses/NotFound'}
   /deals/{id}/outcome-reviews:
     parameters:
@@ -7206,6 +6690,8 @@ paths:
         Line items may ride the create; each snapshots description/price from its optional
         `product_id` unless given explicitly. Totals are DERIVED — a body carrying
         `net_minor`/`gross_minor`/`line_total` (any spelling) is rejected 422.
+        A `buyer_company_id` or `template_id` that names a record the caller cannot read answers 422
+        naming that field, the same for a missing record and for one hidden by row scope.
 
         Needs the passport permission Change records.
 
@@ -7246,6 +6732,13 @@ paths:
       tags: [Offers]
       operationId: updateOffer
       summary: Update offer header fields — allowed only while status=draft.
+      description: |-
+        A `buyer_company_id` or `template_id` that names a record the caller cannot read answers 422
+        naming that field, the same for a missing record and for one hidden by row scope.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
       parameters:
         - $ref: '#/components/parameters/IfMatch'
       requestBody:
@@ -7266,12 +6759,6 @@ paths:
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
-      description: |-
-        Update offer header fields — allowed only while status=draft.
-
-        Needs the passport permission Change records.
-
-        Runs at once.
     delete:
       tags: [Offers]
       operationId: archiveOffer
@@ -7282,12 +6769,15 @@ paths:
         Needs the passport permission Change records.
 
         Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
       responses:
         '200':
           description: Archived offer.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/Offer'}
+        '422': {$ref: '#/components/responses/ValidationError'}
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/Conflict'}
   /offers/{id}/line-items:
@@ -7594,6 +7084,17 @@ paths:
       description: |-
         What the nightly check found, ordered the way a manager with ten minutes before a
         call needs it: high severity first, then by the money at stake.
+      parameters:
+        - name: scope_kind
+          in: query
+          schema: {type: string, enum: [workspace, team, owner]}
+          description: >-
+            Narrows the findings to the deals of one population, as the forecast and the reports measure it. Omitted means every finding the caller can see. A scope the caller may not measure is refused.
+        - name: scope_id
+          in: query
+          schema: {type: string, format: uuid}
+          description: >-
+            The team or owner, for a team or owner scope. Refused with the workspace scope, which names no subject.
       responses:
         '200':
           description: The open findings, most material first.
@@ -7607,8 +7108,14 @@ paths:
                     type: array
                     items: {$ref: '#/components/schemas/InputCheck'}
                 additionalProperties: false
+        '400':
+          description: A scope the request cannot mean, such as an id without a kind or a workspace scope with an id.
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
   /forecast/movement:
     get:
       tags: [Reports]
@@ -8261,7 +7768,11 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/PermissionDenied'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/VersionConflict'}
+        '409':
+          description: 'The company changed since the version in If-Match (`code: version_skew`). Or the company is the installations anchor, its name changes, and a boot source sets `installation.name` (`code: setting_locked_by_boot_source`).'
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /companies/{id}/profile-fields/{field}/confirm:
     parameters:
@@ -8293,7 +7804,11 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/PermissionDenied'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/VersionConflict'}
+        '409':
+          description: 'The company changed since the version in If-Match (`code: version_skew`). Or the company is the installations anchor, its name changes, and a boot source sets `installation.name` (`code: setting_locked_by_boot_source`).'
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /companies/{id}/facts/{factKey}:
     parameters:
@@ -8416,7 +7931,7 @@ components:
       in: query
       schema: {type: string}
       description: >-
-        The record named in words, found as `search_records` finds it. A name matching more than one record is refused with the candidate ids rather than guessed at.
+        The record named in words, found the way `search_records` finds the same words. A name matching more than one record is refused with the candidate ids rather than guessed at.
     AnchorMaxItems:
       name: max_items
       in: query
@@ -8532,7 +8047,12 @@ components:
         create. **Scope:** the key is unique within
         `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
         returns the original status + body. Reusing the same key with a *different* request body
-        returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+        returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+        do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+        means the first request under the key is still running and carries `Retry-After`;
+        resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+        request under the key failed after it had started, so check whether it took effect before
+        retrying under a new key.
         **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
         answer lost": without it the blind retry answers `409 version_skew`, because the first
         attempt already bumped the version.
@@ -8553,13 +8073,12 @@ components:
       in: header
       schema: {type: string}
       description: |-
-        A signed, single-use approval token (see schema `ApprovalToken`) minted by
-        POST /approvals/{id}/approve, authorizing exactly one confirm-first operation. It is a
-        compact JWS whose claims **bind** the token to a specific approval, effect, tenant and
-        principal — it is NOT a bare opaque string. The server rejects a token that is
-        expired, already consumed, or whose `diff_hash`/`workspace_id`/`passport_id`/`tool` does not
-        match the operation being executed (`403 code: approval_token_invalid`). Required when an
-        AGENT principal invokes a operation; a human's direct call is itself the approval.
+        The id of the approval that authorizes this one call — the id the `403 approval_required`
+        answer named. MCP takes the same id as `approval_id`. The server checks it against the
+        stored approval: same tool, same diff hash, same staging passport, decided as approved,
+        not yet used, and within 15 minutes of the decision. Anything else is refused with
+        `403 code: approval_token_invalid`. Required when an AGENT principal repeats a call; a
+        human's direct call is itself the approval.
     IfMatch:
       name: If-Match
       in: header
@@ -8586,7 +8105,7 @@ components:
           schema: {$ref: '#/components/schemas/Problem'}
           examples:
             rbac:
-              value: {type: 'https://errors.gradion.com/forbidden', title: Forbidden, status: 403, code: forbidden, detail: Your role does not permit this action.}
+              value: {type: 'https://errors.gradion.com/permission_denied', title: Forbidden, status: 403, code: permission_denied, detail: Your role does not permit this action.}
     PermissionDenied:
       description: 'RBAC object/action denial — the authenticated principal''s role lacks the grant for this object+action (`code: permission_denied`, ErrPermissionDenied). Distinct from `scope_exceeds_grantor`/`seat_tier_insufficient` (agent-passport limits) and `approval_required` (gate).'
       content:
@@ -8616,6 +8135,16 @@ components:
           examples:
             skew:
               value: {type: 'https://errors.gradion.com/version_skew', title: Version conflict, status: 409, code: version_skew, detail: The resource changed since your last read; re-read and retry.}
+    CalendarUnavailable:
+      description: |-
+        The host's selected calendar could not be read (`code: calendar_unavailable`). A read offers
+        no times and a write changes nothing, because either would rest on a partial picture of the
+        host's diary. The `detail` points the host at the calendar chosen in meeting settings; the
+        calendar and the provider's reason are in the server log only. It clears once the host
+        repairs the calendar or the provider answers again.
+      content:
+        application/problem+json:
+          schema: {$ref: '#/components/schemas/Problem'}
     ValidationError:
       description: Request failed validation (RFC 7807 with field-level `details.errors`).
       content:
@@ -8660,193 +8189,36 @@ components:
           type: string
           description: A field belonging to `category`; the pairing is checked, so a market field under `company` is a 422 rather than a row nobody can read back.
         value: {type: string, minLength: 1}
-    WebhookSubscription:
-      type: object
-      description: >-
-        An outbound webhook subscription: a tenant-configured target URL that receives signed HTTP POSTs for a chosen subset of the published event catalog. The signing secret is NEVER returned here — it is surfaced once, at create/rotate, in `WebhookSubscriptionCreated`.
-      required: [id, owner_id, target_url, event_types, state, version]
-      properties:
-        id: {type: string, format: uuid}
-        owner_id: {type: string, format: uuid}
-        target_url: {type: string, format: uri, description: HTTPS-only delivery endpoint.}
-        event_types:
-          type: array
-          items: {type: string}
-          description: The subscribed event types, each from the published event catalog.
-        state: {type: string, enum: [active, paused]}
-        version: {type: integer, format: int64, description: Optimistic-concurrency version; echo it in If-Match on update.}
-        created_at: {type: string, format: date-time}
-        updated_at: {type: string, format: date-time}
-        archived_at: {type: [string, 'null'], format: date-time}
-    WebhookSubscriptionCreated:
-      type: object
-      description: >-
-        The create/rotate response — the subscription plus the `signing_secret`, which is shown EXACTLY ONCE and never retrievable again. Store it now: deliveries are signed with it on the Standard Webhooks scheme (standardwebhooks.com).
-      required: [subscription, signing_secret]
-      properties:
-        subscription: {$ref: '#/components/schemas/WebhookSubscription'}
-        signing_secret:
-          type: string
-          description: >-
-            The per-subscription signing secret (`whsec_` + standard base64). Shown once; decode the base64 to raw bytes and use them as the HMAC-SHA256 key to verify the `webhook-signature` header against `{webhook-id}.{webhook-timestamp}.{raw body}` (Standard Webhooks — standardwebhooks.com).
-    CreateWebhookSubscriptionRequest:
-      type: object
-      required: [target_url, event_types]
-      properties:
-        target_url: {type: string, format: uri, pattern: '^https://', description: 'HTTPS-only; http:// is rejected (the contract enforces the scheme, matching the store''s check).'}
-        event_types:
-          type: array
-          minItems: 1
-          uniqueItems: true
-          items: {type: string}
-          description: At least one event type from the published catalog; a true set — duplicates are rejected.
-    UpdateWebhookSubscriptionRequest:
-      type: object
-      description: A partial update; omitted fields keep their stored value. Use it to pause/resume or re-target the event set.
-      minProperties: 1
-      properties:
-        state: {type: string, enum: [active, paused]}
-        event_types:
-          type: array
-          minItems: 1
-          uniqueItems: true
-          items: {type: string}
-    InstallationSettings:
-      type: object
-      description: |-
-        The installation's identity and reporting basis. Read by every role,
-        changed only by admin/ops.
-      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, dead_work_banner_hours, oauth_access_token_ttl_minutes, forecast_forward_measure, base_currency_locked, max_upload_bytes, sign_in_providers, operations]
-      properties:
-        name:
-          type: string
-          description: The company's display name.
-        timezone:
-          type: string
-          description: |-
-            IANA zone name every reporting period boundary is computed in (not a user's own
-            display timezone, which is per-user).
-        base_currency:
-          type: string
-          description: ISO-4217 code every money roll-up converts to.
-        base_language:
-          type: string
-          enum: [en, de, vi]
-          description: |-
-            The language AI writes in when what it writes is read by the whole team — claims,
-            signals, extracted facts, agent answers. Not a user's display language, which is
-            per-user.
-        date_format:
-          type: string
-          enum: [locale, dmy, mdy, ymd]
-          description: 'Display dates using the UI language, DD.MM.YYYY, MM/DD/YYYY, or YYYY-MM-DD. Defaults to locale; never changes stored dates or reporting boundaries.'
-        time_format:
-          type: string
-          enum: [locale, 24h, 12h]
-          description: 'Display times using the UI language, a 24-hour clock, or a 12-hour clock. Defaults to locale; never changes timezones or stored instants.'
-        fiscal_year_start_month:
-          type: integer
-          minimum: 1
-          maximum: 12
-          description: |-
-            The month the installation's business year begins, 1..12. January (1) is the
-            default, which is the calendar year every installation reported by before this
-            setting existed.
-        sign_in_providers:
-          type: array
-          description: |-
-            Every external sign-in provider this deployment holds credentials for, and whether
-            the installation currently offers it on the login screen. The list is what the
-            DEPLOYMENT makes possible: an admin can turn one off, but cannot add one, because
-            a client id and secret cannot be invented from a settings screen.
-          items:
-            $ref: '#/components/schemas/SignInProvider'
-        base_currency_locked:
-          type: boolean
-          description: |-
-            True once a conversion rate has been frozen against the base currency — by a closed
-            deal, a sent offer, a mirrored invoice, a contract, a commission entry, or a loaded
-            rate sheet — after which it can no longer be changed.
-        base_currency_locked_reason:
-          type: string
-          description: |-
-            Why the currency is locked, naming what has already converted against it. Absent
-            when it is still changeable.
-        max_upload_bytes:
-          type: integer
-          format: int64
-          description: |-
-            The largest upload request this installation accepts, in bytes — set by whoever
-            operates it, not compiled into the build. Read-only:
-            it is a deployment fact, so PATCH does not carry it.
-        oauth_access_token_ttl_minutes:
-          type: integer
-          minimum: 5
-          maximum: 129600
-          description: |-
-            How long the access token an MCP connector's OAuth handshake mints lives, in minutes —
-            for the code exchange and every refresh rotation alike. 30 days by default, at most
-            90. A change applies to the next token minted; tokens already issued keep the expiry
-            they were issued with.
-        operations:
-          $ref: '#/components/schemas/OperationSettings'
-        dead_work_banner_hours:
-          type: integer
-          minimum: 1
-          maximum: 168
-          description: |-
-            How far back the maintenance banner looks before it calls dead work a problem, in
-            hours. 24 by default, bounded above by River's own seven-day retention — a window
-            past that cannot narrow anything, since every terminal row still there is inside it.
-        forecast_forward_measure:
-          type: string
-          enum: [commit_evidence, weighted, manager_call]
-          description: |-
-            Which remaining-pipeline reading a projected landing is built from. A setting
-            rather than a fixed choice, because it is a question about how this installation
-            SELLS rather than about the software: a team with a disciplined commit stage means
-            something by it, and one that commits everything does not — their weighted number
-            is the honest one.
-    SignInProvider:
+    SettingOrigin:
       type: object
       additionalProperties: false
-      required: [key, label, enabled]
-      description: >-
-        One external sign-in provider this deployment holds credentials for, and whether the installation currently offers it. An admin can turn one off; they cannot add one, because a client id and secret cannot be invented from a settings screen.
+      description: Where the value in force came from.
+      required: [source, name]
       properties:
-        key:
+        source:
           type: string
-          description: The provider key the sign-in routes are served under.
-        label:
-          type: string
-          description: The provider's display name, as the login screen shows it.
-        enabled:
-          type: boolean
-          description: Whether this installation currently offers it on the login screen.
-    OperationSettings:
+          enum: [flag, env, env_file, config_file, database, default, unset]
+          description: |-
+            `flag`, `env`, `env_file` and `config_file` are boot sources, and a setting one of them
+            sets is locked. `config_file` covers both the base file and the `--config-file` file;
+            `file` says which. `database` is a value an administrator saved, `default` the
+            declared default, and `unset` no value at all.
+        name: {type: string, description: 'The flag, environment variable or YAML key that set the value. Empty for `database`, `default` and `unset`.'}
+        file: {type: string, description: 'The file that held the value, for a .env or YAML source or a secret file.'}
+    SettingLock:
       type: object
       additionalProperties: false
-      description: |-
-        The worker's operating values: how often each background pass runs, how far ahead a
-        mailbox subscription is renewed, and how fast one mailbox sends. A running worker reads
-        them again within a minute of a change, so none needs a restart.
-      required: [agent_runner_interval_seconds, webhook_retry_interval_seconds, time_scan_interval_seconds, close_date_sweep_interval_seconds, follow_up_reconcile_interval_seconds, retention_sweep_interval_seconds, geocode_backfill_interval_seconds, technical_backfill_interval_seconds, gmail_watch_scan_interval_seconds, graph_watch_scan_interval_seconds, gmail_watch_renew_within_hours, graph_watch_renew_within_hours, send_rate_limit, send_rate_window_seconds, send_max_age_hours]
+      description: A setting a boot source sets. A write that changes it is refused with 409 `setting_locked_by_boot_source`.
+      required: [key, origin]
       properties:
-        agent_runner_interval_seconds: {type: integer, minimum: 10, maximum: 3600, description: 'How often scheduled agents are checked for a run that is due, in seconds. Default 30.'}
-        webhook_retry_interval_seconds: {type: integer, minimum: 10, maximum: 3600, description: 'How often failed webhook deliveries are retried, in seconds. Default 30.'}
-        time_scan_interval_seconds: {type: integer, minimum: 60, maximum: 86400, description: 'How often time-based automation rules are checked, in seconds. Default 3600.'}
-        close_date_sweep_interval_seconds: {type: integer, minimum: 3600, maximum: 604800, description: 'How often deals whose close date has passed are flagged, in seconds. Default 86400.'}
-        follow_up_reconcile_interval_seconds: {type: integer, minimum: 3600, maximum: 604800, description: 'How often stalled deals are checked for a follow-up to propose, in seconds. Default 86400.'}
-        retention_sweep_interval_seconds: {type: integer, minimum: 3600, maximum: 604800, description: 'How often data past its retention period is removed, in seconds. Default 86400. It cannot be switched off.'}
-        geocode_backfill_interval_seconds: {type: integer, minimum: 0, maximum: 604800, description: 'How often addresses without coordinates are looked up, in seconds, from 300; 0 switches the sweep off. Default 3600.'}
-        technical_backfill_interval_seconds: {type: integer, minimum: 0, maximum: 604800, description: 'How often company domains without technical facts are looked up, in seconds, from 300; 0 switches the sweep off. Default 21600.'}
-        gmail_watch_scan_interval_seconds: {type: integer, minimum: 600, maximum: 43200, description: 'How often Gmail push subscriptions are checked for renewal, in seconds. Default 21600.'}
-        graph_watch_scan_interval_seconds: {type: integer, minimum: 600, maximum: 43200, description: 'How often Microsoft 365 mail subscriptions are checked for renewal, in seconds. Default 21600.'}
-        gmail_watch_renew_within_hours: {type: integer, minimum: 24, maximum: 144, description: 'How far ahead of expiry a Gmail push subscription is renewed, in hours. A watch lasts seven days. Default 48.'}
-        graph_watch_renew_within_hours: {type: integer, minimum: 24, maximum: 60, description: 'How far ahead of expiry a Microsoft 365 mail subscription is renewed, in hours. A subscription lasts just under three days. Default 24.'}
-        send_rate_limit: {type: integer, minimum: 1, maximum: 1000, description: 'How many messages one mailbox may send per window. A burst bound, not a quota. Default 30.'}
-        send_rate_window_seconds: {type: integer, minimum: 10, maximum: 3600, description: 'The window the send rate is counted over, in seconds. Default 60.'}
-        send_max_age_hours: {type: integer, minimum: 1, maximum: 168, description: 'How long a delivery held back by the send rate may wait before it stops with a reason, in hours. Default 24.'}
+        key: {type: string, description: 'The setting''s key, such as `capture.auto_enrich_daily_cap`.'}
+        origin: {$ref: '#/components/schemas/SettingOrigin'}
+    SettingLocks:
+      type: array
+      description: |-
+        The settings in this response that a boot source sets, each with its source. A client
+        shows each as read-only. Empty when nothing is locked. A write ignores it.
+      items: {$ref: '#/components/schemas/SettingLock'}
     SourceAuthor:
       type: object
       description: |-
@@ -9148,6 +8520,12 @@ components:
         disposed_by: {type: [string, 'null'], format: uuid}
         disposed_at: {type: [string, 'null'], format: date-time}
         created_at: {type: string, format: date-time}
+    DedupeCandidateListResponse:
+      type: object
+      required: [data, page]
+      properties:
+        data: {type: array, items: {$ref: '#/components/schemas/DedupeCandidate'}}
+        page: {$ref: '#/components/schemas/PageInfo'}
     DedupeDispositionRequest:
       type: object
       required: [disposition]
@@ -9156,7 +8534,7 @@ components:
         winner_id: {type: [string, 'null'], format: uuid, description: 'Required for merge: the surviving record — must be one of the pair.'}
     ImportObject:
       type: string
-      enum: [company, lead, contact]
+      enum: [company, lead, contact, deal, activity]
       description: |-
         What the file's rows are, and therefore what the run creates.
     ImportColumn:
@@ -9246,8 +8624,8 @@ components:
         file: {type: string, description: 'The entry''s path inside the ZIP.'}
         reason:
           type: string
-          enum: [unknown_name, not_yet_importable]
-          description: '`unknown_name`: the file name names no type this CRM knows. `not_yet_importable`: it names a type an import cannot land yet.'
+          enum: [unknown_name]
+          description: '`unknown_name`: the file name names no type this CRM knows.'
     ImportPartRequest:
       type: object
       description: One file of a ZIP run, with the type and mapping the human settled for it.
@@ -9277,6 +8655,10 @@ components:
       type: string
       enum: [broken_link, dropped_link, invalid_value, unknown_owner, new_tag, duplicate, permission, unusable_row]
       description: 'What kind of problem a report issue names, so a screen can group them. One closed list, the same one the server reports from.'
+    ImportReasonCode:
+      type: string
+      enum: [activity_empty, activity_held, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_future, close_date_past, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_not_found, contact_not_found_dropped, contact_unnamed, currency_not_a_code, currency_unset, deal_already_closed, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_type_unknown, linkedin_held, lost_reason_missing, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_unreadable]
+      description: 'Why a row was skipped or warned about, so a screen can say it in the reader''s language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.'
     CreateImportRunRequest:
       type: object
       description: |-
@@ -9327,6 +8709,22 @@ components:
             A tag applied to every record this run CREATES, so a batch stays
             findable as a batch — "the K5 conference list", "the January
             partner file".
+        preset_links:
+          type: array
+          items: {$ref: '#/components/schemas/ImportPresetLink'}
+          maxItems: 1
+          description: |-
+            The record every imported activity is filed under, so the file needs
+            no `links` column. Only for a run whose files are all `activity`.
+            The contact must be visible to the caller; one that is not, or does
+            not exist, is answered `404` the same way.
+    ImportPresetLink:
+      type: object
+      description: A record a whole run's activities are filed under.
+      required: [type, id]
+      properties:
+        type: {type: string, enum: [contact]}
+        id: {type: string, format: uuid}
     ImportOnDuplicate:
       type: string
       enum: [create, skip]
@@ -9368,6 +8766,11 @@ components:
         from: {type: string, description: 'The record the link starts at, by the key the file identified it with.'}
         to: {type: string, description: 'What the file named as the other end — a company name, not an id, because no id was found.'}
         reason: {type: string, description: 'Why it was not applied, in the words of the contact who made the file.'}
+        reason_code: {$ref: '#/components/schemas/ImportReasonCode'}
+        params:
+          type: object
+          additionalProperties: {type: string}
+          description: The values `reason_code`'s sentence names. Absent on a report stored before codes.
     ImportRunDisposition:
       type: object
       description: What the run will do, or did, counted per outcome. The four sum to the rows read — a disposition that does not add up is hiding something.
@@ -9448,6 +8851,11 @@ components:
         kind: {$ref: '#/components/schemas/ImportProblemKind'}
         value: {type: string, description: 'The cell value at fault, when one is, so a screen can group the rows that share it.'}
         reason: {type: string, description: 'What is wrong, in terms of the file the human uploaded — never a database or driver message.'}
+        reason_code: {$ref: '#/components/schemas/ImportReasonCode'}
+        params:
+          type: object
+          additionalProperties: {type: string}
+          description: 'The values the sentence of `reason_code` names, by name. Absent when the code names none, and for a report written before codes existed.'
     ImportPartReport:
       type: object
       description: One file's slice of a run's report.
@@ -9457,6 +8865,8 @@ components:
         object: {$ref: '#/components/schemas/ImportObject'}
         rows_read: {type: integer, minimum: 0}
         disposition: {$ref: '#/components/schemas/ImportRunDisposition'}
+        closed_won: {type: integer, minimum: 1, description: 'Deals of a deals file that land already won, as closed history. Absent when none does.'}
+        closed_lost: {type: integer, minimum: 1, description: 'Deals of a deals file that land already lost, as closed history. Absent when none does.'}
     ImportRunReport:
       type: object
       description: |-
@@ -9533,13 +8943,19 @@ components:
             Rows this run corrected rather than created, which undo leaves corrected. A row count, from the run's own report: two rows naming one record count twice. Absent or zero means the run corrected nothing, and what it did reverse is `reversed_count`, `kept` and `errored`.
         kept:
           type: array
-          description: 'Import-created rows a human edited since import, therefore left in place (A93).'
+          description: 'Import-created rows left in place: a human edited them since import (A93), or a live record still names the company.'
           items:
             type: object
             required: [object, id]
             properties:
               object: {$ref: '#/components/schemas/ImportObject'}
               id: {type: string, format: uuid}
+              reason: {type: string, description: 'Why the row was left in place, in terms the operator can act on. Absent in a report written before kept rows carried one.'}
+              reason_code: {$ref: '#/components/schemas/ImportReasonCode'}
+              params:
+                type: object
+                additionalProperties: {type: string}
+                description: 'The values the sentence of `reason_code` names, by name. Absent when the code names none.'
         errored:
           type: array
           description: |-
@@ -9554,6 +8970,7 @@ components:
               object: {$ref: '#/components/schemas/ImportObject'}
               id: {type: string, format: uuid}
               reason: {type: string, description: 'What kept it from reversing, in terms the operator can act on — never a database or driver message.'}
+              reason_code: {$ref: '#/components/schemas/ImportReasonCode'}
     ImportRun:
       type: object
       required: [id, connector, status, checkpoint, version, source_released, source, captured_by, created_at, updated_at]
@@ -9570,6 +8987,11 @@ components:
         context_tag_id: {type: string, format: uuid, readOnly: true, description: 'The tag every record this run creates is filed under, as the run was staged with it. Absent when the run names none.'}
         on_broken_link:
           $ref: '#/components/schemas/ImportOnBrokenLink'
+        preset_links:
+          type: array
+          readOnly: true
+          items: {$ref: '#/components/schemas/ImportPresetLink'}
+          description: 'The record every activity of this run is filed under. Absent when the run names none.'
         status: {$ref: '#/components/schemas/ImportRunStatus'}
         checkpoint: {type: integer, minimum: 0, description: 'What a resume continues from.'}
         error: {type: [string, 'null'], description: 'Why a failed run stopped, or why a draft''s last test stopped, in the uploader''s terms. Never a driver or SQL message.'}
@@ -9585,6 +9007,45 @@ components:
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal; never client-supplied.'}
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
+        phase: {$ref: '#/components/schemas/ImportRunPhase'}
+        phase_object: {type: string, description: 'The object the run is working on in `phase`, when it is working on one.'}
+        progress: {$ref: '#/components/schemas/ImportRunProgress'}
+        started_at: {type: string, format: date-time, description: 'When a worker took up the run''s current job: its test, its commit or its undo. Absent while the job only waits.'}
+        finished_at: {type: string, format: date-time, description: 'When the run reached a final status: complete, undone or cancelled. Absent while it can still move.'}
+        elapsed_seconds: {type: integer, minimum: 0, description: 'Seconds from `started_at` to now, or to `finished_at` once the run ended. Counted on the database clock.'}
+        idle_seconds: {type: integer, minimum: 0, description: 'Seconds since the run last made progress. Absent when the run is not being worked.'}
+        heartbeat_age_seconds: {type: integer, minimum: 0, description: 'Seconds since the worker last said it is alive. Absent when the run is not being worked.'}
+        rate_rows_per_second: {type: number, minimum: 0, description: 'Rows walked per second over the last minute. Absent until enough rows and time have passed to say, and while the run is idle.'}
+        eta_seconds_low: {type: integer, minimum: 1, description: 'The soonest the item in `eta_scope` is likely done, in seconds from now. Absent whenever `rate_rows_per_second` is.'}
+        eta_seconds_high: {type: integer, minimum: 1, description: 'The latest it is likely done, in seconds from now. A range, never a promise: the speed of one minute is not the speed of the next.'}
+        eta_scope: {type: string, enum: [object, run], description: '`object` means the estimate covers the item the run is on, which is not the last; `run` means it covers what is left of the run.'}
+    ImportRunPhase:
+      type: string
+      enum: [reading, checking, creating_tags, importing, linking, undoing, finishing]
+      description: 'What a run is doing. A test run reads, then checks; a commit or an undo reports the rest.'
+    ImportRunProgress:
+      type: object
+      description: 'What a run has done so far, per object and in total. Absent on a run that never moved. While a run is `undoing`, `objects` lists the types it reverses in undo order, each with the rows reversed of the rows it created, and `counts` stays zero.'
+      required: [objects, counts]
+      properties:
+        objects:
+          type: array
+          items:
+            type: object
+            required: [object, rows_done, rows_total]
+            properties:
+              object: {type: string, description: 'An import object, or `links` for the link phase after every object.'}
+              rows_done: {type: integer, minimum: 0}
+              rows_total: {type: integer, minimum: 0}
+        counts:
+          type: object
+          required: [created, updated, unchanged, skipped, problems]
+          properties:
+            created: {type: integer, minimum: 0}
+            updated: {type: integer, minimum: 0}
+            unchanged: {type: integer, minimum: 0}
+            skipped: {type: integer, minimum: 0}
+            problems: {type: integer, minimum: 0, description: 'Rows that carry a problem, skipped or landed.'}
     ImportRunPart:
       type: object
       required: [file, object, row_count]
@@ -9592,6 +9053,10 @@ components:
         file: {type: string, description: 'The ZIP entry, or the uploaded file''s name for a single CSV. Empty for a single CSV created without `file_name`.'}
         object: {$ref: '#/components/schemas/ImportObject'}
         row_count: {type: integer, minimum: 0, description: 'Rows the file holds, once a dry run has read it; 0 before.'}
+        mapping:
+          type: object
+          additionalProperties: {type: string}
+          description: '`{source column -> target field}` as the run saved it, the shape `updateImportRun` accepts, so a reader restores its edits from the run. Absent while the run holds none.'
     Problem:
       type: object
       description: RFC 7807 problem+json with a stable machine `code` and structured `details`.
@@ -9637,7 +9102,7 @@ components:
         city: {type: [string, 'null']}
         region: {type: [string, 'null']}
         postal_code: {type: [string, 'null']}
-        country: {type: [string, 'null'], description: ISO-3166 alpha-2.}
+        country: {type: [string, 'null'], description: 'ISO-3166 alpha-2. A contact or company write (and a CSV import cell) that changes the country to a name, an alpha-3 code or an unassigned pair answers 422 `invalid_country_code` on `address.country`; a code is stored upper-case. A country stored before this rule is kept as it is when a save carries it back unchanged.'}
       additionalProperties: true
     Money:
       type: object
@@ -9821,6 +9286,13 @@ components:
           type: object
           description: Per-pool ceilings keyed by the provider's declared credit pools.
           additionalProperties: {$ref: '#/components/schemas/ProviderPoolBudget'}
+    ProviderRunReservation:
+      type: object
+      required: [pool, reserved_credits]
+      properties:
+        pool: {type: string}
+        reserved_credits: {type: integer, minimum: 0}
+        actual_credits: {type: [integer, 'null'], minimum: 0}
     ProviderRun:
       type: object
       required: [id, subject_kind, provider, trigger, state, claims_unwritten, connection_version, configuration_snapshot, requested_categories, reservations, created_at, updated_at]
@@ -9871,13 +9343,7 @@ components:
         reservations:
           type: array
           description: Maximum credits held per pool before submission, reconciled to actual spend on a terminal result.
-          items:
-            type: object
-            required: [pool, reserved_credits]
-            properties:
-              pool: {type: string}
-              reserved_credits: {type: integer, minimum: 0}
-              actual_credits: {type: [integer, 'null'], minimum: 0}
+          items: {$ref: '#/components/schemas/ProviderRunReservation'}
         claims_unwritten:
           type: boolean
           default: false
@@ -10082,6 +9548,11 @@ components:
         strength: {allOf: [{$ref: '#/components/schemas/RelationshipStrength'}], readOnly: true, description: 'Deterministic relationship-strength. Read-only derived view; NULL until capture has interactions. No mystery number — the factors + contributing activities are the explanation.'}
         source: {type: string}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.'}
+        imported_from:
+          type: [string, 'null']
+          readOnly: true
+          description: >-
+            Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
         author:
           allOf: [{$ref: '#/components/schemas/SourceAuthor'}]
           readOnly: true
@@ -10119,6 +9590,10 @@ components:
       properties:
         company_id: {type: string, format: uuid}
         company_name: {type: string}
+        logo_url:
+          type: string
+          description: >-
+            The same `getCompanyLogo` path `Company.logo_url` carries for this account. The key is ABSENT when the company wears no logo; a client draws the company's monogram then.
     CreateContactRequest:
       type: object
       required: [full_name, source]
@@ -10349,6 +9824,11 @@ components:
             How many open, live deals belong to this account, counted across the WHOLE workspace — the same population the account's `computed_fields` open-pipeline row sums. The key is ABSENT entirely, not 0, for a role without `deal:read` or without `computed_field:read`. Present on `listCompanies` and `getCompany`; write responses omit it.
         source: {type: string}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.'}
+        imported_from:
+          type: [string, 'null']
+          readOnly: true
+          description: >-
+            Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
         author:
           allOf: [{$ref: '#/components/schemas/SourceAuthor'}]
           readOnly: true
@@ -10525,7 +10005,7 @@ components:
       description: One record a brief sentence was written from.
       required: [entity_type, entity_id]
       properties:
-        entity_type: {type: string, enum: [deal, activity, contact, company, fact, profile_field]}
+        entity_type: {type: string, enum: [deal, activity, contact, company, lead, fact, profile_field]}
         entity_id: {type: string, format: uuid}
         name:
           type: string
@@ -11516,6 +10996,11 @@ components:
           format: date-time
           description: >-
             When we last wrote to them. Shown BESIDE last_inbound_at rather than folded into one "last touch": which direction went last is the whole question.
+        last_live_inbound_at:
+          type: [string, 'null']
+          format: date-time
+          description: >-
+            When they last wrote to us, leaving out email an import brought in as history. Equal to `last_inbound_at` when nothing imported is newer. The re-engaged suggestion reads this, because history that arrived by import is not a reply. Absent when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
         sections_omitted:
           type: array
           description: The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none".
@@ -12033,63 +11518,6 @@ components:
           description: >-
             The section's lines, each citing the records it was written from. A sentence whose citations do not resolve is dropped whole rather than shown uncited.
           items: {$ref: '#/components/schemas/CompanyBriefSentence'}
-    ContactConsentGuard:
-      type: object
-      description: |-
-        Whether an outbound message to this contact is allowed right now, per purpose and
-        channel, WITH the reason.
-      required: [contact_id, entries]
-      properties:
-        contact_id: {type: string, format: uuid}
-        entries:
-          type: array
-          items: {$ref: '#/components/schemas/ContactConsentGuardEntry'}
-    ContactConsentGuardEntry:
-      type: object
-      required: [purpose_key, purpose_class, channel, verdict, reason]
-      properties:
-        purpose_key: {type: string}
-        purpose_label: {type: [string, 'null']}
-        purpose_class:
-          type: string
-          description: |-
-            Which gate this purpose answers to. `business_correspondence` and
-            `transactional` are never consent-gated — their lawful basis is Art 6(1)(b)/(f), and
-            treating a reply to someone who wrote to us as a consent violation is a frame that is
-            legally wrong. `phone_outreach` is specced and dormant.
-          enum: [business_correspondence, transactional, marketing, phone_outreach]
-        channel:
-          type: string
-          enum: [email, phone]
-        verdict:
-          type: string
-          description: '`allowed` proceeds. `blocked` refuses and `reason` says why. `unknown` means no decision is recorded — the offered action is to request consent, never a silent grant.'
-          enum: [allowed, blocked, unknown]
-        reason:
-          type: string
-          description: >-
-            The answer in the reader's words — "she wrote to you on 2 May", "opt-out 12 Jul", "no consent recorded". A verdict a rep cannot explain to the contact is not usable.
-        qualifying_event:
-          description: The recorded event that flipped business correspondence to allowed, when one did.
-          allOf: [{$ref: '#/components/schemas/ConsentQualifyingEvent'}]
-    ConsentQualifyingEvent:
-      type: object
-      description: |-
-        The deterministic event that makes business correspondence lawful: an
-        inbound message, an inquiry they initiated, an active deal with their company, or
-        a recorded in-person exchange. Recording WHICH event and when is what makes the Art
-        6(1)(f) balancing accountable rather than merely asserted.
-      required: [kind, occurred_at]
-      properties:
-        kind:
-          type: string
-          enum: [inbound_message, inquiry, active_deal, in_person, meeting, requested_by_subject]
-        occurred_at: {type: string, format: date-time}
-        source_entity_type: {type: [string, 'null'], enum: [activity, deal, null]}
-        source_entity_id: {type: [string, 'null'], format: uuid}
-        note:
-          type: [string, 'null']
-          description: The typed evidence for a hand-recorded exchange (`in_person` or `requested_by_subject`), where a named human's note is the record.
     ContactGraph:
       type: object
       description: The local graph around one contact — nodes, the edges between them, and the route worth taking.
@@ -12581,6 +12009,14 @@ components:
         evidence:
           type: array
           items: {$ref: '#/components/schemas/DealNextBestActionEvidence'}
+        fingerprint:
+          type: string
+          readOnly: true
+          description: |-
+            A digest of what the move names: its verb, operands and evidence, taken when the
+            rules chose it. Send it to `POST /deals/{id}/move/dismiss` to set this move aside;
+            the set-aside lifts when the card names a different move. Absent on a move with
+            nothing to do (`none`).
       additionalProperties: false
     DealNextBestActionEvidence:
       type: object
@@ -13109,6 +12545,31 @@ components:
       required: [vocabulary]
       properties:
         vocabulary: {type: string}
+    ListFiltersVocabulary:
+      description: 'What `describe_list_filters` answers.'
+      type: object
+      required: [record_types]
+      properties:
+        record_types:
+          type: object
+          description: For each record type list_records takes, the filters it may be narrowed by.
+          additionalProperties:
+            type: array
+            items: {$ref: '#/components/schemas/ListFilter'}
+    ListFilter:
+      description: One filter a record list may be narrowed by.
+      type: object
+      required: [name, operand]
+      properties:
+        name: {type: string, description: "The filter's key in list_records' filters object, and the list route's query parameter."}
+        operand:
+          type: string
+          enum: [string, boolean, integer, number, array]
+          description: 'What the string operand spells: a boolean is "true" or "false", an array is comma-separated.'
+        values:
+          type: array
+          items: {type: string}
+          description: The closed vocabulary the filter takes, when it has one.
     RecordFieldsVocabulary:
       description: 'What `describe_record_fields` answers.'
       type: object
@@ -13308,6 +12769,7 @@ components:
       type: object
       required: [template]
       properties:
+        locks: {$ref: '#/components/schemas/SettingLocks', readOnly: true}
         template:
           type: string
           maxLength: 4000
@@ -13756,6 +13218,11 @@ components:
             The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
         source: {type: string}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.'}
+        imported_from:
+          type: [string, 'null']
+          readOnly: true
+          description: >-
+            Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
         author:
           allOf: [{$ref: '#/components/schemas/SourceAuthor'}]
           readOnly: true
@@ -13773,7 +13240,7 @@ components:
       required: [name, pipeline_id, stage_id, source]
       properties:
         name: {type: string}
-        amount_minor: {type: [integer, 'null'], format: int64}
+        amount_minor: {type: [integer, 'null'], format: int64, minimum: 0, description: 'The deal''s one-off price in minor units of `currency`. Below zero is refused with 422 `amount_negative`.'}
         currency: {type: [string, 'null'], pattern: '^[A-Z]{3}$'}
         expected_arr_minor: {type: [integer, 'null'], format: int64, description: 'Expected annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.'}
         pipeline_id: {type: string, format: uuid}
@@ -13816,7 +13283,7 @@ components:
       type: object
       properties:
         name: {type: string}
-        amount_minor: {type: [integer, 'null'], format: int64}
+        amount_minor: {type: [integer, 'null'], format: int64, minimum: 0, description: 'The deal''s one-off price in minor units of `currency`. Below zero is refused with 422 `amount_negative`.'}
         currency: {type: [string, 'null'], pattern: '^[A-Z]{3}$'}
         expected_arr_minor: {type: [integer, 'null'], format: int64, description: 'Expected annual recurring revenue in minor units of `currency`. Null means no recurring component, which is not zero.'}
         company_id: {type: [string, 'null'], format: uuid}
@@ -15086,6 +14553,37 @@ components:
         provider: {type: string, enum: [gcal, graphcal], description: The calendar provider that holds the event. Omitted on guest reads.}
         video_call: {type: boolean, description: A video call link was requested for this meeting.}
         video_url: {type: string, description: "The join link the calendar created. Absent until the calendar accepts the invitation, or when it could not create one."}
+    CommitmentMeaning:
+      type: object
+      description: The source-supported state and deadline precision of a possible promise.
+      required: [state, condition, deadline_precision, deadline_quote]
+      properties:
+        state: {type: string, description: "Whether the promise is open, completed, conditional, optional, a request, or unclear."}
+        condition: {type: string, description: "The unmet condition in the source's own words, otherwise empty."}
+        deadline_precision: {type: string, description: "Day, range, or none. A range does not name a due date."}
+        deadline_quote: {type: string, description: "The source's deadline words, empty when no deadline was stated."}
+    CommitmentAdmission:
+      type: object
+      description: A recorded decision about whether a promise creates current work. Re-reading replaces this decision without changing human-owned work.
+      required: [locator, summary, source_quote, outcome, current_work, rule_version, evidence_ids, evaluated_at]
+      properties:
+        locator: {type: string}
+        summary: {type: string}
+        source_quote: {type: string}
+        outcome: {type: string}
+        current_work: {type: boolean}
+        meaning: {$ref: "#/components/schemas/CommitmentMeaning"}
+        rule_version: {type: string}
+        evidence_ids: {type: array, items: {type: string, format: uuid}}
+        evaluated_at: {type: string, format: date-time}
+        renewed_by:
+          type: string
+          format: uuid
+          description: The later message that explicitly renewed this promise.
+        renewed_at:
+          type: string
+          format: date-time
+          description: The renewing message's source time when the decision was recorded.
     Activity:
       type: object
       description: |-
@@ -15095,8 +14593,16 @@ components:
         `duration_seconds` only for meeting/call; `direction` is null for note/task. Setting a
         disallowed field for the kind returns `422 code: field_not_valid_for_kind` (the API rejects
         what the DB CHECK would reject, rather than 500-ing at write time).
+        **Custom fields**: the values of the workspace's activity custom fields arrive as extra
+        top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
+        `withheld`.
       required: [id, kind, occurred_at, source, captured_by, created_at, updated_at]
       properties:
+        commitment_admissions:
+          type: array
+          readOnly: true
+          description: Decisions about promises read from this source, included on list and detail reads when its content is visible.
+          items: {$ref: '#/components/schemas/CommitmentAdmission'}
         id: {type: string, format: uuid}
         kind: {type: string, enum: [email, call, meeting, note, task, message]}
         channel_provider:
@@ -15126,6 +14632,12 @@ components:
           readOnly: true
           description: >-
             Meeting only: the member of this company who held it. It is the one place an activity names OUR side of an exchange — a mail says only which contact it was with, and the mailbox behind it is not on the row. Null on every other kind, and on a meeting nobody was recorded as hosting.
+        colleague_ids:
+          type: array
+          readOnly: true
+          items: {type: string, format: uuid}
+          description: >-
+            The colleagues recorded as taking part: the one who logged a call or meeting, the ones named as attending, and the seats capture stamped on a captured one, never a blind copy. Filled wherever one activity is answered whole (its read, its update); a list leaves it out. Withheld with the content, so it is absent whenever `content_state` is `withheld`.
         direction: {type: [string, 'null'], enum: [null, inbound, outbound], description: 'inbound/outbound for email/call; null for note/task.'}
         email_summary:
           allOf: [{$ref: '#/components/schemas/EmailSummary'}]
@@ -15178,13 +14690,18 @@ components:
           format: uuid
           readOnly: true
           description: >-
-            The activity this one was derived from: today, the meeting whose transcript proposed a task. Null on almost every row: a task somebody typed came from nowhere but them. It is a reference, not a grant: opening it goes through the activity read path under the caller's own scope, so a reader who may not see the meeting gets the same answer they would get by asking for it directly.
+            The conversation or note this task follows from, whether added by a human or read from a conversation. Opening the source requires current source access. A task cannot grant access to its source or disclose content from a withheld source.
         links:
           type: array
           description: One activity may link to >1 entity (contact + deal).
           items: {$ref: '#/components/schemas/ActivityLink'}
         source: {type: string}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.'}
+        imported_from:
+          type: [string, 'null']
+          readOnly: true
+          description: >-
+            Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
         author:
           allOf: [{$ref: '#/components/schemas/SourceAuthor'}]
           readOnly: true
@@ -15196,6 +14713,7 @@ components:
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
         archived_at: {type: [string, 'null'], format: date-time}
+      additionalProperties: true
     ProviderRef:
       type: string
       pattern: '^[a-z][a-z0-9_]*$'
@@ -15296,11 +14814,25 @@ components:
                 Longest message text, in characters, when the message ALSO carries files —
                 a transport that sends text-with-files as a caption bounds it far below a
                 text-only message. Zero means no extra bound.
+    ActivityFollowUpTask:
+      type: object
+      additionalProperties: false
+      required: [subject]
+      properties:
+        subject: {type: string, minLength: 1}
+        body: {type: [string, 'null']}
+        due_at: {type: [string, 'null'], format: date-time}
+        assignee_id: {type: [string, 'null'], format: uuid}
     CreateTaskRequest:
       type: object
       description: What a task needs. Stored as an activity of kind `task`.
       required: [subject, source]
       properties:
+        source_activity_id:
+          type: string
+          format: uuid
+          description: >-
+            The non-task activity this task follows from, including email and messages. The caller and assignee need access to the source content. The task preserves its audience and inherits its visible links when no links are supplied. This reference does not accept or settle a request.
         request_activity_id:
           type: string
           format: uuid
@@ -15312,7 +14844,7 @@ components:
         assignee_id: {type: [string, 'null'], format: uuid, description: 'Who owes it. Defaults to the caller.'}
         links:
           type: array
-          description: The records the task is about. Omit it and the task appears on no timeline.
+          description: The records the task is about. With a source activity, omitted or empty links inherit its visible links. Otherwise the task appears on no timeline.
           items:
             type: object
             required: [entity_type, entity_id]
@@ -15325,6 +14857,15 @@ components:
       type: object
       required: [kind, source]
       properties:
+        source_activity_id:
+          type: string
+          format: uuid
+          description: >-
+            The non-task activity this task follows from, including email and messages. The caller and assignee need access to the source content. The task preserves its audience and inherits its visible links when no links are supplied. This reference does not accept or settle a request.
+        follow_up_task:
+          $ref: '#/components/schemas/ActivityFollowUpTask'
+          description: >-
+            Meeting, call or note only. Create this task and its source activity in one transaction. The task inherits the source links and audience. Replaying a source identity returns the original activity without adding another task.
         request_activity_id:
           type: string
           format: uuid
@@ -15406,6 +14947,9 @@ components:
           type: [string, 'null']
           description: >-
             Which occurrence of `ical_uid` this is — the occurrence's own original start, as the calendar states it. Meeting only. Required whenever `ical_uid` is given, because a series without an occurrence names every meeting in it at once.
+      additionalProperties: true
+      description: >-
+        The workspace's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`.
     ActivityAudience:
       type: string
       enum: [workspace, participants, selected]
@@ -15438,6 +14982,9 @@ components:
             `field_not_valid_for_kind` fault on the field otherwise — the same refusal create
             gives, held against the kind the row already carries rather than one the
             patch names, because a patch cannot change a kind.
+      additionalProperties: true
+      description: >-
+        A sparse patch. The workspace's active activity custom fields travel as extra top-level `cf_` keys, and an explicit `null` clears one. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`.
     ActivityListResponse:
       type: object
       required: [data, page]
@@ -15783,13 +15330,16 @@ components:
           description: The timeline activity this produced, once released.
         held_reason:
           type: [string, 'null']
-          enum: [consent_withdrawn, sender_inactive, missed_window, timer_exhausted, send_refused, null]
+          enum: [consent_withdrawn, sender_inactive, passport_revoked, missed_window, timer_exhausted, send_refused, followup_settled, meeting_canceled, null]
           description: |-
             Why a human has to look at it. `consent_withdrawn` — a recipient withdrew consent
             after it was scheduled. `sender_inactive` — the scheduler lost their seat or mailbox.
             `missed_window` — it came due while nothing was running and is now too late to be the
             message that was written. `timer_exhausted` — the job that wakes it ran out of
             attempts. `send_refused` — a gate refused for another reason at fire.
+            `passport_revoked` — the agent credential was revoked.
+            `followup_settled` — the recorded request was answered or completed after scheduling.
+            `meeting_canceled` — the meeting named as follow-up evidence was canceled.
         review_id:
           type: [string, 'null']
           format: uuid
@@ -16044,6 +15594,11 @@ components:
         qualification_evidence:
           $ref: '#/components/schemas/LeadQualificationEvidence'
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.'}
+        imported_from:
+          type: [string, 'null']
+          readOnly: true
+          description: >-
+            Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
         author:
           allOf: [{$ref: '#/components/schemas/SourceAuthor'}]
           readOnly: true
@@ -16425,6 +15980,7 @@ components:
       type: object
       required: [follow_up_after_days]
       properties:
+        locks: {$ref: '#/components/schemas/SettingLocks', readOnly: true}
         follow_up_after_days:
           type: integer
           minimum: 1
@@ -16434,6 +15990,7 @@ components:
       type: object
       required: [first_response_enabled, first_response_target_minutes]
       properties:
+        locks: {$ref: '#/components/schemas/SettingLocks'}
         first_response_enabled: {type: boolean, description: 'Whether the first-response target is tracked at all. Off by default.'}
         first_response_target_minutes: {type: integer, description: 'How long a lead may wait for its first genuine response once the clock starts (routing, else creation). 15..10080.'}
         unassigned_escalation_user_id:
@@ -16522,13 +16079,38 @@ components:
         note: {type: [string, 'null'], description: 'What they wrote about it, if anything.'}
         resolved_by: {type: [string, 'null'], format: uuid, description: 'The colleague who answered; null once their account is deleted.'}
         resolved_at: {type: string, format: date-time}
+    SourceQuoteProof:
+      type: object
+      description: A source span whose words are reconstructed only after source content authorization. Offsets count UTF-8 bytes after collapsing whitespace; the digest covers the entire normalized source message.
+      required: [start, end, sha256]
+      properties:
+        start: {type: integer, minimum: 0}
+        end: {type: integer, minimum: 1}
+        sha256: {type: string, pattern: '^[a-f0-9]{64}$'}
+      additionalProperties: false
     SignalEvidence:
       type: object
       required: [snippet]
       properties:
+        source_quote: {$ref: '#/components/schemas/SourceQuoteProof'}
+        buyer_contact_id:
+          type: string
+          format: uuid
+          description: The buyer identified among the cited source’s verified participants.
+        commercial_role:
+          type: string
+          enum: [buyer, supplier, partner, provider, unknown]
+          description: The commercial role supported by the cited source, independent of recipient order.
         snippet: {type: string}
         source_type: {type: [string, 'null'], enum: [activity, deal, signal, relationship, page, contract, null]}
         source_id: {type: [string, 'null']}
+        lifecycle_scope:
+          type: string
+          enum: [company, workstream, unknown]
+          description: Whether the cited words end the whole account relationship or only one engagement. Missing means unknown.
+        workstream:
+          type: string
+          description: The engagement named in the cited words, when present. Never inferred from the company name.
     SignalListResponse:
       type: object
       required: [data, page]
@@ -17113,10 +16695,6 @@ components:
       properties:
         data: {type: array, items: {$ref: '#/components/schemas/Tag'}}
         page: {$ref: '#/components/schemas/PageInfo'}
-    SavedViewResource:
-      type: string
-      description: The list a saved view is over. One schema for the record, the create and update bodies and the list filter, so the four cannot drift.
-      enum: [contacts, companies, deals, activities, leads, partners, projects]
     ReportingMetricID:
       type: string
       enum:
@@ -17142,6 +16720,10 @@ components:
         - metric_reading
     ReportingStatus:
       type: string
+      description: |-
+        `failed` means the database could not calculate this figure on this
+        read. The other figures in the same evaluation are unaffected, and a
+        later read may succeed.
       enum:
         - ok
         - no_data
@@ -17150,6 +16732,7 @@ components:
         - partial
         - unsupported
         - unavailable
+        - failed
     ReportingScope:
       type: object
       additionalProperties: false
@@ -17228,6 +16811,91 @@ components:
           items:
             $ref: '#/components/schemas/ReportingBlockKind'
           maxItems: 20
+          description: |-
+            The chart kinds the report draws, in order. When `layout` is present the service
+            derives this list from it (each kind once, in the order the layout first names it)
+            and ignores what was sent, so a client that reads only `blocks` keeps working.
+        layout:
+          type: array
+          maxItems: 8
+          description: |-
+            Sections of cards, in reading order. Absent means one untitled section of
+            full-width cards in `blocks` order. A report holds at most 20 cards in total,
+            counted across all its sections.
+          items:
+            $ref: '#/components/schemas/ReportingSection'
+    ReportingSection:
+      type: object
+      additionalProperties: false
+      required: [cards]
+      properties:
+        title:
+          type: string
+          maxLength: 120
+          description: The heading over this section. Absent or blank draws none.
+        cards:
+          type: array
+          maxItems: 20
+          items:
+            $ref: '#/components/schemas/ReportingCard'
+    ReportingCardKind:
+      type: string
+      description: A chart kind, or `question`, a custom analytics question the card asks for each reader.
+      enum:
+        - bookings_trend
+        - stage_distribution
+        - owner_attainment
+        - stage_age
+        - sdr_outcomes
+        - target_progress
+        - forecast_support
+        - pipeline_movement
+        - metric_reading
+        - question
+    ReportingCardQuestion:
+      type: object
+      additionalProperties: false
+      required: [entity, measures]
+      description: |-
+        A custom analytics question a card asks. Present exactly when the card's `kind` is
+        `question`. The page asks it through `/analytics/query` for each reader, under their
+        own grants and over the report's scope. Every reader of the report receives it, so it
+        carries no filters (a filter value can name a record a reader may not open), no scope
+        and no save. A sent edition keeps the answer its sender was given, as
+        `ReportingEditionQuestion` describes.
+      properties:
+        entity: {type: string, minLength: 1, maxLength: 64, description: "The population, by name."}
+        group_by:
+          type: array
+          maxItems: 4
+          items: {type: string, minLength: 1, maxLength: 64}
+        measures:
+          type: array
+          minItems: 1
+          maxItems: 8
+          items:
+            $ref: '#/components/schemas/AnalyticsMeasure'
+        limit: {type: integer, minimum: 1, maximum: 1000, description: "The rows the card shows; 100 when absent."}
+    ReportingCard:
+      type: object
+      additionalProperties: false
+      required: [id, kind, width]
+      properties:
+        id:
+          type: string
+          pattern: '^[a-z0-9-]{1,32}$'
+          description: A short id the client mints. Unique within the report, so one chart kind can be placed twice.
+        kind:
+          $ref: '#/components/schemas/ReportingCardKind'
+        question:
+          $ref: '#/components/schemas/ReportingCardQuestion'
+        metric:
+          $ref: '#/components/schemas/ReportingMetricID'
+          description: The one metric this card draws. Absent draws the kind for every selected metric that has it.
+        width:
+          type: string
+          enum: [full, half]
+          description: '`half` shares a row with the next half card. A chart that needs the whole width draws full regardless.'
     ReportingContext:
       type: object
       additionalProperties: false
@@ -17244,6 +16912,9 @@ components:
         - definition_version
         - member_ids
       properties:
+        prose_language:
+          type: string
+          description: Base language used for generated explanations. Absent on legacy readings, which use English.
         period_kind: {type: string}
         scope:
           $ref: '#/components/schemas/ReportingScope'
@@ -17524,6 +17195,10 @@ components:
         schedule_ready:
           type: boolean
           description: Whether saved snapshots have the retention policy required for automatic publication. Present for schedule authors.
+        edition_retention_days:
+          type: integer
+          minimum: 1
+          description: How many days a sent edition keeps its readings and question answers before retention erases them. Present for schedule authors while the policy is on.
         metrics:
           type: array
           items:
@@ -17558,6 +17233,9 @@ components:
           format: uuid
         name:
           type: string
+        description:
+          type: string
+          description: What the report is for, in the author's words. Absent when none was given.
         audience:
           type: string
           enum:
@@ -17581,6 +17259,12 @@ components:
         archived_at:
           type: string
           format: date-time
+        draft_revision:
+          type: integer
+          format: int64
+          description: |-
+            The unpublished draft revision, shown only to an editor of the report. Absent when there
+            is no draft. Evaluate it with `revision` to preview it.
     ReportingTargetInput:
       type: object
       additionalProperties: false
@@ -17869,6 +17553,36 @@ components:
           type: boolean
         withheld:
           type: boolean
+        questions:
+          type: array
+          maxItems: 160
+          items:
+            $ref: '#/components/schemas/ReportingEditionQuestion'
+          description: The answer each question card of the edition's layout kept, by card id. Present when one edition is read; absent in a list and once retention or erasure removed the answers.
+    ReportingEditionQuestion:
+      type: object
+      additionalProperties: false
+      required: [card_id, status]
+      description: |-
+        What a sent edition kept for one question card. The answer is the one the sender was
+        given when the edition was captured. Each row stays only while the reader may read every
+        record behind it; any other row arrives withheld, as the analytics floor withholds one.
+      properties:
+        card_id:
+          type: string
+          pattern: '^[a-z0-9-]{1,32}$'
+        status:
+          type: string
+          enum: [kept, withheld, not_kept]
+          description: >-
+            `kept`: the answer follows. `withheld`: this reader may not ask the question now, so nothing of the answer is shown. `not_kept`: the edition kept no answer, and `reason` says why.
+        reason:
+          type: string
+          enum: [retention_unconfigured, too_many_records, unanswered, counts_other_records]
+          description: >-
+            Why no answer was kept. `retention_unconfigured`: sent editions had no retention policy. `too_many_records`: the answer rested on more records than an edition keeps. `unanswered`: the sender could not ask the question when the edition was captured. `counts_other_records`: the question measures or groups through records of other kinds than its population, which an edition does not keep.
+        answer:
+          $ref: '#/components/schemas/AnalyticsAnswer'
     ReportingEvidenceRow:
       type: object
       additionalProperties: false
@@ -18014,44 +17728,6 @@ components:
             $ref: '#/components/schemas/ReportingExecution'
         next_cursor:
           type: string
-    SavedView:
-      type: object
-      description: >-
-        A per-user saved view (columns, sort, filter state) over one resource. V1 is private (owner-only); shared/team views are a fast-follow.
-      required: [id, owner_id, resource, name, query, version]
-      properties:
-        id: {type: string, format: uuid}
-        owner_id: {type: string, format: uuid}
-        shared_scope: {type: string, enum: [private, team, workspace], default: private, description: V1 enforces private.}
-        resource: {$ref: '#/components/schemas/SavedViewResource'}
-        name: {type: string}
-        query:
-          type: object
-          additionalProperties: true
-          description: The saved column choice, sort, and filter state, in the list-view vocabulary; persisted and restored verbatim.
-        version: {type: integer, format: int64, description: Optimistic-concurrency version; echo it in If-Match on update.}
-        created_at: {type: string, format: date-time}
-        updated_at: {type: string, format: date-time}
-        archived_at: {type: [string, 'null'], format: date-time}
-    CreateSavedViewRequest:
-      type: object
-      required: [resource, name, query]
-      properties:
-        resource: {$ref: '#/components/schemas/SavedViewResource'}
-        name: {type: string}
-        query: {type: object, additionalProperties: true}
-    UpdateSavedViewRequest:
-      type: object
-      description: A partial update; omitted fields keep their stored value.
-      properties:
-        name: {type: string}
-        query: {type: object, additionalProperties: true}
-    SavedViewListResponse:
-      type: object
-      required: [data, page]
-      properties:
-        data: {type: array, items: {$ref: '#/components/schemas/SavedView'}}
-        page: {$ref: '#/components/schemas/PageInfo'}
     User:
       type: object
       description: A seat — human or first-party agent.
@@ -18243,6 +17919,11 @@ components:
           format: int64
           description: >-
             The forward half. Zero for a manager call, which is a single authored TOTAL rather than a remainder — a call is not added to won_minor, and a reconciliation line drawing this must say the call instead of a split.
+        system_minor:
+          type: integer
+          format: int64
+          description: >-
+            Beside a manager call only: what the deal records alone project, won plus commit evidence. The call replaces this figure, so a reader comparing the call with the records needs both. Absent for every other measure, whose amount_minor already is the records' projection.
         caveat:
           type: string
           enum: [call_absent, call_below_actual]
@@ -18728,14 +18409,14 @@ components:
         and filtering while the column and its values are preserved. Deliberately carries no
         `source`/`captured_by` — the catalog row itself has no such columns; provenance
         on create lives in the audit row.
-      required: [id, object, label, slug, type, status, column_name, created_by, created_at, updated_at]
+      required: [id, object, label, slug, type, status, column_name, show_in_create, reportable, created_by, created_at, updated_at]
       properties:
         id: {type: string, format: uuid}
         object:
           type: string
-          enum: [contact, company, deal, lead, project, contract]
+          enum: [contact, company, deal, lead, project, contract, activity]
           description: The existing core object this field is added to.
-        label: {type: string, description: Display label; the only thing a rename updates.}
+        label: {type: string, description: 'Display label; a rename changes it, and never the slug or column_name.'}
         slug: {type: string, description: Admin-facing key the column_name derives from.}
         type:
           type: string
@@ -18758,6 +18439,14 @@ components:
           type: [array, 'null']
           items: {type: string}
           description: Allowed picklist values; present (non-empty) when `type=picklist`, null otherwise.
+        show_in_create:
+          type: boolean
+          description: >-
+            Whether the field is offered in the create dialog of its object. Off keeps it out of create dialogs only: the record page still shows the field and edits its value.
+        reportable:
+          type: boolean
+          description: >-
+            Whether reports may group and filter by this field. Off by default, and only a picklist or boolean field can be on: one value per record keeps a grouped total from counting a record twice. On publishes the field's label and choices to every reader of the reports over its object.
         created_by: {type: string, format: uuid}
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
@@ -18792,43 +18481,6 @@ components:
       properties:
         data: {type: array, items: {$ref: '#/components/schemas/CustomField'}}
         page: {$ref: '#/components/schemas/PageInfo'}
-    CreateCustomFieldRequest:
-      type: object
-      description: |-
-        always (a schema change is never) — see `createCustomField`. `currency` is
-        required when `type=currency` (pattern `^[A-Z]{3}$`); `options` is required
-        non-empty when `type=picklist`. Neither conditional
-        requirement is expressed as an OpenAPI 3.1 `oneOf`/`if`-`then` here — a prose note
-        plus a 422 on mismatch is sufficient, matching how Offer/Product money fields are
-        documented elsewhere in this contract.
-      required: [object, label, type, source]
-      properties:
-        object:
-          type: string
-          enum: [contact, company, deal, lead, project, contract]
-        label: {type: string}
-        type:
-          type: string
-          enum: [text, number, date, currency, picklist, multiselect, boolean]
-        currency: {type: [string, 'null'], pattern: '^[A-Z]{3}$'}
-        options: {type: [array, 'null'], items: {type: string}}
-        source: {type: string}
-    RenameCustomFieldRequest:
-      type: object
-      description: >-
-        Merge-PATCH; `label` only — `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent).
-      properties:
-        label: {type: string}
-    UpdateCustomFieldOptionsRequest:
-      type: object
-      description: >-
-        Replaces the picklist's full allowed-option set (ordered); at least one option is required — an empty array is rejected (422).
-      required: [options]
-      properties:
-        options:
-          type: array
-          items: {type: string}
-          minItems: 1
     ReportScope:
       type: object
       additionalProperties: false
@@ -19287,7 +18939,8 @@ components:
         company_id: {type: string, format: uuid}
         seed_url: {type: string, format: uri}
         status: {type: string, enum: [queued, deferred, running, done, partial, failed, cancelled]}
-        status_code: {type: [string, 'null'], enum: [null, budget_deferred]}
+        status_code: {type: [string, 'null'], enum: [null, budget_deferred, bot_blocked, http_server_error, timeout, http_client_error, dns, tls, robots_disallowed, unreadable, internal, stale_reclaim], description: 'Why a read did not finish: budget_deferred, or the closed failure vocabulary a failed crawl is diagnosed with.'}
+        deferral_reason: {type: string, description: 'Machine reason for a deferred operation: provider or budget. Absent outside a recognized deferral; preserve status_detail for unknown reasons.'}
         status_detail: {type: [string, 'null'], description: 'Safe guidance only; never provider payload, prompt, SQL, or stack data.'}
         next_attempt_at: {type: [string, 'null'], format: date-time}
         pages:
@@ -19336,11 +18989,147 @@ components:
           description: >-
             1-based line numbers within the source record's body that this claim was read from, for a source whose body is line-addressed (a meeting transcript today,: line N is the Nth newline-split segment of activity.body). Absent for a source that is not line-addressed.
           items: {type: integer, minimum: 1}
+    ApprovalPreviewValue:
+      type: object
+      required: [kind, text]
+      properties:
+        kind:
+          type: string
+          description: How the reader should format this value.
+        text:
+          type: string
+          description: Authorized readable value, or a lifecycle code for translation.
+        currency: {type: string, description: ISO currency of a money value in minor units.}
+        entity_type: {type: string}
+        entity_id: {type: string, format: uuid}
+    ApprovalPreviewChange:
+      type: object
+      required: [field, before, after]
+      properties:
+        field:
+          type: string
+          description: Canonical field name, translated by the client where known.
+        before: {$ref: '#/components/schemas/ApprovalPreviewValue'}
+        after: {$ref: '#/components/schemas/ApprovalPreviewValue'}
+    ApprovalPreviewDetail:
+      type: object
+      required: [field, value]
+      properties:
+        field:
+          type: string
+          description: >-
+            Semantic field key translated by the client. A key starting with `argument:` is one argument of an extension call, shown as plain text and labelled by the rest of the key. Its text is cut to 4096 bytes and ends in an ellipsis when cut; proposed_change keeps the full value.
+        value: {$ref: '#/components/schemas/ApprovalPreviewValue'}
+    ApprovalPreviewImportRow:
+      type: object
+      description: One complete import row effect, using the same checked values as the import writer.
+      required: [object, source_key, line, outcome, changes, details, effects]
+      properties:
+        object: {type: string}
+        source_key: {type: string}
+        line: {type: integer}
+        outcome: {type: string, enum: [create, create_duplicate, update, unchanged, skip]}
+        target: {$ref: '#/components/schemas/ApprovalPreviewValue'}
+        changes:
+          type: array
+          items: {$ref: '#/components/schemas/ApprovalPreviewChange'}
+        details:
+          type: array
+          items: {$ref: '#/components/schemas/ApprovalPreviewDetail'}
+        effects:
+          type: array
+          items: {type: string}
+    ApprovalPreviewFile:
+      type: object
+      required: [id, filename, content_type, byte_size]
+      properties:
+        id: {type: string, format: uuid}
+        filename: {type: string}
+        content_type: {type: string}
+        byte_size: {type: integer, format: int64}
+    ApprovalPreviewConflict:
+      type: object
+      description: Authorized context that must be considered separately from the proposed effect.
+      required: [kind, summary, blocks_approval]
+      properties:
+        kind:
+          type: string
+        summary:
+          type: string
+          description: A sanitized explanation containing only facts this reader may see.
+        blocks_approval:
+          type: boolean
+          description: Whether the domain requires reconciliation before this proposal can be approved.
+    LifecyclePreviewEvidence:
+      type: object
+      description: Current readable source and scope supporting a company lifecycle review.
+      required: [scope, occurred_at]
+      properties:
+        scope: {type: string, enum: [company, workstream, unknown]}
+        occurred_at: {type: string, format: date-time}
+        workstream: {type: string}
+    ApprovalPreview:
+      type: object
+      description: >-
+        A current, authorized explanation of the exact staged effect. It never grants permission or supplies execution arguments. Before values are answered only when the current record still has the staged version; stale records require restaging. Pending proposals alone carry this review-time projection. An approval attempt with stale context returns version_skew. Incomplete, unavailable or conflicting context returns 422 with approval_preview_incomplete, approval_preview_unavailable or approval_preview_conflict respectively, without recording a decision.
+      required: [version, state, changes, reviewer_reason]
+      properties:
+        import_rows:
+          type: array
+          description: The complete bounded row plan. An incomplete plan cannot authorize an import.
+          items: {$ref: '#/components/schemas/ApprovalPreviewImportRow'}
+        lifecycle_evidence:
+          $ref: '#/components/schemas/LifecyclePreviewEvidence'
+        details:
+          type: array
+          description: Version 2 action operands, read with current permissions and kept separate from execution arguments.
+          items: {$ref: '#/components/schemas/ApprovalPreviewDetail'}
+        files:
+          type: array
+          description: The complete authorized set of files the action will send. Version 2 clients provide the normal file review controls.
+          items: {$ref: '#/components/schemas/ApprovalPreviewFile'}
+        effects:
+          type: array
+          description: Additional business effects released by this approval. Other proposals remain separate decisions.
+          items:
+            type: string
+        evidence:
+          type: array
+          description: Current evidence resolved with the reader's source permissions. An empty array replaces historical evidence.
+          items: {$ref: '#/components/schemas/ApprovalEvidence'}
+        version: {type: integer, minimum: 1}
+        state:
+          type: string
+          description: Whether the full effect can still be explained from authorized records.
+        changes:
+          type: array
+          items: {$ref: '#/components/schemas/ApprovalPreviewChange'}
+        reviewer_reason:
+          type: string
+          description: Why this reader can answer the proposal, separate from its business reason.
+        current_version: {type: integer}
+        conflicts:
+          type: array
+          description: >-
+            Current authorized conflicts. Absence means they were not assessed, not that none exist. Related proposals remain separate decisions; approving this proposal never approves them.
+          items: {$ref: '#/components/schemas/ApprovalPreviewConflict'}
     Approval:
       type: object
       description: A staged confirm-first action awaiting human decision.
       required: [id, kind, status, proposed_by, created_at]
       properties:
+        preview:
+          $ref: '#/components/schemas/ApprovalPreview'
+        assignee_inactive:
+          type: boolean
+          readOnly: true
+          description: >-
+            For a pending commitment, whether its named task assignee cannot receive the task. True for invited, deactivated, archived, missing, or agent seats. Absent for an unassigned proposal. This is current decision context, not a change to the staged assignee.
+        requested_decider_id:
+          type: string
+          format: uuid
+          readOnly: true
+          description: The member explicitly asked to decide, independent of who has permission to approve.
         id: {type: string, format: uuid}
         kind: {type: string, description: 'Examples: coldstart | send_email | advance_deal | promote_lead | overnight | deal_follow_up | commitment_task.'}
         status: {type: string, enum: [pending, approved, rejected, expired]}
@@ -19363,7 +19152,7 @@ components:
           description: >-
             What the target record was CALLED when this proposal was staged, where its type has a name at all. Resolved at staging time and frozen: the record may be renamed, archived or merged before anyone opens the inbox, and a caption re-resolved then would name something the approver was never shown. Absent means the type carries no name, or the row had already gone — a card then says nothing rather than "unknown".
         target_version: {type: [integer, 'null'], description: 'The `version` of the target row when the diff was staged. On approve-execute the server RE-READS the row; if its current version ≠ target_version the execution is rejected with 409 ErrVersionSkew (the world changed since the human last saw the diff — re-stage). This closes the stage→approval race.'}
-        diff_hash: {type: [string, 'null'], description: 'Hash of the staged proposed_change; the minted approval_token is bound to this hash so a token cannot authorize a different effect.'}
+        diff_hash: {type: [string, 'null'], description: 'Hash of the staged proposed_change. A redemption whose call hashes differently is refused, so an approval cannot authorize a different effect.'}
         summary: {type: [string, 'null'], description: One-line description of the proposed change.}
         proposed_change:
           type: object
@@ -19376,7 +19165,6 @@ components:
         confidence: {type: [number, 'null'], minimum: 0, maximum: 1}
         result_entity_type: {type: [string, 'null']}
         result_entity_id: {type: [string, 'null'], format: uuid}
-        approval_token: {type: [string, 'null'], description: 'Signed single-use token minted on approve (schema ApprovalToken, serialized as compact JWS); authorizes exactly the downstream operation it is bound to.'}
         decided_by: {type: [string, 'null'], format: uuid}
         decided_at: {type: [string, 'null'], format: date-time}
         effect_failed_at:
@@ -19522,157 +19310,6 @@ components:
         lawful_basis: {type: [string, 'null']}
         double_opt_in_confirmed_at: {type: [string, 'null'], format: date-time}
         updated_at: {type: [string, 'null'], format: date-time}
-    ConsentEvent:
-      type: object
-      description: An append-only proof row (Art. 7 demonstrability). Never updated or deleted.
-      required: [id, purpose_id, new_state, occurred_at]
-      properties:
-        id: {type: string, format: uuid}
-        purpose_id: {type: string, format: uuid}
-        new_state: {type: string, enum: [granted, withdrawn], description: Proof rows record only transitions to granted/withdrawn (never to unknown).}
-        lawful_basis: {type: [string, 'null']}
-        source: {type: [string, 'null'], description: 'How consent was captured (e.g. webform, import, double_opt_in).'}
-        actor_type: {type: string, enum: [human, agent, system, connector]}
-        actor_id: {type: [string, 'null']}
-        occurred_at: {type: string, format: date-time}
-    RecordGrant:
-      type: object
-      description: A manual per-record share — widens own/team/all base scope for one record.
-      required: [id, record_type, record_id, subject_type, subject_id, access, granted_by, created_at, version]
-      properties:
-        id: {type: string, format: uuid}
-        record_type: {type: string, enum: [deal, contact, company, lead, project]}
-        record_id: {type: string, format: uuid}
-        subject_type: {type: string, enum: [user, team]}
-        subject_id: {type: string, format: uuid}
-        access:
-          type: string
-          enum: [read, write]
-          description: "'write' also satisfies 'read'."
-        granted_by: {type: string, format: uuid}
-        reason: {type: [string, 'null'], description: 'Accountability/lawful-basis note surfaced in the audit row.'}
-        expires_at: {type: [string, 'null'], format: date-time, description: 'Optional TTL; an expired grant matches no rows.'}
-        created_at: {type: string, format: date-time}
-        version: {type: integer, format: int64}
-    RecordAccess:
-      type: object
-      description: |-
-        Who can open one contact or company and who can change it. `data` is one page of the
-        members who can open it; `group_counts` and `page.total` count all of them.
-      required: [visibility, archived, detail, you, data, page, group_counts, can_change_count, team_access_count]
-      properties:
-        visibility:
-          type: string
-          enum: [workspace, owner]
-          description: '`workspace` opens to every member whose role reads this record type; `owner` only to its owner and the members it is shared with.'
-        owner_id:
-          type: [string, 'null']
-          format: uuid
-          description: The owner, or null when nobody owns the record.
-        archived:
-          type: boolean
-          description: An archived record still opens; nobody can change it until it is restored.
-        detail:
-          type: boolean
-          description: |-
-            True for a caller holding the `user_admin` read grant, the boundary `GET /users` applies to
-            who is in which team. Then every member is judged with their teams, and role keys and team
-            names ride the rows. When false, every member other than the caller is judged without their
-            teams, so no row tells the caller who belongs to a team; `team_access_count` counts the
-            members whose access or edit rights that leaves out.
-        you: {$ref: '#/components/schemas/RecordAccessVerdict'}
-        data:
-          type: array
-          items: {$ref: '#/components/schemas/RecordAccessMember'}
-        page: {$ref: '#/components/schemas/PageInfo'}
-        group_counts: {$ref: '#/components/schemas/RecordAccessGroupCounts'}
-        can_change_count:
-          type: integer
-          minimum: 0
-          description: How many of the members who can open the record can also change it.
-        team_access_count:
-          type: integer
-          minimum: 0
-          description: How many members have access or edit rights only through a team and are not shown as such, because `detail` is false. Always 0 when `detail` is true.
-        refresh_at:
-          type: [string, 'null']
-          format: date-time
-          description: When the earliest share on this record lapses and this answer changes; null when no share expires.
-    RecordAccessGroupCounts:
-      type: object
-      description: How many members fall in each group, by their first reason in the order owner, direct share, team share, everyone.
-      required: [owner, shared, team_shared, everyone]
-      properties:
-        owner: {type: integer, minimum: 0}
-        shared: {type: integer, minimum: 0}
-        team_shared: {type: integer, minimum: 0}
-        everyone: {type: integer, minimum: 0}
-    RecordAccessVerdict:
-      type: object
-      description: One member's access to the record and the reasons for it.
-      required: [can_change, read_reasons, change_reasons]
-      properties:
-        can_change:
-          type: boolean
-          description: Whether the record's edit path admits this member.
-        read_reasons:
-          type: array
-          items: {$ref: '#/components/schemas/RecordAccessReason'}
-          description: Why the record opens for this member.
-        change_reasons:
-          type: array
-          items: {$ref: '#/components/schemas/RecordAccessReason'}
-          description: Why this member can change it; empty when they cannot.
-    RecordAccessMember:
-      type: object
-      description: A member who can open the record.
-      required: [user_id, display_name, group, can_change, read_reasons, change_reasons]
-      properties:
-        user_id: {type: string, format: uuid}
-        display_name: {type: string}
-        group:
-          type: string
-          enum: [owner, shared, team_shared, everyone]
-          description: The group the panel lists this member under, from their first reason.
-        can_change: {type: boolean}
-        read_reasons:
-          type: array
-          items: {$ref: '#/components/schemas/RecordAccessReason'}
-        change_reasons:
-          type: array
-          items: {$ref: '#/components/schemas/RecordAccessReason'}
-        roles:
-          type: array
-          items: {type: string}
-          description: The member's role keys. Present only when `detail` is true.
-    RecordAccessReason:
-      type: object
-      description: |-
-        One reason a member can open or change the record. `workspace_visible` means the record is
-        open to everyone whose role reads this record type. `owner` means they own it.
-        `user_share` and `team_share` are live shares. `same_team_as_owner` and `all_records` come
-        from the member's role scope and apply only to changing. `write_share` is a share that allows
-        changing.
-      required: [code]
-      properties:
-        code:
-          type: string
-          enum: [workspace_visible, owner, user_share, team_share, same_team_as_owner, all_records, write_share]
-        access:
-          type: string
-          enum: [read, write]
-          description: The share's access level, on the three share codes.
-        expires_at:
-          type: [string, 'null']
-          format: date-time
-          description: When the share lapses, on the three share codes; null when it does not.
-        team_id:
-          type: string
-          format: uuid
-          description: The team behind a team share. Present only when `detail` is true.
-        team_name:
-          type: string
-          description: The team's name. Present only when `detail` is true.
     UserListResponse:
       type: object
       required: [data, page]
@@ -19777,7 +19414,7 @@ components:
         name: {type: string}
         sku: {type: [string, 'null'], description: Optional; unique per workspace while live.}
         description: {type: [string, 'null']}
-        unit: {type: string, description: "'unit' | 'hour' | 'day' | …; display only, free text."}
+        unit: {type: string, description: "A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`) that a client shows in its reader's language, or any other unit as typed text. A row written before the keys may hold a known spelling such as `Tag`, which a client shows as its key. Display only."}
         unit_price_minor: {type: integer, format: int64, description: Integer minor units (P11); no float money.}
         billing_model: {type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.'}
         billing_interval_months: {type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.'}
@@ -19804,7 +19441,7 @@ components:
         name: {type: string}
         sku: {type: [string, 'null']}
         description: {type: [string, 'null']}
-        unit: {type: [string, 'null'], description: Defaults to 'unit'.}
+        unit: {type: [string, 'null'], description: "A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. A known spelling such as `Stunde` or `hours` is stored as its key. Defaults to `piece`."}
         unit_price_minor: {type: integer, format: int64, minimum: 0}
         billing_model: {type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.'}
         billing_interval_months: {type: [integer, 'null'], enum: [1, 3, 6, 12, null], description: 'How many months one billing period spans. Required with `recurring`, refused otherwise.'}
@@ -19812,7 +19449,7 @@ components:
         default_tax_rate: {type: [number, 'null'], format: double, minimum: 0, description: Percent; defaults to 0.}
         active: {type: [boolean, 'null'], description: Defaults to true.}
         source: {type: string}
-      additionalProperties: true
+      additionalProperties: false
     UpdateProductRequest:
       type: object
       description: Any subset; omit a field to leave it unchanged. A price change never re-prices existing offer lines (they hold snapshots).
@@ -19827,7 +19464,7 @@ components:
         currency: {type: string, pattern: '^[A-Z]{3}$'}
         default_tax_rate: {type: number, format: double, minimum: 0}
         active: {type: boolean}
-      additionalProperties: true
+      additionalProperties: false
     DealRoomState:
       type: string
       description: |-
@@ -19895,7 +19532,7 @@ components:
           description: Defaults to the deal's owner when omitted.
         expires_at: {type: [string, 'null'], format: date-time}
         source: {type: string}
-      additionalProperties: true
+      additionalProperties: false
     DealRoomParticipantCapability:
       description: |-
         What a participant may do in the room. Coarse and room-wide on purpose — a
@@ -20226,7 +19863,7 @@ components:
         position: {type: [integer, 'null'], minimum: 1, description: Defaults to the next free position.}
         product_id: {type: [string, 'null'], format: uuid}
         description: {type: [string, 'null']}
-        unit: {type: [string, 'null']}
+        unit: {type: [string, 'null'], description: "A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. A known spelling such as `Stunde` or `hours` is stored as its key. Defaults to the product's unit, else `piece`."}
         quantity: {type: number, format: double, description: '> 0, up to 3 decimal places.'}
         unit_price_minor: {type: [integer, 'null'], format: int64, minimum: 0}
         billing_model: {type: [string, 'null'], enum: [one_time, recurring, null], description: 'Whether this price repeats. Null means nobody has classified it, which is NOT the same as one_time: every row written before the field existed carries null, and reading it as one-off would assert a classification nobody made.'}
@@ -20262,7 +19899,7 @@ components:
           type: [array, 'null']
           items: {$ref: '#/components/schemas/OfferLineItemInput'}
         source: {type: string}
-      additionalProperties: true
+      additionalProperties: false
     UpdateOfferRequest:
       type: object
       description: Header-field patch; allowed only while status=draft (422 offer_not_draft otherwise). Totals are derived and not settable (422).
@@ -20282,7 +19919,7 @@ components:
         template_id: {type: [string, 'null'], format: uuid}
         intro_text: {type: [string, 'null']}
         terms_text: {type: [string, 'null']}
-      additionalProperties: true
+      additionalProperties: false
     MorningBrief:
       type: object
       description: |-

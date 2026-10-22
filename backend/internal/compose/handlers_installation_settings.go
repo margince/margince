@@ -11,6 +11,7 @@ package compose
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -18,10 +19,17 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/currencylock"
 )
 
 type installationSettingsHandlers struct {
 	store *identity.InstallationSettingsStore
+	// afterSave runs once a patch has committed. The meter's ForgetPolicy, so
+	// this process binds a saved allowance on the next agent call.
+	afterSave func()
+	// now reads the window plan in the answer; it is the store's clock in a test
+	// that pins one, and the wall clock otherwise.
+	now func() time.Time
 	// pool reads the jurisdiction page in one transaction
 	// (handlers_installation_jurisdiction.go).
 	pool *pgxpool.Pool
@@ -194,6 +202,10 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 	// refusal names the setting and quotes the group or role it refused —
 	// the same division of labour as the fiscal month above.
 	patch.OidcGroupRoleMap = req.OidcGroupRoleMap
+	// Each switch checks agent_client per field (settings.SetRawTx), so the
+	// installation patch gate alone does not let ops turn a method back on.
+	patch.DynamicClientRegistration = req.DynamicClientRegistration
+	patch.MetadataDocumentClients = req.MetadataDocumentClients
 	// Each entry's validator holds its range and names the field it refuses.
 	patch.Operations = identity.OperationPatch{
 		AgentRunnerIntervalSeconds:       req.AgentRunnerIntervalSeconds,
@@ -212,10 +224,19 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 		TimeScanIntervalSeconds:          req.TimeScanIntervalSeconds,
 		WebhookRetryIntervalSeconds:      req.WebhookRetryIntervalSeconds,
 	}
+	patch.AgentAllowances = identity.AgentAllowancePatch{
+		WritesPerWindow: req.AgentWritesPerWindow,
+		EgressPerWindow: req.AgentEgressPerWindow,
+		CallsPerWindow:  req.AgentCallsPerWindow,
+		WindowHours:     req.AgentWindowHours,
+	}
 	s, err := h.store.UpdateInstallation(r.Context(), patch)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
+	}
+	if h.afterSave != nil {
+		h.afterSave()
 	}
 	httperr.WriteJSON(w, http.StatusOK, h.toContract(s))
 }
@@ -225,8 +246,8 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 // arrives from composition rather than from the settings table — the same way
 // base_currency_locked is derived rather than kept.
 //
-// The lock reason is omitted rather than sent empty when the currency is still
-// changeable: an empty string would render as a reason that says nothing.
+// The lock reason and its facts are sent only when the lock has prose. An empty
+// reason, or one off the contract's enum, tells a client nothing.
 func (h installationSettingsHandlers) toContract(s identity.InstallationSettings) crmcontracts.InstallationSettings {
 	out := crmcontracts.InstallationSettings{
 		Name:                 s.Name,
@@ -242,14 +263,30 @@ func (h installationSettingsHandlers) toContract(s identity.InstallationSettings
 		MaxUploadBytes:             h.maxUploadBytes,
 		SignInProviders:            h.signInProviders(s.EnabledOidcProviders),
 		Operations:                 crmcontracts.OperationSettings(s.Operations),
+		AgentAllowances:            toAgentAllowances(s.AgentAllowances, h.clock()),
+		Locks:                      loadedLocks(identity.Settings()),
 	}
 	dateFormat := crmcontracts.InstallationSettingsDateFormat(s.DateFormat)
 	timeFormat := crmcontracts.InstallationSettingsTimeFormat(s.TimeFormat)
 	out.DateFormat = &dateFormat
 	out.TimeFormat = &timeFormat
-	if s.BaseCurrencyLockedReason != "" {
-		reason := s.BaseCurrencyLockedReason
+	if reason := s.BaseCurrencyLock.Prose(); s.BaseCurrencyLocked && reason != "" {
 		out.BaseCurrencyLockedReason = &reason
+		out.BaseCurrencyLock = toBaseCurrencyLock(s.BaseCurrencyLock)
+	}
+	return out
+}
+
+// toBaseCurrencyLock sends the facts the prose reason was worded from. An
+// absent base stays absent, not empty, so a client words that case without one.
+func toBaseCurrencyLock(lock currencylock.Lock) *crmcontracts.BaseCurrencyLock {
+	out := &crmcontracts.BaseCurrencyLock{
+		Reason: crmcontracts.BaseCurrencyLockReason(lock.Reason),
+		Count:  lock.Count,
+	}
+	if lock.BaseCurrency != "" {
+		base := lock.BaseCurrency
+		out.BaseCurrency = &base
 	}
 	return out
 }
@@ -286,4 +323,11 @@ func (h installationSettingsHandlers) signInProviders(chosen []string) []crmcont
 		})
 	}
 	return out
+}
+
+func (h installationSettingsHandlers) clock() time.Time {
+	if h.now != nil {
+		return h.now()
+	}
+	return time.Now()
 }

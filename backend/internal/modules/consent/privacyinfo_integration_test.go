@@ -62,6 +62,12 @@ func TestThePrivacyNoticeAsksForNoSubscription(t *testing.T) {
 	// sees.
 	body := strings.ReplaceAll(
 		sent.Rendered.Subject+"\n"+sent.Rendered.Body, linkPlaceholder, "")
+	// A statement that no action is required must not look like a request to act.
+	const noReply = "No reply or confirmation is required."
+	if !strings.Contains(body, noReply) {
+		t.Fatal("the notice does not explain that no reply is required")
+	}
+	body = strings.ReplaceAll(body, noReply, "")
 	for _, asking := range []string{
 		"whether you want", "want to hear from us", "subscribe", "confirm",
 	} {

@@ -57,11 +57,6 @@ func (w *csvWriters) companyDomainAlreadyHeld(ctx context.Context, row migration
 	return held, nil
 }
 
-// linkedInClaimedReason is the report's word for a row whose LinkedIn URL
-// another live record holds. Like domainClaimedReason it names no incumbent.
-const linkedInClaimedReason = "this LinkedIn URL is already held by another record in the CRM, " +
-	"so the row cannot claim it"
-
 // linkedInClaimed reports whether the store refused a write because another
 // live company or lead holds its LinkedIn URL.
 func linkedInClaimed(err error) bool {

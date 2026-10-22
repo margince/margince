@@ -268,9 +268,10 @@ recipient's own choice. The pages a link opens carry a language switch, which is
 ### Confirm first for agents; a human's own action is its own approval
 
 Both send operations declare `tier: confirmation_required` (🟡) in the contract's `x-mcp-tool`
-extension, and both take an `ApprovalToken` input. The composition layer's gate for agent actions
+extension, and both take an `X-Approval-Token` header. The composition layer's gate for agent actions
 reads that tier off the contract and enforces it **before** the request reaches the handler. An agent
-caller must show an approval token, while the own call of a human caller comes in as the approval it is.
+caller repeats the call with the approval's id in that header once a human approves it. A human
+caller's own call is itself the approval.
 That is the same 🟡 machine the approvals module runs for every other action that asks first; see
 [agent-surface.md](agent-surface.md).
 

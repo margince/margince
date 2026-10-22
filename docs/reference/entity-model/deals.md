@@ -72,7 +72,7 @@ The 23 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 ## deal
 
-43 columns · primary key `(id)` · referenced by 25 foreign keys
+43 columns · primary key `(id)` · referenced by 26 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -715,7 +715,7 @@ The 23 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `proposal_state` | `text`, default `'accepted'::text` | yes | One of `staged`, `accepted`. |
 | `quantity` | `numeric(14,3)` | yes | Up to 3 decimal places (numeric 14,3); must be > 0. |
 | `tax_rate` | `numeric(5,2)`, default `0` | yes | Percent, up to 2 decimal places. |
-| `unit` | `text`, default `'unit'::text` | yes |  |
+| `unit` | `text`, default `'unit'::text` | yes | A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`), or any other unit as typed text. |
 | `unit_price_minor` | `bigint` | yes | Snapshot; never re-read from product after creation. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
@@ -830,7 +830,7 @@ The 23 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `description` | `text` |  |  |
 | `name` | `text` | yes |  |
 | `sku` | `text` |  | Optional; unique per workspace while live. |
-| `unit` | `text`, default `'unit'::text` | yes | 'unit' \| 'hour' \| 'day' \| …; display only, free text. |
+| `unit` | `text`, default `'unit'::text` | yes | A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`) that a client shows in its reader's language, or any other unit as typed text. |
 | `unit_price_minor` | `bigint` | yes | Integer minor units (P11); no float money. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal; never client-supplied. |

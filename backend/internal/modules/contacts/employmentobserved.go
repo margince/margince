@@ -112,7 +112,7 @@ func auditFirstObservation(ctx context.Context, tx pgx.Tx, move firstObservation
 		}},
 	}
 	if err := storekit.EmitEvent(ctx, tx, auditID, move.contact.UUID,
-		relationshipUpdatedPayload(contactEntity, delta)); err != nil {
+		relationshipUpdatedPayload(ctx, contactEntity, delta)); err != nil {
 		return fmt.Errorf("contacts: publish the employment edge's first observation: %w", err)
 	}
 	return nil
@@ -130,23 +130,12 @@ const fieldFirstObservedAt = "first_observed_at"
 // mergedColumn is the endpoint the merge rewrites ("contact_id" or
 // "company_id"); the edges must agree on the other one.
 func foldFirstObservations(ctx context.Context, tx pgx.Tx, mergedColumn string, source, target ids.UUID) error {
-	sharedColumn := contactFK
-	if mergedColumn == contactFK {
-		sharedColumn = companyFK
-	}
-	rows, err := tx.Query(ctx, storekit.SQLf(`
-		UPDATE relationship s SET first_observed_at = f.earliest
-		  FROM (SELECT b.id, b.first_observed_at AS was, min(a.first_observed_at) AS earliest
-		          FROM relationship a
-		          JOIN relationship b ON b.kind = a.kind AND b.id <> a.id AND b.archived_at IS NULL
-		           AND b.%[2]s = a.%[2]s AND b.%[1]s = $2
-		         WHERE a.kind = 'employment' AND a.archived_at IS NULL AND a.%[1]s = $1
-		           AND `+roleKeyedDuplicateSQL+`
-		         GROUP BY b.id, b.first_observed_at) f
-		 WHERE s.id = f.id AND f.earliest IS NOT NULL
-		   AND (f.was IS NULL OR f.earliest < f.was)
-		RETURNING s.id, s.contact_id, s.company_id, f.was, s.first_observed_at`,
-		mergedColumn, sharedColumn), source, target)
+	rows, err := tx.Query(ctx, `
+ UPDATE relationship s SET first_observed_at = f.earliest
+ FROM (`+mergeObservationCandidates(mergedColumn)+`) f
+ WHERE s.id = f.id AND `+mergeObservationChanges+`
+ RETURNING s.id, s.contact_id, s.company_id, f.was, s.first_observed_at`,
+		pgx.StrictNamedArgs{mergeSourceKey: source, mergeTargetKey: target})
 	if err != nil {
 		return fmt.Errorf("contacts: folding the merged employment edges' first observations: %w", err)
 	}
@@ -169,4 +158,21 @@ func foldFirstObservations(ctx context.Context, tx pgx.Tx, mergedColumn string, 
 		}
 	}
 	return nil
+}
+
+const mergeObservationChanges = "f.earliest IS NOT NULL AND (f.was IS NULL OR f.earliest < f.was)"
+
+func mergeObservationCandidates(mergedColumn string) string {
+	sharedColumn := contactFK
+	if mergedColumn == contactFK {
+		sharedColumn = companyFK
+	}
+	return storekit.SQLf(`
+ SELECT b.id, b.first_observed_at AS was, min(a.first_observed_at) AS earliest
+ FROM relationship a
+ JOIN relationship b ON b.kind = a.kind AND b.id <> a.id AND b.archived_at IS NULL
+ AND b.%[2]s = a.%[2]s AND b.%[1]s = @target
+ WHERE a.kind = 'employment' AND a.archived_at IS NULL AND a.%[1]s = @source
+ AND `+roleKeyedDuplicateSQL+`
+ GROUP BY b.id, b.first_observed_at`, mergedColumn, sharedColumn)
 }

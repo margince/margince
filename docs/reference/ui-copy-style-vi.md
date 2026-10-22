@@ -42,7 +42,7 @@ reviewer reads a Vietnamese change against this page.
   "từ khi mở danh sách", "Tin nhắn vẫn nằm ngoài danh sách". Keep it in "Bạn không có quyền thực hiện thao
   tác này" and beside "Deal của nhóm". Lowercase mid-sentence; a capital only where a sentence opens.
 - **Five families are read by an outsider**: the four German Sie families in
-  `frontend/src/i18n/address-register.test.ts` (`privacynotice.`, `confirm.`, `buyer.`, `prefs.`) and
+  `frontend/scripts/lib/german-catalogs.ts` (`privacynotice.`, `confirm.`, `buyer.`, `prefs.`) and
   `book.`, the public booking form a guest fills in. There the reader is **quý khách** where the English
   says you, never bạn, and "Vui lòng" is allowed. Use quý khách only where the sentence needs it: "Xin cảm
   ơn", "Xác nhận đăng ký". `book.name` and `book.email` share a form with `scheduling.` keys, so they
@@ -231,7 +231,7 @@ the reviewer in the sense its row gives.
 | Snooze | tạm hoãn (Not now / set aside = gác lại, Để sau) | |
 | A classifier's result | kết quả, lần kiểm tra | `phán quyết`, `verdict` |
 | Capture intake step | kiểm tra đầu vào | `admission check` |
-| Ownership of a deal | phụ trách (label Phụ trách; the human người phụ trách; Assign owner = Giao người phụ trách) | người sở hữu for ownership |
+| The owner of a record; a responsibility role on it | chịu trách nhiệm for the owner (label Người chịu trách nhiệm; Assign owner = Giao người chịu trách nhiệm); phụ trách for a role | người sở hữu, chủ sở hữu for ownership; phụ trách for the owner |
 | Tabs of a record | the tab labels themselves | `phần của bản ghi` |
 | A pointer to a Settings page | Cài đặt, mục followed by the tab or group label as the screen shows it | an arrow between Cài đặt and the label; lowercase cài đặt before the label |
 | The running Margince system | bản cài đặt | |
@@ -379,8 +379,8 @@ vocabulary.
 | No failure word in a short value | thất bại in a value of at most 8 words: a title, label, status or counter |
 
 The prefixes come from the gates that own them: the speaker exemptions from
-`copy-style.test.ts`, the outsider families from `address-register.test.ts`
-with `book.` added, the consent keys from `marketingquestion_test.go`, and the
+`copy-style.test.ts`, the outsider families from `german-catalogs.ts` with
+`book.` added, the consent keys from `marketingquestion_test.go`, and the
 retired words and their kept compounds from the Vocabulary table. Two more
 tests fail a `vi.json` a unit ships that the gate did not read, and a unit
 value whose words equal its English.

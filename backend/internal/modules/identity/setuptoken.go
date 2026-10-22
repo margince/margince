@@ -292,7 +292,7 @@ func (s *Service) ClaimInstallation(ctx context.Context, token string, in Instal
 		if err := consumeSetupToken(ctx, tx, token); err != nil {
 			return err
 		}
-		wsID, err = createInstallation(ctx, tx, in, originClaimed, seed, &discarded)
+		wsID, err = createInstallation(ctx, tx, s.config, in, originClaimed, seed, &discarded)
 		return err
 	})
 	if err != nil {

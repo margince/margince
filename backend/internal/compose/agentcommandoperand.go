@@ -3,15 +3,11 @@
 
 package compose
 
-// The REST door's half of the eight commands whose operand is a SECOND path
-// parameter or a second path segment, not the route's own {id}
-// (margince/margince#928 task 5): a company fact or profile
-// field, a custom field's retire/options actions, and a project stakeholder.
-// The decoding shape is the same one archiveCommand/patchCommand set in
-// agentcommand.go — parse {id} as the existence-hiding 404 (routedID, shared
-// with them), decode the rest, hand the typed command to its resolver
-// (modules/agents/commandsidecar.go, commandaction.go) — split out here
-// because the family carries a SECOND path operand those two never had to.
+// The REST door's half of the commands with a second path operand beyond the
+// route's own {id}. They act on a company fact or profile field, or on a
+// project stakeholder. Each parses {id} as the existence-hiding
+// 404 (routedID), decodes the second operand, and hands the typed command to
+// its resolver (modules/agents/commandsidecar.go, commandaction.go).
 
 import (
 	"encoding/json"
@@ -124,24 +120,6 @@ func updateProfileFieldCommand(_ agentPolicy, deps restCommandDeps, r *http.Requ
 	return agents.NewUpdateProfileFieldCall(deps.records, deps.language, agents.UpdateProfileFieldCommand{ID: id, Field: field}), nil
 }
 
-//nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
-func retireCustomFieldCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, _ []byte) (agents.GovernedCall, error) {
-	id, err := routedID(r)
-	if err != nil {
-		return nil, err
-	}
-	return agents.NewRetireCustomFieldCall(deps.records, deps.language, agents.RetireCustomFieldCommand{ID: id}), nil
-}
-
-//nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
-func updateCustomFieldOptionsCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, _ []byte) (agents.GovernedCall, error) {
-	id, err := routedID(r)
-	if err != nil {
-		return nil, err
-	}
-	return agents.NewUpdateCustomFieldOptionsCall(deps.records, deps.language, agents.UpdateCustomFieldOptionsCommand{ID: id}), nil
-}
-
 // setStakeholderCommand decodes PUT /v1/projects/{id}/stakeholders, whose
 // contact_id arrives in the BODY where its DELETE twin carries it in the path.
 //
@@ -229,7 +207,19 @@ func createRoomItemCommand(pol agentPolicy, deps restCommandDeps, r *http.Reques
 	if err != nil {
 		return nil, err
 	}
-	fields, err := withRoomID(body, roomID)
+	parents := map[string]ids.UUID{"deal_room_id": roomID}
+	if pol.RecordType == recordTypeDealRoomComment {
+		raw, err := pathOperand(r, "threadId")
+		if err != nil {
+			return nil, err
+		}
+		threadID, perr := ids.Parse(raw)
+		if perr != nil {
+			return nil, apperrors.ErrNotFound
+		}
+		parents["thread_id"] = threadID
+	}
+	fields, err := withParents(body, parents)
 	if err != nil {
 		return nil, err
 	}
@@ -278,22 +268,24 @@ func roomItemPatchCommand(pol agentPolicy, deps restCommandDeps, r *http.Request
 	}), nil
 }
 
-// withRoomID folds the routed room into a create body so the staged approval
-// names where the item lands. A body that is not an object is refused here
-// rather than reaching the handler, because a create whose fields cannot carry
-// the room would stage an item belonging to no room at all.
-func withRoomID(body []byte, roomID ids.UUID) (json.RawMessage, error) {
+// withParents folds the routed parents into a create body, under the names a
+// create_record call gives them. The staged approval names where the item
+// lands, and both doors stage one command. A body that is not an object is
+// refused here: a create whose fields cannot carry its room belongs nowhere.
+func withParents(body []byte, parents map[string]ids.UUID) (json.RawMessage, error) {
 	fields := map[string]json.RawMessage{}
 	if len(body) > 0 {
 		if err := json.Unmarshal(body, &fields); err != nil {
 			return nil, httperr.Validation("body", "invalid", "the request body must be a JSON object")
 		}
 	}
-	encoded, err := json.Marshal(roomID)
-	if err != nil {
-		return nil, httperr.Validation("id", "invalid", "the room in the path is not a uuid")
+	for name, id := range parents {
+		encoded, err := json.Marshal(id)
+		if err != nil {
+			return nil, httperr.Validation(name, "invalid", "the "+name+" in the path is not a uuid")
+		}
+		fields[name] = encoded
 	}
-	fields["room_id"] = encoded
 	merged, err := json.Marshal(fields)
 	if err != nil {
 		return nil, httperr.Validation("body", "invalid", "the request body could not be read as fields")

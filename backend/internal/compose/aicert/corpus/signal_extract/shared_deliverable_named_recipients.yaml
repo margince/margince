@@ -1,0 +1,58 @@
+{
+  "name": "shared_deliverable_named_recipients",
+  "task": "signal_extract",
+  "site": "thread_events",
+  "source": "hand_authored",
+  "sanitized_by": "hand_authored/codex",
+  "fixture": [
+    {
+      "direction": "outbound",
+      "subject": "Recording",
+      "sent": "2026-09-07",
+      "body": "Ines and Morgan, I will send the recording to both of you.",
+      "participants": [
+        {
+          "key": "mira",
+          "kind": "seat",
+          "role": "from",
+          "name": "Mira Chen",
+          "address": ""
+        },
+        {
+          "key": "ines",
+          "kind": "contact",
+          "role": "to",
+          "name": "Ines Huber",
+          "address": ""
+        },
+        {
+          "key": "morgan",
+          "kind": "contact",
+          "role": "cc",
+          "name": "Morgan Reed",
+          "address": ""
+        }
+      ]
+    }
+  ],
+  "expect": {
+    "outcome": "accepted",
+    "answer": [
+      {
+        "kind": "commitment_made",
+        "message": 1,
+        "promiser": "mira",
+        "recipients": [
+          "ines",
+          "morgan"
+        ]
+      }
+    ],
+    "rubric": "Return one promise by Mira to send the recording. Attribute only the contacts explicitly promised the deliverable. Attendance and copied-message membership do not create obligations. Preserve one shared promise when the same quoted words name both recipients. Do not invent a deadline.",
+    "bands": {
+      "certified_min": 70,
+      "degraded_min": 50,
+      "floor": 40
+    }
+  }
+}

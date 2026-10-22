@@ -108,7 +108,7 @@ func (e *reportEngine) fetchDerivation(ctx context.Context, report string, spec 
 		if err != nil {
 			return err
 		}
-		rowsSQL, rowsArgs, err := bindReportTokens(ctx, frame, fmt.Sprintf(
+		rowsSQL, rowsArgs, err := bindReportTokens(ctx, tx, frame, fmt.Sprintf(
 			"SELECT %s FROM %s WHERE %s ORDER BY t.id LIMIT %d",
 			strings.Join(selects, ", "), spec.fromClause(), whereSQL, reportRowLimit), rowArgs)
 		if err != nil {
@@ -129,7 +129,7 @@ func (e *reportEngine) fetchDerivation(ctx context.Context, report string, spec 
 		// (count(*) rides along as the honest total behind the capped
 		// rows slice). Values are read positionally, so a caller alias
 		// cannot shadow the total.
-		aggSQL, aggArgs, err := bindReportTokens(ctx, frame, fmt.Sprintf(
+		aggSQL, aggArgs, err := bindReportTokens(ctx, tx, frame, fmt.Sprintf(
 			"SELECT count(*), %s FROM %s WHERE %s",
 			strings.Join(plan.aggSelects, ", "), spec.fromClause(), whereSQL), args)
 		if err != nil {
@@ -277,7 +277,7 @@ func derivationWhere(
 	ctx context.Context, tx pgx.Tx, spec reportSpec, plan derivationPlan,
 	requested RequestedScope, arg func(any) int,
 ) ([]string, string, error) {
-	where := []string{spec.baseWhere}
+	where := []string{spec.populationWhere()}
 	for _, p := range plan.preds {
 		switch {
 		case p.threshold != nil:

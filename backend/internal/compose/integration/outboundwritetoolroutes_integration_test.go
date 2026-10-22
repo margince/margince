@@ -19,10 +19,10 @@ import (
 // stand-in for the web.
 func TestEnrichStagesTheSameApprovalOnEitherDoor(t *testing.T) {
 	d := newTwoDoors(t, "enrich-write-doors", "read", "write", "enrich")
-	company := func(name string) string {
-		return createdID(t, d.e, "/v1/companies", AnyMap{"display_name": name, "domain": "doors.example", "source": "manual"})
+	company := func(name, domain string) string {
+		return createdID(t, d.e, "/v1/companies", AnyMap{"display_name": name, "domains": []AnyMap{{"domain": domain, "is_primary": true}}, "source": "manual"})
 	}
-	viaREST, viaTool := company("Enrich Rest"), company("Enrich Tool")
+	viaREST, viaTool := company("Enrich Rest", "rest.doors.example"), company("Enrich Tool", "tool.doors.example")
 
 	var refusal fileRefusal
 	if status := d.e.Call(t, "POST", "/v1/companies/"+viaREST+"/enrich", AnyMap{}, d.bearer, &refusal); status != http.StatusForbidden || refusal.Code != "approval_required" {

@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // FromView folds the caller's 360 into the draft's input.
@@ -81,6 +82,7 @@ func recipientOf(view crmcontracts.Contact360) RecipientIn {
 	contact := view.Contact
 	out := RecipientIn{
 		ID:           contact.Id.String(),
+		Kind:         datasource.EntityContact,
 		Name:         contact.FullName,
 		FirstName:    greetingName(contact),
 		LastName:     surname(contact),

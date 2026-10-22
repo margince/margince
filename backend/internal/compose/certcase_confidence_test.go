@@ -24,8 +24,8 @@ func TestSignalExtractReportsTheConfidenceOfItsCommitmentsOnly(t *testing.T) {
 	first, second := c.thread.Messages[0].ID, c.thread.Messages[1].ID
 	reply := `{"events":[
 		{"kind":"new_opportunity","message_id":"` + first.String() + `","summary":"s","confidence":0.99},
-		{"kind":"commitment_made","message_id":"` + second.String() + `","summary":"s","confidence":0.6},
-		{"kind":"commitment_made","message_id":"` + second.String() + `","summary":"t","confidence":0.9}]}`
+		{"kind":"commitment_made","message_id":"` + second.String() + `","summary":"s","confidence":0.6,"commitment":{"state":"open","condition":"","deadline_precision":"none","deadline_quote":""}},
+		{"kind":"commitment_made","message_id":"` + second.String() + `","summary":"t","confidence":0.9,"commitment":{"state":"open","condition":"","deadline_precision":"none","deadline_quote":""}}]}`
 
 	low, high, reported := c.AnswerConfidence(aitasks.Trace{Output: reply})
 
@@ -39,7 +39,7 @@ func TestTranscriptProposeReportsNoConfidenceForAnEmptyOrUnparseableReply(t *tes
 
 	_, _, emptyReported := c.AnswerConfidence(aitasks.Trace{Output: `{"proposals":[]}`})
 	_, _, garbledReported := c.AnswerConfidence(aitasks.Trace{Output: `not json`})
-	low, high, reported := c.AnswerConfidence(aitasks.Trace{Output: `{"proposals":[{"summary":"s","owner":"a","source_lines":[1],"confidence":0.8}]}`})
+	low, high, reported := c.AnswerConfidence(aitasks.Trace{Output: `{"proposals":[{"summary":"s","owner":"a","source_lines":[1],"confidence":0.8,"commitment":{"state":"open","condition":"","deadline_precision":"none","deadline_quote":""}}]}`})
 
 	if emptyReported || garbledReported {
 		t.Fatalf("an empty or unparseable reply reported a confidence (empty=%v, garbled=%v)", emptyReported, garbledReported)

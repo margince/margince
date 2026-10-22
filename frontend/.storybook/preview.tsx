@@ -5,9 +5,9 @@ import type { Decorator, Preview } from "@storybook/react-vite";
 // colours, which ds-purity bans — the theme switch below is a decorator.
 import "../src/app.css";
 // Structural chrome (.wrap/.list-toolbar) and composed surfaces
-// (.card/.firmo/.meterbar/…) live in these two sheets, loaded in the real
-// app via component-colocated side-effect imports (app/shell.tsx,
-// design-system/composed.tsx) that most stories never reach — importing
+// (.card/.firmo/.meterbar/…) live in these two sheets. The app loads them
+// through the modules that use them, such as app/shell.tsx and
+// design-system/timeline.tsx, and most stories never reach those. Importing
 // them here keeps story renders matching production chrome.
 import "../src/app/shell.css";
 // The strip's own sheet, for the same reason and with the same failure mode: a
@@ -29,7 +29,7 @@ import "../src/design-system/atoms.css";
 // renders one card on its own never reaches it. Unloaded, that commit band had
 // no interval above it, so every settings-card story understated exactly the
 // spacing those stories exist to check.
-import "../src/screens/settings.css";
+import "../src/features/settings/settings.css";
 
 // Theme decorator — sets data-theme on <html>, the same mechanism the shell
 // uses (src/app/shell.tsx), so a story previews in light and dark.

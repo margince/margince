@@ -159,6 +159,7 @@ type DraftPatch struct {
 	OnDuplicate  *string
 	OnBrokenLink *string
 	ContextTag   *string
+	PresetLinks  *[]PresetLink
 	DraftStep    *string
 }
 
@@ -213,7 +214,7 @@ func writeDraft(
 	}
 	if stepChanged {
 		if state.status == StatusAwaitingApproval && !choiceChanged {
-			return fmt.Errorf("import run %s holds a report; only a changed choice returns it to draft: %w", id, apperrors.ErrConflict)
+			return RefuseRun(id, "this import holds a report; only a changed choice returns it to draft")
 		}
 		change.before["draft_step"], change.after["draft_step"] = state.draftStep, *step
 		change.values = append(change.values, runValue{"draft_step", *step})
@@ -250,6 +251,7 @@ func (p DraftPatch) applyTo(mapping RunMapping, before, after map[string]any) Ru
 	patchField("on_duplicate", p.OnDuplicate, &mapping.OnDuplicate, before, after)
 	patchField("on_broken_link", p.OnBrokenLink, &mapping.OnBrokenLink, before, after)
 	patchField("context_tag", p.ContextTag, &mapping.ContextTag, before, after)
+	patchField("preset_links", p.PresetLinks, &mapping.PresetLinks, before, after)
 	return mapping
 }
 

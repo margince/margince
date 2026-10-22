@@ -111,7 +111,7 @@ TEST_EXEC_FLAGS = $(if $(TEST_EXEC),-count=1 -exec $(TEST_EXEC))
 
 .DEFAULT_GOAL := help
 
-.PHONY: perfdoc help check build test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial lint arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
+.PHONY: perfdoc config-gen help check check-static build test test-cached test-uncached test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe ai-eval test-db-up test-it test-integration-serial lint arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln vendor-live tools tools-go hooks
 
 help: ## List targets with their descriptions (the default goal)
 	@grep -hE '^[a-zA-Z][a-zA-Z0-9_-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -138,13 +138,22 @@ help: ## List targets with their descriptions (the default goal)
 #
 # A phase that fails is never closed, so a table only ever describes a run that
 # got to the end.
+#
+# CHECK_LEGS are the passes the fan-out runs. CI splits them over two jobs, so
+# lint and the unit tests each get a whole runner: `deterministic-gates` passes
+# CHECK_LEGS="$(TEST_LEGS)", and `backend-lint` runs `check-static`.
+# gates/checklegsplit_test.go fails if the two stop covering every leg.
+TEST_LEGS   := test test-extensions
+STATIC_LEGS := lint vet arch-lint
+CHECK_LEGS  := $(TEST_LEGS) $(STATIC_LEGS)
+
 check: ## The merge gate: everything a PR must pass
 	@[ -n "$$PHASE_TIMER_OWNED" ] || bash ../scripts/phase-timer.sh reset
 	@bash ../scripts/phase-timer.sh start "backend: build (host + windows)"
 	$(MAKE) build
 	@bash ../scripts/phase-timer.sh stop
-	@bash ../scripts/phase-timer.sh start "backend: vet/lint/arch-lint/test/test-extensions (-j4)"
-	$(MAKE) -j4 test lint vet arch-lint test-extensions
+	@bash ../scripts/phase-timer.sh start "backend: $(CHECK_LEGS) (-j4)"
+	$(MAKE) -j4 $(CHECK_LEGS)
 	@bash ../scripts/phase-timer.sh stop
 	@bash ../scripts/phase-timer.sh start "backend: contract drift"
 	$(MAKE) drift
@@ -153,6 +162,9 @@ check: ## The merge gate: everything a PR must pass
 	$(MAKE) check-composition
 	@bash ../scripts/phase-timer.sh stop
 	@[ -n "$$PHASE_TIMER_OWNED" ] || bash ../scripts/phase-timer.sh report
+
+check-static: composition ## The static half of check (STATIC_LEGS), which CI runs as its own job
+	$(MAKE) -j3 $(STATIC_LEGS)
 
 # gen-composition runs pinned to the ROOT workspace: the tool lives in
 # the separate backend/tools module, so a caller-exported GOWORK (off, or
@@ -261,7 +273,10 @@ test-uncached: composition
 	# which fails a pull request for the lane's own size rather than for
 	# anything in the diff. The perf lanes below name theirs for the same
 	# reason.
-	$(GOWORK_COMPOSED) $(GO) test -count=1 -timeout 25m $(UNCACHED_TEST_PKGS)
+	# GOMEMLIMIT, because the gates binary peaked near 5 GB with no limit and
+	# check runs beside other legs. At 3GiB it peaked at 3.4 GB in the same
+	# wall time; 2GiB doubled its CPU, since the parse cache alone holds ~1.9 GB.
+	GOMEMLIMIT=3GiB $(GOWORK_COMPOSED) $(GO) test -count=1 -timeout 25m $(UNCACHED_TEST_PKGS)
 
 # -v is load-bearing, not chattiness: `go test` only names skipped tests in
 # verbose mode, and the zero-skip teeth below grep for them. A skip in this
@@ -459,21 +474,24 @@ test-integration-serial: composition ## Escape hatch: the old sequential lane, a
 	fi; \
 	rm -f "$$log"; echo "OK: integration passed with 0 skips"
 
-# PERF-3/PERF-7 at the tier the SLO binds at, and the only target that WRITES a
-# record. The suite used to ride the standing integration lane at the SMB tier
-# as well; it does not any more (see its own file comment), so this target and
-# bench-perf-check below are the two ways it runs.
-bench-perf: composition ## PERF-3/PERF-7 benchmark harness on the mid-market §6.7 tier (needs db-up; seeds 250k contacts)
+# PERF-3/PERF-7, and the only target that WRITES its record. A run by hand gets the
+# tier the SLO binds at. The weekly scheduled job records the SMB tier through
+# this same target and proposes the record as a pull request, so a number
+# reaches the tree only when a human merges it.
+BENCH_PERF_TIER    ?= mid_market
+BENCH_PERF_TIMEOUT ?= 30m
+# Empty skips the page render, for a caller that renders once after collecting
+# records: a render failure must not read as the measurement failing.
+BENCH_RENDER       ?= 1
+bench-perf: composition ## PERF-3/PERF-7 benchmark harness, writing a record; mid-market unless BENCH_PERF_TIER=smb (needs db-up; seeds 250k contacts)
 	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && bench_db $(BENCH_DB_NAME) \
-	  && cd backend && MARGINCE_BENCH_TIER=mid_market MARGINCE_BENCH_RECORD=1 \
+	  && cd backend && MARGINCE_BENCH_TIER=$(BENCH_PERF_TIER) MARGINCE_BENCH_RECORD=1 \
 	     MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$$BENCH_APP_DSN" \
-	     $(GO) test -tags "integration bench" -run TestPerfBudgetsHoldOnSeededVolumeTier -count=1 -v -timeout 30m ./internal/compose/integration'
-	@$(MAKE) --no-print-directory perfdoc
+	     $(GO) test -tags "integration bench" -run TestPerfBudgetsHoldOnSeededVolumeTier -count=1 -v -timeout $(BENCH_PERF_TIMEOUT) ./internal/compose/integration'
+	@if [ -n "$(BENCH_RENDER)" ]; then $(MAKE) --no-print-directory perfdoc; fi
 
-# The SMB budgets, recording NOTHING — what the weekly scheduled workflow runs.
-# Records are a human's to publish: a machine writing its own numbers into the
-# tree is the failure MARGINCE_BENCH_RECORD exists to prevent, and a scheduled
-# job is exactly the machine meant.
+# The SMB budgets, recording NOTHING: a drift check, run by hand, without
+# touching the published page.
 #
 # SMB ONLY, and the omission is the honest half of this target. Mid-market is
 # where the PERF-7 SLO binds, so a drift alarm would ideally watch it. What
@@ -503,7 +521,7 @@ bench-perf: composition ## PERF-3/PERF-7 benchmark harness on the mid-market §6
 # nothing" must be a property of the target, not of whatever the caller's shell
 # happened to export. A developer with it set from an earlier `bench-perf` would
 # otherwise have this target rewrite the published record from the SMB tier.
-bench-perf-check: composition ## PERF-3/PERF-7 on the SMB tier, no record written (needs db-up; the scheduled lane's target)
+bench-perf-check: composition ## PERF-3/PERF-7 on the SMB tier, no record written (needs db-up)
 	@$(GOWORK_COMPOSED) bash -c 'cd .. && source scripts/lib-testdb.sh && parse_test_dsn && bench_db $(BENCH_DB_NAME) \
 	  && cd backend && MARGINCE_BENCH_TIER=smb MARGINCE_BENCH_RECORD= \
 	     MARGINCE_TEST_DSN="$$BENCH_OWNER_DSN" MARGINCE_TEST_APP_DSN="$$BENCH_APP_DSN" \
@@ -515,10 +533,9 @@ bench-perf-check: composition ## PERF-3/PERF-7 on the SMB tier, no record writte
 # runs any of them. `make vet` and both golangci passes still TYPE-CHECK them,
 # which is the only thing standing between a by-hand lane and rot.
 #
-# bench-perf and bench-perf-check above are the one exception to "by hand": the
-# scheduled workflow runs bench-perf-check weekly, because PERF-3/PERF-7 lost
-# its standing merge-gate canary and drift nobody looks for is drift nobody
-# finds. It still writes no record — publishing a number stays a human's act.
+# bench-perf above is the one exception to "by hand": the scheduled workflow
+# runs it weekly on the SMB tier, because PERF-3/PERF-7 lost its standing
+# merge-gate canary and drift nobody looks for is drift nobody finds.
 #
 # Separate targets rather than one, because they measure unrelated promises and
 # cost unrelated amounts of time: a reader chasing a slow save should not have
@@ -684,11 +701,18 @@ gen: mcp-apps-vocab handbook-embed ## Regenerate everything derived from the con
 		-out internal/compose/agentbundle/agentcontract_gen.yaml -index internal/compose/agentbundle/agentindex_gen.txt
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-recordfields -in api/crm.yaml -out internal/modules/agents/recordshapes_gen.go
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-aitasks -contract api/ai-tasks.yaml -out-go internal/modules/ai/tasks_gen.go
-	$(GOWORK_ROOT) $(GO) run ./tools/gen-configschema -pkg internal/platform/deployconfig -out ../config/margince.schema.json -routing-go internal/modules/ai/routingschema_gen.go
+	$(GOWORK_ROOT) $(GO) run ./tools/gen-config
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-jobs -contract api/jobs.yaml \
 		-out-specs internal/platform/jobs/specs_gen.go \
 		-out-kinds internal/compose/jobkinds_gen.go
 	$(GOWORK_ROOT) $(GO) run ./internal/compose/aicert/decisioncertcmd -out internal/modules/ai/decisioncert_gen.go
+
+# Every file the settings registry is the source of: the settings tables in
+# docs/reference/configuration.md, config/margince.example.yaml, .env.example,
+# config/margince.schema.json and the routing $defs the ai module serves.
+# gates/configgenerated_test.go fails a stale one, and drift diffs them below.
+config-gen: ## Regenerate the configuration docs, templates and schema from the settings registry
+	$(GOWORK_ROOT) $(GO) run ./tools/gen-config
 
 drift: gen perfdoc ## Fail when a committed generated file drifted from what its generator produces
 	# gen regenerates the committed per-unit manifests too (via composition);
@@ -701,7 +725,7 @@ drift: gen perfdoc ## Fail when a committed generated file drifted from what its
 	# page went on publishing an older machine's numbers under a date no record
 	# held. A page that is merely stale says so; one that disagrees with its own
 	# source reads as current and is believed.
-	git diff --exit-code -- '*_gen.go' internal/compose/agentbundle/agentcontract_gen.yaml internal/compose/agentbundle/agentindex_gen.txt internal/contracts/ ../config/margince.schema.json '../extensions/*/manifest.generated.json' internal/modules/agents/apps/forbidden.json internal/modules/agents/apps/actions.json 'internal/modules/knowledge/handbook/*.md' ../docs/reference/performance-budgets.md ../docs/reference/benchmark.md ../docs/reference/ai-provider-outages.md
+	git diff --exit-code -- '*_gen.go' internal/compose/agentbundle/agentcontract_gen.yaml internal/compose/agentbundle/agentindex_gen.txt internal/contracts/ ../config/margince.schema.json ../config/margince.example.yaml ../.env.example ../docs/reference/configuration.md '../extensions/*/manifest.generated.json' internal/modules/agents/apps/forbidden.json internal/modules/agents/apps/actions.json 'internal/modules/knowledge/handbook/*.md' ../docs/reference/performance-budgets.md ../docs/reference/benchmark.md ../docs/reference/ai-provider-outages.md
 	# git diff ignores UNTRACKED files, so a new (or gen-recreated after a
 	# committed deletion) manifest that was never `git add`ed would slip past
 	# the diff above — fail explicitly when a generated manifest is uncommitted.
@@ -736,7 +760,7 @@ mcp-apps-vocab: ## Copy the MCP App admission vocabulary in from the frontend
 # keep answering out of a page the handbook no longer has.
 # TestTheEmbeddedHandbookMatchesTheDocs fails in both directions.
 handbook-embed: ## Copy the operator handbook in from docs/handbook
-	rsync -a --delete --include='*.md' --exclude='*' ../docs/handbook/ internal/modules/knowledge/handbook/
+	rsync -ac --delete --include='*.md' --exclude='*' ../docs/handbook/ internal/modules/knowledge/handbook/
 
 # Scaffolding, not generation: gen-workflow writes a write-once handler +
 # test stub for a developer to fill in (AC-W1) and is never part of

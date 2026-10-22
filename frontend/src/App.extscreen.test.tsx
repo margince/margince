@@ -6,6 +6,7 @@ import {
   memoryStorage,
   renderApp,
   sessionOnlyFetch,
+  teardownApp,
 } from "./testing/appharness";
 
 // The THIRD extension-route case, beside App.test.tsx's vanilla lane and
@@ -20,10 +21,9 @@ import {
 // unit the installation did not compose is inert rather than a route into a
 // surface with no server behind it.
 //
-// The screen itself is a stub. The real one (src/screens/ext/notes.tsx) is
-// outside the vanilla TypeScript program and is exercised by its own suite;
-// what is under test here is App.tsx's dispatch, and mounting the real screen
-// would drag its six network calls into a routing test.
+// The screen itself is a stub. A real one lives under extensions/, outside the
+// vanilla TypeScript program, and has its own suite. This test is about the
+// dispatch in App.tsx, and a real screen would add its network calls to it.
 vi.mock("@composition/extensions", () => ({
   extensions: [
     {
@@ -76,8 +76,9 @@ beforeEach(() => {
   vi.stubGlobal("fetch", vi.fn(sessionOnlyFetch()));
 });
 
-afterEach(() => {
+afterEach(async () => {
   cleanup();
+  await teardownApp();
   vi.unstubAllGlobals();
   window.location.hash = "";
 });
@@ -131,7 +132,7 @@ describe("extension routes (composed screen registry)", () => {
     window.location.hash = "#/ext/constructor";
     renderApp();
     expect(
-      await screen.findByRole("heading", { level: 1, name: "constructor" }),
+      await screen.findByRole("heading", { level: 1, name: "Constructor" }),
     ).toBeTruthy();
     expect(screen.getAllByRole("heading", { level: 1 })).toHaveLength(1);
   });

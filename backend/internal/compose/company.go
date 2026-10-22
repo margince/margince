@@ -24,7 +24,9 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // The only schemes a company website or a read-back source may name. Anything
@@ -67,6 +69,45 @@ type companyHandlers struct {
 	rollout string
 }
 
+// profileFields is the profile a save writes, keyed by the wire name of each
+// field.
+func profileFields(req crmcontracts.CompanyProfileInput) map[string]*string {
+	return map[string]*string{
+		fieldOfferSummary:      trimOptional(req.OfferSummary),
+		fieldLegalName:         trimOptional(req.LegalName),
+		fieldRegisteredAddress: trimOptional(req.RegisteredAddress),
+		fieldRegisterVat:       trimOptional(req.RegisterVat),
+		fieldLegalForm:         trimOptional(req.LegalForm),
+		fieldRegisterCourt:     trimOptional(req.RegisterCourt),
+		fieldRegisterNumber:    trimOptional(req.RegisterNumber),
+		fieldIndustry:          trimOptional(req.Industry),
+		fieldICP:               req.Icp,
+		fieldValueProposition:  req.ValueProposition,
+		fieldUSP:               req.Usp,
+		fieldCustomerPains:     req.CustomerPains,
+		fieldDesiredOutcomes:   req.DesiredOutcomes,
+		fieldBuyingCenter:      req.BuyingCenter,
+		fieldBuyingIntents:     req.BuyingIntents,
+		fieldCommonObjections:  req.CommonObjections,
+		fieldSalesMotion:       req.SalesMotion,
+		fieldHistory:           req.History,
+	}
+}
+
+// clearProfileFields reads a null on a profile field as the empty string that
+// clears it. The website and the display name name the company itself, so a
+// null on either is refused rather than dropped.
+func clearProfileFields(fields map[string]*string, cleared []string) error {
+	empty := ""
+	for _, name := range cleared {
+		if _, profile := fields[name]; !profile {
+			return &storekit.NotClearableError{Field: name}
+		}
+		fields[name] = &empty
+	}
+	return nil
+}
+
 func (h companyHandlers) GetAnchorCompanyContextCapabilities(w http.ResponseWriter, r *http.Request) {
 	rollout := h.rollout
 	if rollout == "" {
@@ -103,8 +144,14 @@ func (h companyHandlers) PutAnchorCompany(w http.ResponseWriter, r *http.Request
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	if strings.TrimSpace(req.DisplayName) == "" {
-		httperr.Write(w, r, httperr.Validation("display_name", "empty", "a company needs a name"))
+	// Before the name check, which would read a null display_name as empty.
+	fields := profileFields(req)
+	if err := clearProfileFields(fields, httperr.ClearedFields(r)); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	if code, why := values.CompanyNameFault(req.DisplayName); code != "" {
+		httperr.Write(w, r, httperr.Validation("display_name", code, why))
 		return
 	}
 	// New onboarding requires the three semantic answers. During the pre-live
@@ -149,26 +196,7 @@ func (h companyHandlers) PutAnchorCompany(w http.ResponseWriter, r *http.Request
 	company, err := h.store.SaveCompany(r.Context(), contacts.SaveCompanyInput{
 		DisplayName: strings.TrimSpace(req.DisplayName),
 		Website:     website,
-		Fields: map[string]*string{
-			fieldOfferSummary:      trimOptional(req.OfferSummary),
-			fieldLegalName:         trimOptional(req.LegalName),
-			fieldRegisteredAddress: trimOptional(req.RegisteredAddress),
-			fieldRegisterVat:       trimOptional(req.RegisterVat),
-			fieldLegalForm:         trimOptional(req.LegalForm),
-			fieldRegisterCourt:     trimOptional(req.RegisterCourt),
-			fieldRegisterNumber:    trimOptional(req.RegisterNumber),
-			fieldIndustry:          trimOptional(req.Industry),
-			fieldICP:               req.Icp,
-			fieldValueProposition:  req.ValueProposition,
-			fieldUSP:               req.Usp,
-			fieldCustomerPains:     req.CustomerPains,
-			fieldDesiredOutcomes:   req.DesiredOutcomes,
-			fieldBuyingCenter:      req.BuyingCenter,
-			fieldBuyingIntents:     req.BuyingIntents,
-			fieldCommonObjections:  req.CommonObjections,
-			fieldSalesMotion:       req.SalesMotion,
-			fieldHistory:           req.History,
-		},
+		Fields:      fields,
 	})
 	if err != nil {
 		httperr.Write(w, r, err)

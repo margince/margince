@@ -24,7 +24,8 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose"
-	"github.com/margince/margince/backend/internal/platform/cliflags"
+	ps "github.com/margince/margince/backend/internal/compose/programsettings"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
@@ -45,7 +46,6 @@ type siteReadFlags struct {
 
 func parseSiteReadFlags(args []string) (siteReadFlags, error) {
 	fs := flag.NewFlagSet("worker siteread", flag.ContinueOnError)
-	var env cliflags.Env
 	var cfg siteReadFlags
 	fs.IntVar(&cfg.maxPages, "max-pages", 0, "crawl page cap; 0 takes the built-in default")
 	fs.IntVar(&cfg.maxBytes, "max-bytes", 0, "crawl aggregate byte cap; 0 takes the built-in default")
@@ -55,14 +55,16 @@ func parseSiteReadFlags(args []string) (siteReadFlags, error) {
 	fs.StringVar(&cfg.jsonPath, "json", "", "write the machine-readable report here ('-' = stdout). Diff two runs with: jq 'del(.crawl.duration_ms, .crawl.pages[].fetch_ms, .model_calls[].latency_ms)'")
 	fs.StringVar(&cfg.dumpDir, "dump-pages", "", "directory to save each fetched page's reduced text into")
 	fs.StringVar(&cfg.urlsFile, "urls-file", "", "file of seed URLs, one per line (# comments allowed)")
-	env.String(fs, &cfg.logLevel, "log-level", "MARGINCE_LOG_LEVEL", "info", "log level: debug|info|warn|error")
-	env.String(fs, &cfg.logFormat, "log-format", "MARGINCE_LOG_FORMAT", "text", "log format: text|json")
+	shared, err := addLaneSettings(fs, ps.LogLevel, ps.LogFormat)
+	if err != nil {
+		return siteReadFlags{}, err
+	}
 	// stdlib flag stops at the first positional; re-parsing the remainder
 	// lets URLs and flags interleave (`siteread https://x.de --ai-fake`).
 	rest := args
 	for {
 		if err := fs.Parse(rest); err != nil {
-			return siteReadFlags{}, err
+			return siteReadFlags{}, config.FlagFault(fs, err)
 		}
 		rest = fs.Args()
 		if len(rest) == 0 {
@@ -71,6 +73,11 @@ func parseSiteReadFlags(args []string) (siteReadFlags, error) {
 		cfg.seeds = append(cfg.seeds, rest[0])
 		rest = rest[1:]
 	}
+	loaded, err := shared.load()
+	if err != nil {
+		return siteReadFlags{}, err
+	}
+	cfg.logLevel, cfg.logFormat = config.Val(loaded, ps.LogLevel), config.Val(loaded, ps.LogFormat)
 	if cfg.maxPages < 0 || cfg.maxBytes < 0 || cfg.wall < 0 {
 		return siteReadFlags{}, errors.New("the caps must be zero (default) or positive")
 	}

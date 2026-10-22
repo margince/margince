@@ -37,8 +37,8 @@ for the frontend; the agent surface follows the same rule. Three things follow:
 
 The first raw call is the LinkedIn `Connections.csv` file send. It is a
 **`/v1` call the typed client cannot make**: the client cannot build a
-`multipart` body. Its file (`screens/linkedin-import.tsx`) says so in place, and a new exception of that kind
-needs the same note. The other raw call is `screens/connected-agents.tsx`
+`multipart` body. Its file (`features/import/linkedin-import.tsx`) says so in place, and a new exception of that kind
+needs the same note. The other raw call is `features/automations/connected-agents.tsx`
 reading `/.well-known/oauth-protected-resource`. That is **not a `/v1` route**,
 so the typed client does not carry it.
 
@@ -56,8 +56,10 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
                         ⌘K palette, agent dock, banners
  src/lib/               shared code that draws nothing: hash router, URL
                         state, theme, capability, problem decoding, session
- src/screens/           one file per surface (a directory when the surface
-                        is a state machine)
+ src/components/        screen parts many features share: create, edit,
+                        list query, record fields
+ src/features/<name>/   one folder per feature: its screens, tests, stories
+ src/testing/           test harnesses, fixtures and tree-wide guards
  src/i18n/  src/format/ the presentation edge: copy, money, dates, zones
  src/api/               the one seam + the generated contract types
 ```
@@ -71,12 +73,14 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   Then come `atoms.tsx` (`Button`, `Badge`, `Avatar`, `Card`, `Modal`, …) and
   `trust.tsx`. The trust parts are `AutonomyDot`, `EvidenceChip`,
   `ConfidenceMeter`, `ProvenanceTag`, `StagingCard` and `FieldDiff`. Next come
-  the Margince Core (`margince-core*`) and `composed.tsx`, which builds on both
-  (`RecordView`, `PipelineBoard`, `GroupedTimelineList`, …). `motion.ts` holds
+  the Margince Core (`margince-core*`) and the composed parts that build on
+  both, such as `recordview.tsx`, `pipelineboard.tsx` and `timeline.tsx`. `motion.ts` holds
   the `prefers-reduced-motion` rule: with it on, a change shows its end state at
-  once, never nothing. `conformance.test.ts` is the drift gate over the whole
-  tree. No file in `design-system/` imports `app/` or `screens/`: a part that needs
-  a feature, such as the record page's mail drawer, lives in `screens/`.
+  once, never nothing.
+
+  `conformance.test.ts` is the drift gate over the whole
+  tree. No file in `design-system/` imports `app/`, `components/` or `features/`. A part
+  that needs a feature, such as the record page's mail drawer, lives in that feature.
 - **`src/app/`**: the shell of the app and what holds on every screen.
   `shell.tsx` is the shell, the sidebar and the title of each page.
   `topbar.tsx` is the top bar of the session: the control that makes the
@@ -89,15 +93,17 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   the shell itself shows (`economybanner.tsx`, `embedreindexbanner.tsx`).
 - **`src/lib/`**: shared code that draws nothing. `router.tsx` (hash routing),
   `urlstate.ts`, `theme.ts` and `capability.ts` live here, with problem
-  decoding and the session. `lib/` never imports `app/` or `screens/`.
-- **`src/screens/`**: one file per surface. A surface gets a *folder* only
-  when it is a state machine and not a page. One has one:
-  `screens/onboarding-conversation/`. There the conversation machine, each
-  `*-act.tsx` and `*-scene.tsx` file, and the code that loads the conversation
-  again each need their own file. Everything else, even surfaces as
-  large as `companies.tsx` and `deals.tsx`, stays one file, with its
-  `*.test.tsx` and `*.stories.tsx` beside it. An address that no screen answers
-  shows a note that says so (`shell.unknownPage`), never an empty page.
+  decoding and the session. `lib/` never imports `app/`, `components/` or `features/`.
+- **`src/components/`**: the screen parts that many features share. Examples are
+  the create and edit dialogs, the list query and the record fields.
+  A component never imports `app/` or `features/`.
+- **`src/features/<name>/`**: one folder per feature, with each screen's
+  `*.test.tsx` and `*.stories.tsx` beside it. A screen gets a folder of its own
+  only when it is a state machine and not a page, as
+  `features/onboarding/onboarding-conversation/` is. An address that no screen
+  answers shows a note that says so (`shell.unknownPage`), never an empty page.
+- **`src/custom/`**: the screens a fork adds. Margince ships it with only its
+  README, so a fork's screens never conflict with a new release.
 - **`src/i18n/`**: three catalogs (`en`, `de`, `vi`), with `en` the default.
   Two checks make every catalog hold the same keys. `MessageKey` is
   `keyof typeof en`, and the other catalogs are checked against it with
@@ -122,6 +128,25 @@ The router removes it, so a `?utm=…` never ends up in a screen name.
   one kind of money into another, no counting on calendar dates, and no locale
   going back into what is stored.
 
+### Each feature stands alone
+
+Only the shell (`app/` and `App`) imports a feature. A feature imports no
+other feature and not the shell. When two features need the same code, it moves
+down: to `components/` if it draws, to `lib/` if it does not. Code that only one
+other feature uses moves into that feature, and a test helper that features
+share moves to `testing/`. A feature that shows another feature's whole screen
+gets it from `app/`, which passes it in.
+
+The other side holds too: a file in `components/`, `lib/` or `format/` that
+only one feature uses belongs in that feature. Without this rule, a move of one
+feature's code into a shared folder would get past the first.
+
+`frontend/scripts/feature-boundaries.test.ts` fails both. The imports that
+crossed a feature line when it landed are frozen in
+`frontend/scripts/feature-boundaries-waivers.txt`. That list only gets shorter,
+and a new line is never added. The steps for a move are in
+[move-frontend-code.md](../how-to/move-frontend-code.md).
+
 ## The shell
 
 `src/app/nav.ts` holds the list of places that decides, and `rail.test.tsx`
@@ -133,7 +158,7 @@ labels.
 | *(no group)* | `home` |
 | Records | `contacts`, `companies`, `leads`, `deals` |
 | Work | `projects`, `filters` |
-| Intelligence | `analytics` |
+| Insights | `analytics` |
 
 The groups belong to the **open sidebar** alone. When the sidebar is small,
 each group title keeps its place and shows a line there. So the
@@ -281,10 +306,10 @@ The old parts stay in two places, both by design:
 - **Inside the mark.** The `EvidenceMark` panel renders `ProvenanceTag` itself,
   and states its trust as text, not as a bar.
 - **On the staging surfaces**, whose job is to set a proposal beside what is
-  stored. The first is the approvals lane of the Worklist (`screens/worklist.tsx`,
-  `screens/approvalrow.tsx`). Then the confirm step of onboarding
-  (`screens/onboarding-conversation/confirm-card.tsx`,
-  `screens/onboarding-company-form.tsx`) and the Company-context settings
+  stored. The first is the approvals lane of the Worklist (`features/worklist/worklist.tsx`,
+  `features/automations/approvalrow.tsx`). Then the confirm step of onboarding
+  (`features/onboarding/onboarding-conversation/confirm-card.row.tsx`,
+  `features/onboarding/onboarding-company-form.tsx`) and the Company-context settings
   screen. Last are the record surfaces that show a single line about where a
   value comes from (`contacts.tsx`, `leads.tsx`, `consent.tsx`, `history.tsx`).
   `StagingCard` and `FieldDiff` are the composed forms of the same parts.
@@ -372,7 +397,7 @@ merge gate and needs Node and pnpm. Run `make check-fe` (or
 | a derived colour role | `src/design-system/brand.css`: a `color-mix()`, never a new hex value |
 | light and dark themes | `src/lib/theme.ts` and `tokens.css`, which carries all three states: the light colour set on `:root` alone, the `prefers-color-scheme` block for a surface whose host states nothing, and the `[data-theme]` blocks a stated choice sets |
 | how a derived value shows its evidence | `src/design-system/evidencemark.tsx` |
-| a staging or approval surface | `src/design-system/trust.tsx` and `src/screens/worklist.tsx` |
+| a staging or approval surface | `src/design-system/trust.tsx` and `src/features/worklist/worklist.tsx` |
 | copy | `src/i18n/en.ts`, `de.ts` **and** `vi.ts`; the type check holds their keys the same |
 | money, dates and time | `src/format/format.ts`, apart from which calendar day a point in time falls on, and the point in time where the day the user set ends: those are in `src/format/calendarday.ts` |
 | an API call | `src/api/client.ts` is the seam; generate the types again with `pnpm gen:api` |
@@ -400,7 +425,9 @@ merge gate and needs Node and pnpm. Run `make check-fe` (or
 | Design gates (tests) | `frontend/src/design-system/{conformance,tokens}.test.ts` |
 | Design gates (shell script checks that fail closed) | `frontend/scripts/check-*.sh` |
 | Render UAT scoped to the change | `frontend/scripts/fe-uat.mjs` |
-| Screens | `frontend/src/screens/` (one file per surface; `onboarding-conversation/` is the one state-machine folder) |
+| Screen parts many features share | `frontend/src/components/` |
+| Features | `frontend/src/features/<name>/` (one folder per feature; `onboarding-conversation/` is the one state-machine folder) |
+| The feature boundary gate | `frontend/scripts/feature-boundaries.ts` |
 | Catalogs / the edge where values turn into text | `frontend/src/i18n/`, `frontend/src/format/` |
 
 ## Where to go next

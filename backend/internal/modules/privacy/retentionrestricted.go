@@ -136,5 +136,5 @@ func liftAndEraseHeldRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, due str
 	if err != nil {
 		return class, err
 	}
-	return class, nil
+	return class, clearActivityCustomValues(ctx, tx, []ids.UUID{id})
 }

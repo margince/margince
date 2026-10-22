@@ -280,11 +280,10 @@ func (h dataResetHandlers) sweepAndReseed(ctx context.Context, wsID ids.UUID, co
 		// audit+outbox writes trace to one originating operation.
 		seedCtx := principal.SystemActing(principal.WithWorkspaceID(ctx, wsID), "system")
 		// The reset's own discard list, reported here rather than dropped. It
-		// is not empty on this path: ai.Routing is installation identity, so
-		// ResetConfig spares its row and a re-seed of the declared binding is
-		// refused by ON CONFLICT — correct, because the stored binding is the
-		// one an admin may have changed since bootstrap, and a reset must not
-		// quietly re-point which vendor sees the installation's text.
+		// is not empty on this path. ai.Routing survives a data reset, so
+		// ResetConfig spares its row, and ON CONFLICT refuses the re-seed. That
+		// is correct: an admin may have changed the stored binding since
+		// bootstrap, and a reset must not re-point the vendor.
 		var discarded []string
 		if err := configuredSeed(h.seeds, deals.NewHandlers(InstallationDB(h.pool), DealsInstallation()), &discarded)(seedCtx, tx); err != nil {
 			return err

@@ -39,14 +39,16 @@ const maxDescriptionRunes = 3000
 // none of it is a list of tools someone has to keep current.
 func (r *Registry) Register(t mcp.Tool) {
 	spec := t.Spec()
-	if rt, isRouter := t.(router); isRouter {
+	rt, isRouter := t.(router)
+	if isRouter {
 		spec = r.routedSpec(rt)
 	}
 	if spec.Name == "" {
 		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
 		panic("crmagents: registering a tool with no name")
 	}
-	if spec.Tier == mcp.TierDynamic && spec.TierResolver == nil {
+	// A router decides per call by its action, so it has no resolver of its own.
+	if spec.Tier == mcp.TierDynamic && spec.TierResolver == nil && !isRouter {
 		//craft:ignore panic-in-domain composition-time registration assertion — fires only while cmd wiring runs, never on a request path
 		panic(fmt.Sprintf("crmagents: %s is TierDynamic without a TierResolver", spec.Name))
 	}
@@ -140,6 +142,7 @@ func (r *Registry) Register(t mcp.Tool) {
 	r.numArgs[spec.Name] = declaredNumBounds(spec.InputSchema)
 	r.enumArgs[spec.Name] = declaredEnumArgs(spec.InputSchema)
 	r.requiredArgs[spec.Name] = declaredRequired(spec.InputSchema)
+	r.typedArgs[spec.Name] = declaredTypes(spec.InputSchema)
 }
 
 // envelopedSpec is the spec every surface is served: the tool's own, with its

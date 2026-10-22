@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { de } from "../src/i18n/de";
 import { mockApi } from "./seed";
 
 /**
@@ -207,9 +208,7 @@ test.beforeEach(async ({ page }) => {
   await mockApi(page);
 });
 
-test("AC-voice-1: the card says what to hand over and why it matters", async ({
-  page,
-}) => {
+test("AC-voice-1: the card says what to hand over", async ({ page }) => {
   await mockVoice(page, { buildStatus: "running", versions: [] });
   await page.goto("/#/settings/voice");
 
@@ -220,8 +219,7 @@ test("AC-voice-1: the card says what to hand over and why it matters", async ({
     ".txt,.md,.vtt,.srt,.json,.pdf,.docx",
   );
   // And the card answers "what should I upload?" where the uploading happens.
-  await expect(page.getByText("Die besten Proben")).toBeVisible();
-  await expect(page.getByText("Warum Proben hinzufügen")).toBeVisible();
+  await expect(page.getByText(de["settings.voice.worksTitle"])).toBeVisible();
 });
 
 test("AC-voice-2: a running build says so, and takes no second press", async ({

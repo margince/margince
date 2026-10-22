@@ -7,39 +7,13 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/mailquote"
 )
 
-// Server-side reading of a captured mail body. The stored body is the whole
-// message — signature, quoted history and all — because the enrichment pass
-// mines the sign-off for contact details, so nothing may be trimmed at rest.
-// What a row shows is the sentence the sender wrote, and that is what this
-// file finds.
-//
-// This is a deliberate mirror of frontend/src/format/emailtext.ts. The two
-// exist because the row's preview is now composed by the server while the
-// drawer still folds the tail in the browser, and a preview that disagreed
-// with the message it opens would be a row lying about its own mail.
-//
-// backend/gates/emailsplitterparity_test.go is what makes "mirror" true. It
-// reads both files and compares the five vocabularies and the four single
-// patterns below, in BOTH directions, so a sign-off added here and not there is
-// a red build rather than a preview that ends mid-sentence. The scan window is
-// compared too: fifteen lines on one side and ten on the other folds a message
-// on one surface and prints the sign-off on the other.
-//
-// Why not textlang.NewTextOnly, which also finds where a message ends: it
-// answers a different question and its answer is wrong for a row. Asked for
-// "Danke für das Angebot.\n\nViele Grüße\nAna" it returns the whole thing —
-// it cuts on the RFC 3676 sig-dash and on legal-footer leads, and knows no
-// sign-off vocabulary, no mobile-client boilerplate and not the From:/To:
-// preamble capture prepends. A preview built on it would print the sender's
-// closing and their signature block as though they were the message.
-//
-// The two also owe opposite guarantees. NewTextOnly feeds language detection,
-// where cutting too much is safe and a short remainder is fine; a preview must
-// never come back empty, because a body that is nothing but a greeting is a
-// real message and a row that renders it as blank has hidden the mail. That
-// floor is why this splitter falls back to the whole body twice.
+// Stored mail retains its signature for enrichment; previews remove it for reading.
+// The parity gate compares this display policy and shared mailquote patterns with the browser.
+// Language detection may discard all text, but a preview must preserve a nonempty body.
 
 // preamblePattern is what the capture mail mapper prepends verbatim. Peeled
 // before any heuristic runs, or the `From:` line reads as an Outlook reply
@@ -49,16 +23,6 @@ var preamblePattern = regexp.MustCompile(`^From:[^\n]*\nTo:[^\n]*\n\n`)
 // signatureDelimiter is RFC 3676 §4.3: a line of exactly two hyphens.
 // Trailing whitespace is allowed because mail clients strip it inconsistently.
 var signatureDelimiter = regexp.MustCompile(`^--\s*$`)
-
-// attributionPatterns introduce a quoted reply. Bounded repetition keeps a
-// pathological body from backtracking.
-var attributionPatterns = []*regexp.Regexp{
-	regexp.MustCompile(`^On\s.{1,200}\swrote:\s*$`),
-	regexp.MustCompile(`^Am\s.{1,200}\sschrieb\s?.{0,120}:\s*$`),
-	regexp.MustCompile(`(?i)^-{2,}\s*(Original Message|Ursprüngliche Nachricht|Forwarded message|Weitergeleitete Nachricht)`),
-	regexp.MustCompile(`(?i)^Anfang der weitergeleiteten (E-Mail|Nachricht)`),
-	regexp.MustCompile(`^_{5,}\s*$`),
-}
 
 // The Outlook top-reply block: a From:/Von: line whose neighbours carry the
 // sent-date field. Recognised as a pair because "Von:" alone is ordinary prose
@@ -170,10 +134,8 @@ func isQuoteStart(lines []string, index int) bool {
 	if strings.HasPrefix(line, ">") {
 		return true
 	}
-	for _, pattern := range attributionPatterns {
-		if pattern.MatchString(line) {
-			return true
-		}
+	if mailquote.IsAttribution(line) {
+		return true
 	}
 	// The Outlook block: the sent-date field within the next few lines is what
 	// separates a reply header from a sentence that opens "Von:".

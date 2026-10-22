@@ -292,7 +292,7 @@ func TestCreateProjectRefusesAnIncompleteBodyOverHTTP(t *testing.T) {
 		},
 		"company_id names nothing visible": {
 			AnyMap{"name": "Orphan", "company_id": ids.NewV7().String(), "source": "manual"},
-			http.StatusNotFound,
+			http.StatusUnprocessableEntity,
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
@@ -454,7 +454,7 @@ func TestASecondProjectLinkIsRefusedWithoutNamingTheFirst(t *testing.T) {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
-		"kind": "note", "source": "manual",
+		"kind": "note", "source": "manual", "subject": "Kick-off notes",
 		"links": []AnyMap{{"entity_type": "project", "entity_id": first.ID}},
 	}, nil, &activity); status != http.StatusCreated {
 		t.Fatalf("POST /activities → %d, want 201", status)

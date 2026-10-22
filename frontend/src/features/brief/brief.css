@@ -1,0 +1,702 @@
+/* Brief — the morning handover.
+ *
+ * Four registers, in reading order: the GREETING and the day in one sentence;
+ * the READINGS, five figures for what the day holds; the FOCUS, the ranked
+ * work; and the FOLLOW-THROUGH beneath it — what was done for the reader, and
+ * the context (the schedule, the night) the work is read against. The first
+ * three take the page's width in turn; the fourth is the two-column zones.
+ *
+ * The grid for the fourth is not here: it is `PageZones` in the design system,
+ * the same primitive the record pages use, so Brief and a company record fold
+ * at the same widths and never disagree about what a rail is. What lives in
+ * this sheet is Brief's own voice — the briefing block, the readings' place,
+ * the shapes inside the rail's panels, and the queue drawer's band. */
+
+/* ── Arrival ───────────────────────────────────────────────────────────────
+ * The page composes itself in reading order: greeting, then the figures one
+ * after another, then the work, then the rest. One movement, from a step below
+ * and translucent, at the entering duration — and each block a beat after the
+ * one before it, so the eye is led down the page the way the sentences are.
+ * The resting state is the end state; a reader who asked for less motion gets
+ * the page at rest, at once. */
+@keyframes brief-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(var(--space-2));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* The SLOT arrives, not the tile inside it: every reading's cell is the link
+   or button that opens it, so a delay keyed on `.stat-card` landed on an only
+   child and every slot arrived at once. */
+.arrive,
+.brief-readings .stat-strip > *,
+.brief-main > *,
+.brief-rail > * {
+  animation: brief-arrive var(--dur-enter) var(--ease-out) both;
+}
+/* THE ORDER THE PAGE IS READ IN is the order it arrives in: the work the
+   morning is for, then the day's five readings under it, then the
+   follow-through. A delay keyed to the old order left the readings landing
+   before the panel they now sit beneath. */
+.brief-readings .stat-strip > *:nth-child(1) {
+  animation-delay: var(--dur-move);
+}
+.brief-readings .stat-strip > *:nth-child(2) {
+  animation-delay: calc(var(--dur-move) + var(--dur-tap) * 0.5);
+}
+.brief-readings .stat-strip > *:nth-child(3) {
+  animation-delay: calc(var(--dur-move) + var(--dur-tap));
+}
+.brief-readings .stat-strip > *:nth-child(4) {
+  animation-delay: calc(var(--dur-move) + var(--dur-tap) * 1.5);
+}
+.brief-readings .stat-strip > *:nth-child(5) {
+  animation-delay: calc(var(--dur-move) + var(--dur-tap) * 2);
+}
+.brief-main > * {
+  animation-delay: calc(var(--dur-move) + var(--dur-tap));
+}
+.brief-rail > :nth-child(1) {
+  animation-delay: calc(var(--dur-move) + var(--dur-tap));
+}
+.brief-rail > :nth-child(2) {
+  animation-delay: calc(var(--dur-move) + var(--dur-state));
+}
+.brief-rail > :nth-child(n + 3) {
+  animation-delay: calc(var(--dur-move) + var(--dur-move));
+}
+@media (prefers-reduced-motion: reduce) {
+  .arrive,
+  .brief-readings .stat-strip > *,
+  .brief-main > *,
+  .brief-rail > * {
+    animation: none;
+  }
+}
+
+/* ── The briefing ──────────────────────────────────────────────────────────
+ * The head on the page ground, composed the way a record's head is: the
+ * greeting where a record's name stands, the day over it as the one uppercase
+ * line, the sentence under it where a record's subtitle goes, and the controls
+ * on the far edge where a record's verbs stand. The readings line closes it,
+ * the way the facts strip closes a record's head.
+ *
+ * The first line: the greeting takes the room, the controls sit at the far
+ * edge on the greeting's own top line, and on a phone they drop under it. */
+.brief-head {
+  display: flex;
+  flex-wrap: wrap;
+  /* The controls sit on the greeting block's LAST line: the day, the greeting
+     and the day's sentence are read top to bottom, and the dials and the way
+     into the queue meet the eye at the end of that read rather than beside
+     its first line. */
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-3) var(--space-5);
+  padding-block: var(--space-2) var(--space-4);
+}
+.brief-head > .glance {
+  flex: 1 1 32rem;
+  min-width: 0;
+}
+
+.glance {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 0;
+}
+
+/* The day, PAINTED over the greeting, with the page's controls on its line
+   where the view has them: a reader arriving at their desk asks what day it
+   is before anything else. `order` moves the paint and not the tree — the
+   greeting stays the block's first child and a screen reader meets it first. */
+.glance-topline {
+  order: -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+}
+.glance-date {
+  margin: 0;
+  color: var(--accentText);
+}
+.glance-frozen {
+  color: var(--textSecondary);
+}
+/* The title, with what acts on it (the weekly's stepper) at its line's end. */
+.glance-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+.greeting-name {
+  color: var(--accentText);
+}
+
+/* THE LARGEST RUNG: this is the page a day opens on and the first thing anyone
+ * sees after signing in, so the greeting is the one heading in the product
+ * allowed a step over a record's name — which is `Heading size="xlarge"` at the
+ * call site, in the same face, and nothing for this sheet to spell. */
+.glance-greeting {
+  margin: 0;
+  text-wrap: balance;
+}
+
+/* The Brief's opening block: the greeting, then the day in one sentence. The
+   sentence is the LEAD rung rather than body — it is the thing the page is
+   FOR, the one sentence a reader takes away — and every figure it used to be
+   followed by is now drawn by the section that owns it. It is ONE face whether
+   the morning composed the sentence from the ranked queue or the view fell
+   back to its own standing line. */
+.glance-sentence {
+  font: var(--fontBodyLarge);
+  margin: var(--space-1) 0 0;
+  max-width: 62ch;
+  /* TWO LINES, the same clamp `.stat-card-detail` takes. A row title is user
+     data of unbounded length and it is embedded in this sentence, so a long
+     one pushed the readings strip and everything under it down the page. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  text-wrap: pretty;
+}
+
+.glance-briefed {
+  margin: var(--space-1) 0 0;
+}
+
+/* ── The readings band ─────────────────────────────────────────────────────
+ * Between the head and the work, what describes the WHOLE day: the five
+ * readings as the house's reading cards, each a door into its lane with its
+ * basis under the figure, the way a record's band draws its readings — with
+ * the strip's own footnotes under them. */
+/* The readings band, under the work: its own section's air above it, the
+   same interval every section of this page takes. */
+.brief-overview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: var(--space-6) 0 0;
+}
+.brief-readings {
+  margin: 0;
+}
+
+/* The strip's own footnotes: what the page could not read, and when the page
+   was assembled. Quiet, under the figures they qualify — a reader checks a
+   figure's date after reading it, not before. */
+.brief-coverage {
+  margin: 0;
+}
+
+/* ── The work ──────────────────────────────────────────────────────────────
+ * The Focus panel across the page, then the zones under it: what was done
+ * for the reader and the notices as the work column, and the rail beside
+ * them — the schedule as the day's line, and the night. `PageZones` draws the
+ * grid. The interval over each is the register change from the block before
+ * it, one rung wider than any gap inside either register. */
+.brief-head + #brief-weekly {
+  margin-top: var(--space-6);
+}
+
+/* ── The follow-through ────────────────────────────────────────────────────
+ * The panels of the work column, in the order the day decides, and beside
+ * them the context rail. The gap between blocks is wider than the gap between
+ * the rows inside either of them, which is what makes them read as blocks. */
+.brief-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* ── The morning ───────────────────────────────────────────────────────────
+ * The greeting, the day in one sentence, the card in hand and the rest of the
+ * order in one column, read top to bottom with a section's air between each
+ * block; beside it, the figures and the day's meetings. The two columns hold
+ * a reading width rather than the window's, so a wide screen gets margins
+ * instead of longer lines. */
+.brief-morning {
+  max-width: 70rem;
+  margin-inline: auto;
+  padding-block-start: var(--space-10);
+}
+@media (min-width: 1201px) {
+  .brief-morning {
+    column-gap: var(--space-16);
+  }
+}
+.brief-morning > .brief-main {
+  gap: var(--space-12);
+}
+.brief-morning .brief-head {
+  flex-direction: column;
+  /* One line: a wrapping column is as wide as its widest item, which pushed
+     the greeting past a phone's edge. */
+  flex-wrap: nowrap;
+  align-items: stretch;
+  padding-block: 0;
+}
+/* The head is a column here, so the row layout's basis would be a HEIGHT. */
+.brief-morning .brief-head > .glance {
+  flex: none;
+}
+.brief-morning .glance {
+  gap: var(--space-3);
+}
+.brief-morning .glance-greeting {
+  font: var(--fontDisplayLarge);
+}
+.brief-morning .glance-sentence {
+  font: var(--fontLead);
+  max-width: none;
+  margin-block-start: var(--space-3);
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+}
+.brief-morning .brief-overview {
+  margin: 0;
+}
+/* A section's name on this page is a quiet label over its rows, not a title:
+   the greeting is the page's one headline and the card in hand its second. */
+.t-eyebrow.brief-section-label,
+.brief-morning .brief-first-head > .t-eyebrow,
+.brief-morning .brief-triage-queue-head {
+  margin: 0;
+  font: var(--fontBody);
+  font-weight: var(--fontWeightMedium);
+  color: var(--textSecondary);
+}
+/* A section on the page ground: its label, then its rows. With no box
+   around them, the rows and groups keep no gutter of their own either. */
+.brief-section {
+  --padPanel: 0px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+@media (min-width: 1201px) {
+  .brief-morning > .brief-rail {
+    position: sticky;
+    top: var(--space-10);
+    align-self: start;
+  }
+}
+
+/* ── The context rail ─────────────────────────────────────────────────────
+ * One column of `Panel`s, never a grid: a rail that re-columns is a second
+ * body rather than a margin. */
+.brief-rail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-10);
+}
+/* A reading in the rail: the name and the figure on one line, the basis and
+   the way into its lane under them. */
+.brief-rail .stat-strip:has(.stat-card-narrow-row) .stat-card-narrow-row {
+  grid-template-areas:
+    "label figure"
+    "basis foot";
+  padding-block: var(--space-4);
+  row-gap: var(--space-1);
+}
+.brief-rail
+  .stat-strip:has(.stat-card-narrow-row)
+  .stat-card-narrow-row
+  > .stat-card-foot {
+  justify-self: end;
+}
+.brief-rail
+  .stat-strip:has(.stat-card-narrow-row)
+  .stat-card-narrow-row
+  > .stat-card-label {
+  color: var(--textSecondary);
+}
+
+.rail-count,
+.rail-count-go {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+}
+
+/* The row is the press target only where the count HAS a destination, so the
+   button fills it rather than sitting inside it as a second edge. */
+.rail-count-go {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.rail-count-go:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.rail-count-label {
+  flex: 1;
+  min-width: 0;
+}
+
+.rail-count-value {
+  flex: none;
+}
+
+.rail-money {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  width: 100%;
+}
+
+.rail-projects {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.rail-project-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rail-watch-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* ── The day's own line, in the rail ───────────────────────────────────────
+ * A schedule row is read as a COLUMN of times hung on one line: the hour on
+ * its own rail, a stop on the line beside it, the meeting after. The eye runs
+ * down the times and the stops rather than hunting for each hour at the head
+ * of a sentence of different length. The panel's own hairlines between rows
+ * go: the line through the stops is the connector. */
+.rail-schedule-row {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: var(--space-3);
+  align-items: baseline;
+}
+.rail-schedule-row::before {
+  content: none;
+}
+
+/* Tabular figures so 09:30 and 11:00 occupy the same width — a column of times
+   that shifts by a digit reads as a ragged edge rather than as a rail. The
+   hour is set a weight up in the primary ink: it is what the eye runs down. */
+.rail-schedule-when {
+  color: var(--textPrimary);
+  font-variant-numeric: tabular-nums;
+  font-weight: var(--fontWeightMedium);
+  white-space: nowrap;
+  min-width: 3rem;
+}
+
+/* The stop, and the line through it: an accent disc on its own column, with
+   the line drawn from the row's top edge to its bottom so one stop's line
+   meets the next's. The first row's line starts at its stop and the last
+   row's ends at its own, so the line reads as the day and not as a rule that
+   runs off the panel. */
+.rail-schedule-dot {
+  position: relative;
+  align-self: stretch;
+  inline-size: var(--space-3);
+}
+.rail-schedule-dot::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: calc(50% - 0.5px);
+  inline-size: 1px;
+  background: var(--borderStrong);
+}
+.rail-schedule-row:first-child .rail-schedule-dot::before,
+.panel-head + .rail-schedule-row .rail-schedule-dot::before {
+  inset-block-start: var(--space-3);
+}
+.rail-schedule-row:last-child .rail-schedule-dot::before {
+  inset-block-end: calc(100% - var(--space-3));
+}
+.rail-schedule-dot::after {
+  content: "";
+  position: absolute;
+  inset-block-start: var(--space-2);
+  inset-inline-start: 0;
+  inline-size: var(--space-3);
+  block-size: var(--space-3);
+  box-sizing: border-box;
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--accent);
+  /* A rim in the pane's own ground, so the disc sits ON the line rather than
+     being cut by it. A border rather than a spread shadow: depth here is the
+     three tokens', and this is not depth. */
+  border: 2px solid var(--bgElevated);
+}
+
+/* The badge sits WITH the title rather than after it, so a meeting whose name
+   wraps keeps its warning attached to it. */
+.rail-schedule-what {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* What the panel cannot tell you, under what it can. Quiet like every other
+   line where a surface reports on its own limits. */
+.rail-promise-note {
+  margin: 0;
+}
+
+.brief-rail .brief-readings {
+  margin: 0;
+}
+
+.brief-wrap > .record-details-toggle {
+  margin-left: auto;
+}
+
+/* ── The queue drawer ────────────────────────────────────────────────────── */
+/* The queue is EMBEDDED here, so it must not also pay the page gutter: the
+   drawer body already spaces its content, and the worklist's own page wrapper
+   on top of it made this the one drawer whose content sat twice as far in as
+   every other drawer's. */
+.brief-queue-body > .wrap {
+  padding: 0;
+}
+
+/* NO LANES COLUMN IN THE DRAWER: it is a column already. The head — the
+   day's figures, the dials and the cuts as one strip — stands across the top
+   of the queue and STICKS there while the rows scroll under it, so a reader
+   ten rows down changes the cut without going back up. It pays the drawer's
+   own inset on its sides and its top, because it has to reach the drawer's
+   edges to read as a band and not as a card stranded over the rows. The
+   columns wrapper is put back to a block, which is also what tells the head
+   (worklist.header.tsx) to draw its cuts as a strip. */
+.brief-queue-body .worklist-columns {
+  display: block;
+}
+.brief-queue-body .worklist-lanes {
+  position: sticky;
+  top: calc(-1 * var(--space-5));
+  z-index: 1;
+  margin: calc(-1 * var(--space-5)) calc(-1 * var(--space-5)) 0;
+  padding: var(--space-4) var(--space-5);
+  background: var(--bgElevated);
+  border-bottom: 1px solid var(--borderSubtle);
+}
+.brief-queue-body .worklist-day {
+  margin-block-start: var(--gapCards);
+}
+
+/* The rows draw as they do on the queue's own page: their list is the
+   container they measure themselves against (worklist.row.css), so they
+   already answer to the drawer's width and not to the window behind it. */
+
+.brief-queue-body .page-zones-aside {
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 0.7fr);
+}
+
+@media (max-width: 1000px) {
+  .brief-queue-body .page-zones-aside {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* ── The receipt ───────────────────────────────────────────────────────────
+ * A group per lane that has lines in it, under the section's label. */
+
+/* A line is one row: what happened and the record it is about, read down the
+   list without stopping at small print. The list is one grid the lines share,
+   so the marks, the undos and the times stand in columns rather than wherever
+   each sentence happened to end. */
+.magic-lines {
+  display: grid;
+  grid-template-columns: var(--space-3) minmax(0, 1fr) auto auto;
+  column-gap: var(--space-3);
+  row-gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.magic-line {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  align-items: baseline;
+}
+
+.magic-line > .magic-mark {
+  grid-column: 1;
+}
+
+.magic-line-text {
+  grid-column: 2;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.magic-line-subject {
+  margin-inline-start: var(--space-2);
+  color: var(--textSecondary);
+}
+
+.magic-line-controls {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 3;
+  align-self: center;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--gapActions);
+}
+
+.magic-line-when {
+  grid-column: 4;
+  justify-self: end;
+  color: var(--textSecondary);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* On a phone the controls drop under the line, so the words keep the width
+   and the time keeps its column. */
+@media (max-width: 600px) {
+  .magic-lines {
+    grid-template-columns: var(--space-3) minmax(0, 1fr) auto;
+  }
+
+  .magic-line-controls {
+    grid-row: 2;
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+
+  .magic-line-when {
+    grid-column: 3;
+  }
+}
+
+/* The done lines fold under their own group head, which already draws the
+   seam a disclosure would draw again. */
+.magic-fold {
+  border-top: 0;
+  padding-top: 0;
+  margin-bottom: 0;
+}
+
+/* The two caveats: what could not be read, above the summary, and what was
+   left out, under the lanes. Both are lists of captions and neither wants a
+   bullet. */
+.magic-withheld,
+.magic-notshown {
+  list-style: none;
+  margin: 0 0 var(--space-3);
+  padding: 0;
+}
+
+.magic-notshown {
+  margin: 0;
+}
+
+/* An opened line: one row per record, its name and its undo on one line, the
+   fields it moved under it as label and old → new. */
+.magic-records {
+  list-style: none;
+  margin: var(--space-3) 0;
+  padding: 0;
+}
+
+.magic-record + .magic-record {
+  margin-top: var(--space-3);
+}
+
+.magic-record-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  justify-content: space-between;
+}
+
+.magic-changes {
+  margin: var(--space-2) 0 0;
+}
+
+.magic-changes > div {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.magic-changes dd {
+  margin: 0;
+}
+
+/* What the duty's deadline rests on, set apart from the sentence above it. */
+.notice-duty-facts {
+  margin-block: var(--space-3);
+}
+
+/* The three ways to discharge a privacy-notice duty, side by side. */
+.notice-duty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gapActions);
+  margin-top: var(--space-3);
+}
+
+/* ── Folds ────────────────────────────────────────────────────────────────
+ * `PageZones` folds the columns; what folds here is the briefing's own scale.
+ * A display-size greeting on a phone costs three lines before a reader has
+ * learned anything. */
+@media (max-width: 720px) {
+  /* The greeting steps down a rung: at the largest rung it cost three lines
+     before a reader learned anything. */
+  .glance-greeting {
+    font: var(--fontHeadingLarge);
+  }
+
+  .glance-sentence {
+    font: var(--fontBody);
+  }
+}
+
+/* The coarse-pointer floor (WCAG 2.2 AA), the way `.stat-card-open` takes it in
+   atoms.css. `max()` for the reason `.btn-federated` gives: a later rise in the
+   shared control height must not be capped by this floor. Declared under
+   `pointer: coarse` and not at a width, because a narrow WINDOW on a desktop is
+   still a mouse — the floor is about what a thumb can hit, not about how much
+   room there is. */
+@media (pointer: coarse) {
+  .rail-count-go,
+  .record-details-toggle {
+    min-height: max(var(--controlHeight), 44px);
+  }
+}
+
+.magic-line-basis {
+  display: block;
+  color: var(--textSecondary);
+}

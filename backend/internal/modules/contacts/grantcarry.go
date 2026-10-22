@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
 // GrantCarrier moves the grants on a retiring record onto its survivor, folding
@@ -35,6 +36,10 @@ func (s *Store) carryGrantsTx(ctx context.Context, tx pgx.Tx, recordType string,
 	if s.grantCarrier != nil {
 		return s.grantCarrier.CarryGrantsTx(ctx, tx, recordType, from, to)
 	}
+	return refuseUnwiredGrantCarry(ctx, tx, recordType, from)
+}
+
+func refuseUnwiredGrantCarry(ctx context.Context, tx pgx.Tx, recordType string, from ids.UUID) error {
 	var held bool
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (SELECT 1 FROM record_grant WHERE record_type = $1 AND record_id = $2)`,
@@ -45,4 +50,15 @@ func (s *Store) carryGrantsTx(ctx context.Context, tx pgx.Tx, recordType string,
 		return &SatelliteCarrierNotWiredError{Holding: "shares with colleagues"}
 	}
 	return nil
+}
+
+type grantCarryPreviewer interface {
+	PreviewGrantCarryTx(context.Context, pgx.Tx, string, ids.UUID, ids.UUID) ([]authz.CarriedRecordGrant, error)
+}
+
+func (s *Store) previewGrantCarry(ctx context.Context, tx pgx.Tx, kind string, source, target ids.UUID) ([]authz.CarriedRecordGrant, error) {
+	if reader, ok := s.grantCarrier.(grantCarryPreviewer); ok {
+		return reader.PreviewGrantCarryTx(ctx, tx, kind, source, target)
+	}
+	return nil, refuseUnwiredGrantCarry(ctx, tx, kind, source)
 }

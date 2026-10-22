@@ -30,9 +30,10 @@ func TestRenderedShapesDescribeExactlyWhatTheDecoderAccepts(t *testing.T) {
 		tool     string
 		decoded  map[datasource.EntityType]reflect.Type
 		rendered map[string]string
+		parents  map[string][]string
 	}{
-		{"create_record", createShapes, createRecordShapes},
-		{"update_record", updateShapes, updateRecordShapes},
+		{"create_record", createShapes, createRecordShapes, createParentFields},
+		{"update_record", updateShapes, updateRecordShapes, nil},
 	} {
 		if len(table.decoded) != len(table.rendered) {
 			t.Errorf("%s describes %d record types and decodes %d",
@@ -44,8 +45,9 @@ func TestRenderedShapesDescribeExactlyWhatTheDecoderAccepts(t *testing.T) {
 				t.Errorf("%s decodes %s but renders no shape for it", table.tool, recordType)
 				continue
 			}
-			want := contractFieldNames(shape)
+			want := acceptedFieldNames(shape, table.parents[string(recordType)])
 			got := renderedKeys(rendered)
+			slices.Sort(got)
 			if !slices.Equal(got, want) {
 				t.Errorf("%s %s renders keys %v, decoder accepts %v", table.tool, recordType, got, want)
 			}
@@ -161,15 +163,13 @@ func TestRenderedShapesMarkRequiredKeys(t *testing.T) {
 
 // A key the TOOL supplies is never rendered as one the caller must send.
 //
-// `source` is required by every create body in crm.yaml and stamped by this
-// surface, which overwrites whatever arrived. Rendering it required would make
-// an agent invent a mandatory value that is discarded — and the description says
-// two sentences later that it is overwritten, so the pair would contradict
-// itself. Derived from the same list the generator uses, so a second stamped key
-// inherits the check.
+// `source` is required by every create body in crm.yaml that has one, and
+// stamped by this surface, which overwrites whatever arrived. Rendering it
+// required would make an agent invent a mandatory value that is discarded. An
+// offer template records no source, so its body has none to render.
 func TestRenderedShapesNeverRequireAKeyThisSurfaceStamps(t *testing.T) {
 	for recordType, rendered := range createRecordShapes {
-		if !strings.Contains(rendered, "source?: string") {
+		if strings.Contains(rendered, " source: string") || strings.Contains(rendered, "{source: string") {
 			t.Errorf("%s renders `source` as a key the caller must send:\n%s", recordType, rendered)
 		}
 	}

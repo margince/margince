@@ -3,11 +3,11 @@
 
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider, translate } from "../i18n";
-import { NumberSetting } from "./numbersetting";
+import { NumberSetting, NumberSettingRow } from "./numbersetting";
 import { PageSaveBar, SavePageProvider } from "./savepage";
 import { SettingList, SettingRow } from "./settingrow";
 
@@ -43,6 +43,33 @@ function renderPages(onCommit: (next: number) => void) {
 }
 
 describe("NumberSetting", () => {
+  it("says why the reader may not change it, and refuses the edit on that alone", () => {
+    render(
+      <SettingList>
+        <SettingRow
+          label="Pages per read"
+          description="Most pages one read fetches."
+          control={(control) => (
+            <NumberSetting
+              control={control}
+              value={60}
+              min={1}
+              max={200}
+              refusal={REFUSAL}
+              reason="Only an administrator can change this."
+              onCommit={vi.fn()}
+            />
+          )}
+        />
+      </SettingList>,
+    );
+    const box = screen.getByRole("textbox", { name: "Pages per read" });
+    expect(box).toBeDisabled();
+    expect(box).toHaveAccessibleDescription(
+      "Most pages one read fetches. Only an administrator can change this.",
+    );
+  });
+
   it("commits a whole number in range on Enter", async () => {
     const user = userEvent.setup();
     const onCommit = vi.fn();
@@ -51,6 +78,52 @@ describe("NumberSetting", () => {
     await user.type(box, "120{Enter}");
     expect(onCommit).toHaveBeenCalledWith(120);
     expect(box).not.toHaveAttribute("aria-invalid");
+  });
+
+  it("commits nothing on an input method's Enter", async () => {
+    const user = userEvent.setup();
+    const onCommit = vi.fn();
+    const box = renderPages(onCommit);
+    await user.clear(box);
+    await user.type(box, "120");
+
+    fireEvent.keyDown(box, { key: "Enter", keyCode: 229 });
+
+    expect(onCommit).not.toHaveBeenCalled();
+  });
+
+  it("names the caller's element after the row's description, and only once given", () => {
+    const row = (describedBy?: string) => (
+      <SettingList>
+        <NumberSettingRow
+          label="Pages per read"
+          description="Most pages one read fetches."
+          value={60}
+          min={1}
+          max={200}
+          refusal={REFUSAL}
+          describedBy={describedBy}
+          onCommit={vi.fn()}
+        />
+      </SettingList>
+    );
+    const { rerender } = render(
+      <>
+        {row()}
+        <p id="card-refusal">The save was refused.</p>
+      </>,
+    );
+    const box = screen.getByRole("textbox", { name: "Pages per read" });
+    expect(box).toHaveAccessibleDescription("Most pages one read fetches.");
+    rerender(
+      <>
+        {row("card-refusal")}
+        <p id="card-refusal">The save was refused.</p>
+      </>,
+    );
+    expect(box).toHaveAccessibleDescription(
+      "Most pages one read fetches. The save was refused.",
+    );
   });
 
   // The reader corrects what they typed instead of retyping it, and hears the

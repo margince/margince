@@ -30,6 +30,7 @@ import (
 	"golang.org/x/term"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/dbmigrate"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -49,29 +50,27 @@ func main() {
 
 func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	if len(args) == 0 {
-		return errors.New("usage: migrate <up|down|reset-password|setup-token|recreate-db|drop-db|db-exists|workspace-exists|drill-start|drill-finish> --dsn <dsn> [--steps n] [--email <address>] [--name <db>] [--template <db>] [--statement-timeout <duration>] [--by <name>] [--restored-to <time>] [--drill <id>] [--outcome passed|failed] [--note <text>]")
+		return errors.New("usage: migrate <up|down|reset-password|setup-token|recreate-db|drop-db|db-exists|workspace-exists|drill-start|drill-finish|data-tasks> --dsn <dsn> [--steps n] [--email <address>] [--name <db>] [--template <db>] [--statement-timeout <duration>] [--by <name>] [--restored-to <time>] [--drill <id>] [--outcome passed|failed] [--note <text>]")
 	}
 	direction := args[0]
+	if direction == "data-tasks" {
+		return runDataTasks(ctx, args[1:], stdout, stderr)
+	}
 
 	fs := flag.NewFlagSet("migrate", flag.ContinueOnError)
 	// The usage text goes where the caller says, so a test can assert what it
 	// contains. flag writes to os.Stderr otherwise, out of reach of any assertion.
 	fs.SetOutput(stderr)
-	// Registered with an EMPTY default and resolved after parsing. flag echoes a
-	// non-empty default in its usage output — `(default "postgres://…")` — and this
-	// value carries a password, so any default read from the environment here
-	// reaches stderr on a mistyped flag. On CI that stderr is a public build log.
-	dsn := fs.String("dsn", "", "Postgres DSN (owner role); default MARGINCE_OWNER_DSN, else MARGINCE_DSN")
+	dsn, err := addDSNFlags(fs)
+	if err != nil {
+		return err
+	}
 	steps := fs.Int("steps", 1, "migrations to revert (down only)")
 	email := fs.String("email", "", "user email (reset-password only)")
 	name := fs.String("name", "", "database name (recreate-db, drop-db, db-exists only)")
 	template := fs.String("template", "", "template database to copy (recreate-db only)")
 	var drill drillFlags
-	fs.StringVar(&drill.by, "by", "", "who runs the restore drill (drill-start only)")
-	fs.StringVar(&drill.restoredTo, "restored-to", "", "RFC 3339 point in time the backup restores to (drill-start only)")
-	fs.StringVar(&drill.drill, "drill", "", "drill id drill-start printed (drill-finish only)")
-	fs.StringVar(&drill.outcome, "outcome", "", "passed or failed (drill-finish only)")
-	fs.StringVar(&drill.note, "note", "", "what the drill checked, or why it failed (drill-start, drill-finish)")
+	addDrillFlags(fs, &drill)
 	// Bounds how long a single migration statement may HOLD its lock. Every
 	// migration file already bounds ACQUISITION with `SET LOCAL lock_timeout`
 	// (migrations/locktimeout_test.go requires it), and that is a different
@@ -96,9 +95,9 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	statementTimeout := fs.Duration("statement-timeout", defaultStatementCeiling,
 		"ceiling on a single migration statement, and on the wait for the migration lock; 0 removes it")
 	if err := fs.Parse(args[1:]); err != nil {
-		return err
+		return config.FlagFault(fs, err)
 	}
-	resolved, err := resolveDSN(fs, *dsn)
+	resolved, err := dsn.resolve(config.Environ())
 	if err != nil {
 		return err
 	}

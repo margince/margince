@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/knowledge/handbook"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/auditentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -195,7 +196,7 @@ func reconcilePages(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, pages []h
 		if _, err := tx.Exec(ctx, `DELETE FROM knowledge_document WHERE id = $1`, doc.id); err != nil {
 			return 0, fmt.Errorf("remove the withdrawn handbook page: %w", err)
 		}
-		if _, err := storekit.Audit(ctx, tx, "delete", "knowledge_document", doc.id,
+		if _, err := storekit.Audit(ctx, tx, "delete", auditentity.KnowledgeDocument, doc.id,
 			map[string]any{filenameKey: filename, managedSourceKey: HandbookSource}, nil); err != nil {
 			return 0, fmt.Errorf("audit the withdrawn handbook page: %w", err)
 		}
@@ -246,7 +247,7 @@ func filePage(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, page handbook.P
 		handbookStorageKey(page.Filename), checksum, HandbookSource, by); err != nil {
 		return fmt.Errorf("file the handbook page: %w", err)
 	}
-	if _, err := storekit.Audit(ctx, tx, "create", "knowledge_document", id, nil,
+	if _, err := storekit.Audit(ctx, tx, "create", auditentity.KnowledgeDocument, id, nil,
 		pageImage(corpusID, page.Filename, size)); err != nil {
 		return fmt.Errorf("audit the filed handbook page: %w", err)
 	}
@@ -274,7 +275,7 @@ func replacePage(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, page handboo
 		prior.id, size, checksum); err != nil {
 		return fmt.Errorf("update the handbook page: %w", err)
 	}
-	if _, err := storekit.Audit(ctx, tx, "update", "knowledge_document", prior.id,
+	if _, err := storekit.Audit(ctx, tx, "update", auditentity.KnowledgeDocument, prior.id,
 		map[string]any{checksumKey: prior.checksum},
 		pageImage(corpusID, page.Filename, size)); err != nil {
 		return fmt.Errorf("audit the replaced handbook page: %w", err)

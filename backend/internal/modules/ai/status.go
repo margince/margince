@@ -10,7 +10,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -31,7 +31,7 @@ func (s *AdminStore) observed(ctx context.Context) (crmcontracts.AiBudgetSnapsho
 			return err
 		}
 		if auth.Require(ctx, routingSettingsObject, principal.ActionRead) == nil {
-			cfg, err = settings.GetTx(ctx, tx, Routing)
+			cfg, err = config.StoredValTx(ctx, tx, s.cfg, Routing)
 		}
 		return err
 	})
@@ -59,7 +59,7 @@ func (s *AdminStore) ReadStatus(ctx context.Context) (crmcontracts.AiStatus, err
 	features := visibleFeatureRoutes(ctx, cfg, budget.Band)
 	if auth.Require(ctx, routingSettingsObject, principal.ActionRead) == nil {
 		version = cfg.Revision()
-		overrides, err := settings.Get(ctx, s.settings, TaskOverridesSetting)
+		overrides, err := config.StoredVal(ctx, s.cfg, TaskOverridesSetting)
 		if err != nil {
 			return crmcontracts.AiStatus{}, err
 		}

@@ -193,6 +193,14 @@ func recordedCriteria() []string {
 // point: a waiver nobody had to justify is how a second spelling survives
 // review for a year.
 var retired = gatekit.Waive(map[string]string{
+	"backend/internal/compose/meetingbrief/coachingcopy.go":  "German human-role wording names the sales colleague and accountable actor, not the contact record type",
+	"backend/internal/compose/meetingbrief/advancecopy.go":   "German human-role wording names the responsible colleague or buying role, not the contact record type",
+	"backend/internal/compose/meetingbrief/objectivecopy.go": "German human-role wording names the responsible colleague or buying role, not the contact record type",
+	"backend/internal/compose/reportingdefinitioncopy.go":    "German human-role wording names the responsible colleague or buying role, not the contact record type",
+	"backend/internal/compose/reportinglabelcopy.go":         "German human-role wording names the responsible colleague or buying role, not the contact record type",
+	"backend/internal/modules/reporting/statuscopy.go":       "German human-role wording names the responsible colleague or buying role, not the contact record type",
+	"backend/internal/shared/kernel/dealrole/words.go":       "German human-role wording names the responsible colleague or buying role, not the contact record type",
+
 	"backend/migrations/core": "shipped migrations are never edited — the SQL that built the " +
 		"old names is the record of how the schema got here",
 	"backend/migrations/custom": "the same, one namespace over",
@@ -209,10 +217,14 @@ var retired = gatekit.Waive(map[string]string{
 		"chose, and a licence is not restyled by a vocabulary rule",
 	"CODE_OF_CONDUCT.md": "the adopted Contributor Covenant, held verbatim by " +
 		"docscodeofconduct_test.go; its people are human beings, never this record",
+	"LICENSING.md": "counsel's explanation of the CLA, kept verbatim beside it",
+	"CLA.md": "counsel's agreement text, where a person is a party to a contract; rewording it " +
+		"changes what a contributor accepted",
 	"sbom-schemas": "a vendored SPDX schema, not ours to rename",
 	"e2e/llm/testdata": "recorded model output — what a model actually said on a run, which " +
 		"editing would falsify",
 
+	"frontend/src/format/rbacobjects.ts": "a grant area named for the seats settings group",
 	"frontend/src/i18n/en.ts": "the catalog's human-sense values, held key by key and from both " +
 		"sides by frontend/src/i18n/record-noun.test.ts, which is where the reason each one keeps " +
 		"the word is written down",
@@ -223,21 +235,23 @@ var retired = gatekit.Waive(map[string]string{
 	// Settings → People is the SEATS group, beside Company and Sales. It heads
 	// the pages about colleagues with a licence, and it is the one surface in
 	// this tree where the plural still means the humans who work here.
-	"frontend/src/screens/settingscatalog.ts":              "the seats settings group",
-	"frontend/src/app/shell.stories.tsx":                   "the seats settings group",
-	"frontend/src/screens/settings-chrome.test.tsx":        "the seats settings group",
-	"frontend/src/screens/license.stories.tsx":             "a page under the seats settings group",
-	"frontend/src/screens/licenseholder.stories.tsx":       "a page under the seats settings group",
-	"frontend/src/screens/roles-detail.stories.tsx":        "a page under the seats settings group",
-	"frontend/src/screens/roles-settings.stories.tsx":      "a page under the seats settings group",
-	"frontend/src/screens/team-dialogs.stories.tsx":        "a page under the seats settings group",
-	"frontend/src/screens/users-access.stories.tsx":        "a page under the seats settings group",
-	"frontend/src/screens/users-admin.stories.tsx":         "a page under the seats settings group",
-	"frontend/src/screens/users-invite-form.stories.tsx":   "a page under the seats settings group",
-	"frontend/src/screens/users-memberverbs.stories.tsx":   "a page under the seats settings group",
-	"frontend/src/screens/users-password-link.stories.tsx": "a page under the seats settings group",
-	"frontend/src/screens/users-rolecell.stories.tsx":      "a page under the seats settings group",
-	"frontend/src/screens/share.tsx": "the share target kind: a colleague with a seat, or a team " +
+	"frontend/src/lib/settingscatalog.ts":                            "the seats settings group",
+	"frontend/src/lib/settingscatalog.business.ts":                   "the seats settings group",
+	"frontend/src/app/shell.stories.tsx":                             "the seats settings group",
+	"frontend/src/features/settings/settings-chrome.test.tsx":        "the seats settings group",
+	"frontend/src/features/settings/license.stories.tsx":             "a page under the seats settings group",
+	"frontend/src/features/settings/licenseholder.stories.tsx":       "a page under the seats settings group",
+	"frontend/src/features/settings/roles-detail.stories.tsx":        "a page under the seats settings group",
+	"frontend/src/features/settings/roles-drawer.stories.tsx":        "a page under the seats settings group",
+	"frontend/src/features/settings/roles-settings.stories.tsx":      "a page under the seats settings group",
+	"frontend/src/features/settings/team-dialogs.stories.tsx":        "a page under the seats settings group",
+	"frontend/src/features/settings/users-access.stories.tsx":        "a page under the seats settings group",
+	"frontend/src/features/settings/users-admin.stories.tsx":         "a page under the seats settings group",
+	"frontend/src/features/settings/users-invite-form.stories.tsx":   "a page under the seats settings group",
+	"frontend/src/features/settings/users-memberverbs.stories.tsx":   "a page under the seats settings group",
+	"frontend/src/features/settings/users-password-link.stories.tsx": "a page under the seats settings group",
+	"frontend/src/features/settings/users-rolecell.stories.tsx":      "a page under the seats settings group",
+	"frontend/src/features/records/share.parts.tsx": "the share target kind: a colleague with a seat, or a team " +
 		"of them — never this record",
 	"docs/handbook/settings.md": "it names the seats settings group, which is the heading a " +
 		"reader navigating Settings actually sees",

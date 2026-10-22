@@ -6,7 +6,7 @@ import { useT } from "../i18n";
 import { useCan, useCanWrite } from "../lib/capability";
 import { unwrap } from "../lib/problem";
 import { routeHash } from "../lib/router";
-import { settingsHref } from "../screens/settingsrouting";
+import { settingsHref } from "../lib/settingsrouting";
 
 export function EconomyBanner() {
   const t = useT();

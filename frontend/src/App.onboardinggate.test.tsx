@@ -7,16 +7,16 @@ import { App } from "./App";
 import { createQueryClient } from "./app/queryclient";
 import { LocaleProvider } from "./i18n";
 import { parseHash, routeHash } from "./lib/router";
-import { memoryStorage, wizardRow } from "./testing/appharness";
+import { memoryStorage, teardownApp, wizardRow } from "./testing/appharness";
 import { type GrantSpec, meFixture } from "./testing/mefixture";
 
 // Two places decide, on their own, where a session belongs when the
-// installation has not described itself, and each rewrites the hash to say so:
+// installation has not described itself, and each rewrites the hash to say so.
 // AuthedApp's onboarding gate sends every route back to onboarding while
-// GET /company answers 404, and the conversational shell's restore
-// (screens/onboarding-conversation/restore.ts) decides whether the journey is
-// finished and leaves. Those are the only two automatic navigators in the app;
-// every other navigate() answers a click.
+// GET /company answers 404. The conversational shell's restore
+// (features/onboarding/onboarding-conversation/restore.ts) decides whether the
+// journey is finished and leaves. Those are the only two automatic navigators
+// in the app; every other navigate() answers a click.
 //
 // When they disagree they rewrite the hash AT each other, and that is not a
 // cosmetic redirect flicker. `useRoute` is a useSyncExternalStore over
@@ -207,8 +207,9 @@ beforeEach(() => {
   vi.stubGlobal("scrollTo", vi.fn());
 });
 
-afterEach(() => {
+afterEach(async () => {
   cleanup();
+  await teardownApp();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
   window.location.hash = "";
@@ -509,7 +510,7 @@ describe("onboarding gate", () => {
   // still leave; the rest of settings waits for the journey to finish.
   it("lets a non-admin mid-journey reach Settings > Account and Sign out", async () => {
     // Routing is under test; wait for the real lazy module before timing UI queries.
-    await import("./screens/settings");
+    await import("./features/settings/settings");
     window.location.hash = "#/settings/account";
     stubCompany(
       403,

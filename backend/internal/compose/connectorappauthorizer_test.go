@@ -50,18 +50,27 @@ func authorizerFor(t *testing.T, resolve appResolver, envApp string) (googleAppA
 	return a, used
 }
 
-// What an admin sets through Settings outranks the environment: the environment
-// is how the pair ARRIVES, and the stored app is where it lives.
-func TestTheStoredAppOutranksTheEnvironment(t *testing.T) {
-	a, used := authorizerFor(t, func(context.Context) (capture.ConnectorApp, bool, error) {
+// The environment's app outranks a stored one: a boot source locks the stored
+// app, so the one it sets is the one every call uses. Where the deployment
+// composed none, the stored app answers.
+func TestTheEnvironmentsAppOutranksAStoredOne(t *testing.T) {
+	storedApp := func(context.Context) (capture.ConnectorApp, bool, error) {
 		return capture.ConnectorApp{ClientID: "stored-id", ClientSecretRef: "stored-secret"}, true, nil
-	}, "env-id")
-
+	}
+	a, used := authorizerFor(t, storedApp, "env-id")
 	if _, err := a.AccessToken(context.Background(), "refresh"); err != nil {
 		t.Fatalf("AccessToken: %v", err)
 	}
-	if *used != "stored-id" {
-		t.Errorf("refreshed against %q, want the STORED app; the environment is not the authority once an app is set", *used)
+	if *used != "env-id" {
+		t.Errorf("refreshed against %q, want the environment's app; it locks the stored one", *used)
+	}
+
+	alone, usedAlone := authorizerFor(t, storedApp, "")
+	if _, err := alone.AccessToken(context.Background(), "refresh"); err != nil {
+		t.Fatalf("AccessToken: %v", err)
+	}
+	if *usedAlone != "stored-id" {
+		t.Errorf("refreshed against %q, want the STORED app where the environment composed none", *usedAlone)
 	}
 }
 
@@ -81,20 +90,27 @@ func TestTheEnvironmentStillServesWhenNothingIsStored(t *testing.T) {
 }
 
 // A sealed secret that will not open means the vault's root key moved under the
-// installation. Connecting anyway with an older environment copy would hide
-// that behind a flow that half works.
+// installation. Where the stored app is the one in use, that is reported, not
+// read as "no app configured". Where the environment composed one, the stored
+// app is not read at all, so its failure cannot break the flow.
 func TestAResolutionFailureIsReportedNotPaperedOverWithTheEnvironment(t *testing.T) {
 	boom := errors.New("vault: sealed secret will not open")
-	a, used := authorizerFor(t, func(context.Context) (capture.ConnectorApp, bool, error) {
+	broken := func(context.Context) (capture.ConnectorApp, bool, error) {
 		return capture.ConnectorApp{}, false, boom
-	}, "env-id")
+	}
+	a, used := authorizerFor(t, broken, "")
 
 	_, err := a.AccessToken(context.Background(), "refresh")
 	if !errors.Is(err, boom) {
 		t.Fatalf("AccessToken err = %v, want the resolution failure surfaced", err)
 	}
 	if *used != "" {
-		t.Errorf("fell back to %q after a resolution error, hiding a broken vault behind a working-looking flow", *used)
+		t.Errorf("answered with %q after a resolution error, hiding a broken vault behind a working-looking flow", *used)
+	}
+
+	withEnv, usedEnv := authorizerFor(t, broken, "env-id")
+	if _, err := withEnv.AccessToken(context.Background(), "refresh"); err != nil || *usedEnv != "env-id" {
+		t.Errorf("AccessToken = %q %v, want the environment's app without reading the stored one", *usedEnv, err)
 	}
 }
 
@@ -238,7 +254,8 @@ func TestEveryMicrosoftMethodReachesTheSameResolvedApp(t *testing.T) {
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
-			a, used, tenant := graphAuthorizerFor(t, stored, "env-entra")
+			// No environment app, so the stored one is the app in use.
+			a, used, tenant := graphAuthorizerFor(t, stored, "")
 			if err := call(a); err != nil {
 				t.Fatalf("%s: %v", name, err)
 			}

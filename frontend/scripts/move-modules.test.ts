@@ -6,6 +6,7 @@ const files = new Set([
   "/fe/src/app/storage.test.ts",
   "/fe/src/app/shell.tsx",
   "/fe/src/api/client.ts",
+  "/fe/src/api/schema.d.ts",
   "/fe/src/screens/common.tsx",
   "/fe/src/screens/common.css",
   "/fe/src/screens/deal/index.ts",
@@ -114,6 +115,20 @@ describe("moving modules", () => {
         exists,
       ),
     ).toBe('import "../lib/common.css";');
+  });
+
+  it("re-spells an import of a declaration file without its .d.ts", () => {
+    const common = new Map([
+      ["/fe/src/screens/common.tsx", "/fe/src/features/x/common.tsx"],
+    ]);
+    expect(
+      rewriteImports(
+        "/fe/src/screens/common.tsx",
+        'import type { paths } from "../api/schema";',
+        common,
+        exists,
+      ),
+    ).toBe('import type { paths } from "../../api/schema";');
   });
 
   it("leaves package imports and unmoved paths alone", () => {

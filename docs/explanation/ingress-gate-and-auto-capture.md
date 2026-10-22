@@ -254,6 +254,15 @@ commits on its own, so a failure keeps whatever was already decided. The decisio
 share a transaction, so a row can
 never say `real` without the contact it promised.
 
+**Meeting mail from Google is never noise.** Mail from `calendar-notification@google.com`,
+`gemini-notes@google.com` and `meetings-noreply@google.com` is settled as a `role_mailbox` with no
+model call. It counts only when the Gmail receiving server passed DMARC for `google.com`, which is the
+activity's `inbound_sender_authenticated` stamp. A forged From is judged like any other sender.
+
+A `noise` or `personal` answer stored for one of these addresses hides or destroys none of its mail
+that passed that check. It keeps none of that mail's files out of storage either. The next such
+message asks the question again. The list is in `capture/googlemeetingmail.go`.
+
 **The AI call: `capture_counterparty_verdict`.** One sender per call, never a group. Only the text
 of that sender is in the prompt, so an attack message cannot answer for anyone else. SQL first limits
 the subject, body and sender name (300 / 1200 / 300 characters), and the prompt marks them off as
@@ -562,7 +571,7 @@ has a right to.
 | The ledger of decisions and its caps | `backend/internal/modules/capture/pending.go`, `pendingcap.go` |
 | Review queue and sweeps | `backend/internal/modules/capture/pendingreview.go`, `pendingsweeps.go` |
 | Own domains, personal mail list, settings | `owndomainstore.go`, `freemaildomain.go`, `baselinelist.go`, `settings.go` |
-| T2 registry and its config keys | `capture/transactional.go`, `platform/deployconfig/capture.go` |
+| T2 registry and its config keys | `capture/transactional.go`, `compose/capturesettings.go` |
 | Verdict engine, prompt, sweeps, accept | `backend/internal/compose/captureverdict{,ask,sweeps,accept}.go` |
 | AI task names and routing | `internal/modules/ai/tasks_gen.go` (generated), `internal/compose/brain.go` |
 | What starts the company check | `backend/internal/compose/capturedomaintriage.go` |

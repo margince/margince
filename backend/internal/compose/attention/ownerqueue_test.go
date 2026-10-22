@@ -42,7 +42,7 @@ func managerReading() context.Context {
 // waitingOwnedBy is the who-is-waiting lane over rows attributed to two contacts.
 type waitingOwnedBy []WaitingCustomer
 
-func (w waitingOwnedBy) Unanswered(context.Context, time.Time) ([]WaitingCustomer, bool, error) {
+func (w waitingOwnedBy) Unanswered(context.Context, time.Time, *ids.UUID) ([]WaitingCustomer, bool, error) {
 	return []WaitingCustomer(w), false, nil
 }
 
@@ -136,7 +136,7 @@ func TestBothNarrowingPassesKeepTheSameWaitingRow(t *testing.T) {
 			Source: sourceWaiting,
 			Deal:   &crmcontracts.WorklistDealFacts{OwnerId: &alice},
 		},
-		owner: theRep,
+		ownerRef: ownedBy(theRep),
 	}
 
 	reader := principal.Principal{Type: principal.PrincipalHuman, UserID: theRep}

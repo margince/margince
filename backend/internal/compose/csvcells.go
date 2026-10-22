@@ -13,6 +13,7 @@ import (
 	"maps"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -21,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -28,6 +30,13 @@ import (
 // target; the part writer turns it into the file's own header.
 type cellProblem struct {
 	Target, Value, Message string
+	// Why is Message as a code, so the report can say it in another language.
+	Why migration.Reason
+}
+
+// problemOf is one cell the store would refuse, worded by the reason.
+func problemOf(target, value string, why migration.Reason) *cellProblem {
+	return &cellProblem{Target: target, Value: value, Message: why.English(), Why: why}
 }
 
 // checkRow checks the core cells, then each custom-field cell in target order.
@@ -43,16 +52,13 @@ func checkRow(object string, fields map[string]string, cat importCatalog) (map[s
 	}
 	for _, target := range slices.Sorted(maps.Keys(fields)) {
 		raw := fields[target]
-		if !strings.HasPrefix(target, customFieldPrefix) || strings.TrimSpace(raw) == "" {
+		if !datasource.IsCustomFieldKey(target) || strings.TrimSpace(raw) == "" {
 			continue
 		}
 		col, active := cat.byName[target]
 		if !active {
 			// Retired after the run was staged: the store has no column to bind it to.
-			return nil, &cellProblem{
-				Target: target, Value: raw,
-				Message: fmt.Sprintf("%q cannot be written: this field is no longer active", strings.TrimSpace(raw)),
-			}
+			return nil, problemOf(target, raw, migration.Why(migration.ReasonFieldInactive, "value", strings.TrimSpace(raw)))
 		}
 		value, problem := checkCell(target, col, raw, cat.optionsReadable)
 		if problem != nil {
@@ -77,7 +83,7 @@ func checkParsedCells(object string, fields map[string]string) (map[string]any, 
 		}
 		stored, err := storedSpelling(object, target, text)
 		if err != nil {
-			return nil, &cellProblem{Target: target, Value: fields[target], Message: parseMessage(text, err)}
+			return nil, problemOf(target, fields[target], parseReason(text, err))
 		}
 		if typed == nil {
 			typed = map[string]any{}
@@ -104,15 +110,15 @@ func storedSpelling(object, target, text string) (string, error) {
 	}
 }
 
-func parseMessage(text string, err error) string {
+func parseReason(text string, err error) migration.Reason {
 	parseErr, ok := errors.AsType[*values.ParseError](err)
 	if !ok {
-		return fmt.Sprintf("%q cannot be read", text)
+		return migration.Why(migration.ReasonValueUnreadable, "value", text)
 	}
 	if parseErr.Code == "phone_needs_country_code" {
-		return fmt.Sprintf("%q needs its country code, like +49 30 1234567", text)
+		return migration.Why(migration.ReasonPhoneNeedsCountry, "value", text)
 	}
-	return fmt.Sprintf("%q: %s", text, parseErr.Message)
+	return migration.Why(migration.ReasonValueRefused, "value", text, "detail", parseErr.Message)
 }
 
 // checkCell turns one custom-field cell into the value storekit.SQLValue takes.
@@ -124,7 +130,7 @@ func parseMessage(text string, err error) string {
 func checkCell(target string, col fieldcatalog.Column, raw string, optionsReadable bool) (any, *cellProblem) {
 	text := strings.TrimSpace(raw)
 	var wire any = text
-	message := ""
+	var message migration.Reason
 	switch col.Type {
 	case fieldcatalog.TypePicklist:
 		option, refusal := picklistValue(col, text, optionsReadable)
@@ -139,29 +145,29 @@ func checkCell(target string, col fieldcatalog.Column, raw string, optionsReadab
 		value, refusal := booleanValue(text)
 		wire, message = value, refusal
 	}
-	if message == "" {
+	if message.Code == "" {
 		if _, binds := storekit.SQLValue(col, wire); !binds {
-			message = unboundMessage(col, text)
+			message = unboundReason(col, text)
 		}
 	}
-	if message != "" {
-		return nil, &cellProblem{Target: target, Value: raw, Message: message}
+	if message.Code != "" {
+		return nil, problemOf(target, raw, message)
 	}
 	return wire, nil
 }
 
 // picklistValue is the catalog's spelling of the option the text names.
-func picklistValue(col fieldcatalog.Column, text string, optionsReadable bool) (string, string) {
+func picklistValue(col fieldcatalog.Column, text string, optionsReadable bool) (string, migration.Reason) {
 	if option, found := optionNamed(col.Options, text); found {
-		return option, ""
+		return option, migration.Reason{}
 	}
-	return "", notAllowedMessage(col, text, optionsReadable)
+	return "", notAllowedReason(col, text, optionsReadable)
 }
 
 // multiselectValue splits on semicolons and names each option in the catalog's
 // spelling. A comma with no semicolon is the usual mistake, so it gets its own
 // sentence once the whole text is not itself an option.
-func multiselectValue(col fieldcatalog.Column, text string, optionsReadable bool) ([]string, string) {
+func multiselectValue(col fieldcatalog.Column, text string, optionsReadable bool) ([]string, migration.Reason) {
 	var chosen []string
 	for part := range strings.SplitSeq(text, ";") {
 		part = strings.TrimSpace(part)
@@ -171,26 +177,26 @@ func multiselectValue(col fieldcatalog.Column, text string, optionsReadable bool
 		option, found := optionNamed(col.Options, part)
 		if !found {
 			if strings.Contains(text, ",") && !strings.Contains(text, ";") {
-				return nil, fmt.Sprintf("%q: separate several values with semicolons", text)
+				return nil, migration.Why(migration.ReasonOptionsNeedSemicolons, "value", text)
 			}
-			return nil, notAllowedMessage(col, part, optionsReadable)
+			return nil, notAllowedReason(col, part, optionsReadable)
 		}
 		chosen = append(chosen, option)
 	}
-	return chosen, ""
+	return chosen, migration.Reason{}
 }
 
 // currencyValue is the amount in the column's minor units. A column with no
 // currency has no unit to count, so its values cannot be read at all.
-func currencyValue(col fieldcatalog.Column, text string) (float64, string) {
+func currencyValue(col fieldcatalog.Column, text string) (float64, migration.Reason) {
 	if col.Currency == "" {
-		return 0, fmt.Sprintf("%q cannot be read: this currency field has no currency set", text)
+		return 0, migration.Why(migration.ReasonCurrencyUnset, "value", text)
 	}
 	minor, ok := values.MinorUnits(text, col.Currency)
 	if !ok {
-		return 0, fmt.Sprintf("%q is not an amount in %s; write it like 12000.50", text, col.Currency)
+		return 0, migration.Why(migration.ReasonNotAnAmount, "value", text, "currency", col.Currency)
 	}
-	return float64(minor), ""
+	return float64(minor), migration.Reason{}
 }
 
 // spreadsheetBooleans are the spellings a spreadsheet uses for yes and no.
@@ -199,11 +205,11 @@ func currencyValue(col fieldcatalog.Column, text string) (float64, string) {
 var spreadsheetBooleans = map[string]bool{"true": true, "yes": true, "1": true, "false": false, "no": false, "0": false}
 
 // booleanValue reads a cell spelled as one of spreadsheetBooleans.
-func booleanValue(text string) (bool, string) {
+func booleanValue(text string) (bool, migration.Reason) {
 	if value, ok := spreadsheetBooleans[strings.ToLower(text)]; ok {
-		return value, ""
+		return value, migration.Reason{}
 	}
-	return false, fmt.Sprintf("%q is not yes or no", text)
+	return false, migration.Why(migration.ReasonNotYesNo, "value", text)
 }
 
 func optionNamed(options []string, text string) (string, bool) {
@@ -215,22 +221,22 @@ func optionNamed(options []string, text string) (string, bool) {
 	return "", false
 }
 
-func notAllowedMessage(col fieldcatalog.Column, text string, optionsReadable bool) string {
+func notAllowedReason(col fieldcatalog.Column, text string, optionsReadable bool) migration.Reason {
 	if !optionsReadable {
-		return fmt.Sprintf("%q is not one of this field's allowed values", text)
+		return migration.Why(migration.ReasonOptionNotAllowed, "value", text)
 	}
-	return fmt.Sprintf("%q is not one of the allowed values: %s", text, strings.Join(col.Options, ", "))
+	return migration.Why(migration.ReasonOptionNotInList, "value", text, "options", strings.Join(col.Options, ", "))
 }
 
-// unboundMessage says why SQLValue refused a value of this type.
-func unboundMessage(col fieldcatalog.Column, text string) string {
+// unboundReason says why SQLValue refused a value of this type.
+func unboundReason(col fieldcatalog.Column, text string) migration.Reason {
 	switch col.Type {
 	case fieldcatalog.TypeNumber:
-		return fmt.Sprintf("%q is not a number", text)
+		return migration.Why(migration.ReasonNotANumber, "value", text)
 	case fieldcatalog.TypeDate:
-		return fmt.Sprintf("%q is not a date; write it as YYYY-MM-DD", text)
+		return migration.Why(migration.ReasonNotADate, "value", text)
 	}
-	return fmt.Sprintf("%q cannot be written to a %s field", text, col.Type)
+	return migration.Why(migration.ReasonCannotWriteType, "value", text, "type", string(col.Type))
 }
 
 // wireText renders a checked value the way textOf renders the stored JSON, so
@@ -254,13 +260,24 @@ func (w *csvWriters) headerFor(target string) string {
 // checkedCells is checkRow for one of this part's rows, with a problem
 // rendered as the report's invalid_value issue on the file's column.
 func (w *csvWriters) checkedCells(row migration.Row) (map[string]any, *migration.SkippedRow) {
-	typed, problem := checkRow(w.object, textFields(row.Fields), w.cols.catalog)
+	fields := textFields(row.Fields)
+	typed, problem := checkRow(w.object, fields, w.cols.catalog)
+	if problem == nil && w.object == migration.ObjectDeal {
+		typed, problem = w.dealStages.checkCells(fields, typed)
+	}
+	if problem == nil && w.object == migration.ObjectLead {
+		typed, problem = checkLeadStatus(fields, typed)
+	}
+	if problem == nil && w.object == migration.ObjectActivity {
+		typed, problem = checkActivityCells(fields, typed, w.nowUTC())
+	}
 	if problem == nil {
 		return typed, nil
 	}
 	return nil, &migration.SkippedRow{
 		ExternalID: row.ExternalID, Line: row.Line, Column: w.headerFor(problem.Target),
-		Kind: migration.ProblemInvalidValue, Value: problem.Value, Reason: problem.Message,
+		Kind: migration.ProblemInvalidValue, Value: problem.Value,
+		Reason: problem.Message, Code: problem.Why.Code, Params: problem.Why.Params,
 	}
 }
 
@@ -271,11 +288,16 @@ func (w *csvWriters) checkedCells(row migration.Row) (map[string]any, *migration
 // hand-copied, so a band added to crm.yaml leaves no second list behind.
 // Held by: TestEveryClosedVocabularyOverAContractEnumHoldsAllOfIt (backend/gates/contractvocabulary_test.go)
 func unwritableReason(object string, fields map[string]string) *cellProblem {
-	if reason := authorUnwritableReason(fields); reason != "" {
-		return &cellProblem{Target: csvTargetAuthor, Value: fields[csvTargetAuthor], Message: reason}
+	if reason := authorUnwritableReason(fields); reason.Code != "" {
+		return problemOf(csvTargetAuthor, fields[csvTargetAuthor], reason)
 	}
 	if problem := tagCellProblem(fields[csvTargetTags]); problem != nil {
 		return problem
+	}
+	if object == migration.ObjectContact || object == migration.ObjectCompany {
+		if problem := countryCellProblem(fields); problem != nil {
+			return problem
+		}
 	}
 	if object == migration.ObjectContact || object == migration.ObjectLead {
 		// Both stores parse the address before the write and refuse a malformed one.
@@ -284,10 +306,7 @@ func unwritableReason(object string, fields map[string]string) *cellProblem {
 			return nil
 		}
 		if _, err := values.ParseEmail(email); err != nil {
-			return &cellProblem{
-				Target: fieldEmail, Value: fields[fieldEmail],
-				Message: fmt.Sprintf("%q is not an email address that can be written", fields[fieldEmail]),
-			}
+			return problemOf(fieldEmail, fields[fieldEmail], migration.Why(migration.ReasonNotAnEmail, "value", fields[fieldEmail]))
 		}
 		return nil
 	}
@@ -297,27 +316,32 @@ func unwritableReason(object string, fields map[string]string) *cellProblem {
 	// parseCompanyDomains refuses a domain its parser cannot read before the write.
 	if domain := strings.TrimSpace(fields[fieldDomain]); domain != "" {
 		if _, err := values.ParseDomain(domain); err != nil {
-			return &cellProblem{
-				Target: fieldDomain, Value: fields[fieldDomain],
-				Message: fmt.Sprintf("%q is not a domain that can be written", domain),
-			}
+			return problemOf(fieldDomain, fields[fieldDomain], migration.Why(migration.ReasonNotADomain, "value", domain))
 		}
 	}
 	if length := utf8.RuneCountInString(fields[descriptionField]); length > contacts.CompanyDescriptionMax {
-		return &cellProblem{
-			Target: descriptionField, Value: fields[descriptionField],
-			Message: fmt.Sprintf("the description is %d characters; a company description holds at most %d",
-				length, contacts.CompanyDescriptionMax),
-		}
+		return problemOf(descriptionField, fields[descriptionField], migration.Why(migration.ReasonDescriptionTooLong,
+			"length", strconv.Itoa(length), "max", strconv.Itoa(contacts.CompanyDescriptionMax)))
 	}
 	band := strings.TrimSpace(fields[fieldSizeBand])
 	if band == "" || importableSizeBands[band] {
 		return nil
 	}
-	return &cellProblem{
-		Target: fieldSizeBand, Value: fields[fieldSizeBand],
-		Message: fmt.Sprintf("size_band %q is not one of %s", fields[fieldSizeBand], strings.Join(sizeBandVocabulary(), ", ")),
+	return problemOf(fieldSizeBand, fields[fieldSizeBand], migration.Why(migration.ReasonSizeBandInvalid,
+		"value", fields[fieldSizeBand], "allowed", strings.Join(sizeBandVocabulary(), ", ")))
+}
+
+// countryCellProblem refuses an address country the stores would refuse, by the
+// store's own rule, so the preview and the commit agree on the cell.
+func countryCellProblem(fields map[string]string) *cellProblem {
+	raw := fields[fieldAddressCountry]
+	if strings.TrimSpace(raw) == "" {
+		return nil
 	}
+	if _, err := contacts.NormalizeCountryCode(raw); err != nil {
+		return problemOf(fieldAddressCountry, raw, migration.Why(migration.ReasonValueRefused, "value", raw, "detail", err.Error()))
+	}
+	return nil
 }
 
 // importableSizeBands is the closed size_band vocabulary, off the contract.

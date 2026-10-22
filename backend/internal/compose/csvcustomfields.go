@@ -16,16 +16,15 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/customfields"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
-
-// customFieldPrefix starts every custom field's column name.
-const customFieldPrefix = "cf_"
 
 // importCatalog is one object's active custom fields, keyed by column name,
 // and their labels. It needs no create grant, so profile, stage and format can
@@ -43,12 +42,14 @@ type importCatalog struct {
 type importColumns struct {
 	catalog importCatalog
 	store   contacts.CustomColumns
+	// deals is the deals store's half, read for a deal part only.
+	deals deals.CustomColumns
 }
 
 // readImportCatalog reads one object's catalog. An object no import lands has
 // none, and importTargets refuses it.
 func readImportCatalog(ctx context.Context, db *database.DB, object string) (importCatalog, error) {
-	if _, importable := csvTargets[object]; !importable {
+	if _, importable := csvTargets[object]; !importable || !hasCustomFields(object) {
 		return importCatalog{}, nil
 	}
 	catalog := customfields.NewService(db.Pool(), nil)
@@ -92,12 +93,28 @@ func readImportColumns(ctx context.Context, db *database.DB, object string) (imp
 	if err != nil {
 		return importColumns{}, err
 	}
+	if !hasCustomFields(object) {
+		return importColumns{catalog: cat}, nil
+	}
 	store, err := contacts.NewStore(db).WithFieldCatalog(customfields.NewService(db.Pool(), nil)).
 		ActiveCreateColumns(ctx, object)
 	if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
 		return importColumns{}, err
 	}
-	return importColumns{catalog: cat, store: store}, nil
+	out := importColumns{catalog: cat, store: store}
+	if object == migration.ObjectDeal {
+		if out.deals, err = dealsStoreOver(db).ActiveDealColumns(ctx); err != nil {
+			return importColumns{}, err
+		}
+	}
+	return out, nil
+}
+
+// dealsStoreOver is the deals store an import's deal rows are read and
+// written through, with the custom-field catalog wired as the HTTP surface
+// wires it.
+func dealsStoreOver(db *database.DB) *deals.Store {
+	return deals.NewStore(db, DealsInstallation()).WithFieldCatalog(customfields.NewService(db.Pool(), nil))
 }
 
 // requestedObjects answers the objects a create request names, in its order.
@@ -176,7 +193,7 @@ func suggestImportMapping(p migration.Profile, targets []string, cat importCatal
 func customFieldsFrom(fields map[string]string, typed map[string]any) map[string]any {
 	var out map[string]any
 	for target, value := range typed {
-		if _, given := fields[target]; !given || !strings.HasPrefix(target, customFieldPrefix) {
+		if _, given := fields[target]; !given || !datasource.IsCustomFieldKey(target) {
 			continue
 		}
 		if out == nil {

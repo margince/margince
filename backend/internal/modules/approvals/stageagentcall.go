@@ -162,6 +162,13 @@ func (s *Service) liveApprovalForCallInTx(ctx context.Context, tx pgx.Tx, in Sta
 	var undecided ids.ApprovalID
 	for _, c := range candidates {
 		if c.Status == statusPending {
+			stale, err := withdrawStalePendingInTx(ctx, tx, c.ID)
+			if err != nil {
+				return liveAuthority{}, false, err
+			}
+			if stale {
+				continue
+			}
 			if undecided.IsZero() {
 				undecided = c.ID
 			}

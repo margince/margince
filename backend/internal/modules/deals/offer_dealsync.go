@@ -65,17 +65,10 @@ func (s *Store) syncDealAmountFromOffer(ctx context.Context, tx pgx.Tx,
 	var amountBefore *int64
 	var arrBefore *int64
 	var currencyBefore *string
-	var rateBefore *string
-	var rateDateBefore *time.Time
-	// The frozen pair is read for its pre-image, not for a decision: re-pricing a
-	// closed deal replaces a rate it already carries, and the audit diff has to
-	// say which one.
 	if err := tx.QueryRow(ctx,
-		`SELECT status, closed_at, amount_minor, expected_arr_minor, currency,
-		        fx_rate_to_base::text, fx_rate_date
+		`SELECT status, closed_at, amount_minor, expected_arr_minor, currency
 		   FROM deal WHERE id = $1`,
-		dealID).Scan(&status, &closedAt, &amountBefore, &arrBefore, &currencyBefore,
-		&rateBefore, &rateDateBefore); err != nil {
+		dealID).Scan(&status, &closedAt, &amountBefore, &arrBefore, &currencyBefore); err != nil {
 		return nil, fmt.Errorf("read deal for amount sync: %w", err)
 	}
 
@@ -105,6 +98,11 @@ func (s *Store) syncDealAmountFromOffer(ctx context.Context, tx pgx.Tx,
 	// compared on its own terms. An unpriced deal and a priced one are different
 	// forecasts; so are two different prices; and re-pricing at the figure the
 	// deal already carries is neither.
+	// An offer's lines are non-negative, so its gross is too. Asked anyway, so
+	// this writer shares the sign rule with the others.
+	if err := amountSetError(offer.GrossMinor); err != nil {
+		return nil, err
+	}
 	p := storekit.NewPatch()
 	if amountBefore == nil || *amountBefore != *offer.GrossMinor {
 		p.Set(amountField, amountBefore, *offer.GrossMinor)
@@ -130,7 +128,7 @@ func (s *Store) syncDealAmountFromOffer(ctx context.Context, tx pgx.Tx,
 	if DealStatus(status) != DealOpen {
 		// deal_closed_at guarantees closedAt on a non-open row.
 		if err := s.freezeBaseRate(ctx, tx, p, openapi_types.UUID(dealID.UUID), offer.Currency,
-			*offer.GrossMinor, *closedAt, rateBefore, rateDateBefore); err != nil {
+			*offer.GrossMinor, *closedAt); err != nil {
 			return nil, fmt.Errorf("re-freeze fx for closed deal on accept: %w", err)
 		}
 	}

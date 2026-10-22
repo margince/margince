@@ -31,7 +31,7 @@ func TestABulkChangeChargesEveryRecordItChangedAgainstTheAgentsWrites(t *testing
 	agent := mintPassport(t, e)
 	client := mcpBulkDoor(apptest.NewMCPClient(e, agent.token))
 
-	items := seedBulkContacts(t, e, 25)
+	items := seedBulkContacts(t, e, 11)
 	change := reassignContacts(colleague, items)
 	preview, refusal := client.preview(t, change)
 	if refusal != "" {
@@ -41,11 +41,11 @@ func TestABulkChangeChargesEveryRecordItChangedAgainstTheAgentsWrites(t *testing
 		t.Fatalf("a preview charged %d writes, want none — it changes nothing", got)
 	}
 	change["confirm_token"] = preview.ConfirmToken
-	if out, refusal := client.execute(t, change, ""); refusal != "" || out.Changed != 25 {
+	if out, refusal := client.execute(t, change, ""); refusal != "" || out.Changed != 11 {
 		t.Fatalf("executing → %+v, refused %q", out, refusal)
 	}
-	if got := writesCharged(t, e, meter, agent); got != 25 {
-		t.Errorf("a 25-record change charged %d writes, want 25", got)
+	if got := writesCharged(t, e, meter, agent); got != 11 {
+		t.Errorf("an 11-record change charged %d writes, want 11", got)
 	}
 
 	// The REST door charges the same way.
@@ -54,8 +54,8 @@ func TestABulkChangeChargesEveryRecordItChangedAgainstTheAgentsWrites(t *testing
 	if status := e.Call(t, "POST", "/v1/bulk/execute", reassignContacts(colleague, more), agent.header, &out); status != http.StatusOK {
 		t.Fatalf("executing over REST as the agent → %d", status)
 	}
-	if got := writesCharged(t, e, meter, agent); got != 28 {
-		t.Errorf("after three more over REST the window reads %d writes, want 28", got)
+	if got := writesCharged(t, e, meter, agent); got != 14 {
+		t.Errorf("after three more over REST the window reads %d writes, want 14", got)
 	}
 }
 

@@ -94,7 +94,7 @@ func (q *queueEnv) stageAConfirmFirstCall(t *testing.T, invoke func(tool, args s
 	var company struct {
 		ID string `json:"id"`
 	}
-	if status := q.Call(t, "POST", "/v1/companies", AnyMap{"source": "manual", "display_name": name}, nil, &company); status != http.StatusCreated {
+	if status := q.Call(t, "POST", "/v1/companies", AnyMap{"source": "manual", "display_name": name, "domains": []AnyMap{{"domain": "example.com", "is_primary": true}}}, nil, &company); status != http.StatusCreated {
 		t.Fatalf("create company → %d", status)
 	}
 	_, err := invoke("enrich", `{"company_id":"`+company.ID+`"}`)
@@ -442,10 +442,8 @@ func TestACreateThatFilesADuplicateSaysSoInItsAnswer(t *testing.T) {
 			agents.CodeDuplicateFiled, envelope.Warnings)
 	}
 
-	// The disclosed record is CITED. Naming a record to an agent is handing it
-	// over, and this surface charges the read bound for that — a create that
-	// names five other records for the price of the one it wrote would be the
-	// cheapest read here, and repeating it walks the workspace for free.
+	// The disclosed record is cited. Naming a record to an agent hands it over.
+	// A create that names five other records must cite them all.
 	var cited bool
 	for _, e := range envelope.Evidence {
 		if e.RecordID == first.ID {

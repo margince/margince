@@ -113,3 +113,53 @@ func (h Handlers) PauseReportingSchedules(w http.ResponseWriter, r *http.Request
 	count, err := h.service.PauseAll(r.Context())
 	respond(w, r, count, err)
 }
+
+// SaveReportingReportDraft stores the editor's next revision without publishing it.
+func (h Handlers) SaveReportingReportDraft(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.SaveReportingReportDraftParams) {
+	var body crmcontracts.ReportingReportDraftInput
+	if !httperr.Decode(w, r, &body) {
+		return
+	}
+	version, ok := requiredVersion(w, r)
+	if !ok {
+		return
+	}
+	out, err := h.service.SaveReportDraft(r.Context(), ids.UUID(id), version, body)
+	respond(w, r, out, err)
+}
+
+// DiscardReportingReportDraft drops the draft and keeps the published revision.
+func (h Handlers) DiscardReportingReportDraft(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.DiscardReportingReportDraftParams) {
+	version, ok := requiredVersion(w, r)
+	if !ok {
+		return
+	}
+	out, err := h.service.DiscardReportDraft(r.Context(), ids.UUID(id), version)
+	respond(w, r, out, err)
+}
+
+// PublishReportingReportDraft makes the draft what every reader sees.
+func (h Handlers) PublishReportingReportDraft(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, params crmcontracts.PublishReportingReportDraftParams) {
+	version, ok := requiredVersion(w, r)
+	if !ok {
+		return
+	}
+	out, err := h.service.PublishReportDraft(r.Context(), ids.UUID(id), version)
+	respond(w, r, out, err)
+}
+
+// ListReportingReportRevisions lists the revisions to an editor of the report.
+func (h Handlers) ListReportingReportRevisions(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	out, err := h.service.ListReportRevisions(r.Context(), ids.UUID(id))
+	respond(w, r, out, err)
+}
+
+// RestoreReportingReportRevision publishes a copy of an earlier revision.
+func (h Handlers) RestoreReportingReportRevision(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, revision int64, params crmcontracts.RestoreReportingReportRevisionParams) {
+	version, ok := requiredVersion(w, r)
+	if !ok {
+		return
+	}
+	out, err := h.service.RestoreReportRevision(r.Context(), ids.UUID(id), version, revision)
+	respond(w, r, out, err)
+}

@@ -283,7 +283,7 @@ describe("the chip fill's call sites", () => {
       expect(found.length, `no element draws .${name}`).toBeGreaterThan(0);
       return found;
     };
-    expect(carrying("meterbar-part").every(({ textless }) => textless)).toBe(
+    expect(carrying("progressbar").every(({ textless }) => textless)).toBe(
       true,
     );
     expect(carrying("ai-latency-track").every(({ textless }) => textless)).toBe(

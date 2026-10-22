@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -97,6 +98,9 @@ func (s *Service) createInTx(ctx context.Context, tx pgx.Tx, spec FieldSpec, cre
 	if err := serializeSchemaChange(ctx, tx, spec.Object); err != nil {
 		return crmcontracts.CustomField{}, err
 	}
+	if err := refuseTakenLabel(ctx, tx, spec.Object, ids.Nil, spec.Label); err != nil {
+		return crmcontracts.CustomField{}, err
+	}
 	if err := refuseTakenColumn(ctx, tx, spec.Object, column); err != nil {
 		return crmcontracts.CustomField{}, err
 	}
@@ -125,11 +129,17 @@ func (s *Service) createInTx(ctx context.Context, tx pgx.Tx, spec FieldSpec, cre
 	if err != nil {
 		return crmcontracts.CustomField{}, err
 	}
-	row := tx.QueryRow(ctx, `INSERT INTO custom_field (object, slug, label, type, column_name, currency, options, created_by)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		 RETURNING `+catalogColumns,
-		spec.Object, slug, spec.Label, spec.Type, column, currency, optionsArg, creator)
-	out, err := scanCustomField(row)
+	out, err := insertCatalogRow(ctx, tx, []catalogBinding{
+		{fieldObject, spec.Object},
+		{fieldSlug, slug},
+		{fieldLabel, spec.Label},
+		{fieldType, spec.Type},
+		{fieldColumn, column},
+		{fieldCurrency, currency},
+		{fieldOptions, optionsArg},
+		{fieldShow, spec.ShowInCreate == nil || *spec.ShowInCreate},
+		{"created_by", creator},
+	})
 	if storekit.IsUniqueViolation(err) {
 		// The (object, slug/column_name) unique index fired: a duplicate
 		// that raced past the pre-check. The failed INSERT rolls the whole
@@ -142,8 +152,9 @@ func (s *Service) createInTx(ctx context.Context, tx pgx.Tx, spec FieldSpec, cre
 	}
 
 	after := map[string]any{
-		fieldObject: string(out.Object), "slug": out.Slug, fieldLabel: out.Label,
-		fieldType: string(out.Type), "column_name": column, fieldStatus: string(out.Status),
+		fieldObject: string(out.Object), fieldSlug: out.Slug, fieldLabel: out.Label,
+		fieldType: string(out.Type), fieldColumn: column, fieldStatus: string(out.Status),
+		fieldShow: out.ShowInCreate,
 	}
 	if out.Currency != nil {
 		after[fieldCurrency] = *out.Currency
@@ -161,6 +172,25 @@ func (s *Service) createInTx(ctx context.Context, tx pgx.Tx, spec FieldSpec, cre
 		return crmcontracts.CustomField{}, fmt.Errorf("customfields: audit write: %w", err)
 	}
 	return out, nil
+}
+
+// catalogBinding is one column of the catalog INSERT and its value. The column
+// list, the placeholders and the arguments all derive from one list of them.
+type catalogBinding struct {
+	column string
+	value  any
+}
+
+// insertCatalogRow writes one custom_field row and reads it back in the
+// catalogColumns shape. Every column is a compile-time literal of this package.
+func insertCatalogRow(ctx context.Context, tx pgx.Tx, bindings []catalogBinding) (crmcontracts.CustomField, error) {
+	columns := make([]string, len(bindings))
+	args := make([]any, len(bindings))
+	for i, b := range bindings {
+		columns[i], args[i] = b.column, b.value
+	}
+	return scanCustomField(tx.QueryRow(ctx, storekit.SQLf(`INSERT INTO custom_field (%s) VALUES (%s) RETURNING %s`,
+		strings.Join(columns, ", "), storekit.Placeholders(args), catalogColumns), args...))
 }
 
 // serializeSchemaChange is the shared arming step of both DDL paths
@@ -224,6 +254,36 @@ func refuseTakenColumn(ctx context.Context, tx pgx.Tx, object, column string) er
 			column, object, apperrors.ErrConflict)
 	}
 	return &ColumnTakenError{Column: column}
+}
+
+// foldedLabel is a stored label as the collision test reads it: trimmed of any
+// whitespace, as strings.TrimSpace trims the label being written, and lower-cased.
+const foldedLabel = `lower(regexp_replace(label, '^\s+|\s+$', '', 'g'))`
+
+// refuseTakenLabel keeps one label from naming two fields of an object. A
+// label whose text another field holds reads the same in a picker, a column
+// header and a filter. A label whose slug another field holds would collide on
+// the unique key. Create and rename both ask it, and the caller holds the
+// schema advisory lock so two concurrent writes cannot both pass. A create
+// passes ids.Nil, which no row has.
+func refuseTakenLabel(ctx context.Context, tx pgx.Tx, object string, id ids.UUID, label string) error {
+	var heldLabel, heldSlug string
+	err := tx.QueryRow(ctx,
+		`SELECT label, slug FROM custom_field
+		  WHERE object = $1 AND id <> $2 AND (slug = $3 OR `+foldedLabel+` = $4)
+		  ORDER BY (`+foldedLabel+` = $4) DESC LIMIT 1`,
+		object, id, DeriveSlug(label), strings.ToLower(strings.TrimSpace(label))).Scan(&heldLabel, &heldSlug)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("customfields: probing label namespace: %w", err)
+	}
+	if strings.EqualFold(strings.TrimSpace(heldLabel), strings.TrimSpace(label)) {
+		return fmt.Errorf("a custom field labelled %q already exists on %s: %w", label, object, apperrors.ErrConflict)
+	}
+	return fmt.Errorf("that label would reuse the key %q of the field labelled %q on %s; choose a different label: %w",
+		heldSlug, heldLabel, object, apperrors.ErrConflict)
 }
 
 // optionsJSON renders a picklist's option set for the jsonb catalog

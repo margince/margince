@@ -1,8 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { components } from "../../src/api/schema";
+import {
+  agentClientList,
+  GEMINI_CLIENT,
+  PUBLISHED_CLIENT,
+} from "../../src/testing/agent-clients.fixtures";
+import { defaultAgentAllowances } from "../../src/testing/agentallowances.fixtures";
+import { defaultOperations } from "../../src/testing/operationsettings.fixtures";
 import { meFixture } from "../../src/testing/mefixture";
-import { defaultOperations } from "../../src/screens/operationsettings.fixtures";
 import { E2E_ADMIN_GRANTS } from "./fixtures";
 import { type Handler, notFound } from "./server";
 
@@ -16,7 +23,12 @@ export const me: Handler = ({ json }, { options }) => {
       401,
     );
   }
-  const fixture = meFixture({ allow: E2E_ADMIN_GRANTS });
+  const fixture = meFixture({
+    allow:
+      options.dataTasks === "withheld"
+        ? { ...E2E_ADMIN_GRANTS, data_task: [] }
+        : E2E_ADMIN_GRANTS,
+  });
   return json({
     ...fixture,
     // Armed, so the sweep opens `settings/reset`. Rendering the danger zone
@@ -73,9 +85,8 @@ function redirectUris(microsoft: boolean) {
 // One card per vendor, each supplied by the deployment (`environment`), the
 // state the card was written for. Only Microsoft has directories, and this
 // app is pinned to one.
-export const oauthApp: Handler = ({ json, path }) => {
-  const microsoft = path.endsWith("/microsoft");
-  return json({
+function coreOAuthApp(microsoft: boolean) {
+  return {
     provider: microsoft ? "microsoft" : "google",
     configured: true,
     client_id: microsoft
@@ -84,12 +95,23 @@ export const oauthApp: Handler = ({ json, path }) => {
     ...(microsoft ? { tenant: "99999999-8888-7777-6666-555555555555" } : {}),
     source: "environment",
     redirect_uris: redirectUris(microsoft),
-  });
-};
+  };
+}
+
+export const oauthApp: Handler = ({ json, path }) =>
+  json(coreOAuthApp(path.endsWith("/microsoft")));
+
+// The vanilla tree composes no unit, so the list is the two core vendors.
+export const oauthApps: Handler = ({ json }) =>
+  json({ data: [coreOAuthApp(false), coreOAuthApp(true)] });
 
 // The shell holds its first paint on this read: `timezone` is the clock every
 // record date renders in. Europe/Berlin, because the specs assert German
 // dates against it.
+// The MCP page's client list: one client an admin registered and one that
+// signs in with its published identity.
+export const agentClients = agentClientList([GEMINI_CLIENT, PUBLISHED_CLIENT]);
+
 export const installationSettings = {
   name: "Brandt Automotive",
   timezone: "Europe/Berlin",
@@ -99,12 +121,69 @@ export const installationSettings = {
   max_upload_bytes: 25_000_000,
   oauth_access_token_ttl_minutes: 43_200,
   operations: defaultOperations,
+  agent_allowances: defaultAgentAllowances,
   // One provider in each state, so the sign-in methods card draws both rows.
   sign_in_providers: [
     { key: "google", label: "Google", enabled: true },
     { key: "microsoft", label: "Microsoft", enabled: false },
   ],
 };
+
+// The configuration list: a value from each kind of source, a secret, and a
+// struct value long enough to need wrapping at 390px.
+export const installationConfiguration: components["schemas"]["ConfigurationEntry"][] =
+  [
+    {
+      key: "http.addr",
+      env: "MARGINCE_ADDR",
+      flag: "addr",
+      type: "string",
+      doc: "The address the api listens on.",
+      roles: ["api"],
+      secret: false,
+      stored: false,
+      value: ":8080",
+      default: ":8080",
+      origin: { source: "flag", name: "--addr" },
+    },
+    {
+      key: "database.dsn",
+      env: "MARGINCE_DSN",
+      type: "string",
+      doc: "The connection string of the database.",
+      roles: ["api", "worker"],
+      secret: true,
+      stored: false,
+      value: null,
+      default: null,
+      origin: { source: "env", name: "MARGINCE_DSN" },
+    },
+    {
+      key: "ai.budget",
+      env: "MARGINCE_AI_BUDGET",
+      type: "struct",
+      doc: "The AI token allowance per seat and per company.",
+      roles: ["api", "worker"],
+      secret: false,
+      stored: true,
+      value:
+        '{"tokens_per_full_user":12000000,"company_monthly_tokens":null,"tokens_per_light_user":3000000}',
+      default: null,
+      origin: { source: "database", name: "" },
+    },
+    {
+      key: "installation.follow_up_reconcile_interval_seconds",
+      env: "MARGINCE_INSTALLATION_FOLLOW_UP_RECONCILE_INTERVAL_SECONDS",
+      type: "int",
+      doc: "How often the follow-up reconcile pass runs.",
+      roles: ["worker"],
+      secret: false,
+      stored: true,
+      value: "900",
+      default: "900",
+      origin: { source: "default", name: "" },
+    },
+  ];
 
 // The banner keys on the two identities differing and on nothing else. It
 // does not read `reindex_needed`, which a drift-cancelled rebuild leaves set.

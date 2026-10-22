@@ -6,6 +6,8 @@
 package activities
 
 import (
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -15,12 +17,21 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// Every availability door reads the host's calendar. A host whose connection
-// is gone is refused as a request they can act on, never answered with a 500.
+// Every availability door reads the host's calendar. A gone connection is a
+// request the host can act on. A calendar the provider could not report is
+// named as the problem. Neither is a bare 500.
 func TestAvailabilityWithoutAUsableCalendarIsRefusedAtEveryDoor(t *testing.T) {
-	for name, fail := range map[string]func(*invitationCalendar){
-		"check": func(c *invitationCalendar) { c.checkErr = connector.ErrAuthRejected },
-		"busy":  func(c *invitationCalendar) { c.busyErr = connector.ErrAuthRejected },
+	for name, tc := range map[string]struct {
+		fail func(*invitationCalendar)
+		want int
+	}{
+		"check":      {func(c *invitationCalendar) { c.checkErr = connector.ErrAuthRejected }, http.StatusUnprocessableEntity},
+		"busy":       {func(c *invitationCalendar) { c.busyErr = connector.ErrAuthRejected }, http.StatusUnprocessableEntity},
+		"unreadable": {func(c *invitationCalendar) { c.busyErr = connector.NewCalendarUnavailable("primary", "notFound", nil) }, http.StatusBadGateway},
+		"unreached": {func(c *invitationCalendar) {
+			c.busyErr = fmt.Errorf("calendar: provider status 503: %w", connector.ErrUnreachable)
+		}, http.StatusBadGateway},
+		"our fault": {func(c *invitationCalendar) { c.busyErr = errors.New("keyvault: key resolution failed") }, http.StatusInternalServerError},
 	} {
 		f := newInvitationFixture(t)
 		hostName := "Test Host"
@@ -41,7 +52,7 @@ func TestAvailabilityWithoutAUsableCalendarIsRefusedAtEveryDoor(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		fail(f.calendar)
+		tc.fail(f.calendar)
 		h := Handlers{store: f.store}
 		from, to := monday(8), monday(18)
 		doors := map[string]func(*httptest.ResponseRecorder, *http.Request){
@@ -65,8 +76,11 @@ func TestAvailabilityWithoutAUsableCalendarIsRefusedAtEveryDoor(t *testing.T) {
 			}
 			rec := httptest.NewRecorder()
 			call(rec, httptest.NewRequest(http.MethodGet, "/availability", nil).WithContext(f.ctx))
-			if rec.Code != http.StatusUnprocessableEntity {
-				t.Errorf("%s via %s answered %d %s, want 422", door, name, rec.Code, rec.Body.String())
+			if rec.Code != tc.want {
+				t.Errorf("%s via %s answered %d %s, want %d", door, name, rec.Code, rec.Body.String(), tc.want)
+			}
+			if tc.want == http.StatusBadGateway && !strings.Contains(rec.Body.String(), connector.CalendarUnavailableCode) {
+				t.Errorf("%s via %s does not name the calendar as the problem: %s", door, name, rec.Body.String())
 			}
 		}
 	}

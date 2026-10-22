@@ -19,13 +19,11 @@ func TestReadRoutersRouteEveryView(t *testing.T) {
 	RegisterInputChecksTool(r, nil)
 	RegisterCoverageTool(r, nil)
 	RegisterImportTools(r, stubImports{})
-	r.Register(readInputChecks{})
 	for _, tc := range []struct {
 		router string
 		table  map[string]string
 		args   string
 	}{
-		{"read_input_checks", (readInputChecks{}).routeTargets(), `"stray":1`},
 		{"read_import", (readImport{}).routeTargets(), `"run_id":"not-a-uuid"`},
 	} {
 		for view, target := range tc.table {

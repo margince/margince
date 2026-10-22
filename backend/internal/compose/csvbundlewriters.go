@@ -6,6 +6,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/collections"
@@ -20,7 +21,8 @@ import (
 // bundleWriters hands each row to the writer of its own type. A single CSV is
 // a bundle of one part, so every run reaches the engine through this.
 type bundleWriters struct {
-	parts map[string]*csvWriters
+	reviewPlan *migration.ReviewPlan
+	parts      map[string]*csvWriters
 	// links is the one resolver every part writer shares, so a row of one
 	// file finds a row of another.
 	links *linkResolver
@@ -48,13 +50,15 @@ type runOptions struct {
 	SourceName, OnDuplicate, ContextTag, OnBrokenLink string
 	// FromZip is a run staged from a ZIP, whose every link follows OnBrokenLink.
 	FromZip bool
+	// PresetLinks file every activity of the run under the same records.
+	PresetLinks []migration.PresetLink
 }
 
 // runOptionsOf reads the run-wide decisions off a stored mapping.
 func runOptionsOf(m migration.RunMapping) runOptions {
 	return runOptions{
 		SourceName: m.SourceName, OnDuplicate: m.OnDuplicate, ContextTag: m.ContextTag,
-		OnBrokenLink: m.OnBrokenLink, FromZip: len(m.Parts) > 0,
+		OnBrokenLink: m.OnBrokenLink, FromZip: len(m.Parts) > 0, PresetLinks: m.PresetLinks,
 	}
 }
 
@@ -81,19 +85,32 @@ func newBundleWriters(
 	if err := b.resolveOwnersAndTags(ctx, db, src); err != nil {
 		return nil, err
 	}
+	stages, err := runDealStages(ctx, db, parts, src)
+	if err != nil {
+		return nil, err
+	}
 	for _, part := range parts {
 		cols, err := readImportColumns(ctx, db, part.Object)
 		if err != nil {
 			return nil, err
 		}
 		w := newCSVWriters(db, runID, part, options, b.links, cols)
-		w.owners, w.tagNames = b.owners, b.tags
+		w.owners, w.tagNames, w.dealStages = b.owners, b.tags, stages
 		b.parts[part.Object] = w
 		if b.fallback == nil {
 			b.fallback = w
 		}
 	}
 	return b, nil
+}
+
+// runDealStages reads the pipelines a run's deal rows are checked against. An
+// undo, or a run with no deals file, checks no deal row and reads nothing.
+func runDealStages(ctx context.Context, db *database.DB, parts []migration.PartMapping, src migration.Source) (dealStages, error) {
+	if src == nil || !slices.ContainsFunc(parts, func(p migration.PartMapping) bool { return p.Object == migration.ObjectDeal }) {
+		return dealStages{}, nil
+	}
+	return readDealStages(ctx, db)
 }
 
 // resolveOwnersAndTags reads every owner and tag cell of the run in import
@@ -150,12 +167,8 @@ func (c *cellCollector) add(object string, row migration.Row) {
 func ownerAndTagCells(ctx context.Context, src migration.Source, firstNamedBy map[string]string) ([]string, []string, error) {
 	c := &cellCollector{seenEmail: map[string]bool{}, firstNamedBy: firstNamedBy}
 	for _, object := range src.Objects() {
-		part, err := partSourceOf(src, object)
-		if err != nil {
-			return nil, nil, err
-		}
 		for offset := 0; ; offset += importPredictPage {
-			rows, err := part.Rows(ctx, object, offset, importPredictPage)
+			rows, err := src.Rows(ctx, object, offset, importPredictPage)
 			if err != nil {
 				return nil, nil, err
 			}
@@ -211,6 +224,9 @@ func (b *bundleWriters) Ensure(ctx context.Context, object string, row migration
 func (b *bundleWriters) Associate(ctx context.Context, a migration.Assoc) (migration.AssocResult, error) {
 	w, err := b.part(a.FromType)
 	if err != nil {
+		return migration.AssocResult{}, err
+	}
+	if err := w.validateReviewedLinks(ctx, a.FromID); err != nil {
 		return migration.AssocResult{}, err
 	}
 	return w.Associate(ctx, a)

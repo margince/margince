@@ -103,6 +103,7 @@ func censusJobConfig() JobRunnerConfig {
 		ChannelVault:           keyvault.NewMemory(),
 		ClassifyBrain:          seam,
 		OwedBrain:              seam,
+		TagSuggestBrain:        seam,
 		EnrichBrain:            seam,
 		VerdictBrain:           seam,
 		DeepReadBrain:          seam,

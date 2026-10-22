@@ -44,6 +44,13 @@ is here: [authorization.md](../explanation/authorization.md).)
 - `NewGate(authority).Admit(ctx, spec, resolve)`: the gate that admits an agent (scope ∧ tier ∧ seat), checked again live.
 - **Use it when:** a store reads or writes a table with owners, or admits an agent or MCP call.
 
+### `platform/emailview` and `platform/mailwire`: email format
+
+`emailview` renders escaped product content in the user’s language as HTML and plain text. It reads no records
+and sends no mail. Controller wording stays with consent; customer mail stays with its send owner.
+`mailwire` builds MIME parts and attachments for mailbox connectors and SMTP. SMTP uses
+`quoted-printable`; mailbox sends keep their existing body bytes and envelope handling.
+
 ### `platform/events`: the bus side of the write path
 Outbox relay, a reader for each consumer group, and dedupe. It never starts an event. (More:
 [write-backbone.md](../explanation/write-backbone.md).)
@@ -110,13 +117,13 @@ Our own runner for the migration sets (core, custom, `packs`), each with its own
 - `Load(fsys, dir)`, `Up(ctx, conn, namespaces…)`, `Down(ctx, conn, ns, n)`.
 - **Use it when:** you apply or undo migrations in a tool (most of the time you only run `cmd/migrate`).
 
-### `platform/deployconfig`: the installation config (`margince.yaml`)
-Loads the file the operator writes for the installation. It holds the one company, the first admin, the
-sign-in, email, AI and capture posture, and the `company_context.rollout` level (`off < read < tasks <
-onboarding`; empty means `onboarding`).
-- `Load(path)`, the typed `Config` tree, `EffectiveRollout()`.
-- **Use it when:** how the product acts is a choice of the operator for the installation, not workspace data. It goes in
-  this file, not in a new flag.
+### `platform/deployconfig`: what an installation is created with
+Reads the four bootstrap roots of `margince.yaml`: `version`, `workspace`, `bootstrap_admin` and
+`seeds`. They are consumed once, when the workspace is created. Every other key of the file is a
+setting that `platform/config` loads.
+- `LoadBootstrapFiles(base, configFile)`, the typed `Bootstrap` tree, `Roots()`.
+- **Use it when:** a value seeds a new installation. A choice of the operator that the product reads at
+  each boot is a `config.Define` beside the code that reads it.
 
 ### `platform/mailer`: product email
 The outbound path for mail the product itself sends, over SMTP the operator sets up. Its first user is the

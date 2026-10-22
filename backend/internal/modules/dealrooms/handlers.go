@@ -17,7 +17,9 @@ import (
 
 // Handlers is this module's transport.
 type Handlers struct {
-	store *Store
+	store         *Store
+	mailLanguage  func(context.Context) string
+	inviteContext func(context.Context) (string, string, error)
 	// inviteMailer carries a buyer's invitation to a relay. Nil means the
 	// installation has no outbound mail configured: invitations are still
 	// recorded and their credential still returned, and the response reports

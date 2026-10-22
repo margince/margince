@@ -35,22 +35,14 @@ import (
 func relinkContactReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) (relinkCounts, error) {
 	counts := relinkCounts{}
 	var err error
-	if counts.Emails, err = relinkDemotingPrimary(ctx, tx, `
-		UPDATE contact_email a SET contact_id = $2,
-		  is_primary = a.is_primary AND NOT EXISTS (
-		    SELECT 1 FROM contact_email b
-		    WHERE b.contact_id = $2 AND b.email_type = a.email_type
-		      AND b.is_primary AND b.archived_at IS NULL)
-		WHERE a.contact_id = $1 AND a.archived_at IS NULL`, sourceID.UUID, targetID.UUID); err != nil {
+	if counts.Emails, err = relinkDemotingPrimary(ctx, tx,
+		`UPDATE contact_email a SET contact_id = @target, is_primary = `+mergeEmailPrimary+` WHERE `+mergeContactAddressSource,
+		sourceID.UUID, targetID.UUID); err != nil {
 		return counts, fmt.Errorf("relink emails: %w", err)
 	}
-	if counts.Phones, err = relinkDemotingPrimary(ctx, tx, `
-		UPDATE contact_phone a SET contact_id = $2,
-		  is_primary = a.is_primary AND NOT EXISTS (
-		    SELECT 1 FROM contact_phone b
-		    WHERE b.contact_id = $2 AND b.phone_type = a.phone_type
-		      AND b.is_primary AND b.archived_at IS NULL)
-		WHERE a.contact_id = $1 AND a.archived_at IS NULL`, sourceID.UUID, targetID.UUID); err != nil {
+	if counts.Phones, err = relinkDemotingPrimary(ctx, tx,
+		`UPDATE contact_phone a SET contact_id = @target, is_primary = `+mergePhonePrimary+` WHERE `+mergeContactAddressSource,
+		sourceID.UUID, targetID.UUID); err != nil {
 		return counts, fmt.Errorf("relink phones: %w", err)
 	}
 	// The enrichment sidecar moves with the contact. Left behind it is
@@ -73,16 +65,13 @@ func relinkContactReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 	// two-year-old signature as today — the merged copy would then outrank the
 	// contact's own later mail, and a dropped buffer leaves a replaced value
 	// nobody can put back.
-	if _, err = tx.Exec(ctx, `
-		INSERT INTO contact_profile_field
-		  (contact_id, field, value_key, value, evidence_snippet, source_ref, confidence, source,
-		   captured_by, observed_at, superseded_value, superseded_captured_by, superseded_observed_at)
-		SELECT $2, field, value_key, value, evidence_snippet, source_ref, confidence, source,
-		       captured_by, observed_at, superseded_value, superseded_captured_by, superseded_observed_at
-		  FROM contact_profile_field WHERE contact_id = $1
-		ON CONFLICT (contact_id, field, value_key) DO NOTHING`, sourceID.UUID, targetID.UUID); err != nil {
+	if _, err = tx.Exec(ctx, `INSERT INTO contact_profile_field
+ (contact_id, `+mergeProfileColumns+`)
+ SELECT @target, `+mergeProfileColumns+` FROM contact_profile_field WHERE contact_id = @source
+ ON CONFLICT (contact_id, field, value_key) DO NOTHING`, pgx.StrictNamedArgs{mergeSourceKey: sourceID, mergeTargetKey: targetID}); err != nil {
 		return counts, fmt.Errorf("relink enrichment fields: %w", err)
 	}
+
 	if _, err = tx.Exec(ctx,
 		`DELETE FROM contact_profile_field WHERE contact_id = $1`, sourceID.UUID); err != nil {
 		return counts, fmt.Errorf("retire the merged-away enrichment fields: %w", err)
@@ -93,10 +82,10 @@ func relinkContactReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 	if counts.Relationships, err = relinkContactEdges(ctx, tx, sourceID, targetID); err != nil {
 		return counts, fmt.Errorf("relink relationships: %w", err)
 	}
-	if counts.ActivityLinks, err = relinkLinkRows(ctx, tx, "contact", sourceID.UUID, targetID.UUID); err != nil {
+	if counts.ActivityLinks, err = relinkLinkRows(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID); err != nil {
 		return counts, fmt.Errorf("relink activity/list/tag rows: %w", err)
 	}
-	if err := moveKindIDRows(ctx, tx, "contact", sourceID.UUID, targetID.UUID); err != nil {
+	if err := moveKindIDRows(ctx, tx, contactEntity, sourceID.UUID, targetID.UUID); err != nil {
 		return counts, err
 	}
 	if err := relinkParticipantRows(ctx, tx, sourceID, targetID); err != nil {
@@ -115,8 +104,8 @@ func relinkContactReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 	// halves cannot both hold the same identity live and the relink cannot
 	// collide.
 	if _, err := tx.Exec(ctx, `
-		UPDATE contact_channel_identity SET contact_id = $2
-		WHERE contact_id = $1 AND archived_at IS NULL`, sourceID, targetID); err != nil {
+		UPDATE contact_channel_identity SET contact_id = @target
+		WHERE `+mergeLiveChannelIdentity, pgx.StrictNamedArgs{mergeSourceKey: sourceID, mergeTargetKey: targetID}); err != nil {
 		return counts, fmt.Errorf("relink channel identities: %w", err)
 	}
 	// Why each contact existed follows the survivor, and both accounts are
@@ -223,6 +212,11 @@ func mergePair[T any, K ids.EntityKind](ctx context.Context, tx pgx.Tx, kind str
 		}
 		return zero, zero, err
 	}
+	for _, id := range []ids.UUID{sourceID.UUID, targetID.UUID} {
+		if err := storekit.EnsureReleasedVersion(ctx, tx, kind, id); err != nil {
+			return zero, zero, err
+		}
+	}
 	return source, target, nil
 }
 
@@ -247,7 +241,7 @@ func requireSourceVersion(ctx context.Context, tx pgx.Tx, kind string, sourceID 
 // relinkDemotingPrimary runs a relink UPDATE whose SET clause demotes the
 // row's primary flag when the survivor already fills that primary slot.
 func relinkDemotingPrimary(ctx context.Context, tx pgx.Tx, stmt string, sourceID, targetID ids.UUID) (int64, error) {
-	tag, err := tx.Exec(ctx, stmt, sourceID, targetID)
+	tag, err := tx.Exec(ctx, stmt, pgx.StrictNamedArgs{mergeSourceKey: sourceID, mergeTargetKey: targetID})
 	return tag.RowsAffected(), err
 }
 
@@ -261,10 +255,9 @@ func relinkDemotingPrimary(ctx context.Context, tx pgx.Tx, stmt string, sourceID
 func mergeContactSocial(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) error {
 	if _, err := tx.Exec(ctx, `
 		DELETE FROM contact_social a
-		WHERE a.contact_id = $1 AND EXISTS (
-		  SELECT 1 FROM contact_social b
-		  WHERE b.contact_id = $2 AND b.platform = a.platform)`,
-		sourceID, targetID); err != nil {
+		WHERE a.contact_id = @source AND EXISTS (
+		  SELECT 1 FROM contact_social b WHERE `+mergeSocialTwin+`)`,
+		pgx.StrictNamedArgs{mergeSourceKey: sourceID, mergeTargetKey: targetID}); err != nil {
 		return err
 	}
 	_, err := tx.Exec(ctx,
@@ -331,16 +324,11 @@ func relinkProviderPurchases(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 	// left the building: the source's may have been charged, the survivor's
 	// certainly has not.
 	if _, err := tx.Exec(ctx, `
-		UPDATE provider_run s
-		   SET state = 'cancelled', completed_at = now(),
-		       input_fingerprint = 'merged:' || gen_random_uuid()::text
-		 WHERE s.contact_id = $2 AND s.state = 'queued'
-		   AND EXISTS (
-		     SELECT 1 FROM provider_run o
-		      WHERE o.contact_id = $1 AND o.provider = s.provider
-		        AND o.input_fingerprint = s.input_fingerprint
-		        AND o.state IN ('submitting','in_progress','submission_unknown'))`,
-		sourceID.UUID, targetID.UUID); err != nil {
+ UPDATE provider_run s
+ SET state = 'cancelled', completed_at = now(),
+ input_fingerprint = 'merged:' || gen_random_uuid()::text
+ WHERE s.contact_id = @subject AND s.state = 'queued' AND `+mergePaidProviderTwin,
+		pgx.StrictNamedArgs{mergeSubjectKey: targetID.UUID, mergeOtherKey: sourceID.UUID}); err != nil {
 		return fmt.Errorf("cancel the survivor's unspent colliding runs: %w", err)
 	}
 	// Both sides live and past queued: keep both, and take the source's out
@@ -352,16 +340,10 @@ func relinkProviderPurchases(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 	// every one of those that collides with a source run in exactly these
 	// states — so naming `queued` would be an arm that can never fire.
 	if _, err := tx.Exec(ctx, `
-		UPDATE provider_run s
-		   SET input_fingerprint = 'merged:' || gen_random_uuid()::text
-		 WHERE s.contact_id = $1
-		   AND s.state IN ('submitting','in_progress','submission_unknown')
-		   AND EXISTS (
-		     SELECT 1 FROM provider_run o
-		      WHERE o.contact_id = $2 AND o.provider = s.provider
-		        AND o.input_fingerprint = s.input_fingerprint
-		        AND o.state IN ('submitting','in_progress','submission_unknown'))`,
-		sourceID.UUID, targetID.UUID); err != nil {
+ UPDATE provider_run s
+ SET input_fingerprint = 'merged:' || gen_random_uuid()::text
+ WHERE s.contact_id = @subject AND s.state IN `+mergePaidProviderStates+` AND `+mergePaidProviderTwin,
+		pgx.StrictNamedArgs{mergeSubjectKey: sourceID.UUID, mergeOtherKey: targetID.UUID}); err != nil {
 		return fmt.Errorf("re-fingerprint the merged-away record's live runs: %w", err)
 	}
 	if err := settleCategoryClaims(ctx, tx, sourceID, targetID); err != nil {
@@ -397,17 +379,10 @@ func relinkProviderPurchases(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 func relinkParticipantRows(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.ContactID) error {
 	if _, err := tx.Exec(ctx, `
 		DELETE FROM activity_participant ap
-		 WHERE ap.contact_id = $1
+		 WHERE ap.contact_id = @source
 		   AND EXISTS (
-		       SELECT 1 FROM activity_participant twin
-		        WHERE twin.activity_id = ap.activity_id
-		          AND twin.role = ap.role
-		          AND twin.contact_id = $2
-		          AND coalesce(twin.user_id, '00000000-0000-0000-0000-000000000000')
-		            = coalesce(ap.user_id, '00000000-0000-0000-0000-000000000000')
-		          AND coalesce(twin.address, '') = coalesce(ap.address, '')
-		          AND coalesce(twin.channel_user_id, '') = coalesce(ap.channel_user_id, ''))`,
-		sourceID, targetID); err != nil {
+`+mergeParticipantTwin+`)`,
+		pgx.StrictNamedArgs{mergeSourceKey: sourceID, mergeTargetKey: targetID}); err != nil {
 		return fmt.Errorf("drop the duplicated participant rows: %w", err)
 	}
 	if _, err := tx.Exec(ctx,

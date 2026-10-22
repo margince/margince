@@ -147,6 +147,7 @@ func TestEmailRequestCreatesOneUndatedPersonalTaskWithSourceEvidence(t *testing.
 		t.Fatal("colleague read a personal request")
 	}
 	// Removing access to the evidence also withholds the derived reminder.
+
 	e.exec(t, `UPDATE activity SET archived_at = $2 WHERE id = $1`, source, requestInstant)
 	got, err = store.GetActivity(e.as(), ids.From[ids.ActivityKind](task), storekit.LiveOnly)
 	if err != nil {
@@ -254,6 +255,17 @@ func TestReassignedEmailReminderRequiresReadableSource(t *testing.T) {
 	}
 	if got.Subject == nil || *got.Subject != "Send the report" {
 		t.Fatal("new assignee cannot read the reminder")
+	}
+	for _, instant := range []time.Time{requestInstant.Add(time.Hour), pastTheHorizon} {
+		rows, err := store.WaitingRepliesForOwnerBefore(e.as(), instant, WaitingPosition{}, e.rep)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, row := range rows {
+			if row.ActivityID == source {
+				t.Fatal("reassignment revived the original recipient's waiting obligation")
+			}
+		}
 	}
 	e.exec(t, `UPDATE activity SET archived_at = $2 WHERE id = $1`, source, requestInstant)
 	got, err = store.GetActivity(recipient, ids.From[ids.ActivityKind](task), storekit.LiveOnly)

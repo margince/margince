@@ -172,7 +172,7 @@ var piiTables = map[string]piiHandling{
 			// the row keeps saying a meeting happened while saying nothing
 			// about what was in it, and a sweep that stopped writing it would
 			// leave the old subject line standing.
-			"subject = $2",
+			"subject = @subject",
 			// Read FROM the words being emptied, so it describes erased text
 			// rather than the row. Same ruling as reply_verdict on the sibling
 			// eraser: a conclusion drawn from content does not outlive it.
@@ -281,6 +281,11 @@ var piiTables = map[string]piiHandling{
 	// a subject asking what we concluded about their mail is asking for exactly
 	// this.
 	"activity_reply_verdict_history": {erasureWrite: true, sarRead: true},
+	// Which tags the model read as the subject's interests in one message, and a
+	// digest of its text. Deleted by statement, since erasure never deletes the
+	// activity. Not exported, like transcript_read: a machine reading whose
+	// visible result is the tag suggestion.
+	"tag_interest_read": {erasureWrite: true, sarRead: false},
 	// A claim carries a VERBATIM quotation of the activity it was read from —
 	// the writer refuses one that does not — so the row is a copy of the
 	// subject's own words held outside the message. It goes when the body goes,
@@ -377,7 +382,8 @@ var piiTables = map[string]piiHandling{
 	// reply verdicts' own ground, and more plainly still: a subject asking what
 	// we concluded about their mail is asking for exactly this, and here the
 	// answer can be an outstanding obligation TO them.
-	"activity_request_settlement": {erasureWrite: true, sarRead: true},
+	"activity_request_settlement":   {erasureWrite: true, sarRead: true},
+	"activity_commitment_admission": {erasureWrite: true, sarRead: true},
 	// The preference-center token (0048) is a live capability over the
 	// subject's consent record — held by whoever has the emailed
 	// List-Unsubscribe URL, honoured with no session at all. Registered so
@@ -490,6 +496,7 @@ var piiTables = map[string]piiHandling{
 // the only package that can call sarSections.
 var sarAssemblyFiles = []string{
 	"internal/modules/privacy/sarreporting.go",
+	"internal/modules/privacy/reportingquestions.go",
 	"internal/modules/privacy/sar.go",
 	"internal/modules/privacy/sarsections.go",
 	// What this installation CONCLUDED about the subject's correspondence —
@@ -608,14 +615,8 @@ func TestErasureAndSARReachEveryPIITable(t *testing.T) {
 	for _, path := range retentionSweepFiles {
 		maps.Copy(assembled, assembledSweepTargets(t, path))
 		for _, lit := range sqlLiterals(t, path) {
-			// Before the split, whether the split can be trusted. A quoting
-			// form the scan cannot track leaves it inverted, and an inverted
-			// scan cuts inside a string — which is the fragment naming no
-			// table that sqlStatements was written to prevent.
-			if form := quotingBeyondTheSplit(lit); form != "" {
-				t.Fatalf("%s carries a `%s` literal, which the statement split cannot track: %q\n"+
-					"the split would cut inside the string and the fragment carrying the assignment would name no table. "+
-					"Teach sqlStatements this form, or keep the statement out of the swept files", path, form, collapsedSQL(lit))
+			if form := unclosedWriteSpan(lit); form != "" {
+				t.Fatalf("%s carries an unclosed SQL span %q; complete the literal before the statement scan", path, form)
 			}
 			// SPLIT, because the unit both checks below name is the statement
 			// and a literal is not one. Read whole, a literal carrying two

@@ -17,8 +17,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/backoff"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -87,7 +87,7 @@ func backoffDelay(consecutiveFailures int) time.Duration {
 func (r *Registry) recordSyncSuccess(ctx context.Context, connectionID ids.UUID) error {
 	return r.db.Tx(ctx, func(tx pgx.Tx) error {
 		now := r.now()
-		interval, err := settings.ApplyTx(ctx, tx, MailSyncIntervalSeconds)
+		interval, err := config.StoredApplyTx(ctx, tx, config.Bound(), MailSyncIntervalSeconds)
 		if err != nil {
 			return err
 		}

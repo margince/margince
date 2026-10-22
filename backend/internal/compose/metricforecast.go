@@ -17,7 +17,7 @@ import (
 
 func readReportingForecast(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, _ crmcontracts.ReportingFramework, e metricEvaluator) ([]reporting.Fact, crmcontracts.ReportingCoverage, error) {
 	if frame.Scope.Kind == ScopeKindManagedTeams {
-		return nil, reportingGap("unsupported", "Choose a single team for its forecast"), nil
+		return nil, reportingGap("unsupported", reporting.ExplanationCopy(frame).Say(reportingCoverageWords.SingleTeam)), nil
 	}
 	period, base, err := ForecastPeriodAt(ctx, tx, forecasting.PeriodQuarter, frame.EvaluatedAt)
 	if err != nil {
@@ -49,7 +49,7 @@ func readReportingForecast(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
-	facts, err := forecastMetricFacts(readings, landing, called)
+	facts, err := forecastMetricFacts(frame, readings, landing, called)
 	if err != nil {
 		return nil, crmcontracts.ReportingCoverage{}, err
 	}
@@ -59,10 +59,10 @@ func readReportingForecast(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 			facts[i].Scope = &scope
 		}
 	}
-	return facts, reportingForecastCoverage(readings, landing, withheld), nil
+	return facts, reportingForecastCoverage(frame, readings, landing, withheld), nil
 }
 
-func forecastMetricFacts(readings forecasting.Readings, landing forecasting.Landing, called *int64) ([]reporting.Fact, error) {
+func forecastMetricFacts(frame crmcontracts.ReportingContext, readings forecasting.Readings, landing forecasting.Landing, called *int64) ([]reporting.Fact, error) {
 	out := []reporting.Fact{}
 	for _, contribution := range readings.Contributions {
 		id, err := ids.Parse(contribution.DealID)
@@ -85,7 +85,7 @@ func forecastMetricFacts(readings forecasting.Readings, landing forecasting.Land
 		}
 		for _, contextID := range contexts {
 			fact := reporting.Fact{Metric: reportingForecastLanding, ContextID: contextID, SourceType: string(recordTypeDeal), SourceID: id, OwnerID: owner, Money: contribution.BaseMinor}
-			fact.Row = crmcontracts.ReportingEvidenceRow{Key: contribution.DealID, Label: "Forecast contribution", SourceId: ptrUUID(id), SourceType: &fact.SourceType, OwnerId: ptrUUID(owner)}
+			fact.Row = crmcontracts.ReportingEvidenceRow{Key: contribution.DealID, Label: reporting.ExplanationCopy(frame).Say(reportingLabelWords.ForecastContribution), SourceId: ptrUUID(id), SourceType: &fact.SourceType, OwnerId: ptrUUID(owner)}
 			if contribution.BaseMinor != nil {
 				if *contribution.BaseMinor > reportingExactInteger || *contribution.BaseMinor < -reportingExactInteger {
 					return nil, errors.New("forecast exceeds exact reporting range")
@@ -96,17 +96,17 @@ func forecastMetricFacts(readings forecasting.Readings, landing forecasting.Land
 			out = append(out, fact)
 		}
 	}
-	return forecastAuthoredFacts(out, landing, called)
+	return forecastAuthoredFacts(frame, out, landing, called)
 }
 
 func reportingForecastChart(out *reporting.Evaluation, chart crmcontracts.ReportingChart) crmcontracts.ReportingChart {
 	chart.ContextId = objectForecast
 	chart.StateAt = &out.Result.Context.StateAt
 	chart.Interval = out.Result.Context.CloseInterval
-	for _, part := range []struct{ id, label string }{{"forecast_won", "Won"}, {"forecast_supported", "Supported open"}, {"forecast_upside", "Additional upside"}} {
-		facts := metricFacts(out.Facts, chart.Metric, part.id)
+	for _, part := range []string{"forecast_won", "forecast_supported", "forecast_upside"} {
+		facts := metricFacts(out.Facts, chart.Metric, part)
 		value, _, _ := metricSum(facts)
-		chart.Points = append(chart.Points, crmcontracts.ReportingPoint{Key: part.id, Label: part.label, Value: value, Status: chart.Coverage.Status, Evidence: &crmcontracts.ReportingEvidenceRef{Metric: chart.Metric, ContextId: part.id}})
+		chart.Points = append(chart.Points, crmcontracts.ReportingPoint{Key: part, Label: reporting.ExplanationCopy(out.Result.Context).Say(reportingForecastLabels[part]), Value: value, Status: chart.Coverage.Status, Evidence: &crmcontracts.ReportingEvidenceRef{Metric: chart.Metric, ContextId: part}})
 	}
 	calls := metricFacts(out.Facts, chart.Metric, "forecast_call")
 	if len(calls) == 1 {
@@ -115,20 +115,17 @@ func reportingForecastChart(out *reporting.Evaluation, chart crmcontracts.Report
 	return chart
 }
 
-func reportingForecastCoverage(readings forecasting.Readings, landing forecasting.Landing, withheld bool) crmcontracts.ReportingCoverage {
+func reportingForecastCoverage(frame crmcontracts.ReportingContext, readings forecasting.Readings, landing forecasting.Landing, withheld bool) crmcontracts.ReportingCoverage {
 	coverage := crmcontracts.ReportingCoverage{Status: "ok", Withheld: withheld}
 	if readings.PricedCount < readings.EligibleCount || readings.FxMissingCount > 0 || landing.Caveat != "" {
 		coverage.Status = reportingPartial
-		reason := string(landing.Caveat)
-		if reason == "" {
-			reason = "Some forecast contributions are unpriced"
-		}
+		reason := reportingForecastReason(frame, landing.Caveat)
 		coverage.Reason = &reason
 	}
 	return coverage
 }
 
-func forecastAuthoredFacts(out []reporting.Fact, landing forecasting.Landing, called *int64) ([]reporting.Fact, error) {
+func forecastAuthoredFacts(frame crmcontracts.ReportingContext, out []reporting.Fact, landing forecasting.Landing, called *int64) ([]reporting.Fact, error) {
 	// Authored totals cannot be redistributed into per-deal credit. Projection
 	// retains them only while the complete frozen population remains visible.
 	for _, reading := range []struct {
@@ -142,7 +139,7 @@ func forecastAuthoredFacts(out []reporting.Fact, landing forecasting.Landing, ca
 			return nil, errors.New("forecast exceeds exact reporting range")
 		}
 		value := float64(*reading.amount)
-		out = append(out, reporting.Fact{Metric: reportingForecastLanding, ContextID: reading.context, SourceType: reportingForecastProjection, Provenance: string(landing.Measure), Money: reading.amount, Row: crmcontracts.ReportingEvidenceRow{Key: reading.context, Label: reading.context, Value: &value}})
+		out = append(out, reporting.Fact{Metric: reportingForecastLanding, ContextID: reading.context, SourceType: reportingForecastProjection, Provenance: string(landing.Measure), Money: reading.amount, Row: crmcontracts.ReportingEvidenceRow{Key: reading.context, Label: reporting.ExplanationCopy(frame).Say(reportingForecastLabels[reading.context]), Value: &value}})
 	}
 	return out, nil
 }

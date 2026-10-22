@@ -93,36 +93,16 @@ func TestStageRefusalNamesTheTargetAndSuppliesNoClientPin(t *testing.T) {
 // whether a column is live is a claim these rationales make and a reader must be
 // able to check.
 var unpinnableConfirmFirstTypes = gatekit.Waive(map[agentRecordType]string{
-	"import_run": "import_run has NO version column at all (migrations/custom/20260716120000_baseline), and adding one " +
-		"would pin the wrong thing: what a human approves is the run's REPORT, and the report is " +
-		"written once by the dry run and never edited — a run whose report changed would have had to " +
-		"re-run the validation pass, which moves it out of awaiting_approval and makes the commit " +
-		"refuse on state before any pin could speak. The residue is the diff_hash identical-call " +
-		"binding, and it is narrower here than elsewhere: the only argument is the run id, so a " +
-		"drifted call is a different run and fails the hash.",
-	"custom_field": "custom_field HAS a version column (migrations/core/0063) but nothing maintains it: " +
-		"the catalog's own writers (customfields' rename, options and retire paths) issue bare UPDATEs " +
-		"rather than storekit's guarded patch, so the column never leaves 1 and never takes an If-Match. " +
-		"A pin over it would re-check a constant and pass always. The serialization that does hold is the " +
-		"DDL engine's lock on the catalog row itself. Pinning becomes correct when those three writers " +
-		"move onto the guarded patch — not before.",
+	"deal_room": "the only agent route that stages against a room is createDealRoom, a CREATE: it names no " +
+		"existing row, so there is no version to pin, and the diff_hash binds the call that makes it.",
+	"deal_room_thread": "openDealRoomThread is a CREATE of a thread: no existing row, so nothing to pin; " +
+		"the diff_hash binds the call.",
+	"deal_room_comment": "replyDealRoomThread CREATES a reply: no existing row, so nothing to pin; the " +
+		"diff_hash binds the call.",
 })
 
-// Every operation that can stage against a concrete record type must have a type
-// the approvals engine can PIN — or sit in the ratified list above with a reason.
-// This is the read-side twin the pin was missing: the gate used to take a
-// server-side pin for exactly the five datasource-readable types and fall back to
-// the agent's own If-Match for the rest, so most confirm-first routes carried a
-// pin the agent could simply decline to supply, and nothing said so.
-//
-// "Can stage" is wider than "the contract declares confirm-first", and the
-// difference is new. A verb whose declared tier is auto_execute stages anyway
-// under a workspace tier floor (agenttierfloor.go), so its target type has to be
-// pinnable too — otherwise an installation that tightens the verb gets an
-// approval bound by diff_hash alone, silently weaker than the one the contract
-// would have given it. That is why import_run stays waived: commit_import no
-// longer declares confirm-first, but a floor on it stages against a run, and the
-// rationale below is what makes that residue acceptable rather than unnoticed.
+// Workspace tier floors can stage auto-execute operations too, so their
+// existing targets need the same server-held version pins.
 func TestConfirmFirstTargetsArePinnable(t *testing.T) {
 	defer unpinnableConfirmFirstTypes.AssertAllMatched(t)
 
@@ -208,14 +188,14 @@ func TestRedemptionCarriesThePinOntoTheForwardedRequest(t *testing.T) {
 // to, and inventing a version would refuse a legitimate redemption.
 func TestRedemptionWithoutAPinLeavesIfMatchAlone(t *testing.T) {
 	approvalID := ids.New[ids.ApprovalKind]()
-	pol := agentPolicy{Op: "createCustomField", Access: accessTool, Tool: "create_record", RecordType: recordTypeCustomField}
+	pol := agentPolicy{Op: "createProduct", Access: accessTool, Tool: "create_record", RecordType: recordTypeProduct}
 
 	var forwarded string
 	next := http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		forwarded = r.Header.Get("If-Match")
 	})
 
-	req := httptest.NewRequest(http.MethodPost, "/v1/custom-fields", nil)
+	req := httptest.NewRequest(http.MethodPost, "/v1/products", nil)
 	req.Header.Set(approvalTokenHeader, approvalID.String())
 
 	if handled, _ := redeemIfPresented(httptest.NewRecorder(), req, next, &capturingApprovals{}, pol, nil); !handled {

@@ -4,14 +4,9 @@
 package compose
 
 // The finance mirror's River wiring (ADR-0083/A128): a sweep every six hours
-// that fans out one pass per workspace, and the pass itself.
-//
-// The provider is chosen HERE rather than inside the module, which is the
-// point of the seam: the store knows how to mirror a ledger and nothing about
-// where one comes from. Today the only provider is the offline generator, so
-// an installation that connects "offline_demo" gets a plausible ledger and one
-// that connects anything else gets an honest refusal rather than a silent
-// no-op.
+// that fans out one pass per workspace, and the pass itself. The provider is
+// resolved here, through the composed sources, so the store knows how to
+// mirror a ledger and nothing about where one comes from.
 //
 // Job args and worker adapters only — the mirror stays River-agnostic.
 
@@ -20,7 +15,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -49,8 +43,9 @@ func (FinanceSyncSweepArgs) FleetWide() {}
 // One worker where there were two (ADR-0103): the dispatcher that enqueued a
 // finance_sync child per workspace is gone, and this walks them itself.
 type financeSyncSweepWorker struct {
-	pool *pgxpool.Pool
-	log  *slog.Logger
+	pool    *pgxpool.Pool
+	log     *slog.Logger
+	sources finance.Sources
 }
 
 func (w *financeSyncSweepWorker) Work(ctx context.Context, _ *river.Job[FinanceSyncSweepArgs]) error {
@@ -113,7 +108,7 @@ func (w *financeSyncSweepWorker) syncWorkspace(ctx context.Context, workspace id
 	wsCtx = principal.WithActor(wsCtx, financeSweepPrincipal())
 	wsCtx = principal.WithCorrelationID(wsCtx, ids.NewV7())
 
-	provider, configured, err := w.providerFor(wsCtx, workspace)
+	provider, configured, err := w.providerFor(wsCtx)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
@@ -145,82 +140,58 @@ func (w *financeSyncSweepWorker) syncWorkspace(ctx context.Context, workspace id
 // providerFor resolves the reader for this workspace's configured source.
 //
 // `configured` is false when there is no live connection, which is the
-// ordinary state of most installations. An unknown provider is an ERROR rather
-// than a quiet skip: an operator who connected something this build cannot
-// read deserves to be told, not left watching a card that never fills in.
+// ordinary state of most installations. A provider no composed unit supplies
+// is an error rather than a skip. An operator who connected something this
+// build cannot read is told, rather than left watching an empty card.
 //
-// workspace's configured source needs, and returning the concrete generator
-// would make the choice uninteresting and the second provider a rewrite.
-//
-//nolint:ireturn // the seam IS an interface: this resolves WHICH reader a
+//nolint:ireturn // the seam IS an interface: this resolves WHICH reader a workspace's source needs
 func (w *financeSyncSweepWorker) providerFor(
-	ctx context.Context, workspace ids.UUID,
+	ctx context.Context,
 ) (finance.Provider, bool, error) {
 	var (
-		name      string
-		createdAt time.Time
-		customers []finance.SourceCustomer
+		name string
+		conn finance.SourceConnection
 	)
 	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		// created_at rides the read because it is the offline generator's
-		// ANCHOR: the demonstration ledger is measured back from the moment
-		// this connection was made, so it is fixed for a given installation
-		// and positioned freshly for a new one. A constant in the generator
-		// would leave the card's rolling windows behind as the calendar moved.
-		row := tx.QueryRow(ctx, `
-			SELECT provider, created_at FROM finance_connection
+		return tx.QueryRow(ctx, `
+			SELECT provider, id::text, created_at FROM finance_connection
 			 WHERE archived_at IS NULL AND status <> 'disconnected'
 			 ORDER BY created_at DESC
-			 LIMIT 1`)
-		if err := row.Scan(&name, &createdAt); err != nil {
-			// pgx.ErrNoRows lands here and is answered as "not configured" by
-			// the caller below; anything else is a real read failure.
-			return err
-		}
-		var readErr error
-		customers, readErr = linkedCustomers(ctx, tx)
-		return readErr
+			 LIMIT 1`).Scan(&name, &conn.ID, &conn.ConnectedAt)
 	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, false, nil
+	}
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, false, nil
-		}
 		return nil, false, fmt.Errorf("read the finance connection: %w", err)
 	}
-	if name != finance.OfflineProviderName {
-		return nil, false, fmt.Errorf(
-			"finance: no reader for provider %q — this build ships only %q",
-			name, finance.OfflineProviderName)
+	provider, ok := w.sources.Open(name, conn)
+	if !ok {
+		return nil, false, fmt.Errorf("finance: no composed unit supplies provider %q", name)
 	}
-	return finance.NewOfflineProvider(workspace.String(), customers, createdAt), true, nil
+	return provider, true, nil
 }
 
-// linkedCustomers is the directory the offline provider generates for.
-//
-// It is built from the LINKS an operator already made, not from an invented
-// customer list: the generator's job is to produce a ledger for a customer
-// somebody mapped, and minting customers nobody asked for would put rows in
-// the mirror that match no company.
-func linkedCustomers(ctx context.Context, tx pgx.Tx) ([]finance.SourceCustomer, error) {
-	rows, err := tx.Query(ctx, `
-		SELECT l.external_customer_id, coalesce(o.display_name, l.external_customer_id)
-		  FROM finance_customer_link l
-		  JOIN company o ON o.id = l.company_id
-		 WHERE l.archived_at IS NULL
-		 ORDER BY l.external_customer_id`)
-	if err != nil {
-		return nil, fmt.Errorf("read the customer links: %w", err)
+// FinanceSyncArgs runs one workspace's pass now, queued when an administrator
+// connects a source or asks for a sync.
+type FinanceSyncArgs struct {
+	Workspace ids.UUID `json:"workspace_id" river:"unique"`
+}
+
+// Kind is the stable job identifier River persists in river_job.
+func (FinanceSyncArgs) Kind() string { return "finance_sync" }
+
+// WorkspaceID binds the pass to its tenant (jobs.WorkspaceScoped).
+func (a FinanceSyncArgs) WorkspaceID() ids.UUID { return a.Workspace }
+
+// financeSyncWorker is the sweep's per-workspace pass, run for one workspace.
+type financeSyncWorker struct{ sweep *financeSyncSweepWorker }
+
+func (w *financeSyncWorker) Work(ctx context.Context, job *river.Job[FinanceSyncArgs]) error {
+	if _, err := workspaceJobCtx(ctx, job.Args); err != nil {
+		return jobs.FaultContext(ctx, err)
 	}
-	defer rows.Close()
-	var out []finance.SourceCustomer
-	for rows.Next() {
-		var each finance.SourceCustomer
-		if err := rows.Scan(&each.ExternalID, &each.DisplayName); err != nil {
-			return nil, fmt.Errorf("scan a customer link: %w", err)
-		}
-		out = append(out, each)
-	}
-	return out, rows.Err()
+	return jobs.FaultContext(ctx, w.sweep.syncWorkspace(ctx, job.Args.Workspace))
 }
 
 // addFinanceJobs registers the sweep and the per-workspace pass, and hands
@@ -229,6 +200,8 @@ func linkedCustomers(ctx context.Context, tx pgx.Tx) ([]finance.SourceCustomer, 
 func addFinanceJobs(
 	reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger,
 ) []*river.PeriodicJob {
-	addDeclaredWorker[FinanceSyncSweepArgs](reg, &financeSyncSweepWorker{pool: pool, log: log})
+	sweep := &financeSyncSweepWorker{pool: pool, log: log, sources: composedFinanceSources{}}
+	addDeclaredWorker[FinanceSyncSweepArgs](reg, sweep)
+	addDeclaredWorker[FinanceSyncArgs](reg, &financeSyncWorker{sweep: sweep})
 	return periodicFor(cfg, FinanceSyncSweepArgs{})
 }

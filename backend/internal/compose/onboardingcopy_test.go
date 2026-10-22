@@ -11,13 +11,13 @@ package compose
 // worth asserting, because sameness is what the bug looked like.
 
 import (
-	"reflect"
 	"regexp"
 	"strings"
 	"testing"
 	"unicode"
 	"unicode/utf8"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy/langcopytest"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -101,20 +101,12 @@ type germanField struct{ name, text string }
 // gate below without anyone remembering to extend it.
 func germanOnboarding(t *testing.T) []germanField {
 	t.Helper()
-	said := reflect.ValueOf(onboardingCopyByLang[textlang.German])
-	fields := make([]germanField, 0, said.NumField())
-	for i := range said.NumField() {
-		// A field this loop cannot read is a field it skips silently, and a
-		// census that reads a smaller subject than it has still says PASS.
-		if said.Field(i).Kind() != reflect.String {
-			t.Fatalf("onboardingCopy.%s holds no string, so this gate never reads it",
-				said.Type().Field(i).Name)
-		}
-		fields = append(fields, germanField{said.Type().Field(i).Name, said.Field(i).String()})
+	sentences := langcopytest.Sentences(t, onboardingCopyByLang[textlang.German])
+	fields := make([]germanField, 0, len(sentences))
+	for name, text := range sentences {
+		fields = append(fields, germanField{name, text})
 	}
-	if len(fields) == 0 {
-		t.Fatal("the German onboarding copy carries no fields, so nothing below was checked")
-	}
+
 	return fields
 }
 

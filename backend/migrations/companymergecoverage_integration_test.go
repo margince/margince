@@ -75,7 +75,10 @@ var sqlWriteTarget = regexp.MustCompile(`(?i)\b(?:UPDATE|INSERT\s+INTO|DELETE\s+
 // its `DELETE FROM x WHERE company_id = $1` behind, and a census reading table
 // names alone reports that table covered while the merge destroys every row the
 // retired company held.
-var assignsToSurvivor = regexp.MustCompile(`(?i)([a-z_][a-z0-9_]*)\s*=\s*[^=]*?\$(?:2|%d)`)
+//
+// The survivor arrives as `$2` in a positional statement and as `@target` in
+// one bound through pgx.NamedArgs (the merge's mergeTargetKey).
+var assignsToSurvivor = regexp.MustCompile(`(?i)([a-z_][a-z0-9_]*)\s*=\s*[^=]*?(?:\$(?:2|%d)|@target\b)`)
 
 // updateSetClause is the assignment list of an UPDATE: what follows `SET`, up
 // to its `WHERE`.
@@ -91,11 +94,11 @@ func setClauseOf(stmt string) string {
 	return ""
 }
 
-// carriesSurvivorIntoInsert matches the INSERT … SELECT $2 form, where the
+// carriesSurvivorIntoInsert matches the INSERT … SELECT $2 (or @target) form, where the
 // survivor's id arrives positionally as the first selected value rather than as
 // an assignment. The column it lands in is the first name in the INSERT's
 // column list.
-var carriesSurvivorIntoInsert = regexp.MustCompile(`(?is)INSERT\s+INTO\s+[a-z_][a-z0-9_]*\s*\(\s*([a-z_][a-z0-9_]*).*?SELECT\s+\$2`)
+var carriesSurvivorIntoInsert = regexp.MustCompile(`(?is)INSERT\s+INTO\s+[a-z_][a-z0-9_]*\s*\(\s*([a-z_][a-z0-9_]*).*?SELECT\s+(?:\$2|@target\b)`)
 
 // concatenatedColumn matches a Go string concatenation standing where a column
 // name belongs, so a statement that assembles its column still counts as

@@ -26,9 +26,10 @@ record is evidence about one machine on one day.
 Re-measure with ` + "`make bench-perf`" + `, ` + "`make bench-record`" + `,
 ` + "`make bench-capture`" + `, ` + "`make bench-daily`" + ` (each needs ` + "`make db-up`" + `) or
 ` + "`make bench-mobile`" + `. Each writes its own record and re-renders this page.
-The weekly scheduled job runs ` + "`make bench-perf-check`" + ` and
-` + "`make bench-mobile-check`" + `, which measure without recording, so nothing
-here changes until somebody measures by hand.
+` + "`make bench-perf-check`" + ` and ` + "`make bench-mobile-check`" + ` measure
+without recording. The weekly scheduled job records the SMB tier of
+` + "`bench-perf`" + ` and ` + "`bench-mobile`" + ` and opens a pull request with the
+records, so a row changes only when a maintainer merges it.
 
 `
 

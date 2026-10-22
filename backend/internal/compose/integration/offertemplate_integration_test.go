@@ -268,8 +268,13 @@ func TestOfferTemplateUpdate_HappyVersionSkewAndDefaultConflict(t *testing.T) {
 	unchanged, err := e.Deals.UpdateOfferTemplate(ctx, id, deals.UpdateOfferTemplateInput{
 		Name: "Editable v2", Locale: "de-DE", Layout: map[string]any{"footer": "v2"}, IfVersion: &v2,
 	})
-	if err != nil || *unchanged.Version != 3 {
-		t.Fatalf("keeping the row's own name/layout must succeed as a real PUT (version bumps to 3), got %+v, %v", unchanged, err)
+	if err != nil || *unchanged.Version != 2 {
+		t.Fatalf("keeping the row's own name/layout must succeed and leave the version at 2, got %+v, %v", unchanged, err)
+	}
+	if n := e.WsCount(t,
+		`SELECT count(*) FROM audit_log WHERE entity_type = 'offer_template' AND entity_id = $1 AND action = 'update'`,
+		ids.UUID(created.Id)); n != 1 {
+		t.Fatalf("a repeat of the stored values wrote an audit row: update rows = %d, want still 1", n)
 	}
 }
 

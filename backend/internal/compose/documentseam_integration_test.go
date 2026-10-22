@@ -25,7 +25,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
-	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -89,7 +88,7 @@ func newDocumentHarness(t *testing.T, perms principal.Permissions) documentHarne
 	t.Helper()
 	e := integration.Setup(t)
 	blob := blobstore.NewMemory()
-	limits := deployconfig.Config{}.EffectiveUploads()
+	limits := DefaultUploadLimits()
 	limits.Attachment = documentAgentLimit
 	srv := &Server{blob: blob, uploadLimits: limits}
 	seat := documentSeat{perms: perms, teams: []ids.UUID{e.Team1}}

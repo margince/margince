@@ -75,6 +75,7 @@ func mergeThreadsTx(ctx context.Context, tx pgx.Tx, from, to string) error {
 func threadJoiner() capture.ThreadJoiner {
 	return capture.ThreadJoiner{
 		RecordReferences: activities.RecordMailReferencesTx,
+		SentBySeat:       activities.SentFromHereBySeatTx,
 		Neighbours:       activities.MailNeighboursTx,
 		Earliest:         activities.EarliestThreadKeyTx,
 		Merge:            mergeThreadsTx,

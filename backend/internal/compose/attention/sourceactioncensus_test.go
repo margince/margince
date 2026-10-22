@@ -32,7 +32,7 @@ import (
 )
 
 // performedBySource is what the CLIENT can actually do with each verb, per
-// source, and it is a claim about frontend/src/screens/worklist.rowverbs.tsx.
+// source, and it is a claim about frontend/src/features/worklist/worklist.rowverbs.tsx.
 //
 // Keyed by source rather than by verb alone, because the endpoint a verb posts
 // to depends on the row it sits on: `dismiss` is the contact's nudge dismissal
@@ -89,16 +89,18 @@ var performedBySource = map[string][]crmcontracts.AttentionItemActions{
 	"ai_work_health": {"open"},
 	// `retry` reaches AutomationRetry; a failed firing carries it and a blocked
 	// one does not, because blocked is a refusal on purpose.
-	"automation_run":  {"open", "retry"},
-	"bounce":          {"open"},
-	"undelivered":     {"open"},
-	"failed_approval": {"open"},
+	"automation_run": {"open", "retry"},
+	"bounce":         {"open"},
+	"undelivered":    {"open"},
+	// Drawn by FailedApprovalAnswer: `acknowledge` posts the failure
+	// acknowledgement, and `retry` approves the row once more.
+	"failed_approval": {"open", "acknowledge", "retry"},
 	// Answered IN PLACE, like an approval: `keep` makes the company from the
 	// domain's own label and `discard` writes this reader's own capture
 	// exclusion. Neither needs anything typed, which is what lets a domain
 	// question settle from a queue row — and there is no `open`, because the
 	// subject is a domain rather than a record with a page.
-	"domain_question": {"keep", "discard"},
+	"domain_question": {"keep", "discard", "reopen"},
 	// The privacy queue's own row. It is read here and answered there.
 	"dsr": {"open"},
 	// The disclosure duty, read here and discharged on the contact's own screen
@@ -187,7 +189,7 @@ func TestNoLaneAdvertisesAVerbTheClientCannotPerform(t *testing.T) {
 				if !slicesContain(allowed, action) {
 					t.Errorf("source %q advertises %q and the client performs %v: "+
 						"the row reaches a reader who is shown work and given no way to do it. "+
-						"Wire the verb in frontend/src/screens/worklist.rowverbs.tsx, or stop sending it",
+						"Wire the verb in frontend/src/features/worklist/worklist.rowverbs.tsx, or stop sending it",
 						source, action, allowed)
 				}
 			}
@@ -276,6 +278,9 @@ func TestTheCensusDescribesEverySourceTheQueueClassifies(t *testing.T) {
 // so every stub carries a row.
 func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 	t.Helper()
+	briefDeal := ids.NewV7()
+	commitment := promise("a promise", readInstant)
+	commitment.ActivityID = ids.NewV7()
 	svc := NewService(
 		// The four lanes the sibling check leaves empty, filled here on purpose:
 		// a lane the fixture does not feed is a lane this census silently does
@@ -291,15 +296,15 @@ func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 			LinkType: "contact", LinkID: ids.NewV7(),
 		}}},
 		stubReceipts{},
-		stubBriefing{rows: []BriefEntry{{ID: ids.NewV7(), DealID: ids.NewV7(), Rank: 1}}},
-		&stubCommitments{rows: []Commitment{promise("a promise", readInstant)}},
-		stubAtRisk{rows: []RiskyDeal{{Name: "a deal", QuietDays: 20}}},
-		&stubDecay{rows: []QuietRelationship{{Name: "a contact", QuietDays: 63, LastAt: readInstant}}},
-		&stubMeetings{rows: []Meeting{{Subject: "a meeting", StartsAt: readInstant}}},
+		stubBriefing{rows: []BriefEntry{{ID: ids.NewV7(), DealID: briefDeal, Rank: 1}}},
+		&stubCommitments{rows: []Commitment{commitment}},
+		stubAtRisk{rows: []RiskyDeal{{DealID: briefDeal, Name: "a deal", QuietDays: 20}}},
+		&stubDecay{rows: []QuietRelationship{{ContactID: ids.NewV7(), Name: "a contact", QuietDays: 63, LastAt: readInstant}}},
+		&stubMeetings{rows: []Meeting{{ID: ids.NewV7(), Subject: "a meeting", StartsAt: readInstant}}},
 		&stubFailedEffects{rows: []FailedEffect{{
 			ID: ids.NewV7(), Kind: "send_email",
 			Sentence: "this was approved, but the work it released did not run",
-			FailedAt: readInstant, TargetType: "contact", TargetID: ids.NewV7(),
+			FailedAt: readInstant, TargetType: "contact", TargetID: ids.NewV7(), Retryable: true,
 		}}},
 		&stubDSRs{rows: []DSRCase{{ID: ids.NewV7(), Kind: "access", DueAt: readInstant}}},
 		&stubCaptureHealth{rows: []CaptureConcern{{ConnectionID: ids.NewV7(), Kind: "reauth_required", Provider: "gmail"}}},
@@ -321,7 +326,7 @@ func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 		// The other clock the law started, an Option for the same reason and so
 		// just as easy to leave out of a fixture.
 		WithNoticeCases(&stubNoticeCases{rows: []NoticeCase{{
-			ID: ids.NewV7(), Rule: "art14", DueAt: readInstant,
+			ID: ids.NewV7(), ContactID: ids.NewV7(), Rule: "art14", DueAt: readInstant,
 		}}})).
 		WithUndelivered(&stubUndelivered{rows: []ParkedSend{{
 			ID: ids.NewV7(), Subject: "a send that never left",

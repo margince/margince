@@ -119,12 +119,13 @@ func TestRelationshipLifecycle(t *testing.T) {
 	}, nil, nil); status != 422 {
 		t.Fatalf("shape-violating edge → %d, want 422", status)
 	}
-	// An invisible endpoint reads as absent (H1).
+	// An invisible endpoint reads as absent (H1), and the refusal names it.
+	var refused problemBody
 	if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
 		"kind": "employment", "contact_id": "00000000-0000-7000-8000-00000000dead",
 		"company_id": e.companyID, "source": "manual",
-	}, nil, nil); status != http.StatusNotFound {
-		t.Fatalf("invisible endpoint → %d, want 404", status)
+	}, nil, &refused); status != http.StatusUnprocessableEntity || !namesFieldWithCode(refused, "contact_id", "reference_not_found") {
+		t.Fatalf("invisible endpoint → %d %+v, want 422 reference_not_found on contact_id", status, refused.Details.Errors)
 	}
 }
 
@@ -466,13 +467,21 @@ func assertDecidableInTheInbox(t *testing.T, e *apptest.AppEnv, approvalID, want
 // An approval whose TARGET is archived before anyone decides stays visible and
 // rejectable — otherwise it sits pending until its TTL with no way to clear it.
 //
-// Staged through createWebhookSubscription, which the contract still floors to
-// confirm-first: registering outbound egress is configuration a credential must
-// not widen, so it kept its floor when the ordinary record writes lost theirs.
-// The verb matters only in that it still asks a human; the property under test
-// is the approval's.
+// Staged through archive_record under a tier floor, the composition an
+// installation gets when it declares the verb confirm-first. That door stages
+// against an edge.
 func TestAnApprovalStaysDecidableAfterItsTargetIsArchived(t *testing.T) {
 	e := setupRelationships(t)
+
+	var edge struct {
+		ID string `json:"id"`
+	}
+	if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
+		"kind": "employment", "contact_id": e.contactID, "company_id": e.companyID,
+		"role": "cto", "source": "manual",
+	}, nil, &edge); status != http.StatusCreated {
+		t.Fatalf("create employment → %d", status)
+	}
 
 	var minted struct {
 		Token string `json:"token"`
@@ -483,23 +492,32 @@ func TestAnApprovalStaysDecidableAfterItsTargetIsArchived(t *testing.T) {
 		t.Fatalf("issue passport → %d", status)
 	}
 
-	var problem struct {
-		Detail string `json:"detail"`
+	_, err := flooredArchiveInvoker(t, e.AppEnv, minted.Token)(
+		`{"record_type":"relationship","id":"` + edge.ID + `"}`,
+	)
+	if !errors.Is(err, apperrors.ErrRequiresApproval) {
+		t.Fatalf("a floored edge archive answered %v, want the confirm-first refusal", err)
 	}
-	if status := e.Call(t, "POST", "/v1/webhook-subscriptions", AnyMap{
-		"target_url": "https://example.test/vanishing", "event_types": []string{"company.created"},
-	}, map[string]string{"Authorization": "Bearer " + minted.Token}, &problem); status != http.StatusForbidden {
-		t.Fatalf("agent webhook-subscription create → %d, want 403 approval_required", status)
-	}
-	approvalID := ExtractStagedApprovalID(t, problem.Detail)
+	approvalID := ExtractStagedApprovalID(t, err.Error())
 
-	// A create names no existing row, so there is nothing for the archive race
-	// to remove — which is itself the point: the row must be decidable with a
-	// NULL target, the state every staged create is in.
+	// A human archives the edge themselves while the agent's proposal waits.
+	if status := e.Call(t, "DELETE", "/v1/relationships/"+edge.ID, nil, nil, nil); status != http.StatusOK {
+		t.Fatalf("human archive of the edge → %d", status)
+	}
+	var archived bool
+	if err := e.Owner.QueryRow(t.Context(),
+		`SELECT archived_at IS NOT NULL FROM relationship WHERE id = $1`, edge.ID).Scan(&archived); err != nil {
+		t.Fatalf("reading the edge back: %v", err)
+	}
+	if !archived {
+		t.Fatal("the edge is still live, so this fixture proves nothing about an archived target")
+	}
+
+	assertDecidableInTheInbox(t, e.AppEnv, approvalID, "relationship")
 	if got := e.Call(t, "POST", "/v1/approvals/"+approvalID+"/reject", AnyMap{
 		"reason": "no longer wanted",
 	}, nil, nil); got != http.StatusOK {
-		t.Errorf("rejecting an approval whose target does not exist → %d, want 200 — a human must be able "+
+		t.Errorf("rejecting an approval whose target was archived → %d, want 200 — a human must be able "+
 			"to clear authority whose target is gone", got)
 	}
 }

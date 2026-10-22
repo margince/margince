@@ -89,6 +89,10 @@ func (s *Store) carryIntrosTx(ctx context.Context, tx pgx.Tx, from, to ids.Conta
 	if s.introCarrier != nil {
 		return s.introCarrier.CarryIntrosTx(ctx, tx, from, to)
 	}
+	return refuseUnwiredIntroCarry(ctx, tx, from)
+}
+
+func refuseUnwiredIntroCarry(ctx context.Context, tx pgx.Tx, from ids.ContactID) error {
 	var held bool
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (SELECT 1 FROM intro_request WHERE contact_id = $1 OR through_contact_id = $1)`,

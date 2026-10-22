@@ -29,6 +29,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -238,4 +239,52 @@ func reportRunExplain(
 		return analyticsquery.Explain{Query: q, AllCells: true}, nil
 	}
 	return analyticsquery.Explain{Query: q, Group: *cell}, nil
+}
+
+// ReportRunSummary is one saved question as its asker lists it: the question
+// and when it was asked, never the stored rows.
+type ReportRunSummary struct {
+	ID      ids.UUID
+	Query   analyticsquery.Query
+	AskedAt time.Time
+}
+
+// ListReportRuns pages the caller's own saved questions, newest first. The
+// page boundary is (created_at, id), since two runs can share a timestamp.
+func ListReportRuns(
+	ctx context.Context, tx pgx.Tx, after *storekit.Cursor, limit int,
+) ([]ReportRunSummary, bool, error) {
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return nil, false, apperrors.ErrPermissionDenied
+	}
+	var afterAt *time.Time
+	var afterID *ids.UUID
+	if after != nil {
+		afterAt, afterID = &after.CreatedAt, &after.ID
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT id, query, created_at FROM report_run
+		WHERE asked_by = $1
+		  AND ($2::timestamptz IS NULL OR (created_at, id) < ($2, $3::uuid))
+		ORDER BY created_at DESC, id DESC
+		LIMIT $4`, actor.UserID, afterAt, afterID, limit+1)
+	if err != nil {
+		return nil, false, fmt.Errorf("compose: listing saved questions: %w", err)
+	}
+	out, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (ReportRunSummary, error) {
+		var run ReportRunSummary
+		var queryJSON []byte
+		if err := row.Scan(&run.ID, &queryJSON, &run.AskedAt); err != nil {
+			return run, err
+		}
+		return run, json.Unmarshal(queryJSON, &run.Query)
+	})
+	if err != nil {
+		return nil, false, fmt.Errorf("compose: reading saved questions: %w", err)
+	}
+	if len(out) > limit {
+		return out[:limit], true, nil
+	}
+	return out, false, nil
 }

@@ -124,3 +124,24 @@ export function nextSortValue(
   // Unsorted, a number almost always wants its biggest value first.
   return option.numeric ? `-${option.field}` : option.field;
 }
+
+/** Which segment of a filter row currently owns the one open popover. */
+export type FilterRowSegment = "cond" | "value" | "menu";
+
+function isFilterRowSegment(value: string): value is FilterRowSegment {
+  return value === "cond" || value === "value" || value === "menu";
+}
+
+/** The segment of one row the toolbar's single `openMenu` key names, if any:
+ * one key, not per-row state, keeps one menu open across filter rows. */
+export function openRowSegment(
+  openMenu: string | null,
+  key: string,
+): FilterRowSegment | null {
+  const prefix = `row:${key}:`;
+  if (!openMenu?.startsWith(prefix)) {
+    return null;
+  }
+  const segment = openMenu.slice(prefix.length);
+  return isFilterRowSegment(segment) ? segment : null;
+}

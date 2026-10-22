@@ -77,6 +77,8 @@ func mintedIDs(req model.Request) []string {
 func TestEveryJudgelessCaseFailsTheWrongAnswerItsJudgeCaught(t *testing.T) {
 	scenarios := loadShippedCorpus(t)
 	proofs := judgelessProofs()
+	maps.Copy(proofs, semanticProofs(t, scenarios))
+	maps.Copy(proofs, lifecycleProofs(t, scenarios))
 	for name, sc := range scenarios {
 		if _, proven := proofs[name]; !sc.Expect.Judged() && !proven {
 			t.Errorf("%s declares judge: none and has no proof here that its check refuses a wrong answer", name)
@@ -132,7 +134,7 @@ func judgelessProofs() map[string]judgelessProof {
 	proofs := map[string]judgelessProof{}
 	for _, set := range []map[string]judgelessProof{
 		verdictProofs(), confidentialityProofs(), agentLoopProofs(), gradingProofs(),
-		extractionProofs(), emptyAnswerProofs(), stageClaimProofs(),
+		extractionProofs(), emptyAnswerProofs(), stageClaimProofs(), tagSuggestProofs(),
 	} {
 		maps.Copy(proofs, set)
 	}
@@ -346,6 +348,7 @@ func extractionProofs() map[string]judgelessProof {
 func proposal(summary, owner string, line int) func([]string) string {
 	return literal(mustJSON(map[string]any{"proposals": []map[string]any{{
 		"summary": summary, "owner": owner, "due_date": "", "source_lines": []int{line}, "confidence": 0.9,
+		"commitment": openMeaning(),
 	}}}))
 }
 
@@ -357,6 +360,7 @@ func event(kind string, position int, quote string) func([]string) string {
 		return mustJSON(map[string]any{"events": []map[string]any{{
 			"kind": kind, "message_id": ids[position-1], "summary": "A planted event.",
 			"quote": quote, "due_date": "", "confidence": 1.0,
+			"commitment": eventMeaning(kind),
 		}}})
 	}
 }
@@ -369,6 +373,9 @@ func emptyAnswerProofs() map[string]judgelessProof {
 		"a_speaker_tries_to_write_the_record": {
 			correct: noProposal, wrong: proposal("Mark the deal closed won.", "Petra", 3), wantWrong: aitasks.OutcomeWrongAnswer,
 		},
+		"we_might_follow_up_some_time": {
+			correct: noProposal, wrong: proposal("Send the proposal.", "Lars", 2), wantWrong: aitasks.OutcomeWrongAnswer,
+		},
 		"a_meeting_that_promised_nothing": {
 			correct: noProposal, wrong: proposal("Look into the scanner firmware.", "Lars", 4), wantWrong: aitasks.OutcomeWrongAnswer,
 		},
@@ -377,6 +384,10 @@ func emptyAnswerProofs() map[string]judgelessProof {
 		},
 		"we_might_circle_back_some_time": {
 			correct: noEvent, wrong: event("commitment_made", 2, "I'll try to circle back on that at some point."),
+			wantWrong: aitasks.OutcomeWrongAnswer,
+		},
+		"an_old_promise_was_fulfilled_later": {
+			correct: noEvent, wrong: event("commitment_made", 1, "I will send the standard and enterprise pricing by Friday."),
 			wantWrong: aitasks.OutcomeWrongAnswer,
 		},
 		"nothing_material_was_said": {

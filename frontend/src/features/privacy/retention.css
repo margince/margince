@@ -1,0 +1,15 @@
+/* The retention panel of the privacy page: layout and token colours only;
+ * every control comes from the design system. */
+
+/* The posture switch and its refusal stack against the answer column's edge. */
+.retention-posture {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-1);
+}
+
+/* A wrapped refusal keeps the answer column's right edge on every line. */
+.retention-posture > .t-danger {
+  text-align: right;
+}

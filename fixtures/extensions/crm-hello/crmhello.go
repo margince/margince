@@ -11,29 +11,42 @@
 package crmhello
 
 import (
+	"context"
+	"errors"
+	"log/slog"
+
 	"github.com/margince/margince/backend/pkg/extension"
 	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
 )
 
-// New returns the unit's declaration (the constructor
-// contract the generated composition calls). It exercises both kinds the
-// manifest reader distinguishes: a jurisdiction pack (passive policy, no
-// manifest entry) and a governed agent tool (a 🟡 risk-tier request that DOES
-// appear in manifest.generated.json).
-//
-// There is no Tools entry, and that is the point. hello_ping is declared in
-// api/crm.yaml and nothing here carries behavior for it, so it is a
-// CONTRACT-ONLY governed request: it reaches the manifest and the merged
-// contract, and the composed surface serves nothing. A Tools entry with a nil
-// Handle would declare the same inertness a second time, in the one place that
-// exists to say what the unit can actually run.
+// New returns the unit's declaration. hello_ping in api/crm.yaml has no Tools
+// entry: a contract-only request reaches the manifest and serves
+// nothing. The subscription puts a declared system read in the extension lane.
 func New() extension.Extension {
 	return extension.Extension{
 		Name:          "crm-hello",
 		Version:       "0.1.0",
-		Description:   "The tier's smoke fixture: one jurisdiction pack and nothing else.",
+		Description:   "The tier's smoke fixture: one jurisdiction pack, and a note of each deal change.",
 		Jurisdictions: []jurisdiction.Pack{pack{}},
+		Subscriptions: []extension.Subscription{
+			{Name: "note_deal_change", Events: []string{"deal.updated"}, Handle: noteDealChange},
+		},
+		SystemReads: []extension.SystemRead{extension.SystemReadDeals},
 	}
+}
+
+// noteDealChange reads the deal a delivery names and logs its stage, the
+// smallest real use of a declared system read.
+func noteDealChange(ctx context.Context, rt extension.Runtime, d extension.Delivery) error {
+	deal, err := rt.Deals().Get(ctx, d.Entity.ID)
+	if errors.Is(err, extension.ErrNotFound) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	slog.InfoContext(ctx, "crm-hello: a deal changed", "deal", deal.ID, "stage", deal.StageName)
+	return nil
 }
 
 // pack registers under "zz" — an ISO 3166-1 user-assigned code, so the

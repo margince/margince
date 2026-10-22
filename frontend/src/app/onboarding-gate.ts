@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Route, Screen } from "../lib/router";
-import { settingsHref } from "../screens/settingsrouting";
+import { settingsHref } from "../lib/settingsrouting";
 
 // OAuth consent keeps its cookie-bound, single-use nonce through onboarding.
 const ONBOARDING_GATE_EXEMPT_SCREENS: ReadonlySet<Screen> = new Set([

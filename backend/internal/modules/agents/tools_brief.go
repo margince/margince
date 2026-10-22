@@ -201,6 +201,7 @@ func (t readBrief) Spec() mcp.ToolSpec {
 		Description:   readBriefCopy.render(),
 		Instead:       readBriefCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		Unlisted:  true,
 		OpenAPIOp: "getMorningBrief",
 		// No arguments. The brief a caller may read is the one belonging to the
 		// human they act for, and a parameter naming a user would be an

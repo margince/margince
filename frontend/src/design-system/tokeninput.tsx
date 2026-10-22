@@ -3,6 +3,7 @@
 
 import { X } from "lucide-react";
 import { type KeyboardEvent, useRef, useState } from "react";
+import { isImeCommit } from "../lib/imecommit";
 import { type Suggestion, SuggestPopup, useSuggestList } from "./suggestlist";
 import "./tokeninput.css";
 
@@ -142,6 +143,9 @@ export function TokenInput({
     // the reader typed. A control that let the list swallow every Enter would
     // refuse a value simply because it was not on a list that is help.
     if (list.navigate(event)) {
+      return;
+    }
+    if (isImeCommit(event)) {
       return;
     }
     if (event.key === "Enter" || event.key === ",") {

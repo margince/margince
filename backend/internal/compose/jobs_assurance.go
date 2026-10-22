@@ -162,7 +162,7 @@ func (w *assuranceRunWorker) Work(ctx context.Context, job *river.Job[AssuranceR
 // that stopped changing.
 func (w *assuranceSweepWorker) check(ctx context.Context, ws ids.UUID, requestedBy *string) error {
 	store := assurance.NewStore(InstallationDB(w.pool))
-	scanner := assurance.NewScanner(store, AssuranceSubjects, AssuranceCoverage, assurance.DefaultConfig())
+	scanner := assurance.NewScanner(store, AssuranceSubjects, AssuranceCoverage, assurance.DefaultConfig()).WithSignalSubjects(AssuranceSignalSubjects)
 	result, err := scanner.Scan(ctx, w.now(), requestedBy)
 	if err != nil {
 		return err

@@ -2,11 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
+import { parseHash, type Route, routeHash } from "../lib/router";
 import {
   groupSearchHits,
+  SEARCH_ACTIVITY_SEGMENT,
   SEARCH_GROUP_KEY,
   SEARCH_GROUP_ORDER,
   SEARCH_HIT_ORDER,
+  searchActivityRoute,
   searchEmailRoute,
   searchGroupType,
   searchHitDestination,
@@ -28,9 +31,8 @@ describe("searchHitRoute", () => {
     expect(searchHitRoute("tag", "t1")).toEqual({ screen: "tags", id: "t1" });
   });
 
-  // An activity is a link rather than a thing links hang off. Where it IS a
-  // message, searchEmailRoute answers instead — a question about the hit, not
-  // about its type, which is why this arm stays null.
+  // An activity has no page. Which panel it opens in is a question about the
+  // hit, which searchHitDestination answers.
   it("gives an activity no page of its own", () => {
     expect(searchHitRoute("activity", "a1")).toBeNull();
   });
@@ -52,9 +54,46 @@ describe("searchEmailRoute", () => {
   // be the results for something: landing on an empty search with a drawer
   // over it would give the reader nothing to go back to.
   it("keeps the query the reader typed", () => {
-    expect(searchEmailRoute("Rennsteig terms", "a1").id).toBe(
-      "Rennsteig terms",
-    );
+    expect(
+      decodeURIComponent(searchEmailRoute("Rennsteig terms", "a1").id ?? ""),
+    ).toBe("Rennsteig terms");
+  });
+});
+
+// A route has to survive being written to the address and read back. A "/" in
+// the query must not shift the message id along a segment.
+describe("search routes through the address", () => {
+  const QUERIES = [
+    "ACME / renewal",
+    "50% off",
+    "C# rollout",
+    "quarterly review",
+    "Müller Straße 東京",
+    "%2F already encoded",
+  ];
+  const throughTheAddress = (route: Route) => {
+    const read = parseHash(routeHash(route));
+    return {
+      q: decodeURIComponent(read.id ?? ""),
+      id: read.id2,
+      openAs: read.id3,
+    };
+  };
+
+  it.each(QUERIES)("an email route keeps %j and its message", (query) => {
+    expect(throughTheAddress(searchEmailRoute(query, "a1"))).toEqual({
+      q: query,
+      id: "a1",
+      openAs: undefined,
+    });
+  });
+
+  it.each(QUERIES)("an activity route keeps %j and its panel", (query) => {
+    expect(throughTheAddress(searchActivityRoute(query, "a2"))).toEqual({
+      q: query,
+      id: "a2",
+      openAs: SEARCH_ACTIVITY_SEGMENT,
+    });
   });
 });
 
@@ -70,13 +109,12 @@ describe("searchHitDestination", () => {
     ).toEqual({ screen: "search", id: "renewal", id2: "a1" });
   });
 
-  // A call, a note, a task and a meeting are activities too, and the server
-  // sends no summary for them. Branching on the FIELD rather than the kind
-  // word is what keeps them out.
-  it("still gives a non-email activity nowhere to go", () => {
+  // A call, a note, a task and a meeting are activities too. The server sends
+  // no summary for them, and they open the activity panel on the results.
+  it("sends a non-email activity to the results, open in the activity panel", () => {
     expect(
       searchHitDestination({ type: "activity", id: "a2" }, "renewal"),
-    ).toBeNull();
+    ).toEqual({ screen: "search", id: "renewal", id2: "a2", id3: "activity" });
   });
 
   it("leaves every other type on the destination it had", () => {

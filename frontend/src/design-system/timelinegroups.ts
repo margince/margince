@@ -1,4 +1,4 @@
-import type { TimelineEntry, TimelineGroup } from "./composed";
+import type { TimelineEntry, TimelineGroup } from "./timelineentry";
 
 export type { TimelineGroup };
 

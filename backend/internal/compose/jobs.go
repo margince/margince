@@ -82,6 +82,7 @@ func sweepInsertOpts() *river.InsertOpts {
 // Embedder registers nothing for the drift sweep and anyway for a reindex —
 // which is why the posture is stated per kind and never per field.
 type JobRunnerConfig struct {
+	DataTasksPace time.Duration
 	// Schedules is the interval every {setting: …} cadence runs at, read from
 	// the admin's settings at boot and moved by its Watch while the worker
 	// runs. Nil schedules from the registered defaults.
@@ -199,6 +200,10 @@ type JobRunnerConfig struct {
 	// owed until somebody ticks its reminder, because a reply alone has never
 	// settled one.
 	SettlementBrain completer
+	// TagSuggestBrain is the tag_suggest lane, which reads captured items
+	// against the suggestible tags' descriptions. Nil = the tag scout matches
+	// description phrases instead.
+	TagSuggestBrain completer
 	// EnrichBrain is the signature-enrich lane; nil = the pass is absent
 	// by omission and connector-created contacts keep their empty fields.
 	EnrichBrain completer
@@ -400,6 +405,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 	addImportJobs(reg, pool, cfg, log)
 
 	periodic := slices.Concat(
+		addDataTaskJobs(reg, pool, cfg),
 		addMeetingDeliveryJob(reg, pool, cfg),
 		// The passes that register themselves: each helper wires its own
 		// workers and hands back the schedules that go with them, so this
@@ -450,6 +456,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		periodicFor(cfg, MailDraftRetentionArgs{}),
 		periodicFor(cfg, WaitingHorizonRefreshArgs{}),
 		periodicFor(cfg, ApprovalExpiryArgs{}),
+		periodicFor(cfg, ApprovalNoticeReconcileArgs{}),
 		periodicFor(cfg, IntroExpiryArgs{}),
 		periodicFor(cfg, ApprovalAutoApplyArgs{}),
 		periodicFor(cfg, CaptureAutoEnrichSweepArgs{}),

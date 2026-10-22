@@ -4,7 +4,7 @@
 import {
   bookingInvitation,
   bookingProfile,
-} from "../../src/screens/book.testkit";
+} from "../../src/testing/book.testkit";
 import { publicSlots } from "./fixtures";
 import type { Handler } from "./server";
 

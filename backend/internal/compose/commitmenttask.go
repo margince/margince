@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 
@@ -32,21 +33,26 @@ import (
 // The links are frozen at staging time: a rep confirms the proposal they were
 // shown, and a relink between the two moments must not move the task.
 type CommitmentTaskProposal struct {
-	SourceActivityID ids.UUID `json:"source_activity_id"`
-	Summary          string   `json:"summary"`
+	ExistingTaskID   *ids.UUID `json:"existing_task_id,omitempty"`
+	SourceActivityID ids.UUID  `json:"source_activity_id"`
+	Summary          string    `json:"summary"`
 	// Party is who made the promise, as the source names them.
 	Party string `json:"party"`
 	// SeatID is the colleague the task is for. Nil when nobody could be named,
 	// and then accepting it makes it the decider's.
 	SeatID *ids.UUID `json:"seat_id,omitempty"`
+	// PromiserSeatID preserves attribution when the proposed assignee must differ.
+	PromiserSeatID     *ids.UUID `json:"promiser_seat_id,omitempty"`
+	PromiserUnresolved bool      `json:"promiser_unresolved,omitempty"`
 	// DueDate is a day, YYYY-MM-DD, or empty. Text rather than an instant, so a
 	// reviewer edits a day and acceptance decides when that day ends.
-	DueDate string                         `json:"due_date,omitempty"`
-	Links   []activities.ActivityLinkInput `json:"links"`
-	Quote   string                         `json:"quote"`
-	Locator string                         `json:"locator"`
-	ClaimID *ids.UUID                      `json:"claim_id,omitempty"`
-	Body    string                         `json:"body"`
+	DueDate  string                         `json:"due_date,omitempty"`
+	Links    []activities.ActivityLinkInput `json:"links"`
+	Quote    string                         `json:"quote"`
+	Locator  string                         `json:"locator"`
+	ClaimID  *ids.UUID                      `json:"claim_id,omitempty"`
+	ClaimIDs []ids.UUID                     `json:"claim_ids,omitempty"`
+	Body     string                         `json:"body"`
 	// PrivateTo is the one member the source mail answers to, whose alone the
 	// task is to read. Nil for a shared conversation.
 	PrivateTo *ids.UUID `json:"private_to,omitempty"`
@@ -63,6 +69,7 @@ type commitmentTask struct {
 	DueDate          string
 	Assignee         ids.UUID
 	ClaimID          *ids.UUID
+	ClaimIDs         []ids.UUID
 	PrivateTo        *ids.UUID
 }
 
@@ -110,8 +117,9 @@ func writeCommitmentTask(
 		return ids.UUID{}, err
 	}
 	taskID := ids.UUID(task.Id)
-	if t.ClaimID != nil {
-		if err := claims.SetClaimTaskTx(execCtx, tx, *t.ClaimID, taskID); err != nil {
+	claimIDs := commitmentClaimIDs(t.ClaimID, t.ClaimIDs)
+	for _, claimID := range claimIDs {
+		if err := claims.SetClaimTaskTx(execCtx, tx, claimID, taskID); err != nil {
 			return ids.UUID{}, err
 		}
 	}
@@ -188,11 +196,14 @@ func commitmentTaskEffect(
 				return fmt.Errorf("compose: a commitment read out of private mail is its owner's to accept: %w",
 					apperrors.ErrPermissionDenied)
 			}
+			if proposal.ExistingTaskID != nil {
+				return attachCommitmentRecipients(ctx, tx, tasks, claims, proposal)
+			}
 			_, err = writeCommitmentTask(ctx, tx, tasks, claims, commitmentTask{
 				Locator: proposal.Locator,
 				Summary: proposal.Summary, Body: proposal.Body,
 				SourceActivityID: proposal.SourceActivityID, Links: proposal.Links,
-				DueDate: proposal.DueDate, Assignee: assignee, ClaimID: proposal.ClaimID,
+				DueDate: proposal.DueDate, Assignee: assignee, ClaimID: proposal.ClaimID, ClaimIDs: proposal.ClaimIDs,
 				PrivateTo: privateTo,
 			})
 			return err
@@ -229,7 +240,7 @@ func sourcePrivateToNow(ctx context.Context, tx pgx.Tx, source ids.UUID, staged 
 	}
 	if !offered {
 		return nil, fmt.Errorf("compose: the conversation this commitment was read from changed since, "+
-			"and who may read it is no longer known — dismiss this card and let the next reading propose it again: %w",
+			"and who may read it is no longer known — review conversation access before retrying: %w",
 			apperrors.ErrConflict)
 	}
 	if staged != nil || owner.IsZero() {
@@ -276,7 +287,9 @@ func refuseCommitmentEdit(staged, edited json.RawMessage) error {
 		return &approvals.InvalidEditError{Cause: fmt.Errorf(
 			"the due date %q is not a date — write it as YYYY-MM-DD", after.DueDate)}
 	}
-	after.Summary, after.DueDate = before.Summary, before.DueDate
+	if before.ExistingTaskID == nil {
+		after.Summary, after.DueDate = before.Summary, before.DueDate
+	}
 	pinned, err := json.Marshal(after)
 	if err != nil {
 		return fmt.Errorf("compose: marshal edited commitment proposal: %w", err)
@@ -289,4 +302,36 @@ func refuseCommitmentEdit(staged, edited json.RawMessage) error {
 		return &approvals.InvalidEditError{Cause: errors.New("only the promise's wording and its due date may be edited")}
 	}
 	return nil
+}
+
+func commitmentClaimIDs(single *ids.UUID, plural []ids.UUID) []ids.UUID {
+	named := slices.Clone(plural)
+	if single != nil && !slices.Contains(named, *single) {
+		named = append(named, *single)
+	}
+	return named
+}
+
+func attachCommitmentRecipients(ctx context.Context, tx pgx.Tx, tasks *activities.Store, claims *contacts.Store, proposal CommitmentTaskProposal) error {
+	target, err := commitmentRecipientTarget(ctx, tx, tasks, proposal)
+	if err != nil {
+		return err
+	}
+	for _, claim := range commitmentClaimIDs(proposal.ClaimID, proposal.ClaimIDs) {
+		if err := claims.SetClaimTaskTx(ctx, tx, claim, target); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func commitmentRecipientTarget(ctx context.Context, tx pgx.Tx, tasks *activities.Store, proposal CommitmentTaskProposal) (ids.UUID, error) {
+	target, err := tasks.OpenCommitmentTaskTx(ctx, tx, proposal.Locator, proposal.PrivateTo)
+	if err != nil {
+		return ids.Nil, err
+	}
+	if proposal.ExistingTaskID == nil || target.ID.IsZero() || target.ID != *proposal.ExistingTaskID || derefSeat(target.Assignee) != derefSeat(proposal.SeatID) {
+		return ids.Nil, apperrors.ErrVersionSkew
+	}
+	return target.ID, nil
 }

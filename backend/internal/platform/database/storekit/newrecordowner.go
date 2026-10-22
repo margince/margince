@@ -24,8 +24,13 @@ import (
 // It takes a transaction because the question is a query, which is why a
 // create asks it in its transactional body rather than beside its parse.
 func NewRecordOwner(ctx context.Context, tx pgx.Tx, owner *ids.UserID) (*ids.UserID, error) {
+	return NewRecordOwnerWithDefault(ctx, tx, owner, OwnerOrActor(ctx))
+}
+
+// NewRecordOwnerWithDefault takes identity from the fallback but checks named assignments as the caller.
+func NewRecordOwnerWithDefault(ctx context.Context, tx pgx.Tx, owner, fallback *ids.UserID) (*ids.UserID, error) {
 	if owner == nil {
-		return OwnerOrActor(ctx), nil
+		return fallback, nil
 	}
 	if err := auth.EnsureNewRecordOwner(ctx, tx, owner.UUID); err != nil {
 		return nil, err

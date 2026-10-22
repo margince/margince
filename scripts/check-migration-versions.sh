@@ -226,6 +226,8 @@ base_namespaces="$(git ls-tree --name-only -d "$BASE_REF" "$MIGRATIONS_DIR/" 2>/
 all_namespaces="$(printf '%s\n%s\n' "$tree_namespaces" "$base_namespaces" | sort -u)"
 
 for ns in $all_namespaces; do
+  # Operator scripts have no migration ledger. The embedded-files test keeps this directory outside startup migrations.
+  [[ "$ns" = "datafix" ]] && continue
   tree_rows="$(migrations_in_tree "$ns")"
   base_rows="$(migrations_at "$BASE_REF" "$ns")"
   fork_rows="$(migrations_at "$FORK_REF" "$ns")"

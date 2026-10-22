@@ -39,6 +39,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
+	"github.com/margince/margince/backend/internal/platform/mailer"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -97,8 +98,8 @@ func (h Handlers) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 	// disclose whether the address maps to an account. Failures on the
 	// async path are operator incidents, logged — never a different
 	// answer to the caller.
-	// NOSONAR: releaseSend is deferred in the goroutine, which outlives this
-	// handler. Releasing it here would cancel the send it bounds.
+	// releaseSend is deferred in the goroutine, which outlives this handler.
+	// Releasing it here would cancel the send it bounds.
 	workCtx, releaseSend := context.WithTimeout(context.WithoutCancel(r.Context()), resetSendTimeout)
 	done := h.resetSendStarted // test seam; nil in production
 	go func() {
@@ -133,11 +134,9 @@ func (h Handlers) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		link := passwordLink(h.passwordLinkBaseURL, rawToken)
-		words := h.mailCopy(workCtx)
-		body := words.ResetIntro + "\n\n" +
-			words.ResetAction + "\n\n  " + link + "\n\n" +
-			words.ResetIgnore
-		if err := h.resetMailer.Send(workCtx, email.String(), words.ResetSubject, body); err != nil {
+		words := h.mailCopy(workCtx, email.String())
+		body := words.AccountMessage(false, "", "", link)
+		if err := mailer.SendProduct(workCtx, h.resetMailer, email.String(), words.ResetSubject, body); err != nil {
 			slog.Error("password-reset email failed", "err", err)
 		}
 	}()

@@ -5,8 +5,7 @@
  * from a rule nested under it. */
 
 /* The box the count is pinned to. `position: relative` is the whole job — the
-   trigger inside is an ordinary design-system Button and owns its own
-   geometry, which is why it wears no class of its own here. */
+   trigger inside is a bare design-system Button and owns its own geometry. */
 .notifbell {
   position: relative;
   display: flex;

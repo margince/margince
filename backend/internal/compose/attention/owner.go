@@ -44,6 +44,7 @@ const (
 	ownerUnstated ownerKind = iota
 	// ownerNamed: this lane resolved a contact.
 	ownerNamed
+	ownerShared
 	// ownerNobody: this lane's rows are genuinely unheld.
 	ownerNobody
 	// ownerTheReader: this lane's read is bound to the acting user.
@@ -74,7 +75,8 @@ const (
 type ownerRef struct {
 	kind ownerKind
 	// user is who answers, for ownerNamed.
-	user ids.UUID
+	user  ids.UUID
+	users []ids.UUID
 }
 
 // ownedBy is a producer naming the contact who answers for a row.
@@ -110,13 +112,8 @@ func ownedByWhoeverIsReading() ownerRef { return ownerRef{kind: ownerTheReader} 
 // wire step reads the deal the facts pass attached.
 func deferredToTheDeal() ownerRef { return ownerRef{kind: ownerFromTheDeal} }
 
-// ownerOnTheWire is the field a client draws, with the label still to resolve.
-//
-// The DEAL's owner is consulted only where the lane itself did not answer, and
-// the order matters for the reason answersTo documents: a waiting row absorbs a
-// drifting deal's facts for display between two passes, so asking the deal
-// first can answer differently on the second pass than on the first, and a
-// customer lands on neither contact's queue.
+// ownerOnTheWire resolves the producer's attribution for scope and display.
+// Deal facts decide ownership only when the producer explicitly defers to them.
 func ownerOnTheWire(row ranked, reader ids.UUID) *crmcontracts.WorklistOwner {
 	switch row.ownerRef.kind {
 	case ownerNamed:
@@ -124,6 +121,12 @@ func ownerOnTheWire(row ranked, reader ids.UUID) *crmcontracts.WorklistOwner {
 			Kind: crmcontracts.WorklistOwnerKindWorklistOwnerUser,
 			Id:   idPtr(row.ownerRef.user),
 		}
+	case ownerShared:
+		users := make([]crmcontracts.WorklistOwnerMember, 0, len(row.ownerRef.users))
+		for _, user := range row.ownerRef.users {
+			users = append(users, crmcontracts.WorklistOwnerMember{Id: *idPtr(user)})
+		}
+		return &crmcontracts.WorklistOwner{Kind: crmcontracts.WorklistOwnerKindWorklistOwnerShared, Users: &users}
 	case ownerNobody:
 		return &crmcontracts.WorklistOwner{Kind: crmcontracts.WorklistOwnerKindWorklistOwnerUnassigned}
 	case ownerUnreadable:
@@ -267,6 +270,13 @@ func (s *Service) nameTheOwners(ctx context.Context, queue []crmcontracts.Workli
 // nameAnOwner labels one owner with their roster name. One rule for every
 // surface that names an owner: an id the roster knows, with a non-empty name.
 func nameAnOwner(owner *crmcontracts.WorklistOwner, names map[ids.UUID]string) {
+	if owner.Users != nil {
+		for i := range *owner.Users {
+			if name := names[ids.UUID((*owner.Users)[i].Id)]; name != "" {
+				(*owner.Users)[i].Label = &name
+			}
+		}
+	}
 	if owner.Id == nil {
 		return
 	}
@@ -290,40 +300,23 @@ func rosterNames(roster []TeamMember) map[ids.UUID]string {
 // label nothing is a query per page for no reader's benefit.
 func anyOwnerNeedsAName(queue []crmcontracts.WorklistItem) bool {
 	for _, item := range queue {
-		if (item.Owner != nil && item.Owner.Id != nil) || item.Host != nil {
+		if (item.Owner != nil && (item.Owner.Id != nil || item.Owner.Users != nil && len(*item.Owner.Users) > 0)) || item.Host != nil {
 			return true
 		}
 	}
 	return false
 }
 
-// assigneeID is the assignee as the SCOPE filters read it.
-//
-// The same value ownerFromAssignee turns into the wire's answer, in the shape
-// answersTo wants: a zero id where nobody holds the row. Both readings come off
-// this one field so a task cannot be unowned to the filters and owned to the
-// client — which is how an outside-team assignee reached both the page and the
-// wire while `keepTeams` counted the row as nobody's.
-func assigneeID(assignee *openapi_types.UUID) ids.UUID {
-	if assignee == nil {
-		return ids.UUID{}
+// A missing owner is unassigned only when the owning record was readable.
+func waitingOwner(owner ids.UUID, known bool, recipients []ids.UUID) ownerRef {
+	if !owner.IsZero() {
+		return ownedBy(owner)
 	}
-	return ids.UUID(*assignee)
-}
-
-// waitingOwner is the waiting lane's answer, where a zero id is ambiguous.
-//
-// Every other owner-column lane can read a zero as "nobody has taken it". This
-// one cannot: its eligibility is qualified through an ungated lookup and its
-// owner through a visibility-gated one, so a row whose owning record the reader
-// may not open reaches here indistinguishable from an unowned customer.
-//
-// It says nothing in that case. A withheld owner reported as `unassigned` is a
-// claim the workspace never made — somebody does owe that reply — and the
-// reader has nothing on the row to tell them the difference.
-func waitingOwner(owner ids.UUID) ownerRef {
-	if owner.IsZero() {
-		return ownerRef{kind: ownerUnreadable}
+	if len(recipients) > 1 {
+		return ownerRef{kind: ownerShared, users: recipients}
 	}
-	return ownedBy(owner)
+	if known {
+		return unassigned()
+	}
+	return ownerRef{kind: ownerUnreadable}
 }

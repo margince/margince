@@ -127,6 +127,7 @@ func TestExtractPayloadFidelity(t *testing.T) {
 	promise := func(quote, due string) extractedEvent {
 		e := event("commitment_made", second, "We send the final invoice on Friday.", 0.8)
 		e.Quote, e.DueDate = quote, due
+		e.Meaning = &commitmentMeaning{State: "open", DeadlinePrecision: "day", DeadlineQuote: "Friday"}
 		return e
 	}
 

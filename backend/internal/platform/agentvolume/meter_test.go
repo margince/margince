@@ -39,7 +39,7 @@ func humanCtx(t *testing.T) context.Context {
 // governedCounters is every counter that can refuse. Tests that assert a
 // property of "the bound" walk it rather than naming one, so a counter added
 // later inherits the property instead of quietly opting out of it.
-var governedCounters = []Counter{Reads, Writes, Egress, Calls}
+var governedCounters = []Counter{Writes, Egress, Calls}
 
 // The sharpest property in the package: a meter that cannot reach its counter
 // does not know whether the threshold has been passed, and a control that
@@ -55,9 +55,9 @@ func TestAnUnreachableCounterRefusesTheAgentRatherThanAdmittingIt(t *testing.T) 
 		if !reading.Exceeded {
 			t.Errorf("a meter with no counter admitted %s; the bound is removable by stopping Redis", c)
 		}
-		if reading.Limit != meter.Limit(c) {
+		if reading.Limit != meter.window(t.Context()).limits.of(c) {
 			t.Errorf("the %s refusal reported limit %d, not the configured %d — a caller cannot act on a limit that is not the real one",
-				c, reading.Limit, meter.Limit(c))
+				c, reading.Limit, meter.window(t.Context()).limits.of(c))
 		}
 		if reading.Counter != c {
 			t.Errorf("a reading of %s named itself %s; a refusal that misnames its quota cannot be acted on", c, reading.Counter)
@@ -91,7 +91,7 @@ func TestAHumanIsNotMeteredEvenWhenTheCounterIsUnreachable(t *testing.T) {
 func TestACallWithNoActorIsNotMetered(t *testing.T) {
 	meter := New(nil, Limits{}, DefaultWindow)
 
-	if meter.Read(t.Context(), Reads).Exceeded {
+	if meter.Read(t.Context(), Writes).Exceeded {
 		t.Error("a call with no actor was refused by a bound that only governs agents")
 	}
 }
@@ -102,10 +102,10 @@ func TestACallWithNoActorIsNotMetered(t *testing.T) {
 func TestChargingAnUnmeteredCallerRecordsNothingAndDoesNotFail(t *testing.T) {
 	meter := New(nil, Limits{}, DefaultWindow)
 
-	if err := meter.Consume(humanCtx(t), Reads, 25); err != nil {
+	if err := meter.Consume(humanCtx(t), Writes, 25); err != nil {
 		t.Errorf("charging a human failed: %v", err)
 	}
-	if err := meter.Consume(agentCtx(t), Reads, 0); err != nil {
+	if err := meter.Consume(agentCtx(t), Writes, 0); err != nil {
 		t.Errorf("charging an empty page failed: %v", err)
 	}
 }
@@ -122,8 +122,8 @@ func TestAnAgentWithNoPassportIsStillMetered(t *testing.T) {
 		Type: principal.PrincipalAgent, ID: "agent:passportless",
 	})
 
-	if !meter.Read(ctx, Reads).Exceeded {
-		t.Error("an agent with no Passport escaped the read bound entirely")
+	if !meter.Read(ctx, Writes).Exceeded {
+		t.Error("an agent with no Passport escaped the volume bound entirely")
 	}
 }
 
@@ -135,13 +135,13 @@ func TestTheWindowBucketRollsOverWithTheInjectedClock(t *testing.T) {
 	clock := func() time.Time { return now }
 	meter := NewWithClock(nil, Limits{}, time.Hour, clock)
 
-	first := meter.Bucket()
+	first := meter.Bucket(t.Context())
 	now = now.Add(59 * time.Minute)
-	if meter.Bucket() != first {
+	if meter.Bucket(t.Context()) != first {
 		t.Error("two moments inside one window landed in different buckets")
 	}
 	now = now.Add(2 * time.Minute)
-	if meter.Bucket() == first {
+	if meter.Bucket(t.Context()) == first {
 		t.Error("a moment past the window boundary stayed in the previous bucket")
 	}
 }
@@ -152,7 +152,7 @@ func TestTheWindowBucketRollsOverWithTheInjectedClock(t *testing.T) {
 func TestTheCounterOutlivesItsWindowByTheSkewSlackOnly(t *testing.T) {
 	meter := New(nil, Limits{}, 24*time.Hour)
 
-	ttl := time.Duration(meter.ttlSeconds()) * time.Second
+	ttl := time.Duration(meter.window(t.Context()).ttlSeconds()) * time.Second
 
 	if ttl <= 24*time.Hour {
 		t.Errorf("a counter with a %s expiry dies inside its own 24h window", ttl)
@@ -171,31 +171,30 @@ func TestEachPassportWorkspaceAndCounterCountsSeparately(t *testing.T) {
 	ws, other := ids.New[ids.WorkspaceKind]().UUID, ids.New[ids.WorkspaceKind]().UUID
 	passport, second := ids.New[ids.PassportKind]().String(), ids.New[ids.PassportKind]().String()
 
-	if meter.countKey(ws, passport, Reads, 1) == meter.countKey(ws, second, Reads, 1) {
+	if meter.countKey(ws, passport, Writes, 1) == meter.countKey(ws, second, Writes, 1) {
 		t.Error("two Passports in one workspace share a counter")
 	}
-	if meter.countKey(ws, passport, Reads, 1) == meter.countKey(other, passport, Reads, 1) {
+	if meter.countKey(ws, passport, Writes, 1) == meter.countKey(other, passport, Writes, 1) {
 		t.Error("one Passport shares a counter across two workspaces")
 	}
-	if meter.countKey(ws, passport, Reads, 1) == meter.countKey(ws, passport, Writes, 1) {
+	if meter.countKey(ws, passport, Writes, 1) == meter.countKey(ws, passport, Egress, 1) {
 		t.Error("one Passport's reads and writes share a counter")
 	}
-	if meter.countKey(ws, passport, Reads, 1) == meter.releaseKey(ws, passport, Reads, 1) {
+	if meter.countKey(ws, passport, Writes, 1) == meter.releaseKey(ws, passport, Writes, 1) {
 		t.Error("the charge and the release a human granted share a key; one would erase the other")
 	}
 }
 
 // The key prefix is load-bearing history, not a name. Renaming it orphans every
-// live read window at deploy, and an orphaned counter reads as zero — one free
-// full allowance per connected Passport, on the exact release meant to tighten
-// the bound. Pinned so the rename is a deliberate act with a failing test in
-// front of it.
+// live window at deploy, and an orphaned counter reads as zero. That hands every
+// connected Passport a free allowance on the release meant to tighten the bound.
+// This test makes a rename an explicit act.
 func TestTheCounterKeyPrefixIsPinnedToWhatIsAlreadyDeployed(t *testing.T) {
 	meter := New(nil, Limits{}, DefaultWindow)
 	ws := ids.New[ids.WorkspaceKind]().UUID
-	key := meter.countKey(ws, "passport", Reads, 7)
+	key := meter.countKey(ws, "passport", Writes, 7)
 
-	if want := "msr:" + ws.String() + ":passport:reads:7"; key != want {
+	if want := "msr:" + ws.String() + ":passport:writes:7"; key != want {
 		t.Errorf("counter key is %q, want %q — changing this resets every live window to zero", key, want)
 	}
 }
@@ -209,10 +208,10 @@ func TestRebindingReachesEveryHolderOfTheSharedPointer(t *testing.T) {
 	shared := New(nil, Limits{}, DefaultWindow)
 	held := shared // the gate's copy of the pointer, taken before the rebind
 
-	shared.RebindFrom(New(nil, Limits{Reads: 50}, time.Hour))
+	shared.RebindFrom(New(nil, Limits{Writes: 50}, time.Hour))
 
-	if held.Limit(Reads) != 50 {
-		t.Errorf("a holder that took the pointer before the rebind still reads limit %d, not the rebound 50", held.Limit(Reads))
+	if held.window(t.Context()).limits.of(Writes) != 50 {
+		t.Errorf("a holder that took the pointer before the rebind still reads limit %d, not the rebound 50", held.window(t.Context()).limits.of(Writes))
 	}
 }
 
@@ -224,10 +223,10 @@ func TestAnUnusableConfiguredWindowFallsBackToTheSpecDefault(t *testing.T) {
 		return time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
 	})
 
-	if meter.window != DefaultWindow {
-		t.Errorf("a zero window resolved to %s, not the %s default", meter.window, DefaultWindow)
+	if got := meter.window(t.Context()).length; got != DefaultWindow {
+		t.Errorf("a zero window resolved to %s, not the %s default", got, DefaultWindow)
 	}
-	if meter.Bucket() <= 0 {
+	if meter.Bucket(t.Context()) <= 0 {
 		t.Error("the window fallback did not produce a usable bucket")
 	}
 }
@@ -248,7 +247,7 @@ func TestAnUnmeteredCompositionAdmitsWhereAnUnreachableOneRefuses(t *testing.T) 
 			t.Errorf("a bound that cannot reach its counter admitted %s", c)
 		}
 	}
-	if err := declared.Consume(ctx, Reads, 5000); err != nil {
+	if err := declared.Consume(ctx, Writes, 5000); err != nil {
 		t.Errorf("charging an unmetered composition failed: %v", err)
 	}
 }
@@ -261,7 +260,7 @@ func TestRebindingCarriesWhetherTheCompositionIsBounded(t *testing.T) {
 
 	shared.RebindFrom(Unmetered())
 
-	if shared.Read(agentCtx(t), Reads).Exceeded {
+	if shared.Read(agentCtx(t), Writes).Exceeded {
 		t.Error("rebinding to an unmetered composition left the meter refusing")
 	}
 }
@@ -273,14 +272,14 @@ func TestASubSecondWindowBucketsRatherThanDividingByZero(t *testing.T) {
 	now := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
 	meter := NewWithClock(nil, Limits{}, 500*time.Millisecond, func() time.Time { return now })
 
-	first := meter.Bucket()
+	first := meter.Bucket(t.Context())
 	now = now.Add(600 * time.Millisecond)
 
-	if meter.Bucket() == first {
+	if meter.Bucket(t.Context()) == first {
 		t.Error("a 500ms window did not roll after 600ms")
 	}
-	if meter.ttlSeconds() < 1 {
-		t.Errorf("a sub-second window asked Redis for a %ds expiry, which never expires", meter.ttlSeconds())
+	if meter.window(t.Context()).ttlSeconds() < 1 {
+		t.Errorf("a sub-second window asked Redis for a %ds expiry, which never expires", meter.window(t.Context()).ttlSeconds())
 	}
 }
 
@@ -290,7 +289,7 @@ func TestASubSecondWindowBucketsRatherThanDividingByZero(t *testing.T) {
 // admitted it would hand out a free pass on a wiring fault.
 func TestAnAgentWithNoWorkspaceIsRefusedRatherThanUnmetered(t *testing.T) {
 	meter := Unmetered() // even an unmetered composition must not be the reason
-	if meter.Read(t.Context(), Reads).Exceeded {
+	if meter.Read(t.Context(), Writes).Exceeded {
 		t.Fatal("an unmetered composition refused a call")
 	}
 
@@ -300,8 +299,8 @@ func TestAnAgentWithNoWorkspaceIsRefusedRatherThanUnmetered(t *testing.T) {
 		PassportID: ids.New[ids.PassportKind]().UUID,
 	})
 
-	if !bounded.Read(ctx, Reads).Exceeded {
-		t.Error("an agent with no workspace bound escaped the read bound entirely")
+	if !bounded.Read(ctx, Writes).Exceeded {
+		t.Error("an agent with no workspace bound escaped the volume bound entirely")
 	}
 }
 
@@ -313,8 +312,8 @@ func TestAHumanWithNoWorkspaceIsStillUnmetered(t *testing.T) {
 		Type: principal.PrincipalHuman, ID: "human:rep",
 	})
 
-	if meter.Read(ctx, Reads).Exceeded {
-		t.Error("a human with no workspace was refused by the agent read bound")
+	if meter.Read(ctx, Writes).Exceeded {
+		t.Error("a human with no workspace was refused by the agent volume bound")
 	}
 }
 
@@ -326,15 +325,15 @@ func TestEveryReadingNamesItsOwnWindow(t *testing.T) {
 	meter := NewWithClock(nil, Limits{}, time.Hour, func() time.Time { return now })
 	ctx := agentCtx(t)
 
-	first := meter.Read(ctx, Reads).Bucket
-	if first != meter.Bucket() {
-		t.Errorf("a reading named window %d while the meter is in %d", first, meter.Bucket())
+	first := meter.Read(ctx, Writes).Bucket
+	if first != meter.Bucket(t.Context()) {
+		t.Errorf("a reading named window %d while the meter is in %d", first, meter.Bucket(t.Context()))
 	}
 	now = now.Add(2 * time.Hour)
-	if meter.Read(ctx, Reads).Bucket == first {
+	if meter.Read(ctx, Writes).Bucket == first {
 		t.Error("a reading taken two windows later named the earlier window")
 	}
-	if meter.Read(humanCtx(t), Reads).Bucket == 0 {
+	if meter.Read(humanCtx(t), Writes).Bucket == 0 {
 		t.Error("an unmetered reading named no window; the field must be answerable on every path")
 	}
 }
@@ -367,10 +366,10 @@ func TestACounterValueThisMeterDidNotWriteIsAnErrorNotAZero(t *testing.T) {
 // of two different things — which is what a caller reaching for the package
 // default instead would produce.
 func TestTheMeterAnswersTheWindowItActuallyCounts(t *testing.T) {
-	if got := New(nil, Limits{}, time.Hour).Window(); got != time.Hour {
+	if got := New(nil, Limits{}, time.Hour).window(t.Context()).length; got != time.Hour {
 		t.Errorf("Window() = %s, want the configured hour", got)
 	}
-	if got := New(nil, Limits{}, 0).Window(); got != DefaultWindow {
+	if got := New(nil, Limits{}, 0).window(t.Context()).length; got != DefaultWindow {
 		t.Errorf("an unusable window answered %s, want the %s default", got, DefaultWindow)
 	}
 }
@@ -387,5 +386,19 @@ func TestRebindingCarriesTheCostCeiling(t *testing.T) {
 
 	if got := shared.Read(agentCtx(t), Cost).Limit; got != 40_000 {
 		t.Errorf("after a rebind the cost share reads %d, want the live 40000", got)
+	}
+}
+
+func TestAConnectionIsCountedAsItsGrantAndAMintedPassportAsItself(t *testing.T) {
+	passport, connection := ids.New[ids.PassportKind]().UUID, ids.NewV7()
+
+	if got := SubjectOf(passport, connection); got != connection.String() {
+		t.Errorf("a connection's passport is counted as %s, want its grant %s", got, connection)
+	}
+	if got := SubjectOf(passport, ids.UUID{}); got != passport.String() {
+		t.Errorf("a minted passport is counted as %s, want itself", got)
+	}
+	if got := SubjectOf(ids.UUID{}, ids.UUID{}); got != "" {
+		t.Errorf("no passport at all is counted as %q, want nothing", got)
 	}
 }

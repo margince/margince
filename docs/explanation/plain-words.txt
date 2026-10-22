@@ -37,7 +37,6 @@ aggregate
 agree
 agreement
 ahead
-aims
 air
 alert
 alike
@@ -516,7 +515,6 @@ extra
 extract
 extractor
 extractor's
-extractors
 facing
 fact
 fail
@@ -1335,7 +1333,6 @@ sixty
 size
 skip
 sleep
-slice
 slim
 slot
 slow
@@ -1415,7 +1412,6 @@ suggestion
 suggests
 suite
 summary
-sunday
 superuser
 supervisor
 supply

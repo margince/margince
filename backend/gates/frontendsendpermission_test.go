@@ -49,12 +49,12 @@ import (
 const (
 	sendPermissionContract  = "api/crm.yaml"
 	sendPermissionFrontend  = "../frontend/src"
-	sendPermissionComponent = "../frontend/src/screens/sendpermission.tsx"
+	sendPermissionComponent = "../frontend/src/components/sendpermission.tsx"
 	// composerSurface is the file this walk must always see. A count would follow
 	// how many composers the app has. A name fails when the walk goes blind, and
 	// it says which file to look for. The composer's send hook names the door,
 	// and compose.tsx renders the answer.
-	composerSurface = "screens/composesend.ts"
+	composerSurface = "features/mail/composesend.ts"
 )
 
 // silentSendSurfaces ratifies each surface that posts to a send door without

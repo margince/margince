@@ -16,6 +16,7 @@ package attention
 // right ones.
 
 import (
+	"slices"
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -30,7 +31,8 @@ func classifyDay(day crmcontracts.Attention, asOf time.Time, money dayMoney) []r
 	bar := materialBarOf(day, money)
 	rows = appendLane(rows, day.Meetings, asOf, classifyMeeting)
 	rows = appendLane(rows, day.MeetingsUnreported, asOf, classifyUnansweredMeeting)
-	rows = appendLane(rows, &day.ThisMorning, asOf, func(item crmcontracts.AttentionItem, at time.Time) ranked {
+	admitted := admittedBriefItems(day, asOf)
+	rows = appendLane(rows, &admitted, asOf, func(item crmcontracts.AttentionItem, at time.Time) ranked {
 		return classifyBriefItem(item, at, money)
 	})
 	rows = appendLane(rows, day.Commitments, asOf, classifyCommitment)
@@ -65,7 +67,12 @@ func appendLane(
 		return rows
 	}
 	for _, item := range *lane {
-		rows = append(rows, classify(item, asOf))
+		row := classify(item, asOf)
+		// Read by no classifier, so carried here once for every lane.
+		if item.SubjectMovedAt != nil {
+			row.subjectMovedAt = *item.SubjectMovedAt
+		}
+		rows = append(rows, row)
 	}
 	return rows
 }
@@ -80,22 +87,26 @@ func base(
 	consequence crmcontracts.WorklistItemConsequence,
 ) crmcontracts.WorklistItem {
 	return crmcontracts.WorklistItem{
-		Id:           item.Id,
-		Source:       crmcontracts.WorklistItemSource(item.Source),
-		Category:     category,
-		Level:        level,
-		Consequence:  consequence,
-		Kind:         item.Kind,
-		Title:        item.Title,
-		Detail:       item.Detail,
-		NoticeOrigin: item.NoticeOrigin,
-		CauseRef:     item.CauseRef,
+		Id:                item.Id,
+		Source:            crmcontracts.WorklistItemSource(item.Source),
+		Category:          category,
+		Level:             level,
+		Consequence:       consequence,
+		Kind:              item.Kind,
+		Title:             item.Title,
+		Detail:            item.Detail,
+		NoticeOrigin:      item.NoticeOrigin,
+		PromiseRecipients: item.PromiseRecipients,
+		DomainReasonCode:  item.DomainReasonCode,
+		CauseRef:          item.CauseRef,
 		// The identity AND the words for it. The identity groups the row; the
 		// label is what the group says. Forwarding only the first is how the
 		// client came to interpolate an identity into a sentence.
-		CauseLabel: item.CauseLabel,
-		Connection: item.Connection,
-		Subject:    item.Subject,
+		CauseLabel:   item.CauseLabel,
+		AiTask:       item.AiTask,
+		Connection:   item.Connection,
+		Subject:      item.Subject,
+		SourceRecord: item.SourceRecord,
 		// Carried so the worklist's duty dialog shows what the deadline rests on.
 		Acquisition: item.Acquisition,
 		// The row the card's own verbs write to, forwarded like every other fact
@@ -132,8 +143,7 @@ func base(
 	}
 }
 
-// classifyCommitment: a promise the rep made. Level 2 whether or not it is
-// overdue — the promise is the fact, and the date only orders it.
+// A team claim alone does not identify the colleague who promised.
 func classifyCommitment(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	row := base(item, levelPromise, "tasks", "promise_breaks")
 	stampDeadline(&row, item.DueAt, asOf)
@@ -141,8 +151,9 @@ func classifyCommitment(item crmcontracts.AttentionItem, asOf time.Time) ranked 
 	if overdueAt(item.DueAt, asOf) {
 		row.Because = append(row.Because, reason("overdue", nil))
 	}
+	row.Because = appendReadOnly(row)
 	return ranked{
-		ownerRef:   ownedByWhoeverIsReading(),
+		ownerRef:   unassigned(),
 		item:       row,
 		deadlineAt: deadlineOf(item.DueAt),
 		overdue:    overdueAt(item.DueAt, asOf),
@@ -262,6 +273,7 @@ func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 	if item.AssigneeId == nil {
 		row.Because = append(row.Because, reason("unassigned", nil))
 	}
+	row.Because = appendReadOnly(row)
 	return ranked{
 		item:       row,
 		deadlineAt: deadlineOf(item.DueAt),
@@ -273,12 +285,6 @@ func classifyTask(item crmcontracts.AttentionItem, asOf time.Time) ranked {
 		// saying "unassigned" in its reasons while naming an owner beside them
 		// is a row a reader cannot make sense of.
 		ownerRef: ownerFromAssignee(item.AssigneeId),
-		// And the SAME id where the scope filters read it. Without this a task
-		// answers nobody to answersTo, so keepTeams keeps it as unowned work —
-		// which is the hole its own comment describes for link-less tasks, and
-		// which now also puts an outside-team colleague's user id on the wire
-		// through the owner field. One assignee, read by both.
-		owner: assigneeID(item.AssigneeId),
 	}
 }
 
@@ -293,4 +299,13 @@ func waitingSubject(waiting WaitingCustomer) *crmcontracts.AttentionSubject {
 	default:
 		return nil
 	}
+}
+
+// appendReadOnly says why a task or a promise offers no Done. The reader may
+// read the record and not change it, so the verb that finishes it is withheld.
+func appendReadOnly(row crmcontracts.WorklistItem) []crmcontracts.WorklistReason {
+	if slices.Contains(row.Actions, crmcontracts.WorklistItemActionsComplete) {
+		return row.Because
+	}
+	return append(row.Because, reason("read_only", nil))
 }

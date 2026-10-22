@@ -128,31 +128,6 @@ func TestTheSchemaVersionMovesWhenTheVocabularyDoes(t *testing.T) {
 	}
 }
 
-// The resource and the vocabulary tool's reader serve one document. The two
-// doors share analyticsVocabularyText today; this holds the sharing, so a
-// second rendering cannot arrive under either door without failing here.
-func TestTheAnalyticsResourceAndTheToolReaderServeOneDocument(t *testing.T) {
-	t.Parallel()
-	ctx := seatWith("deal", "activity", "contact", "company", "project", "partner")
-	contents, err := analyticsSchemaResource{}.ReadResource(ctx, AnalyticsSchemaURI)
-	if err != nil {
-		t.Fatalf("the resource: %v", err)
-	}
-	viaTool, err := analyticsVocabularyReader{}.AnalyticsVocabularyDocument(ctx)
-	if err != nil {
-		t.Fatalf("the tool's reader: %v", err)
-	}
-	if contents.Text != viaTool {
-		t.Errorf("the resource and the tool serve two documents:\nresource: %q\ntool:     %q",
-			contents.Text, viaTool)
-	}
-	// The equality above must be over a real vocabulary, not two empty
-	// strings agreeing.
-	if !strings.Contains(viaTool, "group by") {
-		t.Errorf("the shared document describes no population, so the equality proved nothing: %q", viaTool)
-	}
-}
-
 // A population whose base entity the seat may not read is absent from the
 // derived schema — not narrowed, not refused by name: absent. The vocabulary
 // document and the unknown-name refusal both serve the schema, so this is
@@ -181,5 +156,42 @@ func TestAPopulationWhoseEntityTheSeatCannotReadIsAbsent(t *testing.T) {
 	}
 	if dealPopulations == 0 {
 		t.Fatal("no prebuilt report reads deals, so this test swept nothing")
+	}
+}
+
+// A row's own id, name and key answer a group of one, below any floor, and a
+// filter on one leaves a population of one. The vocabulary names none of them.
+// A row's own timestamp can still bound a range, so it narrows and never groups.
+func TestTheVocabularyOffersNoFieldThatCanOnlyBeWithheld(t *testing.T) {
+	t.Parallel()
+	schema := AnalyticsSchemaFor(seatWith("deal", "activity", "contact", "company", "project", "partner"))
+	for _, name := range []string{"project-commitments", "projects-gone-quiet"} {
+		entity, ok := schema.Entities[name]
+		if !ok {
+			t.Fatalf("%s is absent from a vocabulary that holds every grant", name)
+		}
+		for _, field := range []string{fieldProjectID, fieldName, fieldKey} {
+			if got, named := entity.Fields[field]; named {
+				t.Errorf("%s names %+v, which can only be withheld", name, got)
+			}
+		}
+		for _, field := range []string{fieldPhase, fieldOwnerID, fieldCompanyID} {
+			if got := entity.Fields[field]; got.Kind != analyticsquery.KindDimension {
+				t.Errorf("%s.%s = %+v, want it still offered as a grouping", name, field, got)
+			}
+		}
+	}
+	quiet := schema.Entities["projects-gone-quiet"]
+	for _, field := range []string{fieldLastActivityAt, fieldQuietSince} {
+		if got := quiet.Fields[field]; got.Kind != analyticsquery.KindFilter {
+			t.Errorf("projects-gone-quiet.%s = %+v, want a field to narrow by and not to group by", field, got)
+		}
+	}
+	for name, entity := range schema.Entities {
+		for field, def := range entity.Fields {
+			if def.Expr == colRowID {
+				t.Errorf("%s.%s names the row's own id", name, field)
+			}
+		}
 	}
 }

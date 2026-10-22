@@ -144,7 +144,10 @@ const candidateColumns = `a.id, a.kind, coalesce(a.subject, ''), coalesce(left(a
 // The audience and hold clauses are on the prior message too. It is our own
 // text, but it goes to the same cloud tier as the message being judged, and a
 // thread the confidentiality engine narrowed is exactly the mail that must not.
-var priorOutboundJoin = `LEFT JOIN LATERAL (
+var priorOutboundJoin = priorOutboundVisibleJoin("true")
+
+func priorOutboundVisibleJoin(scope string) string {
+	return `LEFT JOIN LATERAL (
   SELECT prior.id, prior.subject, left(prior.body, $%[4]d) AS body, prior.occurred_at
     FROM activity prior
    WHERE a.thread_key IS NOT NULL
@@ -154,10 +157,11 @@ var priorOutboundJoin = `LEFT JOIN LATERAL (
      -- helper, because this one ships the body to a model. A thread the
      -- confidentiality engine narrowed is exactly the mail that must not go.
      AND prior.audience = 'workspace'
-     AND prior.restricted_at IS NULL
+     AND prior.restricted_at IS NULL AND (` + scope + `)
      AND (prior.occurred_at, prior.id) < (a.occurred_at, a.id)
    ORDER BY prior.occurred_at DESC, prior.id DESC
    LIMIT 1) prior ON true`
+}
 
 // candidateGroupBy keeps the participant aggregation from multiplying the row.
 const candidateGroupBy = `a.id, a.kind, a.subject, a.body, a.has_calendar_part, a.calendar_method, a.occurred_at,
@@ -168,21 +172,30 @@ func scanCandidates(rows pgx.Rows) ([]OwedCandidate, error) {
 	defer rows.Close()
 	var out []OwedCandidate
 	for rows.Next() {
-		var m OwedCandidate
-		var priorID *ids.UUID
-		var priorSubject, priorBody string
-		var priorAt *time.Time
-		if err := rows.Scan(&m.ID, &m.Kind, &m.Subject, &m.Body,
-			&m.HasCalendarPart, &m.CalendarMethod, &m.To, &m.Cc,
-			&priorID, &priorSubject, &priorBody, &priorAt); err != nil {
+		m, err := scanOwedCandidate(rows)
+		if err != nil {
 			return nil, err
-		}
-		if priorID != nil && priorAt != nil {
-			m.PriorOutbound = &PriorOutbound{Subject: priorSubject, Body: priorBody, At: *priorAt}
 		}
 		out = append(out, m)
 	}
 	return out, rows.Err()
+}
+
+//craft:ignore naked-any pgx scan destinations extend the shared candidate row at the database boundary
+func scanOwedCandidate(row pgx.CollectableRow, extra ...any) (OwedCandidate, error) {
+	var m OwedCandidate
+	var priorID *ids.UUID
+	var priorSubject, priorBody string
+	var priorAt *time.Time
+	fields := []any{&m.ID, &m.Kind, &m.Subject, &m.Body, &m.HasCalendarPart, &m.CalendarMethod, &m.To, &m.Cc, &priorID, &priorSubject, &priorBody, &priorAt}
+	fields = append(fields, extra...)
+	if err := row.Scan(fields...); err != nil {
+		return OwedCandidate{}, err
+	}
+	if priorID != nil && priorAt != nil {
+		m.PriorOutbound = &PriorOutbound{Subject: priorSubject, Body: priorBody, At: *priorAt}
+	}
+	return m, nil
 }
 
 // OwedBacklog reads the oldest inbound correspondence carrying no verdict.
@@ -347,6 +360,7 @@ func (s *Store) OwedRestale(ctx context.Context, ruleset string, limit, bodyLimi
 			 WHERE a.direction = 'inbound'
 			   AND a.kind IN ('email', 'message')
 			   AND a.owed_verdict IS NOT NULL
+			   AND NOT `+humanReviewedOwedSQL("a")+`
 			   AND `+rulesetStaleSQL("a.owed_verdict_ruleset", "$%[2]d")+`
 			   AND a.archived_at IS NULL
 			   AND a.audience = 'workspace'
@@ -395,103 +409,58 @@ func rulesetStaleSQL(col, param string) string {
 	return "(" + col + " IS NULL OR " + col + " <> " + param + ")"
 }
 
-// SetOwedVerdict writes one verdict, reporting whether it applied.
-//
-// THE CAS IS `owed_verdict IS NULL`: a concurrent pass that judged the row first
-// wins, and this write reports applied=false. An earlier verdict stands rather
-// than being overwritten, because two model calls on one message under the SAME
-// rules are two opinions and the tree has no rule for preferring the later one.
-//
-// readAt MUST come from the DATABASE's clock, which OwedBacklog and OwedRestale
-// return for exactly this purpose. owed_verdict_at is stamped with now(), so a
-// readAt taken from the caller's own clock compares two unsynchronised clocks
-// and the guard below simply stops firing — silently, because the write still
-// lands and only the race it was meant to refuse gets through.
-//
-// ACROSS rules it does have one, and readAt is what makes it decidable. A
-// different ruleset proves the two judgements differ; it says nothing about
-// which is later, and the classifier reads a batch, spends a model call, then
-// writes — so during a rolling deploy an old binary can hold a pre-deploy
-// digest across that gap, land its UPDATE after a new binary judged the row,
-// and pass a bare `ruleset <> $current` test while overwriting a strictly newer
-// answer with a strictly older one. Comparing owed_verdict_at against the
-// moment the batch was READ closes it: a row judged since then is left alone,
-// whichever rules judged it. FOR UPDATE serialises the pair without deciding
-// it, which is why the timestamp and not the lock is the answer.
-//
-// The audience, hold and archive clauses are re-tested at WRITE time, not merely
-// in the read that selected the row. The classifier reads a batch, spends a model call
-// per message and writes the answers back; a human or a privacy verdict can
-// narrow the row inside that window, and a write landing after the narrowing
-// would stamp a judgement on a message the queue's readers may no longer open.
+// SetOwedVerdict retains the ordinary ruleset and read-time compare-and-swap.
+// readAt must be the database read timestamp so a slow prediction cannot replace a newer verdict.
 func (s *Store) SetOwedVerdict(ctx context.Context, id ids.UUID, verdict, ruleset string, readAt time.Time) (applied bool, err error) {
-	if verdict != OwedVerdictAsksUs && verdict != OwedVerdictInformsUs {
-		return false, fmt.Errorf("activities: %q is not a verdict this column accepts", verdict)
-	}
-	if ruleset == "" {
-		return false, fmt.Errorf("activities: a verdict must name the prompt that judged it: %w", errRulesetUnnamed)
-	}
-	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
+	if err := validateOwedVerdictWrite(ctx, verdict, ruleset); err != nil {
 		return false, err
 	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// The prior verdict, read under the row lock so the image and the write
-		// cannot disagree. ErrNoRows means the row is gone or narrowed, which is
-		// the same unapplied answer the CAS gives.
-		var priorVerdict, priorRuleset *string
-		switch err := tx.QueryRow(ctx, `
-			SELECT owed_verdict, owed_verdict_ruleset FROM activity
-			WHERE id = $1 AND archived_at IS NULL
-			  AND audience = 'workspace' AND restricted_at IS NULL
-			FOR UPDATE`, id).Scan(&priorVerdict, &priorRuleset); {
-		case errors.Is(err, pgx.ErrNoRows):
-			return nil
-		case err != nil:
-			return fmt.Errorf("activities: reading the verdict this write replaces: %w", err)
-		}
-		// Read back through RowsAffected: no row means the message was judged
-		// under these same rules already, or judged by a newer pass since this
-		// batch was read. Neither is an error — the caller reports the write as
-		// unapplied and moves on.
-		tag, err := tx.Exec(ctx, `
-			UPDATE activity
-			   SET owed_verdict = $2, owed_verdict_at = now(), owed_verdict_ruleset = $3
-			WHERE id = $1
-			  AND `+rulesetStaleSQL("owed_verdict_ruleset", "$3")+`
-			  AND (owed_verdict_at IS NULL OR owed_verdict_at < $4)
-			  AND archived_at IS NULL
-			  AND audience = 'workspace' AND restricted_at IS NULL`, id, verdict, ruleset, readAt)
-		if err != nil {
-			return fmt.Errorf("activities: setting the owed verdict: %w", err)
-		}
-		if tag.RowsAffected() == 0 {
-			return nil
-		}
-		applied = true
-		// Audited in the SAME transaction as the column write, so a verdict that
-		// landed is one audit_log can account for. Without it the question this
-		// tree answers for every other derived write — which records did this
-		// pass touch — would have no answer for the one pass that reads customer
-		// correspondence and acts on what it read.
-		//
-		// WITH a before-image, because this write can now replace. A first
-		// judgement images two explicit nulls rather than nothing: "there was no
-		// verdict here" is the fact, and storekit refuses an absent image on an
-		// update precisely so that fact is recorded rather than assumed.
-		//
-		// No outbox row beside it. The write shape asks for an event where one
-		// has a consumer outside the transaction, and this has none: the verdict
-		// is read by the queue's own next read, from the column. An event type
-		// with no subscriber is a catalog entry and a schema to keep current for
-		// nobody, and the tree already spells this shape — an audited derived
-		// write with no event — in transcriptread.go and in capture's settings
-		// writers.
-		if _, err := storekit.Audit(ctx, tx, "update", "activity", id,
-			map[string]any{owedVerdictField: priorVerdict, "owed_verdict_ruleset": priorRuleset},
-			map[string]any{owedVerdictField: verdict, "owed_verdict_ruleset": ruleset}); err != nil {
-			return err
-		}
-		return nil
+		var writeErr error
+		applied, writeErr = setOwedVerdictTx(ctx, tx, id, verdict, ruleset, readAt, nil)
+		return writeErr
 	})
 	return applied, err
+}
+
+func setOwedVerdictTx(ctx context.Context, tx pgx.Tx, id ids.UUID, verdict, ruleset string, readAt time.Time, evidence map[string]any) (bool, error) {
+	if err := validateOwedVerdictWrite(ctx, verdict, ruleset); err != nil {
+		return false, err
+	}
+	var before, beforeRules *string
+	err := tx.QueryRow(ctx, `SELECT owed_verdict,owed_verdict_ruleset FROM activity WHERE id=@id
+ AND archived_at IS NULL AND audience='workspace' AND restricted_at IS NULL FOR UPDATE`, pgx.NamedArgs{"id": id}).Scan(&before, &beforeRules)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	reviewed := evidence != nil
+	tag, err := tx.Exec(ctx, `UPDATE activity SET owed_verdict=@verdict,owed_verdict_at=now(),owed_verdict_ruleset=@rules
+ WHERE id=@id AND (@reviewed OR (`+rulesetStaleSQL("owed_verdict_ruleset", "@rules")+`
+ AND (owed_verdict_at IS NULL OR owed_verdict_at<@read_at) AND NOT `+humanReviewedOwedSQL("activity")+`))
+ AND archived_at IS NULL AND audience='workspace' AND restricted_at IS NULL`,
+		pgx.NamedArgs{"id": id, "verdict": verdict, "rules": ruleset, "reviewed": reviewed, "read_at": readAt})
+	if err != nil || tag.RowsAffected() == 0 {
+		return false, err
+	}
+	_, err = storekit.AuditWithEvidence(ctx, tx, "update", "activity", id,
+		map[string]any{owedVerdictField: before, "owed_verdict_ruleset": beforeRules},
+		map[string]any{owedVerdictField: verdict, "owed_verdict_ruleset": ruleset}, evidence)
+	return err == nil, err
+}
+
+func humanReviewedOwedSQL(alias string) string {
+	return storekit.HumanReviewedOwedClause(alias)
+}
+
+func validateOwedVerdictWrite(ctx context.Context, verdict, ruleset string) error {
+	if verdict != OwedVerdictAsksUs && verdict != OwedVerdictInformsUs {
+		return apperrors.ErrInvalidArgument
+	}
+	if ruleset == "" {
+		return errRulesetUnnamed
+	}
+	return auth.Require(ctx, "activity", principal.ActionUpdate)
 }

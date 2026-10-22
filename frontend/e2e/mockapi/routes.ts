@@ -5,11 +5,13 @@ import {
   reportingStoryCatalog,
   reportingStoryEvaluation,
   reportingStoryFramework,
-} from "../../src/screens/reporting.fixtures";
+} from "../../src/testing/reporting.fixtures";
 import * as ai from "./ai";
 import * as booking from "./booking";
 import * as capture from "./capture";
+import * as dataTasks from "./datatasks";
 import {
+  agentUsageByUser,
   aiCalls,
   aiHealth,
   aiProviderHealth,
@@ -21,10 +23,13 @@ import {
   automationCatalog,
   brandt,
   captureActivity,
+  captureHealth,
+  extensionIngestHealth,
   installationJurisdiction,
   jobHealth,
   knowledgeCorpora,
   passports,
+  recoveryHealth,
   seats,
   seededLead,
 } from "./fixtures";
@@ -54,6 +59,11 @@ export const routes: readonly MockRoute[] = [
   },
   {
     method: "GET",
+    path: "/installation/oauth-apps",
+    handle: session.oauthApps,
+  },
+  {
+    method: "GET",
     path: (path) => path.startsWith("/installation/oauth-apps/"),
     handle: session.oauthApp,
   },
@@ -61,6 +71,29 @@ export const routes: readonly MockRoute[] = [
     method: "GET",
     path: "/installation/settings",
     handle: reply(session.installationSettings),
+  },
+  {
+    method: "GET",
+    path: "/installation/agent-clients",
+    handle: reply(session.agentClients),
+  },
+  {
+    method: "GET",
+    path: "/installation/configuration",
+    handle: reply(session.installationConfiguration),
+  },
+  // An installation with the demo source composed in and nothing connected.
+  {
+    method: "GET",
+    path: "/finance/source",
+    handle: reply({
+      available: [
+        {
+          provider: "offline_demo",
+          description: "Made-up invoices for a demo.",
+        },
+      ],
+    }),
   },
   // The anonymous reads the signed-out surface makes, by design.
   { path: "/embeddings/reindex/status", handle: session.reindexStatus },
@@ -212,6 +245,11 @@ export const routes: readonly MockRoute[] = [
     path: (path) => path.startsWith("/approvals/"),
     handle: work.decideApproval,
   },
+  {
+    method: "GET",
+    path: "/activities/a-quarterly",
+    handle: reply(insight.quarterlyReview),
+  },
   { method: "POST", path: "/activities", handle: work.logActivity },
   {
     method: "POST",
@@ -302,6 +340,7 @@ export const routes: readonly MockRoute[] = [
   { path: "/ai/budget", handle: ai.aiBudget },
   { path: "/ai/health", handle: reply(aiHealth) },
   { path: "/ai/usage", handle: reply(aiUsage) },
+  { method: "GET", path: "/ai/agent-usage", handle: reply(agentUsageByUser) },
   { method: "GET", path: "/ai/provider-keys", handle: reply(aiProviderKeys) },
   { path: "/ai/provider-health", handle: reply(aiProviderHealth) },
   { method: "GET", path: "/ai/calls", handle: reply(aiCalls) },
@@ -309,9 +348,27 @@ export const routes: readonly MockRoute[] = [
   { path: "/ai/call-stats/flow", handle: ai.callStatsFlow },
   { method: "GET", path: "/ai/task-overrides", handle: reply({}) },
   { path: "/ai/routing/schema", handle: reply({}) },
+  { method: "GET", path: "/admin/data-tasks", handle: dataTasks.list },
+  {
+    method: "POST",
+    path: "/admin/data-tasks/control",
+    handle: dataTasks.control,
+  },
   { path: "/admin/job-health", handle: reply(jobHealth) },
+  { path: "/admin/capture-health", handle: reply(captureHealth) },
+  { path: "/admin/recovery-health", handle: reply(recoveryHealth) },
+  {
+    path: "/admin/extension-ingest-health",
+    handle: reply(extensionIngestHealth),
+  },
   { path: "/capture/settings", handle: capture.captureSettings },
   { path: "/capture/senders", handle: capture.senders },
+  {
+    path: "/capture/contacts-awaiting-decision",
+    handle: capture.awaitingDecision,
+  },
+  { path: "/capture/held-threads", handle: capture.heldThreads },
+  { path: "/me/linkedin-reach", handle: capture.linkedInReach },
   {
     path: (path) =>
       path.startsWith("/capture/senders/") && path.endsWith("/decision"),

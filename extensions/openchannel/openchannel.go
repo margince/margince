@@ -136,6 +136,14 @@ func New() extension.Extension {
 			Handle: receive,
 		}},
 		Migrations: migrations,
+		// The contact header leads a member to their endpoint and its traffic.
+		// Gated on the endpoint read, which is what the screen opens on.
+		Entries: []extension.Entry{{
+			Slot:   extension.SlotContactHeader,
+			Label:  "extOpenchannel.title",
+			Icon:   extension.IconPlug,
+			Object: "ext_openchannel_endpoint",
+		}},
 	}
 }
 

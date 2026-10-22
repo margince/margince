@@ -1,9 +1,11 @@
-"""Every tool a scenario names is one the server lists.
+"""Every tool a scenario names is one the server lists, or a verb a listed router fronts.
 
 The lane only checks must_call against what was offered. A hidden name in
 must_call_with fails every paid run, and one in must_not_call_with or may_call
-holds nothing at all, silently. The listed set is the published surface,
-regenerated from the registry, so this reads the owner rather than a copy.
+holds nothing at all, silently. A verb behind a router is reached by calling the
+router with its action, which the lane records as that verb. The listed set is
+the published surface, regenerated from the registry, so this reads the owner
+rather than a copy.
 """
 
 import json
@@ -19,19 +21,20 @@ import check  # noqa: E402
 LANE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCENARIOS = os.path.join(LANE, "scenarios")
 SURFACE = os.path.join(LANE, "..", "..", "docs", "reference", "mcp-info.json")
-FIELDS = ("must_call", "may_call", "must_call_with", "must_not_call_with")
-# must_not_call_with is `tool~regex`, and its regex may hold a `|` of its own.
+FIELDS = ("must_call", "may_call", "must_call_with", "must_not_call_with", "must_call_matching")
+# The `tool~regex` fields' regex may hold a `|` of its own.
 # must_call_with alternatives each open with `tool.`.
 CALL_WITH = re.compile(r"(?:^|\|)\s*([a-z_]+)\.")
 
 
 def listed():
     with open(SURFACE) as surface:
-        return {tool["name"] for tool in json.load(surface)["tools"]["tools"]}
+        names = [tool["name"] for tool in json.load(surface)["tools"]["tools"]]
+    return set(check.offered_verbs(names, check.load_routes()))
 
 
 def named(field, entry):
-    if field == "must_not_call_with":
+    if field in ("must_not_call_with", "must_call_matching"):
         return [entry.split("~", 1)[0].strip()]
     if field == "must_call_with":
         return CALL_WITH.findall(entry)

@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -65,10 +66,15 @@ type SettingsPatch struct {
 // SettingsStore is the store over the workspace capture posture.
 type SettingsStore struct {
 	settings *settings.Store
+	// config answers a value a boot source sets and refuses a change to it.
+	config *config.Config
 }
 
-// NewSettings builds the capture-settings store over the settings mechanism.
-func NewSettings(s *settings.Store) *SettingsStore { return &SettingsStore{settings: s} }
+// NewSettings builds the capture-settings store over the settings mechanism,
+// under the boot locks cfg holds.
+func NewSettings(s *settings.Store, cfg *config.Config) *SettingsStore {
+	return &SettingsStore{settings: s, config: cfg}
+}
 
 // Get reads the workspace's capture settings. The read gate lives on the
 // entry (`capture_settings`, read granted to every role), so there is no
@@ -77,14 +83,14 @@ func (s *SettingsStore) Get(ctx context.Context) (Settings, error) {
 	var out Settings
 	for _, f := range []struct {
 		into  *bool
-		entry *settings.Entry[bool]
+		entry *config.Setting[bool]
 	}{
 		{&out.AutoEnrich, AutoEnrich},
 		{&out.MailSharing, MailSharing},
 		{&out.SignatureEnrich, SignatureEnrich},
 		{&out.SharedPostureAllowed, SharedPostureAllowed},
 	} {
-		value, err := settings.Get(ctx, s.settings, f.entry)
+		value, err := config.StoredVal(ctx, s.config, f.entry)
 		if err != nil {
 			return Settings{}, fmt.Errorf("capture: reading settings: %w", err)
 		}
@@ -92,12 +98,12 @@ func (s *SettingsStore) Get(ctx context.Context) (Settings, error) {
 	}
 	for _, f := range []struct {
 		into  *int
-		entry *settings.Entry[int]
+		entry *config.Setting[int]
 	}{
 		{&out.AutoEnrichDailyCap, AutoEnrichDailyCap},
 		{&out.MailSyncIntervalSeconds, MailSyncIntervalSeconds},
 	} {
-		value, err := settings.Get(ctx, s.settings, f.entry)
+		value, err := config.StoredVal(ctx, s.config, f.entry)
 		if err != nil {
 			return Settings{}, fmt.Errorf("capture: reading settings: %w", err)
 		}
@@ -120,13 +126,13 @@ func (s *SettingsStore) SiteReadLimits(ctx context.Context) (SiteReadLimits, err
 	err := s.settings.WriteTx(ctx, func(tx pgx.Tx) error {
 		for _, f := range []struct {
 			into  *int
-			entry *settings.Entry[int]
+			entry *config.Setting[int]
 		}{
 			{&out.MaxPages, SiteReadMaxPages},
 			{&out.MaxMiB, SiteReadMaxMiB},
 			{&out.WallSeconds, SiteReadWallSeconds},
 		} {
-			value, err := settings.GetTx(ctx, tx, f.entry)
+			value, err := config.StoredValTx(ctx, tx, s.config, f.entry)
 			if err != nil {
 				return err
 			}
@@ -143,7 +149,7 @@ func (s *SettingsStore) SiteReadLimits(ctx context.Context) (SiteReadLimits, err
 // AutoEnrichOn reads the auto-enrich switch alone, for the deep-read worker,
 // which asks it of every automatic read it claims and needs nothing else.
 func (s *SettingsStore) AutoEnrichOn(ctx context.Context) (bool, error) {
-	on, err := settings.Get(ctx, s.settings, AutoEnrich)
+	on, err := config.StoredVal(ctx, s.config, AutoEnrich)
 	if err != nil {
 		return false, fmt.Errorf("capture: reading the auto-enrich setting: %w", err)
 	}
@@ -174,7 +180,7 @@ func (s *SettingsStore) Update(ctx context.Context, patch SettingsPatch) (Settin
 	err := s.settings.WriteTx(ctx, func(tx pgx.Tx) error {
 		for _, f := range []struct {
 			want  *bool
-			entry *settings.Entry[bool]
+			entry *config.Setting[bool]
 		}{
 			{patch.AutoEnrich, AutoEnrich},
 			{patch.MailSharing, MailSharing},
@@ -184,13 +190,13 @@ func (s *SettingsStore) Update(ctx context.Context, patch SettingsPatch) (Settin
 			if f.want == nil {
 				continue
 			}
-			if err := settings.SetTx(ctx, s.settings, tx, f.entry, *f.want); err != nil {
+			if err := config.SaveTx(ctx, s.config, tx, f.entry, *f.want); err != nil {
 				return err
 			}
 		}
 		for _, f := range []struct {
 			want  *int
-			entry *settings.Entry[int]
+			entry *config.Setting[int]
 		}{
 			{patch.AutoEnrichDailyCap, AutoEnrichDailyCap},
 			{patch.SiteReadMaxPages, SiteReadMaxPages},
@@ -201,7 +207,7 @@ func (s *SettingsStore) Update(ctx context.Context, patch SettingsPatch) (Settin
 			if f.want == nil {
 				continue
 			}
-			if err := settings.SetTx(ctx, s.settings, tx, f.entry, *f.want); err != nil {
+			if err := config.SaveTx(ctx, s.config, tx, f.entry, *f.want); err != nil {
 				return err
 			}
 		}

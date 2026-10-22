@@ -275,10 +275,13 @@ func TestTheReconcilingPassStopsAtItsBudgetAndFinishesOnTheNextTick(t *testing.T
 	const sender = "chi@fvhospital.example"
 	const held = clearedSenderSweepBudget + 5
 	var last ids.UUID
+	var batch pgx.Batch
 	for i := range held {
-		last = seedCapturedMail(t, e, sender, fmt.Sprintf("held message %d", i))
-		seedPostureHeldImport(t, e, last, e.Rep1)
+		last = ids.NewV7()
+		queueMail(&batch, last, sender, fmt.Sprintf("held message %d", i), false)
+		queueImport(&batch, last, e.Rep1, "classified", nil, []string{"posture"})
 	}
+	sendSeed(t, e, &batch, "seeding the held mail")
 	dispositionID := seedPendingDisposition(t, e, sender, "fvhospital.example", last)
 	settleDisposition(t, e, dispositionID, capture.PendingStatusReal, capture.KindContact)
 
@@ -325,26 +328,24 @@ func seedImport(
 	posture string, verdictStatus *string, reasons []string,
 ) {
 	t.Helper()
+	var batch pgx.Batch
+	queueImport(&batch, activityID, seat, posture, verdictStatus, reasons)
+	sendSeed(t, e, &batch, "seeding the import row")
+}
+
+func queueImport(batch *pgx.Batch, activityID, seat ids.UUID, posture string, verdictStatus *string, reasons []string) {
 	reason := ""
 	if len(reasons) > 0 {
 		reason = reasons[0]
 	}
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(context.Background(), `
+	batch.Queue(`
 			INSERT INTO capture_import
 			  (activity_id, user_id, posture_at_import, verdict_status, verdict_reason, verdict_reasons)
 			VALUES ($1, $2, $3, $4, NULLIF($5, ''), $6)`,
-			activityID, seat, posture, verdictStatus, reason, reasons); err != nil {
-			return err
-		}
-		_, err := tx.Exec(context.Background(), `
+		activityID, seat, posture, verdictStatus, reason, reasons)
+	batch.Queue(`
 			UPDATE activity SET audience = 'participants', audience_reason = $2 WHERE id = $1`,
-			activityID, reason)
-		return err
-	})
-	if err != nil {
-		t.Fatalf("seeding the import row: %v", err)
-	}
+		activityID, reason)
 }
 
 // settleDisposition records a verdict the way a pass on an earlier day would

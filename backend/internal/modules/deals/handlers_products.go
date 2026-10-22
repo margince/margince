@@ -5,7 +5,6 @@ package deals
 
 import (
 	"net/http"
-	"slices"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -35,31 +34,11 @@ func (h Handlers) CreateProduct(w http.ResponseWriter, r *http.Request, _ crmcon
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	source, err := httperr.RequireNonBlank("source", req.Source)
+	price, _ := httperr.PresentField(r, "unit_price_minor")
+	in, err := productCreateInput(req, price != nil)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
-	}
-	// A missing or null price decodes to 0, which would sell the product free.
-	if price, _ := httperr.PresentField(r, "unit_price_minor"); price == nil {
-		httperr.Write(w, r, httperr.Validation("unit_price_minor", "required",
-			"unit_price_minor is required: send the price in minor units, or 0 for a free item"))
-		return
-	}
-	billingModel, billingMonths := billingClassificationOf(req.BillingModel, req.BillingIntervalMonths)
-	in := CreateProductInput{
-		Name:           req.Name,
-		SKU:            req.Sku,
-		Description:    req.Description,
-		Unit:           req.Unit,
-		UnitPriceMinor: req.UnitPriceMinor,
-		Currency:       req.Currency,
-		DefaultTaxRate: req.DefaultTaxRate,
-		Active:         req.Active,
-		Source:         source,
-
-		BillingModel:          billingModel,
-		BillingIntervalMonths: billingMonths,
 	}
 	product, err := h.store.CreateProduct(r.Context(), in)
 	if err != nil {
@@ -88,47 +67,10 @@ func (h Handlers) UpdateProduct(w http.ResponseWriter, r *http.Request, id crmco
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	if err := httperr.RefuseNull(r, "name"); err != nil {
+	in, err := productUpdateInput(req, httperr.ClearedFields(r), ifVersion)
+	if err != nil {
 		writeStoreErr(w, r, err)
 		return
-	}
-	billingModel, billingMonths := billingClassificationOf(req.BillingModel, req.BillingIntervalMonths)
-	// `not_specified` is how a caller says "nobody has classified this".
-	//
-	// Not because a null cannot be read. httperr tells an explicit null from an
-	// absent field, and the clear list below rests on that.
-	//
-	// It is because product_billing_shape ties billing_model to
-	// billing_interval_months. One sentinel moves the pair, and a null on
-	// either half alone would name a state the CHECK refuses.
-	//
-	// Translated to the pair of nulls the column holds, here at the edge, so
-	// the store speaks in stored values only.
-	if billingModel != nil && *billingModel == string(crmcontracts.UpdateProductRequestBillingModelNotSpecified) {
-		billingModel, billingMonths = nil, nil
-	}
-	// Beside a named model, a null interval is the pair's other half. The
-	// classification writes it, so it is no clear of one column.
-	clears := httperr.ClearedFields(r)
-	if req.BillingModel != nil {
-		clears = slices.DeleteFunc(clears, func(field string) bool { return field == billingIntervalColumn })
-	}
-	in := UpdateProductInput{
-		Name:           req.Name,
-		SKU:            req.Sku,
-		Description:    req.Description,
-		Unit:           req.Unit,
-		UnitPriceMinor: req.UnitPriceMinor,
-		Currency:       req.Currency,
-		DefaultTaxRate: req.DefaultTaxRate,
-		Active:         req.Active,
-		Clear:          clears,
-		IfVersion:      ifVersion,
-
-		// A PATCH addresses the classification when it names either half.
-		Classified:            req.BillingModel != nil || req.BillingIntervalMonths != nil,
-		BillingModel:          billingModel,
-		BillingIntervalMonths: billingMonths,
 	}
 	product, err := h.store.UpdateProduct(r.Context(), pathID[ids.ProductKind](id), in)
 	if err != nil {
@@ -138,8 +80,13 @@ func (h Handlers) UpdateProduct(w http.ResponseWriter, r *http.Request, id crmco
 	httperr.WriteJSON(w, http.StatusOK, product)
 }
 
-func (h Handlers) ArchiveProduct(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	product, err := h.store.ArchiveProduct(r.Context(), pathID[ids.ProductKind](id))
+// ArchiveProduct preserves the request version through the native archive writer.
+func (h Handlers) ArchiveProduct(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.ArchiveProductParams) {
+	ifVersion, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
+	product, err := h.store.ArchiveProductAt(r.Context(), pathID[ids.ProductKind](id), ifVersion)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

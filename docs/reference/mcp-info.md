@@ -13,12 +13,12 @@ input and output schema in folds below it. What a tool may do and whether a huma
 
 | | |
 |---|---:|
-| Tools | 56 |
+| Tools | 37 |
 | Resources | 9 |
-| Tool catalog | 175.2 KB |
+| Tool catalog | 123.8 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 45751 |
-| Largest tool | `prep_for_meeting` (9.0 KB) |
+| Approx. wire tokens | 32583 |
+| Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
 Those are the bytes on the wire: they carry each tool's output schema and the
@@ -32,11 +32,11 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 60.8 KB | 34% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 48.4 KB | 27% | Yes, every step |
-| Input schemas | 52.6 KB | 30% | Yes, every step |
-| _Names, annotations, punctuation_ | 13.4 KB | 7% | Partly |
-| **Description + input schema** | **101.0 KB** | **57%** | **the recurring cost** |
+| Output schemas | 24.6 KB | 19% | **No**: a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 31.6 KB | 25% | Yes, every step |
+| Input schemas | 58.9 KB | 47% | Yes, every step |
+| _Names, annotations, punctuation_ | 8.7 KB | 7% | Partly |
+| **Description + input schema** | **90.5 KB** | **73%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -55,65 +55,46 @@ descriptions and input schemas are what each step pays for.
 - [`ui://margince/approval.html`](#approval_view): Waiting for a decision
 - [`ui://margince/field-conflict.html`](#field_conflict_view): Edited by hand
 
-### Tools (56)
+### Tools (37)
 
 | Tool | What it is for | Read-only | View | Prompt tokens |
 |---|---|:-:|---|---:|
-| [`advance_project_phase`](#advance_project_phase) | Move a project to a phase |  |  | 416 |
 | [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 417 |
-| [`archive_record`](#archive_record) | Archive a record |  |  | 292 |
-| [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes |  | 212 |
-| [`attach_document`](#attach_document) | Attach a file to a record |  |  | 399 |
-| [`book_meeting`](#book_meeting) | Book a meeting |  |  | 344 |
+| [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
 | [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 809 |
-| [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 348 |
-| [`change_lead_state`](#change_lead_state) | Change a lead's state |  |  | 494 |
+| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1361 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 592 |
-| [`change_tags`](#change_tags) | Change tags |  |  | 492 |
+| [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 567 |
+| [`change_state`](#change_state) | Move a lead, deal or project on |  |  | 866 |
+| [`change_tags`](#change_tags) | Change tags |  |  | 553 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 342 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 279 |
-| [`compose_analytics_report`](#compose_analytics_report) | Compose an analytics report | yes |  | 786 |
-| [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 678 |
-| [`create_task`](#create_task) | Create a task |  |  | 221 |
+| [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 643 |
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
-| [`describe_vocabulary`](#describe_vocabulary) | Describe what a tool accepts | yes |  | 346 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
-| [`enrich`](#enrich) | Enrich a company from its website |  |  | 396 |
-| [`invite_meeting`](#invite_meeting) | Send a calendar invitation |  |  | 264 |
-| [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 268 |
-| [`list_documents`](#list_documents) | List a record's documents | yes |  | 180 |
-| [`list_records`](#list_records) | List records | yes |  | 821 |
-| [`log_activity`](#log_activity) | Log an activity |  |  | 791 |
-| [`merge_tags`](#merge_tags) | Fold one tag into another |  |  | 198 |
-| [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 394 |
-| [`preview_import`](#preview_import) | Preview an import |  |  | 988 |
-| [`progress_deal`](#progress_deal) | Progress a deal with a note |  |  | 522 |
-| [`query_workspace`](#query_workspace) | Query the workspace | yes |  | 530 |
+| [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
+| [`find_records`](#find_records) | Find records | yes |  | 1697 |
+| [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 401 |
+| [`list_documents`](#list_documents) | List a record's documents | yes |  | 216 |
+| [`preview_import`](#preview_import) | Preview an import |  |  | 1001 |
+| [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 998 |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
-| [`read_brief`](#read_brief) | Read the morning brief | yes |  | 205 |
-| [`read_directory`](#read_directory) | Read the workspace's colleagues, pipelines and channels | yes |  | 361 |
-| [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes |  | 677 |
-| [`read_import`](#read_import) | Read an import run or the import format | yes |  | 185 |
-| [`read_input_checks`](#read_input_checks) | Can the forecast's inputs be trusted | yes |  | 346 |
+| [`read_attention`](#read_attention) | See what needs attention | yes |  | 326 |
+| [`read_context`](#read_context) | Get the story so far | yes |  | 395 |
+| [`read_forecast`](#read_forecast) | Read the forecast and how it moved | yes |  | 824 |
+| [`read_import`](#read_import) | Read an import run or the import format | yes |  | 220 |
 | [`read_lists`](#read_lists) | Find and read lists | yes |  | 745 |
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 292 |
-| [`read_record`](#read_record) | Read a record | yes |  | 292 |
+| [`read_record`](#read_record) | Read a record | yes |  | 307 |
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
-| [`read_reporting`](#read_reporting) | Read sales reporting | yes |  | 544 |
-| [`read_tags`](#read_tags) | Read tags | yes |  | 322 |
-| [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  |  | 260 |
-| [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 303 |
+| [`read_reports`](#read_reports) | Read sales reports | yes |  | 1812 |
+| [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
+| [`read_view`](#read_view) | Read a view | yes |  | 989 |
+| [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 488 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 393 |
-| [`resolve_entities`](#resolve_entities) | Resolve contacts and companies | yes |  | 494 |
-| [`review_commitments`](#review_commitments) | Review open commitments | yes |  | 401 |
-| [`run_analytics_query`](#run_analytics_query) | Run an analytics query | yes |  | 508 |
-| [`run_report`](#run_report) | Run a report | yes |  | 1024 |
-| [`search_context`](#search_context) | Search for relevant material | yes |  | 344 |
-| [`search_records`](#search_records) | Search records | yes |  | 456 |
-| [`search_report_evidence`](#search_report_evidence) | Search the evidence behind a saved run | yes |  | 335 |
+| [`schedule_meeting`](#schedule_meeting) | Book or invite to a meeting |  |  | 474 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1014 |
-| [`update_record`](#update_record) | Update a record |  | [`ui://margince/field-conflict.html`](#field_conflict_view) | 581 |
-| [`whats_slipping_this_week`](#whats_slipping_this_week) | What's slipping this week | yes |  | 273 |
+| [`update_record`](#update_record) | Update a record |  | [`ui://margince/field-conflict.html`](#field_conflict_view) | 585 |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 129 |
 
 ## Resources
@@ -165,9 +146,9 @@ carrying it.
 **Report plan vocabulary**
 
 ```text
-What each prebuilt report accepts in a run_report plan: the names its group_by, filters and
-aggregates admit, what it answers with no plan at all, and what a filter means when its name alone
-does not say. run_report names this document instead of carrying it.
+What each prebuilt report accepts in a report plan: the names its group_by, filters and aggregates
+admit, what it answers with no plan at all, and what a filter means when its name alone does not
+say. read_reports with kind=run names this document instead of carrying it.
 ```
 
 ### report_blocks
@@ -178,7 +159,8 @@ does not say. run_report names this document instead of carrying it.
 
 ```text
 The blocks a report may carry: each kind, whether it renders figures, words or both, and the
-severities a callout may state. compose_analytics_report names this document instead of carrying it.
+severities a callout may state. read_analytics with step=compose names this document instead of
+carrying it.
 ```
 
 ### analytics-schema
@@ -188,8 +170,9 @@ severities a callout may state. compose_analytics_report names this document ins
 **Analytics query vocabulary**
 
 ```text
-The populations a run_analytics_query plan may name, each with its group_by dimensions and its
-measures, derived for this seat. run_analytics_query names this document instead of carrying it.
+The populations an analytics query plan may name, each with its group_by dimensions and its
+measures, derived for this seat. read_analytics with step=query names this document instead of
+carrying it.
 ```
 
 ### create_followups_view
@@ -280,172 +263,6 @@ one proposed and the choice to keep or replace it.
 
 ## Tools
 
-### advance_project_phase
-
-**Move a project to a phase**
-
-```text
-Move a project to another phase — initiative, pursuing, delivering, closed. The four names are
-fixed but the order is not enforced: a project may go back a phase, and a closed one may be
-reopened. Closing requires a reason, which is recorded on the phase history either way. Closing does
-not complete, cancel or hide anything open on the project: its tasks and commitments stay open on
-their own records. When the user has asked for the close, report what is still open and close — an
-open commitment is something to tell them, not a reason to hold back a close they asked for. Use
-progress_deal for a deal's pipeline stages; a project's phases are a different vocabulary on a
-different record. Send if_version with the version you read. By default the phase moves when this
-call answers. Where an installation has raised this verb to confirm first, the answer is a staged
-approval and the phase has NOT moved — keep its id and do not report the project as advanced until
-the retry that carries the approval has answered. (Runs immediately; requires passport scope
-"write".)
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {
-    "approval_id": {
-      "description": "Set on approved retry",
-      "format": "uuid",
-      "type": "string"
-    },
-    "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
-      "maxLength": 255,
-      "type": "string"
-    },
-    "if_version": {
-      "description": "The version the caller read; the write is refused as skew if the project moved since",
-      "type": "integer"
-    },
-    "project_id": {
-      "format": "uuid",
-      "type": "string"
-    },
-    "reason": {
-      "description": "Required when to_phase is closed; recorded on the phase-history row either way",
-      "type": "string"
-    },
-    "to_phase": {
-      "enum": [
-        "initiative",
-        "pursuing",
-        "delivering",
-        "closed"
-      ],
-      "type": "string"
-    }
-  },
-  "required": [
-    "project_id",
-    "to_phase"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "id": {
-          "format": "uuid",
-          "type": "string"
-        }
-      },
-      "required": [
-        "id"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
 ### annotate_brief
 
 **Write findings onto the morning brief**
@@ -456,10 +273,11 @@ and for each deal you looked at, why it is on the list, what changed, and the on
 would make. It writes onto that user's own brief for today and nothing else — it cannot be pointed
 at another user, another day, or a deal that is not already in their queue, and it cannot change the
 ranking. Every evidence id you cite must be one the brief already recorded for that item; citing
-anything else refuses the whole write, so cite from what read_brief gave you rather than from
-memory. Use log_activity to record something that happened on a deal, which belongs on the record
-itself and outlives today's brief. Calling it again replaces what you wrote before, so a second pass
-is a correction rather than an addition. (Runs immediately; requires passport scope "write".)
+anything else refuses the whole write, so cite from what read_context with about=brief gave you
+rather than from memory. Use change_activities with action=log to record something that happened on
+a deal, which belongs on the record itself and outlives today's brief. Calling it again replaces
+what you wrote before, so a second pass is a correction rather than an addition. (Runs immediately;
+requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -567,6 +385,7 @@ is a correction rather than an addition. (Runs immediately; requires passport sc
           "type": "boolean"
         },
         "last_synced_at": {
+          "format": "date-time",
           "type": "string"
         }
       },
@@ -627,11 +446,11 @@ Retire a record that should no longer be worked — a duplicate, a dead company,
 ended. Archiving hides the record from day-to-day work; it does not delete it and does not move
 anything attached to it, so an archived duplicate still holds the activities and deals that were
 logged against it. Use resolve_duplicates when a duplicate's history should end up on the record
-that survives, and change_lead_state to disqualify a lead going nowhere — a lead's own transition
-records the reason where archiving would not. By default the record is archived when this call
-answers; where an installation has raised this verb to confirm first, the answer is a staged
-approval and you must not report the record as archived until the retry that carries their approval
-has answered. (Runs immediately; requires passport scope "write".)
+that survives, and change_state with action=disqualify to close out a lead going nowhere — a
+lead's own transition records the reason where archiving would not. By default the record is
+archived when this call answers; where an installation has raised this verb to confirm first, the
+answer is a staged approval and you must not report the record as archived until the retry that
+carries their approval has answered. (Runs immediately; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -661,7 +480,10 @@ has answered. (Runs immediately; requires passport scope "write".)
         "deal",
         "project",
         "relationship",
-        "activity"
+        "activity",
+        "product",
+        "offer_template",
+        "offer"
       ],
       "type": "string"
     }
@@ -732,610 +554,7 @@ has answered. (Runs immediately; requires passport scope "write".)
           "type": "boolean"
         },
         "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### at_risk_relationships
-
-**Relationships going cold**
-
-```text
-Answer "where are our relationships thin?": across the caller's OPEN deals, the ones resting on a
-single contact, missing an engaged champion, or carried almost entirely by one colleague on our
-side. It sweeps open deals — a deal already won or lost is not at risk and is left out — and it
-takes no arguments, because the caller's own visibility already decides which deals these are. It is
-about the shape of the relationships around a deal, not about the deal's own momentum. Use
-whats_slipping_this_week when the question is about deals losing momentum, and read_relationships
-with a deal_id when the question is about one deal rather than the whole book. Each finding names
-its deal_id and the contacts it is about; those are what read_relationships takes next.
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {},
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "coverage_withheld": {
-          "type": "boolean"
-        },
-        "deals": {
-          "items": {
-            "properties": {
-              "deal_id": {
-                "format": "uuid",
-                "type": "string"
-              },
-              "name": {
-                "type": "string"
-              },
-              "risks": {
-                "items": {
-                  "properties": {
-                    "contact_ids": {
-                      "items": {
-                        "format": "uuid",
-                        "type": "string"
-                      },
-                      "type": "array"
-                    },
-                    "contacts": {
-                      "items": {
-                        "properties": {
-                          "contact_id": {
-                            "format": "uuid",
-                            "type": "string"
-                          },
-                          "name": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "contact_id",
-                          "name"
-                        ],
-                        "type": "object"
-                      },
-                      "type": "array"
-                    },
-                    "days_since_touch": {
-                      "type": "integer"
-                    },
-                    "kind": {
-                      "type": "string"
-                    },
-                    "summary": {
-                      "type": "string"
-                    },
-                    "user_ids": {
-                      "items": {
-                        "format": "uuid",
-                        "type": "string"
-                      },
-                      "type": "array"
-                    }
-                  },
-                  "required": [
-                    "kind",
-                    "summary"
-                  ],
-                  "type": "object"
-                },
-                "type": "array"
-              }
-            },
-            "required": [
-              "deal_id",
-              "name",
-              "risks"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        },
-        "deals_scanned": {
-          "type": "integer"
-        },
-        "truncated": {
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "coverage_withheld",
-        "deals",
-        "deals_scanned",
-        "truncated"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### attach_document
-
-**Attach a file to a record**
-
-```text
-Put a file the user gave you on a company, contact, deal, lead or project, where it appears on the
-record's Documents tab, or on one activity such as the meeting it came from — use it whenever the
-user wants a file kept on a record, and never save a file's text as a note instead. Up to 6.2 MB per
-file, or less where the workspace sets a smaller upload limit. Common document, image and email
-formats are accepted; any other kind is refused, and the refusal names the accepted ones. Tell the
-user about a refused file; never rename, convert or zip it to get it accepted. The file is stored,
-not read. It is filed against a contract only when you name contract_id; read_project (view:
-overview) lists its contracts with their ids. Use log_activity for what was said about the file,
-linked to the same record. Keep attachment_id to name the file to the user. (Runs immediately;
-requires passport scope "write".)
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {
-    "content_base64": {
-      "description": "The whole file, standard base64 with = padding",
-      "type": "string"
-    },
-    "content_type": {
-      "description": "The file's media type, e.g. application/pdf",
-      "type": "string"
-    },
-    "contract_id": {
-      "description": "The agreement this file is paper for, when it is one",
-      "format": "uuid",
-      "type": "string"
-    },
-    "entity_id": {
-      "format": "uuid",
-      "type": "string"
-    },
-    "entity_type": {
-      "enum": [
-        "company",
-        "contact",
-        "deal",
-        "lead",
-        "project",
-        "activity"
-      ],
-      "type": "string"
-    },
-    "filename": {
-      "description": "The file's name, with its extension",
-      "type": "string"
-    },
-    "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
-      "maxLength": 255,
-      "type": "string"
-    }
-  },
-  "required": [
-    "entity_type",
-    "entity_id",
-    "filename",
-    "content_type",
-    "content_base64"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "attachment_id": {
-          "format": "uuid",
-          "type": "string"
-        },
-        "byte_size": {
-          "type": "integer"
-        },
-        "captured_by": {
-          "type": "string"
-        },
-        "checksum": {
-          "type": "string"
-        },
-        "content_type": {
-          "type": "string"
-        },
-        "contract_id": {
-          "format": "uuid",
-          "type": "string"
-        },
-        "created_at": {
-          "type": "string"
-        },
-        "entity_id": {
-          "format": "uuid",
-          "type": "string"
-        },
-        "entity_type": {
-          "type": "string"
-        },
-        "filename": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "attachment_id",
-        "byte_size",
-        "captured_by",
-        "checksum",
-        "content_type",
-        "created_at",
-        "entity_id",
-        "entity_type",
-        "filename"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### book_meeting
-
-**Book a meeting**
-
-```text
-Record a meeting against linked CRM records without sending an invitation. Reserves the recorded
-interval locally. It does not create a calendar event or notify attendees. Needs at least one record
-link. Use invite_meeting for an explicit provider-backed invitation, or log_activity for a past
-meeting. Keep the recorded activity id. Do not describe a record-only booking as an invitation sent.
-(Runs immediately; requires passport scope "send".)
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {
-    "approval_id": {
-      "description": "Set on approved retry",
-      "format": "uuid",
-      "type": "string"
-    },
-    "end": {
-      "description": "RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
-      "format": "date-time",
-      "type": "string"
-    },
-    "host_user_id": {
-      "format": "uuid",
-      "type": "string"
-    },
-    "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
-      "maxLength": 255,
-      "type": "string"
-    },
-    "links": {
-      "description": "Who and what the meeting is about; at least one. The booking is refused without it.",
-      "items": {
-        "additionalProperties": false,
-        "properties": {
-          "entity_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "entity_type": {
-            "enum": [
-              "contact",
-              "company",
-              "deal",
-              "lead",
-              "project"
-            ],
-            "type": "string"
-          }
-        },
-        "required": [
-          "entity_type",
-          "entity_id"
-        ],
-        "type": "object"
-      },
-      "maxItems": 25,
-      "minItems": 1,
-      "type": "array"
-    },
-    "start": {
-      "description": "RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
-      "format": "date-time",
-      "type": "string"
-    },
-    "subject": {
-      "type": "string"
-    }
-  },
-  "required": [
-    "start",
-    "end",
-    "links"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "id": {
-          "format": "uuid",
-          "type": "string"
-        }
-      },
-      "required": [
-        "id"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
+          "format": "date-time",
           "type": "string"
         }
       },
@@ -1609,6 +828,7 @@ passport scope "write".)
           "type": "array"
         },
         "expires_at": {
+          "format": "date-time",
           "type": "string"
         },
         "left_behind": {
@@ -1781,6 +1001,7 @@ passport scope "write".)
           "type": "boolean"
         },
         "last_synced_at": {
+          "format": "date-time",
           "type": "string"
         }
       },
@@ -1832,255 +1053,20 @@ passport scope "write".)
 
 </details>
 
-### catch_me_up_on
+### change_activities
 
-**Catch me up on a record**
-
-```text
-Answer "what has been going on with this?" for one contact, company, deal, lead, project or meeting:
-the recent activity and related records in one picture, with the evidence each part rests on. Built
-around ONE record you name; everything it reports carries a source, and what cannot be evidenced is
-absent rather than inferred. prep_for_meeting when a meeting is about to happen, read_record for the
-record's own stored fields, search_records when you do not yet know which record you mean. Each item
-carries the record_type and record_id a follow-up call acts on. occurred_at is when an item
-happened, in UTC — prefer it over a date the prose recalls, and convert before naming a day.
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {
-    "max_items": {
-      "maximum": 20,
-      "minimum": 1,
-      "type": "integer"
-    },
-    "project_id": {
-      "description": "Keep only what is filed under this project or under none",
-      "format": "uuid",
-      "type": "string"
-    },
-    "record_id": {
-      "description": "The record to build around. Give this or record_name, not both.",
-      "format": "uuid",
-      "type": "string"
-    },
-    "record_name": {
-      "description": "The record named in words, resolved the way search_records resolves it. Refused with the candidate ids when the name matches more than one, rather than guessing.",
-      "type": "string"
-    },
-    "record_type": {
-      "enum": [
-        "contact",
-        "company",
-        "deal",
-        "lead",
-        "project",
-        "activity"
-      ],
-      "type": "string"
-    }
-  },
-  "required": [
-    "record_type"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "anchor": {
-          "properties": {
-            "record_id": {
-              "format": "uuid",
-              "type": "string"
-            },
-            "record_type": {
-              "type": "string"
-            }
-          },
-          "required": [
-            "record_id",
-            "record_type"
-          ],
-          "type": "object"
-        },
-        "sections": {
-          "items": {
-            "properties": {
-              "items": {
-                "items": {
-                  "properties": {
-                    "evidence": {
-                      "items": {
-                        "properties": {
-                          "snippet": {
-                            "type": "string"
-                          },
-                          "source": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "snippet",
-                          "source"
-                        ],
-                        "type": "object"
-                      },
-                      "type": "array"
-                    },
-                    "occurred_at": {
-                      "type": "string"
-                    },
-                    "record_id": {
-                      "format": "uuid",
-                      "type": "string"
-                    },
-                    "record_type": {
-                      "type": "string"
-                    },
-                    "summary": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "evidence",
-                    "record_id",
-                    "record_type",
-                    "summary"
-                  ],
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              "name": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "items",
-              "name"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "anchor",
-        "sections"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### change_lead_state
-
-**Change a lead's state**
+**Log, plan and file activities**
 
 ```text
-Move a lead through its lifecycle. qualify fills what the lead's own data already implies — today
-the company name, from its email domain — and names the qualification fields still empty. promote
-turns a lead who has genuinely engaged into a contact, carrying their history across. disqualify
-closes out a lead that is going nowhere. demote reverses a promotion that should not have happened.
-qualify fills only empty fields and never overwrites or invents a value. promote needs a trigger
-naming the engagement — a reply, a booked or held meeting, or a human's decision; cold outreach
-nobody answered never promotes. disqualify keeps the record and its history. demote needs a reason
-and is refused once the promoted contact owns a deal. Use enrich to learn about a company from its
-website, and update_record to edit a lead's fields. The gaps qualify reports are what a human still
-has to supply. A promotion answers with the new contact's id. Where an installation has raised an
-action to confirm first, the answer is a staged approval: keep its id and do not report the change
-until the retry carrying it has answered. (Runs immediately; requires passport scope "write".)
+Log, plan and file activities. log records an email, call, meeting, note or message that already
+happened, on its records. task creates a task for a seat. attach attaches a file to a record. relink
+moves one activity to another record; relink_many moves a named set. relink and relink_many wait for
+a human when they file under a project, and run at once anywhere else. attach checks the record
+first; read list_documents before attaching the same file again. Use schedule_meeting to book a
+meeting still to come, and change_state with move_deal when the same event moves a deal, so move and
+note are one change. Keep the activity id; a relink needs it. A staged answer's approval id is what
+the retry carries. (Governance: runs immediately for attach, log, task; decided per call from its
+arguments for relink, relink_many; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -2089,52 +1075,203 @@ until the retry carrying it has answered. (Runs immediately; requires passport s
 {
   "properties": {
     "action": {
+      "description": "log: record an email, call, meeting, note or message; task: create a task; attach: attach a file; relink: move one activity to another record; relink_many: move a named set",
       "enum": [
-        "demote",
-        "disqualify",
-        "promote",
-        "qualify"
+        "attach",
+        "log",
+        "relink",
+        "relink_many",
+        "task"
       ],
       "type": "string"
     },
-    "approval_id": {
-      "description": "demote, disqualify, promote only: Set on approved retry",
+    "activity_id": {
+      "description": "relink only: The captured activity to re-associate",
       "format": "uuid",
       "type": "string"
     },
-    "evidence_note": {
-      "description": "promote only",
+    "activity_ids": {
+      "description": "relink_many only",
+      "items": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "maxItems": 500,
+      "minItems": 1,
+      "type": "array"
+    },
+    "approval_id": {
+      "description": "relink, relink_many only: Set on approved retry",
+      "format": "uuid",
       "type": "string"
+    },
+    "assignee_id": {
+      "description": "task only: Defaults to the human you act for.",
+      "format": "uuid",
+      "type": "string"
+    },
+    "attendee_user_ids": {
+      "description": "log only: Meeting or call only: the workspace members who attended besides you, ids from the colleague roster. The meeting then counts toward each one's relationship with every linked contact. An id that is not an active member is refused.",
+      "items": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "maxItems": 25,
+      "type": "array"
+    },
+    "body": {
+      "description": "log, task only: Prose a colleague reads. Same language rule as subject.",
+      "type": "string"
+    },
+    "channel_provider": {
+      "description": "log only: Required when kind is \"message\", else refused; a provider the workspace's channel provider list names.",
+      "type": "string"
+    },
+    "content_base64": {
+      "description": "attach only: The whole file, standard base64 with = padding",
+      "type": "string"
+    },
+    "content_type": {
+      "description": "attach only: The file's media type, e.g. application/pdf",
+      "type": "string"
+    },
+    "contract_id": {
+      "description": "attach only: The agreement this file is paper for, when it is one",
+      "format": "uuid",
+      "type": "string"
+    },
+    "direction": {
+      "description": "log only",
+      "enum": [
+        "inbound",
+        "outbound"
+      ],
+      "type": "string"
+    },
+    "due_at": {
+      "description": "log, task only: RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
+      "format": "date-time",
+      "type": "string"
+    },
+    "entity_id": {
+      "description": "attach, relink, relink_many only",
+      "format": "uuid",
+      "type": "string"
+    },
+    "entity_type": {
+      "description": "attach, relink, relink_many only",
+      "enum": [
+        "activity",
+        "company",
+        "contact",
+        "deal",
+        "lead",
+        "project"
+      ],
+      "type": "string"
+    },
+    "filename": {
+      "description": "attach only: The file's name, with its extension",
+      "type": "string"
+    },
+    "follow_up_task": {
+      "description": "log only",
+      "properties": {
+        "assignee_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "body": {
+          "type": "string"
+        },
+        "due_at": {
+          "format": "date-time",
+          "type": "string"
+        },
+        "subject": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "subject"
+      ],
+      "type": "object"
     },
     "idempotency_key": {
       "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
       "maxLength": 255,
       "type": "string"
     },
-    "lead_id": {
-      "description": "The lead",
+    "kind": {
+      "description": "log only",
+      "enum": [
+        "email",
+        "call",
+        "meeting",
+        "note",
+        "task",
+        "message"
+      ],
+      "type": "string"
+    },
+    "links": {
+      "description": "log, task only: Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES: filing under a project marks the activity as commercial correspondence, so it is made by relinking the activity, which waits for the user's yes. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval that waits for the user's yes before it takes effect.",
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "entity_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "entity_type": {
+            "enum": [
+              "contact",
+              "company",
+              "deal",
+              "lead",
+              "project"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity_type",
+          "entity_id"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "occurred_at": {
+      "description": "log only: RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
+      "format": "date-time",
+      "type": "string"
+    },
+    "replace_existing_of_type": {
+      "default": false,
+      "description": "relink, relink_many only: Replace the existing link of the same entity_type (move) rather than adding one (associate)",
+      "type": "boolean"
+    },
+    "source_activity_id": {
+      "description": "log, task only: A non-task source, including email or message. Caller and assignee need access to the source content. Empty links inherit its visible links; its audience is preserved. This does not accept a request.",
       "format": "uuid",
       "type": "string"
     },
-    "reason": {
-      "description": "demote only, required: why the promotion is reversed, recorded in the audit trail",
-      "minLength": 1,
+    "source_id": {
+      "description": "log only",
       "type": "string"
     },
-    "trigger": {
-      "description": "promote only, required: the genuine engagement justifying it; cold outreach with no reply never promotes",
-      "enum": [
-        "inbound_reply",
-        "meeting_booked",
-        "meeting_held",
-        "human_qualify"
-      ],
+    "source_system": {
+      "description": "log only",
+      "type": "string"
+    },
+    "subject": {
+      "description": "log, task only: Prose a colleague reads. Write it in whoami's prose_language, whatever language this conversation is in; do not translate names or quoted text.",
       "type": "string"
     }
   },
   "required": [
-    "action",
-    "lead_id"
+    "action"
   ],
   "type": "object"
 }
@@ -2367,6 +1504,7 @@ and its new version from the answer. (Runs immediately; requires passport scope 
           "type": "boolean"
         },
         "last_synced_at": {
+          "format": "date-time",
           "type": "string"
         }
       },
@@ -2418,6 +1556,375 @@ and its new version from the answer. (Runs immediately; requires passport scope 
 
 </details>
 
+### change_record_parts
+
+**Change the parts of a record**
+
+```text
+Change what is kept under a record: an offer's line items, a company's facts and profile fields, a
+project's companies and stakeholders. Prices are in minor units; read a product for its
+unit_price_minor rather than inventing one. An offer's totals are computed from its lines and cannot
+be supplied, and a sent or accepted offer keeps its lines. Pass if_version from your read so a
+change made since is refused. Each action answers as its route does. Use update_record for a
+record's own fields, and create_record with record_type offer to make an offer with its first lines.
+(Runs immediately; requires passport scope "write".)
+```
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {
+    "action": {
+      "enum": [
+        "add_company_fact",
+        "add_offer_line",
+        "confirm_company_fact",
+        "confirm_company_profile_field",
+        "remove_company_fact",
+        "remove_offer_line",
+        "remove_project_company",
+        "remove_project_stakeholder",
+        "set_project_company",
+        "set_project_stakeholder",
+        "update_company_fact",
+        "update_company_profile_field",
+        "update_offer_line"
+      ],
+      "type": "string"
+    },
+    "category": {
+      "type": "string"
+    },
+    "company_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "contact_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "fact_key": {
+      "description": "One fact of the company, spelled \u003cfield\u003e:\u003cvalue_key\u003e from its read",
+      "type": "string"
+    },
+    "field": {
+      "type": "string"
+    },
+    "idempotency_key": {
+      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
+      "maxLength": 255,
+      "type": "string"
+    },
+    "if_version": {
+      "description": "The version you read, so a change made since is refused rather than overwritten",
+      "type": "integer"
+    },
+    "line": {
+      "additionalProperties": false,
+      "description": "The line to add, or the fields of it to change. quantity is required to add one; product_id is taken only on add.",
+      "properties": {
+        "billing_interval_months": {
+          "enum": [
+            1,
+            3,
+            6,
+            12
+          ],
+          "type": "integer"
+        },
+        "billing_model": {
+          "enum": [
+            "one_time",
+            "recurring"
+          ],
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "discount_pct": {
+          "type": "number"
+        },
+        "interval_count": {
+          "type": "integer"
+        },
+        "position": {
+          "type": "integer"
+        },
+        "product_id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "quantity": {
+          "type": "number"
+        },
+        "tax_rate": {
+          "type": "number"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "unit_price_minor": {
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "line_item_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "offer_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "project_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "role": {
+      "type": "string"
+    },
+    "value": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "action"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "format": "date-time",
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+### change_state
+
+**Move a lead, deal or project on**
+
+```text
+Move a lead, deal or project on. qualify fills what a lead's own data already implies, today the
+company name from its email domain, and names the fields still empty. promote turns a lead who has
+genuinely engaged into a contact. disqualify closes out a lead going nowhere. demote reverses a
+promotion. move_deal moves a deal to a stage, with a note. move_project moves a project to a phase;
+closed closes it. promote needs a trigger naming the engagement; cold outreach nobody answered never
+promotes. demote needs a reason and is refused once the contact owns a deal. move_deal to a won or
+lost stage waits for a human; to an open stage it runs at once. move_project to closed needs a
+reason and leaves the project's tasks open. When the user asked for the close, report what is still
+open and close: an open task is news for them, not a reason to hold back. read_workspace topic
+pipelines gives the stage ids. Use update_record for a record's other fields, and enrich to learn
+about a company from its website. A promotion answers with the new contact's id. A staged answer's
+approval id is what the retry carries; do not report the change until the retry has answered.
+(Governance: runs immediately for demote, disqualify, move_project, promote, qualify; decided per
+call from its arguments for move_deal; requires passport scope "write".)
+```
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "properties": {
+    "action": {
+      "enum": [
+        "demote",
+        "disqualify",
+        "move_deal",
+        "move_project",
+        "promote",
+        "qualify"
+      ],
+      "type": "string"
+    },
+    "approval_id": {
+      "description": "demote, disqualify, move_deal, move_project, promote only: Set on approved retry",
+      "format": "uuid",
+      "type": "string"
+    },
+    "deal_id": {
+      "description": "move_deal only",
+      "format": "uuid",
+      "type": "string"
+    },
+    "evidence_note": {
+      "description": "promote only",
+      "type": "string"
+    },
+    "idempotency_key": {
+      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
+      "maxLength": 255,
+      "type": "string"
+    },
+    "if_version": {
+      "description": "move_deal, move_project only",
+      "type": "integer"
+    },
+    "lead_id": {
+      "description": "The lead",
+      "format": "uuid",
+      "type": "string"
+    },
+    "lost_reason": {
+      "description": "move_deal only: Required when the target stage closes the deal as lost",
+      "type": "string"
+    },
+    "note": {
+      "description": "move_deal only: Logged as a note on the deal's timeline after the move",
+      "type": "string"
+    },
+    "project_id": {
+      "description": "move_project only",
+      "format": "uuid",
+      "type": "string"
+    },
+    "reason": {
+      "description": "demote, required: why the promotion is reversed. move_project: required when to_phase is closed. Recorded in the audit trail",
+      "minLength": 1,
+      "type": "string"
+    },
+    "to_phase": {
+      "description": "move_project only",
+      "enum": [
+        "initiative",
+        "pursuing",
+        "delivering",
+        "closed"
+      ],
+      "type": "string"
+    },
+    "to_stage_id": {
+      "description": "move_deal only: The target stage, by id — obtain it from the workspace's pipeline list, since a deal you have read carries only the stage it is already IN. That stage's semantic decides what happens next: open executes immediately, won or lost is staged for a human's approval.",
+      "format": "uuid",
+      "type": "string"
+    },
+    "trigger": {
+      "description": "promote only, required: the genuine engagement justifying it; cold outreach with no reply never promotes",
+      "enum": [
+        "inbound_reply",
+        "meeting_booked",
+        "meeting_held",
+        "human_qualify"
+      ],
+      "type": "string"
+    },
+    "won_without_contract_detail": {
+      "description": "move_deal only: What the reason was, required when it is other",
+      "maxLength": 500,
+      "type": "string"
+    },
+    "won_without_contract_reason": {
+      "description": "move_deal only: Why this win has no contract behind it. Omit when the deal has a signed contract with its paper attached; a win claiming neither is refused.",
+      "enum": [
+        "imported",
+        "purchase_order",
+        "verbal",
+        "renewal_by_email",
+        "other"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "action"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
 ### change_tags
 
 **Change tags**
@@ -2425,15 +1932,16 @@ and its new version from the answer. (Runs immediately; requires passport scope 
 ```text
 Change the workspace's tags. apply and remove put one tag on, or take it off, one contact, company,
 deal, lead or project, by tag_id or by the tag_name of a tag that already exists. create coins a new
-word. update renames, recolours or describes one; fields left out are unchanged. apply never creates
-a tag: an unknown name is refused, a name matches case-insensitively, an archived word is refused as
-archived, and the same tag twice is a conflict. Before create, read the list — a near-duplicate
-splits records that belong together, and a taken name is a conflict, even a retired one, which only
-Settings restores. create and update need tag grants an ordinary seat lacks. update sends no
-version, so read the tag right before editing; it changes what a word is called, never what carries
-it. Removing a tag that is not there succeeds. Use merge_tags to fold a duplicate word into the one
-kept, and archive_record on a tag to retire it for every record. (Runs immediately; requires
-passport scope "write".)
+word. update renames, recolours or describes one; fields left out are unchanged. merge folds a
+duplicate word into the one kept, once a human approves. apply never creates a tag: an unknown name
+is refused, a name matches case-insensitively, an archived word is refused as archived, and the same
+tag twice is a conflict. Before create, read the list — a near-duplicate splits records that
+belong together, and a taken name is a conflict, even a retired one, which only Settings restores.
+create and update need tag grants an ordinary seat lacks. update sends no version, so read the tag
+right before editing; it changes what a word is called, never what carries it. Removing a tag that
+is not there succeeds. archive retires a word for every record; the records keep it. (Governance:
+runs immediately for apply, archive, create, remove, update; a human approves first for merge;
+requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -2444,10 +1952,17 @@ passport scope "write".)
     "action": {
       "enum": [
         "apply",
+        "archive",
         "create",
+        "merge",
         "remove",
         "update"
       ],
+      "type": "string"
+    },
+    "approval_id": {
+      "description": "merge only: Set on approved retry",
+      "format": "uuid",
       "type": "string"
     },
     "color": {
@@ -2474,6 +1989,11 @@ passport scope "write".)
       "maxLength": 255,
       "type": "string"
     },
+    "into_tag_id": {
+      "description": "merge only: The word that survives",
+      "format": "uuid",
+      "type": "string"
+    },
     "name": {
       "description": "create, update only",
       "maxLength": 64,
@@ -2497,7 +2017,7 @@ passport scope "write".)
       "type": "string"
     },
     "tag_id": {
-      "description": "apply, remove, update only",
+      "description": "apply, archive, merge, remove, update only",
       "format": "uuid",
       "type": "string"
     },
@@ -2524,11 +2044,11 @@ passport scope "write".)
 Find candidate times for a host without booking or sending anything. Set reliable=true to check the
 acting host's selected Google or Microsoft calendars and pending reservations. Otherwise only
 meetings recorded in this CRM are considered. calendar_backing=calendar is the evidence that live
-occupancy was checked. This never checks invitees' availability. Use invite_meeting to request an
-approved calendar invitation after a time is agreed. book_meeting only records a meeting.
-prep_for_meeting prepares for an existing meeting. Keep the exact start and end, the
-calendar_backing value, and the truncated flag. Availability is checked again when reserving the
-time.
+occupancy was checked. This never checks invitees' availability. Use schedule_meeting with
+action=invite to request an approved calendar invitation after a time is agreed. schedule_meeting
+with action=book only records a meeting. read_context with about=meeting prepares for an existing
+meeting. Keep the exact start and end, the calendar_backing value, and the truncated flag.
+Availability is checked again when reserving the time.
 ```
 
 <details><summary>Input schema</summary>
@@ -2587,9 +2107,11 @@ time.
           "items": {
             "properties": {
               "end": {
+                "format": "date-time",
                 "type": "string"
               },
               "start": {
+                "format": "date-time",
                 "type": "string"
               }
             },
@@ -2643,6 +2165,7 @@ time.
           "type": "boolean"
         },
         "last_synced_at": {
+          "format": "date-time",
           "type": "string"
         }
       },
@@ -2803,289 +2326,7 @@ requires passport scope "write".)
           "type": "boolean"
         },
         "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### compose_analytics_report
-
-**Compose an analytics report**
-
-```text
-WRITE a DOCUMENT somebody keeps and reads — a board-pack section, a summary for a meeting —
-whose numbers come from governed queries, standard metrics or frozen editions instead of being
-typed. Not for answering with a figure: a number in the reply is run_analytics_query's or
-run_report's. A query-cell figure comes from run_analytics_query with save; a run_report answer has
-no run id and cannot be cited. The document carries the STRUCTURE and the WORDS; each figure names a
-query cell, metric_ref or edition_ref, and the server resolves those handles under the reader's own
-authority. It writes no number of its own and refuses any document that does. A block carrying a
-literal figure is refused EVEN WHEN a valid handle sits beside it: the literal is what renders, the
-two can disagree, and no reader could tell the page shows a figure the database never computed.
-Preserve returned coverage, units and capture context. For a query cell, run an analytics query with
-save, and cite the run id it answers with. Ask run_analytics_query for one number when a figure is
-what is wanted. This composes a DOCUMENT of several, which is worth the round trip only when the
-answer is a report somebody reads. describe_vocabulary (topic report_blocks) holds the block kinds
-and their fields for a caller that wants them before composing. Never put a number in a block —
-cite the cell that holds it. A block kind outside the grammar is refused BY NAME with the whole set,
-so a first attempt costs one refusal rather than a lookup.
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "description": "Discover pipeline and stage IDs with read_directory (list: pipelines).",
-  "properties": {
-    "blocks": {
-      "items": {
-        "additionalProperties": false,
-        "properties": {
-          "cells": {
-            "items": {
-              "additionalProperties": false,
-              "description": "Choose exactly one saved-run cell, metric_ref, or edition_ref.",
-              "properties": {
-                "column": {
-                  "type": "string"
-                },
-                "edition_ref": {
-                  "additionalProperties": false,
-                  "properties": {
-                    "edition_id": {
-                      "format": "uuid",
-                      "type": "string"
-                    },
-                    "metric": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "edition_id",
-                    "metric"
-                  ],
-                  "type": "object"
-                },
-                "group": {
-                  "type": "array"
-                },
-                "metric_ref": {
-                  "description": "A `pipeline_id` or `stage_id` used in a plan comes from read_directory (list: pipelines).",
-                  "properties": {
-                    "metric": {
-                      "type": "string"
-                    },
-                    "selection": {
-                      "properties": {
-                        "blocks": {
-                          "items": {
-                            "type": "string"
-                          },
-                          "type": "array"
-                        },
-                        "close_window": {
-                          "type": "string"
-                        },
-                        "interval": {
-                          "properties": {
-                            "end_at": {
-                              "type": "string"
-                            },
-                            "start_at": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "end_at",
-                            "start_at"
-                          ],
-                          "type": "object"
-                        },
-                        "metrics": {
-                          "items": {
-                            "type": "string"
-                          },
-                          "type": "array"
-                        },
-                        "period": {
-                          "type": "string"
-                        },
-                        "pipeline_id": {
-                          "format": "uuid",
-                          "type": "string"
-                        },
-                        "scope": {
-                          "properties": {
-                            "id": {
-                              "format": "uuid",
-                              "type": "string"
-                            },
-                            "kind": {
-                              "type": "string"
-                            },
-                            "label": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "kind"
-                          ],
-                          "type": "object"
-                        },
-                        "target_basis": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "blocks",
-                        "close_window",
-                        "metrics",
-                        "period",
-                        "scope",
-                        "target_basis"
-                      ],
-                      "type": "object"
-                    }
-                  },
-                  "required": [
-                    "metric",
-                    "selection"
-                  ],
-                  "type": "object"
-                },
-                "run_id": {
-                  "type": "string"
-                }
-              },
-              "type": "object"
-            },
-            "type": "array"
-          },
-          "kind": {
-            "type": "string"
-          },
-          "severity": {
-            "type": "string"
-          },
-          "text": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "kind"
-        ],
-        "type": "object"
-      },
-      "minItems": 1,
-      "type": "array"
-    }
-  },
-  "required": [
-    "blocks"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "blocks": {
-          "items": {
-            "type": "object"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "blocks"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
+          "format": "date-time",
           "type": "string"
         }
       },
@@ -3143,14 +2384,12 @@ so a first attempt costs one refusal rather than a lookup.
 
 ```text
 Create a contact, company, deal, lead, project, activity or relationship that does not exist yet.
-Creating a deal requires a pipeline_id and a stage_id, and read_directory (list: pipelines) is what
+Creating a deal requires a pipeline_id and a stage_id, and the workspace's pipeline list is what
 yields them for a deal that does not exist yet. Only the fields the chosen record_type actually
 stores are accepted, and a field belonging to a neighbouring type is refused rather than dropped. A
-CONTACT created here is visible to the human you are acting for and to nobody else, until they
-publish it or correspondence with that address earns a widening verdict — attending a meeting
-together does not earn one. Do not tell anyone a contact you just created is on their colleagues'
-screens. Search first when the record might already exist — a second copy of a contact or company
-is a problem that then needs resolve_duplicates to undo. A record that shares only a name, with a
+CONTACT created here is visible to everyone in the workspace, the same as one a human types in.
+Search first when the record might already exist — a second copy of a contact or company is a
+problem that then needs resolve_duplicates to undo. A record that shares only a name, with a
 different email, phone or employer, is not proof of a duplicate: create it — the create files the
 pair for review, and you report the pair as filed, unresolved until the reviewer decides. Several
 contacts, companies or leads at once — a pasted list, a CSV — go through preview_import, which
@@ -3174,7 +2413,7 @@ Renders its result in [`ui://margince/create-followups.html`](#create_followups_
       "type": "string"
     },
     "fields": {
-      "description": "The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields, and answered by describe_vocabulary (topic record_fields) — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. Any field holding a sentence — a description, a summary, a note — is written in whoami's prose_language, whatever language this conversation is in.",
+      "description": "The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields, and answered by read_workspace with topic=record_fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. Any field holding a sentence — a description, a summary, a note — is written in whoami's prose_language, whatever language this conversation is in.",
       "type": "object"
     },
     "idempotency_key": {
@@ -3195,7 +2434,13 @@ Renders its result in [`ui://margince/create-followups.html`](#create_followups_
         "lead",
         "activity",
         "project",
-        "relationship"
+        "relationship",
+        "product",
+        "offer_template",
+        "offer",
+        "deal_room",
+        "deal_room_thread",
+        "deal_room_comment"
       ],
       "type": "string"
     }
@@ -3344,193 +2589,7 @@ Renders its result in [`ui://margince/create-followups.html`](#create_followups_
           "type": "boolean"
         },
         "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### create_task
-
-**Create a task**
-
-```text
-Put a to-do on someone's list: what is owed, by whom, on which records. Creates the task only — no
-reminder, no deal move; unlinked, it sits on no timeline. log_activity is for what already happened.
-(Runs immediately; requires passport scope "write".)
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {
-    "assignee_id": {
-      "description": "Defaults to the human you act for.",
-      "format": "uuid",
-      "type": "string"
-    },
-    "body": {
-      "type": "string"
-    },
-    "due_at": {
-      "description": "RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
-      "format": "date-time",
-      "type": "string"
-    },
-    "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
-      "maxLength": 255,
-      "type": "string"
-    },
-    "links": {
-      "items": {
-        "additionalProperties": false,
-        "properties": {
-          "entity_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "entity_type": {
-            "enum": [
-              "contact",
-              "company",
-              "deal",
-              "lead",
-              "project"
-            ],
-            "type": "string"
-          }
-        },
-        "required": [
-          "entity_type",
-          "entity_id"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "subject": {
-      "type": "string"
-    }
-  },
-  "required": [
-    "subject"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "fields": {
-          "type": "object"
-        },
-        "id": {
-          "format": "uuid",
-          "type": "string"
-        },
-        "record_type": {
-          "type": "string"
-        },
-        "trust_tier": {
-          "type": "string"
-        },
-        "version": {
-          "type": "integer"
-        }
-      },
-      "required": [
-        "fields",
-        "id",
-        "record_type"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
+          "format": "date-time",
           "type": "string"
         }
       },
@@ -3643,51 +2702,6 @@ where both ids come from. If the proposal is your OWN refused call, approving do
 
 </details>
 
-### describe_vocabulary
-
-**Describe what a tool accepts**
-
-```text
-Answer the names another tool accepts, one topic at a time. query: the record types, fields,
-operators and the one relationship hop a query_workspace plan may name. analytics: the populations,
-group_by dimensions, measures and functions run_analytics_query takes for this seat. record_fields:
-what a create_record or update_record `fields` body accepts for each record_type. report_vocabulary:
-the group_by, filters and aggregates each run_report report admits. report_blocks: the block kinds a
-compose_analytics_report document may contain. It returns names, never records or numbers, and none
-of it is a prerequisite: each of those tools refuses an unknown name together with the accepted
-list. query, analytics and record_fields are narrowed to what you may already see. Call the tool
-that does the work directly when the names are already known, and read its refusal when one is
-wrong. Take every name verbatim; a name outside the document is refused, not approximated. In
-record_fields a key with no `?` is required, and a custom field is spelled cf_<slug>. A report
-figure is cited from a saved run, never written into a block.
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "properties": {
-    "topic": {
-      "description": "Which tool's names to describe",
-      "enum": [
-        "analytics",
-        "query",
-        "record_fields",
-        "report_blocks",
-        "report_vocabulary"
-      ],
-      "type": "string"
-    }
-  },
-  "required": [
-    "topic"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
 ### draft_outbound
 
 **Draft an email or follow-ups**
@@ -3699,10 +2713,10 @@ deal or project it is about). slipping_deals: a follow-up for each deal in a seg
 today `slipping` — each left on its deal's timeline. A first email waits on the recipient's page,
 marked as drafted by an agent, until the human you act for sends it there; a reply, or one not_saved
 because they keep an unsent draft of their own, is not saved, so show it in full. slipping_deals
-covers the deals whats_slipping_this_week reports, at most 25. send_outbound sends an email once it
-is written. Keep the subject, body, to and the activity_id or links a message echoes; the send takes
-them unchanged. Each follow-up comes back with its deal_id and draft_activity_id. (Runs immediately;
-requires passport scope "draft".)
+covers the deals read_attention with view=slipping reports, at most 25. send_outbound sends an email
+once it is written. Keep the subject, body, to and the activity_id or links a message echoes; the
+send takes them unchanged. Each follow-up comes back with its deal_id and draft_activity_id. (Runs
+immediately; requires passport scope "draft".)
 ```
 
 <details><summary>Input schema</summary>
@@ -3795,11 +2809,11 @@ accept onto the record. It reaches OUTSIDE the workspace, and what it returns is
 nothing lands on the record until someone accepts it, which is the review that guards this, not an
 approval on the call. Reading one page answers immediately; reading a whole site is queued and
 answers with a read id rather than the content. What it finds is captured text from a third party,
-not a fact this workspace has verified. Use change_lead_state to qualify a lead when the missing
-values are already derivable from the record itself, which costs no external read and needs no
-approval. Keep the company_id you enriched, and the read id when a whole-site read was queued —
-the result is collected against it later. (Governance: a human approves every call before it runs;
-requires passport scope "enrich".)
+not a fact this workspace has verified. Use change_state with action=qualify to qualify a lead when
+the missing values are already derivable from the record itself, which costs no external read and
+needs no approval. Keep the company_id you enriched, and the read id when a whole-site read was
+queued — the result is collected against it later. (Governance: a human approves every call before
+it runs; requires passport scope "enrich".)
 ```
 
 <details><summary>Input schema</summary>
@@ -3887,6 +2901,7 @@ requires passport scope "enrich".)
           "type": "boolean"
         },
         "last_synced_at": {
+          "format": "date-time",
           "type": "string"
         }
       },
@@ -3938,19 +2953,23 @@ requires passport scope "enrich".)
 
 </details>
 
-### invite_meeting
+### find_records
 
-**Send a calendar invitation**
+**Find records**
 
 ```text
-Create a real calendar invitation for one contact and notify their chosen address. Requires a
-connected writable calendar and a contact email the acting host may use. It checks actual busy time
-and returns pending until the provider confirms. Does not prove the guest agreed or received the
-notification. Use book_meeting only to record a meeting without inviting anyone. Use
-check_availability with reliable=true to propose calendar-checked times. Keep the invitation id and
-inspect its status before claiming it is booked. Retrying an uncertain delivery must use the
-existing invitation. (Governance: a human approves every call before it runs; requires passport
-scope "send".)
+Find records, choosing the engine by the question. search ranks contacts, companies, deals, leads
+and projects by how well their text matches your words, and products, offer templates or activity
+when named. list pages one record type by its filters and sort, newest first, and reaches the
+timeline (activity), offers, products and deal rooms. query runs a typed plan of fields, operators
+and one join, for counts, sums and the records near a place. meaning finds passages whose meaning
+matches, in notes, emails and transcripts. identify says which existing contact or company a name,
+email or domain refers to. search needs words and reads a timeline only when activity is named;
+meaning reads it and answers passages, not records. list needs record_type, and read_workspace topic
+list_filters names the filters each type takes. query names only fields read_workspace topic query
+lists. identify answers unresolved for a record you may not see, as for one that does not exist. Use
+read_record for one record you already have the id of, and read_context to learn what has been
+happening on it. Keep each record's id and version, and next_cursor to read on.
 ```
 
 <details><summary>Input schema</summary>
@@ -3958,186 +2977,322 @@ scope "send".)
 ```json
 {
   "properties": {
-    "attendee_email": {
+    "candidates": {
+      "description": "identify only",
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "domains": {
+            "description": "Company domains claimed by the payload. Read for a company only.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 10,
+            "type": "array"
+          },
+          "emails": {
+            "description": "Every address on the payload, not just the primary one. For a company each address also contributes its domain, unless it is a consumer mail domain.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 10,
+            "type": "array"
+          },
+          "kind": {
+            "description": "Which record type this payload is asking about. Leads are not resolved.",
+            "enum": [
+              "contact",
+              "company"
+            ],
+            "type": "string"
+          },
+          "legal_name": {
+            "description": "The registered company name, when it differs from the trading name. Read for a company only.",
+            "type": "string"
+          },
+          "name": {
+            "description": "Full name for a contact, trading name for a company.",
+            "type": "string"
+          },
+          "phones": {
+            "description": "Phone numbers in E.164 form; one that does not normalize is not a key and is ignored.",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 10,
+            "type": "array"
+          },
+          "ref": {
+            "description": "Your own label for this candidate, echoed back on its answer so a batch can be lined up. Any string; it is never stored.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "type": "object"
+      },
+      "maxItems": 20,
+      "minItems": 1,
+      "type": "array"
+    },
+    "cursor": {
+      "description": "list, search only: Keyset cursor from a previous page's next_cursor",
       "type": "string"
     },
-    "contact_id": {
-      "format": "uuid",
+    "engine": {
+      "description": "search: records ranked by how well their text matches your words; list: one record type by its filters, newest first; query: a typed plan of fields, operators and one join; meaning: passages whose meaning matches; identify: which existing contact or company a name, email or domain is",
+      "enum": [
+        "identify",
+        "list",
+        "meaning",
+        "query",
+        "search"
+      ],
       "type": "string"
     },
-    "description": {
-      "type": "string"
-    },
-    "end": {
-      "type": "string"
-    },
-    "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
-      "maxLength": 255,
-      "type": "string"
-    },
-    "location": {
-      "type": "string"
-    },
-    "start": {
-      "type": "string"
-    },
-    "subject": {
-      "type": "string"
-    },
-    "video_call": {
-      "type": "boolean"
-    }
-  },
-  "required": [
-    "attendee_email",
-    "contact_id",
-    "description",
-    "end",
-    "location",
-    "start",
-    "subject"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
+    "filters": {
+      "additionalProperties": false,
+      "description": "list only: Narrow the list. Every operand is a string. Which filters each record_type takes, and the values each takes, is in read_workspace with topic=list_filters. A pipeline_id or stage_id comes from the workspace's pipeline list; nothing else on this surface yields one.",
       "properties": {
-        "calendar_url": {
+        "acquisition_source": {
           "type": "string"
         },
-        "end": {
+        "active": {
           "type": "string"
         },
-        "id": {
-          "format": "uuid",
+        "active_only": {
           "type": "string"
         },
-        "location": {
+        "ai_written": {
           "type": "string"
         },
-        "management_token": {
+        "assignee_id": {
           "type": "string"
         },
-        "provider": {
+        "captured_by_kind": {
           "type": "string"
         },
-        "reminder_status": {
+        "cert_status": {
           "type": "string"
         },
-        "start": {
+        "channel_provider": {
+          "type": "string"
+        },
+        "commercial_motion": {
+          "type": "string"
+        },
+        "company_id": {
+          "type": "string"
+        },
+        "deal_id": {
+          "type": "string"
+        },
+        "deal_room_id": {
+          "type": "string"
+        },
+        "document_id": {
+          "type": "string"
+        },
+        "domain": {
+          "type": "string"
+        },
+        "entity_id": {
+          "type": "string"
+        },
+        "entity_type": {
+          "type": "string"
+        },
+        "forecast_category": {
+          "type": "string"
+        },
+        "from_contact_id": {
+          "type": "string"
+        },
+        "include_anchor": {
+          "type": "string"
+        },
+        "include_archived": {
+          "type": "string"
+        },
+        "industry": {
+          "type": "string"
+        },
+        "key": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "lifecycle": {
+          "type": "string"
+        },
+        "list_id": {
+          "type": "string"
+        },
+        "locale": {
+          "type": "string"
+        },
+        "min_score": {
+          "type": "string"
+        },
+        "occurred_after": {
+          "type": "string"
+        },
+        "occurred_before": {
+          "type": "string"
+        },
+        "owner_id": {
+          "type": "string"
+        },
+        "owner_team_id": {
+          "type": "string"
+        },
+        "participant_email": {
+          "type": "string"
+        },
+        "partner_attribution": {
+          "type": "string"
+        },
+        "partner_company_id": {
+          "type": "string"
+        },
+        "partner_role": {
+          "type": "string"
+        },
+        "partner_sourced": {
+          "type": "string"
+        },
+        "phase": {
+          "type": "string"
+        },
+        "pipeline_id": {
+          "type": "string"
+        },
+        "priority": {
+          "type": "string"
+        },
+        "project_id": {
+          "type": "string"
+        },
+        "relationship_type": {
+          "type": "string"
+        },
+        "size_band": {
+          "type": "string"
+        },
+        "sla_state": {
+          "type": "string"
+        },
+        "sort": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "source_activity_id": {
+          "type": "string"
+        },
+        "stage_id": {
+          "type": "string"
+        },
+        "stalled": {
+          "type": "string"
+        },
+        "state": {
           "type": "string"
         },
         "status": {
           "type": "string"
         },
-        "subject": {
+        "tag_id": {
           "type": "string"
         },
-        "version": {
-          "type": "integer"
-        },
-        "video_call": {
-          "type": "boolean"
-        },
-        "video_url": {
+        "tag_mode": {
           "type": "string"
-        }
-      },
-      "required": [
-        "end",
-        "id",
-        "location",
-        "start",
-        "status",
-        "subject",
-        "version"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
         },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
+        "thread_key": {
+          "type": "string"
         },
-        "last_synced_at": {
+        "unassigned": {
+          "type": "string"
+        },
+        "waiting_reply": {
           "type": "string"
         }
       },
-      "required": [
-        "authoritative"
-      ],
       "type": "object"
     },
-    "schema_version": {
+    "limit": {
+      "description": "list, meaning, search only; at most 25 for meaning, search.",
+      "maximum": 50,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "per_type": {
+      "description": "search only: Answer up to this many of each type instead of one ranked list, at most 25 records in all. Takes no cursor or limit; types_with_more names the types holding more.",
+      "maximum": 20,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "plan": {
+      "description": "query only: A query plan, in the grammar published at margince://schema/query. That document, not this description, holds the record types, fields, operators and relationships this workspace admits: a name outside it is refused by name, never guessed at.",
+      "type": "object"
+    },
+    "q": {
+      "description": "list: text to match alongside any filters; search: the words to rank by, required",
       "type": "string"
     },
-    "trace_id": {
+    "query": {
+      "description": "meaning only: What to look for, in your own words. The wording is matched by meaning as well as by the words themselves, so a phrase that appears nowhere on a record can still rank it.",
+      "maxLength": 1000,
       "type": "string"
     },
-    "trust": {
+    "record_type": {
+      "description": "list, search only",
+      "enum": [
+        "activity",
+        "commission",
+        "company",
+        "contact",
+        "deal",
+        "deal_room",
+        "deal_room_document",
+        "deal_room_participant",
+        "deal_room_thread",
+        "lead",
+        "offer",
+        "offer_template",
+        "partner",
+        "product",
+        "project"
+      ],
       "type": "string"
     },
-    "warnings": {
+    "record_types": {
+      "description": "search: these types in place of record_type, omitted for contact, company, deal, lead and project; meaning: these types, omitted for all five",
       "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
+        "enum": [
+          "activity",
+          "company",
+          "contact",
+          "deal",
+          "lead",
+          "offer_template",
+          "product",
+          "project"
         ],
-        "type": "object"
+        "type": "string"
       },
       "type": "array"
+    },
+    "with_employees": {
+      "description": "search only: Also find the contacts who work at a matching company; each carries match.works_at.",
+      "type": "boolean"
     }
   },
   "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
+    "engine"
   ],
   "type": "object"
 }
@@ -4154,9 +3309,10 @@ The staged actions waiting for a human's decision: what was proposed and what ea
 where a proposal that is already waiting turns up — a message staged and unsent is not one that
 needs writing again. It lists what the colleague you act for could decide themselves; anything else
 is absent rather than refused. A proposal past its expiry reads as expired and can no longer be
-answered. Each item carries its one-line summary, not the change itself. read_approval opens one and
-shows what it holds; decide_approvals answers it. Keep the staged_action_id you mean to act on, the
-bundle_id when one act staged several, and next_cursor.
+answered. Personal mutes hide eligible pending rows, so a bundle may be partial. Use include_muted
+for a complete authorized bundle review. Each item carries its one-line summary, not the change
+itself. read_approval opens one and shows what it holds; decide_approvals answers it. Keep the
+staged_action_id you mean to act on, the bundle_id when one act staged several, and next_cursor.
 ```
 
 <details><summary>Input schema</summary>
@@ -4165,12 +3321,21 @@ bundle_id when one act staged several, and next_cursor.
 {
   "additionalProperties": false,
   "properties": {
+    "bundle_id": {
+      "description": "The approvals staged together as one bundle.",
+      "format": "uuid",
+      "type": "string"
+    },
     "cursor": {
       "description": "next_cursor from a previous page.",
       "type": "string"
     },
+    "include_muted": {
+      "description": "Include your muted proposals for explicit review; visibility rules still apply.",
+      "type": "boolean"
+    },
     "kind": {
-      "description": "One staged action, e.g. send_email or advance_deal.",
+      "description": "One staged action's kind, e.g. advance_deal.",
       "type": "string"
     },
     "limit": {
@@ -4185,6 +3350,14 @@ bundle_id when one act staged several, and next_cursor.
         "approved",
         "rejected"
       ],
+      "type": "string"
+    },
+    "target_entity_id": {
+      "format": "uuid",
+      "type": "string"
+    },
+    "target_entity_type": {
+      "description": "With target_entity_id, the approvals staged against one record.",
       "type": "string"
     }
   },
@@ -4209,9 +3382,11 @@ bundle_id when one act staged several, and next_cursor.
                 "type": "string"
               },
               "created_at": {
+                "format": "date-time",
                 "type": "string"
               },
               "decided_at": {
+                "format": "date-time",
                 "type": "string"
               },
               "decided_by": {
@@ -4243,6 +3418,7 @@ bundle_id when one act staged several, and next_cursor.
                 "type": "array"
               },
               "expires_at": {
+                "format": "date-time",
                 "type": "string"
               },
               "kind": {
@@ -4323,6 +3499,7 @@ bundle_id when one act staged several, and next_cursor.
           "type": "boolean"
         },
         "last_synced_at": {
+          "format": "date-time",
           "type": "string"
         }
       },
@@ -4382,7 +3559,8 @@ bundle_id when one act staged several, and next_cursor.
 List the files stored on a company, contact, deal, lead, project or activity, newest first: name,
 type, size, who added them and the contract each is filed against. It lists and never returns a
 file's contents. Check it before attaching a file again, so the record does not carry the same file
-twice. Keep next_cursor to read the next page.
+twice. Use read_view with view company_documents or deal_documents for a company's or deal's
+document register, filtered by category, contract or state. Keep next_cursor to read the next page.
 ```
 
 <details><summary>Input schema</summary>
@@ -4457,6 +3635,7 @@ twice. Keep next_cursor to read the next page.
                 "type": "string"
               },
               "created_at": {
+                "format": "date-time",
                 "type": "string"
               },
               "entity_id": {
@@ -4525,1536 +3704,7 @@ twice. Keep next_cursor to read the next page.
           "type": "boolean"
         },
         "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### list_records
-
-**List records**
-
-```text
-Enumerate the contacts, companies, deals, leads or projects that meet exact conditions — every
-deal in one pipeline, the leads one rep owns, the projects still being delivered. It narrows only by
-the filters this workspace publishes for that record_type, which the schema lists per type, and it
-answers ONE page: the set continues past it. Use search_records when the question is what a record
-is called rather than which records meet a condition, and run_report when the answer is a count or a
-total rather than the records themselves. Keep next_cursor and pass it back to read the next page
-— a second call without it re-reads the first one. A result's `owner` says who holds it. When
-`owner.is_you` is false, say whose it is when you report the record (or that its owner could not be
-named, when `owner.name` is absent), and treat contacting it as theirs to decide rather than
-advising an approach as though the record were unowned.
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {
-    "cursor": {
-      "description": "Keyset cursor from a previous page's next_cursor",
-      "type": "string"
-    },
-    "filters": {
-      "additionalProperties": false,
-      "description": "Narrow the list. Every operand is a string. Each record_type takes only its own: contact — owner_id, tag_id (a), tag_mode (any|all|none) company — domain, lifecycle (unknown|target|prospect|opportunity|customer|former_customer|disqualified), owner_id, relationship_type (customer|partner|supplier|investor|portfolio_company|competitor|other), tag_id (a), tag_mode (any|all|none) deal — acquisition_source, commercial_motion (new_business|renewal|upsell|cross_sell|expansion|existing_business|unset), company_id, forecast_category (commit|best_case|pipeline|omitted), owner_id, partner_attribution (sourced|influenced), partner_company_id, partner_sourced (b), pipeline_id, priority (low|medium|high|unset), project_id, stage_id, stalled (b), status (open|won|lost), tag_id (a), tag_mode (any|all|none) lead — from_contact_id, min_score (i), owner_id, status (new|contacted|engaged|promoted|disqualified), tag_id (a), tag_mode (any|all|none) project — company_id, key, owner_id, phase (initiative|pursuing|delivering|closed) (a) is a comma-separated list, (b) is \"true\" or \"false\", (i) is a whole number. A pipeline_id or stage_id comes from read_directory (list: pipelines); nothing else on this surface yields one.",
-      "properties": {
-        "acquisition_source": {
-          "type": "string"
-        },
-        "commercial_motion": {
-          "type": "string"
-        },
-        "company_id": {
-          "type": "string"
-        },
-        "domain": {
-          "type": "string"
-        },
-        "forecast_category": {
-          "type": "string"
-        },
-        "from_contact_id": {
-          "type": "string"
-        },
-        "key": {
-          "type": "string"
-        },
-        "lifecycle": {
-          "type": "string"
-        },
-        "min_score": {
-          "type": "string"
-        },
-        "owner_id": {
-          "type": "string"
-        },
-        "partner_attribution": {
-          "type": "string"
-        },
-        "partner_company_id": {
-          "type": "string"
-        },
-        "partner_sourced": {
-          "type": "string"
-        },
-        "phase": {
-          "type": "string"
-        },
-        "pipeline_id": {
-          "type": "string"
-        },
-        "priority": {
-          "type": "string"
-        },
-        "project_id": {
-          "type": "string"
-        },
-        "relationship_type": {
-          "type": "string"
-        },
-        "stage_id": {
-          "type": "string"
-        },
-        "stalled": {
-          "type": "string"
-        },
-        "status": {
-          "type": "string"
-        },
-        "tag_id": {
-          "type": "string"
-        },
-        "tag_mode": {
-          "type": "string"
-        }
-      },
-      "type": "object"
-    },
-    "limit": {
-      "maximum": 50,
-      "minimum": 1,
-      "type": "integer"
-    },
-    "record_type": {
-      "enum": [
-        "contact",
-        "company",
-        "deal",
-        "lead",
-        "project"
-      ],
-      "type": "string"
-    }
-  },
-  "required": [
-    "record_type"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "next_cursor": {
-          "type": "string"
-        },
-        "records": {
-          "items": {
-            "properties": {
-              "fields": {
-                "type": "object"
-              },
-              "id": {
-                "format": "uuid",
-                "type": "string"
-              },
-              "owner": {
-                "properties": {
-                  "id": {
-                    "format": "uuid",
-                    "type": "string"
-                  },
-                  "is_you": {
-                    "type": "boolean"
-                  },
-                  "name": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "id",
-                  "is_you"
-                ],
-                "type": "object"
-              },
-              "record_type": {
-                "type": "string"
-              },
-              "trust_tier": {
-                "type": "string"
-              },
-              "version": {
-                "type": "integer"
-              }
-            },
-            "required": [
-              "fields",
-              "id",
-              "record_type"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "records"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### log_activity
-
-**Log an activity**
-
-```text
-Record something that happened — a call, a meeting, a note, a message — on the records it was
-about: name every one of them in this call. A meeting is with a contact, and also concerns their
-company and the deal it is for. It writes history and changes nothing else: no deal moves, no field
-updates, nobody is notified. Unlinked, it appears on no timeline, and adding a link afterwards is a
-second call — relink_activity — which waits for the user's yes when it files under a project.
-Use progress_deal when the same event also moves a deal, so move and note are one act; create_task
-for something still owed; attach_document for a file, whose text never goes into a note. Keep the
-activity id — draft_outbound and send_outbound identify a conversation by it. (Runs immediately;
-requires passport scope "write".)
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {
-    "attendee_user_ids": {
-      "description": "Meeting or call only: the workspace members who attended besides you, ids from read_directory (list: colleagues). The meeting then counts toward each one's relationship with every linked contact. An id that is not an active member is refused.",
-      "items": {
-        "format": "uuid",
-        "type": "string"
-      },
-      "maxItems": 25,
-      "type": "array"
-    },
-    "body": {
-      "description": "Prose a colleague reads. Same language rule as subject.",
-      "type": "string"
-    },
-    "channel_provider": {
-      "description": "Required when kind is \"message\", else refused; a provider read_directory (list: channel_providers) names.",
-      "type": "string"
-    },
-    "direction": {
-      "enum": [
-        "inbound",
-        "outbound"
-      ],
-      "type": "string"
-    },
-    "due_at": {
-      "description": "RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
-      "format": "date-time",
-      "type": "string"
-    },
-    "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
-      "maxLength": 255,
-      "type": "string"
-    },
-    "kind": {
-      "enum": [
-        "email",
-        "call",
-        "meeting",
-        "note",
-        "task",
-        "message"
-      ],
-      "type": "string"
-    },
-    "links": {
-      "description": "Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES: filing under a project marks the activity as commercial correspondence, so it is made through relink_activity, which waits for the user's yes. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval that waits for the user's yes before it takes effect.",
-      "items": {
-        "additionalProperties": false,
-        "properties": {
-          "entity_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "entity_type": {
-            "enum": [
-              "contact",
-              "company",
-              "deal",
-              "lead",
-              "project"
-            ],
-            "type": "string"
-          }
-        },
-        "required": [
-          "entity_type",
-          "entity_id"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "occurred_at": {
-      "description": "RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
-      "format": "date-time",
-      "type": "string"
-    },
-    "source_id": {
-      "type": "string"
-    },
-    "source_system": {
-      "type": "string"
-    },
-    "subject": {
-      "description": "Prose a colleague reads. Write it in whoami's prose_language, whatever language this conversation is in; do not translate names or quoted text.",
-      "type": "string"
-    }
-  },
-  "required": [
-    "kind"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "fields": {
-          "type": "object"
-        },
-        "id": {
-          "format": "uuid",
-          "type": "string"
-        },
-        "record_type": {
-          "type": "string"
-        },
-        "trust_tier": {
-          "type": "string"
-        },
-        "version": {
-          "type": "integer"
-        }
-      },
-      "required": [
-        "fields",
-        "id",
-        "record_type"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### merge_tags
-
-**Fold one tag into another**
-
-```text
-Fold a duplicate word into the one the workspace keeps, moving every record that carries it. NOT
-UNDOABLE once approved: the source is retired, its name is released — links to it stop working and
-someone may coin it again — and no pointer home is kept, unlike a contact or company merge. The
-TARGET is the word that survives; read both with read_tags first. Needs the tag.update grant.
-(Governance: a human approves every call before it runs; requires passport scope "write".)
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {
-    "approval_id": {
-      "description": "Set on approved retry",
-      "format": "uuid",
-      "type": "string"
-    },
-    "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
-      "maxLength": 255,
-      "type": "string"
-    },
-    "into_tag_id": {
-      "description": "The word that survives",
-      "format": "uuid",
-      "type": "string"
-    },
-    "tag_id": {
-      "description": "The word to retire",
-      "format": "uuid",
-      "type": "string"
-    }
-  },
-  "required": [
-    "tag_id",
-    "into_tag_id"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "collapsed": {
-          "type": "integer"
-        },
-        "moved": {
-          "type": "integer"
-        }
-      },
-      "required": [
-        "collapsed",
-        "moved"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### prep_for_meeting
-
-**Prepare for a meeting**
-
-```text
-Get ready for a specific meeting: given the meeting, the same written brief a human reads; given any
-other record, the assembled picture a catch-up gives, plus the open items pulled out as the things
-to raise. It is built around ONE record you name, and everything it reports carries a source; what
-cannot be evidenced is absent rather than inferred. Given a meeting it works out which record that
-meeting is about and names the others alongside. Use catch_me_up_on when there is no meeting and the
-question is simply what has been happening, and check_availability when the goal is finding a time
-rather than preparing for one. The focus list names the open items by record_id; those are what to
-act on after the meeting. prepared_for names the record the prep was built around. occurred_at is
-when an item happened, in UTC — prefer it over a date the prose recalls.
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {
-    "max_items": {
-      "maximum": 20,
-      "minimum": 1,
-      "type": "integer"
-    },
-    "project_id": {
-      "description": "Keep only what is filed under this project or under none",
-      "format": "uuid",
-      "type": "string"
-    },
-    "record_id": {
-      "description": "The record to build around. Give this or record_name, not both.",
-      "format": "uuid",
-      "type": "string"
-    },
-    "record_name": {
-      "description": "The record named in words, resolved the way search_records resolves it. Refused with the candidate ids when the name matches more than one, rather than guessing.",
-      "type": "string"
-    },
-    "record_type": {
-      "enum": [
-        "contact",
-        "company",
-        "deal",
-        "lead",
-        "project",
-        "activity"
-      ],
-      "type": "string"
-    }
-  },
-  "required": [
-    "record_type"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "brief": {
-          "properties": {
-            "activity_id": {
-              "format": "uuid",
-              "type": "string"
-            },
-            "generated_at": {
-              "type": "string"
-            },
-            "generated_by": {
-              "type": "string"
-            },
-            "plan": {
-              "properties": {
-                "advance": {
-                  "properties": {
-                    "best": {
-                      "properties": {
-                        "evidence": {
-                          "items": {
-                            "properties": {
-                              "record_id": {
-                                "format": "uuid",
-                                "type": "string"
-                              },
-                              "record_type": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "record_id",
-                              "record_type"
-                            ],
-                            "type": "object"
-                          },
-                          "type": "array"
-                        },
-                        "nature": {
-                          "type": "string"
-                        },
-                        "text": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "evidence",
-                        "text"
-                      ],
-                      "type": "object"
-                    },
-                    "fallback": {
-                      "properties": {
-                        "evidence": {
-                          "items": {
-                            "properties": {
-                              "record_id": {
-                                "format": "uuid",
-                                "type": "string"
-                              },
-                              "record_type": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "record_id",
-                              "record_type"
-                            ],
-                            "type": "object"
-                          },
-                          "type": "array"
-                        },
-                        "nature": {
-                          "type": "string"
-                        },
-                        "text": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "evidence",
-                        "text"
-                      ],
-                      "type": "object"
-                    },
-                    "minimum": {
-                      "properties": {
-                        "evidence": {
-                          "items": {
-                            "properties": {
-                              "record_id": {
-                                "format": "uuid",
-                                "type": "string"
-                              },
-                              "record_type": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "record_id",
-                              "record_type"
-                            ],
-                            "type": "object"
-                          },
-                          "type": "array"
-                        },
-                        "nature": {
-                          "type": "string"
-                        },
-                        "text": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "evidence",
-                        "text"
-                      ],
-                      "type": "object"
-                    }
-                  },
-                  "required": [
-                    "best",
-                    "fallback",
-                    "minimum"
-                  ],
-                  "type": "object"
-                },
-                "company_arc": {
-                  "items": {
-                    "properties": {
-                      "from": {
-                        "type": "string"
-                      },
-                      "summary": {
-                        "properties": {
-                          "evidence": {
-                            "items": {
-                              "properties": {
-                                "record_id": {
-                                  "format": "uuid",
-                                  "type": "string"
-                                },
-                                "record_type": {
-                                  "type": "string"
-                                }
-                              },
-                              "required": [
-                                "record_id",
-                                "record_type"
-                              ],
-                              "type": "object"
-                            },
-                            "type": "array"
-                          },
-                          "nature": {
-                            "type": "string"
-                          },
-                          "text": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "evidence",
-                          "text"
-                        ],
-                        "type": "object"
-                      },
-                      "title": {
-                        "type": "string"
-                      },
-                      "to": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "from",
-                      "summary",
-                      "to"
-                    ],
-                    "type": "object"
-                  },
-                  "type": "array"
-                },
-                "likely_asks": {
-                  "items": {
-                    "properties": {
-                      "basis": {
-                        "properties": {
-                          "evidence": {
-                            "items": {
-                              "properties": {
-                                "record_id": {
-                                  "format": "uuid",
-                                  "type": "string"
-                                },
-                                "record_type": {
-                                  "type": "string"
-                                }
-                              },
-                              "required": [
-                                "record_id",
-                                "record_type"
-                              ],
-                              "type": "object"
-                            },
-                            "type": "array"
-                          },
-                          "nature": {
-                            "type": "string"
-                          },
-                          "text": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "evidence",
-                          "text"
-                        ],
-                        "type": "object"
-                      },
-                      "prepare": {
-                        "type": "string"
-                      },
-                      "question": {
-                        "type": "string"
-                      },
-                      "relevance": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "basis",
-                      "prepare",
-                      "question",
-                      "relevance"
-                    ],
-                    "type": "object"
-                  },
-                  "type": "array"
-                },
-                "manager_coaching": {
-                  "properties": {
-                    "failure_mode": {
-                      "type": "string"
-                    },
-                    "focus": {
-                      "type": "string"
-                    },
-                    "intervene_if": {
-                      "type": "string"
-                    },
-                    "listen_for": {
-                      "type": "string"
-                    },
-                    "paths": {
-                      "items": {
-                        "properties": {
-                          "evidence": {
-                            "items": {
-                              "properties": {
-                                "record_id": {
-                                  "format": "uuid",
-                                  "type": "string"
-                                },
-                                "record_type": {
-                                  "type": "string"
-                                }
-                              },
-                              "required": [
-                                "record_id",
-                                "record_type"
-                              ],
-                              "type": "object"
-                            },
-                            "type": "array"
-                          },
-                          "label": {
-                            "type": "string"
-                          },
-                          "play": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "evidence",
-                          "label",
-                          "play"
-                        ],
-                        "type": "object"
-                      },
-                      "type": "array"
-                    },
-                    "watch_for": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "failure_mode",
-                    "focus",
-                    "intervene_if",
-                    "listen_for",
-                    "watch_for"
-                  ],
-                  "type": "object"
-                },
-                "meeting_type": {
-                  "type": "string"
-                },
-                "meeting_type_confidence": {
-                  "type": "string"
-                },
-                "objective": {
-                  "properties": {
-                    "evidence": {
-                      "items": {
-                        "properties": {
-                          "record_id": {
-                            "format": "uuid",
-                            "type": "string"
-                          },
-                          "record_type": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "record_id",
-                          "record_type"
-                        ],
-                        "type": "object"
-                      },
-                      "type": "array"
-                    },
-                    "nature": {
-                      "type": "string"
-                    },
-                    "text": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "evidence",
-                    "text"
-                  ],
-                  "type": "object"
-                },
-                "objective_caveat": {
-                  "type": "string"
-                },
-                "opening": {
-                  "properties": {
-                    "evidence": {
-                      "items": {
-                        "properties": {
-                          "record_id": {
-                            "format": "uuid",
-                            "type": "string"
-                          },
-                          "record_type": {
-                            "type": "string"
-                          }
-                        },
-                        "required": [
-                          "record_id",
-                          "record_type"
-                        ],
-                        "type": "object"
-                      },
-                      "type": "array"
-                    },
-                    "nature": {
-                      "type": "string"
-                    },
-                    "text": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "evidence",
-                    "text"
-                  ],
-                  "type": "object"
-                },
-                "questions": {
-                  "items": {
-                    "properties": {
-                      "ask": {
-                        "type": "string"
-                      },
-                      "evidence": {
-                        "items": {
-                          "properties": {
-                            "record_id": {
-                              "format": "uuid",
-                              "type": "string"
-                            },
-                            "record_type": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "record_id",
-                            "record_type"
-                          ],
-                          "type": "object"
-                        },
-                        "type": "array"
-                      },
-                      "listen_for": {
-                        "type": "string"
-                      },
-                      "why": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "ask",
-                      "evidence",
-                      "listen_for",
-                      "why"
-                    ],
-                    "type": "object"
-                  },
-                  "type": "array"
-                },
-                "readiness": {
-                  "type": "string"
-                },
-                "scenarios": {
-                  "items": {
-                    "properties": {
-                      "evidence": {
-                        "items": {
-                          "properties": {
-                            "record_id": {
-                              "format": "uuid",
-                              "type": "string"
-                            },
-                            "record_type": {
-                              "type": "string"
-                            }
-                          },
-                          "required": [
-                            "record_id",
-                            "record_type"
-                          ],
-                          "type": "object"
-                        },
-                        "type": "array"
-                      },
-                      "label": {
-                        "type": "string"
-                      },
-                      "play": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "evidence",
-                      "label",
-                      "play"
-                    ],
-                    "type": "object"
-                  },
-                  "type": "array"
-                },
-                "top_risk": {
-                  "properties": {
-                    "avoid": {
-                      "type": "string"
-                    },
-                    "say": {
-                      "type": "string"
-                    },
-                    "show": {
-                      "type": "string"
-                    },
-                    "text": {
-                      "properties": {
-                        "evidence": {
-                          "items": {
-                            "properties": {
-                              "record_id": {
-                                "format": "uuid",
-                                "type": "string"
-                              },
-                              "record_type": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "record_id",
-                              "record_type"
-                            ],
-                            "type": "object"
-                          },
-                          "type": "array"
-                        },
-                        "nature": {
-                          "type": "string"
-                        },
-                        "text": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "evidence",
-                        "text"
-                      ],
-                      "type": "object"
-                    }
-                  },
-                  "required": [
-                    "avoid",
-                    "say",
-                    "show",
-                    "text"
-                  ],
-                  "type": "object"
-                },
-                "unknowns": {
-                  "items": {
-                    "properties": {
-                      "kind": {
-                        "type": "string"
-                      },
-                      "question": {
-                        "type": "string"
-                      }
-                    },
-                    "required": [
-                      "kind",
-                      "question"
-                    ],
-                    "type": "object"
-                  },
-                  "type": "array"
-                }
-              },
-              "required": [
-                "advance",
-                "meeting_type",
-                "meeting_type_confidence",
-                "readiness"
-              ],
-              "type": "object"
-            },
-            "project_id": {
-              "format": "uuid",
-              "type": "string"
-            },
-            "sections": {
-              "items": {
-                "properties": {
-                  "kind": {
-                    "type": "string"
-                  },
-                  "sentences": {
-                    "items": {
-                      "properties": {
-                        "evidence": {
-                          "items": {
-                            "properties": {
-                              "record_id": {
-                                "format": "uuid",
-                                "type": "string"
-                              },
-                              "record_type": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "record_id",
-                              "record_type"
-                            ],
-                            "type": "object"
-                          },
-                          "type": "array"
-                        },
-                        "nature": {
-                          "type": "string"
-                        },
-                        "text": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "evidence",
-                        "text"
-                      ],
-                      "type": "object"
-                    },
-                    "type": "array"
-                  }
-                },
-                "required": [
-                  "kind",
-                  "sentences"
-                ],
-                "type": "object"
-              },
-              "type": "array"
-            }
-          },
-          "required": [
-            "activity_id",
-            "generated_at",
-            "generated_by",
-            "sections"
-          ],
-          "type": "object"
-        },
-        "briefing": {
-          "properties": {
-            "anchor": {
-              "properties": {
-                "record_id": {
-                  "format": "uuid",
-                  "type": "string"
-                },
-                "record_type": {
-                  "type": "string"
-                }
-              },
-              "required": [
-                "record_id",
-                "record_type"
-              ],
-              "type": "object"
-            },
-            "sections": {
-              "items": {
-                "properties": {
-                  "items": {
-                    "items": {
-                      "properties": {
-                        "evidence": {
-                          "items": {
-                            "properties": {
-                              "snippet": {
-                                "type": "string"
-                              },
-                              "source": {
-                                "type": "string"
-                              }
-                            },
-                            "required": [
-                              "snippet",
-                              "source"
-                            ],
-                            "type": "object"
-                          },
-                          "type": "array"
-                        },
-                        "occurred_at": {
-                          "type": "string"
-                        },
-                        "record_id": {
-                          "format": "uuid",
-                          "type": "string"
-                        },
-                        "record_type": {
-                          "type": "string"
-                        },
-                        "summary": {
-                          "type": "string"
-                        }
-                      },
-                      "required": [
-                        "evidence",
-                        "record_id",
-                        "record_type",
-                        "summary"
-                      ],
-                      "type": "object"
-                    },
-                    "type": "array"
-                  },
-                  "name": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "items",
-                  "name"
-                ],
-                "type": "object"
-              },
-              "type": "array"
-            }
-          },
-          "required": [
-            "anchor",
-            "sections"
-          ],
-          "type": "object"
-        },
-        "meeting_focus": {
-          "items": {
-            "properties": {
-              "record_id": {
-                "format": "uuid",
-                "type": "string"
-              },
-              "summary": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "record_id",
-              "summary"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "briefing",
-        "meeting_focus"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
+          "format": "date-time",
           "type": "string"
         }
       },
@@ -6113,23 +3763,23 @@ when an item happened, in UTC — prefer it over a date the prose recalls.
 ```text
 Bring a spreadsheet in: send the CSV as text with a `mapping` saying what each column is, and this
 checks every row against the workspace and reports what importing it would do. Writes nothing.
-`object` is company, contact or lead. Use `contact` for a file the business already knows — a
-migration off another CRM, a corrected export coming back. Use `lead` for a machine-sourced list
-nobody has worked yet; those land unworked and a human promotes them. A row naming a record already
-here is counted in `duplicates`, and created unless on_duplicate is skip — except a contact whose
-email is already held, which is always refused, because an email is a real key. A company's Website
-or Domain column maps to `domain`, which is what identifies a company — import it and dedupe stops
-guessing from names. To link contacts to their employers, map the company column to `company_name`
-— import the companies FIRST, because a name that matches nothing links nothing and says so. To
-CORRECT companies rather than add them, map a column to `id`, then give a row the id of the company
-it corrects — read them out first. A row whose `id` is EMPTY is a new company, so one file may
-both correct and add. Files that link to each other go together in `files`, at most one per type,
-instead of `object` and `csv`: a `ref` column is a row's own key, and a link such as a contact's
-`company_ref` names a company's ref. read_import with view format lists each file's columns.
-create_record for one record you already know. Keep the run_id. The counts its report answers —
-created, duplicates, skipped — and the mapping it settled on are what the user weighs, so report
-both: a column this placed by a name they did not write is a decision they did not make. (Runs
-immediately; requires passport scope "write".)
+`object` is company, contact, lead, deal or activity. Use `contact` for a file the business already
+knows — a migration off another CRM, a corrected export coming back. Use `lead` for a
+machine-sourced list nobody has worked yet; those land unworked and a human promotes them. A row
+naming a record already here is counted in `duplicates`, and created unless on_duplicate is skip —
+except a contact whose email is already held, which is always refused, because an email is a real
+key. A company's Website or Domain column maps to `domain`, which is what identifies a company —
+import it and dedupe stops guessing from names. To link contacts to their employers, map the company
+column to `company_name` — import the companies FIRST, because a name that matches nothing links
+nothing and says so. To CORRECT companies rather than add them, map a column to `id`, then give a
+row the id of the company it corrects — read them out first. A row whose `id` is EMPTY is a new
+company, so one file may both correct and add. Files that link to each other go together in `files`,
+at most one per type, instead of `object` and `csv`: a `ref` column is a row's own key, and a link
+such as a contact's `company_ref` names a company's ref. read_import with view format lists each
+file's columns. create_record for one record you already know. Keep the run_id. The counts its
+report answers — created, duplicates, skipped — and the mapping it settled on are what the user
+weighs, so report both: a column this placed by a name they did not write is a decision they did not
+make. (Runs immediately; requires passport scope "write".)
 ```
 
 <details><summary>Input schema</summary>
@@ -6165,7 +3815,9 @@ immediately; requires passport scope "write".)
             "enum": [
               "company",
               "lead",
-              "contact"
+              "contact",
+              "deal",
+              "activity"
             ],
             "type": "string"
           }
@@ -6177,7 +3829,7 @@ immediately; requires passport scope "write".)
         ],
         "type": "object"
       },
-      "maxItems": 3,
+      "maxItems": 5,
       "minItems": 1,
       "type": "array"
     },
@@ -6197,7 +3849,9 @@ immediately; requires passport scope "write".)
       "enum": [
         "company",
         "lead",
-        "contact"
+        "contact",
+        "deal",
+        "activity"
       ],
       "type": "string"
     },
@@ -6338,7 +3992,16 @@ immediately; requires passport scope "write".)
                   "line": {
                     "type": "integer"
                   },
+                  "params": {
+                    "additionalProperties": {
+                      "type": "string"
+                    },
+                    "type": "object"
+                  },
                   "reason": {
+                    "type": "string"
+                  },
+                  "reason_code": {
                     "type": "string"
                   },
                   "value": {
@@ -6366,7 +4029,16 @@ immediately; requires passport scope "write".)
                       "from": {
                         "type": "string"
                       },
+                      "params": {
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "type": "object"
+                      },
                       "reason": {
+                        "type": "string"
+                      },
+                      "reason_code": {
                         "type": "string"
                       },
                       "to": {
@@ -6398,6 +4070,12 @@ immediately; requires passport scope "write".)
             "parts": {
               "items": {
                 "properties": {
+                  "closed_lost": {
+                    "type": "integer"
+                  },
+                  "closed_won": {
+                    "type": "integer"
+                  },
                   "disposition": {
                     "properties": {
                       "created": {
@@ -6471,6 +4149,9 @@ immediately; requires passport scope "write".)
                       },
                       "reason": {
                         "type": "string"
+                      },
+                      "reason_code": {
+                        "type": "string"
                       }
                     },
                     "required": [
@@ -6490,6 +4171,18 @@ immediately; requires passport scope "write".)
                         "type": "string"
                       },
                       "object": {
+                        "type": "string"
+                      },
+                      "params": {
+                        "additionalProperties": {
+                          "type": "string"
+                        },
+                        "type": "object"
+                      },
+                      "reason": {
+                        "type": "string"
+                      },
+                      "reason_code": {
                         "type": "string"
                       }
                     },
@@ -6604,6 +4297,7 @@ immediately; requires passport scope "write".)
           "type": "boolean"
         },
         "last_synced_at": {
+          "format": "date-time",
           "type": "string"
         }
       },
@@ -6655,471 +4349,352 @@ immediately; requires passport scope "write".)
 
 </details>
 
-### progress_deal
+### read_analytics
 
-**Progress a deal with a note**
+**Write a report or query data**
 
 ```text
-Move a deal to a different stage of its pipeline, optionally leaving a note on its timeline saying
-why, in one call. The stage is named by id from read_directory (list: pipelines) — call it first;
-a deal you read carries only its current stage. Moving onto or off a won or lost stage is a human's
-decision: staged for approval, with a lost_reason for a losing stage. Read the target stage's
-semantic rather than guessing from its name. The move commits first and the note follows it, so a
-note that fails to write does not put the deal back — the answer says so, and the note is then
-log_activity's to retry. Use log_activity when something happened but the deal did not move. Send
-if_version with the version you read of the deal; keep the staged approval id if a closing move is
-sent for approval. (Governance: some calls run immediately and others a human approves first,
-decided per call from its arguments; requires passport scope "write".)
+Write a report document a reader keeps, such as a board-pack section, or ask the data a question.
+For a document: query with save, then compose the saved results into it. query alone groups and
+measures a population. read_workspace topic analytics names the populations, dimensions and measures
+you may use. A figure in a composed document is cited from a saved query, never typed in. Use
+read_reports for the standard metrics and named reports. Keep a saved query's id; compose cites it.
 ```
 
 <details><summary>Input schema</summary>
 
 ```json
 {
-  "additionalProperties": false,
   "properties": {
-    "approval_id": {
-      "description": "Set on retry after a human approved a won/lost move",
-      "format": "uuid",
-      "type": "string"
-    },
-    "deal_id": {
-      "format": "uuid",
-      "type": "string"
-    },
-    "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
-      "maxLength": 255,
-      "type": "string"
-    },
-    "if_version": {
-      "type": "integer"
-    },
-    "lost_reason": {
-      "description": "Required when the target stage closes the deal as lost",
-      "type": "string"
-    },
-    "note": {
-      "description": "Logged as a note on the deal's timeline after the move",
-      "type": "string"
-    },
-    "to_stage_id": {
-      "description": "The target stage, by id — obtain it from read_directory (list: pipelines), since a deal you have read carries only the stage it is already IN. That stage's semantic decides what happens next: open executes immediately, won or lost is staged for a human's approval.",
-      "format": "uuid",
-      "type": "string"
-    },
-    "won_without_contract_detail": {
-      "description": "What the reason was, required when it is other",
-      "maxLength": 500,
-      "type": "string"
-    },
-    "won_without_contract_reason": {
-      "description": "Why this win has no contract behind it. Omit when the deal has a signed contract with its paper attached; a win claiming neither is refused.",
-      "enum": [
-        "imported",
-        "purchase_order",
-        "verbal",
-        "renewal_by_email",
-        "other"
-      ],
-      "type": "string"
-    }
-  },
-  "required": [
-    "deal_id",
-    "to_stage_id"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "deal": {
-          "properties": {
-            "fields": {
-              "type": "object"
-            },
-            "id": {
-              "format": "uuid",
-              "type": "string"
-            },
-            "record_type": {
-              "type": "string"
-            },
-            "trust_tier": {
-              "type": "string"
-            },
-            "version": {
-              "type": "integer"
-            }
-          },
-          "required": [
-            "fields",
-            "id",
-            "record_type"
-          ],
-          "type": "object"
-        },
-        "note_activity_id": {
-          "format": "uuid",
-          "type": "string"
-        }
-      },
-      "required": [
-        "deal"
-      ],
-      "type": "object"
-    },
-    "evidence": {
+    "blocks": {
+      "description": "compose only",
       "items": {
+        "additionalProperties": false,
         "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### query_workspace
-
-**Query the workspace**
-
-```text
-Answer a question that has STRUCTURE — a record type, conditions on its fields, a hop to a related
-record, or a likeness to describe — by sending a plan and reading back the records that satisfy
-it, together with what kind of answer it is. It also finds where records are: an address is filtered
-by its city (address.city) or by distance (within_radius). Every name in a plan comes from the
-published vocabulary; one outside it is refused by name. The margince://schema/query resource —
-not this description — says which record types, fields, operators and relationships can be asked
-about. At most one similarity clause and one hop. It cannot group, count or total, and has no
-cursor: an answer that hit its limit says so. Use search_records when you only have a name or a
-phrase and no conditions to apply, and run_report when the answer wanted is a count, a total or a
-breakdown rather than the records themselves. Read `coverage` before you use the rows:
-`complete_exact` means every record matching the plan is here, `ranked_semantic` means these ranked
-highest and others may match, and `partial_degraded` means something in the plan could not be
-answered as asked — `notes` says which. Keep each row's record_type and id for any follow-up call,
-and its `evidence` for the related record that admitted it. A row's `owner` is the colleague who
-holds that company: rows come back from across the whole workspace, so most of them belong to
-someone other than the contact asking. When `owner.is_you` is false, say whose it is when you report
-the record (or that its owner could not be named, when `owner.name` is absent), and treat contacting
-it as theirs to decide rather than advising an approach as though the record were unowned.
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {
-    "plan": {
-      "description": "A query plan, in the grammar published at margince://schema/query. That document, not this description, holds the record types, fields, operators and relationships this workspace admits: a name outside it is refused by name, never guessed at.",
-      "type": "object"
-    }
-  },
-  "required": [
-    "plan"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "coverage": {
-          "type": "string"
-        },
-        "executed_plan": {
-          "type": "string"
-        },
-        "limit": {
-          "type": "integer"
-        },
-        "notes": {
-          "items": {
-            "properties": {
-              "code": {
-                "type": "string"
-              },
-              "detail": {
-                "type": "string"
-              },
-              "path": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "code",
-              "detail"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        },
-        "rows": {
-          "items": {
-            "properties": {
-              "distance_km": {
-                "type": "number"
-              },
-              "evidence": {
-                "items": {
+          "cells": {
+            "items": {
+              "additionalProperties": false,
+              "description": "Choose exactly one saved-run cell, metric_ref, or edition_ref.",
+              "properties": {
+                "column": {
+                  "type": "string"
+                },
+                "edition_ref": {
+                  "additionalProperties": false,
                   "properties": {
-                    "id": {
+                    "edition_id": {
                       "format": "uuid",
                       "type": "string"
                     },
-                    "record_type": {
-                      "type": "string"
-                    },
-                    "relation": {
-                      "type": "string"
-                    },
-                    "title": {
-                      "type": "string"
-                    },
-                    "trust_tier": {
+                    "metric": {
                       "type": "string"
                     }
                   },
                   "required": [
-                    "id",
-                    "record_type",
-                    "relation",
-                    "title"
+                    "edition_id",
+                    "metric"
                   ],
                   "type": "object"
                 },
-                "type": "array"
-              },
-              "owner": {
-                "properties": {
-                  "id": {
-                    "format": "uuid",
-                    "type": "string"
-                  },
-                  "is_you": {
-                    "type": "boolean"
-                  },
-                  "name": {
-                    "type": "string"
-                  }
+                "group": {
+                  "type": "array"
                 },
-                "required": [
-                  "id",
-                  "is_you"
-                ],
-                "type": "object"
-              },
-              "record": {
-                "properties": {
-                  "fields": {
-                    "type": "object"
+                "metric_ref": {
+                  "description": "A `pipeline_id` or `stage_id` used in a plan comes from the workspace's pipeline list.",
+                  "properties": {
+                    "metric": {
+                      "type": "string"
+                    },
+                    "selection": {
+                      "properties": {
+                        "blocks": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "close_window": {
+                          "type": "string"
+                        },
+                        "interval": {
+                          "properties": {
+                            "end_at": {
+                              "format": "date-time",
+                              "type": "string"
+                            },
+                            "start_at": {
+                              "format": "date-time",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "end_at",
+                            "start_at"
+                          ],
+                          "type": "object"
+                        },
+                        "layout": {
+                          "items": {
+                            "properties": {
+                              "cards": {
+                                "items": {
+                                  "properties": {
+                                    "id": {
+                                      "type": "string"
+                                    },
+                                    "kind": {
+                                      "type": "string"
+                                    },
+                                    "metric": {
+                                      "type": "string"
+                                    },
+                                    "question": {
+                                      "properties": {
+                                        "entity": {
+                                          "type": "string"
+                                        },
+                                        "group_by": {
+                                          "items": {
+                                            "type": "string"
+                                          },
+                                          "type": "array"
+                                        },
+                                        "limit": {
+                                          "type": "integer"
+                                        },
+                                        "measures": {
+                                          "items": {
+                                            "properties": {
+                                              "as": {
+                                                "type": "string"
+                                              },
+                                              "field": {
+                                                "type": "string"
+                                              },
+                                              "fn": {
+                                                "type": "string"
+                                              }
+                                            },
+                                            "required": [
+                                              "fn"
+                                            ],
+                                            "type": "object"
+                                          },
+                                          "type": "array"
+                                        }
+                                      },
+                                      "required": [
+                                        "entity",
+                                        "measures"
+                                      ],
+                                      "type": "object"
+                                    },
+                                    "width": {
+                                      "type": "string"
+                                    }
+                                  },
+                                  "required": [
+                                    "id",
+                                    "kind",
+                                    "width"
+                                  ],
+                                  "type": "object"
+                                },
+                                "type": "array"
+                              },
+                              "title": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "cards"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        },
+                        "metrics": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "period": {
+                          "type": "string"
+                        },
+                        "pipeline_id": {
+                          "format": "uuid",
+                          "type": "string"
+                        },
+                        "scope": {
+                          "properties": {
+                            "id": {
+                              "format": "uuid",
+                              "type": "string"
+                            },
+                            "kind": {
+                              "type": "string"
+                            },
+                            "label": {
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "kind"
+                          ],
+                          "type": "object"
+                        },
+                        "target_basis": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "blocks",
+                        "close_window",
+                        "metrics",
+                        "period",
+                        "scope",
+                        "target_basis"
+                      ],
+                      "type": "object"
+                    }
                   },
-                  "id": {
-                    "format": "uuid",
-                    "type": "string"
-                  },
-                  "record_type": {
-                    "type": "string"
-                  },
-                  "trust_tier": {
-                    "type": "string"
-                  },
-                  "version": {
-                    "type": "integer"
-                  }
+                  "required": [
+                    "metric",
+                    "selection"
+                  ],
+                  "type": "object"
                 },
-                "required": [
-                  "fields",
-                  "id",
-                  "record_type"
-                ],
-                "type": "object"
+                "run_id": {
+                  "type": "string"
+                }
               },
-              "score": {
-                "type": "number"
-              }
+              "type": "object"
             },
-            "required": [
-              "evidence",
-              "record"
-            ],
-            "type": "object"
+            "type": "array"
           },
-          "type": "array"
-        }
-      },
-      "required": [
-        "coverage",
-        "executed_plan",
-        "limit",
-        "notes",
-        "rows"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
+          "kind": {
             "type": "string"
           },
-          "record_id": {
-            "format": "uuid",
+          "severity": {
             "type": "string"
           },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
+          "text": {
             "type": "string"
           }
         },
         "required": [
-          "record_id",
-          "record_type"
+          "kind"
+        ],
+        "type": "object"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "entity": {
+      "description": "query only: A population from margince://schema/analytics. An unknown name is refused with the allowed set.",
+      "type": "string"
+    },
+    "filters": {
+      "description": "query only",
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "op": {
+            "enum": [
+              "eq",
+              "ne",
+              "lt",
+              "lte",
+              "gt",
+              "gte",
+              "is_null",
+              "is_not_null"
+            ]
+          },
+          "value": {}
+        },
+        "required": [
+          "field",
+          "op"
         ],
         "type": "object"
       },
       "type": "array"
     },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
+    "group_by": {
+      "description": "query only",
       "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "limit": {
+      "description": "query only",
+      "type": "integer"
+    },
+    "measures": {
+      "description": "query only",
+      "items": {
+        "additionalProperties": false,
         "properties": {
-          "code": {
+          "as": {
             "type": "string"
           },
-          "message": {
+          "field": {
+            "description": "A measure name. Omit only with fn=count.",
             "type": "string"
+          },
+          "fn": {
+            "enum": [
+              "count",
+              "count_distinct",
+              "sum",
+              "avg",
+              "min",
+              "max",
+              "median",
+              "p75"
+            ]
           }
         },
         "required": [
-          "code",
-          "message"
+          "fn"
         ],
         "type": "object"
       },
       "type": "array"
+    },
+    "save": {
+      "description": "query only: Persist the run; the answer then carries a citable run_id.",
+      "type": "boolean"
+    },
+    "scope_id": {
+      "description": "query only",
+      "type": "string"
+    },
+    "scope_kind": {
+      "description": "query only: Omit for this seat's own default population.",
+      "enum": [
+        "workspace",
+        "team",
+        "owner"
+      ]
+    },
+    "step": {
+      "description": "query: ask a question of the data; compose: build a report document from saved queries",
+      "enum": [
+        "compose",
+        "query"
+      ],
+      "type": "string"
     }
   },
   "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
+    "step"
   ],
   "type": "object"
 }
@@ -7174,9 +4749,11 @@ Renders its result in [`ui://margince/approval.html`](#approval_view), visible t
           "type": "string"
         },
         "created_at": {
+          "format": "date-time",
           "type": "string"
         },
         "decided_at": {
+          "format": "date-time",
           "type": "string"
         },
         "decided_by": {
@@ -7208,6 +4785,7 @@ Renders its result in [`ui://margince/approval.html`](#approval_view), visible t
           "type": "array"
         },
         "expires_at": {
+          "format": "date-time",
           "type": "string"
         },
         "kind": {
@@ -7277,6 +4855,7 @@ Renders its result in [`ui://margince/approval.html`](#approval_view), visible t
           "type": "boolean"
         },
         "last_synced_at": {
+          "format": "date-time",
           "type": "string"
         }
       },
@@ -7328,274 +4907,15 @@ Renders its result in [`ui://margince/approval.html`](#approval_view), visible t
 
 </details>
 
-### read_brief
+### read_attention
 
-**Read the morning brief**
-
-```text
-Read the ranked queue the user you act for sees when they open their morning brief — the deals the
-workspace decided are worth their attention today, in order, with the rows behind each ranking. It
-re-reads the last assembled run rather than building a new one, so its as_of says how current it is,
-and it is that user's own queue: it cannot be asked for anyone else's. Acting on, dismissing or
-snoozing an item is theirs alone. Use whats_slipping_this_week when the question is which deals are
-losing momentum regardless of what today's brief chose, and read_record for what one of these deals
-currently says. Each item names a deal_id and its evidence_ids; read those to cite what the ranking
-rested on rather than restating the item's own summary.
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {},
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "as_of": {
-          "type": "string"
-        },
-        "brief_id": {
-          "format": "uuid",
-          "type": "string"
-        },
-        "candidate_count": {
-          "type": "integer"
-        },
-        "factors_omitted": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "generated_at": {
-          "type": "string"
-        },
-        "items": {
-          "items": {
-            "properties": {
-              "composite": {
-                "type": "number"
-              },
-              "deal_id": {
-                "format": "uuid",
-                "type": "string"
-              },
-              "evidence_ids": {
-                "items": {
-                  "format": "uuid",
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              "factors": {
-                "properties": {
-                  "momentum": {
-                    "type": "number"
-                  },
-                  "revenue": {
-                    "type": "number"
-                  },
-                  "timing": {
-                    "type": "number"
-                  },
-                  "warmth": {
-                    "type": "number"
-                  },
-                  "winnability": {
-                    "type": "number"
-                  }
-                },
-                "required": [
-                  "momentum",
-                  "revenue",
-                  "timing",
-                  "warmth",
-                  "winnability"
-                ],
-                "type": "object"
-              },
-              "item_id": {
-                "format": "uuid",
-                "type": "string"
-              },
-              "lineage": {
-                "properties": {
-                  "dismissed_on": {
-                    "type": "string"
-                  },
-                  "returned_with_activity_at": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "dismissed_on",
-                  "returned_with_activity_at"
-                ],
-                "type": "object"
-              },
-              "previous_rank": {
-                "type": "integer"
-              },
-              "rank": {
-                "type": "integer"
-              },
-              "reopen_on": {
-                "type": "string"
-              },
-              "reopen_ref": {
-                "format": "uuid",
-                "type": "string"
-              },
-              "snoozed_until": {
-                "type": "string"
-              },
-              "state": {
-                "type": "string"
-              },
-              "state_at": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "composite",
-              "deal_id",
-              "evidence_ids",
-              "factors",
-              "item_id",
-              "rank",
-              "state"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        },
-        "local_day": {
-          "type": "string"
-        },
-        "previous_local_day": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "as_of",
-        "brief_id",
-        "candidate_count",
-        "factors_omitted",
-        "generated_at",
-        "items",
-        "local_day"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### read_directory
-
-**Read the workspace's colleagues, pipelines and channels**
+**See what needs attention**
 
 ```text
-Read how this workspace is set up. colleagues: who works HERE, the seats that can receive work, not
-the contacts stored as records; `q` narrows by name. pipelines: every pipeline with its live stages,
-each open, won or lost. channel_providers: the messaging transports this installation composed. A
-`q` matching nobody answers with `all_colleagues` and a warning, which decides whether someone truly
-has no seat. A deal cannot be created, or moved anywhere new, without pipelines: a deal you read
-carries only its current stage, and a stage's semantic, not its name, says whether it closes the
-deal. supplies_transport=false means a reply on that transport will be refused. search_records finds
-a CUSTOMER contact; this finds a colleague. user_id is what assignee_id and owner_id take; never
-assign to an is_agent seat. Keep the pipeline_id and stage_id: create_record for a deal needs both,
-and progress_deal takes the stage_id as to_stage_id. Carry `provider` verbatim: log_activity takes
-it as channel_provider when kind is "message".
+See what needs attention. slipping lists deals at risk this week and why. at_risk lists the open
+deals that rest on a single contact or whose contacts have gone quiet. commitments lists promises
+made to customers that are still open. Each view covers only what you may see, and says why each
+item is on it. Use read_context to dig into one item. Keep each item's record id to act on it.
 ```
 
 <details><summary>Input schema</summary>
@@ -7603,22 +4923,110 @@ it as channel_provider when kind is "message".
 ```json
 {
   "properties": {
-    "list": {
-      "description": "colleagues are the seats here, pipelines the stages a deal moves through, channel_providers the messaging transports",
+    "assignee_id": {
+      "description": "commitments only: Narrow to one owner's promises; omit for everyone's",
+      "format": "uuid",
+      "type": "string"
+    },
+    "limit": {
+      "description": "commitments, slipping only: Cap the set; omit for 50, the server-side ceiling",
+      "maximum": 50,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "project_id": {
+      "description": "commitments only: Keep only promises filed under this project or under none",
+      "format": "uuid",
+      "type": "string"
+    },
+    "quiet_days": {
+      "default": 60,
+      "description": "slipping only: Days without recorded activity after which a deal counts as gone quiet; omit it for the product-wide stalled threshold",
+      "maximum": 365,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "view": {
+      "description": "slipping: deals at risk this week; at_risk: relationships going cold; commitments: promises still open",
       "enum": [
-        "channel_providers",
-        "colleagues",
-        "pipelines"
+        "at_risk",
+        "commitments",
+        "slipping"
       ],
-      "type": "string"
-    },
-    "q": {
-      "description": "colleagues only: Narrow by name or email; omit for the whole roster",
       "type": "string"
     }
   },
   "required": [
-    "list"
+    "view"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+### read_context
+
+**Get the story so far**
+
+```text
+Get the story so far. catch_up tells what has been happening on one contact, company, deal or
+project. meeting prepares for a meeting: who is coming, the open threads and what was promised.
+brief reads this morning's brief for the seat. It reads and writes nothing. catch_up summarises the
+timeline; a field's current value is read_record's. brief answers the brief already made, never a
+fresh one. Use read_attention for what is at risk across the whole pipeline. Keep the ids the answer
+cites to read or change those records next.
+```
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "properties": {
+    "about": {
+      "description": "catch_up: what has been happening on one record; meeting: what to know before a meeting; brief: this morning's brief",
+      "enum": [
+        "brief",
+        "catch_up",
+        "meeting"
+      ],
+      "type": "string"
+    },
+    "max_items": {
+      "description": "catch_up, meeting only",
+      "maximum": 20,
+      "minimum": 1,
+      "type": "integer"
+    },
+    "project_id": {
+      "description": "catch_up, meeting only: Keep only what is filed under this project or under none",
+      "format": "uuid",
+      "type": "string"
+    },
+    "record_id": {
+      "description": "catch_up, meeting only: The record to build around. Give this or record_name, not both.",
+      "format": "uuid",
+      "type": "string"
+    },
+    "record_name": {
+      "description": "catch_up, meeting only: The record named in words, found the way find_records with engine=search finds the same words. Refused with the candidate ids when the name matches more than one, rather than guessing.",
+      "type": "string"
+    },
+    "record_type": {
+      "description": "catch_up, meeting only",
+      "enum": [
+        "activity",
+        "company",
+        "contact",
+        "deal",
+        "lead",
+        "project"
+      ],
+      "type": "string"
+    }
+  },
+  "required": [
+    "about"
   ],
   "type": "object"
 }
@@ -7634,17 +5042,22 @@ it as channel_provider when kind is "message".
 Read the forecast under the installation's fiscal calendar and base currency. readings: what a
 period is expected to close — `won`, `evidence`, `best_case`, `open` and `weighted` — and
 `snapshots`, the period's frozen states, newest first. movement: why the forecast changed between
-two snapshots, as named causes that sum to the whole difference. `won` counts deals by the day they
-ACTUALLY closed. `evidence` is committed pipeline whose close date somebody confirmed.
-`coverage_note` says what the totals leave out; quote it with any total. movement needs `from` then
-`to`, both from ONE readings answer's `snapshots`; none listed means nothing was frozen yet. Reading
-twice and subtracting is not the same answer: it says nothing of where the difference went. In
-movement, `definition` means the snapshots used different rules and `model` a re-scored probability:
-neither is sales movement. run_report and query_workspace also produce numbers, and neither is the
-forecast. For a board-pack section, run_analytics_query with save, then compose_analytics_report;
-read_input_checks says whether the inputs were read. Quote `as_of`, `timezone` and `base_currency`
-with the number. Every `_minor` figure is in minor units of `base_currency`: 3100000 in EUR is EUR
-31,000.
+two snapshots, as named causes that sum to the whole difference. input_summary: whether the inputs
+are sound enough to quote, and how much of the pipeline last night's check reached.
+input_exceptions: the open input problems, most material first. input_sources: which connectors the
+check could read, and how far back. `won` counts deals by the day they ACTUALLY closed. `evidence`
+is committed pipeline whose close date somebody confirmed. `coverage_note` says what the totals
+leave out; quote it with any total. movement needs `from` then `to`, both from ONE readings answer's
+`snapshots`; none listed means nothing was frozen yet. Reading twice and subtracting is not the same
+answer: it says nothing of where the difference went. In movement, `definition` means the snapshots
+used different rules and `model` a re-scored probability: neither is sales movement.
+`checks_incomplete` is not a worse `needs_review`: one says the pipeline has problems, the other
+that nobody could look. An empty input_exceptions cannot be told from a clean pipeline;
+input_sources tells them apart, and needs a coverage grant sellers lack. read_reports and
+find_records with engine query also produce numbers, and neither is the forecast. For a board-pack
+section, use read_analytics: query with save, then compose. Quote `as_of`, `timezone` and
+`base_currency` with the number. Every `_minor` figure is in minor units of `base_currency`: 3100000
+in EUR is EUR 31,000.
 ```
 
 <details><summary>Input schema</summary>
@@ -7682,16 +5095,16 @@ with the number. Every `_minor` figure is in minor units of `base_currency`: 310
       "type": "string"
     },
     "scope_id": {
-      "description": "readings only: The team or owner, for those scopes. Refused with scope_kind=workspace, which names no subject.",
+      "description": "input_exceptions, readings only: The team or owner, for a team or owner scope_kind",
       "format": "uuid",
       "type": "string"
     },
     "scope_kind": {
-      "description": "readings only: Whose forecast. Omit for this caller's own default population; a wider one is refused.",
+      "description": "input_exceptions, readings only: Only the findings on the deals of this population. Omit for every finding you can see.",
       "enum": [
-        "workspace",
+        "owner",
         "team",
-        "owner"
+        "workspace"
       ],
       "type": "string"
     },
@@ -7701,8 +5114,11 @@ with the number. Every `_minor` figure is in minor units of `base_currency`: 310
       "type": "string"
     },
     "view": {
-      "description": "readings is what a period is expected to close; movement is why it changed between two snapshots",
+      "description": "readings: what a period is expected to close; movement: why it changed between two snapshots; input_summary, input_exceptions and input_sources: whether its inputs can be trusted",
       "enum": [
+        "input_exceptions",
+        "input_sources",
+        "input_summary",
         "movement",
         "readings"
       ],
@@ -7735,6 +5151,15 @@ failed.
 ```json
 {
   "properties": {
+    "lang": {
+      "description": "format only: The language of the guide text; the installation's when absent",
+      "enum": [
+        "en",
+        "de",
+        "vi"
+      ],
+      "type": "string"
+    },
     "run_id": {
       "description": "report only",
       "format": "uuid",
@@ -7745,49 +5170,6 @@ failed.
       "enum": [
         "format",
         "report"
-      ],
-      "type": "string"
-    }
-  },
-  "required": [
-    "view"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### read_input_checks
-
-**Can the forecast's inputs be trusted**
-
-```text
-Answer whether the forecast's inputs can be trusted, in three views. summary: the verdict —
-whether the numbers are sound enough to quote — and how much of the pipeline last night's check
-reached. exceptions: the open input problems themselves, most material first — a close date that
-went by, an amount that disagrees with the sent offer, a deal nobody has heard from in ninety days.
-sources: which connectors the nightly check could read at all, and how far back each reaches.
-`checks_incomplete` is NOT a worse `needs_review`: one says the pipeline has problems, the other
-says nobody could look. exceptions is scoped to what you can open, and an empty list cannot be told
-apart from a clean pipeline — sources is what tells them apart. sources needs a coverage grant
-that operators hold and sellers do not, so a refusal there is a seat boundary, not a missing run.
-Read summary's `readiness` before quoting any forecast figure. Only a `checked` source carries a
-date; any other state means nothing was read from it. In exceptions, `affected_minor` absent means
-the money at stake cannot be said, not that nothing is.
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "properties": {
-    "view": {
-      "description": "summary is the verdict, exceptions the open problems, sources what could be read",
-      "enum": [
-        "exceptions",
-        "sources",
-        "summary"
       ],
       "type": "string"
     }
@@ -7818,8 +5200,8 @@ recorded. A preview is logged as a read of those records. A list with health ret
 works but filters on a retired custom field, named in retired_fields; its steward should replace
 that clause. A list with health retired_tag filters on an archived or merged-away tag, named in
 retired_tags, and that tag no longer matches any record, so its steward should name the live tag.
-search_records finds records by name; tags are applied with change_tags, not lists. Keep list_id,
-the version for a later change, and next_cursor to read the next page.
+find_records with engine=search finds records by name; tags are applied with change_tags, not lists.
+Keep list_id, the version for a later change, and next_cursor to read the next page.
 ```
 
 <details><summary>Input schema</summary>
@@ -8014,6 +5396,7 @@ the version for a later change, and next_cursor to read the next page.
           "type": "boolean"
         },
         "last_synced_at": {
+          "format": "date-time",
           "type": "string"
         }
       },
@@ -8076,9 +5459,9 @@ what the delivery side needs from sales — who owns it, who to call at the clie
 by when, what is already promised — with a named gap for each the records do not answer. overview
 cuts each section at 25 rows and flags it truncated; sections_omitted names what your grants
 withhold. A handoff gap means the field is empty as far as the caller can see. Preparing a handover
-is not performing one. read_record for the project's stored fields alone, catch_me_up_on for what
-has been happening. The project_id, each gap's source field, and the deal, contact and task ids a
-follow-up acts on.
+is not performing one. read_record for the project's stored fields alone, read_context with
+about=catch_up for what has been happening. The project_id, each gap's source field, and the deal,
+contact and task ids a follow-up acts on.
 ```
 
 <details><summary>Input schema</summary>
@@ -8117,13 +5500,13 @@ follow-up acts on.
 ```text
 Read one record's own stored fields — the values a reader would see on its detail page — when
 you already know which record you mean. It returns that record and nothing around it: no timeline,
-no related contacts, no deals on the company. Use catch_me_up_on when the goal is what has been
-happening on the record rather than what it currently says. Keep the version from the result and
-pass it back as if_version on a later update, so a write is refused rather than silently overwriting
-a change made in between. Its `owner` says who holds it. When `owner.is_you` is false, say whose it
-is when you report the record (or that its owner could not be named, when `owner.name` is absent),
-and treat contacting it as theirs to decide rather than advising an approach as though the record
-were unowned.
+no related contacts, no deals on the company. Use read_context with about=catch_up when the goal is
+what has been happening on the record rather than what it currently says. Keep the version from the
+result and pass it back as if_version on a later update, so a write is refused rather than silently
+overwriting a change made in between. Its `owner` says who holds it. When `owner.is_you` is false,
+say whose it is when you report the record (or that its owner could not be named, when `owner.name`
+is absent), and treat contacting it as theirs to decide rather than advising an approach as though
+the record were unowned.
 ```
 
 <details><summary>Input schema</summary>
@@ -8145,7 +5528,12 @@ were unowned.
         "lead",
         "activity",
         "project",
-        "partner"
+        "partner",
+        "product",
+        "offer_template",
+        "offer",
+        "commission",
+        "deal_room"
       ],
       "type": "string"
     }
@@ -8241,6 +5629,7 @@ were unowned.
           "type": "boolean"
         },
         "last_synced_at": {
+          "format": "date-time",
           "type": "string"
         }
       },
@@ -8303,10 +5692,11 @@ we know there and which colleague could introduce us. deal_id: which roles at th
 have a relationship with, and where the deal rests on a single contact. Only interactions somebody
 recorded count, so an unlogged relationship is absent, and never spoken is no relationship rather
 than a score of zero. A company nobody here has spoken to has no warm path, and saying so is the
-answer. Deal coverage says nothing about whether the deal will close. at_risk_relationships finds
-the thin relationships across every open deal at once. Keep the user_id of each colleague and the
-contact ids a path names. For a deal, say WHO fills an uncovered seat by `contact_name`; a seat with
-no name is one this caller may not read, so report the gap and do not guess.
+answer. Deal coverage says nothing about whether the deal will close. read_attention with
+view=at_risk finds the thin relationships across every open deal at once. Keep the user_id of each
+colleague and the contact ids a path names. For a deal, say WHO fills an uncovered seat by
+`contact_name`; a seat with no name is one this caller may not read, so report the gap and do not
+guess.
 ```
 
 <details><summary>Input schema</summary>
@@ -8336,62 +5726,135 @@ no name is one this caller may not read, so report the gap and do not guess.
 
 </details>
 
-### read_reporting
+### read_reports
 
-**Read sales reporting**
+**Read sales reports**
 
 ```text
-Discover standard sales metrics, evaluate the same graphs as Analytics, or reopen saved report
-definitions and frozen editions. Read only. Catalog returns permitted metric IDs and blocks.
-Evaluate requires a selection. Report and editions require a report id; edition requires an edition
-id. Evidence requires the evaluation receipt and selection, or an edition id, plus its exact
-reference. Compare requires two edition IDs. Always retain coverage and capture times when quoting
-numbers. Use read_directory (list: pipelines) to discover pipeline and stage IDs. Use
-run_analytics_query for custom groupings and compose_analytics_report for a document. Configure
-targets, report sharing and schedules in Analytics.
+Read sales reports. standard reads the standard metrics, saved reports and their frozen editions,
+and the open partner commission liability. run runs one of the named reports, grouped and filtered.
+evidence searches the passages behind a saved run. Read only. Every figure names its coverage and
+when it was captured; quote both. read_workspace topic report_vocabulary names what each run report
+takes. For a written section a reader keeps, such as a board pack, use read_analytics: query with
+save, then compose. Use read_forecast for what a period is expected to close. Keep a run's id to
+search its evidence, and quote coverage with each number.
 ```
 
 <details><summary>Input schema</summary>
 
 ```json
 {
-  "description": "A `pipeline_id` or `stage_id` used in a plan comes from read_directory (list: pipelines).",
   "properties": {
+    "aggregates": {
+      "description": "run only: Omit for the report's own default aggregates.",
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "as": {
+            "description": "Output column name for this aggregate",
+            "type": "string"
+          },
+          "field": {
+            "description": "A measure name from this report's list. Omit only with fn=count.",
+            "type": "string"
+          },
+          "fn": {
+            "description": "How to aggregate the field. count takes no field; every other function names one from this report's aggregates list.",
+            "enum": [
+              "avg",
+              "count",
+              "max",
+              "median",
+              "min",
+              "p75",
+              "sum"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "fn"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "cell": {
+      "description": "evidence only: One cell's group key values, in the run's group_by order. Omit to search every record the run measured.",
+      "items": {},
+      "type": "array"
+    },
     "cursor": {
+      "description": "standard only",
       "type": "string"
     },
     "evaluated_at": {
+      "description": "standard only",
+      "format": "date-time",
       "type": "string"
     },
     "evaluation_key": {
+      "description": "standard only",
       "type": "string"
     },
+    "filters": {
+      "description": "run only: Equality predicates using this report's published filter names.",
+      "type": "object"
+    },
     "framework_revision": {
+      "description": "standard only",
       "type": "integer"
     },
+    "group_by": {
+      "description": "run only: Published dimension names; omit for default grouping.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
     "id": {
+      "description": "standard only",
       "format": "uuid",
       "type": "string"
     },
+    "kind": {
+      "description": "standard: the standard sales metrics, saved reports and frozen editions; run: one of the named reports, grouped and filtered; evidence: the passages behind a saved run",
+      "enum": [
+        "evidence",
+        "run",
+        "standard"
+      ],
+      "type": "string"
+    },
     "limit": {
+      "description": "evidence, standard only: How many citations, counterexamples and abstentions to return, each; at most 25 for evidence.",
       "maximum": 100,
       "minimum": 1,
       "type": "integer"
     },
     "mode": {
+      "description": "standard only",
       "enum": [
         "catalog",
         "evaluate",
         "reports",
         "report",
+        "report_evaluation",
         "editions",
         "edition",
         "evidence",
-        "compare"
+        "compare",
+        "commission_summary"
       ],
       "type": "string"
     },
+    "query": {
+      "description": "evidence only: The words the evidence would carry.",
+      "maxLength": 1000,
+      "type": "string"
+    },
     "reference": {
+      "description": "standard only",
       "properties": {
         "context_id": {
           "type": "string"
@@ -8403,6 +5866,7 @@ targets, report sharing and schedules in Analytics.
           "type": "string"
         },
         "through": {
+          "format": "date-time",
           "type": "string"
         }
       },
@@ -8412,14 +5876,61 @@ targets, report sharing and schedules in Analytics.
       ],
       "type": "object"
     },
+    "report": {
+      "description": "run only: The prebuilt report to run. Send `report` ALONE for the default answer listed below — that call takes no other argument and needs nothing read first. activities-by-kind: count as activities grouped by kind. deals-by-stage: count as deals, sum(amount_minor) as amount_minor_sum grouped by stage_id, currency. forecast: count as deals, sum(amount_minor) as unweighted_minor, sum(weighted_amount_minor) as weighted_minor grouped by forecast_category, currency. leads-by-status: count as leads grouped by status. meeting-conversion: count as meetings grouped by became_opportunity. open-deals-per-company: count as open_deals grouped by company_id. pipeline-current: count as deals, sum(amount_base_minor) as amount_base_minor_sum, sum(weighted_base_minor) as weighted_base_minor_sum, count(amount_base_minor) as priced_deals grouped by stage_id. project-commitments: sum(overdue_commitments) as overdue_commitments, sum(open_commitments) as open_commitments grouped by project_id, name, key, phase, owner_id. projects-by-phase: count as projects, sum(open_deal_value_minor) as open_deal_value_minor, sum(won_deal_value_minor) as won_deal_value_minor grouped by phase. projects-gone-quiet: count as projects grouped by project_id, name, key, phase, owner_id, last_activity_at, quiet_since. stage-age: count as deals, median(days_in_stage) as median_days, p75(days_in_stage) as p75_days grouped by stage_id. win-loss: count as deals, sum(amount_minor) as amount_minor_sum, median(days_to_close) as median_days_to_close, p75(days_to_close) as p75_days_to_close grouped by status, currency. A default is not a report's reach: each slices by dimensions the line above does not name, so a breakdown no default shows is usually still one of these reports. Those dimension names, and its `filters` and `aggregates`, are that report's ALONE, published at margince://schema/reports and answered by read_workspace with topic=report_vocabulary; a name outside them is refused with the accepted list. A `pipeline_id` or `stage_id` used in a plan comes from the workspace's pipeline list.",
+      "enum": [
+        "activities-by-kind",
+        "deals-by-stage",
+        "forecast",
+        "leads-by-status",
+        "meeting-conversion",
+        "open-deals-per-company",
+        "pipeline-current",
+        "project-commitments",
+        "projects-by-phase",
+        "projects-gone-quiet",
+        "stage-age",
+        "win-loss"
+      ],
+      "type": "string"
+    },
+    "revision": {
+      "description": "standard only",
+      "minimum": 1,
+      "type": "integer"
+    },
     "right_id": {
+      "description": "standard only",
+      "format": "uuid",
+      "type": "string"
+    },
+    "run_id": {
+      "description": "evidence only: A saved run: an analytics query with save answers one.",
       "format": "uuid",
       "type": "string"
     },
     "scheduled": {
+      "description": "standard only",
       "type": "boolean"
     },
+    "scope": {
+      "description": "run only",
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "type": "object"
+    },
     "selection": {
+      "description": "standard only",
       "properties": {
         "blocks": {
           "items": {
@@ -8433,9 +5944,11 @@ targets, report sharing and schedules in Analytics.
         "interval": {
           "properties": {
             "end_at": {
+              "format": "date-time",
               "type": "string"
             },
             "start_at": {
+              "format": "date-time",
               "type": "string"
             }
           },
@@ -8444,6 +5957,86 @@ targets, report sharing and schedules in Analytics.
             "start_at"
           ],
           "type": "object"
+        },
+        "layout": {
+          "items": {
+            "properties": {
+              "cards": {
+                "items": {
+                  "properties": {
+                    "id": {
+                      "type": "string"
+                    },
+                    "kind": {
+                      "type": "string"
+                    },
+                    "metric": {
+                      "type": "string"
+                    },
+                    "question": {
+                      "properties": {
+                        "entity": {
+                          "type": "string"
+                        },
+                        "group_by": {
+                          "items": {
+                            "type": "string"
+                          },
+                          "type": "array"
+                        },
+                        "limit": {
+                          "type": "integer"
+                        },
+                        "measures": {
+                          "items": {
+                            "properties": {
+                              "as": {
+                                "type": "string"
+                              },
+                              "field": {
+                                "type": "string"
+                              },
+                              "fn": {
+                                "type": "string"
+                              }
+                            },
+                            "required": [
+                              "fn"
+                            ],
+                            "type": "object"
+                          },
+                          "type": "array"
+                        }
+                      },
+                      "required": [
+                        "entity",
+                        "measures"
+                      ],
+                      "type": "object"
+                    },
+                    "width": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "kind",
+                    "width"
+                  ],
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "title": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "cards"
+            ],
+            "type": "object"
+          },
+          "type": "array"
         },
         "metrics": {
           "items": {
@@ -8492,124 +6085,7 @@ targets, report sharing and schedules in Analytics.
     }
   },
   "required": [
-    "mode"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "additionalProperties": false,
-      "properties": {
-        "catalog": {
-          "type": "object"
-        },
-        "comparison": {
-          "type": "object"
-        },
-        "edition": {
-          "type": "object"
-        },
-        "editions": {
-          "type": "object"
-        },
-        "evaluation": {
-          "type": "object"
-        },
-        "evidence": {
-          "type": "object"
-        },
-        "report": {
-          "type": "object"
-        },
-        "reports": {
-          "type": "object"
-        }
-      },
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
+    "kind"
   ],
   "type": "object"
 }
@@ -8624,12 +6100,12 @@ targets, report sharing and schedules in Analytics.
 ```text
 Read the workspace's tags. list: every word, with the tag_id the other tag calls take. get: one tag
 and how many contacts, companies, deals and leads carry it — the records themselves come from
-list_records. record: the tags on one contact, company, deal or lead, with who applied each and
-when. list returns archived words only with include_archived, and they cannot be applied;
-`truncated` means a word missing from the list may still exist. In record, `withheld` true means the
-vocabulary is hidden from this caller, NOT that the record has no tags — never report it as none.
-A word the user says fits a contact you are creating goes to create_record as offer_tag, which
-offers it without applying it.
+find_records with engine=list. record: the tags on one contact, company, deal or lead, with who
+applied each and when. list returns archived words only with include_archived, and they cannot be
+applied; `truncated` means a word missing from the list may still exist. In record, `withheld` true
+means the vocabulary is hidden from this caller, NOT that the record has no tags — never report it
+as none. A word the user says fits a contact you are creating goes to create_record as offer_tag,
+which offers it without applying it.
 ```
 
 <details><summary>Input schema</summary>
@@ -8669,6 +6145,10 @@ offers it without applying it.
       "description": "get only",
       "format": "uuid",
       "type": "string"
+    },
+    "with_carried_by": {
+      "description": "list only: Also count the records you can see carrying each word",
+      "type": "boolean"
     }
   },
   "required": [
@@ -8680,18 +6160,16 @@ offers it without applying it.
 
 </details>
 
-### relink_activities
+### read_view
 
-**Re-associate a set of activities to a record**
+**Read a view**
 
 ```text
-Move up to 500 named activities onto one record, all or nothing. Each id must be visible and
-writable to you. A project destination, or any move the installation's policy raises, is staged for
-confirmation and the retry moves exactly these ids; once the user says yes, relay it with
-decide_approvals. A filing under a project can be undone by a member from the activity.
-relink_activity moves one message. The answer is the count moved. (Governance: some calls run
-immediately and others a human approves first, decided per call from its arguments; requires
-passport scope "write".)
+Read what the record tools do not answer: a record's derived views (company_360, contact_graph,
+deal_stakeholders, company_facts), the workspace's reference lists (stages, lead_sources, teams,
+record_roles) and reporting objects (reporting_targets, forecast_calls). Each view answers exactly
+what the matching REST route answers. Name the view, then the id it reads and any of its filters. A
+view refuses an argument it does not take and names the ones it does.
 ```
 
 <details><summary>Input schema</summary>
@@ -8700,49 +6178,268 @@ passport scope "write".)
 {
   "additionalProperties": false,
   "properties": {
-    "activity_ids": {
+    "agg": {
       "items": {
-        "format": "uuid",
         "type": "string"
       },
-      "maxItems": 500,
-      "minItems": 1,
       "type": "array"
     },
-    "approval_id": {
-      "description": "Set on approved retry",
-      "format": "uuid",
+    "as_of": {
+      "type": "string"
+    },
+    "blocks": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "by": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "category": {
+      "type": "string"
+    },
+    "close_window": {
+      "type": "string"
+    },
+    "company_id": {
+      "type": "string"
+    },
+    "contact_id": {
+      "type": "string"
+    },
+    "contract_id": {
+      "type": "string"
+    },
+    "cursor": {
+      "type": "string"
+    },
+    "deal_id": {
+      "type": "string"
+    },
+    "doc_state": {
+      "type": "string"
+    },
+    "end_at": {
       "type": "string"
     },
     "entity_id": {
-      "format": "uuid",
+      "description": "one value; a list of values for list_members",
       "type": "string"
     },
     "entity_type": {
+      "type": "string"
+    },
+    "evaluated_at": {
+      "type": "string"
+    },
+    "evaluation_key": {
+      "type": "string"
+    },
+    "facts_only": {
+      "type": "boolean"
+    },
+    "framework_revision": {
+      "type": "integer"
+    },
+    "handle_version": {
+      "type": "string"
+    },
+    "id": {
+      "description": "one value; a list of values for name_seats",
+      "type": "string"
+    },
+    "include_archived": {
+      "type": "boolean"
+    },
+    "include_hidden": {
+      "type": "boolean"
+    },
+    "kind": {
+      "type": "string"
+    },
+    "limit": {
+      "type": "integer"
+    },
+    "list_type": {
+      "type": "string"
+    },
+    "metrics": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "object": {
+      "type": "string"
+    },
+    "period": {
+      "type": "string"
+    },
+    "period_start": {
+      "type": "string"
+    },
+    "pinned_only": {
+      "type": "boolean"
+    },
+    "pipeline_id": {
+      "description": "comes from the workspace's pipeline list",
+      "type": "string"
+    },
+    "project_id": {
+      "type": "string"
+    },
+    "q": {
+      "type": "string"
+    },
+    "readId": {
+      "type": "string"
+    },
+    "record_id": {
+      "type": "string"
+    },
+    "record_type": {
+      "type": "string"
+    },
+    "refresh": {
+      "type": "boolean"
+    },
+    "report": {
+      "type": "string"
+    },
+    "resolution_state": {
+      "type": "string"
+    },
+    "resource": {
+      "type": "string"
+    },
+    "retired": {
+      "type": "boolean"
+    },
+    "scope": {
+      "type": "string"
+    },
+    "scope_id": {
+      "type": "string"
+    },
+    "scope_kind": {
+      "type": "string"
+    },
+    "sharing": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "sort": {
+      "type": "string"
+    },
+    "start_at": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string"
+    },
+    "target_basis": {
+      "type": "string"
+    },
+    "thread_cursor": {
+      "type": "string"
+    },
+    "view": {
       "enum": [
-        "contact",
-        "company",
-        "deal",
-        "lead",
-        "project"
+        "acquisition_sources",
+        "activity_review_templates",
+        "agent_open_api_document",
+        "automation",
+        "automation_catalog",
+        "automations",
+        "bulk_change",
+        "company_360",
+        "company_contacts",
+        "company_coverage",
+        "company_documents",
+        "company_facts",
+        "company_finance_summary",
+        "company_graph",
+        "company_hierarchy_rollup",
+        "company_profile_fields",
+        "company_strength",
+        "company_vat_check",
+        "consent_purposes",
+        "contact_360",
+        "contact_graph",
+        "contact_strength",
+        "custom_field_live_lists",
+        "custom_fields",
+        "deal_commitments",
+        "deal_documents",
+        "deal_outcome_reviews",
+        "deal_stakeholders",
+        "deal_status",
+        "dedupe_candidate",
+        "dedupe_candidates",
+        "email_presentation",
+        "email_signature_template",
+        "explain_report",
+        "export_reporting_edition",
+        "export_reporting_evaluation",
+        "filter_vocabulary",
+        "follow_up_settings",
+        "forecast_calls",
+        "import_run",
+        "latest_site_read",
+        "latest_technical_enrich",
+        "latest_transcript_read",
+        "lead_disqualify_reasons",
+        "lead_settings",
+        "lead_sources",
+        "list_members",
+        "lists",
+        "meeting_brief",
+        "meeting_invitation",
+        "name_seats",
+        "pipeline",
+        "preview_contact_employment_import",
+        "project_health_assessments",
+        "project_stakeholders",
+        "record_assignments",
+        "record_lists",
+        "record_roles",
+        "relationships",
+        "reply_recipient",
+        "reporting_execution",
+        "reporting_executions",
+        "reporting_framework",
+        "reporting_schedules",
+        "reporting_target",
+        "reporting_targets",
+        "scheduling_profile",
+        "signal",
+        "signal_intro_path",
+        "signal_warmth",
+        "signals",
+        "site_read",
+        "stage",
+        "stage_automation_report",
+        "stage_evidence",
+        "stage_exit_criteria",
+        "stages",
+        "teams",
+        "transcript_read",
+        "transition_policies"
       ],
       "type": "string"
     },
-    "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
-      "maxLength": 255,
-      "type": "string"
-    },
-    "replace_existing_of_type": {
-      "default": false,
-      "description": "Move rather than associate",
-      "type": "boolean"
+    "window_days": {
+      "type": "integer"
     }
   },
   "required": [
-    "activity_ids",
-    "entity_type",
-    "entity_id"
+    "view"
   ],
   "type": "object"
 }
@@ -8756,14 +6453,6 @@ passport scope "write".)
 {
   "properties": {
     "data": {
-      "properties": {
-        "relinked": {
-          "type": "integer"
-        }
-      },
-      "required": [
-        "relinked"
-      ],
       "type": "object"
     },
     "evidence": {
@@ -8797,6 +6486,7 @@ passport scope "write".)
           "type": "boolean"
         },
         "last_synced_at": {
+          "format": "date-time",
           "type": "string"
         }
       },
@@ -8848,165 +6538,63 @@ passport scope "write".)
 
 </details>
 
-### relink_activity
+### read_workspace
 
-**Re-associate an activity to a record**
+**Read how this workspace is set up**
 
 ```text
-Fix what a recorded activity is about, when a captured mail or meeting landed on the wrong record or
-on none. Changes only the association; content is untouched. By default the new link is ADDED beside
-existing ones. Onto a project it waits for the user's yes; the answer says whether you may relay it
-with decide_approvals. log_activity records an event not recorded yet; relink_activities moves a
-picked set, such as a whole thread's activities. Set replace_existing_of_type to move rather than
-associate. (Governance: some calls run immediately and others a human approves first, decided per
-call from its arguments; requires passport scope "write".)
+Read how this workspace is set up. colleagues: the seats that can receive work, not the contacts
+stored as records; q narrows by name. pipelines: every pipeline with its stages, each open, won or
+lost. channel_providers: the messaging transports. The other topics name what a tool accepts: query
+(find_records engine query), analytics (read_analytics), record_fields (create_record and
+update_record), list_filters (find_records engine list), report_vocabulary (read_reports kind run),
+report_blocks (read_analytics step compose). A q matching nobody answers with every colleague and a
+warning. A stage's semantic, not its name, says whether it closes a deal. None of the name topics is
+a prerequisite: each tool refuses an unknown name with the accepted list. Use find_records to find a
+customer contact; colleagues are seats here. user_id is what assignee_id and owner_id take; never
+assign to an is_agent seat. Keep pipeline_id and stage_id for a deal. Take every name verbatim; a
+custom field is spelled cf_<slug>.
 ```
 
 <details><summary>Input schema</summary>
 
 ```json
 {
-  "additionalProperties": false,
   "properties": {
-    "activity_id": {
-      "description": "The captured activity to re-associate",
-      "format": "uuid",
-      "type": "string"
-    },
-    "approval_id": {
-      "description": "Set on approved retry",
-      "format": "uuid",
-      "type": "string"
-    },
-    "entity_id": {
-      "description": "The record to link it to",
-      "format": "uuid",
-      "type": "string"
-    },
-    "entity_type": {
-      "enum": [
-        "contact",
-        "company",
-        "deal",
-        "lead",
-        "project"
-      ],
-      "type": "string"
-    },
-    "idempotency_key": {
-      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
-      "maxLength": 255,
-      "type": "string"
-    },
-    "replace_existing_of_type": {
-      "default": false,
-      "description": "Replace the existing link of the same entity_type (move) rather than adding one (associate)",
+    "include_archived": {
+      "description": "pipelines only: Also list retired pipelines; a deal cannot be moved into one",
       "type": "boolean"
+    },
+    "include_inactive": {
+      "description": "colleagues only: Also list deactivated and suspended seats, for a member administrator only",
+      "type": "boolean"
+    },
+    "include_invited": {
+      "description": "colleagues only: Also list invited seats that have not signed in yet",
+      "type": "boolean"
+    },
+    "q": {
+      "description": "colleagues only: Narrow by name or email; omit for the whole roster",
+      "type": "string"
+    },
+    "topic": {
+      "description": "colleagues, pipelines or channel_providers; or which names a tool accepts: query, analytics, record_fields, list_filters, report_blocks, report_vocabulary",
+      "enum": [
+        "analytics",
+        "channel_providers",
+        "colleagues",
+        "list_filters",
+        "pipelines",
+        "query",
+        "record_fields",
+        "report_blocks",
+        "report_vocabulary"
+      ],
+      "type": "string"
     }
   },
   "required": [
-    "activity_id",
-    "entity_type",
-    "entity_id"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "id": {
-          "format": "uuid",
-          "type": "string"
-        }
-      },
-      "required": [
-        "id"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
+    "topic"
   ],
   "type": "object"
 }
@@ -9082,1720 +6670,116 @@ requires passport scope "write".)
 
 </details>
 
-### resolve_entities
+### schedule_meeting
 
-**Resolve contacts and companies**
+**Book or invite to a meeting**
 
 ```text
-Find out whether the contacts and companies named in something you are holding already exist here,
-matched on addresses, phone numbers and company domains rather than on text. It reads only. Nothing
-is created, changed or merged, and it answers contact and company, never leads. A near match comes
-back `ambiguous` however close it is. Use search_records to find a record you know exists, and
-resolve_duplicates once a contact has decided that two records are one. Call this BEFORE creating a
-contact or company from anything you did not type. Act on `matched`; on `ambiguous` ask which is
-meant; on `unresolved` say what you will create — a miss is not proof nothing exists.
+Put a meeting on the calendar. book places it on the calendar of the seat this passport acts for.
+invite sends the invitation to its attendees. book runs at once; invite reaches attendees outside
+the workspace and waits for a human. Read check_availability before booking a time. Use
+change_activities with log to record a meeting that already happened. Keep the meeting's id to send
+its invitation. (Governance: runs immediately for book; a human approves first for invite; requires
+passport scope "send".)
 ```
 
 <details><summary>Input schema</summary>
 
 ```json
 {
-  "additionalProperties": false,
   "properties": {
-    "candidates": {
+    "action": {
+      "description": "book: put a meeting on the calendar; invite: send the invitation to the attendees",
+      "enum": [
+        "book",
+        "invite"
+      ],
+      "type": "string"
+    },
+    "approval_id": {
+      "description": "book only: Set on approved retry",
+      "format": "uuid",
+      "type": "string"
+    },
+    "attendee_email": {
+      "description": "invite only",
+      "type": "string"
+    },
+    "contact_id": {
+      "description": "invite only",
+      "format": "uuid",
+      "type": "string"
+    },
+    "description": {
+      "description": "invite only",
+      "type": "string"
+    },
+    "end": {
+      "description": "RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
+      "format": "date-time",
+      "type": "string"
+    },
+    "host_user_id": {
+      "description": "book only",
+      "format": "uuid",
+      "type": "string"
+    },
+    "idempotency_key": {
+      "description": "A retry without it may repeat the write. Same key, same result; a key reused with other arguments is refused.",
+      "maxLength": 255,
+      "type": "string"
+    },
+    "links": {
+      "description": "book only: Who and what the meeting is about; at least one. The booking is refused without it.",
       "items": {
         "additionalProperties": false,
         "properties": {
-          "domains": {
-            "description": "Company domains claimed by the payload. Read for a company only.",
-            "items": {
-              "type": "string"
-            },
-            "maxItems": 10,
-            "type": "array"
+          "entity_id": {
+            "format": "uuid",
+            "type": "string"
           },
-          "emails": {
-            "description": "Every address on the payload, not just the primary one. For a company each address also contributes its domain, unless it is a consumer mail domain.",
-            "items": {
-              "type": "string"
-            },
-            "maxItems": 10,
-            "type": "array"
-          },
-          "kind": {
-            "description": "Which record type this payload is asking about. Leads are not resolved.",
+          "entity_type": {
             "enum": [
               "contact",
-              "company"
+              "company",
+              "deal",
+              "lead",
+              "project"
             ],
-            "type": "string"
-          },
-          "legal_name": {
-            "description": "The registered company name, when it differs from the trading name. Read for a company only.",
-            "type": "string"
-          },
-          "name": {
-            "description": "Full name for a contact, trading name for a company.",
-            "type": "string"
-          },
-          "phones": {
-            "description": "Phone numbers in E.164 form; one that does not normalize is not a key and is ignored.",
-            "items": {
-              "type": "string"
-            },
-            "maxItems": 10,
-            "type": "array"
-          },
-          "ref": {
-            "description": "Your own label for this candidate, echoed back on its answer so a batch can be lined up. Any string; it is never stored.",
             "type": "string"
           }
         },
         "required": [
-          "kind"
+          "entity_type",
+          "entity_id"
         ],
         "type": "object"
       },
-      "maxItems": 20,
+      "maxItems": 25,
       "minItems": 1,
       "type": "array"
-    }
-  },
-  "required": [
-    "candidates"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "candidates": {
-          "items": {
-            "properties": {
-              "decision": {
-                "type": "string"
-              },
-              "matches": {
-                "items": {
-                  "properties": {
-                    "confidence": {
-                      "type": "number"
-                    },
-                    "matched_on": {
-                      "type": "string"
-                    },
-                    "record": {
-                      "properties": {
-                        "fields": {
-                          "type": "object"
-                        },
-                        "id": {
-                          "format": "uuid",
-                          "type": "string"
-                        },
-                        "record_type": {
-                          "type": "string"
-                        },
-                        "trust_tier": {
-                          "type": "string"
-                        },
-                        "version": {
-                          "type": "integer"
-                        }
-                      },
-                      "required": [
-                        "fields",
-                        "id",
-                        "record_type"
-                      ],
-                      "type": "object"
-                    }
-                  },
-                  "required": [
-                    "confidence",
-                    "matched_on",
-                    "record"
-                  ],
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              "ref": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "decision",
-              "matches"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "candidates"
-      ],
-      "type": "object"
     },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
+    "location": {
+      "description": "invite only",
       "type": "string"
     },
-    "trace_id": {
+    "start": {
+      "description": "RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
+      "format": "date-time",
       "type": "string"
     },
-    "trust": {
+    "subject": {
       "type": "string"
     },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### review_commitments
-
-**Review open commitments**
-
-```text
-Answer "what have we promised and not delivered?": the open promises across the workspace, most
-overdue first, from BOTH places a promise is recorded — a task somebody filed, and a commitment
-read out of a captured conversation, which carries the sentence it was read from. Each names when it
-came due and the record it was made about. It reads what the workspace captured: a promise made in
-an uncaptured call, or in a thread nobody filed, is absent. The two sources are not linked, so a
-promise both said and typed can appear twice. Narrowing by assignee or project returns recorded
-TASKS alone — a conversation commitment carries neither — so a narrowed answer is a smaller
-question than the unnarrowed one. It is scoped to the records the caller may see. Use
-whats_slipping_this_week when the question is which DEALS are at risk rather than which promises are
-outstanding, and catch_me_up_on for everything that has happened on one record. Each item carries
-source (task | conversation) and the id for that source — task_id or claim_id — plus assignee_id
-where a task has one. Every state is judged against as_of, so carry that too if you report the
-answer later.
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {
-    "assignee_id": {
-      "description": "Narrow to one owner's promises; omit for everyone's",
-      "format": "uuid",
-      "type": "string"
-    },
-    "limit": {
-      "description": "Cap the set; omit for 50, the server-side ceiling",
-      "maximum": 50,
-      "minimum": 1,
-      "type": "integer"
-    },
-    "project_id": {
-      "description": "Keep only promises filed under this project or under none",
-      "format": "uuid",
-      "type": "string"
-    }
-  },
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "as_of": {
-          "type": "string"
-        },
-        "commitments": {
-          "items": {
-            "properties": {
-              "about": {
-                "items": {
-                  "properties": {
-                    "entity_id": {
-                      "format": "uuid",
-                      "type": "string"
-                    },
-                    "entity_type": {
-                      "type": "string"
-                    },
-                    "name": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "entity_id",
-                    "entity_type"
-                  ],
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              "assignee_id": {
-                "format": "uuid",
-                "type": "string"
-              },
-              "assignee_name": {
-                "type": "string"
-              },
-              "claim_id": {
-                "format": "uuid",
-                "type": "string"
-              },
-              "days_overdue": {
-                "type": "integer"
-              },
-              "due_at": {
-                "type": "string"
-              },
-              "quote": {
-                "type": "string"
-              },
-              "source": {
-                "type": "string"
-              },
-              "source_activity_id": {
-                "format": "uuid",
-                "type": "string"
-              },
-              "state": {
-                "type": "string"
-              },
-              "subject": {
-                "type": "string"
-              },
-              "task_id": {
-                "format": "uuid",
-                "type": "string"
-              }
-            },
-            "required": [
-              "about",
-              "source",
-              "state",
-              "subject"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "as_of",
-        "commitments"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### run_analytics_query
-
-**Run an analytics query**
-
-```text
-Compute a grouped aggregate — counts, sums, averages, medians — over a governed population, in
-the database. The answer carries its columns, rows and schema version; groups too small to disclose
-are withheld, never estimated. Populations, dimensions and measures come from
-margince://schema/analytics, derived for this seat and answered by describe_vocabulary (topic
-analytics); a name outside it is refused with what would work. Money measures are minor units. An
-omitted scope is this seat's own default population, never the workspace. run_report answers a
-prebuilt report by key; query_workspace lists exact records; the forecast tools answer forecast
-readings and movement. This one is for a novel aggregate no prebuilt report shapes, and for an
-ad-hoc figure a compose_analytics_report document will cite as a query cell: only a saved run can be
-cited. Set save to get a run_id whose cells compose_analytics_report can cite; without it the answer
-is served once and not stored.
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {
-    "entity": {
-      "description": "A population from margince://schema/analytics. An unknown name is refused with the allowed set.",
-      "type": "string"
-    },
-    "filters": {
-      "items": {
-        "additionalProperties": false,
-        "properties": {
-          "field": {
-            "type": "string"
-          },
-          "op": {
-            "enum": [
-              "eq",
-              "ne",
-              "lt",
-              "lte",
-              "gt",
-              "gte",
-              "is_null",
-              "is_not_null"
-            ]
-          },
-          "value": {}
-        },
-        "required": [
-          "field",
-          "op"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "group_by": {
-      "items": {
-        "type": "string"
-      },
-      "type": "array"
-    },
-    "limit": {
-      "type": "integer"
-    },
-    "measures": {
-      "items": {
-        "additionalProperties": false,
-        "properties": {
-          "as": {
-            "type": "string"
-          },
-          "field": {
-            "description": "A measure name. Omit only with fn=count.",
-            "type": "string"
-          },
-          "fn": {
-            "enum": [
-              "count",
-              "count_distinct",
-              "sum",
-              "avg",
-              "min",
-              "max",
-              "median",
-              "p75"
-            ]
-          }
-        },
-        "required": [
-          "fn"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "save": {
-      "description": "Persist the run; the answer then carries a citable run_id.",
+    "video_call": {
+      "description": "invite only",
       "type": "boolean"
-    },
-    "scope_id": {
-      "type": "string"
-    },
-    "scope_kind": {
-      "description": "Omit for this seat's own default population.",
-      "enum": [
-        "workspace",
-        "team",
-        "owner"
-      ]
     }
   },
   "required": [
-    "entity",
-    "measures"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "columns": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "population_narrowed": {
-          "type": "string"
-        },
-        "rows": {
-          "items": {
-            "type": "object"
-          },
-          "type": "array"
-        },
-        "run_id": {
-          "type": "string"
-        },
-        "schema_version": {
-          "type": "string"
-        },
-        "total_safe": {
-          "type": "boolean"
-        },
-        "withheld": {
-          "type": "boolean"
-        }
-      },
-      "required": [
-        "columns",
-        "rows",
-        "schema_version",
-        "total_safe",
-        "withheld"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### run_report
-
-**Run a report**
-
-```text
-Answer a question about totals, counts or breakdowns by running one of this workspace's prebuilt
-reports. Only the named reports exist, each with its own filter, grouping and measure names;
-anything else is refused. It aggregates: how many and how much, never which record. Use
-search_records or whats_slipping_this_week when the answer is the records rather than a number over
-them. Reach for run_analytics_query only when NO prebuilt report answers the question — a report
-is one call, a query is a lookup and a call — or when the figures go into a written document: a
-report's answer has no run_id, so compose_analytics_report cannot cite it. Call a report with no
-plan first for its default answer, then narrow with the names describe_vocabulary gives.
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {
-    "aggregates": {
-      "description": "Omit for the report's own default aggregates.",
-      "items": {
-        "additionalProperties": false,
-        "properties": {
-          "as": {
-            "description": "Output column name for this aggregate",
-            "type": "string"
-          },
-          "field": {
-            "description": "A measure name from this report's list. Omit only with fn=count.",
-            "type": "string"
-          },
-          "fn": {
-            "description": "How to aggregate the field. count takes no field; every other function names one from this report's aggregates list.",
-            "enum": [
-              "avg",
-              "count",
-              "max",
-              "median",
-              "min",
-              "p75",
-              "sum"
-            ],
-            "type": "string"
-          }
-        },
-        "required": [
-          "fn"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "filters": {
-      "description": "Equality predicates using this report's published filter names.",
-      "type": "object"
-    },
-    "group_by": {
-      "description": "Published dimension names; omit for default grouping.",
-      "items": {
-        "type": "string"
-      },
-      "type": "array"
-    },
-    "report": {
-      "description": "The prebuilt report to run. Send `report` ALONE for the default answer listed below — that call takes no other argument and needs nothing read first. activities-by-kind: count as activities grouped by kind. deals-by-stage: count as deals, sum(amount_minor) as amount_minor_sum grouped by stage_id, currency. forecast: count as deals, sum(amount_minor) as unweighted_minor, sum(weighted_amount_minor) as weighted_minor grouped by forecast_category, currency. leads-by-status: count as leads grouped by status. meeting-conversion: count as meetings grouped by became_opportunity. open-deals-per-company: count as open_deals grouped by company_id. pipeline-current: count as deals, sum(amount_base_minor) as amount_base_minor_sum, sum(weighted_base_minor) as weighted_base_minor_sum, count(amount_base_minor) as priced_deals grouped by stage_id. project-commitments: sum(overdue_commitments) as overdue_commitments, sum(open_commitments) as open_commitments grouped by project_id, name, key, phase, owner_id. projects-by-phase: count as projects, sum(open_deal_value_minor) as open_deal_value_minor, sum(won_deal_value_minor) as won_deal_value_minor grouped by phase. projects-gone-quiet: count as projects grouped by project_id, name, key, phase, owner_id, last_activity_at, quiet_since. stage-age: count as deals, median(days_in_stage) as median_days, p75(days_in_stage) as p75_days grouped by stage_id. win-loss: count as deals, sum(amount_minor) as amount_minor_sum, median(days_to_close) as median_days_to_close, p75(days_to_close) as p75_days_to_close grouped by status, currency. A default is not a report's reach: each slices by dimensions the line above does not name, so a breakdown no default shows is usually still one of these reports. Those dimension names, and its `filters` and `aggregates`, are that report's ALONE, published at margince://schema/reports and answered by describe_vocabulary; a name outside them is refused by name, with that argument's accepted list. A `pipeline_id` or `stage_id` used in a plan comes from read_directory (list: pipelines).",
-      "enum": [
-        "activities-by-kind",
-        "deals-by-stage",
-        "forecast",
-        "leads-by-status",
-        "meeting-conversion",
-        "open-deals-per-company",
-        "pipeline-current",
-        "project-commitments",
-        "projects-by-phase",
-        "projects-gone-quiet",
-        "stage-age",
-        "win-loss"
-      ],
-      "type": "string"
-    },
-    "scope": {
-      "properties": {
-        "id": {
-          "format": "uuid",
-          "type": "string"
-        },
-        "kind": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "kind"
-      ],
-      "type": "object"
-    }
-  },
-  "required": [
-    "report"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "base_currency": {
-          "type": "string"
-        },
-        "columns": {
-          "items": {
-            "type": "string"
-          },
-          "type": "array"
-        },
-        "derivation_url": {
-          "type": "string"
-        },
-        "excluded_by_permission": {
-          "type": "integer"
-        },
-        "generated_at": {
-          "type": "string"
-        },
-        "plan": {
-          "type": "object"
-        },
-        "population_narrowed": {
-          "type": "string"
-        },
-        "report": {
-          "type": "string"
-        },
-        "rows": {
-          "items": {
-            "type": "object"
-          },
-          "type": "array"
-        },
-        "total_rows": {
-          "type": "integer"
-        }
-      },
-      "required": [
-        "columns",
-        "plan",
-        "report",
-        "rows"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### search_context
-
-**Search for relevant material**
-
-```text
-Find the records most relevant to a description, ranked by meaning as well as by wording, each with
-the excerpt that ranked it. Ranked, never exhaustive: records that also match may be absent, and no
-count of them exists. You can narrow it to particular record types, but not by field, date or owner,
-and it does not group or total. It cannot be narrowed to a project either: the index carries no
-project column. Use catch_me_up_on with project_id for one project, query_workspace when the
-question has conditions, a date bound or a related record to reach through, and search_records when
-you have the exact name or phrase. Read `coverage`: `partial_degraded` means `notes` matters, and
-`semantic_ranking_degraded_to_lexical` there means the ranking fell back to word overlap. Keep each
-hit's record_type and id.
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {
-    "limit": {
-      "maximum": 25,
-      "minimum": 1,
-      "type": "integer"
-    },
-    "query": {
-      "description": "What to look for, in your own words. The wording is matched by meaning as well as by the words themselves, so a phrase that appears nowhere on a record can still rank it.",
-      "maxLength": 1000,
-      "type": "string"
-    },
-    "record_types": {
-      "description": "Restrict the sweep to these types; omit to sweep all of them.",
-      "items": {
-        "enum": [
-          "contact",
-          "company",
-          "deal",
-          "lead",
-          "project"
-        ],
-        "type": "string"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "query"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "coverage": {
-          "type": "string"
-        },
-        "hits": {
-          "items": {
-            "properties": {
-              "excerpts": {
-                "items": {
-                  "properties": {
-                    "snippet": {
-                      "type": "string"
-                    },
-                    "source": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "snippet",
-                    "source"
-                  ],
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              "record": {
-                "properties": {
-                  "fields": {
-                    "type": "object"
-                  },
-                  "id": {
-                    "format": "uuid",
-                    "type": "string"
-                  },
-                  "record_type": {
-                    "type": "string"
-                  },
-                  "trust_tier": {
-                    "type": "string"
-                  },
-                  "version": {
-                    "type": "integer"
-                  }
-                },
-                "required": [
-                  "fields",
-                  "id",
-                  "record_type"
-                ],
-                "type": "object"
-              },
-              "score": {
-                "type": "number"
-              }
-            },
-            "required": [
-              "excerpts",
-              "record",
-              "score"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        },
-        "notes": {
-          "items": {
-            "properties": {
-              "code": {
-                "type": "string"
-              },
-              "detail": {
-                "type": "string"
-              },
-              "path": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "code",
-              "detail"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "coverage",
-        "hits",
-        "notes"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### search_records
-
-**Search records**
-
-```text
-Find contacts, companies, deals, leads and projects when you know roughly what they are called but
-not which record they are. It matches text stored ON the record. It does not read a timeline:
-message bodies, call notes and meeting content are not searched, so a query describing what someone
-said or did will not find them. Use list_records when the question is which records meet a condition
-rather than what one is called, read_record when you already hold the record's id, and run_report
-when the question is a count, a total or a breakdown rather than a set of records. Keep each
-result's record_type and id together: every other tool identifies a record by both, and an id alone
-does not say which type it belongs to. A result's `owner` says who holds it. When `owner.is_you` is
-false, say whose it is when you report the record (or that its owner could not be named, when
-`owner.name` is absent), and treat contacting it as theirs to decide rather than advising an
-approach as though the record were unowned.
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {
-    "cursor": {
-      "description": "Keyset cursor from the previous page, which a page reporting more always carries. A sweep of every type resumes by it too.",
-      "type": "string"
-    },
-    "limit": {
-      "maximum": 50,
-      "minimum": 1,
-      "type": "integer"
-    },
-    "q": {
-      "description": "What to match against the text stored on the record. It does not reach a timeline: message bodies, call notes and meeting content are not searched. Not accepted with record_type=partner, which has no text of its own.",
-      "type": "string"
-    },
-    "record_type": {
-      "description": "Restrict to one type; omit to sweep every type this workspace serves, which is not always all of these. A sweep never visits partner: name it to reach one.",
-      "enum": [
-        "contact",
-        "company",
-        "deal",
-        "lead",
-        "project",
-        "partner"
-      ],
-      "type": "string"
-    }
-  },
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "next_cursor": {
-          "type": "string"
-        },
-        "records": {
-          "items": {
-            "properties": {
-              "fields": {
-                "type": "object"
-              },
-              "id": {
-                "format": "uuid",
-                "type": "string"
-              },
-              "owner": {
-                "properties": {
-                  "id": {
-                    "format": "uuid",
-                    "type": "string"
-                  },
-                  "is_you": {
-                    "type": "boolean"
-                  },
-                  "name": {
-                    "type": "string"
-                  }
-                },
-                "required": [
-                  "id",
-                  "is_you"
-                ],
-                "type": "object"
-              },
-              "record_type": {
-                "type": "string"
-              },
-              "trust_tier": {
-                "type": "string"
-              },
-              "version": {
-                "type": "integer"
-              }
-            },
-            "required": [
-              "fields",
-              "id",
-              "record_type"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "records"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### search_report_evidence
-
-**Search the evidence behind a saved run**
-
-```text
-Check a claim against the records behind a saved analytics run — or one cell of it — by
-searching their text: records that carry the words are citations, records that do not are
-counterexamples, and records with no text to judge are abstentions. It searches only the run's own
-records that this seat can read today, and every figure counts those — never records hidden from
-this seat. It states a prevalence only when coverage is complete_exact; otherwise prevalence is null
-and the notes say why. search_context sweeps the whole workspace by meaning; run_analytics_query
-counts. This one answers how much of a counted set supports a claim. Cite records by id. Quote a
-share only from prevalence, never by dividing the lists.
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {
-    "cell": {
-      "description": "One cell's group key values, in the run's group_by order. Omit to search every record the run measured.",
-      "items": {},
-      "type": "array"
-    },
-    "limit": {
-      "description": "How many citations, counterexamples and abstentions to return, each.",
-      "maximum": 25,
-      "minimum": 1,
-      "type": "integer"
-    },
-    "query": {
-      "description": "The words the evidence would carry.",
-      "maxLength": 1000,
-      "type": "string"
-    },
-    "run_id": {
-      "description": "A saved run: run_analytics_query with save answers one.",
-      "format": "uuid",
-      "type": "string"
-    }
-  },
-  "required": [
-    "run_id",
-    "query"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "abstentions": {
-          "items": {
-            "properties": {
-              "id": {
-                "format": "uuid",
-                "type": "string"
-              },
-              "record_type": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "id",
-              "record_type"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        },
-        "citations": {
-          "items": {
-            "properties": {
-              "excerpts": {
-                "items": {
-                  "properties": {
-                    "snippet": {
-                      "type": "string"
-                    },
-                    "source": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "snippet",
-                    "source"
-                  ],
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              "record": {
-                "properties": {
-                  "fields": {
-                    "type": "object"
-                  },
-                  "id": {
-                    "format": "uuid",
-                    "type": "string"
-                  },
-                  "record_type": {
-                    "type": "string"
-                  },
-                  "trust_tier": {
-                    "type": "string"
-                  },
-                  "version": {
-                    "type": "integer"
-                  }
-                },
-                "required": [
-                  "fields",
-                  "id",
-                  "record_type"
-                ],
-                "type": "object"
-              },
-              "score": {
-                "type": "number"
-              }
-            },
-            "required": [
-              "excerpts",
-              "record",
-              "score"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        },
-        "counterexamples": {
-          "items": {
-            "properties": {
-              "fields": {
-                "type": "object"
-              },
-              "id": {
-                "format": "uuid",
-                "type": "string"
-              },
-              "record_type": {
-                "type": "string"
-              },
-              "trust_tier": {
-                "type": "string"
-              },
-              "version": {
-                "type": "integer"
-              }
-            },
-            "required": [
-              "fields",
-              "id",
-              "record_type"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        },
-        "coverage": {
-          "type": "string"
-        },
-        "notes": {
-          "items": {
-            "properties": {
-              "code": {
-                "type": "string"
-              },
-              "detail": {
-                "type": "string"
-              },
-              "path": {
-                "type": "string"
-              }
-            },
-            "required": [
-              "code",
-              "detail"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        },
-        "prevalence": {
-          "properties": {
-            "matched": {
-              "type": "integer"
-            },
-            "of": {
-              "type": "integer"
-            },
-            "share": {
-              "type": "number"
-            }
-          },
-          "required": [
-            "matched",
-            "of",
-            "share"
-          ],
-          "type": "object"
-        },
-        "tally": {
-          "properties": {
-            "matched": {
-              "type": "integer"
-            },
-            "unjudged": {
-              "type": "integer"
-            },
-            "unmatched": {
-              "type": "integer"
-            }
-          },
-          "required": [
-            "matched",
-            "unjudged",
-            "unmatched"
-          ],
-          "type": "object"
-        }
-      },
-      "required": [
-        "abstentions",
-        "citations",
-        "counterexamples",
-        "coverage",
-        "notes",
-        "tally"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
+    "action",
+    "start",
+    "end"
   ],
   "type": "object"
 }
@@ -10815,10 +6799,11 @@ chat conversation, by activity_id, on the channel it came from. Every recipient 
 the consent purpose the call names. A sent message cannot be recalled, and by default nothing holds
 it: where an installation has raised a send to confirm first, the answer is a staged approval
 instead. chat_reply cannot start a conversation or choose a channel. Use draft_outbound first when
-the message does not exist yet, and log_activity to record that something was said rather than say
-it. Send the subject, body and activity_id or links the draft produced, and keep the staged approval
-id: the approval binds that exact message, so changed text needs a new one. email_new answers with
-the new conversation's activity_id. (Runs immediately; requires passport scope "send".)
+the message does not exist yet, and change_activities with action=log to record that something was
+said rather than say it. Send the subject, body and activity_id or links the draft produced, and
+keep the staged approval id: the approval binds that exact message, so changed text needs a new one.
+email_new answers with the new conversation's activity_id. (Runs immediately; requires passport
+scope "send".)
 ```
 
 <details><summary>Input schema</summary>
@@ -10983,10 +6968,11 @@ contact's email addresses are not among them). A field a HUMAN last set is not o
 part is staged for a human and named in the result, and that part of the write has not happened. It
 names the record by id; when a name matches two records, a human picks. owner_id is NOT neutral —
 ownership decides visibility, so reassigning moves the record onto someone else's book and can take
-it off the owner's. Use progress_deal to move a deal between stages, and relink_activity to change
-what an activity is about; neither is a field edit. Send if_version with the version you read, and
-keep the staged approval id from the result if you intend to retry the same change once a human has
-released it. (Runs immediately; requires passport scope "write".)
+it off the owner's. Use change_state with action=move_deal to move a deal between stages, and
+change_activities with action=relink to change what an activity is about; neither is a field edit.
+Send if_version with the version you read, and keep the staged approval id from the result if you
+intend to retry the same change once a human has released it. (Runs immediately; requires passport
+scope "write".)
 ```
 
 Renders its result in [`ui://margince/field-conflict.html`](#field_conflict_view), visible to `model`, `app`.
@@ -11003,7 +6989,7 @@ Renders its result in [`ui://margince/field-conflict.html`](#field_conflict_view
       "type": "string"
     },
     "fields": {
-      "description": "Only sent fields change. Fields a human last edited are not applied: they are staged for approval and named in the result's staged_approval. The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields, and answered by describe_vocabulary (topic record_fields) — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. Any field holding a sentence — a description, a summary, a note — is written in whoami's prose_language, whatever language this conversation is in.",
+      "description": "Only sent fields change. Fields a human last edited are not applied: they are staged for approval and named in the result's staged_approval. The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields, and answered by read_workspace with topic=record_fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. Any field holding a sentence — a description, a summary, a note — is written in whoami's prose_language, whatever language this conversation is in.",
       "type": "object"
     },
     "id": {
@@ -11027,7 +7013,10 @@ Renders its result in [`ui://margince/field-conflict.html`](#field_conflict_view
         "lead",
         "activity",
         "project",
-        "relationship"
+        "relationship",
+        "product",
+        "offer_template",
+        "offer"
       ],
       "type": "string"
     }
@@ -11132,190 +7121,7 @@ Renders its result in [`ui://margince/field-conflict.html`](#field_conflict_view
           "type": "boolean"
         },
         "last_synced_at": {
-          "type": "string"
-        }
-      },
-      "required": [
-        "authoritative"
-      ],
-      "type": "object"
-    },
-    "schema_version": {
-      "type": "string"
-    },
-    "trace_id": {
-      "type": "string"
-    },
-    "trust": {
-      "type": "string"
-    },
-    "warnings": {
-      "items": {
-        "properties": {
-          "code": {
-            "type": "string"
-          },
-          "message": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "code",
-          "message"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    }
-  },
-  "required": [
-    "data",
-    "evidence",
-    "freshness",
-    "schema_version",
-    "trace_id",
-    "trust",
-    "warnings"
-  ],
-  "type": "object"
-}
-```
-
-</details>
-
-### whats_slipping_this_week
-
-**What's slipping this week**
-
-```text
-Answer "what is slipping?": the deals going quiet or running past their expected close date, ranked
-worst first, each with the evidence that says so. It reports only deals whose risk can be evidenced
-from their own fields — a deal nobody can point at a reason for is absent rather than guessed —
-and it is scoped to the deals the caller may see. Use run_report for the pipeline as a whole
-(totals, counts, breakdowns), and at_risk_relationships when the question is who a deal rests on
-rather than whether it is moving. Keep each deal_id if you intend to act; draft_outbound (for:
-slipping_deals) works over this same ranked set at the default quiet_days without you re-deriving
-it.
-```
-
-<details><summary>Input schema</summary>
-
-```json
-{
-  "additionalProperties": false,
-  "properties": {
-    "limit": {
-      "description": "Cap the ranked set; omit for the full evidenced set",
-      "maximum": 50,
-      "minimum": 1,
-      "type": "integer"
-    },
-    "quiet_days": {
-      "default": 60,
-      "description": "Days without recorded activity after which a deal counts as gone quiet; omit it for the product-wide stalled threshold",
-      "maximum": 365,
-      "minimum": 1,
-      "type": "integer"
-    }
-  },
-  "type": "object"
-}
-```
-
-</details>
-
-<details><summary>Output schema</summary>
-
-```json
-{
-  "properties": {
-    "data": {
-      "properties": {
-        "deals": {
-          "items": {
-            "properties": {
-              "amount_minor": {
-                "type": "integer"
-              },
-              "currency": {
-                "type": "string"
-              },
-              "deal_id": {
-                "format": "uuid",
-                "type": "string"
-              },
-              "evidence": {
-                "items": {
-                  "properties": {
-                    "snippet": {
-                      "type": "string"
-                    },
-                    "source": {
-                      "type": "string"
-                    }
-                  },
-                  "required": [
-                    "snippet",
-                    "source"
-                  ],
-                  "type": "object"
-                },
-                "type": "array"
-              },
-              "name": {
-                "type": "string"
-              },
-              "rank": {
-                "type": "integer"
-              }
-            },
-            "required": [
-              "deal_id",
-              "evidence",
-              "name",
-              "rank"
-            ],
-            "type": "object"
-          },
-          "type": "array"
-        }
-      },
-      "required": [
-        "deals"
-      ],
-      "type": "object"
-    },
-    "evidence": {
-      "items": {
-        "properties": {
-          "captured_by": {
-            "type": "string"
-          },
-          "record_id": {
-            "format": "uuid",
-            "type": "string"
-          },
-          "record_type": {
-            "type": "string"
-          },
-          "source": {
-            "type": "string"
-          }
-        },
-        "required": [
-          "record_id",
-          "record_type"
-        ],
-        "type": "object"
-      },
-      "type": "array"
-    },
-    "freshness": {
-      "properties": {
-        "authoritative": {
-          "type": "boolean"
-        },
-        "last_synced_at": {
+          "format": "date-time",
           "type": "string"
         }
       },
@@ -11457,6 +7263,7 @@ answered, where locale is absent until this contact chooses one.
           "type": "boolean"
         },
         "last_synced_at": {
+          "format": "date-time",
           "type": "string"
         }
       },

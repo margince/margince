@@ -59,7 +59,7 @@ type elsewhereProvider struct {
 }
 
 func (elsewhereProvider) Read(_ context.Context, ref datasource.EntityRef) (datasource.Record, error) {
-	return datasource.Record{Ref: ref, Fields: json.RawMessage(`{"full_name":"Mirrored"}`)}, nil
+	return datasource.Record{Ref: ref, Fields: json.RawMessage(`{"full_name":"Mirrored","domains":[{"domain":"acme.example"}]}`)}, nil
 }
 
 // stageableToolArgs is the argument corpus every walk over the stageable set
@@ -245,14 +245,18 @@ func (localProvider) ArchiveAt(_ context.Context, in datasource.ArchiveInput) (d
 	return in.Ref, nil
 }
 
+func (p localProvider) ReadLeadForReversal(ctx context.Context, id ids.UUID) (datasource.Record, error) {
+	return p.Read(ctx, datasource.EntityRef{Type: datasource.EntityLead, ID: id})
+}
+
 func (localProvider) Read(_ context.Context, ref datasource.EntityRef) (datasource.Record, error) {
 	return nativeRecord(datasource.Record{
 		Ref: ref, Version: 1,
-		// One record shape serving every tool in the corpus: a name for the
-		// labels a summary is written from, and the channel kind the reply
-		// tools ask for before they will describe a send.
+		// One record shape serves every tool in the corpus. It carries a name for
+		// the summary labels, the channel kind the reply tools need, and the
+		// domain an enrich reads.
 		Fields: json.RawMessage(`{"full_name":"Ada Lovelace","name":"Ada Lovelace",` +
-			`"kind":"message","channel_provider":"telegram"}`),
+			`"kind":"message","channel_provider":"telegram","domains":[{"domain":"acme.example"}]}`),
 	}), nil
 }
 

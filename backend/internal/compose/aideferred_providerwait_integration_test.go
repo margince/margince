@@ -109,6 +109,11 @@ func TestWebsiteReadsSplitTheBudgetWaitFromTheProviderWait(t *testing.T) {
 			if err != nil || current.NextAttemptAt == nil {
 				return time.Time{}, err
 			}
+			report := siteReadReport(current)
+			onboarding := companySiteRead(current, nil, nil)
+			if report.DeferralReason == nil || *report.DeferralReason != name || onboarding.DeferralReason == nil || *onboarding.DeferralReason != name {
+				t.Fatalf("%s retry reason missing from API projections: %+v / %+v", name, report.DeferralReason, onboarding.DeferralReason)
+			}
 			return *current.NextAttemptAt, nil
 		}
 	}

@@ -60,7 +60,13 @@ question to answer, a time to confirm, a point it defers or reserves. A reply th
 everything we asked and leaves nothing open is informs_us, however long it is.
 Judge only the sender's new words. Quoted earlier requests and signatures do not create a new
 obligation. Acknowledgements, returning a document, and "I will get back to you" are informs_us
-unless the new text separately asks the recipient to do something.`
+unless the new text separately asks the recipient to do something.
+A tentative offer such as "If useful, I could draft something next week" is informs_us unless it
+also asks for an answer or decision. Do not turn willingness to help into a request to accept it.
+A newsletter or mass promotion inviting all subscribers to book or buy is informs_us: a general
+call to action does not leave this recipient a pending obligation. A personal request directed
+to this recipient is still asks_us, including a supplier quote or a private errand. Commercial
+relevance is separate from whether the recipient has been asked to act.`
 
 // SystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
 func SystemFor(fence promptfence.Fence) string {

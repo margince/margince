@@ -30,7 +30,7 @@
 # Shard mode (the CI matrix): INTEGRATION_SHARD="k/N" slices the lane across N
 # independent runners BY TEST, not by package — package-level fan-out bottoms
 # out at the heaviest package (compose/integration is minutes of serial tests),
-# so each shard runs a deterministic round-robin slice of every package's
+# so each shard runs a deterministic, duration-balanced slice of every package's
 # top-level Test functions via -run. Discovery is static (`func Test…` in the
 # package's *_test.go files) so it costs no compile; files under the known
 # opt-in lane tags (e2e_llm, livesmoke, voicelive) and the by-hand benchmark lane
@@ -151,10 +151,41 @@ JOBS="${INTEGRATION_JOBS:-$(( $(ncpu) < 8 ? $(ncpu) : 8 ))}"
 # LANE_CONN_BUDGET for the harness.
 declare_lane_budget "$JOBS"
 
+# The coverage flags of a sharded run, one string because run_one reads it in
+# the child shell xargs starts, and an array does not cross that boundary.
+export LANE_COVER_FLAGS="-cover -coverpkg=./... -covermode=atomic"
+
+# Compile the lane once before fanning out, with the flags every package's
+# `go test` uses. Concurrent `go` processes do not share a compile still in
+# flight, so packages starting together on a cold cache each built the same
+# dependencies. It runs beside the template build, which mostly waits on
+# Postgres; `wait` reports its status, so a failure cannot hide behind the `&`.
+prebuild_flags=(-tags=integration)
+if [[ -n "${COVERDIR:-}" ]]; then
+  read -r -a cover_flags <<< "$LANE_COVER_FLAGS"
+  prebuild_flags+=("${cover_flags[@]}")
+fi
+prebuild_log="$(mktemp)"
+( cd "$ROOT/backend" && go build "${prebuild_flags[@]}" ./... ) > "$prebuild_log" 2>&1 &
+prebuild_pid=$!
+# A failed template build exits here under set -e; stop and reap the compiler
+# rather than leave it running. The lane's own EXIT trap below replaces this.
+trap 'kill "$prebuild_pid" 2>/dev/null || true; wait "$prebuild_pid" 2>/dev/null || true; rm -f "$prebuild_log"' EXIT
+
 # Build the migrated template once, fresh, before fanning out. Every package
 # clones from it (CREATE DATABASE ... TEMPLATE) instead of re-migrating.
 echo "test-integration-parallel: building migrated template ${TEMPLATE_NAME}…"
 build_template
+
+prebuild_started=$SECONDS
+if ! wait "$prebuild_pid"; then
+  cat "$prebuild_log"
+  rm -f "$prebuild_log"
+  echo "FAIL: the integration lane does not compile with ${prebuild_flags[*]} — the compiler's error is above"
+  exit 1
+fi
+rm -f "$prebuild_log"
+echo "test-integration-parallel: compiled the lane once ($(( SECONDS - prebuild_started ))s after the template was ready)"
 
 # Every integration test in this repo lives in the backend module.
 GO_DIRS=(backend)
@@ -187,7 +218,7 @@ done > "$CANDIDATES"
 
 CONSTRAINT_SCOPE="$(mktemp)" LANE_PKGS="$(mktemp)" WORK="$(mktemp)"
 DISCOVERY="$(mktemp)" ASSIGNED="$(mktemp)" RAN="$(mktemp)" UNTAGGED="$(mktemp)"
-TIMING="$(mktemp)" WALLCLOCK="$(mktemp)" FAILED_PKGS="$(mktemp)"
+TIMING="$(mktemp)" TEST_TIMING="$(mktemp)" WALLCLOCK="$(mktemp)" FAILED_PKGS="$(mktemp)"
 # The packages go test KILLED for exceeding the budget. Kept apart from
 # FAILED_PKGS because a timeout explains something no other failure does: every
 # one of that package's assigned tests is missing from the run, and the
@@ -215,7 +246,7 @@ OUTDIR="$(mktemp -d)"
 # needs the evidence, because the re-run that would reproduce it usually passes.
 # A green run still cleans up: nobody wants a temp dir per passing run.
 KEEP_LOGS=""
-trap 'rm -f "$CANDIDATES" "$CONSTRAINT_SCOPE" "$LANE_PKGS" "$WORK" "$DISCOVERY" "$ASSIGNED" "$RAN" "$UNTAGGED" "$TIMING" "$WALLCLOCK" "$FAILED_PKGS" ${GROUPED:+"$GROUPED"}; [[ -n "$KEEP_LOGS" ]] || rm -rf "$OUTDIR"; rm -rf ${REGEX_DIR:+"$REGEX_DIR"}' EXIT
+trap 'rm -f "$CANDIDATES" "$CONSTRAINT_SCOPE" "$LANE_PKGS" "$WORK" "$DISCOVERY" "$ASSIGNED" "$RAN" "$UNTAGGED" "$TIMING" "$TEST_TIMING" "$WALLCLOCK" "$FAILED_PKGS" ${GROUPED:+"$GROUPED"}; [[ -n "$KEEP_LOGS" ]] || rm -rf "$OUTDIR"; rm -rf ${REGEX_DIR:+"$REGEX_DIR"}' EXIT
 
 # The ONE spelling of "which build constraints does this file declare": the
 # region above the `package` clause, one expression per line. Both passes below
@@ -376,11 +407,11 @@ if (( SHARD_TOTAL > 0 )); then
     echo "FAIL: discovered only $NTESTS integration tests for $SHARD_TOTAL shards — the discovery is broken or the shard count is absurd"
     exit 1
   fi
-  # Deterministic round-robin over the sorted list: line i goes to shard
-  # ((i-1) % N) + 1. Every shard computes the same list from the same commit,
-  # so the slices are complete and disjoint by construction — and the fan-in
-  # verifies exactly that instead of trusting it.
-  awk -v k="$SHARD_IDX" -v n="$SHARD_TOTAL" 'NR % n == k % n' "$DISCOVERY" > "$ASSIGNED"
+  # Split by measured duration, so slow tests do not land on one shard; the
+  # rules live in scripts/lib-laneorder.sh, which is unit-tested. Every shard
+  # computes the same split from the same commit, and the fan-in verifies that
+  # the slices are complete and disjoint instead of trusting it.
+  assign_shard "$DISCOVERY" "$ROOT/scripts/integration-test-timing.txt" "$SHARD_IDX" "$SHARD_TOTAL" > "$ASSIGNED"
 else
   # Unsharded: the whole lane is this run's slice. Naming it explicitly is what
   # lets the -run union and the ran==assigned teeth below serve both modes.
@@ -468,7 +499,7 @@ run_one() {
   local cover_pre=() cover_post=() run_args=()
   if [[ -n "${COVERDIR:-}" ]]; then
     mkdir -p "$COVERDIR/$idx"
-    cover_pre=(-cover -coverpkg=./... -covermode=atomic)
+    read -r -a cover_pre <<< "$LANE_COVER_FLAGS"
     cover_post=(-args -test.gocoverdir="$COVERDIR/$idx")
   fi
   [[ -n "$runre" ]] && run_args=(-run "$runre")
@@ -561,6 +592,10 @@ for base in $(cd "$OUTDIR" && ls -1 -- *.log 2>/dev/null | sort -n); do
   # "assigned but not run" instead, which names the reconciliation rather than
   # the skip and sends the reader looking for a dead worker.
   grep -E '^--- (PASS|FAIL|SKIP): ' "$log" | awk -v p="$d|$rel|" '{print p $3}' >> "$RAN" || true
+  # "dir|rel|TestName|seconds", the line shape scripts/integration-test-timing.txt
+  # is refreshed from.
+  grep -E '^--- (PASS|FAIL|SKIP): ' "$log" \
+    | awk -v p="$d|$rel|" '{ secs = $4; gsub(/[()s]/, "", secs); print p $3 "|" secs }' >> "$TEST_TIMING" || true
   # Cost, taken from `go test`'s own trailing "ok <pkg> <n>s" — millisecond
   # precision already in the log, and it excludes the clone provisioning around
   # it, so what it prices is the tests themselves.
@@ -793,6 +828,7 @@ if [[ -n "$SHARD_OUT" ]]; then
   # "rel|seconds|tests" per package, so cost can be tracked across runs rather
   # than re-derived by eye from a scrolled log.
   cp "$TIMING" "$SHARD_OUT/timing.txt"
+  cp "$TEST_TIMING" "$SHARD_OUT/test-timing.txt"
   printf 'shard=%s\ntotal=%s\n' "$SHARD_IDX" "$SHARD_TOTAL" > "$SHARD_OUT/meta.txt"
 fi
 

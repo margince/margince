@@ -312,7 +312,7 @@ func NewFollowUpReconciler(pool *pgxpool.Pool, log *slog.Logger) *deals.FollowUp
 	// unreachable from here. It refuses rather than passes if that ever changes.
 	drafter := newCommsAdapter(pool, nil, SendPath{})
 	stager := followUpStager{
-		svc:   approvals.NewService(db),
+		svc:   NewApprovalsService(db),
 		draft: drafter,
 		owner: dealOwnerAuthority{db: db, users: identity.NewServiceFor(db)},
 		pool:  pool,

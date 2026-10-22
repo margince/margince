@@ -293,9 +293,8 @@ func (h importHandlers) commitRun(
 		return crmcontracts.ImportRun{}, err
 	}
 	if run.Mapping == nil {
-		return crmcontracts.ImportRun{}, fmt.Errorf(
-			"import run %s carries no mapping, so it is not an approvable import: %w",
-			run.ID, apperrors.ErrConflict)
+		return crmcontracts.ImportRun{}, migration.RefuseRun(run.ID,
+			"this import carries no mapping, so it cannot be approved")
 	}
 	if h.blobs == nil {
 		return crmcontracts.ImportRun{}, errNoObjectStore

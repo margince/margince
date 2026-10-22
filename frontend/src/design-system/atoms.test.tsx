@@ -3,9 +3,9 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { verticalPlacement } from "./anchored";
 import {
@@ -20,8 +20,8 @@ import {
   Textarea,
   TextInput,
 } from "./atoms";
+import { ConfirmModal } from "./confirmmodal";
 import { Heading } from "./heading";
-import { holdExits } from "./presence-testing";
 import { Select } from "./select";
 
 // The dropdown these cases pair with a Field is the Select from select.tsx — a
@@ -184,12 +184,9 @@ function DialogAction() {
   );
 }
 
-// The one item that must NOT close the menu under itself: one whose whole job
-// is to put a dialog up. A dialog restores focus, on close, to the control that
-// opened it — so hiding that control first strands the reader on <body>. The
-// menu asks `coveredByDialog` as its Escape handler does, one commit after the
-// press, which is the first moment the answer exists.
-it("stays open when the item it just ran opened a dialog", async () => {
+// A dialog put up from the menu owns the screen, so the menu does not stand
+// behind it. Focus waits on the trigger, so closing the dialog lands there.
+it("closes when an item opens a dialog, and the dialog hands focus back to the trigger", async () => {
   const user = userEvent.setup();
   render(
     <OverflowMenu label="More actions">
@@ -201,36 +198,58 @@ it("stays open when the item it just ran opened a dialog", async () => {
 
   await user.click(screen.getByRole("button", { name: "Merge with…" }));
 
-  expect(trigger.getAttribute("aria-expanded")).toBe("true");
+  expect(
+    await screen.findByRole("dialog", { name: "Merge with…" }),
+  ).toBeTruthy();
+  expect(trigger.getAttribute("aria-expanded")).toBe("false");
+  expect(
+    document.querySelector(".overflow-menu-items")?.hasAttribute("hidden"),
+  ).toBe(true);
+  await user.keyboard("{Escape}");
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(document.activeElement).toBe(trigger);
 });
 
-// A dialog on its way out is no longer up: a reader who dismissed it and picked
-// a verb before its exit ended has chosen that verb, and the menu is finished.
-it("closes when an item is chosen while the dialog it opened is leaving", async () => {
-  const exits = holdExits();
-  try {
-    const user = userEvent.setup();
-    render(
-      <OverflowMenu label="More actions">
-        <DialogAction />
-        <button type="button">Archive</button>
-      </OverflowMenu>,
+// The item's dialog is its child in React, so a press inside that dialog bubbles
+// to the panel. It chose nothing in the menu, and focus stays in the dialog.
+it("leaves focus in a dialog an item opened when a button inside it is pressed", async () => {
+  const user = userEvent.setup();
+  function GrowingDialogAction() {
+    const [open, setOpen] = useState(false);
+    const [rows, setRows] = useState(0);
+    return (
+      <>
+        <button type="button" onClick={() => setOpen(true)}>
+          Merge with…
+        </button>
+        <Modal
+          open={open}
+          onClose={() => setOpen(false)}
+          labelledBy="merge-rows"
+          intent="form"
+        >
+          <Heading size="large" id="merge-rows">
+            Merge with…
+          </Heading>
+          <button type="button" onClick={() => setRows(rows + 1)}>
+            Add row {rows}
+          </button>
+        </Modal>
+      </>
     );
-    const trigger = screen.getByRole("button", { name: "More actions" });
-    await user.click(trigger);
-    await user.click(screen.getByRole("button", { name: "Merge with…" }));
-    await user.keyboard("{Escape}");
-    expect(document.querySelector(".overlay")?.hasAttribute("inert")).toBe(
-      true,
-    );
-    expect(trigger.getAttribute("aria-expanded")).toBe("true");
-
-    await user.click(screen.getByRole("button", { name: "Archive" }));
-
-    expect(trigger.getAttribute("aria-expanded")).toBe("false");
-  } finally {
-    exits.mockRestore();
   }
+  render(
+    <OverflowMenu label="More actions">
+      <GrowingDialogAction />
+    </OverflowMenu>,
+  );
+  await user.click(screen.getByRole("button", { name: "More actions" }));
+  await user.click(screen.getByRole("button", { name: "Merge with…" }));
+  await user.click(await screen.findByRole("button", { name: "Add row 0" }));
+
+  expect(document.activeElement).toBe(
+    screen.getByRole("button", { name: "Add row 1" }),
+  );
 });
 
 // A menu drawn INSIDE a dialog is not under it: the dialog is the page it sits
@@ -258,6 +277,97 @@ it("closes on Escape and on a chosen verb when it sits inside a dialog", async (
   await user.click(screen.getByRole("button", { name: "Archive" }));
   expect(trigger.getAttribute("aria-expanded")).toBe("false");
   expect(onDialogClose).not.toHaveBeenCalled();
+});
+
+// At the body the panel sits under the dialog's overlay, where no press reaches it.
+it("hangs its panel in the dialog it sits inside, and closes on a press elsewhere in it", async () => {
+  const user = userEvent.setup();
+  render(
+    <Modal open onClose={() => {}} labelledBy="deal" intent="drawer">
+      <Heading size="large" id="deal">
+        Deal
+      </Heading>
+      <OverflowMenu label="More actions">
+        <button type="button">Archive</button>
+      </OverflowMenu>
+    </Modal>,
+  );
+  const trigger = screen.getByRole("button", { name: "More actions" });
+
+  await user.click(trigger);
+  const item = screen.getByRole("button", { name: "Archive" });
+  expect(item.closest(".overlay")).toBe(trigger.closest(".overlay"));
+
+  await user.click(screen.getByRole("heading", { name: "Deal" }));
+  expect(trigger.getAttribute("aria-expanded")).toBe("false");
+});
+
+it("mounts kept items once when the menu sits in a drawer", () => {
+  let mounts = 0;
+  function KeptAction() {
+    useEffect(() => {
+      mounts += 1;
+    }, []);
+    return <button type="button">Export</button>;
+  }
+  render(
+    <Modal open onClose={() => {}} labelledBy="list" intent="drawer">
+      <Heading size="large" id="list">
+        List
+      </Heading>
+      <OverflowMenu label="More actions" keepMounted>
+        <KeptAction />
+      </OverflowMenu>
+    </Modal>,
+  );
+
+  expect(mounts).toBe(1);
+});
+
+it("stacks a confirm opened from a menu in a drawer after that drawer", async () => {
+  const user = userEvent.setup();
+  function ArchiveItem() {
+    const [asking, setAsking] = useState(false);
+    return (
+      <>
+        <button type="button" onClick={() => setAsking(true)}>
+          Archive
+        </button>
+        <ConfirmModal
+          open={asking}
+          onClose={() => setAsking(false)}
+          title="Archive this deal?"
+          confirmLabel="Archive"
+          onConfirm={() => setAsking(false)}
+        >
+          <p>It leaves the pipeline.</p>
+        </ConfirmModal>
+      </>
+    );
+  }
+  render(
+    <Modal open onClose={() => {}} labelledBy="deal" intent="drawer">
+      <Heading size="large" id="deal">
+        Deal
+      </Heading>
+      <OverflowMenu label="More actions">
+        <ArchiveItem />
+      </OverflowMenu>
+    </Modal>,
+  );
+
+  await user.click(screen.getByRole("button", { name: "More actions" }));
+  await user.click(screen.getByRole("button", { name: "Archive" }));
+
+  const overlays = [...document.body.children].filter((node) =>
+    node.classList.contains("overlay"),
+  );
+  const confirm = screen.getByRole("dialog", { name: "Archive this deal?" });
+  expect(overlays).toHaveLength(2);
+  expect(confirm.closest(".overlay")).toBe(overlays[1]);
+  expect(
+    document.querySelector(".overflow-menu-items")?.closest(".overlay"),
+  ).toBe(overlays[0]);
 });
 
 // The trigger's own geometry, asserted here because this is the design system's
@@ -712,56 +822,4 @@ it("stretches the door over the card and rings the card it opens", () => {
   const door = declarations(css, ".stat-card-open:focus-visible");
   expect(door).toMatch(/outline:\s*var\(--focus-ring-forced\)/);
   expect(door).not.toMatch(/outline:\s*var\(--focus-ring\)/);
-});
-
-// A menu inside a dialog stands above it. The panel is portalled out of the
-// dialog its trigger is in, so on the page's menu layer the dialog's own scrim
-// would cover it.
-function zIndexOf(css: string, selector: string): number {
-  const z = /z-index:\s*(\d+)/.exec(declarations(css, selector))?.[1];
-  if (z === undefined) throw new Error(`${selector} declares no z-index`);
-  return Number(z);
-}
-
-it("draws a menu opened inside a dialog on the layer above that dialog", async () => {
-  const user = userEvent.setup();
-  render(
-    <Modal open onClose={() => {}} labelledBy="q" intent="drawer">
-      <Heading size="large" id="q">
-        Worklist
-      </Heading>
-      <OverflowMenu label="More actions">
-        <button type="button">Snooze</button>
-      </OverflowMenu>
-    </Modal>,
-  );
-
-  await user.click(screen.getByRole("button", { name: "More actions" }));
-
-  const panel = screen.getByRole("button", { name: "Snooze" }).parentElement;
-  expect(panel?.getAttribute("data-layer")).toBe("dialog");
-});
-
-it("keeps a menu outside any dialog on the page's layer", async () => {
-  const user = userEvent.setup();
-  render(
-    <OverflowMenu label="More actions">
-      <button type="button">Archive</button>
-    </OverflowMenu>,
-  );
-
-  await user.click(screen.getByRole("button", { name: "More actions" }));
-
-  const panel = screen.getByRole("button", { name: "Archive" }).parentElement;
-  expect(panel?.hasAttribute("data-layer")).toBe(false);
-});
-
-it("puts that layer above a dialog's overlay, and under a later dialog", () => {
-  const css = readFileSync(join(here, "atoms.css"), "utf8");
-  const overlay = zIndexOf(css, ".overlay");
-
-  expect(zIndexOf(css, ".overflow-menu-items")).toBeLessThan(overlay);
-  const inDialog = '.overflow-menu-items[data-layer="dialog"]';
-  expect(zIndexOf(css, inDialog)).toBeGreaterThan(overlay);
-  expect(zIndexOf(css, `${inDialog}:has(~ .overlay)`)).toBeLessThan(overlay);
 });

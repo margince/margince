@@ -43,6 +43,9 @@ var mailLabelPairs = []struct {
 	key   string
 	field func(mailcopy.Copy) string
 }{
+	{"prefs.purpose.business_correspondence", func(c mailcopy.Copy) string { return c.BusinessPurpose }},
+	{"prefs.purpose.marketing_email", func(c mailcopy.Copy) string { return c.MarketingPurpose }},
+	{"prefs.purpose.transactional", func(c mailcopy.Copy) string { return c.TransactionalPurpose }},
 	{"brief.weekly.tasksDelivered", func(c mailcopy.Copy) string { return c.WeeklyTasksDelivered }},
 	// The count template, with the panel's {done}/{due} placeholders read as
 	// the %d pair the mail formats with: the ORDER is the localised part, and
@@ -57,7 +60,6 @@ var mailLabelPairs = []struct {
 	// The planning question is the PANEL's heading. The mail asks it and the
 	// screen answers it, so two spellings would have the message invite
 	// something the page it opens does not offer under that name.
-	{"plan.title", func(c mailcopy.Copy) string { return c.WeeklyPlanAhead }},
 	{"brief.weekly.outcome.won", func(c mailcopy.Copy) string { return c.WeeklyOutcomeWon }},
 	{"brief.weekly.outcome.lost", func(c mailcopy.Copy) string { return c.WeeklyOutcomeLost }},
 	{"brief.weekly.outcome.moved", func(c mailcopy.Copy) string { return c.WeeklyOutcomeMoved }},

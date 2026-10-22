@@ -53,6 +53,39 @@ func testDSNs(t *testing.T) (maint string, base string, withDB func(string) stri
 	return withDB("postgres"), base, withDB
 }
 
+// migratedDatabase copies the lane's template, which `migrate up` built to head,
+// so a test of a later verb does not pay for an `up` of its own.
+func migratedDatabase(t *testing.T, suffix string) string {
+	t.Helper()
+	template := os.Getenv("TEMPLATE_NAME")
+	if template == "" {
+		t.Fatal("TEMPLATE_NAME is not set — run this package through `make test-it` or the integration lane, which build the migrated template")
+	}
+	maint, base, withDB := testDSNs(t)
+	name := base + suffix
+	t.Cleanup(func() { mustMigrate(t, "drop-db", "--dsn", maint, "--name", name) })
+	mustMigrate(t, "recreate-db", "--dsn", maint, "--name", name, "--template", template)
+	dsn := withDB(name)
+
+	ctx := context.Background()
+	conn, err := pgx.Connect(ctx, dsn)
+	if err != nil {
+		t.Fatalf("connecting to the copied installation: %v", err)
+	}
+	var workspaces int
+	err = conn.QueryRow(ctx, `SELECT count(*) FROM workspace`).Scan(&workspaces)
+	if closeErr := conn.Close(ctx); closeErr != nil {
+		t.Fatalf("disconnecting from the copied installation: %v", closeErr)
+	}
+	if err != nil {
+		t.Fatalf("counting the copied installation's workspaces: %v", err)
+	}
+	if workspaces != 0 {
+		t.Fatalf("template %s holds %d workspace(s); a migrated installation holds none, so rebuild the template", template, workspaces)
+	}
+	return dsn
+}
+
 func migrateCmd(t *testing.T, args ...string) (string, error) {
 	t.Helper()
 	var out, usage bytes.Buffer
@@ -364,13 +397,7 @@ func TestUpAppliesAnExtensionNamespaceAndTheRiverIndex(t *testing.T) {
 // would call an archived-only installation provisioned and withhold the
 // credential that could still bootstrap it.
 func TestWorkspaceExistsAnswersTheEntrypointsQuestion(t *testing.T) {
-	maint, base, withDB := testDSNs(t)
-	name := base + "_company_probe"
-	t.Cleanup(func() { mustMigrate(t, "drop-db", "--dsn", maint, "--name", name) })
-	mustMigrate(t, "recreate-db", "--dsn", maint, "--name", name)
-
-	dsn := withDB(name)
-	mustMigrate(t, "up", "--dsn", dsn)
+	dsn := migratedDatabase(t, "_company_probe")
 
 	if out := mustMigrate(t, "workspace-exists", "--dsn", dsn); out != "false\n" {
 		t.Fatalf("workspace-exists against a migrated but unbootstrapped installation printed %q, want %q", out, "false\n")

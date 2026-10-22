@@ -13,6 +13,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { holdExits } from "../design-system/presence-testing";
+import { COMPANY_CONTEXT_ON } from "../features/settings/settingspages.fixtures";
 import { LocaleProvider } from "../i18n";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { steppedClock } from "../testing/steppedclock";
@@ -199,6 +200,19 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     expect(window.location.hash).toBe("#/deals");
   });
 
+  it("runs nothing on an input method's Enter", async () => {
+    window.location.hash = "#/home";
+    const onClose = vi.fn();
+    render(<CommandPalette open onClose={onClose} commands={commands} />);
+    const input = screen.getByRole("searchbox");
+    await userEvent.type(input, "deals");
+
+    fireEvent.keyDown(input, { key: "Enter", keyCode: 229 });
+
+    expect(window.location.hash).toBe("#/home");
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it("closes on a selection that lands on the address it is already at", async () => {
     window.location.hash = "#/deals";
     const onClose = vi.fn();
@@ -207,6 +221,24 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     await userEvent.keyboard("{Enter}");
     expect(window.location.hash).toBe("#/deals");
     expect(onClose).toHaveBeenCalled();
+  });
+
+  it("closes on a backdrop press, never on a drag that ends there", () => {
+    const onClose = vi.fn();
+    const { baseElement } = render(
+      <CommandPalette open onClose={onClose} commands={commands} />,
+    );
+    const overlay = baseElement.querySelector<HTMLElement>(".palette-overlay");
+    if (!overlay) throw new Error("the palette draws no overlay");
+    fireEvent.pointerDown(screen.getByRole("searchbox"));
+    fireEvent.pointerUp(overlay);
+    fireEvent.click(overlay);
+    expect(onClose).not.toHaveBeenCalled();
+
+    fireEvent.pointerDown(overlay);
+    fireEvent.pointerUp(overlay);
+    fireEvent.click(overlay);
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it("Esc closes; opening clears the previous query (AC-shell-3)", async () => {
@@ -802,9 +834,19 @@ describe("useBuiltinCommands", () => {
   function renderProbeWithCompany(opts: { roles: string[]; allow: GrantSpec }) {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () =>
-        jsonResponse(meFixture({ roles: opts.roles, allow: opts.allow })),
-      ),
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (url.endsWith("/company/context/capabilities")) {
+          return jsonResponse(COMPANY_CONTEXT_ON);
+        }
+        // The installation writer may open Configuration, so search reads it.
+        if (url.endsWith("/installation/configuration")) {
+          return jsonResponse([]);
+        }
+        return jsonResponse(
+          meFixture({ roles: opts.roles, allow: opts.allow }),
+        );
+      }),
     );
     return render(<Probe />);
   }

@@ -32,7 +32,16 @@ func TestFieldRoutersRouteEveryChoice(t *testing.T) {
 		table  map[string]string
 	}{
 		{"read_forecast", principal.ScopeRead, "view", (readForecast{}).routeTargets()},
-		{"read_directory", principal.ScopeRead, "list", (readDirectory{}).routeTargets()},
+		{"read_workspace", principal.ScopeRead, "topic", (readWorkspace{}).routeTargets()},
+		{"find_records", principal.ScopeRead, "engine", (findRecords{}).routeTargets()},
+		{"read_context", principal.ScopeRead, "about", (readContext{}).routeTargets()},
+		{"read_attention", principal.ScopeRead, "view", (readAttention{}).routeTargets()},
+		{"read_reports", principal.ScopeRead, "kind", (readReports{}).routeTargets()},
+		{"read_analytics", principal.ScopeRead, "step", (readAnalytics{}).routeTargets()},
+		{"change_state", principal.ScopeWrite, "action", (changeState{}).routeTargets()},
+		{"change_activities", principal.ScopeWrite, "action", (changeActivities{}).routeTargets()},
+		{"change_tags", principal.ScopeWrite, "action", (changeTags{}).routeTargets()},
+		{"schedule_meeting", principal.ScopeSend, "action", (scheduleMeeting{}).routeTargets()},
 		{"read_project", principal.ScopeRead, "view", (readProject{}).routeTargets()},
 		{"send_outbound", principal.ScopeSend, "as", (sendOutbound{}).routeTargets()},
 		{"draft_outbound", principal.ScopeDraft, "for", (draftOutbound{}).routeTargets()},
@@ -51,10 +60,10 @@ func TestFieldRoutersRouteEveryChoice(t *testing.T) {
 // with them, rather than refusing the boot.
 func TestARouterIsAbsentWhereATargetsSeamIs(t *testing.T) {
 	r := NewRegistry(nil, nil)
-	RegisterColleaguesTool(r, func(context.Context, string) ([]Colleague, bool, error) { return nil, false, nil })
-	registerWhereServed(r, readDirectory{})
-	if _, served := r.Spec("read_directory"); served {
-		t.Error("read_directory registered without list_pipelines or list_channel_providers behind it")
+	RegisterColleaguesTool(r, func(context.Context, ColleagueQuery) ([]Colleague, bool, error) { return nil, false, nil })
+	registerWhereServed(r, readWorkspace{})
+	if _, served := r.Spec("read_workspace"); served {
+		t.Error("read_workspace registered without list_pipelines or list_channel_providers behind it")
 	}
 }
 

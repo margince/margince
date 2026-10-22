@@ -243,12 +243,12 @@ func TestOfferedProvidersOnlyEverNarrowsWhatTheDeploymentComposed(t *testing.T) 
 	}
 }
 
-// The client a flow runs on is resolved when the flow runs, the stored app
-// first: the app an admin saves during the first run reaches the login screen
-// without a restart, and the environment's pair is what a deployment without
-// one falls back to. A vault that will not open is neither — it is reported,
-// never quietly replaced by the older environment copy.
-func TestGoogleSignInRunsOnTheStoredAppBeforeTheEnvironmentsPair(t *testing.T) {
+// The client a flow runs on is resolved when the flow runs. The environment's
+// pair comes first, because a boot source locks the stored app. Where the
+// deployment composed none, the app an admin saves reaches the login screen
+// with no restart. A vault that will not open is reported, never read as "no
+// app".
+func TestGoogleSignInRunsOnTheEnvironmentsPairBeforeTheStoredApp(t *testing.T) {
 	ctx := context.Background()
 	env := signInClient{ClientID: "env-cid", ClientSecret: "env-secret"}
 	verifier := newGoogleOIDCVerifier(googleJWKSURL, identityResolvedPerRequest)
@@ -262,7 +262,7 @@ func TestGoogleSignInRunsOnTheStoredAppBeforeTheEnvironmentsPair(t *testing.T) {
 		return capture.ConnectorApp{}, false, errors.New("the vault root key moved")
 	}
 
-	p, ok, err := googleSignInSource{env: env, stored: stored, verifier: verifier}.provider(ctx)
+	p, ok, err := googleSignInSource{stored: stored, verifier: verifier}.provider(ctx)
 	if err != nil || !ok {
 		t.Fatalf("with a stored app: ok=%v err=%v", ok, err)
 	}
@@ -275,6 +275,11 @@ func TestGoogleSignInRunsOnTheStoredAppBeforeTheEnvironmentsPair(t *testing.T) {
 		t.Errorf("exchanger = %#v, want the stored app's secret", p.Exchanger)
 	}
 
+	p, ok, err = googleSignInSource{env: env, stored: stored, verifier: verifier}.provider(ctx)
+	if err != nil || !ok || p.Config.ClientID != "env-cid" {
+		t.Fatalf("with both: ok=%v err=%v client=%q, want the environment's pair over the stored app", ok, err, p.Config.ClientID)
+	}
+
 	p, ok, err = googleSignInSource{env: env, stored: none, verifier: verifier}.provider(ctx)
 	if err != nil || !ok || p.Config.ClientID != "env-cid" {
 		t.Fatalf("without a stored app: ok=%v err=%v client=%q, want the environment's pair", ok, err, p.Config.ClientID)
@@ -284,8 +289,8 @@ func TestGoogleSignInRunsOnTheStoredAppBeforeTheEnvironmentsPair(t *testing.T) {
 		t.Fatalf("with no client from any source: ok=%v err=%v, want withheld without error", ok, err)
 	}
 
-	if _, _, err := (googleSignInSource{env: env, stored: sealed, verifier: verifier}).provider(ctx); err == nil {
-		t.Fatal("a secret that will not open fell back to the environment's pair, hiding a moved vault key")
+	if _, _, err := (googleSignInSource{stored: sealed, verifier: verifier}).provider(ctx); err == nil {
+		t.Fatal("a stored secret that will not open read as no app, hiding a moved vault key")
 	}
 }
 

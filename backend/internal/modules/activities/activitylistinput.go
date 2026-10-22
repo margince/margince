@@ -20,8 +20,9 @@ import (
 // ListActivitiesInput narrows a timeline read: the page, the kind, the
 // transport, and the record the activities hang off.
 type ListActivitiesInput struct {
-	Cursor *string
-	Limit  *int
+	mailIdentities map[string][]string
+	Cursor         *string
+	Limit          *int
 	// Sort is the caller's order, validated against activitySortFields. Nil
 	// means the order the rest of this narrowing implies: newest-first for a
 	// timeline, nearest-deadline-first for the task queue.
@@ -44,13 +45,16 @@ type ListActivitiesInput struct {
 	// groups client-side over the page it holds; a group the page cut off
 	// completes itself through this rather than by widening the page for every
 	// account that has no long thread.
-	ThreadKey       *string
-	IncludeArchived bool
+	SourceActivityID *ids.ActivityID
+	ThreadKey        *string
+	IncludeArchived  bool
 	// AssigneeID is the work queue's narrowing: the OPEN tasks one contact
 	// holds, which is what the contract declares the parameter to mean and
 	// what the partial index behind it is built on. Done-ness is part of
 	// that question rather than a second dial — see openTaskAssigneeClause.
 	AssigneeID *ids.UserID
+	// TaskAsOf is required for transaction reads filtered by assignee; store reads supply their clock.
+	TaskAsOf *time.Time
 
 	// OwnQueueOf narrows to the open work one contact is answerable for.
 	// Distinct from AssigneeID, which means exact assignment on any kind and is
@@ -151,6 +155,9 @@ type ListActivitiesInput struct {
 	// this filter and the rest of the page judging against two different
 	// clock reads.
 	WaitingReplyAsOf *time.Time
+	// WaitingReply asks for the same narrowing judged now. The store reads its
+	// own clock, so the wait and its page judge one snapshot.
+	WaitingReply bool
 	// RequestReviewAsOf reads confirmed obligations independently of queue priority.
 	RequestReviewAsOf *time.Time
 	// ownDomains is the colleague-domain snapshot the waiting walk tests senders
@@ -198,4 +205,11 @@ type ListActivitiesInput struct {
 	// row is reached, and the reader who most needs to see next week's deadline
 	// is exactly the reader who never does.
 	OpenAndDueAfter *time.Time
+	// CustomFilters are the request's cf_ equality filters. They read content, so
+	// a row whose content the caller may not read drops out.
+	CustomFilters map[string]string
+	// Columns are the active custom fields the filters are checked against and
+	// the page is filled from. The store sets them; a composite page reads them
+	// with ActiveActivityColumns before its transaction opens. Zero fills nothing.
+	Columns CustomColumns
 }

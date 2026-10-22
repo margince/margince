@@ -16,15 +16,20 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/signals"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // seedAccountAtStage plants the account the whole overhaul is named for,
@@ -47,20 +52,43 @@ func seedAccountAtStage(t *testing.T, e *integration.Env, stage string) ids.UUID
 // conversation says the relationship is over.
 func seedOpenContractEnded(t *testing.T, e *integration.Env, company ids.UUID) ids.UUID {
 	t.Helper()
-	signal := ids.NewV7()
+	return seedScopedContractEnded(t, e, company, "company", "We are ending all business with your company.")
+}
+
+func seedScopedContractEnded(t *testing.T, e *integration.Env, company ids.UUID, scope, quote string) ids.UUID {
+	t.Helper()
+	at := time.Date(2026, 7, 31, 12, 0, 0, 0, time.UTC)
+	return seedScopedContractEndedAt(t, e, company, scope, quote, at, at)
+}
+
+func seedScopedContractEndedAt(t *testing.T, e *integration.Env, company ids.UUID, scope, quote string, at, detected time.Time, workstream ...string) ids.UUID {
+	t.Helper()
+	source, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+		Kind: "note", Subject: new("Relationship decision"), Body: &quote, OccurredAt: &at, Source: "manual",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	proof, ok := values.ProveQuote(quote, quote)
+	if !ok {
+		t.Fatal("fixture quote has no source proof")
+	}
+	named := ""
+	if len(workstream) > 0 {
+		named = workstream[0]
+	}
+	fingerprint := ids.NewV7().String()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		// No fingerprint: these stand for signals a human filed, and the point
-		// of several is that they are several rows rather than one deduped one.
-		_, err := tx.Exec(context.Background(), `
-			INSERT INTO signal (id, kind, source_channel, entity_type, entity_id,
-			                    resolved_company_id, resolution_state, severity, summary, status,
-			                    detected_at, source, captured_by)
-			VALUES ($1, 'contract_ended', 'derived', 'company', $2, $2, 'resolved',
-			        'warn', 'They wrote that the contract ends on 31 July.', 'open',
-			        now(), 'signal-scan', 'agent:contract_ended')`,
-			signal, company)
+		_, err := signals.RecordDerived(e.Admin(), tx, signals.DerivedSignal{
+			Kind: signalKindContractEnded, CompanyID: company, Summary: "The source reports an ending.", Severity: "warn", Fingerprint: fingerprint,
+			Evidence: []signals.DerivedEvidence{{ActivityID: ids.UUID(source.Id), Snippet: "Termination reported", SourceQuote: &proof, LifecycleScope: scope, Workstream: named}},
+		}, detected)
 		return err
 	}); err != nil {
+		t.Fatal(err)
+	}
+	signal, err := ids.Parse(e.WsScalar(t, `SELECT id::text FROM signal WHERE fingerprint=$1`, fingerprint))
+	if err != nil {
 		t.Fatal(err)
 	}
 	return signal
@@ -71,7 +99,7 @@ func proposePass(t *testing.T, e *integration.Env) int {
 	t.Helper()
 	proposer := NewSignalProposer(e.Pool, approvalsServiceWithEffects(e.Pool),
 		slog.New(slog.DiscardHandler))
-	staged, err := proposer.RunWorkspace(e.Admin())
+	staged, err := proposer.RunWorkspace(e.As(e.AdminUser, nil, integration.AdminWithSignals))
 	if err != nil {
 		t.Fatalf("RunWorkspace: %v", err)
 	}
@@ -84,7 +112,7 @@ func stagedOffer(t *testing.T, e *integration.Env, company ids.UUID) ids.UUID {
 	var approvalID ids.UUID
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT id FROM approval WHERE kind = 'lifecycle_change' AND target_entity_id = $1`,
+			`SELECT id FROM approval WHERE kind = 'lifecycle_change' AND target_entity_id = $1 AND status = 'pending'`,
 			company).Scan(&approvalID)
 	}); err != nil {
 		t.Fatalf("reading the staged offer: %v", err)
@@ -250,14 +278,7 @@ func TestNoOfferIsMadeOnAnAccountAlreadyFiledAsOver(t *testing.T) {
 	}
 }
 
-// An account can carry several signals saying the same thing — three
-// conversations that each mention the contract ending are three rows. The
-// human answering the proposal has answered the question all of them ask.
-//
-// Settling only the quoted row leaves the rest open forever: the record has
-// left the stage the reconciler looks for, so no later pass considers them and
-// nothing else will ever close them.
-func TestAcceptingSettlesEveryOpenContradictionOnTheAccount(t *testing.T) {
+func TestAcceptingSettlesOnlyTheCitedContradiction(t *testing.T) {
 	e := integration.Setup(t)
 	company := seedAccountAtStage(t, e, "customer")
 	first := seedOpenContractEnded(t, e, company)
@@ -265,17 +286,22 @@ func TestAcceptingSettlesEveryOpenContradictionOnTheAccount(t *testing.T) {
 	third := seedOpenContractEnded(t, e, company)
 
 	proposePass(t, e)
+	cited := e.WsScalar(t, `SELECT proposed_change->>'signal_id' FROM approval WHERE target_entity_id=$1`, company)
+	later := seedScopedContractEndedAt(t, e, company, "company", "We ended all business earlier.",
+		time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC), time.Date(2026, 8, 1, 12, 0, 0, 0, time.UTC))
 	if _, err := approvalsServiceWithEffects(e.Pool).Decide(
 		e.As(e.Rep1, nil, integration.AdminWithSignals),
 		ids.From[ids.ApprovalKind](stagedOffer(t, e, company)), true, nil); err != nil {
 		t.Fatalf("accepting the offer: %v", err)
 	}
 
-	for _, signal := range []ids.UUID{first, second, third} {
-		if status := signalStatus(t, e, signal); status != "acknowledged" {
-			t.Errorf("signal %s reads %q after the accept, want acknowledged — the "+
-				"account has left the stage this rule looks for, so nothing else "+
-				"would ever close it", signal, status)
+	for _, signal := range []ids.UUID{first, second, third, later} {
+		want := "open"
+		if signal.String() == cited {
+			want = "acknowledged"
+		}
+		if status := signalStatus(t, e, signal); status != want {
+			t.Errorf("signal %s status=%s, want %s", signal, status, want)
 		}
 	}
 }
@@ -287,55 +313,38 @@ func TestAcceptingSettlesEveryOpenContradictionOnTheAccount(t *testing.T) {
 var teamScopedDecider = principal.Permissions{
 	RoleKeys: []string{"rep"},
 	Objects: map[string]principal.ObjectGrant{
-		"company": {Read: true, Update: true},
-		"signal":  {Read: true, Update: true},
-		"deal":    {Read: true},
-		"contact": {Read: true},
+		"company":  {Read: true, Update: true},
+		"signal":   {Read: true, Update: true},
+		"deal":     {Read: true},
+		"contact":  {Read: true},
+		"activity": {Read: true},
+		"contract": {Read: true},
+		"project":  {Read: true},
 	},
 	RowScope: principal.RowScopeTeam,
 }
 
-// Accepting settles the account's contradictions — the ones the decider could
-// have opened themselves, and no others.
-//
-// A signal is matched for settlement by resolved_company_id, while signal row
-// scope is inherited from its SUBJECT (auth.SignalScopeClause). Those are
-// different questions and can disagree: a signal resolved to this account
-// whose subject is a contact capture-private to another rep is on an account
-// the decider can read and about a record they cannot. Settling it would
-// mutate a row outside their scope on the strength of a decision they were
-// never shown it for.
-func TestAcceptingSettlesOnlyTheContradictionsTheDeciderCanSee(t *testing.T) {
+func TestHiddenContradictionBlocksAccountLifecycleDecision(t *testing.T) {
 	e := integration.Setup(t)
 	company := seedAccountAtStage(t, e, "customer")
-	// Accepting the offer writes the account's lifecycle, and an unowned row
-	// is writable by nobody below row_scope=all until claimed — so the
-	// team-scoped decider must own the account they are deciding on.
 	e.WsExec(t, "UPDATE company SET owner_id = $1 WHERE id = $2", e.Rep1, company)
 	mine := seedOpenContractEnded(t, e, company)
-	// Same account, but its subject is a contact capture-private to the OTHER
-	// team's rep — the one state that still hides an identity row from a seat.
+	proposePass(t, e)
 	theirs := seedOpenContractEndedOnContact(t, e, company, seedCapturePrivateContactOf(t, e, e.Rep3))
 
-	proposePass(t, e)
-	if _, err := approvalsServiceWithEffects(e.Pool).Decide(
+	_, err := approvalsServiceWithEffects(e.Pool).Decide(
 		e.As(e.Rep1, nil, teamScopedDecider),
-		ids.From[ids.ApprovalKind](stagedOffer(t, e, company)), true, nil); err != nil {
-		t.Fatalf("accepting the offer: %v", err)
+		ids.From[ids.ApprovalKind](stagedOffer(t, e, company)), true, nil)
+	if !errors.Is(err, apperrors.ErrVersionSkew) {
+		t.Fatalf("incomplete evidence decision error = %v, want version skew", err)
 	}
-
-	// The account is the decider's own, so it is within their scope — which is
-	// what makes this the control: the two signals differ ONLY in their
-	// subject, so the one that stays open stays open because of the contact it
-	// is about and nothing else.
-	if status := signalStatus(t, e, mine); status != "acknowledged" {
-		t.Errorf("the signal subjected to the account itself reads %q, want "+
-			"acknowledged — the scope bound is settling rows it should not withhold", status)
+	if got := e.WsScalar(t, "SELECT lifecycle FROM company WHERE id = $1", company); got != "customer" {
+		t.Fatalf("account lifecycle = %s, want customer", got)
 	}
-	if status := signalStatus(t, e, theirs); status != "open" {
-		t.Errorf("a signal whose subject is another rep's private contact reads %q after the "+
-			"accept, want open — it was settled by a decision made without it ever "+
-			"being visible to the decider", status)
+	for _, signal := range []ids.UUID{mine, theirs} {
+		if got := signalStatus(t, e, signal); got != "open" {
+			t.Errorf("signal %s status = %s, want open", signal, got)
+		}
 	}
 }
 
@@ -368,4 +377,64 @@ func seedOpenContractEndedOnContact(t *testing.T, e *integration.Env, company, c
 		t.Fatal(err)
 	}
 	return signal
+}
+
+func TestNewEvidenceSupersedesThePendingLifecycleDecision(t *testing.T) {
+	e := integration.Setup(t)
+	company := seedAccountAtStage(t, e, "customer")
+	firstAt := time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC)
+	seedScopedContractEndedAt(t, e, company, "company", "We ended all business.", firstAt, firstAt)
+	if proposePass(t, e) != 1 {
+		t.Fatal("first evidence did not stage a decision")
+	}
+	first := stagedOffer(t, e, company)
+	newer := firstAt.AddDate(0, 0, 1)
+	seedScopedContractEndedAt(t, e, company, "company", "We confirm the end of all business.", newer, newer)
+	if proposePass(t, e) != 1 {
+		t.Fatal("new evidence did not stage a decision")
+	}
+	if got := stagedOffer(t, e, company); got == first {
+		t.Fatal("pending decision kept the superseded evidence")
+	}
+	if got := e.WsCount(t, `SELECT count(*) FROM approval WHERE target_entity_id=$1 AND kind='lifecycle_change' AND status='pending'`, company); got != 1 {
+		t.Fatalf("pending decisions=%d, want 1", got)
+	}
+}
+
+func TestWhitespaceNormalizedSourceProofAllowsTheDecision(t *testing.T) {
+	e := integration.Setup(t)
+	company := seedAccountAtStage(t, e, "customer")
+	signal := seedScopedContractEnded(t, e, company, "company", "We are ending\nall business\twith your company.")
+	if proposePass(t, e) != 1 {
+		t.Fatal("normalized source words failed to stage")
+	}
+	_, err := approvalsServiceWithEffects(e.Pool).Decide(e.As(e.Rep1, nil, integration.AdminWithSignals), ids.From[ids.ApprovalKind](stagedOffer(t, e, company)), true, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if accountStage(t, e, company) != "former_customer" || signalStatus(t, e, signal) != "acknowledged" {
+		t.Fatal("normalized proof did not settle the cited decision")
+	}
+}
+
+func TestLifecycleProposalKeepsSourceWordsBehindTheSourceReader(t *testing.T) {
+	e := integration.Setup(t)
+	company := seedAccountAtStage(t, e, "customer")
+	quote := "We are ending all business, including Atlas support, with your company."
+	at := time.Date(2026, 7, 31, 12, 0, 0, 0, time.UTC)
+	seedScopedContractEndedAt(t, e, company, "company", quote, at, at, "Atlas support")
+	if proposePass(t, e) != 1 {
+		t.Fatal("fixture did not stage a decision")
+	}
+	stored := e.WsScalar(t, `SELECT jsonb_build_object('change', proposed_change, 'evidence', evidence)::text FROM approval WHERE id=$1`, stagedOffer(t, e, company))
+	if strings.Contains(stored, quote) || strings.Contains(stored, "Atlas support") || strings.Contains(stored, `"occurred_at"`) {
+		t.Fatal("proposal copied source words outside source authorization")
+	}
+	view, err := approvalsServiceWithEffects(e.Pool).GetWire(e.As(e.Rep1, nil, integration.AdminWithSignals), ids.From[ids.ApprovalKind](stagedOffer(t, e, company)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if view.Preview == nil || view.Preview.Evidence == nil || len(*view.Preview.Evidence) == 0 || (*view.Preview.Evidence)[0].EvidenceSnippet != quote {
+		t.Fatal("authorized preview did not reconstruct its source quote")
+	}
 }

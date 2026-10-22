@@ -308,7 +308,7 @@ func TestTheClientKnowsEachSeededRoleByTheNameIdentityStores(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the identity service source: %v", err)
 	}
-	client, err := os.ReadFile(filepath.Join("..", "frontend", "src", "screens", "roles.queries.ts"))
+	client, err := os.ReadFile(filepath.Join("..", "frontend", "src", "lib", "roles.queries.ts"))
 	if err != nil {
 		t.Fatalf("reading the client's role table: %v", err)
 	}

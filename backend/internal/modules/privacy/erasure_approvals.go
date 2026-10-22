@@ -186,6 +186,10 @@ func redactStagedApprovals(ctx context.Context, tx pgx.Tx, subject ids.ContactID
 		leadIDs = []ids.UUID{}
 	}
 
+	if err := eraseApprovalNoticesMatching(ctx, tx, subjectWithdrawal, causeContactErasure, subjectApprovalMatch, subject.UUID, leadIDs, addresses); err != nil {
+		return err
+	}
+
 	// Pending first, and separately from the decided rows: only these carry a
 	// run that has to be ended, and separating them is what lets the statement
 	// RETURN exactly the ids that were still live.
@@ -349,13 +353,16 @@ var evidenceCitesSubjectActivity = `
 // rather than off a reason string. Until then the erasure's ordering carries
 // it: this runs AFTER redactStagedApprovals, so a proposal that answers to both
 // is withdrawn there, with its run ended, before this statement sees it.
-func redactApprovalsCitingActivities(ctx context.Context, tx pgx.Tx, activities []ids.UUID, reason string) error {
+func redactApprovalsCitingActivities(ctx context.Context, tx pgx.Tx, activities []ids.UUID, reason, cause string) error {
 	if len(activities) == 0 {
 		return nil
 	}
 	cited := make([]string, 0, len(activities))
 	for _, activity := range activities {
 		cited = append(cited, activity.String())
+	}
+	if err := eraseApprovalNoticesMatching(ctx, tx, reason, cause, evidenceCitesActivity, cited); err != nil {
+		return err
 	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE approval

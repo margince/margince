@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -237,6 +238,13 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	contactPos := arg(contactID)
+	if order != byRecency {
+		identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+		if err != nil {
+			return nil, false, err
+		}
+		extra += " AND " + activities.CurrentTaskClause("a", s.now(), identities, arg)
+	}
 	// DISCOVER-gated, like the activities list: a limited conversation on
 	// this contact is still a row on the timeline — date, direction, kind —
 	// with its content withheld (content_state), not a gap the reader
@@ -287,6 +295,9 @@ func (s *Service) readActivities(ctx context.Context, tx pgx.Tx, contactID ids.C
 	if err := activities.WithEmailRowFacts(ctx, tx, out); err != nil {
 		return nil, false, err
 	}
+	if err := activities.WithCommitmentAdmissions(ctx, tx, out); err != nil {
+		return nil, false, err
+	}
 	return out, hasMore, nil
 }
 
@@ -307,6 +318,7 @@ func (s *Service) lastTouchSection(ctx context.Context, tx pgx.Tx, contactID ids
 	touch := touched[contactID]
 	out.LastInboundAt = touch.InboundAt
 	out.LastOutboundAt = touch.OutboundAt
+	out.LastLiveInboundAt = touch.LiveInboundAt
 	return nil
 }
 

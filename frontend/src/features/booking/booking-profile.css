@@ -1,0 +1,11 @@
+/* The link with its two verbs on one line, wrapping under it on a phone. */
+.booking-link {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gapActions);
+}
+.booking-link > :first-child {
+  flex: 1 1 18rem;
+  min-width: 0;
+}

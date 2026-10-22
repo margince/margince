@@ -1,19 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import {
-  createContext,
-  type ReactNode,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
-import { createPortal } from "react-dom";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { AmbientWaves } from "./ambient-waves";
 import { Eyebrow } from "./eyebrow";
 import { Logomark } from "./logomark";
 import { MarginceCoreScene, type MarginceCoreState } from "./margince-core";
+import { createPortalSlot, SlotFill } from "./portalslot";
 import { ThemeToggle } from "./theme-toggle";
 import "./onboarding-stage.css";
 import { Heading } from "./heading";
@@ -444,7 +437,7 @@ export function OnboardingStage({
   );
 }
 
-const StageActionsSlot = createContext<HTMLElement | null>(null);
+const StageActionsSlot = createPortalSlot();
 
 /**
  * A step's way onward, placed on the stage's bottom rail from inside the board.
@@ -464,9 +457,9 @@ const StageActionsSlot = createContext<HTMLElement | null>(null);
  * appear there on that commit.
  */
 export function StageActions({ children }: Readonly<{ children: ReactNode }>) {
-  const slot = useContext(StageActionsSlot);
-  if (slot === null) {
-    return <div className="ob-stage-acts">{children}</div>;
-  }
-  return createPortal(children, slot);
+  return (
+    <SlotFill slot={StageActionsSlot} className="ob-stage-acts">
+      {children}
+    </SlotFill>
+  );
 }

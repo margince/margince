@@ -58,6 +58,17 @@ func (s *Store) EnrichTargetURL(ctx context.Context, companyID ids.CompanyID) (s
 	return "https://" + domain, nil
 }
 
+// ResolveEnrichTargetURL keeps override and company-domain reads under the same visibility gate.
+func (s *Store) ResolveEnrichTargetURL(ctx context.Context, companyID ids.CompanyID, override string) (string, error) {
+	if override == "" {
+		return s.EnrichTargetURL(ctx, companyID)
+	}
+	if _, err := s.GetCompany(ctx, companyID, storekit.LiveOnly); err != nil {
+		return "", err
+	}
+	return override, nil
+}
+
 // ApplyEnrichment executes an ACCEPTED enrichment proposal against the named
 // company: fill only empty columns, upsert the evidence row for every field, never
 // overwrite a human-set value. One transaction, one audit row, one

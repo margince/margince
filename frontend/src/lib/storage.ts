@@ -45,6 +45,12 @@ export const STORAGE_KEYS = {
     area: "local",
     lifetime: "seat",
   },
+  // The local day Home's greeting last played on, so it plays once a day.
+  briefIntroShown: {
+    name: "margince.brief.introShown",
+    area: "local",
+    lifetime: "seat",
+  },
   segregationNoteDismissed: {
     name: "margince.leads.segregationNoteDismissed",
     area: "local",
@@ -62,6 +68,12 @@ export const STORAGE_KEYS = {
   },
   overnightChoice: {
     name: "ob.connect.overnightChoice",
+    area: "session",
+    lifetime: "seat",
+  },
+  // The hash route a reader asked for before a provider sign-in left the page.
+  signInReturnRoute: {
+    name: "margince.signin.returnRoute",
     area: "session",
     lifetime: "seat",
   },

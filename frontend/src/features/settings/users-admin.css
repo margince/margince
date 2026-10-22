@@ -1,0 +1,67 @@
+/* Admin member management layout. Colour inherits from the design tokens so the
+   purity gate stays satisfied; only structure lives here. */
+
+/* A long name or address wraps inside the cell instead of widening the table. */
+.users-member {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 9rem;
+  overflow-wrap: anywhere;
+}
+.users-member-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+/* A long role name wraps inside its column instead of widening the table, so
+   the row's verbs stay in view. Inline, so a folded row keeps it on line two. */
+.users-role {
+  display: inline-flex;
+  vertical-align: middle;
+  max-inline-size: 12rem;
+}
+
+/* A capped strip truncates its badges instead of widening the table; a folded
+   row gives line two its whole width. */
+.users-teams {
+  display: inline-block;
+  vertical-align: middle;
+  max-inline-size: 8rem;
+}
+@container table-fold (width < 36rem) {
+  .users-teams {
+    max-inline-size: calc(100cqi - 2 * var(--padPanel));
+  }
+}
+
+/* A short date or a relative time reads on one line. */
+.users-nowrap {
+  white-space: nowrap;
+}
+
+/* The BOX a refusal sits in inside the set-password dialog. It sits in a
+   wrapping flex line (`.users-link-row`), so it takes the whole next line
+   rather than being squeezed between the controls it is about — and the line
+   is the box's business, because the notice inside it owns no layout. */
+.users-formerror {
+  flex-basis: 100%;
+}
+
+/* The link and its copy button share a line when the card is wide enough, the
+   link taking the slack; otherwise Copy drops below. The link wraps rather than
+   truncates, because a clipped URL hides what is being copied. */
+.users-link-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-2) 0;
+}
+
+.users-link-row .code-block {
+  flex: 1 1 20rem;
+  min-width: 0;
+}

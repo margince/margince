@@ -62,6 +62,7 @@ func readUnitManifest(u extensionUnit, vocab map[string]string, verbs []declared
 		return unitManifest{}, fmt.Errorf("extensions/%s: %w", u.Name, err)
 	}
 	r := &unitReader{
+		unit:            u.Name,
 		fset:            fset,
 		vocab:           vocab,
 		verbs:           verbs,
@@ -121,6 +122,8 @@ func encodeUnitManifest(m unitManifest) ([]byte, error) {
 // return a literal so the manifest derives without compiling — a computed
 // value is a hard error naming the position, never a silent gap.
 type unitReader struct {
+	// unit is the directory name, which the Name field must equal.
+	unit  string
 	fset  *token.FileSet
 	vocab map[string]string
 	// verbs are the operations this unit's contract fragments declare, read
@@ -300,6 +303,14 @@ func (r *unitReader) readExtension(fn *ast.FuncDecl, file *ast.File) (unitManife
 	return m, nil
 }
 
+func (r *unitReader) readMigrationsField(value ast.Expr) error {
+	r.sawMigrations = true
+	if name, ok := value.(*ast.Ident); ok && r.migrationEmbeds[name.Name] {
+		return nil
+	}
+	return r.errAt(value, "Migrations must name a package-level var whose //go:embed directive covers %s/ — the field is what cmd/migrate applies, so one pointing anywhere else leaves the unit's tables uncreated at boot", migrationsLayer)
+}
+
 func (r *unitReader) readExtensionField(elt ast.Expr, file *ast.File, m *unitManifest) error {
 	kv, ok := elt.(*ast.KeyValueExpr)
 	if !ok {
@@ -393,11 +404,7 @@ func (r *unitReader) readExtensionField(elt ast.Expr, file *ast.File, m *unitMan
 		// is outside what a static reader can follow at all. What it does close
 		// is the whole population of accidents — the unset field, the typo, the
 		// var that embeds a different layer.
-		r.sawMigrations = true
-		name, ok := kv.Value.(*ast.Ident)
-		if !ok || !r.migrationEmbeds[name.Name] {
-			err = r.errAt(kv.Value, "Migrations must name a package-level var whose //go:embed directive covers %s/ — the field is what cmd/migrate applies, so one pointing anywhere else leaves the unit's tables uncreated at boot", migrationsLayer)
-		}
+		err = r.readMigrationsField(kv.Value)
 	case "Secrets":
 		var secrets []secretsRequest
 		secrets, err = r.readSecrets(kv.Value, file)
@@ -422,12 +429,20 @@ func (r *unitReader) readExtensionField(elt ast.Expr, file *ast.File, m *unitMan
 		if err == nil {
 			m.Channels = append(m.Channels, channels...)
 		}
-	case "Inbound":
-		var endpoints []inboundEndpoint
-		endpoints, err = r.readInbound(kv.Value, file)
+	case "FinanceSources":
+		var sources []declaredFinanceSource
+		sources, err = r.readFinanceSources(kv.Value, file)
 		if err == nil {
-			m.Inbound = append(m.Inbound, endpoints...)
+			m.FinanceSources = append(m.FinanceSources, sources...)
 		}
+	case "Entries":
+		m.Entries, err = r.readEntries(kv.Value, file)
+	case "Inbound":
+		m.Inbound, err = r.readInbound(kv.Value, file)
+	case "SystemReads":
+		m.SystemReads, err = r.readSystemReads(kv.Value, file)
+	case "OAuthApps":
+		m.OAuthApps, err = r.readOAuthApps(kv.Value, file)
 	default:
 		// Fail closed: a field this generator does not recognize could be a
 		// future governed capability, and a manifest that silently omitted

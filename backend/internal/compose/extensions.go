@@ -36,6 +36,9 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 	if err := validateVerbSet(verbs); err != nil {
 		return err
 	}
+	if err := preflightEntryObjects(exts, verbs); err != nil {
+		return err
+	}
 	// Do every fallible step before applying anything, so the whole
 	// reconciliation stays validate-then-apply: adapting the handler-bearing
 	// tools to the core seam can (in principle — preflightTools already
@@ -208,6 +211,8 @@ func validateExtensionSet(exts []extension.Extension) error {
 	// Which mounted anonymous path each unit has asked for — a fact about the
 	// composed SET, accumulated across the loop for claimedProviders' reason.
 	inboundMounts := make(map[string]extension.Name)
+	financeProviders := make(map[string]extension.Name)
+	oauthApps := make(map[string]extension.Name)
 	for _, e := range exts {
 		if err := e.Name.Validate(); err != nil {
 			return fmt.Errorf("compose: %w", err)
@@ -252,16 +257,28 @@ func validateExtensionSet(exts []extension.Extension) error {
 		if err := preflightSubscriptions(e); err != nil {
 			return err
 		}
+		if err := preflightSystemReads(e); err != nil {
+			return err
+		}
 		if err := preflightIngress(e); err != nil {
 			return err
 		}
 		if err := preflightChannels(e, claimedProviders); err != nil {
 			return err
 		}
+		if err := preflightFinanceSources(e, financeProviders); err != nil {
+			return err
+		}
 		if err := preflightInbound(e); err != nil {
 			return err
 		}
 		if err := reserveInboundMounts(e, inboundMounts); err != nil {
+			return err
+		}
+		if err := preflightEntries(e); err != nil {
+			return err
+		}
+		if err := preflightOAuthApps(e, oauthApps); err != nil {
 			return err
 		}
 	}

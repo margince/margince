@@ -208,3 +208,11 @@ how do I rename a saved view
 how do I delete a saved view
 how do I claim a company nobody owns
 how do I revoke a forecast share link
+# webhooks
+how can i connect deal complete to slack
+send a slack message when a deal is won
+how do I connect Margince to Zapier
+my webhook failed, how do I resend it
+how do I verify a webhook signature
+how do I customise the webhook body
+can I only get a message when a deal is won

@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -41,9 +40,8 @@ type CreateLeadInput struct {
 	Source              string
 	// Author is who wrote it in the system it came from; zero when unknown.
 	Author storekit.SourceAuthorInput
-	// CustomFields carries the request body's extra top-level keys
-	// (additionalProperties); only active cf_* catalog columns land,
-	// drop-on-mismatch (customfields.go).
+	// CustomFields carries the request body's cf_* keys. A key no active catalog
+	// column takes is refused (storekit.CheckCustomValues).
 	CustomFields map[string]any
 	// FromContactID names a contact whose identity fills the fields left
 	// out (leadfromcontact.go).
@@ -158,41 +156,8 @@ func createLeadInTx(ctx context.Context, tx pgx.Tx, in CreateLeadInput, by strin
 	if replay != nil {
 		return *replay, false, nil
 	}
-	// The LinkedIn claim is locked before either probe reads, so two
-	// creates racing on the same contact answer with the same key rather
-	// than whichever one they happened to lose.
-	if err := lockLeadLinkedInIdentity(ctx, tx, in.LinkedInURL); err != nil {
+	if err := admitLeadCreate(ctx, tx, in); err != nil {
 		return crmcontracts.Lead{}, false, err
-	}
-	if err := ensureLeadEmailUnclaimed(ctx, tx, in.Email); err != nil {
-		return crmcontracts.Lead{}, false, err
-	}
-	if err := ensureLeadLinkedInUnclaimed(ctx, tx, in.LinkedInURL); err != nil {
-		return crmcontracts.Lead{}, false, err
-	}
-	if err := ensureContactNotWorked(ctx, tx, in.FromContactID, nil); err != nil {
-		return crmcontracts.Lead{}, false, err
-	}
-	if err := ensureContactStillLive(ctx, tx, in.FromContactID); err != nil {
-		return crmcontracts.Lead{}, false, err
-	}
-
-	if in.ProjectID != nil {
-		if err := auth.EnsureLinkTarget(ctx, tx, "project", in.ProjectID.UUID); err != nil {
-			return crmcontracts.Lead{}, false, err
-		}
-	}
-	// A named owner on a create is an assignment, and it is checked here
-	// rather than in readyLeadCreate because the question needs a
-	// transaction. Both entry points reach this body — CreateLead and
-	// CreateLeadTx, the latter being what CSV and mirror imports call — so
-	// this is the one place that sees every created lead. Omitting the owner
-	// stays the unassigned queue's own case and asks nothing. An invited
-	// colleague may be named, as on every other record's create.
-	if in.OwnerID != nil {
-		if err := auth.EnsureNewRecordOwner(ctx, tx, in.OwnerID.UUID); err != nil {
-			return crmcontracts.Lead{}, false, err
-		}
 	}
 	id, err := insertLeadRow(ctx, tx, in, active, by)
 	if err != nil {
@@ -219,14 +184,11 @@ func insertLeadRow(ctx context.Context, tx pgx.Tx, in CreateLeadInput, active []
 	if err := ensureHumanSourceAllowed(ctx, tx, in.Source); err != nil {
 		return ids.LeadID{}, err
 	}
-	intents, err := loadSourceIntents(ctx, tx)
+	fit, err := initialLeadScore(ctx, tx, in)
 	if err != nil {
 		return ids.LeadID{}, err
 	}
 	id := ids.New[ids.LeadKind]()
-	// The initial score is the §3 fit component — a fresh lead has no
-	// behavioral history yet; signal recompute moves it later.
-	fit := ScoreLeadDetail(deref(in.Title), intents.Of(in.Source), nil, time.Now().UTC())
 	if err := storekit.RefuseUnknownSeat(ctx, tx, in.Author); err != nil {
 		return ids.LeadID{}, err
 	}
@@ -235,7 +197,10 @@ func insertLeadRow(ctx context.Context, tx pgx.Tx, in CreateLeadInput, active []
 		in.LinkedInURL, in.Status, fit.Score, in.OwnerID, in.ProjectID, in.SourceSystem, in.SourceID, in.Source, by,
 		in.FromContactID, in.Phone,
 	})
-	cfCols, cfHolders, args := storekit.InsertFragments(active, in.CustomFields, base)
+	cfCols, cfHolders, args, err := storekit.InsertFragments(active, in.CustomFields, base)
+	if err != nil {
+		return ids.LeadID{}, err
+	}
 	_, err = tx.Exec(ctx,
 		`INSERT INTO lead (id, full_name, email, title, company_name, candidate_company_key,
 		                   linkedin_url, status, score, owner_id, project_id, source_system, source_id, source, captured_by,
@@ -361,14 +326,23 @@ func (s *Store) FindLeadByLinkedInURL(ctx context.Context, rawURL string) (*crmc
 
 	var out *crmcontracts.Lead
 	err = s.tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		ctx, err = withLeadTaskIdentities(ctx, tx)
+		if err != nil {
+			return err
+		}
 		// A dedupe probe for the capture path — its result is not rendered
 		// with custom fields, so no catalog columns are carried (nil active).
-		policy, err := loadLeadSLAPolicy(ctx, tx)
+		policy, err := loadLeadSLAPolicy(ctx, tx, s.bootConfig())
+		if err != nil {
+			return err
+		}
+		columns, err := leadColumns(ctx, arg)
 		if err != nil {
 			return err
 		}
 		l, err := scanLead(tx.QueryRow(ctx,
-			`SELECT `+leadColumns+` FROM lead
+			`SELECT `+columns+` FROM lead
 			 WHERE linkedin_url = $1 AND archived_at IS NULL AND `+scope+`
 			 ORDER BY created_at ASC, id ASC LIMIT 1`, args...), nil, policy)
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -446,6 +420,9 @@ type ListLeadsInput struct {
 	Sort *string
 	// Membership narrows to one list's members (list_id).
 	Membership storekit.ListMemberFilter
+	// MemberOf is the list a seam caller narrowed to; the provider resolves it
+	// into Membership before the read.
+	MemberOf *ids.UUID
 }
 
 // leadUniqueViolation maps a lead write's unique-index violation to the
@@ -471,4 +448,34 @@ func deref(s *string) string {
 		return ""
 	}
 	return *s
+}
+
+func admitLeadCreate(ctx context.Context, tx pgx.Tx, in CreateLeadInput) error {
+	if err := lockLeadLinkedInIdentity(ctx, tx, in.LinkedInURL); err != nil {
+		return err
+	}
+	if err := ensureLeadEmailUnclaimed(ctx, tx, in.Email); err != nil {
+		return err
+	}
+	if err := ensureLeadLinkedInUnclaimed(ctx, tx, in.LinkedInURL); err != nil {
+		return err
+	}
+	if err := ensureContactNotWorked(ctx, tx, in.FromContactID, nil); err != nil {
+		return err
+	}
+	if err := ensureContactStillLive(ctx, tx, in.FromContactID); err != nil {
+		return err
+	}
+
+	if in.ProjectID != nil {
+		if err := auth.EnsureReferenceTarget(ctx, tx, "project_id", "project", in.ProjectID.UUID); err != nil {
+			return err
+		}
+	}
+	if in.OwnerID != nil {
+		if err := auth.EnsureNewRecordOwner(ctx, tx, in.OwnerID.UUID); err != nil {
+			return err
+		}
+	}
+	return nil
 }

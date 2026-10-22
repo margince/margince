@@ -251,7 +251,7 @@ DO $$
 DECLARE
   ws   uuid;
   conn uuid;
-  company  RECORD;
+  unmatched int;
 BEGIN
   ws := pg_temp.installation_workspace();
   IF ws IS NULL THEN
@@ -264,27 +264,45 @@ BEGIN
   IF conn IS NULL THEN
     INSERT INTO finance_connection
            (provider, status, credential_ref, source, captured_by)
-    VALUES ('offline_demo', 'active', 'offline://demo', 'system', 'system:seed')
+    VALUES ('offline_demo', 'active', 'extension:offline_demo', 'system', 'system:seed')
     RETURNING id INTO conn;
   END IF;
 
   -- Customers only. A target or a prospect has never been invoiced, and the
   -- card is absent for them by design (FIN-AC-3) — linking one would put a
   -- ledger behind a company we have never billed.
-  FOR company IN
-    SELECT id, display_name FROM company
-     WHERE archived_at IS NULL
-       AND lifecycle = 'customer'
-  LOOP
-    INSERT INTO finance_customer_link
-           (connection_id, company_id, external_customer_id,
-            sync_hash, source, captured_by)
-    VALUES (conn, company.id, 'DEMO-' || left(replace(company.id::text, '-', ''), 8),
-            'seed', 'system', 'system:seed')
-    ON CONFLICT DO NOTHING;
-  END LOOP;
+  --
+  -- Each unlinked customer takes the next free entry of the finance-demo
+  -- unit's directory (DEMO-0001 to DEMO-0050), so a re-run links only what is
+  -- new and never reuses an id another company holds.
+  INSERT INTO finance_customer_link
+         (connection_id, company_id, external_customer_id,
+          sync_hash, source, captured_by)
+  SELECT conn, unlinked.id, free.external_id, 'seed', 'system', 'system:seed'
+    FROM (SELECT c.id, row_number() OVER (ORDER BY c.created_at, c.id) AS n
+            FROM company c
+           WHERE c.archived_at IS NULL AND c.lifecycle = 'customer'
+             AND NOT EXISTS (SELECT 1 FROM finance_customer_link l
+                              WHERE l.connection_id = conn AND l.company_id = c.id
+                                AND l.archived_at IS NULL)) unlinked
+    JOIN (SELECT 'DEMO-' || lpad(g::text, 4, '0') AS external_id,
+                 row_number() OVER (ORDER BY g) AS n
+            FROM generate_series(1, 50) g
+           WHERE NOT EXISTS (SELECT 1 FROM finance_customer_link l
+                              WHERE l.connection_id = conn AND l.archived_at IS NULL
+                                AND l.external_customer_id = 'DEMO-' || lpad(g::text, 4, '0'))) free
+      ON free.n = unlinked.n;
 
-  RAISE NOTICE 'seed-dev.sql: offline_demo finance connection + customer links seeded; the sweep fills the ledger';
+  SELECT count(*) INTO unmatched
+    FROM company c
+   WHERE c.archived_at IS NULL AND c.lifecycle = 'customer'
+     AND NOT EXISTS (SELECT 1 FROM finance_customer_link l
+                      WHERE l.connection_id = conn AND l.company_id = c.id
+                        AND l.archived_at IS NULL);
+  IF unmatched > 0 THEN
+    RAISE WARNING 'seed-dev.sql: % customers have no finance ledger: the finance-demo directory holds 50 customers', unmatched;
+  END IF;
+  RAISE NOTICE 'seed-dev.sql: finance-demo connection + customer links seeded; the sweep fills the ledger';
 END $$;
 
 -- 4. The one piece of Worklist work no endpoint can write: a customer waiting.

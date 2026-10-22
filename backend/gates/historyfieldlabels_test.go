@@ -10,7 +10,7 @@ package gates
 // The record page renders one row per changed field, and the name it prints is
 // a key out of the audit image the writer built. Two kinds of key reach it. A
 // CONTRACT column — `amount_minor`, `owner_id` — is covered by
-// frontend/src/screens/historyfieldlabels.test.ts, which derives its set from
+// frontend/src/lib/historyfieldlabels.test.ts, which derives its set from
 // what an `Update<Type>Request` writes. A HAND-BUILT image is not: those keys
 // are Go string literals, the contract has never heard of them, and a census on
 // the other side of the wire cannot see them by construction.
@@ -46,14 +46,18 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
+// mergeAuditVerb is the audit action a merge writes.
+const mergeAuditVerb = "merge"
+
 const (
-	historyLabelSource = "../frontend/src/screens/historyfieldlabels.ts"
+	historyLabelSource = "../frontend/src/lib/historyfieldlabels.ts"
 	syntheticLabelMap  = "const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>(["
 	contractLabelMap   = "const HISTORY_FIELD_LABELS = new Map<string, MessageKey>(["
 	// projectedKeyFloor guards against a vacuous pass. Roughly fifty distinct
@@ -85,17 +89,20 @@ func TestEveryProjectedAuditKeyHasALabel(t *testing.T) {
 	for _, parsed := range files {
 		consts := constantsByPackage[filepath.Dir(parsed.Path)]
 		for _, site := range auditSitesIn(parsed) {
-			if auditDoorsWithBeforeImage[site.door] {
+			action, known := site.action(consts)
+			// The record's history prints a merge's images beside an update's
+			// fields, on the archived record and on the survivor.
+			readAsALine := known && action == mergeAuditVerb
+			if auditDoorsWithBeforeImage[site.door] && !readAsALine {
 				continue
 			}
-			action, known := site.action(consts)
-			entity, entityKnown := resolveString(site.argAt(auditEntityTypeArg), consts)
+			entity, entityKnown := resolveAuditEntity(t, parsed.File, site.argAt(auditEntityTypeArg), consts)
 			// An unresolvable verb or record type is READ AS PROJECTED rather
 			// than skipped. Under-recognition is the one direction a census
 			// must not have: a site this walk cannot place would otherwise
 			// carry its keys past the map unasked, which is exactly how the
 			// original gap survived.
-			if (known && !actions[action]) || (entityKnown && !entities[entity]) {
+			if (known && !actions[action] && !readAsALine) || (entityKnown && !entities[entity]) {
 				continue
 			}
 			for _, key := range site.imageKeys(t, consts, callsByPackage[filepath.Dir(parsed.Path)]) {
@@ -514,4 +521,37 @@ func tsMapKeys(t *testing.T, path, source, marker string) map[string]bool {
 		t.Fatalf("%s's %s literal reads as empty, so every key would look unlabelled", path, marker)
 	}
 	return keys
+}
+
+// Imported audit subjects keep the writer and receipt on one vocabulary.
+func resolveAuditEntity(t *testing.T, file *ast.File, expr ast.Expr, local map[string]string) (string, bool) {
+	t.Helper()
+	if value, ok := resolveString(expr, local); ok {
+		return value, true
+	}
+	selector, ok := expr.(*ast.SelectorExpr)
+	if !ok {
+		return "", false
+	}
+	qualifier, ok := selector.X.(*ast.Ident)
+	if !ok || qualifier.Obj != nil {
+		return "", false
+	}
+	for _, imported := range file.Imports {
+		path, err := strconv.Unquote(imported.Path.Value)
+		if err != nil {
+			t.Fatal(err)
+		}
+		name, dot := gatekit.ImportedAs(file, path)
+		if dot || name != qualifier.Name {
+			continue
+		}
+		dir, internal := strings.CutPrefix(path, modulePath+"/")
+		if !internal {
+			return "", false
+		}
+		value, known := gatekit.PackageStringConstants(t, dir)[selector.Sel.Name]
+		return value, known
+	}
+	return "", false
 }

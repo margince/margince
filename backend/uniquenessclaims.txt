@@ -128,7 +128,6 @@ internal/compose/dbhandle.go#func ProjectsStore
 internal/compose/dealstatus/grounding.go#func knownIDs
 internal/compose/deepread_integration_test.go#func TestDeepReadAttributesItsWritesToTheRequesterTheRowNames
 internal/compose/deepreadprincipal.go#func withClaimedRequester
-internal/compose/deploymentsecretseal.go#func resolveSecret
 internal/compose/deploymentsecretseal.go#method vaultBinding.open
 internal/compose/dispatch.go#func fanOutChildren
 internal/compose/documentextract.go#func documentFieldOrder
@@ -162,8 +161,6 @@ internal/compose/integration/channels/telegram_fixture_integration_test.go#type 
 internal/compose/integration/channels/telegram_identity_integration_test.go#func TestErasedSubjectsNextMessageIsAcceptedAndPersistsNothing
 internal/compose/integration/collections/linkedleaves_integration_test.go#method fixture.customerAndSupplier
 internal/compose/integration/declaredfilters_integration_test.go#func TestTheLeadListNarrowsToOneTeamAndToTheUnownedQueue
-internal/compose/integration/deploymentsecretseal_integration_test.go#func TestARotatedDeclarationIsResealed
-internal/compose/integration/deploymentsecretseal_integration_test.go#func TestAnUnopenableVaultNamesItselfRatherThanReportingNoLicense
 internal/compose/integration/employment_dedupe_integration_test.go#func TestAnEmploymentPastItsLastDayStopsCountingAtTheAccount
 internal/compose/integration/harness.go#func ProjectsStore
 internal/compose/integration/offertemplate_http_integration_test.go#func assertRenderOfferNotImplementedWithoutBlobstore
@@ -289,7 +286,6 @@ internal/modules/agents/reserved.go#const block at const approvalIDArg
 internal/modules/agents/runner/window.go#const triggerProvenance
 internal/modules/agents/schemacheck.go#func ResultDefect
 internal/modules/agents/toollist.go#func invocableByCaller
-internal/modules/agents/tools_enrich.go#func readEnrichArgs
 internal/modules/agents/tools_import.go#const block at const importObjectCompany
 internal/modules/agents/tools_import.go#const block at const importOnDuplicateCreate
 internal/modules/agents/tools_lifecycle_test.go#func advertisedEnum
@@ -466,7 +462,6 @@ internal/modules/privacy/retentionpolicystore.go#const fieldRetainDays
 internal/modules/privacy/retentionscope.go#func AuthorableScopes
 internal/modules/privacy/retentionscope.go#func ParseRetentionScope
 internal/modules/privacy/retentionscope_test.go#func TestAuthorableScopesIsTheSelectorTableInWireSpelling
-internal/modules/projects/handlers.go#func refuseCallerChosenKey
 internal/modules/projects/keymint.go#const projectKeyField
 internal/modules/projects/keymint.go#func mintProjectKey
 internal/modules/projects/listfilters.go#const block at const filterKey
@@ -492,7 +487,6 @@ internal/modules/search/queryvocab.go#const block at const OpEq
 internal/modules/signals/audiencerescope.go#const block at const rescopeImageArchivedAt
 internal/modules/signals/derived.go#const block at const columnStatus
 internal/modules/signals/derived.go#type DerivedSignal.PrivateTo
-internal/modules/signals/signal.go#func OfCompanyWhere
 internal/modules/signals/warmroom.go#func RankRouteIn
 internal/modules/signals/warmroom.go#func RouteInEdges
 internal/modules/webhooks/store.go#const fieldEventTypes
@@ -509,7 +503,6 @@ internal/platform/auth/rbac.go#func UpsertAction
 internal/platform/auth/rbac.go#func refuseBuyer
 internal/platform/auth/rowscope.go#var ownerPrivateTables
 internal/platform/auth/writescope.go#const grantAccessWrite
-internal/platform/cliflags/cliflags.go#method Env.Items
 internal/platform/database/statementbudget.go#func BoundStatement
 internal/platform/database/storekit/claim.go#func ClaimOwnership
 internal/platform/database/storekit/customcolumns.go#func quoteColumnIdentifier

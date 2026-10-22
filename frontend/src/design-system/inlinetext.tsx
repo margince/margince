@@ -7,6 +7,7 @@ import {
   useState,
 } from "react";
 import { useT } from "../i18n";
+import { isImeCommit } from "../lib/imecommit";
 import { problemMessageOf } from "../lib/problem";
 import { BusyMark, Button, Field, Textarea, TextInput } from "./atoms";
 import "./inlinechoice.css";
@@ -321,6 +322,7 @@ export function InlineText({
               // Cmd/Ctrl+Enter; in a line Enter is still the commit.
               if (
                 event.key === "Enter" &&
+                !isImeCommit(event) &&
                 (!multiline || event.metaKey || event.ctrlKey)
               ) {
                 event.preventDefault();

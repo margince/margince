@@ -40,6 +40,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -68,6 +69,35 @@ type armCase struct {
 	// the user is in appears here and an archived one does not. That difference
 	// is the whole subject of two cases below.
 	teams []ids.UUID
+}
+
+func TestAnAudienceLimitedToOneOwnerExcludesEveryOtherReader(t *testing.T) {
+	e := Setup(t)
+	in := activities.LogActivityInput{Kind: "task", Body: new("Private follow-up"), Source: "manual"}
+	in.VisibleOnlyTo(e.Rep1)
+	row, _, err := e.Activities.LogActivity(e.As(e.Rep1, []ids.UUID{e.Team1}, AdminPerms), in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := ids.UUID(row.Id)
+	check := func(want bool) {
+		t.Helper()
+		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			limited, err := auth.ActivityAudienceLimitedToTx(e.Admin(), tx, id, e.Rep1)
+			if err == nil && limited != want {
+				t.Errorf("limited to owner = %v, want %v", limited, want)
+			}
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	check(true)
+	party(t, id, "attendee", &e.Rep2, nil)
+	check(false)
+	if !readsContent(e.As(e.Rep2, []ids.UUID{e.Team1}, activityLifecyclePerms), t, e, id) {
+		t.Fatal("the additional reader does not exercise the content gate")
+	}
 }
 
 // seedBareActivity writes an activity carrying none of the arms: captured by a

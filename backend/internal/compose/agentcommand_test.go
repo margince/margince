@@ -43,6 +43,7 @@ func (seamRecord) ArchivableTypes(context.Context) ([]datasource.EntityType, err
 	return []datasource.EntityType{
 		datasource.EntityContact, datasource.EntityCompany, datasource.EntityDeal,
 		datasource.EntityProject, datasource.EntityRelationship, datasource.EntityActivity,
+		datasource.EntityProduct, datasource.EntityOfferTemplate, datasource.EntityOffer,
 	}, nil
 }
 
@@ -55,7 +56,7 @@ func (seamRecord) ArchiveAt(_ context.Context, in datasource.ArchiveInput) (data
 func (seamRecord) Read(_ context.Context, ref datasource.EntityRef) (datasource.Record, error) {
 	return datasource.Record{
 		Ref:       ref,
-		Fields:    json.RawMessage(`{"name":"Acme"}`),
+		Fields:    json.RawMessage(`{"name":"Acme","domains":[{"domain":"acme.example"}]}`),
 		Version:   4,
 		Freshness: datasource.FreshnessInfo{Authoritative: true},
 	}, nil
@@ -319,4 +320,12 @@ func TestAFileThatMustWaitIsRefusedAlikeOnEitherDoor(t *testing.T) {
 			t.Errorf("%s answered %d %q, want 403 approval_required", door, recorder.Code, problem.Code)
 		}
 	}
+}
+
+func (p seamRecord) ReadLeadForReversal(ctx context.Context, id ids.UUID) (datasource.Record, error) {
+	return p.Read(ctx, datasource.EntityRef{Type: datasource.EntityLead, ID: id})
+}
+
+func (p hiddenRecord) ReadLeadForReversal(ctx context.Context, id ids.UUID) (datasource.Record, error) {
+	return p.Read(ctx, datasource.EntityRef{Type: datasource.EntityLead, ID: id})
 }

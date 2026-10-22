@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Read a scenario, and judge one run of it against what the assistant said.
 
-Five things are checked per run, and all five must hold:
+Six things are checked per run, and all six must hold:
 
   must_call        Did it reach the tools it needed? An answer written from the
                    model's own memory, with Margince never asked, is a failure
@@ -17,6 +17,10 @@ Five things are checked per run, and all five must hold:
                    Did it keep out of a call what must not be sent? Each entry
                    is `tool~regex`, searched in every call's arguments: the
                    file's text pasted into log_activity, which no answer shows.
+  must_call_matching
+                   The other direction: some call to `tool` carries what
+                   `tool~regex` asks, when the target is named in free text
+                   rather than one argument's exact value.
   judge            Does the answer do what this sentence says? Each entry is a
                    criterion in plain words, decided by a model (judge.py).
 
@@ -159,6 +163,45 @@ def _scalar(text):
     return text
 
 
+# ROUTES are the served surface's routers, read from the table the backend
+# derives (TestTheLanesRoutingTableIsPublished). A call to a router is recorded
+# twice: as the router, and as the verb its action ran with the route field
+# gone. A scenario may therefore name either, and one naming the verb keeps its
+# meaning when the verb moves behind a router.
+_ROUTES_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "routes.json")
+
+
+def load_routes(path=_ROUTES_FILE):
+    with open(path, encoding="utf-8") as fh:
+        return json.load(fh).get("routers", {})
+
+
+def routed(name, arguments, routes):
+    """The verb a router call ran and its own arguments, or None for a plain call."""
+    prefix, _, bare = name.rpartition("__")
+    table = routes.get(bare)
+    if not table or not table.get("field") or not isinstance(arguments, dict):
+        return None
+    verb = table.get("actions", {}).get(arguments.get(table["field"]))
+    if not verb:
+        return None
+    rest = {k: v for k, v in arguments.items() if k != table["field"]}
+    return (prefix + "__" + verb if prefix else verb), rest
+
+
+def offered_verbs(offered, routes):
+    """The offered names, and every verb an offered router fronts by its field."""
+    out = list(offered)
+    for name in offered:
+        prefix, _, bare = name.rpartition("__")
+        table = routes.get(bare, {})
+        if not table.get("field"):
+            continue
+        for verb in table.get("actions", {}).values():
+            out.append(prefix + "__" + verb if prefix else verb)
+    return out
+
+
 def read_transcript(path):
     """Pull the tool names called and everything the assistant said.
 
@@ -167,6 +210,7 @@ def read_transcript(path):
     and is included so a scenario checking the closing sentence sees it.
     """
     called, said, calls = [], [], []
+    routes = load_routes()
     for line in _open_checked(path):
         line = line.strip()
         if not line:
@@ -193,6 +237,12 @@ def read_transcript(path):
                 # wrong plan, and must_mention only sees the closing prose — so
                 # an unrelated call plus an invented number would score green.
                 calls.append((block.get("name", ""), block.get("input") or {}))
+                # Recorded twice on purpose, as the router and as its verb, so a
+                # scenario may name either; nothing here counts calls.
+                verb = routed(block.get("name", ""), block.get("input") or {}, routes)
+                if verb:
+                    called.append(verb[0])
+                    calls.append(verb)
             elif block.get("type") == "text":
                 said.append(block.get("text", ""))
     return called, "\n".join(said), calls
@@ -416,6 +466,7 @@ def offered_problem(scenario, path):
         return "the transcript carries no system line, so what was offered is unknown"
     if not offered:
         return "the server offered no tools at all"
+    offered = offered_verbs(offered, load_routes())
     missing = [
         entry for entry in scenario.get("must_call", [])
         if not any(tool_matches(offered, alt) for alt in alternatives(entry))
@@ -507,6 +558,17 @@ def _sent_problems(calls, entry):
     return problems
 
 
+def _unmatched_problem(calls, entry):
+    """A problem line when no call to `tool` carries what `tool~regex` asks, or None."""
+    tool, sep, pattern = str(entry).partition("~")
+    if not sep or not tool or not pattern:
+        return f"must_call_matching entry {entry!r} is not tool~regex"
+    for name, arguments in calls:
+        if tool_matches([name], tool) and re.search(pattern, json.dumps(arguments, ensure_ascii=False), re.IGNORECASE):
+            return None
+    return f"never called {tool} carrying anything matching /{pattern}/"
+
+
 def check(scenario, transcript_path):
     called, said, calls = read_transcript(transcript_path)
     problems = []
@@ -541,6 +603,11 @@ def check(scenario, transcript_path):
 
     for entry in scenario.get("must_not_call_with", []):
         problems.extend(_sent_problems(calls, entry))
+
+    for entry in scenario.get("must_call_matching", []):
+        problem = _unmatched_problem(calls, entry)
+        if problem:
+            problems.append(problem)
 
     for pattern in scenario.get("must_mention", []):
         if not re.search(pattern, said, re.IGNORECASE):

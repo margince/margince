@@ -13,6 +13,7 @@ package gates
 
 import (
 	"go/ast"
+	"go/parser"
 	"go/token"
 	"os"
 	"path"
@@ -134,6 +135,10 @@ func systemActingNames(t *testing.T, parsed gatekit.ParsedFile, consts packageCo
 			}
 			if name, ok := consts.read(parsed, call.Args[1]); ok {
 				names = append(names, name)
+				return true
+			}
+			if prefix, ok := systemActingPrefix(parsed, consts, call.Args[1]); ok {
+				names = append(names, prefix)
 				return true
 			}
 			passed, ok := parameterIndex(fn, call.Args[1])
@@ -304,4 +309,37 @@ func moduleImportDir(file *ast.File, name string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+func systemActingPrefix(parsed gatekit.ParsedFile, consts packageConsts, expr ast.Expr) (string, bool) {
+	joined, ok := expr.(*ast.BinaryExpr)
+	if !ok || joined.Op != token.ADD {
+		return "", false
+	}
+	prefix, ok := consts.read(parsed, joined.X)
+	if !ok || !strings.HasSuffix(prefix, ":") {
+		return "", false
+	}
+	name := strings.TrimSuffix(prefix, ":")
+	return name, systemPrincipalText.MatchString(name)
+}
+
+func TestSystemActorPrefixesRemainNamedWhileTaskIDsStayOpaque(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct{ expression, want string }{
+		{`"system:datatask:" + taskID`, "system:datatask"},
+		{`"system:" + arbitrary`, ""},
+		{`"agent:datatask:" + taskID`, ""},
+		{`"system:datatask:extra:" + taskID`, ""},
+		{`arbitrary + taskID`, ""},
+	} {
+		expr, err := parser.ParseExpr(tc.expression)
+		if err != nil {
+			t.Fatal(err)
+		}
+		got, ok := systemActingPrefix(gatekit.ParsedFile{Path: "internal/platform/datatask/acting.go"}, packageConsts{t: t, byDir: map[string]map[string]string{}}, expr)
+		if ok != (tc.want != "") || ok && got != tc.want {
+			t.Fatalf("prefix %s = %q, %v", tc.expression, got, ok)
+		}
+	}
 }

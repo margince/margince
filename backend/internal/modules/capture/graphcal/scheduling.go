@@ -14,6 +14,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/capture/calendarwire"
 	"github.com/margince/margince/backend/internal/modules/capture/graphconn"
+	"github.com/margince/margince/backend/internal/platform/emailview"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -146,6 +147,11 @@ func graphInstant(at scheduledTime) (time.Time, error) {
 }
 
 func (a *httpAPI) Busy(ctx context.Context, token, calendar string, from, to time.Time) ([]connector.CalendarInterval, error) {
+	busy, err := a.readBusy(ctx, token, calendar, from, to)
+	return busy, connector.CalendarReadFailed(calendar, err)
+}
+
+func (a *httpAPI) readBusy(ctx context.Context, token, calendar string, from, to time.Time) ([]connector.CalendarInterval, error) {
 	query := url.Values{"startDateTime": {from.Format(time.RFC3339)}, "endDateTime": {to.Format(time.RFC3339)}, "$top": {"100"}, "$select": {"id,start,end,isAllDay,isCancelled,showAs,responseStatus"}}
 	next := a.base + calendarPath(calendar) + "/calendarView?" + query.Encode()
 	busy := []connector.CalendarInterval{}
@@ -206,7 +212,7 @@ func (a *httpAPI) Save(ctx context.Context, token string, in connector.CalendarA
 	} else {
 		// Only a new event carries a body: Outlook keeps an online meeting's
 		// join details in it, and a reschedule that rewrote it would drop them.
-		event.Body = &scheduledBody{"text", in.Description}
+		event.Body = &scheduledBody{"text", emailview.MeetingDescription(in.Description)}
 		if in.VideoCall {
 			provider, err := a.meetingProvider(ctx, token, in.CalendarID)
 			if err != nil {

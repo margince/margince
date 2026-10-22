@@ -6,6 +6,8 @@ package deals
 import (
 	"testing"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 )
 
 // TestTheRecencySentenceCountsTheWayTheCacheKeyDoes is the defect this closes,
@@ -39,7 +41,7 @@ func TestTheRecencySentenceCountsTheWayTheCacheKeyDoes(t *testing.T) {
 			// "2 days ago", so a contains-check passes on an answer that is off
 			// by ten days — which is the class of error this test is about.
 			want := "Last activity " + probe.want + "."
-			if got := recencyReason(&last, false, probe.now); got != want {
+			if got := recencyReason(&last, false, probe.now, langcopy.For("en")); got != want {
 				t.Errorf("at %s the card says %q, want %q — a sentence a reader can check "+
 					"against a timestamp must not move between cache writes",
 					probe.now.Format(time.RFC3339), got, want)
@@ -54,7 +56,7 @@ func TestTheRecencySentenceCountsTheWayTheCacheKeyDoes(t *testing.T) {
 func TestARecordAheadOfTheClockReadsAsToday(t *testing.T) {
 	last := time.Date(2026, 8, 22, 9, 0, 0, 0, time.UTC)
 	const want = "Last activity today."
-	if got := recencyReason(&last, false, time.Date(2026, 8, 20, 9, 0, 0, 0, time.UTC)); got != want {
+	if got := recencyReason(&last, false, time.Date(2026, 8, 20, 9, 0, 0, 0, time.UTC), langcopy.For("en")); got != want {
 		t.Errorf("an activity dated ahead of now reads %q, want %q", got, want)
 	}
 }
@@ -64,7 +66,7 @@ func TestARecordAheadOfTheClockReadsAsToday(t *testing.T) {
 func TestAStalledDealSaysSoInTheSameSentence(t *testing.T) {
 	last := time.Date(2026, 8, 1, 9, 0, 0, 0, time.UTC)
 	const want = "Last activity 21 days ago — the deal counts as stalled."
-	if got := recencyReason(&last, true, time.Date(2026, 8, 22, 9, 0, 0, 0, time.UTC)); got != want {
+	if got := recencyReason(&last, true, time.Date(2026, 8, 22, 9, 0, 0, 0, time.UTC), langcopy.For("en")); got != want {
 		t.Errorf("a stalled deal's recency reads %q, want %q", got, want)
 	}
 }

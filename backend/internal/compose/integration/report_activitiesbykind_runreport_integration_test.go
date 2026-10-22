@@ -24,9 +24,13 @@ package integration
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -46,7 +50,7 @@ func (e *Env) teamReaderWith(objects ...string) context.Context {
 func TestActivitiesByKindDoesNotCrashForATeamScopedReader(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()
-	fileActivity(admin, t, e, "call", time.Now().UTC().Add(-time.Hour), nil)
+	fileActivity(admin, t, e, "meeting", time.Now().UTC().Add(-time.Hour), nil)
 
 	reader := e.teamReaderWith("activity")
 	rows, err := tryPrebuiltReport(reader, e, "activities-by-kind", "")
@@ -54,6 +58,34 @@ func TestActivitiesByKindDoesNotCrashForATeamScopedReader(t *testing.T) {
 		t.Fatalf("activities-by-kind for a team-scoped reader errored (want a real answer, not the owner_id crash): %v", err)
 	}
 	if len(rows) != 1 || cell(rows[0], "activities") != "1" {
-		t.Errorf("activities-by-kind for a team-scoped reader = %v, want the one call counted", rows)
+		t.Errorf("activities-by-kind for a team-scoped reader = %v, want the one meeting counted", rows)
+	}
+}
+
+// Mail is most of the activity table, so no report counts it. The default
+// population leaves it out. A filter that names it is refused, because a zero
+// would read like a measurement.
+func TestActivitiesByKindCountsMeetingsAndTasksAndRefusesEmail(t *testing.T) {
+	e := Setup(t)
+	admin := e.Admin()
+	when := clocktest.Now(t).Add(-time.Hour)
+	fileActivity(admin, t, e, "meeting", when, nil)
+	fileActivity(admin, t, e, "task", when, nil)
+	for _, uncounted := range []string{"email", "call", "note"} {
+		fileActivity(admin, t, e, uncounted, when, nil)
+	}
+
+	counted := map[string]string{}
+	for _, row := range runPrebuiltReport(admin, t, e, "activities-by-kind", "") {
+		counted[cell(row, "kind")] = cell(row, "activities")
+	}
+	if want := map[string]string{"meeting": "1", "task": "1"}; fmt.Sprint(counted) != fmt.Sprint(want) {
+		t.Errorf("default population = %v, want %v", counted, want)
+	}
+
+	_, err := tryPrebuiltReport(admin, e, "activities-by-kind", `{"filters":{"kind":"email"}}`)
+	var refusal *analyticsquery.RefusalError
+	if !errors.As(err, &refusal) || refusal.Kind != analyticsquery.RefusalUnsupported {
+		t.Errorf("filter kind=email → %v, want an unsupported refusal", err)
 	}
 }

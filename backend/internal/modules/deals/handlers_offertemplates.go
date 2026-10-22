@@ -50,22 +50,10 @@ func (h Handlers) CreateOfferTemplate(w http.ResponseWriter, r *http.Request, _ 
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	name, err := httperr.RequireNonBlank(offerTemplateNameField, req.Name)
+	in, err := OfferTemplateCreationInput(req)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
-	}
-	req.Name = name
-	if req.Layout == nil {
-		writeStoreErr(w, r, &RequiredFieldError{Field: "layout"})
-		return
-	}
-	in := CreateOfferTemplateInput{Name: req.Name, Layout: req.Layout}
-	if req.Locale != nil {
-		in.Locale = *req.Locale
-	}
-	if req.IsDefault != nil {
-		in.IsDefault = *req.IsDefault
 	}
 	template, err := h.store.CreateOfferTemplate(r.Context(), in)
 	if err != nil {
@@ -97,18 +85,10 @@ func (h Handlers) UpdateOfferTemplate(w http.ResponseWriter, r *http.Request, id
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	name, err := httperr.RequireNonBlank(offerTemplateNameField, req.Name)
+	in, err := offerTemplateUpdateInput(req, ifVersion)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
-	}
-	req.Name = name
-	if req.Layout == nil {
-		writeStoreErr(w, r, &RequiredFieldError{Field: "layout"})
-		return
-	}
-	in := UpdateOfferTemplateInput{
-		Name: req.Name, Locale: req.Locale, IsDefault: req.IsDefault, Layout: req.Layout, IfVersion: ifVersion,
 	}
 	template, err := h.store.UpdateOfferTemplate(r.Context(), pathID[ids.OfferTemplateKind](id), in)
 	if err != nil {
@@ -120,8 +100,12 @@ func (h Handlers) UpdateOfferTemplate(w http.ResponseWriter, r *http.Request, id
 
 // ArchiveOfferTemplate soft-deletes a template; a repeat archive is a
 // no-op that returns the same entity.
-func (h Handlers) ArchiveOfferTemplate(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	template, err := h.store.ArchiveOfferTemplate(r.Context(), pathID[ids.OfferTemplateKind](id))
+func (h Handlers) ArchiveOfferTemplate(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.ArchiveOfferTemplateParams) {
+	ifVersion, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
+	template, err := h.store.ArchiveOfferTemplateAt(r.Context(), pathID[ids.OfferTemplateKind](id), ifVersion)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

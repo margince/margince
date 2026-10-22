@@ -40,6 +40,11 @@ var dealFilterOperands = map[string]string{
 	filterStatus:             "open",
 	filterTag:                filterOperandID,
 	filterTagMode:            "all",
+	filterOwnerTeamID:        filterOperandID,
+	filterUnassigned:         "true",
+	filterIncludeArchived:    "true",
+	filterSort:               "-created_at",
+	filterListID:             filterOperandID,
 }
 
 // Every filter this module declares narrows something — the deal half of the
@@ -61,11 +66,10 @@ func TestEachDealsEntityIsOfferedItsOwnVocabulary(t *testing.T) {
 		want   []string
 	}{
 		{datasource.EntityDeal, []string{
-			"acquisition_source", "commercial_motion",
-			"company_id", "forecast_category", "owner_id", "partner_attribution",
-			"partner_company_id", "partner_sourced",
-			"pipeline_id", "priority", "project_id", "stage_id", "stalled", "status",
-			"tag_id", "tag_mode",
+			"acquisition_source", "commercial_motion", "company_id", "forecast_category", "include_archived",
+			"list_id", "owner_id", "owner_team_id", "partner_attribution", "partner_company_id", "partner_sourced",
+			"pipeline_id", "priority", "project_id", "sort", "stage_id", "stalled", "status", "tag_id", "tag_mode",
+			"unassigned",
 		}},
 	} {
 		if got := p.ListFilters(tc.entity); !slices.Equal(got, tc.want) {

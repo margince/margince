@@ -123,6 +123,11 @@ func counterpartyAcceptEffect(svc *approvals.Service, store *contacts.Store,
 		})
 		var triageDomain string
 		if err := svc.RedeemAndApply(ctx, approvalID, counterpartyProposalKind, diffHash, func(tx pgx.Tx) error {
+			// Asked again as the decider on the write's own transaction: the
+			// precheck answered before the decision, and the contact can move.
+			if err := store.ProbeCounterpartyMatchTx(ctx, tx, proposal.Email); err != nil {
+				return err
+			}
 			var applyErr error
 			triageDomain, applyErr = applyCounterpartyAccept(execCtx, tx, store, filer, pending, proposal)
 			return applyErr
@@ -183,4 +188,38 @@ func applyCounterpartyAccept(ctx context.Context, tx pgx.Tx, store *contacts.Sto
 		return "", err
 	}
 	return created.TriageDomain, nil
+}
+
+// counterpartyPrecheck refuses an accept whose address already belongs to a
+// contact the decider may not file onto. It runs before the decision, so the
+// card stays pending; the effect asks again as it writes.
+func counterpartyPrecheck(store *contacts.Store) approvals.ReleasePrecheck {
+	return func(ctx context.Context, staged, edited json.RawMessage) error {
+		var proposal approvalsubject.Counterparty
+		if err := json.Unmarshal(staged, &proposal); err != nil {
+			return fmt.Errorf("compose: decoding the counterparty proposal: %w", err)
+		}
+		if err := refuseSenderEdit(proposal, edited); err != nil {
+			return err
+		}
+		return store.ProbeCounterpartyMatch(ctx, proposal.Email)
+	}
+}
+
+// refuseSenderEdit refuses an edit that names another sender. The card asks
+// about one address, and an edit aimed at another would file mail elsewhere.
+func refuseSenderEdit(staged approvalsubject.Counterparty, edited json.RawMessage) error {
+	if len(edited) == 0 {
+		return nil
+	}
+	var after approvalsubject.Counterparty
+	if err := json.Unmarshal(edited, &after); err != nil {
+		return &approvals.InvalidEditError{Cause: err}
+	}
+	if !strings.EqualFold(strings.TrimSpace(after.Email), strings.TrimSpace(staged.Email)) ||
+		!strings.EqualFold(strings.TrimSpace(after.Domain), strings.TrimSpace(staged.Domain)) {
+		return &approvals.InvalidEditError{Cause: errors.New(
+			"this card is about one sender; edit the name, not the address or the domain")}
+	}
+	return nil
 }

@@ -79,9 +79,8 @@ type CreateContactInput struct {
 	SourceSystem *string
 	// Author is who wrote it in the system it came from; zero when unknown.
 	Author storekit.SourceAuthorInput
-	// CustomFields carries the request body's extra top-level keys
-	// (additionalProperties); only active cf_* catalog columns land,
-	// drop-on-mismatch (customfields.go).
+	// CustomFields carries the request body's cf_* keys. A key no active catalog
+	// column takes is refused (storekit.CheckCustomValues).
 	CustomFields map[string]any
 }
 
@@ -91,7 +90,7 @@ func (s *Store) CreateContact(ctx context.Context, in CreateContactInput) (crmco
 	if err := auth.Require(ctx, "contact", principal.ActionCreate); err != nil {
 		return crmcontracts.Contact{}, err
 	}
-	by, err := s.readyContactCreate(ctx, in)
+	by, err := s.readyContactCreate(ctx, &in)
 	if err != nil {
 		return crmcontracts.Contact{}, err
 	}
@@ -125,7 +124,7 @@ func (s *Store) CreateContactTx(ctx context.Context, tx pgx.Tx, in CreateContact
 	if err := refuseUncataloguedCustomFields(in.CustomFields, cols); err != nil {
 		return crmcontracts.Contact{}, err
 	}
-	by, err := s.readyContactCreate(ctx, in)
+	by, err := s.readyContactCreate(ctx, &in)
 	if err != nil {
 		return crmcontracts.Contact{}, err
 	}
@@ -136,10 +135,15 @@ func (s *Store) CreateContactTx(ctx context.Context, tx pgx.Tx, in CreateContact
 // the contact parse and the captured-by resolution — and answers the
 // attribution the write shape stamps. Both entry points call it, so neither
 // can drift from the other's validation.
-func (s *Store) readyContactCreate(ctx context.Context, in CreateContactInput) (string, error) {
+func (s *Store) readyContactCreate(ctx context.Context, in *CreateContactInput) (string, error) {
 	if err := parseContactContacts(in.Emails, in.Phones); err != nil {
 		return "", err
 	}
+	address, err := checkedAddress(in.Address)
+	if err != nil {
+		return "", err
+	}
+	in.Address = address
 	return storekit.CapturedBy(ctx)
 }
 
@@ -154,11 +158,7 @@ func (s *Store) createContactInTx(ctx context.Context, tx pgx.Tx, in CreateConta
 	}
 	in.OwnerID = owner
 
-	if err := ensureContactEmailsUnclaimed(ctx, tx, in.Emails); err != nil {
-		return crmcontracts.Contact{}, err
-	}
-
-	match, err := manualDedupeContact(ctx, tx, in)
+	match, err := admitAndDedupeContactCreate(ctx, tx, in)
 	if err != nil {
 		return crmcontracts.Contact{}, err
 	}
@@ -178,7 +178,7 @@ func (s *Store) createContactInTx(ctx context.Context, tx pgx.Tx, in CreateConta
 		// The capture paths are unaffected. They carry OwnerScoped on the spec
 		// and still mint an owner-scoped contact where privacy demands one — an
 		// unjudged sender, and an advisor's record among them.
-		Visibility:   visibilityWorkspace,
+		Visibility:   TypedCreateVisibility,
 		FullName:     in.FullName,
 		FirstName:    in.FirstName,
 		LastName:     in.LastName,

@@ -2,13 +2,6 @@
 
 Every call a passport can make, grouped by area. Find the operationId in openapi.yaml for its parameters and answers.
 
-## Webhooks
-
-| Call | operationId | What it does | Permission | Runs |
-| --- | --- | --- | --- | --- |
-| `POST /webhook-subscriptions` | createWebhookSubscription | Register an outbound webhook subscription (returns the signing secret once). | Change records | waits for approval |
-| `PATCH /webhook-subscriptions/{id}` | updateWebhookSubscription | Pause/resume a subscription or re-target its event set. | Change records | waits for approval |
-
 ## Contacts
 
 | Call | operationId | What it does | Permission | Runs |
@@ -21,11 +14,11 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `DELETE /contacts/{id}` | archiveContact | Archive (soft-delete) a contact. | Change records | at once |
 | `POST /contacts/{id}/merge` | mergeContact | Merge this contact into a target (non-lossy). | Change records | at once |
 | `GET /contacts/{id}/360` | getContact360 | The whole contact record page in one round trip — identity, employments, buying roles, strength, who-knows-them, timeline, consent, provenance. | Read records | at once |
-| `GET /contacts/{id}/consent/guard` | getContactConsentGuard | May we write to this contact right now — per purpose and channel, with the reason. | Read records | at once |
 | `GET /contacts/{id}/graph` | getContactGraph | Who around this contact could open a door, and through whom. | Read records | at once |
-| `GET /contacts/{id}/access` | getContactAccess | Who can open this contact and who can change it, and why. | Read records | at once |
 | `GET /contacts/{id}/strength` | getContactStrength | Relationship strength for a contact (deterministic recency × frequency × reciprocity). | Read records | at once |
 | `GET /email-signature-template` | getEmailSignatureTemplate | The workspace's signature template. | Read records | at once |
+| `GET /dedupe/candidates` | listDedupeCandidates | The dedupe review queue, confidence-sorted. | Read records | at once |
+| `GET /dedupe/candidates/{id}` | getDedupeCandidate | One candidate with its full detection-time evidence. | Read records | at once |
 | `POST /dedupe/candidates/{id}/disposition` | disposeDedupeCandidate | Decide one pair — merge through the owner's verb, or dismiss forever. | Change records | at once |
 | `POST /dedupe/candidates/{id}/undo` | undoDedupeDisposition | Re-open a disposed pair. | Change records | at once |
 | `GET /contacts/{id}/network` | getContactNetwork | Who on our team knows this contact, and how well. | Read records | at once |
@@ -54,7 +47,6 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /companies/{id}/vat-check` | getCompanyVatCheck | What the EU VAT register answered about this company's VAT ID, and the receipt for having asked. | Read records | at once |
 | `GET /companies/{id}/site-reads/latest` | getLatestSiteRead | The newest deep read on this account, so a crawl that failed after the rep navigated away is still visible. | Read records | at once |
 | `GET /companies/{id}/site-reads/{readId}` | getSiteRead | One deep read's progress and outcome — pages read, pages skipped and WHY, what got staged. | Read records | at once |
-| `GET /companies/{id}/access` | getCompanyAccess | Who can open this company and who can change it, and why. | Read records | at once |
 | `GET /companies/{id}/strength` | getCompanyStrength | Relationship strength for a company (max over current employees). | Read records | at once |
 | `GET /companies/{id}/finance-summary` | getCompanyFinanceSummary | Does this customer actually pay us, and on time? | Read records | at once |
 | `GET /companies/{id}/facts` | listCompanyFacts | The company's confirmed facts, grouped by category on the client. Site-read facts carry evidence (snippet, source URL, confidence); human/migration values may omit it. | Read records | at once |
@@ -220,22 +212,13 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | Call | operationId | What it does | Permission | Runs |
 | --- | --- | --- | --- | --- |
 | `GET /filters/vocabulary` | getFilterVocabulary | Read what a new filter clause may name on one record type. | Read records | at once |
-| `GET /views` | listSavedViews | List the caller's saved views (per-user; optionally scoped to one resource). | Read records | at once |
-| `POST /views` | createSavedView | Save a per-user view (columns, sort, filter state) for a resource. | Change records | at once |
-| `GET /views/{id}` | getSavedView | Get one of the caller's saved views by id. | Read records | at once |
-| `PATCH /views/{id}` | updateSavedView | Update a saved view's name or query state. | Change records | at once |
-| `DELETE /views/{id}` | archiveSavedView | Archive a saved view. | Change records | at once |
 
 ## CustomFields
 
 | Call | operationId | What it does | Permission | Runs |
 | --- | --- | --- | --- | --- |
 | `GET /custom-fields` | listCustomFields | List custom fields for an object (admin read; includes retired by default). | Read records | at once |
-| `POST /custom-fields` | createCustomField | Define a new custom field on an existing core object (a schema change). | Change records | waits for approval |
-| `PATCH /custom-fields/{id}` | renameCustomField | Rename a custom field's display label (not a schema change). | Change records | at once |
 | `GET /custom-fields/{id}/lists` | listCustomFieldLiveLists | The Live Lists whose filter names this custom field. | Read records | at once |
-| `POST /custom-fields/{id}/retire` | retireCustomField | Retire (soft-retire) a custom field — irreversible-feeling, confirm-first. | Change records | waits for approval |
-| `PATCH /custom-fields/{id}/options` | updateCustomFieldOptions | Edit a picklist custom field's allowed options (regenerates the column's CHECK). | Change records | waits for approval |
 
 ## Reports
 
@@ -243,7 +226,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | --- | --- | --- | --- | --- |
 | `GET /analytics/metrics` | getReportingMetrics | Get reporting metrics | Read records | at once |
 | `GET /analytics/evaluate.csv` | exportReportingEvaluation | Evaluate reporting | Read records | at once |
-| `GET /analytics/editions/{id}/export.csv` | exportReportingEdition | Export this edition's permitted frozen metrics and chart readings. | Read records | at once |
+| `GET /analytics/editions/{id}/export.csv` | exportReportingEdition | Export this edition's permitted frozen metrics, chart readings and kept question answers. | Read records | at once |
 | `GET /analytics/evaluate` | evaluateReporting | Evaluate reporting | Read records | at once |
 | `GET /analytics/evidence` | getReportingEvidence | Get reporting evidence | Read records | at once |
 | `GET /analytics/reports` | listReportingReports | List reporting reports | Read records | at once |
@@ -285,6 +268,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `POST /workspace-queries` | queryWorkspace | Answer a query plan over the workspace's records. | Read records | at once |
 | `POST /entity-resolutions` | resolveEntities | Whether the contacts and companies in a payload are already records here. | Read records | at once |
 | `GET /record-fields` | describeRecordFields | The fields a record create or update may write, for each record type. | Read records | at once |
+| `GET /list-filters` | describeListFilters | The filters a record list may be narrowed by, for each record type. | Read records | at once |
 | `GET /search` | search | Cross-object search (contacts, companies, deals, activities, leads). | Read records | at once |
 
 ## Approvals
@@ -293,7 +277,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | --- | --- | --- | --- | --- |
 | `GET /approvals` | listApprovals | The approval inbox — list staged actions awaiting human decision. | Read records | at once |
 | `GET /approvals/{id}` | getApproval | Get a single approval item (full proposed diff + evidence). | Read records | at once |
-| `POST /approvals/{id}/approve` | approveApproval | Approve a staged action (commits it; mints the approval token). | Change records | at once |
+| `POST /approvals/{id}/approve` | approveApproval | Approve a staged action (commits it). | Change records | at once |
 | `POST /approvals/{id}/reject` | rejectApproval | Reject a staged action (discards it; nothing commits). | Change records | at once |
 | `POST /approval-bundles/{bundle_id}/approve` | approveApprovalBundle | Approve every still-pending member of one bundle. | Change records | at once |
 | `POST /approval-bundles/{bundle_id}/reject` | rejectApprovalBundle | Reject every still-pending member of one bundle; no records change. | Change records | at once |
@@ -303,7 +287,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | Call | operationId | What it does | Permission | Runs |
 | --- | --- | --- | --- | --- |
 | `GET /whoami` | getActingIdentity | Who this caller acts for. | Read records | at once |
-| `GET /installation/settings` | getInstallationSettings | The installation's own settings. | Read records | at once |
+| `GET /openapi.json` | getAgentOpenAPIDocument | The OpenAPI 3.1 document of every operation a passport can call, as JSON. | Read records | at once |
 | `GET /users` | listUsers | List workspace members (roster) — cursor-paginated. Read-only. | Read records | at once |
 | `GET /users/names` | nameSeats | Name the colleagues behind a set of ids. Read-only. | Read records | at once |
 | `GET /teams` | listTeams | List workspace teams — cursor-paginated. Read-only. | Read records | at once |
@@ -324,12 +308,6 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /bulk/{id}` | getBulkChange | Read what one bulk change did, and whether it was undone. | Read records | at once |
 | `POST /bulk/{id}/undo/preview` | previewBulkUndo | Say what undoing one bulk change would do, without doing it. | Change records | at once |
 | `POST /bulk/{id}/undo` | undoBulkChange | Put back what one bulk change did, record by record. | Change records | at once |
-
-## Access
-
-| Call | operationId | What it does | Permission | Runs |
-| --- | --- | --- | --- | --- |
-| `GET /record-grants` | listRecordGrants | List manual per-record grants, filtered by record or by subject. | Read records | at once |
 
 ## Attachments
 
@@ -368,7 +346,6 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | Call | operationId | What it does | Permission | Runs |
 | --- | --- | --- | --- | --- |
 | `GET /consent-purposes` | listConsentPurposes | List the workspace's consent purposes (e.g. transactional, marketing_email, profiling). | Read records | at once |
-| `GET /contacts/{id}/consent` | getContactConsent | Read a contact's per-purpose consent state plus the append-only proof log. | Read records | at once |
 
 ## Import
 

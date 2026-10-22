@@ -17,6 +17,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -156,6 +157,12 @@ func (h Handlers) UpdateAutomation(w http.ResponseWriter, r *http.Request, id cr
 	}
 	var req crmcontracts.UpdateAutomationRequest
 	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	// An automation always has a name, params and a status, so a null names
+	// nothing it can be set to.
+	if cleared := httperr.ClearedFields(r); len(cleared) > 0 {
+		httperr.Write(w, r, &storekit.NotClearableError{Field: cleared[0]})
 		return
 	}
 	in := UpdateAutomationInput{Name: req.Name, IfVersion: ifVersion}

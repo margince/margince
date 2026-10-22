@@ -1,6 +1,7 @@
 import { createServer, type Plugin, type ViteDevServer } from "vite";
-import { afterAll, beforeAll, expect, it } from "vitest";
+import { afterAll, beforeAll, expect, it, vi } from "vitest";
 import actions from "../src/mcp-apps/actions.json";
+import { fetchTheNetwork } from "../src/testing/no-network";
 import spaConfig from "../vite.config";
 import {
   inspectDocument,
@@ -26,6 +27,12 @@ let base: string;
 // what the dev server SERVES, never where, so the right fix removes the shared
 // resource instead of partitioning it. A second hard-coded number would answer
 // "the port is not 5199" and leave two concurrent runs still colliding.
+// These cases read from a dev server they stand up, so the request is their
+// subject rather than a leak.
+beforeAll(() => {
+  vi.stubGlobal("fetch", fetchTheNetwork);
+});
+
 beforeAll(async () => {
   server = await createServer({
     configFile: false,

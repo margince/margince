@@ -7,6 +7,12 @@
         "read": true,
         "update": true
       },
+      "agent_client": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
       "ai_budget": {
         "create": false,
         "delete": false,
@@ -121,6 +127,12 @@
         "read": true,
         "update": false
       },
+      "data_task": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": true
+      },
       "deal": {
         "create": true,
         "delete": true,
@@ -206,6 +218,12 @@
         "update": true
       },
       "lead": {
+        "create": true,
+        "delete": true,
+        "read": true,
+        "update": true
+      },
+      "legal_entity": {
         "create": true,
         "delete": true,
         "read": true,
@@ -414,6 +432,12 @@
         "read": true,
         "update": true
       },
+      "agent_client": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "ai_budget": {
         "create": false,
         "delete": false,
@@ -528,6 +552,12 @@
         "read": false,
         "update": false
       },
+      "data_task": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "deal": {
         "create": true,
         "delete": true,
@@ -617,6 +647,12 @@
         "delete": true,
         "read": true,
         "update": true
+      },
+      "legal_entity": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
       },
       "legal_review": {
         "create": false,
@@ -821,6 +857,12 @@
         "read": true,
         "update": true
       },
+      "agent_client": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "ai_budget": {
         "create": false,
         "delete": false,
@@ -935,6 +977,12 @@
         "read": false,
         "update": false
       },
+      "data_task": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "deal": {
         "create": true,
         "delete": true,
@@ -1024,6 +1072,12 @@
         "delete": true,
         "read": true,
         "update": true
+      },
+      "legal_entity": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
       },
       "legal_review": {
         "create": false,
@@ -1228,6 +1282,12 @@
         "read": true,
         "update": true
       },
+      "agent_client": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "ai_budget": {
         "create": false,
         "delete": false,
@@ -1342,6 +1402,12 @@
         "read": true,
         "update": false
       },
+      "data_task": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": true
+      },
       "deal": {
         "create": true,
         "delete": true,
@@ -1431,6 +1497,12 @@
         "delete": true,
         "read": true,
         "update": true
+      },
+      "legal_entity": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
       },
       "legal_review": {
         "create": false,
@@ -1635,6 +1707,12 @@
         "read": true,
         "update": false
       },
+      "agent_client": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "ai_budget": {
         "create": false,
         "delete": false,
@@ -1749,6 +1827,12 @@
         "read": false,
         "update": false
       },
+      "data_task": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "deal": {
         "create": false,
         "delete": false,
@@ -1834,6 +1918,12 @@
         "update": false
       },
       "lead": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
+      "legal_entity": {
         "create": false,
         "delete": false,
         "read": true,
@@ -2042,6 +2132,12 @@
         "read": true,
         "update": true
       },
+      "agent_client": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "ai_budget": {
         "create": false,
         "delete": false,
@@ -2156,6 +2252,12 @@
         "read": false,
         "update": false
       },
+      "data_task": {
+        "create": false,
+        "delete": false,
+        "read": false,
+        "update": false
+      },
       "deal": {
         "create": true,
         "delete": false,
@@ -2245,6 +2347,12 @@
         "delete": true,
         "read": true,
         "update": true
+      },
+      "legal_entity": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
       },
       "legal_review": {
         "create": false,

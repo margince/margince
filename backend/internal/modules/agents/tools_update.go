@@ -53,9 +53,9 @@ func (t updateRecord) Spec() mcp.ToolSpec {
 		Instead:       updateRecordCopy.Instead,
 		RequiredScope: principal.ScopeWrite,
 		Tier:          mcp.TierAutoExecute,
-		OpenAPIOp:     "updateContact/updateCompany/updateDeal/updateLead/updateActivity/updateProject/updateRelationship",
+		OpenAPIOp:     "updateContact/updateCompany/updateDeal/updateLead/updateActivity/updateProject/updateRelationship/updateProduct/updateOfferTemplate/updateOffer",
 		InputSchema: schema(`{"type":"object","required":["record_type","id","fields"],"properties":{
-			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","relationship"]},
+			"record_type":{"type":"string","enum":["contact","company","deal","lead","activity","project","relationship","product","offer_template","offer"]},
 			"id":{"type":"string","format":"uuid"},
 			"fields":{"type":"object","description":` + jsonString("Only sent fields change. Fields a human last edited are not applied: they are staged for approval and named in the result's staged_approval. "+recordFieldsDescription) + `},
 			"if_version":{"type":"integer","description":"Optimistic-concurrency guard: the last-seen record version"},
@@ -133,6 +133,12 @@ func (t updateRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	}
 	if len(split.Conflicts) == 0 {
 		return t.apply(ctx, args, args.Fields)
+	}
+	// The residue meets the REST split's refusals before any half applies.
+	if err := NewPatchCall(t.p, t.language, PatchCommand{
+		RecordType: args.RecordType, ID: args.ID, Fields: split.Staged,
+	}).Guards(ctx); err != nil {
+		return nil, err
 	}
 	if t.staging == nil {
 		return nil, fmt.Errorf("fields %s were last edited by a human, and this surface has no approvals engine to stage the overwrite: %w",

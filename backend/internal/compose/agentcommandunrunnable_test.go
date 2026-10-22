@@ -161,20 +161,16 @@ var unrunnableCalls = map[string]unrunnableCall{
 	"archiveProduct":       malformedRoutedID(http.MethodDelete, "/products"),
 	"archiveProject":       malformedRoutedID(http.MethodDelete, "/projects"),
 	"archiveRelationship":  malformedRoutedID(http.MethodDelete, "/relationships"),
-	"archiveSavedView":     malformedRoutedID(http.MethodDelete, "/views"),
 
 	"approveImportRun": malformedRoutedID(http.MethodPost, "/imports"),
 	"disqualifyLead":   malformedRoutedID(http.MethodDelete, "/leads"),
 	"demoteLead":       demoteLeadUnrunnable,
 
-	"retireCustomField":         malformedRoutedID(http.MethodPost, "/custom-fields"),
-	"updateCustomFieldOptions":  malformedRoutedID(http.MethodPatch, "/custom-fields"),
-	"updateWebhookSubscription": malformedRoutedID(http.MethodPatch, "/webhook-subscriptions"),
-	"scrapeCompany":             malformedRoutedID(http.MethodPost, "/companies"),
-	"deepReadCompany":           malformedRoutedID(http.MethodPost, "/companies"),
-	"technicalEnrichCompany":    malformedRoutedID(http.MethodPost, "/companies"),
-	"mergeContact":              malformedRoutedID(http.MethodPost, "/contacts"),
-	"mergeCompany":              malformedRoutedID(http.MethodPost, "/companies"),
+	"scrapeCompany":          malformedRoutedID(http.MethodPost, "/companies"),
+	"deepReadCompany":        malformedRoutedID(http.MethodPost, "/companies"),
+	"technicalEnrichCompany": malformedRoutedID(http.MethodPost, "/companies"),
+	"mergeContact":           malformedRoutedID(http.MethodPost, "/contacts"),
+	"mergeCompany":           malformedRoutedID(http.MethodPost, "/companies"),
 
 	"updateProject": {
 		refusal: refusedArgument("nickname", "the patch names a member a project has no field for"),
@@ -303,21 +299,7 @@ func missingOperand(method, path, operand string) unrunnableCall {
 // noUnrunnableCall names the confirm-first operations with no cheap call an
 // executor would refuse on arguments alone, and why — stated here rather than
 // skipped silently, so the shape of what is NOT covered is readable.
-//
-// Both are creates of a record type whose body the governance seam holds to no
-// shape: agents.createRecordShapes carries the types create_record itself
-// writes, and a create outside it is performed by its own module's handler,
-// which is where its body is validated. The seam has no shape to refuse against
-// (margince/margince#1021 is where those types get one), so any body
-// this test could send would stage — which is a gap to record, not a fixture to
-// fake.
-var noUnrunnableCall = gatekit.Waive(map[string]string{
-	"createCustomField": "the governance seam holds a custom_field body to no declared shape, so every " +
-		"body this gate could send would stage and the refusal it looks for happens in the module's own handler",
-	"createWebhookSubscription": "the governance seam holds a webhook_subscription body to no declared " +
-		"shape, so every body this gate could send would stage and the refusal it looks for happens in the " +
-		"module's own handler",
-})
+var noUnrunnableCall = gatekit.Waive(map[string]string{})
 
 func TestNoConfirmFirstOperationStagesACallItsExecutorWouldRefuse(t *testing.T) {
 	defer noUnrunnableCall.AssertAllMatched(t)

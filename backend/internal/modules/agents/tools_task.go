@@ -23,6 +23,8 @@ import (
 // deal status card is the first such caller; this verb exists so its
 // catalog, and an agent's, can say create_task and mean it.
 
+const followUpSourceDescription = `"A non-task source, including email or message. Caller and assignee need access to the source content. Empty links inherit its visible links; its audience is preserved. This does not accept a request."`
+
 type createTask struct {
 	p datasource.SystemOfRecordProvider
 }
@@ -30,11 +32,12 @@ type createTask struct {
 // taskFields is the verb's own shape. Folded into the activity body the
 // provider validates; `kind` is never a caller's to choose here.
 type taskFields struct {
-	Subject    string          `json:"subject"`
-	Body       *string         `json:"body,omitempty"`
-	DueAt      *string         `json:"due_at,omitempty"`
-	AssigneeID *string         `json:"assignee_id,omitempty"`
-	Links      json.RawMessage `json:"links,omitempty"`
+	SourceActivityID *string         `json:"source_activity_id,omitempty"`
+	Subject          string          `json:"subject"`
+	Body             *string         `json:"body,omitempty"`
+	DueAt            *string         `json:"due_at,omitempty"`
+	AssigneeID       *string         `json:"assignee_id,omitempty"`
+	Links            json.RawMessage `json:"links,omitempty"`
 	// Source is the REST door's provenance field. The tool stamps its own and
 	// never reads this, but the compose decoder folds a REST body through the
 	// same function, and a required field must not read as an unknown one.
@@ -47,11 +50,13 @@ func (t createTask) Spec() mcp.ToolSpec {
 		Description:   createTaskCopy.render(),
 		Instead:       createTaskCopy.Instead,
 		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		Unlisted:  true,
 		OpenAPIOp: "createTask",
 		// Terse on purpose: the listing rides every run under a token ceiling,
 		// and log_activity's schema already explains links and timestamps.
 		InputSchema: schema(`{"type":"object","required":["subject"],"properties":{
 			"subject":{"type":"string"},"body":{"type":"string"},
+			"source_activity_id":{"type":"string","format":"uuid","description":` + followUpSourceDescription + `},
 			"due_at":{"type":"string","format":"date-time"` + timestampNote + `},
 			"assignee_id":{"type":"string","format":"uuid","description":"Defaults to the human you act for."},
 			"links":{"type":"array","items":{"type":"object","required":["entity_type","entity_id"],"properties":{
@@ -92,6 +97,9 @@ func TaskAsActivity(in json.RawMessage) (json.RawMessage, error) {
 		return nil, &BadArgsError{Cause: errors.New("subject is required: a task has to say what is to be done")}
 	}
 	body := map[string]any{"kind": "task", "subject": subject}
+	if args.SourceActivityID != nil {
+		body["source_activity_id"] = *args.SourceActivityID
+	}
 	if args.Body != nil {
 		body["body"] = *args.Body
 	}

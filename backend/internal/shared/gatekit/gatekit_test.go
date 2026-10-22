@@ -89,15 +89,18 @@ func TestAReasonThatStatesNoCostIsRefusedHoweverLongItIs(t *testing.T) {
 // any script, so a reason written in one is held to the same length as an
 // English one and no stricter.
 func TestTheReasonFloorCountsCharactersRatherThanBytes(t *testing.T) {
-	const wide = "貸方の理由"                          // five runes, fifteen bytes
-	const enough = "この免除が何を犠牲にしているかを説明する理由がここにある" // twenty-eight runes
+	wide := strings.Repeat("理", minReason-1)
+	enough := strings.Repeat("理", minReason)
+	if len(wide) < minReason {
+		t.Fatalf("setup: %d bytes do not reach the floor of %d, so a byte count would refuse it too", len(wide), minReason)
+	}
 
 	rec := &recorder{TB: t}
 	if !Waive(map[string]string{"a": wide}).Waived(rec, "a") {
 		t.Fatal("setup: the subject was not waived")
 	}
 	if len(rec.errs) != 1 || !strings.Contains(rec.joined(), "what it costs") {
-		t.Errorf("a five-character reason was accepted because its bytes reached the floor: %s", rec.joined())
+		t.Errorf("a reason one character short of the floor was accepted because its bytes reached it: %s", rec.joined())
 	}
 
 	rec = &recorder{TB: t}
@@ -105,7 +108,7 @@ func TestTheReasonFloorCountsCharactersRatherThanBytes(t *testing.T) {
 		t.Fatal("setup: the subject was not waived")
 	}
 	if len(rec.errs) != 0 {
-		t.Errorf("a reason well past the floor in characters was refused: %s", rec.joined())
+		t.Errorf("a reason exactly at the floor in characters was refused: %s", rec.joined())
 	}
 }
 

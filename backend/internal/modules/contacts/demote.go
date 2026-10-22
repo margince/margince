@@ -317,19 +317,11 @@ func unwindContact(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, contactID 
 	if _, err := storekit.LockRow(ctx, tx, "contact", contactID.UUID, storekit.LiveOnly); err != nil {
 		return "", fmt.Errorf("lock promoted contact: %w", err)
 	}
-	if err := ensureNoLiveDeal(ctx, tx, contactID); err != nil {
+	unwind, err := demotionUnwind(ctx, tx, leadID, contactID, outcome)
+	if err != nil {
 		return "", err
 	}
-	if outcome == outcomeCreated {
-		shared, err := isSharedByOthers(ctx, tx, leadID, contactID)
-		if err != nil {
-			return "", err
-		}
-		if shared {
-			outcome = outcomeMerged
-		}
-	}
-	if outcome == outcomeMerged {
+	if unwind == crmcontracts.DemoteLeadResponseUnwindDemoteUnwindMergeLineageOnly {
 		if _, err := tx.Exec(ctx,
 			`UPDATE contact SET converted_from_lead_id = NULL WHERE id = $1 AND converted_from_lead_id = $2`,
 			contactID, leadID); err != nil {

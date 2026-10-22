@@ -8,30 +8,47 @@ package agents
 // depend on. See toolcopy.go for what each field answers.
 
 var searchRecordsCopy = toolCopy{
-	Purpose: "Find contacts, companies, deals, leads and projects when you know roughly what " +
-		"they are called but not which record they are.",
-	Limits: "It matches text stored ON the record. It does not read a timeline: message bodies, " +
-		"call notes and meeting content are not searched, so a query describing what someone said " +
-		"or did will not find them.",
-	Instead: "Use list_records when the question is which records meet a condition rather than " +
-		"what one is called, read_record when you already hold the record's id, and run_report " +
-		"when the question is a count, a total or a breakdown rather than a set of records.",
+	Purpose: "Find records by the words they carry, best match first: contacts, companies, deals, " +
+		"leads and projects, and products, offer templates or activity when you name them.",
+	Limits: "It needs words in q. It searches the timeline (message bodies, call notes, meetings) " +
+		"only when you name activity.",
+	Instead: "Use list_records to list records without words or by a condition, read_record when " +
+		"you already hold the record's id, and run_report when the question is a count, a total " +
+		"or a breakdown rather than a set of records.",
 	Retain: "Keep each result's record_type and id together: every other tool identifies a record " +
 		"by both, and an id alone does not say which type it belongs to. A result's `owner` " +
 		"says who holds it. " + sayWhoseItIs,
 }
 
 var listRecordsCopy = toolCopy{
-	Purpose: "Enumerate the contacts, companies, deals, leads or projects that meet exact " +
-		"conditions — every deal in one pipeline, the leads one rep owns, the projects still " +
-		"being delivered.",
-	Limits: "It narrows only by the filters this workspace publishes for that record_type, which " +
-		"the schema lists per type, and it answers ONE page: the set continues past it.",
-	Instead: "Use search_records when the question is what a record is called rather than which " +
-		"records meet a condition, and run_report when the answer is a count or a total rather " +
-		"than the records themselves.",
-	Retain: "Keep next_cursor and pass it back to read the next page — a second call without it " +
-		"re-reads the first one. A result's `owner` says who holds it. " + sayWhoseItIs,
+	Purpose: "List the records of one record_type that meet exact conditions: every deal in one " +
+		"pipeline, the leads one rep owns, a contact's timeline.",
+	Limits: "It narrows only by the filters listed for that record_type, and answers ONE page: " +
+		"the set continues past it.",
+	Instead: "Use search_records to find a record by what it is called, and run_report for a count " +
+		"or a total.",
+	Retain: "Pass next_cursor back to read the next page; a call without it re-reads the first. " +
+		"A result's `owner` says who holds it. " + sayWhoseItIs,
+}
+
+var readViewCopy = toolCopy{
+	Purpose: "Read what the record tools do not answer: a record's derived views (company_360, " +
+		"contact_graph, deal_stakeholders, company_facts), the workspace's reference lists (stages, " +
+		"lead_sources, teams, record_roles) and reporting objects (reporting_targets, forecast_calls). " +
+		"Each view answers exactly what the matching REST route answers.",
+	Limits: "Name the view, then the id it reads and any of its filters. A view refuses an argument " +
+		"it does not take and names the ones it does.",
+}
+
+var changeRecordPartsCopy = toolCopy{
+	Purpose: "Change what is kept under a record: an offer's line items, a company's facts and " +
+		"profile fields, a project's companies and stakeholders. Prices are in minor units; read a " +
+		"product for its unit_price_minor rather than inventing one.",
+	Limits: "An offer's totals are computed from its lines and cannot be supplied, and a sent or " +
+		"accepted offer keeps its lines. Pass if_version from your read so a change made since is " +
+		"refused. Each action answers as its route does.",
+	Instead: "Use update_record for a record's own fields, and create_record with record_type offer " +
+		"to make an offer with its first lines.",
 }
 
 var readRecordCopy = toolCopy{
@@ -52,10 +69,8 @@ var createRecordCopy = toolCopy{
 	Limits: "Creating a deal requires a pipeline_id and a stage_id, and " + pipelinesSource + " is " +
 		"what yields them for a deal that does not exist yet. Only the fields the chosen record_type " +
 		"actually stores are accepted, and a field belonging to a neighbouring type is refused " +
-		"rather than dropped. A CONTACT created here is visible to the human you are acting for " +
-		"and to nobody else, until they publish it or correspondence with that address earns a " +
-		"widening verdict — attending a meeting together does not earn one. Do not tell anyone " +
-		"a contact you just created is on their colleagues' screens.",
+		"rather than dropped. A CONTACT created here is visible to everyone in the workspace, " +
+		"the same as one a human types in.",
 	Instead: "Search first when the record might already exist — a second copy of a contact or " +
 		"company is a problem that then needs resolve_duplicates to undo. A record that shares only " +
 		"a name, with a different email, phone or employer, is not proof of a duplicate: create " +
@@ -98,7 +113,10 @@ var logActivityCopy = toolCopy{
 	Purpose: "Record something that happened — a call, a meeting, a note, a message — on the " +
 		"records it was about: name every one of them in this call. A meeting is with a contact, " +
 		"and also concerns their company and the deal it is for.",
-	Limits: "It writes history and changes nothing else: no deal moves, no field updates, nobody " +
+	Limits: "It writes history and can add a follow_up_task to a meeting, call or note in the same " +
+		"transaction. That task inherits source links and audience; its assignee must be able to " +
+		"read the source. Source-identity replay returns the original activity without adding a task. " +
+		"No deal moves, no field updates, nobody " +
 		"is notified. Unlinked, it appears on no timeline, and adding a link afterwards is a " +
 		"second call — relink_activity — which waits for the user's yes when it files under a " +
 		"project.",
@@ -111,7 +129,8 @@ var logActivityCopy = toolCopy{
 
 var createTaskCopy = toolCopy{
 	Purpose: "Put a to-do on someone's list: what is owed, by whom, on which records.",
-	Limits:  "Creates the task only — no reminder, no deal move; unlinked, it sits on no timeline.",
+	Limits: "Creates the task only — no reminder, no deal move. A source activity supplies its " +
+		"visible links when none are sent; without either, the task sits on no timeline.",
 	Instead: "log_activity is for what already happened.",
 }
 
@@ -167,7 +186,7 @@ var archiveRecordCopy = toolCopy{
 		"move anything attached to it, so an archived duplicate still holds the activities and " +
 		"deals that were logged against it.",
 	Instead: "Use resolve_duplicates when a duplicate's history should end up on the record that " +
-		"survives, and change_lead_state to disqualify a lead going nowhere — a lead's own transition " +
+		"survives, and disqualify_lead to close out a lead going nowhere — a lead's own transition " +
 		"records the reason where archiving would not.",
 	Retain: "By default the record is archived when this call answers; where an installation " +
 		"has raised this verb to confirm first, the answer is a staged approval and you must not " +

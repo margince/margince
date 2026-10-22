@@ -35,6 +35,43 @@ describe("columnLayout", () => {
     expect(layout.floor).toBe(626);
   });
 
+  const contacts: SizedColumn[] = [
+    { key: "name", fixed: true },
+    { key: "email" },
+    { key: "owner", holds: "colleague" },
+    { key: "lastActivity", holds: "date" },
+    { key: "created", holds: "date" },
+  ];
+
+  it("gives a wide page's spare width to the text columns, not the dates", () => {
+    const layout = columnLayout(contacts, {}, 1800);
+    expect(contacts.map((column) => px(layout.widthOf(column)))).toEqual([
+      expect.any(Number),
+      expect.any(Number),
+      240,
+      150,
+      150,
+    ]);
+    expect(px(layout.widthOf(contacts[1]))).toBeGreaterThan(300);
+    expect(layout.floor).toBeCloseTo(1800);
+    expect(layout.slack).toBe("0px");
+  });
+
+  it("leaves the trailing gap the width a lone date column cannot use", () => {
+    const dragged = { name: 300, email: 200, owner: 250, lastActivity: 130 };
+    const layout = columnLayout(contacts, dragged, 1800);
+    expect(layout.widthOf(contacts[4])).toBe("150px");
+    expect(layout.floor).toBe(1030);
+    expect(layout.slack).toBeUndefined();
+  });
+
+  it("holds a date at its minimum on a narrow page and fits the row", () => {
+    const layout = columnLayout(contacts, {}, 900);
+    expect(px(layout.widthOf(contacts[3]))).toBe(120);
+    expect(px(layout.widthOf(contacts[2]))).toBe(150);
+    expect(layout.floor).toBeCloseTo(900);
+  });
+
   it("keeps a dragged width and lets the shares divide the rest", () => {
     const layout = columnLayout(catalogue, { name: 300 }, 1000);
     expect(layout.widthOf(catalogue[0])).toBe("300px");

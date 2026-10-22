@@ -11,6 +11,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -68,7 +69,14 @@ func TestReportingExistingWinsMatchTheDealOwnerAndTarget(t *testing.T) {
 }
 
 func TestReportingUnassignedWinDoesNotRetainThePreviousOwner(t *testing.T) {
+	for _, tc := range []struct{ language, label string }{{"en", "Unassigned"}, {"de", "Nicht zugewiesen"}, {"vi", "Chưa phân công"}} {
+		t.Run(tc.language, func(t *testing.T) { reportingUnassignedLanguage(t, tc.language, tc.label) })
+	}
+}
+
+func reportingUnassignedLanguage(t *testing.T, language, label string) {
 	e := setupForecast(t)
+	integration.SetBaseLanguage(reportingActor(e), t, e.Pool, language)
 	closed, store, writer := reportingWrittenClose(t, e)
 	if _, err := store.UpdateDeal(writer, ids.From[ids.DealKind](ids.UUID(closed.Id)), deals.UpdateDealInput{Clear: []string{"owner_id"}}); err != nil {
 		t.Fatal(err)
@@ -83,7 +91,7 @@ func TestReportingUnassignedWinDoesNotRetainThePreviousOwner(t *testing.T) {
 	found := false
 	for _, point := range result.Charts[0].Points {
 		if point.Key == ids.Nil.String() {
-			found = point.Label == "Unassigned" && point.Value != nil && *point.Value == 21600000
+			found = point.Label == label && point.Value != nil && *point.Value == 21600000
 		}
 		if point.Key == e.Rep1.String() && point.Value != nil && *point.Value != 0 {
 			t.Fatal("unassigned win stayed with former owner")

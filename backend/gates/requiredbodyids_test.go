@@ -44,6 +44,7 @@ const generatedContract = "internal/contracts/api_gen.go"
 // module that owns the mapping.
 var probedRequiredIDBodies = map[string]bool{
 	"MeetingInvitationRequest":          true,
+	"AssignLegalEntityMemberRequest":    true,
 	"MeetingProposalRequest":            true,
 	"AssignLeadsRequest":                true,
 	"CreateOutcomeReviewRequest":        true,
@@ -68,6 +69,7 @@ var probedRequiredIDBodies = map[string]bool{
 	"CreateRecordGrantRequest":          true,
 	"CreateRecordAssignmentRequest":     true,
 	"MergeContactJSONBody":              true,
+	"LinkFinanceSourceCustomerRequest":  true,
 	"RecordConversationClaimRequest":    true,
 	"MergeCompanyJSONBody":              true,
 	"RelinkActivityJSONBody":            true,

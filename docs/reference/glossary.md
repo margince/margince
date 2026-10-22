@@ -11,20 +11,26 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | AC | Acceptance criterion: a numbered screen check, as in `AC-<screen>-N`. |
 | AES | The Advanced Encryption Standard, used as AES-256-GCM to seal secrets. |
 | AI | Artificial intelligence: the language models Margince calls. |
+| Antigravity | Google's AI coding tool, which can connect to Margince. |
 | Apache | The Apache License 2.0, which each release becomes after two years. |
 | API | The HTTP interface the server offers, defined in `backend/api/crm.yaml`. |
 | backend | The Go server code under `backend/`. |
+| Beschäftigteninformation | The German notice each employee gets before their mailbox is read (Art. 13 GDPR). |
 | BUSL | The Business Source License 1.1, the license Margince uses. |
 | changelog | The list of changes in each release, kept in `CHANGELOG.md`. |
 | CI | Continuous integration: the checks GitHub runs on every pull request. |
+| CIMD | Client ID Metadata Document: an AI tool's ID that is the URL of a file describing it. |
 | Compose | Docker Compose, which starts Postgres and Redis for local work. |
 | Conventional | Conventional Commits, a format for commit messages. |
+| Copilot | Microsoft's AI assistant, whose Copilot Studio builds agents that connect to Margince. |
 | Corepack | The Node tool that installs the pinned version of pnpm. |
 | CRA | The EU Cyber Resilience Act, which sets duties for software makers. |
 | CRM | Customer relationship management: software for contacts, companies and deals. |
 | CSV | Comma-separated values, a plain text format for tables. |
+| de | The language code for German, as a setting value. |
 | dev | The development mode of a local install, set by `MARGINCE_ENV`. |
 | Diátaxis | A way to sort docs into tutorials, how-to guides, reference and explanation. |
+| dmy | The date order day, month, year, as a setting value. |
 | Docker | The container tool used to run the local stack and the images. |
 | English | The language the docs and the source catalog are written in. |
 | EU | The European Union, whose laws several pages refer to. |
@@ -40,18 +46,22 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | HNSW | A vector index type, Hierarchical Navigable Small World, that Margince does not use. |
 | HTTPS | HTTP over an encrypted connection. |
 | IMAP | The standard protocol for reading mail from a mail server. |
+| incoming | An incoming webhook: the address a chat tool gives for posting into a channel. |
 | Jurisdiction | The settings page where an admin chooses the law an installation follows. |
 | Langdock | A service that serves OpenAI, Gemini and Claude models on one key. |
 | LICENSE | The file at the repository root that holds the license text. |
 | LinkedIn | The professional network whose contact export Margince can import. |
+| locale | The date or time format of the reader's language, as a setting value. |
 | macOS | Apple's desktop operating system. |
 | Margince | The CRM this repository builds. |
 | MCP | Model Context Protocol: how an AI agent connects to Margince's tools. |
+| mdy | The date order month, day, year, as a setting value. |
 | Microsoft | The company behind Microsoft 365 mail and calendars. |
 | Node | Node.js, the JavaScript runtime the web app's tools run on. |
 | Ollama | A tool that runs language models on your own machine. |
 | OpenDocument | The open file format for text, tables and slides. |
 | OpenRouter | A service that routes model calls to many AI providers. |
+| PKCE | Proof Key for Code Exchange: a one-time secret that ties the end of a sign-in to its start. |
 | pnpm | The package manager for the web app. |
 | Postgres | PostgreSQL, the database Margince stores its data in. |
 | RBAC | Role-based access control: what each role may see and change. |
@@ -60,15 +70,21 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | REST | The style of HTTP API Margince offers next to MCP. |
 | RTF | Rich Text Format, a document format most word processors read. |
 | skill | A folder an AI tool loads to learn a task, led by a `SKILL.md` file. |
+| Slack | A team chat tool where an incoming webhook can post messages. |
 | SonarCloud | A code quality service that scans each pull request. |
+| subscription | A webhook's setup: the address it sends to and the events it sends. |
 | Telegram | A chat app Margince can send messages through. |
 | UTF | The Unicode text encoding family, as in UTF-8. |
 | VAT | Value added tax, and the tax number a company is registered under. |
+| vi | The language code for Vietnamese, as a setting value. |
 | Vite | The build and dev server tool for the web app. |
 | vLLM | A server that runs language models on your own machines. |
+| webhook | A message Margince sends to another tool's address when a chosen event happens. |
 | Windows | Microsoft's desktop operating system. |
 | Worklist | The app's list of tasks and items that need a user's action. |
 | worktree | A second git checkout of the repository with its own branch. |
+| ymd | The date order year, month, day, as a setting value. |
+| Zapier | An automation tool that can start a task when a webhook arrives. |
 | ZIP | A file format that packs many files into one. |
 
 ## Names without a meaning yet
@@ -95,12 +111,12 @@ write its meaning, and delete it here. A name new to the docs goes in the table,
 `Geist`, `Gemini`, `Gemma`, `GGUF`, `GH`, `GiB`, `gitignored`, `gitleaks`, `glob`, `GNU`, `go-arch-lint`,
 `GoBD`, `gofmt`, `golangci`, `golangci-lint`, `gosec`, `govulncheck`, `GPL`, `GPT`, `GPU`, `Graph`, `graphcal`,
 `grep`, `Groq`, `GUC`, `Haiku`, `Handelsbrief`, `HardPass`, `HGB`, `HMAC`, `HMAC-SHA`, `HTML`, `HTTP`, `Hà`,
-`IAM`, `IANA`, `ICP`, `ID`, `id`, `idempotency`, `Idempotency-Key`, `IDs`, `IMAPS`, `Impressum`, `Inspector`,
-`Intel`, `Intelligence`, `IP`, `iPhone`, `ISO`, `Jev`, `jq`, `jsdom`, `JSON`, `JSON-LD`, `JSON-RPC`, `JSONL`,
+`IAM`, `IANA`, `ICP`, `ID`, `id`, `idempotency`, `Idempotency-Key`, `IDs`, `IMAPS`, `Impressum`, `Insights`,
+`Inspector`, `Intel`, `IP`, `iPhone`, `ISO`, `Jev`, `jq`, `jsdom`, `JSON`, `JSON-LD`, `JSON-RPC`, `JSONL`,
 `JSONPath`, `K`, `KB`, `Kev`, `Keychain`, `keyvault`, `Laya`, `lcov`, `Levenshtein`, `libpq`, `Linux`,
 `LiteLLM`, `LLM`, `LOC`, `localhost`, `lockfile`, `London`, `Mac`, `Mach-O`, `MAJOR`, `Makefile`, `Markdown`,
 `markdown`, `MB`, `Meet`, `MFA`, `MiB`, `micro-USD`, `middleware`, `MIME`, `Minh`, `MinIO`, `Ministral`,
-`MINOR`, `Mistral`, `MIT`, `Mitarbeiterinformation`, `MLX`, `MoE`, `MRL`, `ms`, `MSVC`, `mtime`, `MX`, `NAT`,
+`MINOR`, `Mistral`, `MIT`, `MLX`, `MoE`, `MRL`, `ms`, `MSVC`, `mtime`, `MX`, `NAT`,
 `Nebius`, `Nemo`, `NFC`, `NL`, `non-match`, `nonce`, `NormalizedRecord`, `notarization`, `Novita`, `npm`, `Nr`,
 `NULL`, `null`, `OA`, `oapi-codegen`, `oasdiff`, `OAuth`, `Office`, `OIDC`, `OpenAI`, `OpenAI-compatible`,
 `OpenAPI`, `Ops`, `ops`, `OS`, `Outfit`, `Outlook`, `Parasail`, `PATCH`, `PDF`, `PERF`, `pgvector`, `pids`,

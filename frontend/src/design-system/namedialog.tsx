@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type FormEvent, useState } from "react";
+import { type FormEvent, type ReactNode, useState } from "react";
 import type { MessageKey } from "../i18n/en";
 import { problemCodeOf, problemMessageOf } from "../lib/problem";
 import { Field, TextInput } from "./atoms";
@@ -45,6 +45,7 @@ export function NameDialog({
   label,
   initial = "",
   placeholder,
+  hint,
   confirmLabel,
   pending = false,
   problem,
@@ -58,6 +59,8 @@ export function NameDialog({
   /** The name a rename starts from; an unchanged name cannot be saved. */
   initial?: string;
   placeholder?: string;
+  /** A line under the field, such as the raw key a rename keeps (`KeyCode`). */
+  hint?: ReactNode;
   confirmLabel: string;
   pending?: boolean;
   /** The refused write, already in the reader's words. */
@@ -95,6 +98,7 @@ export function NameDialog({
       confirmDisabled={!ready}
       pending={pending}
       error={problem}
+      unsaved={draft.trim() !== initial.trim()}
       onConfirm={save}
     >
       {/* A form of one text box, so Enter saves it. */}
@@ -104,7 +108,7 @@ export function NameDialog({
           save();
         })}
       >
-        <Field label={label} error={refusedName}>
+        <Field label={label} hint={hint} error={refusedName}>
           {(control) => (
             <TextInput
               {...control}

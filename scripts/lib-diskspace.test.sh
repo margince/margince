@@ -26,8 +26,10 @@ fail() { echo "FAIL: $*" >&2; FAILURES=$((FAILURES + 1)); }
 # which has no readarray to split one back apart.
 run() {
   set +e
+  # Cache size is diagnostic, not part of the threshold decision.
+  # Its filesystem scan must not make the fixtures depend on a developer's cache.
   SAID="$(CI="$3" DISK_FLOOR_GIB="$1" DISK_WARN_GIB="$2" bash -c \
-    "source '$LIB'; require_disk_headroom 'the lane'" 2>&1)"
+    "source '$LIB'; go_build_cache_bytes() { echo 1073741824; }; require_disk_headroom 'the lane'" 2>&1)"
   STATUS=$?
   set -e
 }
@@ -62,6 +64,14 @@ run 999999 999999 "true"
 free="$(bash -c "source '$LIB'; disk_free_bytes .")"
 [[ "$free" =~ ^[0-9]+$ ]] || fail "disk_free_bytes answered '$free', want a byte count"
 (( free > 0 )) || fail "disk_free_bytes answered 0 on a running machine, so every threshold below compares against nothing"
+
+# Read the real diagnostic against a small fixture, not the shared build cache.
+cache_fixture="$(mktemp -d)"
+trap 'rm -rf "$cache_fixture"' EXIT
+printf 'fixture\n' > "$cache_fixture/probe"
+cache_bytes="$(GOCACHE="$cache_fixture" bash -c "source '$LIB'; go_build_cache_bytes")"
+[[ "$cache_bytes" =~ ^[0-9]+$ ]] || fail "go_build_cache_bytes answered '$cache_bytes', want a byte count"
+(( cache_bytes > 0 )) || fail "go_build_cache_bytes missed the fixture"
 
 if (( FAILURES > 0 )); then
   echo "lib-diskspace: $FAILURES case(s) failed" >&2

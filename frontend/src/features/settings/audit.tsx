@@ -1,0 +1,347 @@
+import { humanizeToken } from "../../format/humanizetoken";
+
+export { humanizeToken } from "../../format/humanizetoken";
+
+import {
+  Bot,
+  CircleUser,
+  Cog,
+  type LucideIcon,
+  Plug,
+  UserRoundCheck,
+} from "lucide-react";
+import type { components } from "../../api/schema";
+import { SEARCH_HIT_KIND_KEY } from "../../app/searchkinds";
+import { Badge } from "../../design-system/atoms";
+import { formatDateTime } from "../../format/format";
+import { type Translator, useLocale, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
+import { useRecordZone } from "../../lib/recordzone";
+import "./audit.css";
+
+// Reusable audit attribution — turns a raw AuditLogEntry into a line a contact
+// can read, and specifically into a line that names A CONTACT: the wire carries
+// opaque ids (`human:<uuid>`, `agent:<passport>`) plus the display names the
+// read path resolves for them. Shared by every audit surface (the settings
+// audit log, the custom-fields change rail) so attribution reads the same
+// everywhere.
+
+type AuditLogEntry = components["schemas"]["AuditLogEntry"];
+type ActorFields = Pick<
+  AuditLogEntry,
+  | "actor_type"
+  | "actor_id"
+  | "actor_name"
+  | "on_behalf_of"
+  | "on_behalf_of_name"
+  | "passport_id"
+> & {
+  // The tool's registered name, when the write came through an OAuth grant.
+  // Optional because the compliance log's own entry does not carry it yet —
+  // record history does, and both surfaces render through this one component.
+  agent_client?: string | null;
+};
+
+// One label per contract action, for the dial and the rows. An action the
+// contract adds fails to compile here until it has one.
+const AUDIT_ACTION_LABEL = {
+  create: "audit.action.create",
+  update: "audit.action.update",
+  archive: "audit.action.archive",
+  merge: "audit.action.merge",
+  promote: "audit.action.promote",
+  demote: "audit.action.demote",
+  disqualify: "audit.action.disqualify",
+  restore: "audit.action.restore",
+  export: "audit.action.export",
+  erase: "audit.action.erase",
+  anonymize: "audit.action.anonymize",
+  assign: "audit.action.assign",
+  advance_stage: "audit.action.advanceStage",
+  advance_phase: "audit.action.advancePhase",
+  send_email: "audit.action.sendEmail",
+  consent_grant: "audit.action.consentGrant",
+  consent_withdraw: "audit.action.consentWithdraw",
+  approve: "audit.action.approve",
+  reject: "audit.action.reject",
+  record_share: "audit.action.recordShare",
+  record_unshare: "audit.action.recordUnshare",
+  activity_relink: "audit.action.activityRelink",
+  import: "audit.action.import",
+  import_undo: "audit.action.importUndo",
+  reset_data: "audit.action.resetData",
+  password_link_issued: "audit.action.passwordLinkIssued",
+  connect: "audit.action.connect",
+  disconnect: "audit.action.disconnect",
+  schedule: "audit.action.schedule",
+  reschedule: "audit.action.reschedule",
+  cancel: "audit.action.cancel",
+  release: "audit.action.release",
+  hold: "audit.action.hold",
+  expire: "audit.action.expire",
+  resolve: "audit.action.resolve",
+  restrict: "audit.action.restrict",
+  pin: "audit.action.pin",
+  accrue: "audit.action.accrue",
+  pay: "audit.action.pay",
+  publish: "audit.action.publish",
+  pause: "audit.action.pause",
+  resume: "audit.action.resume",
+  close: "audit.action.close",
+  invite: "audit.action.invite",
+  revoke: "audit.action.revoke",
+  delete: "audit.action.delete",
+  place_legal_hold: "audit.action.placeLegalHold",
+  lift_legal_hold: "audit.action.liftLegalHold",
+  request_legal_review: "audit.action.requestLegalReview",
+  withdraw_legal_review: "audit.action.withdrawLegalReview",
+} as const satisfies Record<AuditLogEntry["action"], MessageKey>;
+
+const ACTION_LABELS = new Map<string, MessageKey>(
+  Object.entries(AUDIT_ACTION_LABEL),
+);
+
+export const AUDIT_ACTION_VALUES: readonly string[] = [...ACTION_LABELS.keys()];
+
+// A server newer than this screen may send an action it has no label for yet.
+export function actionLabel(action: string, t: Translator): string {
+  const key = ACTION_LABELS.get(action);
+  return key ? t(key) : humanizeToken(action);
+}
+
+const KIND_LABELS = new Map<string, MessageKey>([
+  ...Object.entries(SEARCH_HIT_KIND_KEY),
+  ["custom_field", "audit.kind.customField"],
+]);
+
+// A record kind reads in the reader's language; a governance object keeps its
+// own name.
+export function entityLabel(entityType: string, t: Translator): string {
+  const key = KIND_LABELS.get(entityType);
+  return key ? t(key) : humanizeToken(entityType);
+}
+
+export const ACTOR_ICON: Record<AuditLogEntry["actor_type"], LucideIcon> = {
+  human: CircleUser,
+  agent: Bot,
+  system: Cog,
+  connector: Plug,
+  // A contact, not a machine: a buyer decided this. The icon differs from a
+  // member's so a reader can tell at a glance that the actor sits outside the
+  // company and will not be found in the member directory.
+  buyer: UserRoundCheck,
+};
+
+// A server newer than this client may send an actor kind it cannot attribute.
+export function isAuditActorType(
+  actorType: string,
+): actorType is AuditLogEntry["actor_type"] {
+  return Object.hasOwn(ACTOR_ICON, actorType);
+}
+
+// The phrase that says a machine did the typing, qualifying the contact who
+// authorised it. Only the two delegated actor kinds have one: a human needs no
+// qualifier and `system` is not acting for anybody.
+const MACHINE_QUALIFIER: Partial<
+  Record<AuditLogEntry["actor_type"], "audit.viaAgent" | "audit.viaConnector">
+> = {
+  agent: "audit.viaAgent",
+  connector: "audit.viaConnector",
+};
+
+// HUMAN_ACTOR_PREFIX is how the wire spells a human actor: audit_log.actor_id
+// carries the typed principal id, not a bare uuid. Comparing the raw column to
+// a bare user id is how "You" silently stopped rendering — the strings could
+// never be equal.
+export const HUMAN_ACTOR_PREFIX = "human:";
+
+// actorAttribution decides who a row is attributed to. A buyer is named; a
+// member's id is never the label.
+//
+// The contact comes first and the machine second (PD-002). An agent's own
+// identifier is never the label: attribution exists so somebody can be asked
+// about a change, and a passport uuid cannot be asked anything. `identifier` is
+// the machine's id, carried only when it is the one thing left to show.
+export function actorAttribution(
+  entry: ActorFields,
+  meUserId: string | undefined,
+): {
+  labelKey?: MessageKey;
+  name?: string;
+  qualifierKey?: MessageKey;
+  // The tool's own name, when the row records which one. Mutually exclusive
+  // with qualifierKey: a named client replaces the generic phrase rather than
+  // appending to it.
+  qualifierName?: string;
+  identifier?: string;
+} {
+  if (entry.actor_type === "human") {
+    if (meUserId && entry.actor_id === HUMAN_ACTOR_PREFIX + meUserId) {
+      return { labelKey: "audit.you" };
+    }
+    // No app_user resolved: the account is gone, or the row carries an id no
+    // directory entry matches. Neither is a name, and neither is a uuid worth
+    // putting in front of a reader.
+    return entry.actor_name
+      ? { name: entry.actor_name }
+      : { labelKey: "audit.unknownMember" };
+  }
+  if (entry.actor_type === "system") {
+    return entry.passport_id
+      ? {
+          labelKey: "audit.noHumanAuthority",
+          identifier: machineIdentifier(entry),
+        }
+      : { labelKey: "audit.system" };
+  }
+  // A Deal Room participant, named the way a member is. The read path resolves
+  // actor_name from deal_room_participant for a buyer, so "who confirmed v5?"
+  // answers with the contact rather than with their kind.
+  //
+  // The kind still stands in when the name is absent, and absent is a real
+  // state rather than a gap: a revoked participant, an archived room, or a
+  // subject erasure that scrubbed the name all leave the audit row behind
+  // without one. An invented name would be worse than the label.
+  if (entry.actor_type === "buyer") {
+    return entry.actor_name
+      ? { name: entry.actor_name, qualifierKey: "audit.viaDealRoom" }
+      : { labelKey: "audit.unknownBuyer", qualifierKey: "audit.viaDealRoom" };
+  }
+
+  const qualifierKey = MACHINE_QUALIFIER[entry.actor_type];
+  // The tool's own name beats the generic phrase. "via Claude" tells a reader
+  // which connection wrote the row; "via an agent" tells them what they could
+  // already see from the icon.
+  const qualifier = entry.agent_client
+    ? { qualifierName: entry.agent_client }
+    : { qualifierKey };
+  // A machine acting under a human's authority READS AS THAT HUMAN.
+  const authority = humanAuthority(entry, meUserId);
+  if (authority) {
+    return { ...authority, ...qualifier };
+  }
+  if (entry.passport_id) {
+    // A GRANT was presented and yet no human resolved behind it. That is a
+    // gap: a passport's granting human is recorded when the grant is made, so
+    // the row failed to carry what existed. It says so, and does NOT fall back
+    // to "System" — system is reserved for a change that genuinely has nobody
+    // behind it, and absorbing the gap would hide it on the one surface that
+    // exists to expose it.
+    return {
+      labelKey: "audit.noHumanAuthority",
+      identifier: machineIdentifier(entry),
+      ...qualifier,
+    };
+  }
+  // No grant was presented, so there is no human to name and no gap to report:
+  // a background pass nobody's context ran, or a connector with no connect
+  // flow. The deciding question is whether a grant was presented — not which
+  // machine word actor_type happens to carry. The id is the readable,
+  // workspace-chosen name of the thing that acted.
+  return { identifier: machineIdentifier(entry), ...qualifier };
+}
+
+// A recorded human no directory entry names is an unknown member, not a gap.
+function humanAuthority(
+  entry: ActorFields,
+  meUserId: string | undefined,
+): { labelKey: MessageKey } | { name: string } | undefined {
+  if (entry.on_behalf_of && meUserId && entry.on_behalf_of === meUserId) {
+    return { labelKey: "audit.you" };
+  }
+  if (entry.on_behalf_of_name) {
+    return { name: entry.on_behalf_of_name };
+  }
+  return entry.on_behalf_of ? { labelKey: "audit.unknownMember" } : undefined;
+}
+
+// machineIdentifier is the machine's own id, with a typed fallback for the one
+// state the contract permits and no writer should produce: actor_id is declared
+// as a bare `string` with no minimum length, and an empty one would render an
+// icon with no label beside it — a row attributed to nothing at all.
+function machineIdentifier(entry: ActorFields): string {
+  // A registered client name, when there is one: `agent:01a0216f-…` is the
+  // truth and unreadable, and a reader asking "what changed my record" is not
+  // helped by a uuid they cannot look up.
+  if (entry.agent_client) {
+    return entry.agent_client;
+  }
+  return entry.actor_id === "" ? entry.actor_type : entry.actor_id;
+}
+
+// ActorTag renders WHO acted, naming the CONTACT and saying a machine did the
+// typing second (PD-002). A rep working through a passport reads as the rep,
+// qualified "via an agent" — never as the agent with the rep in a footnote.
+// Shared by every audit surface so attribution reads the same everywhere.
+export function ActorTag({
+  entry,
+  meUserId,
+}: Readonly<{ entry: ActorFields; meUserId?: string }>) {
+  const t = useT();
+  const Icon = ACTOR_ICON[entry.actor_type];
+  const { labelKey, name, qualifierKey, qualifierName, identifier } =
+    actorAttribution(entry, meUserId);
+
+  return (
+    <span className="audit-actor">
+      <Icon aria-hidden />
+      {/* The contact is its own element, not a bare text node: it is the
+          primary half of the attribution, and a reader (or a test) should be
+          able to address who acted separately from what they acted through. */}
+      <span className="audit-actor-name">
+        {name ?? (labelKey ? t(labelKey) : null)}
+      </span>
+      {identifier && <span>{identifier}</span>}
+      {qualifierName && (
+        <span>{t("audit.viaNamed", { client: qualifierName })}</span>
+      )}
+      {!qualifierName && qualifierKey && <span>{t(qualifierKey)}</span>}
+    </span>
+  );
+}
+
+// Kinds whose change `label` is the record's own name. On other kinds a field
+// called `label` may hold any value, so the line shows none.
+const NAMED_BY_CHANGE: ReadonlySet<string> = new Set(["custom_field"]);
+
+// The live name when the server resolves one, else the name the change wrote.
+function entryName(entry: AuditLogEntry): string | undefined {
+  const live = entry.entity_label?.trim();
+  if (live) return live;
+  if (!NAMED_BY_CHANGE.has(entry.entity_type)) return undefined;
+  return [entry.after?.label, entry.before?.label].find(
+    (label): label is string =>
+      typeof label === "string" && label.trim() !== "",
+  );
+}
+
+// AuditEntryLine is the one-line rendering of an audit entry: who, what, on
+// which kind of thing, and when. The entity's uuid is deliberately dropped —
+// it is opaque to a reader and carries no meaning without a name lookup.
+export function AuditEntryLine({
+  entry,
+  meUserId,
+}: Readonly<{ entry: AuditLogEntry; meUserId?: string }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
+  const name = entryName(entry);
+  return (
+    <div className="audit-line t-sub">
+      <ActorTag entry={entry} meUserId={meUserId} />
+      <Badge tone="accent">{actionLabel(entry.action, t)}</Badge>
+      <span>{entityLabel(entry.entity_type, t)}</span>
+      {name && <span className="audit-target">{name}</span>}
+      {/* An audit entry is a fact in the company's book, like the change
+          history beside it, so it reads on the company's clock. On the
+          viewer's clock an entry at 18:00Z is 21 August to a reader in Berlin
+          and 22 August to one in Ho Chi Minh City: two investigators quoting
+          the same line quote different days, which is the failure a shared
+          record clock exists to prevent. `dateTime` carries the unambiguous
+          instant for anyone who has to convert. */}
+      <time className="audit-when" dateTime={entry.occurred_at}>
+        {formatDateTime(entry.occurred_at, locale, recordZone)}
+      </time>
+    </div>
+  );
+}

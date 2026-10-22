@@ -28,7 +28,7 @@ const (
 	TaskDealHealth Task = "deal_health"
 	// TaskDocumentExtract is read ONE attached document — a scanned form, an invoice, an order confirmation — for the four deal facts a human may then accept onto the deal (records-depth RD-PARAM-N-3), each carrying the quote it was read from. premium-only BY CONTRACT for site_extract's reason and one of its own: a rung that cannot carry the document is not a degraded answer to this question, it is a different question, so there is no rung to degrade to. no_payload BY CONTRACT: a scanned contract or invoice is exactly the content that must never reach ai_call_payload, whatever the deployment's capture posture says. A reading takes seconds and can fail, so it is a durable record its surface polls (records-depth RD-DDL-4), never work done inside the request that asks for it.
 	TaskDocumentExtract Task = "document_extract"
-	// TaskDraftReply is Six sites, one task: the reply to an activity, the contact page's composer, the company page's first-touch outbound, the message that opens a conversation from a stated intent alone, the ask a rep sends a COLLEAGUE for an introduction (the only one written to somebody on our own side, which is why it carries its own phrasing), and the note that colleague then FORWARDS to the contact (draft_email over MCP, which names records to file under rather than records to write from). The last two are one workflow and two registers: the ask is internal and its overclaim is falsifiable by the teammate reading it, while the note goes out over that colleague's own name to a customer who cannot check it — which is why they carry separate prompts, separate wording tables and separate scenarios rather than one site with a flag. They differ in what a draft is grounded IN, and share the rules block every drafting surface writes under (compose/draftrules). The reply site alone has two system variants (voice-enabled and plain), selected per call from the workspace's Voice DNA state — a variant, not a site of its own; the composers and the first-message site gain theirs when Voice DNA reaches them.
+	// TaskDraftReply is Five sites, one task: the reply to an activity, the contact page's composer, the company page's first-touch outbound, the ask a rep sends a COLLEAGUE for an introduction (the only one written to somebody on our own side, which is why it carries its own phrasing), and the note that colleague then FORWARDS to the contact (draft_email over MCP, which names records to file under rather than records to write from). The last two are one workflow and two registers: the ask is internal and its overclaim is falsifiable by the teammate reading it, while the note goes out over that colleague's own name to a customer who cannot check it — which is why they carry separate prompts, separate wording tables and separate scenarios rather than one site with a flag. They differ in what a draft is grounded IN, and share the rules block every drafting surface writes under (compose/draftrules). The reply site and the two composers each have two system variants (voice-enabled and plain), selected per call from the sender's Voice DNA state — a variant, not a site of its own.
 	TaskDraftReply Task = "draft_reply"
 	// TaskEnrich is Read a contact's own mail signature into contact fields - title, phone, linkedin, company_name, address, website - each quoting the signature line it was read from; a quote not in the signature is dropped in code. Floor 0.6. phone is a list: the reply carries one phone entry per number the signature lists, and each number is its own evidence row. A newer signature replaces only the older number of the same country and type; a number it leaves out is kept, because a trimmed signature is not a retired number.
 	TaskEnrich Task = "enrich"
@@ -57,6 +57,8 @@ const (
 	TaskStageEvidenceExtract Task = "stage_evidence_extract"
 	// TaskSummarize is Six grounded-prose sites, all over what the VIEWER can already see, assembled per viewer because visibility is per viewer. company_brief — the standing account brief: what this account is, where it stands, what changed. Its operation is deprecated and the company record page no longer renders it — the page's lead card is now the account's work in flight, spelled from the records — but the assembly stays, because company_ask is served from the same handlers. company_ask — the prepared questions behind Ask Margince: the question is chosen from a fixed list rather than typed, because each one names the records its answer must be written from, which is what lets every sentence cite a record the reader could open themselves. company_dossier — what the COMPANY is, from its own recorded facts: deliberately not the account composite, because a dossier that could see the pipeline would describe the pipeline and the separation from the brief would collapse on the first prompt revision. meeting_plan — what to DO in one booked meeting: the outcome to earn, the opener, the one risk with its response, what the other side is likely to ask and what to ask them. It rides this lane rather than its own because it is the same task — grounded prose over records the caller can already see — but it reads a different projection: the account arc with the excerpts behind it, rather than the whole assembled input, because the specificity of every question comes from what contacts actually wrote. meeting_brief — the SECTIONS beside that plan, written under the same request: what the meeting is, who is in the room, what they promised, what changed. It is a second call and a second prompt, not a rendering of the plan, which is why it is its own site rather than a variant of meeting_plan. contact_brief — the contact page's standing relationship brief: who this contact is commercially, what they have said they care about, what changed, and the one move that follows. It rides this lane for meeting_plan's reason — the same task over a different projection — and reads the claims extracted from conversations with the contact's own words behind them, what CHANGED about the relationship, and each recent message through the server's own one-line summary of what was written, rather than the timeline's subjects and directions: a brief written from transport events says only that mail was exchanged, which is true of every contact in the system.
 	TaskSummarize Task = "summarize"
+	// TaskTagSuggest is Which of the workspace's suggestible tags a captured mail, meeting, note or call shows interest in, judged from what the counterparty writes rather than from the words of the tag's description. A ledger stores each item's answer with the vocabulary and the text it was read under. An edit to the item, or an admin's edit to a suggestible tag, reads it again. Any change to one suggestible tag changes the vocabulary digest for all of them, so suggestions from every stored answer pause until each item is read again, at most 200 items a pass; that is accepted, since an answer read against other tags may no longer hold. The answer is tag ids per item id from a closed per-call set, with no confidence number, and an empty list is a real answer. Every pass raises suggestions from the stored answers, on the records the items are filed under then, so a pair refused today is raised once it can be. An answer for one item can borrow from another in its call, so items share a call when they have one reader set: workspace audience, the same linked records and the same attending seats. Every other item is asked alone. An item the models decline, or answer invalidly three times, is stored with no tag until its text or the vocabulary changes.Only a rep's Accept applies a tag. The hourly tag scout runs it, and a budget stop leaves the unread items for the next pass. Without a lane bound to this task the scout matches description phrases instead. No cost_unit, for owed_verdict's reason: the pass reads the last 30 days hourly and never runs at backfill.
+	TaskTagSuggest Task = "tag_suggest"
 	// TaskTranscript is Declared, not built (ADR-0074). Pasted transcript text is T2/untrusted per ai-operational-spec §1 when a site lands.
 	TaskTranscript Task = "transcript"
 	// TaskTranscriptPropose is the reading of next steps and commitments out of a meeting transcript, each citing the 1-based transcript lines it was read from. Floor 0.7; below it the proposal is dropped, never guessed, and a transcript stating none yields no proposal at all. Each commitment goes through the shared commitment rule: a customer's promise is filed on their contact and never becomes a task; a named colleague's promise read at or above 0.85 becomes their task directly, marked as the reader's; anything else stages for a human (approval kind commitment_task).
@@ -95,13 +97,14 @@ var taskDisplayNames = map[Task]string{
 	TaskOwedVerdict:                   "Unanswered-message triage",
 	TaskProposeRoles:                  "Buying-role reading",
 	TaskRateExtract:                   "Exchange rate extraction",
-	TaskRequestSettlement:             "Did our reply settle it",
+	TaskRequestSettlement:             "Checking whether the reply answered the request",
 	TaskSignalExtract:                 "Signal extraction",
-	TaskSiteExtract:                   "Website deep read",
+	TaskSiteExtract:                   "Website research",
 	TaskSiteFactExtract:               "Website fact extraction",
 	TaskSiteTriage:                    "Website triage",
 	TaskStageEvidenceExtract:          "Stage evidence extraction",
 	TaskSummarize:                     "Record summary",
+	TaskTagSuggest:                    "Tag suggestions",
 	TaskTranscript:                    "Transcript reading",
 	TaskTranscriptPropose:             "Meeting follow-up extraction",
 	TaskVoiceBuild:                    "Voice DNA build",
@@ -143,6 +146,7 @@ var taskSummaries = map[Task]string{
 	TaskSiteTriage:                    "Decides what an email domain's website is — a company, a personal site or a mailbox provider — before a company is created.",
 	TaskStageEvidenceExtract:          "Reads what the buyer wrote or said against a deal stage's exit criteria.",
 	TaskSummarize:                     "Writes the short summaries shown on account, contact and deal pages.",
+	TaskTagSuggest:                    "Reads captured mail, meetings, notes and calls and suggests the tags whose description of interest they show.",
 	TaskTranscript:                    "Reads pasted meeting transcripts. Not in use yet.",
 	TaskTranscriptPropose:             "Reads next steps and commitments out of a meeting transcript.",
 	TaskVoiceBuild:                    "Learns your writing voice from emails you wrote, so drafts sound like you.",
@@ -178,7 +182,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "f4e62d028c83b01a75553ee601d218edd7785491c89cdc489e824dca68c25dd4"
+const TaskContractHash = "7e4374e45d68cb46cc435dedafe31127aa158462e3719a9d89e00f679ddd5ff9"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -211,6 +215,7 @@ func AllTasks() []Task {
 		TaskSiteTriage,
 		TaskStageEvidenceExtract,
 		TaskSummarize,
+		TaskTagSuggest,
 		TaskTranscript,
 		TaskTranscriptPropose,
 		TaskVoiceBuild,
@@ -242,14 +247,15 @@ var taskLadders = map[Task][]Tier{
 	TaskProposeRoles:                  {TierCheapCloud, TierPremium},
 	TaskRateExtract:                   {TierPremium, TierCheapCloud},
 	TaskRequestSettlement:             {TierLocalSmall, TierCheapCloud},
-	TaskSignalExtract:                 {TierCheapCloud, TierPremium},
+	TaskSignalExtract:                 {TierFrontier},
 	TaskSiteExtract:                   {TierPremium},
 	TaskSiteFactExtract:               {TierCheapCloud, TierPremium},
 	TaskSiteTriage:                    {TierCheapCloud, TierPremium},
 	TaskStageEvidenceExtract:          {TierCheapCloud, TierPremium},
 	TaskSummarize:                     {TierCheapCloud, TierPremium},
+	TaskTagSuggest:                    {TierLocalSmall, TierCheapCloud},
 	TaskTranscript:                    {TierCheapCloud, TierPremium},
-	TaskTranscriptPropose:             {TierCheapCloud, TierPremium},
+	TaskTranscriptPropose:             {TierPremium},
 	TaskVoiceBuild:                    {TierCheapCloud, TierPremium},
 	TaskWeeklyLearnings:               {TierCheapCloud, TierPremium},
 	TaskWeeklyReview:                  {TierCheapCloud, TierPremium},
@@ -294,6 +300,7 @@ var taskExecutionModes = map[Task]ExecutionMode{
 	TaskSiteTriage:                    ExecutionModeBackground,
 	TaskStageEvidenceExtract:          ExecutionModeBackground,
 	TaskSummarize:                     ExecutionModeInteractive,
+	TaskTagSuggest:                    ExecutionModeBackground,
 	TaskTranscript:                    ExecutionModeInteractive,
 	TaskTranscriptPropose:             ExecutionModeBackground,
 	TaskVoiceBuild:                    ExecutionModeBackground,
@@ -359,6 +366,7 @@ var taskStatus = map[Task]string{
 	TaskSiteTriage:                    "shipped",
 	TaskStageEvidenceExtract:          "shipped",
 	TaskSummarize:                     "shipped",
+	TaskTagSuggest:                    "shipped",
 	TaskTranscript:                    "planned",
 	TaskTranscriptPropose:             "shipped",
 	TaskVoiceBuild:                    "shipped",
@@ -430,7 +438,6 @@ var taskSites = map[Task][]Site{
 		{Name: "reply", Kind: "one_shot"},
 		{Name: "contact", Kind: "one_shot"},
 		{Name: "account", Kind: "one_shot"},
-		{Name: "first", Kind: "one_shot"},
 		{Name: "intro", Kind: "one_shot"},
 		{Name: "intro_note", Kind: "one_shot"},
 	},
@@ -480,6 +487,9 @@ var taskSites = map[Task][]Site{
 		{Name: "meeting_plan", Kind: "one_shot"},
 		{Name: "meeting_brief", Kind: "one_shot"},
 		{Name: "contact_brief", Kind: "one_shot"},
+	},
+	TaskTagSuggest: {
+		{Name: "interest", Kind: "one_shot"},
 	},
 	TaskTranscriptPropose: {
 		{Name: "next_steps", Kind: "one_shot"},
@@ -538,6 +548,7 @@ var noPayloadTasks = map[Task]bool{
 	TaskRequestSettlement:             true,
 	TaskSignalExtract:                 true,
 	TaskStageEvidenceExtract:          true,
+	TaskTagSuggest:                    true,
 }
 
 // NoPayload reports the contract's payload prohibition for a task.
@@ -628,6 +639,7 @@ var taskCompanyContext = map[Task]CompanyContextPolicy{
 	TaskSiteTriage:                    {TokenBudget: 0, Conditional: false},
 	TaskStageEvidenceExtract:          {TokenBudget: 0, Conditional: false},
 	TaskSummarize:                     {Scopes: []string{"identity"}, TokenBudget: 300, Conditional: true},
+	TaskTagSuggest:                    {TokenBudget: 0, Conditional: false},
 	TaskTranscript:                    {TokenBudget: 0, Conditional: false},
 	TaskTranscriptPropose:             {TokenBudget: 0, Conditional: false},
 	TaskVoiceBuild:                    {TokenBudget: 0, Conditional: false},

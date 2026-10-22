@@ -48,6 +48,9 @@ func EraseUntoldLeadTx(ctx context.Context, tx pgx.Tx, in UntoldLead) error {
 		return err
 	}
 	if !in.ApprovalID.IsZero() {
+		if err := eraseApprovalNoticesMatching(ctx, tx, untoldLeadReason, causeUntoldLead, "id = @id", pgx.StrictNamedArgs{"id": in.ApprovalID}); err != nil {
+			return err
+		}
 		if err := dropFromSiteRead(ctx, tx, in.ApprovalID); err != nil {
 			return err
 		}
@@ -64,6 +67,9 @@ func EraseUntoldLeadTx(ctx context.Context, tx pgx.Tx, in UntoldLead) error {
 	}
 	notices, err := deleteNoticeActivities(ctx, tx, in.DeliveryID, in.LeadID.UUID)
 	if err != nil {
+		return err
+	}
+	if err := redactQuestionSource(ctx, tx, "lead", []ids.UUID{in.LeadID.UUID}); err != nil {
 		return err
 	}
 	if err := deleteLeadRecordsTx(ctx, tx, in.LeadID.UUID); err != nil {

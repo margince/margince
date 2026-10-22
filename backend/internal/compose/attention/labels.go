@@ -104,7 +104,7 @@ func (s *Service) fillSubjectLabels(ctx context.Context, out *crmcontracts.Atten
 	var subjects []*crmcontracts.AttentionSubject
 	for _, lane := range everyItemLane(out) {
 		for i := range *lane {
-			subjects = append(subjects, (*lane)[i].Subject)
+			subjects = append(subjects, (*lane)[i].Subject, (*lane)[i].SourceRecord)
 		}
 	}
 	return s.labelSubjects(ctx, subjects)

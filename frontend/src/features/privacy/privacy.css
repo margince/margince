@@ -1,0 +1,28 @@
+/* The privacy page's own layout: tokens only, every gap on the --space-* scale. */
+
+/* A subject reference is often one unbroken string. */
+.privacy-wrap {
+  overflow-wrap: anywhere;
+}
+
+/* A deadline and the overdue mark that qualifies it, wrapping as one. */
+.dsr-due {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-1) var(--space-2);
+}
+
+.dsr-actions {
+  display: flex;
+  gap: var(--gapActions);
+  flex-wrap: wrap;
+}
+
+/* `Callout` draws each refusal; the band only spaces two that stand at once. */
+.dsr-refusal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}

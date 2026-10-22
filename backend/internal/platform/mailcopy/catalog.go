@@ -25,7 +25,7 @@ var catalog = buildCatalog()
 // does not compile — which a map of key to translations would have allowed,
 // and which nothing else here would catch.
 func buildCatalog() map[Language]Copy {
-	en, de, vi := &Copy{}, &Copy{}, &Copy{}
+	en, de, vi := &Copy{Language: English}, &Copy{Language: German}, &Copy{Language: Vietnamese}
 	line := func(field func(*Copy) *string, english, german, vietnamese string) {
 		*field(en), *field(de), *field(vi) = english, german, vietnamese
 	}
@@ -41,6 +41,7 @@ func buildCatalog() map[Language]Copy {
 	digestLines(line)
 	confirmLines(line)
 	noticeLines(line)
+	presentationLines(line)
 
 	return map[Language]Copy{English: *en, German: *de, Vietnamese: *vi}
 }
@@ -73,13 +74,13 @@ func resetLines(line writeLine) {
 		"Margince-Passwort zurücksetzen",
 		"Đặt lại mật khẩu Margince")
 	line(func(c *Copy) *string { return &c.ResetIntro },
-		"Someone requested a password reset for your Margince account.",
-		"Jemand hat für dein Margince-Konto eine Passwort-Zurücksetzung angefordert.",
-		"Có người yêu cầu đặt lại mật khẩu cho tài khoản Margince của bạn.")
+		"Use the link below to choose a new password for your Margince account. The link is valid for one hour.",
+		"Mit diesem Link kannst du ein neues Passwort für dein Margince-Konto festlegen. Der Link ist eine Stunde gültig.",
+		"Dùng liên kết dưới đây để đặt mật khẩu mới cho tài khoản Margince. Liên kết có hiệu lực trong một giờ.")
 	line(func(c *Copy) *string { return &c.ResetAction },
-		"Reset your password within one hour:",
-		"Setze dein Passwort innerhalb einer Stunde zurück:",
-		"Đặt lại mật khẩu trong vòng một giờ:")
+		"Choose a new password",
+		"Neues Passwort festlegen",
+		"Đặt mật khẩu mới")
 	line(func(c *Copy) *string { return &c.ResetIgnore },
 		"If this wasn't you, ignore this email — your password is unchanged.",
 		"Warst du das nicht, ignoriere diese E-Mail. Dein Passwort bleibt unverändert.",
@@ -93,45 +94,41 @@ func inviteLines(line writeLine) {
 		"Du bist zu Margince eingeladen",
 		"Bạn được mời vào Margince")
 	line(func(c *Copy) *string { return &c.InviteIntro },
-		"You've been invited to Margince.",
-		"Du wurdest zu Margince eingeladen.",
-		"Bạn đã được mời vào Margince.")
+		"You have been invited to your team’s shared CRM in Margince.",
+		"Du wurdest zum gemeinsamen CRM deines Teams in Margince eingeladen.",
+		"Bạn được mời tham gia CRM dùng chung của nhóm trên Margince.")
 	line(func(c *Copy) *string { return &c.InviteAction },
-		"Set your password within seven days to sign in:",
-		"Setze innerhalb von sieben Tagen dein Passwort, um dich anzumelden:",
-		"Đặt mật khẩu trong vòng bảy ngày để đăng nhập:")
+		"Set up your access",
+		"Zugang einrichten",
+		"Thiết lập quyền truy cập")
 	line(func(c *Copy) *string { return &c.InviteIgnore },
-		"If you weren't expecting this, you can ignore this email.",
-		"Hast du das nicht erwartet, kannst du diese E-Mail ignorieren.",
-		"Nếu bạn không mong đợi điều này, bạn có thể bỏ qua email này.")
+		"This invitation is valid for seven days. If you did not expect it, you can ignore this email.",
+		"Diese Einladung ist sieben Tage gültig. Wenn du sie nicht erwartet hast, kannst du diese E-Mail ignorieren.",
+		"Lời mời có hiệu lực trong bảy ngày. Nếu không chờ lời mời này, bạn có thể bỏ qua email.")
 }
 
 // morningLines is the daily brief.
 func morningLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.MorningSubject },
-		"Your morning: ",
-		"Dein Morgen: ",
-		"Buổi sáng của bạn: ")
-	line(func(c *Copy) *string { return &c.MorningHeading },
-		"Your morning, ",
-		"Dein Morgen, ",
-		"Buổi sáng của bạn, ")
+		"Your priorities: ",
+		"Dein Überblick: ",
+		"Việc ưu tiên của bạn: ")
 	line(func(c *Copy) *string { return &c.MorningTop },
 		"What to start with:",
 		"Womit du anfängst:",
 		"Bắt đầu với:")
 	line(func(c *Copy) *string { return &c.MorningAndMore },
 		"and %d more on Home",
-		"und %d weitere auf der Startseite",
+		"und %d weitere auf der Home-Seite",
 		"và %d mục khác trên Trang chủ")
 	line(func(c *Copy) *string { return &c.MorningQuiet },
 		"Nothing is waiting on you this morning.",
 		"Heute Morgen wartet nichts auf dich.",
 		"Sáng nay không có gì đang chờ bạn.")
 	line(func(c *Copy) *string { return &c.MorningOpenDay },
-		"Open your day:",
-		"Öffne deinen Tag:",
-		"Mở ngày của bạn:")
+		"View today’s work",
+		"Tagesübersicht öffnen",
+		"Xem công việc hôm nay")
 }
 
 // notificationLines is the one notice mailed the moment it is raised: an
@@ -149,17 +146,17 @@ func morningLines(line writeLine) {
 // waiting is two voices in one mailbox.
 func notificationLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.NotificationSubject },
-		"Waiting on you: ",
-		"Wartet auf dich: ",
-		"Đang chờ bạn: ")
+		"Your decision is needed: ",
+		"Deine Entscheidung ist gefragt: ",
+		"Cần quyết định của bạn: ")
 	line(func(c *Copy) *string { return &c.NotificationIntro },
-		"An approval is waiting for your decision.",
-		"Eine Freigabe wartet auf deine Entscheidung.",
-		"Một phê duyệt đang chờ bạn quyết định.")
+		"Please review this request. You can approve or decline it in Margince.",
+		"Prüfe diese Anfrage. In Margince kannst du sie freigeben oder ablehnen.",
+		"Xem yêu cầu này. Có thể duyệt hoặc từ chối trong Margince.")
 	line(func(c *Copy) *string { return &c.NotificationOpen },
-		"Open your worklist",
-		"Arbeitsliste öffnen",
-		"Mở danh sách công việc")
+		"Review the request",
+		"Anfrage prüfen",
+		"Xem yêu cầu")
 }
 
 // digestLines is the once-a-day batch: what is waiting on a colleague's
@@ -175,41 +172,28 @@ func notificationLines(line writeLine) {
 // and a product that says "du" every morning and "Sie" in the daily summary of
 // the same morning is two voices in one mailbox.
 func digestLines(line writeLine) {
-	// NO TIME OF DAY in the subject, and the lane is why. The window closes at
-	// the local morning, but the pass ticks hourly, so a worker that was down
-	// sends that same batch later in the day — and a subject line is the one
-	// part of a message a reader checks against the clock.
 	line(func(c *Copy) *string { return &c.DigestSubject },
 		"What is waiting on your worklist",
-		"Das wartet auf deiner Arbeitsliste",
+		"Das wartet in deiner Worklist",
 		"Những việc đang chờ trong danh sách công việc của bạn")
-	// STILL WAITING, not "since yesterday", and the window is why. The pass
-	// reaches back two local-day labels and skips nothing a reader has left
-	// unread, so a notice nobody has opened is quoted again tomorrow — a
-	// sentence naming a boundary would be false on the second morning and
-	// falser on the third. What is true every morning is that these are
-	// waiting.
 	line(func(c *Copy) *string { return &c.DigestIntro },
-		"Here is what is still waiting on your worklist.",
-		"Das wartet noch auf deiner Arbeitsliste.",
-		"Đây là những gì vẫn đang chờ trong danh sách công việc của bạn.")
-	// THE COUNT LAST IN GERMAN, like the retrospective's tail above: this line
-	// is reached with one, and a German adjective inflects for the count — a
-	// singular beside a plural, which a catalog of flat strings cannot hold.
+		"These updates need your attention. Open an item to see its current status.",
+		"Diese Neuigkeiten solltest du dir ansehen. Öffne einen Eintrag, um den aktuellen Stand zu prüfen.",
+		"Bạn nên xem các cập nhật này. Mở từng mục để kiểm tra trạng thái hiện tại.")
 	line(func(c *Copy) *string { return &c.DigestAndMore },
 		"…and %d more",
 		"…weitere Einträge: %d",
 		"…và %d mục khác")
 	line(func(c *Copy) *string { return &c.DigestOpen },
-		"Open your worklist:",
-		"Arbeitsliste öffnen:",
-		"Mở danh sách công việc:")
+		"View the updates",
+		"Neuigkeiten ansehen",
+		"Xem cập nhật")
 }
 
 // confirmLines is the copy for a contact the installation holds a record about.
 // The English is pinned by hash on every consent proof, so moving a word or
 // reordering these registrations is a version bump, not a translation.
-// German and Vietnamese use the formal address (Sie; quý khách or quý vị). This
+// German and Vietnamese use the formal address (Sie; quý khách). This
 // copy speaks to a stranger about their own rights, and the reset and invite
 // copy above to a colleague.
 func confirmLines(line writeLine) {
@@ -228,7 +212,7 @@ func confirmAskLines(line writeLine) {
 	// the answer.
 	line(func(c *Copy) *string { return &c.ConfirmMarketingAsk },
 		"News from time to time, roughly once a month. Your choice is respected.",
-		"Neuigkeiten von Zeit zu Zeit, etwa einmal im Monat. Ihre Entscheidung wird respektiert.",
+		"Sie erhalten von Zeit zu Zeit Neuigkeiten, etwa einmal im Monat. Ihre Entscheidung wird respektiert.",
 		"Thỉnh thoảng gửi tin tức, khoảng mỗi tháng một lần. Lựa chọn của quý khách được tôn trọng.")
 	line(func(c *Copy) *string { return &c.ConfirmMarketingYes },
 		"Subscribe to news",
@@ -257,49 +241,37 @@ func confirmAskLines(line writeLine) {
 // asks the reader for anything.
 func recordNoticeLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.ConfirmRecordSubject },
-		"Your details, and whether we may stay in touch",
-		"Ihre Daten, und ob wir in Kontakt bleiben dürfen",
-		"Thông tin của quý vị, và liệu chúng tôi có thể giữ liên lạc")
+		"Review your contact details",
+		"Ihre Kontaktdaten prüfen",
+		"Kiểm tra thông tin liên hệ của quý khách")
 	line(func(c *Copy) *string { return &c.ConfirmRecordBody },
-		"You can see what we have on file about you, correct anything that is wrong,\n"+
-			"and tell us whether you want to hear from us.",
-		"Sie können sehen, was wir über Sie gespeichert haben, Falsches korrigieren\n"+
-			"und uns sagen, ob Sie von uns hören möchten.",
-		"Quý vị có thể xem chúng tôi lưu giữ thông tin gì về mình, sửa những gì chưa đúng,\n"+
-			"và cho chúng tôi biết quý vị có muốn nhận tin từ chúng tôi hay không.")
+		"You can review the contact details we hold about you and correct any mistakes.\nChoosing to receive news from us is optional and separate from checking your details.",
+		"Sie können Ihre bei uns gespeicherten Kontaktdaten prüfen und Fehler korrigieren.\nOb Sie außerdem Neuigkeiten von uns erhalten möchten, entscheiden Sie unabhängig davon.",
+		"Quý khách có thể kiểm tra thông tin liên hệ chúng tôi lưu và sửa thông tin chưa đúng.\nViệc đăng ký nhận tin là tùy chọn và độc lập với việc kiểm tra thông tin.")
 	line(func(c *Copy) *string { return &c.NoticeSubject },
-		"What we hold about you, and where it came from",
-		"Was wir über Sie gespeichert haben, und woher es stammt",
-		"Chúng tôi lưu giữ thông tin gì về quý vị, và từ đâu")
+		"Information about your personal data",
+		"Informationen zur Verarbeitung Ihrer personenbezogenen Daten",
+		"Thông tin về việc xử lý dữ liệu cá nhân của quý khách")
 	line(func(c *Copy) *string { return &c.NoticeBody },
-		"We hold some information about you and we are telling you so, as the law\n"+
-			"requires. The link below shows what we hold, where we got it, what we use it\n"+
-			"for, and the rights you have over it.",
-		"Wir haben Informationen über Sie gespeichert und teilen Ihnen das mit, wie es\n"+
-			"das Gesetz verlangt. Der Link unten zeigt, was wir gespeichert haben, woher\n"+
-			"wir es haben, wofür wir es nutzen und welche Rechte Sie daran haben.",
-		"Chúng tôi có lưu giữ một số thông tin về quý vị và xin thông báo điều đó,\n"+
-			"theo quy định của pháp luật. Liên kết bên dưới cho thấy chúng tôi lưu giữ gì,\n"+
-			"lấy từ đâu, dùng để làm gì, và quý vị có những quyền nào đối với nó.")
+		"We hold personal data about you. The link below explains how to review the details,\nwhere they came from, how they are used, and your privacy rights.\nYou can also contact us directly using the contact details in this message.",
+		"Wir haben personenbezogene Daten von Ihnen gespeichert. Über den folgenden Link erfahren Sie,\nwelche Daten das sind, woher sie stammen, wofür wir sie verwenden und welche Rechte Sie haben.\nBei Fragen können Sie sich auch direkt über die Kontaktdaten in dieser E-Mail an uns wenden.",
+		"Chúng tôi đang lưu dữ liệu cá nhân của quý khách. Liên kết dưới đây cho biết dữ liệu nào\nđược lưu, nguồn cung cấp, cách sử dụng và các quyền về dữ liệu của quý khách.\nQuý khách cũng có thể liên hệ trực tiếp theo thông tin trong email này.")
 	line(func(c *Copy) *string { return &c.NoticeIgnore },
-		"You do not need to reply or do anything. This is not a request.",
-		"Sie müssen nicht antworten und nichts tun. Dies ist keine Aufforderung.",
-		"Quý vị không cần trả lời hay làm gì cả. Đây không phải là một yêu cầu.")
+		"No reply or confirmation is required.",
+		"Sie müssen weder antworten noch etwas bestätigen.",
+		"Quý khách không cần trả lời hay xác nhận.")
 	line(func(c *Copy) *string { return &c.OptOutAckSubject },
-		"We have stopped sending you advertising",
-		"Wir senden Ihnen keine Werbung mehr",
-		"Chúng tôi đã ngừng gửi quảng cáo cho quý vị")
+		"Your advertising opt-out is confirmed",
+		"Ihre Abmeldung von Werbung ist bestätigt",
+		"Yêu cầu ngừng nhận quảng cáo đã được xác nhận")
 	line(func(c *Copy) *string { return &c.OptOutAckBody },
-		"You asked us to stop sending you advertising, and we have. It may take a\n"+
-			"short time for anything already on its way to stop arriving.",
-		"Sie haben uns gebeten, Ihnen keine Werbung mehr zu senden, und das haben wir\n"+
-			"getan. Bereits versendete Nachrichten können noch kurz ankommen.",
-		"Quý vị đã yêu cầu chúng tôi ngừng gửi quảng cáo, và chúng tôi đã ngừng.\n"+
-			"Những thư đã gửi đi có thể còn đến trong một thời gian ngắn.")
+		"Your opt-out is recorded. We will not send further messages for the advertising purposes you opted out of. Messages already sent may still reach you.",
+		"Ihre Abmeldung ist gespeichert. Zu den abgemeldeten Werbezwecken erhalten Sie keine weiteren Nachrichten. Bereits versendete Nachrichten können Sie noch erreichen.",
+		"Yêu cầu ngừng nhận đã được ghi nhận. Chúng tôi sẽ không gửi thêm thư cho các mục đích quảng cáo quý khách đã từ chối. Những thư đã gửi vẫn có thể đến sau đó.")
 	line(func(c *Copy) *string { return &c.OptOutAckIgnore },
-		"You do not need to reply. We are telling you because the law requires it.",
-		"Sie müssen nicht antworten. Wir teilen es Ihnen mit, weil das Gesetz es verlangt.",
-		"Quý vị không cần trả lời. Chúng tôi thông báo vì pháp luật yêu cầu.")
+		"No reply or further action is needed.",
+		"Sie müssen nichts weiter tun und nicht antworten.",
+		"Quý khách không cần trả lời hay thực hiện thêm thao tác nào.")
 }
 
 // confirmConsentLines is the message that asks a reader to turn a request into
@@ -307,37 +279,27 @@ func recordNoticeLines(line writeLine) {
 // how long it lasts, and what ignoring it does.
 func confirmConsentLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.ConfirmConsentSubject },
-		"Please confirm you want to hear from us",
-		"Bitte bestätigen Sie, dass Sie von uns hören möchten",
-		"Vui lòng xác nhận quý vị muốn nhận tin từ chúng tôi")
+		"Confirm your subscription",
+		"Bitte bestätigen Sie Ihr Abonnement",
+		"Vui lòng xác nhận đăng ký của quý khách")
 	line(func(c *Copy) *string { return &c.ConfirmConsentBody },
-		"You asked to hear from us. Confirming below is what turns that into a\n"+
-			"permission we will act on — until you do, we will not write to you about it.",
-		"Sie haben darum gebeten, von uns zu hören. Erst Ihre Bestätigung unten macht\n"+
-			"daraus eine Einwilligung, auf die wir uns stützen. Bis dahin schreiben wir\n"+
-			"Ihnen dazu nicht.",
-		"Quý vị đã yêu cầu nhận tin từ chúng tôi. Việc xác nhận bên dưới mới biến điều đó\n"+
-			"thành sự đồng ý mà chúng tôi dựa vào — cho đến lúc đó, chúng tôi sẽ không\n"+
-			"viết cho quý vị về việc này.")
+		"Confirm this subscription only if you want to receive these messages. We will send messages for this purpose\nonly after you confirm. You can withdraw your choice later.",
+		"Bestätigen Sie das Abonnement nur, wenn Sie diese Nachrichten erhalten möchten. Erst danach senden wir Ihnen\nNachrichten zu diesem Zweck. Sie können Ihre Einwilligung später widerrufen.",
+		"Chỉ xác nhận đăng ký nếu muốn nhận các thư này. Thư cho mục đích này chỉ được gửi sau khi\nquý khách xác nhận. Quý khách có thể rút lại sự đồng ý sau đó.")
 	line(func(c *Copy) *string { return &c.ConfirmPersonal },
-		"This link is personal to you.",
-		"Dieser Link ist persönlich für Sie.",
-		"Liên kết này dành riêng cho quý vị.")
-	// The date arrives ISO-formatted, so each language frames it rather than
-	// inflecting it: German "bis zum" would want an ordinal with a period
-	// ("bis zum 9. März"), which no formatter in this tree produces.
+		"This link is for your use only.",
+		"Dieser Link ist nur für Sie bestimmt.",
+		"Liên kết này chỉ dành cho quý khách.")
 	line(func(c *Copy) *string { return &c.ConfirmExpiry },
-		" It works until %s.",
-		" Er gilt bis einschließlich %s.",
-		" Liên kết có hiệu lực đến hết ngày %s.")
+		" It is valid until %s.",
+		" Er ist bis %s gültig.",
+		" Liên kết có hiệu lực đến %s.")
 	line(func(c *Copy) *string { return &c.ConfirmRecordIgnore },
-		"You do not have to do anything. Ignoring this changes nothing.",
-		"Sie müssen nichts tun. Ignorieren ändert nichts.",
-		"Quý vị không cần làm gì cả. Bỏ qua thư này thì không có gì thay đổi.")
+		"Reviewing your details is optional. Leaving this email unanswered does not subscribe you to anything.",
+		"Die Prüfung Ihrer Daten ist freiwillig. Wenn Sie nichts tun, abonnieren Sie keine Nachrichten.",
+		"Việc kiểm tra thông tin là tùy chọn. Không trả lời email này không đăng ký quý khách nhận bất kỳ nội dung nào.")
 	line(func(c *Copy) *string { return &c.ConfirmConsentIgnore },
-		"If you did not ask for this, ignore it. Nothing happens until you confirm.",
-		"Falls Sie darum nicht gebeten haben, ignorieren Sie diese E-Mail. Ohne Ihre\n"+
-			"Bestätigung passiert nichts.",
-		"Nếu quý vị không yêu cầu điều này, hãy bỏ qua. Không có gì xảy ra cho đến khi\n"+
-			"quý vị xác nhận.")
+		"If you do not want this subscription, you can ignore this email. Without your confirmation, the subscription will not be activated.",
+		"Wenn Sie diese Nachrichten nicht abonnieren möchten, können Sie diese E-Mail ignorieren. Ohne Ihre Bestätigung wird das Abonnement nicht aktiviert.",
+		"Nếu không muốn đăng ký, quý khách có thể bỏ qua email này. Đăng ký sẽ không được kích hoạt khi chưa xác nhận.")
 }

@@ -16,17 +16,19 @@ package gates
 // gatekit:fixture the owning module path each table's writes are compared
 // against — expected data, not a cost anyone is paying.
 var tableOwners = map[string]string{
-	"report_projection_fence":      storekitOwned,
-	"reporting_framework":          "internal/modules/reporting",
-	"reporting_framework_revision": "internal/modules/reporting",
-	"report_definition":            "internal/modules/reporting",
-	"report_definition_revision":   "internal/modules/reporting",
-	"sales_target":                 "internal/modules/reporting",
-	"sales_target_revision":        "internal/modules/reporting",
-	"report_schedule":              "internal/modules/reporting",
-	"report_execution":             "internal/modules/reporting",
-	"report_edition":               "internal/modules/reporting",
-	"report_edition_contribution":  "internal/modules/reporting",
+	"report_projection_fence":        storekitOwned,
+	"reporting_framework":            "internal/modules/reporting",
+	"reporting_framework_revision":   "internal/modules/reporting",
+	"report_definition":              "internal/modules/reporting",
+	"report_definition_revision":     "internal/modules/reporting",
+	"sales_target":                   "internal/modules/reporting",
+	"sales_target_revision":          "internal/modules/reporting",
+	"report_schedule":                "internal/modules/reporting",
+	"report_execution":               "internal/modules/reporting",
+	"report_edition":                 "internal/modules/reporting",
+	"report_edition_contribution":    "internal/modules/reporting",
+	"report_edition_question":        "internal/modules/reporting",
+	"report_edition_question_source": "internal/modules/reporting",
 	// identity
 	"workspace":           "internal/modules/identity",
 	"app_user":            "internal/modules/identity",
@@ -87,6 +89,8 @@ var tableOwners = map[string]string{
 	"sdr_handoff":           "internal/modules/contacts",
 	"sdr_handoff_event":     "internal/modules/contacts",
 	"sdr_handoff_reason":    "internal/modules/contacts",
+	"legal_entity":          "internal/modules/contacts",
+	"legal_entity_member":   "internal/modules/contacts",
 	"company_profile_field": "internal/modules/contacts",
 	"company_vat_check":     "internal/modules/contacts",
 	"contact_profile_field": "internal/modules/contacts",
@@ -107,8 +111,9 @@ var tableOwners = map[string]string{
 	// What a mail domain is allowed to create. It governs COMPANY
 	// creation, which contacts owns, so the verdict lives with the records it
 	// authorizes rather than with the capture path that asks the question.
-	"company_domain_disposition": "internal/modules/contacts",
-	"site_read":                  "internal/modules/contacts",
+	"company_domain_disposition":     "internal/modules/contacts",
+	"company_domain_question_reader": "internal/modules/contacts",
+	"site_read":                      "internal/modules/contacts",
 	// DH-DDL-1: the pair verdicts live with the ONE dedupe implementation.
 	"dedupe_candidate": "internal/modules/contacts",
 	// deals (incl. the E03 offer engine: rate-card + versioned offers)
@@ -161,6 +166,7 @@ var tableOwners = map[string]string{
 	"legal_review":             "internal/modules/deals",
 	"tag_suggestion":           "internal/modules/collections",
 	"tag_suggestion_evidence":  "internal/modules/collections",
+	"tag_interest_read":        "internal/modules/collections",
 	"deal_suggestion_evidence": "internal/modules/deals",
 	// The project is its own bounded context, superseding ADR-0073 — see
 	// modules/projects/doc.go. This entry is what makes that a rule rather than
@@ -191,7 +197,8 @@ var tableOwners = map[string]string{
 	// hangs off `activity` and is written beside the owed verdict it completes,
 	// so it belongs to the module that owns that row — the same ground the
 	// reply-verdict history above stands on.
-	"activity_request_settlement": "internal/modules/activities",
+	"activity_request_settlement":   "internal/modules/activities",
+	"activity_commitment_admission": "internal/modules/activities",
 	// Which owed mails had their stored original re-read for a calendar method.
 	// Its candidates are owedSQL, which this module owns, so the marker is here
 	// rather than beside the compose-owned markers of the meeting passes.
@@ -210,6 +217,7 @@ var tableOwners = map[string]string{
 	"activity_review_template": "internal/modules/activities",
 	"activity_review_response": "internal/modules/activities",
 	"worklist_pin":             "internal/modules/activities",
+	"worklist_done":            "internal/modules/activities",
 	// ACT-DDL-3: who was in the interaction. It belongs beside activity and
 	// activity_link for the same reason they belong together — it is part of
 	// what an activity IS, not a graph artifact derived from one.
@@ -239,17 +247,19 @@ var tableOwners = map[string]string{
 	// its own key on the transaction writing its owning row, so the writes reach this
 	// table from all of them through platform's helper — which is why the helper, and
 	// the table with it, sit below every module rather than inside one.
-	"stored_object_intent": "internal/platform/storedobjects",
-	"deal_document_hide":   "internal/modules/activities",
-	"meeting_proposal":     "internal/modules/activities",
-	"meeting_invitation":   "internal/modules/activities",
-	"booking_page":         "internal/modules/activities",
-	// approvals (signing_key backs the approval-token JWS; the autonomy policy
-	// is what each rep has decided about a KIND of proposal, so it belongs to
-	// the module that owns the kinds and records the decisions it counts)
+	"stored_object_intent":  "internal/platform/storedobjects",
+	"data_task_run_history": "internal/platform/datatask",
+	"data_task_review":      "internal/platform/datatask",
+	"data_task_run":         "internal/platform/datatask",
+	"deal_document_hide":    "internal/modules/activities",
+	"meeting_proposal":      "internal/modules/activities",
+	"meeting_invitation":    "internal/modules/activities",
+	"booking_page":          "internal/modules/activities",
+	// approvals. The autonomy policy is what each rep decided about a KIND of
+	// proposal, so it sits with the kinds and the decisions it counts.
 	"approval":                 "internal/modules/approvals",
-	"signing_key":              "internal/modules/approvals",
 	"approval_autonomy_policy": "internal/modules/approvals",
+	"approval_preference":      "internal/modules/approvals",
 	// consent (the DSR case queue and the retention-policy catalog are
 	// consent's; the engines that EXECUTE them live in privacy)
 	"consent_purpose":   "internal/modules/consent",
@@ -543,7 +553,8 @@ var tableOwners = map[string]string{
 	// two above, and the same ruling: derived content, regenerable from the
 	// records at any time, readable by nobody but the user it was written
 	// for.
-	"deal_status_card": "internal/compose/dealstatus",
+	"deal_status_card":    "internal/compose/dealstatus",
+	"deal_move_dismissal": "internal/compose/dealstatus",
 	// The reader's own "not this, not now" on the page's one moment, held
 	// against the evidence it fired on so it re-arms when that evidence moves
 	// (ADR-0096 D3). View state: no audit row, no outbox event, no other

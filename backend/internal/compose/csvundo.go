@@ -5,10 +5,14 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -44,18 +48,43 @@ func (w *csvWriters) Reverse(
 	}
 	switch object {
 	case migration.ObjectLead:
-		_, err = w.contacts.DisqualifyLead(ctx, ids.From[ids.LeadKind](nativeID), contacts.DisqualifyLeadInput{}, untouched)
+		// The retired lead gives its ref back, so the same file imports again.
+		_, err = w.contacts.DisqualifyLead(ctx, ids.From[ids.LeadKind](nativeID), contacts.DisqualifyLeadInput{}, untouched, contacts.ReleasingSourceKey())
 	case migration.ObjectCompany:
-		_, err = w.contacts.ArchiveCompany(ctx, ids.From[ids.CompanyKind](nativeID), nil, untouched)
+		// A live deal or contact that still names the company keeps it.
+		// Archiving would leave that record pointing at a hidden company.
+		_, err = w.contacts.ArchiveCompany(ctx, ids.From[ids.CompanyKind](nativeID), nil, untouched, contacts.KeepWhileReferenced())
 	case migration.ObjectContact:
 		// The archive cascades to the contact's addresses, numbers and
 		// relationships, so the child rows this run created go with it.
 		_, err = w.contacts.ArchiveContact(ctx, ids.From[ids.ContactKind](nativeID), nil, untouched)
+	case migration.ObjectDeal:
+		// The archive takes the deal's stakeholder edges with it, so the edges
+		// this run seated go too.
+		_, err = w.deals.ArchiveDeal(ctx, ids.From[ids.DealKind](nativeID), nil, deals.NotTouchedByHumanSince(importedAt))
+	case migration.ObjectActivity:
+		// The archive takes the activity's links with it, so the contact's last
+		// activity falls back to what was there before the import.
+		_, err = w.activities.ArchiveActivity(ctx, ids.From[ids.ActivityKind](nativeID), nil, activities.NotTouchedByHumanSince(importedAt))
 	default:
 		return fmt.Errorf("import undo: %q is not a reversible object: %w", object, apperrors.ErrConflict)
 	}
 	if err != nil {
-		return fmt.Errorf("import undo: reversing %s %s: %w", object, nativeID, err)
+		return fmt.Errorf("import undo: reversing %s %s: %w", object, nativeID, keptCause(err))
 	}
 	return nil
+}
+
+// keptCause answers a refusal that leaves a row in place as a kept row with
+// its reason, and any other error as it is.
+func keptCause(err error) error {
+	if wrapsA[*contacts.HumanTouchedError](err) || wrapsA[*deals.HumanTouchedError](err) ||
+		wrapsA[*activities.HumanTouchedError](err) {
+		return &migration.KeptError{Why: migration.Why(migration.ReasonUndoEdited)}
+	}
+	if still, ok := errors.AsType[*contacts.StillReferencedError](err); ok {
+		return &migration.KeptError{Why: migration.Why(migration.ReasonUndoStillReferenced,
+			"deals", strconv.Itoa(still.Deals), "contacts", strconv.Itoa(still.Contacts))}
+	}
+	return err
 }

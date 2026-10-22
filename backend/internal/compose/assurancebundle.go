@@ -163,19 +163,17 @@ func bundleableFindings(
 	ctx context.Context, tx pgx.Tx, runID ids.UUID,
 ) ([]assurance.Exception, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT `+exceptionColumns+`
+		SELECT `+exceptionSelect(rawFindingMoney)+`
 		  FROM assurance_exception e
 		  JOIN assurance_run_finding f ON f.exception_id = e.id AND f.run_id = $1
+		  `+findingPricedJoin(rawFindingMoney.affected)+`
 		 WHERE e.status = 'open'
 		   AND e.subject_kind = 'deal'
 		   AND NOT EXISTS (SELECT 1 FROM assurance_resolution r
 		                    WHERE r.exception_id = e.id
 		                      AND r.outcome = $2
 		                      AND r.remind_at > now())
-		 ORDER BY
-		   CASE e.severity WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,
-		   e.affected_minor DESC NULLS LAST,
-		   e.last_seen_at DESC`, runID, assurance.OutcomeRemindLater)
+		 ORDER BY `+findingRank, runID, assurance.OutcomeRemindLater)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading the findings to bundle: %w", err)
 	}

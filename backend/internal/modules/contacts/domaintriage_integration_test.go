@@ -252,11 +252,12 @@ func TestResolvingADomainNobodyAskedAboutIsRefused(t *testing.T) {
 
 	// Nothing opened a question for this domain, so there is no verdict to
 	// settle. Creating rows anyway would be a company nobody's mail justified.
+	// A missing row is a 404 for the caller; a bare error would be a 500.
 	if _, err := e.store.ResolveDomainTriage(ctx, ResolveDomainTriageInput{
 		Domain: "unasked.test", Status: DomainCompany, Source: DomainSourceSiteRead,
 		DossierName: "Unasked Ltd", SeedURL: "https://unasked.test",
-	}); err == nil {
-		t.Fatal("resolving a domain with no open question must refuse, not create")
+	}); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("resolving a domain with no open question = %v, want ErrNotFound", err)
 	}
 }
 

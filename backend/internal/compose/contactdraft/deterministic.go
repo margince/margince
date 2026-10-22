@@ -15,8 +15,6 @@ package contactdraft
 // no claim about what the recipient thinks, no invented urgency.
 
 import (
-	"strings"
-
 	"github.com/margince/margince/backend/internal/compose/contactcontext"
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -74,14 +72,7 @@ func deterministicSubject(in Input) string {
 func deterministicBody(in Input) string {
 	phrases := draftfloor.For(in.Envelope.Lang(), in.Envelope.Band())
 
-	lines := []string{greeting(in), ""}
-	if phrases.Opener != "" {
-		lines = append(lines, phrases.Opener, "")
-	}
-	if opener := deterministicOpener(in); opener != "" {
-		lines = append(lines, opener, "")
-	}
-	return strings.Join(append(lines, phrases.Ask), "\n")
+	return draftfloor.Body(in.Envelope.Lang(), greeting(in), phrases.Opener, deterministicOpener(in), phrases.Ask)
 }
 
 // greeting names the recipient, or greets the group when the message goes to
@@ -192,12 +183,11 @@ func dealLine(deal *DealIn) string {
 // A claim is cited by its SOURCE activity, not by its own id: the claim row has
 // no page, and a chip has to open something.
 func deterministicReasons(in Input) []Reason {
-	reasons := []Reason{{
-		Kind:       crmcontracts.AccountDraftReasonKindRecipient,
-		Label:      in.Recipient.Name,
-		EntityType: citeContact,
-		EntityID:   in.Recipient.ID,
-	}}
+	recipient := Reason{Kind: crmcontracts.AccountDraftReasonKindRecipient, Label: in.Recipient.Name}
+	if cited := in.Recipient.citedAs(); cited != "" {
+		recipient.EntityType, recipient.EntityID = cited, in.Recipient.ID
+	}
+	reasons := []Reason{recipient}
 	claim, hasClaim := leadClaim(in)
 	if hasClaim {
 		reasons = append(reasons, Reason{

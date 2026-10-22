@@ -22,7 +22,21 @@ type SkippedRow struct {
 	// Kind is one of ProblemKinds, so a screen can group the problems.
 	Kind  string `json:"kind,omitempty"`
 	Value string `json:"value,omitempty"`
+	// Code and Params let a screen say Reason in its own language. A report
+	// stored before they existed has neither, and Reason alone is shown.
+	Code   ReasonCode `json:"reason_code,omitempty"`
+	Params Params     `json:"params,omitempty"`
 }
+
+// Because answers the row with its reason, in English and as code and params.
+func (s SkippedRow) Because(why Reason) SkippedRow {
+	s.Reason, s.Code, s.Params = why.English(), why.Code, why.Params
+	return s
+}
+
+// Why is the reason the row was written with, empty for a stored report that
+// has no code.
+func (s SkippedRow) Why() Reason { return Reason{Code: s.Code, Params: s.Params} }
 
 // The kinds of problem a report names. The contract's ImportProblemKind enum
 // is this same list, and a test holds the two equal.
@@ -48,7 +62,7 @@ func ProblemKinds() []string {
 // skipReasonEmptyPayload marks a source row with no fields at all — the
 // "payload-less system entries" class the parity preview must disclose
 // rather than silently drop (UC-E18-04 E2).
-const skipReasonEmptyPayload = "empty_payload"
+var skipReasonEmptyPayload = Why(ReasonEmptyPayload)
 
 // ObjectReport is one object class's slice of the run/dry-run report.
 type ObjectReport struct {
@@ -92,13 +106,18 @@ type ObjectReport struct {
 	// a dropped link. Not skips, so they never count in Skipped. The dry run and
 	// the commit both list a row's warning; the report names it once.
 	Warnings []SkippedRow `json:"warnings,omitempty"`
+	// ClosedWon and ClosedLost count the deals the dry run saw land already
+	// closed, which the commit writes as history. Only the preview counts them.
+	ClosedWon  int `json:"closed_won,omitempty"`
+	ClosedLost int `json:"closed_lost,omitempty"`
 }
 
 // Report is the run (or dry-run) outcome: per-object dispositions plus
 // the association tally. The disposition table is the honest-disclosure
 // surface — nothing is dropped without a line here.
 type Report struct {
-	Objects []ObjectReport `json:"objects"`
+	ReviewPlan *ReviewPlan    `json:"review_plan,omitempty"`
+	Objects    []ObjectReport `json:"objects"`
 	// Associations counts edges APPLIED, not edges read; AssociationsSkipped
 	// carries the rest with their reasons.
 	Associations        int            `json:"associations"`
@@ -129,13 +148,17 @@ type SkippedAssoc struct {
 	From   string `json:"from"`
 	To     string `json:"to"`
 	Reason string `json:"reason"`
+	// Code and Params say the reason in the reader's language; a report stored
+	// before they existed has only Reason.
+	Code   ReasonCode `json:"reason_code,omitempty"`
+	Params Params     `json:"params,omitempty"`
 }
 
 // record folds one row's outcome into the class's disposition.
 func (or *ObjectReport) record(row Row, res EnsureResult) {
 	switch {
 	case res.Skipped:
-		skip := SkippedRow{ExternalID: row.ExternalID, Line: row.Line, Reason: res.SkipReason}
+		skip := SkippedRow{ExternalID: row.ExternalID, Line: row.Line, Reason: res.SkipReason, Code: res.SkipWhy.Code, Params: res.SkipWhy.Params}
 		if res.Problem != nil {
 			skip.Column, skip.Kind, skip.Value = res.Problem.Column, res.Problem.Kind, res.Problem.Value
 		}
@@ -197,6 +220,7 @@ func (r Report) mergedWith(next Report) Report {
 		associations, associationsSkipped = r.Associations, r.AssociationsSkipped
 	}
 	return Report{
+		ReviewPlan:          r.ReviewPlan,
 		Associations:        associations,
 		AssociationsSkipped: append([]SkippedAssoc(nil), associationsSkipped...),
 		Imported:            r.Imported + next.Imported,
@@ -211,6 +235,7 @@ func (r Report) mergedWith(next Report) Report {
 // commit's own edges replace. The caller counts the walks.
 func (r Report) withLeg(leg Report, startsWalk bool) Report {
 	out := Report{
+		ReviewPlan:          r.ReviewPlan,
 		Associations:        r.Associations + leg.Associations,
 		AssociationsSkipped: append(append([]SkippedAssoc(nil), r.AssociationsSkipped...), leg.AssociationsSkipped...),
 		Imported:            r.Imported + leg.Imported,
@@ -247,6 +272,8 @@ func foldObjects(earlier, later []ObjectReport) []ObjectReport {
 		into.Skipped = append(into.Skipped, or.Skipped...)
 		into.Collisions = append(into.Collisions, or.Collisions...)
 		into.WillDuplicate += or.WillDuplicate
+		into.ClosedWon += or.ClosedWon
+		into.ClosedLost += or.ClosedLost
 		into.Duplicated += or.Duplicated
 		into.Disclosures = append(into.Disclosures, or.Disclosures...)
 		// Warnings add as skips do: the row walk has a checkpoint, so a resume

@@ -170,7 +170,7 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 		Band:      state.Band,
 		Threaded:  threaded,
 		Recipient: recipient,
-	}, intent)
+	})
 	data := replyActivityData{
 		// Already bounded: NewEnvelope caps the two identity fields, which are
 		// the only ones that come from a text column rather than being

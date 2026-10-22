@@ -13,7 +13,7 @@ was decided, and the audit log says who read what.
 
 ### How do I make Margince GDPR compliant before connecting mailboxes?
 To get Margince ready for mail capture within the law, do four things before anyone connects a work mailbox; Margince itself checks none of them.
-1. Tell the colleagues whose mail will be read (Mitarbeiterinformation, Art. 13 GDPR).
+1. Tell the colleagues whose mail will be read (Beschäftigteninformation, Art. 13 GDPR).
 2. Settle private use of work mail: consent per colleague, or a written ban (Einwilligung, §26(2) BDSG).
 3. Agree it with the works council (Betriebsvereinbarung, §87(1) Nr. 6 BetrVG).
 4. Record it for the regulator (Verarbeitungsverzeichnis und DSFA, Art. 30 and Art. 35).
@@ -27,7 +27,7 @@ Also called: compliance check, legal sign-off, is Margince compliant.
 ## The four compliance documents, in order
 
 1. **Tell the colleagues whose mail will be read**: the
-   *Mitarbeiterinformation* (Art. 13 GDPR). Do it before a mailbox is
+   *Beschäftigteninformation* (Art. 13 GDPR). Do it before a mailbox is
    connected, not after. Keep the receipt: the *Empfangsbestätigung* shows you
    did it, which Art. 5(2) asks of you on its own. Where there is no works
    council (most often in Austria), add each colleague's written agreement to

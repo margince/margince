@@ -331,3 +331,32 @@ func TestCompanyPutRefusesAnAgentPassport(t *testing.T) {
 		t.Fatalf("the agent's refused PUT still saved a company (GET → %d, want 404)", getStatus)
 	}
 }
+
+// A null on a profile field clears it, as an empty string does. A null on the
+// website names nothing the company can be without, so it is refused.
+func TestACompanyProfileFieldClearsOnNull(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	body := wellFormedCompany()
+	body["usp"] = "Ships in a week"
+	if status := e.Call(t, "PUT", "/v1/company", body, nil, nil); status != http.StatusOK {
+		t.Fatalf("seeding the company = %d, want 200", status)
+	}
+
+	body["usp"] = nil
+	var cleared companyProfileDTO
+	if status := e.Call(t, "PUT", "/v1/company", body, nil, &cleared); status != http.StatusOK || cleared.Usp != nil {
+		t.Fatalf("usp: null = %d, usp %v; want 200 and no usp", status, cleared.Usp)
+	}
+
+	for _, field := range []string{"website", "display_name"} {
+		refused := wellFormedCompany()
+		refused[field] = nil
+		var problem companyProblem
+		status := e.Call(t, "PUT", "/v1/company", refused, nil, &problem)
+		if status != http.StatusUnprocessableEntity || len(problem.Details.Errors) != 1 ||
+			problem.Details.Errors[0].Field != field || problem.Details.Errors[0].Code != "field_not_clearable" {
+			t.Errorf("%s: null = %d %+v, want 422 field_not_clearable on %s", field, status, problem, field)
+		}
+	}
+}

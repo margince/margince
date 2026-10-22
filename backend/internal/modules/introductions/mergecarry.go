@@ -44,31 +44,26 @@ const (
 // contact merge asks: this rewrites which contact an ask is about, and must
 // not let an in-process caller re-home asks between contacts it may not change.
 func (s *Store) CarryIntrosTx(ctx context.Context, tx pgx.Tx, from, to ids.ContactID) error {
-	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
+	if err := admitIntroCarry(ctx, tx, from, to); err != nil {
 		return err
-	}
-	for _, named := range []ids.ContactID{from, to} {
-		if err := auth.EnsureWritable(ctx, tx, "contact", named.UUID); err != nil {
-			return err
-		}
 	}
 	if err := s.closeMergedDuplicates(ctx, tx, from, to); err != nil {
 		return err
 	}
 	rows, err := tx.Query(ctx, `
 		WITH prior AS (
-			SELECT id, contact_id, through_contact_id FROM intro_request
-			 WHERE contact_id = $1 OR through_contact_id = $1
+			SELECT id, contact_id, through_contact_id, `+introCarryContact+` AS next_contact, `+introCarryThrough+` AS next_through FROM intro_request
+			 WHERE `+introCarrySource+`
 			 FOR UPDATE
 		)
 		UPDATE intro_request r
-		   SET contact_id = CASE WHEN r.contact_id = $1 THEN $2 ELSE r.contact_id END,
-		       through_contact_id = CASE WHEN r.through_contact_id = $1 THEN $2 ELSE r.through_contact_id END,
+		   SET contact_id = prior.next_contact,
+		       through_contact_id = prior.next_through,
 		       version = r.version + 1, updated_at = now()
 		  FROM prior
 		 WHERE r.id = prior.id
 		RETURNING r.id, prior.contact_id, prior.through_contact_id, r.contact_id, r.through_contact_id`,
-		from, to)
+		introCarryArgs(from, to))
 	if err != nil {
 		return fmt.Errorf("introductions: carrying the asks onto the surviving contact: %w", err)
 	}
@@ -116,37 +111,17 @@ func (s *Store) closeMergedDuplicates(ctx context.Context, tx pgx.Tx, from, to i
 		 ORDER BY id FOR UPDATE`, from, to); err != nil {
 		return fmt.Errorf("introductions: locking the asks the merge will re-home: %w", err)
 	}
+	args := introCarryArgs(from, to)
+	args["closed"] = s.now().UTC()
 	rows, err := tx.Query(ctx, `
-		WITH mapped AS (
-			SELECT id, status, version, requested_at, introducer_user_id AS colleague,
-			       CASE WHEN contact_id = $1 THEN $2 ELSE contact_id END AS about,
-			       CASE WHEN through_contact_id = $1 THEN $2 ELSE through_contact_id END AS via
-			  FROM intro_request
-			 WHERE (contact_id = $1 OR through_contact_id = $1)
-			   AND status = ANY($3) AND archived_at IS NULL
-		),
-		losers AS (
-			SELECT m.id, m.status, m.version, m.about, m.about = m.via AS self_route FROM mapped m
-			 WHERE m.about = m.via
-			    OR EXISTS (
-			         SELECT 1 FROM intro_request k
-			          WHERE k.contact_id = m.about AND k.introducer_user_id = m.colleague
-			            AND k.through_contact_id IS NOT DISTINCT FROM m.via
-			            AND k.status = ANY($3) AND k.archived_at IS NULL
-			            AND k.contact_id <> $1 AND k.through_contact_id IS DISTINCT FROM $1)
-			    OR EXISTS (
-			         SELECT 1 FROM mapped o
-			          WHERE o.about = m.about AND o.colleague = m.colleague
-			            AND o.via IS NOT DISTINCT FROM m.via AND o.about <> o.via
-			            AND (o.requested_at, o.id) < (m.requested_at, m.id))
-		)
+`+introCarryClosures+`
 		UPDATE intro_request r
-		   SET status = 'cancelled', closed_at = $6, version = r.version + 1, updated_at = now(),
-		       decision_reason = CASE WHEN losers.self_route THEN $5 ELSE $4 END
+		   SET status = 'cancelled', closed_at = @closed, version = r.version + 1, updated_at = now(),
+		       decision_reason = CASE WHEN losers.self_route THEN @self_reason ELSE @duplicate_reason END
 		  FROM losers
 		 WHERE r.id = losers.id AND r.status = losers.status AND r.version = losers.version
 		RETURNING r.id, losers.status, losers.about`,
-		from, to, openStatuses(), mergedDuplicateReason, mergedSelfRouteReason, s.now().UTC())
+		args)
 	if err != nil {
 		return fmt.Errorf("introductions: closing asks the merge made duplicates: %w", err)
 	}
@@ -197,4 +172,16 @@ func openStatuses() []string {
 		}
 	}
 	return open
+}
+
+func admitIntroCarry(ctx context.Context, tx pgx.Tx, from, to ids.ContactID) error {
+	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
+		return err
+	}
+	for _, named := range []ids.ContactID{from, to} {
+		if err := auth.EnsureWritable(ctx, tx, "contact", named.UUID); err != nil {
+			return err
+		}
+	}
+	return nil
 }

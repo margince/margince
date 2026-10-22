@@ -62,20 +62,20 @@ func TestAWeekBeforeEverySourceSaysSoAndPrintsNoZero(t *testing.T) {
 
 	for _, want := range []string{
 		"This week falls before the first records, so it has no figures to report.",
-		"Not recorded · Recorded from 2026-06-15",
+		"Not recorded · Recorded from 15 Jun 2026",
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("the message does not say %q:\n%s", want, body)
 		}
 	}
-	for _, label := range []string{"Tasks delivered:", "Won · Lost · Moved:", "Carried over:"} {
-		if row := rowOf(t, body, label); !strings.HasSuffix(row, "Not recorded · Recorded from 2026-06-15") {
+	for _, label := range []string{"Due tasks completed:", "Deals won:", "Open at week’s end:"} {
+		if row := rowOf(t, body, label); !strings.HasSuffix(row, "Not recorded · Recorded from 15 Jun 2026") {
 			t.Errorf("the %q row prints a figure its source never measured: %q", label, row)
 		}
 	}
-	// Proposals and the morning queue carry no coverage, so their counts stand.
-	if !strings.Contains(body, "4 yes · 2 no") {
-		t.Errorf("the message dropped a figure that has no coverage to qualify it:\n%s", body)
+	// Internal proposal counters do not become customer results.
+	if strings.Contains(body, "4 yes · 2 no") {
+		t.Errorf("the message exposed internal approval counters:\n%s", body)
 	}
 }
 
@@ -101,10 +101,10 @@ func TestAPartialWeekKeepsItsCountAndSaysWhenCountingBegan(t *testing.T) {
 
 	body := MailBody(coveredFixture(crmcontracts.WeeklyFigureCoverageSet{Deals: partial, Tasks: recorded}), "", english)
 
-	if row := rowOf(t, body, "Won · Lost · Moved:"); !strings.HasSuffix(row, "1 · 1 · 3 · Partial week: counted from 2026-06-15") {
+	if row := rowOf(t, body, "Deals won:"); !strings.HasSuffix(row, "1 · Figures cover the period from 15 Jun 2026 only") {
 		t.Errorf("the partial deals figure is not qualified with its start: %q", row)
 	}
-	if row := rowOf(t, body, "Tasks delivered:"); !strings.HasSuffix(row, " 7 of 9") {
+	if row := rowOf(t, body, "Due tasks completed:"); !strings.HasSuffix(row, " 7 of 9") {
 		t.Errorf("a fully recorded figure gained a qualifier: %q", row)
 	}
 }
@@ -122,8 +122,8 @@ func TestTheCoverageWordsAreTheInstallationsLanguage(t *testing.T) {
 	body := MailBody(coveredFixture(everyFamilyNotRecorded(firstRecord)), "", mailcopy.For(string(mailcopy.German)))
 
 	for _, want := range []string{
-		"Diese Woche liegt vor den ersten Datensätzen",
-		"Nicht erfasst · Erfasst ab 2026-06-15",
+		"Für diese Woche gibt es keine Zahlen, da sie vor den ersten Datensätzen liegt.",
+		"Nicht erfasst · Erfasst ab 15.06.2026",
 	} {
 		if !strings.Contains(body, want) {
 			t.Errorf("the German message does not say %q:\n%s", want, body)
@@ -142,7 +142,7 @@ func TestWonReadsUnavailableWhenItsBookingsWereNotRead(t *testing.T) {
 
 			body := MailBody(review, "", english)
 
-			if row := rowOf(t, body, "Won · Lost · Moved:"); !strings.HasSuffix(row, " Unavailable · 1 · 3") {
+			if row := rowOf(t, body, "Deals won:"); !strings.HasSuffix(row, " Unavailable") {
 				t.Errorf("Won prints a count its bookings read never saw: %q", row)
 			}
 		})
@@ -157,7 +157,7 @@ func TestAPartialBookingsReadMarksWonAlone(t *testing.T) {
 
 	body := MailBody(review, "", english)
 
-	if row := rowOf(t, body, "Won · Lost · Moved:"); !strings.HasSuffix(row, " 1 (partial) · 1 · 3") {
+	if row := rowOf(t, body, "Deals won:"); !strings.HasSuffix(row, " 1 (partial)") {
 		t.Errorf("a partial bookings read did not mark Won: %q", row)
 	}
 }
@@ -168,8 +168,8 @@ func TestNotRecordedOutranksUnavailable(t *testing.T) {
 	review := coveredFixture(everyFamilyNotRecorded(firstRecord))
 	review.NumericSummary.BookingsCoverage = crmcontracts.ReportingCoverage{Status: crmcontracts.ReportingStatusUnavailable}
 
-	row := rowOf(t, MailBody(review, "", english), "Won · Lost · Moved:")
-	if !strings.HasSuffix(row, "Not recorded · Recorded from 2026-06-15") {
+	row := rowOf(t, MailBody(review, "", english), "Deals won:")
+	if !strings.HasSuffix(row, "Not recorded · Recorded from 15 Jun 2026") {
 		t.Errorf("an unrecorded week does not read as unrecorded: %q", row)
 	}
 }
@@ -180,7 +180,7 @@ func TestASourceWithNoRecordSaysSoWithoutADate(t *testing.T) {
 
 	body := MailBody(coveredFixture(crmcontracts.WeeklyFigureCoverageSet{Deals: never}), "", english)
 
-	if row := rowOf(t, body, "Won · Lost · Moved:"); !strings.HasSuffix(row, "Not recorded · No records from this source") {
+	if row := rowOf(t, body, "Deals won:"); !strings.HasSuffix(row, "Not recorded · No information recorded for this part of the report") {
 		t.Errorf("a source with no record is not stated as such: %q", row)
 	}
 }
@@ -189,7 +189,7 @@ func TestAnUnknownZoneDatesInUTCAndSaysSo(t *testing.T) {
 	review := coveredFixture(everyFamilyNotRecorded(firstRecord))
 	review.NumericSummary.Timezone = "Not/AZone"
 
-	if row := rowOf(t, MailBody(review, "", english), "Tasks delivered:"); !strings.HasSuffix(row, "Recorded from 2026-06-14 UTC") {
+	if row := rowOf(t, MailBody(review, "", english), "Due tasks completed:"); !strings.HasSuffix(row, "Recorded from 14 Jun 2026 UTC") {
 		t.Errorf("an unknown zone did not fall back to a labelled UTC date: %q", row)
 	}
 }

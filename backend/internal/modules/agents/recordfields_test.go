@@ -147,7 +147,7 @@ func TestWriteToolsRefuseFieldsTheRecordCannotStore(t *testing.T) {
 			if !strings.Contains(err.Error(), "accepts") {
 				t.Errorf("err = %q, want it to list the fields the type accepts", err)
 			}
-			if !strings.Contains(err.Error(), customFieldPrefix) {
+			if !strings.Contains(err.Error(), datasource.CustomFieldPrefix) {
 				t.Errorf("err = %q, want it to mention the custom-field channel", err)
 			}
 		})

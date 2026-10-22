@@ -38,6 +38,8 @@ const (
 	// suppliedDay is a date taken as an outside system wrote it, in a zone the
 	// product never learns, and compared with no today.
 	suppliedDay dayCalendar = "as supplied"
+	// storedZoneDay is a day a user picked in a zone stored beside it, and judged in that zone.
+	storedZoneDay dayCalendar = "zone stored beside it"
 )
 
 // dateColumnCalendar is one column's statement. why is required for every
@@ -69,6 +71,10 @@ var dateColumnCalendars = map[string]dateColumnCalendar{
 	"capture_auto_enrich_budget.budget_date": {
 		calendar: utcDay,
 		why:      "one shared daily enrichment cap, keyed explicitly on (now() AT TIME ZONE 'UTC')::date so the cap resets at one instant everywhere",
+	},
+	"capture_connection.history_baseline_date": {
+		calendar: storedZoneDay,
+		why:      "a mailbox owner picks it in their own zone, stored in history_baseline_tz, and a message's sent time is cut to a day in that zone before the comparison",
 	},
 	"capture_backfill.after_date": {
 		calendar: utcDay,
@@ -190,7 +196,7 @@ func TestADateColumnOutsideTheInstallationZoneSaysWhy(t *testing.T) {
 	for column, stated := range dateColumnCalendars {
 		switch stated.calendar {
 		case installationDay:
-		case utcDay, suppliedDay:
+		case utcDay, suppliedDay, storedZoneDay:
 			if strings.TrimSpace(stated.why) == "" {
 				t.Errorf("%s is a %s day with no reason; the installation zone is the rule, "+
 					"so an exception says why it holds", column, stated.calendar)

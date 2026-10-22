@@ -5,6 +5,7 @@
   "pkg:github/actions/setup-go": "MIT",
   "pkg:github/actions/setup-node": "MIT",
   "pkg:github/actions/upload-artifact": "MIT",
+  "pkg:github/contributor-assistant/github-action": "Apache-2.0",
   "pkg:github/crazy-max/ghaction-github-runtime": "MIT",
   "pkg:github/docker/setup-buildx-action": "Apache-2.0",
   "pkg:github/docker/setup-qemu-action": "Apache-2.0",

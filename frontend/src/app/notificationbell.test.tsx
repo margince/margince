@@ -127,7 +127,7 @@ function refusingBackend(which: "read-all" | "one") {
             type: "about:blank",
             title: "Internal Server Error",
             status: 500,
-            code: "internal_error",
+            code: "internal",
             detail: "the notice store is unavailable",
           },
           500,
@@ -655,7 +655,7 @@ describe("NotificationBell", () => {
     render(<NotificationBell />, "de");
 
     const bell = await screen.findByRole("button", {
-      name: "Meldungen, 2 offen",
+      name: "Benachrichtigungen, 2 offen",
     });
     await user.click(bell);
 

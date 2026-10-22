@@ -32,6 +32,7 @@ func TestEachOptionalLaneFillsItsOwnField(t *testing.T) {
 		&stubMeetings{rows: []Meeting{{Subject: "a meeting", StartsAt: readInstant}}},
 		&stubFailedEffects{rows: []FailedEffect{{
 			ID: ids.NewV7(), Kind: "send_email",
+			Summary:  new("Send the revised offer"),
 			Sentence: "this was approved, but the work it released did not run",
 			FailedAt: readInstant, TargetType: "contact", TargetID: ids.NewV7(),
 		}}},
@@ -63,7 +64,7 @@ func TestEachOptionalLaneFillsItsOwnField(t *testing.T) {
 		// isolates.
 		{
 			"did_not_run", out.DidNotRun, "failed_approval",
-			"this was approved, but the work it released did not run",
+			"Send the revised offer",
 		},
 		{"dsr", out.Dsr, "dsr", ""},
 		{"capture_health", out.CaptureHealth, "capture_health", ""},

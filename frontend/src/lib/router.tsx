@@ -1,5 +1,6 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 
+import { noteHistoryEntry } from "./historydepth";
 import { hashWithParams, type UrlParams } from "./urlstate";
 
 // Hash routing: "#/deals/01J9ZK" → { screen: "deals", id: "01J9ZK" }.
@@ -15,8 +16,8 @@ import { hashWithParams, type UrlParams } from "./urlstate";
 // Four members are also spelled as a named constant elsewhere, because the
 // module that owns the route owns the name. `ext` is lib/extensions.ts's
 // EXTENSION_SCREEN, `x` is app/custom.ts's CUSTOM_SCREEN, `reset-password` is
-// screens/auth.tsx's RESET_ROUTE, and `scheduled` is
-// screens/scheduledsends.tsx's SCHEDULED_SCREEN. All four are literal types
+// features/sign-in/auth.tsx's RESET_ROUTE, and `scheduled` is
+// features/mail/scheduledsends.tsx's SCHEDULED_SCREEN. All four are literal types
 // used where a `Screen` is expected, so a rename there stops compiling here
 // rather than drifting.
 //
@@ -193,9 +194,9 @@ const IDENTITY_DEPTH: Readonly<Record<Screen, number>> = {
   // reading their OWN queue under that colleague's address, with no error and
   // nothing on screen to say so.
   //
-  // Held by screens/worklist.identity.test.tsx. Selecting a row here is local
-  // state and never touches the address, which is what makes lowering this look
-  // free — the pane is not what the depth is protecting.
+  // Held by features/worklist/worklist.identity.test.tsx. Selecting a row is
+  // local state and never touches the address. That makes lowering this look
+  // free, but the depth protects the address, not the pane.
   worklist: WHOLE_ADDRESS,
   // #/analytics/<section> — the picker chooses a view of one screen, so
   // switching sections re-renders the panel instead of throwing the screen away.
@@ -324,9 +325,9 @@ const HASH_CREDENTIALS: ReadonlyArray<{ screen: Screen; param: string }> = [
   // The Deal Room's buyer invitation: `#/room?c=<credential>`.
   { screen: "room", param: "c" },
   // The emailed password reset: `#/reset-password?token=<token>`. The screen
-  // name is screens/auth.tsx's RESET_ROUTE, spelled as the literal here for the
-  // same reason SCREENS above spells it — importing a screen from the router
-  // would be a cycle, and the `Screen` type still fails a rename.
+  // name is RESET_ROUTE in features/sign-in/auth.tsx, spelled as a literal here
+  // as SCREENS above spells it. Importing a screen from the router would be a
+  // cycle, and the `Screen` type still fails a rename.
   { screen: "reset-password", param: "token" },
 ];
 
@@ -407,6 +408,11 @@ export function forgetHashCredential(screen: Screen, credential: string): void {
 const watchers = new Set<() => void>();
 
 function announce(): void {
+  // A replace keeps the entry, and the address noted for it must follow. With
+  // nobody watching, no entry is being counted.
+  if (watchers.size > 0) {
+    noteHistoryEntry("replaced");
+  }
   // A copy, so a watcher that unsubscribes while being told does not change the
   // set underneath the loop.
   for (const watcher of [...watchers]) {
@@ -414,23 +420,20 @@ function announce(): void {
   }
 }
 
-// Set once this page load has moved between addresses: only then does
-// `history.back()` land on an earlier screen of this app.
-let movedSinceLoad = false;
-export const backStaysInApp = (): boolean => movedSinceLoad;
-
 function addressChanged(): void {
-  movedSinceLoad = true;
   // A second link pasted into an open tab is a hash change and nothing else:
   // the screen does not remount for one, and whatever renders next is decided
   // above the route. So the credential comes out of the new address before
   // React is told there is one.
   takeFromHash();
+  noteHistoryEntry("moved");
   announce();
 }
 
 function subscribe(onChange: () => void): () => void {
   if (watchers.size === 0) {
+    // The entry the app starts on, so the first move is counted from it.
+    noteHistoryEntry("start");
     globalThis.addEventListener("hashchange", addressChanged);
   }
   watchers.add(onChange);

@@ -1,0 +1,29 @@
+/* Two panes of one page: the stack's own gap, which this wrapper would
+   otherwise swallow. */
+.auto-admin {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Folded, the column heading is out of sight, so the run count is read as a
+   sentence that carries its window instead of as a bare figure. */
+.auto-runs-sentence {
+  display: none;
+}
+@container table-fold (width < 36rem) {
+  .auto-runs-figure {
+    display: none;
+  }
+  .auto-runs-sentence {
+    display: inline;
+  }
+}
+
+/* The approval badge reads with the name it qualifies and wraps under it as one. */
+.auto-name {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-2);
+}

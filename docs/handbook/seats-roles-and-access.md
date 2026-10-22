@@ -12,20 +12,20 @@ A "no" from any one of them is a no. **Settings → Overview** shows your own an
 ## Managing colleagues, roles and teams
 
 ### How do I invite a colleague to Margince?
-To invite a colleague to Margince, open **Settings → Members** and choose **Invite user**.
+To invite a colleague to Margince, open **Settings → Members** and choose **Invite member** at the top of the page.
 1. Open the account menu at the top right and choose **Settings**, then **Members**.
-2. Choose **Invite user**.
+2. Choose **Invite member**.
 3. Fill **Email** (required) and **Full name** (required).
 4. Pick a **Role** and tick any **Teams** they should join.
 5. Check the **User access** preview, then choose **Invite**.
-You need the permission to manage users. Without it the page says "Your role cannot manage users." An invite is refused when no seat is left.
+You need the permission to manage users. A role that may only read the page sees **Read-only settings** and no **Invite member**. An invite is refused when no seat is left.
 Also called: add a user, add a teammate, create an account, onboard a colleague.
 
 ### How do I change someone's role or make someone an admin?
-To change a colleague's role in Margince, open **Settings → Members** and pick the new role in the role menu on their row.
+To change a colleague's role in Margince, open **Settings → Members** and choose the role on their row.
 1. Open **Settings → Members**.
-2. Find the colleague in the **Users** list.
-3. Open the role menu on their row (it reads **Set role…** when they hold no role). Pick **Admin**, **Management**, **Team lead**, **User**, **Read-only** or **Ops**.
+2. Find the colleague in the **Members** list.
+3. Choose the role on their row. It reads as plain text, and **Not set** when they hold no role. Pick **Admin**, **Management**, **Team lead**, **User**, **Read-only** or **Ops**.
 4. The note "Role changed for {name}" confirms it.
 Choosing a role takes the place of every role they held. Only an Admin can give or take away the Admin role.
 Also called: promote, demote, change permissions, make admin.
@@ -44,11 +44,11 @@ They must sign in again after that. Bringing them back takes a full seat again, 
 Also called: restore a user, re-enable an account.
 
 ### A colleague left: who gets their deals, and how do I reassign their records?
-When a colleague leaves and you deactivate them in Margince, they stay the owner of their deals, leads, contacts and companies. Nothing gets a new owner on its own. Give the work to others before you deactivate them.
+When a colleague leaves and you deactivate them in Margince, they stay the owner of their deals, leads, contacts, companies and projects. Nothing gets a new owner on its own. Give the work to others before you deactivate them.
 1. List what they own: **Filters and views** → **New filter** → **Contacts** → **Add condition** → **Owner**.
 2. **Deals** and **Leads**: tick the rows and press **Assign** in the bar for many rows. See [Lists, filters and views](lists-filters-and-views.md).
-3. **Contacts**, **Companies** and **Projects**, one at a time: **Owner** in **Details**.
-On a project, use **More actions** → **Assign to a colleague**.
+3. **Contacts** and **Companies**, one at a time: **Owner** in **Details**.
+4. **Projects**, one at a time: open the project and choose **More actions** → **Assign to a colleague**.
 Also called: offboarding, handover, a rep left, transfer a colleague's accounts.
 
 ### How do I reset someone's password?
@@ -60,12 +60,12 @@ The box shows when the link ends. To change your own password, use **Settings �
 Also called: forgot password, password reset, locked out.
 
 ### How do I create a team?
-To create a team in Margince, open **Settings → Teams** and choose **New team**.
+To create a team in Margince, open **Settings → Teams** and choose **New team** at the top of the page.
 1. Open **Settings → Teams**.
 2. Choose **New team**.
 3. Fill **Team name** (required), for example "DACH Sales".
 4. Choose **Create team**.
-To add colleagues, an Admin chooses the team's name and picks them under **Add member**. The remove button beside a member takes them off the team. You can add only active human users. Without the permission the page says "Your role cannot manage teams."
+To add colleagues, an Admin chooses the team's name and picks them under **Add member**. The remove button beside a member takes them off the team. You can add only active human users. A role that may only read the page sees **Read-only settings** and no **New team**.
 Also called: group, squad, sales team.
 
 ### How do I change someone's seat from read to full?
@@ -156,6 +156,26 @@ Saved views, automations and your writing voice keep the owner rule; a shared li
 
 Everyone can read a record with **no owner**, and nobody can write to it until someone claims it.
 
+## The owner and responsibility roles
+
+A contact, company, lead, deal or project can have one **owner**. When it has one, the owner is the colleague who holds the sales responsibility for the record.
+
+The owner also decides who else may change it. Row scope reads the owner: a User changes the records they own, and a Team lead changes the records of their team. The owner can share the record with a colleague or a team. Someone who holds it through a share cannot change its owner or its sharing.
+
+A **responsibility role** is a label for what someone looks after on a company, deal or project, such as **Account manager** or **Technical contact**. You set them on a record under **Responsibilities**. Admin and Ops keep the list in **Settings → Responsibility roles**.
+
+A responsibility role controls nothing:
+
+- It gives no access to the record, and takes none away.
+- It does not change the owner. Nothing links the owner to the **Account manager** role, so the owner may hold it, or someone else may.
+- A role you turn off stays on the records that carry it, but nobody can be given it again.
+
+Margince comes with these responsibility roles: **Account manager**, **Sales engineer**, **Delivery lead**, **Project manager**, **Technical contact**, **Executive sponsor** and **Support team**. Admin and Ops can rename them and add more. **Settings → Responsibility roles** marks each one **Built-in** when it comes with Margince, or **Custom** when someone added it.
+
+These are different from the six roles above. A role in **Settings → Roles and permissions** decides what a member may do. A responsibility role decides nothing.
+
+In German, the owner is **Verantwortlich** and the responsibility roles are **Zuständigkeiten**.
+
 ## Seeing and sharing records
 
 ### Why can't I see a record?
@@ -228,7 +248,7 @@ A team in Margince is a named group of colleagues. To create or rename one you n
 1. **You can share with it.** You can share a record with a whole team in one step.
 2. It gives the meaning of team row scope: what "their team" means for a **Team lead**. That is the one role Margince comes with that reads it.
 
-The Teams page says it: "For most roles, membership grants no access. A team lead added to a team can read and edit that team’s records without a share."
+The Teams page says it: "Membership grants no access, except to a team lead, who can read and edit the team’s records without a share."
 
 When a team is archived, being in it gives nothing any more. You can restore an archived team.
 

@@ -172,6 +172,16 @@ func (s *Service) stageOrJoinPendingInTx(ctx context.Context, tx pgx.Tx, in Stag
 			ORDER BY created_at DESC LIMIT 1 FOR UPDATE`, joinArgs...).Scan(&id)
 	switch {
 	case err == nil:
+		stale, err := withdrawStalePendingInTx(ctx, tx, id)
+		if err != nil {
+			return ids.ApprovalID{}, err
+		}
+		if stale {
+			id, err = s.insertProposalInTx(ctx, tx, in)
+			if err != nil {
+				return ids.ApprovalID{}, err
+			}
+		}
 		if err := s.rebundleJoinedInTx(ctx, tx, in, id); err != nil {
 			return ids.ApprovalID{}, err
 		}
@@ -361,7 +371,7 @@ func (s *Service) insertProposalInTx(ctx context.Context, tx pgx.Tx, in StageInp
 	// The summary is prose, and several stagers build it out of record text
 	// the agent or an inbound sender could have written. Sanitizing at the
 	// one place every staging passes through means no stager can bypass it.
-	in.Summary = sanitizeSummary(in.Summary)
+	in.Summary = SanitizeSummary(in.Summary)
 	current, pinned, err := resolveTargetVersion(ctx, tx, in)
 	if err != nil {
 		return ids.ApprovalID{}, err

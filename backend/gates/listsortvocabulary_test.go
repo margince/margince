@@ -34,6 +34,7 @@ package gates
 
 import (
 	"go/ast"
+	"io/fs"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -45,7 +46,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// listSurface pairs a screen with the resource it lists.
+// listSurface pairs a screen, by its path under frontend/src, with the resource
+// it lists.
 //
 // Declared because nothing in either tree names the other: a screen fetches a
 // path and the vocabulary belongs to a store, and no import, type or route
@@ -53,21 +55,19 @@ import (
 // renamed file or a retired vocabulary fails here rather than dropping a
 // surface out of the census quietly.
 var listSurfaces = map[string]struct{ vocabulary, source string }{
-	"deals.tsx":          {"dealListFields", "internal/modules/deals/deal_read.go"},
-	"contacts.tsx":       {"contactListFields", "internal/modules/contacts/contact_list.go"},
-	"leads.list.tsx":     {"leadListFields", "internal/modules/contacts/lead_list.go"},
-	"companies.tsx":      {"companyListFields", "internal/modules/contacts/company_list.go"},
-	"projects.tsx":       {"projectListFields", "internal/modules/projects/read.go"},
-	"products.tsx":       {"productListFields", "internal/modules/deals/product.go"},
-	"offertemplates.tsx": {"offerTemplateListFields", "internal/modules/deals/offer_template.go"},
+	"features/deals/deals.list.tsx":         {"dealListFields", "internal/modules/deals/deal_read.go"},
+	"features/contacts/contacts.tsx":        {"contactListFields", "internal/modules/contacts/contact_list.go"},
+	"features/leads/leads.list.tsx":         {"leadListFields", "internal/modules/contacts/lead_list.go"},
+	"features/companies/companies.list.tsx": {"companyListFields", "internal/modules/contacts/company_list.go"},
+	"features/projects/projects.tsx":        {"projectListFields", "internal/modules/projects/read.go"},
+	"features/deals/products.tsx":           {"productListFields", "internal/modules/deals/product.go"},
+	"features/deals/offertemplates.tsx":     {"offerTemplateListFields", "internal/modules/deals/offer_template.go"},
 }
-
-const screenDir = "../frontend/src/screens/"
 
 // sharedColumnSource holds the column helpers several screens draw from. A sort
 // one of them offers is offered by every screen that calls it, so it is read
 // per screen rather than once.
-const sharedColumnSource = screenDir + "recordlist.tsx"
+const sharedColumnSource = "../frontend/src/components/recordlist.tsx"
 
 var (
 	// tsSortLiteral reads one `sort: "field"` off a column.
@@ -135,9 +135,10 @@ func TestEverySortAListOffersIsOneItsResourceAccepts(t *testing.T) {
 // since a header declared in `leads.columns.tsx` is the leads screen's header.
 func screenWithColumns(t *testing.T, name string, read map[string]bool) string {
 	t.Helper()
-	screen := readSource(t, screenDir+name)
+	path := filepath.Join(frontendSrc, name)
+	screen := readSource(t, path)
 	for _, m := range tsColumnsModule.FindAllStringSubmatch(screen, -1) {
-		screen += "\n" + readSource(t, screenDir+m[1]+".tsx")
+		screen += "\n" + readSource(t, filepath.Join(filepath.Dir(path), m[1]+".tsx"))
 		read[m[1]+".tsx"] = true
 	}
 	return screen
@@ -145,12 +146,22 @@ func screenWithColumns(t *testing.T, name string, read map[string]bool) string {
 
 // assertEveryColumnModuleRead fails a column module no surface's scan reached.
 // Moving a screen's columns into their own file otherwise takes every header
-// out of this census while it goes on reporting a pass.
+// out of this census while it goes on reporting a pass. It walks all of
+// frontend/src, so a module that moves to a feature folder stays counted.
 func assertEveryColumnModuleRead(t *testing.T, read map[string]bool) {
 	t.Helper()
-	modules, err := filepath.Glob(screenDir + "*.columns.tsx")
+	var modules []string
+	err := filepath.WalkDir(frontendSrc, func(path string, _ fs.DirEntry, err error) error {
+		if err == nil && strings.HasSuffix(path, ".columns.tsx") {
+			modules = append(modules, path)
+		}
+		return err
+	})
 	if err != nil {
 		t.Fatalf("listing column modules: %v", err)
+	}
+	if len(modules) == 0 {
+		t.Fatalf("found no *.columns.tsx under %s, so no column module was checked", frontendSrc)
 	}
 	for _, path := range modules {
 		if !read[filepath.Base(path)] {

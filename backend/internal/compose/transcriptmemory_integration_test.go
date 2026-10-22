@@ -29,10 +29,14 @@ import (
 // says so differently — what a second pass over one transcript actually looks
 // like.
 func reworded(t *testing.T, summary string, line int) string {
+	return rewordedAttributed(t, summary, line, "")
+}
+
+func rewordedAttributed(t *testing.T, summary string, line int, promiser string) string {
 	t.Helper()
 	raw, err := json.Marshal(map[string]any{"proposals": []map[string]any{{
-		"summary": summary, "owner": "Priya",
-		"source_lines": []int{line}, "confidence": 0.9,
+		"summary": summary, "owner": "Priya", "promiser_ref": promiser,
+		"source_lines": []int{line}, "confidence": 0.9, "commitment": openCommitmentMeaning("", ""),
 	}}})
 	if err != nil {
 		t.Fatalf("building the model reply: %v", err)
@@ -157,11 +161,11 @@ func TestTwoCommitmentsOnOneLineBothReachTheQueue(t *testing.T) {
 	both, err := json.Marshal(map[string]any{"proposals": []map[string]any{
 		{
 			"summary": "Send the revised pricing", "owner": "Priya",
-			"source_lines": []int{3}, "confidence": 0.9,
+			"source_lines": []int{3}, "confidence": 0.9, "commitment": openCommitmentMeaning("", ""),
 		},
 		{
 			"summary": "Book the follow-up call", "owner": "Dana",
-			"source_lines": []int{3}, "confidence": 0.9,
+			"source_lines": []int{3}, "confidence": 0.9, "commitment": openCommitmentMeaning("", ""),
 		},
 	}})
 	if err != nil {

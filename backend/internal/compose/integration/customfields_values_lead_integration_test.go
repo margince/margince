@@ -5,12 +5,12 @@
 
 package integration
 
-// The lead half of the custom-field VALUES coverage: the fieldcatalog seam
-// wired into the segregated lead store — active cf_* columns ride create /
-// update writes and get / list / replay / disqualify reads like core fields,
-// same drop-on-mismatch and workspace-isolation posture as the
-// contact/company/deal suites. Reuses the shared contacts cfvFixture
-// (setupCFV) since leads live in the contacts store.
+// The lead half of the custom-field values coverage. The fieldcatalog seam is
+// wired into the lead store. Active cf_* columns ride create and update writes
+// and get, list, replay and disqualify reads like core fields. The refusal of a
+// key or shape no column holds, and the workspace isolation, match the contact,
+// company and deal suites. It reuses the contacts cfvFixture (setupCFV), since
+// leads live in the contacts store.
 
 import (
 	"testing"

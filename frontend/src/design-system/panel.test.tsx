@@ -243,9 +243,9 @@ describe("panel.css keeps the row's hover on its two variants", () => {
     }
   });
 
-  // A record list reads as a table: its rows' rules reach the pane's edges, and
-  // so does the seam under its last row.
-  it("runs a record row's hairline and the seam under it edge to edge", () => {
+  // A record list reads as a table, so its rows' rules reach the pane's edges.
+  // Every seam between two bands does too, whatever band stands above it.
+  it("runs a record row's hairline and every seam edge to edge", () => {
     const rules = cssRules(panelCss());
     const insetOf = (selector: string) =>
       rules
@@ -254,16 +254,21 @@ describe("panel.css keeps the row's hover on its two variants", () => {
         .filter((value) => value !== undefined)
         .at(-1);
     expect(insetOf(".panel-row-record::before")).toBe("0 0 auto");
-    for (const lead of [
-      ".panel-row-record",
-      ".panel > .settinglist-bleed",
-      ".panel > .table-scroll-bleed",
-    ]) {
-      expect(insetOf(`${lead} + .panel-body::before`)).toBe("0 0 auto");
-    }
-    expect(insetOf(".panel-body + .panel-body::before")).toBe(
-      "0 var(--padPanel) auto",
+    expect(insetOf(".panel > :not(.panel-row) + .panel-row::before")).toBe(
+      "0 0 auto",
     );
+    const seams = rules.filter((rule) =>
+      / \+ \.panel-body::before$/.test(rule.selector),
+    );
+    expect(seams.length).toBeGreaterThanOrEqual(4);
+    for (const seam of seams) {
+      const content = declaredValue(seam.block, "content");
+      if (content === "none") continue;
+      expect(content, seam.selector).toBe('""');
+      expect(declaredValue(seam.block, "inset"), seam.selector).toBe(
+        "0 0 auto",
+      );
+    }
   });
 
   it("rules the boundary between a bleeding list and a bleeding table", () => {
@@ -533,20 +538,63 @@ function tokenValue(name: string): string {
   return (declared?.[1] ?? "").trim();
 }
 
-describe("the panel head is one band at the height every panel shares, wider than a phone", () => {
-  it("takes its height from the house token rather than a floor of its own", () => {
-    const head = bandRules(panelCss()).find(
-      (rule) => rule.selector === ".panel-head",
+// The coarse-pointer floor every touch target stands at (`.segmented button`,
+// `.stat-card-open`); no token carries it.
+const TOUCH_TARGET_PX = 44;
+
+// A px value from tokens.css, followed through `var()` to the number.
+function tokenPx(name: string): number {
+  const value = tokenValue(name);
+  const alias = /^var\((--[\w-]+)\)$/.exec(value);
+  if (alias) return tokenPx(alias[1]);
+  expect(value, `${name} resolves to px`).toMatch(/^\d+px$/);
+  return Number.parseFloat(value);
+}
+
+// The padding-block one arm of the band declares, read from the arm's own
+// `.panel-head` block inside the named query.
+function armPadding(query: string): string | undefined {
+  const arm = new RegExp(
+    `@media \\(${query}\\)\\s*\\{\\s*\\.panel-head\\s*\\{([^}]*)\\}`,
+  ).exec(stripComments(panelCss()))?.[1];
+  return arm === undefined ? undefined : declaredValue(arm, "padding-block");
+}
+
+function spaceToken(value: string | undefined): string {
+  const name = /^var\((--space-\d+)\)/.exec(value ?? "")?.[1];
+  expect(name, `${value} is a --space-N token`).toBeDefined();
+  return name ?? "";
+}
+
+describe("the panel head stands at the height every panel shares, and grows only to keep its words", () => {
+  const head = () =>
+    bandRules(panelCss()).find((rule) => rule.selector === ".panel-head");
+
+  // A floor rather than a height, so a long title wraps and no word is cut.
+  it("takes its floor from the house token and wraps what does not fit", () => {
+    expect(head()).toBeDefined();
+    expect(declaredValue(head()?.block ?? "", "min-height")).toBe(
+      "var(--panel-head-h)",
     );
-    expect(head).toBeDefined();
-    expect(head?.block).toMatch(/height:\s*var\(--panel-head-h\)/);
-    // A floor is an invitation: a description raised the band, a screen then
-    // re-spaced it, and the same card stood at three heights across one page.
-    expect(head?.properties).not.toContain("min-height");
-    expect(head?.block).toMatch(/align-items:\s*center/);
-    expect(head?.block).toMatch(/flex-wrap:\s*nowrap/);
-    expect(head?.block).toMatch(/padding:\s*0 var\(--padPanel\)/);
+    expect(head()?.properties).not.toContain("height");
+    expect(head()?.properties).not.toContain("max-height");
+    expect(declaredValue(head()?.block ?? "", "align-items")).toBe("center");
+    expect(declaredValue(head()?.block ?? "", "flex-wrap")).toBe("wrap");
     expect(tokenValue("--panel-head-h")).toBe("56px");
+  });
+
+  // Wider than a phone, the padding must leave room for a control on a mouse
+  // and a 44px target on touch. The 1px rule is inside the floor.
+  it("fits a --controlHeight control or a 44px target within the floor, wider than a phone", () => {
+    const floor = tokenPx("--panel-head-h");
+    const padding = declaredValue(head()?.block ?? "", "padding") ?? "";
+    expect(padding).toMatch(/^var\(--space-\d+\) var\(--padPanel\)$/);
+    const fine = tokenPx(spaceToken(padding));
+    expect(2 * fine + tokenPx("--controlHeight") + 1).toBeLessThanOrEqual(
+      floor,
+    );
+    const coarse = tokenPx(spaceToken(armPadding("pointer: coarse")));
+    expect(2 * coarse + TOUCH_TARGET_PX + 1).toBeLessThanOrEqual(floor);
   });
 
   // One value at every viewport, like the band it is. A touch arm that raised
@@ -556,21 +604,47 @@ describe("the panel head is one band at the height every panel shares, wider tha
     expect(declarations).toHaveLength(1);
   });
 
-  it("drops a verb under the title on a phone, and wraps a title too long to fit", () => {
-    const phone =
-      /@media \(max-width: 720px\)\s*\{\s*\.panel-head\s*\{([^}]*)\}/.exec(
-        stripComments(panelCss()),
-      )?.[1] ?? "";
-    expect(declaredValue(phone, "flex-wrap")).toBe("wrap");
-    expect(declaredValue(phone, "min-height")).toBe("var(--panel-head-h)");
-    const phoneTitle =
-      /@media \(max-width: 720px\)\s*\{[^@]*?\.panel-head \.panel-title\s*\{([^}]*)\}/.exec(
-        stripComments(panelCss()),
-      )?.[1] ?? "";
-    expect(declaredValue(phoneTitle, "white-space")).toBe("normal");
+  // The phone arm comes after the touch arm, so a phone keeps its wider air.
+  // That air stands a one-line head with a control above the floor.
+  it("gives a phone wider air than the band's own, whatever the pointer", () => {
+    const css = stripComments(panelCss());
+    expect(css.indexOf("@media (pointer: coarse)")).toBeGreaterThan(-1);
+    expect(css.indexOf("@media (max-width: 720px)")).toBeGreaterThan(
+      css.indexOf("@media (pointer: coarse)"),
+    );
+    const phone = tokenPx(spaceToken(armPadding("max-width: 720px")));
+    const fine = tokenPx(
+      spaceToken(declaredValue(head()?.block ?? "", "padding")),
+    );
+    expect(phone).toBeGreaterThan(fine);
   });
 
-  // The band's height is constant: a `:has()` rule would grow it for one kind
+  // `hyphens` and `hyphenate-limit-chars` inherit, so the limit is the
+  // document's, declared once, and every sheet that hyphenates inherits it.
+  it("sets the hyphenation limit once, on the document root", () => {
+    const root = cssRules(readFileSync(join(here, "base.css"), "utf8")).find(
+      (rule) =>
+        rule.selector === ":root" &&
+        rule.properties.includes("hyphenate-limit-chars"),
+    );
+    expect(declaredValue(root?.block ?? "", "hyphenate-limit-chars")).toBe(
+      "7 3 3",
+    );
+    const elsewhere = [
+      ...stylesheetsUnder(src),
+      ...stylesheetsUnder(extensions),
+    ]
+      .filter((path) => !path.endsWith(join("design-system", "base.css")))
+      .filter((path) =>
+        /hyphenate-limit-chars\s*:/.test(
+          stripComments(readFileSync(path, "utf8")),
+        ),
+      )
+      .map((path) => relative(src, path));
+    expect(elsewhere).toEqual([]);
+  });
+
+  // The band grows only by wrapping. A `:has()` rule would grow it for one kind
   // of content, and a page of panels would go ragged.
   it("never sizes the band from what the head carries", () => {
     expect(panelCss()).not.toMatch(/\.panel-head:has\(/);
@@ -585,31 +659,38 @@ describe("the panel head is one band at the height every panel shares, wider tha
     ]);
   });
 
-  // The title does not wrap, because a second line is a second height. It ends
-  // in an ellipsis instead, and it is the only thing that gives way: a badge or
-  // a button squeezed by a long title reads as a different control, or loses
-  // its label outright.
-  it("truncates the title and lets nothing else give way", () => {
+  // An ellipsis cuts the name a reader finds the zone by. A squeezed badge or
+  // button reads as a different control, so nothing else gives way.
+  it("wraps the title whole and lets nothing else give way", () => {
     const selector = ".panel-head .panel-title";
-    const declared = cssRules(panelCss())
-      .filter((rule) => rule.selector === selector)
+    const declared = titleRules(panelCss())
       .map((rule) => rule.block)
       .join(";");
-    expect(declaredValue(declared, "white-space"), selector).toBe("nowrap");
-    expect(declaredValue(declared, "overflow"), selector).toBe("hidden");
-    expect(declaredValue(declared, "text-overflow"), selector).toBe("ellipsis");
+    expect(declaredValue(declared, "white-space"), selector).toBeUndefined();
+    expect(declaredValue(declared, "text-overflow"), selector).toBeUndefined();
+    expect(declaredValue(declared, "overflow"), selector).toBeUndefined();
+    expect(
+      declaredValue(declared, "-webkit-line-clamp"),
+      selector,
+    ).toBeUndefined();
+    expect(declaredValue(declared, "hyphens"), selector).toBe("auto");
     expect(declaredValue(declared, "min-width"), selector).toBe("0");
     // The push that keeps an action at the far end rides on the title, so a
     // pair of actions cannot split around it the way a `:last-child` push lets
     // them.
     expect(declaredValue(declared, "margin-right"), selector).toBe("auto");
 
+    const beside = cssRules(panelCss()).find(
+      (rule) => rule.selector === ".panel-head > :where(:not(.panel-title))",
+    );
+    expect(declaredValue(beside?.block ?? "", "flex-shrink")).toBe("0");
+    // Capped at the band, so a control that wraps does so inside the head
+    // rather than under the pane's clipped edge.
+    expect(declaredValue(beside?.block ?? "", "max-width")).toBe("100%");
+
     // The band itself does not clip: a menu or a tooltip opened from a button
     // in the head has to be able to leave it.
-    const head = bandRules(panelCss()).find(
-      (rule) => rule.selector === ".panel-head",
-    );
-    expect(head?.properties).not.toContain("overflow");
+    expect(head()?.properties).not.toContain("overflow");
   });
 });
 
@@ -739,8 +820,9 @@ describe("panel.css is the only sheet that shapes the head band", () => {
     expect(
       swept.filter(
         (path) =>
-          path.endsWith(join("screens", "company", "glance.css")) ||
-          path.endsWith(join("screens", "contact360.css")),
+          path.endsWith(
+            join("features", "companies", "company", "glance.css"),
+          ) || path.endsWith(join("features", "contacts", "contact360.css")),
       ),
     ).toHaveLength(2);
 
@@ -766,7 +848,7 @@ describe("panel.css is the only sheet that shapes the head band", () => {
     });
     expect(
       offences,
-      "the head band is 56px and its title one size on every screen: recolour them if you must, resize them in panel.css or not at all",
+      "the head band's floor is 56px and its title one size on every screen: recolour them if you must, resize them in panel.css or not at all",
     ).toEqual([]);
   });
 });
@@ -889,8 +971,9 @@ describe("the pane insets the state arm it has no body to wrap", () => {
     expect(
       swept.filter(
         (path) =>
-          path.endsWith(join("screens", "automationdetail.css")) ||
-          path.endsWith(join("design-system", "settingrow.css")),
+          path.endsWith(
+            join("features", "automations", "automationdetail.css"),
+          ) || path.endsWith(join("design-system", "settingrow.css")),
       ),
     ).toHaveLength(2);
 

@@ -57,6 +57,7 @@ var scopeSpellingTable = map[string]scopeSpelling{
 
 	"EnsureVisible":                 {argument: 2},
 	"EnsureVisibleLive":             {argument: 2},
+	"EnsureVisibleExisting":         {argument: 2},
 	"EnsureVisibleForSubjectRights": {argument: 2},
 	// The write-authority family takes the same (ctx, tx, table, id) shape as
 	// the visible family it opens with, so the table is in the same position.
@@ -532,5 +533,13 @@ const (
 	// 121: deals.readReviewTerms and deals.readOfferTerms read the deal's
 	// company and each offer's buyer company into the legal review terms. The
 	// ids feed a SHA-256 the stage gate compares and never leave the server.
-	modulesTierUnscopedCeiling = 121
+	//
+	// 123: privacy.subjectQuestionSources follows a rights-case subject to the
+	// deals and projects they are a stakeholder of. Subject access and erasure
+	// then reach every kept question answer those records were counted in.
+	// The operator's own seat must not narrow a subject's rights case.
+	//
+	// 124: privacy.leadTwinOf follows the same subject through merged contacts
+	// to the leads they were, for the same rights case.
+	modulesTierUnscopedCeiling = 124
 )

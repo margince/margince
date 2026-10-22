@@ -401,13 +401,14 @@ func TestUndoingASignatureLeavesATitleItOnlyConfirmed(t *testing.T) {
 	}
 }
 
-// A LinkedIn handle a colleague saved after the fill is theirs, even when it
-// reads the same as the one the fill claimed.
-func TestASignatureLinkedinAColleagueSavedSinceIsNotUndone(t *testing.T) {
+// A LinkedIn handle a colleague saved after the fill is theirs once it differs
+// from the one the fill claimed. A save that repeats the filled handle changes
+// nothing, writes no trail, and leaves the fill undoable.
+func TestASignatureLinkedinAColleagueChangedSinceIsNotUndone(t *testing.T) {
 	e := integration.Setup(t)
 	contact, fill := seedSignatureFill(t, e)
 	if _, err := e.Contacts.UpdateContact(e.Admin(), ids.From[ids.ContactKind](contact), contacts.UpdateContactInput{
-		Social: map[string]any{"linkedin": "https://www.linkedin.com/in/bob-contact"},
+		Social: map[string]any{"linkedin": "https://www.linkedin.com/in/bob-contact-cto"},
 	}); err != nil {
 		t.Fatalf("a colleague saving the handle: %v", err)
 	}
@@ -420,9 +421,26 @@ func TestASignatureLinkedinAColleagueSavedSinceIsNotUndone(t *testing.T) {
 	}
 }
 
-// A title a colleague saved again after a site read filled it is theirs, even
-// though it reads the same and the read left no title evidence row.
-func TestASiteReadTitleAColleagueSavedAgainIsNotUndone(t *testing.T) {
+func TestASignatureLinkedinAColleagueSavedUnchangedIsStillUndone(t *testing.T) {
+	e := integration.Setup(t)
+	contact, fill := seedSignatureFill(t, e)
+	if _, err := e.Contacts.UpdateContact(e.Admin(), ids.From[ids.ContactKind](contact), contacts.UpdateContactInput{
+		Social: map[string]any{"linkedin": "https://www.linkedin.com/in/bob-contact"},
+	}); err != nil {
+		t.Fatalf("a colleague saving the handle: %v", err)
+	}
+
+	if err := undoEntry(t, e, "contact", contact, fill); err != nil {
+		t.Fatalf("undoing the fill after an unchanged save: %v", err)
+	}
+	if _, _, _, linkedin := whatTheFillLeft(t, e, contact); linkedin != 0 {
+		t.Errorf("%d LinkedIn handles after the undo, want the filled one cleared", linkedin)
+	}
+}
+
+// A title a colleague saved again, unchanged, after a site read filled it is a
+// save that changed nothing. It writes no trail, so the fill stays undoable.
+func TestASiteReadTitleAColleagueSavedAgainUnchangedIsStillUndone(t *testing.T) {
 	e := integration.Setup(t)
 	contact := e.SeedContact(t, "Sara Site", nil)
 	company := e.SeedCompany(t, "Acme Site GmbH", nil)
@@ -439,8 +457,11 @@ func TestASiteReadTitleAColleagueSavedAgainIsNotUndone(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if reason := refusedFor(t, undoEntry(t, e, "contact", contact, fill)); reason != ReasonSuperseded {
-		t.Errorf("the undo refused %q, want %q", reason, ReasonSuperseded)
+	if err := undoEntry(t, e, "contact", contact, fill); err != nil {
+		t.Fatalf("undoing the fill after an unchanged save: %v", err)
+	}
+	if title, _, _, _ := whatTheFillLeft(t, e, contact); title != nil {
+		t.Errorf("title = %q after the undo, want the filled title cleared", *title)
 	}
 }
 

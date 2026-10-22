@@ -3,9 +3,10 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
-import { type BoardDeal, DealCard } from "./composed";
+import { DealCard } from "./dealcard";
 import { EmailReference } from "./emailreference";
 import { Eyebrow } from "./eyebrow";
+import type { BoardDeal } from "./pipelineboard";
 
 // The card on its own, for the states the board canvases
 // (pipelineboard.stories.tsx) cannot hold still: a flyout open under a settled
@@ -111,8 +112,8 @@ export const BoardCardStatesDark: StoryObj = {
 
 // A card's mail line with the flyout a caller gave it: the last few subjects,
 // read on hover, without opening the deal. The aside's content is the
-// caller's — here the same stacked citations screens/dealmailaside.tsx reads
-// from the timeline, handed in as fixtures — so what this canvas holds is the
+// caller's. Here it is the stacked citations features/deals/dealmailaside.tsx
+// reads from the timeline, handed in as fixtures. So this canvas holds the
 // trigger, the panel and where it sits against the card.
 export const BoardCardMailFlyout: StoryObj = {
   render: () => (

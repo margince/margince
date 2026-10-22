@@ -5,10 +5,12 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useQueryClient } from "@tanstack/react-query";
 import { Database, ShieldCheck, UserRound } from "lucide-react";
 import { type ReactNode, useState } from "react";
+import { expect, waitFor } from "storybook/test";
 import { Card } from "../design-system/atoms";
+import type { Locale } from "../i18n";
+import { LISTS_KEY, type List } from "../lib/lists.queries";
 import type { Route } from "../lib/router";
-import { LIVE_ID, liveList } from "../screens/lists.fixtures";
-import { LISTS_KEY, type List } from "../screens/lists.queries";
+import { LIVE_ID, liveList } from "../testing/lists.fixtures";
 import {
   installFetchStub,
   meRoute,
@@ -27,12 +29,11 @@ import { TopBar } from "./topbar";
  *
  * Every frame renders the REAL frame — the `.app` grid, the sidebar beside it,
  * the bar as the first row of `<main>`. Nothing here is decoration. The bar is
- * three tracks, `minmax(0, 1fr) auto minmax(0, 1fr)`, and the search stands IN
- * that row rather than being taken out of it: the field therefore lands on the
- * centre of the CONTENT column — not of the window — and the trail beside it has
- * an edge to shrink and ellipsis against. A bar rendered at a hand-set width is a
- * picture of geometry the product does not use, and the one thing it would get
- * wrong is the thing worth looking at.
+ * three tracks, the outer two equal while the trail fits its half. The search
+ * stands IN that row, so it lands on the centre of the CONTENT column, not of
+ * the window. The trail beside it has an edge to shrink and ellipsis against.
+ * A bar rendered at a hand-set width pictures geometry the product does not
+ * use. What it would get wrong is the thing worth looking at.
  *
  * The strip's height is one token, `--topbarH`, and the sidebar's head is
  * measured against it so the first destination's row begins on the line this
@@ -47,13 +48,12 @@ import { TopBar } from "./topbar";
  * is the arrangement this bar was changed away from.
  *
  * TWO things these frames cannot promise on their own, both because `fe-uat`
- * captures every non-phone story at 1024px:
+ * captures every untagged story at 1024px:
  *
  * - The labeled field and its two key caps belong to a `min-width: 1101px`
- *   arrangement, so the render gate photographs the collapsed glyph on every
- *   wide frame below. The caps are real only in Storybook, in a window wider
- *   than 1100px; `Narrow` is the frame that pins the small arrangement
- *   deterministically.
+ *   arrangement. The render gate photographs them only in `SettingsEntryGerman`,
+ *   tagged `uat-wide`; every other wide frame shows the collapsed glyph.
+ *   `Narrow` is the frame that pins the small arrangement deterministically.
  * - The approvals bell is the other way round — it is hidden only under 700px,
  *   so 1024px does photograph it, and `Phone` is the frame where it is gone.
  *
@@ -90,9 +90,16 @@ const NOTHING_WAITING = { inbox: 0, tasks: 0 };
  * which is where the centred field gives up its slot. Storybook's viewport tool
  * is applied by the MANAGER, which resizes the preview iframe from outside it,
  * so these frames are honest in Storybook. They are honest under the render gate
- * too, for an unrelated reason: `fe-uat` drives every non-phone story at 1024px,
- * which is already inside this same rule.
+ * too: `fe-uat` drives an untagged story at 1024px, which is inside this rule.
  */
+const WIDE_VIEWPORT = {
+  viewport: {
+    options: {
+      wide: { name: "Wide", styles: { width: "1440px", height: "900px" } },
+    },
+  },
+};
+
 const NARROW_VIEWPORT = {
   viewport: {
     options: {
@@ -228,16 +235,18 @@ function BarStory({
   counts,
   startCollapsed,
   record,
+  locale,
 }: Readonly<{
   route: Route;
   section?: NavSection;
   counts?: NavCounts;
   startCollapsed?: boolean;
   record?: { id: string; name: string };
+  locale?: Locale;
 }>) {
   stubSession();
   return (
-    <StoryProviders>
+    <StoryProviders locale={locale}>
       <SeedCache record={record}>
         <BarFrame
           route={route}
@@ -341,9 +350,8 @@ export const BelowFiltersAndViews: Story = {
 };
 
 /**
- * The same trail on a phone. The row has room for two stops, so the list folds
- * away and the trail keeps the way back to the library and the page; the page
- * names the list it edits.
+ * The same trail on a phone: only the page shows, with the whole row to itself.
+ * The way back is the bottom bar, and the page names the list it edits.
  */
 export const BelowFiltersAndViewsPhone: Story = {
   name: "below Filters and views — on a phone",
@@ -365,12 +373,8 @@ export const BelowFiltersAndViewsPhone: Story = {
  * rest of the name is on the tooltip the clipped label carries, on hover and on
  * keyboard focus alike.
  *
- * True at every width, and it was not always: the search was `position: absolute`
- * once, which left nothing bounding `.topbar-lead` but the row itself — the last
- * crumb grew to the full width of the bar, ran UNDER the centred field and came
- * out the other side, unclipped and with no tooltip. The bar is a three-track
- * grid now (`minmax(0, 1fr) auto minmax(0, 1fr)`), so the trail has a bound to
- * shrink against and this frame shows the rule rather than the bug.
+ * Above 1100px `.topbar-lead` carries a cap, the bound the trail shrinks
+ * against; below it the lead takes what the end controls leave.
  */
 export const RecordLongName: Story = {
   name: "a record whose name outruns the row",
@@ -432,6 +436,38 @@ export const SettingsEntry: Story = {
       section={SETTINGS_SECTION}
     />
   ),
+};
+
+/** German: a trail longer than half the bar grows into the room the end
+ *  controls leave. With the sidebar open it is whole from 1131px. */
+export const SettingsEntryGerman: Story = {
+  name: "a settings entry — a German trail longer than its half",
+  parameters: WIDE_VIEWPORT,
+  globals: { viewport: { value: "wide" } },
+  tags: ["uat-wide"],
+  render: () => (
+    <BarStory
+      route={{ screen: "settings", id: "privacy" }}
+      section={SETTINGS_SECTION}
+      locale="de"
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    await waitFor(() => {
+      const label = canvasElement.querySelector(
+        ".crumbs-current .crumbs-label",
+      );
+      const search = canvasElement.querySelector(".topbar-searchslot");
+      if (!(label instanceof HTMLElement) || !(search instanceof HTMLElement)) {
+        throw new Error("the bar has no current crumb or no search slot");
+      }
+      expect(label.textContent).toContain("Datenschutz und Aufbewahrung");
+      expect(label.scrollWidth).toBeLessThanOrEqual(label.clientWidth);
+      expect(label.getBoundingClientRect().right).toBeLessThan(
+        search.getBoundingClientRect().left,
+      );
+    });
+  },
 };
 
 /**

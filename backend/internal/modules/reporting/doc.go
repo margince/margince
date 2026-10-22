@@ -8,5 +8,6 @@
 // Tables owned: reporting_framework, reporting_framework_revision,
 // report_definition, report_definition_revision, sales_target,
 // sales_target_revision, report_schedule, report_execution, report_edition,
-// report_edition_contribution.
+// report_edition_contribution, report_edition_question,
+// report_edition_question_source.
 package reporting

@@ -64,7 +64,7 @@ var grantedToNobody = gatekit.Waive(map[string]string{})
 // scan cannot resolve. Each is a door no static check covers, so it may fall
 // freely and rise only with a reason. Migration's doors count here because
 // they name ImportRunObject, which the scan cannot follow.
-const dynamicObjectCeiling = 96
+const dynamicObjectCeiling = 94
 
 // dynamicActionCeiling is the same bound for the OTHER unresolved argument: a
 // call site naming a known object and an action computed at runtime, as

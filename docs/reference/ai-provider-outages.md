@@ -54,15 +54,16 @@ does in this state.
 | `owed_verdict` | Unanswered-message triage | background | `local_small` → `cheap_cloud` | waits for the provider's next check; the attempt is not spent | — |
 | `propose_roles` | Buying-role reading | interactive | `cheap_cloud` → `premium` | fails at once with a 503 naming the cause | — |
 | `rate_extract` | Exchange rate extraction | background | `premium` → `cheap_cloud` | waits for the provider's next check; the attempt is not spent | — |
-| `request_settlement` | Did our reply settle it | background | `local_small` → `cheap_cloud` | waits for the provider's next check; the attempt is not spent | — |
-| `signal_extract` | Signal extraction | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | — |
-| `site_extract` | Website deep read | background | `premium` | waits for the provider's next check; the attempt is not spent | — |
+| `request_settlement` | Checking whether the reply answered the request | background | `local_small` → `cheap_cloud` | waits for the provider's next check; the attempt is not spent | — |
+| `signal_extract` | Signal extraction | background | `frontier` | waits for the provider's next check; the attempt is not spent | — |
+| `site_extract` | Website research | background | `premium` | waits for the provider's next check; the attempt is not spent | — |
 | `site_fact_extract` | Website fact extraction | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | — |
 | `site_triage` | Website triage | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | a failed decision call hands the task to its ladder |
 | `stage_evidence_extract` | Stage evidence extraction | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | — |
 | `summarize` | Record summary | interactive | `cheap_cloud` → `premium` | answers from its own facts instead of failing | — |
+| `tag_suggest` | Tag suggestions | background | `local_small` → `cheap_cloud` | waits for the provider's next check; the attempt is not spent | — |
 | `transcript` | Transcript reading | interactive | `cheap_cloud` → `premium` | not in use yet | — |
-| `transcript_propose` | Meeting follow-up extraction | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | — |
+| `transcript_propose` | Meeting follow-up extraction | background | `premium` | waits for the provider's next check; the attempt is not spent | — |
 | `voice_build` | Voice DNA build | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | — |
 | `weekly_learnings` | What last week taught | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | — |
 | `weekly_review` | Weekly review narrative | background | `cheap_cloud` → `premium` | waits for the provider's next check; the attempt is not spent | — |

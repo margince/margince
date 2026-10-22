@@ -10,6 +10,8 @@ package attention
 // figures, two places to answer it, and both counted in the readings above.
 
 import (
+	"context"
+	"slices"
 	"testing"
 	"time"
 
@@ -75,6 +77,62 @@ func TestTheFoldedRowKeepsTheBriefMarkVerbs(t *testing.T) {
 	}
 	if ids.UUID(*kept[0].item.BriefItemId) != briefItem {
 		t.Errorf("brief_item_id = %v, want the folded entry %v", *kept[0].item.BriefItemId, briefItem)
+	}
+}
+
+// The surviving row's own actions stay the deal's. The brief entry's declining
+// verbs travel beside them, as the server offered them, so no client invents one.
+func TestTheFoldedRowCarriesTheBriefsOwnDecliningVerbs(t *testing.T) {
+	deal, briefItem := ids.NewV7(), ids.NewV7()
+
+	kept := foldBriefIntoRisk([]ranked{atRiskRow(deal), rankedBriefRow(briefItem, deal)})
+
+	want := []crmcontracts.WorklistItemBriefActions{"set_aside", "dismiss"}
+	if got := kept[0].item.BriefActions; got == nil || !slices.Equal(*got, want) {
+		t.Errorf("brief_actions = %v, want %v copied from the brief entry", got, want)
+	}
+	if !slices.Equal(kept[0].item.Actions, []crmcontracts.WorklistItemActions{"open"}) {
+		t.Errorf("the row's own actions became %v: the brief's verbs belong in brief_actions", kept[0].item.Actions)
+	}
+}
+
+// The brief is the acting reader's. On a colleague's queue, a manager must not
+// find their own brief entry folded into the colleague's deal row. Its Snooze
+// and Dismiss would change the manager's brief under the colleague's name.
+func TestABriefEntryFoldsOnlyIntoTheReadersOwnQueue(t *testing.T) {
+	colleague := ids.MustParse("01a05500-0000-7000-8000-0000000000cc")
+	deal, briefItem := ids.NewV7(), ids.NewV7()
+	risk := item(deal.String(), "deal_at_risk", withDeal(90_000_00), withDealSubject(deal))
+	risk.Deal.OwnerId = uuidPtr(colleague)
+	risk.Actions = []crmcontracts.AttentionItemActions{"open"}
+	withDue(rankInstant)(&risk)
+	night := item(briefItem.String(), "brief_item", withCurrentIntervention(), withDealSubject(deal))
+	night.Actions = []crmcontracts.AttentionItemActions{"act", "set_aside", "dismiss"}
+	day := crmcontracts.Attention{
+		AsOf: rankInstant, AtRisk: lane(risk), ThisMorning: []crmcontracts.AttentionItem{night},
+	}
+	carriers := func(page crmcontracts.Worklist) (n int) {
+		for _, row := range page.Queue {
+			if row.BriefItemId != nil || row.BriefActions != nil {
+				n++
+			}
+		}
+		return n
+	}
+
+	own := (&Service{}).worklistFrom(context.Background(), day, scopeAll, "", 25, waitingRead{}, worklistCursor{}, nil)
+	if len(own.Queue) != 1 || carriers(own) != 1 {
+		t.Fatalf("the reader's own queue has %d rows, %d carrying the brief entry: want the one folded row",
+			len(own.Queue), carriers(own))
+	}
+
+	theirs := (&Service{taskOwner: colleague, taskScope: TasksOwnedBy}).worklistFrom(
+		context.Background(), day, scopeMine, "", 25, waitingRead{}, worklistCursor{}, nil)
+	if len(theirs.Queue) != 1 {
+		t.Fatalf("the colleague's queue has %d rows, want their deal alone", len(theirs.Queue))
+	}
+	if carriers(theirs) != 0 {
+		t.Errorf("the colleague's deal row carries the reader's own brief entry %v", theirs.Queue[0].BriefItemId)
 	}
 }
 

@@ -38,37 +38,38 @@ const askCap = 5
 // fact about the record, and "the model did not mention it" is a fact about the
 // model. Only the first belongs in front of a reader.
 func unknownsFor(in Input, typ MeetingType, arc []ArcMoment) []Unknown {
+	said := briefCopyFor(in.Language)
 	var out []Unknown
 	add := func(kind crmcontracts.MeetingPlanUnknownKind, question string) {
 		out = append(out, Unknown{Kind: kind, Question: question})
 	}
 	if typ.Value == crmcontracts.MeetingPlanTypeValueMeetingPlanTypeUnknown {
 		add(crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownIntentNotCaptured,
-			"What would make this hour worth your time?")
+			said.Say(questionWords.Intent))
 	}
 	if in.Deal == nil {
 		add(crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownNoOpenDeal,
-			"Is there a piece of work here you are trying to get funded, or is this still exploratory?")
+			said.Say(questionWords.Funding))
 	}
 	if !hasClaimKind(in, kindDecisionProcess) {
 		add(crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownDecisionRouteNotCaptured,
-			"Who else has to agree before this can go ahead?")
+			said.Say(questionWords.Approvers))
 	}
 	if len(in.PriorMeetings) == 0 {
 		add(crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownNoPriorMeeting,
-			"Have you spoken to anyone else on our side before today?")
+			said.Say(questionWords.PriorContact))
 	}
 	if len(in.Commitments) == 0 {
 		add(crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownNoCommitmentsCaptured,
-			"Is anything outstanding from either side that I should pick up?")
+			said.Say(questionWords.Outstanding))
 	}
 	if len(arc) == 0 {
 		add(crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownNoHistory,
-			"How much of the background do you already have from your side?")
+			said.Say(questionWords.Background))
 	}
 	if len(in.Attendees) == 0 {
 		add(crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownAttendeesNotVisible,
-			"Who else is joining, and what do they need from this?")
+			said.Say(questionWords.Joining))
 	}
 	return out
 }
@@ -88,57 +89,51 @@ func hasClaimKind(in Input, kind string) bool {
 // asked, a promise we made them. A hypothesis with no record behind it is a
 // guess, and a guess printed beside cited facts borrows their credibility.
 func likelyAsksFor(in Input, ranked *rankedClaims) []Ask {
+	said := briefCopyFor(in.Language)
 	var out []Ask
-	for _, claim := range ranked.all(ofKind(kindOpenQuestion, kindCommitmentOurs, kindObjection)) {
+	for _, claim := range ranked.all(openOfKind(kindOpenQuestion, kindCommitmentOurs, kindObjection)) {
 		if len(out) == askCap {
 			break
 		}
-		question, prepare := askLines(claim)
+		question, prepare := said.askLines(claim)
 		if question == "" {
 			continue
 		}
 		out = append(out, Ask{
 			Question: question,
 			Basis: Sentence{
-				Text:     askBasis(claim),
+				Text:     said.askBasis(claim),
 				Nature:   natureAssessment,
 				Evidence: []Evidence{{EntityType: citeActivity, EntityID: claim.SourceID}},
 			},
-			Relevance: relevanceOf(claim),
+			Relevance: crmcontracts.MeetingPlanTierMeetingPlanTierHigh,
 			Prepare:   prepare,
 		})
 	}
 	return out
 }
 
-func askLines(claim ClaimIn) (string, string) {
+func (said briefCopy) askLines(claim ClaimIn) (string, string) {
 	switch claim.Kind {
 	case kindOpenQuestion:
 		return fmt.Sprintf("%q", claim.Body),
-			"Answer it directly, or say who will and by when."
+			said.Say(questionWords.Answer)
 	case kindCommitmentOurs:
-		return fmt.Sprintf("Where are you with %s?", claim.Body),
-			"Have the current state and the next date ready before the meeting."
+		return fmt.Sprintf(said.Say(questionWords.Progress), claim.Body),
+			said.Say(questionWords.Prepare)
 	case kindObjection:
-		return fmt.Sprintf("%q — expect them to raise it again.", claim.Body),
-			"Answer it with a record they can check, not with reassurance."
+		return fmt.Sprintf(said.Say(questionWords.Objection), claim.Body),
+			said.Say(questionWords.Evidence)
 	default:
 		return "", ""
 	}
 }
 
-func askBasis(claim ClaimIn) string {
+func (said briefCopy) askBasis(claim ClaimIn) string {
 	if claim.Kind == kindCommitmentOurs {
-		return fmt.Sprintf("We promised %s this and it is still open.", claim.ContactName)
+		return fmt.Sprintf(said.Say(questionWords.PromiseOpen), claim.ContactName)
 	}
-	return fmt.Sprintf("%s raised this and it has not been closed out.", claim.ContactName)
-}
-
-func relevanceOf(claim ClaimIn) crmcontracts.MeetingPlanTier {
-	if claim.Status == statusOpen {
-		return crmcontracts.MeetingPlanTierMeetingPlanTierHigh
-	}
-	return crmcontracts.MeetingPlanTierMeetingPlanTierMedium
+	return fmt.Sprintf(said.Say(questionWords.RaisedOpen), claim.ContactName)
 }
 
 // questionsFor is what to ask THEM.
@@ -149,17 +144,20 @@ func relevanceOf(claim ClaimIn) crmcontracts.MeetingPlanTier {
 // file. An unknown with nothing to anchor on stays in `unknowns`, where it
 // reads as the gap it is, instead of being dressed up as preparation.
 func questionsFor(in Input, unknowns []Unknown, ranked *rankedClaims) []Question {
+	said := briefCopyFor(in.Language)
 	var out []Question
-	for _, claim := range ranked.all(ofKind(kindPriority, kindSuccessCriterion, kindOpenQuestion)) {
+	for _, claim := range ranked.all(func(claim ClaimIn) bool {
+		return ofKind(kindPriority, kindSuccessCriterion)(claim) || openOfKind(kindOpenQuestion)(claim)
+	}) {
 		if len(out) == questionCap {
 			return out
 		}
 		out = append(out, Question{
-			Ask: fmt.Sprintf("You said %q — what has changed about that since?", claim.Body),
+			Ask: fmt.Sprintf(said.Say(questionWords.Changed), claim.Body),
 			Why: fmt.Sprintf(
-				"It is the thing %s named, and the plan should be built on it rather than on what we assume.",
+				said.Say(questionWords.Named),
 				claim.ContactName),
-			ListenFor: "Whether it still matters, who owns it now, and what it is costing them.",
+			ListenFor: said.Say(questionWords.ListenPriority),
 			Evidence:  []Evidence{{EntityType: citeActivity, EntityID: claim.SourceID}},
 		})
 	}
@@ -171,14 +169,14 @@ func questionsFor(in Input, unknowns []Unknown, ranked *rankedClaims) []Question
 		if len(out) == questionCap {
 			return out
 		}
-		why := unknownWhy(unknown.Kind, anchor)
+		why := said.unknownWhy(unknown.Kind, anchor)
 		if why == "" {
 			continue
 		}
 		out = append(out, Question{
 			Ask:       unknown.Question,
 			Why:       why,
-			ListenFor: unknownListenFor(unknown.Kind),
+			ListenFor: said.unknownListenFor(unknown.Kind),
 			Evidence:  []Evidence{{EntityType: citeActivity, EntityID: in.ActivityID}},
 		})
 	}
@@ -197,14 +195,14 @@ func accountAnchor(in Input) string {
 	return ""
 }
 
-func unknownWhy(kind crmcontracts.MeetingPlanUnknownKind, anchor string) string {
+func (said briefCopy) unknownWhy(kind crmcontracts.MeetingPlanUnknownKind, anchor string) string {
 	switch kind {
 	case crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownIntentNotCaptured:
-		return fmt.Sprintf("Nothing in the record says what %s wants from this meeting.", anchor)
+		return fmt.Sprintf(said.Say(questionWords.WhyIntent), anchor)
 	case crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownDecisionRouteNotCaptured:
-		return fmt.Sprintf("The record does not name who decides at %s.", anchor)
+		return fmt.Sprintf(said.Say(questionWords.WhyDecision), anchor)
 	case crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownNoOpenDeal:
-		return fmt.Sprintf("There is no open deal with %s, so what this is for is unstated.", anchor)
+		return fmt.Sprintf(said.Say(questionWords.WhyDeal), anchor)
 	default:
 		// The rest are gaps worth stating and not worth spending one of five
 		// questions on — a rep does not need prompting to ask whether anything
@@ -213,13 +211,13 @@ func unknownWhy(kind crmcontracts.MeetingPlanUnknownKind, anchor string) string 
 	}
 }
 
-func unknownListenFor(kind crmcontracts.MeetingPlanUnknownKind) string {
+func (said briefCopy) unknownListenFor(kind crmcontracts.MeetingPlanUnknownKind) string {
 	switch kind {
 	case crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownIntentNotCaptured:
-		return "The word they use for the problem, and whether a date is attached to it."
+		return said.Say(questionWords.ListenProblem)
 	case crmcontracts.MeetingPlanUnknownKindMeetingPlanUnknownDecisionRouteNotCaptured:
-		return "Names and roles: who approves, who pays, who can veto."
+		return said.Say(questionWords.ListenRoles)
 	default:
-		return "Whether the answer names a contact, a date, or neither."
+		return said.Say(questionWords.ListenContact)
 	}
 }

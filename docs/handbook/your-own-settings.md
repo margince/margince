@@ -1,9 +1,9 @@
 <!-- prose:plain -->
 # Your own settings
 
-Your own settings in Margince are the six pages under **You** in Settings:
-**Account**, **Meetings**, **Writing voice**, **Agents**, **Connections** and
-**Capture activity**. Everything here changes your own seat and nobody else's.
+Your own settings in Margince are the pages under **You** in Settings:
+**Account**, **Meetings**, **Writing voice**, **AI access**, **Notifications**,
+**Connections** and **Capture activity**. Everything here changes your own seat and nobody else's.
 Capture activity also carries one card that holds for the whole company: the
 company's rules for what capture keeps out, beside your own. Connections only
 shows the company's email sharing rule, on a row marked **Whole company**, and changes
@@ -13,24 +13,53 @@ For everything else, see [Settings](settings.md).
 
 ### How do I open my own settings?
 To open your own settings in Margince, open the account menu at the top right and choose **Settings**, then pick a page under **You**.
-The six pages are **Account**, **Meetings**, **Writing voice**, **Agents**, **Connections** and **Capture activity**. **Account** holds your name, password, signature, language and look. **Meetings** holds your booking link, calendar, working hours and what guests see.
+The pages are **Account**, **Meetings**, **Writing voice**, **AI access**, **Notifications**, **Connections** and **Capture activity**. **Account** holds your name, password, signature, language and look. **Meetings** holds your booking link, calendar, working hours and what guests see.
 You can also press ⌘K (Ctrl+K) and type the page name, or a word such as "password", "language", "theme" or "mailbox".
 Also called: my profile, my account, preferences, user settings.
 
-### How do I change my notifications?
-Margince has no notification bell and no notification settings. The two summaries that come each day and each week are the morning brief and the weekly review. You choose whether they also come by email. Open **Settings → Account** and set **Morning brief** and **Weekly review** to **By email** or **Not by email**.
+### How do I finish setting up Margince?
+To see what is left of your setup in Margince, open Settings and look at **Your setup** on **Overview**.
+It lists the steps: connect your mail, connect your calendar, add writing samples and turn on your booking link. Each step has a button, such as **Connect mail** or **Turn on**.
+While steps are open, **Finish setup** at the top of every screen shows how many are done. Choose **Hide until next sign-in** to put it away for now.
+Also called: setup list, getting started, onboarding steps.
 
-Both always appear on **Home**, whatever you pick, and what you still need to do waits on your Worklist there.
+### How do I save a change on a settings page?
+To save a change on a settings page in Margince, change a field, then choose **Save** in the bar at the foot of the page.
+**Discard** in that bar puts every field back as it was. If a field has a mistake, the bar says "Fix the marked fields to save."
+Switches work at once and need no save. If you leave with changes not saved, Margince asks "Save your changes?" and offers **Save**, **Discard changes** or **Stay**.
+Also called: save settings, changes not saved, undo changes.
+
+### How do I change my notifications?
+To change your notifications in Margince, open Settings → **Notifications**.
+1. Under **Delivery by kind**, pick how each kind reaches you: **Off**, **In the app**, **Email** or **Daily digest**. Not every kind offers every choice.
+2. Under **Email summaries**, set **Morning brief** and **Weekly review** to **By email** or **Not by email**.
+
+Every notice also stays in the notification center under the bell, whatever you pick. **Nudges from colleagues** cannot be turned off. The brief and the review always appear on **Home**, and what you still need to do waits on your Worklist there.
+
+Morning and weekly emails use your saved account language. Without a saved
+language, they use the company language. Password links use the account
+language too; invitations for a new account use the company language.
+
+Weekly emails show recorded results and name open due tasks separately.
+An empty week with no work to follow up means no email is sent. A team email opens
+the selected team and week. If part of the report could not be read, the email
+says so rather than counting missing information as zero.
+
 Also called: email notifications, turn off emails, alerts, daily digest.
 
 ## Account
 
-The Account page in Settings holds one card, **Your account**. It holds who you
-are, how you sign in and how you sign off. It also holds which language the
-product uses with you (English, Deutsch or Tiếng Việt), and how it looks. It
-also has **Sign out**.
+The Account page in Settings has three panels. **Profile** holds who you are,
+your display and greeting names, and your email signature. **Security** holds your
+password and two-step sign-in, and **Sign out**. **Language and appearance**
+holds which language the product uses with you (English, Deutsch or Tiếng
+Việt), and how it looks.
 **Appearance** is here as well as in the account menu, where it is called
 **Theme**. Both change the same setting.
+
+Where your browser can add Margince to this device as an app, a fourth panel
+shows: **This device**. It offers **Install**, says how to add the app, or says
+**Installed**.
 
 ### How do I change my password?
 To change your password in Margince, open Settings → **Account** and choose **Change password** in the **Password** row.
@@ -42,8 +71,50 @@ Margince says **Password changed** and signs you out on all your other computers
 Forgot it? Use **Forgot password?** on the sign-in page where it is shown, or ask an administrator for a new link to set a password.
 Also called: reset my password, update login.
 
+### How do I turn on two-step sign-in?
+To turn on two-step sign-in in Margince, open Settings → **Account** and choose **Set up** in the **Two-step sign-in** row.
+1. Open an app on your phone that makes sign-in codes, and scan the picture on the screen.
+2. If you cannot scan it, choose **Copy key** and add the **Secret key** to the app instead.
+3. Type the code the app shows into **Code from the app**, and choose **Turn on**.
+4. Keep the backup codes under **Recovery codes** in a place only you can reach. **Copy codes** helps.
+5. Choose **Done**.
+
+Margince shows the backup codes once, and never again. The row then reads "On · 10 recovery codes left".
+When two or fewer are left, the row warns you.
+Turning it on signs you out on all your other computers and phones.
+Also called: MFA, second sign-in step, sign-in code, code app.
+
+A setup you started and did not finish shows **Not finished**. **Discard setup** removes it, with no code needed.
+
+### What if Margince asks me to set up two-step sign-in before I can continue?
+Your installation requires two-step sign-in, and you have not set it up yet. After your password, Margince shows **Set up two-step sign-in**.
+Choose **Set up**. The steps are the same as on the **Account** page, from the picture to **Turn on**.
+Keep your **Recovery codes**, choose **Done**, and Margince opens.
+
+If you are already signed in when the switch goes on, you see this page the next time Margince checks.
+**Sign out** leaves without setting it up.
+Also called: required two-step sign-in, must set up, cannot continue.
+
+### How do I sign in with two-step sign-in?
+To sign in to Margince with two-step sign-in, enter your email and password as usual. Margince then shows **Verification code**.
+Type the code your phone app shows now, or one of your backup codes, into **Code**, and choose **Verify code**.
+Each backup code works once. A wrong code is refused, and after too many wrong codes Margince makes you wait a short while.
+
+The code page stays open for five minutes. After that, choose **Back to sign in** and start again with your password.
+Also called: sign-in code, code not working, use a backup code.
+
+### How do I turn off two-step sign-in?
+To turn off two-step sign-in in Margince, open Settings → **Account**, choose **Remove** in the **Two-step sign-in** row, and enter a code.
+The code is one your phone app shows now, or one of your backup codes. Your backup codes stop working with it.
+For new backup codes, or to move to a new phone, remove it and set it up again.
+
+If your installation requires two-step sign-in, Margince asks you to set it up again straight away. That is also how you get new backup codes there.
+Also called: new phone, new backup codes, lost phone.
+
+Keep your backup codes where you can find them without your phone. An administrator cannot turn two-step sign-in off for you.
+
 ### How do I change my display name?
-To change your display name in Margince, open Settings → **Account**, edit the **Display name** field and choose **Save**.
+To change your display name in Margince, open Settings → **Account**, edit the **Display name** field, and choose **Save** or press Enter. **Save** shows once you change the name.
 Your display name is what colleagues see on records you edit, in pickers and in the audit log.
 It cannot be empty, and it can be up to 255 characters long. Your email address shows under it, and you do not change it here.
 Also called: my name, profile name, rename myself.
@@ -98,6 +169,8 @@ Also called: working hours, availability, office hours, notice.
 Without the permission to book meetings, the page shows only the working hours.
 You save them with **Save working hours**, and a note says "Booking meetings
 needs permission from an administrator."
+
+Opening meeting settings from a booking draft opens another tab; coming back loads the saved settings again.
 
 ### How do I share a booking link?
 To share your booking link in Margince, open Settings → **Meetings** and choose **Copy link** on the link in **Booking links**.
@@ -197,23 +270,22 @@ Under that share, the file counts as plain text and is taken whole. So an email
 with a line that opens with a heading and a colon, such as "Frage: …", is not
 asked about.
 
-## Agents
+## AI access
 
-The Agents page in Settings is where you make and take back **passports**: the
-keys that let an AI agent work as you. Every member can open this page.
+The AI access page in Settings is where you connect your AI tool, such as
+Claude or ChatGPT, to Margince. Under **For developers** you also make and take
+back **passports**: the keys that let a script or your own code work as you.
+Every member can open this page.
+
+To connect your AI tool, see [How do I connect my AI tool to Margince?](agents-and-passports.md#how-do-i-connect-my-ai-tool-to-margince).
 
 ### How do I create an agent passport?
-To create an agent passport in Margince, open Settings → **Agents** and choose **New passport** in the **Agent passports** card.
-1. Enter an **Agent name**.
-2. Under **Agent permissions**, tick at least one: **Read records**, **Draft messages**, **Change records**, **Send messages**, **Buy contact data**.
-3. Choose **Mint passport**.
-4. Choose **Copy passport**, then **Download skill** for an AI tool, or **Copy example** for your own code.
-
-An agent can never do more than you can: every request checks your own permissions again.
+To create an agent passport, open Settings → **AI access**, then **For developers**, and see [How do I give an agent access to Margince?](agents-and-passports.md#how-do-i-give-an-agent-access-to-margince).
 Also called: API key, access token, connect an AI agent.
 
-You also see the list of actions agents may use, and the **Connected MCP clients**
-card, on the Agents page. Taking an agent off ends the whole connection, not one key. The
+**Your connections** lists each AI tool you connected. Under **For developers**,
+the **Agent rules** tab shows the list of actions agents may use. Choosing **Disconnect** on a
+connection ends the whole connection, not one key. The
 agent loses access on its next call and cannot get it back. Connecting it again
 means approving access again.
 
@@ -245,6 +317,10 @@ The cards, in order:
   Connections.csv, set your LinkedIn profile URL, and see which companies on file
   you know someone at.
 
+**What your connections found** counts what they brought in: **Senders**,
+**Waiting on a decision** (only while a sender waits), **Held threads** and
+**Network reach**. Choose **View** on a row to see its list.
+
 ### How do I connect my mailbox?
 To connect your mailbox and calendar to Margince, open Settings → **Connections** and choose **Connect Google** or **Connect Microsoft 365** in **Mail and calendar**. Once one account is connected, choose **Add account**.
 1. **Add account** asks which account first: **Google**, **Microsoft 365** or **Another mail host**.
@@ -272,11 +348,11 @@ rule applies from the next message; what is already captured stays.
 
 **Capture activity** shows what the last 24 hours of your mail turned into.
 
-**Outcomes** are counts for those 24 hours: **Captured**, **Dropped as
-internal**, **No contact created**, **Awaiting sender check** and **Derivation
-failed**. Click one to narrow the list under it.
+**Outcomes** are counts for those 24 hours: **Captured**, **Internal**, **No
+contact created**, **Awaiting check** and **Failed**. Click one to narrow the
+list under it.
 
-**Messages**, behind a disclosure, is the log for each message: which step a message
+**Messages** is the log for each message: which step a message
 stopped at, and why. Open it when a message you expected did not show up. By
 default each row names the sender and a short subject. If your installation
 turned this off, the page says so above the rows.
@@ -286,7 +362,7 @@ each, and your own answer where there is one. Only you see this list.
 
 ### Why did an email not show up in Margince?
 To find out why an email did not show up in Margince, open Settings → **Capture activity** and look in **Messages** for the last 24 hours.
-1. Click an **Outcomes** count, such as **Dropped as internal** or **No contact created**, to narrow the list.
+1. Click an **Outcomes** count, such as **Internal** or **No contact created**, to narrow the list.
 2. Open a row's steps to see where that message stopped, and why.
 
 Mail between colleagues is never stored, and a sender under **Capture exclusions** is always kept out.

@@ -13,16 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
-// dealScoutSQL is the scout's one read, in four steps:
-//
-//   - ev: every piece of evidence in the window that could count, from
-//     companies that may be offered a suggestion;
-//   - pairs: per company, the newest new_opportunity with the newest
-//     commitment_made within signalPairWindow of it;
-//   - chosen: the companies a rule fires for — a meeting, a document or a pair
-//     — newest evidence first, capped;
-//   - the evidence the chosen companies' suggestions cite, and for their
-//     documents alone, the latest finished reading's amount and currency.
+// Buyer intent selects candidates; meetings and documents only corroborate them.
 func dealScoutSQL(since, now time.Time, companyCap int) (string, []any) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -32,55 +23,27 @@ func dealScoutSQL(since, now time.Time, companyCap int) (string, []any) {
 	}
 	pairSeconds := arg(int64(signalPairWindow / time.Second))
 	document := proposalDocumentSQL("at.filename", "at.content_type", arg)
-	query := `
-	WITH ev AS (
-	  SELECT mc.company_id, 'meeting' AS kind, a.id AS ref, a.occurred_at, NULL::text AS signal_kind
-	    FROM (` + activities.HeldMeetingCounterparties() + `) mc
-	    JOIN activity a ON a.id = mc.activity_id
-	   WHERE ` + workspaceEvidence("a") + ` AND ` + in("a.occurred_at") + `
-	     AND ` + scoutCandidate("mc.company_id", "a.occurred_at") + `
-	  UNION ALL
-	  SELECT s.resolved_company_id, 'signal', s.id, s.detected_at, s.kind
-	    FROM signal s
-	   WHERE s.kind IN ('new_opportunity', 'commitment_made')
-	     AND s.status = 'open' AND s.archived_at IS NULL AND s.visibility = 'workspace'
-	     AND ` + in("s.detected_at") + `
-	     AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(s.evidence) cite
-	           WHERE cite->>'source_type' = 'activity' AND NOT EXISTS (SELECT 1 FROM activity ca
-	             WHERE ca.id = ` + storekit.CitedActivityID("cite") + ` AND ` + workspaceEvidence("ca") + `))
-	     AND ` + scoutCandidate("s.resolved_company_id", "s.detected_at") + `
-	  UNION ALL
-	  SELECT filed.company_id, 'attachment', at.id, a.occurred_at, NULL
-	    FROM attachment at
-	    JOIN activity a ON a.id = at.activity_id
-	    JOIN LATERAL (
-	      SELECT at.company_id WHERE at.company_id IS NOT NULL
-	      UNION
-	      SELECT reach.company_id FROM (` + activities.CompanyReachSet() + `) reach
-	       WHERE reach.activity_id = a.id AND at.company_id IS NULL) filed ON true
-	   WHERE at.archived_at IS NULL AND NOT at.bytes_withheld AND a.kind = 'email' AND a.direction = 'outbound'
-	     AND ` + workspaceEvidence("a") + ` AND ` + in("a.occurred_at") + `
-	     AND ` + document + `
-	     AND ` + scoutCandidate("filed.company_id", "a.occurred_at") + `
-	), pairs AS (
+	query := `WITH ev AS (` + scoutEvidenceSQL(in, document) + `
+	), deduped AS (
+   SELECT DISTINCT ON (company_id, kind, source_identity) * FROM ev
+   ORDER BY company_id, kind, source_identity, occurred_at, ref
+ ), pairs AS (
 	  SELECT DISTINCT ON (o.company_id) o.company_id, o.ref AS opportunity, c.ref AS commitment,
 	         greatest(o.occurred_at, c.occurred_at) AS occurred_at
-	    FROM ev o
-	    JOIN ev c ON c.company_id = o.company_id AND c.signal_kind = 'commitment_made'
+	    FROM deduped o
+	    JOIN deduped c ON c.company_id = o.company_id AND c.signal_kind = 'commitment_made' AND c.matter = o.matter
 	     AND abs(extract(epoch FROM c.occurred_at - o.occurred_at)) <= $` + fmt.Sprint(pairSeconds) + `
 	   WHERE o.signal_kind = 'new_opportunity'
 	   ORDER BY o.company_id, o.occurred_at DESC, c.occurred_at DESC
 	), chosen AS (
 	  SELECT company_id FROM (
-	    SELECT company_id, occurred_at FROM ev WHERE kind <> 'signal'
-	    UNION ALL
 	    SELECT company_id, occurred_at FROM pairs) qualifying
 	   GROUP BY company_id
 	   ORDER BY max(occurred_at) DESC, company_id
 	   LIMIT $` + fmt.Sprint(arg(companyCap)) + `
 	), cited AS (
 	  SELECT ev.*, row_number() OVER (PARTITION BY ev.company_id, ev.kind ORDER BY ev.occurred_at DESC, ev.ref) AS rank
-	    FROM ev JOIN chosen USING (company_id)
+	    FROM deduped ev JOIN chosen USING (company_id)
 	   WHERE ev.kind <> 'signal'
 	      OR ev.ref IN (SELECT p.opportunity FROM pairs p WHERE p.company_id = ev.company_id
 	                    UNION SELECT p.commitment FROM pairs p WHERE p.company_id = ev.company_id)
@@ -98,6 +61,45 @@ func dealScoutSQL(since, now time.Time, companyCap int) (string, []any) {
 	 WHERE cited.kind = 'signal' OR cited.rank <= $` + fmt.Sprint(arg(dealScoutItemCap)) + `
 	 ORDER BY cited.company_id, cited.occurred_at DESC, cited.ref`
 	return query, args
+}
+
+func scoutEvidenceSQL(in func(string) string, document string) string {
+	return `
+	  SELECT mc.company_id, 'meeting' AS kind, a.id AS ref, a.occurred_at, NULL::text AS signal_kind, a.id::text AS source_identity, NULL::text AS matter
+	    FROM (` + activities.HeldMeetingCounterparties() + `) mc
+	    JOIN activity a ON a.id = mc.activity_id
+	   WHERE ` + workspaceEvidence("a") + ` AND ` + in("a.occurred_at") + `
+	     AND ` + scoutCandidate("mc.company_id", "a.occurred_at") + `
+	  UNION ALL
+	  SELECT s.resolved_company_id, 'signal', s.id, source.occurred_at, s.kind, s.id::text, source.matter
+	    FROM signal s
+	    CROSS JOIN LATERAL (SELECT ` + storekit.CitedActivityTime("s.evidence") + ` AS occurred_at,
+         (SELECT CASE WHEN count(DISTINCT coalesce(nullif(m.thread_key, ''), m.id::text)) = 1
+            THEN min(coalesce(nullif(m.thread_key, ''), m.id::text)) END
+          FROM jsonb_array_elements(s.evidence) matter_cite
+          JOIN activity m ON m.id = ` + storekit.CitedActivityID("matter_cite") + `
+          WHERE matter_cite->>'source_type' = 'activity') AS matter) source
+	   WHERE s.kind IN ('new_opportunity', 'commitment_made')
+	     AND (s.kind <> 'new_opportunity' OR (` + scoutBuyerSignal("s") + ` AND ` + unlinkedCommercialMatter("s") + `))
+	     AND s.status = 'open' AND s.archived_at IS NULL AND s.visibility = 'workspace'
+	     AND ` + in("source.occurred_at") + `
+	     AND NOT EXISTS (SELECT 1 FROM jsonb_array_elements(s.evidence) cite
+	           WHERE cite->>'source_type' = 'activity' AND NOT EXISTS (SELECT 1 FROM activity ca
+	             WHERE ca.id = ` + storekit.CitedActivityID("cite") + ` AND ` + workspaceEvidence("ca") + `))
+	     AND ` + scoutCandidate("s.resolved_company_id", "source.occurred_at") + `
+	  UNION ALL
+	  SELECT filed.company_id, 'attachment', at.id, a.occurred_at, NULL, coalesce(nullif(at.checksum, ''), at.id::text), NULL::text
+	    FROM attachment at
+	    JOIN activity a ON a.id = at.activity_id
+	    JOIN LATERAL (
+	      SELECT at.company_id WHERE at.company_id IS NOT NULL
+	      UNION
+	      SELECT reach.company_id FROM (` + activities.CompanyReachSet() + `) reach
+	       WHERE reach.activity_id = a.id AND at.company_id IS NULL) filed ON true
+	   WHERE at.archived_at IS NULL AND NOT at.bytes_withheld AND a.kind = 'email' AND a.direction = 'outbound'
+	     AND ` + workspaceEvidence("a") + ` AND ` + in("a.occurred_at") + `
+	     AND ` + document + `
+	     AND ` + scoutCandidate("filed.company_id", "a.occurred_at") + ``
 }
 
 // workspaceEvidence admits an activity the whole workspace may read: the

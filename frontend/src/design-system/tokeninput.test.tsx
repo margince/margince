@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
@@ -42,6 +42,17 @@ describe("committing a value", () => {
 
     expect(screen.getByText("DE")).toBeTruthy();
     expect(box().value).toBe("");
+  });
+
+  it("leaves an input method's Enter to the input method", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+    await user.type(box(), "DE");
+
+    fireEvent.keyDown(box(), { key: "Enter", keyCode: 229 });
+
+    expect(box().value).toBe("DE");
+    expect(screen.queryByRole("button", { name: /DE/ })).toBeNull();
   });
 
   it("commits on comma too, so a pasted list does not become one token", async () => {
@@ -286,5 +297,17 @@ describe("offering a vocabulary", () => {
     await user.keyboard("{ArrowDown}{Enter}");
     expect(screen.getByText("dana@nordwand.example")).toBeTruthy();
     expect(screen.queryByText("dan")).toBeNull();
+  });
+
+  it("takes no highlighted row on an input method's Enter", async () => {
+    const user = userEvent.setup();
+    render(<Offering />);
+    await user.type(toBox(), "dan");
+    await user.keyboard("{ArrowDown}");
+
+    fireEvent.keyDown(toBox(), { key: "Enter", keyCode: 229 });
+
+    expect(screen.queryByText("dana@nordwand.example")).toBeNull();
+    expect(toBox().value).toBe("dan");
   });
 });

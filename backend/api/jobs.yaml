@@ -90,6 +90,9 @@
 # but never built is one a fan-out child is inserted onto (workspaceSweepOpts
 # reads the DECLARED queue) with no client to work it.
 queues:
+  data_task:
+    max_workers: 1
+    reason: Bounded database corrections run apart from interactive jobs and serialize across processes with a database lock.
   default: {max_workers: 5}
   comms_send:
     max_workers: 3
@@ -108,6 +111,14 @@ queues:
       message a contact pressed a button for and is waiting on, so the pool is
       wide enough that an ordinary text send is not queued behind two album
       uploads.
+  accounting_read:
+    max_workers: 2
+    reason: >-
+      A finance sync reads every linked customer's ledger from an accounting
+      system this deployment does not control, for up to five minutes a pass.
+      On the default queue a burst of admins pressing Sync would hold every
+      worker that capture syncs and close-date jobs need. Two, because the
+      sync is a six-hourly mirror nobody waits on beyond the card's spinner.
   deep_read:
     max_workers: 6
     reason: >-
@@ -286,7 +297,7 @@ kinds:
     role: worker
     fleet: true
     go_type: FinanceSyncSweepArgs
-    queue: default
+    queue: accounting_read
     timeout: 5m
     opts_owner: caller
     cadence: 6h
@@ -307,6 +318,39 @@ kinds:
       Each workspace's pass reads the source's customers and the ledger of each
       linked one, and writes only what changed. The hash covers the source's own
       values, so a pass over an unchanged ledger writes nothing.
+
+  finance_sync:
+    role: worker
+    go_type: FinanceSyncArgs
+    queue: accounting_read
+    timeout: 5m
+    opts_owner: caller
+    args:
+      Workspace: id
+    reason: >-
+      One workspace's pass, queued when an administrator connects a source or
+      presses Sync now, so the customer directory arrives without waiting for
+      the six-hourly sweep. It is the pass the sweep runs per workspace, under
+      the same five minutes.
+
+  data_task_run:
+    role: worker
+    fleet: true
+    go_type: DataTaskRunArgs
+    queue: data_task
+    timeout: 2m
+    opts_owner: caller
+    reason: A globally serialized bounded correction batch, paced between transactions.
+
+  data_task_reconcile:
+    role: worker
+    fleet: true
+    go_type: DataTaskReconcileArgs
+    queue: default
+    timeout: 2m
+    opts_owner: caller
+    cadence: 10m
+    reason: Seed missing correction progress and restore an interrupted executor job.
 
   capture_backfill_reconcile:
     role: worker
@@ -483,14 +527,11 @@ kinds:
     queue: default
     timeout: 10m
     opts_owner: caller
-    cadence: 6h
+    cadence: 1h
     reason: >-
-      Every six hours rather than weekly, for the same reason the brief ticks
-      hourly: the Monday it aims at is the installation's local one, and a tick
-      that crosses the review hour in every zone the setting can name is what
-      makes the schedule correct without a per-zone cron. The per-rep week
-      uniqueness collapses the extra ticks into one review, and the same
-      property backfills a Monday the worker was down for.
+      Hourly ticks reach each recipient's bounded personal delivery window.
+      The reporting week remains the installation's last closed week;
+      existing review and delivery claims prevent repeated generation or sending.
 
 
 
@@ -980,6 +1021,21 @@ kinds:
       loosening the cadence without amending the migration makes it a lie.
 
 
+  approval_notice_reconcile:
+    role: worker
+    go_type: ApprovalNoticeReconcileArgs
+    queue: default
+    timeout: 2m
+    max_attempts: 3
+    opts_owner: args
+    cadence: 5m
+    reason: >-
+      Clear pending-decision notices whose approval was withdrawn, replaced or
+      erased without a decision event. Each attempt reads at most 200 notices
+      and keeps its cursor in the job metadata before yielding. Pending rows
+      do not hide later notices. At the end of the scan the job completes, so
+      the next periodic pass starts from the beginning.
+
   # One job, not a dispatcher and a child (ADR-0103 §1): one indexed scan over
   # an installation-wide table, so there is nothing to fan out over.
   approval_expiry:
@@ -1005,8 +1061,6 @@ kinds:
       every row this pass did not reach is still due then. A backing-off row
       would only suppress that tick.
 
-  # One job, not a dispatcher and a child (ADR-0103 §1): one indexed scan over
-  # an installation-wide table, so there is nothing to fan out over.
   intro_expiry:
     role: worker
     go_type: IntroExpiryArgs
@@ -1357,7 +1411,7 @@ kinds:
     queue: privacy_retention
     timeout:
       derived: privacyRetentionPassTimeout
-      value: 7h18m20s
+      value: 7h51m40s
       reason: >-
         privacy.MaxPassDuration is the pass's own ceiling — its stage count
         times its batch bound times its per-record allowance — and the margin
@@ -1582,15 +1636,16 @@ kinds:
     fleet: true
     go_type: TagScoutArgs
     queue: default
-    timeout: 5m
+    timeout: 15m
     opts_owner: caller
     cadence: 1h
+    registration: {when: [TagSuggestBrain], absent: registers_anyway}
     reason: >-
       Hourly, like deal_scout: a mail asking about a product this morning
-      should be a suggestion by lunch. The pass is one phrase-matching read
-      over thirty days of captured activity and at most two hundred writes per
-      workspace, and calls no model, so five minutes is a ceiling it does not
-      approach.
+      should be a suggestion by lunch. With a tag_suggest lane bound the pass
+      asks the model about at most two hundred unread items per workspace,
+      ten to a call, so it takes owed_verdict's fifteen minutes. Without one
+      it matches description phrases and calls no model.
 
 
   site_deep_read:

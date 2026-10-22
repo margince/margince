@@ -293,8 +293,11 @@ func fuzzyContact(ctx context.Context, tx pgx.Tx, c ContactCandidate) (ContactRe
 // contactConfidence is the PO-F-1 score: weights sum to 1.0, so the
 // result is in [0,1] and comparable against the threshold directly.
 func contactConfidence(c ContactCandidate, row contactCandidateRow) float64 {
-	return dedupeNameWeight*nameSimilarity(c.FullName, row.fullName) +
-		dedupeCompanyDomainWeight*companyMatch(c, row)
+	name := dedupeNameWeight * nameSimilarity(c.FullName, row.fullName)
+	if !namesCorroborate(c.FullName, row.fullName) {
+		return name
+	}
+	return name + dedupeCompanyDomainWeight*companyMatch(c, row)
 }
 
 // companyMatch is PO-F-1's employer agreement term, most-specific first: a shared

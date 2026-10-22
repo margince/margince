@@ -35,6 +35,11 @@ not a pass. The job is not required, so a vendor that is down blocks no merge.
 `make fe-uat` renders only the stories the diff reaches, so a story that fails on `main` stays hidden until
 some change reaches it.
 
+Once a week `scheduled.yml` also measures the PERF budgets and the use cases a model drives, and
+records the results. It never writes them to `main`. It opens one pull request with the
+records and the pages they feed, and a record is published when a maintainer merges that pull request. See
+[the workflows beside the merge gate](../reference/ci-workflows.md#scheduledyml).
+
 **The merge queue is not turned on.** Each active ruleset on `main` requires the `ci` check, and none
 holds a merge queue rule. So no `merge_group` run happens, and a pull request's own run, scoped to its diff, is
 the merge verdict. `ci.yml` still handles `merge_group`. The sections below that describe the queue
@@ -151,9 +156,9 @@ What the `backend` scope adds on top of `backend_db`:
   `backend/gates/` read files under `frontend/`. So a pull request that only changes the frontend must
   still run the lane that holds them.
 - The rest of what the suite opens: `.github/**`, `.coderabbit.yaml`, `.env.example`, `.tool-versions`,
-  `config/**`, `e2e/**`, `tools/**`, `user-guide/**`, `Dockerfile*`, `package.json`, `pnpm-lock.yaml`,
-  `renovate.json`, `README.md`, `CHANGELOG.md`, `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `SECURITY.md`,
-  `SUPPORT.md`.
+  `config/**`, `e2e/**`, `tools/**`, `user-guide/**`, `Dockerfile*`, `package.json`, `pnpm-lock.yaml`
+  and `renovate.json`. It also opens the root pages `README.md`, `CHANGELOG.md`, `CLA.md`,
+  `CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `LICENSING.md`, `SECURITY.md` and `SUPPORT.md`.
 
 That list is worked out from the tree, not kept by hand. `backend/gates/gatelanetrigger_test.go` checks every path literal
 in the suite against the tree, and fails on one this scope does not cover. These paths sit in `backend`
@@ -216,7 +221,9 @@ What follows from this:
 ## Job graph
 
 ```
-changes ──┬─> deterministic-gates ──> craftsmanship
+changes ──┬─> deterministic-gates
+          ├─> backend-lint
+          ├─> craftsmanship
           ├─> integration  →  _lane-integration.yml ────────────────┐
           │                     integration-shards (×6) ──┐         │
           │                     integration-unit-coverage ┴─> fan-in│
@@ -235,9 +242,10 @@ changes ──┬─> deterministic-gates ──> craftsmanship
   secret-scan    (every non-draft change, independent — + the image-pin gate)
 
   ci  ── the ONE required context. needs: deterministic-gates,
-         craftsmanship, craft-residue, secret-scan, extension-reference,
-         integration, frontend, uat, license-gate, images   (ten — vuln and
-         live-boot stay advisory and are NOT in the fan-in)
+         backend-lint, craftsmanship, craft-residue, secret-scan,
+         extension-reference, integration, frontend, uat, license-gate,
+         images   (eleven — vuln and live-boot stay advisory and are NOT
+         in the fan-in)
 ```
 
 ### Two lanes are called, not inlined
@@ -277,6 +285,10 @@ waiting. It would sit 9 minutes in the queue behind a unit job of 17 minutes. Ru
 save its runner minutes only on a change that `fe-quality` refuses. That is about one frontend run in
 7, which is cheaper than the wait.
 
+The `uat` lane is **sharded** too: three matrix runners each run a third of the Playwright tests
+(`--shard`). As one job it took longer than every other lane and set the time of the `ci` result. The `ci`
+aggregate reads one result for the three, so one red shard fails it.
+
 The integration lane on a real Postgres runs **beside** `deterministic-gates` for the same reason. It is
 the longest lane in the pipeline. Running the two slowest jobs one after the other would set the clock
 time of a PR. And `deterministic-gates` itself still catches a broken build.
@@ -291,11 +303,12 @@ green run, one shard spent about `146s` loading the build cache and about `275s`
 matrix in half costs about a minute of clock time, and gives back about half the lane's runner minutes.
 The compile half is a problem of building once, not of sharding.
 
-### The `ci` aggregate is the only required context
+### The `ci` aggregate is the only required build context
 
-A **ruleset** requires one check: **`ci`**. There is no branch rule of the old kind
+A **ruleset** requires two checks: **`ci`**, and **`cla`**, which asks an author outside the Margince
+team to accept [CLA.md](../../CLA.md). There is no branch rule of the old kind
 (`GET /branches/main/protection` answers 404). The two are set up in different places, and only the
-ruleset is in use here. `main-required-status-checks` is the active ruleset that names `ci`.
+ruleset is in use here. `main-required-status-checks` is the active ruleset that names both.
 `main-required-ai-reviewers` names CodeRabbit, and is **turned off**. Nothing else is required, the
 SonarCloud scan too.
 
@@ -354,7 +367,7 @@ dependency builds under them are shared:
 
 | Kind | Written by | Read by |
 |---|---|---|
-| `plain` | `cache-warm.yml` job `plain` | `deterministic-gates`, `extension-reference`, `integration unit coverage`, `live-boot`, `vuln` |
+| `plain` | `cache-warm.yml` job `plain` | `deterministic-gates`, `backend-lint`, `extension-reference`, `integration unit coverage`, `live-boot`, `vuln` |
 | `integration` | `cache-warm.yml` job `integration` | every shard |
 
 ### The writer lives in `cache-warm.yml`, on a schedule

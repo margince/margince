@@ -323,7 +323,6 @@ demote
 density
 deny
 depend
-derivation
 derive
 descending
 describe
@@ -772,7 +771,6 @@ offer
 offer's
 offered
 office
-offline
 often
 ok
 old
@@ -838,7 +836,6 @@ partial
 participant
 particular
 partner
-partway
 pass
 passage
 passport
@@ -1041,7 +1038,6 @@ routine
 row
 rule
 run
-s
 said
 sale
 salesperson
@@ -1052,6 +1048,7 @@ say
 scan
 schedule
 scheme
+school
 scope
 score
 scorecard
@@ -1258,7 +1255,6 @@ trail
 training
 transcript
 transfer
-transition
 translation
 trash
 trend

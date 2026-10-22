@@ -11,9 +11,9 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -22,6 +22,9 @@ import (
 // surface (the erasure/SAR engines and the nightly evaluator run behind
 // the DSR queue and the worker, not their own routes).
 type Handlers struct {
+	// locks reports the settings a boot source sets on each settings response;
+	// nil leaves the field out.
+	locks func(surface []config.Any) *[]crmcontracts.SettingLock
 	// db binds the installation's workspace itself (ADR-0091 §9 step 3).
 	db       *database.DB
 	policies *PolicyStore
@@ -47,13 +50,13 @@ type Handlers struct {
 }
 
 // NewHandlers wires the transport over the installation-bound pool and the
-// assembled settings catalog.
+// configuration the retain-only posture is read and saved through.
 //
-// The catalog is a constructor argument rather than an option because every route
-// here needs it: the posture routes read and write it, and the policy list reports
-// each row's live suppression against it.
-func NewHandlers(db *database.DB, store *settings.Store) Handlers {
-	return Handlers{db: db, policies: NewPolicyStore(db), posture: NewPostureStore(store), eraser: NewEraser(db)}
+// The configuration is a constructor argument rather than an option, because
+// every route here needs it. The posture routes read and write it, and the
+// policy list reports each row's live suppression against it.
+func NewHandlers(db *database.DB, cfg *config.Config) Handlers {
+	return Handlers{db: db, policies: NewPolicyStore(db), posture: NewPostureStore(cfg), eraser: NewEraser(db)}
 }
 
 // WithBlobstore gives the retention surface an eraser that reaches attachment
@@ -140,7 +143,7 @@ func auditEntryToWire(e AuditEntry) (crmcontracts.AuditLogEntry, error) {
 		ActorName:         e.ActorName,
 		OnBehalfOfName:    e.OnBehalfOfName,
 		AgentClient:       e.AgentClient,
-		Action:            crmcontracts.AuditLogEntryAction(e.Action),
+		Action:            crmcontracts.AuditAction(e.Action),
 		EntityType:        e.EntityType,
 		EntityLabel:       e.EntityLabel,
 		AuthorizationRule: e.AuthorizationRule,

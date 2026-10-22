@@ -15,6 +15,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // answerArm is one kind of evidence that a message was answered: the rows it
@@ -111,14 +112,14 @@ func offThreadAnswerArms(inbound, until string) []answerArm {
 	return []answerArm{
 		{at: "answer_mail.occurred_at", id: "answer_mail.id", from: `FROM activity_participant answer_asker
 	  ` + senderAddresses + `
-	  CROSS JOIN LATERAL (SELECT answer_mail.* FROM activity answer_mail
+	  CROSS JOIN LATERAL (SELECT ` + answerMailColumns + ` FROM activity answer_mail
 	     WHERE answer_mail.counterparty_email = answer_address.address
 	       AND ` + ourMailIndexed + ` OFFSET 0) answer_mail
 	  WHERE ` + asker + `
 	    AND ` + ourMail},
 		{at: "answer_mail.occurred_at", id: "answer_mail.id", from: `FROM activity_participant answer_asker
 	  ` + senderAddresses + `
-	  CROSS JOIN LATERAL (SELECT answer_mail.* FROM activity_participant answer_told
+	  CROSS JOIN LATERAL (SELECT ` + answerMailColumns + ` FROM activity_participant answer_told
 	     JOIN activity answer_mail ON answer_mail.id = answer_told.activity_id
 	     WHERE lower(answer_told.address) = answer_address.address
 	       AND answer_told.role IN ('to', 'cc') OFFSET 0) answer_mail
@@ -130,6 +131,13 @@ func offThreadAnswerArms(inbound, until string) []answerArm {
 	     WHERE answer_attendee.contact_id = answer_asker.contact_id`),
 	}
 }
+
+// answerMailColumns are the columns the mail arms read off a lateral row, named
+// because an administrator can add a custom-field column to activity at runtime.
+const answerMailColumns = `answer_mail.id, answer_mail.kind, answer_mail.channel_provider,
+	answer_mail.direction, answer_mail.counterparty_outbound_attested, answer_mail.restricted_at,
+	answer_mail.audience, answer_mail.source_activity_id, answer_mail.archived_at,
+	answer_mail.occurred_at, answer_mail.subject`
 
 // touchAnswerArm is a logged call or held meeting among the activities walk
 // names for the sender's contact.
@@ -239,12 +247,10 @@ func firstAnswerAtSQL(inbound, until string) string {
 // of asOf. The "needs reply" badge is exactly this; the waiting lane is this
 // plus its queue rules.
 //
-// A request (asked of us, accepted by a human, or an unjudged scheduling or
-// commitment mail) stays owed through replies until it is completed, settled
-// or dismissed: a reply is not proof the request was met. Any other inbound
-// is owed while it is the newest inbound on its thread and unanswered. Mail
-// from an address no human reads, and a calendar response, are owed only as a
-// confirmed request.
+// Captured mail requires confirmed intent; a topic label does not prove work.
+// Confirmed requests survive replies until fulfilled, settled or dismissed.
+// Unclassified manually logged mail retains the newest-unanswered rule.
+// Machine senders and calendar responses require confirmed requests too.
 //
 // Two judgements end the obligation and are each counted in
 // /worklist/hidden: a human's not-sales call on the thread, and the
@@ -253,13 +259,14 @@ func firstAnswerAtSQL(inbound, until string) string {
 // OR-ed in front of them; the hidden-backlog reading passes TRUE to count
 // what one hides, every other caller passes neverRelaxed.
 //
-// unjudgedResponseStillOwed admits an unjudged calendar response. Only the
-// owed-verdict backlog passes TRUE: a sender can mark any request REPLY, so
-// such mail must still be judged before it leaves the lane.
+// unjudgedResponseStillOwed admits unjudged captured mail and calendar responses
+// to classification. Only the owed-verdict backlog passes TRUE; pending intent
+// must remain judgeable without appearing as an obligation.
 //
 // The newer-inbound walk names its kinds for the index, as answerArms does.
 func owedSQL(asOf, dismissedStillOwed, informsStillOwed, unjudgedResponseStillOwed string) string {
-	return `(` + requestOpenSQL + `
+	return `(NOT ` + ImportedHistorySQL + ` AND ` + requestOpenSQL + `
+ AND (` + capturedReplyAdmissionSQL(unjudgedResponseStillOwed, informsStillOwed) + `)
 	 AND (` + dismissedStillOwed + ` OR ` + notDismissedSQL + `)
 	 AND (` + informsStillOwed + ` OR a.owed_verdict IS DISTINCT FROM '` + OwedVerdictInformsUs + `'
 	   OR ` + acceptedRequestSQL + `)
@@ -288,3 +295,12 @@ const machineSenderSQL = `EXISTS (
 	  WHERE machine.activity_id = a.id
 	    AND machine.role = 'from'
 	    AND machine.address ~* '(noreply|no-reply|do-not-reply|donotreply|notification|mailer-daemon)')`
+
+// Captured mail needs an intent judgment before it becomes somebody's work.
+// The classifier still reads pending mail; a human can explicitly keep noise.
+func capturedReplyAdmissionSQL(classifying, reviewingInformational string) string {
+	human := heldRequestSQL() + ` OR (a.owed_verdict = 'asks_us' AND ` + humanReviewedOwedSQL("a") + `)`
+	return `(` + classifying + ` OR (` + reviewingInformational + ` AND a.owed_verdict = 'informs_us') OR (` + human + `) OR (
+   a.capture_label IS DISTINCT FROM 'noise'
+   AND (NOT starts_with(a.captured_by, '` + string(principal.PrincipalConnector) + `:') OR (` + confirmedRequestSQL + `))))`
+}

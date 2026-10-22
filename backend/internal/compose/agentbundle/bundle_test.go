@@ -6,8 +6,11 @@ package agentbundle
 import (
 	"archive/zip"
 	"bytes"
+	"encoding/json"
+	"fmt"
 	"io"
 	"os"
+	"reflect"
 	"regexp"
 	"strings"
 	"testing"
@@ -20,7 +23,12 @@ const testBase = "https://crm.test.example/v1"
 // unzip builds the bundle for testBase and returns its files by name.
 func unzip(t *testing.T) map[string]string {
 	t.Helper()
-	archive, err := (&Builder{}).Build(testBase)
+	return unzipFrom(t, &Builder{})
+}
+
+func unzipFrom(t *testing.T, builder *Builder) map[string]string {
+	t.Helper()
+	archive, err := builder.Build(testBase)
 	if err != nil {
 		t.Fatalf("Build: %v", err)
 	}
@@ -249,4 +257,144 @@ func storageTables(t *testing.T) *regexp.Regexp {
 		t.Fatalf("read %d table names from the catalog; it holds hundreds, so the pattern no longer matches", len(names))
 	}
 	return regexp.MustCompile(`\b(` + strings.Join(names, "|") + `)\b`)
+}
+
+func TestTheJSONContractIsTheBundlesYAMLContract(t *testing.T) {
+	specJSON, err := (&Builder{}).SpecJSON(testBase)
+	if err != nil {
+		t.Fatalf("SpecJSON: %v", err)
+	}
+	if !json.Valid(specJSON) {
+		t.Fatal("SpecJSON is not valid JSON")
+	}
+	if !bytes.HasPrefix(specJSON, []byte(`{"openapi":"3.1`)) {
+		t.Errorf("the JSON does not open with the openapi version, as a reader expects: %.40s", specJSON)
+	}
+	// JSON is YAML, so one decoder reads both and the two trees must be equal.
+	var fromYAML, fromJSON map[string]any
+	if err := yaml.Unmarshal([]byte(unzip(t)["margince/openapi.yaml"]), &fromYAML); err != nil {
+		t.Fatalf("openapi.yaml: %v", err)
+	}
+	if err := yaml.Unmarshal(specJSON, &fromJSON); err != nil {
+		t.Fatalf("the JSON: %v", err)
+	}
+	if !reflect.DeepEqual(fromYAML, fromJSON) {
+		t.Error("the JSON contract differs from the bundle's openapi.yaml")
+	}
+}
+
+// asJSON parses src as YAML and writes it back as JSON.
+func asJSON(t *testing.T, src string) (string, error) {
+	t.Helper()
+	var doc yaml.Node
+	if err := yaml.Unmarshal([]byte(src), &doc); err != nil {
+		t.Fatalf("the test input is not YAML: %v", err)
+	}
+	var out bytes.Buffer
+	err := writeJSON(&out, &doc)
+	return out.String(), err
+}
+
+func TestWriteJSONKeepsEachScalarsYAMLType(t *testing.T) {
+	src := "quoted: '200'\nnumber: 200\nratio: 0.5\nflag: true\nnothing: null\nday: 2026-01-02\nlist: [a, 1]\n"
+	got, err := asJSON(t, src)
+	if err != nil {
+		t.Fatalf("writeJSON: %v", err)
+	}
+	want := `{"quoted":"200","number":200,"ratio":0.5,"flag":true,"nothing":null,"day":"2026-01-02","list":["a",1]}`
+	if got != want {
+		t.Errorf("writeJSON =\n%s\nwant\n%s", got, want)
+	}
+}
+
+func TestWriteJSONRefusesANumberJSONCannotCarry(t *testing.T) {
+	if _, err := asJSON(t, "limit: .inf\n"); err == nil {
+		t.Error("writeJSON accepted .inf, which has no JSON form")
+	}
+}
+
+func TestWriteJSONFollowsAnAliasToItsAnchor(t *testing.T) {
+	got, err := asJSON(t, "base: &shared {x: 1}\ncopy: *shared\n")
+	if err != nil {
+		t.Fatalf("writeJSON: %v", err)
+	}
+	if want := `{"base":{"x":1},"copy":{"x":1}}`; got != want {
+		t.Errorf("writeJSON = %s, want %s", got, want)
+	}
+}
+
+func TestWriteJSONRefusesAValueItsTagCannotHold(t *testing.T) {
+	for _, src := range []string{
+		"flag: !!bool maybe\n",
+		"count: !!int many\n",
+		"ratios: [!!float half]\n",
+	} {
+		if _, err := asJSON(t, src); err == nil {
+			t.Errorf("writeJSON accepted %q", src)
+		}
+	}
+}
+
+func TestWriteJSONRefusesANodeOfNoKind(t *testing.T) {
+	var out bytes.Buffer
+	if err := writeJSON(&out, &yaml.Node{}); err == nil {
+		t.Error("writeJSON accepted a node with no kind")
+	}
+}
+
+func TestABuilderAnswersARepeatedBaseFromItsCacheAndKeepsOnlyTheRecentFew(t *testing.T) {
+	builder := &Builder{}
+	first, err := builder.SpecJSON(testBase)
+	if err != nil {
+		t.Fatalf("SpecJSON: %v", err)
+	}
+	again, err := builder.SpecJSON(testBase)
+	if err != nil {
+		t.Fatalf("SpecJSON: %v", err)
+	}
+	if &first[0] != &again[0] {
+		t.Error("a repeated base built its contract a second time")
+	}
+	for i := range recentBases + 1 {
+		if _, err := builder.Build(fmt.Sprintf("https://host%d.test.example/v1", i)); err != nil {
+			t.Fatalf("Build: %v", err)
+		}
+	}
+	if len(builder.recent) != recentBases {
+		t.Errorf("the builder keeps %d bases, want %d", len(builder.recent), recentBases)
+	}
+	for _, entry := range builder.recent {
+		if entry.base == testBase {
+			t.Error("the oldest base is still kept after more than recentBases newer ones")
+		}
+	}
+}
+
+func TestTheReadmeLeadsWithConnectingATool(t *testing.T) {
+	const mcpURL = "https://crm.test.example/mcp"
+	readme := unzipFrom(t, &Builder{MCPURL: mcpURL})["margince/README.md"]
+	connect := strings.Index(readme, "## Connect your AI tool")
+	scripts := strings.Index(readme, "## Scripts and your own code")
+	if connect < 0 || scripts < 0 || connect > scripts {
+		t.Fatalf("README puts connecting a tool at %d and scripts at %d; connecting must come first", connect, scripts)
+	}
+	if !strings.Contains(readme[connect:scripts], "claude mcp add --transport http margince "+mcpURL) {
+		t.Error("README does not give the connector address in the command-line steps")
+	}
+	if strings.Contains(readme, "does not accept AI tool connections") {
+		t.Error("README says the connector is off while it names its address")
+	}
+}
+
+func TestTheReadmeSendsTheReaderToAPassportWhenTheConnectorIsOff(t *testing.T) {
+	readme := unzip(t)["margince/README.md"]
+	if !strings.Contains(readme, "does not accept AI tool connections yet") {
+		t.Error("README does not say AI tools cannot connect while the connector is off")
+	}
+	if strings.Contains(readme, "/mcp") {
+		t.Error("README names a connector address the installation does not serve")
+	}
+	if !strings.Contains(readme, "## Scripts and your own code") {
+		t.Error("README drops the passport section")
+	}
 }

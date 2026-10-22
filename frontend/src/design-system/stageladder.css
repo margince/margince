@@ -236,3 +236,15 @@
     }
   }
 }
+
+/* A fixed list the reader must see whole: the run wraps instead of scrolling,
+   and drops its scroller's clipping with it. */
+.stage-ladder.is-wrap .stage-ladder-run {
+  overflow: visible;
+}
+
+.stage-ladder.is-wrap .stage-ladder-steps {
+  inline-size: auto;
+  flex-wrap: wrap;
+  row-gap: var(--space-1);
+}

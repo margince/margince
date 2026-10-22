@@ -13,8 +13,8 @@ import (
 	"strings"
 	"testing"
 	"time"
-	"unicode/utf8"
 
+	"github.com/margince/margince/backend/internal/platform/emailview"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 )
 
@@ -49,13 +49,13 @@ func TestTheMessageStatesTheWeeksNumbers(t *testing.T) {
 
 	for _, want := range []string{
 		"7 of 9", // promised, delivered
-		"1 · 1 · 3",
-		"4 yes · 2 no", // proposals decided
-		"6 acted · 3 dismissed",
-		"Carried over",
+		"Deals won: 1",
+		"Deals lost: 1",
+		"Deals with stage changes: 3",
+		"Open at week’s end",
 		"Stahlbau Krämer",
-		"12500.00 EUR",
-		"2026-06-03",
+		"12,500.00 EUR",
+		"3 Jun 2026",
 		"https://crm.example.test",
 	} {
 		if !strings.Contains(body, want) {
@@ -69,7 +69,7 @@ func TestTheMessageStatesTheWeeksNumbers(t *testing.T) {
 // cannot tell apart in a list.
 func TestTheSubjectNamesTheWeek(t *testing.T) {
 	got := MailSubject(mailFixture(), english)
-	if !strings.Contains(got, "2026-06-01") {
+	if !strings.Contains(got, "1 Jun 2026") {
 		t.Errorf("the subject does not name the week: %q", got)
 	}
 }
@@ -148,8 +148,8 @@ func TestTheNarrativeCannotForgeStructureInTheBody(t *testing.T) {
 			t.Fatalf("the narrative started a carried-over line of its own:\n%s", body)
 		}
 	}
-	if !strings.Contains(body, "A quiet week. Carried into Monday:  0 From: nobody@example.test") {
-		t.Errorf("the narrative was not flattened onto one line:\n%s", body)
+	if strings.Contains(body, "A quiet week.") {
+		t.Error("an unverified stored narrative reached the deterministic email")
 	}
 }
 
@@ -168,7 +168,13 @@ func TestALongWeekSaysWhatItDidNotList(t *testing.T) {
 	if !strings.Contains(body, "… and 4 more, on Home") {
 		t.Errorf("a capped week does not say what it left out:\n%s", body)
 	}
-	if got := strings.Count(body, "  · "); got != mailDealCap {
+	listed := 0
+	for line := range strings.SplitSeq(body, "\n") {
+		if strings.HasPrefix(line, "Stahlbau Krämer — ") || strings.HasPrefix(line, "Deal — ") {
+			listed++
+		}
+	}
+	if got := listed; got != mailDealCap {
 		t.Errorf("the message listed %d deals, the cap is %d", got, mailDealCap)
 	}
 }
@@ -189,12 +195,12 @@ func TestTheMessageIsWrittenInTheInstallationsLanguage(t *testing.T) {
 		{
 			language: "de",
 			subject:  "Deine Woche",
-			labels:   []string{"Aufgaben erledigt", "7 von 9", "Entschiedene Vorschläge", "Einträge im Morgenbericht", "Übertragen", "gewonnen"},
+			labels:   []string{"Fällige Aufgaben erledigt", "7 von 9", "Zum Wochenende offen", "gewonnen"},
 		},
 		{
 			language: "vi",
 			subject:  "Tuần của bạn",
-			labels:   []string{"Việc cần làm đã hoàn tất", "7 trên 9", "Đề xuất đã có quyết định", "Việc trong Bản tin sáng", "Chuyển sang tuần sau", "thắng"},
+			labels:   []string{"Việc đến hạn đã hoàn tất", "7 trên 9", "Việc còn mở cuối tuần", "đã chốt"},
 		},
 		{
 			// A language this build has no copy for is written in the fallback
@@ -202,7 +208,7 @@ func TestTheMessageIsWrittenInTheInstallationsLanguage(t *testing.T) {
 			// more to its reader than no summary.
 			language: "fr",
 			subject:  "Your week",
-			labels:   []string{"Tasks delivered", "Proposals decided", "Morning brief items", "Carried over", "won"},
+			labels:   []string{"Due tasks completed", "Open at week’s end", "won"},
 		},
 	} {
 		t.Run(c.language, func(t *testing.T) {
@@ -220,41 +226,16 @@ func TestTheMessageIsWrittenInTheInstallationsLanguage(t *testing.T) {
 	}
 }
 
-// TestTheLabelColumnIsSizedToTheLabelsItHas holds the layout in a language
-// whose words are longer than the English ones it was laid out for.
-//
-// Padding by BYTES rather than runes short-changes every row with an umlaut or
-// a Vietnamese diacritic in it, which is a ragged column in two of the three
-// languages and a straight one in the language nobody needed this for.
-func TestTheLabelColumnIsSizedToTheLabelsItHas(t *testing.T) {
+func TestEveryMetricKeepsItsNameInBothAlternatives(t *testing.T) {
 	for _, language := range []string{"en", "de", "vi"} {
-		t.Run(language, func(t *testing.T) {
-			body := MailBody(mailFixture(), "", mailcopy.For(language))
-			widths := map[int]bool{}
-			for line := range strings.SplitSeq(body, "\n") {
-				colon := strings.Index(line, ":")
-				// Only the tally rows: they are the ones laid out in columns,
-				// and they are what a ragged edge would show in.
-				if colon <= 0 || strings.HasPrefix(line, " ") || strings.Contains(line, "http") {
-					continue
-				}
-				// A line with nothing after its colon is a heading, not a
-				// tally: "What moved:" ends one section and starts another.
-				if strings.TrimSpace(line[colon+1:]) == "" {
-					continue
-				}
-				widths[utf8.RuneCountInString(line[:colon+1])+countLeadingSpaces(line[colon+1:])] = true
+		words := mailcopy.For(language)
+		message := MailMessage(mailFixture(), "", words)
+		for _, label := range []string{words.WeeklyTasksDelivered, words.WeeklyDealsWon, words.WeeklyDealsLost, words.WeeklyMoved, words.WeeklyCarried} {
+			if !strings.Contains(message.Text, label+": ") || !strings.Contains(emailview.Render(message), ">"+label+"</th>") {
+				t.Errorf("%s metric %q lost its label", language, label)
 			}
-			if len(widths) > 1 {
-				t.Errorf("the tally rows start their values at %d different columns:\n%s", len(widths), body)
-			}
-		})
+		}
 	}
-}
-
-// countLeadingSpaces is how far a value sits from its label's colon.
-func countLeadingSpaces(s string) int {
-	return len(s) - len(strings.TrimLeft(s, " "))
 }
 
 // The link opens the WEEK, not the morning.
@@ -296,27 +277,9 @@ func TestTheWeeklyOmitsTheLinkLineWithNoOrigin(t *testing.T) {
 	}
 }
 
-// The message closes by asking, not just reporting.
-//
-// Every line above it is a week that is over. Without the question the mail is
-// a receipt: a rep reads their numbers, agrees with them, and does nothing —
-// while the panel behind the link is asking them to plan the next week.
-//
-// Asserted ABOVE the link, because the order is the argument: the question is
-// what the reader is being asked to do, and the archive line is where they go
-// if they want the week before instead.
-func TestTheWeeklyAsksAboutTheWeekAhead(t *testing.T) {
+func TestTheWeeklyOffersAConcretePlanningAction(t *testing.T) {
 	body := MailBody(mailFixture(), "https://crm.example.test", english)
-
-	asked := strings.Index(body, english.WeeklyPlanAhead)
-	if asked < 0 {
-		t.Fatalf("the weekly message never asks about the week ahead:\n%s", body)
-	}
-	link := strings.Index(body, english.WeeklyFullWeek)
-	if link < 0 {
-		t.Fatalf("the weekly message lost its archive line:\n%s", body)
-	}
-	if asked > link {
-		t.Errorf("the planning question sits below the archive link:\n%s", body)
+	if !strings.Contains(body, "Review the results and plan your next step\nhttps://crm.example.test/#/home?view=weekly") {
+		t.Fatal("weekly lost the planning destination")
 	}
 }

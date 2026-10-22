@@ -9,15 +9,15 @@ import {
 import { type ReactNode, useEffect } from "react";
 import { expect, within } from "storybook/test";
 import type { components } from "../api/schema";
-import { RecordShell } from "../app/testing/recordshell.testkit";
 import { type Locale, LocaleProvider } from "../i18n";
 import { useMe } from "../lib/session";
 import { type GrantSpec, meFixture } from "./mefixture";
+import { RecordShell } from "./recordshell.testkit";
 import { recordUnroutedSessionProbe } from "./unrouted-session";
 
-// Shared Storybook rendering harness for the screens/* modules (fe-uat
-// render gate, frontend/scripts/fe-uat.mjs): every screen component reads
-// through the openapi-fetch `api` client (global fetch) and expects a
+// Shared Storybook rendering harness for the feature modules, used by the
+// fe-uat render gate (frontend/scripts/fe-uat.mjs). Every screen component
+// reads through the openapi-fetch `api` client (global fetch). It expects a
 // react-query + LocaleProvider context. Mirrors the *.test.tsx fetch-stub
 // convention exactly, so a story renders off the same fixture shapes the
 // unit tests already exercise — never a live network call.
@@ -27,6 +27,13 @@ export function jsonResponse(body: unknown, status = 200): Response {
     status,
     headers: { "Content-Type": "application/json" },
   });
+}
+
+export function permissionDenied(): Response {
+  return jsonResponse(
+    { title: "Forbidden", status: 403, code: "permission_denied" },
+    403,
+  );
 }
 
 export const emptyPage = {
@@ -293,5 +300,28 @@ export async function expectNameAndValueApart(canvasElement: HTMLElement) {
   } else {
     await expect(Math.abs(value.left - label.left)).toBeLessThanOrEqual(1);
     await expect(value.top).toBeGreaterThanOrEqual(label.bottom - 0.5);
+  }
+}
+
+// Real Chromium only. A datatable.css selector spells out the DOM chain that
+// insets a folded row under a Disclosure; a changed chain shows here.
+export async function expectFoldedRowsUnderSummary(canvasElement: HTMLElement) {
+  await within(canvasElement).findAllByRole("table");
+  const rows = canvasElement.querySelectorAll(
+    ".disclosure .table-scroll-fold > .table > tbody > tr",
+  );
+  await expect(rows.length).toBeGreaterThan(0);
+  for (const row of rows) {
+    const cell = row.querySelector("td");
+    const summary = row.closest(".disclosure")?.querySelector("summary");
+    if (!cell || !summary) {
+      throw new Error("a folded row has no cell, or no summary above it");
+    }
+    await expect(
+      Math.abs(
+        cell.getBoundingClientRect().left -
+          summary.getBoundingClientRect().left,
+      ),
+    ).toBeLessThan(1);
   }
 }

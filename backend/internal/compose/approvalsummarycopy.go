@@ -30,6 +30,7 @@ import (
 // and the census walks the struct itself, so a field added here is covered
 // without anybody remembering to list it.
 type approvalSummaryCopy struct {
+	signaturePrivate string
 	// draftedReplyWaiting: a follow-up reply is drafted. %q is its subject.
 	draftedReplyWaiting string
 	// counterpartyWorthKeeping asks about an unresolved sender. %s is the address.
@@ -94,6 +95,7 @@ type approvalSummaryCopy struct {
 // walk textlang.Shipped and ask this map directly.
 var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 	textlang.English: {
+		signaturePrivate: "The sender’s private signature cannot be shown to this reviewer. Ask the sender to review this message.",
 		draftedReplyWaiting: "A reply to %q is drafted and waiting to be sent — " +
 			"the conversation left no next step planned",
 		counterpartyWorthKeeping: "Is %s a contact worth keeping?",
@@ -132,6 +134,7 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 		acts: agentActsEnglish,
 	},
 	textlang.German: {
+		signaturePrivate: "Die private Signatur des Absenders ist für diese Prüfung nicht freigegeben. Den Absender um Prüfung dieser Nachricht bitten.",
 		draftedReplyWaiting: "Eine Antwort auf %q ist entworfen und wartet auf den Versand: " +
 			"Das Gespräch endete ohne geplanten nächsten Schritt",
 		counterpartyWorthKeeping: "Lohnt es sich, %s als Kontakt zu behalten?",
@@ -142,10 +145,10 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 		overwriteHumanEdited:     "Manuell bearbeitete Felder überschreiben (%s): %s",
 		linkedInLooksLike:        "%s bei %s scheint %s zu sein",
 		unnamedEmployer:          "einem nicht genannten Arbeitgeber",
-		vcardResemblesContact:    "Diese Visitenkarte ähnelt einem bestehenden Kontakt. %s trotzdem anlegen?",
+		vcardResemblesContact:    "Diese Visitenkarte ähnelt einem bestehenden Kontakt. %s trotzdem erstellen?",
 
 		heldNotSent:          "%q wurde nicht gesendet: %s",
-		heldConsentWithdrawn: "ein Empfänger hat seine Einwilligung für diesen Zweck nach der Planung widerrufen",
+		heldConsentWithdrawn: "jemand unter den Empfangenden hat die Einwilligung für diesen Zweck nach der Planung widerrufen",
 		heldSenderInactive:   "das sendende Konto oder sein Postfach ist nicht mehr aktiv",
 		heldPassportRevoked: "die Agent-Zugangsdaten, unter denen die Nachricht geplant wurde, wurden widerrufen oder sind abgelaufen. " +
 			"Dein Konto ist in Ordnung, sende sie also selbst, wenn sie noch rausgehen soll",
@@ -155,8 +158,8 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 		heldSendRefused:    "eine Prüfung hat den Versand zum Sendezeitpunkt abgelehnt",
 
 		reviewSendRefused:  "Ein Versand an %s wurde abgelehnt (%s), und jemand fragt, ob er trotzdem rausgehen darf",
-		reviewOneRecipient: "1 Empfänger",
-		reviewRecipients:   "%d Empfänger",
+		reviewOneRecipient: "1 Empfangsadresse",
+		reviewRecipients:   "%d Empfangsadressen",
 
 		coldStartFromURL:             "Cold-Start-Auslesung aus %s",
 		coldStartFromText:            "Cold-Start-Auslesung aus eingefügtem Text",
@@ -171,6 +174,7 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 		acts: agentActsGerman,
 	},
 	textlang.Vietnamese: {
+		signaturePrivate: "Không thể hiển thị chữ ký riêng của người gửi cho người xem xét này. Hãy yêu cầu người gửi xem xét tin nhắn.",
 		draftedReplyWaiting: "Một thư trả lời cho %q đã được soạn và đang chờ gửi: " +
 			"cuộc trò chuyện không để lại bước tiếp theo nào được lên kế hoạch",
 		counterpartyWorthKeeping: "%s có phải là một liên hệ đáng giữ lại không?",

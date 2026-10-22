@@ -104,6 +104,12 @@ const (
 	SignInProduct = "margince-signin"
 	SignInHeader  = SignInProduct + "/" + version
 
+	// ExtensionProduct identifies a request an extension unit makes to its own
+	// provider through extension.NewRequest. One token for every unit: the
+	// unit's provider holds the unit's credential, which names the unit.
+	ExtensionProduct = "margince-extension"
+	ExtensionHeader  = ExtensionProduct + "/" + version
+
 	// ModelCatalogueProduct identifies the reads of a public model catalogue —
 	// OpenRouter's list and models.dev's price sheet — daily while auto-sync is
 	// on and whenever an admin presses Refresh now. The request carries no

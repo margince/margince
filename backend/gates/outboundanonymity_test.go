@@ -27,9 +27,11 @@ package gates
 // is invisible in the code either way.
 
 import (
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"path/filepath"
 	"sort"
 	"strings"
 	"testing"
@@ -121,7 +123,8 @@ func TestEveryOutboundRequestSaysWhoIsCallingOrRegistersWhyNot(t *testing.T) {
 		t.Errorf("%d function(s) build an outbound request that names nobody:\n\t%s\n\n"+
 			"Go then sends `Go-http-client/1.1`, which names the language and not the caller, and "+
 			"an operator reading it can act on a language or on nothing. Set the User-Agent from "+
-			"an identity in internal/platform/outbound, or register the FUNCTION above — the "+
+			"an identity in internal/platform/outbound (an extension unit builds its request with "+
+			"extension.NewRequest, which does), or register the FUNCTION above — the "+
 			"register keys on `path:func name`, so a file-shaped entry matches nothing.",
 			len(findings), strings.Join(findings, "\n\t"))
 	}
@@ -572,5 +575,97 @@ func TestTheAnonymityCensusSeesEachShapeARequestIsBuiltIn(t *testing.T) {
 				t.Errorf("the detector found %d anonymous builder(s), want %d: %v", len(got), tc.want, got)
 			}
 		})
+	}
+}
+
+// A unit cannot import the core's identities, so it builds its request with
+// extension.NewRequest, which names the installation. Such a unit needs no
+// register entry; one building a bare net/http request still does.
+func TestAUnitBuildingThroughThePublishedConstructorNeedsNoRegisterEntry(t *testing.T) {
+	t.Parallel()
+	for src, anonymous := range map[string]bool{
+		`package u
+import ("context"; "net/http"; "github.com/margince/margince/backend/pkg/extension")
+func call(ctx context.Context) (*http.Response, error) {
+	req, err := extension.NewRequest(ctx, http.MethodGet, "https://provider.example.test", nil)
+	if err != nil { return nil, err }
+	return extension.OutboundClient().Do(req)
+}`: false,
+		`package u
+import ("context"; "net/http"; "github.com/margince/margince/backend/pkg/extension")
+func call(ctx context.Context) (*http.Response, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://provider.example.test", nil)
+	if err != nil { return nil, err }
+	return extension.OutboundClient().Do(req)
+}`: true,
+	} {
+		file, err := parser.ParseFile(token.NewFileSet(), "unit.go", src, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := len(anonymousRequestBuildersIn(file)) > 0; got != anonymous {
+			t.Errorf("reported anonymous = %v, want %v for:\n%s", got, anonymous, src)
+		}
+	}
+}
+
+// unitRoots hold the extension units: those in the tier and the fixtures CI
+// stages into it.
+var unitRoots = []string{"../extensions", "../fixtures/extensions"}
+
+// TestNoUnitWritesItsOwnUserAgent holds a unit to the name extension.NewRequest
+// gives its request. A unit cannot import the core's declared identities, so a
+// User-Agent it writes, literal or computed, is one no operator was told about.
+func TestNoUnitWritesItsOwnUserAgent(t *testing.T) {
+	t.Parallel()
+	byDir := map[string][]*ast.File{}
+	paths := map[*ast.File]string{}
+	eachGoFileUnder(t, unitRoots, func(path string, file *ast.File) {
+		if strings.HasSuffix(path, "_test.go") {
+			return
+		}
+		byDir[filepath.Dir(path)] = append(byDir[filepath.Dir(path)], file)
+		paths[file] = path
+	})
+	if len(paths) == 0 {
+		t.Fatalf("no unit source under %v, so this census reads nothing", unitRoots)
+	}
+	var findings []string
+	for _, files := range byDir {
+		consts := stringConstants(files)
+		for _, file := range files {
+			if writes := len(userAgentWrites(file, consts)); writes > 0 {
+				findings = append(findings, fmt.Sprintf("%s: %d User-Agent write(s)", paths[file], writes))
+			}
+		}
+	}
+	sort.Strings(findings)
+	if len(findings) > 0 {
+		t.Errorf("an extension unit writes its own User-Agent:\n\t%s\n\nBuild the request with "+
+			"extension.NewRequest, which sets the identity the core declares for units.",
+			strings.Join(findings, "\n\t"))
+	}
+}
+
+func TestTheUnitUserAgentCensusSeesEveryWayAHeaderIsWritten(t *testing.T) {
+	t.Parallel()
+	for name, body := range map[string]string{
+		"a computed Set":     `req.Header.Set("User-Agent", agent)`,
+		"an Add":             `req.Header.Add("user-agent", "relay/1.0")`,
+		"a named header":     `req.Header.Set(uaHeader, agent)`,
+		"an index write":     `req.Header["User-Agent"] = []string{agent}`,
+		"a whole header map": `req.Header = http.Header{"User-Agent": {agent}}`,
+	} {
+		src := `package u
+import "net/http"
+const uaHeader = "User-Agent"
+func call(req *http.Request, agent string) { ` + body + ` }`
+		file, err := parser.ParseFile(token.NewFileSet(), "unit.go", src, 0)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(userAgentWrites(file, stringConstants([]*ast.File{file}))) != 1 {
+			t.Errorf("%s: the census did not see the write in %s", name, body)
+		}
 	}
 }

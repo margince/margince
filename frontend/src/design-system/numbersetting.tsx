@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useId, useState } from "react";
+import { type ReactNode, useId, useState } from "react";
+import { isImeCommit } from "../lib/imecommit";
 import { TextInput } from "./atoms";
+import { describedByIds } from "./describedby";
 import { ErrorLine } from "./errorline";
 import { useSaveDraft } from "./savepage";
 import { type SettingControlProps, SettingRow } from "./settingrow";
@@ -41,6 +43,8 @@ export function NumberSetting({
   reading,
   onCommit,
   disabled,
+  reason,
+  describedBy,
   testId,
 }: Readonly<{
   control: SettingControlProps;
@@ -53,35 +57,41 @@ export function NumberSetting({
   reading?: (value: number) => string;
   onCommit: (next: number) => unknown;
   disabled?: boolean;
+  /** Why this reader may not change it, under the box; refuses the edit alone. */
+  reason?: ReactNode;
+  /**
+   * An element elsewhere that describes this number, named after the row's
+   * own description.
+   */
+  describedBy?: string;
   testId?: string;
 }>) {
   const refusalId = useId();
   const readingId = useId();
+  const reasonId = useId();
   const number = useNumberDraft(value, { min, max, lowestOn }, onCommit);
   const words = reading && number.typed !== null ? reading(number.typed) : null;
   return (
     <div className="settingrow-measure numbersetting">
       <TextInput
         {...control}
-        aria-describedby={
-          [
-            control["aria-describedby"],
-            words ? readingId : null,
-            number.refused ? refusalId : null,
-          ]
-            .filter(Boolean)
-            .join(" ") || undefined
-        }
+        aria-describedby={describedByIds(
+          control["aria-describedby"],
+          describedBy,
+          words && readingId,
+          reason !== undefined && reasonId,
+          number.refused && refusalId,
+        )}
         aria-invalid={number.refused ? true : undefined}
         className="t-num"
         data-testid={testId}
         inputMode="numeric"
         value={number.shown}
-        disabled={disabled}
+        disabled={disabled || reason !== undefined}
         onChange={(e) => number.type(e.target.value)}
         onBlur={() => number.commit("blur")}
         onKeyDown={(e) => {
-          if (e.key === "Enter") {
+          if (e.key === "Enter" && !isImeCommit(e)) {
             e.preventDefault();
             number.commit("enter");
           }
@@ -91,6 +101,11 @@ export function NumberSetting({
         <span id={readingId} className="t-caption numbersetting-reading">
           {words}
         </span>
+      )}
+      {reason !== undefined && (
+        <p id={reasonId} className="t-caption numbersetting-reason">
+          {reason}
+        </p>
       )}
       <ErrorLine id={refusalId}>{number.refused ? refusal : null}</ErrorLine>
     </div>

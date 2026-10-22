@@ -81,7 +81,7 @@ func listContractsTx(ctx context.Context, tx pgx.Tx, in ListContractsInput, asOf
 		where = append(where, storekit.SQLf("status = $%d", arg(*in.Status)))
 	}
 	if in.UnderContractOnly {
-		where = append(where, underContractSQL(asOfPos))
+		where = append(where, UnderContractSQL(asOfPos))
 	}
 	if in.Cursor != nil && *in.Cursor != "" {
 		cursor, err := storekit.DecodeCursor(*in.Cursor)
@@ -94,7 +94,7 @@ func listContractsTx(ctx context.Context, tx pgx.Tx, in ListContractsInput, asOf
 	limit := storekit.ClampLimit(in.Limit)
 	rows, err := tx.Query(ctx, storekit.SQLf(
 		`SELECT %s%s, %s FROM contract WHERE %s ORDER BY `+termOrder+` LIMIT $%d`,
-		contractColumns, storekit.SelectSuffix(active), underContractSQL(asOfPos),
+		contractColumns, storekit.SelectSuffix(active), UnderContractSQL(asOfPos),
 		strings.Join(where, " AND "), arg(limit+1),
 	), args...)
 	if err != nil {
@@ -183,7 +183,7 @@ func (s *Store) ListProjectContractsTx(ctx context.Context, tx pgx.Tx, projectID
 	lim := storekit.ClampLimit(limit)
 	rows, err := tx.Query(ctx, storekit.SQLf(
 		`SELECT %s%s, %s FROM contract WHERE %s ORDER BY `+termOrder+` LIMIT $%d`,
-		contractColumns, storekit.SelectSuffix(active), underContractSQL(asOfPos),
+		contractColumns, storekit.SelectSuffix(active), UnderContractSQL(asOfPos),
 		strings.Join(where, " AND "), arg(lim+1),
 	), args...)
 	if err != nil {

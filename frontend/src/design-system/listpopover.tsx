@@ -12,6 +12,7 @@ import {
 } from "react";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
+import { isImeCommit } from "../lib/imecommit";
 import { problemMessageOf } from "../lib/problem";
 import { useFoldedViewport } from "../lib/viewport";
 import { useActiveOptionVisible } from "./anchoredpopup";
@@ -223,7 +224,7 @@ function ListSearch({
       return;
     }
     const row = rows[active];
-    if (event.key === "Enter" && row) {
+    if (event.key === "Enter" && !isImeCommit(event) && row) {
       event.preventDefault();
       pick(row);
     }

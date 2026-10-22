@@ -143,11 +143,11 @@ leave data outside its own constraint. A `picklist` always keeps one value or mo
 Changing the catalog is **owned by admins and operators**, and every role may read it, as with pipeline config. A
 field changes what the system stores for every user's records. The catalog is config shared
 by the workspace, with no `owner_id`. So the object grant is the whole authority question, and there is
-no row scope to compose. Creating a field is 🟡: an agent caller stages it for approval first, and a
-human's direct call is itself the approval.
+no row scope to compose. Creating, renaming, retiring or changing the options of a field is
+`human-only`: the gate refuses an agent principal. An agent reads the live catalog through
+`describe_query_vocabulary`.
 
-The field is put down to the human or, behind an agent, to the human who granted the agent
-(*agent ≤ human*). Changes to the catalog are **audit only**: the closed event catalog has no
+The field is put down to the human who changed it. Changes to the catalog are **audit only**: the closed event catalog has no
 `custom_field.*` type. A catalog change over many objects has no single event stream to go on.
 
 ## How record stores see `cf_*` columns
@@ -172,9 +172,13 @@ needs DDL authority.
 may see (the same thing the admin list already answers). It exposes no row data. The store's row-level
 gate guards the values.
 
-One rule catches developers out: a custom field value is **dropped when it does not match**. A request body's
-`additionalProperties` carries no shape contract per key. So a value whose shape does not match its
-column's type is dropped without an error, instead of answered with a 422.
+One rule catches developers out: a record write refuses what it cannot store. A request body's
+`additionalProperties` carries no shape contract per key, so the write checks each extra key itself
+(`storekit.CheckCustomValues`). A 422 names each key that fails.
+
+Three things fail. One is a key that is not a `cf_` key. Another is a `cf_` key that names no active
+field. The third is a value of the wrong type or outside the field's options. The codes are
+`unknown_field` and `invalid_value`. Nothing is written, so a success means every key was stored.
 
 ## No `cf_*` column is indexed
 
@@ -220,7 +224,7 @@ the cost visible, but it is new surface to govern. The choice is an open product
 | The record store code | `internal/platform/database/storekit/customcolumns.go` |
 | The sort and filter words that `cf_*` columns are part of | `internal/platform/database/storekit/listquery.go` |
 | The catalog table + its RBAC grants | `backend/migrations/core/` (the `custom_field` table is in the `0001` migration) |
-| The admin UI | `frontend/src/screens/customfields.tsx` |
+| The admin UI | `frontend/src/features/records/customfields.tsx` |
 
 The owner pool flag and its `/readyz` check: [reference/configuration.md](../reference/configuration.md).
 The write shape these changes still go through: [write-backbone.md](write-backbone.md). The role table

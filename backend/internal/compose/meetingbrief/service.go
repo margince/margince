@@ -22,6 +22,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -180,7 +181,7 @@ func (s *Service) assembleFiled(ctx context.Context, activityID ids.UUID, reques
 		return crmcontracts.MeetingBrief{}, nil, err
 	}
 	if coached {
-		plan.ManagerCoaching = wireCoaching(coachingFor(written.plan))
+		plan.ManagerCoaching = wireCoaching(briefCopyFor(in.Language).coachingFor(written.plan))
 	}
 	var filed *ids.UUID
 	if in.Project != nil {
@@ -215,11 +216,12 @@ func (s *Service) assembleFiled(ctx context.Context, activityID ids.UUID, reques
 // contract's field is optional, and an empty array on the wire invites a client
 // to render an empty "what you cannot see" heading.
 func omissions(in Input) *[]crmcontracts.MeetingBriefOmission {
+	words := briefCopyFor(in.Language)
 	var out []crmcontracts.MeetingBriefOmission
 	if in.RoomHidden {
 		out = append(out, crmcontracts.MeetingBriefOmission{
 			Source: "deal_room",
-			Reason: "You do not have access to Deal Rooms, so what the buyer did in this deal's room is not in this brief.",
+			Reason: words.Say(omissionWords.Room),
 		})
 	}
 	// A history this caller may not read is the difference between a quiet
@@ -230,23 +232,13 @@ func omissions(in Input) *[]crmcontracts.MeetingBriefOmission {
 	if withheld := withheldCount(in.History); withheld > 0 {
 		out = append(out, crmcontracts.MeetingBriefOmission{
 			Source: "activity_history",
-			Reason: fmt.Sprintf(
-				"%s in this account %s not yours to read, so the account arc is built from the rest.",
-				plural(withheld, "conversation"), isAre(withheld)),
+			Reason: words.withheldHistory(withheld),
 		})
 	}
 	if len(out) == 0 {
 		return nil
 	}
 	return &out
-}
-
-// isAre keeps the omission sentence grammatical for one and for many.
-func isAre(count int) string {
-	if count == 1 {
-		return "is"
-	}
-	return "are"
 }
 
 // foldRoom turns what the transaction read into the shape the writers take.
@@ -291,6 +283,7 @@ func (s *Service) foldRoom(
 // may be seen — there is no attendee whose history the count would be of.
 func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, requested *ids.ProjectID) (Input, *crmcontracts.ProjectScope, error) {
 	var room meeting
+	language := identity.BaseLanguageForPrompt(ctx, s.pool)
 	var scope *ids.ProjectID
 	var perAttendee map[ids.UUID][]crmcontracts.ConversationClaim
 	var earlier []priorMeeting
@@ -358,7 +351,7 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 		if loaded.Deal == nil {
 			return nil
 		}
-		moves, roomHidden, err = s.readDealMoves(ctx, tx, loaded.Deal.ID, spoke, s.now().UTC())
+		moves, roomHidden, err = briefCopyFor(language).readDealMoves(ctx, tx, loaded.Deal.ID, spoke, s.now().UTC())
 		return err
 	})
 	if err != nil {
@@ -366,6 +359,7 @@ func (s *Service) assembleInput(ctx context.Context, activityID ids.UUID, reques
 	}
 
 	in := s.foldRoom(room, perAttendee, earlier, lastSpoke, moves, roomHidden, history, excerpts, seats)
+	in.Language = language
 	if len(room.Attendees) == 0 {
 		// Nobody in the room this caller may see. The header still stands, and
 		// assembling a 360 for a contact nobody named would be a read of a

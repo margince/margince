@@ -50,6 +50,10 @@ const (
 	// screen posted back is not one this server will authorize any more.
 	// TERMINAL for the same reason: re-posting it would be refused again.
 	consentErrorInvalid = "invalid_request"
+	// consentErrorMethodOff: an admin switched off the way this client
+	// registered. TERMINAL until an admin turns it back on or registers the
+	// tool by hand.
+	consentErrorMethodOff = "method_off"
 )
 
 // authorizeScreenParams is the parameter set the consent screen carries and

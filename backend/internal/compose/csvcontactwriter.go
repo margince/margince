@@ -45,7 +45,7 @@ import (
 func (w *csvWriters) createContact(ctx context.Context, row migration.Row, typed map[string]any) (migration.EnsureResult, error) {
 	in := contactCreateFrom(textFields(row.Fields), typed, w.sourceSystem, w.provenanceOf(row.ExternalID))
 	if in.FullName == "" {
-		return migration.EnsureResult{Skipped: true, SkipReason: "the row carries neither a name nor an email, so it names no contact"}, nil
+		return skippedFor(contactUnnamedWhy), nil
 	}
 	err := w.land(ctx, row, func(tx pgx.Tx) (ids.UUID, error) {
 		if err := w.authors.resolve(ctx, tx, &in.Author); err != nil {
@@ -60,7 +60,7 @@ func (w *csvWriters) createContact(ctx context.Context, row migration.Row, typed
 	if _, ok := errors.AsType[*contacts.DuplicateEmailError](err); ok {
 		// The same sentence the preview used, so an approval decided on
 		// "skipped, the address is held" is not answered by different words.
-		return migration.EnsureResult{Skipped: true, SkipReason: contactEmailClaimedReason}, nil
+		return skippedFor(contactEmailClaimedWhy), nil
 	}
 	if err != nil {
 		return migration.EnsureResult{}, err
@@ -72,6 +72,7 @@ func (w *csvWriters) createContact(ctx context.Context, row migration.Row, typed
 // email, phone and LinkedIn handle onto what the contact holds, because the
 // store replaces each of those wholesale.
 func (w *csvWriters) applyContact(ctx context.Context, id ids.UUID, in contacts.UpdateContactInput, current []byte, source string) error {
+	in.IfVersion = w.reviewedVersion(id)
 	// Emails and phones added by an update carry the provenance the create
 	// path stamps; without it their source lands empty.
 	in.Source = source
@@ -186,11 +187,6 @@ func (w *csvWriters) readPageEmails(ctx context.Context, rows []migration.Row) e
 	w.heldEmails = held
 	return nil
 }
-
-// contactEmailClaimedReason is what the report says for such a row. It names the
-// address the file supplied and nothing else — not the incumbent, not their
-// owner, not whether the caller could have seen them.
-const contactEmailClaimedReason = "this email address is already held in the CRM, so the row cannot create a second contact under it"
 
 // contactCollides answers whether this row names someone the caller can already
 // see, running the same ladder the create path runs.

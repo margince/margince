@@ -1,0 +1,26 @@
+import type { QueryClient, QueryKey } from "@tanstack/react-query";
+
+export const worklistKey = ["worklist"] as const;
+export const magicKey = ["magic"] as const;
+export const briefKey = ["brief"] as const;
+export const digestKey = ["digest"] as const;
+
+export async function invalidateHandledChange(
+  client: QueryClient,
+): Promise<void> {
+  await Promise.all(
+    [worklistKey, magicKey, briefKey, ["deals"]].map((queryKey) =>
+      client.invalidateQueries({ queryKey }),
+    ),
+  );
+}
+
+export function isLiveWorkRead(key: QueryKey): boolean {
+  return (
+    (key[0] === worklistKey[0] &&
+      (key[1] === "handled" ||
+        (key[1] === "mine" && key[2] === "all" && key[3] === ""))) ||
+    (key[0] === "approvals" && key[1] === "pending") ||
+    (key.length === 1 && (key[0] === magicKey[0] || key[0] === briefKey[0]))
+  );
+}

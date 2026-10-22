@@ -84,7 +84,7 @@ func TestEndToEnd_passportBearerSurface(t *testing.T) {
 		Code string `json:"code"`
 	}
 	status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-		"full_name": "Should not exist", "source": "manual", "captured_by": "x",
+		"full_name": "Should not exist", "source": "manual",
 	}, bearer, &problem)
 	if status != 403 || problem.Code != "scope_exceeds_grantor" {
 		t.Fatalf("read-scope write → %d %q, want 403 scope_exceeds_grantor", status, problem.Code)
@@ -117,7 +117,7 @@ func TestEndToEnd_agentWritesGovernedOnREST(t *testing.T) {
 		Token string `json:"token"`
 	}
 	if status := e.Call(t, "POST", "/v1/passports", AnyMap{
-		"label": "write agent", "scopes": []string{"read", "write"},
+		"label": "write agent", "scopes": []string{"read", "write", "enrich"},
 	}, nil, &minted); status != 201 {
 		t.Fatalf("issue passport → %d", status)
 	}
@@ -130,9 +130,15 @@ func TestEndToEnd_agentWritesGovernedOnREST(t *testing.T) {
 		CapturedBy string `json:"captured_by"`
 	}
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-		"full_name": "Governed Green Write", "source": "manual", "captured_by": "human:forged",
+		"full_name": "Governed Green Write", "source": "manual",
 	}, bearer, &created); status != 201 {
 		t.Fatalf("write-scope 🟢 REST mutation → %d, want 201 (ADR-0055 admits governed agent writes)", status)
+	}
+	// A body that claims its own author is refused, not obeyed and not ignored.
+	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
+		"full_name": "Forged Author", "source": "manual", "captured_by": "human:forged",
+	}, bearer, nil); status != 422 {
+		t.Fatalf("a body naming captured_by → %d, want 422", status)
 	}
 	if !strings.HasPrefix(created.CapturedBy, "agent:") {
 		t.Fatalf("agent create stamped captured_by=%q, want the authenticated agent", created.CapturedBy)
@@ -156,29 +162,27 @@ func TestEndToEnd_agentWritesGovernedOnREST(t *testing.T) {
 		t.Error("the archive answered 200 and the contact is still live")
 	}
 
-	// 🟡 still exists, on the routes whose destination the credential-holder did
-	// not choose: registering outbound egress is configuration a credential must
-	// not widen, so createWebhookSubscription keeps its floor.
+	// 🟡 still exists on the calls that reach outside the workspace: an
+	// enrichment reads the company's website, so it asks a human first.
+	companyID := createdID(t, e, "/v1/companies", AnyMap{"display_name": "Governed Yellow GmbH", "source": "manual", "domains": []AnyMap{{"domain": "example.com", "is_primary": true}}})
+	enrichPath := "/v1/companies/" + companyID + "/enrich"
 	var problem struct {
 		Code   string `json:"code"`
 		Detail string `json:"detail"`
 	}
-	status := e.Call(t, "POST", "/v1/webhook-subscriptions", AnyMap{
-		"target_url": "https://example.test/hook", "event_types": []string{"company.created"},
-	}, bearer, &problem)
+	status := e.Call(t, "POST", enrichPath, AnyMap{}, bearer, &problem)
 	if status != 403 || problem.Code != "approval_required" {
 		t.Fatalf("🟡 REST mutation → %d %q, want 403 approval_required", status, problem.Code)
 	}
-	// The staged call must not have executed. Without this the 403 alone proves
-	// only that the gate answered, not that it answered BEFORE the effect.
-	if n := countWebhookSubscriptions(t, e); n != 0 {
-		t.Fatalf("%d webhook subscription(s) exist behind an unapproved create, want 0", n)
+	// The staged call must not have executed. A run would stage its own
+	// enrichment proposal on the company, so one row alone targets it.
+	if n := approvalsTargeting(t, e, companyID); n != 1 {
+		t.Fatalf("%d approvals target the company behind an unapproved enrich, want only the staged call", n)
 	}
 	approvalID := ExtractStagedApprovalID(t, problem.Detail)
 
-	// The agent may STAGE but not release this proposal of its own: a webhook
-	// sends every later event to an address the agent chose, and what has been
-	// delivered cannot be called back, so the human releases it in the CRM.
+	// The agent may stage this proposal but not release it. A page fetched
+	// cannot be unfetched, so the human releases it in the CRM.
 	var denyBody struct {
 		Code string `json:"code"`
 	}
@@ -192,22 +196,18 @@ func TestEndToEnd_agentWritesGovernedOnREST(t *testing.T) {
 	}
 
 	// A human approves; the agent repeats the IDENTICAL request with the
-	// approval token and the effect lands exactly once.
+	// approval token, and the token releases it once.
 	if status := e.Call(t, "POST", "/v1/approvals/"+approvalID+"/approve", AnyMap{}, nil, nil); status != 200 {
 		t.Fatalf("human approve → %d", status)
 	}
 	withToken := map[string]string{"Authorization": "Bearer " + minted.Token, "X-Approval-Token": approvalID}
-	body := AnyMap{
-		"target_url": "https://example.test/hook", "event_types": []string{"company.created"},
-	}
-	// Past the gate is what the token buys. Where the create lands after that is
-	// the webhook module's business — this composition seals no signing key, so
-	// it answers 503 — and an unredeemed call never reaches the module at all.
-	if status := e.Call(t, "POST", "/v1/webhook-subscriptions", body, withToken, nil); status == 403 {
+	// Past the gate is what the token buys. This composition fetches no
+	// website, so the handler's own answer is not asserted.
+	if status := e.Call(t, "POST", enrichPath, AnyMap{}, withToken, nil); status == 403 {
 		t.Fatal("approved retry → 403, want the token to release the staged call")
 	}
 	// Single-use: the same token cannot authorize a second effect.
-	if e.Call(t, "POST", "/v1/webhook-subscriptions", body, withToken, &problem) != 403 {
+	if e.Call(t, "POST", enrichPath, AnyMap{}, withToken, &problem) != 403 {
 		t.Fatal("a consumed approval token was not refused on the second call")
 	}
 }
@@ -225,7 +225,7 @@ func TestEndToEnd_readSeatCannotMutate(t *testing.T) {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-		"full_name": "Full Seat Made", "source": "manual", "captured_by": "admin",
+		"full_name": "Full Seat Made", "source": "manual",
 	}, nil, &created); status != 201 {
 		t.Fatalf("full-seat create → %d", status)
 	}
@@ -243,7 +243,7 @@ func TestEndToEnd_readSeatCannotMutate(t *testing.T) {
 		Code string `json:"code"`
 	}
 	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{
-		"full_name": "Read Seat Blocked", "source": "manual", "captured_by": "admin",
+		"full_name": "Read Seat Blocked", "source": "manual",
 	}, nil, &problem); status != 403 || problem.Code != "seat_tier_insufficient" {
 		t.Fatalf("read-seat create → %d %q, want 403 seat_tier_insufficient", status, problem.Code)
 	}
@@ -252,13 +252,13 @@ func TestEndToEnd_readSeatCannotMutate(t *testing.T) {
 	}
 }
 
-// countWebhookSubscriptions is what a staged create did or did not write.
-func countWebhookSubscriptions(t *testing.T, e *apptest.AppEnv) int {
+// approvalsTargeting counts the approvals staged against one record.
+func approvalsTargeting(t *testing.T, e *apptest.AppEnv, targetID string) int {
 	t.Helper()
 	var n int
 	if err := e.Owner.QueryRow(t.Context(),
-		`SELECT count(*) FROM webhook_subscription`).Scan(&n); err != nil {
-		t.Fatalf("counting webhook subscriptions: %v", err)
+		`SELECT count(*) FROM approval WHERE target_entity_id = $1`, targetID).Scan(&n); err != nil {
+		t.Fatalf("counting approvals: %v", err)
 	}
 	return n
 }

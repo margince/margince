@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/graphcal"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -101,6 +102,9 @@ type connectorHandlers struct {
 	// importer starts the past-email import a connect asked for, on the same
 	// engine as the backfill start endpoint (connectors_chain.go).
 	importer connectImport
+	// extOAuthGrants opens one unit's OAuth grants; nil reads them through the
+	// process's extension runtime binding, as the unit's Runtime does.
+	extOAuthGrants func(unit string) extOAuthGrants
 }
 
 // wired reports whether the Gmail OAuth app is composed for this role.
@@ -203,16 +207,8 @@ func (h connectorHandlers) ConnectConnector(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	app := avail.app
-	actor, ok := principal.Actor(r.Context())
-	ws, hasWS := principal.WorkspaceID(r.Context())
-	if !ok || actor.Type != principal.PrincipalHuman || !hasWS {
-		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusUnauthorized,
-			Code:   codeUnauthorized,
-			// Provider-neutral: this guard serves the calendars as well as the
-			// mailboxes, and naming a mailbox mislabels half the flows it refuses.
-			Detail: "Connecting an account is a signed-in human action.",
-		})
+	actor, ws, ok := signedInHuman(w, r)
+	if !ok {
 		return
 	}
 	// The body is optional for OAuth providers, so an absent one is not a
@@ -328,6 +324,24 @@ func (h connectorHandlers) ConnectorOAuthCallback(w http.ResponseWriter, r *http
 	h.chainAfterConnect(runCtx, w, r, st)
 }
 
+// signedInHuman answers the human starting a consent and their workspace, or
+// writes the 401 and false.
+func signedInHuman(w http.ResponseWriter, r *http.Request) (principal.Principal, ids.UUID, bool) {
+	actor, ok := principal.Actor(r.Context())
+	ws, hasWS := principal.WorkspaceID(r.Context())
+	if !ok || actor.Type != principal.PrincipalHuman || !hasWS {
+		httperr.Write(w, r, &httperr.DetailedError{
+			Status: http.StatusUnauthorized,
+			Code:   codeUnauthorized,
+			// Provider-neutral: this guard serves every consent flow, and
+			// naming a mailbox mislabels most of the ones it refuses.
+			Detail: "Connecting an account is a signed-in human action.",
+		})
+		return principal.Principal{}, ids.UUID{}, false
+	}
+	return actor, ws, true
+}
+
 // grantorContext reconstructs the granting human's authority from the trusted
 // (signed) state: workspace + user id. A minimal read-scoped human principal is
 // what Registry.Connect needs — it stamps granted_by and checks the connector's
@@ -379,6 +393,11 @@ func (h connectorHandlers) SetConnectorSignatureEnrichment(w http.ResponseWriter
 	}
 	var req crmcontracts.SetSignatureEnrichmentRequest
 	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	// A null follows the workspace default; a body that omits the switch is a mistake.
+	if err := httperr.RequireSent(r, "enabled", "send enabled: true, false, or null to follow the workspace default"); err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
 	view, err := h.registry.SetSignatureEnrichment(r.Context(), string(provider), req.Enabled)

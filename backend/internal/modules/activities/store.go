@@ -114,6 +114,9 @@ type Store struct {
 	// clock reads the current instant. Injected so the scheduling suites can
 	// pin a due moment and a missed window without sleeping (P3).
 	clock func() time.Time
+	// catalog answers the activity custom fields; nil reads and writes core
+	// columns only (WithFieldCatalog).
+	catalog FieldCatalog
 }
 
 // NewStore opens this module's store on a handle already bound to the

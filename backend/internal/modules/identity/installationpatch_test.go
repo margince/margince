@@ -29,10 +29,15 @@ func TestEveryInstallationPatchFieldIsEncoded(t *testing.T) {
 	// the encoder it is checking.
 	filled := reflect.New(patchType).Elem()
 	operationsField, _ := patchType.FieldByName("Operations")
+	allowancesField, _ := patchType.FieldByName("AgentAllowances")
 	for i := range patchType.NumField() {
 		field := filled.Field(i)
-		if i == operationsField.Index[0] {
+		switch i {
+		case operationsField.Index[0]:
 			field.Set(reflect.ValueOf(filledOperationPatch(t)))
+			continue
+		case allowancesField.Index[0]:
+			field.Set(reflect.ValueOf(filledAgentAllowancePatch()))
 			continue
 		}
 		if field.Kind() != reflect.Pointer {
@@ -89,7 +94,9 @@ func TestEveryInstallationPatchFieldIsEncoded(t *testing.T) {
 		t.Fatalf("encoding a fully-populated patch: %v", err)
 	}
 
-	if want := patchType.NumField() - 1 + operationsField.Type.NumField(); len(encoded) != want {
+	// The window length is scheduled inside the transaction, not encoded.
+	allowanceWrites := allowancesField.Type.NumField() - 1
+	if want := patchType.NumField() - 2 + operationsField.Type.NumField() + allowanceWrites; len(encoded) != want {
 		t.Errorf("the encoder produced %d writes for %d patch fields — "+
 			"a field it does not encode is one that silently stops saving",
 			len(encoded), want)
@@ -100,12 +107,12 @@ func TestEveryInstallationPatchFieldIsEncoded(t *testing.T) {
 	seen := map[string]bool{}
 	for _, w := range encoded {
 		if w.raw == nil {
-			t.Errorf("%s encoded to nil bytes from a field that was set", w.entry.Key())
+			t.Errorf("%s encoded to nil bytes from a field that was set", w.key)
 		}
-		if seen[w.entry.Key()] {
-			t.Errorf("%s is encoded twice, so some other field is not encoded at all", w.entry.Key())
+		if seen[w.key] {
+			t.Errorf("%s is encoded twice, so some other field is not encoded at all", w.key)
 		}
-		seen[w.entry.Key()] = true
+		seen[w.key] = true
 	}
 }
 
@@ -123,7 +130,7 @@ func TestAnAbsentInstallationPatchFieldEncodesToNothing(t *testing.T) {
 	for _, w := range encoded {
 		if w.raw != nil {
 			t.Errorf("%s encoded %q from an absent field; the write loop would store it",
-				w.entry.Key(), string(w.raw))
+				w.key, string(w.raw))
 		}
 	}
 }

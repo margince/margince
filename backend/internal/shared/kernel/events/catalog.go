@@ -189,8 +189,14 @@ var catalog = map[string]struct {
 	"list.member_removed": {contactStreamEntity, 1},
 	"list.evaluated":      {contactStreamEntity, 1},
 
-	"reporting.changed":          {identityStreamEntity, 1},
-	"booking_page.updated":       {identityStreamEntity, 1},
+	"reporting.changed":    {identityStreamEntity, 1},
+	"booking_page.updated": {identityStreamEntity, 1},
+	// The legal entities the installation trades as, on the identity stream
+	// because an entity is installation configuration a user is assigned to.
+	"legal_entity.created":       {identityStreamEntity, 1},
+	"legal_entity.updated":       {identityStreamEntity, 1},
+	"legal_entity.archived":      {identityStreamEntity, 1},
+	"legal_entity.member_added":  {identityStreamEntity, 1},
 	"meeting_proposal.updated":   {activityStreamEntity, 1},
 	"meeting_invitation.updated": {activityStreamEntity, 1},
 	"activity.captured":          {activityStreamEntity, 1},
@@ -241,6 +247,7 @@ var catalog = map[string]struct {
 	// How a seat wants their notices to reach them is a fact about the seat, so
 	// it rides the stream those notices ride, and only they are its subject.
 	"notification.preference_changed": {identityStreamEntity, 1},
+	"approval.preference_changed":     {identityStreamEntity, 1},
 
 	// A weekly plan belongs to one rep, so its changes ride the same identity
 	// stream a notice does. help_requested is its own type rather than another
@@ -272,8 +279,9 @@ var catalog = map[string]struct {
 	"intro_request.replied":   {contactStreamEntity, 1},
 	"intro_request.closed":    {contactStreamEntity, 1},
 
-	"approval.requested": {approvalStreamEntity, 1},
-	"approval.decided":   {approvalStreamEntity, 1},
+	"approval.requested":            {approvalStreamEntity, 1},
+	"approval.decided":              {approvalStreamEntity, 1},
+	"approval.failure_acknowledged": {approvalStreamEntity, 1},
 
 	"capture.received":   {captureStreamEntity, 1},
 	"capture.normalized": {captureStreamEntity, 1},

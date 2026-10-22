@@ -133,7 +133,7 @@ func TestABrokenSuggestionReadIsNamedFailedAndTheRestOfTheDayStillLoads(t *testi
 			svc := decisionsService(stubApprovals{rows: []crmcontracts.Approval{approval("a staged send")}}, stubDuplicates{}).
 				WithDealSuggestions(suggestions)
 
-			day, err := svc.Worklist(meetingPrepReader(), "", "", ids.UUID{}, 25, "")
+			day, err := svc.Worklist(meetingPrepReader(), scopeAll, "", ids.UUID{}, 25, "")
 			if err != nil {
 				t.Fatalf("a stalled suggestion read failed the whole worklist: %v", err)
 			}

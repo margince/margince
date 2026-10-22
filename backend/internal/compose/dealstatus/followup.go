@@ -10,6 +10,7 @@ package dealstatus
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -34,6 +35,7 @@ func followUpOwed(f facts) (activities.AwaitingReply, bool) {
 // followUpMove opens the composer to everyone the meeting was with. The
 // recipients ride as contact links, so the queue re-checks each one on read.
 func followUpMove(f facts, met activities.AwaitingReply) crmcontracts.DealStatusCardMove {
+	said := statusCopyFor(f.lang)
 	meetingID := openapi_types.UUID(met.ActivityID)
 	links := make([]map[string]any, 0, len(met.Recipients))
 	for _, contact := range met.Recipients {
@@ -41,13 +43,13 @@ func followUpMove(f facts, met activities.AwaitingReply) crmcontracts.DealStatus
 	}
 	subject := met.Subject
 	if subject == "" {
-		subject = untitledMeeting
+		subject = said.Say(statusWords.Meeting)
 	}
 	held := met.SentAt
 	return move(ActionDraftEmail,
-		"You met "+since(f.now, met.SentAt)+" and nothing has been sent since. Draft the follow-up.",
+		fmt.Sprintf(said.Say(statusWords.FollowUp), said.since(f.now, met.SentAt)),
 		map[string]any{argActivityID: meetingID, argLinks: links},
-		crmcontracts.DealNextBestActionEvidence{ActivityId: &meetingID, OccurredAt: &held, Text: "Met: " + subject})
+		crmcontracts.DealNextBestActionEvidence{ActivityId: &meetingID, OccurredAt: &held, Text: fmt.Sprintf(said.Say(statusWords.Met), subject)})
 }
 
 // followUpMeeting is the meeting a stored follow-up move names: a draft that

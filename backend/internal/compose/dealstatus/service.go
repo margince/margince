@@ -29,9 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// timelineWindow bounds how much of the timeline the card reads. The timeline
-// is ordered by occurred_at DESC, so the window holds the nearest scheduled
-// rows first and then the most recent past ones.
+// The descending timeline holds scheduled rows before recent past ones.
 const timelineWindow = 25
 
 // modelCallFloor is the one clock in an otherwise fact-keyed cache, and it
@@ -175,7 +173,7 @@ func (s *Service) readCard(ctx context.Context, dealID ids.DealID, policy cardRe
 	if err := briefevidence.Attach(ctx, briefevidence.FromActivities(timeline), cardEvidence(&card)); err != nil {
 		return crmcontracts.DealStatusCard{}, err
 	}
-	return card, nil
+	return s.withSetAside(ctx, dealID, card)
 }
 
 // cardEvidence collects the card's citations that could name a message: the
@@ -355,7 +353,7 @@ func (s *Service) gather(ctx context.Context, dealID ids.DealID) (facts, error) 
 		return facts{}, fmt.Errorf("deal status: reading the deal's timeline: %w", err)
 	}
 	f.timeline = timeline
-	requestKind := "email"
+	requestKind := string(crmcontracts.ActivityKindEmail)
 	requests, _, err := s.activities.ListActivities(ctx, activities.ListActivitiesInput{
 		EntityType: &entityType, EntityID: &dealID.UUID, Limit: &limit,
 		RequestReviewAsOf: &f.now, Kind: &requestKind,
@@ -372,6 +370,7 @@ func (s *Service) gather(ctx context.Context, dealID ids.DealID) (facts, error) 
 	// exclusion is the module's own SQL predicate, so the answer is
 	// authoritative rather than a page filtered after it was read.
 	open, more, err := s.activities.ListOpenTasks(ctx, activities.ListOpenTasksInput{
+		AsOf:       f.now,
 		EntityType: &entityType, EntityID: &dealID.UUID, Limit: timelineWindow,
 		ExcludeSystemMinted: true,
 	})

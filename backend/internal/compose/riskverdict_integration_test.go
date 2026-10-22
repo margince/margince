@@ -166,9 +166,10 @@ func figureOf(m crmcontracts.ResponseMetrics) atRiskFigure {
 // judged at all.
 func TestTheSameDayNextStepFigureCountsWhatThePassRecorded(t *testing.T) {
 	e := setupVerdicts(t)
-	e.passAt(t, e.taskAt.Add(-24*time.Hour))
-	e.passAt(t, e.taskAt)
-	e.passAt(t, e.taskAt.Add(24*time.Hour))
+	at := e.dayNoon(t)
+	e.passAt(t, at.Add(-24*time.Hour))
+	e.passAt(t, at)
+	e.passAt(t, at.Add(24*time.Hour))
 
 	for name, deal := range map[string]ids.UUID{"booked": e.booked, "other team's": e.other} {
 		if got := e.verdicts(t, deal); got != 3 {
@@ -181,7 +182,7 @@ func TestTheSameDayNextStepFigureCountsWhatThePassRecorded(t *testing.T) {
 		}
 	}
 
-	later := e.taskAt.Add(48 * time.Hour)
+	later := at.Add(48 * time.Hour)
 	whole := e.figureAt(e.Admin(), t, later)
 	if whole.Judged != 6 || whole.Booked != 1 {
 		t.Errorf("an unbounded reader sees %d judged and %d booked, want 6 and 1 — the task counts on the day it was "+
@@ -268,9 +269,10 @@ func TestOnlyALiveTaskIsANextStep(t *testing.T) {
 // The day still running is not counted: its step can still be booked.
 func TestTodayIsNotCountedUntilItEnds(t *testing.T) {
 	e := setupVerdicts(t)
-	e.passAt(t, e.taskAt)
+	at := e.dayNoon(t)
+	e.passAt(t, at)
 
-	sameDay := e.figureAt(e.Admin(), t, e.taskAt.Add(time.Minute))
+	sameDay := e.figureAt(e.Admin(), t, at.Add(time.Minute))
 	if sameDay.Judged != 0 {
 		t.Errorf("read on the verdict's own day, the figure counts %d judged, want 0 until the day ends",
 			sameDay.Judged)
@@ -306,11 +308,12 @@ func TestTheFigureSaysWhenRecordingBegan(t *testing.T) {
 // nothing, even for a deal that has turned material and at risk since.
 func TestTheDayCountsTheSetItBeganWith(t *testing.T) {
 	e := setupVerdicts(t)
-	e.passAt(t, e.taskAt)
+	at := e.dayNoon(t)
+	e.passAt(t, at)
 	// The €50,000 deal slips past its close date after the morning pass: it is
 	// now at risk and clears the bar, and it is not the day's to count.
 	e.WsExec(t, `UPDATE deal SET expected_close_date = current_date - 7 WHERE id = $1`, e.calm)
-	e.passAt(t, e.taskAt.Add(time.Minute))
+	e.passAt(t, at.Add(time.Minute))
 
 	if got := e.verdicts(t, e.booked); got != 1 {
 		t.Errorf("two passes on one day left %d verdicts on the deal, want 1", got)
@@ -327,7 +330,7 @@ func TestTheDayCountsTheSetItBeganWith(t *testing.T) {
 	}
 
 	// The next day starts with it.
-	e.passAt(t, e.taskAt.Add(24*time.Hour))
+	e.passAt(t, at.Add(24*time.Hour))
 	if got := e.verdicts(t, e.calm); got != 1 {
 		t.Errorf("the next day's first pass judged the slipped deal %d times, want 1", got)
 	}
@@ -415,8 +418,9 @@ func TestASeatCannotRecordAVerdict(t *testing.T) {
 // The verdicts age out on the seeded window, and go with their deal.
 func TestTheVerdictsAgeOutAndGoWithTheirDeal(t *testing.T) {
 	e := setupVerdicts(t)
-	e.passAt(t, e.taskAt.Add(-24*time.Hour))
-	e.passAt(t, e.taskAt)
+	at := e.dayNoon(t)
+	e.passAt(t, at.Add(-24*time.Hour))
+	e.passAt(t, at)
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return consent.SeedDefaultRetentionTx(context.Background(), tx)
 	}); err != nil {
@@ -476,4 +480,14 @@ func TestAPassCrossingMidnightKeepsItsDay(t *testing.T) {
 	if want := start.Format(time.DateOnly); day != want {
 		t.Fatalf("a pass starting on %s filed its judgement under %s", want, day)
 	}
+}
+
+func (e *verdictEnv) dayNoon(t *testing.T) time.Time {
+	t.Helper()
+	zone, err := installationZone(e.Admin(), e.Pool)
+	if err != nil {
+		t.Fatal(err)
+	}
+	day := e.taskAt.In(zone)
+	return time.Date(day.Year(), day.Month(), day.Day(), 12, 0, 0, 0, zone)
 }

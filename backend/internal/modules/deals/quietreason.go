@@ -3,24 +3,8 @@
 
 package deals
 
-// The sentence a reader reads when asked whether a quiet deal is still alive.
-//
-// It replaced a fixed string ("deal has gone quiet; confirm it is still alive")
-// which was true of every quiet deal and therefore told the reader nothing they
-// could act on. A reason earns its place by naming what happened: which way the
-// silence runs, who is on the other end of it, and how long it has lasted.
-//
-// The three shapes below are not stylistic variants — they are three different
-// situations, and the verb changes because the next action does:
-//
-//	they wrote last  → we owe a reply, and the name is who we owe it to
-//	we wrote last    → they went cold, and the name is who stopped answering
-//	neither          → nobody has ever corresponded on this deal at all
-//
-// Names arrive already resolved. This module cannot read the contact table, and
-// a reason that silently drops the name when the reader lacks contact:read is
-// better than one that leaks it — so an unknown name degrades to "the contact"
-// rather than to an identifier or an empty gap.
+// Names come from the owner-scoped reader. Missing names stay generic so a
+// receipt cannot reveal a contact that reader was not allowed to see.
 
 import (
 	"fmt"
@@ -30,30 +14,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// The reasons that are not about a deal's correspondence, kept beside the ones
-// that are so all of this surface's prose reads as one voice.
-//
-// The reason is written for a RECEIPT rather than for a card. The sweep has
-// already moved the date by the time a reader reads this, so the sentence says
-// what was done and why, and never asks them to confirm anything: the way back
-// is the Undo on the row, not an approval they have to go and find.
-const (
-	// quietFallbackBasis stands in when the correspondence could not be read.
-	// It says the deal is quiet and does not pretend to know more, which is
-	// the honest version of what the sweep has at that point.
-	quietFallbackBasis = "This deal has gone quiet and we could not read its correspondence — check the account."
-)
-
-// pacedBasis says where a proposed date came from, without showing the
-// arithmetic. "3 open stage(s) remaining × stage velocity" is the formula that
-// produced the number, and a formula is not a reason a salesperson can weigh.
-func pacedBasis(remainingStages int) string {
-	if remainingStages == 1 {
-		return "Based on how long deals like this usually take to clear their last stage."
-	}
-	return fmt.Sprintf(
-		"Based on how long deals like this usually take, with %d stages still to go.",
-		remainingStages)
+// pacedBasis names the observations behind an unconfirmed estimate.
+func (said quietCopy) pacedBasis(remainingStages int, pace closeDatePace) string {
+	return fmt.Sprintf(said.Say(quietWords.Paced), pace.wonDeals, pace.days, remainingStages)
 }
 
 // QuietNames maps the counterparty on each side of ReadQuietFacts to a display
@@ -63,78 +26,29 @@ type QuietNames map[ids.UUID]string
 
 // quietReason composes the sentence. `today` is the sweep's own day so the
 // day counts land in the workspace's calendar rather than the server's.
-func quietReason(facts QuietFacts, names QuietNames, today time.Time, loc *time.Location) string {
+func (said quietCopy) quietReason(facts QuietFacts, names QuietNames, today time.Time, loc *time.Location) string {
 	inbound, outbound := facts.LastInbound, facts.LastOutbound
-	switch {
-	case inbound != nil && (outbound == nil || outbound.At.Before(inbound.At)):
-		// They spoke last: the ball is ours, and that is the sharper finding of
-		// the two because it is a thing WE failed to do.
-		return fmt.Sprintf("%s %s on %s and %s — %s.",
-			quietWho(inbound, names, "The contact"),
-			quietReached(inbound.Kind),
-			quietDay(inbound.At, loc),
-			quietUnanswered(inbound.Kind),
-			quietFor(inbound.At, today, loc))
-	case outbound != nil:
-		return fmt.Sprintf("We %s %s on %s and %s — %s.",
-			quietReachedOut(outbound.Kind),
-			quietWho(outbound, names, "the contact"),
-			quietDay(outbound.At, loc),
-			quietSilenceSince(outbound.Kind),
-			quietFor(outbound.At, today, loc))
-	default:
-		return "Nobody has been in touch on this deal either way — there is no correspondence to judge it by."
+	if inbound != nil && (outbound == nil || outbound.At.Before(inbound.At)) {
+		phrase := quietWords.InMessage
+		switch crmcontracts.ActivityKind(inbound.Kind) {
+		case crmcontracts.ActivityKindCall:
+			phrase = quietWords.InCall
+		case crmcontracts.ActivityKindMeeting:
+			phrase = quietWords.InMeeting
+		}
+		return fmt.Sprintf(said.Say(phrase), quietWho(inbound, names, said.Say(quietWords.Contact)), quietDay(inbound.At, loc), said.quietFor(inbound.At, today, loc))
 	}
-}
-
-// quietReached and quietReachedOut say what actually happened, per direction.
-// The facts query accepts any directional activity, so a phone call would
-// otherwise be reported as something somebody "wrote" — a small falsehood, and
-// a reader who was actually on that call stops trusting the rest of the
-// sentence. An unrecognised kind degrades to the neutral verb rather than
-// guessing.
-func quietReached(kind string) string {
-	switch crmcontracts.ActivityKind(kind) {
-	case crmcontracts.ActivityKindCall:
-		return "called"
-	case crmcontracts.ActivityKindMeeting:
-		return "met us"
-	default:
-		return "wrote"
+	if outbound != nil {
+		phrase, unknown := quietWords.OutMessage, quietWords.ContactRecipient
+		switch crmcontracts.ActivityKind(outbound.Kind) {
+		case crmcontracts.ActivityKindCall:
+			phrase, unknown = quietWords.OutCall, quietWords.ContactObject
+		case crmcontracts.ActivityKindMeeting:
+			phrase, unknown = quietWords.OutMeeting, quietWords.ContactObject
+		}
+		return fmt.Sprintf(said.Say(phrase), quietWho(outbound, names, said.Say(unknown)), quietDay(outbound.At, loc), said.quietFor(outbound.At, today, loc))
 	}
-}
-
-func quietReachedOut(kind string) string {
-	switch crmcontracts.ActivityKind(kind) {
-	case crmcontracts.ActivityKindCall:
-		return "called"
-	case crmcontracts.ActivityKindMeeting:
-		return "met"
-	default:
-		return "wrote to"
-	}
-}
-
-// quietUnanswered and quietSilenceSince close the sentence in the same terms it
-// opened. "Called ... and nobody has answered" reads as a missed phone call
-// rather than an unreturned one, and a meeting never gets a "reply" at all — so
-// the second half of the sentence follows the verb in the first.
-func quietUnanswered(kind string) string {
-	switch crmcontracts.ActivityKind(kind) {
-	case crmcontracts.ActivityKindCall, crmcontracts.ActivityKindMeeting:
-		return "nobody has followed up since"
-	default:
-		return "nobody has answered since"
-	}
-}
-
-func quietSilenceSince(kind string) string {
-	switch crmcontracts.ActivityKind(kind) {
-	case crmcontracts.ActivityKindCall, crmcontracts.ActivityKindMeeting:
-		return "nothing has happened since"
-	default:
-		return "there has been no reply"
-	}
+	return said.Say(quietWords.NoCorrespondence)
 }
 
 // quietWho names the counterparty, falling back to a generic noun. The fallback
@@ -152,7 +66,7 @@ func quietWho(side *QuietSide, names QuietNames, unknown string) string {
 // deal is late on. A message at 23:00 local is otherwise reported as the next
 // day, which a reader can check against their own mailbox and find wrong.
 func quietDay(at time.Time, loc *time.Location) string {
-	return at.In(orUTC(loc)).Format("2 January")
+	return at.In(orUTC(loc)).Format(time.DateOnly)
 }
 
 // orUTC is the zone fallback. A sweep always has one; the guard exists so a
@@ -174,17 +88,17 @@ func dayIn(at time.Time, loc *time.Location) time.Time {
 // quietFor is the elapsed span, in the unit a contact would say it in. Days up to
 // a fortnight, then weeks: "38 days" makes a reader do arithmetic to learn what
 // "5 weeks" says outright.
-func quietFor(since, today time.Time, loc *time.Location) string {
+func (said quietCopy) quietFor(since, today time.Time, loc *time.Location) string {
 	zone := orUTC(loc)
 	days := max(int(dayIn(today, zone).Sub(dayIn(since, zone)).Hours()/24), 0)
 	switch {
 	case days == 0:
-		return "that was today"
+		return said.Say(quietWords.Today)
 	case days == 1:
-		return "that was yesterday"
+		return said.Say(quietWords.Yesterday)
 	case days <= 14:
-		return fmt.Sprintf("%d days ago", days)
+		return fmt.Sprintf(said.Say(quietWords.Days), days)
 	default:
-		return fmt.Sprintf("%d weeks ago", days/7)
+		return fmt.Sprintf(said.Say(quietWords.Weeks), days/7)
 	}
 }

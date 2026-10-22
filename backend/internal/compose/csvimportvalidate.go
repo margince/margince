@@ -137,6 +137,12 @@ func (h importHandlers) checkedMapping(
 	if err := h.contextTagIsApplicable(ctx, mapping.ContextTag); err != nil {
 		return migration.RunMapping{}, err
 	}
+	if err := refuseNonActivityPreset(mapping); err != nil {
+		return migration.RunMapping{}, err
+	}
+	if err := h.presetsAreVisible(ctx, mapping.PresetLinks); err != nil {
+		return migration.RunMapping{}, err
+	}
 	return mapping, nil
 }
 
@@ -146,7 +152,7 @@ func draftPatchOf(m migration.RunMapping) migration.DraftPatch {
 	return migration.DraftPatch{
 		Parts: &m.Parts, Object: &m.Object, Fields: &m.Fields, SourceKey: &m.SourceKey,
 		SourceName: &m.SourceName, OnDuplicate: &m.OnDuplicate, OnBrokenLink: &m.OnBrokenLink,
-		ContextTag: &m.ContextTag,
+		ContextTag: &m.ContextTag, PresetLinks: &m.PresetLinks,
 	}
 }
 
@@ -183,6 +189,7 @@ func requestOfRun(run migration.Run) crmcontracts.CreateImportRunRequest {
 	if tag := parseContextTag(m.ContextTag); !tag.IsZero() {
 		req.ContextTagId = new(openapi_types.UUID(tag.UUID))
 	}
+	req.PresetLinks = presetLinksOnWire(m.PresetLinks)
 	return req
 }
 

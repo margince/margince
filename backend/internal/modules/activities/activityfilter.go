@@ -117,6 +117,11 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (
 		return nil, "", nil, nil, err
 	}
 	where = append(where, activityRowClauses(in, arg)...)
+	custom, err := storekit.CustomFilterClauses(in.Columns.cols, in.CustomFilters, arg)
+	if err != nil {
+		return nil, "", nil, nil, err
+	}
+	where = append(where, custom...)
 	where = append(where, worklistClauses(in, readerOrNobody(ctx), arg)...)
 	keyset, err := timelineKeyset(in, sorted, arg)
 	if err != nil {
@@ -140,6 +145,9 @@ func timelineNarrowings(in ListActivitiesInput, arg func(any) int) []string {
 	if !in.IncludeArchived {
 		where = append(where, activityLive)
 	}
+	if in.SourceActivityID != nil {
+		where = append(where, sprintf("a.kind = 'task' AND a.source_activity_id = $%d", arg(*in.SourceActivityID)))
+	}
 	if in.Kind != nil {
 		where = append(where, sprintf("a.kind = $%d", arg(*in.Kind)))
 	}
@@ -161,7 +169,7 @@ func timelineNarrowings(in ListActivitiesInput, arg func(any) int) []string {
 	if in.UnhostedMeetings {
 		where = append(where, "a.kind = 'meeting' AND a.host_user_id IS NULL")
 	}
-	if clause := openTaskAssigneeClause(in.AssigneeID, arg); clause != "" {
+	if clause := openTaskAssigneeClause(in.AssigneeID, in.TaskAsOf, in.mailIdentities, arg); clause != "" {
 		where = append(where, clause)
 	}
 	return append(where, openTaskWindowClauses(in, arg)...)
@@ -220,6 +228,8 @@ func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 // filtersOnContent reports whether the list narrows on fields a withheld row
 // does not disclose.
 //
+// A custom-field filter belongs here because its values are content too.
+//
 // waiting_reply belongs here for the reason waiting.go's own gate comment
 // states: who wrote last and that nobody replied are both derived from
 // thread membership, not from the safe discover markers, so a withheld
@@ -227,5 +237,6 @@ func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 // with the answer blanked.
 func filtersOnContent(in ListActivitiesInput) bool {
 	return (in.ThreadKey != nil && *in.ThreadKey != "") || (in.Query != nil && *in.Query != "") ||
-		in.WaitingReplyAsOf != nil || in.RequestReviewAsOf != nil || in.ReadableOnly
+		in.WaitingReplyAsOf != nil || in.RequestReviewAsOf != nil || in.ReadableOnly || in.SourceActivityID != nil ||
+		len(in.CustomFilters) > 0
 }

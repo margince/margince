@@ -61,12 +61,8 @@ with some of the tone, plus a line in the tone; `primary` has a fill with all of
 Sparkles. No `uppercase`, no click; `badge-spelling.test.ts` fails a badge built by hand or a new
 look for one.
 
-**A status is one `StatusBadge`**: green done, grey neutral (waiting, invited, results like Lost; running
-adds `live`), amber someone must act, red something broke. `info` and `accent` never mean a status.
-
-**A settings `Panel` has no `tone`** and at most one primary. A settings page saves through one
-`PageSaveBar`: each card hands its draft over with `useSaveDraft`, and no card or row has a Save of
-its own. A `Switch` alone writes when you turn it.
+**A settings `Panel` has no `tone`** and at most one primary. A page saves through one `PageSaveBar`
+(`useSaveDraft`); no card or row has its own "Save". A `Switch` alone writes when turned.
 
 ### Indigo is a claim about the source
 
@@ -79,9 +75,17 @@ thing.
 ## Imports flow down
 
 `src/lib/` holds shared code that draws nothing. `lib`, `api`, `i18n` and `format` sit at the bottom:
-they never import `app/` or `screens/`, and the Biome rule `noRestrictedImports` fails one that
-does. Move a module with `node scripts/move-modules.ts <from> <to>`, so its imports follow and the
-PR changes nothing else.
+they never import `app/`, `components/` or `features/`, and the Biome rule `noRestrictedImports`
+fails one that does.
+
+Only the shell (`app/`, `App`) imports a feature, and a feature imports no other feature. Code that
+two features need moves down: to `components/` if it draws, to `lib/` if it does not. A test helper
+that features share goes to `testing/`. Code that one feature alone uses lives in that feature,
+never in `components/`, `lib/` or `format/`. `scripts/feature-boundaries.test.ts` fails both, and
+its message says where the file goes. Never add a line to its waiver list.
+
+Move a module with `node scripts/move-modules.ts <from> <to>`, so its imports follow and the PR
+changes nothing else. The steps: [move-frontend-code.md](../docs/how-to/move-frontend-code.md).
 
 ## Text follows the writing guides
 
@@ -119,7 +123,7 @@ The rule, and the gate that holds it:
 - A check for an empty value at the start of a `mutationFn` (`if (!form) return`) does not keep you
   safe. It is what *happens* when an old closure runs, and it refuses a form the user has filled in.
   An old closure can also send a form state the user never set.
-- `src/screens/mutation-variable-coverage.test.ts` walks the TSX with the TypeScript compiler API
+- `src/testing/mutation-variable-coverage.test.ts` walks the TSX with the TypeScript compiler API
   and fails on the pattern. Do not find a way past it.
 
 ### Use the app in tests in a way that does not cost clock time

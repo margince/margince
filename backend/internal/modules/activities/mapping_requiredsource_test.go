@@ -31,8 +31,9 @@ func TestAnActivityAndATaskMustNameTheirSource(t *testing.T) {
 
 func TestAnActivityKeepsItsSourceTrimmed(t *testing.T) {
 	t.Parallel()
+	subject := "Met at the fair"
 	in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
-		Kind: crmcontracts.CreateActivityRequestKindCreateActivityRequestKindNote, Source: "  manual ",
+		Kind: crmcontracts.CreateActivityRequestKindCreateActivityRequestKindNote, Subject: &subject, Source: "  manual ",
 	})
 	if err != nil || in.Source != "manual" {
 		t.Errorf("source = %q, %v; want manual", in.Source, err)

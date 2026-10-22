@@ -6,7 +6,6 @@ package contacts
 import (
 	"context"
 	"strings"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -52,9 +51,8 @@ type UpdateLeadInput struct {
 	OwnerID            *ids.UserID
 	ProjectID          *ids.ProjectID
 	IfVersion          *int64
-	// CustomFields carries the request body's extra top-level keys
-	// (additionalProperties); only active cf_* catalog columns land,
-	// drop-on-mismatch (customfields.go).
+	// CustomFields carries the request body's cf_* keys. A key no active catalog
+	// column takes is refused (storekit.CheckCustomValues).
 	CustomFields map[string]any
 }
 
@@ -262,7 +260,7 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 	// Deliberately no same-company check: a lead has no company to compare
 	// (Note PROJ-DDL-N-4).
 	if in.ProjectID != nil {
-		if err := auth.EnsureLinkTarget(ctx, tx, "project", in.ProjectID.UUID); err != nil {
+		if err := auth.EnsureReferenceTarget(ctx, tx, "project_id", "project", in.ProjectID.UUID); err != nil {
 			return crmcontracts.Lead{}, err
 		}
 	}
@@ -282,9 +280,15 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 	if err := stampStatusSetBy(ctx, p, current, in); err != nil {
 		return crmcontracts.Lead{}, err
 	}
-	storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties)
+	if err := storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties); err != nil {
+		return crmcontracts.Lead{}, err
+	}
 	if p.Empty() {
 		return current, nil
+	}
+	rescore, err := stageLeadRescore(ctx, tx, id, current, p, resumeRecompute)
+	if err != nil {
+		return crmcontracts.Lead{}, err
 	}
 	if err := p.ApplyLocked(ctx, tx, lock); err != nil {
 		if mapped, ok := leadUniqueViolation(err, in.Email); ok {
@@ -299,9 +303,6 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventLeadUpdated{ChangedFields: p.After()}); err != nil {
 		return crmcontracts.Lead{}, err
 	}
-	// Clearing an override immediately recomputes from current signals
-	// (formulas §3.1): score no longer lags behind the machine value, and
-	// the recompute appends its own history entry.
 	// A rename or a new company/address can make this lead read like another
 	// one; the review trail follows the identity, not just the create.
 	if identityTouched(p, leadNameColumn, leadCompanyColumn, leadEmailColumn) {
@@ -317,28 +318,29 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 			return crmcontracts.Lead{}, err
 		}
 	}
-	if resumeRecompute {
-		if err := recomputeLeadScoreTx(ctx, tx, id, time.Now().UTC(), true); err != nil {
-			return crmcontracts.Lead{}, err
-		}
-	} else if in.Source != nil && *in.Source != current.Source {
-		// The source weight is part of the score (formulas §3.1): a corrected
-		// source is rescored at once. Under an override the recompute moves
-		// score_computed and leaves the human's number alone.
-		if err := recomputeLeadScoreTx(ctx, tx, id, time.Now().UTC(), false); err != nil {
-			return crmcontracts.Lead{}, err
-		}
-	} else if in.Score != nil {
+	if err := recordRescoreHistory(ctx, tx, id, in, rescore); err != nil {
+		return crmcontracts.Lead{}, err
+	}
+	return readLead(ctx, tx, id, storekit.LiveOnly, active)
+}
+
+// recordRescoreHistory writes the score history entry an edit owes once the
+// lead's UPDATE has landed, when no cleared override is recomputing instead.
+func recordRescoreHistory(
+	ctx context.Context, tx pgx.Tx, id ids.LeadID, in UpdateLeadInput, rescore stagedLeadRescore,
+) error {
+	switch {
+	case rescore.moved:
+		return rescore.record(ctx, tx, id)
+	case in.Score != nil:
 		// SETTING an override moves the displayed score without touching the
 		// machine value, so no recompute runs and nothing else records it.
 		// Without this entry the newest point in the series still holds the
 		// pre-override number, and "Explain This Score" would answer for a
 		// score the lead no longer carries (ADR-0105 §5).
-		if err := appendOverrideScoreHistory(ctx, tx, id); err != nil {
-			return crmcontracts.Lead{}, err
-		}
+		return appendOverrideScoreHistory(ctx, tx, id)
 	}
-	return readLead(ctx, tx, id, storekit.LiveOnly, active)
+	return nil
 }
 
 // buildLeadPatch folds the caller's sparse update onto the current lead

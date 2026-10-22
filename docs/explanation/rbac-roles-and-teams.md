@@ -284,7 +284,7 @@ gives `rep` to its second user for this reason.
 Row scope has only three steps (own / team / all). **Record sharing** works on one record at a time.
 It grants **one record** to **one user or team**, at **read or write**, with a reason. It can also
 carry an end date.
-This is the Share screen (`frontend/src/screens/share.tsx`, `#/share/<type>/<id>`) and the
+This is the Share screen (`frontend/src/features/records/share.tsx`, `#/share/<type>/<id>`) and the
 `record_grant` table and `/v1/record-grants` API.
 
 How it works with everything above:

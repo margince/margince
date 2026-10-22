@@ -43,13 +43,14 @@ func NewStore(db *database.DB) *Store {
 
 // Notice is one durable line addressed to one contact.
 type Notice struct {
-	Origin    *crmcontracts.NoticeOrigin
-	ID        ids.UUID
-	Kind      string
-	Subject   string
-	Body      string
-	Target    Target
-	CreatedAt time.Time
+	ApprovalID *ids.ApprovalID
+	Origin     *crmcontracts.NoticeOrigin
+	ID         ids.UUID
+	Kind       string
+	Subject    string
+	Body       string
+	Target     Target
+	CreatedAt  time.Time
 }
 
 // Target is the record a notice is about, when it is about one.
@@ -294,9 +295,10 @@ func storedNotice(ctx context.Context, tx pgx.Tx, recipient ids.UserID, dedupeKe
 //
 // A boolean expression over `notice` columns only, so it composes into a WHERE
 // arm and into RETURNING alike.
-const notTheReadersOwnStageMove = `NOT coalesce(
-	kind = 'automation' AND target_type = 'deal'
-	AND (origin ? 'stage_change' OR starts_with(dedupe_key, 'stage_change_notify:'))
+const stageMoveNotice = `kind = 'automation' AND target_type = 'deal'
+ AND (origin ? 'stage_change' OR starts_with(dedupe_key, 'stage_change_notify:'))`
+
+const notTheReadersOwnStageMove = `NOT coalesce(` + stageMoveNotice + `
 	AND origin->>'actor_type' = 'human'
 	AND lower(origin->>'actor_id') IN
 	  (recipient_user_id::text, 'human:' || recipient_user_id::text), false)`
@@ -328,6 +330,18 @@ func inTheReadersLane(mutedAt int) string {
 // contact behind it is refused with the permission sentinel, which the
 // attention feed renders as a withheld lane.
 func (s *Store) UnreadFor(ctx context.Context, limit int) ([]Notice, error) {
+	return s.unreadPage(ctx, limit, false)
+}
+
+// UnreadWorkFor omits stage history and mirrors of the authoritative approval queue.
+func (s *Store) UnreadWorkFor(ctx context.Context, limit int) ([]Notice, error) {
+	if err := auth.RequireHuman(ctx); err != nil {
+		return nil, err
+	}
+	return s.unreadPage(ctx, limit, true)
+}
+
+func (s *Store) unreadPage(ctx context.Context, limit int, workOnly bool) ([]Notice, error) {
 	seat, err := actingSeat(ctx, "reading your notices")
 	if err != nil {
 		return nil, err
@@ -342,8 +356,12 @@ func (s *Store) UnreadFor(ctx context.Context, limit int) ([]Notice, error) {
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		recipient, page := arg(seat), arg(limit)
 		lane := inTheReadersLane(arg(muted))
+		if workOnly {
+			lane += " AND NOT coalesce(" + stageMoveNotice + ", false)"
+			lane += fmt.Sprintf(" AND kind <> $%d", arg(KindApprovalPending))
+		}
 		rows, txErr := tx.Query(ctx, fmt.Sprintf(`
-			SELECT id, kind, subject, body, target_type, target_id, created_at, origin
+			SELECT id, kind, subject, body, target_type, target_id, created_at, origin, coalesce(dedupe_key, '')
 			  FROM notice
 			 WHERE recipient_user_id = $%d AND read_at IS NULL
 			   AND %s
@@ -356,16 +374,21 @@ func (s *Store) UnreadFor(ctx context.Context, limit int) ([]Notice, error) {
 		unread = []Notice{}
 		for rows.Next() {
 			var n Notice
+			var noticeKey string
 			// Both halves are nullable and the table pairs them, so either
 			// arriving alone is a row the constraint should have refused.
 			var targetType *string
 			var targetID *ids.UUID
 			if scanErr := rows.Scan(&n.ID, &n.Kind, &n.Subject, &n.Body,
-				&targetType, &targetID, &n.CreatedAt, &n.Origin); scanErr != nil {
+				&targetType, &targetID, &n.CreatedAt, &n.Origin, &noticeKey); scanErr != nil {
 				return scanErr
 			}
 			if targetType != nil && targetID != nil {
 				n.Target = Target{Type: *targetType, ID: *targetID}
+			}
+			if approval, ok := approvalOfNoticeKey(n.Kind, noticeKey); ok {
+				typed := ids.From[ids.ApprovalKind](approval)
+				n.ApprovalID = &typed
 			}
 			unread = append(unread, n)
 		}

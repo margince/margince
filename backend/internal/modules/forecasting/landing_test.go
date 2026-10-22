@@ -150,3 +150,33 @@ func TestALandingThatCannotBeRepresentedIsRefused(t *testing.T) {
 			"a wrapped total reads as a negative quarter and still looks like money")
 	}
 }
+
+// A call replaces the records' projection, so the landing carries that
+// projection beside it. The other measures already are the records'.
+func TestAManagerCallLandingCarriesTheRecordsProjectionBesideIt(t *testing.T) {
+	t.Parallel()
+	call := int64(900_00)
+	got, err := ProjectLanding(measured(400_00, 250_00, 180_00), MeasureManagerCall, &call)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.SystemMinor == nil || *got.SystemMinor != 650_00 {
+		t.Fatalf("system = %v, want won plus commit evidence, 65000", got.SystemMinor)
+	}
+	for _, measure := range []ForwardMeasure{MeasureCommitEvidence, MeasureWeighted} {
+		other, err := ProjectLanding(measured(400_00, 250_00, 180_00), measure, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if other.SystemMinor != nil {
+			t.Errorf("%s carried a second system figure %d", measure, *other.SystemMinor)
+		}
+	}
+	absent, err := ProjectLanding(measured(400_00, 250_00, 180_00), MeasureManagerCall, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if absent.SystemMinor != nil {
+		t.Errorf("a fallback landing already is the records' figure; it carried another %d", *absent.SystemMinor)
+	}
+}

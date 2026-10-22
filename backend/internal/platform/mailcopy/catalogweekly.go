@@ -28,20 +28,20 @@ func weeklyCoverageLines(line writeLine) {
 		"Erfasst ab {date}",
 		"Ghi nhận từ {date}")
 	line(func(c *Copy) *string { return &c.WeeklyNoRecords },
-		"No records from this source",
-		"Keine Datensätze aus dieser Quelle",
-		"Nguồn này không có dữ liệu")
+		"No information recorded for this part of the report",
+		"Für diesen Teil der Auswertung liegen keine Angaben vor",
+		"Chưa có thông tin cho phần báo cáo này")
 	line(func(c *Copy) *string { return &c.WeeklyPartialFrom },
-		"Partial week: counted from {date}",
-		"Teilwoche: gezählt ab {date}",
-		"Một phần tuần: tính từ {date}")
+		"Figures cover the period from {date} only",
+		"Die Auswertung umfasst nur den Zeitraum ab {date}",
+		"Số liệu chỉ bao gồm thời gian từ {date}")
 	line(func(c *Copy) *string { return &c.WeeklyPartialValue },
 		"{value} (partial)",
 		"{value} (teilweise)",
 		"{value} (một phần)")
 	line(func(c *Copy) *string { return &c.WeeklyBeforeHistory },
 		"This week falls before the first records, so it has no figures to report.",
-		"Diese Woche liegt vor den ersten Datensätzen und hat daher keine Zahlen.",
+		"Für diese Woche gibt es keine Zahlen, da sie vor den ersten Datensätzen liegt.",
 		"Tuần này nằm trước thời điểm có dữ liệu đầu tiên nên không có số liệu để báo cáo.")
 	line(func(c *Copy) *string { return &c.WeeklyUnavailable },
 		"Unavailable",
@@ -58,28 +58,28 @@ func weeklyFigureLines(line writeLine) {
 		"Tuần của bạn: ")
 	line(func(c *Copy) *string { return &c.WeeklyHeading },
 		"Your week of ",
-		"Deine Woche ab ",
+		"Deine Woche vom ",
 		"Tuần của bạn từ ")
 	line(func(c *Copy) *string { return &c.WeeklyTasksDelivered },
-		"Tasks delivered",
-		"Aufgaben erledigt",
-		"Việc cần làm đã hoàn tất")
+		"Due tasks completed",
+		"Fällige Aufgaben erledigt",
+		"Việc đến hạn đã hoàn tất")
 	line(func(c *Copy) *string { return &c.WeeklyOfDue },
 		"%d of %d",
 		"%d von %d",
 		"%d trên %d")
 	line(func(c *Copy) *string { return &c.WeeklyDealsWon },
-		"Won",
-		"Gewonnen",
-		"Thắng")
+		"Deals won",
+		"Gewonnene Deals",
+		"Deal đã chốt")
 	line(func(c *Copy) *string { return &c.WeeklyDealsLost },
-		"Lost",
-		"Verloren",
-		"Thua")
+		"Deals lost",
+		"Verlorene Deals",
+		"Deal đã mất")
 	line(func(c *Copy) *string { return &c.WeeklyMoved },
-		"Moved",
-		"Bewegt",
-		"Đã chuyển")
+		"Deals with stage changes",
+		"Deals mit Phasenwechsel",
+		"Deal đã đổi giai đoạn")
 	line(func(c *Copy) *string { return &c.WeeklyDecided },
 		"Proposals decided",
 		"Entschiedene Vorschläge",
@@ -122,18 +122,18 @@ func weeklyQueueLines(line writeLine) {
 		"weggeklickt",
 		"đã bỏ qua")
 	line(func(c *Copy) *string { return &c.WeeklyCarried },
-		"Carried over",
-		"Übertragen",
-		"Chuyển sang tuần sau")
+		"Open at week’s end",
+		"Zum Wochenende offen",
+		"Việc còn mở cuối tuần")
 }
 
 // weeklyMovementLines are what actually moved, the way on to the rest of it,
 // and the words a single row's outcome is written with.
 func weeklyMovementLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.WeeklyWhatMoved },
-		"What moved:",
-		"Was sich bewegt hat:",
-		"Những gì đã chuyển động:")
+		"Deals that changed this week:",
+		"Diese Deals haben sich verändert:",
+		"Các deal thay đổi trong tuần:")
 	line(func(c *Copy) *string { return &c.WeeklyAndMore },
 		"… and %d more, on Home",
 		"… weitere auf Home: %d",
@@ -144,24 +144,20 @@ func weeklyMovementLines(line writeLine) {
 // That is next week's plan and the archive behind it. The outcome words the
 // movement list is written in close it.
 func weeklyClosingLines(line writeLine) {
-	line(func(c *Copy) *string { return &c.WeeklyPlanAhead },
-		"This week’s commitments",
-		"Zusagen dieser Woche",
-		"Cam kết tuần này")
 	line(func(c *Copy) *string { return &c.WeeklyFullWeek },
-		"The full week, and the ones before it:",
-		"Die ganze Woche, und die davor:",
-		"Cả tuần, và những tuần trước:")
+		"Review the results and plan your next step",
+		"Ergebnisse ansehen und den nächsten Schritt planen",
+		"Xem kết quả và lên kế hoạch bước tiếp theo")
 	line(func(c *Copy) *string { return &c.WeeklyOutcomeWon },
 		"won",
 		"gewonnen",
-		"thắng")
+		"đã chốt")
 	line(func(c *Copy) *string { return &c.WeeklyOutcomeLost },
 		"lost",
 		"verloren",
-		"thua")
+		"đã mất")
 	line(func(c *Copy) *string { return &c.WeeklyOutcomeMoved },
-		"moved",
-		"bewegt",
-		"đã chuyển")
+		"stage changed",
+		"Verkaufsphase geändert",
+		"đã đổi giai đoạn")
 }

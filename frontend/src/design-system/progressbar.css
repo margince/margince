@@ -1,0 +1,50 @@
+/* A task's progress: the fill is the AI hue outright, because the bar exists
+   only while the machine is working. */
+.progressbar {
+  block-size: 6px;
+  margin-top: var(--space-2);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--bgChip);
+  overflow: hidden;
+}
+.progressbar-fill {
+  position: relative;
+  display: block;
+  block-size: 100%;
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--ai);
+  overflow: hidden;
+  transition: inline-size var(--dur-move) var(--ease-out);
+}
+/* The travelling sheen is the one thing that says "now" rather than "so far":
+   a poll every few seconds moves the edge in steps, and between two steps a
+   still bar and a stalled one look the same. Mixed from the hue and the
+   card's own ground so it reads in both themes with no literal. */
+.progressbar-fill::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    color-mix(in srgb, var(--ai) 40%, var(--bgElevated)) 50%,
+    transparent 100%
+  );
+  transform: translateX(-100%);
+  animation: progressbar-sheen 1.8s var(--ease-in-out) infinite;
+}
+@keyframes progressbar-sheen {
+  to {
+    transform: translateX(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .progressbar-fill::after {
+    animation: none;
+  }
+  .progressbar-fill {
+    transition: none;
+  }
+}

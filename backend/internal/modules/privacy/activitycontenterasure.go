@@ -53,7 +53,7 @@ import (
 // retention window is scoped to time — so an unwired seam is not a degraded
 // mode, it is an erasure that reports success over an intact original.
 func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.UUID, act erasureAct) error {
-	if err := redactReportingSource(ctx, tx, "activity", []ids.UUID{id}); err != nil {
+	if err := purgeActivityIndexes(ctx, tx, []ids.UUID{id}); err != nil {
 		return err
 	}
 	if e.purgeRawCaptures == nil {
@@ -67,14 +67,6 @@ func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.
 	if err := e.purgeRawCaptures(ctx, tx, []ids.UUID{id}); err != nil {
 		return err
 	}
-	if _, err := tx.Exec(ctx, `
-		DELETE FROM embedding WHERE entity_type = 'activity' AND entity_id = $1`, id); err != nil {
-		return err
-	}
-	if _, err := tx.Exec(ctx, `
-		DELETE FROM field_provenance WHERE object_type = 'activity' AND object_id = $1`, id); err != nil {
-		return err
-	}
 	// What a classifier concluded the message MEANT, and every human correction
 	// of that conclusion. It is derived from the text this act destroys, so it
 	// goes with it: a verdict saying somebody replied negatively is a claim
@@ -86,6 +78,14 @@ func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.
 	// holds the subject's data after an operator was told it was gone.
 	if _, err := tx.Exec(ctx, `
 		DELETE FROM activity_reply_verdict_history WHERE activity_id = $1`, id); err != nil {
+		return err
+	}
+	// Which tags the model read as the subject's interests, on the same ground.
+	if _, err := tx.Exec(ctx, `
+		DELETE FROM tag_interest_read WHERE activity_id = $1`, id); err != nil {
+		return err
+	}
+	if err := e.eraseCommitmentDerivatives(ctx, tx, []ids.UUID{id}, act); err != nil {
 		return err
 	}
 	// What was promised, asked or decided in the message — and, on every one of
@@ -119,7 +119,7 @@ func (e *Eraser) purgeContentDerivedFrom(ctx context.Context, tx pgx.Tx, id ids.
 	if err := purgeTranscriptReadings(ctx, tx, []ids.UUID{id}); err != nil {
 		return err
 	}
-	if err := redactApprovalsCitingActivities(ctx, tx, []ids.UUID{id}, act.approvalWithdrawal); err != nil {
+	if err := redactApprovalsCitingActivities(ctx, tx, []ids.UUID{id}, act.approvalWithdrawal, act.cause); err != nil {
 		return err
 	}
 	if err := redactEvidenceQuoting(ctx, tx, []ids.UUID{id}, act.collateralReason, act.cause); err != nil {
@@ -169,6 +169,11 @@ type erasureAct struct {
 }
 
 var (
+	aLegalHoldEnded = erasureAct{
+		approvalWithdrawal: ErasedSourceWithdrawal,
+		collateralReason:   "legal hold ended: the postponed content erasure was completed",
+		cause:              "legal_hold_ended",
+	}
 	// theClockRanOut is the nightly retention pass and a statutory floor
 	// expiring. Both are the same act by the same actor: time.
 	theClockRanOut = erasureAct{
@@ -194,3 +199,17 @@ var (
 		keepsMessageIdentity: true,
 	}
 )
+
+func purgeActivityIndexes(ctx context.Context, tx pgx.Tx, activities []ids.UUID) error {
+	if len(activities) == 0 {
+		return nil
+	}
+	if err := redactReportingSource(ctx, tx, "activity", activities); err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM embedding WHERE entity_type = 'activity' AND entity_id = ANY($1)`, activities); err != nil {
+		return err
+	}
+	_, err := tx.Exec(ctx, `DELETE FROM field_provenance WHERE object_type = 'activity' AND object_id = ANY($1)`, activities)
+	return err
+}

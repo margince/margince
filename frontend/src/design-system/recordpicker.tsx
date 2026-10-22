@@ -1,12 +1,13 @@
 import { Check } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useT } from "../i18n";
+import { isImeCommit } from "../lib/imecommit";
 import { problemMessageOf } from "../lib/problem";
 import { Button, SearchField } from "./atoms";
 import { ErrorLine } from "./errorline";
 
 // The shared debounced search→candidate-list→pick pattern. MergeAction
-// (screens/merge.tsx) draws it; AddRelationshipAction (screens/relationships.tsx)
+// (components/merge.tsx) draws it; AddRelationshipAction (features/records/relationships.tsx)
 // still holds its own copy.
 //
 // It is now PUBLISHED to the extension tier (surface/design-system.ts), which
@@ -156,11 +157,11 @@ export function RecordPicker({
         onChange={(event) => setTerm(event.target.value)}
         // Inside a form, Enter here would submit the record picked BEFORE this
         // search; a pick is a click on a candidate, never this keystroke. An
-        // IME's Enter commits its candidate, and Safari reports it as 229.
+        // IME's Enter commits its candidate.
         onKeyDown={(event) => {
-          const composing =
-            event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229;
-          if (event.key === "Enter" && !composing) event.preventDefault();
+          if (event.key === "Enter" && !isImeCommit(event)) {
+            event.preventDefault();
+          }
         }}
       />
       {searchFailure !== null && (

@@ -30,6 +30,7 @@ func TestTheShareIsAMonthlyBudgetProRatedToOneWindow(t *testing.T) {
 		{"one credential, one day of a 30-day budget", monthly, 1, 24 * time.Hour, 400_000},
 		{"four credentials share that day", monthly, 4, 24 * time.Hour, 100_000},
 		{"an hour is a 24th of the day's share", monthly, 1, time.Hour, 16_666},
+		{"a share too small to count is still a ceiling of one token", 100, 1, time.Hour, 1},
 		{"no budget is no ceiling", 0, 1, 24 * time.Hour, 0},
 		{"a negative budget is not a ceiling either", -5, 1, 24 * time.Hour, 0},
 		{"no window is no ceiling", monthly, 1, 0, 0},
@@ -49,16 +50,19 @@ func TestTheShareIsAMonthlyBudgetProRatedToOneWindow(t *testing.T) {
 func TestTheShareIsCachedPerWorkspaceForTheCacheWindow(t *testing.T) {
 	now := time.Date(2026, 8, 8, 9, 0, 0, 0, time.UTC)
 	c := &passportShareCeiling{
-		window: 24 * time.Hour, now: func() time.Time { return now },
+		now:    func() time.Time { return now },
 		budget: ai.StaticBudget(12_000_000), pool: nil,
 		cached: map[string]shareReading{},
 	}
 	ws := ids.New[ids.WorkspaceKind]().UUID
 	ctx := principal.WithWorkspaceID(context.Background(), ws)
-	c.cached[ws.String()] = shareReading{tokens: 400_000, at: now}
+	c.cached[ws.String()] = shareReading{monthly: 30_000_000, live: 2, at: now}
 
-	if got := c.TokensPerPassport(ctx); got != 400_000 {
-		t.Errorf("a cached share read %d, want the cached 400000", got)
+	if got := c.TokensPerPassport(ctx, 24*time.Hour); got != 500_000 {
+		t.Errorf("a cached share read %d, want 500000 from the cached budget and divisor", got)
+	}
+	if got := c.TokensPerPassport(ctx, 12*time.Hour); got != 250_000 {
+		t.Errorf("the cached share for a 12h window read %d, want 250000: it is pro-rated per call", got)
 	}
 
 	// Past the TTL the entry is recomputed. With no pool the divisor read
@@ -66,7 +70,7 @@ func TestTheShareIsCachedPerWorkspaceForTheCacheWindow(t *testing.T) {
 	// the whole window's, which is a DIFFERENT number reached by the live path
 	// rather than the cached one handed back.
 	now = now.Add(shareCacheTTL + time.Minute)
-	if got := c.TokensPerPassport(ctx); got != 400_000 {
+	if got := c.TokensPerPassport(ctx, 24*time.Hour); got != 400_000 {
 		t.Errorf("a share past its TTL recomputed to %d, want the live 400000", got)
 	}
 	if c.cached[ws.String()].at != now {
@@ -78,10 +82,10 @@ func TestTheShareIsCachedPerWorkspaceForTheCacheWindow(t *testing.T) {
 // panic. Everything about this counter fails open, and the one thing it must
 // never do is take a model call down with it.
 func TestAShareWithNoBudgetPolicyIsNoCeilingRatherThanACrash(t *testing.T) {
-	c := &passportShareCeiling{window: 24 * time.Hour, now: time.Now, cached: map[string]shareReading{}}
+	c := &passportShareCeiling{now: time.Now, cached: map[string]shareReading{}}
 	ctx := principal.WithWorkspaceID(context.Background(), ids.New[ids.WorkspaceKind]().UUID)
 
-	if got := c.TokensPerPassport(ctx); got != 0 {
+	if got := c.TokensPerPassport(ctx, 24*time.Hour); got != 0 {
 		t.Errorf("a ceiling with no budget answered %d", got)
 	}
 }
@@ -89,9 +93,9 @@ func TestAShareWithNoBudgetPolicyIsNoCeilingRatherThanACrash(t *testing.T) {
 // A call with no workspace bound has no budget to take a share of, and answers
 // no ceiling rather than guessing at one.
 func TestACallWithNoWorkspaceHasNoShare(t *testing.T) {
-	c := &passportShareCeiling{window: 24 * time.Hour, now: time.Now, cached: map[string]shareReading{}}
+	c := &passportShareCeiling{now: time.Now, cached: map[string]shareReading{}}
 
-	if got := c.TokensPerPassport(context.Background()); got != 0 {
+	if got := c.TokensPerPassport(context.Background(), 24*time.Hour); got != 0 {
 		t.Errorf("a workspace-less call was given a share of %d", got)
 	}
 }

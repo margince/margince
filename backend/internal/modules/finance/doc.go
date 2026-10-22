@@ -20,32 +20,18 @@
 // and an unmapped one is a visible state rather than an auto-created
 // company.
 //
-// WHOEVER WRITES THE FIRST CUSTOMER LINK OWES A DECISION ABOUT MERGING.
-// Nothing creates a finance_customer_link today — the sync reads them and
-// the company merge moves them, but no code path makes one, so the case
-// below is currently unreachable. It becomes reachable with the mapping
-// writer, and it is silent when it arrives:
-//
-// finance_customer_link_company_ux admits one LIVE link per
-// (connection, company). Merging two companies that each hold one on the
-// same connection therefore cannot move both. The merge repoints the
-// invoices and payments onto the survivor, moves the link only into a
-// vacancy, and deliberately leaves the loser's link live rather than
-// archiving it — readLinks (sync.go) reads unarchived links only, so
-// archiving would stop syncing that external customer with nothing
-// anywhere saying why. The consequence is that the next sync resolves
-// that customer to the ARCHIVED company and moves its invoices back off
-// the survivor. The merge looks correct and a later sync undoes it.
-//
-// The fix is not the merge's to make: it needs either a rule for which
-// link wins, or a cardinality that admits both, which is a migration.
-// Decide it with the writer, and cover it with a test that merges two
-// linked companies and then syncs.
+// An administrator writes the links (sourcecustomers.go). A company may hold
+// several accounting customers, and a customer belongs to one company. So a
+// company merge moves every link, invoice and payment onto the survivor in
+// its one transaction.
 //
 // Money is integer minor units in the issued currency, converted through
 // the existing effective-dated rate sheet and frozen on issue date
 // (DM-FX-4). A missing rate is the existing refusal — never a silent
 // conversion and never a zero.
+//
+// The core ships no accounting source. Each one is an extension unit's
+// FinanceSource, offered to an administrator on the finance settings page.
 //
 // Tables owned: finance_connection, finance_external_customer,
 // finance_customer_link, finance_invoice, finance_payment.

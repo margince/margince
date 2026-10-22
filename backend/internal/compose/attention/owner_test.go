@@ -206,7 +206,7 @@ func dayOfEveryLane() crmcontracts.Attention {
 		AsOf:               rankInstant,
 		Meetings:           lane(item("meeting", "meeting")),
 		MeetingsUnreported: lane(item("meeting-over", "meeting_outcome")),
-		ThisMorning:        []crmcontracts.AttentionItem{item("brief", "brief_item")},
+		ThisMorning:        []crmcontracts.AttentionItem{item("brief", "brief_item", withCurrentIntervention())},
 		Commitments:        lane(item("promise", "conversation_claim")),
 		DidNotRun:          lane(item("failed", "failed_approval")),
 		Dsr:                lane(item("dsr", "dsr")),
@@ -244,7 +244,6 @@ func dayOfEveryLane() crmcontracts.Attention {
 func TestOnlyAReaderBoundLaneNamesTheReader(t *testing.T) {
 	t.Parallel()
 	readerBound := map[crmcontracts.WorklistItemSource]string{
-		"conversation_claim":   "OpenCommitmentsDue takes the actor's id",
 		"failed_approval":      "ListWire with FailedForDecider carries the decider",
 		"introduction_request": "AwaitingMyAnswer is the reader's own asks",
 		"relationship_decay":   "QuietEdgesForUser binds the edges to the actor",
@@ -301,18 +300,6 @@ func holdsABatch(rows []ranked) bool {
 	return false
 }
 
-// TestATeamPageDropsAnOutsideTeamTask closes the hole publishing the owner
-// opened.
-//
-// keepTeams judges a row through answersTo, which reads `ranked.owner`. The
-// task lane never set it, so a task answered nobody and the filter kept it as
-// unowned work — the gap its own comment describes for link-less tasks, which
-// auth.ActivityDiscoverClause makes discoverable installation-wide. Putting the
-// assignee on the wire made that worse: the colleague's user id travelled with
-// the row.
-//
-// The two readings come off one field now, so a task cannot be unowned to the
-// filter and owned to the client.
 func TestATeamPageDropsAnOutsideTeamTask(t *testing.T) {
 	t.Parallel()
 	outsider := ids.MustParse("01a05500-0000-7000-8000-00000000d15e")

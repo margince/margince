@@ -70,12 +70,12 @@ func TestVoiceLiveSmoke(t *testing.T) {
 	}
 	t.Logf("model=%s thinking=%q moves=%d obsessions=%v",
 		artifact.ModelName, artifact.Inference.ThinkingPattern, len(artifact.Inference.SignatureMoves), artifact.Inference.ObservedObsessions)
-	result, err := evaluateVoiceCandidate(ctx, path.VoiceBuild, artifact, "Blunt, bilingual.", heldOut, nil)
+	result, err := voiceCopyFor("en").evaluateVoiceCandidate(ctx, path.VoiceBuild, artifact, "Blunt, bilingual.", heldOut, nil)
 	if err != nil {
 		t.Fatalf("evaluation against the live provider: %v", err)
 	}
 	t.Logf("action=%s classification=%s eval=%v reasons=%v",
-		result.Action, result.Classification, result.Evaluation["candidate_median_voice_score"], result.ReviewReasons)
+		result.Action, result.Classification, result.Evaluation["candidate_median_voice_score"], result.Reasons)
 	if artifact.Inference.ThinkingPattern == "" {
 		t.Fatal("live provider produced an empty thinking pattern")
 	}

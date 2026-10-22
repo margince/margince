@@ -42,6 +42,7 @@ export function FileDropzone({
   multiple,
   files,
   accept,
+  disabled,
 }: Readonly<{
   label: string;
   hint?: string;
@@ -61,6 +62,8 @@ export function FileDropzone({
   // filtered by it — the browser applies it to the picker only — so a caller
   // that can only read some types still checks what it was handed.
   accept?: string;
+  // Takes no file, by click or by drop: for a form whose write is out.
+  disabled?: boolean;
 }>) {
   return (
     <Field label={label} hint={hint}>
@@ -73,6 +76,7 @@ export function FileDropzone({
           multiple={multiple}
           files={files}
           accept={accept}
+          disabled={disabled}
         />
       )}
     </Field>
@@ -94,6 +98,7 @@ export function FileDropzoneControl({
   multiple,
   files,
   accept,
+  disabled,
 }: Readonly<{
   control: FieldControl;
   emptyLabel: string;
@@ -102,6 +107,7 @@ export function FileDropzoneControl({
   multiple?: boolean;
   files?: readonly File[];
   accept?: string;
+  disabled?: boolean;
 }>) {
   const [over, setOver] = useState(false);
 
@@ -110,7 +116,7 @@ export function FileDropzoneControl({
   // so a single-file caller must still be handed exactly one — the browser
   // does not enforce that for us.
   const take = (chosen: FileList | null) => {
-    if (!chosen) {
+    if (!chosen || disabled) {
       return;
     }
     if (multiple) {
@@ -151,6 +157,7 @@ export function FileDropzoneControl({
         // fails. Without this the second pick is silently inert.
         multiple={multiple}
         accept={accept}
+        disabled={disabled}
         onChange={(event) => {
           const chosen = event.target.files;
           take(chosen);
@@ -163,7 +170,7 @@ export function FileDropzoneControl({
           // Without this the browser navigates to the dropped file, which
           // loses both the file and the form the reader had filled in.
           event.preventDefault();
-          setOver(true);
+          setOver(!disabled);
         }}
         onDragLeave={() => setOver(false)}
         onDrop={(event: DragEvent<HTMLInputElement>) => {

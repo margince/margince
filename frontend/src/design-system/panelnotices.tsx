@@ -14,8 +14,9 @@ export function PanelNotices({
 }: Readonly<{
   /** The read-only posture's title, or false for a reader who may write. */
   readOnly?: string | false;
-  /** The card's last refused write: its title, and the failure behind it. */
-  refused?: Readonly<{ title: string; error: unknown }>;
+  /** The card's last refused write: its title, the failure behind it, and an
+   * id the refused controls name in `aria-describedby`. */
+  refused?: Readonly<{ title: string; error: unknown; id?: string }>;
 }>) {
   const t = useT();
   if (!readOnly && refused === undefined) return null;
@@ -23,7 +24,12 @@ export function PanelNotices({
     <PanelBody className="panel-notices">
       {readOnly && <Callout kind="standing" title={readOnly} />}
       {refused !== undefined && (
-        <Callout kind="outcome" tone="danger" title={refused.title}>
+        <Callout
+          kind="outcome"
+          tone="danger"
+          title={refused.title}
+          id={refused.id}
+        >
           {problemMessageOf(refused.error, t)}
         </Callout>
       )}

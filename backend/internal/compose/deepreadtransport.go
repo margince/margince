@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/providerwait"
 )
 
 // deepReadEnqueuer is the slice of *jobs.Runner the start handler needs;
@@ -123,20 +124,16 @@ func (e *deepReadEngine) start(w http.ResponseWriter, r *http.Request, id openap
 // either transport renders the same 422 from the same decision.
 func (e *deepReadEngine) startSiteRead(ctx context.Context, id ids.UUID, override string) (crmcontracts.SiteReadStarted, error) {
 	companyID := ids.From[ids.CompanyKind](id)
-	seedURL := override
-	if seedURL == "" {
-		resolved, err := e.contacts.EnrichTargetURL(ctx, companyID)
-		if errors.Is(err, contacts.ErrNoEnrichTarget) {
-			return crmcontracts.SiteReadStarted{}, &httperr.DetailedError{
-				Status: http.StatusUnprocessableEntity,
-				Code:   companyUnreadable,
-				Detail: "This company has no website on file. Add a URL to read from.",
-			}
+	seedURL, err := e.contacts.ResolveEnrichTargetURL(ctx, companyID, override)
+	if errors.Is(err, contacts.ErrNoEnrichTarget) {
+		return crmcontracts.SiteReadStarted{}, &httperr.DetailedError{
+			Status: http.StatusUnprocessableEntity,
+			Code:   companyUnreadable,
+			Detail: "This company has no website on file. Add a URL to read from.",
 		}
-		if err != nil {
-			return crmcontracts.SiteReadStarted{}, err
-		}
-		seedURL = resolved
+	}
+	if err != nil {
+		return crmcontracts.SiteReadStarted{}, err
 	}
 
 	read, joined, err := e.contacts.StartSiteReadQueued(ctx, companyID, seedURL, requestedBy(ctx),
@@ -197,18 +194,19 @@ func siteReadReport(read contacts.SiteRead) crmcontracts.SiteReadReport {
 		panic("siteReadReport called for an unbound onboarding dossier")
 	}
 	report := crmcontracts.SiteReadReport{
-		ReadId:        openapi_types.UUID(read.ID),
-		CompanyId:     openapi_types.UUID(read.CompanyID.UUID),
-		SeedUrl:       read.SeedURL,
-		Status:        crmcontracts.SiteReadReportStatus(read.Status),
-		Pages:         make([]crmcontracts.SiteReadPage, 0, len(read.Pages)),
-		Skipped:       make([]crmcontracts.SiteReadSkip, 0, len(read.Skipped)),
-		ProposalIds:   make([]openapi_types.UUID, 0, len(read.ProposalIDs)),
-		FactCount:     &read.FactCount,
-		CreatedAt:     read.CreatedAt,
-		FinishedAt:    read.FinishedAt,
-		StatusDetail:  read.StatusDetail,
-		NextAttemptAt: read.NextAttemptAt,
+		ReadId:         openapi_types.UUID(read.ID),
+		CompanyId:      openapi_types.UUID(read.CompanyID.UUID),
+		SeedUrl:        read.SeedURL,
+		Status:         crmcontracts.SiteReadReportStatus(read.Status),
+		Pages:          make([]crmcontracts.SiteReadPage, 0, len(read.Pages)),
+		Skipped:        make([]crmcontracts.SiteReadSkip, 0, len(read.Skipped)),
+		ProposalIds:    make([]openapi_types.UUID, 0, len(read.ProposalIDs)),
+		FactCount:      &read.FactCount,
+		CreatedAt:      read.CreatedAt,
+		FinishedAt:     read.FinishedAt,
+		StatusDetail:   read.StatusDetail,
+		DeferralReason: providerwait.Reason(read.Status, read.StatusCode, read.StatusDetail),
+		NextAttemptAt:  read.NextAttemptAt,
 	}
 	if read.StatusCode != nil {
 		code := crmcontracts.SiteReadReportStatusCode(*read.StatusCode)
@@ -252,8 +250,9 @@ func requestedBy(ctx context.Context) string {
 func WithDeepRead(inserter *jobs.Runner, brain completer) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		engine := &deepReadEngine{
-			contacts: contacts.NewStore(InstallationDB(pool)), approvals: approvals.NewService(InstallationDB(pool)),
-			runtime: ai.NewRunTransparency(InstallationDB(pool)), brain: brain, enqueue: inserter, log: s.log,
+			contacts:  contacts.NewStore(InstallationDB(pool)).WithInstallationRenamer(installationRenamer(pool)),
+			approvals: NewApprovalsService(InstallationDB(pool)),
+			runtime:   ai.NewRunTransparency(InstallationDB(pool)), brain: brain, enqueue: inserter, log: s.log,
 			// Read here AND written by WithBlobstore, so neither option order
 			// leaves the onboarding confirmation unable to collect the mark its
 			// anchor declined — the two-way wiring WithDataReset carries too.

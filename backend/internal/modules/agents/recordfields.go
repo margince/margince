@@ -28,6 +28,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -42,13 +43,19 @@ import (
 // type the seam does not serve would be describing nothing.
 var (
 	createShapes = map[datasource.EntityType]reflect.Type{
-		datasource.EntityContact:      reflect.TypeFor[crmcontracts.CreateContactRequest](),
-		datasource.EntityCompany:      reflect.TypeFor[crmcontracts.CreateCompanyRequest](),
-		datasource.EntityDeal:         reflect.TypeFor[crmcontracts.CreateDealRequest](),
-		datasource.EntityLead:         reflect.TypeFor[crmcontracts.CreateLeadRequest](),
-		datasource.EntityActivity:     reflect.TypeFor[crmcontracts.CreateActivityRequest](),
-		datasource.EntityProject:      reflect.TypeFor[crmcontracts.CreateProjectRequest](),
-		datasource.EntityRelationship: reflect.TypeFor[crmcontracts.CreateRelationshipRequest](),
+		datasource.EntityContact:         reflect.TypeFor[crmcontracts.CreateContactRequest](),
+		datasource.EntityCompany:         reflect.TypeFor[crmcontracts.CreateCompanyRequest](),
+		datasource.EntityDeal:            reflect.TypeFor[crmcontracts.CreateDealRequest](),
+		datasource.EntityLead:            reflect.TypeFor[crmcontracts.CreateLeadRequest](),
+		datasource.EntityActivity:        reflect.TypeFor[crmcontracts.CreateActivityRequest](),
+		datasource.EntityProject:         reflect.TypeFor[crmcontracts.CreateProjectRequest](),
+		datasource.EntityRelationship:    reflect.TypeFor[crmcontracts.CreateRelationshipRequest](),
+		datasource.EntityProduct:         reflect.TypeFor[crmcontracts.CreateProductRequest](),
+		datasource.EntityOfferTemplate:   reflect.TypeFor[crmcontracts.CreateOfferTemplateRequest](),
+		datasource.EntityOffer:           reflect.TypeFor[crmcontracts.CreateOfferRequest](),
+		datasource.EntityDealRoom:        reflect.TypeFor[crmcontracts.CreateDealRoomRequest](),
+		datasource.EntityDealRoomThread:  reflect.TypeFor[crmcontracts.OpenDealRoomThreadRequest](),
+		datasource.EntityDealRoomComment: reflect.TypeFor[crmcontracts.PostDealRoomCommentRequest](),
 	}
 	// An activity patch cannot reach its LINKS: UpdateActivityRequest declares
 	// no link field, so this list has none to describe. A relationship patch
@@ -56,13 +63,16 @@ var (
 	// domain one — an edge's ends are what it IS, so moving one is an archive
 	// plus a new edge, never an update.
 	updateShapes = map[datasource.EntityType]reflect.Type{
-		datasource.EntityContact:      reflect.TypeFor[crmcontracts.UpdateContactRequest](),
-		datasource.EntityCompany:      reflect.TypeFor[crmcontracts.UpdateCompanyRequest](),
-		datasource.EntityDeal:         reflect.TypeFor[crmcontracts.UpdateDealRequest](),
-		datasource.EntityLead:         reflect.TypeFor[crmcontracts.UpdateLeadRequest](),
-		datasource.EntityActivity:     reflect.TypeFor[crmcontracts.UpdateActivityRequest](),
-		datasource.EntityProject:      reflect.TypeFor[crmcontracts.UpdateProjectRequest](),
-		datasource.EntityRelationship: reflect.TypeFor[crmcontracts.UpdateRelationshipRequest](),
+		datasource.EntityContact:       reflect.TypeFor[crmcontracts.UpdateContactRequest](),
+		datasource.EntityCompany:       reflect.TypeFor[crmcontracts.UpdateCompanyRequest](),
+		datasource.EntityDeal:          reflect.TypeFor[crmcontracts.UpdateDealRequest](),
+		datasource.EntityLead:          reflect.TypeFor[crmcontracts.UpdateLeadRequest](),
+		datasource.EntityActivity:      reflect.TypeFor[crmcontracts.UpdateActivityRequest](),
+		datasource.EntityProject:       reflect.TypeFor[crmcontracts.UpdateProjectRequest](),
+		datasource.EntityRelationship:  reflect.TypeFor[crmcontracts.UpdateRelationshipRequest](),
+		datasource.EntityProduct:       reflect.TypeFor[crmcontracts.UpdateProductRequest](),
+		datasource.EntityOfferTemplate: reflect.TypeFor[crmcontracts.UpdateOfferTemplateRequest](),
+		datasource.EntityOffer:         reflect.TypeFor[crmcontracts.UpdateOfferRequest](),
 	}
 )
 
@@ -100,6 +110,14 @@ func contractFieldNames(t reflect.Type) []string {
 	return names
 }
 
+// acceptedFieldNames is what a write's fields may name: the contract body's own
+// fields and the parent ids its route carries in its path, sorted.
+func acceptedFieldNames(shape reflect.Type, parents []string) []string {
+	names := append(contractFieldNames(shape), parents...)
+	sort.Strings(names)
+	return names
+}
+
 // recordFieldsDescription is the `fields` description both write tools carry.
 //
 // It NAMES the vocabulary rather than reciting it. Reciting it cost 18% of the
@@ -128,41 +146,19 @@ func contractFieldNames(t reflect.Type) []string {
 // disprove, which costs more than the silence it replaced.
 const recordFieldsDescription = "The crm.yaml body for the record_type. The fields each " +
 	"record_type takes, which of them are REQUIRED, and their shapes are published at " +
-	RecordFieldsURI + ", and answered by describe_vocabulary (topic record_fields) — that document, not this " +
+	RecordFieldsURI + ", and answered by describe_record_fields — that document, not this " +
 	"description, is what says what a write may name. An extra key must be cf_<slug> for a " +
 	"custom field; any other key is refused BY NAME " +
 	"and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. " +
 	"Any field holding a sentence — a description, a summary, a note — is written in whoami's " +
 	"prose_language, whatever language this conversation is in."
 
-// customFieldPrefix is the only shape an extra key may take: the
-// customfields engine derives every column it adds as cf_<slug>, so a key
-// without that prefix is not a custom field under any workspace's catalog.
-const customFieldPrefix = "cf_"
-
 // rejectUnknownFields refuses a `fields` payload carrying keys the record type
 // cannot store, naming them and the ones it accepts.
 //
-// This lives at the TOOL, not in the store, and that placement is the whole
-// point. The store's silence is contract-conformant: the write bodies declare
-// additionalProperties: true, and storekit's package doc ratifies
-// drop-on-mismatch. So a SESSION may keep accepting-and-discarding, while a
-// governed call — whose caller cannot see a response body it did not think to
-// re-read — refuses up front instead of reporting success for a write it did
-// not perform. Two sessions lost data to that silence: company_id on a
-// contact create, and emails on a contact UPDATE, which is a real field on
-// create and no field at all on update.
-//
-// The line is the CREDENTIAL, not the door, and it stopped being the door when
-// the governed-call seam put these guards on the REST agent path
-// (margince/margince#928). An agent's confirm-first create with a stray key is
-// refused where a session's identical request succeeds, and that asymmetry is
-// the intended one: the session's own reader is looking at the screen the write
-// answered, and the agent's is not. Reading this comment as "REST accepts" is
-// what it used to say and is now false of half of REST.
-//
-// A cf_-prefixed key passes: whether that custom field is active in this
-// workspace is the store's ratified question, not a shape this tool can judge.
+// The provider's decode refuses the same keys, so no door drops one. This check
+// runs first to answer with the record type's vocabulary. A cf_ key passes:
+// whether that field is active is the store's question.
 func rejectUnknownFields(shapes writeShapes, recordType string, fields json.RawMessage) error {
 	shape, ok := shapes.types[datasource.EntityType(recordType)]
 	if !ok {
@@ -184,15 +180,12 @@ func rejectUnknownFields(shapes writeShapes, recordType string, fields json.RawM
 		return &BadArgsError{Field: fieldsArg, Cause: errors.New("fields must be a JSON object, not null")}
 	}
 	accepted := make(map[string]struct{})
-	for _, name := range contractFieldNames(shape) {
+	for _, name := range acceptedFieldNames(shape, shapes.parents[recordType]) {
 		accepted[name] = struct{}{}
 	}
 	var unknown []string
 	for key := range submitted {
-		// The prefix alone is not a field name: `cf_` names no slug, so it
-		// can match no catalog column and would be discarded like any other
-		// unknown key.
-		if _, ok := accepted[key]; ok || len(key) > len(customFieldPrefix) && strings.HasPrefix(key, customFieldPrefix) {
+		if _, ok := accepted[key]; ok || datasource.IsCustomFieldKey(key) {
 			continue
 		}
 		unknown = append(unknown, key)
@@ -304,10 +297,13 @@ type writeShapes struct {
 	// with its JSON type, its closed vocabulary where it has one, and a `?` on
 	// the ones the body may omit.
 	rendered map[string]string
+	// parents are the parent ids a create names among its fields, which its
+	// REST route carries in its path.
+	parents map[string][]string
 }
 
 var (
-	createWriteShapes = writeShapes{types: createShapes, rendered: createRecordShapes}
+	createWriteShapes = writeShapes{types: createShapes, rendered: createRecordShapes, parents: createParentFields}
 	updateWriteShapes = writeShapes{types: updateShapes, rendered: updateRecordShapes}
 )
 
@@ -331,4 +327,10 @@ func (w writeShapes) acceptedBy(recordType string, shape reflect.Type) string {
 		return rendered
 	}
 	return strings.Join(contractFieldNames(shape), ", ")
+}
+
+// CreateParents names the parent ids create_record takes among a record
+// type's fields, which its REST route carries in its path.
+func CreateParents(recordType string) []string {
+	return slices.Clone(createParentFields[recordType])
 }

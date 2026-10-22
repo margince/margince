@@ -7,12 +7,14 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"log/slog"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
@@ -31,16 +33,15 @@ func newTestPriceSweep(e *integration.Env) *aiPriceSyncSweepWorker {
 		broker:    ai.NewModelCatalogueOver(fixedPriceList(`{"data":[{"id":"x/y","pricing":{"prompt":"0.000001","completion":"0.000002"}}]}`), clock),
 		modelsDev: ai.NewModelsDevCatalogueOver(fixedPriceList(sweepModelsDev), clock),
 	}
-	noEnv := func(string) string { return "" }
 	log := slog.New(slog.DiscardHandler)
-	return &aiPriceSyncSweepWorker{pool: e.Pool, sync: newAIPriceSync(e.Pool, nil, noEnv, log, cats), log: log}
+	return &aiPriceSyncSweepWorker{pool: e.Pool, sync: newAIPriceSync(e.Pool, nil, log, cats), log: log}
 }
 
 // keyGemini makes Gemini usable without a real key: a sealed ref exists, and
 // with no vault and no environment the listing fails before any network call.
 func keyGemini(t *testing.T, e *integration.Env) {
 	t.Helper()
-	if err := settings.Set(e.Admin(), NewSettingsStore(e.Pool), ai.ProviderKeys, map[string]string{"gemini": "ref-for-test"}); err != nil {
+	if err := NewSettingsStore(e.Pool).SetRaw(e.Admin(), ai.GeminiKey.Key(), json.RawMessage(`"ref-for-test"`)); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -105,7 +106,7 @@ func TestTheDailySweepLeavesAnInstallationWithAutoSyncOffAlone(t *testing.T) {
 	e := integration.Setup(t)
 	keyGemini(t, e)
 	seedPrice(t, e, "1.5", ai.RateSourceSeed)
-	if err := settings.Set(e.Admin(), NewSettingsStore(e.Pool), ai.PriceSyncSettings, ai.PriceSyncConfig{AutoSync: false}); err != nil {
+	if err := config.Save(e.Admin(), StoredConfig(e.Pool), ai.PriceSyncSettings, ai.PriceSyncConfig{AutoSync: false}); err != nil {
 		t.Fatal(err)
 	}
 

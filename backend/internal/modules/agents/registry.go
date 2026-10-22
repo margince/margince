@@ -54,6 +54,9 @@ type Registry struct {
 	// `required` binds the surface rather than describing an intention that
 	// each handler then re-states in its own words.
 	requiredArgs map[string][]string
+	// typedArgs[tool] is the JSON type its schema declares for each top-level
+	// argument, read off the schema once at registration.
+	typedArgs map[string][]typedArg
 	// unitOwned[tool] is true when an extension unit shipped that tool's
 	// handler, read off the registered tool once (mcp.UnitScopedTool). It is
 	// remembered rather than re-asserted because two decisions depend on it and
@@ -106,6 +109,7 @@ func NewRegistry(approvals Approvals, gate *auth.Gate, opts ...RegistryOption) *
 		numArgs:      map[string][]numBound{},
 		enumArgs:     map[string][]enumArg{},
 		requiredArgs: map[string][]string{},
+		typedArgs:    map[string][]typedArg{},
 		unitOwned:    map[string]bool{},
 		approvals:    approvals,
 		gate:         gate,
@@ -271,11 +275,10 @@ func (r *Registry) InvokeServing(ctx context.Context, name string, in json.RawMe
 func (r *Registry) runClaimed(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec, res reserved) (json.RawMessage, int, error) {
 	fresh, attempt, answered, records, err := r.claimFor(ctx, spec, res)
 	if !fresh {
-		// A replay hands over the records the ORIGINAL call was charged for, and
-		// claimFor has already re-proven and re-charged them. The COUNT still
-		// travels: a task settled from a replayed answer must record what that
-		// answer costs, or its own later polls would re-prove the evidence and
-		// charge nothing for it.
+		// A replay hands over the records the original call served, and claimFor
+		// has already re-proven them. The count still travels: a task settled from
+		// a replayed answer must record it, or its later polls would skip the
+		// visibility re-check.
 		return answered, records, err
 	}
 	redeemed, err := r.redeemPresented(ctx, spec, res)
@@ -326,10 +329,16 @@ func (r *Registry) runAndSeal(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec
 	ctx, facts := withEnvelopeFacts(ctx)
 	ctx = agentvolume.WithEffectTally(ctx)
 	noteRowScope(ctx)
+	// Capture privacy is a second boundary with the same failure mode, and it
+	// binds an administrator that row scope does not. Whether it took anything
+	// is a fact about the read, so the report is installed here and read once
+	// the handler has made its reads.
+	ctx, withheld := auth.WithWithheldReport(ctx)
 	out, err := t.Handle(ctx, args)
 	if err != nil {
 		return nil, 0, err
 	}
+	noteCaptureWithheld(ctx, withheld)
 	r.noteCostShare(ctx)
 	sealed, err := sealEnvelope(spec, trace, facts, out)
 	if err != nil {
@@ -341,7 +350,7 @@ func (r *Registry) runAndSeal(ctx context.Context, t mcp.Tool, spec mcp.ToolSpec
 	// other order would spend the window on a result a marshalling failure was
 	// about to discard.
 	served := facts.servedCount()
-	if err := r.chargeAnswer(ctx, spec, served); err != nil {
+	if err := r.chargeAnswer(ctx, spec); err != nil {
 		return nil, 0, err
 	}
 	return sealed, served, nil

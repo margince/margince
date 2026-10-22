@@ -17,6 +17,7 @@
 }
 
 .table {
+  --tableCellPadBlock: 10px;
   width: 100%;
   border-collapse: collapse;
 }
@@ -26,29 +27,86 @@
   border-bottom: 1px solid var(--borderStrong);
 }
 .table td {
-  padding: 10px 12px;
+  padding: var(--tableCellPadBlock) 12px;
   border-bottom: 1px solid var(--borderSubtle);
 }
 /* A rule DIVIDES rows, so the last row has nothing to divide from and draws
-   none; otherwise a table ends on a hairline just above the card's own edge,
-   which reads as a doubled border. `th` as well as `td`, because a table with
-   row headers puts one in the last row. */
-.table tbody tr:last-child td,
-.table tbody tr:last-child th {
+   none. Without this every table in the tree ended on a hairline pointing at
+   whatever sat under it — usually the card's own edge a few pixels below, which
+   reads as a doubled border. Two screens had already noticed and reset it in
+   their own sheets (`.provider-spend-table`, and now `.ext-matrix` and
+   `.import__table`); this is the same obligation derived from the component
+   instead of maintained as a list of the tables somebody remembered. `th` as
+   well as `td`, because a table with row headers puts one in the last row.
+   Child combinators, so a table nested in the last row keeps its own rules. */
+.table > tbody > tr:last-child > td,
+.table > tbody > tr:last-child > th {
   border-bottom: 0;
 }
-.table tbody tr {
+.table > tbody > tr {
   cursor: default;
 }
-.table tbody tr:hover td {
+.table > tbody > tr:hover > td {
   background: var(--bgHover);
 }
 /* bleed: the table spans the pane, and its outer cells keep the pane's padding
-   so the first column lines up with a PanelBody's text. */
-.panel > .table-scroll-bleed > .table > * > tr > :first-child {
+   so the first column lines up with a PanelBody's text. A table opened from a
+   disclosure that bleeds spans the pane with it. */
+.panel
+  > :is(.panel-body, .settinglist-bleed)
+  > .disclosure-wrap
+  > .disclosure
+  > .disclosure-body
+  > .table-scroll,
+.panel
+  > :is(.panel-body, .settinglist-bleed)
+  > .disclosure
+  > .disclosure-body
+  > .table-scroll {
+  margin-inline: calc(-1 * var(--padPanel));
+}
+.panel > .table-scroll-bleed > .table > * > tr > :first-child,
+.panel
+  > :is(.panel-body, .settinglist-bleed)
+  > .disclosure
+  > .disclosure-body
+  > .table-scroll
+  > .table
+  > *
+  > tr
+  > :first-child,
+.panel
+  > :is(.panel-body, .settinglist-bleed)
+  > .disclosure-wrap
+  > .disclosure
+  > .disclosure-body
+  > .table-scroll
+  > .table
+  > *
+  > tr
+  > :first-child {
   padding-inline-start: var(--padPanel);
 }
-.panel > .table-scroll-bleed > .table > * > tr > :last-child {
+.panel > .table-scroll-bleed > .table > * > tr > :last-child,
+.panel
+  > :is(.panel-body, .settinglist-bleed)
+  > .disclosure
+  > .disclosure-body
+  > .table-scroll
+  > .table
+  > *
+  > tr
+  > :last-child,
+.panel
+  > :is(.panel-body, .settinglist-bleed)
+  > .disclosure-wrap
+  > .disclosure
+  > .disclosure-body
+  > .table-scroll
+  > .table
+  > *
+  > tr
+  > :last-child {
   padding-inline-end: var(--padPanel);
 }
 /* The pinned first column is opaque because the rest scrolls under it. Any
@@ -1002,10 +1060,12 @@
   white-space: normal;
   overflow-wrap: anywhere;
 }
+/* The opaque inset ground, not the chip fill: the option's detail line is in
+   the secondary ink, which does not clear AA on the chip. */
 .recordpicker-option[aria-pressed="true"] {
-  border-color: var(--accent);
-  color: var(--accentText);
-  background: var(--accentLight);
+  border-color: var(--borderStrong);
+  color: var(--textPrimary);
+  background: var(--bgInset);
 }
 .recordpicker-selected {
   display: flex;
@@ -1013,9 +1073,9 @@
   gap: var(--space-2);
   margin-top: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--accent);
+  border: 1px solid var(--borderStrong);
   border-radius: var(--r-sm);
-  background: var(--accentLight);
+  background: var(--bgInset);
   color: var(--textPrimary);
 }
 .recordpicker-selected-text {
@@ -1030,7 +1090,7 @@
   flex: none;
 }
 
-/* Repeatable-row form group (create.tsx RepeatableRowsField): label → rows →
+/* Repeatable-row form group (repeatablerowsfield.tsx RepeatableRowsField): label → rows →
  * "Add" button at 8px rhythm — a distinct wrapper from bare .field's tighter
  * 5px, since a row group needs more breathing room than a single input. */
 .field-repeatable {
@@ -1039,7 +1099,7 @@
   gap: 8px;
 }
 
-/* Multiselect field group (create.tsx MultiselectField): a legend + one
+/* Multiselect field group (create.controls.tsx MultiselectField): a legend + one
  * checkbox row per option, at the same 8px rhythm as .field-repeatable. */
 .field-multiselect {
   display: flex;
@@ -1050,7 +1110,7 @@
   padding: 0;
 }
 
-/* Form field stack (create.tsx RecordFormBody): the 8/12 spacing scale. */
+/* Form field stack (create.form.tsx RecordFormBody): the 8/12 spacing scale. */
 .form-stack {
   display: flex;
   flex-direction: column;
@@ -1127,7 +1187,7 @@ span.error-line {
   margin-bottom: var(--space-3);
 }
 
-/* Group divider inside a form (create.tsx RecordFormBody): sets custom fields
+/* Group divider inside a form (create.form.tsx RecordFormBody): sets custom fields
    apart from core fields with a labeled rule, no input of its own. */
 .form-divider {
   margin: 4px 0 0;
@@ -1527,10 +1587,83 @@ span.error-line {
   position: relative;
   overflow-x: auto;
 }
+/* The end edge shades while columns lie past it and clears at the end. Drawn
+   above the cells, so a hovered or opaque cell cannot hide it. */
+@property --table-scroll-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@keyframes table-scroll-end {
+  from {
+    --table-scroll-end: var(--space-8);
+  }
+  to {
+    --table-scroll-end: 0px;
+  }
+}
+@supports (animation-timeline: scroll()) {
+  /* The shade shares the table's grid cell, and sticks to the visible end. */
+  /* One track the box's width: a table sized to it must not grow to its content. */
+  .table-scroll {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .table-scroll > :first-child {
+    grid-area: 1 / 1;
+  }
+  /* A table with no width of its own keeps it, as it would in a block. */
+  .table-scroll > table:first-child {
+    justify-self: start;
+  }
+  /* Clear of the inset focus ring, which the shade would otherwise cover. */
+  .table-scroll:focus-visible::after {
+    inset-inline-end: 2px;
+  }
+  .table-scroll::after {
+    --table-scroll-toward: to left;
+    content: "";
+    grid-area: 1 / 1;
+    justify-self: end;
+    position: sticky;
+    inset-inline-end: 0;
+    z-index: 2;
+    inline-size: var(--table-scroll-end);
+    pointer-events: none;
+    background-image: linear-gradient(
+      var(--table-scroll-toward),
+      var(--borderStrong) 1px,
+      color-mix(in srgb, var(--borderStrong) 55%, transparent) 1px,
+      transparent
+    );
+    /* A box that fits has no scroll timeline, so the shade stays at zero. */
+    animation: table-scroll-end linear both;
+    animation-timeline: scroll(nearest inline);
+    animation-range: calc(100% - var(--space-8)) 100%;
+  }
+  .table-scroll:dir(rtl)::after {
+    --table-scroll-toward: to right;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .table-scroll::after {
+      animation-timing-function: step-end;
+    }
+  }
+  @media (forced-colors: active) {
+    .table-scroll::after {
+      background-image: linear-gradient(
+        var(--table-scroll-toward),
+        CanvasText 1px,
+        transparent 1px
+      );
+    }
+  }
+}
 
 /* Disclosure: a section the reader opens when they want it. The chevron is the
    only state indicator, so it must turn — a summary that looks identical open
-   and closed leaves the reader unsure whether the click did anything. */
+   and closed leaves the reader unsure whether the click did anything. It turns
+   with `.expander-chevron`, at the end of the row. */
 .disclosure {
   border-top: 1px solid var(--borderSubtle);
   padding-top: var(--space-3);
@@ -1568,14 +1701,10 @@ span.error-line {
   outline-offset: 2px;
   border-radius: var(--r-sm);
 }
-.disclosure-chevron {
+.disclosure-summary > .expander-chevron {
   width: 14px;
   height: 14px;
   flex: none;
-  transition: transform var(--dur-state);
-}
-.disclosure[open] .disclosure-chevron {
-  transform: rotate(90deg);
 }
 .disclosure-body {
   margin-top: var(--space-3);
@@ -1601,6 +1730,12 @@ span.error-line {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
   column-gap: var(--space-3);
+  container-type: inline-size;
+}
+/* Only the summary's line gives the verb a column; the open body takes the
+   wrap's whole width (`cqi`), which the details' own column cannot reach. */
+.disclosure-wrap > .disclosure > .disclosure-body {
+  inline-size: 100cqi;
 }
 .disclosure-action {
   display: inline-flex;
@@ -1608,25 +1743,25 @@ span.error-line {
   padding-top: var(--space-3);
 }
 
-/* The chevron on a control that opens something which is NOT a `<details>` —
-   the next table row, a panel below the button. `Disclosure` owns its own; this
-   is for the two screens that had each written the turn as an inline
-   `style={{ transform: expanded ? "rotate(180deg)" : undefined }}`, which is
-   the open state spelled twice per call site: once for the reader who sees the
-   glyph and once, separately, for the one who hears `aria-expanded`. Keyed off
-   that attribute instead, the two cannot disagree.
-
-   The turn is unconditional — a reader who asked for less motion still needs
-   the chevron to point at an opened row — and only the tween is conditional. */
+/* Keyed off `aria-expanded`, so the glyph and a screen reader agree. Reduced
+   motion keeps the turn and drops the tween, which runs on the fold's time. */
 .expander-chevron {
-  transition: transform var(--dur-state) var(--ease-in-out);
+  transition: transform var(--dur-move) var(--ease-in-out);
 }
 [aria-expanded="true"] > .expander-chevron,
 [aria-expanded="true"] .expander-chevron {
   transform: rotate(180deg);
 }
+/* In-out: a fold travels between two resting places. Clipped on the block axis
+   only, so a focus ring inside keeps its sides. */
+[data-folding] {
+  box-sizing: border-box;
+  overflow: visible clip;
+  transition: height var(--dur-move) var(--ease-in-out);
+}
 @media (prefers-reduced-motion: reduce) {
-  .expander-chevron {
+  .expander-chevron,
+  [data-folding] {
     transition: none;
   }
 }
@@ -1638,10 +1773,9 @@ span.error-line {
   position: relative;
   display: inline-flex;
 }
-/* Fixed and portalled to the body: the panel is positioned against the
-   trigger's viewport rectangle by the component, so it is not clipped by a
-   card that hides its own overflow and cannot be trapped by a stacking context
-   between the two. */
+/* Fixed and portalled to its layer: the dialog's overlay, or the body. It is
+   positioned against the trigger's viewport rectangle, so a card that hides
+   its own overflow cannot clip it. */
 .overflow-menu-items {
   position: fixed;
   /* Above the phone layout's fixed bottom rail (shell.css, z-index 30) and
@@ -1680,18 +1814,6 @@ span.error-line {
   border-radius: var(--r-sm);
   background: var(--bgElevated);
   box-shadow: var(--shadow-pop);
-}
-/* A menu opened from inside a dialog stands above that dialog's overlay and
-   below a popover. The panel is portalled out of the dialog, so on the layer
-   above, the dialog would cover its own menu. */
-.overflow-menu-items[data-layer="dialog"] {
-  z-index: 60;
-}
-/* Under a dialog opened after its own, it sinks under the scrim as a menu
-   outside any dialog does. A panel follows its own dialog in the body, so a
-   later overlay is a dialog on top, and the top dialog's menu stays above. */
-.overflow-menu-items[data-layer="dialog"]:has(~ .overlay) {
-  z-index: 35;
 }
 /* An author-level `display` beats the UA stylesheet's `[hidden] {display:none}`,
    so without this the closed menu stays open — the whole point of folding the
@@ -1785,20 +1907,17 @@ span.error-line {
    arrives as `aria-expanded`, as `aria-pressed`, or as the primary variant a
    caller reaches for to draw the same thing, and stripping the fill above took
    the whole signal with it. It says so here the way the Select's chosen option
-   does (select.css, [aria-selected="true"]): accent ink, a little more weight,
-   and the accent's own quiet ground — not the filled bar, which in a list
-   claims to be the panel's one action rather than one row's state. */
+   does: the pressed filter pill's neutral ground and the primary ink, not the
+   filled bar, which in a list claims to be the panel's one action rather than
+   one row's state. */
 .overflow-menu-items .btn-primary,
 .overflow-menu-items .btn[aria-expanded="true"],
-.overflow-menu-items .btn[aria-pressed="true"] {
-  background: var(--accentLight);
-  color: var(--accentText);
-}
+.overflow-menu-items .btn[aria-pressed="true"],
 .overflow-menu-items .btn-primary:hover:not(:disabled),
 .overflow-menu-items .btn[aria-expanded="true"]:hover:not(:disabled),
 .overflow-menu-items .btn[aria-pressed="true"]:hover:not(:disabled) {
-  background: var(--accentMed);
-  color: var(--accentText);
+  background: var(--bgChip);
+  color: var(--textPrimary);
 }
 
 /* One reading at the top of a record. The tile stays neutral and only the
@@ -1836,10 +1955,17 @@ span.error-line {
   min-block-size: 138px;
 }
 
+/* A compound breaks at a syllable first, and `anywhere` only where a syllable
+   still does not fit. Not on the figure: `anywhere` splits a number. */
+.stat-card-label-text,
+.stat-card-detail {
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
 /* The compact card, inside a strip that asked for it (`StatStrip density`).
-   One step down the same heading scale, tighter air, and a one-line basis:
-   the row sits above the content a reader came for, so it must not fill the
-   first screen. The full figure stays on the value's tooltip. */
+   One step down the same heading scale and tighter air: the row sits above
+   the content a reader came for, so it must not fill the first screen. */
 [data-density="compact"] .stat-card {
   padding: var(--space-3);
   min-block-size: 0;
@@ -1849,6 +1975,9 @@ span.error-line {
 [data-density="compact"] .stat-card-label {
   flex-wrap: wrap;
   row-gap: 0;
+  /* Two lines held for every name, so the figures of a row stay level beside
+     a name that wraps. */
+  min-block-size: 2lh;
 }
 [data-density="compact"] .stat-card-label-text {
   flex-shrink: 0;
@@ -1860,8 +1989,6 @@ span.error-line {
   margin-block-end: var(--space-1);
 }
 [data-density="compact"] .stat-card-detail {
-  -webkit-line-clamp: 1;
-  line-clamp: 1;
   margin-block-end: 0;
 }
 [data-density="compact"] .stat-card-foot {
@@ -1879,10 +2006,9 @@ span.error-line {
 /* The line under the figure. Its TYPE comes from `.t-caption` on the element
    (atoms.tsx) — quiet grey at the meta size is that utility's own spelling, and
    a copy of it here is one that stops moving when the utility does.
-   What the rule owns is the SHAPE: two lines at most, so a reading whose basis
-   runs long cannot push its own card taller than the four beside it. A clamp
-   rather than a scrollbar or an ellipsis on one line: two lines hold the basis
-   a reader needs, and the receipt chip is where the rest of it lives. */
+   What the rule owns is the SHAPE: two lines at most, because a basis may carry
+   user text of any length (a meeting's subject) and must not set the row's
+   height. The receipt chip is where the rest of it lives. */
 .stat-card-detail {
   display: -webkit-box;
   -webkit-box-orient: vertical;
@@ -1915,17 +2041,9 @@ span.error-line {
   color: var(--textSecondary);
   margin-block-end: var(--space-1);
 }
-/* The name itself clamps to ONE line, and the chips beside it do not: a row of
-   readings whose labels wrap to two lines puts every figure in the row at a
-   different height. `min-width: 0` because a flex item's floor is its content,
-   and without it a long label pushes the badge off the card instead of
-   clipping. */
+/* `min-width: 0` because a flex item's floor is its content, and without it a
+   long name pushes the badge off the card instead of wrapping beside it. */
 .stat-card-label-text {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 1;
-  line-clamp: 1;
-  overflow: hidden;
   min-width: 0;
 }
 .stat-card-source {
@@ -1945,14 +2063,18 @@ span.error-line {
    this tier owns.
    `font-variant-numeric` FOLLOWS the shorthand: `font` resets `font-variant`,
    so tabular figures declared above it would be thrown away and a column of
-   readings would stop lining up. The figure holds ONE line and ellipsises what
-   does not fit, rather than breaking mid-number: a money reading wrapped
-   between its thousands and its cents reads as two figures. */
+   readings would stop lining up. A figure in words wraps balanced at its
+   spaces. A number cannot break, so only a number wider than the tile ends in
+   an ellipsis, with the whole figure on the card's tooltip. */
 .stat-card-value {
   font: var(--fontHeadingLarge);
   font-variant-numeric: tabular-nums;
   color: var(--textPrimary);
-  white-space: nowrap;
+  text-wrap: balance;
+  hyphens: auto;
+  /* Stated, not inherited: a sheet above that lets words break would split it. */
+  overflow-wrap: normal;
+  word-break: normal;
   overflow: hidden;
   text-overflow: ellipsis;
   margin-block-end: var(--space-2);
@@ -2131,9 +2253,6 @@ span.error-line {
 .stat-card-meter-segments .stat-card-meter-fill {
   flex: 1;
 }
-.stat-card-meter-empty {
-  background: var(--bgHover);
-}
 .stat-card-meter-fill {
   display: block;
   block-size: 100%;
@@ -2153,6 +2272,11 @@ span.error-line {
 }
 .stat-card-info ~ .stat-card-meter .stat-card-meter-fill {
   background: var(--info);
+}
+/* An empty segment is the track, whatever the tone. It matches the tone rules'
+   weight and comes after them, so no fill colour reaches it. */
+.stat-card-meter .stat-card-meter-fill.stat-card-meter-empty {
+  background: var(--bgHover);
 }
 
 /* The four tones a reading's figure can carry, and the ONE place each is
@@ -2225,7 +2349,7 @@ span.error-line {
 /* The two chip-shaped links, and the disclosure and table rows beside them. All
    four changed colour on hover in a single frame. */
 .disclosure-summary,
-.table tbody tr td {
+.table > tbody > tr > td {
   transition:
     background-color var(--dur-state) var(--ease-out),
     color var(--dur-state) var(--ease-out);

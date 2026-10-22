@@ -106,6 +106,7 @@ var managerObjects = grid(crud, map[string]grant{
 	objPrivacyRequest:         none,
 	objAuditLog:               none,
 	objJobHealth:              none,
+	objDataTask:               none,
 	objExtensionAccess:        none,
 	objSystemReset:            none,
 	objAiDiagnostics:          none,
@@ -113,6 +114,7 @@ var managerObjects = grid(crud, map[string]grant{
 	objCommunicationException: none,
 	objAuthenticationPolicy:   none,
 	objOauthApplication:       none,
+	objAgentClient:            none,
 	objSeatUsage:              none,
 	objTeamOversight:          none,
 
@@ -121,6 +123,7 @@ var managerObjects = grid(crud, map[string]grant{
 	// Reviewing legal requests is handed out by an admin, never inherited by a
 	// team lead.
 	objLegalReview: none,
+	objLegalEntity: readOnly,
 })
 
 // managementObjects is managerObjects with the administration reads a
@@ -134,12 +137,14 @@ var managerObjects = grid(crud, map[string]grant{
 // records posture would silently widen the company-scoped seat too.
 var managementObjects = func() map[string]grant {
 	out := maps.Clone(managerObjects)
+	out[objDataTask] = none
 	for _, object := range []string{
 		objAiDiagnostics,
 		objAiBudget,
 		objConsentConfig,
 		objAuthenticationPolicy,
 		objOauthApplication,
+		objAgentClient,
 		objSeatUsage,
 		objTeamOversight,
 	} {
@@ -187,6 +192,7 @@ var defaults = map[string]Document{
 			objPrivacyRequest:       readUpdate,
 			objAuditLog:             readOnly,
 			objJobHealth:            readOnly,
+			objDataTask:             readUpdate,
 			objExtensionAccess:      readOnly,
 			objSystemReset:          deleteOnly,
 			objAiDiagnostics:        readOnly,
@@ -304,6 +310,7 @@ var defaults = map[string]Document{
 			objPrivacyRequest:         none,
 			objAuditLog:               none,
 			objJobHealth:              none,
+			objDataTask:               none,
 			objExtensionAccess:        none,
 			objSystemReset:            none,
 			objAiDiagnostics:          none,
@@ -311,6 +318,7 @@ var defaults = map[string]Document{
 			objCommunicationException: none,
 			objAuthenticationPolicy:   none,
 			objOauthApplication:       none,
+			objAgentClient:            none,
 			objSeatUsage:              none,
 			objTeamOversight:          none,
 			objTeamLead:               none,
@@ -347,6 +355,7 @@ var defaults = map[string]Document{
 			objPrivacyRequest:         none,
 			objAuditLog:               none,
 			objJobHealth:              none,
+			objDataTask:               none,
 			objExtensionAccess:        none,
 			objSystemReset:            none,
 			objAiDiagnostics:          none,
@@ -354,6 +363,7 @@ var defaults = map[string]Document{
 			objCommunicationException: none,
 			objAuthenticationPolicy:   none,
 			objOauthApplication:       none,
+			objAgentClient:            none,
 			objSeatUsage:              none,
 			objTeamOversight:          none,
 			objTeamLead:               none,
@@ -402,16 +412,21 @@ var defaults = map[string]Document{
 			objPrivacyRequest:       none,
 			objAuditLog:             none,
 			objJobHealth:            readOnly,
+			objDataTask:             readUpdate,
 			objExtensionAccess:      readOnly,
 			objSystemReset:          none,
 			objAiDiagnostics:        readOnly,
 			objAuthenticationPolicy: readOnly,
-			objSeatUsage:            readOnly,
+			// Ops reads the AI tool clients and leaves admitting a new one to admin,
+			// as it does the sign-in policy.
+			objAgentClient: readOnly,
+			objSeatUsage:   readOnly,
 			// Ops runs the installation and leads nobody, so it reads no
 			// team's coaching week.
 			objTeamOversight: none,
 			objTeamLead:      none,
 			objLegalReview:   none,
+			objLegalEntity:   readOnly,
 			// Ops configures the rules and does not send under them. Directing
 			// a message past the engine's answer about a contact is a decision
 			// somebody takes about their own correspondence, and this seat has

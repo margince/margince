@@ -122,7 +122,12 @@ function targetOf(
   exists: (path: string) => boolean,
 ): string | null {
   const base = resolve(dirname(fromFile), specifier);
-  return moduleAt(base, exists) ?? (exists(base) ? base : null);
+  const declaration = `${base}.d.ts`;
+  return (
+    moduleAt(base, exists) ??
+    (exists(base) ? base : null) ??
+    (exists(declaration) ? declaration : null)
+  );
 }
 
 // specifierFor spells `target` from `fromFile` the way `original` spelled it:
@@ -138,10 +143,9 @@ function specifierFor(
   const named = throughIndex ? dirname(target) : target;
   const keepsExtension =
     extname(original) !== "" && extname(original) === extname(oldTarget);
+  const extension = named.endsWith(".d.ts") ? ".d.ts" : extname(named);
   const path =
-    keepsExtension || throughIndex
-      ? named
-      : named.slice(0, -extname(named).length);
+    keepsExtension || throughIndex ? named : named.slice(0, -extension.length);
   const spelled = relative(dirname(fromFile), path).split(sep).join("/");
   return spelled.startsWith(".") ? spelled : `./${spelled}`;
 }

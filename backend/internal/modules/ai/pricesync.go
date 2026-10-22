@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -24,6 +25,8 @@ type PriceSyncDeps struct {
 	Broker    *ModelCatalogue
 	ModelsDev *ModelsDevCatalogue
 	Settings  *settings.Store
+	// Config reads and saves the switch under the locks the boot sources set.
+	Config *config.Config
 }
 
 // PriceSync is the one engine behind "Refresh now" and the daily sweep.
@@ -55,7 +58,7 @@ func (p *PriceSync) Run(ctx context.Context, trigger PriceSyncTrigger) (RateRefr
 
 // RunScheduled is the daily pass: a Run, unless auto-sync is off.
 func (p *PriceSync) RunScheduled(ctx context.Context) error {
-	cfg, err := settings.Get(ctx, p.d.Settings, PriceSyncSettings)
+	cfg, err := config.StoredVal(ctx, p.d.Config, PriceSyncSettings)
 	if err != nil || !cfg.AutoSync {
 		return err
 	}
@@ -65,7 +68,7 @@ func (p *PriceSync) RunScheduled(ctx context.Context) error {
 
 // State is the switch and the last run, as the Model prices card shows them.
 func (p *PriceSync) State(ctx context.Context) (PriceSyncState, error) {
-	cfg, err := settings.Get(ctx, p.d.Settings, PriceSyncSettings)
+	cfg, err := config.StoredVal(ctx, p.d.Config, PriceSyncSettings)
 	if err != nil {
 		return PriceSyncState{}, err
 	}
@@ -82,7 +85,7 @@ func (p *PriceSync) SetAutoSync(ctx context.Context, on bool) (PriceSyncState, e
 	if err := auth.Require(ctx, "ai_model_rate", principal.ActionRead); err != nil {
 		return PriceSyncState{}, err
 	}
-	if err := settings.Set(ctx, p.d.Settings, PriceSyncSettings, PriceSyncConfig{AutoSync: on}); err != nil {
+	if err := config.Save(ctx, p.d.Config, PriceSyncSettings, PriceSyncConfig{AutoSync: on}); err != nil {
 		return PriceSyncState{}, err
 	}
 	return p.State(ctx)
@@ -99,7 +102,11 @@ func (p *PriceSync) sources(ctx context.Context) (PriceSources, error) {
 	if err != nil {
 		return PriceSources{}, err
 	}
-	src := PriceSources{Routing: cfg, Usable: map[string]bool{}, Listed: map[string][]model.Info{}}
+	switched, err := p.d.Rates.switchedServedModels(ctx, p.now().Add(-switchedModelWindow))
+	if err != nil {
+		return PriceSources{}, err
+	}
+	src := PriceSources{Routing: cfg, Usable: map[string]bool{}, Listed: map[string][]model.Info{}, Switched: switched}
 	for _, s := range statuses {
 		src.Usable[s.Provider] = s.Usable()
 	}

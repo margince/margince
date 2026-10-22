@@ -300,3 +300,20 @@ export const CLAIM_SETTLED_KEYS: readonly QueryKey[] = [
   ["contact360"],
   DEAL_COMMITMENTS_KEY,
 ];
+
+export const activityFollowUpsKey = (sourceId: string) =>
+  ["activities", "followups", sourceId] as const;
+
+/** One activity's own file list. */
+export const activityFilesKey = (activityId: string) =>
+  ["attachments", "activity", activityId] as const;
+
+/** What a file landing on an activity leaves stale. A deal's Files and a
+ *  company's library list linked activities' files too. Which records is not
+ *  known here, so those reads refresh by prefix. */
+export const activityFileStaleKeys = (activityId: string): QueryKey[] => [
+  activityFilesKey(activityId),
+  ["deal-documents"],
+  ["deal-attachments"],
+  ["companyDocuments"],
+];

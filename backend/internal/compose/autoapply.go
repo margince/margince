@@ -383,7 +383,8 @@ func (a autoApplier) Sweep(ctx context.Context) (int, error) {
 // about that proposal, and each leaves it pending for a contact.
 func refusesThisRow(err error) bool {
 	var decided *approvals.AlreadyDecidedError
-	return errors.As(err, &decided) ||
+	var contextRefusal *approvals.PreviewContextError
+	return errors.As(err, &decided) || errors.As(err, &contextRefusal) ||
 		errors.Is(err, apperrors.ErrVersionSkew) ||
 		errors.Is(err, apperrors.ErrApprovalTokenInvalid) ||
 		errors.Is(err, apperrors.ErrNotFound) ||

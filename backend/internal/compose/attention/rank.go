@@ -131,6 +131,10 @@ type ranked struct {
 	waitingRank int
 	strength    int
 	occurredAt  time.Time
+	// newestMember is a folded group's newest member moment, and subjectMovedAt
+	// the lane's subject_moved_at. Both bring a row marked done back (done.go).
+	newestMember   time.Time
+	subjectMovedAt time.Time
 	// asOf is the one instant every row in the same page was classified
 	// against, carried onto the row rather than threaded through every step
 	// signature. The occurrence step reads it to turn occurredAt into how many
@@ -138,25 +142,7 @@ type ranked struct {
 	// already promises, for every source that falls through to it rather than
 	// only the one lane that computes a day count for itself.
 	asOf time.Time
-	// owner is who this row answers to, for the sources that carry an owner but
-	// no deal on the wire.
-	//
-	// The scope filters judge a deal-bearing row by its deal's owner, which a
-	// waiting message does not have: the message names a contact, not a deal, and
-	// its ownership is the ownership of the record it is filed under. The lane
-	// resolves that walk, and this is where the answer rides so the SAME filters
-	// can judge it. Zero means the row names nobody, which for a wait is an
-	// unowned customer rather than a missing answer.
-	owner ids.UUID
-	// ownerRef is the same question answered for the CLIENT rather than for the
-	// scope filters, and it carries one thing `owner` cannot: whether the
-	// producer answered at all.
-	//
-	// A zero `owner` means two different things — nobody holds this row, and
-	// this lane never said — and the filters can live with that because a row
-	// they cannot judge simply stays. A reader cannot: told `unassigned`, they
-	// would read a confident claim that nobody owes it. So the producers state
-	// this one, and the census fails on a lane that does not.
+	// ownerRef is the producer's attribution for both scope and display.
 	ownerRef ownerRef
 	// contact is WHO a waiting row is about, when it names one.
 	//
@@ -252,8 +238,7 @@ func renderInOrder(rows []ranked, reader ids.UUID) []crmcontracts.WorklistItem {
 		// which of its verbs is the step. Stamped here rather than by each
 		// classifier, so a source added later carries a primary action by
 		// arriving in this loop instead of by its author remembering to.
-		if item.Source == sourceWaiting {
-			offered := waitingDispositions(row, reader)
+		if offered := dispositionsFor(row, reader); offered != nil {
 			item.Dispositions = &offered
 		}
 		item.PrimaryAction = primaryActionFor(item)

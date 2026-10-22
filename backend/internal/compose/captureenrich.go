@@ -32,7 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/schema"
@@ -172,7 +172,7 @@ func (e *CaptureEnricher) RunWorkspace(ctx context.Context) (filled bool, err er
 	// Read once per pass rather than per candidate: it is one row, and a value
 	// that changed mid-pass would sort one night's candidates by two different
 	// answers to the same question.
-	defaultEnrich, err := settings.Get(wsCtx, NewSettingsStore(e.pool), capture.SignatureEnrich)
+	defaultEnrich, err := config.StoredVal(wsCtx, StoredConfig(e.pool), capture.SignatureEnrich)
 	if err != nil {
 		return false, fmt.Errorf("reading the signature-enrichment setting: %w", err)
 	}

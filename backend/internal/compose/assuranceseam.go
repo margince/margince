@@ -17,7 +17,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/assurance"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -65,7 +67,7 @@ const assuranceSubjectsSQL = `
 		          JOIN activity_link al ON al.activity_id = a.id
 		         WHERE al.deal_id = d.id
 		           AND a.archived_at IS NULL
-		           AND ((a.kind = 'task' AND a.is_done = false)
+		           AND ((a.kind = 'task' AND a.is_done = false AND %s)
 		                -- NULL is a meeting nothing has said is off. An imported
 		                -- one carries no status, and the strict form raised a
 		                -- "no next step" finding against a deal whose next step
@@ -115,8 +117,14 @@ const closePushWindow = 90 * 24 * time.Hour
 // entirely exchange rate.
 func AssuranceSubjects(ctx context.Context, tx pgx.Tx) ([]assurance.Subject, error) {
 	now := time.Now().UTC()
-	rows, err := tx.Query(ctx, assuranceSubjectsSQL,
-		now.Add(-closePushWindow), now, dealrole.EconomicBuyer)
+	args := []any{now.Add(-closePushWindow), now, dealrole.EconomicBuyer}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+	if err != nil {
+		return nil, err
+	}
+	query := fmt.Sprintf(assuranceSubjectsSQL, activities.CurrentTaskClause("a", now, identities, arg))
+	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading the deals to check: %w", err)
 	}

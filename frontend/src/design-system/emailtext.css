@@ -22,13 +22,28 @@
   overflow-wrap: anywhere;
 }
 
-.emailtext__quoted > summary {
+/* A quiet fold inside the message, not a section of the page: no rule above
+ * it, and its words read as a link with the chevron right behind them. */
+.emailtext > .emailtext__quoted {
+  border-top: 0;
+  padding-top: 0;
+  margin-bottom: 0;
+}
+.emailtext__quoted > .disclosure-summary,
+.emailtext__quoted > .disclosure-summary:hover {
+  justify-content: start;
   color: var(--accent);
-  cursor: pointer;
+  font-weight: inherit;
+}
+.emailtext__quoted > .disclosure-summary > .disclosure-label {
+  flex: none;
+}
+.emailtext__quoted > .disclosure-body {
+  margin-top: var(--space-2);
 }
 
-.emailtext__quoted > p {
-  margin: var(--space-2) 0 0;
+.emailtext__quoted p {
+  margin: 0;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }

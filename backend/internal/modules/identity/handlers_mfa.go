@@ -76,8 +76,8 @@ func (h Handlers) GetMyMfa(w http.ResponseWriter, r *http.Request) {
 // step-up operation: the body must carry a current authenticator or recovery
 // code, so a borrowed session cannot strip the account of the factor guarding
 // it. A wrong code — the empty one included — is the same neutral 401 a wrong
-// confirmation code earns, and it spends the same per-user failure budget the
-// challenge endpoint meters: the code being guessed at is the same secret,
+// confirmation code earns. It spends the same per-user attempt budget the
+// challenge endpoint meters. The code being guessed at is the same secret,
 // reachable from behind any hijacked session. The code is NOT screened for
 // presence here, because the service verifies it only where a confirmed factor
 // exists — the contract's codeless cases (nothing enrolled, a merely PENDING
@@ -92,13 +92,12 @@ func (h Handlers) DisableMyMfa(w http.ResponseWriter, r *http.Request) {
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	if h.mfaFailures.Blocked(id.UserID.String()) {
+	if !h.mfaAttempts.Allow(id.UserID.String()) {
 		httperr.Write(w, r, apperrors.ErrBudgetExceeded)
 		return
 	}
 	if err := h.svc.DisableMFA(r.Context(), req.Code); err != nil {
 		if errors.Is(err, errBadMFACode) {
-			h.mfaFailures.Record(id.UserID.String())
 			httperr.Unauthorized(w, r, "the code is not valid")
 			return
 		}

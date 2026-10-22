@@ -104,6 +104,34 @@ describe("useClipboardCopy", () => {
     expect(screen.getByRole("button", { name: "Copy link" })).toBeTruthy();
   });
 
+  it("keeps the failure notice while the reader edits the text", async () => {
+    // The remedy is to copy the text by hand, so editing it must not hide how.
+    const user = userEvent.setup();
+    stubClipboard("refuses");
+    renderProbe("the-link");
+    await user.click(screen.getByRole("button", { name: "Copy link" }));
+    await screen.findByText(/clipboard access denied/i);
+
+    await user.click(screen.getByRole("button", { name: "Edit the text" }));
+
+    expect(screen.getByText(/clipboard access denied/i)).toBeTruthy();
+  });
+
+  it("takes the notice away as soon as the next attempt starts", async () => {
+    const user = userEvent.setup();
+    stubClipboard("refuses");
+    renderProbe("the-link");
+    await user.click(screen.getByRole("button", { name: "Copy link" }));
+    await screen.findByText(/clipboard access denied/i);
+
+    const deferred = stubDeferredClipboard();
+    await user.click(screen.getByRole("button", { name: "Copy link" }));
+
+    expect(deferred.writes).toHaveLength(1);
+    expect(screen.queryByText(/clipboard access denied/i)).toBeNull();
+    deferred.restore();
+  });
+
   it("takes the notice away once a later attempt lands", async () => {
     const user = userEvent.setup();
     stubClipboard("refuses");

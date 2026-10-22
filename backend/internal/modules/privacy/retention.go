@@ -27,7 +27,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -122,12 +121,12 @@ const maxRecordDuration = 10 * time.Second
 // precisely what would make this bound a fiction, which is why both facts are
 // enforced rather than assumed.
 //
-// The §3.4 ladder is unaffected: its rungs are different scopes (`activity` at
-// 1095, `activity/transcript` at 365), never repeated ones.
+// A ladder is unaffected: its rungs are different scopes (`activity` and
+// `activity/transcript`), never repeated ones.
 //
 // aiRetentionStages adds the engine-owned AI stores, which batch the same way,
 // and restrictionExpiryStages the erasure of held records whose window closed.
-var MaxPassDuration = time.Duration(len(retentionSelectors)+aiRetentionStages+restrictionExpiryStages) *
+var MaxPassDuration = time.Duration(len(retentionSelectors)+aiRetentionStages+restrictionExpiryStages+heldCommitmentStages) *
 	(retentionBatch * maxRecordDuration)
 
 // embedCallRetention bounds how long an embedding-kind ai_call trace row
@@ -315,6 +314,9 @@ func (s *RetentionService) EvaluateInstallation(ctx context.Context) error {
 	if err := s.evaluateRestrictionExpiry(ctx); err != nil {
 		return err
 	}
+	if err := s.evaluateHeldCommitments(ctx); err != nil {
+		return err
+	}
 	retainOnly, err := s.retainOnly(ctx)
 	if err != nil {
 		return err
@@ -454,7 +456,7 @@ func (s *RetentionService) retainOnly(ctx context.Context) (bool, error) {
 	var held bool
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		held, err = settings.GetTx(ctx, tx, RetainOnly)
+		held, err = retainOnlyTx(ctx, tx)
 		return err
 	})
 	if err != nil {

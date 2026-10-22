@@ -58,6 +58,7 @@ func (s *Store) WithConfirmationLane(sender ConfirmationSender, vault ConfirmLin
 
 // confirmMailInput is one confirm link, ready to be turned into a message.
 type confirmMailInput struct {
+	purposeID  ids.PurposeID
 	contactID  ids.ContactID
 	leadID     ids.LeadID
 	recipient  string
@@ -82,8 +83,20 @@ func (s *Store) stageConfirmMail(
 		// No lane wired: nothing was staged, and a zero id says so.
 		return ids.UUID{}, nil
 	}
-	rendered, category, err := RenderControllerTemplate(
-		templateForLinkKind(in.kind), in.expiresAt, s.mailLanguage(ctx, tx))
+	language := s.mailLanguage(ctx, tx)
+	purpose := ""
+	if in.kind == LinkConsentConfirmation {
+		var err error
+		purpose, err = subscriptionPurposeLabel(ctx, tx, in.purposeID, mailcopy.For(language))
+		if err != nil {
+			return ids.UUID{}, err
+		}
+	}
+	rendered, category, err := renderTemplateContext(templateForLinkKind(in.kind), in.expiresAt, language, purpose)
+	if err != nil {
+		return ids.UUID{}, err
+	}
+	rendered, err = s.controllerView(ctx, tx, rendered, category)
 	if err != nil {
 		return ids.UUID{}, err
 	}

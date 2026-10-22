@@ -6,6 +6,35 @@ make on its own. The agent does not do it. It writes down what it means to do
 and puts it before a human, who accepts, edits or rejects it. The product
 calls the waiting items **Approvals**.
 
+## Reading a commercial change
+
+A deal-stage, owner or company-lifecycle proposal shows the record and the values before and after
+the change. Owners and stages have names. **Review authority** explains why you can answer it.
+A deal win also names its effects on linked correspondence and eligible delivery projects.
+**Set when applied** means Margince records that value when the change takes effect.
+
+Source evidence appears when it is available. A linked proposal remains a separate decision. If the record changed or the full change cannot be shown, you cannot approve it.
+Request a new proposal with current context, or reject the old one.
+
+## Reading an import proposal
+
+An import proposal shows each source row, its planned result, and the values to create or change.
+Links name an existing record or the source row that will create it. Review skipped rows and new tags too.
+Approval starts the queued import. It checks again the reviewed source and existing record versions before writing.
+
+The queue requires a complete plan of at most 500 rows. Older test runs, larger files, or rows that update
+the same record twice need a new plan. Open **Settings → Data import**, split larger files or resolve
+rows that change the same record, and run another test. You can reject the queued proposal without starting the import.
+
+## Reading a confirmation request
+
+An automation can ask you to confirm a question. The card shows the question and the effect of your answer.
+It also shows the reason if the request has one. A confirmation records your answer and finishes the waiting
+automation run. It does not authorize a record change or send a message.
+
+If an old request has no clear question, ask for a new request or reject it. An event name
+or a list of fields does not tell you what you are confirming.
+
 ## Answering approvals
 
 ### How do I approve an action in Margince?
@@ -41,13 +70,29 @@ Nothing is applied. The card shows **Expired**, and the agent has to propose aga
 A pending card shows "expires in {countdown}". One kind never expires: a stopped scheduled message waits until somebody answers.
 Also called: approval timed out, missed an approval, stale approval.
 
+### What if an approved change did not run?
+If Margince could not carry out a change you approved, a row on your own Worklist says the work did not run.
+Press **Run again**, where the row offers it, to run the approved work again.
+Press **Acknowledge** to take the row off your list. If the same change fails again later, it comes back.
+Also called: approval failed, approved but nothing happened, retry an approval.
+
 ### Who approves agent actions?
 An agent action in Margince is approved by the colleague the agent acts for, or by a colleague who could have made the same change. You only see approvals whose target you can see and whose effect you could carry out. No agent may approve a proposal staged for somebody else, or a send it proposed itself. An administrator has no override past their own permissions.
 Also called: approver, who signs off, permission to approve.
 
 ### How do I stop Margince making automatic changes?
-To make Margince ask before changing close dates, company names or lifecycle stages, open **Settings → Agents**. Turn off the matching switch under **Automatic changes**. The switches apply to your work only. A kind you switch off comes back to your Worklist as an approval.
+To make Margince ask before changing close dates, company names or lifecycle stages, open **Settings → AI access**, then **For developers**, then **Agent rules**. Turn off the matching switch under **Automatic changes**. The switches apply to your work only. A kind you switch off comes back to your Worklist as an approval.
 Also called: autopilot, auto-apply, stop the AI editing my records.
+
+### How do I hide a kind of proposal from my own queue?
+Open **Settings → AI access**, then **For developers**, then **Agent rules**, then
+**Personal approval mutes**.
+Turn on a kind to hide it from your own queue. Other readers keep their proposals, and nobody has accepted or rejected anything.
+
+Both hiding and showing a kind turn off your automatic changes for that kind. Showing it again does not restore an old automatic choice.
+Sends, bookings, merges and proposals from agent passports stay visible.
+
+Use **Review including muted** to read hidden proposals, including those that have expired. A group in the ordinary queue can have fewer entries because of your choice; check each proposal before deciding.
 
 ### Can I undo what the AI changed?
 Yes. To undo a change the AI or an agent made in Margince, press **Undo** on its row under **Handled for you** in the Worklist. You can also press it on the entry in the record's history.
@@ -118,9 +163,10 @@ decided: **Close dates**, **Company names** and **Lifecycle stages**. They land
 under **Handled for you** on the Worklist rather than as an approval.
 
 This is set per seat, and it is **on by default**. The switches
-are at **Settings → Agents**, under **Automatic changes**, which says: "Automatic
-changes start on. Existing settings are kept. Each switch applies to your work,
-not the whole team."
+are at **Settings → AI access**, on the **Agent rules** tab under **For developers**. The **Automatic
+changes** card says: "Each switch
+lets one kind of change run without your review. It applies to your work, not
+the whole team."
 
 Each switch shows how you have answered that kind of proposal so far.
 It reads: "So far: {clean} approved as proposed, {edited} approved after edits, {rejected}
@@ -180,10 +226,9 @@ confirmation.
 
 ## When something changed first
 
-The record may change while an approval waits. Then the app says
-"This record changed after it was staged. Stage it again before deciding." and
-offers **Reload**. So you never approve a proposal based on an older version of
-the record.
+The record may change while an approval waits. Ask for a current proposal before
+approving it so the decision uses the current record. You can still reject the
+old proposal.
 
 If someone else answered first, you see "Already decided. Nothing left to do."
 Nobody can decide it a second time; that try is refused.

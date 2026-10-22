@@ -10,20 +10,16 @@ import {
 } from "react";
 import type { components } from "../api/schema";
 import { Avatar } from "../design-system/atoms";
-import { ChoiceList } from "../design-system/choicelist";
+import { SETTINGS_SCREEN } from "../features/settings/settingsnav";
 import { useT } from "../i18n";
 import { routeHash } from "../lib/router";
 import { useMe } from "../lib/session";
-import {
-  setThemeChoice,
-  THEME_CHOICES,
-  type ThemeChoice,
-  useThemeChoice,
-} from "../lib/theme";
-import { SETTINGS_SCREEN } from "../screens/settingsnav";
 import { AccountRelease, type RowSeat, SignOutRow } from "./accountfoot";
 import { usePopoverDismiss } from "./popover";
 import "./account.css";
+import { ThemeSubmenu } from "./accounttheme";
+
+export { THEME_LABEL_KEYS } from "./accounttheme";
 
 type SessionUser = components["schemas"]["MeResponse"]["user"];
 
@@ -37,13 +33,6 @@ type SessionUser = components["schemas"]["MeResponse"]["user"];
  */
 const SETTINGS_HREF = routeHash({ screen: SETTINGS_SCREEN });
 
-/** The appearance choices, in the order the submenu shows them, named. */
-export const THEME_LABEL_KEYS = {
-  light: "theme.light",
-  dark: "theme.dark",
-  system: "theme.system",
-} as const satisfies Record<ThemeChoice, string>;
-
 /**
  * Where each row of the menu sits in the roving walk.
  *
@@ -52,9 +41,13 @@ export const THEME_LABEL_KEYS = {
  * itself — and three hand-written `1`s is how one of them comes to disagree.
  */
 const SETTINGS_SEAT = 0;
+
 const THEME_SEAT = 1;
+
 const BOOKING_SEAT = 2;
+
 const SIGN_OUT_SEAT = 3;
+
 const SEAT_COUNT = 4;
 
 /**
@@ -155,83 +148,6 @@ function nextSeat(
     }
   }
   return from;
-}
-
-/**
- * Light / Dark / System: one question with three answers, so it is the product's
- * radio GROUP and not a second spelling of one. `ChoiceList` carries the
- * `fieldset` that names the question and the native radios that answer it —
- * which is also the keyboard contract, since a radio group already owns the
- * roving tabstop and the arrow walk this hand-rolled before.
- *
- * Picking one does NOT close the panel. This is the appearance control, and the
- * whole of its feedback is the document repainting under the open flyout with
- * the tick moving to the answer that did it; closing on pick would take that
- * away and make the reader re-open it to see what they chose.
- *
- * Escape is deliberately absent here. `usePopoverDismiss` (app/popover.ts) is
- * what dismisses this layer, and the parent menu's copy of the same hook stands
- * down while the row that opened this one still reads `aria-expanded="true"`.
- * One keystroke, one layer, one implementation.
- */
-function ThemeSubmenu({
-  id,
-  panel,
-  onBack,
-}: Readonly<{
-  /** What the row that opened this points `aria-controls` at. */
-  id: string;
-  panel: RefObject<HTMLDivElement | null>;
-  onBack: () => void;
-}>) {
-  const t = useT();
-  const choice = useThemeChoice();
-
-  // Where the reader starts: the answer that is already standing, so opening the
-  // chooser puts them on the appearance they currently have. A radio group makes
-  // that one the group's only tab stop, so it is the one to focus.
-  useEffect(() => {
-    panel.current
-      ?.querySelector<HTMLInputElement>('input[type="radio"]:checked')
-      ?.focus();
-  }, [panel]);
-
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    // Left is the way BACK to the row that opened this, as it was when these
-    // were menu items; the group's own walk keeps Up and Down, which is the
-    // whole of it for a column of three.
-    if (event.key === "ArrowLeft") {
-      onBack();
-      event.preventDefault();
-      event.stopPropagation();
-      return;
-    }
-    // The parent menu listens on the same bubble path, so without this its own
-    // roving tabstop moves under a reader who is standing in here. Not
-    // prevented: the arrow walk that must run is the radio group's.
-    if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
-      event.stopPropagation();
-    }
-  };
-
-  return (
-    // The flyout is the positioned box and the group is what it holds: the ref
-    // this hands back is what `usePopoverDismiss` tests containment against, and
-    // a fieldset is not what the sheet-at-phone-width rules are written about.
-    // biome-ignore lint/a11y/noStaticElementInteractions: the handler is a guard on the PARENT menu's bubble path, not an affordance — the controls a reader operates are the radios inside
-    <div className="accountsub" id={id} ref={panel} onKeyDown={onKeyDown}>
-      <ChoiceList
-        legend={t("shell.theme")}
-        hideLegend
-        value={choice}
-        choices={THEME_CHOICES.map((option) => ({
-          value: option,
-          label: t(THEME_LABEL_KEYS[option]),
-        }))}
-        onChange={setThemeChoice}
-      />
-    </div>
-  );
 }
 
 /**

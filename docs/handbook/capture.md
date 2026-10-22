@@ -86,6 +86,18 @@ Capture creates the contact but not their company. A step of its own reads the
 domain's website and proposes the company. So a personal domain such as
 `sebastian@kestner.example` does not become a company called "Kestner".
 
+### A contact you added without an email
+
+You can add a contact without an email, for example from a business card. When
+mail from them is captured, capture does not put the address on that contact.
+It creates a new contact for the sender, as it does for any sender.
+
+Margince then lists the two contacts as a possible duplicate, so a colleague can
+merge them. The pair is listed when the two names match, or are close and the
+employer's domain matches the mail domain. Colleagues see the pair only once
+the sender has been judged a business contact. A sender kept private, for
+example because the message is held, is not shown to them.
+
 ## When nothing matches
 
 An unknown sender goes into a queue, which Margince works through every 10
@@ -101,6 +113,11 @@ not sort. The answers it can give:
   contact.
 - **A newsletter**, **something transactional**, or **spam**: hide the mail and
   mark the domain as not a company.
+
+Calendar notifications and meeting notes from Google are never hidden this way.
+They are the record that a meeting took place, so Margince keeps them visible
+without asking the model. This holds only for mail Gmail confirmed came from
+Google; a message that only claims to come from Google is judged like any other.
 
 **The model never decides what is kept.** It only decides whether
 a *contact* is created. If your installation has no model set up at all,
@@ -320,6 +337,18 @@ a company."
 will not create a company for. Each shows what decided it: an AI model, a fixed
 rule, or a human. Letting a domain back in asks the company question again.
 
+**Domain review** (Worklist → Review): domains waiting for a company match
+appear together. Open **Domain review** to see each question, the
+answering website, and the age of the evidence. **Set aside** hides your question
+until newer evidence arrives; it stays in Domain review, where **Return to Review**
+puts it back in your queue. A colleague's question stays as it was.
+
+**Match company** links the domain to the company you choose. **Create company**
+adds one where the evidence allows it. If another domain answered the website
+read, you must choose an existing company yourself. **Retry site read** leaves
+the company question open and asks again. **Exclude domain** stops capture for your
+mailboxes. You can use **Set aside** without making these decisions.
+
 **Senders** (Settings → Capture activity): every address that came in through your mailbox, and
 what Margince decided about each. That is a contact, a role mailbox, an
 automated tool, a newsletter, an advisor, or personal. You can change any of
@@ -337,6 +366,6 @@ the team** releases one.
 
 Three settings decide who may read captured mail. **Mail visibility** is in
 each mailbox's settings in Settings → Connections. **Private correspondence** is on a
-contact's or company's page. **Email sharing** is in Settings → Capture rules,
+contact's or company's page. **Mail sharing and sync** is in Settings → Capture rules,
 for administrators only. They are explained in [Who can see an email](who-can-see-an-email.md),
 together with whose capture activity you can see.

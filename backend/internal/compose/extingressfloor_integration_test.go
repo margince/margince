@@ -112,7 +112,7 @@ func setFloor(t *testing.T, e *ingressEnv, sharing bool) {
 			RowScope: principal.RowScopeAll,
 		},
 	})
-	if _, err := capture.NewSettings(NewSettingsStore(e.Pool)).
+	if _, err := capture.NewSettings(NewSettingsStore(e.Pool), StoredConfig(e.Pool)).
 		Update(ctx, capture.SettingsPatch{MailSharing: &sharing}); err != nil {
 		t.Fatalf("setting mail sharing to %v: %v", sharing, err)
 	}

@@ -20,12 +20,9 @@ import {
 import { availableParallelism } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { importSpecifiers } from "./lib/import-specifiers.mjs";
 import { isDocsPage, storyCensus } from "./lib/story-files.ts";
-import {
-  FAILURE_EVENTS,
-  outcomeErrors,
-  SETTLED_EVENTS,
-} from "./lib/story-outcome.mjs";
+import { outcomeErrors, SETTLED_EVENTS } from "./lib/story-outcome.mjs";
 import {
   buildStaticStorybook,
   loadPlaywright,
@@ -33,6 +30,15 @@ import {
   serveStaticStorybook,
 } from "./lib/storybook-harness.mjs";
 import {
+  EXPECTED_ERROR_TAG,
+  PAINTED,
+  paintCensus,
+  renderPhase,
+  storyOutcome,
+  viewportFor,
+} from "./lib/uat-page.mjs";
+import {
+  changesSince,
   needsStory,
   scopeFor,
   storiesInScope,
@@ -113,7 +119,7 @@ function git(args) {
   return r.stdout.toString().trim();
 }
 
-// 1. Changed files on this branch vs origin/main.
+// Include the working tree because this gate also runs before a commit.
 let base = null;
 if (scope === "diff") {
   try {
@@ -131,12 +137,7 @@ const head = git("rev-parse HEAD");
 // and then fails as "a changed story the build did not register", which is the
 // gate reporting its own bookkeeping as a defect. The sibling spacing gate
 // filters the same way.
-const changed =
-  base === null
-    ? []
-    : git(`diff --name-only --diff-filter=d ${base}..HEAD`)
-        .split("\n")
-        .filter(Boolean);
+const changed = base === null ? [] : changesSince(git, base);
 
 // 2. Story-coverage map: for every source file, the story files that import it.
 //    A component is covered by ANY story that renders it — coverage is not tied
@@ -156,51 +157,6 @@ if (census.suffixes === null) {
 }
 const isStoryFile = (file) =>
   !isDocsPage(file) && census.suffixes.some((suffix) => file.endsWith(suffix));
-
-// Coverage means a story RENDERS the component, so a specifier only counts
-// where the module system would honour it: comments are stripped first, and
-// what remains has to sit in a real import/export position — a path mentioned
-// in prose or quoted as data pulls nothing in.
-const STATEMENT_START = String.raw`(?:^|[;{}])\s*`;
-const IMPORT_PATTERNS = [
-  // `import … from "s"` / `export … from "s"`. The clause between the keyword
-  // and `from` carries neither a quote nor a `;`, which is what stops a match
-  // from spanning two statements while still crossing a multi-line clause.
-  new RegExp(
-    `${STATEMENT_START}(?:import|export)\\b[^;'"]*?\\bfrom\\s*["']([^"']+)["']`,
-    "gm",
-  ),
-  // Side-effect `import "s"`.
-  new RegExp(`${STATEMENT_START}import\\s+["']([^"']+)["']`, "gm"),
-  // Dynamic `import("s")`, which is an expression and has no statement start.
-  /\bimport\s*\(\s*["']([^"']+)["']/g,
-];
-
-// A comment or a string literal, whichever opens first. String literals are in
-// the alternation so a `//` inside one — a URL, say — is consumed as part of
-// the string and never read as the start of a comment.
-const COMMENT_OR_STRING =
-  /\/\/[^\n]*|\/\*[\s\S]*?\*\/|"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`/g;
-
-// Blanks out comments, leaving string literals alone. Blanking rather than
-// deleting keeps every line and column where it was, so the statement-start
-// anchors above still see real line starts.
-function stripComments(source) {
-  return source.replace(COMMENT_OR_STRING, (match) =>
-    match.startsWith("/") ? match.replace(/[^\n]/g, " ") : match,
-  );
-}
-
-// The module specifiers of `import x from "s"`, `import "s"`, `export … from "s"`
-// and `import("s")` — every form by which a story pulls in a sibling module.
-function importSpecifiers(source) {
-  const code = stripComments(source);
-  const specifiers = [];
-  for (const pattern of IMPORT_PATTERNS) {
-    for (const match of code.matchAll(pattern)) specifiers.push(match[1]);
-  }
-  return specifiers;
-}
 
 // Resolve a relative specifier to a repo-relative file the way the bundler does:
 // the literal path, then the TS/JS extensions, then the directory's index.
@@ -268,82 +224,6 @@ const fanOutByReach = [...fanOut].sort(
 );
 
 // Map story files (frontend/src/…) to Storybook importPaths (./src/…).
-// The tags fe-uat honours.
-//
-// EXPECTED_ERROR_TAG: see the console listener below.
-//
-// PHONE_TAG exists because of a mechanism that made every narrow story a lie.
-// `globals: { viewport: … }` is applied by the Storybook MANAGER, which styles
-// the preview iframe from outside it — and this harness loads `iframe.html`
-// DIRECTLY, so the manager never runs and the story renders at whatever width
-// the browser was given. Every story named `…Phone` was captured at 1024px,
-// including the shell's, which had been claiming to show the phone layout since
-// it was written. A story about a 390px layout has to be driven at 390px, so the
-// tag moves the browser instead of asking the manager to.
-const EXPECTED_ERROR_TAG = "uat-expected-console-error";
-const PHONE_TAG = "uat-phone";
-// The same phone on its side, for a layout keyed on height running out.
-const PHONE_ON_ITS_SIDE_TAG = "uat-phone-on-its-side";
-const DESKTOP = { width: 1024, height: 720 };
-const PHONE = { width: 390, height: 844 };
-const PHONE_ON_ITS_SIDE = { width: 844, height: 390 };
-
-function viewportFor(tags) {
-  if (tags.includes(PHONE_TAG)) return PHONE;
-  if (tags.includes(PHONE_ON_ITS_SIDE_TAG)) return PHONE_ON_ITS_SIDE;
-  return DESKTOP;
-}
-
-// What counts as painted. The canvas is the usual answer, but `Modal`
-// (src/design-system/atoms.tsx) returns `createPortal(…, document.body)` — a
-// dialog opened from inside a collapsed container would otherwise be hidden
-// along with it — so a drawer story renders FULLY while leaving
-// `#storybook-root` empty, and reading the canvas alone called four such
-// stories blank.
-//
-// The dialog ROLES and nothing wider: an overflow menu and a toast portal to
-// the body too, and either one would let a story that never drew its subject
-// pass here as rendered.
-const PAINTED = '#storybook-root > *, [role="dialog"], [role="alertdialog"]';
-// Enough of a node to recognise it by, in a manifest read without the browser.
-const DUMP_CHARS = 600;
-
-// What the deadline actually saw. A verdict that now spans two places has to
-// report both, or the next reader cannot tell an empty canvas from a dialog
-// that opened and never became visible.
-async function paintCensus(page) {
-  return await page.evaluate((limit) => {
-    const clip = (el) => el.outerHTML.slice(0, limit);
-    const root = document.querySelector("#storybook-root");
-    const dialogs = [
-      ...document.querySelectorAll('[role="dialog"], [role="alertdialog"]'),
-    ];
-    return [
-      `#storybook-root: ${root ? clip(root) : "absent"}`,
-      `dialogs (${dialogs.length}): ${dialogs.map(clip).join(" | ") || "none"}`,
-    ].join("\n");
-  }, DUMP_CHARS);
-}
-
-async function storyOutcome(page) {
-  return await page.evaluate(
-    (events) =>
-      Object.fromEntries(
-        events.map((event) => [
-          event,
-          globalThis.__STORYBOOK_ADDONS_CHANNEL__?.last(event) ?? null,
-        ]),
-      ),
-    FAILURE_EVENTS,
-  );
-}
-
-async function renderPhase(page) {
-  return await page.evaluate(
-    () => globalThis.__STORYBOOK_PREVIEW__?.currentRender?.phase ?? "unknown",
-  );
-}
-
 const wantedStoryFiles =
   scope === "all"
     ? census.files.filter(isStoryFile).map((abs) => relative(repoRoot, abs))
@@ -421,7 +301,7 @@ async function captureStory(page, port, story) {
 
 async function openPage(browser, lane) {
   lane.page = await browser.newPage({
-    viewport: DESKTOP,
+    viewport: viewportFor([]),
     deviceScaleFactor: 2,
   });
   lane.crashed = false;

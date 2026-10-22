@@ -8,12 +8,11 @@ import { Breadcrumb } from "./breadcrumb";
 /**
  * The trail that says where the reader is and how they got here.
  *
- * Its one caller in this product is the TOP BAR (app/topbar.tsx), not the page
- * head: the trail is chrome that says where the session is, and the page's own
- * name is a heading in the content column below it. The frames here render the
- * primitive on its own ground at `layout: "padded"`, because what they are about
- * is the rules rather than the strip — the strip itself is framed under
- * Shell/Top bar, where the trail can be seen shrinking against a real track edge.
+ * Its main caller is the TOP BAR (app/topbar.tsx), where it says where the
+ * session is; the booking page's head (features/booking/booking-invite.tsx) draws one
+ * too. The frames here render the primitive on its own ground, because they are
+ * about the rules rather than the strip. Shell/Top bar frames the strip, where
+ * the trail shrinks against a real track edge.
  *
  * What they catch, in order: a single-stop trail is a real state and not a
  * degenerate one (TopLevelPage), the two-stop list→record shape is the one the
@@ -66,8 +65,8 @@ export const ListToRecord: Story = {
  * the pressure IS the story: the trail has to be given less room than it wants
  * before there is anything to look at, and the canvas at any reviewer's window
  * width would not do that reliably. In the product the same bound arrives as a
- * grid track rather than as a wrapper (`minmax(0, 1fr)` on the bar's lead), which
- * is the version Shell/Top bar frames.
+ * grid track and a cap on the bar's lead rather than as a wrapper. That is the
+ * version Shell/Top bar frames.
  */
 export const LongRecordName: Story = {
   args: {

@@ -53,15 +53,21 @@ func (h Handlers) ListWebhookSubscriptions(w http.ResponseWriter, r *http.Reques
 
 // CreateWebhookSubscription registers a subscription and returns the
 // one-time signing secret; 503 when no deployment key is configured.
-func (h Handlers) CreateWebhookSubscription(w http.ResponseWriter, r *http.Request, _ crmcontracts.CreateWebhookSubscriptionParams) {
+func (h Handlers) CreateWebhookSubscription(w http.ResponseWriter, r *http.Request) {
 	var req crmcontracts.CreateWebhookSubscriptionRequest
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	sub, secret, err := h.store.CreateSubscription(r.Context(), CreateSubscriptionInput{
-		TargetURL:  req.TargetUrl,
-		EventTypes: req.EventTypes,
-	})
+	in := CreateSubscriptionInput{
+		TargetURL:       req.TargetUrl,
+		EventTypes:      req.EventTypes,
+		BodyTemplate:    req.BodyTemplate,
+		BodyContentType: contentTypeOf(req.BodyContentType),
+	}
+	if req.CustomHeaders != nil {
+		in.CustomHeaders = headerInputs(*req.CustomHeaders)
+	}
+	sub, secret, err := h.store.CreateSubscription(r.Context(), in)
 	if err != nil {
 		writeErr(w, r, err)
 		return
@@ -100,12 +106,41 @@ func (h Handlers) UpdateWebhookSubscription(w http.ResponseWriter, r *http.Reque
 		state := string(*req.State)
 		in.State = &state
 	}
+	if req.CustomHeaders != nil {
+		headers := headerInputs(*req.CustomHeaders)
+		in.CustomHeaders = &headers
+	}
+	_, templateSent := httperr.PresentField(r, fieldBodyTemplate)
+	_, contentTypeSent := httperr.PresentField(r, fieldBodyContentType)
+	if templateSent || contentTypeSent {
+		in.Body = &BodyFormatChange{
+			TemplateSet: templateSent, Template: req.BodyTemplate,
+			ContentTypeSet: contentTypeSent, ContentType: contentTypeOf(req.BodyContentType),
+		}
+	}
 	sub, err := h.store.UpdateSubscription(r.Context(), ids.UUID(id), in)
 	if err != nil {
 		writeErr(w, r, err)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, wireSubscription(sub))
+}
+
+// PreviewWebhookBody renders a body template against a sample event with
+// the delivery engine; nothing is sent or stored.
+func (h Handlers) PreviewWebhookBody(w http.ResponseWriter, r *http.Request) {
+	var req crmcontracts.WebhookBodyPreviewRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	body, contentType, err := h.store.PreviewBody(r.Context(), req.EventType, req.BodyTemplate, contentTypeOf(req.BodyContentType))
+	if err != nil {
+		writeErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.WebhookBodyPreview{
+		Body: string(body), ContentType: contentType, ByteLength: len(body),
+	})
 }
 
 // ArchiveWebhookSubscription archives a subscription, stopping all delivery.

@@ -55,7 +55,7 @@ func allowSharedPosture(t *testing.T, e *integration.SearchEnv) {
 		},
 	})
 	on := true
-	store := capturemod.NewSettings(composeSettingsStore(e))
+	store := capturemod.NewSettings(composeSettingsStore(e), compose.StoredConfig(e.Pool))
 	if _, err := store.Update(ctx, capturemod.SettingsPatch{SharedPostureAllowed: &on}); err != nil {
 		t.Fatalf("turning on the shared-posture opt-in: %v", err)
 	}

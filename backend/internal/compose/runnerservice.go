@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -47,6 +48,8 @@ type RunnerService struct {
 	identity  *identity.Service
 	retriever retrieval.Retriever
 	log       *slog.Logger
+	// features are the seams its tools get, as the API's do.
+	features registryFeatures
 	// specByName resolves a stored job's catalog entry. It defaults to
 	// ScheduledAgentSpecByName — the catalog IS code and this does not make it
 	// configuration. What that default adds is the declared allowlist: a
@@ -78,6 +81,22 @@ func WithSpecResolver(resolve func(string) (runner.AgentSpec, bool)) RunnerOptio
 	return func(s *RunnerService) { s.specByName = resolve }
 }
 
+// WithRunnerLists turns on list_id narrowing in the runner's tools, as the
+// API's are when lists are on.
+func WithRunnerLists(on bool) RunnerOption {
+	return func(s *RunnerService) { s.features.lists = on }
+}
+
+// WithRunnerBlobstore lets an offer a run changes reclaim the rendering it
+// retired, as an API call does. A nil store reclaims nothing.
+func WithRunnerBlobstore(store blobstore.Store) RunnerOption {
+	return func(s *RunnerService) {
+		if store != nil {
+			s.features.reclaim = store.Delete
+		}
+	}
+}
+
 // NewRunnerService assembles the runner over the SAME governed registry
 // every other agent surface dispatches through — the two-directions
 // invariant is a property of this constructor: there is no other
@@ -86,7 +105,6 @@ func NewRunnerService(pool *pgxpool.Pool, brain runner.Brain, draftBrain complet
 	svc := &RunnerService{
 		pool:       pool,
 		store:      runner.NewStore(InstallationDB(pool)),
-		runner:     runner.New(registryWithDraftBrain(pool, draftBrain, send), brain),
 		identity:   identity.NewService(pool),
 		specByName: ScheduledAgentSpecByName,
 		retriever:  retriever,
@@ -100,6 +118,7 @@ func NewRunnerService(pool *pgxpool.Pool, brain runner.Brain, draftBrain complet
 	for _, opt := range opts {
 		opt(svc)
 	}
+	svc.runner = runner.New(registryWithDraftBrain(pool, draftBrain, send, svc.features), brain)
 	return svc
 }
 

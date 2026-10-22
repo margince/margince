@@ -14,15 +14,10 @@ package agents
 // catalog and the live column catalog, so there is nothing about it this
 // package could usefully hold.
 //
-// WHAT THIS TOOL OWNS is the half the executor cannot: turning the refs it
-// answers into records, through the same seam every other read on this surface
-// uses. That is where the trust tier is stamped, where the result envelope's
-// freshness and evidence are collected, where the caller's object RBAC and row
-// scope are applied to the record itself, and where the read is COUNTED against
-// MCP-SESS-READS — so a query answering twenty-five rows spends twenty-five of
-// the caller's records, not one. A densely-joined answer is the cheapest bulk
-// read on a surface that charges per call (A139), and this is the densest read
-// the surface has.
+// This tool owns the half the executor cannot: turning the refs it answers into
+// records through the seam every read on this surface uses. The seam stamps the
+// trust tier, collects freshness and evidence, applies the caller's object RBAC
+// and row scope, and takes the answer's served count.
 
 import (
 	"bytes"
@@ -32,7 +27,6 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -134,6 +128,7 @@ func (t queryWorkspace) Spec() mcp.ToolSpec {
 		Description:   queryWorkspaceCopy.render(),
 		Instead:       queryWorkspaceCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		Unlisted:  true,
 		OpenAPIOp: "queryWorkspace",
 		// The plan document is NOT re-declared here. Its grammar is published
 		// at margince://schema/query, derived per caller from the field catalog
@@ -195,12 +190,10 @@ func (t queryWorkspace) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 
 // hydrate turns the executor's refs into records through the datasource seam.
 //
-// Every record on the way out goes through newWireRecord, which is the ONE
-// place a record becomes output on this surface: the overlay trust tier is
-// stamped there, the envelope's freshness and evidence are collected there, and
-// the record is counted against the caller's read bound there. A tool that
-// assembled rows itself would answer with an envelope claiming nothing had been
-// read, and would serve every one of those records for free.
+// Every record on the way out goes through newWireRecord, the one place a record
+// becomes output on this surface. It stamps the trust tier, collects freshness
+// and evidence, and counts the record as served. A tool that assembled rows
+// itself would answer with an envelope claiming nothing had been read.
 //
 // THE HOP IS A RECORD TOO. Its id and title come out of the executor's own
 // statement, so passing them straight through would put a record on the wire
@@ -352,28 +345,19 @@ func newServedRecords() *servedRecords {
 	}
 }
 
-// read fetches one record through the seam, through the cache and WITHOUT
-// stamping it. A verdict is remembered as a verdict, so a record two rows or two
-// candidates name is asked for once whether the answer was yes or no — the two
-// are indistinguishable as a missing map entry, which is why hopRead exists.
-//
-// The BOOL is the verdict, kept apart from the error: false is a definite answer
-// and the ref is dropped, while an error is the ABSENCE of one and is returned.
+// read is readServable through the cache. A no is cached like a yes, so a
+// record two rows name is asked for once. An error is not a verdict and is not
+// cached.
 func (s *servedRecords) read(ctx context.Context, p datasource.SystemOfRecordProvider, ref datasource.EntityRef) (datasource.Record, bool, error) {
 	if cached, ok := s.hops[ref]; ok {
 		return cached.record, cached.readable, nil
 	}
-	record, err := p.Read(ctx, ref)
-	switch {
-	case err == nil:
-	case errors.Is(err, apperrors.ErrNotFound), errors.Is(err, apperrors.ErrPermissionDenied):
-		s.hops[ref] = hopRead{readable: false}
-		return datasource.Record{}, false, nil
-	default:
+	record, readable, err := readServable(ctx, p, ref)
+	if err != nil {
 		return datasource.Record{}, false, err
 	}
-	s.hops[ref] = hopRead{record: record, readable: true}
-	return record, true, nil
+	s.hops[ref] = hopRead{record: record, readable: readable}
+	return record, readable, nil
 }
 
 // stamp puts a record through newWireRecord the FIRST time it is served, and

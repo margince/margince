@@ -11,7 +11,7 @@ import { LocaleProvider } from "../i18n";
 import { parseHash } from "../lib/router";
 import { forgetSeat, readStored, STORAGE_KEYS } from "../lib/storage";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
-import { ignoreSearch, newClient, renderWith } from "./testing/shellharness";
+import { ignoreSearch, newClient, renderWith } from "../testing/shellharness";
 import { TopBar } from "./topbar";
 
 // The top bar's "Finish setup" chip: what it counts, what opening it shows, and

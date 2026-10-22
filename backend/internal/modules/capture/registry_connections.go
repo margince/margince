@@ -193,6 +193,9 @@ type ConnectionView struct {
 	// default, and one that did keeps its answer whatever the default becomes.
 	SignatureEnrichEnabled *bool
 
+	// HistoryBaseline is nil when the owner chose none.
+	HistoryBaseline *HistoryBaseline
+
 	CanBackfill bool // supportsBackfill, asked of this provider's connector
 }
 
@@ -209,6 +212,7 @@ func (r *Registry) Connections(ctx context.Context) ([]ConnectionView, error) {
 		rows, err := tx.Query(ctx, `
 			SELECT c.id, c.provider, c.status, c.sync_cursor, c.watch_expires_at, c.provider_scopes,
 			       c.account_label, c.signature_enrich_enabled, c.mail_posture,
+			       c.history_baseline_date, c.history_baseline_tz, c.history_baseline_set_by, c.history_baseline_set_at,
 			       t.id, t.name, t.archived_at IS NOT NULL,
 			       s.last_synced_at, s.last_error_class, s.next_sync_at, s.failing_since
 			FROM capture_connection c
@@ -230,13 +234,16 @@ func (r *Registry) Connections(ctx context.Context) ([]ConnectionView, error) {
 			var tagID *ids.UUID
 			var tagName *string
 			var tagArchived *bool
+			var baseline historyBaselineColumns
 			if err := rows.Scan(&v.ID, &v.Provider, &v.Status, &v.Cursor, &v.WatchExpiresAt, &v.ProviderScopes,
 				&v.AccountLabel, &v.SignatureEnrichEnabled, &v.MailPosture,
+				&baseline.date, &baseline.timezone, &baseline.setBy, &baseline.setAt,
 				&tagID, &tagName, &tagArchived,
 				&v.LastSyncedAt, &v.LastErrorClass, &v.NextSyncDueAt, &v.FailingSince); err != nil {
 				return err
 			}
 			v.ContextTag = contextTagOf(tagID, tagName, tagArchived)
+			v.HistoryBaseline = baseline.baseline()
 			out = append(out, v)
 		}
 		if err := rows.Err(); err != nil {

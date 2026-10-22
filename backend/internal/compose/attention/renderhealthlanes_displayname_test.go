@@ -11,6 +11,7 @@ package attention
 // reading "site_triage failed 8 times" learns nothing they can act on.
 
 import (
+	"strconv"
 	"testing"
 	"time"
 
@@ -61,5 +62,30 @@ func TestAnUnknownTaskGoesUnlabelledRatherThanShowingItsKey(t *testing.T) {
 	}
 	if item.CauseRef == nil {
 		t.Error("an unknown task lost its identity too, so its failures stop grouping")
+	}
+	if item.AiTask != nil {
+		t.Error("an unknown task was presented as a known catalog task")
+	}
+}
+
+func TestAITaskIdentitySurvivesQueueGrouping(t *testing.T) {
+	t.Parallel()
+	for _, count := range []int{1, 12} {
+		t.Run(strconv.Itoa(count), func(t *testing.T) {
+			t.Parallel()
+			rows := make([]ranked, 0, count)
+			for range count {
+				item := aiWorkItem(troubledRun(string(ai.TaskSiteTriage)))
+				rows = append(rows, classifySystem(item, *item.OccurredAt))
+			}
+			folded := foldRoutineDecisions(rows)
+			if len(folded) != 1 {
+				t.Fatalf("one task produced %d queue rows", len(folded))
+			}
+			task := folded[0].item.AiTask
+			if task == nil || string(*task) != string(ai.TaskSiteTriage) {
+				t.Fatal("the queue lost the typed task identity needed for a localized name")
+			}
+		})
 	}
 }

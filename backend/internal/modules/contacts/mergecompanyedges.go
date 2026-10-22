@@ -10,7 +10,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -28,53 +27,19 @@ func relinkCompanyEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.C
 	if _, err := tx.Exec(ctx, storekit.SQLf(`UPDATE provider_employment_resolution SET company_id=$%d WHERE company_id=$%d`, len(args), sourcePos), args...); err != nil {
 		return err
 	}
-	now := time.Now().UTC()
-	// An edge between the two merging companies would become a self-edge.
-	if _, err := tx.Exec(ctx, `
-		UPDATE relationship SET archived_at = $3
-		WHERE archived_at IS NULL
-		  AND ((company_id = $1 AND counterparty_company_id = $2)
-		    OR (company_id = $2 AND counterparty_company_id = $1))`,
-		sourceID, targetID, now); err != nil {
+	mergeArgs := pgx.NamedArgs{mergeSourceKey: sourceID, mergeTargetKey: targetID, archiveStateKey: time.Now().UTC()}
+	if _, err := tx.Exec(ctx, `UPDATE relationship a SET archived_at=@archived WHERE `+mergeCompanyEdgeSource+` AND `+mergeCompanyEdgeSelf, mergeArgs); err != nil {
 		return err
 	}
 	if err := foldFirstObservations(ctx, tx, companyFK, sourceID.UUID, targetID.UUID); err != nil {
 		return err
 	}
-	// Duplicates of edges the survivor already has, on either column.
-	if _, err := tx.Exec(ctx, `
-		UPDATE relationship a SET archived_at = $3
-		WHERE a.archived_at IS NULL
-		  AND (a.company_id = $1 OR a.counterparty_company_id = $1)
-		  AND EXISTS (
-		    SELECT 1 FROM relationship b
-		    WHERE b.kind = a.kind AND b.archived_at IS NULL AND b.id <> a.id
-		      AND b.contact_id IS NOT DISTINCT FROM a.contact_id
-		      AND b.deal_id IS NOT DISTINCT FROM a.deal_id
-		      -- The project too, or a project_company edge on project A is
-		      -- read as a duplicate of one on project B merely because both
-		      -- name the survivor — and the company silently leaves project A.
-		      AND b.project_id IS NOT DISTINCT FROM a.project_id
-		      AND b.company_id IS NOT DISTINCT FROM
-		            (CASE WHEN a.company_id = $1 THEN $2::uuid ELSE a.company_id END)
-		      AND b.counterparty_company_id IS NOT DISTINCT FROM
-		            (CASE WHEN a.counterparty_company_id = $1 THEN $2::uuid ELSE a.counterparty_company_id END)
-		      AND `+roleKeyedDuplicateSQL+`)`,
-		sourceID, targetID, now); err != nil {
+	if _, err := tx.Exec(ctx, `UPDATE relationship a SET archived_at=@archived WHERE `+mergeCompanyEdgeSource+` AND `+mergeCompanyEdgeDuplicate, mergeArgs); err != nil {
 		return err
 	}
-	// Relinked employment edges keep ≤1 current-primary per contact.
-	if _, err := tx.Exec(ctx, `
-		UPDATE relationship a SET company_id = $2,
-		  is_current_primary = a.is_current_primary AND NOT EXISTS (
-		    SELECT 1 FROM relationship b
-		    WHERE b.contact_id = a.contact_id AND b.id <> a.id
-		      AND `+employment.CurrentPrimarySlotSQL("b")+`)
-		WHERE a.company_id = $1 AND a.archived_at IS NULL`, sourceID, targetID); err != nil {
+	if _, err := tx.Exec(ctx, `UPDATE relationship a SET company_id=@target,is_current_primary=`+mergeCompanyEdgePrimary+` WHERE `+mergeCompanyForwardSource, mergeArgs); err != nil {
 		return err
 	}
-	_, err := tx.Exec(ctx,
-		`UPDATE relationship SET counterparty_company_id = $2
-		 WHERE counterparty_company_id = $1 AND archived_at IS NULL`, sourceID, targetID)
+	_, err := tx.Exec(ctx, `UPDATE relationship SET counterparty_company_id=@target WHERE counterparty_company_id=@source AND archived_at IS NULL`, mergeArgs)
 	return err
 }

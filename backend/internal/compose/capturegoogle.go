@@ -236,6 +236,9 @@ func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 				s.addRedirectURI(capture.AppProviderGoogle, connector.purpose, uri)
 			}
 		}
+		// A unit app's callback rides the same two bases, and this option is the
+		// one every api composes whatever vendor it serves.
+		s.unitCallbackAPIBase, s.unitCallbackPublicBase = c.APIBaseURL, c.PublicBaseURL
 		// Without a vault the connect flow can't seal the refresh token, so
 		// mounting the endpoints would only fail at the callback — leave the
 		// surface its declared 501 instead. (WithKeyvault must precede this.)

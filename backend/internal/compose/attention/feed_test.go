@@ -34,7 +34,7 @@ func (s stubApprovals) ListWire(context.Context, ApprovalQuery) ([]crmcontracts.
 	return s.rows, s.err
 }
 
-func (s stubApprovals) CountPending(context.Context) (int, error) {
+func (s stubApprovals) CountPending(context.Context, ApprovalQuery) (int, error) {
 	if s.pending > 0 {
 		return s.pending, s.err
 	}
@@ -782,4 +782,16 @@ func TestATruncatedUpcomingListReportsItselfTruncated(t *testing.T) {
 	if boundedSources(small)["task"] {
 		t.Error("a lane well under both caps reported itself truncated")
 	}
+}
+
+func (s stubApprovals) PendingInScope(_ context.Context, _ ApprovalQuery, named []ids.ApprovalID) (map[ids.ApprovalID]bool, error) {
+	visible := make(map[ids.ApprovalID]bool)
+	for _, id := range named {
+		for _, row := range s.rows {
+			if ids.UUID(row.Id) == id.UUID {
+				visible[id] = true
+			}
+		}
+	}
+	return visible, s.err
 }

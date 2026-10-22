@@ -57,7 +57,7 @@ func TestTheTeamScopeReportsARosterThatCameBackAtItsCap(t *testing.T) {
 
 	svc := &Service{now: func() time.Time { return boardInstant }}
 	svc.teammates = cutRoster{{UserID: theColleague}}
-	rows := []ranked{{item: crmcontracts.WorklistItem{Id: "teammate"}, owner: theColleague}}
+	rows := []ranked{{item: crmcontracts.WorklistItem{Id: "teammate"}, ownerRef: ownedBy(theColleague)}}
 
 	kept, note := svc.narrowToScope(boardReaderAt(principal.RowScopeTeam), rows, scopeTeam, ids.UUID{})
 	if len(kept) != 1 {
@@ -82,7 +82,7 @@ type waitingSaying struct {
 	cut bool
 }
 
-func (w waitingSaying) Unanswered(context.Context, time.Time) ([]WaitingCustomer, bool, error) {
+func (w waitingSaying) Unanswered(context.Context, time.Time, *ids.UUID) ([]WaitingCustomer, bool, error) {
 	return w.rows, w.cut, nil
 }
 
@@ -131,7 +131,6 @@ func boardServiceOver(teammates Teammates) *Service {
 		waiting:     waitingSaying{},
 		overdueLoad: overdueSaying{},
 		atRisk:      stubAtRisk{},
-		promiseLoad: &promisesSaying{per: map[ids.UUID]int{}},
 		now:         func() time.Time { return boardInstant },
 	}
 }
@@ -405,9 +404,9 @@ func TestTheTeamScopeKeepsTheTeamsRowsAndNobodyElses(t *testing.T) {
 		now: func() time.Time { return boardInstant },
 	}
 	rows := []ranked{
-		{item: crmcontracts.WorklistItem{Id: "mine"}, owner: theReader},
-		{item: crmcontracts.WorklistItem{Id: "teammate"}, owner: theColleague},
-		{item: crmcontracts.WorklistItem{Id: "outsider"}, owner: outsider},
+		{item: crmcontracts.WorklistItem{Id: "mine"}, ownerRef: ownedBy(theReader)},
+		{item: crmcontracts.WorklistItem{Id: "teammate"}, ownerRef: ownedBy(theColleague)},
+		{item: crmcontracts.WorklistItem{Id: "outsider"}, ownerRef: ownedBy(outsider)},
 		{item: crmcontracts.WorklistItem{Id: "nobody"}},
 	}
 
@@ -441,7 +440,7 @@ func TestTheTeamScopeFailsClosedWithoutTheMembershipReader(t *testing.T) {
 	t.Parallel()
 
 	svc := &Service{now: func() time.Time { return boardInstant }}
-	rows := []ranked{{item: crmcontracts.WorklistItem{Id: "somebody's"}, owner: theColleague}}
+	rows := []ranked{{item: crmcontracts.WorklistItem{Id: "somebody's"}, ownerRef: ownedBy(theColleague)}}
 	got, note := svc.narrowToScope(boardReaderAt(principal.RowScopeTeam), rows, scopeTeam, ids.UUID{})
 	if len(got) != 0 {
 		t.Fatalf("the team scope answered %d rows with no membership reader bound", len(got))
@@ -454,88 +453,13 @@ func TestTheTeamScopeFailsClosedWithoutTheMembershipReader(t *testing.T) {
 	}
 }
 
-// promisesSaying is the counting reader over a fixed tally, recording which
-// owners it was asked about — the board passes its own roster, so a reader that
-// silently answered for somebody not on it would be counting a stranger's load
-// into a manager's team.
-type promisesSaying struct {
-	per   map[ids.UUID]int
-	asked []ids.UUID
-}
-
-func (p *promisesSaying) DuePerOwner(
-	_ context.Context, owners []ids.UUID, _ time.Time,
-) (map[ids.UUID]int, error) {
-	p.asked = append(p.asked, owners...)
-	return p.per, nil
-}
-
-func TestTheBoardCountsPromisesDuePerOwner(t *testing.T) {
-	t.Parallel()
-
-	svc := boardService(
-		TeamMember{UserID: theReader, DisplayName: "Aa Reader"},
-		TeamMember{UserID: theColleague, DisplayName: "Bb Colleague"},
-	)
-	svc.promiseLoad = &promisesSaying{per: map[ids.UUID]int{theColleague: 3}}
-
-	board, err := svc.TeamBoard(boardReaderAt(principal.RowScopeTeam))
-	if err != nil {
-		t.Fatalf("the board refused a team-scoped reader: %v", err)
-	}
-	if got := board.Members[1].Counts.PromisesDue; got != 3 {
-		t.Fatalf("the colleague's promises read %d, wanted 3", got)
-	}
-	// The reader owes none, and zero is the answer about them rather than a
-	// gap: the source was asked and said so.
-	if got := board.Members[0].Counts.PromisesDue; got != 0 {
-		t.Fatalf("a contact the source did not name read %d, wanted 0", got)
-	}
-}
-
-// The board asks about the contacts it is drawing, and nobody else. A reader free
-// to answer for anyone would fold a stranger's promises into a team's row.
-func TestTheBoardAsksAboutItsOwnRosterAndNoOneElse(t *testing.T) {
-	t.Parallel()
-
-	svc := boardService(
-		TeamMember{UserID: theReader, DisplayName: "Aa Reader"},
-		TeamMember{UserID: theColleague, DisplayName: "Bb Colleague"},
-	)
-	asked := &promisesSaying{per: map[ids.UUID]int{}}
-	svc.promiseLoad = asked
-
-	if _, err := svc.TeamBoard(boardReaderAt(principal.RowScopeTeam)); err != nil {
-		t.Fatalf("the board refused a team-scoped reader: %v", err)
-	}
-	if len(asked.asked) != 2 {
-		t.Fatalf("the board asked about %d owners over a team of two", len(asked.asked))
-	}
-	for _, owner := range asked.asked {
-		if owner != theReader && owner != theColleague {
-			t.Fatalf("the board asked about %v, who is not on its roster", owner)
-		}
-	}
-}
-
-// An UNBOUND source refuses the board rather than drawing a column of zeros.
-//
-// Every count on this board is `required` in the contract, so there is no way to
-// draw absence: an unbound reader's column arrives as zero, and zero is the
-// answer "they are clear". A source dropped from the composition would tell a
-// lead their team is up to date — the one thing this surface exists to stop
-// getting wrong, and the same reasoning the failing-source cases below follow.
-//
-// Derived from the four sources rather than written out once per column, so a
-// fifth added to the board without its guard fails here.
 func TestAnUnboundSourceRefusesRatherThanDrawingAColumnOfZeros(t *testing.T) {
 	t.Parallel()
 
 	unbind := map[string]func(*Service){
-		"waiting":      func(s *Service) { s.waiting = nil },
-		"overdue":      func(s *Service) { s.overdueLoad = nil },
-		"at_risk":      func(s *Service) { s.atRisk = nil },
-		"promises_due": func(s *Service) { s.promiseLoad = nil },
+		"waiting": func(s *Service) { s.waiting = nil },
+		"overdue": func(s *Service) { s.overdueLoad = nil },
+		"at_risk": func(s *Service) { s.atRisk = nil },
 	}
 	full := boardService(TeamMember{UserID: theReader, DisplayName: "Aa Reader"})
 	if got := full.UnboundBoardSources(); len(got) > 0 {
@@ -559,28 +483,6 @@ func TestAnUnboundSourceRefusesRatherThanDrawingAColumnOfZeros(t *testing.T) {
 			}
 		})
 	}
-}
-
-// A promise source that CANNOT answer fails the board, exactly as the other
-// three do. A column of zeros over a source that errored would tell a lead
-// their team is clear.
-func TestAPromiseSourceThatCouldNotAnswerFailsRatherThanReadingAsZero(t *testing.T) {
-	t.Parallel()
-
-	svc := boardService(TeamMember{UserID: theReader, DisplayName: "Aa Reader"})
-	svc.promiseLoad = promisesFailing{}
-
-	if _, err := svc.TeamBoard(boardReaderAt(principal.RowScopeTeam)); err == nil {
-		t.Fatal("a board built over a source that could not answer was served as though it had")
-	}
-}
-
-type promisesFailing struct{}
-
-func (promisesFailing) DuePerOwner(
-	context.Context, []ids.UUID, time.Time,
-) (map[ids.UUID]int, error) {
-	return nil, errors.New("counting promises due")
 }
 
 // THE ADMISSION REACHES THE PAGE, not just the narrowing that made it.
@@ -658,4 +560,12 @@ func TestTheRosterRefusalNamesNoCategory(t *testing.T) {
 		return
 	}
 	t.Fatal("the roster refusal is missing entirely")
+}
+
+func (o overdueSaying) CommitmentsDuePerAssignee(context.Context, time.Time) (map[ids.UUID]int, error) {
+	return map[ids.UUID]int{}, nil
+}
+
+func (o overdueFailing) CommitmentsDuePerAssignee(context.Context, time.Time) (map[ids.UUID]int, error) {
+	return nil, errors.New("count unavailable")
 }

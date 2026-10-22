@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -166,6 +167,53 @@ func revokeGrantsOfUserTx(ctx context.Context, tx pgx.Tx, userID ids.UserID, rea
 	return nil
 }
 
+// adminDeletedClientReason is what the audit rows say when an admin deleted the
+// client a connection ran through.
+const adminDeletedClientReason = "the client was deleted by an admin"
+
+// revokeClientTx deletes a client and ends every connection under it. It locks
+// the oauth_client row first, the order the file header sets. A consent racing
+// it then either commits before the lock or finds the client gone.
+//
+// The audit row is written here and not by the caller: this function also
+// reaches revokeGrantTx, whose passports emit passport.revoked.
+func revokeClientTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	var clientID, name, createdVia string
+	var uris []string
+	err := tx.QueryRow(ctx, `
+		SELECT client_id, client_name, redirect_uris, created_via FROM oauth_client
+		 WHERE id = $1 AND deleted_at IS NULL FOR UPDATE`, id).Scan(&clientID, &name, &uris, &createdVia)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return apperrors.ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	if _, err := tx.Exec(ctx, `UPDATE oauth_client SET deleted_at = now() WHERE id = $1`, id); err != nil {
+		return err
+	}
+	if _, err := storekit.Audit(ctx, tx, "delete", agentClientAuditEntity, id, map[string]any{
+		"client_name": name, agentClientFieldURIs: uris, "registered_by": createdVia,
+	}, nil); err != nil {
+		return err
+	}
+	rows, err := tx.Query(ctx,
+		`SELECT id FROM oauth_grant WHERE client_id = $1 AND revoked_at IS NULL ORDER BY id`, clientID)
+	if err != nil {
+		return err
+	}
+	grantIDs, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return err
+	}
+	for _, grantID := range grantIDs {
+		if err := revokeGrantTx(ctx, tx, grantID, adminDeletedClientReason); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // revokeGrantPassportsTx kills every live passport under a grant and puts
 // each death on the bus. Rotation uses it to retire the predecessor and the
 // cascade uses it to end the connection, so "the credentials under this
@@ -222,6 +270,9 @@ func revokingUser(ctx context.Context) (ids.UserID, error) {
 type revokeTokenInput struct {
 	Token         string
 	TokenTypeHint string
+	// AuthenticatedClient is the confidential client that proved itself with
+	// its secret on this call, or "" when none did.
+	AuthenticatedClient string
 }
 
 // clientRevokeReason is what the audit row says when the CLIENT ended the
@@ -251,10 +302,23 @@ func (s *Service) revokeToken(ctx context.Context, in revokeTokenInput) error {
 		if grantID == ids.Nil {
 			return nil
 		}
-		var userID ids.UserID
-		if err := tx.QueryRow(ctx, `SELECT user_id FROM oauth_grant WHERE id = $1`, grantID).
-			Scan(&userID); err != nil {
+		var (
+			userID       ids.UserID
+			clientID     string
+			confidential bool
+		)
+		if err := tx.QueryRow(ctx, `
+			SELECT g.user_id, g.client_id, c.client_secret_hash IS NOT NULL
+			FROM oauth_grant g JOIN oauth_client c ON c.client_id = g.client_id
+			WHERE g.id = $1`, grantID).
+			Scan(&userID, &clientID, &confidential); err != nil {
 			return err
+		}
+		// A confidential client's token is handed back only by that client,
+		// signed in with its secret. Anyone else gets the silent success an
+		// unknown token gets (RFC 7009).
+		if confidential && in.AuthenticatedClient != clientID {
+			return nil
 		}
 		// The human attributed is the one who consented, not whoever
 		// presented the token — there is no session on this call, exactly as

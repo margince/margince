@@ -1,23 +1,20 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery } from "@tanstack/react-query";
-import { api } from "../api/client";
 import { Callout } from "../design-system/callout";
+import {
+  useEmbedReindexAvailable,
+  useEmbedReindexStatus,
+} from "../features/settings/embedreindex";
 import { useT } from "../i18n";
 import { useCan } from "../lib/capability";
-import { unwrap } from "../lib/problem";
-import {
-  embedReindexStatusQueryKey,
-  useEmbedReindexAvailable,
-} from "../screens/embedreindex";
 
 // The reindex-needed advisory (v6 B2, rekeyed per ADR-0069 §3a): shown ONLY
 // on an identity mismatch (configured_identity ≠ populated_identity) — the
 // operator changed the embed binding and has not confirmed the rebuild, the
 // one state a human must act on. Identity-matched pending entities (a lost
 // embed event) are NOT this banner's business: the worker drift sweep heals
-// them automatically, and the settings card (screens/embedreindex.tsx) shows
+// them automatically. The settings card (features/settings/embedreindex.tsx) shows
 // the pending detail meanwhile. Keying off reindex_needed here would show an
 // admin a banner about drift the system is already fixing. The status read
 // this banner needs is itself RBAC-gated (embedding_reindex:read, granted to
@@ -31,20 +28,9 @@ export function EmbedReindexBanner() {
   const canRead = useCan("embedding_reindex", "read");
   const bound = useEmbedReindexAvailable();
   const enabled = canRead && bound;
-  const query = useQuery({
-    queryKey: embedReindexStatusQueryKey,
-    enabled,
-    staleTime: 5 * 60_000,
-    queryFn: async () => {
-      const data = unwrap(await api.GET("/embeddings/reindex/status"));
-      if (!data) {
-        throw new Error("malformed reindex status response");
-      }
-      return data;
-    },
-  });
-  // Advisory only: a failed status probe must not block the app shell — the
-  // settings card (screens/embedreindex.tsx) surfaces the same read's error
+  const query = useEmbedReindexStatus(enabled, 5 * 60_000);
+  // Advisory only: a failed status probe must not block the app shell. The
+  // settings card (features/settings/embedreindex.tsx) surfaces the same read's error
   // state to the accountable audience.
   // The mismatch ALONE keys the banner (SEARCH-AC-13) — deliberately not
   // status-qualified: suppressing during status="reembedding" would also

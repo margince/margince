@@ -20,7 +20,9 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/kernel/idlebase"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
@@ -88,9 +90,9 @@ func RegisterSlippingTools(r *Registry, list SlippingLister, draft FollowUpDraft
 	if list == nil {
 		return
 	}
-	r.Register(whatsSlippingThisWeek{list: list, stalledDays: stalledDays})
+	r.Register(whatsSlippingThisWeek{list: list, stalledDays: stalledDays, language: r.BaseLanguage()})
 	if draft != nil {
-		r.Register(draftFollowUpsFor{list: list, draft: draft, stalledDays: stalledDays})
+		r.Register(draftFollowUpsFor{list: list, draft: draft, stalledDays: stalledDays, language: r.BaseLanguage()})
 	}
 }
 
@@ -103,6 +105,7 @@ const maxQuietDays = 365
 type whatsSlippingThisWeek struct {
 	list        SlippingLister
 	stalledDays int
+	language    baselanguage.Resolver
 }
 
 func (t whatsSlippingThisWeek) Spec() mcp.ToolSpec {
@@ -111,6 +114,7 @@ func (t whatsSlippingThisWeek) Spec() mcp.ToolSpec {
 		Description:   whatsSlippingCopy.render(),
 		Instead:       whatsSlippingCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		Unlisted:  true,
 		OpenAPIOp: "listSlippingDeals",
 		InputSchema: schema(fmt.Sprintf(`{"type":"object","properties":{
 			"quiet_days":{"type":"integer","minimum":1,"maximum":%d,"default":%d,"description":"Days without recorded activity after which a deal counts as gone quiet; omit it for the product-wide stalled threshold"},
@@ -138,7 +142,7 @@ func (t whatsSlippingThisWeek) Handle(ctx context.Context, in json.RawMessage) (
 	if err != nil {
 		return nil, err
 	}
-	ranked := rankSlipping(candidates)
+	ranked := rankSlipping(langcopy.For(string(t.language.Resolve(ctx))), candidates)
 	if args.Limit > 0 && len(ranked) > args.Limit {
 		ranked = ranked[:args.Limit]
 	}
@@ -168,6 +172,7 @@ type draftFollowUpsFor struct {
 	list        SlippingLister
 	draft       FollowUpDrafter
 	stalledDays int
+	language    baselanguage.Resolver
 }
 
 func (t draftFollowUpsFor) Spec() mcp.ToolSpec {
@@ -211,7 +216,7 @@ func (t draftFollowUpsFor) Handle(ctx context.Context, in json.RawMessage) (json
 	}
 	// Draft only over the evidenced set: a deal that would not appear in
 	// whats_slipping_this_week gets no follow-up either.
-	ranked := rankSlipping(candidates)
+	ranked := rankSlipping(langcopy.For(string(t.language.Resolve(ctx))), candidates)
 	if ceiling := followUpCap(args.Limit); len(ranked) > ceiling {
 		ranked = ranked[:ceiling]
 	}
@@ -268,7 +273,7 @@ func (it slippingItem) wire(rank int) SlippingDealItem {
 // (last_activity_at, else created_at), an overdue claim on the close
 // date; a candidate whose flags survive neither is dropped. Order: idle
 // longest first, then amount descending, then id — stable and clock-free.
-func rankSlipping(candidates []SlippingDeal) []slippingItem {
+func rankSlipping(said langcopy.Spoken, candidates []SlippingDeal) []slippingItem {
 	items := make([]slippingItem, 0, len(candidates))
 	for _, d := range candidates {
 		it := slippingItem{deal: d, idleSince: idleSince(d)}
@@ -279,13 +284,13 @@ func rankSlipping(candidates []SlippingDeal) []slippingItem {
 			}
 			it.evidence = append(it.evidence, SlippingEvidence{
 				Source:  source,
-				Snippet: "no recorded activity since " + it.idleSince.UTC().Format("2006-01-02"),
+				Snippet: fmt.Sprintf(said.Say(slippingWords.Idle), it.idleSince.UTC().Format("2006-01-02")),
 			})
 		}
 		if d.CloseOverdue && d.ExpectedCloseDate != nil {
 			it.evidence = append(it.evidence, SlippingEvidence{
 				Source:  "deal.expected_close_date",
-				Snippet: "expected close " + d.ExpectedCloseDate.UTC().Format("2006-01-02") + " is past due",
+				Snippet: fmt.Sprintf(said.Say(slippingWords.Overdue), d.ExpectedCloseDate.UTC().Format("2006-01-02")),
 			})
 		}
 		// The one claim grounded in an ABSENCE, so the source names the read
@@ -296,7 +301,7 @@ func rankSlipping(candidates []SlippingDeal) []slippingItem {
 		if d.NoOpenNextStep {
 			it.evidence = append(it.evidence, SlippingEvidence{
 				Source:  "activity.task",
-				Snippet: "no open next step on this deal",
+				Snippet: said.Say(slippingWords.NoNextStep),
 			})
 		}
 		if len(it.evidence) == 0 {

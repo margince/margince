@@ -1,0 +1,535 @@
+/** @vitest-environment happy-dom */
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  cleanup,
+  render as rtlRender,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { writeMessage } from "../../design-system/richtext-testing";
+import { pickOption } from "../../design-system/select-testing";
+import { LocaleProvider } from "../../i18n";
+import {
+  allowedPreview,
+  isPreviewDoor,
+  previewedAddresses,
+} from "../../testing/sendpermission.testkit";
+import { ComposeModal } from "./compose";
+
+// What a sent message files under.
+//
+// The grounding controls and the attribution are one statement: a rep who picks
+// "Related to → Acme Renewal" has said what the message is about, and a send
+// that files only under the page's own record throws that away. These tests
+// assert the request body, because the links array IS the contract.
+
+type Sent = { key: string; body: unknown };
+
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+const PURPOSES = {
+  data: [
+    {
+      id: "p1",
+      key: "transactional",
+      label: "Deal messages",
+      requires_double_opt_in: false,
+      created_at: "2026-01-01T00:00:00Z",
+    },
+  ],
+};
+
+// The account view the grounding selects are populated from: two contacts,
+// two open deals and two live projects, so every pick is a real choice rather
+// than the only option — and the sole-project default stays out of the way.
+const COMPANY_VIEW = {
+  company: { id: "company-1", name: "Acme" },
+  contacts: {
+    data: [
+      { contact_id: "per-1", full_name: "Dieter Klein" },
+      { contact_id: "per-2", full_name: "Sara Vogel" },
+    ],
+  },
+  deals: {
+    data: [
+      { deal_id: "deal-1", name: "Acme Renewal" },
+      { deal_id: "deal-2", name: "Acme Expansion" },
+    ],
+  },
+  projects: [
+    {
+      project_id: "proj-1",
+      name: "ERP rollout",
+      key: "ERP-27",
+      phase: "delivering",
+    },
+    {
+      project_id: "proj-2",
+      name: "Datacentre migration",
+      key: "DC-4",
+      phase: "pursuing",
+    },
+  ],
+};
+
+const SENT_ACTIVITY = {
+  id: "act-9",
+  kind: "email",
+  subject: "Hello",
+  occurred_at: "2026-07-01T00:00:00Z",
+  is_done: false,
+  source: "manual",
+  captured_by: "human:u1",
+  created_at: "2026-07-01T00:00:00Z",
+  updated_at: "2026-07-01T00:00:00Z",
+};
+
+function stubRoutes(
+  overrides: Record<string, () => Response | Promise<Response>> = {},
+) {
+  const sent: Sent[] = [];
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const request = input instanceof Request ? input : null;
+      const url = new URL(
+        request ? request.url : String(input),
+        "https://test.local",
+      );
+      const method = request?.method ?? init?.method ?? "GET";
+      const key = `${method} ${url.pathname.replace(/^\/v1/, "")}`;
+      let body: unknown = null;
+      if (method !== "GET") {
+        try {
+          body = request
+            ? await request.clone().json()
+            : JSON.parse(String(init?.body));
+        } catch {
+          body = null;
+        }
+      }
+      sent.push({ key, body });
+      const override = overrides[key];
+      if (override) return override();
+      if (key === "GET /consent-purposes") return jsonResponse(PURPOSES);
+      if (key === "GET /voice-profiles") return jsonResponse({ data: [] });
+      if (key === "GET /companies/company-1/360")
+        return jsonResponse(COMPANY_VIEW);
+      if (isPreviewDoor(url.pathname)) {
+        return jsonResponse(allowedPreview(previewedAddresses(body)));
+      }
+      return jsonResponse({});
+    }),
+  );
+  return sent;
+}
+
+function render(ui: ReactNode) {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return rtlRender(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">{ui}</LocaleProvider>
+    </QueryClientProvider>,
+  );
+}
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
+
+// The account-started composer carries three dropdowns (recipient, deal, why),
+// so each pick names the one it means rather than taking the only combobox on
+// screen.
+async function pickBy(labelText: string, option: string) {
+  const select = screen.getByLabelText(labelText);
+  await pickOption(userEvent.setup(), select, option);
+}
+
+async function fillBody() {
+  await userEvent.type(screen.getByLabelText("To"), "dieter@acme.test");
+  await userEvent.tab();
+  await userEvent.type(screen.getByLabelText("Subject"), "Hello");
+  writeMessage("Body", "Body content");
+}
+
+function linksOf(sent: Sent[]) {
+  const req = sent.find((r) => r.key === "POST /emails");
+  return (req?.body as { links?: unknown[] } | undefined)?.links;
+}
+
+describe("what a sent message files under", () => {
+  it("sends the deal the rep grounded the draft in, not only the page", async () => {
+    const sent = stubRoutes({
+      "POST /emails": () => jsonResponse(SENT_ACTIVITY, 202),
+    });
+    render(
+      <ComposeModal
+        entityType="company"
+        entityId="company-1"
+        contactId="per-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await screen.findByLabelText("Related to");
+    await pickBy("Related to", "Acme Renewal");
+    await fillBody();
+    await pickBy("Reason for contact", "Active deal");
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => expect(linksOf(sent)).toBeDefined());
+    // The deal is the assertion that fails without the fix: before it, the
+    // send carried the company alone and the deal's timeline never saw
+    // the message the rep wrote about it.
+    expect(linksOf(sent)).toEqual([
+      { entity_type: "company", entity_id: "company-1" },
+      { entity_type: "contact", entity_id: "per-1" },
+      { entity_type: "deal", entity_id: "deal-1" },
+    ]);
+  });
+
+  it("files under the project the rep chose, beside the deal and the recipient", async () => {
+    const sent = stubRoutes({
+      "POST /emails": () => jsonResponse(SENT_ACTIVITY, 202),
+    });
+    render(
+      <ComposeModal
+        entityType="company"
+        entityId="company-1"
+        contactId="per-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await screen.findByLabelText("Project");
+    await pickBy("Related to", "Acme Renewal");
+    await pickBy("Project", "ERP-27 · ERP rollout");
+    // The choice is visible, and so is what it does to the draft.
+    expect(screen.getByText("Scoped to ERP-27")).toBeTruthy();
+    await fillBody();
+    await pickBy("Reason for contact", "Active deal");
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => expect(linksOf(sent)).toBeDefined());
+    // One choice, two effects: the same project id that scoped the draft
+    // files the sent message, so the project's timeline sees it.
+    expect(linksOf(sent)).toEqual([
+      { entity_type: "company", entity_id: "company-1" },
+      { entity_type: "contact", entity_id: "per-1" },
+      { entity_type: "deal", entity_id: "deal-1" },
+      { entity_type: "project", entity_id: "proj-1" },
+    ]);
+  });
+
+  it("sends the chosen project on the draft request, so the draft is grounded in that project alone", async () => {
+    const sent = stubRoutes({
+      "POST /companies/company-1/draft-email": () =>
+        jsonResponse({
+          subject: "ERP-27 cutover",
+          body: "About the cutover.",
+          generated_by: "deterministic",
+          reasoning: [],
+        }),
+    });
+    render(
+      <ComposeModal
+        intent="Discuss the cutover"
+        entityType="company"
+        entityId="company-1"
+        contactId="per-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await screen.findByLabelText("Project");
+    await pickBy("Project", "ERP-27 · ERP rollout");
+    await userEvent.click(
+      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
+    );
+
+    await waitFor(() =>
+      expect(
+        sent.some((r) => r.key === "POST /companies/company-1/draft-email"),
+      ).toBe(true),
+    );
+    const request = sent.find(
+      (r) => r.key === "POST /companies/company-1/draft-email",
+    );
+    expect(request?.body).toEqual({
+      intent: "Discuss the cutover",
+      contact_id: "per-1",
+      project_id: "proj-1",
+    });
+  });
+
+  it("defaults to the account's only live project, visibly", async () => {
+    // A closed project is not offered, so the account below has ONE live
+    // project and the picker lands on it without a click. The default is a
+    // rendered selection, never a silent addition to the request.
+    const sent = stubRoutes({
+      "POST /emails": () => jsonResponse(SENT_ACTIVITY, 202),
+      "GET /companies/company-1/360": () =>
+        jsonResponse({
+          ...COMPANY_VIEW,
+          projects: [
+            {
+              project_id: "proj-1",
+              name: "ERP rollout",
+              key: "ERP-27",
+              phase: "delivering",
+            },
+            {
+              project_id: "proj-old",
+              name: "Old CRM",
+              key: "CRM-1",
+              phase: "closed",
+            },
+          ],
+        }),
+    });
+    render(
+      <ComposeModal
+        entityType="company"
+        entityId="company-1"
+        contactId="per-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByText("Scoped to ERP-27")).toBeTruthy();
+    await fillBody();
+    await pickBy("Reason for contact", "Active deal");
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => expect(linksOf(sent)).toBeDefined());
+    expect(linksOf(sent)).toEqual([
+      { entity_type: "company", entity_id: "company-1" },
+      { entity_type: "contact", entity_id: "per-1" },
+      { entity_type: "project", entity_id: "proj-1" },
+    ]);
+  });
+
+  it("files under the page and the recipient when no deal was chosen", async () => {
+    const sent = stubRoutes({
+      "POST /emails": () => jsonResponse(SENT_ACTIVITY, 202),
+    });
+    render(
+      <ComposeModal
+        entityType="company"
+        entityId="company-1"
+        contactId="per-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await screen.findByLabelText("Related to");
+    await fillBody();
+    await pickBy("Reason for contact", "Active deal");
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => expect(linksOf(sent)).toBeDefined());
+    // An unchosen deal is absent, not an empty entry: "no deal" is a real
+    // answer and must not file the message under a blank id.
+    expect(linksOf(sent)).toEqual([
+      { entity_type: "company", entity_id: "company-1" },
+      { entity_type: "contact", entity_id: "per-1" },
+    ]);
+  });
+
+  it("keeps a deal whose id happens to match the company's", async () => {
+    // A link is identified by its TYPE and its id together, which is how the
+    // server identifies one. Two records of different kinds live in different
+    // tables and may hold the same uuid; collapsing them on the id alone would
+    // drop the deal here, and the message would be missing from its timeline
+    // with nothing to say why. The shared id is the whole point of the case.
+    const sent = stubRoutes({
+      "POST /emails": () => jsonResponse(SENT_ACTIVITY, 202),
+      "GET /companies/shared-id/360": () =>
+        jsonResponse({
+          company: { id: "shared-id", name: "Acme" },
+          contacts: {
+            data: [{ contact_id: "per-1", full_name: "Dieter Klein" }],
+          },
+          deals: { data: [{ deal_id: "shared-id", name: "Acme Renewal" }] },
+        }),
+    });
+    render(
+      <ComposeModal
+        entityType="company"
+        entityId="shared-id"
+        contactId="per-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await screen.findByLabelText("Related to");
+    await pickBy("Related to", "Acme Renewal");
+    await fillBody();
+    await pickBy("Reason for contact", "Active deal");
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() => expect(linksOf(sent)).toBeDefined());
+    expect(linksOf(sent)).toEqual([
+      { entity_type: "company", entity_id: "shared-id" },
+      { entity_type: "contact", entity_id: "per-1" },
+      { entity_type: "deal", entity_id: "shared-id" },
+    ]);
+  });
+
+  it("files a reply under its own record and adds nothing the rep did not pick", async () => {
+    // A reply grounds on the thread, not the account: the rep chose nothing,
+    // and the recipient is already a participant on the activity being
+    // answered. Anchored sends go to the activity's own endpoint, so the
+    // composed links never reach the wire at all.
+    const sent = stubRoutes({
+      "POST /activities/act-1/send-email": () =>
+        jsonResponse(SENT_ACTIVITY, 202),
+    });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="contact"
+        entityId="per-1"
+        contactId="per-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await screen.findByLabelText("Subject");
+    await fillBody();
+    await pickBy("Reason for contact", "Active deal");
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
+
+    await waitFor(() =>
+      expect(
+        sent.some((r) => r.key === "POST /activities/act-1/send-email"),
+      ).toBe(true),
+    );
+    // The account-started endpoint is the only one that takes links, and a
+    // reply must never reach it.
+    expect(sent.some((r) => r.key === "POST /emails")).toBe(false);
+  });
+});
+
+// What the composer SAYS a send files under, on the one transport that cannot
+// be asked. A channel reply posts the words and the consent purpose and
+// nothing else, so the server files it under the links of the conversation it
+// answers — a filing the rep could not see until it had already happened.
+describe("what a channel reply says it will be filed under", () => {
+  const CONVERSATION = {
+    id: "act-1",
+    kind: "message",
+    channel_provider: "telegram",
+    links: [
+      { entity_type: "contact", entity_id: "per-1" },
+      { entity_type: "project", entity_id: "proj-1" },
+    ],
+  };
+
+  function renderChannelReply() {
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="contact"
+        entityId="per-1"
+        contactId="per-1"
+        kind="message"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+  }
+
+  it("names the project the conversation carries", async () => {
+    stubRoutes({
+      "GET /activities/act-1": () => jsonResponse(CONVERSATION),
+      "GET /projects/proj-1": () =>
+        jsonResponse({ id: "proj-1", name: "ERP rollout", key: "ERP-27" }),
+    });
+    renderChannelReply();
+
+    expect(
+      await screen.findByText(
+        "Sending files it under ERP-27 · ERP rollout, with the thread it answers.",
+      ),
+    ).toBeTruthy();
+    // Stated, not asked. A picker here would take an answer the send has no
+    // field to carry, and the server would file the reply under the
+    // conversation's own project regardless of what the rep chose.
+    expect(screen.queryByLabelText("Project")).toBeNull();
+  });
+
+  it("says nothing when the conversation carries no project", async () => {
+    stubRoutes({
+      "GET /activities/act-1": () =>
+        jsonResponse({ ...CONVERSATION, links: [] }),
+    });
+    renderChannelReply();
+
+    // The composer is up and usable — the absent line is the assertion, not an
+    // unrendered surface standing in for one.
+    expect(await screen.findByRole("textbox", { name: "Body" })).toBeTruthy();
+    expect(
+      screen.queryByText(
+        /Sending files it under .* with the thread it answers/,
+      ),
+    ).toBeNull();
+  });
+
+  it("leaves a mail reply asking, because a subject tag can carry the answer", async () => {
+    stubRoutes({
+      // A whole activity, not an id with links: the contract makes kind and
+      // occurred_at required, and the composer now reads the anchor itself to
+      // draw the conversation beside the reply.
+      "GET /activities/act-1": () =>
+        jsonResponse({
+          id: "act-1",
+          kind: "email",
+          subject: "Re: Q3",
+          occurred_at: "2026-07-01T00:00:00Z",
+          is_done: false,
+          source: "manual",
+          captured_by: "human:u1",
+          created_at: "2026-07-01T00:00:00Z",
+          updated_at: "2026-07-01T00:00:00Z",
+          links: [],
+        }),
+    });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="company"
+        entityId="company-1"
+        contactId="per-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByLabelText("Project")).toBeTruthy();
+    expect(
+      screen.queryByText(
+        /Sending files it under .* with the thread it answers/,
+      ),
+    ).toBeNull();
+  });
+});

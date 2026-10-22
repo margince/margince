@@ -109,9 +109,10 @@ func TestDedupeQueueOverHTTP(t *testing.T) {
 		AnyMap{"disposition": "not_a_duplicate"}, nil, &decided); status != http.StatusOK || decided.Status != "not_a_duplicate" {
 		t.Fatalf("dismiss → %d/%s, want 200/not_a_duplicate", status, decided.Status)
 	}
+	var second AnyMap
 	if status := e.Call(t, "POST", "/v1/dedupe/candidates/"+c.ID+"/disposition",
-		AnyMap{"disposition": "not_a_duplicate"}, nil, nil); status != http.StatusConflict {
-		t.Fatalf("second decision → %d, want 409", status)
+		AnyMap{"disposition": "not_a_duplicate"}, nil, &second); status != http.StatusConflict || second["code"] != "already_disposed" {
+		t.Fatalf("second decision → %d %v, want 409 already_disposed", status, second)
 	}
 	var reopened dedupeCandidateDTO
 	if status := e.Call(t, "POST", "/v1/dedupe/candidates/"+c.ID+"/undo", nil, nil, &reopened); status != http.StatusOK || reopened.Status != "open" {
@@ -124,8 +125,9 @@ func TestDedupeQueueOverHTTP(t *testing.T) {
 		AnyMap{"disposition": "merge", "winner_id": incumbentID}, nil, &merged); status != http.StatusOK || merged.Status != "merged" {
 		t.Fatalf("merge → %d/%s, want 200/merged", status, merged.Status)
 	}
-	if status := e.Call(t, "POST", "/v1/dedupe/candidates/"+c.ID+"/undo", nil, nil, nil); status != http.StatusConflict {
-		t.Fatalf("undo on merged → %d, want 409 (PO-AC-M6: no merge reversal)", status)
+	var undone AnyMap
+	if status := e.Call(t, "POST", "/v1/dedupe/candidates/"+c.ID+"/undo", nil, nil, &undone); status != http.StatusConflict || undone["code"] != "not_undoable" {
+		t.Fatalf("undo on merged → %d %v, want 409 not_undoable (PO-AC-M6: no merge reversal)", status, undone)
 	}
 
 	// The decided pair filters by status; the open queue is empty again.

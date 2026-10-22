@@ -163,11 +163,12 @@ type callRuntime struct {
 	callCtx context.Context //nolint:containedctx // the invocation's tenant scope IS this value's lifetime; see above.
 
 	// unattended forces Caller to answer the zero value whatever principal
-	// callCtx carries, and refuses the core port. Two paths set it — a job tick
-	// (jobRuntimeFor) and a bus delivery (deliveryRuntimeFor) — and they share
-	// the one fact that decides both: nobody is there, so there is no authority
-	// a core write could be checked against.
+	// callCtx carries, and refuses the core port. unattendedRuntimeFor sets it,
+	// for the one fact its callers share: nobody is there, so there is no
+	// authority a core write could be checked against.
 	unattended bool
+	// systemReads admits Deals, Authority and Directory; see systemReaderFor.
+	systemReads bool
 
 	// mu orders live: it is read and written under the same lock, so release
 	// and a handler-spawned goroutine cannot race the FLAG. It does not order

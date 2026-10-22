@@ -8,6 +8,7 @@ package activities
 
 import (
 	"context"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -278,28 +279,18 @@ func RequireProjectScope(ctx context.Context, tx pgx.Tx, projectID ids.ProjectID
 // `kind` is stated rather than implied. The `activity_task_fields` CHECK
 // already keeps assignee_id NULL on every other kind, so it narrows nothing —
 // it is what lets the planner match the partial index.
-func openTaskAssigneeClause(assignee *ids.UserID, arg func(any) int) string {
+func openTaskAssigneeClause(assignee *ids.UserID, asOf *time.Time, identities map[string][]string, arg func(any) int) string {
 	if assignee == nil {
 		return ""
 	}
-	return sprintf("a.assignee_id = $%d AND a.kind = 'task' AND NOT a.is_done", arg(*assignee))
+	if asOf == nil || asOf.IsZero() {
+		return "FALSE"
+	}
+	return sprintf("a.assignee_id = $%d AND a.kind = 'task' AND NOT a.is_done", arg(*assignee)) + " AND " + CurrentTaskClause("a", *asOf, sprintf("$%d::jsonb", arg(identities)), arg)
 }
 
-// ownQueueClause narrows to the open tasks one contact is answerable for:
-// assigned to them, and to nobody else.
-//
-// It used to admit unassigned tasks too, on the ground that a rep who writes
-// themselves a task without filling in an assignee still owns it. That reading
-// was true of the case it named and wrong about every other: an automation
-// mints a follow-up with no assignee, and "or nobody" put that one task on
-// every colleague's queue at once — a manager opening "mine" found a rep's
-// lead work waiting for them, which is the report this rule comes from.
-//
-// The self-written task is kept where it belongs by owning it at the point of
-// writing instead (taskAssignee, activity.go), so this clause can mean exactly
-// what it says. Work that genuinely belongs to nobody is answered by
-// unassignedQueueClause, which is a queue somebody chooses to open rather than
-// one that arrives in everybody's.
+// Personal queues contain assigned work; taskAssignee owns a human's new task.
+// Automatic unassigned work belongs to unassignedQueueClause.
 func ownQueueClause(reader *ids.UserID, arg func(any) int) string {
 	if reader == nil {
 		return ""

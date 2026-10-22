@@ -17,7 +17,7 @@ type CallListFilter struct {
 	Task, Provider, ServedProvider, Tier string
 	From, To                             *time.Time
 	Outcome                              string
-	Model                                string
+	Model, ServedModel                   string
 	Query                                string
 }
 
@@ -96,6 +96,9 @@ func (f CallListFilter) where(query *callQuery) string {
 	}
 	if f.Model != "" {
 		clauses = append(clauses, storekit.SQLf("(c.model_id = $%[2]d OR %[1]s = $%[2]d)", callModelSQL, query.arg(f.Model)))
+	}
+	if f.ServedModel != "" {
+		clauses = append(clauses, storekit.SQLf("%s = $%d", answeredModelSQL("c"), query.arg(f.ServedModel)))
 	}
 	if needle := strings.TrimSpace(f.Query); needle != "" {
 		pattern := "%" + likeEscaper.Replace(needle) + "%"

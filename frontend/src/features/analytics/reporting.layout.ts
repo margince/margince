@@ -1,0 +1,284 @@
+import type { components } from "../../api/schema";
+
+type Section = components["schemas"]["ReportingSection"];
+type Card = components["schemas"]["ReportingCard"];
+type Selection = components["schemas"]["ReportingSelection"];
+type Chart = components["schemas"]["ReportingChart"];
+type BlockKind = components["schemas"]["ReportingBlockKind"];
+type MetricId = components["schemas"]["ReportingMetricID"];
+export type ReportingLayout = Section[];
+
+// Mirrors oneChartKinds and unplacedKind in the reporting service's layout.go.
+// The evaluation draws the first two once for the whole report. The page
+// always draws the metric details table below the charts.
+const ONE_CHART_KINDS: ReadonlySet<BlockKind> = new Set([
+  "owner_attainment",
+  "sdr_outcomes",
+]);
+const UNPLACED_KIND: BlockKind = "metric_reading";
+
+/** The service's limits, so the editor offers no step it would refuse. */
+export const MAX_SECTIONS = 8;
+export const MAX_CARDS = 20;
+
+/** A selection's layout, or one untitled section of full cards in block order. */
+export function layoutOf(selection: Selection): ReportingLayout {
+  if (selection.layout) return selection.layout;
+  return [
+    {
+      cards: selection.blocks
+        .filter((kind) => kind !== UNPLACED_KIND)
+        .map((kind) => ({
+          id: kind.replaceAll("_", "-"),
+          kind,
+          width: "full",
+        })),
+    },
+  ];
+}
+
+/**
+ * The question a saved custom report asked, as a card keeps it: its population,
+ * groupings, measures and row limit. The report's scope replaces the run's own,
+ * and a card never saves a run or carries a filter.
+ */
+export function cardQuestion(
+  asked: components["schemas"]["AnalyticsQuery"],
+): NonNullable<Card["question"]> {
+  return {
+    entity: asked.entity,
+    group_by: asked.group_by,
+    measures: asked.measures,
+    limit: asked.limit,
+  };
+}
+
+/** A saved question's run id, read from its link or typed alone. */
+export function runIdOf(link: string): string | undefined {
+  return /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i.exec(
+    link,
+  )?.[0];
+}
+
+/** Each kind once, where the layout first names it; the server derives the same. */
+export function blocksOf(layout: ReportingLayout): BlockKind[] {
+  return [
+    ...new Set(
+      layout.flatMap((section) =>
+        section.cards.flatMap((c) => (c.kind === "question" ? [] : [c.kind])),
+      ),
+    ),
+  ];
+}
+
+/** Cards whose chart a metric still selected can draw; the rest are dropped. */
+export function keptCards(
+  layout: ReportingLayout,
+  drawable: (card: Card) => boolean,
+): ReportingLayout {
+  return layout.map((section) => ({
+    ...section,
+    cards: section.cards.filter(drawable),
+  }));
+}
+
+export function newCardId(layout: ReportingLayout): string {
+  const taken = new Set(layout.flatMap((s) => s.cards.map((c) => c.id)));
+  let n = taken.size + 1;
+  while (taken.has(`card-${n}`)) n++;
+  return `card-${n}`;
+}
+
+/** A chart a card may place: a kind for every metric, or one metric's. */
+export type CardChoice = Readonly<{ kind: BlockKind; metric?: MetricId }>;
+
+/**
+ * What can still be placed: each allowed kind for all its metrics, and, where
+ * two or more selected metrics share a kind, each metric's own. A choice that
+ * would draw a chart already placed is left out, as the server refuses it.
+ */
+export function cardChoices(
+  layout: ReportingLayout,
+  metricBlocks: ReadonlyMap<MetricId, readonly BlockKind[]>,
+): CardChoice[] {
+  const placed = layout.flatMap((section) => section.cards);
+  const choices: CardChoice[] = [];
+  if (placed.length >= MAX_CARDS) return [];
+  const kinds = [...new Set([...metricBlocks.values()].flat())].filter(
+    (kind) => kind !== UNPLACED_KIND,
+  );
+  for (const kind of kinds) {
+    const owners = [...metricBlocks].filter(([, blocks]) =>
+      blocks.includes(kind),
+    );
+    const sameKind = placed.filter((card) => card.kind === kind);
+    if (sameKind.length === 0) choices.push({ kind });
+    if (
+      owners.length < 2 ||
+      ONE_CHART_KINDS.has(kind) ||
+      sameKind.some((card) => !card.metric)
+    )
+      continue;
+    for (const [metric] of owners) {
+      if (!sameKind.some((card) => card.metric === metric))
+        choices.push({ kind, metric });
+    }
+  }
+  return choices;
+}
+
+/** One card as the page draws it: a chart of the evaluation, or a question. */
+export type LaidOutItem = Readonly<
+  { chart: Chart; full: boolean } | { question: Card; full: boolean }
+>;
+
+/** One section as the page draws it: its title and what its cards place. */
+export type LaidOutSection = Readonly<{
+  title?: string;
+  items: readonly LaidOutItem[];
+}>;
+
+/** The evaluation's charts and the questions, grouped and sized by the cards. */
+export function laidOut(
+  layout: ReportingLayout,
+  charts: readonly Chart[],
+): LaidOutSection[] {
+  return layout
+    .map((section) => ({
+      title: section.title?.trim() || undefined,
+      items: section.cards.flatMap((card): LaidOutItem[] => {
+        const full = card.width === "full";
+        if (card.kind === "question") return [{ question: card, full }];
+        return charts
+          .filter(
+            (chart) =>
+              chart.kind === card.kind &&
+              (!card.metric || chart.metric === card.metric),
+          )
+          .map((chart) => ({ chart, full }));
+      }),
+    }))
+    .filter((section) => section.items.length > 0);
+}
+
+const withSection = (
+  layout: ReportingLayout,
+  at: number,
+  change: (section: Section) => Section,
+): ReportingLayout =>
+  layout.map((section, index) => (index === at ? change(section) : section));
+
+/** The edits Edit report makes to a layout; each returns a new layout. */
+export const layoutEdits = {
+  renameSection: (layout: ReportingLayout, at: number, title: string) =>
+    withSection(layout, at, (section) => ({ ...section, title })),
+  addSection: (layout: ReportingLayout): ReportingLayout => [
+    ...layout,
+    { cards: [] },
+  ],
+  /** Its cards join the section before it, or after it when it is first. */
+  removeSection(layout: ReportingLayout, at: number): ReportingLayout {
+    if (layout.length < 2) return layout;
+    const heir = at === 0 ? 1 : at - 1;
+    const moved = layout[at]?.cards ?? [];
+    return withSection(layout, heir, (section) => ({
+      ...section,
+      cards:
+        at === 0 ? [...moved, ...section.cards] : [...section.cards, ...moved],
+    })).filter((_, index) => index !== at);
+  },
+  // Puts a section's cards in the order of keys, which must name each of
+  // them once; any other order leaves the layout as it was.
+  reorderCards(
+    layout: ReportingLayout,
+    at: number,
+    keys: readonly string[],
+  ): ReportingLayout {
+    return withSection(layout, at, (section) => {
+      const byId = new Map(section.cards.map((card) => [card.id, card]));
+      const cards = keys.flatMap((key) => byId.get(key) ?? []);
+      const permutation =
+        keys.length === section.cards.length &&
+        new Set(keys).size === keys.length &&
+        cards.length === keys.length;
+      return permutation ? { ...section, cards } : section;
+    });
+  },
+  moveSection(
+    layout: ReportingLayout,
+    at: number,
+    step: -1 | 1,
+  ): ReportingLayout {
+    const next = at + step;
+    const moving = layout[at];
+    if (!moving || next < 0 || next >= layout.length) return layout;
+    const sections = layout.filter((_, index) => index !== at);
+    sections.splice(next, 0, moving);
+    return sections;
+  },
+  moveCardTo(
+    layout: ReportingLayout,
+    at: number,
+    card: number,
+    target: number,
+  ): ReportingLayout {
+    const moving = layout[at]?.cards[card];
+    if (!moving || target === at || !layout[target]) return layout;
+    const without = withSection(layout, at, (section) => ({
+      ...section,
+      cards: section.cards.filter((_, index) => index !== card),
+    }));
+    return withSection(without, target, (section) => ({
+      ...section,
+      cards: [...section.cards, moving],
+    }));
+  },
+  setWidth: (
+    layout: ReportingLayout,
+    at: number,
+    card: number,
+    width: Card["width"],
+  ) =>
+    withSection(layout, at, (section) => ({
+      ...section,
+      cards: section.cards.map((c, index) =>
+        index === card ? { ...c, width } : c,
+      ),
+    })),
+  removeCard: (layout: ReportingLayout, at: number, card: number) =>
+    withSection(layout, at, (section) => ({
+      ...section,
+      cards: section.cards.filter((_, index) => index !== card),
+    })),
+  /** A question card goes at the end of the last section, full width. */
+  addQuestion(
+    layout: ReportingLayout,
+    question: NonNullable<Card["question"]>,
+  ): ReportingLayout {
+    const sections = layout.length > 0 ? layout : [{ cards: [] }];
+    const card: Card = {
+      id: newCardId(sections),
+      kind: "question",
+      question,
+      width: "full",
+    };
+    return withSection(sections, sections.length - 1, (section) => ({
+      ...section,
+      cards: [...section.cards, card],
+    }));
+  },
+  /** A new card goes at the end of the last section, full width. */
+  addCard(layout: ReportingLayout, choice: CardChoice): ReportingLayout {
+    const sections = layout.length > 0 ? layout : [{ cards: [] }];
+    const card: Card = {
+      id: newCardId(sections),
+      kind: choice.kind,
+      width: "full",
+    };
+    if (choice.metric) card.metric = choice.metric;
+    return withSection(sections, sections.length - 1, (section) => ({
+      ...section,
+      cards: [...section.cards, card],
+    }));
+  },
+};

@@ -1,0 +1,107 @@
+/* Extension access layout — the composed-unit inventory and its role × CRUD
+   matrices. Structure only; every colour reads a design token (ds-purity gate)
+   and every gap reads the --space-* scale (ds-spacing gate). */
+
+/* One card per composed unit, in one column. */
+.ext-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* The version badge and the link to the unit's own page, in the unit card's
+   action slot. */
+.ext-unit-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--gapActions);
+  min-width: 0;
+}
+
+/* The one head action in this product that may legitimately be squeezed, so it
+   says so with a class of its own: panel.css holds everything after the title
+   block at its natural width through a zero-specificity `:where()`, which an
+   ordinary class overrides without depending on sheet order. It is squeezable
+   because the LINK inside it can shorten and still name its target — the
+   version beside it cannot, since "Version 0.3.…" is a different version. */
+.ext-unit > .panel-head > .ext-unit-actions {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.ext-unit-link {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--accentText);
+  min-width: 0;
+}
+
+/* The arrow is the link's mark and keeps its size; the words are what shorten.
+   The ellipsis lands on a span of its own rather than on the link, because
+   `text-overflow` reaches the inline content of a BLOCK container and an
+   inline-flex link's text is an anonymous flex item instead — declared on the
+   link it clips mid-letter with nothing to say the words went on, which is the
+   one thing the ellipsis is here to say. */
+.ext-unit-link svg {
+  flex-shrink: 0;
+}
+.ext-unit-link-text {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* The unit's own sentences and notices, above its grids. A notice owns no
+   layout, so the air between them is the body's. */
+.ext-unit-body > * + * {
+  margin-top: var(--space-3);
+}
+
+/* The sentence that stands in for the page link when this build of the SPA has
+   no page to link to. It is a whole explanation, not a control, so it leads the
+   card body while the link it replaces sits in the heading row. */
+.ext-unit-nopage {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+
+/* Routes and objects as plain lines: a path is read, not pressed. */
+.ext-brings-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The unit's grid is measured against its own card, so it fits a phone without
+   scrolling: the verb columns close up and the role names wrap. */
+.ext-unit {
+  container: ext-unit / inline-size;
+}
+
+@container ext-unit (width < 30rem) {
+  .ext-unit .grant-matrix :is(th, td):not(:first-child) {
+    padding-inline: var(--space-1);
+  }
+  .ext-unit .grant-matrix tbody th {
+    padding-inline-end: var(--space-1);
+  }
+  .ext-unit .grant-matrix thead th {
+    font: var(--fontBodySmall);
+  }
+  .ext-unit .grant-row-head {
+    min-inline-size: 0;
+  }
+}
+
+/* With room, a role's badge stays on its name's line. */
+@container ext-unit (width >= 40rem) {
+  .ext-unit .grant-row-head {
+    max-inline-size: none;
+  }
+}

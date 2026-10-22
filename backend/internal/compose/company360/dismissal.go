@@ -111,6 +111,39 @@ func (s *Service) DismissSuggestion(
 	})
 }
 
+// RestoreSuggestion clears this human's dismissal of one fingerprint on this
+// account: the undo behind "Not now". It asks the same gates the dismissal
+// asks, so the readers who may set an item aside are the ones who may undo it.
+func (s *Service) RestoreSuggestion(ctx context.Context, companyID ids.CompanyID, fingerprint string) error {
+	if err := auth.RequireHuman(ctx); err != nil {
+		return err
+	}
+	if err := auth.Require(ctx, "company", principal.ActionRead); err != nil {
+		return err
+	}
+	userID, err := actingUser(ctx)
+	if err != nil {
+		return err
+	}
+	return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+		if err := auth.EnsureVisible(ctx, tx, "company", companyID.UUID); err != nil {
+			return err
+		}
+		if !isFingerprint(fingerprint) {
+			return httperr.Validation("fingerprint", "malformed",
+				"restore a suggestion by the fingerprint it was dismissed with, unchanged")
+		}
+		_, err := tx.Exec(ctx, `
+			DELETE FROM suggestion_dismissal
+			WHERE user_id = $1 AND company_id = $2 AND fingerprint = $3`,
+			userID, companyID, fingerprint)
+		if err != nil {
+			return fmt.Errorf("clear the suggestion dismissal: %w", err)
+		}
+		return nil
+	})
+}
+
 // raisesSuggestion reports whether this account currently raises the suggestion
 // this fingerprint identifies, for this caller.
 //
@@ -128,7 +161,7 @@ func (s *Service) raisesSuggestion(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, fingerprint string,
 	within *ids.ProjectID,
 ) (bool, error) {
-	facts, err := readSignalFacts(ctx, tx, companyID)
+	facts, err := readSignalFacts(ctx, tx, companyID, now)
 	if err != nil {
 		return false, err
 	}
@@ -143,7 +176,7 @@ func (s *Service) raisesSuggestion(
 	if err != nil {
 		return false, err
 	}
-	in, err := gatherSuggestionInputs(ctx, tx, companyID, now, facts, heading, base, AssembleOptions{ProjectID: within})
+	in, err := gatherSuggestionInputs(ctx, tx, companyID, now, facts, heading, base, AssembleOptions{ProjectID: within}, identity.BaseLanguageForRecord(ctx, tx))
 	if err != nil {
 		return false, err
 	}
@@ -151,6 +184,11 @@ func (s *Service) raisesSuggestion(
 		if suggestion.Fingerprint == fingerprint {
 			return true, nil
 		}
+	}
+	// Not advice, so perhaps the account's moment: its "Not now" is stored
+	// beside the advice rows' own.
+	if raised, err := s.raisesMoment(ctx, tx, companyID, now, within, fingerprint); err != nil || raised {
+		return raised, err
 	}
 	// Not the rules', so perhaps the scan's: a finding the model raised for
 	// this reader is theirs to put off exactly as a rule's row is.

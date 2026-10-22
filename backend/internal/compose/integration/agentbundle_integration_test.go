@@ -5,8 +5,9 @@
 
 package integration
 
-// The skill download through the real router. A signed-in human gets the ZIP
-// and a passport is refused it. The ZIP and the passport list name one address.
+// The skill download and its JSON contract through the real router. A signed-in
+// human gets the ZIP and a passport is refused it; a passport reads the JSON.
+// The ZIP, the JSON and the passport list name one address.
 
 import (
 	"archive/zip"
@@ -35,6 +36,10 @@ func TestAHumanDownloadsTheSkillAndAPassportIsRefusedIt(t *testing.T) {
 	if spec := zipFile(t, body, "margince/openapi.yaml"); !strings.Contains(spec, "url: "+want+"\n") {
 		t.Errorf("openapi.yaml does not name %s as its server", want)
 	}
+	// The harness leaves the connector off, so the README names no address for it.
+	if readme := zipFile(t, body, "margince/README.md"); strings.Contains(readme, "/mcp") {
+		t.Error("README.md names a connector address while the connector is off")
+	}
 	status, header, body = getRaw(t, e, "/v1/passports", nil)
 	if status != http.StatusOK {
 		t.Fatalf("GET /v1/passports → %d", status)
@@ -55,6 +60,44 @@ func TestAHumanDownloadsTheSkillAndAPassportIsRefusedIt(t *testing.T) {
 	bearer := apptest.PassportBearer(t, e, "skill download probe", "read")
 	if status, _, _ := getRaw(t, e, "/v1/agent-bundle", bearer); status != http.StatusForbidden {
 		t.Errorf("passport GET /v1/agent-bundle → %d, want 403: the download is human-only", status)
+	}
+}
+
+func TestAPassportReadsTheOpenAPIDocumentAndNoCredentialIsRefused(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+
+	bearer := apptest.PassportBearer(t, e, "contract probe", "read")
+	status, header, body := getRaw(t, e, "/v1/openapi.json", bearer)
+	if contentType := header.Get("Content-Type"); status != http.StatusOK || contentType != "application/json" {
+		t.Fatalf("passport GET /v1/openapi.json → %d %s, want 200 application/json", status, contentType)
+	}
+	var doc struct {
+		Servers []struct {
+			URL string `json:"url"`
+		} `json:"servers"`
+	}
+	if err := json.Unmarshal(body, &doc); err != nil {
+		t.Fatalf("decoding GET /v1/openapi.json: %v", err)
+	}
+	if len(doc.Servers) != 1 || doc.Servers[0].URL != "https://mail.example.test/v1" {
+		t.Errorf("servers = %+v, want the one address the skill names", doc.Servers)
+	}
+
+	// The harness client carries the signed-in human's cookie jar; a copy without it holds no credential.
+	anonymous := *e.Client
+	anonymous.Jar = nil
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, e.TS.URL+"/v1/openapi.json", nil)
+	if err != nil {
+		t.Fatalf("building request: %v", err)
+	}
+	resp, err := anonymous.Do(req) //nolint:bodyclose // closed by apptest.CloseBody below
+	if err != nil {
+		t.Fatalf("anonymous GET /v1/openapi.json: %v", err)
+	}
+	defer apptest.CloseBody(t, resp)
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Errorf("anonymous GET /v1/openapi.json → %d, want 401", resp.StatusCode)
 	}
 }
 
@@ -109,4 +152,22 @@ func zipFile(t *testing.T, archive []byte, name string) string {
 		t.Fatalf("closing %s: %v", name, err)
 	}
 	return string(body)
+}
+
+func TestTheSkillReadmeLeadsWithTheConnectorAddressWhileItIsOn(t *testing.T) {
+	var resource string
+	e := apptest.SetupAppWithOriginOptions(t, func(origin string) []compose.Option {
+		resource = origin + "/mcp"
+		return []compose.Option{compose.WithMCPConnector(), compose.WithMCPResource(resource)}
+	})
+	e.BootstrapWorkspace(t)
+
+	status, _, body := getRaw(t, e, "/v1/agent-bundle", nil)
+	if status != http.StatusOK {
+		t.Fatalf("human GET /v1/agent-bundle → %d, want 200", status)
+	}
+	readme := zipFile(t, body, "margince/README.md")
+	if !strings.Contains(readme, "claude mcp add --transport http margince "+resource) {
+		t.Errorf("README.md does not lead the reader to the connector at %s", resource)
+	}
 }

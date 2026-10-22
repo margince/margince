@@ -17,8 +17,18 @@ import { vi as viCatalog } from "./vi";
 // name" from "missed translation" at a glance — an addition to any group
 // must be defensible on the same grounds as its neighbours.
 const KEPT_IN_ENGLISH = new Set<string>([
+  // Product and protocol names, an example address and an example header name.
+  "webhooks.body.preset.slack",
+  "webhooks.body.preset.teams",
+  "settings.tab.mcp",
+  "webhooks.eventGroup.voice_dna",
+  "webhooks.field.targetUrlPlaceholder",
+  "webhooks.headers.namePlaceholder",
   // Markup with placeholders, which is the same in every language.
   "signatureTemplate.placeholder",
+  // The promiser and stored summary are values separated by punctuation.
+  "magic.action.approval_commitment_task_named",
+  "magic.action.approval_commitment_task_summary",
   // Latency percentiles and OpenRouter's own name read the same in every
   // language, as does a raw key = value line the summary falls back to.
   "aiFigures.col.p50",
@@ -27,6 +37,9 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "aiServing.openRouter",
   "aiServing.openRouterDocs",
   "aiServing.say.raw",
+  // Audit filter examples in the stored spelling the filter matches.
+  "settings.auditActorExample",
+  "settings.auditEntityExample",
   // A file name the server sends, so every catalog shows the same one.
   "import.result.problemsFile",
   // The name of the network, offered as a profile field in the research drawer.
@@ -154,6 +167,9 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // keeps "Email". German translates it, and does.
   "deal.forecast.pipeline",
   "room.create.defaultTitle",
+  // These slots receive category counts and action names already translated by their owners.
+  "brief.agenda.summary",
+  "magic.action.approval_pending",
   // Pure punctuation layouts: every word in them is a placeholder, so there is
   // nothing to translate and a "translation" could only reorder the slots.
   "dealSuggestion.name",
@@ -166,9 +182,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "filters.sentence.pendingValue",
   // Two phase names and an arrow.
   "project.history.moved",
-  "brief.digestPhaseChange",
   // Two relationship-band names and an arrow, on the contact strip's latest
-  // change. Same shape, same reason as the two above.
+  // change. Same shape, same reason as the one above.
   "contact.intro.change.buckets",
   // A filename and the server's own refusal, separated by a colon. It is one
   // line of a list whose heading says what the list is, and both halves arrive
@@ -213,6 +228,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "cf.obj.deal",
   "cf.obj.lead",
   "co.brief.cite.deal",
+  "co.brief.cite.lead",
   // The borrowed noun in the singular, which English and Vietnamese spell alike;
   // the plural arms differ because English pluralises.
   "today.scan.readDeals_one",
@@ -248,7 +264,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "history.field.email",
   "settings.voice.register.email",
   "settings.voice.kind.email",
-  "product.sku",
   "compose.cc",
   "compose.bcc",
   "compose.transportEmail",
@@ -271,7 +286,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Units, version rows and other format-only strings: symbols/abbreviations
   // that do not translate (ms, a version-row template).
   "aicalls.ms",
-  "operations.inWords",
+  "operations.reading",
   "voice.history.deltaRow",
   "ob.conv.triage.omittedField",
   "share.ceiling.post",
@@ -290,6 +305,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // only the plural headings differ because English pluralises.
   "search.kind.deal",
   "search.kind.lead",
+  // The same loanword, naming the record an approval's evidence came from.
+  "decision.evidenceSource.deal",
   // The lead rail's own deal card title, the same singular loanword as
   // search.kind.deal above it.
   "lead.rail.deal.title",

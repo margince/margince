@@ -121,7 +121,7 @@ func TestAnonymizeClearsWhatIsKeyedOnTheSubjectsAddress(t *testing.T) {
 		        'Hedda asked us not to contact her employer', now() + interval '3 days',
 		        $4)`, contact, user, introducer, "user:"+user.String())
 
-	if err := anonymizeContactRecord(ctx, tx, contact.UUID, nil); err != nil {
+	if err := anonymizeContactRecord(ctx, tx, contact.UUID, &Eraser{}); err != nil {
 		t.Fatalf("anonymizing: %v", err)
 	}
 

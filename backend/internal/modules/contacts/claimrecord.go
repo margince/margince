@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -15,18 +16,27 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-// ourPromiseNotYetATask is an open promise of ours that no task holds yet.
-//
-// Every reader that counts promises beside the open tasks uses it, because a
-// promise the dispatch turned into a task is that task from then on: counting
-// the claim as well would show one promise twice. Readers of one record's
-// claims keep the task-backed ones, so the quote and the task stay reachable.
-const ourPromiseNotYetATask = ourPromiseWithNoTask + ` AND c.status = 'open'`
+// A withheld promise remains history without appearing as current work.
+func currentCommitmentAdmission(asOf time.Time, arg func(any) int) string {
+	current := provenance.CurrentCommitmentClause("c.source_activity_id", "c.evidence_fingerprint", "c.due_at", asOf, arg)
+	return `(c.corrected_at IS NOT NULL OR (starts_with(c.captured_by, 'human:') AND NOT EXISTS (
+ SELECT 1 FROM audit_log imported WHERE imported.entity_type='contact' AND imported.entity_id=c.contact_id
+ AND imported.after->>'claim_id'=c.id::text AND NOT ` + storekit.AuditNotFromAnImport("imported") + `)) OR ` + current + `
+ OR EXISTS (SELECT 1 FROM activity adopted_task WHERE adopted_task.id=c.task_activity_id
+ AND adopted_task.archived_at IS NULL AND NOT adopted_task.is_done AND (` + storekit.HumanWroteActivityClause("adopted_task") + `
+ OR (adopted_task.assignee_id, adopted_task.id::text) IN (SELECT reader_id,row_id FROM ` + auth.EffectiveWorklistPinsSQL(arg) + ` pins WHERE pins.source='task'))))`
+}
+
+func ourPromiseNotYetATask(asOf time.Time, arg func(any) int) string {
+	return ourPromiseWithNoTask + ` AND c.status = 'open' AND ` + currentCommitmentAdmission(asOf, arg)
+}
 
 // ourPromiseWithNoTask is ourPromiseNotYetATask whatever its status: the
 // claims a Worklist promise row names, open or settled since.
@@ -112,6 +122,9 @@ func recordClaimInTx(
 		fingerprint, in.Source, by).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		existing, err := filedClaim(ctx, tx, in, fingerprint)
+		if err == nil && in.Renewal {
+			existing, err = renewClaimDeadline(ctx, tx, in, existing, by)
+		}
 		return existing, false, err
 	}
 	if err != nil {
@@ -168,12 +181,15 @@ func filedClaim(
 		       needs_review, corrected_at, task_activity_id
 		  FROM conversation_claim
 		 WHERE contact_id = $1 AND source_activity_id = $2 AND evidence_fingerprint = $3
-		   AND archived_at IS NULL`,
+		   AND archived_at IS NULL FOR UPDATE`,
 		in.ContactID, in.ActivityID, fingerprint).Scan(&id, &claim.Kind, &claim.Body,
 		&activityID, &claim.SourceQuote, &claim.Status, &claim.DueAt,
 		&claim.NeedsReview, &claim.CorrectedAt, &taskID)
 	if err != nil {
 		return crmcontracts.ConversationClaim{}, fmt.Errorf("read the claim already filed for this evidence: %w", err)
+	}
+	if err := ensureClaimContentVisible(ctx, tx, id); err != nil {
+		return crmcontracts.ConversationClaim{}, err
 	}
 	claim.Id = openapi_types.UUID(id)
 	claim.SourceActivityId = openapi_types.UUID(activityID)
@@ -192,19 +208,48 @@ func (s *Store) SetClaimTaskTx(ctx context.Context, tx pgx.Tx, claimID, taskID i
 	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
 		return err
 	}
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return err
+	}
+	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, taskID); err != nil {
+		return err
+	}
+	if _, err := storekit.LockRow(ctx, tx, "activity", taskID, storekit.LiveOnly); err != nil {
+		return err
+	}
+	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, taskID); err != nil {
+		return err
+	}
 	if _, err := storekit.LockRow(ctx, tx, "conversation_claim", claimID, storekit.LiveOnly); err != nil {
 		return err
 	}
 	var contactID ids.UUID
+	var currentTask *ids.UUID
 	var status string
-	err := tx.QueryRow(ctx, `
-		UPDATE conversation_claim SET task_activity_id = $2
-		 WHERE id = $1 AND task_activity_id IS NULL
-		RETURNING contact_id, status`, claimID, taskID).Scan(&contactID, &status)
-	if errors.Is(err, pgx.ErrNoRows) {
+	if err := tx.QueryRow(ctx, `SELECT contact_id, task_activity_id, status FROM conversation_claim WHERE id = $1`, claimID).Scan(&contactID, &currentTask, &status); err != nil {
+		return fmt.Errorf("read claim task relation: %w", err)
+	}
+	if err := auth.EnsureWritableLive(ctx, tx, "contact", contactID); err != nil {
+		return err
+	}
+	if err := ensureClaimContentVisible(ctx, tx, claimID); err != nil {
+		return err
+	}
+	if currentTask != nil {
 		return nil
 	}
+	var done bool
+	err := tx.QueryRow(ctx, `SELECT is_done FROM activity WHERE id = $1 AND kind = 'task'`, taskID).Scan(&done)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return apperrors.ErrNotFound
+	}
 	if err != nil {
+		return fmt.Errorf("read recipient task status: %w", err)
+	}
+	if done && status == claimStatusOpen {
+		return apperrors.ErrConflict
+	}
+	if _, err := tx.Exec(ctx, `UPDATE conversation_claim SET task_activity_id = $2 WHERE id = $1`, claimID, taskID); err != nil {
 		return fmt.Errorf("link the claim to its task: %w", err)
 	}
 	auditID, err := storekit.Audit(ctx, tx, "update", "contact", contactID,

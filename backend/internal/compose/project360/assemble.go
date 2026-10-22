@@ -111,6 +111,8 @@ type catalogs struct {
 	// already inside — a deadlock Postgres cannot break, because it sees two
 	// unrelated sessions rather than one goroutine waiting on itself.
 	company contacts.CustomColumns
+	// activity fills the timeline section's custom-field values.
+	activity activities.CustomColumns
 }
 
 func (s *Service) readCatalogs(ctx context.Context) (catalogs, error) {
@@ -120,6 +122,9 @@ func (s *Service) readCatalogs(ctx context.Context) (catalogs, error) {
 		return catalogs{}, err
 	}
 	if c.deal, err = s.deals.ActiveDealColumns(ctx); err != nil {
+		return catalogs{}, err
+	}
+	if c.activity, err = s.activities.ActiveActivityColumns(ctx); err != nil {
 		return catalogs{}, err
 	}
 	// The company catalog is read HERE like the two above, and a caller
@@ -254,7 +259,7 @@ func (a *assembly) activityFacts() (activities.ProjectActivityFacts, error) {
 	if a.factsRead {
 		return a.facts, nil
 	}
-	facts, err := a.svc.activities.ProjectActivityFactsTx(a.ctx, a.tx, a.projectID)
+	facts, err := a.svc.activities.ProjectActivityFactsTx(a.ctx, a.tx, a.projectID, a.now)
 	if err != nil {
 		return activities.ProjectActivityFacts{}, err
 	}

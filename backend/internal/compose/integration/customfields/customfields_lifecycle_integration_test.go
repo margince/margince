@@ -14,6 +14,7 @@ package customfields
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
@@ -21,6 +22,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
+
+func renameTo(label string) customfieldsmod.FieldPatch {
+	return customfieldsmod.FieldPatch{Label: &label}
+}
 
 func TestCustomFieldRename_LabelOnly_ColumnIdentityStable(t *testing.T) {
 	e := integration.Setup(t)
@@ -31,7 +36,7 @@ func TestCustomFieldRename_LabelOnly_ColumnIdentityStable(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	renamed, err := svc.Rename(ctx, ids.UUID(created.Id), "Contract renewal", nil)
+	renamed, err := svc.Update(ctx, ids.UUID(created.Id), renameTo("Contract renewal"), nil)
 	if err != nil {
 		t.Fatalf("Rename: %v", err)
 	}
@@ -47,16 +52,80 @@ func TestCustomFieldRename_LabelOnly_ColumnIdentityStable(t *testing.T) {
 	}
 
 	stale := *created.Version // one behind after the rename
-	if _, err := svc.Rename(ctx, ids.UUID(created.Id), "Another", &stale); !errors.Is(err, apperrors.ErrVersionSkew) {
+	if _, err := svc.Update(ctx, ids.UUID(created.Id), renameTo("Another"), &stale); !errors.Is(err, apperrors.ErrVersionSkew) {
 		t.Fatalf("a stale If-Match must answer version skew, got %v", err)
 	}
-	if _, err := svc.Rename(ctx, ids.NewV7(), "Ghost", nil); !errors.Is(err, apperrors.ErrNotFound) {
+	if _, err := svc.Update(ctx, ids.NewV7(), renameTo("Ghost"), nil); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("renaming a missing field must answer not-found, got %v", err)
 	}
 	if n := e.WsCount(t,
 		`SELECT count(*) FROM audit_log WHERE entity_type = 'custom_field' AND entity_id = $1 AND action = 'update'`,
 		ids.UUID(created.Id)); n != 1 {
 		t.Fatalf("exactly the one successful rename may audit, got %d", n)
+	}
+}
+
+func TestCustomFieldRename_ToALabelAnotherFieldHolds_IsRefusedAsAConflict(t *testing.T) {
+	e := integration.Setup(t)
+	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
+	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
+
+	held, err := svc.Create(ctx, dateSpec("Renewal date"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	other, err := svc.Create(ctx, dateSpec("Signed date"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, label := range []string{"Renewal date", "  renewal DATE ", "Renewal-date", "Renewal date\t"} {
+		if _, err := svc.Update(ctx, ids.UUID(other.Id), renameTo(label), nil); !errors.Is(err, apperrors.ErrConflict) {
+			t.Fatalf("renaming onto %q must answer conflict, got %v", label, err)
+		}
+	}
+	if _, err := svc.Update(ctx, ids.UUID(held.Id), renameTo("Renewal date"), nil); err != nil {
+		t.Fatalf("a field may keep the label it already holds: %v", err)
+	}
+	if n := e.WsCount(t,
+		`SELECT count(*) FROM audit_log WHERE entity_type = 'custom_field' AND entity_id = $1 AND action = 'update'`,
+		ids.UUID(other.Id)); n != 0 {
+		t.Fatalf("a refused rename must not audit, got %d", n)
+	}
+}
+
+func TestCustomFieldCreate_OntoALabelARenameGaveAnotherField_IsRefused(t *testing.T) {
+	e := integration.Setup(t)
+	svc := customfieldsmod.NewService(e.Pool, integration.SchemaPool(t))
+	ctx := e.As(e.Rep1, nil, integration.CustomFieldAdminPerms)
+
+	first, err := svc.Create(ctx, dateSpec("Foo"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Update(ctx, ids.UUID(first.Id), renameTo("Bar"), nil); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Create(ctx, dateSpec("Bar")); !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("creating a second %q after a rename gave the first one that label: err = %v, want conflict", "Bar", err)
+	}
+
+	// The renamed field still holds the key its first label derived. A new label
+	// deriving that key collides, and the sentence must say so plainly.
+	_, err = svc.Create(ctx, dateSpec("foo"))
+	if !errors.Is(err, apperrors.ErrConflict) || !strings.Contains(err.Error(), `key "foo"`) || !strings.Contains(err.Error(), `"Bar"`) {
+		t.Fatalf("a label reusing a renamed field's key: err = %v, want a conflict naming the key and the field that holds it", err)
+	}
+	_, err = svc.Update(ctx, ids.UUID(first.Id), renameTo("Renewal date"), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	other, err := svc.Create(ctx, dateSpec("Signed date"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Update(ctx, ids.UUID(other.Id), renameTo("Foo"), nil); !errors.Is(err, apperrors.ErrConflict) || !strings.Contains(err.Error(), "key") {
+		t.Fatalf("renaming onto a slug the first field still holds: err = %v, want a conflict naming the key", err)
 	}
 }
 
@@ -101,7 +170,7 @@ func TestCustomFieldRetire_PreservesColumnAndValues(t *testing.T) {
 
 	// Retirement is terminal: the label is frozen, and the refusal writes
 	// nothing — the audit trail still carries only the one retire.
-	if _, err := svc.Rename(ctx, ids.UUID(created.Id), "Reopened greeting", nil); !errors.Is(err, customfieldsmod.ErrFieldRetired) {
+	if _, err := svc.Update(ctx, ids.UUID(created.Id), renameTo("Reopened greeting"), nil); !errors.Is(err, customfieldsmod.ErrFieldRetired) {
 		t.Fatalf("renaming a retired field must refuse with ErrFieldRetired, got %v", err)
 	}
 	if !errors.Is(customfieldsmod.ErrFieldRetired, apperrors.ErrConflict) {
@@ -276,7 +345,7 @@ func TestCustomFieldRBAC_ReadGrantCannotChangeSchema(t *testing.T) {
 	if _, err := svc.Create(reader, dateSpec("Another field")); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("a read grant must not create, got %v", err)
 	}
-	if _, err := svc.Rename(reader, ids.UUID(created.Id), "X", nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := svc.Update(reader, ids.UUID(created.Id), renameTo("X"), nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("a read grant must not rename, got %v", err)
 	}
 	if _, err := svc.Retire(reader, ids.UUID(created.Id)); !errors.Is(err, apperrors.ErrPermissionDenied) {

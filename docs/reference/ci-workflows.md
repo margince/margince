@@ -8,6 +8,7 @@ workflow is outside the gate:
 
 | Workflow | What starts it | Blocks a merge? |
 |---|---|---|
+| `cla.yml` | `pull_request_target` (`opened`, `reopened`, `synchronize`, `closed`); a PR comment that contains `recheck` or `Contributor License Agreement` | Yes, for an author outside the Margince team |
 | `cache-warm.yml` | `main` every three hours, manual dispatch | No |
 | `merge-attest.yml` | every push to `main` | No (runs after the merge) |
 | `review-coverage.yml` | pull request events, a sent review | No |
@@ -22,6 +23,15 @@ workflow is outside the gate:
 
 The merge queue rule is off, so the `merge_group` trigger in `ci.yml` does not run.
 `main-health.yml` is the only workflow that publishes the SonarCloud analysis of `main`.
+
+## `cla.yml`
+
+Asks every commit author outside the Margince team to accept [CLA.md](../../CLA.md), and
+records each acceptance in a separate signatures repository. Team members and tool accounts are on an
+allowlist, read from GitHub on every run, so the check passes for them at once. It runs on
+`pull_request_target`, because recording needs a secret a fork run never gets, and so it never checks
+out the pull request's code. `backend/gates/cla_test.go` holds every version of the agreement the workflow names to
+the one in `CLA.md`.
 
 ## `cache-warm.yml`
 
@@ -183,9 +193,11 @@ asks "is this diff good?", and runs because a diff exists.
 | frontend clock drift | daily | The Vitest tests run as if it were 200 days from now, with the same result | A fixture whose fixed date a page part compares to `now` breaks on a calendar date, with no diff. |
 | every story renders | daily | `make fe-uat ARGS=--all-stories`: every story the Storybook build registers renders clean | `make fe-uat` on a branch renders only the stories the diff reaches, so a story that fails on `main` stays hidden until a change reaches it. |
 | backend clock drift | daily | The Go tests, unit and real-Postgres, run on a runner whose clock is 200 days later, with the same result | The same calendar break on the backend, where a test can read the clock of Go or the `now()` of Postgres. |
-| PERF-3/PERF-7 budgets | weekly | `make bench-perf-check`: the budgets on the SMB tier (10,000 test contacts), writing no record | Weekly is enough for a budget that no merge needs. |
+| PERF-3/PERF-7 budgets | weekly | `make bench-perf BENCH_PERF_TIER=smb`: the budgets on the SMB tier (10,000 test contacts), writing a record | Weekly is enough for a budget that no merge needs. |
+| `MOBILE-AC-2` budget | weekly | `make bench-mobile`: record open `p95` on a throttled Fast-3G profile at 390px, writing a record | The browser half of the PERF-1 budget, which no merge gate measures. |
 | vendor live check (`make vendor-live`) | daily | `GET /v1/credits` on Surfe, through the production adapter, against the fields `surfe/testdata/vendor-wire.json` records | The offline tests read a recording, which stays green when the vendor changes its API. |
-| use cases a model drives (`make e2e-llm`) | weekly | The deck test cases run by a real model, checking what it said | The fixed tests pin payloads and the cases where it refuses, and stay green while a model can no longer drive the product. |
+| use cases a model drives (`make e2e-llm`) | weekly | The deck test cases run by a real model, checking what it said, writing a verdict per case | The fixed tests pin payloads and the cases where it refuses, and stay green while a model can no longer drive the product. |
+| weekly records (`records`, `records-pr`) | weekly | Renders the pages built from the three weekly records, then opens one pull request with them | A record reaches `main` only when a maintainer merges it. |
 
 Notes on the jobs:
 
@@ -202,7 +214,7 @@ Notes on the jobs:
   return to the pool 200 days later.
 - `BACKEND_CLOCK_SKEW=database:200 make backend-clock-drift` runs the lane on a laptop with the
   weaker database applier. `backend/internal/shared/clockskew` says what each applier reaches.
-- The model lane costs real tokens. It skips, and does not fail, when `ANTHROPIC_API_KEY` is
+- The model lane costs real tokens. It skips, and does not fail, when `CLAUDE_CODE_OAUTH_TOKEN` is
   missing. So a lane with no money does not turn `main` red every Monday. A skipped job says "not
   set up" where a red one says "broken".
 - The vendor live check needs the `SURFE_LIVE_KEY` secret. Without it, the job reports "not checked"
@@ -210,6 +222,21 @@ Notes on the jobs:
 - The model lane does not give the same result each time: it runs each scenario three times, and
   passes at two. It uploads each transcript as an artifact, because the result line names the failed
   scenario, and only the transcript shows what the model did.
+
+The three weekly jobs record what they measure, and none of them writes to `main`:
+
+- Each job uploads its record as an artifact: `bench-perf-record`, `bench-mobile-record` and
+  `e2e-llm-verdicts`. A failed job still uploads, because a budget that is over is recorded before its gate fails.
+- `records` puts the records over the tree of the run. A record that matches the committed one counts
+  as not recorded. It runs `make perfdoc` and the MCP tool coverage generator, and hands over a patch.
+  It holds no write token.
+- `records-pr` commits the patch on a `bench/scheduled-<date>-<run>` branch and opens one pull request.
+  The body names each part, how it was measured (route, search mode, runner), and any part that did
+  not record. It runs only on `main`, and opens nothing when nothing recorded.
+- The default workflow token opens that pull request, and a pull request it opens starts no workflow.
+  Close it and open it again to start CI. The repository must let GitHub Actions open pull requests.
+- The model lane searches by word overlap, because no embedding key reaches the runner. Its verdicts
+  say `search: lexical`, and they replace the verdicts in the same `<model>@<route>` folder.
 
 Findings become issues (`scripts/scheduled-report.sh`): one open issue per check, keyed on a fixed
 title, because a red scheduled run tells nobody.
@@ -226,7 +253,8 @@ title, because a red scheduled run tells nobody.
   looking for a slow-down that nobody measured. A lane that ran and measured something bad has
   proved that it could run. So that finding is closed on the same run that files the other one.
 
-The report job is the only holder of `issues: write`, and runs no build code. That is the same
+The report job is the only holder of `issues: write`, and runs no build code. `records-pr` is the only
+holder of `contents: write` and `pull-requests: write`, and runs no build code either. That is the same
 permission rule `sbom.yml` uses for signing.
 
 ## `sbom.yml`
@@ -310,8 +338,13 @@ The tag is the version, read and checked by
 default; a tag with an ending, such as `v0.0.1-rc.1`, becomes a `pre-release`. A tag the script cannot
 read is refused in seconds, before either bundle compiles PostgreSQL from source.
 
-Two more checks share that first job. The tag points at a commit on `main`, and the commit carries
-no failing `verdict` from `merge-attest`. That last check picks releases, and does not gate merges.
+Three more checks share that first job. The tag points at a commit on `main`. `LICENSE` carries the
+release's Change Date and version, checked by
+[`scripts/release-license-stamped.sh`](../../scripts/release-license-stamped.sh)
+(`make test-release-license-stamped`). And the commit carries no failing `verdict` from
+`merge-attest`.
+
+That last check picks releases, and does not gate merges.
 To merge past `ci` is a standing decision here, so a missing result passes. A result that exists
 but is not done yet refuses.
 

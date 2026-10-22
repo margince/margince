@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
+import { KeyCode } from "./keyedname";
 import { NameDialog } from "./namedialog";
 
 // The caller owns the write, so pending and both refusals arrive as props.
@@ -54,6 +55,33 @@ export const Rename: Story = {
       dialog.getByRole("button", { name: "Save name" }),
     ).toBeDisabled();
   },
+};
+
+// The raw key sits under the field, the one place it shows, and describes it.
+export const RenameWithKey: Story = {
+  args: {
+    title: "Rename field",
+    label: "Field name",
+    initial: "Fleet size",
+    confirmLabel: "Save",
+    hint: <KeyCode code="deal.cf_fleet_size" />,
+  },
+  play: async () => {
+    const dialog = within(await within(document.body).findByRole("dialog"));
+    const field = dialog.getByLabelText("Field name");
+    const described = document.getElementById(
+      field.getAttribute("aria-describedby") ?? "",
+    );
+    await expect(described?.querySelector("code")).toHaveTextContent(
+      "deal.cf_fleet_size",
+    );
+  },
+};
+
+export const RenameWithKeyPhone: Story = {
+  ...RenameWithKey,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };
 
 export const Saving: Story = {

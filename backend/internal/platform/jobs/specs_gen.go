@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "49decc36196b5cf164daeb2a162ab41e2d73991118324ca975861d6542ece139"
+const JobContractHash = "299ce67b6a9b6376b279b8522a295deda69cfe3f0089b740a32b36f632f5c92f"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -107,6 +107,16 @@ var specs = map[string]Spec{
 		Queue:       "default",
 		Timeout:     TimeoutPolicy{Fixed: 2 * time.Minute},
 		MaxAttempts: 1,
+		OptsOwner:   OptsArgs,
+		Cadence:     Cadence{Fixed: 5 * time.Minute},
+	},
+	"approval_notice_reconcile": {
+		Kind:        "approval_notice_reconcile",
+		GoType:      "ApprovalNoticeReconcileArgs",
+		Role:        Worker,
+		Queue:       "default",
+		Timeout:     TimeoutPolicy{Fixed: 2 * time.Minute},
+		MaxAttempts: 3,
 		OptsOwner:   OptsArgs,
 		Cadence:     Cadence{Fixed: 5 * time.Minute},
 	},
@@ -338,6 +348,25 @@ var specs = map[string]Spec{
 		OptsOwner: OptsCaller,
 		Cadence:   Cadence{Fixed: 24 * time.Hour},
 	},
+	"data_task_reconcile": {
+		Kind:      "data_task_reconcile",
+		GoType:    "DataTaskReconcileArgs",
+		Role:      Worker,
+		Fleet:     true,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 10 * time.Minute},
+	},
+	"data_task_run": {
+		Kind:      "data_task_run",
+		GoType:    "DataTaskRunArgs",
+		Role:      Worker,
+		Fleet:     true,
+		Queue:     "data_task",
+		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
+		OptsOwner: OptsCaller,
+	},
 	"deal_scout": {
 		Kind:      "deal_scout",
 		GoType:    "DealScoutArgs",
@@ -391,12 +420,21 @@ var specs = map[string]Spec{
 		OptsOwner: OptsCaller,
 		Cadence:   Cadence{Fixed: 30 * time.Second},
 	},
+	"finance_sync": {
+		Kind:      "finance_sync",
+		GoType:    "FinanceSyncArgs",
+		Role:      Worker,
+		Queue:     "accounting_read",
+		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
+		OptsOwner: OptsCaller,
+		Args:      []ArgField{{Name: "Workspace"}},
+	},
 	"finance_sync_sweep": {
 		Kind:      "finance_sync_sweep",
 		GoType:    "FinanceSyncSweepArgs",
 		Role:      Worker,
 		Fleet:     true,
-		Queue:     "default",
+		Queue:     "accounting_read",
 		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
 		OptsOwner: OptsCaller,
 		Cadence:   Cadence{Fixed: 6 * time.Hour},
@@ -688,7 +726,7 @@ var specs = map[string]Spec{
 		GoType:      "PrivacyRetentionArgs",
 		Role:        Worker,
 		Queue:       "privacy_retention",
-		Timeout:     TimeoutPolicy{Fixed: 26300 * time.Second, DerivedFrom: "privacyRetentionPassTimeout"},
+		Timeout:     TimeoutPolicy{Fixed: 28300 * time.Second, DerivedFrom: "privacyRetentionPassTimeout"},
 		MaxAttempts: 3,
 		OptsOwner:   OptsArgs,
 		Cadence:     Cadence{Setting: "installation.retention_sweep_interval_seconds"},
@@ -799,14 +837,15 @@ var specs = map[string]Spec{
 		Registration: Registration{When: []string{"Blobstore"}},
 	},
 	"tag_scout": {
-		Kind:      "tag_scout",
-		GoType:    "TagScoutArgs",
-		Role:      Worker,
-		Fleet:     true,
-		Queue:     "default",
-		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
-		OptsOwner: OptsCaller,
-		Cadence:   Cadence{Fixed: 1 * time.Hour},
+		Kind:         "tag_scout",
+		GoType:       "TagScoutArgs",
+		Role:         Worker,
+		Fleet:        true,
+		Queue:        "default",
+		Timeout:      TimeoutPolicy{Fixed: 15 * time.Minute},
+		OptsOwner:    OptsCaller,
+		Cadence:      Cadence{Fixed: 1 * time.Hour},
+		Registration: Registration{When: []string{"TagSuggestBrain"}, AbsentRegistersAnyway: true},
 	},
 	"technical_enrich_backfill": {
 		Kind:         "technical_enrich_backfill",
@@ -944,7 +983,7 @@ var specs = map[string]Spec{
 		Queue:     "default",
 		Timeout:   TimeoutPolicy{Fixed: 10 * time.Minute},
 		OptsOwner: OptsCaller,
-		Cadence:   Cadence{Fixed: 6 * time.Hour},
+		Cadence:   Cadence{Fixed: 1 * time.Hour},
 	},
 }
 
@@ -953,10 +992,12 @@ var specs = map[string]Spec{
 // which this package has no business knowing — and this table is what the
 // census holds that construction to, in both directions.
 var queues = map[string]int{
+	"accounting_read":   2,
 	"agent_scheduler":   2,
 	"ai_capture":        2,
 	"capture_part_slim": 1,
 	"comms_send":        3,
+	"data_task":         1,
 	"deep_read":         6,
 	"default":           5,
 	"geocode":           1,

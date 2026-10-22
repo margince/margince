@@ -19,6 +19,7 @@ package gates
 import (
 	"go/ast"
 	"go/parser"
+	"go/token"
 	"slices"
 	"strings"
 	"testing"
@@ -152,4 +153,60 @@ func mentionsAll(findings []string, parts ...string) bool {
 		}
 	}
 	return false
+}
+
+func TestAnAuditSubjectUsesItsImportedConstantWithoutGuessing(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name, path, field string
+		want              bool
+	}{
+		{"shared subject", modulePath + "/internal/shared/kernel/auditentity", "Tag", true},
+		{"unknown constant", modulePath + "/internal/shared/kernel/auditentity", "NotDeclared", false},
+		{"same alias on another package", "example.test/auditentity", "Tag", false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			file, err := parser.ParseFile(token.NewFileSet(), "probe.go", "package probe\nimport subjects \""+tc.path+"\"\nvar entity = subjects."+tc.field, 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			declaration, ok := file.Decls[1].(*ast.GenDecl)
+			if !ok {
+				t.Fatal("missing entity declaration")
+			}
+			value, ok := declaration.Specs[0].(*ast.ValueSpec)
+			if !ok {
+				t.Fatal("missing entity value")
+			}
+			got, known := resolveAuditEntity(t, file, value.Values[0], nil)
+			if known != tc.want || known && got != "tag" {
+				t.Fatalf("subject=%q known=%v want known=%v", got, known, tc.want)
+			}
+		})
+	}
+}
+
+func TestAShadowedAuditImportDoesNotResolveToThePackageConstant(t *testing.T) {
+	t.Parallel()
+	source := "package probe\nimport subjects \"" + modulePath + "/internal/shared/kernel/auditentity\"\nfunc f(subjects struct { Tag string }) { sink(subjects.Tag) }"
+	file, err := parser.ParseFile(token.NewFileSet(), "probe.go", source, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	checked := false
+	ast.Inspect(file, func(node ast.Node) bool {
+		selector, ok := node.(*ast.SelectorExpr)
+		if !ok {
+			return true
+		}
+		checked = true
+		if value, known := resolveAuditEntity(t, file, selector, nil); known {
+			t.Fatalf("shadowed import became %q", value)
+		}
+		return true
+	})
+	if !checked {
+		t.Fatal("fixture had no selector")
+	}
 }

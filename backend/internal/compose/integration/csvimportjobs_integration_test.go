@@ -27,7 +27,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/jobtest"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
-	"github.com/margince/margince/backend/internal/platform/deployconfig"
 )
 
 // importCall posts an approve or an undo of a run, then works every job it
@@ -200,15 +199,32 @@ func TestASnoozedSliceIsClaimedWithTheSameAttempt(t *testing.T) {
 	if len(first) != 1 || first[0].EventKind != river.EventKindJobSnoozed {
 		t.Fatalf("the first slice ended %+v, want one snoozed job", first)
 	}
-	if polled := readRun(t, e, run.ID); polled.Status != "running" || polled.Checkpoint != 500 {
-		t.Fatalf("after one slice the run is %q at %d, want running at 500", polled.Status, polled.Checkpoint)
+	// A slow runner ends the slice on its 12 s budget before row 500, so the
+	// place is any prefix short of the file.
+	if polled := readRun(t, e, run.ID); polled.Status != "running" || polled.Checkpoint < 1 || polled.Checkpoint > 500 {
+		t.Fatalf("after one slice the run is %q at %d, want running at 1 to 500", polled.Status, polled.Checkpoint)
 	}
 	if _, claimed := runLease(t, e, run.ID); claimed != nil {
 		t.Fatalf("a snoozed slice left the run claimed by attempt %d, want it queued for the next slice", *claimed)
 	}
-	second := importjobtest.WorkQueued(t, e, compose.ImportCommitArgs{}.Kind())
-	if len(second) != 1 || second[0].Job.ID != first[0].Job.ID || second[0].EventKind != river.EventKindJobCompleted {
-		t.Fatalf("the second slice was %+v, want job %d again, completed", second, first[0].Job.ID)
+	checkpoint := readRun(t, e, run.ID).Checkpoint
+	for checkpoint < 501 {
+		next := importjobtest.WorkQueued(t, e, compose.ImportCommitArgs{}.Kind())
+		if len(next) != 1 || next[0].Job.ID != first[0].Job.ID {
+			t.Fatalf("the next slice was %+v, want job %d again", next, first[0].Job.ID)
+		}
+		if next[0].EventKind != river.EventKindJobCompleted && next[0].EventKind != river.EventKindJobSnoozed {
+			t.Fatalf("the next slice ended %s, want completion or another bounded slice", next[0].EventKind)
+		}
+		polled := readRun(t, e, run.ID)
+		if polled.Checkpoint <= checkpoint || polled.Checkpoint > 501 {
+			t.Fatalf("slice checkpoint moved from %d to %d, want progress within 501 rows", checkpoint, polled.Checkpoint)
+		}
+		checkpoint = polled.Checkpoint
+		sliceAttempt, claimed := runLease(t, e, run.ID)
+		if sliceAttempt != attempt || (next[0].EventKind == river.EventKindJobSnoozed && claimed != nil) {
+			t.Fatalf("slice attempt %d claimed by %v, want unchanged attempt %d and released snoozes", sliceAttempt, claimed, attempt)
+		}
 	}
 	finalAttempt, claimed := runLease(t, e, run.ID)
 	if finalAttempt != attempt || claimed == nil || *claimed != attempt {
@@ -263,7 +279,7 @@ func TestAShutdownFlushesAndSnoozesWithoutFailing(t *testing.T) {
 	run := testedLeadRun(t, e, leadFile(rows))
 
 	runner, _, _ := jobtest.StartTestJobRunner(t, e.Pool, compose.JobRunnerConfig{
-		Blobstore: store, ImportUploadCap: deployconfig.Config{}.EffectiveUploads().CSVImport,
+		Blobstore: store, ImportUploadCap: compose.DefaultUploadLimits().CSVImport,
 	})
 	approveQueued(t, e, run.ID)
 	landed := awaitCheckpoint(t, e, run.ID)

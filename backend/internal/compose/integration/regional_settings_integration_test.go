@@ -17,7 +17,7 @@ import (
 
 func TestRegionalFormatsPersistAndRequireSettingsAuthority(t *testing.T) {
 	e := SetupSearch(t)
-	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool))
+	store := identity.NewInstallationSettings(e.DB(), compose.NewSettingsStore(e.Pool), compose.StoredConfig(e.Pool))
 	admin := e.installationSettingsCtx(principal.ObjectGrant{Read: true, Update: true})
 	rep := e.installationSettingsCtx(principal.ObjectGrant{Read: true})
 	dateFormat, timeFormat := "dmy", "24h"

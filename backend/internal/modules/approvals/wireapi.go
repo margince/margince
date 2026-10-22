@@ -19,6 +19,7 @@ package approvals
 
 import (
 	"context"
+	"encoding/json"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -36,6 +37,9 @@ func (s *Service) ListWire(ctx context.Context, in ListInput) ([]crmcontracts.Ap
 	for _, a := range rows {
 		out = append(out, wire(a, now))
 	}
+	if err := s.readDecisionContext(ctx, out, rows); err != nil {
+		return nil, storekit.Page{}, err
+	}
 	return out, page, nil
 }
 
@@ -45,7 +49,7 @@ func (s *Service) GetWire(ctx context.Context, id ids.ApprovalID) (crmcontracts.
 	if err != nil {
 		return crmcontracts.Approval{}, err
 	}
-	return wire(a, s.now()), nil
+	return s.contextWire(ctx, a)
 }
 
 // DecideWire is Decide in the contract shape.
@@ -54,7 +58,24 @@ func (s *Service) DecideWire(ctx context.Context, id ids.ApprovalID, approve boo
 	if err != nil {
 		return crmcontracts.Approval{}, err
 	}
-	return wire(a, s.now()), nil
+	return s.committedWire(ctx, a), nil
+}
+
+// DecideEditedWire answers the edited decision with the same context as the inbox.
+func (s *Service) DecideEditedWire(ctx context.Context, id ids.ApprovalID, edited json.RawMessage, reason *string) (crmcontracts.Approval, error) {
+	a, err := s.DecideEditedFor(ctx, id, edited, reason)
+	if err != nil {
+		return crmcontracts.Approval{}, err
+	}
+	return s.committedWire(ctx, a), nil
+}
+
+func (s *Service) contextWire(ctx context.Context, a row) (crmcontracts.Approval, error) {
+	out := []crmcontracts.Approval{wire(a, s.now())}
+	if err := s.readDecisionContext(ctx, out, []row{a}); err != nil {
+		return crmcontracts.Approval{}, err
+	}
+	return out[0], nil
 }
 
 // DecideBundleWire is DecideBundle in the contract shape, each member carrying
@@ -65,12 +86,36 @@ func (s *Service) DecideBundleWire(ctx context.Context, bundleID ids.UUID, appro
 		return nil, err
 	}
 	now := s.now()
-	out := make([]crmcontracts.ApprovalBundleMember, 0, len(members))
+	rows := make([]crmcontracts.Approval, 0, len(members))
+	subjects := make([]row, 0, len(members))
 	for _, member := range members {
+		rows = append(rows, wire(member.Approval, now))
+		subjects = append(subjects, member.Approval)
+	}
+	s.readCommittedContext(ctx, rows, subjects)
+	out := make([]crmcontracts.ApprovalBundleMember, 0, len(members))
+	for index, member := range members {
 		out = append(out, crmcontracts.ApprovalBundleMember{
-			Approval: wire(member.Approval, now),
+			Approval: rows[index],
 			Outcome:  crmcontracts.ApprovalBundleMemberOutcome(member.Outcome),
 		})
 	}
 	return out, nil
+}
+
+// A context outage must not turn a committed verdict into an apparent refusal.
+func (s *Service) readCommittedContext(ctx context.Context, rows []crmcontracts.Approval, subjects []row) {
+	if err := s.readDecisionContext(ctx, rows, subjects); err != nil {
+		s.logger().ErrorContext(ctx, "approval decisions committed but context could not be read", "err", err)
+		for i, subject := range subjects {
+			rows[i] = wire(subject, s.now())
+			rows[i].Preview = &crmcontracts.ApprovalPreview{Version: 1, State: "unavailable", Changes: []crmcontracts.ApprovalPreviewChange{}}
+		}
+	}
+}
+
+func (s *Service) committedWire(ctx context.Context, a row) crmcontracts.Approval {
+	out := []crmcontracts.Approval{wire(a, s.now())}
+	s.readCommittedContext(ctx, out, []row{a})
+	return out[0]
 }

@@ -30,6 +30,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/lifecyclereview"
+	"github.com/margince/margince/backend/internal/compose/receiptcopy"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
@@ -148,15 +150,16 @@ func (s *Service) suggestionsFor(
 func candidateSuggestions(
 	companyID ids.CompanyID, now time.Time, in suggestionInputs,
 ) []crmcontracts.Company360Suggestion {
+	said := suggestionCopyFor(in.language)
 	found := make([]crmcontracts.Company360Suggestion, 0, maxSuggestions)
 	// First, because a record that contradicts itself outranks any advice about
 	// what to do next: acting on a stage that is wrong is worse than not acting.
 	found = appendIf(found, lifecycleConflict(companyID, in))
 	if in.timeline && in.hasNewest {
-		found = appendIf(found, staleThread(companyID, now, in.newest))
+		found = appendIf(found, said.staleThread(companyID, now, in.newest))
 	}
 	if in.pipeline {
-		found = append(found, stalledDealSuggestions(in.open.Stalled)...)
+		found = append(found, said.stalledDealSuggestions(in.open.Stalled)...)
 		if in.timeline {
 			// The no-next-step rule reads BOTH: the pipeline says the account is
 			// live, and the task grant is what makes "nothing is scheduled" a fact
@@ -262,7 +265,7 @@ func NewSuggestionAction(kind crmcontracts.Company360SuggestionActionKind) *stru
 // them, while an unanswered inbound is a thread waiting on US — a different
 // problem with a different action, and conflating the two would tell a rep to
 // chase someone who is waiting for their reply.
-func staleThread(
+func (said suggestionCopy) staleThread(
 	companyID ids.CompanyID, now time.Time, newest lastMessage,
 ) *crmcontracts.Company360Suggestion {
 	// An unrecorded direction cannot support advice about who owes a reply: a
@@ -290,19 +293,19 @@ func staleThread(
 		Name:   nonEmpty(newest.Subject),
 		Quote:  nonEmpty(newest.Excerpt),
 		At:     new(newest.At),
-		Origin: new(sentOrigin(newest.Kind)),
+		Origin: new(receiptcopy.Origin(said.Spoken, newest.Kind, newest.Direction)),
 	}}
 	out := &crmcontracts.Company360Suggestion{
 		Kind: suggestNoReply,
 		// Channel-neutral wording: the newest exchange may have been a call or a
 		// meeting, and "you wrote" would be a small false statement about it.
-		Reason:      fmt.Sprintf("You reached out %d days ago and nobody has come back.", waitedDays),
+		Reason:      fmt.Sprintf(said.Say(suggestionWords.NoReplyReason), waitedDays),
 		Fingerprint: fingerprint(string(suggestNoReply), companyID.String(), evidence),
 		Evidence:    evidence,
 	}
 	// The rule's own words, and the date the EVIDENCE carries — when the thread
 	// went quiet. Neither reaches the fingerprint above (PO-AC-N-14).
-	out.Title = new(fmt.Sprintf("Follow up: no reply in %d days", waitedDays))
+	out.Title = new(fmt.Sprintf(said.Say(suggestionWords.NoReplyTitle), waitedDays))
 	out.DueAt = new(newest.At)
 	setDraftReply(out, newest.ID)
 	return out
@@ -312,14 +315,14 @@ func staleThread(
 // deals module's own — deals.IsStalled, against its fixed 60-day window
 // (StalledThresholdDays); there is no per-pipeline setting — never re-derived
 // here from a date.
-func stalledDealSuggestions(stalled []stalledDeal) []crmcontracts.Company360Suggestion {
+func (said suggestionCopy) stalledDealSuggestions(stalled []stalledDeal) []crmcontracts.Company360Suggestion {
 	out := make([]crmcontracts.Company360Suggestion, 0, len(stalled))
 	for _, deal := range stalled {
 		evidence := []crmcontracts.CompanyBriefEvidence{{
 			EntityType: crmcontracts.CompanyBriefEvidenceEntityTypeDeal,
 			EntityId:   openapi_types.UUID(deal.ID),
 			Name:       new(deal.Name),
-			Origin:     new(originStalledDeal),
+			Origin:     new(said.Say(suggestionWords.OriginStalledDeal)),
 		}}
 		if !deal.IdleSince.IsZero() {
 			evidence[0].At = new(deal.IdleSince)
@@ -328,7 +331,7 @@ func stalledDealSuggestions(stalled []stalledDeal) []crmcontracts.Company360Sugg
 		subjectID := openapi_types.UUID(deal.ID)
 		out = append(out, crmcontracts.Company360Suggestion{
 			Kind:   suggestStalledDeal,
-			Reason: fmt.Sprintf("%q has had no activity long enough to count as stalled.", deal.Name),
+			Reason: fmt.Sprintf(said.Say(suggestionWords.StalledReason), deal.Name),
 			// The STALL is what the fingerprint identifies, not the deal — see
 			// stalledDeal.episode. This stall stays dismissed; the next one is a new
 			// fact about the account.
@@ -336,7 +339,7 @@ func stalledDealSuggestions(stalled []stalledDeal) []crmcontracts.Company360Sugg
 			SubjectType: &subjectType,
 			SubjectId:   &subjectID,
 			Evidence:    evidence,
-			Title:       new(fmt.Sprintf("Move %q — stalled", deal.Name)),
+			Title:       new(fmt.Sprintf(said.Say(suggestionWords.StalledTitle), deal.Name)),
 		})
 		if !deal.IdleSince.IsZero() {
 			out[len(out)-1].DueAt = new(deal.IdleSince)
@@ -360,27 +363,28 @@ func stalledDealSuggestions(stalled []stalledDeal) []crmcontracts.Company360Sugg
 func lifecycleConflict(
 	companyID ids.CompanyID, in suggestionInputs,
 ) *crmcontracts.Company360Suggestion {
-	if !in.contractEnded || !liveLifecycles[in.lifecycle] {
+	said := suggestionCopyFor(in.language)
+	if !in.contractEnded || !lifecyclereview.LiveStage(in.lifecycle) {
 		return nil
 	}
-	// The record cited is the account, because the contract's citable kinds
-	// have no word for a signal; the WORDS are the signal's own, so the
-	// reader checks the conflict against what the mail said rather than
-	// against this rule's paraphrase of it.
 	evidence := []crmcontracts.CompanyBriefEvidence{{
 		EntityType: crmcontracts.CompanyBriefEvidenceEntityTypeCompany,
 		EntityId:   openapi_types.UUID(companyID.UUID),
 		Quote:      nonEmpty(in.contractEndedSaid),
-		Origin:     new(originContractEnded),
+		Origin:     new(said.Say(suggestionWords.OriginContractEnded)),
 	}}
+	if !in.contractEndedSource.IsZero() {
+		evidence[0].EntityType = crmcontracts.CompanyBriefEvidenceEntityTypeActivity
+		evidence[0].EntityId = openapi_types.UUID(in.contractEndedSource)
+	}
 	if !in.contractEndedAt.IsZero() {
 		evidence[0].At = new(in.contractEndedAt)
 	}
 	return &crmcontracts.Company360Suggestion{
 		Kind: suggestConflict,
 		Reason: fmt.Sprintf(
-			"Their correspondence says the contract ended, but this account is still filed as %s.",
-			in.lifecycle),
+			said.Say(suggestionWords.ConflictReason),
+			said.lifecycle(in.lifecycle)),
 		// Keyed on the STAGE as well as the account, so correcting the stage
 		// retires this rather than leaving a dismissal in force over a record
 		// that has since been fixed.
@@ -388,11 +392,6 @@ func lifecycleConflict(
 		Evidence:    evidence,
 		// The conflict is named, not resolved — which of the two is wrong is the
 		// reader's judgment, so the title asks rather than instructs.
-		Title: new("Check the stage against what they wrote"),
+		Title: new(suggestionCopyFor(in.language).Say(suggestionWords.ConflictTitle)),
 	}
 }
-
-// liveLifecycles are the stages a contract_ended signal contradicts. A stage
-// that already reads as over — former_customer, disqualified — is not in
-// conflict with the mail that says so; it is the mail's conclusion.
-var liveLifecycles = map[string]bool{"prospect": true, "opportunity": true, "customer": true}

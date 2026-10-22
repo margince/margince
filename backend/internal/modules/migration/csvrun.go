@@ -67,6 +67,16 @@ type RunMapping struct {
 	// the run is decided by it.
 	FileName     string `json:"file_name,omitempty"`
 	OnBrokenLink string `json:"on_broken_link,omitempty"`
+	// PresetLinks are the records every activity of the run is filed under, so
+	// the file needs no links column. Both the test and the commit read them
+	// from here.
+	PresetLinks []PresetLink `json:"preset_links,omitempty"`
+}
+
+// PresetLink names one record a run files every activity under.
+type PresetLink struct {
+	Type string `json:"type"`
+	ID   string `json:"id"`
 }
 
 // PartMapping is one file of a run: which object its rows are, which column
@@ -104,12 +114,20 @@ func (s *RunStore) Approve(ctx context.Context, id RunID, version int, enqueue E
 	}
 	var run Run
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		err := stageTransition(ctx, tx, id, moveApprove, runChange{
+		version, reviewed, err := releasedReviewPlan(ctx, tx, id, version)
+		if err != nil {
+			return err
+		}
+		literals := []string{"approved_at = now()", "profile = NULL"}
+		if reviewed {
+			literals = append(literals, `report = jsonb_set(report, '{review_plan,enforced}', 'true'::jsonb)`)
+		}
+		err = stageTransition(ctx, tx, id, moveApprove, runChange{
 			version: version,
 			queue:   true,
 			values:  []runValue{{"approved_by", approver}},
 			// The profile serves only the choosing; a stopped commit must not keep its sample cells.
-			literals: []string{"approved_at = now()", "profile = NULL"},
+			literals: literals,
 			after:    map[string]any{"approved_by": approver},
 		})
 		if err != nil {
@@ -194,10 +212,24 @@ func readStaged(ctx context.Context, tx pgx.Tx, id RunID) (Run, error) {
 	return run, nil
 }
 
+// RunView narrows a run list to one of the two things the Data import page
+// shows. Drafts and abandoned runs then cannot push a finished import out of
+// one page.
+type RunView string
+
+const (
+	// ViewAll lists every run.
+	ViewAll RunView = ""
+	// ViewHistory lists the runs that wrote, are writing or failed.
+	ViewHistory RunView = "history"
+	// ViewDrafts lists the runs still waiting for a test.
+	ViewDrafts RunView = "drafts"
+)
+
 // ListStaged reads one page of CSV runs, newest first, each as GetStaged reads
 // one. The flip's own runs are left out: they carry no mapping this surface
 // describes. An empty cursor starts at the newest run.
-func (s *RunStore) ListStaged(ctx context.Context, cursor string, limit int) ([]Run, storekit.Page, error) {
+func (s *RunStore) ListStaged(ctx context.Context, cursor string, limit int, view RunView) ([]Run, storekit.Page, error) {
 	// The exported name, not the alias: the grant-reachability census resolves
 	// only a literal-valued constant.
 	if err := auth.Require(ctx, ImportRunObject, principal.ActionRead); err != nil {
@@ -206,6 +238,12 @@ func (s *RunStore) ListStaged(ctx context.Context, cursor string, limit int) ([]
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	where := storekit.SQLf(`connector = $%d`, arg(ConnectorCSV))
+	switch view {
+	case ViewHistory:
+		where += storekit.SQLf(` AND status NOT IN ($%d, $%d)`, arg(StatusPending), arg(StatusCancelled))
+	case ViewDrafts:
+		where += storekit.SQLf(` AND status = $%d`, arg(StatusPending))
+	}
 	if cursor != "" {
 		after, err := storekit.DecodeCursor(cursor)
 		if err != nil {
@@ -251,7 +289,8 @@ const stagedColumns = `id, connector, status, source_ref, checkpoint, created_at
 			mapping, report, undo_report, error, captured_by,
 			version, coalesce(draft_step, ''), coalesce(approved_by, ''), approved_at, superseded_by,
 			source_released_at IS NOT NULL, job_attempt, actor, attempt_correlation_id,
-			coalesce(phase, ''), progress`
+			coalesce(phase, ''), coalesce(phase_object, ''), progress,
+			started_at, finished_at, progress_at, heartbeat_at, now()`
 
 func scanStaged(row pgx.Row, withProfile bool) (Run, error) {
 	var (
@@ -267,7 +306,8 @@ func scanStaged(row pgx.Row, withProfile bool) (Run, error) {
 		&run.ID, &run.Connector, &run.Status, &run.SourceRef, &run.Checkpoint,
 		&run.CreatedAt, &run.UpdatedAt, &mapping, &report, &undoReport, &runErr, &run.CapturedBy,
 		&run.Version, &run.DraftStep, &run.ApprovedBy, &run.ApprovedAt, &run.SupersededBy, &run.SourceReleased,
-		&run.JobAttempt, &actor, &run.AttemptCorrelationID, &run.Phase, &progress,
+		&run.JobAttempt, &actor, &run.AttemptCorrelationID, &run.Phase, &run.PhaseObject, &progress,
+		&run.StartedAt, &run.FinishedAt, &run.ProgressAt, &run.HeartbeatAt, &run.ReadAt,
 	}
 	if withProfile {
 		dest = append(dest, &run.Profile)
@@ -371,7 +411,7 @@ func (s *RunStore) BindingsOf(ctx context.Context, sourceSystem, object string) 
 	out := map[string]Binding{}
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
-			SELECT m.external_id, m.native_id, r.status, m.origin FROM import_record_map m
+			SELECT m.external_id, m.native_id, r.status, m.origin, r.id FROM import_record_map m
 			  JOIN import_run r ON r.id = m.import_run_id
 			WHERE m.source_system = $1 AND m.object = $2`, sourceSystem, object)
 		if err != nil {
@@ -381,7 +421,7 @@ func (s *RunStore) BindingsOf(ctx context.Context, sourceSystem, object string) 
 		for rows.Next() {
 			var external string
 			var binding Binding
-			if err := rows.Scan(&external, &binding.NativeID, &binding.RunStatus, &binding.Origin); err != nil {
+			if err := rows.Scan(&external, &binding.NativeID, &binding.RunStatus, &binding.Origin, &binding.RunID); err != nil {
 				return fmt.Errorf("migration: reading the %s identities of %s: %w", object, sourceSystem, err)
 			}
 			out[external] = binding

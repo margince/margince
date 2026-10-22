@@ -25,6 +25,10 @@ import (
 // CreateRelationshipInput is one edge to write: its kind, the endpoints that
 // kind anchors, and the optional facts an employment carries.
 type CreateRelationshipInput struct {
+	// ReferencesFromRequest says the caller typed the endpoint ids, so a miss
+	// is refused naming the field. A writer that derives them (an import row, a
+	// promotion) leaves it false.
+	ReferencesFromRequest bool
 	EmploymentStatus      *string
 	StartedPrecision      *string
 	EndedPrecision        *string
@@ -67,12 +71,7 @@ func (s *Store) CreateRelationship(ctx context.Context, in CreateRelationshipInp
 		return relationshipRow{}, err
 	}
 	anchorObject, _ := relationshipAnchor(in.Kind)
-	if err := auth.Require(ctx, "relationship", principal.ActionCreate); err != nil {
-		return relationshipRow{}, err
-	}
-	if err := auth.Require(ctx, anchorObject, principal.ActionUpdate); err != nil {
-		// The edge annotates its anchor: without the anchor's write
-		// grant, an edge would be an RBAC side door onto it.
+	if err := requireRelationshipCreate(ctx, anchorObject); err != nil {
 		return relationshipRow{}, err
 	}
 	capturedBy, err := storekit.CapturedBy(ctx)
@@ -104,10 +103,7 @@ func (s *Store) CreateRelationshipTx(ctx context.Context, tx pgx.Tx, in CreateRe
 		return relationshipRow{}, err
 	}
 	anchorObject, _ := relationshipAnchor(in.Kind)
-	if err := auth.Require(ctx, "relationship", principal.ActionCreate); err != nil {
-		return relationshipRow{}, err
-	}
-	if err := auth.Require(ctx, anchorObject, principal.ActionUpdate); err != nil {
+	if err := requireRelationshipCreate(ctx, anchorObject); err != nil {
 		return relationshipRow{}, err
 	}
 	capturedBy, err := storekit.CapturedBy(ctx)
@@ -149,14 +145,14 @@ func writeRelationshipInTx(
 	// relationship on an archived contact.
 	if in.ContactID != nil {
 		if err := lockContactForAttach(ctx, tx, *in.ContactID); err != nil {
-			return out, err
+			return out, in.named(endContactColumn, err)
 		}
 	}
 	// The counterparty contact is an attach target exactly like the anchor: an
 	// archive racing this write must either refuse it or sweep the edge.
 	if in.CounterpartyContactID != nil {
 		if err := lockContactForAttach(ctx, tx, *in.CounterpartyContactID); err != nil {
-			return out, err
+			return out, in.named("counterparty_contact_id", err)
 		}
 	}
 	if err := ensureRelationshipEndpoints(ctx, tx, in); err != nil {
@@ -208,26 +204,36 @@ func lockEmploymentClocks(ctx context.Context, tx pgx.Tx, in CreateRelationshipI
 	return storekit.LockLastActivityTargets(ctx, tx, targets)
 }
 
+// named names the endpoint field when the caller typed the ids. A writer that
+// derived them gets the bare answer.
+func (in CreateRelationshipInput) named(field string, err error) error {
+	if in.ReferencesFromRequest {
+		return auth.NameMissingReference(field, err)
+	}
+	return err
+}
+
 // ensureRelationshipEndpoints validates every supplied endpoint as a
 // client-supplied FK argument (H1): each named target must be visible
 // under the caller's row scope before the edge lands.
 func ensureRelationshipEndpoints(ctx context.Context, tx pgx.Tx, in CreateRelationshipInput) error {
 	for _, ref := range []struct {
+		field string
 		table string
 		id    *ids.UUID
 	}{
-		{anchorContact, untypedPtr(in.ContactID)},
-		{anchorContact, untypedPtr(in.CounterpartyContactID)},
-		{companyEntity, untypedPtr(in.CompanyID)},
-		{companyEntity, untypedPtr(in.CounterpartyCompanyID)},
-		{anchorDeal, untypedPtr(in.DealID)},
-		{projectObjectName, untypedPtr(in.ProjectID)},
+		{endContactColumn, anchorContact, untypedPtr(in.ContactID)},
+		{"counterparty_contact_id", anchorContact, untypedPtr(in.CounterpartyContactID)},
+		{endCompanyColumn, companyEntity, untypedPtr(in.CompanyID)},
+		{"counterparty_company_id", companyEntity, untypedPtr(in.CounterpartyCompanyID)},
+		{endDealColumn, anchorDeal, untypedPtr(in.DealID)},
+		{endProjectColumn, projectObjectName, untypedPtr(in.ProjectID)},
 	} {
 		if ref.id == nil {
 			continue
 		}
 		if err := auth.EnsureLinkTarget(ctx, tx, ref.table, *ref.id); err != nil {
-			return err
+			return in.named(ref.field, err)
 		}
 	}
 	return nil
@@ -240,4 +246,11 @@ func untypedPtr[K ids.EntityKind](id *ids.ID[K]) *ids.UUID {
 		return nil
 	}
 	return &id.UUID
+}
+
+func requireRelationshipCreate(ctx context.Context, anchor string) error {
+	if err := auth.Require(ctx, "relationship", principal.ActionCreate); err != nil {
+		return err
+	}
+	return auth.Require(ctx, anchor, principal.ActionUpdate)
 }

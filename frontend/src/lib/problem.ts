@@ -49,7 +49,7 @@ export {
 // who can lift the ceiling. It names "the seat", not "your seat". The same code
 // answers a read seat's own mutation and an agent passport acting for one. It
 // also answers a grant that would give a read seat write access. A surface
-// that knows whose seat it is (share.tsx knows it is the recipient's) says so
+// that knows whose seat it is (sharerevoke.tsx knows it is the recipient's) says so
 // before it gets here.
 function problemDetail(
   problem: unknown,
@@ -199,4 +199,24 @@ export function isAlreadyDecided(problem: unknown): boolean {
 // rather than showing a raw server detail.
 export function isConsentNotGranted(problem: unknown): boolean {
   return problemCode(problem) === "consent_not_granted";
+}
+
+// The HTTP status out of a thrown RFC-7807 body, or 0 when the failure carried
+// none (a dropped connection throws no problem document at all).
+export function problemStatus(err: unknown): number {
+  // `typeof null === "object"`, so the null check is needed. Without it, a
+  // ProblemError with a null body throws here and turns a handled error into
+  // an unhandled one.
+  if (
+    !(err instanceof ProblemError) ||
+    typeof err.problem !== "object" ||
+    err.problem === null
+  ) {
+    return 0;
+  }
+  if (!("status" in err.problem)) {
+    return 0;
+  }
+  const { status } = err.problem;
+  return typeof status === "number" ? status : 0;
 }

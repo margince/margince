@@ -3,10 +3,7 @@
 
 package compose
 
-// The OPTIONAL attention lanes' seams over the engines that already own
-// what they read. Three are bound today; commitments is deliberately not
-// (newAttentionService passes nil until its production writer, issue #849,
-// exists), and its seam stays compiled here for that rebinding.
+// Optional attention lanes read the engines that own their records.
 //
 // Each is a binding rather than an implementation, which is the point: the
 // promises come from the contacts module's claim read, the deal risk from the
@@ -40,47 +37,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
-
-// attentionCommitments reads the acting rep's own promises through the contacts
-// store.
-//
-// A claim carries no assignee, so ownership rides the contact it was made to:
-// the rep who holds the relationship is the one who made the promise in their
-// own captured conversation. A principal with no human behind it has no
-// promises of its own to keep, which is a refusal rather than an empty lane —
-// the feed omits and NAMES the lane instead of reporting a clear day.
-type attentionCommitments struct{ store *contacts.Store }
-
-var _ attention.Commitments = attentionCommitments{}
-
-func (c attentionCommitments) DueBy(ctx context.Context, by time.Time, limit int) ([]attention.Commitment, error) {
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.UserID.IsZero() {
-		return nil, apperrors.ErrPermissionDenied
-	}
-	due, err := c.store.OpenCommitmentsDue(ctx, ids.From[ids.UserKind](actor.UserID), by, limit)
-	if err != nil {
-		return nil, err
-	}
-	if err := c.store.MarkSettleable(ctx, due); err != nil {
-		return nil, err
-	}
-	promises := make([]attention.Commitment, 0, len(due))
-	for _, row := range due {
-		promises = append(promises, attention.Commitment{
-			ID:          row.ID,
-			ContactID:   row.ContactID.UUID,
-			Body:        row.Body,
-			Quote:       row.SourceQuote,
-			SourceLabel: row.SourceLabel,
-			OccurredAt:  row.OccurredAt,
-			DueAt:       row.DueAt,
-			Version:     row.Version,
-			ReadOnly:    !row.Settleable,
-		})
-	}
-	return promises, nil
-}
 
 // attentionAtRisk reads the pipeline's own risk candidates at the morning
 // queue's shorter idle window.
@@ -123,6 +79,7 @@ func (a attentionAtRisk) Quiet(ctx context.Context) ([]attention.RiskyDeal, bool
 			AmountMinor:          deal.AmountMinor,
 			Currency:             deal.Currency,
 			QuietDays:            idleDaysOf(deal, now),
+			LastTouchedAt:        idlebase.Since(deal.CreatedAt, deal.LastActivityAt),
 			CloseOverdue:         deal.CloseOverdue,
 			ExpectedCloseDate:    deal.ExpectedCloseDate,
 			CloseDateProvisional: deal.CloseDateProvisional,
@@ -358,6 +315,7 @@ func (f attentionDealFacts) Figures(
 	out := make(map[ids.UUID]attention.DealFigures, len(found))
 	for id, figures := range found {
 		out[id] = attention.DealFigures{
+			Closed:               figures.Closed,
 			StageID:              figures.StageID,
 			StageWinProbability:  figures.StageWinProbability,
 			OwnerID:              figures.OwnerID,
@@ -388,6 +346,9 @@ func taskFromActivity(row crmcontracts.Activity) attention.Task {
 		LinkType:               linkType,
 		LinkID:                 linkID,
 	}
+	if row.SourceActivityId != nil {
+		task.SourceActivityID = new(ids.UUID(*row.SourceActivityId))
+	}
 	// Who holds it, already on the row the store returned and dropped here.
 	// Two of this lane's three scopes put somebody else's task in front of the
 	// reader, and one of them exists precisely to surface the tasks nobody has
@@ -414,10 +375,17 @@ func taskFromActivity(row crmcontracts.Activity) attention.Task {
 // The store's aggregate is unbounded and answers the count itself.
 type attentionOverdue struct{ store *activities.Store }
 
-func (o attentionOverdue) OverduePerAssignee(
-	ctx context.Context, asOf time.Time,
-) (map[ids.UUID]int, error) {
+func (o attentionOverdue) OverduePerAssignee(ctx context.Context, asOf time.Time) (map[ids.UUID]int, error) {
 	rows, err := o.store.OverdueLoadByAssignee(ctx, asOf)
+	return taskLoadMap(rows, err)
+}
+
+func (o attentionOverdue) CommitmentsDuePerAssignee(ctx context.Context, asOf time.Time) (map[ids.UUID]int, error) {
+	rows, err := o.store.CommitmentLoadByAssignee(ctx, asOf)
+	return taskLoadMap(rows, err)
+}
+
+func taskLoadMap(rows []activities.OverdueLoad, err error) (map[ids.UUID]int, error) {
 	if err != nil {
 		return nil, err
 	}
@@ -442,16 +410,6 @@ func (t attentionTasks) CountOpenForViewer(
 		return 0, nil
 	}
 	return t.store.CountActivities(ctx, in)
-}
-
-// CountDueBy answers how many promises are due, for the reason the task lane's
-// count exists: the page is capped at a dozen and the badge is not the cap.
-func (c attentionCommitments) CountDueBy(ctx context.Context, by time.Time) (int, error) {
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.UserID.IsZero() {
-		return 0, apperrors.ErrPermissionDenied
-	}
-	return c.store.CountOpenCommitmentsDue(ctx, ids.From[ids.UserKind](actor.UserID), by)
 }
 
 // attentionPins reads the acting reader's own pinned rows.

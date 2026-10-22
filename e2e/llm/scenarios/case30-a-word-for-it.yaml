@@ -76,7 +76,7 @@ may_call:
   - resolve_entities
   # Called unprompted on most runs, and no part of this errand needs either.
   - whoami
-  - read_directory
+  - read_workspace
 
 must_mention:
   # Criterion 1: it read the vocabulary and used the word that was there. The

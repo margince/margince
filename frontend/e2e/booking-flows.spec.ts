@@ -6,7 +6,7 @@ import {
   bookingInvitation,
   bookingProfile,
   bookingSlots,
-} from "../src/screens/book.testkit";
+} from "../src/testing/book.testkit";
 import { copy } from "./copy";
 import { mockApi } from "./seed";
 import { openedAt } from "./waits";
@@ -363,7 +363,7 @@ test("meeting settings shows the reusable link, saves hours, and previews a paus
   await expect(
     page.getByRole("button", { name: de["scheduling.copyLink"], exact: true }),
   ).toBeVisible();
-  await expect(page.getByLabel("Firmenname")).toHaveCount(0);
+  await expect(page.getByLabel("Unternehmensname")).toHaveCount(0);
   await page
     .getByRole("combobox", { name: de["scheduling.noticeRow"] })
     .click();
@@ -441,6 +441,7 @@ test("calendar setup enables booking with the existing Account name", async ({
   ).toBeVisible();
   const accept = page.getByRole("switch", {
     name: de["scheduling.acceptBookings"],
+    exact: true,
   });
   await expect(accept).toBeDisabled();
   const saveCalendar = page

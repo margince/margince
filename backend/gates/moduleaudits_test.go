@@ -44,6 +44,7 @@ import (
 // module's writes are not recorded at all", so the rationale has to explain
 // where the history actually lives.
 var modulesThatWriteNoHistory = gatekit.Waive(map[string]string{
+	"internal/platform/datatask": "release task progress is operational state; each domain writer records its own audit in the batch transaction. Operator controls and failures write system_log in that same transaction; cursor advancement is not a separate record fact.",
 	// The intent ledger holds no history because it holds no state worth one. A row
 	// says "bytes may exist at this key and no row names them yet". On the ordinary
 	// path it lives for the milliseconds between a put and the transaction that
@@ -90,7 +91,7 @@ var modulesThatWriteNoHistory = gatekit.Waive(map[string]string{
 	"internal/compose/companybrief":   "company_brief is an assembly generated for one reader and never served to another",
 	"internal/compose/companyscan":    "company_scan, the same per-reader shape — the model's reading of one account for one reader, regenerable from the records at any time and never served to another; the read's own history is the AI activity rail, which every transition announces",
 	"internal/compose/contactbrief":   "contact_brief, the same",
-	"internal/compose/dealstatus":     "deal_status_card, the same per-reader shape — a card written from the facts one contact may see, never served to another",
+	"internal/compose/dealstatus":     "deal_status_card, the same per-reader shape — a card written from the facts one contact may see, never served to another — and deal_move_dismissal, one reader's set-aside of that card's move",
 	"internal/compose/worklistsnap":   "worklist_snapshot, the same per-reader shape — one contact's position in one walk, keyed on reader_id, holding identity and order and no record content at all",
 	"internal/compose/companydossier": "company_dossier and company_growth_fit, the same — the DDL says outright that an assembly generated for one reader is never served to another, and growth fit folds seat-dependent context on top",
 

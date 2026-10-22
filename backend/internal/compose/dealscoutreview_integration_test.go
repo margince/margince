@@ -76,6 +76,7 @@ func TestTheCapChoosesAmongCompaniesWhoseEvidenceQualifies(t *testing.T) {
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	dana := e.employee(t, "Dana Buyer", acme)
 	e.meeting(e.Admin(), t, "Scoping workshop", &dana, e.daysAgo(20))
+	e.buyerPair(t, acme, e.daysAgo(6))
 	// Three newer companies, each with a lone signal: evidence, but no rule fires.
 	for _, name := range []string{"Lone One", "Lone Two", "Lone Three"} {
 		lone := e.SeedCompany(t, name, nil)
@@ -109,12 +110,16 @@ func TestAReaderWithoutTheGrantForAKindOfEvidenceSeesNoSuggestionCitingIt(t *tes
 	e := setupScout(t)
 	met := e.SeedCompany(t, "Met GmbH", nil)
 	dana := e.employee(t, "Dana Buyer", met)
-	e.meeting(e.Admin(), t, "Scoping workshop", &dana, e.daysAgo(3))
+	meeting := e.meeting(e.Admin(), t, "Scoping workshop", &dana, e.daysAgo(3))
+
 	signalled := e.SeedCompany(t, "Signalled GmbH", nil)
-	mail := e.email(t, "Next steps", "inbound", signalled, e.daysAgo(6))
-	e.signal(t, "new_opportunity", signalled, mail, e.daysAgo(5), ids.Nil)
+	mail, buyer := e.buyingEmail(t, signalled, e.daysAgo(6))
+	e.signal(t, "new_opportunity", signalled, mail, e.daysAgo(5), ids.Nil, buyer)
 	e.signal(t, "commitment_made", signalled, mail, e.daysAgo(2), ids.Nil)
 	e.pass(t)
+	if raised, err := e.record(e.system(), t, deals.SuggestionDraft{CompanyID: met, NameHint: deals.HintMeetingHeld, Confidence: 0.6, Evidence: []deals.SuggestionEvidence{{Kind: deals.EvidenceMeeting, ActivityID: &meeting, OccurredAt: e.daysAgo(3)}}}); err != nil || !raised {
+		t.Fatalf("recording prior suggestion: %v, %v", raised, err)
+	}
 
 	full := e.rep(e.Rep1, e.Team1)
 	for _, company := range []ids.UUID{met, signalled} {
@@ -140,8 +145,9 @@ func TestAcceptingAfterADealWasOpenedByHandOpensNoSecondDeal(t *testing.T) {
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
 	dana := e.employee(t, "Dana Buyer", acme)
 	e.meeting(e.Admin(), t, "Scoping workshop", &dana, e.daysAgo(3))
+	e.buyerPair(t, acme, e.daysAgo(6))
 	e.pass(t)
-	suggestion := e.onlySuggestion(e.Admin(), t, acme)
+	suggestion := e.onlySuggestion(e.signalReader(), t, acme)
 	company := ids.From[ids.CompanyKind](acme)
 	if _, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
 		Name: "Opened by hand", PipelineID: e.pipeline, StageID: e.open, CompanyID: &company, Source: "manual",
@@ -149,7 +155,7 @@ func TestAcceptingAfterADealWasOpenedByHandOpensNoSecondDeal(t *testing.T) {
 		t.Fatalf("opening the deal by hand: %v", err)
 	}
 
-	_, err := e.decider().AcceptSuggestion(e.Admin(), suggestion.ID, deals.AcceptSuggestionInput{})
+	_, err := e.decider().AcceptSuggestion(e.signalReader(), suggestion.ID, deals.AcceptSuggestionInput{})
 	var superseded *deals.SuggestionSupersededError
 	if !errors.As(err, &superseded) || !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("accepting = %v, want a conflict saying the company already has a deal", err)
@@ -165,9 +171,9 @@ func TestAcceptingAfterADealWasOpenedByHandOpensNoSecondDeal(t *testing.T) {
 func TestAMessageCitedByALiveSignalGoingAwayRetiresTheSuggestion(t *testing.T) {
 	e := setupScout(t)
 	acme := e.SeedCompany(t, "Acme GmbH", nil)
-	cited := e.email(t, "Next steps", "inbound", acme, e.daysAgo(6))
-	e.signal(t, "new_opportunity", acme, cited, e.daysAgo(5), ids.Nil)
-	e.signal(t, "commitment_made", acme, e.email(t, "Confirmed", "inbound", acme, e.daysAgo(6)), e.daysAgo(2), ids.Nil)
+	cited, buyer := e.buyingEmail(t, acme, e.daysAgo(6))
+	e.signal(t, "new_opportunity", acme, cited, e.daysAgo(5), ids.Nil, buyer)
+	e.signal(t, "commitment_made", acme, cited, e.daysAgo(2), ids.Nil)
 	e.pass(t)
 	e.onlySuggestion(e.signalReader(), t, acme)
 
@@ -189,19 +195,20 @@ func TestAcceptingWithNoAmountDropsTheSuggestedOne(t *testing.T) {
 	e.reading(t, proposal,
 		extraction.ExtractedField{Field: "amount_minor", Value: "1250000", Confidence: "high"},
 		extraction.ExtractedField{Field: "currency", Value: "EUR", Confidence: "high"})
+	e.buyerPair(t, priced, e.daysAgo(6))
 	e.pass(t)
-	suggestion := e.onlySuggestion(e.Admin(), t, priced)
+	suggestion := e.onlySuggestion(e.signalReader(), t, priced)
 	if suggestion.AmountMinor == nil {
 		t.Fatal("the suggestion carries no amount to drop")
 	}
 
 	amount := int64(5)
-	if _, err := e.decider().AcceptSuggestion(e.Admin(), suggestion.ID, deals.AcceptSuggestionInput{
+	if _, err := e.decider().AcceptSuggestion(e.signalReader(), suggestion.ID, deals.AcceptSuggestionInput{
 		NoAmount: true, AmountMinor: &amount,
 	}); err == nil {
 		t.Fatal("no_amount with an amount was accepted")
 	}
-	out, err := e.decider().AcceptSuggestion(e.Admin(), suggestion.ID, deals.AcceptSuggestionInput{NoAmount: true})
+	out, err := e.decider().AcceptSuggestion(e.signalReader(), suggestion.ID, deals.AcceptSuggestionInput{NoAmount: true})
 	if err != nil {
 		t.Fatalf("accepting: %v", err)
 	}

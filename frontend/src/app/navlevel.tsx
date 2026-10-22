@@ -214,7 +214,7 @@ export function useNavLevel(
 type TipState = Readonly<{
   collapsed: boolean;
   tip: string | null;
-  onTip: (key: string | null) => void;
+  onTip: (key: string | null, by?: "pointer" | "focus") => void;
 }>;
 
 function NavLevelRow({
@@ -242,7 +242,7 @@ function NavLevelRow({
   // A rail crossed on the way to the work column fired one tip per row it
   // passed, which read as the rail flickering rather than as a page answering.
   const hover = useHoverIntent(
-    () => state.onTip(key),
+    () => state.onTip(key, "pointer"),
     () => state.onTip(null),
   );
   return (
@@ -253,14 +253,13 @@ function NavLevelRow({
       aria-current={active ? currentClaim(level) : undefined}
       onPointerEnter={hover.onPointerEnter}
       onPointerLeave={hover.onPointerLeave}
-      onFocus={() => state.onTip(key)}
+      onFocus={() => state.onTip(key, "focus")}
       onBlur={() => state.onTip(null)}
       onClick={() => onSelect(entry)}
     >
       <entry.icon aria-hidden />
-      {/* The label stays mounted and collapses its width, so the transition is
-          continuous rather than a pop. aria-label carries the accessible name
-          either way. */}
+      {/* The label stays mounted and fades, so the transition is continuous
+          rather than a pop. aria-label carries the accessible name either way. */}
       <span className="navlabel">{label}</span>
       {count !== undefined && count > 0 && (
         // The wrapper only places the figure: trailing in a row, pinned to
@@ -390,7 +389,7 @@ function NavLevelBack({
       ? t("shell.navBackApp")
       : t("shell.navBackTo", { name: t(above) });
   const hover = useHoverIntent(
-    () => state.onTip(BACK_TIP_KEY),
+    () => state.onTip(BACK_TIP_KEY, "pointer"),
     () => state.onTip(null),
   );
   return (
@@ -401,7 +400,7 @@ function NavLevelBack({
       onClick={onWalkUp}
       onPointerEnter={hover.onPointerEnter}
       onPointerLeave={hover.onPointerLeave}
-      onFocus={() => state.onTip(BACK_TIP_KEY)}
+      onFocus={() => state.onTip(BACK_TIP_KEY, "focus")}
       onBlur={() => state.onTip(null)}
     >
       <ChevronLeft aria-hidden />

@@ -10,12 +10,8 @@ import (
 )
 
 // A desktop installation has local disk and no object storage service, so the
-// launcher points the blobstore at one inside the folder. Without the default the
-// api wires no store and attachments and company logos answer 501 until somebody
-// edits margince.env — which they CAN do, since childEnv passes the user's own
-// values through; what the default buys is that nobody has to. A feature that
-// needs a settings file opened before it works is a feature most of this
-// bundle's users never find.
+// launcher points the blobstore at a folder inside it. Without the default,
+// attachments and company logos answer 501 until somebody edits margince.env.
 func TestChildEnvDefaultsTheBlobstorePathIntoTheInstallation(t *testing.T) {
 	l := layout{root: t.TempDir()}
 	b := &backend{layout: l}
@@ -28,17 +24,37 @@ func TestChildEnvDefaultsTheBlobstorePathIntoTheInstallation(t *testing.T) {
 	}
 }
 
-// The default is a DEFAULT: it sits in childEnv's first layer, so an operator
-// who names a real object store in margince.env is not overridden by the folder
-// the launcher would otherwise have used.
-func TestChildEnvLetsMargineEnvOverrideTheBlobstorePath(t *testing.T) {
+// The default is a DEFAULT: an operator who names another store in
+// margince.env keeps it. The roles read that file through --env-file, below the
+// environment, so the launcher must not set the variable over it.
+func TestChildEnvLeavesABlobstorePathMargineEnvNamesToTheFile(t *testing.T) {
 	b := &backend{
 		layout:  layout{root: t.TempDir()},
 		userEnv: []string{"MARGINCE_BLOBSTORE_PATH=/somewhere/else"},
 	}
 
-	if got := valueOf(t, b.childEnv(), "MARGINCE_BLOBSTORE_PATH"); got != "/somewhere/else" {
-		t.Errorf("MARGINCE_BLOBSTORE_PATH = %q, want the value from margince.env", got)
+	for _, entry := range b.childEnv() {
+		if strings.HasPrefix(entry, "MARGINCE_BLOBSTORE_PATH=") {
+			t.Errorf("childEnv sets %q over the value in margince.env", entry)
+		}
+	}
+}
+
+// The user's settings reach the roles through the file alone, so a secret in
+// margince.env stays out of a child's environment.
+func TestChildEnvCarriesNoUserSetting(t *testing.T) {
+	b := &backend{
+		layout:  layout{root: t.TempDir()},
+		userEnv: []string{"GEMINI_API_KEY=from-the-file"},
+	}
+
+	for _, entry := range b.childEnv("MARGINCE_DSN=owned") {
+		if strings.HasPrefix(entry, "GEMINI_API_KEY=") {
+			t.Errorf("childEnv carries %q, which the roles read from margince.env", entry)
+		}
+	}
+	if got := valueOf(t, b.childEnv("MARGINCE_DSN=owned"), "MARGINCE_DSN"); got != "owned" {
+		t.Errorf("MARGINCE_DSN = %q, want the launcher's own", got)
 	}
 }
 

@@ -1,11 +1,17 @@
-import { PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
-import { type RefObject, useRef } from "react";
+import { ArrowLeft, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
+import { type RefObject, useEffect, useRef } from "react";
 import { Kbd } from "../design-system/atoms";
 import { Breadcrumb, type Crumb } from "../design-system/breadcrumb";
+import { IconAction } from "../design-system/iconaction";
+import { SETTINGS_SCREEN } from "../features/settings/settingsnav";
 import { useLocale, useT } from "../i18n";
 import { EXTENSION_SCREEN, findExtension } from "../lib/extensions";
-import { type Route, routeHash } from "../lib/router";
-import { SETTINGS_SCREEN } from "../screens/settingsnav";
+import {
+  leaveRecord,
+  listAddress,
+  rememberListAddress,
+} from "../lib/listreturn";
+import { type Route, routeHash, useHash } from "../lib/router";
 import { AccountMenu } from "./account";
 import { useFiltersCrumbs } from "./filterstrail";
 import {
@@ -16,6 +22,7 @@ import {
   reservedPageTitle,
 } from "./nav";
 import { NotificationBell } from "./notificationbell";
+import { OutboxButton } from "./outboxbutton";
 import { resolveTitle, sectionHead, useRouteSubject } from "./pagemeta";
 import { paletteHotkeyCaps } from "./palette";
 import { SetupReminder } from "./setup-reminder";
@@ -40,6 +47,13 @@ function collapseHotkeyLabel(platform: string): string {
   return /mac|iphone|ipad|ipod/i.test(platform) ? "⌘B" : "Ctrl B";
 }
 
+// A page that stands below a list: a record, or a page a record screen reserves
+// a segment for. An id that names no record (a settings tab) is still the
+// screen. The trail and the back control both lead to that list.
+function belowList(route: Route): boolean {
+  return Boolean(recordKindOf(route) && route.id) || !!reservedPageTitle(route);
+}
+
 /**
  * The trail for a route: where this page sits, ending in the page itself.
  *
@@ -53,23 +67,19 @@ function useCrumbs(route: Route, section?: NavSection): readonly Crumb[] {
   const t = useT();
   const { locale } = useLocale();
   const navItem = NAV.find((item) => item.screen === route.screen);
-  // A record kind, and only then: an id segment that names no record is a
-  // screen's own state — the settings tab, for one — and the page is still the
-  // screen.
-  const recordKind = recordKindOf(route);
   const subject = useRouteSubject(route);
   const inSection = sectionHead(section, route);
   const unit =
     route.screen === EXTENSION_SCREEN ? findExtension(route.id) : null;
   const filtersCrumbs = useFiltersCrumbs(route);
 
-  if ((recordKind && route.id) || reservedPageTitle(route)) {
-    // A record's trail leads back to the list it was opened from, which is the
-    // one place the reader can go that is not "somewhere else entirely".
+  if (belowList(route)) {
+    // A record's trail leads back to the list it was opened from. The list
+    // keeps the filter the reader left it with.
     return [
       {
         label: resolveTitle(route.screen, navItem?.labelKey, t),
-        href: routeHash({ screen: route.screen }),
+        href: listAddress(route.screen),
       },
       { label: subject },
     ];
@@ -165,6 +175,10 @@ export function TopBar({
 }>) {
   const t = useT();
   const crumbs = useCrumbs(route, section);
+  const hash = useHash();
+  // Every list the bar stands over is noted, so a record opened from it can
+  // lead back to it with the same filter.
+  useEffect(() => rememberListAddress(hash), [hash]);
   const toggleLabel = collapsed ? t("shell.expand") : t("shell.collapse");
   const searchRef = useRef<HTMLButtonElement>(null);
   return (
@@ -189,6 +203,15 @@ export function TopBar({
             )}
           </button>
         )}
+        {/* The installed app has no browser Back, so a record page carries
+            its own way out. */}
+        {belowList(route) && (
+          <IconAction
+            label={t("shell.back")}
+            icon={<ArrowLeft />}
+            onClick={() => leaveRecord(route)}
+          />
+        )}
         <Breadcrumb items={crumbs} label={t("shell.breadcrumbAria")} />
       </div>
       <TopBarSearch onOpenSearch={onOpenSearch} buttonRef={searchRef} />
@@ -203,6 +226,7 @@ export function TopBar({
           key={routeHash(route)}
           onHide={() => searchRef.current?.focus()}
         />
+        <OutboxButton />
         <NotificationBell />
         <AccountMenu />
       </div>

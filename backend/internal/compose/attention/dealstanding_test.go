@@ -78,7 +78,7 @@ func TestADealRowCarriesTheCachedVerdictBesideItsMove(t *testing.T) {
 // it stands in rather than leaving the row with no reading at all.
 func TestAnUncachedDealUsesTheGroundedBriefFinding(t *testing.T) {
 	dealID := ids.NewV7()
-	svc := (&Service{}).WithDealStandings(&stubDealStandings{
+	svc := (&Service{briefCutoff: rankInstant}).WithDealStandings(&stubDealStandings{
 		standings: map[ids.UUID]DealStanding{},
 	})
 	queue := []crmcontracts.WorklistItem{riskRow(dealID)}
@@ -97,6 +97,9 @@ func TestAnUncachedDealUsesTheGroundedBriefFinding(t *testing.T) {
 	}
 	if verdict.Line != "The buyer asked for pricing and nobody answered." {
 		t.Errorf("line = %q", verdict.Line)
+	}
+	if verdict.AsOf == nil || !verdict.AsOf.Equal(rankInstant) {
+		t.Fatal("brief finding lost the source run cutoff")
 	}
 	// A finding is prose about the deal and NOT one of the four standings. A
 	// word invented here would be this pass deciding the judgement dealstatus

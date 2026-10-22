@@ -5,7 +5,12 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { entries, GERMAN, LETTER } from "../../scripts/lib/german-catalogs";
+import {
+  entries,
+  GERMAN,
+  LETTER,
+  readByAnOutsider,
+} from "../../scripts/lib/german-catalogs";
 
 // The mechanical half of docs/reference/ui-copy-style-de.md, held on every
 // German catalog a bundler ships. Address is address-register.test.ts's. Each
@@ -19,15 +24,17 @@ function prose(value: string): string {
 }
 
 function offenders(
-  pattern: RegExp,
+  breaks: RegExp | ((value: string) => boolean),
   options: {
     text?: (value: string) => string;
     exempt?: (key: string) => boolean;
   } = {},
 ): string[] {
   const { text = (value: string) => value, exempt = () => false } = options;
+  const broken =
+    breaks instanceof RegExp ? (value: string) => breaks.test(value) : breaks;
   return entries()
-    .filter(([, key, value]) => !exempt(key) && pattern.test(text(value)))
+    .filter(([, key, value]) => !exempt(key) && broken(text(value)))
     .map(
       ([source, key, value]) => `${source} ${key}: ${JSON.stringify(value)}`,
     );
@@ -70,14 +77,15 @@ const RETIRED_WORDS = [
   "Account",
   "Accounts",
   "Mandant",
+  "Ansprechpartner",
   "Opportunity",
   "Opportunities",
   "Verkaufschance",
   "Verkaufschancen",
   "Trichter",
   "Funnel",
-  "Prognose",
-  "Prognosen",
+  "Forecast",
+  "Forecasts",
   "Arbeitsliste",
   "Briefing",
   "Tagesbericht",
@@ -91,6 +99,7 @@ const RETIRED_WORDS = [
   "Versprechen",
   "Owner",
   "Besitzer",
+  "Inhaber",
   "Aufbewahrungssperre",
   "Einkaufskomitee",
   "Kaufgremium",
@@ -99,18 +108,51 @@ const RETIRED_WORDS = [
   "Administrator",
   "Administratoren",
   "Verwalter",
+  "Systemadministrator",
+  "Kollege",
+  "Kollegin",
+  "Kollegen",
   "Nutzer",
   "Nutzern",
   "Benutzer",
   "Benutzern",
+  "Benutzende",
   "Anwender",
+  "Anwenders",
   "Anwendern",
   "Mitarbeiter",
   "Mitarbeitern",
   "Vertriebsmitarbeiter",
+  "Empfänger",
+  "Empfängern",
+  "Absender",
+  "Absenders",
+  "Absendern",
+  "Autor",
+  "Autors",
+  "Autoren",
+  "Eigentümer",
+  "Eigentümers",
+  "Eigentümern",
+  "Teilnehmer",
+  "Teilnehmers",
+  "Teilnehmern",
+  "Käufer",
+  "Käufers",
+  "Käufern",
+  "Verkäufer",
+  "Verkäufers",
+  "Verkäufern",
+  "Ersteller",
+  "Erstellers",
+  "Erstellern",
+  "Leser",
+  "Lesers",
+  "Lesern",
   "Deal-Room",
   "Spine",
   "Backread",
+  "Gastgeber",
   "Deep Read",
   "Zulassungsprüfung",
   "Audit-Trail",
@@ -138,6 +180,21 @@ const RETIRED_WORDS = [
   "Seats",
   "Privatsphäre",
   "GDPR",
+  "Gegenbuchung",
+  "erfolgt",
+  "seitens",
+  "Seitens",
+  "hinsichtlich",
+  "Hinsichtlich",
+  "bezüglich",
+  "Bezüglich",
+  "mittels",
+  "Mittels",
+  "zwecks",
+  "Zwecks",
+  "Durchführung",
+  "Vornahme",
+  "Inanspruchnahme",
 ];
 
 // Keys where a retired word keeps a sense the table does not retire.
@@ -159,6 +216,26 @@ const RETIRED_WORD_KEPT = new Map<string, string>([
     "Vertex AI and its Vertex AI User role are Google's names",
   ],
 ]);
+
+// Read on the raw value, so a placeholder followed by a space opens a sentence
+// as it does for address-register.test.ts. The verb takes the family's address.
+function recoveryBitte(verbs: string): RegExp {
+  return new RegExp(
+    `(?:^|[.?!:]\\s|\\}\\s)Bitte (?:${verbs})(?![${LETTER}])`,
+    "g",
+  );
+}
+const RECOVERY_BITTE_DU = recoveryBitte("versuche|lade|wende");
+const RECOVERY_BITTE_SIE = recoveryBitte("versuchen Sie|laden Sie|wenden Sie");
+
+function misplacedBitte(recovery: RegExp): (value: string) => boolean {
+  return (value) => {
+    const said = value.match(word("bitte", "gi"))?.length ?? 0;
+    if (said === 0) return false;
+    const placed = value.match(recovery)?.length ?? 0;
+    return said > 1 || placed < said || !/\.(?:\s|$)/.test(value);
+  };
+}
 
 function retiredWordPattern(retired: string): RegExp {
   return word(retired.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
@@ -221,15 +298,24 @@ describe("de copy style", () => {
     expect(offenders(/!/)).toEqual([]);
   });
 
-  it("never says bitte", () => {
-    expect(offenders(word("bitte", "i"), { text: prose })).toEqual([]);
+  it("says bitte once, to open a recovery step in a sentence", () => {
+    expect(
+      offenders(misplacedBitte(RECOVERY_BITTE_DU), {
+        exempt: readByAnOutsider,
+      }),
+    ).toEqual([]);
+    expect(
+      offenders(misplacedBitte(RECOVERY_BITTE_SIE), {
+        exempt: (key) => !readByAnOutsider(key),
+      }),
+    ).toEqual([]);
   });
 
   // Case-sensitive past the first letter, so the certificate authority "CA."
   // closing a sentence is not read as "ca.".
   it("uses no abbreviation", () => {
     const abbreviation = new RegExp(
-      `(?<![${LETTER}])(?:[zZ]\\.\\s?B\\.|[dD]\\.\\s?h\\.|[uU]sw\\.|[uU]\\.\\s?a\\.|[gG]gf\\.|[bB]zgl\\.|[bB]zw\\.|[iI]nkl\\.|[cC]a\\.)`,
+      `(?<![${LETTER}])(?:[zZ]\\.\\s?B\\.|[dD]\\.\\s?h\\.|[uU]sw\\.|[uU]\\.\\s?a\\.|[gG]gf\\.|[bB]zgl\\.|[bB]zw\\.|[iI]nkl\\.|[cC]a\\.|Tg\\.)`,
     );
     expect(offenders(abbreviation, { text: prose })).toEqual([]);
   });

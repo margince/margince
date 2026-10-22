@@ -14,7 +14,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
 // The shipped OpenRouter preset with a decisions lane added under its
@@ -38,7 +37,7 @@ func TestRoutingFromDeployConfigCarriesDecisions(t *testing.T) {
 		t.Fatalf("writing the scratch config: %v", err)
 	}
 
-	routing, err := compose.RoutingFromDeployConfig(path, runtimeenv.Development)
+	routing, err := compose.RoutingFromDeployConfig(path)
 	if err != nil {
 		t.Fatalf("RoutingFromDeployConfig: %v", err)
 	}

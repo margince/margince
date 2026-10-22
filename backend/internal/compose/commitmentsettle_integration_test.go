@@ -40,7 +40,7 @@ func seedKeptCommitment(t *testing.T) keptCommitment {
 	e.GrantRole(t, e.AdminUser, "admin")
 	ines := linkInes(t, e)
 	e.WsExec(t, `UPDATE contact SET owner_id = $2 WHERE id = $1`, ines, e.Rep2)
-	e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman", 0.9)})
+	e.read(t, cannedBrain{reply: attributedReply(t, "Priya Raman", "seat:"+e.Rep2.String(), 0.9)})
 	task, err := ids.Parse(e.wsString(t, `SELECT id::text FROM activity WHERE kind = 'task'`))
 	if err != nil {
 		t.Fatalf("want the colleague's task written: %v", err)
@@ -159,12 +159,12 @@ func TestSettlingACommitmentLeavesATaskTheSettlerMayNotChange(t *testing.T) {
 	k.WsExec(t, `DELETE FROM role_assignment WHERE user_id = $1`, k.Rep3)
 	key := "claims-only-" + k.Rep3.String()
 	k.WsExec(t, `INSERT INTO role (key, name, permissions) VALUES ($1, 'Claims only', $2::jsonb)`,
-		key, `{"objects":{"contact":{"read":true,"update":true}},"row_scope":"all"}`)
+		key, `{"objects":{"contact":{"read":true,"update":true},"activity":{"read":true}},"row_scope":"all"}`)
 	k.WsExec(t, `INSERT INTO role_assignment (role_id, user_id) SELECT r.id, $1 FROM role r WHERE r.key = $2`,
 		k.Rep3, key)
 	settler := k.As(k.Rep3, []ids.UUID{k.Team2}, principal.Permissions{
 		RoleKeys: []string{key}, RowScope: principal.RowScopeAll,
-		Objects: map[string]principal.ObjectGrant{"contact": {Read: true, Update: true}},
+		Objects: map[string]principal.ObjectGrant{"contact": {Read: true, Update: true}, "activity": {Read: true}},
 	})
 	if err := k.Contacts.SettleConversationClaim(settler, k.claim, claimStatusDone); err != nil {
 		t.Fatalf("settling the commitment: %v", err)
@@ -212,8 +212,8 @@ func TestASettlementIsMadeAsTheHumanWhoCausedIt(t *testing.T) {
 // can no longer be read, as settling it directly would not.
 func TestTickingATaskLeavesACommitmentFromAConversationTheyMayNotRead(t *testing.T) {
 	k := seedKeptCommitment(t)
-	k.WsExec(t, `UPDATE activity SET archived_at = now() WHERE id = $1`, k.activity.UUID)
 	k.setDone(t, true)
+	k.WsExec(t, `UPDATE activity SET archived_at = now() WHERE id = $1`, k.activity.UUID)
 	k.deliver(t, k.newest(t, eventActivityUpdated, `envelope->'entity'->>'id' = $2`, k.task.String()))
 	if got := k.claimStatus(t); got != "open" {
 		t.Errorf("ticking a task settled a commitment from a conversation the rep may not read (status %q)", got)
@@ -323,18 +323,18 @@ func TestTheClaimTaskReadsNeedContactRead(t *testing.T) {
 	if _, err := k.Contacts.OpenClaimsOnTask(blind, k.task); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("listing a task's claims without contact read answered %v, want permission denied", err)
 	}
-	if _, _, _, err := k.Contacts.ClaimTask(blind, k.claim, ids.NewV7()); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, err := k.Contacts.ReadClaimSettlement(blind, k.claim, ids.NewV7()); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("reading a claim's task without contact read answered %v, want permission denied", err)
 	}
 	if err := k.Contacts.SettleConversationClaim(k.Admin(), k.claim, claimStatusDone); err != nil {
 		t.Fatalf("settling the commitment: %v", err)
 	}
 	settled := k.newest(t, eventClaimChanged, `envelope->'payload'->>'claim_id' = $2`, k.claim.String())
-	if task, _, _, err := k.Contacts.ClaimTask(k.Admin(), k.claim, ids.NewV7()); err != nil || task != nil {
+	if task, err := k.Contacts.ReadClaimSettlement(k.Admin(), k.claim, ids.NewV7()); err != nil || task != nil {
 		t.Errorf("a settlement that is no audit row answered task %v, %v; want none", task, err)
 	}
 	k.WsExec(t, `UPDATE conversation_claim SET archived_at = now() WHERE id = $1`, k.claim)
-	if task, _, _, err := k.Contacts.ClaimTask(k.Admin(), k.claim, settled.Trace.AuditLogID); err != nil || task != nil {
+	if task, err := k.Contacts.ReadClaimSettlement(k.Admin(), k.claim, settled.Trace.AuditLogID); err != nil || task != nil {
 		t.Errorf("an archived claim answered task %v, %v; want none", task, err)
 	}
 }

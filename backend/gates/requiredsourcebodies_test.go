@@ -21,7 +21,6 @@ import (
 	"io/fs"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 	"testing"
 
@@ -91,6 +90,26 @@ func wrongValue(req crmcontracts.WrongValueRequest) error {
 	return err
 }
 
+func named(req crmcontracts.NamedRequest) error {
+ _, err := httperr.RequireNonBlank(sourceField, req.Source)
+ return err
+}
+
+func other(req crmcontracts.OtherRequest) error {
+ _, err := httperr.RequireNonBlank(otherField, req.Source)
+ return err
+}
+
+func unresolved(req crmcontracts.UnresolvedRequest) error {
+ _, err := httperr.RequireNonBlank(unknownField, req.Source)
+ return err
+}
+
+func namedWrongValue(req crmcontracts.NamedWrongValueRequest) error {
+ _, err := httperr.RequireNonBlank(sourceField, req.Title)
+ return err
+}
+
 func elsewhere() error {
 	_, err := httperr.RequireNonBlank("source", "x")
 	return err
@@ -100,11 +119,11 @@ func elsewhere() error {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got := sourceGuardedBodies(file)
-	if !got["GuardedRequest"] {
+	got := sourceGuardedBodies(file, map[string]string{"sourceField": "source", "otherField": "title"})
+	if !got["GuardedRequest"] || !got["NamedRequest"] {
 		t.Errorf("a function that calls RequireNonBlank(\"source\") and takes the body was not credited: %v", got)
 	}
-	for _, name := range []string{"WrongFieldRequest", "NoCallRequest", "CommentedRequest", "WrongValueRequest"} {
+	for _, name := range []string{"WrongFieldRequest", "NoCallRequest", "CommentedRequest", "WrongValueRequest", "OtherRequest", "UnresolvedRequest", "NamedWrongValueRequest"} {
 		if got[name] {
 			t.Errorf("%s was credited without a RequireNonBlank(\"source\") call in its function", name)
 		}
@@ -145,6 +164,7 @@ func contractBodiesWithARequiredSource(t *testing.T) []string {
 func sourceGuardedBodiesUnder(t *testing.T, root string) map[string]bool {
 	t.Helper()
 	guarded := map[string]bool{}
+	constants := map[string]map[string]string{}
 	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 		switch {
 		case walkErr != nil:
@@ -158,7 +178,11 @@ func sourceGuardedBodiesUnder(t *testing.T, root string) map[string]bool {
 		if parseErr != nil {
 			return parseErr
 		}
-		for name := range sourceGuardedBodies(file) {
+		dir := filepath.Dir(path)
+		if constants[dir] == nil {
+			constants[dir] = gatekit.PackageStringConstants(t, dir)
+		}
+		for name := range sourceGuardedBodies(file, constants[dir]) {
 			guarded[name] = true
 		}
 		return nil
@@ -170,12 +194,12 @@ func sourceGuardedBodiesUnder(t *testing.T, root string) map[string]bool {
 }
 
 // sourceGuardedBodies names every contract type mentioned by a function that
-// also calls RequireNonBlank with the literal "source".
-func sourceGuardedBodies(file *ast.File) map[string]bool {
+// also calls RequireNonBlank with a source label resolved from its package.
+func sourceGuardedBodies(file *ast.File, constants map[string]string) map[string]bool {
 	out := map[string]bool{}
 	for _, decl := range file.Decls {
 		fn, ok := decl.(*ast.FuncDecl)
-		if !ok || !callsRequireNonBlankSource(fn) {
+		if !ok || !callsRequireNonBlankSource(fn, constants) {
 			continue
 		}
 		ast.Inspect(fn, func(n ast.Node) bool {
@@ -199,7 +223,7 @@ func namesRequestSource(arg ast.Expr) bool {
 
 // callsRequireNonBlankSource reports a real call, so a comment or a string that
 // spells it does not count.
-func callsRequireNonBlankSource(fn *ast.FuncDecl) bool {
+func callsRequireNonBlankSource(fn *ast.FuncDecl, constants map[string]string) bool {
 	found := false
 	ast.Inspect(fn, func(n ast.Node) bool {
 		call, ok := n.(*ast.CallExpr)
@@ -210,8 +234,8 @@ func callsRequireNonBlankSource(fn *ast.FuncDecl) bool {
 		if !ok || sel.Sel.Name != "RequireNonBlank" {
 			return true
 		}
-		if lit, ok := call.Args[0].(*ast.BasicLit); ok && len(call.Args) == 2 && namesRequestSource(call.Args[1]) {
-			if field, err := strconv.Unquote(lit.Value); err == nil && field == "source" {
+		if len(call.Args) == 2 && namesRequestSource(call.Args[1]) {
+			if field, known := gatekit.StringExpr(call.Args[0], constants, gatekit.FoldStrict); known && field == "source" {
 				found = true
 			}
 		}

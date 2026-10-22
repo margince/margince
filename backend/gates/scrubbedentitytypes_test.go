@@ -98,6 +98,8 @@ var scrubbedEntityTypes = map[string]bool{
 	// The weekly review rebuilds a DEAL from its own audit images, never an
 	// evidence row. The evidence create images never carried the quotation.
 	"deal_stage_evidence": true,
+	// Notice history reads stored text directly; no restore surface may replay its erased images.
+	"notice": true,
 }
 
 func TestEveryScrubbedRecordTypeIsOneAReaderOfTheBoundaryExpects(t *testing.T) {
@@ -141,7 +143,7 @@ func scrubbedTypesInPrivacy(t *testing.T) (map[string]bool, []string) {
 	t.Helper()
 	found := map[string]bool{}
 	var opaque []string
-	dir := filepath.Join(moduleRoot(t), "internal", "modules", "privacy")
+	dir := filepath.Join(gatekit.ModuleRoot(t), "internal", "modules", "privacy")
 	fset := gatekit.SourceFileSet()
 	entries, err := os.ReadDir(dir)
 	if err != nil {

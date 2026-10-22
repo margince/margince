@@ -21,6 +21,11 @@ const (
 	filterCompanyID = "company_id"
 	filterOwnerID   = "owner_id"
 	filterPhase     = "phase"
+
+	filterOwnerTeamID     = "owner_team_id"
+	filterUnassigned      = "unassigned"
+	filterIncludeArchived = "include_archived"
+	filterSort            = "sort"
 )
 
 var projectListFilters = storekit.FilterSet[ListProjectsInput]{
@@ -29,4 +34,9 @@ var projectListFilters = storekit.FilterSet[ListProjectsInput]{
 		func(in *ListProjectsInput, id *ids.CompanyID) { in.CompanyID = id }),
 	filterOwnerID: storekit.FilterID(func(in *ListProjectsInput, id *ids.UserID) { in.OwnerID = id }),
 	filterPhase:   storekit.FilterWord(func(in *ListProjectsInput, v *string) { in.Phase = v }),
+	filterOwnerTeamID: storekit.FilterID(
+		func(in *ListProjectsInput, id *ids.TeamID) { in.OwnerTeamID = id }),
+	filterUnassigned:      storekit.FilterFlag(func(in *ListProjectsInput, v *bool) { in.Unassigned = v }),
+	filterIncludeArchived: storekit.FilterFlag(func(in *ListProjectsInput, v *bool) { in.IncludeArchived = *v }),
+	filterSort:            storekit.FilterWord(func(in *ListProjectsInput, v *string) { in.Sort = v }),
 }

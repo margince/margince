@@ -27,8 +27,10 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -218,6 +220,34 @@ func TestAMailedCardObeysTheMailboxsOwnSwitch(t *testing.T) {
 	}
 	if grantor != e.Rep1 {
 		t.Errorf("the import would run as %s, want the mailbox's granting human %s", grantor, e.Rep1)
+	}
+}
+
+// A mailbox that never chose follows the workspace default. A boot-set default
+// wins over the row in the card path's SQL, as it does in the signature pass.
+// Not parallel: the binding is the process's own.
+func TestABootSetMailReadingDefaultBindsTheCardPath(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	activity := seedCardMail(ctx, t, e, e.Rep1, "workspace")
+	if _, err := e.Pool.Exec(ctx, `
+		INSERT INTO setting (key, value) VALUES ($1, 'true'::jsonb)
+		ON CONFLICT (key) DO UPDATE SET value = excluded.value`, capture.SignatureEnrich.Key()); err != nil {
+		t.Fatalf("saving the workspace default on: %v", err)
+	}
+	if _, err := grantorOf(ctx, e, activity); err != nil {
+		t.Fatalf("with the saved default on, the import was refused: %v", err)
+	}
+
+	before := config.Bound()
+	UseConfig(bootConfigForTest(t, config.RoleWorker, "MARGINCE_CAPTURE_SIGNATURE_ENRICH=false"))
+	t.Cleanup(func() { UseConfig(before) })
+	if _, err := grantorOf(ctx, e, activity); err == nil {
+		t.Fatal("a boot-set default of off still granted the import over the saved row")
+	}
+	setMailboxSwitch(ctx, t, e, true)
+	if _, err := grantorOf(ctx, e, activity); err != nil {
+		t.Fatalf("the mailbox's own switch must win over the boot-set default: %v", err)
 	}
 }
 

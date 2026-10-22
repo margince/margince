@@ -1,0 +1,23 @@
+name: termination_notice_survives_without_a_request_de
+task: signal_extract
+site: thread_events
+source: hand_authored
+sanitized_by: hand_authored/codex
+fixture:
+- direction: inbound
+  subject: Service contract
+  sent: '2026-09-08'
+  body: Wir verlängern den Dienstleistungsvertrag nicht. Er endet am 30. September 2026. Unsere Entscheidung
+    steht fest; eine Antwort ist nicht nötig.
+- direction: outbound
+  subject: Service contract
+  sent: '2026-09-08'
+  body: Erhalten, vielen Dank.
+expect:
+  outcome: accepted
+  answer:
+  - kind: contract_ended
+    message: 1
+  judge: none
+  judge_none_reason: The customer explicitly ends a service contract, while neither message creates
+    future work. The account-risk event must survive even though no reply is requested.

@@ -12,7 +12,6 @@ package projects
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -43,18 +42,8 @@ func (s *Store) AdvanceProjectPhase(ctx context.Context, id ids.ProjectID, in Ad
 	if err != nil {
 		return crmcontracts.Project{}, err
 	}
-	// Closing without a reason is refused here, before the transaction, so
-	// the caller gets the rule rather than a constraint name. The schema
-	// CHECK stays as the net under it.
-	if in.ToPhase == PhaseClosed {
-		var trimmed string
-		if in.Reason != nil {
-			trimmed = strings.TrimSpace(*in.Reason)
-		}
-		if trimmed == "" {
-			return crmcontracts.Project{}, &ClosedReasonRequiredError{}
-		}
-		in.Reason = &trimmed
+	if err := in.normalize(); err != nil {
+		return crmcontracts.Project{}, err
 	}
 	active, err := s.catalogColumns(ctx)
 	if err != nil {
@@ -123,17 +112,7 @@ func recordPhaseTransition(ctx context.Context, tx pgx.Tx, id ids.ProjectID,
 	current crmcontracts.Project, fromPhase string, in AdvanceProjectPhaseInput, by string,
 	evidence map[string]any,
 ) error {
-	p := storekit.NewPatch()
-	p.Set("phase", fromPhase, in.ToPhase)
-	// closed_reason belongs to the closed state: leaving `closed` clears it,
-	// so a re-opened project never carries the explanation of a close that
-	// no longer applies.
-	switch {
-	case in.ToPhase == PhaseClosed:
-		p.Set("closed_reason", current.ClosedReason, *in.Reason)
-	case current.ClosedReason != nil:
-		p.Set("closed_reason", current.ClosedReason, nil)
-	}
+	p := phaseTransitionPatch(current, in)
 	if err := p.ApplyGuarded(ctx, tx, projectObject, id.UUID, in.IfVersion); err != nil {
 		if constraint, ok := storekit.CheckViolation(err); ok {
 			if refusal := projectCheckError(constraint, "ended_at"); refusal != nil {

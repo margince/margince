@@ -6,7 +6,7 @@ import { useState } from "react";
 import { expect, screen, userEvent, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import { ProblemError } from "../lib/problem";
-import { Button } from "./atoms";
+import { Button, Field, TextInput } from "./atoms";
 import { ResolveSheet, type ResolveSheetLabels } from "./resolvesheet";
 
 // Answering a finding from the nightly input check.
@@ -73,8 +73,10 @@ const noop = () => {};
 function ResolveSheetDemo({
   pending = false,
   error,
-}: Readonly<{ pending?: boolean; error?: unknown }>) {
+  requireRecord = false,
+}: Readonly<{ pending?: boolean; error?: unknown; requireRecord?: boolean }>) {
   const [open, setOpen] = useState(true);
+  const [record, setRecord] = useState("");
   return (
     <>
       <Button variant="primary" onClick={() => setOpen(true)}>
@@ -85,6 +87,23 @@ function ResolveSheetDemo({
         pending={pending}
         error={error}
         labels={labels}
+        canSubmit={(outcome) =>
+          !requireRecord || outcome !== "fixed_record" || record.trim() !== ""
+        }
+        outcomeFields={(outcome) =>
+          requireRecord &&
+          outcome === "fixed_record" && (
+            <Field label="Corrected record" required>
+              {(control) => (
+                <TextInput
+                  {...control}
+                  value={record}
+                  onChange={(event) => setRecord(event.target.value)}
+                />
+              )}
+            </Field>
+          )
+        }
         onSubmit={noop}
         onClose={() => setOpen(false)}
       />
@@ -134,4 +153,24 @@ export const Refused: Story = {
       }
     />
   ),
+};
+
+export const RequiredRecord: Story = {
+  render: () => <ResolveSheetDemo requireRecord />,
+  play: async () => {
+    const dialog = within(await screen.findByRole("dialog"));
+    await userEvent.click(
+      dialog.getByRole("radio", { name: /Record corrected/ }),
+    );
+    await expect(
+      dialog.getByRole("button", { name: "Save answer" }),
+    ).toBeDisabled();
+    await userEvent.type(
+      dialog.getByRole("textbox", { name: /Corrected record/ }),
+      "Annual support",
+    );
+    await expect(
+      dialog.getByRole("button", { name: "Save answer" }),
+    ).toBeEnabled();
+  },
 };

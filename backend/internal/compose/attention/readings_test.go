@@ -177,7 +177,7 @@ func TestTheSumCoversBothDealsAtRiskLanes(t *testing.T) {
 		AsOf:   rankInstant,
 		AtRisk: lane(item("priced", "deal_at_risk", withDeal(300_00))),
 		ThisMorning: []crmcontracts.AttentionItem{
-			item("brief", "brief_item", withDeal(900_00)),
+			item("brief", "brief_item", withCurrentIntervention(), withDeal(900_00)),
 		},
 	}
 	rows := classifyDay(day, rankInstant, dayMoney{})

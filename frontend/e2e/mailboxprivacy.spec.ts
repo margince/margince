@@ -146,7 +146,9 @@ test("AC-mailbox-5: a sender kept out is told what that destroys", async ({
     .getByRole("button", { name: de["senders.keepOut"], exact: true })
     .click();
 
-  const dialog = page.getByRole("dialog");
+  const dialog = page.getByRole("dialog", {
+    name: de["senders.keepOutTitle"],
+  });
   await expect(dialog).toContainText("dauerhaft ausschließen");
   await expect(dialog).toContainText("vernichtet");
   // What SURVIVES is the half a reader cannot guess: a colleague's own import

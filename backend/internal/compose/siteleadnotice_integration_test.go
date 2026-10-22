@@ -15,6 +15,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"strings"
@@ -113,13 +114,18 @@ func TestAnAcceptedWebsiteLeadIsToldBeforeAnythingElseIsSent(t *testing.T) {
 		 WHERE o.template_key = 'privacy_notice'`); got != "allow/privacy_notice" {
 		t.Fatalf("staging decision = %q, want allow/privacy_notice", got)
 	}
+	version, ok := consent.ControllerTemplateVersion(consent.TemplatePrivacyNotice)
+	if !ok {
+		t.Fatal("privacy notice template is not registered")
+	}
+	wantProof := fmt.Sprintf("%s@%d/en", consent.TemplatePrivacyNotice, version)
 	if got := e.WsScalar(t, `
 		SELECT n.template_key || '@' || n.template_version || '/' || n.locale
 		  FROM lead_privacy_notice n
 		  JOIN lead l ON l.id = n.lead_id
 		  JOIN comms_outbound o ON o.id = n.delivery_id
-		 WHERE n.approval_id = $1 AND n.state = 'queued'`, id); got != "privacy_notice@1/en" {
-		t.Fatalf("proof row = %q, want a queued privacy_notice@1 in en", got)
+		 WHERE n.approval_id = $1 AND n.state = 'queued'`, id); got != wantProof {
+		t.Fatalf("proof row = %q, want queued %q", got, wantProof)
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE id = $1 AND consumed_at IS NOT NULL`, id); n != 1 {
 		t.Fatal("the approval was not redeemed with the notice")

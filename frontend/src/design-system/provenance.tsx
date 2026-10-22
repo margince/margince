@@ -40,10 +40,10 @@ import "./trust.css";
 // what an unattributed row said: the two cases a reader most needs kept apart
 // both read as their own handiwork.
 //
-// `agent` and `system` name the actor only when the wire named it. Neither is
-// required, because the id behind an agent may be a passport uuid and there are
-// no record lookups here to resolve it: an unnamed tag says the kind and stops,
-// which is more than an identifier tells a reader and all of it is true.
+// `agent` and `system` name the actor only when the wire named it. A passport
+// uuid has no lookup here, so an unnamed tag says the kind and stops. The agent
+// arm carries `agent`, words a caller chose, or `job`, the principal's name
+// read through the catalogue.
 //
 // `author` is who wrote it in the system a row was MIGRATED OUT OF, and it
 // outranks every other reading of the human arm. An import runs as one
@@ -53,7 +53,7 @@ import "./trust.css";
 // correspondence. The author is the only field on the row that knows better,
 // so where it is present it is what the tag says.
 export type Provenance =
-  | { kind: "agent"; agent?: string }
+  | { kind: "agent"; agent?: string; job?: string }
   | { kind: "connector"; connector: string }
   | { kind: "system"; job?: string }
   | { kind: "human"; self: boolean; userId?: string; author?: SourceAuthor }
@@ -103,12 +103,16 @@ export function provenanceLabel(
   renderUser: ((userId: string) => ReactNode) | undefined,
 ): ReactNode {
   switch (provenance.kind) {
-    case "agent":
-      return provenance.agent
-        ? t("trust.agentTag", { agent: provenance.agent })
-        : t("trust.agentUnnamed");
+    case "agent": {
+      const agent =
+        provenance.agent ??
+        (provenance.job &&
+          (jobLabel("agentJob", provenance.job, t) ??
+            extensionJobLabel(provenance.job)));
+      return agent ? t("trust.agentTag", { agent }) : t("trust.agentUnnamed");
+    }
     case "system": {
-      const job = provenance.job && systemJobLabel(provenance.job, t);
+      const job = provenance.job && jobLabel("systemJob", provenance.job, t);
       return job ? t("trust.systemTag", { job }) : t("trust.systemUnnamed");
     }
     case "connector":
@@ -138,14 +142,22 @@ export function importLabel(
 }
 
 /**
- * systemJobLabel names a system pass by its words in the catalogue, never by
- * its key. Every system principal the backend binds has a `systemJob.<name>`
- * message, held there by backend/gates/frontendjoblabels_test.go. Hyphens read
- * as underscores (`system:lead-sla-scan`). A name with no message gets no
- * label, and the tag says only "System task".
+ * jobLabel names a system pass or an agent by its words in the catalogue, never
+ * by its key. Every system principal the backend binds has a `systemJob.<name>`
+ * message and every core agent principal an `agentJob.<name>` one, held by
+ * backend/gates/frontendjoblabels_test.go and frontendagentlabels_test.go. Hyphens read as underscores
+ * (`system:lead-sla-scan`). A name with no message gets no label, and the tag
+ * names only the kind.
  */
-function systemJobLabel(job: string, t: Translator): string | undefined {
-  const key = `systemJob.${job.replaceAll("-", "_")}`;
+function jobLabel(
+  family: "systemJob" | "agentJob",
+  job: string,
+  t: Translator,
+): string | undefined {
+  const pass = family === "systemJob" ? job.split(":")[0] : job;
+  const name = pass?.replaceAll("-", "_");
+  // Each family spelled whole, so the orphan-key sweep sees both prefixes.
+  const key = family === "systemJob" ? `systemJob.${name}` : `agentJob.${name}`;
   return isMessageKey(key) ? t(key) : undefined;
 }
 
@@ -179,4 +191,20 @@ function humanLabel(
   ) : (
     t("trust.typedByHuman")
   );
+}
+
+/**
+ * The core catalogue cannot know the jobs an extension unit declares. So an
+ * extension dispatcher (`agent:ext_openchannel_drain`) is named by its unit
+ * and job in words. The prefix mirrors the backend's extension.NamespacePrefix,
+ * and frontendagentlabels_test.go holds the two together.
+ */
+const EXTENSION_JOB_PREFIX = "ext_";
+
+function extensionJobLabel(job: string): string | undefined {
+  if (!job.startsWith(EXTENSION_JOB_PREFIX)) {
+    return undefined;
+  }
+  const words = job.slice(EXTENSION_JOB_PREFIX.length).replaceAll("_", " ");
+  return words.trim() || undefined;
 }

@@ -440,9 +440,10 @@ func TestConnectabilityNeverReportsAStoredAppAsMissing(t *testing.T) {
 // app taking the roster down with it.
 func TestConnectabilityReportsAppUnusableWithoutFailingTheOtherProviders(t *testing.T) {
 	h := wiredHandlers()
-	// A non-nil transport clears the early gate in graphApp so it reaches the
-	// credential read; the resolver below is what fails.
-	h.graphOAuth = graph.NewOAuth(graph.OAuthConfig{ClientID: "cid", ClientSecret: "sec"})
+	// A registered connector lets the stored app run the flow, and no
+	// environment app stands in front of it. So graphApp reaches the credential
+	// read, and the resolver below is what fails.
+	h.registry.Register(graph.New(nil, nil))
 	boom := errors.New("vault: sealed secret will not open")
 	h.microsoftCredentials = func(context.Context) (capture.ConnectorApp, bool, error) {
 		return capture.ConnectorApp{}, false, boom

@@ -110,7 +110,7 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 			return err
 		}
 
-		if err := redactSubjectReporting(ctx, tx, subject); err != nil {
+		if err := redactSubjectReporting(ctx, tx, subject, emails); err != nil {
 			return err
 		}
 		leadsWiped, err := anonymizeSubjectRows(ctx, tx, subject, emails, identities, reason)
@@ -126,7 +126,7 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 		if err := lockSubjectTimeline(ctx, tx, subject, emails, channelActivityKeys(identities)); err != nil {
 			return err
 		}
-		activitiesRedacted, err := redactSubjectTimeline(ctx, tx, subject, emails, channelActivityKeys(identities), floor)
+		activitiesRedacted, err := e.redactSubjectTimeline(ctx, tx, subject, emails, channelActivityKeys(identities), floor, reason)
 		if err != nil {
 			return err
 		}
@@ -257,22 +257,14 @@ func subjectIdentifiers(ctx context.Context, tx pgx.Tx, contactID ids.ContactID)
 // they answered to, the proposals read out of them, and the transmitted copy in
 // the send log.
 func purgeRedactedActivityTraces(ctx context.Context, tx pgx.Tx, activities []ids.UUID, reason string, payloads PayloadPurger) error {
-	if err := redactReportingSource(ctx, tx, "activity", activities); err != nil {
+	if err := purgeActivityTraces(ctx, tx, activities, payloads); err != nil {
 		return err
 	}
-	// The vectors go with the text they were built from. purgeDerivedTraces
-	// reaches embeddings through activity_link, which by construction cannot
-	// see the unlinked mail redactSubjectTimeline now covers — and
-	// an embedding of erased text is the erased text in another shape, which
-	// a similarity probe can still reach.
-	if len(activities) > 0 {
-		if _, err := tx.Exec(ctx, `
-			DELETE FROM embedding WHERE entity_type = 'activity' AND entity_id = ANY($1)`,
-			activities); err != nil {
-			return err
-		}
-	}
-	if err := tombstoneCollateralScrubs(ctx, tx, "activity", activities, reason, causeContactErasure); err != nil {
+	return tombstoneCollateralScrubs(ctx, tx, "activity", activities, reason, causeContactErasure)
+}
+
+func purgeActivityTraces(ctx context.Context, tx pgx.Tx, activities []ids.UUID, payloads PayloadPurger) error {
+	if err := purgeActivityIndexes(ctx, tx, activities); err != nil {
 		return err
 	}
 	// The external identities of the messages just emptied. The activity-content

@@ -6,13 +6,12 @@ package agents
 import (
 	"context"
 	"encoding/json"
-	"reflect"
-	"slices"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy/langcopytest"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -38,8 +37,6 @@ var summaryVerbs = map[string][]string{
 	"addLineItem":         {"%s"},
 	"updateLineItem":      {"%s", "%s"},
 	"removeLineItem":      {"%s", "%s"},
-	"retireCustomField":   {"%s"},
-	"customFieldOptions":  {"%s"},
 	"setStakeholder":      {"%s"},
 	"removeStakeholder":   {"%s", "%s"},
 	"setCompany":          {"%s"},
@@ -92,73 +89,11 @@ var summaryVerbs = map[string][]string{
 	"annotateNarrative":   nil,
 	"annotateBoth":        {"%d"},
 	"annotateFindings":    {"%d"},
-	"stepUpRecords":       {"%d", "%d", "%s", "%d"},
 	"stepUpChanges":       {"%d", "%d", "%s", "%d"},
 }
 
-// summarySentences reads every sentence field of one set by reflection, so the
-// census walks the struct itself rather than a list that could fall behind it.
-func summarySentences(said summaryCopy) map[string]string {
-	value := reflect.ValueOf(said)
-	sentences := map[string]string{}
-	for i := range value.NumField() {
-		if field := value.Field(i); field.Kind() == reflect.String && value.Type().Field(i).Name != "lang" {
-			sentences[value.Type().Field(i).Name] = field.String()
-		}
-	}
-	return sentences
-}
-
-// verbsIn answers a sentence's formatting verbs in order. Go's verbs are
-// positional, so a translation that reorders %q and %d prints the subject as
-// the count.
-func verbsIn(sentence string) []string {
-	var verbs []string
-	for i := 0; i+1 < len(sentence); i++ {
-		if sentence[i] == '%' {
-			verbs = append(verbs, sentence[i:i+2])
-			i++
-		}
-	}
-	return verbs
-}
-
-// Every shipped language writes the staging summaries in its own words, with
-// the English sentence's formatting verbs in the English order.
 func TestEveryShippedLanguageWritesItsOwnAgentSummaries(t *testing.T) {
-	english := summarySentences(summaryByLang[textlang.English])
-	for name := range english {
-		if _, held := summaryVerbs[name]; !held {
-			t.Errorf("%s is a sentence of summaryCopy with no row in summaryVerbs, so nothing holds its verbs", name)
-		}
-	}
-	for name := range summaryVerbs {
-		if _, exists := english[name]; !exists {
-			t.Errorf("summaryVerbs holds %s, which summaryCopy no longer has", name)
-		}
-	}
-	for _, lang := range textlang.Shipped {
-		t.Run(string(lang), func(t *testing.T) {
-			said, ok := summaryByLang[lang]
-			if !ok {
-				t.Fatalf("the product ships %s and this table has not learned it", lang)
-			}
-			for name, got := range summarySentences(said) {
-				if got == "" {
-					t.Errorf("%s is empty, and a blank summary reaches the inbox as nothing at all", name)
-					continue
-				}
-				if verbs := verbsIn(got); !slices.Equal(verbs, summaryVerbs[name]) {
-					t.Errorf("%s carries verbs %v, its call site passes %v in that order: %q",
-						name, verbs, summaryVerbs[name], got)
-				}
-				if lang != textlang.English && got == english[name] {
-					t.Errorf("%s is the English sentence verbatim; the entry exists and the reader still gets English",
-						name)
-				}
-			}
-		})
-	}
+	langcopytest.CensusByLanguage(t, summaryByLang, summaryVerbs, "lang")
 }
 
 // Every translated language names the same record types, each with a word. A
@@ -203,7 +138,7 @@ func TestARecordNounFallsBackToTheWireType(t *testing.T) {
 		want       string
 	}{
 		{textlang.English, "deal_room", "deal room"},
-		{textlang.German, "deal_room", "Deal-Room"},
+		{textlang.German, "deal_room", "Deal Room"},
 		{textlang.German, "app_user", "app_user"},
 		{textlang.Lang("kl"), "saved_view", "saved view"},
 	} {
@@ -242,7 +177,7 @@ func TestTheToolDoorDescribesInTheComposedLanguage(t *testing.T) {
 	if err != nil {
 		t.Fatalf("staging a served create answered %v", err)
 	}
-	if want := "Kontakt anlegen, Felder: full_name, title"; info.Summary != want {
+	if want := "Kontakt erstellen, Felder: full_name, title"; info.Summary != want {
 		t.Errorf("summary = %q, want %q", info.Summary, want)
 	}
 }
@@ -320,7 +255,7 @@ func TestEverySetNamesItsLanguageAndEnglishKeepsTheWireType(t *testing.T) {
 // German uses only the plain hyphen: an em or en dash in a record noun or a
 // sentence breaks the house rule for German copy.
 func TestGermanCopyCarriesNoLongDash(t *testing.T) {
-	german := summarySentences(summaryByLang[textlang.German])
+	german := langcopytest.Sentences(t, summaryByLang[textlang.German], "lang")
 	for recordType, noun := range recordNounsByLang[textlang.German] {
 		german["noun "+recordType] = noun
 	}

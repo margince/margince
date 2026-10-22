@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -46,7 +47,7 @@ type ProjectActivityFacts struct {
 // project is the record the count is narrowed TO, so it is gated before it
 // is counted against — the same existence-hiding rule the timeline list
 // keeps for its narrowing target.
-func (s *Store) ProjectActivityFactsTx(ctx context.Context, tx pgx.Tx, id ids.ProjectID) (ProjectActivityFacts, error) {
+func (s *Store) ProjectActivityFactsTx(ctx context.Context, tx pgx.Tx, id ids.ProjectID, asOf time.Time) (ProjectActivityFacts, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return ProjectActivityFacts{}, err
 	}
@@ -82,6 +83,11 @@ func (s *Store) ProjectActivityFactsTx(ctx context.Context, tx pgx.Tx, id ids.Pr
 	if edgeScope == "" {
 		edgeScope = scopeUnbounded
 	}
+	identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+	if err != nil {
+		return ProjectActivityFacts{}, err
+	}
+	current := CurrentTaskClause("a", asOf, identities, arg)
 	var facts ProjectActivityFacts
 	// The candidate set is every activity with ANY link into the project's
 	// neighbourhood; each is then classified once, so an activity linked to
@@ -103,7 +109,7 @@ func (s *Store) ProjectActivityFactsTx(ctx context.Context, tx pgx.Tx, id ids.Pr
 		       -- auth.OriginIsEngagement serves a FILTER as well as a WHERE.
 		       max(a.occurred_at) FILTER (WHERE f.filed_here AND TRUE`+auth.OriginIsEngagement("a")+`),
 		       count(*) FILTER (WHERE NOT f.filed_anywhere),
-		       count(*) FILTER (WHERE f.filed_here AND a.kind = 'task' AND NOT a.is_done)
+		       count(*) FILTER (WHERE f.filed_here AND a.kind = 'task' AND NOT a.is_done AND %[5]s)
 		FROM activity a
 		JOIN nearby n ON n.activity_id = a.id
 		CROSS JOIN LATERAL (
@@ -112,7 +118,7 @@ func (s *Store) ProjectActivityFactsTx(ctx context.Context, tx pgx.Tx, id ids.Pr
 			       EXISTS (SELECT 1 FROM activity_link l
 			               WHERE l.activity_id = a.id AND l.project_id IS NOT NULL) AS filed_anywhere
 		) f
-		WHERE %[2]s`, projectPos, strings.Join(where, " AND "), dealScope, edgeScope), args...).
+		WHERE %[2]s`, projectPos, strings.Join(where, " AND "), dealScope, edgeScope, current), args...).
 		Scan(&facts.Attributed, &facts.LastActivityAt, &facts.UnattributedNearby, &facts.OpenCommitments)
 	if err != nil {
 		return ProjectActivityFacts{}, err

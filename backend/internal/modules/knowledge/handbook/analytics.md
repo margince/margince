@@ -3,7 +3,7 @@
 
 **Analytics** in Margince is the reporting screen. It shows forecast, pipeline
 reports, sales performance, time in stage, your own outcomes, delivery and data
-coverage. It is in the sidebar under **Intelligence**. It answers two different
+coverage. It is in the sidebar under **Insights**. It answers two different
 kinds of question and keeps them apart: what the records say, and what somebody
 expects will happen.
 
@@ -13,7 +13,7 @@ open it rather than guessing.
 ## Common reporting tasks
 
 ### Where can I see my forecast?
-To see your forecast in Margince, click **Analytics** in the sidebar (under **Intelligence**) and open the **Forecast** section.
+To see your forecast in Margince, click **Analytics** in the sidebar (under **Insights**) and open the **Forecast** section.
 1. Click **Analytics**, then **Forecast** under **Analytics sections**.
 2. Choose the **Period**: **Quarter**, **Month** or **Week**.
 3. Read the **Period forecast** and what it is made of: **Already won**, **Committed · confirmed dates** and **Best-case addition**.
@@ -30,17 +30,22 @@ Also called: team forecast, my team's deals, manager view, team report.
 ### How do I see my pipeline report?
 To see your pipeline report in Margince, click **Analytics** in the sidebar and open the **Pipeline** tab.
 1. Click **Analytics**, then the **Pipeline** tab.
-2. Read the totals at the top. Then read **Open deals by stage** (deals, value and weighted value per stage), **Forecast categories** and **Open deals per company**.
+2. Read the totals at the top. Then read **Open deals by stage**, **Open pipeline by close month**, **Forecast categories** and **Open deals per company**.
 3. Press **Explain this number** on any card to see the deals behind it.
 The **Deals** board itself also shows each stage's total and weighted total at the top of its column. Also called: pipeline report, sales pipeline, deals by stage, funnel report.
 
 ### What analytics sections are there?
 The Analytics tabs are **Performance**, **Forecast**, **Pipeline**, **My outcomes**, **Delivery** and **Reports**. The **Setup** menu at the end of the tab row holds **Targets**, **Metric definitions** and **Data coverage**. Access decides which tabs and menu entries you get.
-The **Forecast** section is where this period will land. The **Pipeline** section holds the pipeline reports.
+The **Forecast** section is where this period will land. The **Pipeline** section holds the pipeline reports. When you can see no deal yet, Performance, Pipeline and Forecast say **No deals to report on yet** and offer **Open Deals**.
 
 The **Performance** section shows outcome totals, target progress when targets are set, trends and pipeline charts.
 It also shows a **Needs your attention** list when forecast checks, unpriced deals or unread data sources need you.
-The **Reports** section lists saved reports and starts a custom report with **New custom report**. A seat that cannot read saved reports gets a **Custom reports** tab instead.
+
+The list names up to five open forecast checks for the records you picked. Each shows the deal, what the check found, the owner and the money in question. High checks come first, then the largest amounts. **Review** opens the forecast review. When there are more checks, one line counts them all.
+
+The **Reports** section lists saved reports and starts a custom report with **New custom report**. Above them, **Prepared reports** offers ready reports to **Preview**, **Save a copy** of, or **Open** where they already live. A seat that cannot read saved reports gets a **Custom reports** tab instead. A custom report on deals can also group and filter by a deal or company field. An admin turns such a field on under **In reports** in Settings → **Fields**. **Your saved questions**, under a new custom report, lists the custom reports you saved, newest first, each named by what it asks.
+
+A company field shows as its name with "(company)", and groups each deal by its company's value. A deal whose company you cannot open is left out of that grouping. Under **Group by**, the report says how many of the deals you can read have a value in each such field. A grouping by a field few deals hold puts most deals in the empty group. If an admin turns the field off or retires it, a saved report that uses it says so instead of showing numbers. Ask again without the field, or ask an admin to turn it back on.
 
 The **My outcomes** section shows your own open deals and meetings, for a rep only.
 The **Data coverage** section shows which sources the nightly check could read, for a seat allowed to see it. The **Delivery** section holds the project reports. Also called: reports, dashboards.
@@ -102,9 +107,9 @@ plain sentence instead: **"These numbers cover {scope}."**
 
 Archived teams are never offered.
 
-The scope picker rules Performance, Forecast and Custom reports. Pipeline
-and Delivery report cards use their own record scopes; changing the picker does
-not change those cards.
+The scope picker rules Performance, Forecast, Pipeline and Custom reports, so
+these sections count the same records. Delivery does not follow the picker: it
+covers every project you can read.
 
 A report that counts every record still checks a named owner. Filtering one to
 somebody you may not measure is refused. Grouping one by owner counts only
@@ -118,6 +123,10 @@ missing, this line is not shown.
 
 It names no currency, because one report can show deals in their own currency
 beside totals turned into yours.
+
+Activity reports count meetings and tasks, never email. Messages, calls and
+notes are not counted either. An activity report or custom question that asks
+for one of those kinds is refused, and the refusal names the kinds you can use.
 
 ## Explain this number
 
@@ -162,12 +171,18 @@ this number."
 The **No category** tile appears only when a deal falls in it. A tile with
 nothing in it says **"No deals"**, never an empty mark.
 
-**Open deals per company**: company, currency, open deals, value without
-weighting. These rows stay in their own currency and are grouped by company
-*and* currency. So two currencies on one company are two rows.
+**Open pipeline by close month**: deals, value and weighted value per expected
+close month, in calendar order. **No close date** comes last.
 
-Where not every deal carries an amount, a note says so:
-"{priced} of {total} priced".
+**Open deals per company**: company, currency, open deals, value without
+weighting, and share of open pipeline. These rows stay in their own currency
+and are grouped by company *and* currency. So two currencies on one company are
+two rows.
+
+The share is of the open pipeline in the same currency. It shows only when the
+list holds every row and no deal is hidden from you.
+
+Where not every deal has an amount, a note says "{priced} of {total} priced".
 
 ## Performance
 
@@ -302,6 +317,7 @@ means is the **Projection basis** installation setting, and the card names it:
 - **Weighted**: every open deal at its stage probability.
 - **Manager’s call**: the recorded number *replaces* the projection rather
   than adding to what is already won.
+  **From the deal records** shows won plus commit evidence beside it, never added.
 
 No deal is counted in both parts.
 
@@ -380,6 +396,4 @@ link cannot be copied from it.
 A link also stops when it expires or when you lose forecast access. A seat
 without permission to share sees neither button.
 
-A link that no longer works shows **not found**, no matter the reason.
-
-An agent can neither create one nor open one.
+A link that no longer works shows **not found**, no matter the reason. An agent can neither create one nor open one.

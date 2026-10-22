@@ -195,6 +195,8 @@ func (p *StageProgressionProposer) stageCard(
 		DiffHash:       diffHash,
 		TargetType:     approvalTargetDeal,
 		TargetID:       facts.DealID.UUID,
+		CoTargetType:   dealTargetStage,
+		CoTargetID:     facts.ToStageID.UUID,
 		// No TargetVersion: staging takes the pin ITSELF, in this same
 		// transaction (approvals/stagingpins.go), and never from what a caller
 		// supplied. The deal is a versioned target, so the card is pinned to
@@ -228,6 +230,7 @@ func progressionChange(facts deals.StageProgressionFacts, lang textlang.Lang) de
 	criteria := make([]deals.ProposedCriterion, 0, len(facts.Criteria))
 	for _, c := range facts.Criteria {
 		criteria = append(criteria, deals.ProposedCriterion{
+			Version:        c.Version,
 			CriterionID:    c.CriterionID,
 			Key:            c.Key,
 			Label:          c.Label,
@@ -447,6 +450,9 @@ func stageProgressionEffect(svc *approvals.Service, store *deals.Store) approval
 				// authority, and re-asking the autopilot's thresholds would
 				// let a suspended rule block a move somebody explicitly made.
 				if err := refuseAStaleAutomaticMove(ctx, tx, change); err != nil {
+					return err
+				}
+				if err := store.ValidateProgressionCriteriaTx(ctx, tx, change); err != nil {
 					return err
 				}
 				_, err := store.AdvanceDealTx(ctx, tx, change.DealID, deals.AdvanceDealInput{

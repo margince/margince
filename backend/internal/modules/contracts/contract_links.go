@@ -55,12 +55,20 @@ func uuidRef(table string, id *openapi_types.UUID) linkRef {
 // ensureLinksVisible gates every client-supplied reference this write carries.
 // Spelled once because create and patch must apply the same rule: the recurring
 // defect in this tree is the second call site that forgets the first's gate.
-func ensureLinksVisible(ctx context.Context, tx pgx.Tx, refs ...linkRef) error {
+//
+// fromRequest says the caller typed the ids, so a miss names the body field
+// (deal_id, project_id). A renewal reads them off the old contract, where
+// naming a field the caller never sent would point at the wrong input.
+func ensureLinksVisible(ctx context.Context, tx pgx.Tx, fromRequest bool, refs ...linkRef) error {
 	for _, ref := range refs {
 		if ref.id == nil {
 			continue
 		}
-		if err := auth.EnsureLinkTarget(ctx, tx, ref.table, *ref.id); err != nil {
+		err := auth.EnsureLinkTarget(ctx, tx, ref.table, *ref.id)
+		if fromRequest {
+			err = auth.NameMissingReference(ref.table+"_id", err)
+		}
+		if err != nil {
 			return err
 		}
 	}

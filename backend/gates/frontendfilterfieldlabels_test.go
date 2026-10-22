@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	frontendFilterFieldLabels = "../frontend/src/screens/filterdata.ts"
+	frontendFilterFieldLabels = "../frontend/src/lib/filterdata.ts"
 	filterOnlyLabelMap        = "FILTER_ONLY_FIELD_LABELS = new Map<string, MessageKey>(["
 )
 

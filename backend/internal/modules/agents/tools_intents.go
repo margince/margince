@@ -25,18 +25,15 @@ import (
 // RegisterIntentTools wires the intent surface; compose passes the
 // search module's Retriever. No retriever, no tools — a surface that
 // cannot ground does not pretend to.
-// The provider is what resolves a `record_name`, and it is the SAME one
-// search_records resolves through — so a name means here exactly what that tool
-// would have said it means.
+// search resolves a `record_name` on the engine search_records runs.
 func RegisterIntentTools(
-	r *Registry, retriever retrieval.Retriever, brief MeetingBriefReader,
-	p datasource.SystemOfRecordProvider,
+	r *Registry, retriever retrieval.Retriever, brief MeetingBriefReader, search RecordSearch,
 ) {
 	if retriever == nil {
 		return
 	}
-	r.Register(catchMeUpOn{retriever: retriever, p: p})
-	r.Register(prepForMeeting{retriever: retriever, brief: brief, p: p})
+	r.Register(catchMeUpOn{retriever: retriever, search: search})
+	r.Register(prepForMeeting{retriever: retriever, brief: brief, search: search})
 }
 
 // assembleAnchored settles which record the caller meant and builds the
@@ -53,13 +50,12 @@ func RegisterIntentTools(
 // record was named in words, nor off the assembled context, which echoes what
 // a retriever chose to put there.
 func assembleAnchored(
-	ctx context.Context, p datasource.SystemOfRecordProvider,
-	retriever retrieval.Retriever, args anchorArgs,
+	ctx context.Context, search RecordSearch, retriever retrieval.Retriever, args anchorArgs,
 ) (retrieval.Context, ids.UUID, error) {
 	if err := args.validate(); err != nil {
 		return retrieval.Context{}, ids.UUID{}, err
 	}
-	anchored, err := resolveAnchor(ctx, p, args)
+	anchored, err := resolveAnchor(ctx, search, args)
 	if err != nil {
 		return retrieval.Context{}, ids.UUID{}, err
 	}
@@ -88,7 +84,7 @@ type anchorArgs struct {
 const anchorSchema = `{"type":"object","required":["record_type"],"properties":{
 	"record_type":{"type":"string","enum":["contact","company","deal","lead","project","activity"]},
 	"record_id":{"type":"string","format":"uuid","description":"The record to build around. Give this or record_name, not both."},
-	"record_name":{"type":"string","description":"The record named in words, resolved the way search_records resolves it. Refused with the candidate ids when the name matches more than one, rather than guessing."},
+	"record_name":{"type":"string","description":"The record named in words, found the way search_records finds the same words. Refused with the candidate ids when the name matches more than one, rather than guessing."},
 	"max_items":{"type":"integer","minimum":1,"maximum":20},
 	"project_id":{"type":"string","format":"uuid","description":"Keep only what is filed under this project or under none"}},
 	"additionalProperties":false}`
@@ -176,8 +172,8 @@ func assembledContext(ctx context.Context, assembled retrieval.Context) Assemble
 
 type catchMeUpOn struct {
 	retriever retrieval.Retriever
-	// p resolves a `record_name`. See RegisterIntentTools.
-	p datasource.SystemOfRecordProvider
+	// search resolves a `record_name`. See RegisterIntentTools.
+	search RecordSearch
 }
 
 func (t catchMeUpOn) Spec() mcp.ToolSpec {
@@ -186,6 +182,7 @@ func (t catchMeUpOn) Spec() mcp.ToolSpec {
 		Description:   catchMeUpOnCopy.render(),
 		Instead:       catchMeUpOnCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		Unlisted:     true,
 		OpenAPIOp:    "catchUpOnRecord",
 		InputSchema:  schema(anchorSchema),
 		OutputSchema: schemaFor[AssembledContextResult](),
@@ -197,7 +194,7 @@ func (t catchMeUpOn) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
 	}
-	assembled, _, err := assembleAnchored(ctx, t.p, t.retriever, args)
+	assembled, _, err := assembleAnchored(ctx, t.search, t.retriever, args)
 	if err != nil {
 		return nil, err
 	}
@@ -208,8 +205,8 @@ func (t catchMeUpOn) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 
 type prepForMeeting struct {
 	retriever retrieval.Retriever
-	// p resolves a `record_name`. See RegisterIntentTools.
-	p datasource.SystemOfRecordProvider
+	// search resolves a `record_name`. See RegisterIntentTools.
+	search RecordSearch
 	// brief is the contact page's own assembler. Nil is a wiring the tool
 	// survives rather than refuses: an installation without it answers the
 	// assembled picture, which is what this tool has always returned, instead
@@ -223,6 +220,7 @@ func (t prepForMeeting) Spec() mcp.ToolSpec {
 		Description:   prepForMeetingCopy.render(),
 		Instead:       prepForMeetingCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		Unlisted:     true,
 		OpenAPIOp:    "prepForMeeting",
 		InputSchema:  schema(anchorSchema),
 		OutputSchema: schemaFor[PrepForMeetingResult](),
@@ -234,7 +232,7 @@ func (t prepForMeeting) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 	if err := decodeArgs(in, &args); err != nil {
 		return nil, err
 	}
-	assembled, anchored, err := assembleAnchored(ctx, t.p, t.retriever, args)
+	assembled, anchored, err := assembleAnchored(ctx, t.search, t.retriever, args)
 	if err != nil {
 		return nil, err
 	}
@@ -273,11 +271,10 @@ func (t prepForMeeting) Handle(ctx context.Context, in json.RawMessage) (json.Ra
 	return json.Marshal(result)
 }
 
-// noteBriefEvidence charges the brief's own citations against the read bound
-// and puts them in the envelope.
+// noteBriefEvidence puts the brief's own citations in the envelope.
 //
 // Naming a record to an agent is handing that record over, which is why
-// noteEvidence charges rather than only recording. The brief names attendees,
+// noteEvidence counts the record as served as well as citing it. The brief names attendees,
 // the meetings this room held before, and the conversations promises were
 // extracted from — records the context walk beside it never touched. Left
 // uncharged, the richest read on this surface would also be the cheapest, and

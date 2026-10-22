@@ -106,7 +106,7 @@ func (s *Store) ReopenWithheldDomain(ctx context.Context, domain string) (Blocke
 		// new message. Passing a date here would claim mail arrived that did
 		// not, and GREATEST would then hold that claim against the next real
 		// message's.
-		if err := reopenWithheldDispositionTx(ctx, tx, base, *owner, nil); err != nil {
+		if err := reopenWithheldDispositionTx(ctx, tx, base, *owner, nil, true); err != nil {
 			return err
 		}
 		// The answer is the row as it STOOD, not as it is now. Re-opening
@@ -140,7 +140,7 @@ func readOpenQuestionTx(ctx context.Context, tx pgx.Tx, domain string) (BlockedD
 	err := tx.QueryRow(ctx, `
 		SELECT d.id, d.domain, `+domainStanding+`
 		  FROM `+domainStandingFrom+` WHERE d.domain = $1`, domain).
-		Scan(&d.ID, &d.Domain, &d.Admission, &d.Reason, &d.Source, &d.DecidedAt, &company.id, &company.name)
+		Scan(&d.ID, &d.Domain, &d.Admission, &d.Reason, &d.Source, &d.DecidedAt, &company.id, &company.name, &d.ReasonCode, &d.SenderKind)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Nothing has ever asked about this domain, so there is no question to
 		// re-open. Not-found rather than a fault: the caller named a domain

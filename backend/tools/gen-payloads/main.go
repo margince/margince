@@ -3,10 +3,9 @@
 
 // Command gen-payloads compiles isolated, components-only OpenAPI documents
 // into typed Go structs — the public contract for outbound event/webhook
-// payloads. It reuses the oapi-codegen LIBRARY (not the CLI) over each source
-// so the payload files stay isolated from api/crm.yaml: crm.yaml's webhooks:
-// block is silently pruned by kin-openapi, and flipping global skip-prune
-// there trips a pre-existing ApprovalToken name collision. An isolated file
+// payloads. It reuses the oapi-codegen LIBRARY (not the CLI) over each source.
+// The payload files stay apart from api/crm.yaml, whose webhooks: block
+// kin-openapi silently prunes. An isolated file
 // carries only our schemas, so generating every component is safe with no
 // synthetic-path trick.
 //
@@ -54,7 +53,7 @@ func generateGroup(root string, g group) error {
 	if err != nil {
 		return fmt.Errorf("reading source: %w", err)
 	}
-	out, err := generateSource(src, g.Package, g.VersionsVar)
+	out, err := generateSource(src, g.Package, g.VersionsVar, g.SamplesVar)
 	if err != nil {
 		return err
 	}
@@ -75,7 +74,7 @@ func generateGroup(root string, g group) error {
 // every family compiles into ONE Go package: a second file declaring the same
 // map name would not compile, and a map nothing reads is a name to collide on
 // for nothing.
-func generateSource(specYAML []byte, pkg, versionsVar string) (string, error) {
+func generateSource(specYAML []byte, pkg, versionsVar, samplesVar string) (string, error) {
 	normalized, err := oas30.Bytes(specYAML)
 	if err != nil {
 		return "", err
@@ -116,6 +115,13 @@ func generateSource(specYAML []byte, pkg, versionsVar string) (string, error) {
 	}
 	if versions != "" {
 		assembled += "\n" + versions
+	}
+	if samplesVar != "" {
+		samples, err := eventSamples(spec, samplesVar)
+		if err != nil {
+			return "", err
+		}
+		assembled += "\n" + samples
 	}
 
 	formatted, err := format.Source([]byte(assembled))

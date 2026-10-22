@@ -133,11 +133,12 @@ func (s *Service) readFollowUps(
 func classifyAwaiting(awaited AwaitedReply, asOf time.Time) ranked {
 	days := daysSince(awaited.SentAt, asOf)
 	row := crmcontracts.WorklistItem{
-		Id:          awaited.ActivityID.String(),
-		Source:      sourceAwaitingReply,
-		Category:    crmcontracts.WorklistItemCategoryTasks,
-		Level:       levelPromise,
-		Consequence: crmcontracts.WorklistItemConsequenceNone,
+		Id:           awaited.ActivityID.String(),
+		Source:       sourceAwaitingReply,
+		SourceRecord: subjectOf("activity", awaited.ActivityID),
+		Category:     crmcontracts.WorklistItemCategoryTasks,
+		Level:        levelPromise,
+		Consequence:  crmcontracts.WorklistItemConsequenceNone,
 		Because: []crmcontracts.WorklistReason{
 			reason("you_wrote_last", nil), reason("no_reply_days", daysValue(days)),
 		},
@@ -178,11 +179,12 @@ func classifyAwaiting(awaited AwaitedReply, asOf time.Time) ranked {
 func classifyMeetingFollowUp(met AwaitedReply, asOf time.Time) (ranked, bool) {
 	days := daysSince(met.SentAt, asOf)
 	row := crmcontracts.WorklistItem{
-		Id:          met.ActivityID.String(),
-		Source:      sourceMeetingFollowUp,
-		Category:    crmcontracts.WorklistItemCategoryMeetings,
-		Level:       levelPromise,
-		Consequence: crmcontracts.WorklistItemConsequenceNone,
+		Id:           met.ActivityID.String(),
+		Source:       sourceMeetingFollowUp,
+		SourceRecord: subjectOf("activity", met.ActivityID),
+		Category:     crmcontracts.WorklistItemCategoryMeetings,
+		Level:        levelPromise,
+		Consequence:  crmcontracts.WorklistItemConsequenceNone,
 		Because: []crmcontracts.WorklistReason{
 			reason("met_days_ago", daysValue(days)), reason("nothing_sent_since", nil),
 		},

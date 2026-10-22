@@ -1,0 +1,9 @@
+/* Settings → Data model: the two lead vocabularies and the lead-handling
+   posture. */
+
+/* `Select`'s face is `width: 100%`, which an auto-sized cell would resolve to
+   the narrowest option; the intent column holds one fixed measure, wide
+   enough for the longest German option, instead. */
+.lead-vocab-intent .select-control {
+  inline-size: 13rem;
+}

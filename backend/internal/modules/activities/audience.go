@@ -157,7 +157,10 @@ func (s *Store) SetAudience(ctx context.Context, id ids.ActivityID, in SetAudien
 		out, err = readActivity(ctx, tx, id, storekit.LiveOnly)
 		return err
 	})
-	return out, err
+	if err != nil {
+		return out, err
+	}
+	return out, s.attachCustomValues(ctx, &out)
 }
 
 // readAudienceImage renders one side of the audience audit diff: the column on
@@ -323,10 +326,21 @@ func (s *Store) GetActivityContent(ctx context.Context, id ids.ActivityID, archi
 	}
 	var out crmcontracts.Activity
 	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
-		out, err = readActivityContent(ctx, tx, id, archived)
+		out, err = ReadActivityContentTx(ctx, tx, id, archived)
 		return err
 	})
-	return out, err
+	if err != nil {
+		return out, err
+	}
+	return out, s.attachCustomValues(ctx, &out)
+}
+
+// ReadActivityContentTx keeps evidence reads inside the decision's transaction.
+func ReadActivityContentTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, archived storekit.ArchivedFilter) (crmcontracts.Activity, error) {
+	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	return readActivityContent(ctx, tx, id, archived)
 }
 
 // InvalidAudienceError is a malformed audience write: an unknown audience, a

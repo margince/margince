@@ -109,6 +109,7 @@ func (c attentionCaptureHealth) CaptureConcerns(ctx context.Context) ([]attentio
 			AccountLabel: concern.AccountLabel,
 			Calendar:     slices.Contains(calendarProviders, concern.Provider),
 			FailingSince: concern.FailingSince,
+			LastSyncedAt: concern.LastSyncedAt,
 		})
 	}
 	return out, nil
@@ -221,7 +222,7 @@ type attentionNotices struct {
 }
 
 func (a attentionNotices) Unread(ctx context.Context, limit int) ([]attention.UnreadNotice, error) {
-	unread, err := a.store.UnreadFor(ctx, limit)
+	unread, err := a.store.UnreadWorkFor(ctx, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -255,6 +256,7 @@ func (a attentionNotices) Unread(ctx context.Context, limit int) ([]attention.Un
 			}
 		}
 		out = append(out, attention.UnreadNotice{
+			ApprovalID: notice.ApprovalID,
 			ID:         notice.ID,
 			Origin:     notice.Origin,
 			Kind:       notice.Kind,

@@ -152,6 +152,9 @@ func CheckStagedLine(in StagedOfferLineInput) error {
 // written — a second read-back would only re-derive what this function
 // already knows.
 func insertStagedOfferLine(ctx context.Context, tx pgx.Tx, offerID ids.OfferID, position int, in StagedOfferLineInput) (crmcontracts.OfferLineItem, error) {
+	if err := checkLinePosition(&position); err != nil {
+		return crmcontracts.OfferLineItem{}, err
+	}
 	if in.Description == "" {
 		return crmcontracts.OfferLineItem{}, &RequiredFieldError{Field: "description"}
 	}
@@ -168,7 +171,7 @@ func insertStagedOfferLine(ctx context.Context, tx pgx.Tx, offerID ids.OfferID, 
 	if err := CheckStagedLine(in); err != nil {
 		return crmcontracts.OfferLineItem{}, err
 	}
-	const unit, discount = "unit", "0.00"
+	const unit, discount = defaultUnit, zeroPct
 	fig, err := LineTotals(OfferLineInput{
 		Quantity: in.Quantity, UnitPriceMinor: in.UnitPriceMinor, DiscountPct: discount, TaxRate: in.TaxRate,
 	})

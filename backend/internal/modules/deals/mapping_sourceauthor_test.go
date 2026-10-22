@@ -34,7 +34,7 @@ func TestTheDealDoorsAdmitAnAuthorOnlyFromTheImporter(t *testing.T) {
 	}
 	legacy := "legacy_crm"
 	for door, err := range map[string]error{
-		"client door":           second(dealCreateInput(body(&legacy))),
+		"client door":           second(DealCreationInput(body(&legacy))),
 		"importer from nowhere": second(dealCreateInputFromImporter(body(nil))),
 	} {
 		if _, ok := errors.AsType[*provenance.AuthorError](err); !ok {

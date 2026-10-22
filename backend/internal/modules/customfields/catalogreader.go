@@ -58,6 +58,40 @@ func (s *Service) FilterableColumns(ctx context.Context, object string) ([]field
 	return s.queryColumns(ctx, "ORDER BY column_name", object)
 }
 
+// ReportableColumnsIn answers the active columns of one object an administrator
+// opted into reporting, with their labels, ordered by column_name. It reads in
+// the caller's transaction, so a report's vocabulary and count share a snapshot.
+//
+// Runs no auth.Require: the opt-in is what published the label and options, and
+// the reporting surface that asks gates the object itself.
+func ReportableColumnsIn(ctx context.Context, tx pgx.Tx, object string) ([]fieldcatalog.ReportableColumn, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT column_name, type, COALESCE(options, '[]'::jsonb), label
+		   FROM custom_field
+		  WHERE object = $1 AND status = $2 AND reportable
+		  ORDER BY column_name`,
+		object, statusActive)
+	if err != nil {
+		return nil, fmt.Errorf("customfields: reading reportable columns: %w", err)
+	}
+	defer rows.Close()
+	var cols []fieldcatalog.ReportableColumn
+	for rows.Next() {
+		var (
+			c          fieldcatalog.ReportableColumn
+			optionsRaw []byte
+		)
+		if err := rows.Scan(&c.Name, &c.Type, &optionsRaw, &c.Label); err != nil {
+			return nil, fmt.Errorf("customfields: reading reportable columns: %w", err)
+		}
+		if c.Options, err = unmarshalOptions(optionsRaw); err != nil {
+			return nil, err
+		}
+		cols = append(cols, c)
+	}
+	return cols, rows.Err()
+}
+
 // queryColumns runs the custom_field scan both ActiveColumns and
 // FilterableColumns need, varying only in the WHERE-clause fragment
 // (appended after "WHERE object = $1") and its bind args ($2, $3, …

@@ -13,14 +13,18 @@ import (
 	"context"
 	"errors"
 	"maps"
+	"reflect"
+	"slices"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/introductions"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/introduction"
 )
 
 // asker is the admin seat with the introduction grant the admin fixture does
@@ -76,7 +80,9 @@ func TestAMergeCarriesAsksAboutAndThroughTheRetiredContact(t *testing.T) {
 	about := c.ask(t, retired, c.e.Rep1, nil)
 	via := c.ask(t, target, c.e.Rep2, &retired)
 
+	preview := c.introPreview(t, retired, survivor, about, via)
 	c.merge(t, retired, survivor)
+	c.assertIntroPreview(t, preview)
 
 	if _, contact, _ := c.askStatus(t, about); contact != survivor.UUID {
 		t.Errorf("the ask about the retired contact names %s, want the survivor", contact)
@@ -103,7 +109,9 @@ func TestAnAskTheSurvivorAlreadyHasOpenIsClosed(t *testing.T) {
 	survivors := c.ask(t, survivor, c.e.Rep1, nil)
 	retiredAsk := c.ask(t, retired, c.e.Rep1, nil)
 
+	preview := c.introPreview(t, retired, survivor, retiredAsk)
 	c.merge(t, retired, survivor)
+	c.assertIntroPreview(t, preview)
 
 	if status, _, _ := c.askStatus(t, survivors); status != "requested" {
 		t.Errorf("the survivor's own ask is %s, want it to stand as requested", status)
@@ -131,7 +139,9 @@ func TestAnAskTheMergeRoutesThroughItsOwnContactIsClosed(t *testing.T) {
 	aboutRetired := c.ask(t, retired, c.e.Rep2, &survivor)
 	throughRetired := c.ask(t, survivor, c.e.Rep1, &retired)
 
+	preview := c.introPreview(t, retired, survivor, aboutRetired, throughRetired)
 	c.merge(t, retired, survivor)
+	c.assertIntroPreview(t, preview)
 
 	for _, id := range []ids.UUID{aboutRetired, throughRetired} {
 		status, contact, through := c.askStatus(t, id)
@@ -155,7 +165,9 @@ func TestAThroughOnlyCollisionClosesAboutTheContactTheAskIsAbout(t *testing.T) {
 	kept := c.ask(t, target, c.e.Rep1, &survivor)
 	closed := c.ask(t, target, c.e.Rep1, &retired)
 
+	preview := c.introPreview(t, retired, survivor, closed)
 	c.merge(t, retired, survivor)
+	c.assertIntroPreview(t, preview)
 
 	if status, _, _ := c.askStatus(t, kept); status != "requested" {
 		t.Errorf("the survivor-side ask is %s, want it to stand", status)
@@ -188,8 +200,157 @@ func TestAnUnwiredMergeRefusesWhenAnAskWouldBeStranded(t *testing.T) {
 	target := c.contactAt(t, "Unwired Ask Target", "unwired-ask-target@carry.test")
 	c.ask(t, target, c.e.Rep1, &retired)
 
+	preview, previewErr := unwired.PreviewMergeSurvivorship(c.asker(), "contact", retired.UUID, survivor.UUID, nil, nil)
+	if _, ok := errors.AsType[*contacts.SatelliteCarrierNotWiredError](previewErr); !ok || len(preview.Introductions) != 0 {
+		t.Fatalf("unwired preview = %+v, %v", preview, previewErr)
+	}
 	_, err := unwired.MergeContact(c.admin, retired, survivor, nil)
 	if _, ok := errors.AsType[*contacts.SatelliteCarrierNotWiredError](err); !ok {
 		t.Fatalf("the merge answered %v, want SatelliteCarrierNotWiredError", err)
+	}
+}
+
+func (c *carryEnv) introPreview(t *testing.T, source, target ids.ContactID, expected ...ids.UUID) []introduction.CarriedRequest {
+	t.Helper()
+	preview, err := c.contacts.PreviewMergeSurvivorship(c.asker(), "contact", source.UUID, target.UUID, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(preview.Introductions) != len(expected) {
+		t.Fatalf("introduction effects = %d, want %d", len(preview.Introductions), len(expected))
+	}
+	for _, id := range expected {
+		if !slices.ContainsFunc(preview.Introductions, func(change introduction.CarriedRequest) bool { return change.ID == id }) {
+			t.Fatalf("missing introduction effect for %s", id)
+		}
+	}
+	for _, change := range preview.Introductions {
+		status, contact, through := c.askStatus(t, change.ID)
+		if change.Version < 1 || status != change.StatusBefore || contact != change.ContactBefore || !reflect.DeepEqual(through, change.ThroughBefore) {
+			t.Fatalf("preview changed or misstated original ask: %+v", change)
+		}
+	}
+	return preview.Introductions
+}
+
+func (c *carryEnv) assertIntroPreview(t *testing.T, preview []introduction.CarriedRequest) {
+	t.Helper()
+	for _, change := range preview {
+		status, contact, through := c.askStatus(t, change.ID)
+		if status != change.StatusAfter || contact != change.ContactAfter || !reflect.DeepEqual(through, change.ThroughAfter) {
+			t.Fatalf("merge disagrees with preview %+v: %s %s %v", change, status, contact, through)
+		}
+		var reason *string
+		if err := c.e.Pool.QueryRow(context.Background(), "SELECT decision_reason FROM intro_request WHERE id=$1", change.ID).Scan(&reason); err != nil {
+			t.Fatal(err)
+		}
+		if change.CancellationReason != "" && (reason == nil || *reason != change.CancellationReason) {
+			t.Fatalf("cancellation reason = %v, want %q", reason, change.CancellationReason)
+		}
+	}
+}
+
+func TestMergePreviewDoesNotDisclosePrivateIntroductionDependencies(t *testing.T) {
+	for _, privateWitness := range []bool{false, true} {
+		t.Run(map[bool]string{false: "source ask", true: "collision witness"}[privateWitness], func(t *testing.T) {
+			c := setupCarry(t)
+			source := c.contactAt(t, "Private source", "private-source@carry.test")
+			target := c.contactAt(t, "Private target", "private-target@carry.test")
+			perms := integration.AdminPerms
+			perms.Objects = maps.Clone(perms.Objects)
+			perms.Objects["introduction"] = principal.ObjectGrant{Create: true, Read: true, Update: true}
+			other := c.e.As(c.e.Rep2, nil, perms)
+			privateContact := source
+			if privateWitness {
+				c.ask(t, source, c.e.Rep1, nil)
+				privateContact = target
+			}
+			if _, err := c.intros.Create(other, introductionsRequest(privateContact, c.e.Rep1)); err != nil {
+				t.Fatal(err)
+			}
+			preview, err := c.contacts.PreviewMergeSurvivorship(c.asker(), "contact", source.UUID, target.UUID, nil, nil)
+			if !errors.Is(err, apperrors.ErrNotFound) || !reflect.DeepEqual(preview, contacts.MergeSurvivorship{}) {
+				t.Fatalf("private request exposed: %+v, %v", preview, err)
+			}
+		})
+	}
+}
+
+func TestMergePreviewCarriesAClosedIntroductionWithoutCancellingItAgain(t *testing.T) {
+	c := setupCarry(t)
+	source := c.contactAt(t, "Closed source", "closed-source@carry.test")
+	target := c.contactAt(t, "Closed target", "closed-target@carry.test")
+	ask := c.ask(t, source, c.e.Rep1, nil)
+	if err := c.intros.Cancel(c.asker(), ask, "No longer needed", 1); err != nil {
+		t.Fatal(err)
+	}
+	preview := c.introPreview(t, source, target, ask)
+	if len(preview) != 1 || preview[0].ID != ask || preview[0].StatusBefore != "cancelled" || preview[0].StatusAfter != "cancelled" || preview[0].CancellationReason != "" {
+		t.Fatalf("closed request would be cancelled again: %+v", preview)
+	}
+	c.merge(t, source, target)
+	c.assertIntroPreview(t, preview)
+	var reason string
+	if err := c.e.Pool.QueryRow(context.Background(), "SELECT decision_reason FROM intro_request WHERE id=$1", ask).Scan(&reason); err != nil {
+		t.Fatal(err)
+	}
+	if reason != "No longer needed" {
+		t.Fatalf("prior cancellation reason changed: %q", reason)
+	}
+}
+
+func TestIntroductionPreviewChecksReadPermissionBeforeLookingForRequests(t *testing.T) {
+	c := setupCarry(t)
+	source := c.contactAt(t, "Read source", "read-source@carry.test")
+	target := c.contactAt(t, "Read target", "read-target@carry.test")
+	for _, hasAsk := range []bool{false, true} {
+		if hasAsk {
+			c.ask(t, source, c.e.Rep1, nil)
+		}
+		preview, err := c.contacts.PreviewMergeSurvivorship(c.e.Admin(), "contact", source.UUID, target.UUID, nil, nil)
+		if !errors.Is(err, apperrors.ErrPermissionDenied) || !reflect.DeepEqual(preview, contacts.MergeSurvivorship{}) {
+			t.Fatalf("without introduction read, hasAsk=%v: %+v, %v", hasAsk, preview, err)
+		}
+	}
+}
+
+func TestMergePreviewRefusesAnArchivedIntroductionItWouldCarry(t *testing.T) {
+	c := setupCarry(t)
+	source := c.contactAt(t, "Archived source", "archived-source@carry.test")
+	target := c.contactAt(t, "Archived target", "archived-target@carry.test")
+	ask := c.ask(t, source, c.e.Rep1, nil)
+	// No introduction API archives requests; this exercises a persisted archived row.
+	if _, err := c.e.Pool.Exec(context.Background(), "UPDATE intro_request SET archived_at=requested_at WHERE id=$1", ask); err != nil {
+		t.Fatal(err)
+	}
+	c.ask(t, target, c.e.Rep1, nil)
+	preview, err := c.contacts.PreviewMergeSurvivorship(c.asker(), "contact", source.UUID, target.UUID, nil, nil)
+	if !errors.Is(err, apperrors.ErrNotFound) || !reflect.DeepEqual(preview, contacts.MergeSurvivorship{}) {
+		t.Fatalf("archived request omitted: %+v, %v", preview, err)
+	}
+	c.merge(t, source, target)
+	if status, contact, _ := c.askStatus(t, ask); status != "requested" || contact != target.UUID {
+		t.Fatalf("archived ask was not carried: %s %s", status, contact)
+	}
+}
+
+func TestMergeIntroductionPreviewRefusesToTruncateItsScope(t *testing.T) {
+	c := setupCarry(t)
+	source := c.contactAt(t, "Bounded source", "bounded-source@carry.test")
+	target := c.contactAt(t, "Bounded target", "bounded-target@carry.test")
+	for range 500 {
+		ask := c.ask(t, source, c.e.Rep1, nil)
+		if err := c.intros.Cancel(c.asker(), ask, "No longer needed", 1); err != nil {
+			t.Fatal(err)
+		}
+	}
+	preview, err := c.contacts.PreviewMergeSurvivorship(c.asker(), "contact", source.UUID, target.UUID, nil, nil)
+	if err != nil || len(preview.Introductions) != 500 {
+		t.Fatalf("complete bounded scope: %d, %v", len(preview.Introductions), err)
+	}
+	c.ask(t, source, c.e.Rep1, nil)
+	preview, err = c.contacts.PreviewMergeSurvivorship(c.asker(), "contact", source.UUID, target.UUID, nil, nil)
+	if !errors.Is(err, apperrors.ErrInvalidArgument) || !reflect.DeepEqual(preview, contacts.MergeSurvivorship{}) {
+		t.Fatalf("truncated scope returned: %+v, %v", preview, err)
 	}
 }

@@ -19,7 +19,7 @@ import (
 // ReportingRead selects a read operation over the same reporting engine as HTTP.
 type ReportingRead struct {
 	Scheduled         bool                              `json:"scheduled,omitempty"`
-	Mode              string                            `json:"mode" enum:"catalog,evaluate,reports,report,editions,edition,evidence,compare"`
+	Mode              string                            `json:"mode" enum:"catalog,evaluate,reports,report,report_evaluation,editions,edition,evidence,compare,commission_summary"`
 	Selection         crmcontracts.ReportingSelection   `json:"selection,omitempty"`
 	ID                ids.UUID                          `json:"id,omitempty"`
 	RightID           ids.UUID                          `json:"right_id,omitempty"`
@@ -27,6 +27,7 @@ type ReportingRead struct {
 	EvaluationKey     string                            `json:"evaluation_key,omitempty"`
 	EvaluatedAt       time.Time                         `json:"evaluated_at,omitempty"`
 	FrameworkRevision int64                             `json:"framework_revision,omitempty"`
+	Revision          *int64                            `json:"revision,omitempty" minimum:"1"`
 	Cursor            *string                           `json:"cursor,omitempty"`
 	Limit             int                               `json:"limit,omitempty" minimum:"1" maximum:"100"`
 }
@@ -41,6 +42,9 @@ type ReportingAnswer struct {
 	Edition    *crmcontracts.ReportingEdition     `json:"edition,omitempty"`
 	Evidence   *crmcontracts.ReportingEvidence    `json:"evidence,omitempty"`
 	Comparison *crmcontracts.ReportingComparison  `json:"comparison,omitempty"`
+	// CommissionSummary is the open partner commission liability, answered by
+	// the ledger's own summary as GET /commissions/summary answers it.
+	CommissionSummary *crmcontracts.CommissionSummaryResponse `json:"commission_summary,omitempty"`
 }
 
 // ReportingReader injects the reporting service without a sibling-module dependency.
@@ -55,12 +59,12 @@ type readReporting struct{ read ReportingReader }
 
 var reportingReadCopy = toolCopy{
 	Purpose: "Discover standard sales metrics, evaluate the same graphs as Analytics, or reopen saved report definitions and frozen editions.",
-	Limits:  "Read only. Catalog returns permitted metric IDs and blocks. Evaluate requires a selection. Report and editions require a report id; edition requires an edition id. Evidence requires the evaluation receipt and selection, or an edition id, plus its exact reference. Compare requires two edition IDs. Always retain coverage and capture times when quoting numbers.",
+	Limits:  "Read only. commission_summary answers the open partner commission liability. Catalog returns permitted metric IDs and blocks. Evaluate requires a selection. Report, report_evaluation (a saved report evaluated now, at its latest or a given revision) and editions require a report id; edition requires an edition id. Evidence requires the evaluation receipt and selection, or an edition id, plus its exact reference. Compare requires two edition IDs. Always retain coverage and capture times when quoting numbers.",
 	Instead: "Use " + pipelinesSource + " to discover pipeline and stage IDs. Use run_analytics_query for custom groupings and compose_analytics_report for a document. Configure targets, report sharing and schedules in Analytics.",
 }
 
 func (t readReporting) Spec() mcp.ToolSpec {
-	return mcp.ToolSpec{Name: "read_reporting", Title: "Read sales reporting", Version: toolVersionV1, Description: reportingReadCopy.render(), Instead: reportingReadCopy.Instead, RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, OpenAPIOp: "evaluateReporting", InputSchema: reportingReadInput, OutputSchema: schema(`{"type":"object","properties":{"catalog":{"type":"object"},"evaluation":{"type":"object"},"reports":{"type":"object"},"report":{"type":"object"},"editions":{"type":"object"},"edition":{"type":"object"},"evidence":{"type":"object"},"comparison":{"type":"object"}},"additionalProperties":false}`)}
+	return mcp.ToolSpec{Name: "read_reporting", Title: "Read sales reporting", Version: toolVersionV1, Description: reportingReadCopy.render(), Instead: reportingReadCopy.Instead, RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute, Unlisted: true, OpenAPIOp: "evaluateReporting", InputSchema: reportingReadInput, OutputSchema: schema(`{"type":"object","properties":{"catalog":{"type":"object"},"evaluation":{"type":"object"},"reports":{"type":"object"},"report":{"type":"object"},"editions":{"type":"object"},"edition":{"type":"object"},"evidence":{"type":"object"},"comparison":{"type":"object"},"commission_summary":{"type":"object"}},"additionalProperties":false}`)}
 }
 
 func (t readReporting) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {

@@ -115,21 +115,24 @@ already exists:
 | `Tools` | Governed agent tools: a request for a risk tier in the manifest and, when the declaration carries a handler, a tool the agent surface serves (see [what an extension can do](#what-an-extension-can-do-and-how-that-changes)) |
 | `Channels` | Messaging providers the unit supplies the **transport** for. The core calls the unit to send; the unit never sends on its own authority |
 | `Ingress` | Providers the unit takes records **in** from, and the identity keys that source stands behind |
+| `FinanceSources` | Accounting systems the unit can **read** into the finance mirror. The core owns the connection, the customer links, the sync and every figure |
 | `Subscriptions` | Event types the unit answers, each with the function that one delivery runs |
 | `Jobs` | Scheduled work: a job that runs on a fixed schedule and starts one worker run per tenant |
 | `Secrets` | The secret keys the unit will use, by name and scope. It is a request; it grants nothing |
+| `OAuthApps` | Vendors whose sign-in the core runs for an admin. The core keeps the tokens and gives the unit a live access token through `Runtime.OAuthAccessToken` |
 | `Migrations` | The SQL schema layer the unit owns, built into the binary instead of read from the tree |
+| `Entries` | Buttons on core screens that open the unit's screen. The unit names a slot, a label key, an icon and an RBAC object, and the core draws and places the button |
 
 `Channels` and `Ingress` are separate fields, and neither one means the other. A unit may capture from a
 provider it cannot send on, and the channel declaration says which.
 
 ### 2. The public surface and the mark that gates it
 
-A unit may import only `backend/pkg/**`, and only the packages that carry the mark. Six exist today:
+A unit may import only `backend/pkg/**`, and only the packages that carry the mark:
 
 - **`pkg/extension`**: the declaration types (`Extension`, and `Name` and `Version`, which check their
   own values). It also holds every capability contract carried on them: `Tool`, `Channel`,
-  `IngressSource` and `Record`, `MergeKey`, `Subscription`, `Job`, `SecretsRequest`, and the `Runtime`
+  `IngressSource` and `Record`, `MergeKey`, `FinanceSource`, `Subscription`, `Job`, `SecretsRequest`, and the `Runtime`
   each call gets. It also carries the file types a unit and a core connector must share: `InboundFile`,
   `FileDrop`, `OutboundFile` and the four `MaxInbound*` limits. Last, it holds the two helpers
   `SniffContentType` and `SafeFilename` that every producer of an inbound file calls. So what a file is,
@@ -146,6 +149,9 @@ A unit may import only `backend/pkg/**`, and only the packages that carry the ma
 - **`pkg/extension/subjectrights`**: the deadline a jurisdiction gives each kind of data-subject request.
   It counts in months and days, or in hours, and names the laws it rests on.
 - **`pkg/extension/compliancedocs`**: the documents a pack ships, with their audience and kind.
+- **`pkg/extension/accounting`**: the records a finance source hands the core: a customer, an invoice,
+  money paid in, and the connection they are read for. The core uses these same types, so a unit's
+  invoice and the mirror's input are one type.
 
 Being in `backend/pkg` grants nothing on its own. A package is extension surface only when its package
 line carries the mark `//margince:extension-surface`. The allowlist is *derived from the tree*. A fitness
@@ -203,6 +209,9 @@ the harm could go before turning the unit on:
 | `subscriptions` | `Subscriptions` | Which facts of the installation it reads |
 | `ingress` | `Ingress` | Which providers it lands records from, which kinds, and which identity keys the source **stands behind** (`merges`) |
 | `channels` | `Channels` | Which providers it supplies, whose credential each one uses (`credential_model`: required, no default), and whether it supplies a **transport** (`supplies_transport`) or only captures |
+| `finance_sources` | `FinanceSources` | Which accounting systems it reads |
+| `entries` | `Entries` | Which core screens offer a way into the unit, and the object a reader needs `read` on to see it |
+| `oauth_apps` | `OAuthApps` | Which vendors an admin is sent to, the scopes asked for, and the token URL that receives the client secret |
 
 The `extension.Extension` value the unit returns, and every field the manifest derives, must be written
 out in full in the source. A field the generate step does not know fails it, with the place in the file.
@@ -283,6 +292,7 @@ registered is a state the system cannot reach.
 | A subscription | Nobody: no caller behind a delivery | Its reach: which event types it reads | Nothing; a listener has no tier |
 | An ingress source | The member whose credential produced the record | Its reach: provider, record kinds, identity keys | Nothing beyond the reach |
 | A channel | Only on a send a human staged | Its reach: provider, credential model, whether it can send | Nothing beyond the reach |
+| A finance source | Nobody: the core calls it from the sync, or when an admin connects it | Its reach: the provider | Which source to connect, on the **Integrations** settings page |
 | An agent tool (`extension.Tool`) | The caller of the agent, through the admission gate | A request for a risk tier | The tier and scope |
 
 The agent tool is the governed kind. A tool that declares a `Handle` **is served**: `buildExtensionTools`
@@ -439,6 +449,19 @@ checked against the full budget for names, so a name a unit takes today stays go
   reply would leave on the credential of the unit for each member, instead of on the bot of the
   workspace. It would be the same message from a different sender, with nothing different on screen.
 
+- **An accounting source to read**: a `FinanceSource` declares a provider and three read functions:
+  `Check`, `Customers` and `InvoicesFor`. The core ships no source of its own. The demo source is the
+  unit `extensions/finance-demo`, and a real accounting system is one more unit of the same shape.
+
+  The core owns everything that is the same for every vendor. An admin connects a source and links its
+  customers to companies on the **Integrations** settings page. The sync, the mirror and the figures on
+  the company page are core code. The unit owns only how to reach its vendor: the API, the paging,
+  and the credential, which it keeps in its own `Secrets`.
+
+  A source reports what the vendor said and nothing it would work out. An invoice carries no status,
+  because "overdue" depends on today. A source that sent one would change every row every morning.
+  Nothing on the surface can write to an accounting system.
+
 - **Its own frontend**: a `frontend/` folder whose screen is linked into the SPA. The SPA shows it at the
   route of the unit. To remove a unit takes one step: delete the unit folder. An import gate
   (`frontend/scripts/ext-imports.test.ts`) holds a unit screen to the public surface, the same way the Go
@@ -553,6 +576,8 @@ fixture units under `fixtures/extensions/` (`crm-hello`, the smallest unit that 
 | The core names for the file types | `backend/internal/shared/ports/connector/part.go`, `outbound.go` |
 | The channel contract (`Channel`, `MessageSender`, `ConnectionLiveChecker`) | `backend/pkg/extension/channel.go` |
 | The ingress gate and the send path the core runs | `backend/internal/compose/extingress.go`, `extchannelsend.go` |
+| The finance source contract, its records, and how the core calls it | `backend/pkg/extension/financesource.go`, `accounting/accounting.go`, `backend/internal/compose/extfinancesource.go` |
+| The demo finance source, and the reference for a new one | `extensions/finance-demo/financedemo.go` |
 | How a channel provider is registered, and the check against a core name | `backend/internal/compose/channelprovider.go` |
 | The jurisdiction registry inside the core (it points to the public types) | `backend/internal/shared/ports/jurisdiction/jurisdiction.go` |
 | The boot step (check, then apply) | `backend/internal/compose/extensions.go` |
@@ -562,7 +587,7 @@ fixture units under `fixtures/extensions/` (`crm-hello`, the smallest unit that 
 | The committed plain stub (and its `replace` in `backend/go.mod`) | `composition/extensions_gen.go` |
 | The `GOWORK` switch every build lane carries | `backend/Makefile` (`GOWORK_COMPOSED`) |
 | The first-party German pack | `extensions/de/de.go` |
-| The reference unit (every capability), and its served tools | `extensions/openchannel/openchannel.go`, `endpoint.go` |
+| The reference unit (every capability but a finance source), and its served tools | `extensions/openchannel/openchannel.go`, `endpoint.go` |
 | Its connector half: ingress, merge key, transport | `extensions/openchannel/drain.go`, `record.go`, `send.go` |
 | Its inbound edge with no sign-in | `extensions/openchannel/inbound.go` |
 | Its screen, in the workspace package of the unit | `extensions/openchannel/frontend/screen.tsx` |

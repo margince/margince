@@ -4,12 +4,12 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useLayoutEffect, useRef } from "react";
 import { Button, SegmentedControl } from "./atoms";
+import { ListSurface } from "./listsurface";
 import {
   type BoardDeal,
   type BoardMoneyColumn,
   PipelineBoard,
-} from "./composed";
-import { ListSurface } from "./listsurface";
+} from "./pipelineboard";
 import { Select } from "./select";
 
 const meta: Meta<typeof PipelineBoard> = {
@@ -355,7 +355,12 @@ export const WithAFoldedStage: Story = {
 };
 
 // A card passing under the head is the only thing that shows the band seals
-// the column; at rest the two share one ground.
+// the column; at rest the two share one ground. The owner chip and company link
+// are raised over the card's own link, so they are what would break through.
+const passing: Partial<BoardDeal> = {
+  owner: { id: "u-1", name: "Ada Lindqvist" },
+  companyHref: "#/companies/o-1",
+};
 const scrollingStageColumns: BoardMoneyColumn[] = [
   {
     stage: "discovery",
@@ -365,12 +370,12 @@ const scrollingStageColumns: BoardMoneyColumn[] = [
     weightedMinor: 19_700,
     currency: "EUR",
     deals: [
-      boardDeal("s1", "Contoso renewal", 12_000, 3),
-      boardDeal("s2", "Fabrikam expansion", 33_000, 9),
-      boardDeal("s3", "Globex onboarding", 28_000, 14),
-      boardDeal("s4", "Initech upgrade", 54_000, 21),
-      boardDeal("s5", "Umbrella Corp", 61_000, 2),
-      boardDeal("s6", "Northwind pilot", 9_000, 6),
+      boardDeal("s1", "Contoso renewal", 12_000, 3, passing),
+      boardDeal("s2", "Fabrikam expansion", 33_000, 9, passing),
+      boardDeal("s3", "Globex onboarding", 28_000, 14, passing),
+      boardDeal("s4", "Initech upgrade", 54_000, 21, passing),
+      boardDeal("s5", "Umbrella Corp", 61_000, 2, passing),
+      boardDeal("s6", "Northwind pilot", 9_000, 6, passing),
     ],
   },
   {

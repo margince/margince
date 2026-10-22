@@ -8,6 +8,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
@@ -23,6 +24,7 @@ func (h aiAdminHandlers) GetAiBudget(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, err)
 		return
 	}
+	out.Locks = loadedLocks([]config.Any{ai.BudgetSettings})
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
@@ -40,6 +42,7 @@ func (h aiAdminHandlers) ReplaceAiBudget(w http.ResponseWriter, r *http.Request)
 		httperr.Write(w, r, err)
 		return
 	}
+	out.Locks = loadedLocks([]config.Any{ai.BudgetSettings})
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 

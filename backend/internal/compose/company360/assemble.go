@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // The section names, spelled once. They are the contract's
@@ -62,6 +63,8 @@ type Service struct {
 	scans ScanRecogniser
 	// lists: the page names the Shortlists the account is on (lists.enabled).
 	lists bool
+	// activities answers the timeline's custom-field columns (WithActivityFields).
+	activities *activities.Store
 }
 
 // NewService binds the composite read to the module stores it composes.
@@ -121,6 +124,10 @@ func (s *Service) AssembleScoped(ctx context.Context, companyID ids.CompanyID, o
 	if err != nil {
 		return crmcontracts.Company360{}, err
 	}
+	activityColumns, err := s.activityColumns(ctx)
+	if err != nil {
+		return crmcontracts.Company360{}, err
+	}
 	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		company, err := s.contacts.GetCompanyTx(ctx, tx, companyID, storekit.LiveOnly, active)
 		if err != nil {
@@ -130,7 +137,11 @@ func (s *Service) AssembleScoped(ctx context.Context, companyID ids.CompanyID, o
 		if err := opts.admit(ctx, tx, companyID, &out); err != nil {
 			return err
 		}
-		return s.sections(ctx, tx, companyID, now, opts, &out)
+		prepared, err := storekit.WithMailSeatIdentitySnapshot(ctx, tx)
+		if err != nil {
+			return err
+		}
+		return s.sections(prepared, tx, companyID, now, opts, activityColumns, &out)
 	})
 	if err != nil {
 		return crmcontracts.Company360{}, err
@@ -144,8 +155,8 @@ func (s *Service) AssembleScoped(ctx context.Context, companyID ids.CompanyID, o
 // apperrors.ErrPermissionDenied is omitted and named; any other error
 // fails the whole read, because a section that broke for a real reason
 // must never be reported as one the caller may not see.
-func (s *Service) sections(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, opts AssembleOptions, out *crmcontracts.Company360) error {
-	a := &assembly{svc: s, ctx: ctx, tx: tx, companyID: companyID, now: now, opts: opts, out: out}
+func (s *Service) sections(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, opts AssembleOptions, activityColumns activities.CustomColumns, out *crmcontracts.Company360) error {
+	a := &assembly{svc: s, ctx: ctx, tx: tx, companyID: companyID, now: now, opts: opts, out: out, activityColumns: activityColumns}
 	each := []struct {
 		name crmcontracts.Company360SectionsOmitted
 		read func() error
@@ -200,6 +211,8 @@ type assembly struct {
 	now       time.Time
 	opts      AssembleOptions
 	out       *crmcontracts.Company360
+	// activityColumns fills the timeline section's custom-field values.
+	activityColumns activities.CustomColumns
 
 	// baseCurrency is the installation's reporting currency, resolved at most
 	// ONCE per assembly. It is one installation-wide value, and every section
@@ -208,6 +221,7 @@ type assembly struct {
 	// them (the 360's query budget is what noticed).
 	baseCurrency     string
 	baseCurrencyRead bool
+	baseLanguage     textlang.Lang
 
 	contacts      []contacts.ContactStrength
 	contactsRead  bool
@@ -310,28 +324,6 @@ func (a *assembly) readDeals() error {
 	return nil
 }
 
-// readTimeline reads the first page of the account's timeline through the
-// activities module's own list, so the section and GET /activities can
-// never disagree about ordering or row scope. Its gate is that list's own
-// auth.Require, which refuses with the same error every other section uses
-// to declare itself omitted.
-func (a *assembly) readTimeline() error {
-	companyUUID := a.companyID.UUID
-	entityType := "company"
-	limit := sectionLimit
-	data, page, err := activities.ListActivitiesTx(a.ctx, a.tx, activities.ListActivitiesInput{
-		EntityType:      &entityType,
-		EntityID:        &companyUUID,
-		Limit:           &limit,
-		WithinProjectID: a.opts.ProjectID,
-	})
-	if err != nil {
-		return err
-	}
-	a.out.Activities = &crmcontracts.ActivityListResponse{Data: data, Page: pageInfo(page)}
-	return nil
-}
-
 // suggestionInputsOnce reads the newest message, the open pipeline and the
 // scheduled-task flag ONCE. The state strip and the suggestions are two
 // readings of the same three facts, and reading them twice would let the strip
@@ -357,7 +349,7 @@ func (a *assembly) suggestionInputsOnce() (suggestionInputs, error) {
 				return a.advice, a.adviceErr
 			}
 			a.advice, a.adviceErr = gatherSuggestionInputs(
-				a.ctx, a.tx, a.companyID, a.now, facts, heading, base, a.opts)
+				a.ctx, a.tx, a.companyID, a.now, facts, heading, base, a.opts, a.recordLanguage())
 		}
 		a.adviceRead = true
 	}
@@ -370,7 +362,7 @@ func (a *assembly) suggestionInputsOnce() (suggestionInputs, error) {
 // describing different instants.
 func (a *assembly) signalFactsOnce() (signalFacts, error) {
 	if !a.signalsRead {
-		a.signals, a.signalsErr = readSignalFacts(a.ctx, a.tx, a.companyID)
+		a.signals, a.signalsErr = readSignalFacts(a.ctx, a.tx, a.companyID, a.now)
 		a.signalsRead = true
 	}
 	return a.signals, a.signalsErr
@@ -486,4 +478,12 @@ func (a *assembly) installationBaseCurrency() (string, error) {
 	}
 	a.baseCurrency, a.baseCurrencyRead = base, true
 	return base, nil
+}
+
+// One assembly uses one language even if the setting changes during its reads.
+func (a *assembly) recordLanguage() textlang.Lang {
+	if a.baseLanguage == "" {
+		a.baseLanguage = identity.BaseLanguageForRecord(a.ctx, a.tx)
+	}
+	return a.baseLanguage
 }

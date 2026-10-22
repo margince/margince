@@ -57,8 +57,8 @@ func (f mailFigures) value(coverage *crmcontracts.WeeklyFigureCoverage, count st
 		return count
 	}
 	since := coverage.RecordedSince
-	// The engine's Reason is English prose and the mail speaks the installation's
-	// language. An undated figure takes the catalog's words where the panel shows Reason.
+	// The panel keeps Reason in its write language. Mail uses its current
+	// language catalog so the numeric caption agrees with the rest of the message.
 	switch coverage.Status {
 	case crmcontracts.WeeklyFigureCoverageStatusNotRecorded:
 		if since == nil {
@@ -113,7 +113,19 @@ func (f mailFigures) beforeHistory() bool {
 
 func (f mailFigures) date(at time.Time) string {
 	if f.zone == nil {
-		return at.UTC().Format(mailcopy.DateLayout) + " UTC"
+		return f.words.Date(at.UTC()) + " UTC"
 	}
-	return at.In(f.zone).Format(mailcopy.DateLayout)
+	return f.words.Date(at.In(f.zone))
+}
+
+func measuredFigure(coverage *crmcontracts.WeeklyFigureCoverage) bool {
+	return coverage == nil || coverage.Status == crmcontracts.WeeklyFigureCoverageStatusRecorded
+}
+
+func (f mailFigures) completeBookings() bool {
+	return f.bookings == nil || (!f.bookings.Withheld && (f.bookings.Status == crmcontracts.ReportingStatusOk || f.bookings.Status == crmcontracts.ReportingStatusNoData))
+}
+
+func (f mailFigures) readableBookings() bool {
+	return f.bookings == nil || (!f.bookings.Withheld && slices.Contains(readableBookings, f.bookings.Status))
 }

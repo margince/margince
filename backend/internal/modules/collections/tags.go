@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/auditentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -113,7 +114,7 @@ func (s *Store) CreateTag(ctx context.Context, name string, color, description *
 			}
 			return err
 		}
-		_, err = storekit.Audit(ctx, tx, "create", "tag", out.ID.UUID, nil, map[string]any{"name": out.Name})
+		_, err = storekit.Audit(ctx, tx, "create", auditentity.Tag, out.ID.UUID, nil, map[string]any{nameField: out.Name})
 		return err
 	})
 	return out, err
@@ -133,7 +134,7 @@ func (s *Store) ArchiveTag(ctx context.Context, id ids.TagID) (tagRow, error) {
 		} else if err != nil {
 			return err
 		}
-		_, err = storekit.Audit(ctx, tx, "archive", "tag", id.UUID, nil, nil)
+		_, err = storekit.Audit(ctx, tx, "archive", auditentity.Tag, id.UUID, nil, nil)
 		return err
 	})
 	return out, err
@@ -315,7 +316,7 @@ const (
 )
 
 func auditTagLink(ctx context.Context, tx pgx.Tx, tagID ids.TagID, change string, link linkImage, evidence map[string]any) (ids.UUID, error) {
-	return storekit.AuditEventWithEvidence(ctx, tx, "update", "tag", tagID.UUID, map[string]any{change: link}, evidence)
+	return storekit.AuditEventWithEvidence(ctx, tx, "update", auditentity.Tag, tagID.UUID, map[string]any{change: link}, evidence)
 }
 
 // EnsureTaggable refuses a record this caller may not tag.
@@ -386,6 +387,13 @@ func tagSummary(t tagRow) TagSummary {
 	return out
 }
 
+// VocabularyQuery is GET /tags' own two widenings: retired words, and each
+// word's count of the records the caller can see carrying it.
+type VocabularyQuery struct {
+	IncludeArchived bool
+	WithCarriedBy   bool
+}
+
 // TagVocabulary lists the workspace's tags for a caller outside this module.
 //
 // It reports TRUNCATION, because the read is capped at catalogCap and the
@@ -394,18 +402,33 @@ func tagSummary(t tagRow) TagSummary {
 // such tag" for every word past the cap — the exact false negative that makes
 // a caller coin a duplicate, which is what reading the vocabulary was meant to
 // prevent.
-func (s *Store) TagVocabulary(ctx context.Context, includeArchived bool) ([]TagSummary, bool, error) {
+func (s *Store) TagVocabulary(ctx context.Context, q VocabularyQuery) ([]TagSummary, bool, error) {
 	filter := storekit.LiveOnly
-	if includeArchived {
+	if q.IncludeArchived {
 		filter = storekit.IncludeArchived
 	}
-	rows, truncated, err := s.ListTags(ctx, filter)
+	var (
+		rows      []tagRow
+		reach     map[ids.TagID]int
+		truncated bool
+		err       error
+	)
+	if q.WithCarriedBy {
+		rows, reach, truncated, err = s.ListTagsCarried(ctx, filter)
+	} else {
+		rows, truncated, err = s.ListTags(ctx, filter)
+	}
 	if err != nil {
 		return nil, false, err
 	}
 	out := make([]TagSummary, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, tagSummary(r))
+		summary := tagSummary(r)
+		if reach != nil {
+			carriedBy := reach[r.ID]
+			summary.CarriedBy = &carriedBy
+		}
+		out = append(out, summary)
 	}
 	return out, truncated, nil
 }

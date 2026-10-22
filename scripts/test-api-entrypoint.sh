@@ -25,7 +25,7 @@ work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 failures=0
 
-# run PROBE [--password VALUE] [--existing VALUE]
+# run PROBE [--password VALUE] [--existing VALUE] [--in-env-file]
 #
 # PROBE is what the stubbed `margince-migrate workspace-exists` reports: "true",
 # "false", or "fail" to exit non-zero without answering.
@@ -37,24 +37,29 @@ failures=0
 # Passing an empty string instead would test a different thing while claiming
 # to test that one.
 #
+# --in-env-file writes the two DSNs and the password to the mounted /.env
+# instead of the environment, which the programs then read through --env-file.
+#
 # Returns the entrypoint's exit status; leaves its output in $out and the
 # credential file at $pwfile for the caller to assert on.
 run() {
     local probe="$1"; shift
-    local password="" have_password=0 existing="" have_existing=0
+    local password="" have_password=0 existing="" have_existing=0 in_env_file=0
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --password) password="$2"; have_password=1; shift 2 ;;
             --existing) existing="$2"; have_existing=1; shift 2 ;;
+            --in-env-file) in_env_file=1; shift ;;
             *) echo "run: unknown argument $1" >&2; return 2 ;;
         esac
     done
 
-    rm -rf "$work/app" "$work/bin"
+    rm -rf "$work/app" "$work/bin" "$work/.env"
     mkdir -p "$work/app/secrets" "$work/bin"
 
     cat >"$work/bin/margince-migrate" <<STUB
 #!/bin/sh
+echo "stub: migrate \$*" >&2
 [ "\$1" = "workspace-exists" ] || exit 0
 [ "$probe" = "fail" ] && { echo "stub: probe failed" >&2; exit 1; }
 echo "$probe"
@@ -62,9 +67,9 @@ STUB
     cat >"$work/bin/margince-api" <<'STUB'
 #!/bin/sh
 [ "${MARGINCE_SCHEMA_DSN:-}" = "${EXPECTED_SCHEMA_DSN:-$MARGINCE_OWNER_DSN}" ] || exit 91
-[ "$MARGINCE_DSN" != "$MARGINCE_SCHEMA_DSN" ] || exit 92
+[ "${MARGINCE_DSN:-}" != "$MARGINCE_SCHEMA_DSN" ] || exit 92
 echo "stub: schema pool configured; ordinary connection stays app"
-echo "stub: api started"
+echo "stub: api started $*"
 STUB
     chmod +x "$work/bin/margince-migrate" "$work/bin/margince-api"
 
@@ -74,10 +79,24 @@ STUB
         printf '%s' "$existing" >"$work/app/secrets/admin-password"
     fi
 
-    # The entrypoint writes to the absolute /app/secrets; run it under a
-    # rewritten copy so the test needs no container and no root.
-    sed "s#/app/secrets/admin-password#$work/app/secrets/admin-password#" "$entrypoint" >"$work/entrypoint.sh"
+    # The entrypoint writes to the absolute /app/secrets and reads /.env; run
+    # it under a rewritten copy so the test needs no container and no root.
+    sed -e "s#/app/secrets/admin-password#$work/app/secrets/admin-password#" \
+        -e "s#/\.env#$work/.env#g" "$entrypoint" >"$work/entrypoint.sh"
     chmod +x "$work/entrypoint.sh"
+
+    if [[ "$in_env_file" -eq 1 ]]; then
+        printf 'MARGINCE_OWNER_DSN=postgres://owner@localhost/x\nMARGINCE_DSN="postgres://app@localhost/x"\nexport MARGINCE_ADMIN_PASSWORD=%s\n' \
+            "$password" >"$work/.env"
+        local status=0
+        unset MARGINCE_SCHEMA_DSN
+        export EXPECTED_SCHEMA_DSN="postgres://owner@localhost/x"
+        out="$(env -u MARGINCE_OWNER_DSN -u MARGINCE_DSN -u MARGINCE_ADMIN_PASSWORD \
+            PATH="$work/bin:$PATH" "$work/entrypoint.sh" 2>&1)" || status=$?
+        unset EXPECTED_SCHEMA_DSN
+        pwfile="$work/app/secrets/admin-password"
+        return "$status"
+    fi
 
     local status=0
     unset MARGINCE_SCHEMA_DSN EXPECTED_SCHEMA_DSN
@@ -186,6 +205,19 @@ status=0
 run true || status=$?
 served "$status" "explicit schema connection"
 unset schema_override
+
+# --- the settings come from a mounted env file -------------------------------
+# Not exported: each program reads the file through --env-file, where the
+# orchestrator's environment outranks it. The script's own checks still see it.
+status=0
+run false --password "s3cret-passw0rd" --in-env-file || status=$?
+served "$status" "settings in /.env"
+verdict yes "$(grep -q "stub: migrate up --env-file $work/.env" <<<"$out" && echo yes || echo no)" \
+    "migrate is handed the env file"
+verdict yes "$(grep -q "stub: api started --env-file $work/.env" <<<"$out" && echo yes || echo no)" \
+    "and so is the api"
+verdict s3cret-passw0rd "$(cat "$pwfile" 2>/dev/null || echo '')" \
+    "the password the file names is written for the first boot"
 
 # --- the probe cannot answer -------------------------------------------------
 # The sharpest case. A failed probe is not "unprovisioned": treating it as one

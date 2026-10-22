@@ -135,7 +135,7 @@ const PreservedReferenceTables = `('activity_kind', 'channel_provider', 'lead_so
 	`'lead_disqualify_reason', 'sdr_handoff_reason', 'field_mask', ` +
 	`'currency_minor_digits', 'deal_acquisition_source', 'record_role', ` +
 	`'maskable_field', 'report_projection_fence', ` +
-	`'activity_review_template', 'activity_own_sent_mail_repair_cutoff')`
+	`'activity_review_template', 'activity_own_sent_mail_repair_cutoff', 'legal_entity')`
 
 // reclaimSlack is how much a table may grow past its empty size before a reset
 // TRUNCATEs it instead of DELETEing it. Growth, not absolute size, is the
@@ -229,12 +229,29 @@ func resetWithin(ctx context.Context, tx execQuerier) error {
 	if err := restartSequences(ctx, tx); err != nil {
 		return err
 	}
+	if err := restoreSeededLegalEntity(ctx, tx); err != nil {
+		return err
+	}
 	if err := dropCustomFieldColumns(ctx, tx); err != nil {
 		return err
 	}
 	// Every table is empty now, which is the only moment a table that did not
 	// exist when EnsureSchema ran can be given a real baseline.
 	return baselineNewTables(ctx, tx, unbaselined)
+}
+
+// restoreSeededLegalEntity puts legal_entity back to what its migration seeds.
+// The table is kept rather than emptied, because nothing but the migration
+// creates the default entity. So the entities a test described are deleted
+// here, and the default's own fields go back to the seeded NULLs.
+func restoreSeededLegalEntity(ctx context.Context, tx execQuerier) error {
+	if _, err := tx.Exec(ctx, `DELETE FROM legal_entity WHERE NOT is_default;
+		UPDATE legal_entity SET country = NULL, default_language = NULL, bank_account_holder = NULL,
+		       iban = NULL, bic = NULL, imprint = NULL, archived_at = NULL, version = 1
+		 WHERE is_default;`); err != nil {
+		return fmt.Errorf("restoring the seeded legal entity: %w", err)
+	}
+	return nil
 }
 
 // baselineNewTables records the empty size of tables that appeared after

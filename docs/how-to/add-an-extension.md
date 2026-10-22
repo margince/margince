@@ -3,7 +3,8 @@
 
 Ship a named add-on with a version under `extensions/<name>/`, without editing files of the main project. A
 unit can add a country pack, agent tools under the rules, HTTP routes, its own tables and secrets. It can also
-add scheduled jobs, event handlers, capture from its own provider, or a message transport. Read
+add scheduled jobs, event handlers, capture from its own provider, a message transport, or a source of
+accounting data. Read
 [explanation/extensibility.md](../explanation/extensibility.md) first. It says why the seam is a declaration
 checked when the code compiles, and what the surface promises. For a country pack, the live capability is
 retention floors; the example below builds one.
@@ -18,7 +19,9 @@ key declaration and a transport that replies leave on, and it ships a screen. Co
 
 A unit can ship a frontend too. `extensions/<name>/frontend/` is a pnpm package whose
 default export the web app mounts at `#/ext/<name>`. A unit that ships no screen still gets a route and a
-plain card about it, on its own.
+plain card about it, on its own. A unit with a screen can also put a button on a core screen
+that opens it. See
+[Offer an entry on a core screen](#offer-an-entry-on-a-core-screen).
 
 Extension paths have an entry in [CODEOWNERS](../../CODEOWNERS). That covers the units, the `backend/pkg/**`
 seam, the `composition` stub and its generator. So a pull request that touches them asks the tier owner for a
@@ -36,7 +39,7 @@ review on its own.
    ```text
    module github.com/margince/margince/extensions/<name>
 
-   go 1.27.2
+   go 1.27.3
    ```
 
 3. **Write the declaration** `extensions/<name>/<name>.go`.
@@ -171,7 +174,9 @@ func open(ctx context.Context, rt extension.Runtime, in json.RawMessage) (json.R
 
 `rt` is the **only** way a unit reaches the core. The core makes a new one for each call, and it stops
 working the moment the handler returns (`extension.ErrRuntimeExpired`). Today it gives `rt.Secrets()`,
-`rt.Tx()`, `rt.Caller()`, `rt.Ingest()` and `rt.SyncNow()`.
+`rt.Tx()`, `rt.Caller()`, `rt.Ingest()` and `rt.SyncNow()`. A handler with nobody behind it also gets four system
+reads: `rt.Deals().Get()`, `rt.Deals().Responsible()`, `rt.Authority().CanRead()` and `rt.Directory().Emails()`
+(see [Read deals and colleagues from a handler](#read-deals-and-colleagues-from-a-handler)).
 
 What the surface will serve, and what it will not:
 
@@ -407,6 +412,10 @@ constant. A name built at run time is a finding too, because a reader that canno
 it. This guards against errors, not attacks. See `what the tier does not protect against` in
 [extensibility.md](../explanation/extensibility.md).
 
+A vendor API may take a query in its own language that reads like SQL, such as `SELECT * FROM Invoice`. That
+string goes to the vendor, not to the database. Put `//margince:vendor-query <where it goes>` on its line or the
+line above it, and the check skips it. A marker with no reason is a finding.
+
 **A new migration is a new file**, even for an index. `dbmigrate` keys on the version. So a line added to an
 applied `0001` runs only on installations that do not need it (a new one). It never runs on the ones that
 do. `extensions/openchannel/migrations/0003_drain.up.sql` is the worked example. What it adds belongs to
@@ -531,6 +540,57 @@ keys and the core's in the same way. Give **every** language the installation sh
 or the generator refuses. A reader of the missing one would get an empty screen. Keys outside your space are
 refused too: a unit does not write over core text.
 
+## Offer an entry on a core screen
+
+A unit with a screen can ask for a button on a core screen that opens it. Declare one `extension.Entry` per place:
+
+```go
+Entries: []extension.Entry{{
+	Slot:   extension.SlotContactHeader,
+	Label:  "extVisitLog.open",
+	Icon:   extension.IconClipboardList,
+	Target: "report",
+	Object: "ext_visit_log_report",
+}},
+```
+
+`Slot` names the place. The list is `extension.EntrySlots()` in `backend/pkg/extension/entry.go`:
+
+| Slot | Where the button shows |
+|---|---|
+| `extension.SlotLogActivity` (`log_activity`) | The Log activity form, under the fields. A form opened as Add task leaves it out. |
+| `extension.SlotContactHeader` (`record_header.contact`) | The verb row of a contact page, after Add task |
+| `extension.SlotCompanyHeader` (`record_header.company`) | The verb row of a company page, after the booking verb |
+| `extension.SlotDealHeader` (`record_header.deal`) | The verb row of a deal page, after Add task |
+
+The core draws every entry as the same plain button, with the icon first and then the label. The unit supplies
+these fields and nothing more:
+
+- **`Label`** is a key from your own `frontend/i18n/<locale>.json`. `make gen` refuses a key outside your
+  `ext<CamelUnit>.` space, or one that is missing from any of `en`, `de` and `vi`.
+- **`Icon`** is one of the `extension.EntryIcons()` icons: `IconClipboardList`, `IconFileText`, `IconMapPin`,
+  `IconCamera`, `IconCheckSquare`, `IconMessageSquare`, `IconPlug`.
+- **`Target`** is one part of the path under your screen, or empty for the screen itself.
+- **`Object`** is one of your RBAC objects. The button shows only to a reader whose role grants `read` on it.
+  `make gen` and the start both refuse an object that none of your operations gates on.
+
+Two entries in one slot must open different targets.
+
+A press opens `#/ext/<name>/<Target>?record_type=<type>&record_id=<id>`. The type is `contact`, `company` or `deal`
+on a record page. In the Log activity form it is the record the form was opened on. Read both with
+`useEntryContext()` from `@margince/frontend/app` and fill in your form:
+
+```tsx
+const { view, record } = useEntryContext();
+// view is "report"; record is { type: "contact", id: "…" }, or null
+```
+
+`record` is null when your screen was opened some other way, so the screen must work without it. A reader can type the query by hand. So check that the record exists, and that the reader may
+see it, as for any other id.
+
+The registry the SPA reads is generated from the enabled set, so removing the unit removes its entries. Nothing in
+the core names a unit. `extensions/openchannel` declares a contact header entry.
+
 ## Own scheduled jobs
 
 Declare **two kinds** in `api/jobs.yaml`. One is a `dispatcher` on a clock that fans out over every workspace.
@@ -592,6 +652,57 @@ plan for:
   You may name a core type, or another unit's (`ext_<namespace>.<verb>`).
 - **The list is public.** It is written into `manifest.generated.json`. So a reader can see which facts of the
   installation your unit uses, without opening its source.
+
+### Read deals and colleagues from a handler
+
+Your SQL may touch only your own tables. So a handler reads a core deal, and the colleagues on it, through
+four system reads. No user's rights limit what they read. That is why they answer only on a job tick or a bus
+delivery, where no user gets the answer. In all other places each one answers `extension.ErrAttendedRead`: a
+tool call, a route, the inbound edge, a finance source's read and a transport's send. There the answer, or an
+error that quotes it, could reach a user whose own rights hide it.
+
+The refusal guards the call, not your own tables. If you save what a read returned and show it later, ask
+`CanRead` first.
+
+Declare each group of reads your unit makes:
+
+```go
+SystemReads: []extension.SystemRead{
+	extension.SystemReadDeals,     // Deals().Get and Deals().Responsible
+	extension.SystemReadAuthority, // Authority().CanRead
+	extension.SystemReadDirectory, // Directory().Emails
+},
+```
+
+A read you did not declare answers `extension.ErrUndeclaredRead`. The list goes into
+`manifest.generated.json` as `system_reads`, so an admin can see which deals and colleagues' details your
+unit reads without opening its source. `fixtures/extensions/crm-hello` is the smallest example: a
+subscription that reads the deal its event names.
+
+```go
+deal, err := rt.Deals().Get(ctx, d.Entity.ID)            // extension.ErrNotFound once the deal is gone
+team, err := rt.Deals().Responsible(ctx, d.Entity.ID)    // owner first, then by email
+ok, err := rt.Authority().CanRead(ctx, member.UserID, d.Entity, []string{"name", "amount_minor"})
+emails, err := rt.Directory().Emails(ctx, ids)           // active human members only
+```
+
+- **`Get` reads a `DealSummary`.** It holds the name, the stage's name, the status, the value and currency,
+  and the expected close date. It also holds the owner, and whether the deal is archived.
+- **Show the value as `AmountDisplay`** (`12,500.00 EUR`, `120,000 JPY`). Each currency shows its own number of
+  digits after the point, and the core holds that table, not your unit.
+- **`Responsible` names who works the deal.** That is the owner, the users on the deal, and the members of the
+  teams on it. It leaves out agents, members who cannot sign in, users taken off the deal, and archived teams. It stops at
+  `extension.MaxResponsible` colleagues.
+- **Ask `CanRead` first.** Before you show a colleague what you read, ask about them. It answers under their
+  own rights: they must be allowed to open the deal, and no field mask may hide a field you name. A mask that
+  does not hide a field from a user who may change the deal still counts as hiding it. An agent seat is never
+  let in.
+- **Name fields the way the contract's `Deal` does** (`amount_minor`, `expected_close_date`, `owner_id`).
+  `CanRead` answers only for a deal.
+- **Ask about the whole list, then cut it.** Say your provider takes some number of members at most. Ask
+  `CanRead` about each colleague in order, and keep the first ones it lets in. If you cut the list first,
+  colleagues it refuses can take the place of one it would let in.
+- **`Emails` takes at most `extension.MaxResponsible` users**, so the list `Responsible` gave always fits.
 
 ## Capture records from your own provider
 
@@ -699,6 +810,111 @@ The outbound rules of the tier still apply: you may not spend an outbound scope 
 Set `Activity.ChannelProvider` on the records you capture on that transport. A message with no transport cannot
 be replied to on anything, and the gate refuses it.
 
+## Read an accounting system: give a finance source
+
+A `FinanceSource` lets the finance card on a company page show what your accounting system invoiced and
+was paid. The core ships no source of its own. `extensions/finance-demo` is the demo source and the
+smallest one to copy:
+
+```go
+FinanceSources: []extension.FinanceSource{{
+	Provider: "books", Check: check, Customers: customers, InvoicesFor: invoicesFor,
+}},
+Secrets: []extension.SecretsRequest{{Key: "books_token", Scope: extension.SecretScopeWorkspace}},
+```
+
+```go
+func check(ctx context.Context, rt extension.Runtime, conn accounting.Connection) error
+func customers(ctx context.Context, rt extension.Runtime, conn accounting.Connection) ([]accounting.Customer, error)
+func invoicesFor(ctx context.Context, rt extension.Runtime, conn accounting.Connection, customerID string) (accounting.Ledger, error)
+```
+
+The core does the rest. An admin connects your source on **Settings → Integrations**, and the core
+calls `Check` first. An error there refuses the connect and stores nothing. The sync then reads
+`Customers`, and the admin links each customer to a company. Every six hours, and when the admin asks,
+the sync reads `InvoicesFor` for each linked customer. It writes only what changed.
+
+- **Report only what the vendor said.** `accounting.Invoice` has no status field.
+  "Overdue" depends on today, and the mirror works it out on read. Send the dates and money values as
+  the vendor holds them.
+- **Give the same answer for the same data.** The sync compares a hash of each record. A field that
+  moves on its own, such as a time you read from the clock, writes the row again on every pass.
+- **Keep the credential in your own secrets.** Ask for a `workspace` key, read it with
+  `rt.Secrets().Get`, and store a new token with `Put` when the vendor hands one back. Each call gets a
+  new `Runtime` that ends when the call returns, so do not keep one.
+- **Read every page.** `Customers` returns the whole list, and `InvoicesFor` the whole ledger of one
+  customer. Follow the vendor's paging until it says there is no more.
+- **Return an error when you could not read.** The sync then marks the connection as failed, keeps what it
+  read last time, and tries again on the next pass. Nothing is half written.
+- **Never write to the accounting system.** The surface has no way to, and the unit must not add one.
+- **`Provider` is `snake_case`**, with the rule a `Channel` provider follows. Two units cannot declare the
+  same provider: the boot refuses it.
+
+Test the three functions against answers you recorded from the vendor's own API docs, so the test needs
+no network. A check against the live vendor runs on a schedule, outside the merge gate.
+
+## Sign an admin in to your vendor: declare an OAuth app
+
+When your unit reads a vendor's API for the company, an admin must agree at the vendor first. Declare the
+vendor's OAuth app, and the core runs the sign-in for you:
+
+```go
+OAuthApps: []extension.OAuthApp{{
+	Provider: "books", Title: "Books ledger",
+	AuthURL:  "https://auth.ledgerly.example/authorize",
+	TokenURL: "https://auth.ledgerly.example/token",
+	Scopes:   []string{"ledger.read"},
+	OnGrant:  keepCompany,
+}},
+```
+
+What the core does:
+
+1. **Settings → Sign-in and apps** shows a card for the app, named by its `Title`. An admin stores the
+   client ID and secret there, and registers the redirect URI the card shows at the vendor.
+2. Your screen starts the sign-in with `POST /v1/ext-oauth/books/connect`, and sends the browser to the
+   `authorize_url` it gets back. Only a user who may add an integration can start it.
+3. The vendor sends the admin back to `/v1/ext-oauth/books/callback`. The core gets the tokens, keeps them
+   sealed for the workspace, and calls `OnGrant`.
+4. The admin lands on your screen at `#/ext/<unit>?oauth=<outcome>&provider=books`. Read it with
+   `useOAuthReturn()` from `@margince/frontend/app`.
+
+Then, before each call to the vendor:
+
+```go
+token, err := rt.OAuthAccessToken(ctx, "books")
+// errors.Is(err, extension.ErrOAuthNotConnected) or extension.ErrOAuthRevoked: an admin must connect again
+```
+
+The rules:
+
+- **Ask for the token each time.** Keep none. The core gets a new one from the vendor when the old one ends,
+  and keeps the new refresh token if the vendor sends one.
+- **Never log a token**, and never put one in an error.
+- **Keep vendor extras yourself.** Some vendors send the company the admin picked as a query value on the
+  return. `OnGrant` gets these values in `OAuthGrant.Params`; keep what you need in your own `Secrets`. If
+  `OnGrant` returns an error, the core drops the tokens and the admin sees a failure.
+- **`Provider` is `snake_case`**, at most 32 characters, unique in the build, and never a core name such as
+  `google` or `microsoft`. `AuthURL` and `TokenURL` must use `https`.
+- `rt.OAuthDisconnect(ctx, "books")` drops the tokens. It does not end the grant at the vendor.
+
+## Call your provider
+
+Build each request with `extension.NewRequest`. It names the installation to your provider in the
+`User-Agent` header, with the one name the core declares for units. A gate fails a unit that builds a bare
+`net/http` request, or writes its own `User-Agent`.
+
+Build the HTTP client you call your provider with from `extension.OutboundClient()`. It checks each address
+after the name resolves. It refuses one that is not public, so a host a member typed cannot reach the
+installation's own network. If you need your own client settings, set `extension.RefuseNonPublic` as the
+`Control` of your `net.Dialer` instead. Never write your own list of ranges or your own `Control`: a gate
+fails a unit that does.
+
+Under `MARGINCE_ENV=dev`, a client from `OutboundClient()` or `OutboundTransport()` also reaches loopback
+(`127.0.0.0/8` and `::1`). So a stand-in for your provider on your own machine answers. Private ranges stay
+refused under every value, and so does loopback under any value but `dev`. The core sets this once at
+start. Never call `extension.BindEgress` from a unit; the same gate fails that too.
+
 ## Write the unit's own test
 
 Each unit is its own Go module, so the `./...` of the backend never reaches it. It carries its own tests, which
@@ -732,7 +948,8 @@ the gates:
    A unit that is only a country pack asks for none, so its list is empty.
 
    The manifest also records what the unit **reaches**. That is its `secrets`, its `subscriptions`, its
-   `ingress` (with the keys the source stands behind) and its `channels` (with `supplies_transport`).
+   `ingress` (with the keys the source stands behind), its `channels` (with `supplies_transport`), its
+   `finance_sources` and its `entries`.
 
    Commit the manifest with the unit. The drift gate fails one that is old or edited by hand. The manifest is
    read from the AST of your `New()`. The returned `extension.Extension` value, and every field it reads,
@@ -770,7 +987,8 @@ ignores files you add to the unit later. `git add -f` stages the files once, but
 it does not take the place of the line.
 
 A unit for one installation only should stay ignored. Its presence
-in the working tree already turns it on for that install.
+in the working tree already turns it on for that install. List its name in `extensions/operator-units`, one per
+line, so `TestEveryEnabledExtensionIsTracked` lets it stay ignored. Keep that file ignored too.
 
 Commit **the whole unit folder**: every source and test file, plus its module files (`go.mod`, and `go.sum` if it
 uses outside packages). Commit it together with the `.gitignore` line. Do **not** commit `build/composition/`,

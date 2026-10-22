@@ -246,7 +246,7 @@ func TestTheCatalogueEntryDoesNotOrderARead(t *testing.T) {
 	if entry.RequiredScope != principal.ScopeRead {
 		t.Errorf("RequiredScope = %v, want read — the same grant run_report spends", entry.RequiredScope)
 	}
-	if !strings.Contains(entry.Description, "run_report") {
+	if !strings.Contains(entry.Description, "read_reports with kind=run") {
 		t.Error("the description does not name the tool that consumes it, so a caller learns " +
 			"the vocabulary without learning what to do with it")
 	}

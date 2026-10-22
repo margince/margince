@@ -12,7 +12,6 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
-
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -63,12 +62,12 @@ func (s *Store) Load(ctx context.Context, id ids.UUID) (Delivery, error) {
 			          attachments, sender_kind, coalesce(template_key, ''),
 			          coalesce(template_version, 0), coalesce(payload_ref, ''),
 			          payload_expires_at, link_id, execution_authority, instruction_id,
-			          coalesce(inline_logo_key, '')`,
+			          coalesce(inline_logo_key, ''), delivery_due_at`,
 			id).Scan(&d.ID, &d.ActivityID, &userID, &d.Provider, &d.MessageID,
 			&recipients, &cc, &bcc, &d.Subject, &d.Body, &d.HTMLBody, &d.FromName, &d.ChannelUserID, &d.ConsentPurpose,
 			&d.InReplyTo, &refs, &d.ListUnsubscribe, &d.InFlightAt, &d.Status, &d.Attempts, &d.CreatedAt,
 			&files, &d.SenderKind, &d.TemplateKey, &d.TemplateVersion, &d.PayloadRef,
-			&d.PayloadExpiresAt, &linkID, &d.ExecutionAuthority, &instructionID, &d.InlineLogoKey)
+			&d.PayloadExpiresAt, &linkID, &d.ExecutionAuthority, &instructionID, &d.InlineLogoKey, &d.DueAt)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Delivery{}, ErrTerminal

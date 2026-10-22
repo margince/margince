@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../src/api/schema";
+import { runningDataTask } from "../../src/features/settings/datataskshealth.fixtures";
 import { projectMock } from "../projectmock";
 import {
   brandt,
@@ -13,6 +14,7 @@ import {
 } from "./fixtures";
 
 export type MockApiOptions = Readonly<{
+  dataTasks?: "populated" | "empty" | "failed" | "withheld" | "unavailable";
   // "authenticated" (the default) is what every existing AC needs.
   // "unauthenticated" answers /me with 401, so the app renders the login
   // screen a signed-out user meets. The axe sweeps cannot reach it otherwise.
@@ -144,8 +146,22 @@ export function createMockState(options: MockApiOptions = {}) {
   // the other suites read as empty stay empty.
   const loggedActivities: LoggedActivity[] = [];
   const counterpartyHolds: CounterpartyHold[] = [];
+  const dataTasks: components["schemas"]["DataTaskProgress"][] =
+    options.dataTasks === "empty"
+      ? []
+      : [
+          {
+            ...runningDataTask,
+            status:
+              options.dataTasks === "failed"
+                ? "failed"
+                : runningDataTask.status,
+            consecutive_failures: options.dataTasks === "failed" ? 5 : 0,
+          },
+        ];
   return {
     options,
+    dataTasks,
     // No company row and no wizard row. Named once, so a third journey state
     // cannot be added to one route and missed by the other.
     undescribed:

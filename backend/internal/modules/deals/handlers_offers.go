@@ -9,7 +9,6 @@
 package deals
 
 import (
-	"encoding/json"
 	"io"
 	"log/slog"
 	"net/http"
@@ -35,19 +34,6 @@ var clientTotalKeys = []string{
 	"line_tax", "line_tax_minor", "net_minor", "tax_minor", "gross_minor", "total_minor",
 }
 
-// rejectClientTotals answers 422 when an extension-carrying request body
-// smuggles a total; returns false when the response has been written.
-func rejectClientTotals(w http.ResponseWriter, r *http.Request, extra map[string]any) bool {
-	for _, key := range clientTotalKeys {
-		if _, found := extra[key]; found {
-			httperr.Write(w, r, httperr.Validation(key, "totals_derived",
-				"money totals are computed server-side from the line items and cannot be supplied"))
-			return false
-		}
-	}
-	return true
-}
-
 // clientSuppliedTotals rides embedded in the plain (non-extension)
 // line-item decode targets so a smuggled total is SEEN instead of
 // silently dropped by encoding/json.
@@ -62,23 +48,6 @@ type clientSuppliedTotals struct {
 	TaxMinor       *int64 `json:"tax_minor"`
 	GrossMinor     *int64 `json:"gross_minor"`
 	TotalMinor     *int64 `json:"total_minor"`
-}
-
-func (c clientSuppliedTotals) reject(w http.ResponseWriter, r *http.Request) bool {
-	for key, v := range map[string]*int64{
-		"line_total": c.LineTotal, "line_total_minor": c.LineTotalMinor,
-		"line_net": c.LineNet, "line_net_minor": c.LineNetMinor,
-		"line_tax": c.LineTax, "line_tax_minor": c.LineTaxMinor,
-		"net_minor": c.NetMinor, "tax_minor": c.TaxMinor,
-		"gross_minor": c.GrossMinor, "total_minor": c.TotalMinor,
-	} {
-		if v != nil {
-			httperr.Write(w, r, httperr.Validation(key, "totals_derived",
-				"money totals are computed server-side from the line items and cannot be supplied"))
-			return false
-		}
-	}
-	return true
 }
 
 func lineInputRow(in crmcontracts.OfferLineItemInput) OfferLineInputRow {
@@ -119,57 +88,15 @@ func (h Handlers) ListDealOffers(w http.ResponseWriter, r *http.Request, id crmc
 }
 
 func (h Handlers) CreateOffer(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.CreateOfferParams) {
-	// Two decodes over one body: the generated shape (whose custom
-	// UnmarshalJSON owns the extension map — embedding it would shadow
-	// any sibling field), then a probe over the nested line items, whose
-	// decode target has no extension map and would otherwise drop a
-	// smuggled per-line total silently.
 	raw, err := io.ReadAll(io.LimitReader(r.Body, maxOfferBody))
 	if err != nil {
 		httperr.Write(w, r, httperr.Validation("body", "unreadable", "request body could not be read"))
 		return
 	}
-	var req crmcontracts.CreateOfferRequest
-	if err := json.Unmarshal(raw, &req); err != nil {
-		httperr.Write(w, r, httperr.Validation("body", "malformed_json", err.Error()))
-		return
-	}
-	if !rejectClientTotals(w, r, req.AdditionalProperties) {
-		return
-	}
-	var probe struct {
-		LineItems []clientSuppliedTotals `json:"line_items"`
-	}
-	if err := json.Unmarshal(raw, &probe); err != nil {
-		httperr.Write(w, r, httperr.Validation("body", "malformed_json", err.Error()))
-		return
-	}
-	for _, li := range probe.LineItems {
-		if !li.reject(w, r) {
-			return
-		}
-	}
-	source, err := httperr.RequireNonBlank("source", req.Source)
+	in, err := OfferCreationInput(raw)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return
-	}
-	in := CreateOfferInput{
-		Currency:       req.Currency,
-		BuyerCompanyID: idArg[ids.CompanyKind](req.BuyerCompanyId),
-		IntroText:      req.IntroText,
-		TermsText:      req.TermsText,
-		TemplateID:     idArg[ids.OfferTemplateKind](req.TemplateId),
-		Source:         source,
-	}
-	if req.ValidUntil != nil {
-		v := req.ValidUntil.Format("2006-01-02")
-		in.ValidUntil = &v
-	}
-	if req.LineItems != nil {
-		for _, li := range *req.LineItems {
-			in.LineItems = append(in.LineItems, lineInputRow(li))
-		}
 	}
 
 	offer, err := h.store.CreateOffer(r.Context(), pathID[ids.DealKind](id), in)
@@ -196,25 +123,10 @@ func (h Handlers) UpdateOffer(w http.ResponseWriter, r *http.Request, id crmcont
 		return
 	}
 	var req crmcontracts.UpdateOfferRequest
-	if !httperr.Decode(w, r, &req) {
+	if !httperr.DecodeClaiming(w, r, &req, claimClientTotal) {
 		return
 	}
-	if !rejectClientTotals(w, r, req.AdditionalProperties) {
-		return
-	}
-	in := UpdateOfferInput{
-		Currency:       req.Currency,
-		BuyerCompanyID: idArg[ids.CompanyKind](req.BuyerCompanyId),
-		IntroText:      req.IntroText,
-		TermsText:      req.TermsText,
-		TemplateID:     idArg[ids.OfferTemplateKind](req.TemplateId),
-		IfVersion:      ifVersion,
-		Clear:          httperr.ClearedFields(r),
-	}
-	if req.ValidUntil != nil {
-		v := req.ValidUntil.Format("2006-01-02")
-		in.ValidUntil = &v
-	}
+	in := offerUpdateInput(req, httperr.ClearedFields(r), ifVersion)
 
 	offerID := pathID[ids.OfferKind](id)
 	offer, retired, err := h.store.UpdateOffer(r.Context(), offerID, in)
@@ -234,8 +146,13 @@ func (h Handlers) UpdateOffer(w http.ResponseWriter, r *http.Request, id crmcont
 	httperr.WriteJSON(w, http.StatusOK, offer)
 }
 
-func (h Handlers) ArchiveOffer(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	offer, err := h.store.ArchiveOffer(r.Context(), pathID[ids.OfferKind](id))
+// ArchiveOffer preserves the request version through the native archive writer.
+func (h Handlers) ArchiveOffer(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.ArchiveOfferParams) {
+	ifVersion, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
+	offer, err := h.store.ArchiveOfferAt(r.Context(), pathID[ids.OfferKind](id), ifVersion)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -244,17 +161,17 @@ func (h Handlers) ArchiveOffer(w http.ResponseWriter, r *http.Request, id crmcon
 }
 
 func (h Handlers) AddOfferLineItem(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	var req struct {
-		crmcontracts.OfferLineItemInput
-		clientSuppliedTotals
-	}
-	if !httperr.Decode(w, r, &req) {
+	raw, err := io.ReadAll(io.LimitReader(r.Body, maxOfferBody))
+	if err != nil {
+		httperr.Write(w, r, httperr.Validation("body", "unreadable", "request body could not be read"))
 		return
 	}
-	if !req.reject(w, r) {
+	line, err := addLineInput(raw)
+	if err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
-	offer, err := h.store.AddOfferLineItem(r.Context(), pathID[ids.OfferKind](id), lineInputRow(req.OfferLineItemInput))
+	offer, err := h.store.AddOfferLineItem(r.Context(), pathID[ids.OfferKind](id), line)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -263,47 +180,15 @@ func (h Handlers) AddOfferLineItem(w http.ResponseWriter, r *http.Request, id cr
 }
 
 func (h Handlers) UpdateOfferLineItem(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, lineItemId openapi_types.UUID) {
-	var req struct {
-		crmcontracts.UpdateOfferLineItemRequest
-		clientSuppliedTotals
-	}
-	if !httperr.Decode(w, r, &req) {
+	raw, err := io.ReadAll(io.LimitReader(r.Body, maxOfferBody))
+	if err != nil {
+		httperr.Write(w, r, httperr.Validation("body", "unreadable", "request body could not be read"))
 		return
 	}
-	if !req.reject(w, r) {
+	in, err := updateLineInput(raw)
+	if err != nil {
+		httperr.Write(w, r, err)
 		return
-	}
-	in := UpdateOfferLineInput{
-		Position:       req.Position,
-		Description:    req.Description,
-		Unit:           req.Unit,
-		UnitPriceMinor: req.UnitPriceMinor,
-	}
-	if req.Quantity != nil {
-		v := wireDecimal(*req.Quantity)
-		in.Quantity = &v
-	}
-	if req.DiscountPct != nil {
-		v := wireDecimal(*req.DiscountPct)
-		in.DiscountPct = &v
-	}
-	if req.TaxRate != nil {
-		v := wireDecimal(*req.TaxRate)
-		in.TaxRate = &v
-	}
-	// The classification is written whenever the caller names EITHER half, so
-	// that naming one and omitting the other cannot leave the pair half-stated
-	// — and so that a caller who means "not specified" can say it by sending
-	// the model as null beside a cadence they also null. Omitting both leaves
-	// the line's classification exactly as it was.
-	if req.BillingModel != nil || req.BillingIntervalMonths != nil {
-		in.Classified = true
-		model, months := billingClassificationOf(req.BillingModel, req.BillingIntervalMonths)
-		in.BillingModel, in.BillingIntervalMonths = model, months
-	}
-	if req.IntervalCount != nil {
-		in.IntervalCountSet = true
-		in.IntervalCount = req.IntervalCount
 	}
 	offer, err := h.store.UpdateOfferLineItem(r.Context(), pathID[ids.OfferKind](id), ids.UUID(lineItemId), in)
 	if err != nil {

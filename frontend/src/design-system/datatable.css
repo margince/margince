@@ -2,7 +2,7 @@
    alone; the `.table` skin around it is shared with hand-drawn tables and stays
    in atoms.css. This selector outranks that sheet's `cursor: default` on
    specificity, so which of the two loads last decides nothing. */
-.table tbody tr.rowlink {
+.table > tbody > tr.rowlink {
   cursor: pointer;
 }
 
@@ -65,12 +65,20 @@
 .table > tbody > tr.datatable-detail[hidden] {
   display: none;
 }
+/* A detail still closing keeps its row joined to the one above. */
 .table > tbody > tr.datatable-open > td,
+.table > tbody > tr:has(+ tr.datatable-detail:not([hidden])) > td,
 .table > tbody > tr:has(+ tr.datatable-detail[hidden]:last-child) > td {
   border-bottom: 0;
 }
+/* The cell's block padding moves inside the fold, so a shut fold is 0 tall. */
 .table > tbody > tr.datatable-detail > td {
-  padding-block-start: 0;
+  padding-block: 0;
+}
+.datatable-detail-body {
+  padding-block-end: var(--tableCellPadBlock);
+  /* Zero intrinsic width: an opened detail spans every column, so its content must not re-divide them. */
+  contain: inline-size;
 }
 .table > tbody > tr.datatable-open:hover + tr.datatable-detail > td,
 .table > tbody > tr.datatable-open:has(+ tr.datatable-detail:hover) > td {
@@ -88,7 +96,12 @@
     container-type: inline-size scroll-state;
   }
 }
-.table-scroll-sticky > .table > tbody > tr.datatable-detail > td > * {
+.table-scroll-sticky
+  > .table
+  > tbody
+  > tr.datatable-detail
+  > td
+  > .datatable-detail-fold {
   --detailInset: var(--space-3);
   position: sticky;
   inset-inline-start: var(--detailInset);
@@ -100,7 +113,7 @@
   > tbody
   > tr.datatable-detail
   > td
-  > * {
+  > .datatable-detail-fold {
   --detailInset: var(--padPanel);
 }
 
@@ -171,10 +184,48 @@
     min-inline-size: 0;
     overflow-wrap: anywhere;
   }
-  .panel > .table-scroll-bleed.table-scroll-fold > .table > tbody > tr {
+  /* The pane-wide shapes atoms.css insets at the first and last cell. Folded,
+     the row holds that inset, or the first cell starts --space-3 too far in. */
+  .panel > .table-scroll-bleed.table-scroll-fold > .table > tbody > tr,
+  .panel
+    > :is(.panel-body, .settinglist-bleed)
+    > .disclosure
+    > .disclosure-body
+    > .table-scroll-fold
+    > .table
+    > tbody
+    > tr,
+  .panel
+    > :is(.panel-body, .settinglist-bleed)
+    > .disclosure-wrap
+    > .disclosure
+    > .disclosure-body
+    > .table-scroll-fold
+    > .table
+    > tbody
+    > tr {
     padding-inline: var(--padPanel);
   }
-  .panel > .table-scroll-bleed.table-scroll-fold > .table > tbody > tr > td {
+  .panel > .table-scroll-bleed.table-scroll-fold > .table > tbody > tr > td,
+  .panel
+    > :is(.panel-body, .settinglist-bleed)
+    > .disclosure
+    > .disclosure-body
+    > .table-scroll-fold
+    > .table
+    > tbody
+    > tr
+    > td:is(:first-child, :last-child),
+  .panel
+    > :is(.panel-body, .settinglist-bleed)
+    > .disclosure-wrap
+    > .disclosure
+    > .disclosure-body
+    > .table-scroll-fold
+    > .table
+    > tbody
+    > tr
+    > td:is(:first-child, :last-child) {
     padding: 0;
   }
   /* Basis 0, so a long title wraps inside line one instead of pushing the
@@ -217,13 +268,29 @@
     display: block;
     flex-basis: 100%;
   }
+  /* A folded row has no columns to hold, so the grow column's one-line rule
+     gives way and its cells wrap inside the pane. */
+  .table-scroll-fold
+    > .table:has(.datatable-grow)
+    > tbody
+    > tr:not(.datatable-detail)
+    > :is(th, td) {
+    white-space: normal;
+  }
 }
 
 @container table-fold (width < 36rem) {
   .table-scroll-fold > .table > tbody > tr.datatable-detail {
-    padding-block-start: 0;
+    padding-block: 0;
+  }
+  .table-scroll-fold .datatable-detail-body {
+    padding-block-end: var(--space-3);
   }
   .table-scroll-fold > .table > tbody > tr.datatable-open,
+  .table-scroll-fold
+    > .table
+    > tbody
+    > tr:has(+ tr.datatable-detail:not([hidden])),
   .table-scroll-fold
     > .table
     > tbody

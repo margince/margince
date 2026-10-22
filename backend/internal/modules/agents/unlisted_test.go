@@ -18,13 +18,16 @@ var superseded = []struct{ tool, by string }{
 }
 
 func TestASupersededToolIsNotOffered(t *testing.T) {
-	var offered []string
-	for _, spec := range fullRegistry(t).Offered(agentCtx()) {
+	r := fullRegistry(t)
+	var offered, reached []string
+	for _, spec := range r.Offered(agentCtx()) {
 		offered = append(offered, spec.Name)
+		targets, _ := r.RouteTargets(spec.Name)
+		reached = append(append(reached, spec.Name), targets...)
 	}
 	for _, pair := range superseded {
-		if slices.Contains(offered, pair.tool) || !slices.Contains(offered, pair.by) {
-			t.Errorf("offered %v: want %s in place of %s", offered, pair.by, pair.tool)
+		if slices.Contains(offered, pair.tool) || !slices.Contains(reached, pair.by) {
+			t.Errorf("offered %v: want %s, offered or behind a router, in place of %s", offered, pair.by, pair.tool)
 		}
 	}
 }

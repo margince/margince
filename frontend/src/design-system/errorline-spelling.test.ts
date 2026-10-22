@@ -71,7 +71,7 @@ const advice = "use ErrorLine from design-system/errorline.tsx";
  */
 const alertOwners = new Map([
   [
-    "frontend/src/design-system/atoms.tsx",
+    "frontend/src/design-system/field.tsx",
     "Field's `field-error` slot, wired to its control's aria-describedby",
   ],
 ]);
@@ -703,7 +703,7 @@ describe("a failure line under a control has one spelling", () => {
     it("lets a design-system owner keep its alert, and only an owner", () => {
       const slot =
         '<p className="field-error" id={errorId} role="alert">{error}</p>';
-      expect(read(slot, "frontend/src/design-system/atoms.tsx")).toEqual([]);
+      expect(read(slot, "frontend/src/design-system/field.tsx")).toEqual([]);
       expect(read(slot)).toEqual([
         "alert none: <p> hand-rolls an alerting line",
       ]);

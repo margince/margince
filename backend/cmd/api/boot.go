@@ -18,6 +18,7 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"github.com/margince/margince/backend/internal/compose"
+	ps "github.com/margince/margince/backend/internal/compose/programsettings"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/agentvolume"
 	"github.com/margince/margince/backend/internal/platform/config"
@@ -133,40 +134,42 @@ func fileReleaseHandbook(ctx context.Context, pool *pgxpool.Pool, logger *slog.L
 // before any of it is checked here first, so a boot that would publish an
 // unreachable connector never gets as far as bootstrapping a company.
 //
-// Returns the loaded deployment config every later boot phase reads, and the
+// Returns the bootstrap roots the later phases seed from, and the
 // license watcher whose posture baseComposeOptions reports.
-func bindInstallation(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, vault keyvault.Vault, logger *slog.Logger) (deployconfig.Config, *licensecheck.Watcher, error) {
-	deployCfg, err := deployconfig.Load(cfg.configPath, cfg.posture)
+func bindInstallation(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, vault keyvault.Vault, logger *slog.Logger) (deployconfig.Bootstrap, *licensecheck.Watcher, error) {
+	files := cfg.settings.Files()
+	bootstrap, err := deployconfig.LoadBootstrapFiles(files.Base, files.ConfigFile)
 	if err != nil {
-		return deployconfig.Config{}, nil, err
+		return deployconfig.Bootstrap{}, nil, err
 	}
 	// The connector's OAuth audience and its advertised MCP resource are
 	// both derived from --public-base-url, never from the Host header an
 	// attacker controls — so the gate that turns the connector on cannot
 	// be satisfied without it.
-	if deployCfg.MCP.ConnectorEnabled {
+	if cfg.mcpConnector {
 		if cfg.publicBaseURL == "" {
-			return deployconfig.Config{}, nil, errors.New("api: mcp.connector_enabled requires --public-base-url: the OAuth " +
+			return deployconfig.Bootstrap{}, nil, errors.New("api: mcp.connector_enabled requires --public-base-url: the OAuth " +
 				"audience and the advertised MCP resource must not be derived from the Host header")
 		}
 		if err := validatePublicBaseURL(cfg.publicBaseURL); err != nil {
-			return deployconfig.Config{}, nil, err
+			return deployconfig.Bootstrap{}, nil, err
 		}
 	}
 	// A real sender means real recipients, and a link they cannot open is
 	// worse than a refused boot: the message goes out looking correct and
 	// its unsubscribe promise is dead. Checked here, at boot, so an
 	// operator learns from a startup failure rather than from a customer.
-	if senderConfigured(cfg, deployCfg) {
+	if senderConfigured(cfg) {
 		if err := netguard.RequirePublicOrigin("--public-base-url", cfg.publicBaseURL, cfg.posture); err != nil {
-			return deployconfig.Config{}, nil, fmt.Errorf("api: %w", err)
+			return deployconfig.Bootstrap{}, nil, fmt.Errorf("api: %w", err)
 		}
 	}
-	if err := compose.EnsureInstallation(ctx, pool, logger, deployCfg); err != nil {
-		return deployconfig.Config{}, nil, err
+	compose.BindExtensionEgress(cfg.posture)
+	if err := compose.EnsureInstallation(ctx, pool, logger, bootstrap); err != nil {
+		return deployconfig.Bootstrap{}, nil, err
 	}
 	if err := compose.RequireCompiledInCountry(ctx, pool); err != nil {
-		return deployconfig.Config{}, nil, err
+		return deployconfig.Bootstrap{}, nil, err
 	}
 	// After the installation binds, so an installation that cannot bind fails on
 	// that rather than on its license.
@@ -178,12 +181,12 @@ func bindInstallation(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, va
 	// keyvaultOptions wiring, because an installation that has sealed its token
 	// and dropped the declaration reads it out of the vault: the license
 	// question cannot be answered before the vault exists.
-	if err := compose.RemoveDeclaredAbsentCredentials(ctx, pool, vault, deployCfg, logger); err != nil {
-		return deployconfig.Config{}, nil, err
+	if err := compose.RemoveDeclaredAbsentCredentials(ctx, pool, vault, cfg.settings, logger); err != nil {
+		return deployconfig.Bootstrap{}, nil, err
 	}
-	license, err := compose.EnsureLicense(ctx, logger, pool, vault, deployCfg, cfg.posture, config.FromOS)
+	license, err := compose.EnsureLicense(ctx, logger, pool, vault, cfg.settings, cfg.posture)
 	if err != nil {
-		return deployconfig.Config{}, nil, err
+		return deployconfig.Bootstrap{}, nil, err
 	}
 	// The re-check runs on the process context — the signal context main built —
 	// so it lives exactly as long as this role serves and needs no stop of its
@@ -194,7 +197,7 @@ func bindInstallation(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, va
 	// shutdown to interrupt safely, only a reading the process was about to stop
 	// reporting.
 	go license.RunRecheck(ctx)
-	return deployCfg, license, nil
+	return bootstrap, license, nil
 }
 
 // declaredSurfaceOptions wires the surfaces a deployment declares rather than
@@ -205,7 +208,7 @@ func bindInstallation(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, va
 // The reset lane comes back with the options because the endpoint is only half
 // of it: the other half is a listener this process runs for its own lifetime,
 // which run() starts once the handler exists.
-func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, deployCfg deployconfig.Config, pool, schemaPool *pgxpool.Pool, vault keyvault.Vault, rdb *redis.Client, logger *slog.Logger, stdout io.Writer) ([]compose.Option, *resetLane, error) {
+func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, bootstrap deployconfig.Bootstrap, pool, schemaPool *pgxpool.Pool, vault keyvault.Vault, rdb *redis.Client, logger *slog.Logger, stdout io.Writer) ([]compose.Option, *resetLane, error) {
 	// The non-production admin data-reset endpoint (POST /v1/admin/reset-data):
 	// absent this deployment posture, or in production, ResetData answers its
 	// closed 404 default. schemaPool may be nil (no --schema-dsn configured);
@@ -217,10 +220,10 @@ func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, deployCfg deploy
 	// than inferred from MARGINCE_ENV, which is still read here for the posture
 	// itself — a different question, and no longer a destructive one.
 	// The one deployment nobody could sign into is refused before it serves.
-	if err := checkALoginMethodRemains(cfg, deployCfg.Auth.PasswordEnabled(), logger); err != nil {
+	if err := checkALoginMethodRemains(cfg, cfg.passwordLogin, logger); err != nil {
 		return nil, nil, err
 	}
-	allowDataReset := deployCfg.Operations.AllowDataReset
+	allowDataReset := config.Val(cfg.settings, ps.AllowDataReset)
 	// Said out loud at boot because each role reads its own --config: an api
 	// armed beside a worker that was not given the file purges the workspace and
 	// leaves that worker's caches resident until it restarts. A line in each log
@@ -229,24 +232,23 @@ func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, deployCfg deploy
 	// Same reasoning as the data-reset line above: each role reads its own
 	// --config, and a role that never saw this flag would silently register no
 	// test_mailbox connector while another role's log claims it is armed.
-	logger.Info("test mailbox connector", "armed", deployCfg.Operations.AllowTestMailbox)
+	logger.Info("test mailbox connector", "armed", config.Val(cfg.settings, ps.AllowTestMailbox))
 	opts := []compose.Option{
 		// The switch the check above just validated, carried to the probe the
 		// login screen renders from and the routes behind it — one read, so an
 		// offered method and a served route cannot disagree.
-		compose.WithPasswordLogin(deployCfg.Auth.PasswordEnabled()),
-		compose.WithDataReset(schemaPool, deployCfg.Seeds, allowDataReset),
+		compose.WithPasswordLogin(cfg.passwordLogin),
+		compose.WithDataReset(schemaPool, bootstrap.Seeds, allowDataReset),
 		// The same seeds reach the ADR-0105 claim route, so an installation
 		// provisioned by claim lays down the module defaults this file asks
 		// for rather than the built-in ones. Always applied, including the
 		// zero value: an unconfigured `seeds` section means built-in defaults
 		// on both provisioning paths, which is the behaviour to preserve.
-		compose.WithBootstrapSeeds(deployCfg.Seeds),
-		// The per-route upload ceilings (OPS-CFG-12). Always applied, including
-		// for a file with no `uploads` section: EffectiveUploads resolves the
-		// compiled-in defaults, so this stays the one place the numbers are
-		// decided either way.
-		compose.WithUploadLimits(deployCfg.EffectiveUploads()),
+		compose.WithBootstrapSeeds(bootstrap.Seeds),
+		// The per-route upload ceilings (OPS-CFG-12), always applied. With no
+		// `uploads` section UploadLimitsFrom resolves the compiled-in defaults,
+		// so this stays the one place the numbers are decided.
+		compose.WithUploadLimits(compose.UploadLimitsFrom(cfg.settings)),
 	}
 	reset, err := newResetLane(allowDataReset, pool, rdb, logger)
 	if err != nil {
@@ -260,11 +262,11 @@ func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, deployCfg deploy
 	// server and both discovery documents — exists only when the deployment
 	// declared it. The boot check in bindInstallation already proved the
 	// canonical base URL those routes advertise.
-	if deployCfg.MCP.ConnectorEnabled {
-		opts = append(opts, compose.WithMCPConnector())
+	if cfg.mcpConnector {
+		opts = append(opts, compose.WithMCPConnector(), compose.WithClientRegistrationLimit(cfg.clientRegistration))
 	}
 
-	passwordOpts, err := passwordResetOptions(ctx, deployCfg, pool, vault, cfg.publicBaseURL, logger, stdout)
+	passwordOpts, err := passwordResetOptions(ctx, cfg.settings, pool, vault, cfg.publicBaseURL, logger, stdout)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -335,6 +337,13 @@ func sharedRedisClient(cfg apiConfig, logger *slog.Logger) (*redis.Client, func(
 // meter is built by the caller rather than here, because the model path needs
 // the same pointer to charge MCP-SESS-COST against — two meters would count one
 // agent's spend in two windows, neither of them the one the gate reads.
+// newVolumeMeter is the meter judged by the allowances an admin saved, counted
+// in rdb. A role whose rdb is nil gets the fail-closed meter New builds.
+func newVolumeMeter(rdb *redis.Client, pool *pgxpool.Pool) *agentvolume.Meter {
+	return agentvolume.New(rdb, agentvolume.Limits{}, agentvolume.DefaultWindow).
+		WithPolicySource(compose.NewAgentAllowanceSource(pool))
+}
+
 func agentVolumeOptions(volumeMeter *agentvolume.Meter) []compose.Option {
 	return []compose.Option{compose.WithAgentVolume(volumeMeter)}
 }
@@ -347,7 +356,7 @@ func inlineRelayLane(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, log
 		// No inline relay to stop: cmd/worker is running it.
 		return nil, func() {}, nil
 	}
-	busReady, stop, err := startInlineRelay(ctx, pool, cfg.redisAddr, cfg.redisPassword, cfg.webhookKey, logger)
+	busReady, stop, err := startInlineRelay(ctx, pool, cfg.redisAddr, cfg.redisPassword, cfg.webhookKey, cfg.publicBaseURL, logger)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -365,19 +374,19 @@ func inlineRelayLane(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, log
 // modelSurfaceOptions resolves this role's model path and wires every AI
 // surface over it, returning the path so the job-handoff lanes bind to the
 // same one.
-func modelSurfaceOptions(ctx context.Context, cfg apiConfig, deployCfg deployconfig.Config, pool *pgxpool.Pool, logger *slog.Logger) ([]compose.Option, *compose.ModelPath, error) {
+func modelSurfaceOptions(ctx context.Context, cfg apiConfig, bootstrap deployconfig.Bootstrap, pool *pgxpool.Pool, logger *slog.Logger) ([]compose.Option, *compose.ModelPath, error) {
 	// ONE resolution point: coldStartOptions, offerDraftOptions and the
 	// /readyz AI line all consume the same *compose.ModelPath rather than
 	// each running their own copy of the declared-routing/--ai-fake/
 	// neither switch (and, with it, their own Router, cache and budget).
 	modelPath, aiState, assistantProfile, routingVersion, err := resolveModelPath(
-		ctx, modelPathSpecFrom(cfg, deployCfg), pool, logger,
+		ctx, modelPathSpecFrom(cfg, bootstrap), pool, logger,
 	)
 	if err != nil {
 		return nil, nil, err
 	}
-	modelPath.SetCompanyContextEnabled(deployCfg.CompanyContext.TasksEnabled())
-	opts := []compose.Option{compose.WithAiPayloadCaptureFlag(deployCfg.AI.CapturePayloads)}
+	modelPath.SetCompanyContextEnabled(compose.CompanyContextTasks(cfg.settings))
+	opts := []compose.Option{compose.WithAiPayloadCaptureFlag(config.Val(cfg.settings, ps.CapturePayloads))}
 	opts = append(opts, coldStartOptions(modelPath, routingVersion)...)
 	opts = append(opts, offerDraftOptions(pool, modelPath)...)
 	opts = append(opts, compose.WithAssistantProfile(aiState, assistantProfile))
@@ -413,8 +422,8 @@ func modelSurfaceOptions(ctx context.Context, cfg apiConfig, deployCfg deploycon
 // charges a model call to the agent that caused it, where the tokens are known.
 // A model path bound to a different meter would meter an agent's spend into a
 // window nothing else looks at, so the path leaves this function already bound.
-func modelAndHandoffOptions(ctx context.Context, cfg apiConfig, deployCfg deployconfig.Config, pool *pgxpool.Pool, logger *slog.Logger, volumeMeter *agentvolume.Meter) ([]compose.Option, *compose.ModelPath, error) {
-	opts, modelPath, err := modelSurfaceOptions(ctx, cfg, deployCfg, pool, logger)
+func modelAndHandoffOptions(ctx context.Context, cfg apiConfig, bootstrap deployconfig.Bootstrap, pool *pgxpool.Pool, logger *slog.Logger, volumeMeter *agentvolume.Meter) ([]compose.Option, *compose.ModelPath, error) {
+	opts, modelPath, err := modelSurfaceOptions(ctx, cfg, bootstrap, pool, logger)
 	if err != nil {
 		return nil, nil, err
 	}

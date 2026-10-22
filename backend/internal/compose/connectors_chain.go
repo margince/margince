@@ -10,7 +10,6 @@ package compose
 
 import (
 	"context"
-	"crypto/rand"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -131,17 +130,8 @@ func (h connectorHandlers) chainAfterConnect(ctx context.Context, w http.Respons
 // match, so a victim can't complete an attacker-initiated flow (account-linking
 // CSRF).
 func (h connectorHandlers) mintConsent(w http.ResponseWriter, app oauthApp, st connectState) string {
-	st.Nonce = rand.Text()
+	st.Nonce = setCSRFNonce(w, csrfCookieName(st.Provider), connectorCookiePath)
 	st.Version = stateVersionNamespacedCSRF
-	http.SetCookie(w, &http.Cookie{
-		Name:     csrfCookieName(st.Provider),
-		Value:    st.Nonce,
-		Path:     "/v1/connectors",
-		MaxAge:   int(connectStateTTL / time.Second),
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteLaxMode,
-	})
 	state := h.signer.sign(st, time.Now().Add(connectStateTTL))
 	return app.authCodeURL(state, h.callbackURL(st.Provider))
 }

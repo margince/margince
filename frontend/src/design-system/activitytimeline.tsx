@@ -5,7 +5,6 @@ import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { emailSummaryText } from "../format/emailtext";
 import type { Locale, useT } from "../i18n";
-import type { TimelineEntry } from "./composed";
 import {
   type ContactOn,
   contactsOn,
@@ -14,6 +13,7 @@ import {
   withWhom,
 } from "./participants";
 import { provenanceOf } from "./provenanceof";
+import type { TimelineEntry } from "./timelineentry";
 import { isTranscriptActivity, TranscriptReadCard } from "./transcriptread";
 
 type Activity = components["schemas"]["Activity"];
@@ -36,6 +36,15 @@ const TIMELINE_KINDS: readonly TimelineEntry["kind"][] = [
   "task",
   "message",
 ];
+
+// What a rep writes is markdown, for the timeline row and the activity panel
+// alike; a mail, a chat and a transcript stay text.
+const WRITTEN_KINDS = new Set(["note", "call", "meeting", "task"]);
+export function writtenAsMarkdown(
+  entry: Pick<TimelineEntry, "kind" | "transcript">,
+): boolean {
+  return WRITTEN_KINDS.has(entry.kind) && !entry.transcript;
+}
 
 function timelineKind(kind: string): TimelineEntry["kind"] {
   const known = TIMELINE_KINDS.find((candidate) => candidate === kind);
@@ -121,6 +130,13 @@ export function activityTimeline(
     return {
       id: activity.id,
       kind: timelineKind(activity.kind),
+      isDone: activity.is_done,
+      commitmentReviewCount:
+        activity.content_state === "withheld"
+          ? 0
+          : activity.commitment_admissions?.filter(
+              (decision) => !decision.current_work,
+            ).length,
       title: timelineTitle(activity),
       // Carried beside the rendered title, which may be the body or the kind:
       // bulk grouping needs the message's OWN subject or it folds unrelated
@@ -156,6 +172,8 @@ export function activityTimeline(
         activity.captured_by,
         viewerUserId,
         activity.author,
+        activity.source,
+        activity.imported_from,
       ),
       // Offered on the row rather than by each caller: a transcript is readable
       // wherever it is listed, and a per-screen opt-in is how the same affordance

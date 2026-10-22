@@ -23,10 +23,7 @@ import (
 // TestEveryEnvVarIsDocumented reads any MARGINCE_* literal in Go as a variable
 // the code consumes and demands a row in configuration.md; documenting these
 // would claim the product reads a variable it has never heard of.
-var (
-	smtpPasswordVar = envNamespace + "SMTP_PASSWORD"
-	absentVar       = envNamespace + "ABSENT"
-)
+var absentVar = envNamespace + "ABSENT"
 
 const envNamespace = "MARGINCE" + "_"
 
@@ -159,7 +156,7 @@ func TestAnOversizedFileIsRefusedWithoutReadingIt(t *testing.T) {
 	// wrong, and pulling it into memory to discover that is the wrong order.
 	dir := t.TempDir()
 	big := filepath.Join(dir, "not-a-secret")
-	if err := os.WriteFile(big, make([]byte, secretFileLimit+1), 0o600); err != nil {
+	if err := os.WriteFile(big, make([]byte, config.SecretFileLimit+1), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	s, err := decodeSecret(t, "s: ${file:"+big+"}")
@@ -182,11 +179,9 @@ func TestAnOversizedFileIsRefusedWithoutReadingIt(t *testing.T) {
 func TestEverySecretFieldRefusesALiteral(t *testing.T) {
 	for name, doc := range map[string]string{
 		"bootstrap_admin.password": "version: 1\nbootstrap_admin:\n  email: a@b.co\n  password: hunter2-literal\n",
-		"email.smtp.password":      "version: 1\nemail:\n  smtp:\n    host: mail\n    password: hunter2-literal\n",
-		"license.token":            "version: 1\nlicense:\n  token: hunter2-literal\n",
 	} {
 		t.Run(name, func(t *testing.T) {
-			var cfg Config
+			var cfg Bootstrap
 			err := yaml.Unmarshal([]byte(doc), &cfg)
 			if err == nil {
 				t.Fatalf("%s accepted a literal secret", name)
@@ -203,11 +198,9 @@ func TestEverySecretFieldRefusesALiteral(t *testing.T) {
 func TestEverySecretFieldAcceptsAReference(t *testing.T) {
 	for name, doc := range map[string]string{
 		"bootstrap_admin.password": "version: 1\nbootstrap_admin:\n  email: a@b.co\n  password: ${env:X}\n",
-		"email.smtp.password":      "version: 1\nemail:\n  smtp:\n    host: mail\n    password: ${env:X}\n",
-		"license.token":            "version: 1\nlicense:\n  token: ${file:/run/secrets/l}\n",
 	} {
 		t.Run(name, func(t *testing.T) {
-			var cfg Config
+			var cfg Bootstrap
 			if err := yaml.Unmarshal([]byte(doc), &cfg); err != nil {
 				t.Fatalf("%s refused a reference: %v", name, err)
 			}
@@ -215,73 +208,13 @@ func TestEverySecretFieldAcceptsAReference(t *testing.T) {
 	}
 }
 
-// Resolving the SMTP credential, across the three states a relay can be in.
-// The middle one is the reason this is not just "does the reference work": an
-// operator who configured no credential has an UNAUTHENTICATED relay, which is
-// a real deployment and must not be reported as a missing secret.
-func TestSMTPPasswordResolvesEachConfiguredSource(t *testing.T) {
-	dir := t.TempDir()
-	mounted := filepath.Join(dir, "smtp-password")
-	if err := os.WriteFile(mounted, []byte("from-the-secret-store\n"), 0o600); err != nil {
-		t.Fatalf("writing the mounted secret: %v", err)
-	}
-	lookup := config.Static(map[string]string{smtpPasswordVar: "from-the-environment"})
-
-	for name, tc := range map[string]struct {
-		email Email
-		want  string
-	}{
-		"a reference to the environment": {
-			email: Email{SMTP: SMTP{Password: mustRemovable(t, "${env:"+smtpPasswordVar+"}")}},
-			want:  "from-the-environment",
-		},
-		"a reference to a mounted file": {
-			email: Email{SMTP: SMTP{Password: mustRemovable(t, "${file:"+mounted+"}")}},
-			want:  "from-the-secret-store",
-		},
-		// The legacy spelling keeps working: a deployment that already names a
-		// path must boot unchanged rather than be told to migrate first.
-		"the original password_file spelling": {
-			email: Email{SMTP: SMTP{PasswordFile: mounted}},
-			want:  "from-the-secret-store",
-		},
-		"no credential at all": {
-			email: Email{SMTP: SMTP{Host: "mail.example.test"}},
-			want:  "",
-		},
-	} {
-		t.Run(name, func(t *testing.T) {
-			got, err := tc.email.SMTPPassword(lookup)
-			if err != nil {
-				t.Fatalf("SMTPPassword: %v", err)
-			}
-			if got != tc.want {
-				t.Errorf("SMTPPassword = %q, want %q", got, tc.want)
-			}
-		})
-	}
-}
-
-// The reference wins when a deployment carries both, because it is the form
-// that can name the environment and the one an operator migrating forward would
-// have added deliberately. Getting this backwards would silently keep reading
-// the file somebody had just replaced.
-func TestTheReferenceWinsOverTheLegacyPath(t *testing.T) {
-	dir := t.TempDir()
-	stale := filepath.Join(dir, "stale")
-	if err := os.WriteFile(stale, []byte("the-old-credential"), 0o600); err != nil {
-		t.Fatalf("writing the stale file: %v", err)
-	}
-	email := Email{SMTP: SMTP{
-		Password:     mustRemovable(t, "${env:"+smtpPasswordVar+"}"),
-		PasswordFile: stale,
-	}}
-	got, err := email.SMTPPassword(config.Static(map[string]string{smtpPasswordVar: "the-new-credential"}))
-	if err != nil {
-		t.Fatalf("SMTPPassword: %v", err)
-	}
-	if got != "the-new-credential" {
-		t.Errorf("SMTPPassword = %q; the reference must win over password_file", got)
+// Only email.smtp.password, a setting config.Load reads, takes the removal
+// sentinel. A secret here refuses it, so an operator who writes it learns that
+// at boot, and is told where it does belong.
+func TestTheRemovalSentinelIsRefusedByTheBootstrapPassword(t *testing.T) {
+	_, err := LoadBootstrap(writeTemp(t, "version: 1\nbootstrap_admin:\n  email: a@b.co\n  display_name: A\n  password: ${none}\n"))
+	if err == nil || !strings.Contains(err.Error(), "email.smtp.password") {
+		t.Fatalf("err %v; want a refusal naming the one key that takes the sentinel", err)
 	}
 }
 

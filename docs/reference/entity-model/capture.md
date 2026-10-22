@@ -178,7 +178,7 @@ The 24 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_connection
 
-20 columns · primary key `(id)` · referenced by 2 foreign keys
+24 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -189,6 +189,10 @@ The 24 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `context_tag_id` | `uuid` |  | Points at `tag.id`. |
 | `credential_ref` | `text` |  |  |
 | `generation` | `integer`, default `0` | yes |  |
+| `history_baseline_date` | `date` |  |  |
+| `history_baseline_set_at` | `timestamp with time zone` |  |  |
+| `history_baseline_set_by` | `text` |  |  |
+| `history_baseline_tz` | `text` |  |  |
 | `mail_posture` | `text`, default `'classified'::text` | yes | What this mailbox asks of the mail it brings in. |
 | `provider` | `text` | yes | The mail/calendar provider (A51 email+calendar parity). |
 | `provider_scopes` | `text[]` |  |  |
@@ -212,6 +216,7 @@ The 24 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 **Rules**
 
+- `capture_connection_history_baseline_check`: `CHECK ((((history_baseline_date IS NULL) = (history_baseline_tz IS NULL)) AND ((history_baseline_date IS NULL) = (history_baseline_set_by IS NULL)) AND ((history_baseline_date IS NULL) = (history_baseline_set_at IS NULL))))`
 - `capture_connection_mail_posture_check`: `CHECK ((mail_posture = ANY (ARRAY['shared', 'classified', 'held'])))`
 - `capture_connection_provider_check`: `CHECK ((provider = ANY (ARRAY['gmail', 'gcal', 'imap', 'graph', 'graphcal', 'whatsapp', 'telegram', 'offline_demo', 'test_mailbox'])))`
 - `capture_connection_status_check`: `CHECK ((status = ANY (ARRAY['connected', 'disconnected', 'error', 'reauth_required'])))`
@@ -346,15 +351,18 @@ The 24 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_import
 
-9 columns · primary key `(id)` · referenced by 0 foreign keys
+12 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `activity_id` | `uuid` | yes | Points at `activity.id`. |
+| `bcc_only` | `boolean` |  |  |
+| `delivered_by` | `text[]`, default `'{}'::text[]` | yes |  |
 | `imported_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `posture_at_import` | `text` |  | One of `shared`, `classified`, `held`. |
 | `provider_received_at` | `timestamp with time zone` |  |  |
+| `source_occurred_at` | `timestamp with time zone` |  |  |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
 | `verdict_reason` | `text` |  |  |
 | `verdict_reasons` | `text[]` |  |  |

@@ -132,7 +132,21 @@ func TestUploadCreatesADraftAndRefusesOversizeWithoutARun(t *testing.T) {
 		!strings.Contains(refusal.Detail, fmt.Sprint(importRowCap+1)) {
 		t.Fatalf("err = %v, want the row-cap refusal naming the file's row count", err)
 	}
-	if listed, _, err := migration.NewRunStore(e.DB()).ListStaged(importAdmin(e), "", 10); err != nil || len(listed) != 1 {
+	if listed, _, err := migration.NewRunStore(e.DB()).ListStaged(importAdmin(e), "", 10, migration.ViewAll); err != nil || len(listed) != 1 {
 		t.Fatalf("runs = %+v (%v), want only the first upload's draft", listed, err)
+	}
+}
+
+func TestRunListViewsSeparateDraftsFromHistory(t *testing.T) {
+	e := integration.Setup(t)
+	leadSourceHandlers(t, e)
+	store := migration.NewRunStore(e.DB())
+	for view, want := range map[migration.RunView]int{
+		migration.ViewAll: 1, migration.ViewDrafts: 1, migration.ViewHistory: 0,
+	} {
+		listed, _, err := store.ListStaged(importAdmin(e), "", 10, view)
+		if err != nil || len(listed) != want {
+			t.Errorf("view %q listed %d runs (%v), want %d", view, len(listed), err, want)
+		}
 	}
 }

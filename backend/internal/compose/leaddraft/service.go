@@ -129,7 +129,7 @@ func (s *Service) Draft(
 		draftfloor.Written{Body: contactdraft.CorrespondenceTextOf(activities), Purpose: req.Intent},
 		ConversationState(activities, s.envelope.Now()))
 	in := FromLead(lead, activities, req.Intent, envelope)
-	grounding, err := in.Grounding(datasource.EntityLead)
+	grounding, err := in.Grounding()
 	if err != nil {
 		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}

@@ -50,7 +50,9 @@ func TestActivitiesByKindAnalyticsQueryDoesNotCrashForATeamScopedReader(t *testi
 	// test is about), and a withheld answer would read like this one too.
 	for range 6 {
 		e.seedID(t, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
-			VALUES ($1, 'call', 'checking in', now() - interval '1 hour', 'manual', 'human:x')`)
+			VALUES ($1, 'meeting', 'checking in', now() - interval '1 hour', 'manual', 'human:x')`)
+		e.seedID(t, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+			VALUES ($1, 'email', 'checking in', now() - interval '1 hour', 'manual', 'human:x')`)
 	}
 
 	answer, err := e.askAnalytics(e.teamScopedActivityReader(), t, analyticsquery.Query{
@@ -64,6 +66,6 @@ func TestActivitiesByKindAnalyticsQueryDoesNotCrashForATeamScopedReader(t *testi
 		t.Fatalf("answer withheld: %+v, want it above the floor", answer)
 	}
 	if len(answer.Rows) != 1 || answer.Rows[0]["activities"] != int64(6) && answer.Rows[0]["activities"] != float64(6) {
-		t.Errorf("activities-by-kind for a team-scoped reader = %+v, want the six calls counted", answer.Rows)
+		t.Errorf("activities-by-kind for a team-scoped reader = %+v, want the six meetings counted and no email", answer.Rows)
 	}
 }

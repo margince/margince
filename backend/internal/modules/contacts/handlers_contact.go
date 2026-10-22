@@ -101,7 +101,7 @@ func (h Handlers) CreateContact(w http.ResponseWriter, r *http.Request, _ crmcon
 	// A declared importer (a HUMAN holding import_run:create) may stamp the
 	// reserved mirror: namespace; everyone else, an agent carrying that human's
 	// grants included, gets the closed door.
-	mapInput := contactCreateInput
+	mapInput := ContactCreationInput
 	if auth.DeclaredImporter(r.Context()) {
 		mapInput = contactCreateInputFromImporter
 	}

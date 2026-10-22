@@ -40,7 +40,7 @@ func handledFixture(t *testing.T, e *loadEnv, subject string) (contact, message 
 	contact = ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
 		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.rep)
-	return contact, e.seedWait(t, subject, "contact_id", contact)
+	return contact, e.seedPersonalWait(t, subject, contact)
 }
 
 func TestMarkingAMessageDoneTakesItOffItsReadersListOnly(t *testing.T) {

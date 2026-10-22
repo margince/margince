@@ -24,7 +24,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/config"
-	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -33,16 +32,12 @@ import (
 // RoutingStore reads and replaces the stored binding.
 type RoutingStore struct {
 	settings *settings.Store
-	// keys resolves a provider's BYOK secret. It travels with the store for
-	// the same reason it travels with a parsed config: a routing document names
-	// providers and never their credentials, so the two meet only where a
-	// binding is turned into something that can serve.
+	// cfg reads and saves the binding under the locks the boot sources set.
+	cfg *config.Config
+	// keys overrides how a provider's BYOK secret is resolved, for a test that
+	// hands a client its credentials directly. Nil reads each key's setting
+	// through cfg.
 	keys config.Lookup
-	// vault resolves a sealed BYOK key, for the one read that has to CALL a
-	// vendor rather than describe it. Optional: an installation with no vault
-	// keeps its credentials in the environment, which is where every
-	// installation had them before the vault existed, and `keys` still answers.
-	vault keyvault.Vault
 	// catalogue serves the one vendor (OpenRouter) whose list this store asks
 	// unauthenticated and unbound, for the ONE read that ranks by a published
 	// benchmark rather than by a stored binding. Optional: absent it, that
@@ -51,7 +46,8 @@ type RoutingStore struct {
 	// selectBrain builds the client every vendor read and save-time probe
 	// calls through; the zero value is SelectBrain.
 	selectBrain brainSelector
-	// log hears a save admitted unchecked; nil is slog.Default.
+	// log hears a save admitted unchecked and a key that could not be read;
+	// nil is slog.Default.
 	log *slog.Logger
 	// now dates what a Vertex location was found to serve; nil is time.Now.
 	now func() time.Time
@@ -60,46 +56,27 @@ type RoutingStore struct {
 	served *servedAtLocation
 }
 
-// NewRoutingStore builds the store over the settings catalog.
-func NewRoutingStore(s *settings.Store, keys config.Lookup) *RoutingStore {
-	return &RoutingStore{settings: s, keys: keys, served: &servedAtLocation{}}
+// NewRoutingStore builds the store over the settings catalog, reading the
+// binding, the task overrides and the provider keys through cfg.
+func NewRoutingStore(s *settings.Store, cfg *config.Config) *RoutingStore {
+	return &RoutingStore{settings: s, cfg: cfg, served: &servedAtLocation{}}
 }
 
-// WithVault returns a store that can resolve a sealed credential.
-//
-// A separate constructor rather than a fourth argument on NewRoutingStore: the
-// vault is needed by exactly one method, every other caller of this store has
-// no vault to give, and widening the constructor would make all of them say so.
-func (s *RoutingStore) WithVault(vault keyvault.Vault) *RoutingStore {
+// WithSealer returns a store that can open a sealed provider key, for the
+// reads that call a vendor rather than describe it.
+func (s *RoutingStore) WithSealer(sealer config.Sealer) *RoutingStore {
 	next := *s
-	next.vault = vault
+	next.cfg = s.cfg.WithSealer(sealer)
 	return &next
 }
 
-// resolvedKeys is the credential lookup a vendor call uses: the vault's sealed
-// keys for this request's workspace, falling back to the environment for a
-// vendor that has none sealed yet.
-//
-// Per request, because the workspace is the request's. A store-wide lookup
-// would either be one tenant's credentials serving another's call, or the
-// environment only — and the environment is exactly what an installation that
-// pasted its key into the UI does not have.
+// resolvedKeys is the credential lookup a vendor call uses. Per request,
+// because a sealed key opens only under the request's workspace.
 func (s *RoutingStore) resolvedKeys(ctx context.Context) config.Lookup {
-	if s.vault == nil {
+	if s.keys != nil {
 		return s.keys
 	}
-	workspace, err := credentialWorkspace(ctx)
-	if err != nil {
-		return s.keys
-	}
-	refs, err := settings.Get(ctx, s.settings, ProviderKeys)
-	if err != nil {
-		// The environment still answers. A settings read that fails is not a
-		// reason to report every vendor as unkeyed — that would tell a reader
-		// their credentials are gone when what failed was one query.
-		return s.keys
-	}
-	return SealedKeys(ctx, s.vault, workspace, refs, s.keys)
+	return KeyLookup(ctx, s.cfg, s.logger())
 }
 
 // Get reads the stored binding as canonical, so a row stored in the per-lane
@@ -110,7 +87,7 @@ func (s *RoutingStore) Get(ctx context.Context) (RoutingConfig, error) {
 	if err := auth.Require(ctx, routingSettingsObject, principal.ActionRead); err != nil {
 		return RoutingConfig{}, err
 	}
-	stored, err := settings.Get(ctx, s.settings, Routing)
+	stored, err := config.StoredVal(ctx, s.cfg, Routing)
 	if err != nil {
 		return RoutingConfig{}, err
 	}
@@ -132,8 +109,12 @@ func (s *RoutingStore) Replace(ctx context.Context, next RoutingConfig) (Routing
 // probed: one another write moved meanwhile is probed again, and a document
 // that keeps moving is refused as stale.
 func (s *RoutingStore) probedWrite(ctx context.Context, probe func(stored RoutingConfig) error, settle func(current RoutingConfig) (stored, served RoutingConfig, err error)) (RoutingConfig, error) {
+	// A boot-set binding is kept or refused as it stands; Google is not asked.
+	if _, locked := s.cfg.Locked(RoutingKey); locked {
+		return s.write(ctx, settle)
+	}
 	for range probeAttempts {
-		stored, err := settings.Get(ctx, s.settings, Routing)
+		stored, err := config.StoredVal(ctx, s.cfg, Routing)
 		if err != nil {
 			return RoutingConfig{}, err
 		}
@@ -199,6 +180,19 @@ func (s *RoutingStore) logger() *slog.Logger {
 		return slog.Default()
 	}
 	return s.log
+}
+
+// LockFirst answers a refusal of a value sent for key, one the store has not
+// seen, with the lock when a boot source sets key. The update gate comes
+// first, as on a save, so a caller without it learns nothing of the lock.
+func (s *RoutingStore) LockFirst(ctx context.Context, key string, err error) error {
+	if _, locked := s.cfg.Locked(key); !locked || err == nil {
+		return err
+	}
+	if gate := auth.Require(ctx, routingSettingsObject, principal.ActionUpdate); gate != nil {
+		return gate
+	}
+	return s.cfg.LockFirst(key, err)
 }
 
 // Revision identifies the editable document independently of credentials. It
@@ -275,16 +269,27 @@ func (s *RoutingStore) write(ctx context.Context, settle func(current RoutingCon
 		if err := settings.LockForWrite(ctx, tx, RoutingKey); err != nil {
 			return err
 		}
-		current, err := settings.GetTx(ctx, tx, Routing)
+		current, err := config.StoredValTx(ctx, tx, s.cfg, Routing)
 		if err != nil {
 			return err
 		}
+		// A stale If-Match is answered as stale before the lock, as the budget
+		// and the overrides answer it; any other refusal waits on the lock.
 		stored, _, err := settle(current)
-		if err != nil {
+		if errors.Is(err, apperrors.ErrVersionSkew) {
 			return err
+		}
+		if err != nil {
+			return s.cfg.LockFirst(RoutingKey, err)
 		}
 		written = stored
-		return settings.SetTx(ctx, s.settings, tx, Routing, stored)
+		// Compared by revision, as If-Match is: a resent boot binding settles to
+		// its canonical form, which need not be the decoded value field for field.
+		sameBinding := func(boot RoutingConfig) bool { return boot.Revision() == stored.Revision() }
+		if locked, err := config.LockedChange(s.cfg, Routing, sameBinding); locked || err != nil {
+			return err
+		}
+		return config.SaveTx(ctx, s.cfg, tx, Routing, stored)
 	})
 	if err != nil {
 		return RoutingConfig{}, err
@@ -345,13 +350,13 @@ func (cfg RoutingConfig) settle() (stored, served RoutingConfig, err error) {
 // thinking level onto the same lane of next when next declares none and binds
 // the same provider and model. A value next declares always wins.
 //
-// A write that omits them — a client that predates the contract's `routing` or
-// `thinking_level` field, or a settings seed — would otherwise reset how the
-// lane's model is served. The routing editor applies the same rule from its
-// side (rebind in frontend/src/screens/ai-routing-fields.tsx). Keyed on the
-// model because a preference or a level is refused on a model that predates
-// it, and carried onto another it would fail the lane with nothing in the form
-// able to lift it.
+// A write that omits them would otherwise reset how the lane's model is served.
+// Such a write comes from a settings seed, or from a client older than the
+// `routing` or `thinking_level` field. The rebind in
+// frontend/src/features/ai/ai-routing-fields.tsx applies the same rule from the
+// routing editor's side. The pins are keyed on the model: a model older than a
+// preference or a level refuses it. Carried onto another model, it would fail
+// the lane with nothing in the form able to lift it.
 //
 // Both documents are read lifted, so the pins — the provider's — are never
 // carried onto a lane, and the host is the provider's rather than part of the

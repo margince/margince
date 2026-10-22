@@ -208,7 +208,7 @@ describe("problemFieldErrors", () => {
     // unrelated fault into an actionable send refusal.
     expect(
       problemFieldErrors({
-        code: "internal_error",
+        code: "internal",
         details: {
           errors: [
             {
@@ -345,6 +345,19 @@ describe("problemMessageOf", () => {
         t,
       ),
     ).toBe("Seat expired");
+  });
+
+  it("says in the reader's language that the host's calendar could not be read", () => {
+    const refusal = new ProblemError({
+      code: "calendar_unavailable",
+      status: 502,
+      detail: "The server's English sentence",
+    });
+    for (const locale of ["en", "de", "vi"] as const) {
+      const line = problemMessageOf(refusal, (key) => translate(locale, key));
+      expect(line).toBe(translate(locale, "scheduling.calendarUnavailable"));
+    }
+    expect(problemMessageOf(refusal, t)).not.toBe("Internal Server Error");
   });
 
   it("prefers the surface's own copy for a failure the server never described", () => {

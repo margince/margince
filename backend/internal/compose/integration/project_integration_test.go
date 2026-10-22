@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/projects"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -500,7 +501,7 @@ func TestRelinkReplacesOnlyTheLinksTheCallerCanSee(t *testing.T) {
 	// One activity linked to the other rep's private account and to a contact
 	// the attacker owns. The contact link is how they reach the activity at all.
 	act, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "note", Source: "manual",
+		Kind: "note", Subject: new("Linked note"), Source: "manual",
 		Links: []activities.ActivityLinkInput{
 			{EntityType: "company", EntityID: theirs},
 			{EntityType: "contact", EntityID: contact},
@@ -578,7 +579,7 @@ func TestMovingAnActivityBetweenProjectsReplacesTheLinkItCannotSee(t *testing.T)
 	contact := e.SeedContact(t, "Reachable Contact", &e.Rep3)
 
 	act, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "note", Source: "manual",
+		Kind: "note", Subject: new("Linked note"), Source: "manual",
 		Links: []activities.ActivityLinkInput{
 			{EntityType: "project", EntityID: theirs.ID.UUID},
 			{EntityType: "contact", EntityID: contact},
@@ -639,7 +640,7 @@ func TestTheTimelineFilterKnowsEveryLinkTargetTheWriteAccepts(t *testing.T) {
 	contact := e.SeedContact(t, "Findable Contact", nil)
 
 	act, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
-		Kind: "note", Source: "manual",
+		Kind: "note", Subject: new("Linked note"), Source: "manual",
 		Links: []activities.ActivityLinkInput{
 			{EntityType: "project", EntityID: project.ID.UUID},
 			{EntityType: "contact", EntityID: contact},
@@ -748,6 +749,65 @@ func TestAProjectCreatedWithoutAnOwnerBelongsToItsCreator(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("the creating rep attaching their new project to a new deal: %v", err)
 	}
+}
+
+// The owner named at create is an assignment, so the row scope that bounds
+// reassignment must bound it too.
+func TestAProjectMayBeCreatedForAColleagueTheCreatorMayAssignTo(t *testing.T) {
+	e := Setup(t)
+	company := companyIDOf(e.SeedCompany(t, "BAER Pharma", &e.Rep1))
+	projectSeat := func(user ids.UUID, scope principal.RowScope) context.Context {
+		return e.As(user, []ids.UUID{e.Team1}, principal.Permissions{
+			RoleKeys: []string{roleRep},
+			Objects: map[string]principal.ObjectGrant{
+				"project":  {Create: true, Read: true, Update: true},
+				objCompany: {Read: true},
+			},
+			RowScope: scope,
+		})
+	}
+	teamScoped := projectSeat(e.Rep2, principal.RowScopeTeam)
+	rep := projectSeat(e.Rep1, principal.RowScopeOwn)
+	colleague := ids.From[ids.UserKind](e.Rep2)
+	teammate := ids.From[ids.UserKind](e.Rep1)
+
+	t.Run("a team-scoped creator creates a project owned by a teammate", func(t *testing.T) {
+		p, err := e.Projects.CreateProject(teamScoped, projects.CreateProjectInput{
+			Name: "Rollout for a teammate", CompanyID: company, Source: "manual", OwnerID: &teammate,
+		})
+		if err != nil {
+			t.Fatalf("a team-scoped creator naming a teammate as owner → %v, want it created", err)
+		}
+		if p.OwnerId == nil || ids.UUID(*p.OwnerId) != e.Rep1 {
+			t.Fatalf("owner = %v, want the named teammate %s", p.OwnerId, e.Rep1)
+		}
+	})
+
+	t.Run("a rep may not create a project owned by a colleague", func(t *testing.T) {
+		const name = "Rollout handed off at birth"
+		_, err := e.Projects.CreateProject(rep, projects.CreateProjectInput{
+			Name: name, CompanyID: company, Source: "manual", OwnerID: &colleague,
+		})
+		if !errors.As(err, new(*auth.AssigneeNotAllowedError)) {
+			t.Fatalf("a rep creating a project owned by a colleague → %v, want AssigneeNotAllowedError", err)
+		}
+		if n := e.WsCount(t, `SELECT count(*) FROM project WHERE name = $1`, name); n != 0 {
+			t.Errorf("the refused create landed %d project row(s), want 0", n)
+		}
+	})
+
+	t.Run("the same rep may not reassign their own project to that colleague", func(t *testing.T) {
+		p, err := e.Projects.CreateProject(rep, projects.CreateProjectInput{
+			Name: "Rollout kept by its creator", CompanyID: company, Source: "manual",
+		})
+		if err != nil {
+			t.Fatalf("a rep creating their own project: %v", err)
+		}
+		_, err = e.Projects.UpdateProject(rep, projectIDOf(ids.UUID(p.Id)), projects.UpdateProjectInput{OwnerID: &colleague})
+		if !errors.As(err, new(*auth.AssigneeNotAllowedError)) {
+			t.Fatalf("a rep reassigning their project to a colleague → %v, want AssigneeNotAllowedError", err)
+		}
+	})
 }
 
 // A reason of spaces is no reason: closing refuses it the way it refuses none,

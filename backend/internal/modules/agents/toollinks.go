@@ -81,11 +81,11 @@ func requireParsableEvidence(e SendEvidenceArgs) error {
 // that genuinely touches more records than this is neither.
 const maxRecordLinks = 25
 
-// uniqueRecordLinks validates and de-duplicates the links a call attaches to.
+// UniqueRecordLinks validates and de-duplicates the links a call attaches to.
 // Deduplicating matters as much as the cap: the same id repeated is the
 // cheapest way to turn one call into N reads, and it is also just a caller
 // mistake worth not charging for twice.
-func uniqueRecordLinks(links []RecordLink) ([]RecordLink, error) {
+func UniqueRecordLinks(links []RecordLink) ([]RecordLink, error) {
 	if len(links) > maxRecordLinks {
 		return nil, &BadArgsError{Cause: fmt.Errorf(
 			"a call may attach to at most %d records; this one names %d", maxRecordLinks, len(links))}

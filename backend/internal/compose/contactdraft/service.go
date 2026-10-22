@@ -157,7 +157,7 @@ func (s *Service) Draft(
 		return crmcontracts.CompanyEmailDraft{}, nil, httperr.Validation("project_id", "not_found",
 			"that project is not one this contact is part of, or you cannot see it")
 	}
-	grounding, err := in.Grounding(datasource.EntityContact)
+	grounding, err := in.Grounding()
 	if err != nil {
 		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}

@@ -1,0 +1,245 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import type { Meta, StoryObj } from "@storybook/react-vite";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactNode } from "react";
+import { userEvent, within } from "storybook/test";
+import { stubClipboard } from "../../design-system/clipboard-testing";
+import { LocaleProvider } from "../../i18n";
+import { installFetchStub, jsonResponse } from "../../testing/story-utils";
+import { OAuthAppCard } from "./oauth-app";
+
+// The card has THREE states: a stored app, none, and an app the DEPLOYMENT
+// supplies, which is neither and locks the form.
+//
+// It is now ONE component rendered per vendor, so the Microsoft story is not a
+// duplicate: it carries a state Google cannot have — a directory pin — and its
+// copy, callbacks and vendor console all differ. A reader comparing the two is
+// checking exactly what the shared card is allowed to vary.
+
+const meta: Meta<typeof OAuthAppCard> = {
+  title: "Settings/Company/Sign-in and apps/Connector app",
+  component: OAuthAppCard,
+  parameters: { layout: "padded" },
+};
+export default meta;
+type Story = StoryObj<typeof OAuthAppCard>;
+
+const CLIENT_ID = "111-abc.apps.googleusercontent.com";
+const URIS = [
+  {
+    purpose: "sign_in",
+    url: "https://api.brandt.example/v1/auth/oidc/google/callback",
+  },
+  {
+    purpose: "mailbox_connect",
+    url: "https://api.brandt.example/v1/connectors/gmail/callback",
+  },
+  {
+    purpose: "calendar_connect",
+    url: "https://api.brandt.example/v1/connectors/gcal/callback",
+  },
+];
+
+function Served({
+  app,
+  children,
+}: Readonly<{ app: unknown; children: ReactNode }>) {
+  installFetchStub({
+    // The RESOLVED path, not the template: installFetchStub matches a route key
+    // against the request's pathname by exact string, and api.GET has already
+    // substituted the provider by the time it is called. A key still carrying
+    // `{provider}` matches nothing and every story renders the fallback.
+    "GET /installation/oauth-apps/google": () => jsonResponse(app),
+    "GET /installation/oauth-apps/microsoft": () => jsonResponse(app),
+    "GET /me": () =>
+      jsonResponse({
+        user: { email: "admin@brandt.example" },
+        authorization: { capture_settings: ["read", "update"] },
+      }),
+  });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return (
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">{children}</LocaleProvider>
+    </QueryClientProvider>
+  );
+}
+
+/** An app saved through this surface, used where the deployment supplies none. */
+export const Stored: Story = {
+  render: () => (
+    <Served
+      app={{
+        configured: true,
+        client_id: CLIENT_ID,
+        redirect_uris: URIS,
+      }}
+    >
+      <OAuthAppCard provider="google" />
+    </Served>
+  ),
+};
+
+/** The deployment's own credentials. They win over a stored app, so the form is
+ * locked and says where they are set. */
+export const FromEnvironment: Story = {
+  render: () => (
+    <Served
+      app={{
+        configured: true,
+        client_id: CLIENT_ID,
+        locks: [
+          {
+            key: "capture.google_app",
+            origin: { source: "env", name: "MARGINCE_GMAIL_CLIENT_ID" },
+          },
+        ],
+        redirect_uris: URIS,
+      }}
+    >
+      <OAuthAppCard provider="google" />
+    </Served>
+  ),
+};
+
+/** Neither source can supply one, so neither flow can run — but the URIs are
+ * still listed, because this is the state an operator is in while creating the
+ * OAuth client that will end it. */
+export const Absent: Story = {
+  render: () => (
+    <Served
+      app={{
+        configured: false,
+        client_id: "",
+        redirect_uris: URIS,
+      }}
+    >
+      <OAuthAppCard provider="google" />
+    </Served>
+  ),
+};
+
+const ENTRA_ID = "11111111-2222-3333-4444-555555555555";
+const GRAPH_URIS = [
+  {
+    purpose: "sign_in",
+    url: "https://api.brandt.example/v1/auth/oidc/microsoft/callback",
+  },
+  {
+    purpose: "mailbox_connect",
+    url: "https://api.brandt.example/v1/connectors/graph/callback",
+  },
+  {
+    purpose: "calendar_connect",
+    url: "https://api.brandt.example/v1/connectors/graphcal/callback",
+  },
+];
+
+/** The Microsoft variant, pinned to one Entra directory — the state Google has
+ * no equivalent of, and the reason the tenant field exists at all. */
+export const MicrosoftPinnedToADirectory: Story = {
+  render: () => (
+    <Served
+      app={{
+        configured: true,
+        client_id: ENTRA_ID,
+        tenant: "99999999-8888-7777-6666-555555555555",
+        redirect_uris: GRAPH_URIS,
+      }}
+    >
+      <OAuthAppCard provider="microsoft" />
+    </Served>
+  ),
+};
+
+/** Unpinned: the same app authorizing any company, which is what an
+ * omitted tenant means rather than an empty one. */
+export const MicrosoftAnyCompany: Story = {
+  render: () => (
+    <Served
+      app={{
+        configured: true,
+        client_id: ENTRA_ID,
+        locks: [
+          {
+            key: "capture.microsoft_app",
+            origin: { source: "env", name: "MARGINCE_GRAPH_CLIENT_ID" },
+          },
+        ],
+        redirect_uris: GRAPH_URIS,
+      }}
+    >
+      <OAuthAppCard provider="microsoft" />
+    </Served>
+  ),
+};
+
+// An installation behind a long host. Each address stays on one line, cut at
+// the cell's edge, and on a phone runs under its purpose with Copy beside it.
+const LONG_URIS = URIS.map((uri) => ({
+  ...uri,
+  url: uri.url.replace(
+    "api.brandt.example",
+    "crm.brandt-automotive-holding-international.example:8443/eu-central-1",
+  ),
+}));
+
+// The addresses fold behind their summary; these stories open it.
+const openRedirects = async ({
+  canvasElement,
+}: Readonly<{ canvasElement: HTMLElement }>) => {
+  await userEvent.click(
+    await within(canvasElement).findByText("Authorized redirect URIs"),
+  );
+};
+
+export const LongAddressesPhone: Story = {
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => (
+    <Served
+      app={{
+        configured: true,
+        client_id: CLIENT_ID,
+        redirect_uris: LONG_URIS,
+      }}
+    >
+      <OAuthAppCard provider="google" />
+    </Served>
+  ),
+  play: openRedirects,
+};
+
+// The browser refuses the clipboard: the notice lands above the table, not in
+// the row's cell.
+export const CopyRefused: Story = {
+  render: () => (
+    <Served
+      app={{
+        configured: true,
+        client_id: CLIENT_ID,
+        redirect_uris: LONG_URIS,
+      }}
+    >
+      <OAuthAppCard provider="google" />
+    </Served>
+  ),
+  play: async ({ canvasElement }) => {
+    // Put back afterwards: the catalog renders many stories in one page.
+    const clipboard = stubClipboard("absent");
+    try {
+      await openRedirects({ canvasElement });
+      const canvas = within(canvasElement);
+      await userEvent.click(
+        await canvas.findByRole("button", { name: "Copy Mailbox URI" }),
+      );
+      await canvas.findByText(/copy it manually/i);
+    } finally {
+      clipboard.restore();
+    }
+  },
+};

@@ -27,12 +27,14 @@ import (
 type BlockedDomain struct {
 	// ID is the disposition row, which the audit trail names. Not on the wire:
 	// the domain is what an operator identifies a decision by.
-	ID        ids.UUID
-	Domain    string
-	Admission string
-	Reason    string
-	Source    string
-	DecidedAt time.Time
+	ID         ids.UUID
+	Domain     string
+	Admission  string
+	Reason     string
+	ReasonCode string
+	SenderKind string
+	Source     string
+	DecidedAt  time.Time
 	// CompanyID and CompanyName are set together by withVisibleCompanyTx, and
 	// only for a company the caller may read.
 	CompanyID   *ids.CompanyID
@@ -109,7 +111,7 @@ const domainStanding = `
 	CASE WHEN d.pending_reason IS NOT NULL THEN d.pending_reason
 	     ELSE COALESCE(d.admission_source, '') END,
 	COALESCE(d.admission_at, d.updated_at),
-	d.company_id, c.display_name`
+	d.company_id, c.display_name, ` + domainReasonCodeColumns
 
 // domainPendingReason turns a withholding reason into the sentence a reader
 // gets told, for each reason the machine has for leaving a question open.
@@ -130,7 +132,11 @@ const domainPendingReason = `
 	  WHEN '` + PendingStaleEvidence + `'
 	    THEN 'The newest mail from this domain is too old to trust today''s site as evidence about it.'
 	  WHEN '` + PendingNearDuplicate + `'
-	    THEN 'More than one company already carries the name this domain resolved to, so which one it belongs to is for a colleague to decide.'
+	    THEN 'An existing company carries this name. Confirm whether this domain belongs to it.'
+	  WHEN '` + PendingForwardedIdentity + `'
+	    THEN 'This domain forwards to a different site. Confirm its identity before linking a company.'
+	  WHEN '` + PendingReservedDomain + `'
+	    THEN 'Reserved domain: automatic company identification is paused.'
 	  ELSE '' END`
 
 // domainStandingWhere selects the rows this list is the right surface for: every
@@ -168,10 +174,10 @@ const domainPendingReason = `
 // Note this admits an undecided row that also carries an admission: re-withholding
 // an admitted domain leaves both columns set, and such a row belongs on a list of
 // decisions whoever owns it.
-var domainStandingWhere = `d.admission IS NOT NULL
+var domainStandingWhere = `d.admission IS NOT NULL OR d.pending_reason = '` + PendingReservedDomain + `'
 	OR (d.pending_reason IS NOT NULL AND NOT EXISTS (
-	      SELECT 1 FROM app_user u
-	       WHERE u.id = d.owner_id
+	      SELECT 1 FROM company_domain_question_reader r JOIN app_user u ON u.id = r.reader_id
+	       WHERE r.domain = d.domain
 	         AND ` + workforce.LiveMemberSQL("u") + `))`
 
 // ListDomainAdmissions returns every domain that carries a decision, plus the
@@ -219,7 +225,7 @@ func (s *Store) ListDomainAdmissions(ctx context.Context, limit int) ([]BlockedD
 			var d BlockedDomain
 			var company standingCompany
 			if err := rows.Scan(&d.ID, &d.Domain, &d.Admission, &d.Reason, &d.Source, &d.DecidedAt,
-				&company.id, &company.name); err != nil {
+				&company.id, &company.name, &d.ReasonCode, &d.SenderKind); err != nil {
 				rows.Close()
 				return fmt.Errorf("contacts: reading a domain admission: %w", err)
 			}

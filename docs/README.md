@@ -88,6 +88,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [add-an-rbac-object.md](how-to/add-an-rbac-object.md): add a new kind of record to RBAC.
 - [create-a-workflow.md](how-to/create-a-workflow.md): add a new starter workflow.
 - [apply-migrations.md](how-to/apply-migrations.md): write and run a database migration.
+- [add-a-data-task.md](how-to/add-a-data-task.md): add a data task.
+- [data-tasks.md](explanation/data-tasks.md): how a data task keeps its place.
 - [claim-a-red-main.md](how-to/claim-a-red-main.md): say that you fix a red `main` before you start.
 - [work-on-an-issue.md](how-to/work-on-an-issue.md): check that an issue is free, claim it, and release
   it when you stop.
@@ -98,6 +100,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [improve-mcp-quality.md](how-to/improve-mcp-quality.md): find why a model fails an MCP test, and fix
   the right part.
 - [run-the-frontend.md](how-to/run-the-frontend.md): run the web app while you develop.
+- [move-frontend-code.md](how-to/move-frontend-code.md): put a frontend file in the folder that owns it.
 - [connect-a-mailbox.md](how-to/connect-a-mailbox.md): set up the provider apps and settings that mailbox
   and calendar capture need.
 - [enrich-with-a-local-llm.md](how-to/enrich-with-a-local-llm.md): use a local model on Ollama or
@@ -116,6 +119,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
   cloud model provider.
 - [recover-after-a-provider-outage.md](how-to/recover-after-a-provider-outage.md): what to do after a
   model provider goes down.
+- [back-up-an-installation.md](how-to/back-up-an-installation.md): which data to copy, when, and who does
+  which part.
 - [run-a-restore-drill.md](how-to/run-a-restore-drill.md): test that a copy of your data can be
   used, and record the time it takes.
 - [certify-an-ai-model.md](how-to/certify-an-ai-model.md): test a model against a task before you use it
@@ -145,6 +150,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [entity-model/](reference/entity-model/README.md): every table and field, one page per part
   of the product.
   Generated.
+- [webhook-events.md](reference/webhook-events.md): every webhook event and the fields it holds.
+  Generated.
 - [meeting-brief.md](reference/meeting-brief.md): the brief a user reads before a meeting.
 - [agent-tools.md](reference/agent-tools.md): every agent tool, whether a human must approve it, and the pages
   that go with it.
@@ -170,6 +177,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
   write one.
 - [gate-inventory.md](reference/gate-inventory.md): every check in `backend/`, by kind. Generated.
 - [configuration.md](reference/configuration.md): every setting of each program.
+- [rest-api.md](reference/rest-api.md): the rules every REST call follows, and where its OpenAPI document is.
 - [ai-provider-key-test.md](reference/ai-provider-key-test.md): what the Test button on the Models page
   checks.
 - [ai-thinking.md](reference/ai-thinking.md): how much a model thinks before it answers, and where you
@@ -204,6 +212,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 A generated page, and each `perfbench/` record, says so in its first line. Do not change them by hand.
 
 ### Explanation: understand the why
+
+- [shared-record-language.md](explanation/shared-record-language.md): text on shared records.
 
 #### The shape of the system
 
@@ -291,6 +301,8 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 ### Run it in production
 
 - [deploy-margince.md](how-to/deploy-margince.md): run Margince on your own servers.
+- [change-a-setting.md](how-to/change-a-setting.md): change a setting, check it before a start, and see
+  where each value comes from.
 - [self-hosting.md](explanation/self-hosting.md): why it runs the way it does, and what it does when
   something fails.
 - [deployment.md](deployment.md): the old page, now a pointer to the two above.

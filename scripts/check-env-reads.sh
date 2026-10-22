@@ -19,10 +19,6 @@
 #                       that every package below the root can take a Lookup
 #                       instead of reaching for the environment. Exempting it is
 #                       what makes the rule satisfiable at all
-#   - platform/cliflags the flag-to-environment binder itself. It reads the
-#                       environment on behalf of a composition root that asked
-#                       it to, which is the mechanism this rule presumes, not a
-#                       violation of it
 #
 # The ratchet: scripts/env-read-waivers.txt records each pre-existing offender
 # with its frozen count of reads. A waived file may shrink but never grow; once
@@ -53,7 +49,6 @@ report=""
 while IFS= read -r file; do
     case "$file" in
         backend/internal/platform/config/*) continue ;;
-        backend/internal/platform/cliflags/*) continue ;;
     esac
     tagged_integration "$file" && continue
     # -o counts CALLS, not matching lines: two reads on one physical line are

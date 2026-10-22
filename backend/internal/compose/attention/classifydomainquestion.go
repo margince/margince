@@ -9,6 +9,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 )
 
 // sourceDomainQuestion names the undecided-domain producer. A constant for the
@@ -39,13 +40,20 @@ func domainQuestionItem(q DomainQuestion) crmcontracts.AttentionItem {
 	domain := q.Domain
 	reason := q.Reason
 	asked := q.AskedAt
+	reasonCode := q.ReasonCode
+	actions := []crmcontracts.AttentionItemActions{verbKeep, verbDiscard, crmcontracts.AttentionItemActionsReopen}
+	if q.ReasonCode == contacts.PendingForwardedIdentity {
+		actions = []crmcontracts.AttentionItemActions{verbDiscard, crmcontracts.AttentionItemActionsReopen}
+	}
 	return crmcontracts.AttentionItem{
-		Id:         q.Domain,
-		Source:     sourceDomainQuestion,
-		Title:      &domain,
-		Detail:     &reason,
-		OccurredAt: &asked,
-		Actions:    []crmcontracts.AttentionItemActions{verbKeep, verbDiscard},
+		Id:               q.Domain,
+		Source:           sourceDomainQuestion,
+		DomainReasonCode: &reasonCode,
+		Title:            &domain,
+		Detail:           &reason,
+		OccurredAt:       &asked,
+		SubjectMovedAt:   q.EvidenceAt,
+		Actions:          actions,
 	}
 }
 

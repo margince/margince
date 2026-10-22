@@ -13,13 +13,10 @@ package agents
 // always done for catch_me_up_on's grounding, and what no caller could ask for
 // directly.
 //
-// WHAT THIS TOOL OWNS is the half the retriever cannot: turning its refs into
-// records through the same seam every other read on this surface uses. That is
-// where the trust tier is stamped, where the envelope's freshness and evidence
-// are collected, where this caller's object RBAC and row scope are applied to
-// the record itself, and where the read is COUNTED against MCP-SESS-READS. A
-// ranked sweep is a bulk read (A139) and is charged like one — per record, not
-// per call.
+// This tool owns the half the retriever cannot: turning its refs into records
+// through the seam every read on this surface uses. The seam stamps the trust
+// tier, collects freshness and evidence, applies the caller's object RBAC and
+// row scope, and takes the answer's served count.
 //
 // AND IT SAYS WHICH LANE RANKED IT. Hybrid retrieval has two lanes and can lose
 // the vector one — no bound embed model, or an embed call that failed. The hits
@@ -34,8 +31,6 @@ import (
 	"fmt"
 	"strings"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -55,9 +50,7 @@ import (
 const CodeSemanticRankingDegraded = "semantic_ranking_degraded_to_lexical"
 
 // contextSearchMaxLimit bounds one sweep. Every hit is a record read back
-// through the seam and charged, so the page size is a spend the caller chooses;
-// twenty-five is search_records' own ceiling for a single type, and a ranked
-// sweep has no better claim to a bigger one.
+// through the seam and charged, so the page size is a spend the caller chooses.
 const contextSearchMaxLimit = 25
 
 // contextSearchDefaultLimit is what an unstated limit means. It is deliberately
@@ -83,10 +76,8 @@ const contextSearchMaxQueryRunes = 1000
 // not enforce a JSON-Schema enum, so an undeclared type would pass straight
 // through to the retrieval index. That index carries a branch this tool does not
 // publish — `activity`, whose snippet is the first 200 characters of a message
-// body — and search_records' own description promises in as many words that
-// message bodies and call notes are not searched. A surface that advertises five
-// types and serves six has granted a capability nobody declared, whatever its
-// row scope.
+// body. A surface that advertises five types and serves six has granted a
+// capability nobody declared, whatever its row scope.
 // Keyed by the seam's own type so the set and the value handed to the retriever
 // are the same thing, rather than two spellings kept in step.
 var contextSearchTypes = map[datasource.EntityType]bool{
@@ -119,6 +110,7 @@ func (t searchContext) Spec() mcp.ToolSpec {
 		Description:   searchContextCopy.render(),
 		Instead:       searchContextCopy.Instead,
 		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		Unlisted:  true,
 		OpenAPIOp: "searchContext",
 		// The input is three members and stays three. The retrieval seam
 		// serves exactly these, and a filter vocabulary invented here would be
@@ -190,10 +182,9 @@ func (t searchContext) Handle(ctx context.Context, in json.RawMessage) (json.Raw
 	return json.Marshal(result)
 }
 
-// contextSearchLimit resolves the page size. The seam clamps too, but it clamps
-// silently and to its own ceiling; this tool publishes a maximum of 25 in its
-// schema and has to mean that number, because it is what the caller's read bound
-// is spent in units of.
+// contextSearchLimit resolves the page size. The seam clamps too, but silently
+// and to its own ceiling. This tool publishes a maximum of 25 in its schema, so
+// it has to mean that number.
 func contextSearchLimit(asked int) int {
 	if asked <= 0 {
 		return contextSearchDefaultLimit
@@ -225,7 +216,7 @@ func (t searchContext) hydrate(ctx context.Context, found retrieval.Result) (Sea
 	}
 	var dropped bool
 	for _, hit := range found.Hits {
-		record, readable, err := t.read(ctx, hit.Ref)
+		record, readable, err := readServable(ctx, t.p, hit.Ref)
 		if err != nil {
 			return SearchContextResult{}, err
 		}
@@ -261,46 +252,6 @@ func (t searchContext) hydrate(ctx context.Context, found retrieval.Result) (Sea
 		})
 	}
 	return result, nil
-}
-
-// read fetches one hit's record through the seam, WITHOUT stamping it.
-//
-// The bool is the verdict, kept apart from the error because the two mean
-// different things: false is a definite answer and the hit is dropped, while an
-// error is the absence of one — reporting an unreachable store as a partial page
-// would describe an infrastructure fault as a property of the caller's data.
-//
-// A record whose content this caller may no longer read counts as unreadable
-// too: it ranked on that content, so serving it with the excerpt it ranked on
-// would hand back what the audience now withholds.
-func (t searchContext) read(ctx context.Context, ref datasource.EntityRef) (datasource.Record, bool, error) {
-	record, err := t.p.Read(ctx, ref)
-	if err != nil {
-		if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
-			return datasource.Record{}, false, nil
-		}
-		return datasource.Record{}, false, err
-	}
-	withheld, err := contentWithheld(record)
-	if err != nil || withheld {
-		return datasource.Record{}, false, err
-	}
-	return record, true, nil
-}
-
-// contentWithheld reads the content_state an activity carries when the caller
-// may know it exists but not read it. Other records carry none.
-func contentWithheld(record datasource.Record) (bool, error) {
-	if len(record.Fields) == 0 {
-		return false, nil
-	}
-	var state struct {
-		ContentState *crmcontracts.ActivityContentState `json:"content_state"`
-	}
-	if err := json.Unmarshal(record.Fields, &state); err != nil {
-		return false, fmt.Errorf("agents: reading a record's content state: %w", err)
-	}
-	return state.ContentState != nil && *state.ContentState == crmcontracts.ActivityContentStateWithheld, nil
 }
 
 // excerptsOf carries the retriever's grounding onto the wire. An excerpt with no

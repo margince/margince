@@ -170,6 +170,7 @@ var meetingFollowUpsSQL = `
 	  LEFT JOIN activity_link wl ON wl.activity_id = a.id AND (%[3]s)
 	 WHERE a.kind = 'meeting'
 	   AND a.archived_at IS NULL
+	   AND NOT ` + ImportedHistorySQL + `
 	   AND %[12]s
 	   AND %[15]s
 	   -- Measured from when it ENDED: the window, the lookback and what came
