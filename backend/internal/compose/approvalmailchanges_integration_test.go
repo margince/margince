@@ -19,8 +19,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// The single email for a staged field change names the deal, the proposal and
-// each field's value before and after, as the decider's card shows them.
+// The single email for a staged field change names the deal and the proposal.
+// It shows each field's value before and after, as the decider's card does.
 func TestAFieldChangeEmailSaysWhatWouldChange(t *testing.T) {
 	e := integration.Setup(t)
 	pipeline, open, _ := integration.DealFixture(t, e)

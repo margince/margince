@@ -28,8 +28,10 @@ func TestAChangeEmailNamesTheRecordAndEachFieldBeforeAndAfter(t *testing.T) {
 			State:          previewReadyState,
 			ReviewerReason: reviewerOnBehalfOf,
 			Changes: []crmcontracts.ApprovalPreviewChange{
-				{Field: "amount_minor", Before: crmcontracts.ApprovalPreviewValue{Kind: "money", Text: "2500000", Currency: &usd},
-					After: crmcontracts.ApprovalPreviewValue{Kind: "money", Text: "2703600", Currency: &usd}},
+				{
+					Field: "amount_minor", Before: crmcontracts.ApprovalPreviewValue{Kind: "money", Text: "2500000", Currency: &usd},
+					After: crmcontracts.ApprovalPreviewValue{Kind: "money", Text: "2703600", Currency: &usd},
+				},
 				{Field: "expected_close_date", Before: previewText(previewValueEmpty, ""), After: previewText(previewValueDate, "2026-10-11")},
 				{Field: "owner_id", Before: previewText(previewValueUnavailable, ""), After: previewText("owner", "Rainer")},
 				{Field: "lifecycle", Before: previewText(previewValueLifecycle, "customer"), After: previewText(previewValueLifecycle, "former_customer")},
