@@ -25,10 +25,10 @@ import { initialConversationState } from "./conversation-machine";
 // the extras beside it in connect-act.connected.test.tsx.
 
 // Every stub in this file routes the session probe, because ConnectAct mounts
-// capability-aware chrome and story-utils refuses to guess a session: an
-// unrouted GET /me answers 501, every grant fails closed, and the provider
-// cards stay disabled for a reason no assertion here is about. The grants are
-// empty on purpose — this act is onboarding, before any of them are held.
+// capability-aware chrome and story-utils refuses to guess a session. An
+// unrouted GET /me answers 501 and every grant fails closed. The provider
+// cards then stay disabled for a reason no assertion here is about. The grants
+// are empty because this act is onboarding, before any of them are held.
 
 function renderConnectAct(
   outcome?: string,
@@ -163,9 +163,9 @@ it("withholds every account when the roster fetch fails", async () => {
   ).toBeDisabled();
 });
 
-// The mark is what tells a genuine return apart from a stale or bookmarked
-// outcome URL (see `returnedVendor` in connect-act.tsx), so it has to be
-// written before the redirect actually leaves, not after.
+// The mark tells a real return apart from a stale or bookmarked outcome URL
+// (see `returnedVendor` in connect-act.tsx). So it has to be written before
+// the redirect leaves, not after.
 it("marks this tab's own attempt before the real redirect fires", async () => {
   stubWithSession(
     {
@@ -248,8 +248,8 @@ it("keeps the skip open when consent returned but no mailbox could be confirmed"
   ).toBeInTheDocument();
 });
 
-// The way on is read and acted on in the same place: the work surface the
-// reader has been looking at, not a chip surfaced beside the transcript.
+// The way on is read and acted on in the same place. That is the work surface
+// the reader has been looking at, not a chip beside the transcript.
 describe("the way onward", () => {
   it("renders on the stage's rail — never as a thread chip", () => {
     stubWithSession(
@@ -301,7 +301,7 @@ describe("the IMAP form", () => {
     await user.click(screen.getByRole("button", { name: "Not now" }));
 
     expect(screen.queryByLabelText("IMAP host")).toBeNull();
-    // Backing out of ONE provider's ask is not the same decision as skipping
+    // Backing out of one provider's ask is not the same decision as skipping
     // the whole mailbox step: neither fires here.
     expect(dispatch).not.toHaveBeenCalled();
     expect(persist).not.toHaveBeenCalled();
@@ -310,11 +310,11 @@ describe("the IMAP form", () => {
 });
 
 // The disabled Skip only guards its own click. The dialog's other dismissal
-// routes (X, Escape, backdrop) resolve to the same close handler, so it is
-// that handler that refuses while the save is in flight.
+// routes (X, Escape, backdrop) resolve to the same close handler, so that
+// handler refuses while the save is in flight.
 // A roster invalidation (IMAP's own successful connect fires one) puts the
-// query back into flight exactly like the first load did, and the "pick one"
-// rule cannot tell that refetch apart from a first read still pending.
+// query back into flight as the first load did. The "pick one" rule cannot
+// tell that refetch apart from a first read still pending.
 it("keeps the accounts disabled during a roster refetch, not just its first load", async () => {
   const deferred: { resolve: ((r: Response) => void) | null } = {
     resolve: null,
@@ -355,9 +355,9 @@ it("keeps the accounts disabled during a roster refetch, not just its first load
   await user.click(screen.getByRole("button", { name: "Test and connect" }));
   await waitFor(() => expect(rosterCalls).toBe(2));
 
-  // The connect just invalidated the shared roster query; its refetch (call
-  // #2, deferred above) is in flight, so Google and Microsoft, unconnected on
-  // the stale data, must not be pickable until it reports back.
+  // The connect just invalidated the shared roster query, and its refetch (call
+  // #2, deferred above) is in flight. Google and Microsoft, unconnected on the
+  // stale data, must not be pickable until it reports back.
   expect(screen.getByRole("radio", { name: /Google/ })).toBeDisabled();
   expect(screen.getByRole("radio", { name: /Microsoft/ })).toBeDisabled();
 
@@ -381,8 +381,8 @@ it("keeps the accounts disabled during a roster refetch, not just its first load
   expect(screen.queryByRole("radio", { name: /Google/ })).toBeNull();
 });
 
-// A failed roster read is the ONE mail-gate failure with no other surface to
-// explain it: every account renders disabled either way, which without a word
+// A failed roster read is the one mail-gate failure with no other surface to
+// explain it. Every account renders disabled either way, which without a word
 // reads as an ordinary still-loading moment.
 it("says why every account is disabled when the roster read fails, and offers a retry", async () => {
   let rosterCalls = 0;

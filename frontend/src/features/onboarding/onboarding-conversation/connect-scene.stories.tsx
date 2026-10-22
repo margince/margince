@@ -16,10 +16,10 @@ import "./conversation.css";
 
 // The connect act's work surface on its own, without the act that owns its
 // state. The act's stories (`Onboarding/Conversation/Connect act`) walk the
-// route and consent outcomes; these hold the ask in view: the account picker,
-// the inline Google ask with mail and calendar both ticked, IMAP's form, an
-// account whose company app waits on an administrator, the connected account
-// and a roster read that failed.
+// route and consent outcomes. These hold the ask in view. They show the
+// account picker and the inline Google ask with mail and calendar both ticked.
+// They also show IMAP's form, an account whose company app waits on an
+// administrator, the connected account and a roster read that failed.
 
 const ALL_READY: ProviderAvailability[] = [
   { provider: "gmail", reason: "ready" },

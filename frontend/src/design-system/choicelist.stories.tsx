@@ -64,9 +64,8 @@ export const Unanswered: Story = {
   render: () => <Live initial="" />,
 };
 
-// A reader who may not change it. The words stay legible , the point of the
-// control is that both answers can be read, and that is as true for somebody
-// who cannot pick one.
+// A reader who may not change it. The words stay legible: both answers can be
+// read, as true for somebody who cannot pick one.
 export const Disabled: Story = {
   args: {
     legend: "Which conversations go into the CRM?",
@@ -224,7 +223,7 @@ function VendorsLive() {
 }
 
 // One answer as plates with the vendor's own mark, on an elevated card as in a
-// drawer: every live plate stays light, and the chosen one is drawn selected.
+// drawer. Every live plate stays light and the chosen one is drawn selected.
 export const SingleCardsWithMark: Story = {
   render: () => (
     <Card as="div">

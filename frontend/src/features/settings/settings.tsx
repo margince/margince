@@ -288,10 +288,10 @@ export function tabContent(id: SettingsPageId, route?: Route): ReactNode {
   }
 }
 
-// What YOU are connected to: the mail connector list is scoped to the calling
-// human server-side and the LinkedIn surface reads `/me`, so this is personal
-// and needs no grant. What those mailboxes brought in and what is held back is
-// on Capture activity.
+// What you are connected to. The mail connector list is scoped to the calling
+// human server-side and the LinkedIn surface reads `/me`. So this is personal
+// and needs no grant. What those mailboxes brought in and what is held back
+// is on Capture activity.
 function ConnectionsTab() {
   return (
     <>
@@ -438,11 +438,10 @@ export function SettingsScreen({
           to the page's one save bar, which claims for them. */}
       <SettingsSavePage>
         <div className="settings-stack arrive-stack">
-          {/* Said ONCE, at the top, and only for a page with NO open control —
-              the `looksUp` half of the partition: a reader who can change
-              nothing would otherwise infer it from a screenful of disabled
-              cards, and a banner over a control that works is worse than
-              silence. */}
+          {/* Said once, at the top, and only for a page with no open control: the
+              `looksUp` half of the partition. A reader who can change nothing would
+              otherwise infer it from a screenful of disabled cards, and a banner over
+              a control that works is worse than silence. */}
           {readOnlyPage && (
             <Callout kind="standing" title={t("settings.readOnlyPageTitle")}>
               {t("settings.readOnlyPage")}

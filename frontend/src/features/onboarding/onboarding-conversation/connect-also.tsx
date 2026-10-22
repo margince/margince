@@ -21,9 +21,9 @@ import { useT } from "../../../i18n";
 // What the connect step offers beside the mailbox, in either state: the
 // overnight brief and the LinkedIn profile. Neither gates the step.
 //
-// LinkedIn is not a connection here. Nothing is authorized and nothing syncs:
-// the member records which profile their imported network is attributed to,
-// so a connection they bring in later reads "Anna knows them" rather than
+// LinkedIn is not a connection here. Nothing is authorized and nothing syncs.
+// The member records which profile their imported network is attributed to.
+// A connection they bring in later then reads "Anna knows them" rather than
 // "the company knows them". The import itself lives in Settings.
 
 export type LinkedinStatus = "pending" | "saved" | "skipped";
@@ -106,9 +106,9 @@ function LinkedinRow({
       />
       <Modal
         open={open && status === "pending"}
-        // X, Escape and the backdrop all resolve to this ONE handler, so
-        // guarding it here keeps every dismissal from racing the save: a PUT
-        // landing after the reader backed out would save against a closed ask.
+        // X, Escape and the backdrop all resolve to this one handler. Guarding it here
+        // keeps every dismissal from racing the save: a PUT landing after the reader
+        // backed out would save against a closed ask.
         onClose={() => {
           if (!pending) {
             setOpen(false);
@@ -137,8 +137,8 @@ function LinkedinRow({
 }
 
 // The profile ask: one URL and why it is wanted. No scope list, because
-// nothing is being granted: the address is written to the member's own
-// account and read by nobody but the import that attributes their network.
+// nothing is being granted. The address is written to the member's own account
+// and read only by the import that attributes their network.
 function LinkedinPanel({
   onSave,
   onSkip,

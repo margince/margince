@@ -11,8 +11,9 @@ import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { newClient, renderWith } from "../../testing/shellharness";
 import { SettingsHome } from "./settingshome";
 
-// The "Your setup" card at the top of the settings home: the same steps the top
-// bar reminds a reader of, still here after the reminder is hidden.
+// The "Your setup" card at the top of the settings home. It holds the same
+// steps the top bar reminds a reader of, still here after the reminder is
+// hidden.
 
 const VOICE_WRITER: GrantSpec = { voice_profile: ["read", "create", "update"] };
 

@@ -17,13 +17,10 @@ import { navigate } from "../../lib/router";
 export type LinkedInReach = components["schemas"]["LinkedInReachResponse"];
 type ReachAccount = LinkedInReach["accounts"][number];
 
-// The largest page the contract's `limit` admits, asked for explicitly. This
-// view has no cursor (the endpoint declares no cursor parameter and the
-// response carries none), so ONE page is the whole of what a reader can reach,
-// which makes where the list stops this screen's stated choice rather than the
-// server's unnamed default of 50. The caveat reads `accounts_total`,
-// computed over everything, so what sits past the edge is still counted out
-// loud.
+// The largest page the contract's `limit` admits, asked for explicitly. The
+// endpoint declares no cursor, so one page is all a reader can reach. The list
+// edge is therefore this screen's choice, not the server's default of 50.
+// The caveat reads `accounts_total`, so what sits past the edge is still counted.
 const REACH_PAGE_LIMIT = 200;
 
 const REACH_KEY = ["linkedin-reach", REACH_PAGE_LIMIT] as const;

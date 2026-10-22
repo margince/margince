@@ -17,10 +17,11 @@ import type { GrantSpec } from "../../testing/mefixture";
 import { jsonResponse, stubWithSession } from "../../testing/story-utils";
 import { ConnectorsCard } from "./connectors";
 
-// The Mail and calendar card before anything is connected: the steps above a
-// tile per vendor whose Connect opens the dialog on that vendor, a vendor this
-// installation has not wired marked on its own tile with who turns it on, the
-// row for another mail host, and the company's sharing rule under it all.
+// The Mail and calendar card before anything is connected. It shows the steps
+// above a tile per vendor whose Connect opens the dialog on that vendor. A
+// vendor this installation has not wired is marked on its own tile with who
+// turns it on. Below sit the row for another mail host and the company's
+// sharing rule.
 
 type Availability = components["schemas"]["CaptureProviderAvailability"];
 

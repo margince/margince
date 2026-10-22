@@ -7,8 +7,8 @@ import { Button } from "./atoms";
 import { Meter } from "./readings";
 import { ServiceList, ServiceRow } from "./servicerow";
 
-// The services one account brings in, in each state a service can be in, and
-// the same rows as the permissions a connect flow asks for.
+// The services one account brings in, in each state a service can be in.
+// The same rows also appear as the permissions a connect flow asks for.
 
 const meta: Meta<typeof ServiceRow> = {
   title: "Components/Layout and structure/Service row",

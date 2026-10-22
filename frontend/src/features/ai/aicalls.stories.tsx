@@ -314,7 +314,7 @@ export const ListPhone: Story = {
   render: list(calls),
 };
 
-// The settings column is 720 wide: five columns and a broker's unbroken model
+// The settings column is 720 wide. Five columns and a broker's unbroken model
 // ids still fit it, with no sideways scroll and every badge inside the card.
 export const BrokerModelsAtSettingsWidth: Story = {
   render: () => {

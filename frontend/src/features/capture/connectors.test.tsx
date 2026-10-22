@@ -35,11 +35,11 @@ const gmailConnected: CaptureConnection = {
     "https://www.googleapis.com/auth/gmail.send",
   ],
   last_synced_at: "2026-07-23T09:30:00Z",
-  // A finished backfill: mounting BackfillPanel below the row must not fire
-  // an extra request (the panel seeds from this embedded snapshot). "none"
+  // A finished backfill. Mounting BackfillPanel below the row must not fire an
+  // extra request, because the panel seeds from this embedded snapshot. "none"
   // would auto-fire the setup screen's scope preview against an unstubbed
-  // route — "done" is the honest, inert terminal state for an established
-  // connection these fixtures otherwise don't care about.
+  // route. "done" is the inert terminal state for a connection these fixtures
+  // do not otherwise care about.
   backfill: { state: "done" },
 };
 
@@ -214,7 +214,7 @@ describe("the connected-inboxes card", () => {
 
   // The history import belongs to the mailbox it imports for, as one of the
   // services its account lists. A row that only offers the import counts
-  // nothing: the scope preview is a provider round trip, so it waits for the
+  // nothing. The scope preview is a provider round trip, so it waits for the
   // dialog the reader opens.
   it("lists past email under the mailbox's own account without counting it", async () => {
     const calls = stubApi([{ ...gmailConnected, backfill: { state: "none" } }]);
@@ -227,12 +227,11 @@ describe("the connected-inboxes card", () => {
     expect(requestsTo(calls, "/backfill/preview", "POST")).toHaveLength(0);
   });
 
-  // A calendar is not a mailbox, and the three mail-shaped rows do not belong
-  // to one. Reported from a live installation: a member saw the history-import
-  // card under their Google Calendar answering "this mailbox type can't be
-  // backfilled" and read it as the product refusing to import their mail. The
-  // account label is their own email address on both connections, so the row
-  // itself gave them no reason to think otherwise.
+  // A calendar is not a mailbox, and the three mail-shaped rows do not belong to
+  // one. A history-import card under a Google Calendar once answered "this
+  // mailbox type can't be backfilled". A member read that as a refusal to import
+  // their mail. The account label is their own email address on both
+  // connections, so the row gave no reason to think otherwise.
   it("draws no mail-shaped row against a calendar connection", async () => {
     stubApi([gcalConnected]);
     render(<ConnectorsCard />);
@@ -261,8 +260,8 @@ describe("the connected-inboxes card", () => {
     expect(screen.queryByTestId("connector-gmail-past-email")).toBeNull();
   });
 
-  // And the tag row stays: a meeting brings in contacts exactly as a message
-  // does, so which source found them is the same question on either kind.
+  // And the tag row stays. A meeting brings in contacts as a message does, so
+  // which source found them is the same question on either kind.
   it("keeps the context tag row on a calendar connection", async () => {
     stubApi([
       {
@@ -435,9 +434,9 @@ describe("the connected-inboxes card", () => {
       expect(requestsTo(calls, "/connect", "POST").length).toBe(1),
     );
     expect(await screen.findByText(/connect failed/)).toBeTruthy();
-    // Announced, and attached to the account whose Reconnect produced it, at
-    // the row's full width: never in a band of its own under an unrelated
-    // heading, and never squeezed into the service's verb column.
+    // Announced, and attached to the account whose Reconnect produced it, at the
+    // row's full width. Never in a band of its own under an unrelated heading,
+    // and never squeezed into the service's verb column.
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toMatch(/connect failed/);
     const service = screen.getByTestId("connector-gmail");
@@ -461,8 +460,8 @@ describe("the connected-inboxes card's richer health line", () => {
     expect(await screen.findByText("lars@example.de")).toBeTruthy();
   });
 
-  // How the sync works underneath (push or poll, the next check) is not a
-  // fact a member acts on, so the default view leaves it out.
+  // How the sync works underneath (push or poll, the next check) is not a fact a
+  // member acts on. The default view leaves it out.
   it("keeps the sync mechanics out of the default view", async () => {
     stubMailRoutes({
       "GET /connectors": () =>
@@ -534,15 +533,15 @@ describe("the connected-inboxes card's richer health line", () => {
   });
 });
 
-// The OAuth return outcome (Task 2): the backend now lands the callback on
-// #/settings/connections/{outcome} — the route parses to
-// {screen:"settings", id:"connections", id2:<outcome>} and the card renders
-// a dismissible inline note from that segment, never a claim the server
-// hasn't confirmed.
+// The OAuth return outcome: the backend lands the callback on
+// #/settings/connections/{outcome}. The route parses to
+// {screen:"settings", id:"connections", id2:<outcome>}. The card renders a
+// dismissible inline note from that segment, never a claim the server has not
+// confirmed.
 describe("the OAuth return outcome", () => {
   // An import asked for at connect that the server held for the reader rides
-  // the landing as ?import=, on the calendar's landing too when the consent
-  // was chained, and lands on the account it was asked for.
+  // the landing as ?import=. It rides the calendar's landing too when the
+  // consent was chained, and lands on the account it was asked for.
   it("offers the held import on the account the landing names", async () => {
     globalThis.location.hash = "#/settings/connections/ok/gcal?import=12m";
     stubMailRoutes({
@@ -671,8 +670,8 @@ describe("the OAuth return outcome", () => {
   });
 });
 
-// "Add account" opens the connect dialog over the roster it adds to. What the
-// dialog sends for each answer is pinned in connect-flow.test.tsx; these cases
+// "Add account" opens the connect dialog over the roster it adds to.
+// connect-flow.test.tsx pins what the dialog sends for each answer. These cases
 // pin what the card hands it: the roster, and the way out to the IMAP form.
 describe("add an account", () => {
   it("offers what is left of a half-connected account, and refuses a full one", async () => {
@@ -739,8 +738,8 @@ describe("add an account", () => {
 
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toMatch(/connect failed/);
-    // In the dialog the press happened in, not in a band of its own on the
-    // card behind it, where nothing says which press it answers.
+    // In the dialog the press happened in. Not in a band of its own on the card
+    // behind it, where nothing says which press it answers.
     expect(dialog.contains(alert)).toBe(true);
   });
 

@@ -16,8 +16,8 @@ import { meFixture } from "../../testing/mefixture";
 import { AvailabilityCard } from "./meeting-availability";
 
 // The hours half of Meetings, as a reader without the booking grant gets it.
-// A host who narrows their hours receives fewer bookings and will not
-// necessarily connect the two, so the card says so at the moment they save.
+// A host who narrows their hours receives fewer bookings and may not connect
+// the two, so the card says so at the moment they save.
 
 type WorkingHours = components["schemas"]["WorkingHours"];
 
@@ -36,7 +36,7 @@ const FALLBACK: WorkingHours = {
 };
 
 // backendFor answers the read with the given state and applies a PUT the way
-// the server does: storing what it was sent and answering with it, now chosen.
+// the server does. It stores what it was sent and answers with it, now chosen.
 function backendFor(chosen: boolean, hours: WorkingHours = FALLBACK) {
   let state = { chosen, working_hours: hours };
   const writes: WorkingHours[] = [];

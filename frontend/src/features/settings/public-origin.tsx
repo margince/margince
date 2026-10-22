@@ -12,13 +12,9 @@ import { useConnectors } from "../../lib/connectors";
  * answered when last asked.
  *
  * On System health because it answers that page's question: is something
- * broken in the background. A deployment configured with a localhost origin
- * sends mail whose unsubscribe links open nothing, and without this card the
- * only way to find out was for a recipient to click one.
- *
- * Reported, never enforced. The boot and send guards refuse an unusable
- * origin; a probe from inside the deployment says this process can reach it,
- * not that a recipient's mail client can.
+ * broken in the background. A localhost origin sends mail whose unsubscribe
+ * links open nothing. Reported, never enforced: a probe from inside the
+ * deployment cannot show a recipient's client can reach the address.
  */
 export function PublicOriginCard() {
   const t = useT();

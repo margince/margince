@@ -147,8 +147,9 @@ export const NOTIFICATION_ROUTES: RouteMap = {
 };
 
 // Every page story routes all of these: a card can sit on more than one page.
-// No vendor app yet: the answer the sign-in page reads for each vendor, which
-// the contract makes complete, so an unrouted read would be an answer no server gives.
+// No vendor app yet: the answer the sign-in page reads for each vendor. The
+// contract makes it complete, so an unrouted read would be an answer no server
+// gives.
 const NO_OAUTH_APP = (provider: string) => ({
   provider,
   configured: false,

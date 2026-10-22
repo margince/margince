@@ -13,8 +13,8 @@ import {
 } from "./connect-flow-draft";
 
 // What Margince should read from one account, asked in the connect dialog, in
-// "Change what it brings in" and in onboarding: one builder, so the three
-// asks never word or refuse a service differently.
+// "Change what it brings in" and in onboarding. One builder serves all three,
+// so they never word or refuse a service differently.
 
 type Provider = components["schemas"]["CaptureConnection"]["provider"];
 

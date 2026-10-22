@@ -19,10 +19,10 @@ import {
 } from "./onboarding-connect-panels";
 
 // The onboarding IMAP panel (G-10): the wizard's connect step for the one
-// credential provider must post through the typed client — the nested
-// `{imap:{...}}` shape a STANDING connect expects (Task 1) — never a raw
-// fetch to the retired transient endpoint. A standing connect answers
-// BEFORE any mail is read, so the panel hands back to the step, whose account
+// credential provider. It must post through the typed client, with the nested
+// `{imap:{...}}` shape a standing connect expects. It must never use a raw
+// fetch to the retired transient endpoint. A standing connect answers before
+// any mail is read, so the panel hands back to the step. The step's account
 // panel shows the mailbox from the roster.
 
 function render(ui: ReactNode, client?: QueryClient) {
@@ -283,8 +283,8 @@ describe("ImapConnectPanel", () => {
   });
 });
 
-// A granted mail leg is confirmed from the roster, and the exit back to the
-// ask is offered only once the roster has answered that nothing came back.
+// A granted mail leg is confirmed from the roster. The exit back to the ask is
+// offered only once the roster has answered that nothing came back.
 describe("OAuthReturnPanel confirming a granted mailbox", () => {
   it("keeps the plain exit when no connection could be confirmed", async () => {
     installFetchStub({ "GET /connectors": () => jsonResponse({ data: [] }) });

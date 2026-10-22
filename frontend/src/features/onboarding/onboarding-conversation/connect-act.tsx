@@ -32,11 +32,10 @@ import { ConversationWorkbench } from "./workbench";
 
 // The connect act: the work account picked once and asked for inline, mail
 // and calendar in one press, and the way on. A connected mailbox leaves the
-// reader on the step, LinkedIn still waiting beside it, rather than carrying
-// them out of it.
-// Leaving is a server fact before it is a UI fact: how the step was left
-// (a mailbox connected, or none) must land before the act moves on; a
-// failed write is said out loud and retryable.
+// reader on the step, LinkedIn still waiting beside it.
+// Leaving is a server fact before it is a UI fact. How the step was left
+// (a mailbox connected, or none) must land before the act moves on. A failed
+// write is said out loud and retryable.
 
 type ConnectActProps = Readonly<{
   state: ConversationState;
@@ -48,12 +47,12 @@ type ConnectActProps = Readonly<{
   returningProvider?: string;
 }>;
 
-// `outcome` and `returningProvider` are ROUTE segments: a stale bookmark or a
+// `outcome` and `returningProvider` are route segments: a stale bookmark or a
 // reload of an old return URL replays them with no live attempt behind them.
-// `peekOAuthAttempt` is the one thing that DOES prove this tab started the
-// trip, so the account a refused trip was for comes back picked only when the
-// mark and the route name the same vendor. A mail-and-calendar trip marks the mailbox and
-// lands on the calendar, which is the same account.
+// Only `peekOAuthAttempt` proves this tab started the trip. So the account a
+// refused trip was for comes back picked only when the mark and the route name
+// the same vendor. A mail-and-calendar trip marks the mailbox and lands on the
+// calendar, which is the same account.
 function returnedVendor(
   outcome: string | undefined,
   returningProvider: string | undefined,
@@ -83,9 +82,9 @@ export function ConnectAct({
   returningProvider,
 }: ConnectActProps) {
   const t = useT();
-  // The account whose ask is open. On the page load a proven redirect lands
-  // on, it is the account that trip was for, so a refused consent can be
-  // asked again from where the reader left.
+  // The account whose ask is open. On the page load a proven redirect lands on,
+  // it is the account that trip was for. A refused consent can then be asked
+  // again from where the reader left.
   const [vendor, setVendor] = useState<MailProvider | null>(() =>
     returnedVendor(outcome, returningProvider),
   );
@@ -111,9 +110,9 @@ export function ConnectAct({
   }, [outcome]);
 
   // A result whose mailbox question is answered (a consent returned, an IMAP
-  // host connected) closes onto the step, whose roster now shows the account
-  // as connected. The outcome in the address goes with it: left there, a
-  // reload would show a trip this tab already finished.
+  // host connected) closes onto the step. Its roster now shows the account as
+  // connected. The outcome in the address goes with it. Left there, a reload
+  // would show a trip this tab already finished.
   const settleResult = () => {
     setVendor(null);
     setResultSettled(true);
@@ -249,9 +248,9 @@ export function ConnectAct({
           linkedinError={
             linkedin.isError ? problemMessageOf(linkedin.error, t) : null
           }
-          // A redirect already returned: what it could not do, shown inline
-          // whether or not this tab can vouch for the trip, because a stale
-          // link still reports what the roster says.
+          // A redirect already returned: what it could not do, shown inline whether or
+          // not this tab can vouch for the trip. A stale link still reports what the
+          // roster says.
           returnPanel={
             outcome !== undefined && !resultSettled ? (
               <OAuthReturnPanel

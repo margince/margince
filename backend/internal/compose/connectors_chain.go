@@ -76,8 +76,8 @@ func (c connectImport) start(ctx context.Context, st connectState) (bool, error)
 }
 
 // heldOnLeg is the window a landing offers before this leg does anything. Only a
-// calendar leg carries one, forwarded by the mail leg that held it; a mail
-// leg's window is a request its own callback has not acted on yet.
+// calendar leg carries one, forwarded by the mail leg that held it.
+// A mail leg's window is a request its own callback has not acted on yet.
 func heldOnLeg(st connectState) int {
 	if IsMailProvider(st.Provider) {
 		return 0
@@ -126,9 +126,8 @@ func (h connectorHandlers) chainAfterConnect(ctx context.Context, w http.Respons
 }
 
 // mintConsent opens one provider's consent. CSRF: a random nonce goes into both
-// a SameSite=Lax cookie and the signed state; the callback requires them to
-// match, so a victim can't complete an attacker-initiated flow (account-linking
-// CSRF).
+// a SameSite=Lax cookie and the signed state. The callback requires them to
+// match, so a victim can't complete an attacker-initiated flow.
 func (h connectorHandlers) mintConsent(w http.ResponseWriter, app oauthApp, st connectState) string {
 	st.Nonce = setCSRFNonce(w, csrfCookieName(st.Provider), connectorCookiePath)
 	st.Version = stateVersionNamespacedCSRF

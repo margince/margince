@@ -20,10 +20,10 @@ export type Vendor = "google" | "microsoft";
 
 // vendorCopy is each vendor's own wording, as literal message keys.
 //
-// A record of literals rather than a template built from the provider name: the
-// translator's key type is a closed union, so a computed key types as a plain
-// string and a missing translation would reach a reader as a raw key instead of
-// failing the build.
+// A record of literals rather than a template built from the provider name.
+// The translator's key type is a closed union, so a computed key types as a
+// plain string. A missing translation would then reach a reader as a raw key
+// instead of failing the build.
 export const vendorCopy = {
   google: {
     title: "oauthApp.google.title",
@@ -59,9 +59,9 @@ type LockedApp = Readonly<{
 
 /**
  * Where a core vendor's app comes from. An installation configuration that
- * fixes the app wins over a stored one and refuses every edit, so `lock`
- * carries the sentence naming where to change it; the deprecated `source` field
- * is not read.
+ * fixes the app wins over a stored one and refuses every edit. So `lock`
+ * carries the sentence naming where to change it. The deprecated `source`
+ * field is not read.
  */
 export function vendorAppState(
   app: LockedApp,
@@ -90,7 +90,7 @@ export const VENDOR_CONSOLE: Readonly<Record<Vendor, string>> = {
 };
 
 // The query key carries the vendor, so storing one app does not blank the
-// other's card — one key for both would make every write invalidate a view it
+// other's card. One key for both would make every write invalidate a view it
 // says nothing about.
 function appQueryKey(provider: string) {
   return ["installation-oauth-app", provider];
@@ -98,10 +98,9 @@ function appQueryKey(provider: string) {
 
 export const APP_LIST_KEY = ["installation-oauth-apps"];
 
-// Every read an app write changes: the app itself, the list of apps, the setup
-// report that names it as outstanding, the connector roster whose availability
-// it decides, and the sign-in policy. Store and remove share it, so neither
-// can forget one.
+// Every read an app write changes. That is the app, the list of apps, the
+// setup report naming it as outstanding, the connector roster it gates and the
+// sign-in policy. Store and remove share it.
 async function refreshAfterAppWrite(
   queryClient: QueryClient,
   provider: string,

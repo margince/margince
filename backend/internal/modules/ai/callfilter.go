@@ -11,7 +11,7 @@ import (
 )
 
 // CallListFilter narrows the call trace; a zero field does not narrow, and the
-// set fields combine with AND. Outcome is one of the AiCallOutcome values the
+// set fields combine with `AND`. Outcome is one of the AiCallOutcome values the
 // handler has already validated.
 type CallListFilter struct {
 	Task, Provider, ServedProvider, Tier string
@@ -23,7 +23,7 @@ type CallListFilter struct {
 
 // callModelSQL is the model a reader sees for a call, the served identity or the
 // configured binding when the provider reported none. The dropdown's option set
-// reads it, and the model filter matches it or the configured id, so an option
+// reads it. The model filter matches it or the configured id, so an option
 // matches its own calls and a figures link by configured model still lands.
 const callModelSQL = `COALESCE(NULLIF(c.served_model, ''), c.model_id)`
 
@@ -41,7 +41,7 @@ var declinedSentinels = []string{sentinelOutputWithheld, sentinelRequestRejected
 var likeEscaper = strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`)
 
 // callQuery is one statement's argument list. Every placeholder is derived from
-// it, and the outcome expression binds its sentinel sets here so the column a
+// it. The outcome expression binds its sentinel sets here, so the column a
 // row reports and the predicate the filter applies are the same text.
 type callQuery struct {
 	args    []any
@@ -54,6 +54,7 @@ func newCallQuery() *callQuery {
 	return query
 }
 
+//craft:ignore naked-any one list holds string slices and strings, each bound as a pgx argument
 func (query *callQuery) arg(value any) int {
 	query.args = append(query.args, value)
 	return len(query.args)
@@ -72,7 +73,7 @@ func callOutcomeSQL(declined, served int) string {
 	ELSE 'answered' END`, declined, served)
 }
 
-// where is the filter's WHERE clause over the terminal rows.
+// where is the filter's `WHERE` clause over the terminal rows.
 func (f CallListFilter) where(query *callQuery) string {
 	clauses := []string{"c.is_terminal"}
 	for _, equal := range []struct{ column, value string }{

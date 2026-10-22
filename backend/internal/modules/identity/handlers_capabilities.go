@@ -108,17 +108,13 @@ func (h Handlers) GetAuthCapabilities(w http.ResponseWriter, r *http.Request) {
 	httperr.WriteJSON(w, http.StatusOK, caps)
 }
 
-// SignInScreenProviders is the one answer to "which buttons does the login
-// screen draw": the providers the policy enables that also hold a client right
-// now. The anonymous probe spends its rate budget before asking; the
-// authentication-policy read asks it too, so an admin sees what took effect.
+// SignInScreenProviders answers which buttons the login screen draws: the
+// providers the policy enables that also hold a client right now.
 //
-// A failed policy read reports NO providers rather than an error. The login
-// screen renders from this, so an error must cost a reader the buttons and not
-// the page. The routes fail closed separately (StartOidcSignIn), so a short list
-// never admits a sign-in the policy would refuse. Where the password method is
-// off that leaves nothing, and the screen says so: the honest report of a
-// momentary failure, and why boot refuses that posture with no provider mounted.
+// A failed policy read reports no providers rather than an error, so a failure
+// costs a reader the buttons and not the page. The routes fail closed
+// separately (StartOidcSignIn), so a short list never admits a refused sign-in.
+// With the password method off, the screen shows nothing to click.
 func (h Handlers) SignInScreenProviders(ctx context.Context) []OIDCProviderConfig {
 	drawn := make([]OIDCProviderConfig, 0)
 	if h.oidcProvidersEnabledFn == nil {

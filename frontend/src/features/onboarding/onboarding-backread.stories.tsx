@@ -12,11 +12,12 @@ import {
 } from "../../testing/story-utils";
 import { BackreadPanel, useOnboardingBackread } from "./onboarding-backread";
 
-// The backread step for the fe-uat render gate: one story per honest branch:
-// the window pick with its scope, a failed estimate that still allows the read,
-// a run in progress with and without a denominator, the finished read, and the
-// two failure states. Every fixture is a valid BackfillStatus/BackfillPreview,
-// so nothing here renders a count the wire could not have sent.
+// The backread step for the fe-uat render gate, one story per branch.
+// They cover the window pick with its scope and a failed estimate that still
+// allows the read. They also cover a run in progress with and without a
+// denominator, the finished read, and the two failure states.
+// Every fixture is a valid BackfillStatus/BackfillPreview.
+// Nothing here renders a count the wire could not have sent.
 
 type BackfillStatus = components["schemas"]["BackfillStatus"];
 

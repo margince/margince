@@ -22,7 +22,7 @@ import type { AdminWait } from "../../../lib/setup-checklist";
 
 // The picked account's company app is missing or will not open, so no connect
 // can start. An administrator fixes that here, in place, because the onboarding
-// gate bounces a link to Settings back to this step; anyone else gets a request
+// gate bounces a link to Settings back to this step. Anyone else gets a request
 // to hand on and the way to another mail provider.
 
 const WAIT_COPY: Readonly<

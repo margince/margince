@@ -20,18 +20,16 @@ import {
 import { RunView } from "./backfillrunview";
 import "../../components/backfill.css";
 
-// The bounded connect-time backfill (ADR-0063): pick a window, see the scope
-// BEFORE anything spends (ADR-0020 preview-before-spend: the estimate card
-// is the consent surface), then watch real progress. Every number rendered
-// here is a persisted-row count from the single-row status read; nothing is
-// fabricated client-side (CAP-AC-OPEN-1). The scope preview auto-loads so the
-// first thing a newly-connected user sees is honest scope, not a blank form:
-// but the spend still waits for the explicit "Start the import" consent.
+// The bounded connect-time backfill (ADR-0063). Pick a window, see the scope
+// before anything spends (the estimate card is the consent surface), then watch
+// real progress. Every number rendered here is a persisted-row count from the
+// single-row status read. The scope preview auto-loads, but the spend waits for
+// the explicit "Start the import" consent.
 //
 // It is the body of the Settings import dialog, opened from a connected
 // account's Past email service. The account row seeds it with the run row
 // embedded in `CaptureConnection.backfill`, so a live run shows with no extra
-// request; without a seed it fetches on mount.
+// request. Without a seed it fetches on mount.
 
 type BackfillStatus = components["schemas"]["BackfillStatus"];
 type Provider = components["schemas"]["CaptureConnection"]["provider"];
@@ -46,17 +44,16 @@ const FALLBACK_CURRENCY = "USD";
 
 // Both preview and start can answer connector_unsupported (a provider with no
 // Backfiller: IMAP today) or window_narrowing (start only, a widen-only
-// re-run): pull the RFC 7807 code out of a thrown ProblemError so the render
-// can branch to its own honest sentence instead of the raw server detail.
+// re-run). Pull the RFC 7807 code out of a thrown ProblemError so the render
+// can branch to its own sentence instead of the raw server detail.
 function errorCodeOf(error: unknown): string | null {
   return error instanceof ProblemError ? problemCode(error.problem) : null;
 }
 
-// connector_unsupported is a structural fact about the provider (no
-// Backfiller behind it), independent of which window was picked: either op
-// can be the one that surfaces it, depending on whether the setup screen's
+// connector_unsupported is a structural fact about the provider, independent of
+// the window picked. Either op can surface it, depending on whether the
 // auto-preview or an explicit start round-trips first. window_narrowing only
-// ever comes from start (preview never enqueues a run).
+// ever comes from start, because preview never enqueues a run.
 function classifyBackfillErrors(
   previewError: unknown,
   startError: unknown,
@@ -222,9 +219,9 @@ function BackfillSetup({
 }) {
   const t = useT();
 
-  // A provider with no Backfiller behind it (IMAP today) can't run this op
-  // at all, whichever window is picked: the honest answer is a capability
-  // statement, not a retryable error inside the rest of the setup form.
+  // A provider with no Backfiller behind it (IMAP today) can't run this op at
+  // all, whichever window is picked. The answer is a capability statement, not
+  // a retryable error inside the rest of the setup form.
   if (unsupported) {
     return (
       <Panel>
@@ -265,16 +262,12 @@ function BackfillSetup({
   );
 }
 
-// EstimateCard is the consent surface: whatever is known about the scope, and
-// the verb that acts on it.
+// EstimateCard is the consent surface. It shows whatever is known about the
+// scope, and the verb that acts on it.
 //
 // The verb stands in every scope state: counted, still counting, or refused.
-// The window is what the reader picked and what bounds the run; the estimate
-// only describes that window, so a count that is slow or that failed is a
-// reason to say so, never a reason to withhold the import. Drawing the card
-// only on a landed estimate took the start button off screen for exactly the
-// mailboxes slow enough to make someone wonder, and off screen for good when
-// the estimator refused.
+// The window bounds the run and the estimate only describes it. A slow or
+// failed count is a reason to say so, never to withhold the import.
 export function EstimateCard({
   preview,
   window,

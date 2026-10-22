@@ -13,9 +13,9 @@ import {
 } from "../../testing/story-utils";
 import { OAuthAppsCard } from "./oauth-apps-card";
 
-// The card in each state an installation reaches: no app from any source, one
-// stored, one the installation's configuration supplies, and a reader who may
-// see the apps but not change them.
+// The card in each state an installation reaches. Either no app from any
+// source, one stored, or one the installation's configuration supplies. Also a
+// reader who may see the apps but not change them.
 
 const meta: Meta<typeof OAuthAppsCard> = {
   title: "Settings/Company/Sign-in and apps/Company apps",

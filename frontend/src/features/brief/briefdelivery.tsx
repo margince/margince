@@ -86,7 +86,7 @@ function BriefDeliveryRows() {
   });
 
   const chosen = (value: Choice | undefined): Choice => value ?? "email";
-  // The refused write's keys name themselves: the bar holds the one summary and
+  // The refused write's keys name themselves. The bar holds the one summary, and
   // each control that was in the write points at the notice under the list.
   const refusedBy = (setting: keyof BriefDelivery) =>
     save.isError && save.variables?.[setting] !== undefined

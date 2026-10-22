@@ -151,7 +151,7 @@ func TestALiveBookingPageSavesItsLimitsWithoutAskingTheCalendar(t *testing.T) {
 }
 
 // Pointing a live page at another calendar, or at new blocking calendars, is
-// what the check vouches for, so it runs again and its refusal stands.
+// what the check vouches for. So it runs again and its refusal stands.
 func TestALiveBookingPageChecksTheCalendarItIsPointedAt(t *testing.T) {
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)

@@ -104,9 +104,9 @@ export function needsAttention(profile: Profile, standing: CalendarStanding) {
 type ConnectorsData = ReturnType<typeof useConnectors>["data"];
 
 /**
- * The calendar a single Connect press can ask for: the one beside a vendor the
- * member already uses, else the one vendor this installation can connect.
- * Null means the choice belongs on Connections.
+ * The calendar a single Connect press can ask for. That is the one beside a
+ * vendor the member already uses, else the one vendor this installation can
+ * connect. Null means the choice belongs on Connections.
  */
 export function calendarToConnect(
   data: ConnectorsData,

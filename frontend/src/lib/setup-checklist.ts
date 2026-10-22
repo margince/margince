@@ -252,7 +252,7 @@ export function useSetupChecklist(reach: SettingsReach): SetupChecklist {
     acts.has("meetings") && scheduling,
   ];
   // A refused or failed read drops the steps it feeds rather than claiming
-  // them open: the reader is never sent to something the product cannot see.
+  // them open. The reader is never sent to something the product cannot see.
   const steps = deriveSetupSteps({
     acts,
     connectors: connectors.data ?? null,

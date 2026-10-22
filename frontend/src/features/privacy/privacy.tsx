@@ -329,9 +329,9 @@ function FulfilErasureModal({
       title={t("privacy.fulfilErasureTitle")}
       confirmLabel={t("privacy.erasureConfirm")}
       confirmVariant="danger"
-      // A reported hold or a request that moved on fails the same way on
-      // every retry, so the confirm stays shut until the operator reopens the
-      // dialog against the request's current state.
+      // A reported hold or a request that moved on fails the same way on every
+      // retry. So the confirm stays shut until the operator reopens the dialog
+      // against the request's current state.
       confirmDisabled={!phraseMatches(typed, ERASE_PHRASE) || held || movedOn}
       onConfirm={() => dsr && patch.mutate({ request: dsr, resolution })}
       pending={patch.isPending}

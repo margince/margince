@@ -204,9 +204,9 @@ it("OAuthReturnPanel keeps the generic failure for an unrecognized outcome", asy
   ).toBeTruthy();
 });
 
-// The posture question rides the connect flow because the import is what
-// reads a year of mail: an answer given on a later screen arrives after every
-// message it was meant to govern. It is saved on the choice.
+// The posture question rides the connect flow because the import reads a year
+// of mail. An answer given on a later screen arrives after every message it
+// was meant to govern. It is saved on the choice.
 describe("the posture step", () => {
   function renderPosture(posture: string | undefined, sharedAllowed = false) {
     const bodies: { posture: string; apply: boolean }[] = [];
@@ -255,9 +255,9 @@ describe("the posture step", () => {
     ).toBeChecked();
   });
 
-  // A same-account reconnect lands on the row it already had, so "nothing is
-  // captured yet" is not something this screen can assume: narrowing carries
-  // the history with it, widening never opens it as a side effect.
+  // A same-account reconnect lands on the row it already had, so this screen
+  // cannot assume nothing is captured yet. Narrowing carries the history with
+  // it, and widening never opens it as a side effect.
   it("saves on the choice, narrowing the mail already captured", async () => {
     const bodies = renderPosture("classified");
     await userEvent.click(

@@ -49,7 +49,7 @@ type connectState struct {
 	// click connects mail and calendar. Empty ends the chain at this callback.
 	Then string
 	// WindowMonths is the past-email window asked for at connect. A mail leg
-	// imports it once its grant lands; a calendar leg carries it only when the
+	// imports it once its grant lands. A calendar leg carries it only when the
 	// mail leg did not start it, so its landing can offer the start.
 	WindowMonths int
 }

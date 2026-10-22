@@ -33,18 +33,18 @@ import "./connectors.css";
 // and the workspace bot beside it on Integrations.
 export { TelegramConnectorsPanel } from "./connectors.telegram";
 
-// The connected-inboxes surface (RC-8): the Settings cards the onboarding copy
-// has always promised ("disconnect in one click", "manage in Settings"). It
-// lists the live capture connections, lets a stale one reconnect (re-mint the
-// same consent URL), and disconnects one in a single confirmed click.
-// Every field shown is a server fact from GET /connectors — never a claim.
+// The connected-inboxes surface (RC-8), the Settings cards the onboarding copy
+// promises ("disconnect in one click", "manage in Settings"). It lists the live
+// capture connections and lets a stale one reconnect (re-mint the same consent
+// URL). One confirmed click disconnects. Every field shown is a server fact from
+// GET /connectors, never a claim.
 //
 // Mail only. The workspace's Telegram bot is company wiring and lives on
-// Integrations; the address emailed links use is reported on System health.
+// Integrations. The address emailed links use is reported on System health.
 //
-// The roster is one ProviderRow per account (connection-account.tsx), with
-// what each service brings in under it. Adding an account is the card's create
-// verb, so it sits in the header and opens the connect dialog.
+// The roster is one ProviderRow per account (connection-account.tsx), with what
+// each service brings in under it. Adding an account is the card's create verb,
+// so it sits in the header and opens the connect dialog.
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
 
@@ -113,7 +113,7 @@ function connectionsLanding(route: Route, params: UrlParams): Landing {
   };
 }
 
-// The head says nothing is connected until something is; from then on it
+// The head says nothing is connected until something is. From then on it
 // carries the create verb, while there is still an account left to add.
 function MailHeadAction({
   empty,
@@ -173,8 +173,8 @@ function LandingOutcome({
 export function ConnectorsCard() {
   const t = useT();
   const [imapConnectOpen, setImapConnectOpen] = useState(false);
-  // The connect dialog: closed, open on the account step (""), or open on what
-  // a vendor or another host brings in, when the page already chose it.
+  // The connect dialog is closed, open on the account step (""), or open on what
+  // a vendor or another host brings in. The last applies when the page chose.
   const [adding, setAdding] = useState<FlowAccount | "" | null>(null);
   const [params] = useUrlParams();
   const landing = connectionsLanding(useRoute(), params);
@@ -186,16 +186,16 @@ export function ConnectorsCard() {
   );
   const present = rows.map((r) => r.provider);
 
-  // Gated on the list having ANSWERED, not merely on it not having failed:
-  // what is left to add is derived from what is already connected, so before
-  // the read lands every account looks free.
+  // Gated on the list having answered, not merely on it not having failed.
+  // What is left to add is derived from what is connected, so before the read
+  // lands every account looks free.
   const rosterKnown = connectors.isSuccess && !notConfigured;
   const empty = rosterKnown && rows.length === 0;
   const offerAdd = rosterKnown && canAddAccount(present);
   const titleId = useId();
   const addId = useId();
   // Adding a mailbox can take the verb away (every account connected, or the
-  // roster's first row replaces the empty tiles), so focus falls back to the
+  // roster's first row replaces the empty tiles). Focus then falls back to the
   // card's title when the head verb is gone.
   const backToAdd = () =>
     document.getElementById(addId) ?? document.getElementById(titleId);

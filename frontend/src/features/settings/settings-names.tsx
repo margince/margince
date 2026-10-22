@@ -133,7 +133,7 @@ export function useAccountNames(toast: Toast): AccountNames {
 }
 
 // The field the server refused, so its sentence stands under that field and the
-// other one is not blamed; the bar still carries the one summary error.
+// other one is not blamed. The bar still carries the one summary error.
 function useNameRefusal() {
   const t = useT();
   const [refusal, setRefusal] = useState<{

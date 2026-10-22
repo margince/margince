@@ -85,9 +85,9 @@ const APP_TILE = {
 
 /**
  * Today's profile has no video field of its own, so the tiles map onto the two
- * it has: the app is video_call on with no location, the host's own place is
- * video_call off with one, and none is off with neither. An absent video_call
- * means on.
+ * it has. The app is video_call on with no location. The host's own place is
+ * video_call off with one. None is off with neither. An absent video_call means
+ * on.
  */
 export function videoOf(
   profile: Pick<Profile, "video_call" | "location">,
@@ -121,8 +121,8 @@ function minutesOf(draft: LinkDraft): number {
 
 /**
  * What a save sends, against the profile the drawer opened on. The video pair
- * is written only when the tile changed or the own address was edited, so a
- * title edit never clears an address a legacy profile kept beside its video.
+ * is written only when the tile changed or the own address was edited. A title
+ * edit then never clears an address a legacy profile kept beside its video.
  */
 export function linkChanges(
   original: Profile,

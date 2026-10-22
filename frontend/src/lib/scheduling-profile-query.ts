@@ -20,8 +20,9 @@ export function useSchedulingProfile({
 }
 
 /**
- * Writes some fields of the booking profile over the server's latest copy, so a
- * card saving one setting never puts back what another card or tab changed.
+ * Writes some fields of the booking profile over the server's latest copy.
+ * A card saving one setting then never puts back what another card or tab
+ * changed.
  */
 export async function putSchedulingChanges(
   changes: Partial<Profile>,

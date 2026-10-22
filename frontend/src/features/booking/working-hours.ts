@@ -10,9 +10,9 @@ type WorkingHours = components["schemas"]["WorkingHours"];
 // order the server stores.
 export const WEEK = [1, 2, 3, 4, 5, 6, 7] as const;
 
-// dayLabelKey names each day's own key. Spelled out rather than composed,
-// because `t` takes a key from a closed union: a computed key does not compile,
-// and that is what keeps this honest about which days it has words for.
+// dayLabelKey names each day's own key, spelled out rather than composed.
+// `t` takes a key from a closed union, so a computed key does not compile. That
+// keeps this list to the days it has words for.
 export function dayLabelKey(day: (typeof WEEK)[number]): MessageKey {
   switch (day) {
     case 1:
@@ -59,13 +59,13 @@ export function minutesOf(written: string): number {
   return hours * 60 + minutes;
 }
 
-// narrowing reports whether the saved window is smaller than the one that was
-// there before: fewer hours in a day, or fewer days in the week.
+// narrowing reports whether the saved window is smaller than the one before.
+// That means fewer hours in a day, or fewer days in the week.
 //
-// It is the sentence the card owes the reader: a host who moves to 09:00-13:00
-// will receive roughly half the bookings they do today and will not necessarily
-// connect the two. Saying so at the moment they save is the difference between
-// a setting and a trap.
+// The card owes the reader a sentence here. A host who moves to 09:00-13:00
+// will receive roughly half the bookings they do today and may not connect the
+// two. Saying so at the moment they save is the difference between a setting
+// and a trap.
 export function narrowing(before: WorkingHours, after: WorkingHours): boolean {
   const wasHours = minutesOf(before.end_time) - minutesOf(before.start_time);
   const nowHours = minutesOf(after.end_time) - minutesOf(after.start_time);

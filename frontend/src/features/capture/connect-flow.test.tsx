@@ -19,10 +19,10 @@ import { LocaleProvider } from "../../i18n";
 import { locationDouble } from "../../testing/locationdouble";
 import { ConnectFlow } from "./connect-flow";
 
-// The connect dialog decides what the server is asked for: which provider
-// leads, whether its calendar is chained after it, and how far back the import
-// reaches. These cases pin each answer the reader can give to the body it
-// sends, and the two ways out that never reach a vendor.
+// The connect dialog decides what the server is asked for. That covers which
+// provider leads, whether its calendar is chained after it, and how far back
+// the import reaches. These cases pin the body each answer sends, and the two
+// ways out that never reach a vendor.
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {

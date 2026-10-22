@@ -112,18 +112,18 @@ type CallPage struct {
 	Items      []CallSummary
 	NextCursor string
 	HasMore    bool
-	// Tasks and Models are the workspace's COMPLETE terminal sets (sorted),
-	// carried on every page so the trace's dropdowns offer every value, not
-	// just the ones on the current page. Independent of cursor and filters.
+	// Tasks and Models are the workspace's complete terminal sets (sorted).
+	// Every page carries them so the dropdowns offer every value, not just
+	// the current page's. They ignore cursor and filters.
 	Tasks  []string
 	Models []string
 }
 
 // callSummaryFrom joins each terminal row `c` to two aggregates over its
-// logical call's attempts on ai_call_logical_idx: `lc`, whether a decision model
-// was asked, and `lp`, the attempts' price-on-read cost, priced as CostReport
-// prices them so the two sum alike. They are apart so an outcome filter, which
-// reads only `lc`, prices just the rows it keeps.
+// logical call's attempts on ai_call_logical_idx. `lc` says whether a decision
+// model was asked. `lp` is the attempts' cost, priced as CostReport prices them.
+// They are apart so an outcome filter reads only `lc`. That prices just the
+// rows it keeps.
 func callSummaryFrom(query *callQuery) string {
 	fallbackFrom, fallbackTo := rateFallbacks()
 	rate := rateMatch("ac.provider", "ac.model_id", "ac.occurred_at::date",
@@ -265,7 +265,7 @@ func (s *CallReadStore) ListCalls(
 }
 
 // readCallFacets is the complete terminal task and model sets for the filter
-// dropdowns, over EVERY terminal row so they stay complete whatever the page
+// dropdowns, over every terminal row so they stay complete whatever the page
 // shows. is_terminal matches the list's own universe, so no option filters to
 // nothing; a call naming no model at all offers no blank option.
 func readCallFacets(ctx context.Context, tx pgx.Tx) (tasks, models []string, err error) {

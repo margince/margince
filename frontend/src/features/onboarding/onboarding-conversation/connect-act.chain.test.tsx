@@ -21,7 +21,7 @@ import { initialConversationState } from "./conversation-machine";
 // The connect step's ask: the work account picked once, mail and calendar
 // asked for in one press. The calendar rides as the mail consent's
 // `also_connect`, so the server chains the second consent onto the first's
-// return; onboarding never sends an import window, because it asks how far
+// return. Onboarding never sends an import window, because it asks how far
 // back to read only once the mailbox is live.
 
 function renderAct(outcome?: string, returningProvider?: string) {

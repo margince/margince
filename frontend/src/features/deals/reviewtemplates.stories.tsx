@@ -13,11 +13,10 @@ import {
 import type { ReviewTemplate } from "./outcomereview.queries";
 import { ReviewTemplatesCard } from "./reviewtemplates";
 
-// The questions a closed deal is asked. The picture worth keeping is the list
-// an administrator actually meets: a win and a loss template side by side, each
-// outcome badge in its own tone, and a retired template still listed under the
-// badge that says it is no longer offered. Won is green and Lost grey: a
-// loss is a result, not a fault.
+// The questions a closed deal is asked. The list an administrator meets shows
+// a win and a loss template side by side, each badge in its own tone. A retired
+// template stays listed under the badge saying it is no longer offered.
+// Won is green and Lost grey: a loss is a result, not a fault.
 
 function template(over: Partial<ReviewTemplate>): ReviewTemplate {
   return {

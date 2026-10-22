@@ -41,12 +41,11 @@ const summary = {
 };
 
 // The trace is gated on `ai_diagnostics:read`, which is what `GET /ai/calls`
-// asks for, so a stub that never answers /me leaves the caller holding no
-// grant and the card correctly says it is withheld instead of rendering rows.
+// asks for. A stub that never answers /me leaves the caller holding no grant,
+// so the card says it is withheld instead of rendering rows.
 //
-// The card asked `automation:update` before the runtime's spend got an object of
-// its own: a write verb guarding a GET, which kept a management seat off a read
-// the server would have served.
+// The card once asked `automation:update`, a write verb guarding a GET, which
+// kept a management seat off a read the server would have served.
 const OPERATOR: GrantSpec = { ai_diagnostics: ["read"] };
 
 const RETRIED = {
@@ -464,9 +463,9 @@ function askedQueries(): URLSearchParams[] {
     .map((url) => url.searchParams);
 }
 
-// Every dial is a question the server answers over the whole trace, so a pick
-// is written to the address and asked of the server, and an empty answer offers
-// the way back rather than claiming no such call exists.
+// Every dial is a question the server answers over the whole trace. A pick is
+// written to the address and asked of the server. An empty answer offers the
+// way back rather than claiming no such call exists.
 it("asks the server for the outcome and search picked, and clears both", async () => {
   const user = userEvent.setup();
   mount(true, true, OPERATOR, RETRIED, [], (query) => !query.has("q"));
@@ -555,9 +554,9 @@ it("names the decision lane in words, never as the rung key", async () => {
   expect(screen.queryByText(/\bdecide\b/)).toBeNull();
 });
 
-// The terminal row of a fallback is the completion, so the drawer reads the
-// logical call's flag rather than its own kind: a decision model that was asked
-// and overruled is marked in the drawer head.
+// The terminal row of a fallback is the completion. The drawer reads the
+// logical call's flag rather than its own kind. A decision model that was asked
+// and overruled is then marked in the drawer head.
 it("marks a call the decision model fell back from, and never as a retry", async () => {
   const user = userEvent.setup();
   mount(true, true, OPERATOR, DECIDED_THEN_FELL_BACK);
@@ -701,8 +700,8 @@ it("says what the decision model answered, and at what confidence", async () => 
   expect(second?.textContent).not.toContain("answered");
 });
 
-// The rung a decision model fell back to is the SECOND model asked, not a second
-// try of the first, so the attempt count is the ladder's own.
+// The rung a decision model fell back to is the second model asked, not a
+// second try of the first. The attempt count is the ladder's own.
 it("counts the ladder's attempts without the decision model before them", async () => {
   const user = userEvent.setup();
   mount(true, true, OPERATOR, {
@@ -728,8 +727,8 @@ it("leaves the reason out of an attempt that had none", async () => {
   expect(first?.textContent).not.toContain("\u2014");
 });
 
-// Under a feature filter an empty trace is a fact about that feature, so it
-// does not claim the installation never called a model, and offers the way back.
+// Under a feature filter an empty trace is a fact about that feature. It does
+// not claim the installation never called a model, and offers the way back.
 it("says a filtered feature has no calls, rather than that nothing was ever called", async () => {
   const user = userEvent.setup();
   globalThis.location.hash = "#/settings/model-calls?task=account_scan";
@@ -749,7 +748,7 @@ it("says a filtered feature has no calls, rather than that nothing was ever call
 });
 
 // The window is kept on the address by name and cut into an instant when the
-// request runs, so the server narrows the whole trace, not the loaded pages.
+// request runs. The server then narrows the whole trace, not the loaded pages.
 it("asks the server for calls inside the time range picked", async () => {
   const user = userEvent.setup();
   mount();

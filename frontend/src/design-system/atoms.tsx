@@ -34,21 +34,14 @@ export { OverflowMenu } from "./overflowmenu";
 export { TableScroll } from "./tablescroll";
 
 /**
- * The closed tone vocabulary, as a VALUE that the type is read from — so the
- * story that draws every tone and the gate that checks every tone is painted
- * walk the same list the compiler enforces. Spelled twice, they drift, and the
- * copy that goes stale is always the one nobody renders.
+ * The closed tone vocabulary, as a value the type is read from. The story and
+ * the gate that walk every tone then share the list the compiler enforces.
  *
- * `discovery` says a thing is NEW — newly arrived, newly offered, not yet how
- * things have always been. It is the one tone that reports no verdict: a status
- * says how something is GOING and this says how long it has been here, which is
- * why it is a word of its own rather than a borrowed `accent`.
+ * `discovery` says a thing is new. It reports no verdict: a status says how
+ * something is going, this says how long it has been here.
  *
- * `info` is the quiet blue and never a status: a status is one of the four
- * kinds of `StatusBadge` (green done, grey neutral including running with a
- * live dot, amber attention, red failure). It is not `accent`: accent is the
- * brand asking for a press, and a status wearing it told a reader the row was
- * the page's next move.
+ * `info` is the quiet blue and never a status, which is one of the four kinds
+ * of `StatusBadge`. It is not `accent`: accent is the brand asking for a press.
  */
 export const BADGE_TONES = [
   "default",

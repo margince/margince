@@ -243,7 +243,7 @@ func TestGetAuthCapabilitiesDisclosesNothingBeyondItsFixedFields(t *testing.T) {
 	}
 }
 
-// The login screen draws a provider only when the policy enables it AND a client
+// The login screen draws a provider only when the policy enables it and a client
 // stands behind it. A source with no client, or one that fails, withholds that
 // one button and leaves the others.
 func TestSignInScreenProvidersDrawsOnlyEnabledProvidersWithAClient(t *testing.T) {
@@ -271,7 +271,7 @@ func TestSignInScreenProvidersDrawsOnlyEnabledProvidersWithAClient(t *testing.T)
 }
 
 // An unwired policy and a failed read both draw no provider, and say so with an
-// empty list: the authentication-policy read puts this on the wire, where nil
+// empty list. The authentication-policy read puts this on the wire, where nil
 // would marshal as null.
 func TestSignInScreenProvidersIsEmptyNotNilWhenNothingIsDrawn(t *testing.T) {
 	if got := (Handlers{}).SignInScreenProviders(context.Background()); got == nil || len(got) != 0 {
@@ -286,8 +286,8 @@ func TestSignInScreenProvidersIsEmptyNotNilWhenNothingIsDrawn(t *testing.T) {
 }
 
 // The flood budget belongs to the anonymous probe, not to the answer. An admin
-// reading the authentication policy asks the same question and must not be told
-// "none" because somebody hammered the login screen from the same address.
+// reading the authentication policy must not be told "none" because somebody
+// hammered the login screen from the same address.
 func TestSignInScreenProvidersAnswersAfterTheProbesBudgetIsSpent(t *testing.T) {
 	h := NewHandlers(nil).WithOIDCProvidersEnabledFn(func(context.Context) ([]OIDCProviderConfig, error) {
 		return []OIDCProviderConfig{{Key: "google", Label: "Continue with Google"}}, nil

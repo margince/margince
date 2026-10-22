@@ -17,30 +17,25 @@ import { isLiveRun } from "../../lib/backfill-run";
 import { progressFraction } from "../../lib/capture-progress";
 import "../../components/backfill.css";
 
-// What a capture run LOOKS like while it runs and once it has stopped: the
-// three headline figures, the state it is in, and the share of the window it
-// has read.
+// What a capture run looks like while it runs and once it has stopped. It shows
+// the three headline figures, the state it is in, and the share of the window
+// read.
 //
-// Split from the setup panel beside it because the two answer different
-// questions. That panel is the consent surface: a window, its scope, and the
-// verb that spends; this one only ever reports what the server's own row
-// already says, and every number in it is a persisted count.
+// Split from the setup panel beside it, which is the consent surface. This one
+// only reports what the server's own row says, and every number in it is a
+// persisted count.
 
 type BackfillStatus = components["schemas"]["BackfillStatus"];
 
-// A run whose updated_at hasn't moved in this long is honestly "stuck", not
-// "in progress": the contract's own doc comment on BackfillStatus.updated_at
-// calls this out ("a killed worker leaves this honest"). Long enough that
-// ordinary poll jitter or a slow provider batch never false-positives, short
-// enough that a genuinely dead worker surfaces within a couple of polls of
-// the threshold rather than staying "live" indefinitely.
+// A run whose updated_at hasn't moved in this long is "stuck", not "in
+// progress". Long enough that poll jitter or a slow provider batch never
+// false-positives, short enough that a dead worker surfaces within a couple of
+// polls.
 const STALE_AFTER_MS = 3 * 60_000;
 
-// A live run whose updated_at hasn't moved past STALE_AFTER_MS is honestly
-// "stuck", not "in progress": the contract's own doc comment on
-// BackfillStatus.updated_at calls this out ("a killed worker leaves this
-// honest"). A done/error/cancelled run's updated_at is its finish stamp, not
-// a staleness signal, so this only applies to a live one.
+// A live run whose updated_at hasn't moved past STALE_AFTER_MS is "stuck", not
+// "in progress". A done/error/cancelled run's updated_at is its finish stamp,
+// not a staleness signal, so this only applies to a live one.
 function staleness(
   run: BackfillStatus,
   live: boolean,
@@ -73,11 +68,10 @@ export function runReading(run: BackfillStatus) {
   const scanned = counts?.messages_scanned ?? 0;
   const live = isLiveRun(run.state);
   const { stale, agoMs } = staleness(run, live);
-  // A percentage needs a denominator that is still true, and whether this one
-  // is depends on what kind of number the provider gave: Gmail answers a FLOOR
-  // on a large mailbox, Graph an exact count. progressFraction is the one rule,
-  // shared with the chrome's own orb. A run that is not moving forward gets no
-  // bar at all: a stalled import must not draw something that implies progress.
+  // A percentage needs a denominator that is still true. That depends on the
+  // provider: Gmail answers a floor on a large mailbox, Graph an exact count.
+  // progressFraction is the one rule, shared with the chrome's own orb. A run
+  // that is not moving forward gets no bar, since it would imply progress.
   const fraction =
     live && !stale
       ? progressFraction({
@@ -120,8 +114,8 @@ export function RunView({
   cancelError: string | null;
   onCancel: () => void;
   // Put the window picker back in front of the reader. Offered on every run
-  // that has stopped, which is every state this view draws that is not live:
-  // stopping an import is a decision about this run, never about the mailbox.
+  // that has stopped, which is every state this view draws that is not live.
+  // Stopping an import is a decision about this run, never about the mailbox.
   onRestart: () => void;
   // Continue a run that stopped on an error from where it stopped. Offered only
   // when the server says the run can be continued (`resumable`).
@@ -189,8 +183,8 @@ export function RunView({
   );
 }
 
-// What a stopped run has to say beyond its figures: the error, the messages it
-// walked past, and where a run that can be continued stopped.
+// What a stopped run has to say beyond its figures. That is the error, the
+// messages it walked past, and where a run that can be continued stopped.
 function RunNotes({
   run,
   scanned,
@@ -277,10 +271,10 @@ function RunFoot({
   );
 }
 
-// Either the bar or the staleness note over the scanned line, never both: a run
-// that is not moving forward does not get to keep the bar that implies
-// otherwise. The percentage rides the line only when the bar is drawn: the two
-// state one number twice, in a shape and in words.
+// Either the bar or the staleness note over the scanned line, never both. A run
+// that is not moving forward does not keep the bar that implies otherwise. The
+// percentage rides the line only when the bar is drawn, because the two state
+// one number twice, in a shape and in words.
 function RunProgress({
   scanned,
   fraction,

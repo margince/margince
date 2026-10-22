@@ -64,7 +64,7 @@ async function pickRole(
 
 describe("the group roles admin confirmation", () => {
   // A group mapped to Admin hands the highest role to everyone the directory
-  // puts in it, so a NEW one asks for the typed phrase, naming only that group.
+  // puts in it. So a new one asks for the typed phrase, naming only that group.
   it("asks for the typed phrase before saving a new Admin mapping", async () => {
     const user = userEvent.setup();
     const { calls } = mount({ admins: "admin", sales: "rep" });

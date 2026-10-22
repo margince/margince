@@ -131,7 +131,7 @@ func TestConnectStateCarriesChainAndImportWindow(t *testing.T) {
 }
 
 // A connect started before the chain existed is still in flight across a
-// deploy, so its state carries neither key and must land as a plain connect.
+// deploy. Its state carries neither key and must land as a plain connect.
 func TestConnectStateMintedWithoutChainStillVerifies(t *testing.T) {
 	s := newStateSigner([]byte("0123456789abcdef0123456789abcdef"))
 	now := time.Unix(1_700_000_000, 0)

@@ -10,7 +10,7 @@ import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import { LinkedInNetworkPanel } from "./linkedin-import";
 
 // The LinkedIn network panel: the import row says whether anything is imported
-// and how much, and the profile row offers Add before there is a profile and
+// and how much. The profile row offers Add before there is a profile and
 // Edit after.
 
 afterEach(() => {

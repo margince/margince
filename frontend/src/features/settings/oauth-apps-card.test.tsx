@@ -154,8 +154,8 @@ describe("the Google and Microsoft apps card", () => {
     ).toBeTruthy();
   });
 
-  // The installation's own app wins over a stored one and refuses every edit,
-  // so the row names where it is set and offers no verb that would be ignored.
+  // The installation's own app wins over a stored one and refuses every edit.
+  // So the row names where it is set and offers no verb that would be ignored.
   it("locks a configuration-supplied app and names where it is set", async () => {
     mount(app("google", "none"), app("microsoft", "environment"));
     const microsoft = await row("Microsoft app");
@@ -205,7 +205,7 @@ describe("the Google and Microsoft apps card", () => {
   });
 
   // A reader who may not write the apps still sees the verb, refused with the
-  // sentence that says why, rather than a page with the verbs missing.
+  // sentence that says why. The page does not show the verbs missing.
   it("refuses Set up with its reason to a reader who cannot change apps", async () => {
     mount(app("google", "none"), app("microsoft", "none"), false);
     const setUp = await screen.findByRole("button", {

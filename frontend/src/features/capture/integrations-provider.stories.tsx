@@ -221,14 +221,14 @@ export const OperatorConnectedDark: Story = {
   render: cardStory(OPERATOR, [connected]),
 };
 
-// The connected card at 390px: the ProviderRow head wraps its name and badge,
-// the five-column spend DataTable scrolls inside its own box, and the connect
-// verb and its OverflowMenu wrap as a pair instead of squeezing.
+// The connected card at 390px. The ProviderRow head wraps its name and badge.
+// The five-column spend DataTable scrolls inside its own box. The connect verb
+// and its OverflowMenu wrap as a pair instead of squeezing.
 //
-// Storybook applies the viewport from the MANAGER, by resizing the preview
-// iframe — so the fe-uat capture, which loads a bare iframe.html, renders this
-// at the harness's own width and its PNG is NOT a picture of a phone. Review it
-// in Storybook, or by narrowing the browser.
+// Storybook applies the viewport from the manager, by resizing the preview
+// iframe. The fe-uat capture loads a bare iframe.html, so it renders this at
+// the harness's own width. Its PNG is not a picture of a phone. Review it in
+// Storybook, or narrow the browser.
 export const OperatorConnectedPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],

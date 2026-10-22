@@ -22,9 +22,9 @@ import { routeHash } from "../../lib/router";
 import { settingsHref } from "../../lib/settingsrouting";
 import "./connection-empty.css";
 
-// The Mail and calendar card before anything is connected: the steps a Connect
-// walks, one tile per vendor with its own Connect, and a row for any other mail
-// host. Each tile opens the connect dialog with its vendor already chosen.
+// The Mail and calendar card before anything is connected. It shows the steps a
+// Connect walks, one tile per vendor with its own Connect, and a row for any
+// other mail host. Each tile opens the connect dialog with its vendor chosen.
 
 const VENDORS: readonly AccountVendor[] = ["google", "microsoft"];
 
@@ -173,7 +173,7 @@ export function ConnectTiles({
           />
         ))}
       </ul>
-      {/* Secondary on purpose: another host brings mail alone, so it is the
+      {/* Secondary by design: another host brings mail alone, so it is the
           way in for the reader the two tiles do not fit. */}
       {!imapUnwired && (
         <div className="connection-imap">

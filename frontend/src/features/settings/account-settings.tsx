@@ -39,13 +39,13 @@ import { NameSettingRows, useAccountNames } from "./settings-names";
 import { SignatureSettingRow } from "./settingssignaturerow";
 import { InstallSettingRow } from "./thisdevice";
 
-// The Account page as task cards, each one job a reader comes here to do: how
-// colleagues see you, how you sign in, the language that follows the account,
-// and what this browser alone remembers. Every field and choice commits through
-// the page's save bar.
+// The Account page as task cards, each one job a reader comes here to do. They
+// cover how colleagues see you, how you sign in, the language that follows the
+// account, and what this browser alone remembers. Every field and choice
+// commits through the page's save bar.
 export function AccountSettings() {
-  // The page owns where an announcement lands, not the row that produced it: a
-  // toast region between two rows would take the hairline the list draws.
+  // The page owns where an announcement lands, not the row that produced it.
+  // A toast region between two rows would take the hairline the list draws.
   const toast = useToast();
   return (
     <>
@@ -100,8 +100,8 @@ function ProfilePanel({ toast }: Readonly<{ toast: Toast }>) {
   );
 }
 
-// The credential and the session, together: the password row is the one that
-// ends every other session, and Sign out is the one that ends this one.
+// The credential and the session, together. The password row ends every other
+// session, and Sign out ends this one.
 function SignInPanel() {
   const t = useT();
   const me = useMe();

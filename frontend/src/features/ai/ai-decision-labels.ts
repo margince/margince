@@ -154,9 +154,8 @@ export function gaveUpLabel(code: string, t: T): string {
 }
 
 // Why an attempt ran. An explicit switch rather than a key built from the wire
-// string: the catalog is a closed union, and the reason field is a free string
-// the server widens without notice. An unknown reason is shown as sent: "some
-// reason", never a refusal.
+// string. The catalog is a closed union, and the server widens the free reason
+// string without notice. An unknown reason is shown as sent, never a refusal.
 export function attemptReasonLabel(reason: string, t: T): string {
   switch (reason) {
     case "decision_below_floor":

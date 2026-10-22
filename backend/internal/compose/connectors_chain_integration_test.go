@@ -6,8 +6,8 @@
 package compose
 
 // The import a connect asks for, over real migrated Postgres and the real queue
-// insert: the consent's callback runs under the grantor principal the signed
-// state rebuilds, so these prove that principal can open a run, audit it and
+// insert. The consent's callback runs under the grantor principal the signed
+// state rebuilds. These tests prove that principal can open a run, audit it and
 // schedule its pager, which no fake engine can.
 
 import (
@@ -95,8 +95,7 @@ func (c chainWire) gmailConnection(t *testing.T) string {
 }
 
 // importOpened counts what one started import writes: its queued run, the
-// connection's audit row naming the reach (attributed to the human who granted
-// it), and the pager behind the run.
+// connection's audit row naming the reach, and the pager behind the run.
 func (c chainWire) importOpened(t *testing.T, connID string, estimate int) (runs, audits, pagers int) {
 	t.Helper()
 	runs = c.env.WsCount(t, `SELECT count(*) FROM capture_backfill
@@ -147,7 +146,7 @@ func TestAConnectImportUnderTheCapStartsInTheCallback(t *testing.T) {
 }
 
 // Above the cap nothing is spent before the reader sees the count: no run, no
-// audit, no job, and the landing names the held window so its row can offer it.
+// audit, no job. The landing names the held window so its row can offer it.
 func TestAConnectImportOverTheCapLandsHeldWithItsEstimate(t *testing.T) {
 	c := setupChainWire(t)
 	c.gmail.messages = autoImportCap + 1

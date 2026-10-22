@@ -47,9 +47,9 @@ import { AccountSettings } from "./connection-settings";
 import { HistoryBaselineRow } from "./connectors.historybaseline";
 
 // One account on Connections: Google, Microsoft 365, an IMAP mailbox or the
-// test mailbox. Its row says how the account is doing as a whole, and when a
-// service broke, why in one line and the Reconnect that mends it. The services
-// under it each carry one badge; the overflow holds the other account verbs.
+// test mailbox. Its row says how the account is doing as a whole. When a service
+// broke, it gives the reason in one line and the Reconnect that mends it. The
+// services under it each carry one badge; the overflow holds the other verbs.
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
 type Provider = CaptureConnection["provider"];

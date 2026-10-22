@@ -12,12 +12,11 @@ import {
 } from "../../testing/story-utils";
 import { LinkedInNetworkPanel } from "./linkedin-import";
 
-// The LinkedIn network panel for the fe-uat render gate: the import as a
-// connection row with its drop zone, the profile row, the reach and the
+// The LinkedIn network panel for the fe-uat render gate. It shows the import as
+// a connection row with its drop zone, the profile row, the reach and the
 // how-to. It is a personal surface, so the stories differ only in what the
-// reads and the import return. The
-// profile editor is a Modal in the document body, so its story scopes `play`
-// past `canvasElement`.
+// reads and the import return. The profile editor is a Modal in the document
+// body, so its story scopes `play` past `canvasElement`.
 
 type Account = Readonly<{
   profile_url?: string;
@@ -116,9 +115,8 @@ export const EditingTheProfile: Story = {
   },
 };
 
-// What the import PRODUCED, reported under the row. Skipped rows are in the
-// picture on purpose: a file half-ignored under a success message is worse
-// than a refusal.
+// What the import produced, reported under the row. Skipped rows stay in the
+// picture: a file half-ignored under a success message is worse than a refusal.
 export const ImportSummary: Story = {
   render: panelStory({ profile_url: "" }, NO_REACH, {
     "POST /me/linkedin-connections": () =>

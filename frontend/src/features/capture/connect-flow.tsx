@@ -52,14 +52,14 @@ const ACCOUNT_DESCRIPTION: Record<FlowAccount, MessageKey> = {
 };
 
 /**
- * Connecting mail and calendar, in three steps: which account, what it brings
- * in, and the hand-off to the vendor's own sign-in. One consent per service is
- * the server's design, so a vendor account asks twice, chained server-side in
- * one round trip that lands back on Connections.
+ * Connecting mail and calendar, in three steps. First comes which account, then
+ * what it brings in, then the hand-off to the vendor's own sign-in. The server
+ * takes one consent per service, so a vendor account asks twice, chained
+ * server-side in one round trip that lands back on Connections.
  *
- * `startFrom` opens on step 2 for a reader who already chose the vendor on the
- * page. Another mail host has no step 3 here: Continue hands over to the IMAP
- * form, which the caller owns because Reconnect opens the same one.
+ * `startFrom` opens on step 2 for a reader who already chose the vendor.
+ * Another mail host has no step 3 here. Continue hands over to the IMAP form,
+ * which the caller owns because Reconnect opens the same one.
  */
 export function ConnectFlow({
   open,
@@ -103,7 +103,7 @@ export function ConnectFlow({
   };
   const { step, account } = draft;
   // Each step swaps the controls out from under the press that moved it, so
-  // focus goes to the new title; an opening is the dialog's own to place.
+  // focus goes to the new title. An opening is the dialog's own to place.
   const headingRef = useRef<HTMLHeadingElement>(null);
   const seen = useRef({ open, step });
   useEffect(() => {
@@ -363,9 +363,9 @@ function BringInStep({
 }
 
 /**
- * How far back to import, or not at all. Not ImportWindowPicker: that one
- * picks a window for a mailbox that exists and shows its preview, while no
- * mailbox exists yet here and None is an answer.
+ * How far back to import, or not at all. Not ImportWindowPicker: that one picks
+ * a window for a mailbox that exists and shows its preview. Here no mailbox
+ * exists yet, and None is an answer.
  */
 function ImportPicker({
   value,

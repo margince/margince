@@ -79,7 +79,7 @@ function roleAriaLabel(group: string, t: ReturnType<typeof useT>): string {
     : t("groupRoles.roleFor", { group });
 }
 
-// Only a NEW admin grant asks: re-saving one the map already held changes
+// Only a new admin grant asks: re-saving one the map already held changes
 // nobody's role, and the confirmation names only the groups it adds.
 function newAdminGroups(
   map: Readonly<Record<string, string>>,
@@ -105,7 +105,7 @@ function draftChanged(
 }
 
 // The map waiting on the typed confirmation is held as it was when Save was
-// pressed, so the dialog confirms exactly what the admin read.
+// pressed, so the dialog confirms what the admin read.
 function useGrantCommit(
   save: ReturnType<typeof useSaveSignInPolicy>,
   initial: Readonly<Record<string, string>>,
@@ -347,8 +347,9 @@ export function GroupRoleGrants({
   );
 }
 
-// Typed, because a group mapped to Admin hands the highest role to everyone the
-// directory puts in it, at their next sign-in, with nobody asked again.
+// Typed, because a group mapped to Admin hands the highest role to everyone
+// the directory puts in it. That happens at their next sign-in, with nobody
+// asked again.
 function AdminGrantConfirm({
   groups,
   map,

@@ -13,16 +13,14 @@ type ChecklistVariant = "list" | "inline";
 const VariantContext = createContext<ChecklistVariant>("list");
 
 /**
- * Numbered steps toward something working: connect a calendar, check the
- * hours, share the link. An ordered list, so the order is announced, with the
- * numbers drawn from a CSS counter rather than typed into each step.
+ * Numbered steps toward something working, as an ordered list so the order is
+ * announced. Numbers come from a CSS counter.
  *
- * Not a wizard stepper: every step is on screen at once and the reader may do
- * them in any order. Not a tick control either; a step is done because the
- * product can see it is, never because somebody pressed it.
+ * Not a wizard stepper: every step is on screen and any order works. Not a
+ * tick control either: a step is done because the product can see it is.
  *
  * `inline` is the one-line trail of a flow walked with Back and Continue:
- * marks and titles only, so a step's caption, body and action are not drawn.
+ * marks and titles only.
  */
 export function Checklist({
   count,

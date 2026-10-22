@@ -62,8 +62,8 @@ const SavePageContext = createContext<Registry | null>(null);
 
 /**
  * Collects every card's draft on one page so a single bar saves them together.
- * The drafts' callbacks live in a ref, because inline closures change on every
- * render and holding them in state would re-render the page in a loop.
+ * The drafts' callbacks live in a ref. Inline closures change on every render,
+ * so holding them in state would re-render the page in a loop.
  */
 export function SavePageProvider({
   children,
@@ -188,7 +188,7 @@ export function useSavePage(): SavePage | null {
 }
 
 /**
- * The one Save of a settings page, pinned to the foot of the view and drawn
+ * The one Save of a settings page, pinned to the foot of the view. It is drawn
  * only while some card on the page holds a draft.
  */
 export function PageSaveBar() {

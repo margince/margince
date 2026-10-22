@@ -142,8 +142,8 @@ function DeliveryChoices({
   );
   useSaveDraft({
     dirty: changed.length > 0,
-    // One class per write, in turn: the endpoint takes one, and a refusal stops
-    // the rest so the bar's error belongs to the row still drafted.
+    // One class per write, in turn, because the endpoint takes one. A refusal
+    // stops the rest, so the bar's error belongs to the row still drafted.
     save: async () => {
       setRefused(null);
       for (const row of changed) {
@@ -230,15 +230,14 @@ function DeliveryRow({
             refusedBy,
           )}
           className="settingrow-measure"
-          // A row the seat has never decided sits on the STANDING DEFAULT the
-          // server reports, not on a blank or an invented "Default" option:
-          // what the control shows is what happens today, and saving a pick is
-          // what turns a default into a decision.
+          // A row the seat has never decided sits on the standing default the server
+          // reports, not on a blank or an invented "Default" option. The control shows
+          // what happens today, and saving a pick turns a default into a decision.
           value={delivery}
           onChange={(next) => {
-            // Narrowed through the same list the options are built from, so
-            // nothing is drafted that the control was never offering: the coach
-            // row can no more send `off` than it can show it.
+            // Narrowed through the same list the options are built from, so nothing is
+            // drafted that the control was never offering. The coach row can no more send
+            // `off` than it can show it.
             const picked = offered.find((choice) => choice === next);
             if (picked) {
               onPick(picked);

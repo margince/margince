@@ -241,25 +241,20 @@ function PostureCosts({
 }
 
 /**
- * What the sharing rule currently SAYS, as the plate under the reader's own
- * Mail and calendar card.
+ * What the sharing rule currently says, as the plate under the reader's own
+ * Mail and calendar card. A value, not a control.
  *
- * A value, not a control. The switch lives on Capture rules, because it writes
- * the WORKSPACE's posture, and the badge says so: this one plate on a page of
- * the reader's own accounts binds the whole company. It sits under the
- * mailboxes because it governs the mail they bring in, which is where a reader
- * wonders who else can read it.
- *
- * The link appears only for a reader who may CHANGE the rule. Every seeded role
- * may read the posture, so a visibility test sent a rep to a disabled switch.
+ * The switch lives on Capture rules because it writes the workspace's posture,
+ * and the badge says so. The plate sits under the mailboxes because it governs
+ * the mail they bring in.
  */
 export function MailSharingPlate() {
   const t = useT();
   const query = useCaptureSettings();
   // The same question the switch on the other page asks, not "may they open
-  // that page". Every seeded role may READ the capture posture, so a visibility
-  // test offered "Change this" to a rep who would arrive at a disabled switch —
-  // an invitation to a refusal, which is worse than no invitation.
+  // that page". Every seeded role may read the capture posture, so a
+  // visibility test offered "Change this" to a rep who would find a disabled
+  // switch.
   const canChangeIt = useCanWrite("capture_settings", "update");
   const company = useMe().data?.workspace_name ?? "";
   // Nothing until the read lands: a wrong statement about who can read

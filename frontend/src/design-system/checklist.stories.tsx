@@ -7,8 +7,8 @@ import { Checklist, ChecklistStep } from "./checklist";
 import { DataTable } from "./datatable";
 
 // Numbered steps toward a working setup: every state of the list, the count
-// caption, the inline trail of a flow, and one where the product cannot see
-// progress, so every step stays open with a body.
+// caption and the inline trail of a flow. One frame is a list where the
+// product cannot see progress, so every step stays open with a body.
 
 const meta: Meta<typeof Checklist> = {
   title: "Components/Status indicators/Checklist",

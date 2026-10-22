@@ -21,11 +21,11 @@ import type { PairedCalendar } from "../lib/connect-account";
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
 
-// The callback lands on .../{outcome}/{provider}, and only these outcomes are
+// The callback lands on .../{outcome}/{provider}. Only these outcomes are
 // server-defined; any other segment is ignored rather than printed back.
-// Three failures exist so one nobody can fix by retrying does not say retry:
-// the provider refused the grant, its API was never enabled, or it refused
-// this installation's client credentials.
+// Three failures exist so one nobody can fix by retrying does not say retry.
+// Either the provider refused the grant, or its API was never enabled, or it
+// refused this installation's client credentials.
 const OAUTH_OUTCOME_NOTE: Record<string, MessageKey> = {
   ok: "connectors.oauthOk",
   denied: "connectors.oauthDenied",
@@ -134,13 +134,11 @@ function readLanding(
 
 /**
  * The OAuth return outcome above a page's own content: it reports what the
- * reader just did, which is not one of the page's standing decisions.
+ * reader just did, not one of the page's standing decisions.
  *
- * The heading answers whether anything got connected, and the sentence under
- * it says what syncs now or which remedy a failure wants. A calendar refused
- * after its mailbox was granted is a partial success, so it offers the one
- * missing consent through `connectCalendar`, which the host page wires.
- * Dismissing clears it until the landing changes.
+ * A calendar refused after its mailbox was granted is a partial success, so
+ * it offers the one missing consent through `connectCalendar`, which the host
+ * page wires. Dismissing clears it until the landing changes.
  */
 export function OAuthOutcomeNote({
   outcome,

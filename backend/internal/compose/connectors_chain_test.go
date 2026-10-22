@@ -116,8 +116,8 @@ func TestConnectRefusesAWindowAboveTheInstallationsCeiling(t *testing.T) {
 	}
 }
 
-// Asking for the calendar is asking for a connect that would answer on its own,
-// so it is refused exactly as connecting the calendar directly would be.
+// Asking for the calendar is asking for a connect that would answer on its own.
+// It is refused as connecting the calendar directly would be.
 func TestConnectRefusesAChainedCalendarThatCannotConnect(t *testing.T) {
 	h := wiredHandlers()
 	h.gcalOAuth = nil

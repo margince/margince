@@ -22,9 +22,9 @@ import { EstimateCard } from "./backfill";
 import { canResume, runReading } from "./backfillrunview";
 
 // The Past email service of a connected mailbox: the import of mail from before
-// it was connected. A connect asks for a window; a small one starts on its own,
-// and a larger one, or one the server could not count, is held for the reader
-// and lands here with its estimate and one Start import.
+// it was connected. A connect asks for a window. A small one starts on its own.
+// A larger one, or one the server could not count, is held for the reader and
+// lands here with its estimate and one Start import.
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
 type BackfillStatus = components["schemas"]["BackfillStatus"];
@@ -70,7 +70,7 @@ export function usePastEmail({
   onImport: () => void;
 }>): PastEmailParts {
   const t = useT();
-  // The scope is counted only for a held window: a row that merely offers the
+  // The scope is counted only for a held window. A row that merely offers the
   // import must not spend a provider round trip on every page load.
   const importRun = useBackfillRun({
     provider: mail.provider,
@@ -81,8 +81,8 @@ export function usePastEmail({
   const run = importRun.status.data;
   useDrawsImportRun(run !== undefined && runReading(run).live);
 
-  // A reconnect can hold a wider window over an import that already finished,
-  // so the hold stands until a run of that window is moving or has run.
+  // A reconnect can hold a wider window over an import that already finished.
+  // The hold stands until a run of that window is moving or has run.
   const covered =
     run !== undefined && (runReading(run).live || run.window === heldWindow);
   const held = covered ? null : heldWindow;
@@ -214,8 +214,9 @@ function RunVerbs({
   );
 }
 
-// How far a run got: a bar against an exact estimate, the count alone against
-// a floor (Gmail stops counting a large mailbox), and what it brought in.
+// How far a run got. A bar shows against an exact estimate. The count alone
+// shows against a floor (Gmail stops counting a large mailbox). Then comes what
+// it brought in.
 function RunBody({
   run,
   importRun,

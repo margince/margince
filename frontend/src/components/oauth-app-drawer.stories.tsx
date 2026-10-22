@@ -45,10 +45,10 @@ function Served({
   children,
 }: Readonly<{ app: unknown; children: ReactNode }>) {
   installFetchStub({
-    // The RESOLVED path, not the template: installFetchStub matches a route key
-    // against the request's pathname by exact string, and api.GET has already
-    // substituted the provider by the time it is called. A key still carrying
-    // `{provider}` matches nothing and every story renders the fallback.
+    // The resolved path, not the template: installFetchStub matches a route key
+    // against the request's pathname by exact string. api.GET has already
+    // substituted the provider, so a key still carrying `{provider}` matches
+    // nothing and every story renders the fallback.
     "GET /installation/oauth-apps/google": () => jsonResponse(app),
     "GET /installation/oauth-apps/microsoft": () => jsonResponse(app),
     "GET /me": () =>

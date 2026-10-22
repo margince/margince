@@ -286,8 +286,8 @@ func loginScreenKeys(t *testing.T, e *apptest.AppEnv) []string {
 }
 
 // Chosen is not drawn: a provider the installation offers with no client yet is
-// listed in sign_in_providers and absent from sign_in_screen, spelled [] rather
-// than null, so the admin screen can say it is waiting for its app.
+// listed in sign_in_providers and absent from sign_in_screen. It is spelled []
+// rather than null, so the admin screen can say it is waiting for its app.
 func TestTheSignInScreenLeavesOutAChosenProviderWithNoClient(t *testing.T) {
 	e := signInFixture(t, "", "")
 

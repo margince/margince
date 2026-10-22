@@ -302,8 +302,8 @@ function ScreenLine({
   );
 }
 
-// The reason comes from the app the page already reads; a reason the server
-// adds later falls through to "cannot be used right now" rather than a guess.
+// The reason comes from the app the page already reads. A reason the server
+// adds later falls through to "cannot be used right now", not a guess.
 function VendorMissingLine({ vendor }: Readonly<{ vendor: Vendor }>) {
   const t = useT();
   const app = useOAuthApp(vendor).data;

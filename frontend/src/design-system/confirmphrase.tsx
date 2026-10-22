@@ -9,10 +9,9 @@ import { Callout } from "./callout";
 import "./confirmphrase.css";
 
 /**
- * Whether the typed text is the phrase. The typed side is trimmed, both sides
- * are NFC-normalised so a composed and a decomposed letter agree, and the
- * compare is case-sensitive: the server's own check on the reset phrase is an
- * exact compare, and one rule across the product beats a looser one per screen.
+ * Whether the typed text is the phrase. The typed side is trimmed and both
+ * sides are NFC-normalised, so a composed and a decomposed letter agree.
+ * The compare is case-sensitive, like the server's check on the reset phrase.
  * An empty phrase matches nothing, so a missing name can never confirm itself.
  */
 export function phraseMatches(value: string, phrase: string): boolean {
@@ -22,14 +21,14 @@ export function phraseMatches(value: string, phrase: string): boolean {
 
 /**
  * A typed confirmation for a change that cannot be undone or that alters work
- * for everyone: what will happen, then a field asking for the exact phrase.
+ * for everyone. It says what will happen, then asks for the exact phrase.
  *
  * A box, not a dialog. The caller seats it in a ConfirmModal and wires
  * `confirmDisabled={!phraseMatches(value, phrase)}` and `initialFocusTo` to
- * `inputRef`, so the gate and the focus stay where the action is.
+ * `inputRef`.
  *
- * Without a `title` the danger plate is left out: a plate with nothing to say
- * is noise, and the dialog around the box already says what happens.
+ * Without a `title` the danger plate is left out, since the dialog around the
+ * box already says what happens.
  */
 export function ConfirmPhraseBox({
   title,

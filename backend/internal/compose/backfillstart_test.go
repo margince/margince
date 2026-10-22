@@ -11,8 +11,8 @@ import (
 
 // The import asked for at connect starts only if the callback holds the backfill
 // engine. Asserted through the applied options, in every order a role can apply
-// them, because a struct literal that replaces connectorHandlers drops the field
-// silently and the callback then lands plain with nothing started.
+// them. A struct literal that replaces connectorHandlers drops the field
+// silently, and the callback then lands plain with nothing started.
 func TestTheConnectImportIsWiredWhicheverCaptureOptionRunsFirst(t *testing.T) {
 	const stateKey = "0123456789abcdef0123456789abcdef"
 	gmail := WithGmailCapture(GmailConfig{

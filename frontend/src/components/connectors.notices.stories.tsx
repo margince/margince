@@ -10,9 +10,9 @@ import { OAuthOutcomeNote } from "./connectors.notices";
 // props, so each frame poses the outcome, its provider and the roster it is
 // read against.
 //
-// `ok` names the vendor and what now syncs; a calendar refused after its
-// mailbox is a partial success with one way on; the other failures keep one
-// heading, nothing was connected, and their own remedy under it.
+// `ok` names the vendor and what now syncs. A calendar refused after its
+// mailbox is a partial success with one way on. The other failures keep one
+// heading, since nothing was connected, and their own remedy under it.
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
 

@@ -87,8 +87,8 @@ function figureFilterOf(params: UrlParams): FigureFilter {
 }
 
 // The trace as the server narrows it. Every dial is in the key, so a changed
-// filter is a fresh walk from the newest call rather than a cursor minted under
-// another question.
+// filter is a fresh walk from the newest call. No cursor is reused across
+// questions.
 function useCallTrace(
   filters: CallFilters,
   figure: FigureFilter,
@@ -116,19 +116,13 @@ function useCallTrace(
 
 /**
  * When the runtime last reached a model and, where there is no instant to
- * give, WHICH silence this is.
+ * give, which silence this is.
  *
- * `never` is a claim about the INSTALLATION: nothing has ever called a model.
- * The other three are claims about the READ (this reader may not make it, it
- * has not answered yet, it failed), and none of them is evidence about the
- * installation at all. One `null` over all four let a caller say "Never called"
- * over a trace that was still arriving, which is the defect this type exists to
- * make unspellable.
- *
- * `failed` is its own arm rather than folded into `unread` for the reason
- * `never` is its own: only one of the two resolves by waiting, and a reading
- * that goes silent on a broken read tells a reader nothing is wrong. Every
- * caller draws it; none may assume another surface will.
+ * `never` is a claim about the installation. The other three (`unread`,
+ * `failed` and a withheld read) are claims about the read, never about the
+ * installation. One `null` over all four let a caller say "Never called" over a
+ * trace that was still arriving. `failed` is its own arm. Only `unread`
+ * resolves by waiting.
  */
 export type LastCall =
   | { state: "withheld" }
@@ -140,10 +134,9 @@ export type LastCall =
 /**
  * The newest call, as a state a caller can switch on.
  *
- * Its OWN query rather than the card's. The card pages through a filtered trace
- * on demand; this wants the newest row and wants it to keep up, and the two
- * cannot share a key without one imposing its refetch on the other: a poll
- * over every page the reader had loaded.
+ * It has its own query rather than the card's. The card pages through a
+ * filtered trace on demand. This wants the newest row and wants it to keep up.
+ * Sharing a key would make one impose its refetch on the other.
  */
 export function useLastCallAt(): LastCall {
   const canSee = useCan("ai_diagnostics", "read");
@@ -258,10 +251,11 @@ function withSelected(listed: readonly string[], selected: string) {
 
 /**
  * The search box as typed, written to the address once typing settles. The
- * address is the query key, so writing every keystroke would be one request
- * per character with answers free to land out of order. An address that moves
- * on its own (Back, a cleared filter) moves the box with it; trimmed equality
- * keeps the box from eating a space the reader is still typing past.
+ * address is the query key, so writing every keystroke would send one request
+ * per character, with answers free to land out of order.
+ *
+ * An address that moves on its own (Back, a cleared filter) moves the box with
+ * it. Trimmed equality keeps the box from eating a space the reader types past.
  */
 function useSettledSearch(
   settled: string,
@@ -307,11 +301,11 @@ export function AiCallsCard() {
     ),
   );
   const query = useCallTrace(filters, figure, canSee);
-  // The server's complete sets, carried on every page, NOT the values on the
-  // loaded rows: those collapse to the one selected once a dial is set.
+  // The server's complete sets, carried on every page, not the values on the
+  // loaded rows. Those collapse to the one selected once a dial is set.
   const first = query.data?.pages[0];
-  // A value reached by link may have no calls yet and so be absent from the
-  // server's set; it stays selectable so the select shows what is filtered.
+  // A value reached by link may have no calls yet and be absent from the
+  // server's set. It stays selectable so the select shows what is filtered.
   const listedTasks = first?.task_options ?? [];
   const tasks =
     filters.task && !listedTasks.some((option) => option.task === filters.task)
@@ -347,7 +341,7 @@ export function AiCallsCard() {
   }
 
   const rows = query.data?.pages.flatMap((page) => page.data) ?? [];
-  // The figure a link cut the trace to has no dial of its own, so the caption
+  // The figure a link cut the trace to has no dial of its own. The caption
   // names it and Clear takes it away with the rest.
   const caption = (
     <>

@@ -26,9 +26,9 @@ const meta: Meta<typeof TelegramConnectorsPanel> = {
 export default meta;
 type Story = StoryObj<typeof TelegramConnectorsPanel>;
 
-// Three states: no bot yet (the connect verb), live bots (a row each), and a
-// deployment with no credential store to seal a token in (503, a calm
-// feature-off state and not an error).
+// Three states. No bot yet shows the connect verb. Live bots get a row each. A
+// deployment with no credential store to seal a token in answers 503, a
+// feature-off state and not an error.
 function telegramStory(
   channels: unknown[] | null,
   stub: (routes: RouteMap) => void = stubAsBotManager,
@@ -67,8 +67,8 @@ const salesBot = {
 
 export const TelegramNoBotYet: Story = { render: telegramStory([]) };
 
-// Two live bots is the state a send refuses outright in, and this panel is the
-// only surface that can end it, so both have to be here, each with its own
+// Two live bots is the state a send refuses outright in. This panel is the only
+// surface that can end it, so both have to be here, each with its own
 // Disconnect.
 export const TelegramTwoBots: Story = {
   render: telegramStory([

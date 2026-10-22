@@ -31,9 +31,9 @@ type ChannelConnection = components["schemas"]["ChannelConnection"];
 
 type ChannelConnectionsResult = {
   // GET /channel-connections answers 503 when this deployment serves no
-  // messaging channels, or has no credential store to seal a bot token in — a
-  // calm, documented feature-off state, mirroring the mail card's 501
-  // not_implemented treatment rather than an error card.
+  // messaging channels or has no credential store to seal a bot token in. That
+  // is a documented feature-off state, treated like the mail card's 501
+  // not_implemented rather than as an error card.
   notConfigured: boolean;
   data: ChannelConnection[];
 };
@@ -58,8 +58,9 @@ function useChannelConnections() {
   });
 }
 
-// One live bot as a row: which bot it is on the left, whether it is live on the
-// right, and whichever of the two verbs that change it this reader holds.
+// One live bot as a row. Which bot it is sits on the left and whether it is live
+// on the right. Then come whichever of the two verbs that change it this reader
+// holds.
 function TelegramConnectionRow({
   connection,
   onEdit,

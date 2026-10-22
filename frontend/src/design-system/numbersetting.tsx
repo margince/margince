@@ -12,26 +12,23 @@ import "./numbersetting.css";
 
 /**
  * A whole number an admin sets inside a range, in a `SettingRow`'s right
- * column. Only a whole number in range is ever sent: anything else stays in the
- * box, with `refusal` under it, so the reader corrects what they typed instead
- * of retyping it.
+ * column. Anything else stays in the box with `refusal` under it, so the
+ * reader corrects what they typed instead of retyping it.
  *
  * Inside a `SavePageProvider` the typed number is a draft the page's save bar
- * commits; elsewhere it commits on Enter or blur like a rename. `onCommit` may
- * return the write's promise, so the bar can keep a refused draft.
+ * commits; elsewhere it commits on Enter or blur. `onCommit` may return the
+ * write's promise, so the bar can keep a refused draft.
  *
- * `refusal` is the caller's sentence because only the caller knows the unit —
- * "15 to 10,080 minutes" says what a bare "15 to 10,080" cannot. The row's own
- * description stays on the field and the refusal is ADDED to it, so a reader
- * hears the rule and how they broke it.
+ * `refusal` is the caller's sentence because only the caller knows the unit.
+ * It is added to the row's description, so a reader hears the rule and how
+ * they broke it.
  *
- * `lowestOn` is for a setting whose `min` of 0 means off: a value between 0
- * and `lowestOn` is refused too, so 0 and `lowestOn..max` are the choices.
+ * `lowestOn` is for a setting whose `min` of 0 means off. A value between 0
+ * and `lowestOn` is refused too.
  *
- * Typing the stored value back is no edit at all. A draft is held against the
- * value it was typed over, so the box shows the stored value again the moment
- * that value moves — a save landing, a refetch, a colleague's change — rather
- * than a draft that would write the old number back.
+ * Typing the stored value back is no edit. A draft is held against the value
+ * it was typed over. The box shows the stored value again when it moves (a
+ * save, a refetch, a colleague's change) instead of writing the old number back.
  */
 export function NumberSetting({
   control,
@@ -114,9 +111,9 @@ export function NumberSetting({
 
 type Bounds = Readonly<{ min: number; max: number; lowestOn?: number }>;
 
-// `sent` is the number this draft already committed: the blur that follows an
-// Enter would otherwise send it a second time while the first save is in
-// flight, and a saved draft must not hold the page's bar open.
+// `sent` is the number this draft already committed. Without it the blur after
+// an Enter would send it twice while the first save is in flight. A saved
+// draft must not hold the page's bar open.
 function useNumberDraft(
   value: number,
   bounds: Bounds,

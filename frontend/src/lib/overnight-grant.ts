@@ -9,8 +9,8 @@ import { useT } from "../i18n";
 import { unwrap } from "./problem";
 import { readStored, removeStored, STORAGE_KEYS, writeStored } from "./storage";
 
-// The rep's standing answer to "may an agent work as me overnight?", read and
-// written once for the two places that ask it: onboarding and Settings.
+// The rep's standing answer to "may an agent work as me overnight?". It is read
+// and written once for the two places that ask: onboarding and Settings.
 
 export type MyAgentGrant = components["schemas"]["MyAgentGrant"];
 
@@ -20,15 +20,13 @@ export const MORNING_BRIEF = "morning_brief" as const;
 
 const GRANTS_KEY = ["agent-grants"] as const;
 
-// A real OAuth "allow" leaves the page entirely for the provider's consent
-// screen, so React state does not survive the trip back. The rep's answer to
-// the overnight question has to, or an opt-out is silently reversed: they
-// untick the box, click Google, come back, and the step grants anyway because
-// the component remounted at its preselected default.
+// A real OAuth "allow" leaves the page for the provider's consent screen, so
+// React state does not survive the trip back. The answer has to, or an opt-out
+// is silently reversed: the remounted step grants at its preselected default.
 //
-// Same mechanism and same scope as the OAuth attempt mark beside it
-// (`onboarding-connect-panels.tsx`): sessionStorage, belonging to the ONE tab
-// that started the trip.
+// Same mechanism and scope as the OAuth attempt mark beside it
+// (`onboarding-connect-panels.tsx`): sessionStorage, owned by the one tab that
+// started the trip.
 
 /** Remembers the rep's answer across the OAuth round trip. */
 export function rememberOvernightChoice(wanted: boolean): void {
@@ -44,8 +42,7 @@ export function rememberedOvernightChoice(): boolean | undefined {
 }
 
 /** Drops the mark once the step has acted on it, so a later visit to
- * onboarding in the same tab starts from the default rather than from an
- * answer given to a question that has already been settled. */
+ * onboarding in the same tab starts from the default. */
 export function forgetOvernightChoice(): void {
   removeStored(STORAGE_KEYS.overnightChoice);
 }

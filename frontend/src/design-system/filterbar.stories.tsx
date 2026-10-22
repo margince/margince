@@ -82,9 +82,9 @@ const dial = (label: string, value: string, choices: readonly string[]) => (
   </Field>
 );
 
-// A log's bar in the 720-wide settings column: a search and four dials wrap
-// onto a second line, Clear holds the trailing edge once a dial is set, and the
-// caption is the count line for what the dials let through.
+// A log's bar in the 720-wide settings column. A search and four dials wrap
+// onto a second line. Clear holds the trailing edge once a dial is set. The
+// caption counts what the dials let through.
 export const InASettingsColumn: Story = {
   render: () => (
     <div style={{ maxWidth: 720 }}>

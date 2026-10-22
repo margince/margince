@@ -147,10 +147,10 @@ function ImportThenWayOn({
 }
 
 /**
- * The account as one row, the way Connections draws it: its health, why it
- * needs someone, and one primary Reconnect when a grant must be asked again.
- * Its services hang under it; a vendor account without its calendar offers
- * that calendar alone, landing back here.
+ * The account as one row, the way Connections draws it. It shows its health,
+ * why it needs someone, and one primary Reconnect when a grant must be asked
+ * again. Its services hang under it. A vendor account without its calendar
+ * offers that calendar alone, landing back here.
  */
 function AccountPanel({
   account,
@@ -346,7 +346,7 @@ function ConnectedService({
 
 /**
  * The way on with a mailbox live. While the window pick is on screen the one
- * primary is the import, which starts the run and then leaves; declining it is
+ * primary is the import, which starts the run and then leaves. Declining it is
  * the quiet way. A run already started, or no import to offer, leaves Continue.
  */
 export function ConnectedWayOnward({

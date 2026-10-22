@@ -74,12 +74,12 @@ describe("the scope each page declares", () => {
     // Telegram bot lives on Integrations.
     connections: "self",
 
-    // Pages whose cards genuinely split across two scopes. `integrations`
-    // is one: PATCH /integrations/settings is "the installation's
-    // provider-lookup posture" by its own contract summary, while webhooks
-    // and the workspace extension units on the same page stay inside one
-    // workspace. CaptureExclusionsCard's workspace rules keep a
-    // correspondent out of the CRM for everybody.
+    // Pages whose cards split across two scopes. `integrations` is one:
+    // PATCH /integrations/settings is "the installation's provider-lookup
+    // posture" by its own contract summary. Webhooks and the workspace
+    // extension units on the same page stay inside one workspace.
+    // CaptureExclusionsCard's workspace rules keep a correspondent out of the
+    // CRM for everybody.
     integrations: "mixed",
     "capture-activity": "mixed",
 

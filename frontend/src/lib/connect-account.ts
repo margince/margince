@@ -51,15 +51,15 @@ function connectBody(input: ConnectAccountInput): ConnectRequest {
 }
 
 /**
- * The one way a screen starts a mail or calendar consent: Connections,
- * Meetings and onboarding all press through it, so the body, the 501 reading
- * and the hand-off to the vendor cannot drift between them.
+ * The one way a screen starts a mail or calendar consent. Connections,
+ * Meetings and onboarding all use it, so the body, the 501 reading and the
+ * hand-off to the vendor cannot drift between them.
  *
  * A provider this installation never wired answers 501 not_implemented. That
- * is a documented configuration rather than a failure, so it comes back as a
- * result naming the provider, and every other problem throws.
+ * is a documented configuration, so it returns a result naming the provider.
+ * Every other problem throws.
  *
- * `onRedirect` runs just before the page leaves, for a caller that has to
+ * `onRedirect` runs just before the page leaves, for a caller that must
  * remember the attempt across the round trip.
  */
 export function useConnectAccount(

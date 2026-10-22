@@ -140,8 +140,8 @@ function SpendReading({
   if (months.length === 0) {
     return <p className="t-caption">{t("provider.spend.none")}</p>;
   }
-  // The series only carries months that HAD spend, so its newest entry is not
-  // necessarily this one; last month's total must not read as the current bill.
+  // The series only carries months that had spend, so its newest entry is not
+  // necessarily this one. Last month's total must not read as the current bill.
   const now = new Date();
   const current = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-01`;
   const figure = (value: number) => formatNumber(value, locale);

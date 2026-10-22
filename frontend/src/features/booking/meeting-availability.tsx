@@ -293,9 +293,9 @@ function HoursFields({
   );
 }
 
-// Hours and the booking rules are two resources, saved as one: hours first,
-// and stored the moment the server has them, so a rules write that fails
-// after it leaves the hours showing as saved rather than as a draft.
+// Hours and the booking rules are two resources, saved as one: hours first, and
+// stored the moment the server has them. A rules write that fails after it
+// leaves the hours showing as saved rather than as a draft.
 function useSaveAvailability(
   onHoursSaved: (hours: WorkingHours) => void,
   onRulesSaved: (rules: Rules) => void,

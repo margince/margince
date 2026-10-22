@@ -8757,13 +8757,13 @@ export const en = {
 
   // The units an installation composed, offered on the settings page that
   // already holds the kind of credential each one is configured with. The two
-  // headings differ because the two pages mean different things — one is your
+  // headings differ because the two pages mean different things: one is your
   // own account somewhere, the other is the installation's.
   "extUnits.open": "Open",
 
   // The units an installation composed, offered on the settings page that
   // already holds the kind of credential each one is configured with. The two
-  // headings differ because the two pages mean different things — one is your
+  // headings differ because the two pages mean different things: one is your
   // own account somewhere, the other is the installation's.
   "extUnits.openNamed": "Settings for {name}",
   "extUnits.user.title": "Other accounts",

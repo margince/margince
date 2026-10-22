@@ -44,8 +44,8 @@ func recordLogical(ctx context.Context, t *testing.T, meter *CallMeter, attempts
 	}
 }
 
-// databaseNow is the clock ai_call.occurred_at is stamped with, so a rate or a
-// report window dated from it meets the seeded rows however the lane moved time.
+// databaseNow is the clock ai_call.occurred_at is stamped with. A rate or report
+// window dated from it meets the seeded rows however the lane moved time.
 func (e *rateEnv) databaseNow(ctx context.Context, t *testing.T) time.Time {
 	t.Helper()
 	var at time.Time

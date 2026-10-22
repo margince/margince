@@ -95,9 +95,9 @@ export function ConnectPostureStep({
   const t = useT();
   const settings = useCaptureSettings();
   const save = useSetConnectPosture(provider);
-  // The server's answer, always, never a local echo of the last save: the one
-  // option that can be refused (shared, 422 without the workspace opt-in) is
-  // the one whose refusal a reader must see, so optimism is wrong here.
+  // The server's answer, always, never a local echo of the last save. The one
+  // option that can be refused (shared, 422 without the workspace opt-in) must
+  // show its refusal, so optimism is wrong here.
   const current = posture ?? "classified";
 
   useEffect(() => {

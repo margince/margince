@@ -17,9 +17,9 @@ import {
 } from "../../testing/story-utils";
 import { ConnectionAccountRow } from "./connection-account";
 
-// One account on Connections in each state its services can be in: syncing
-// with the import reading, up to date, a service needing a reconnect, a grant
-// too narrow to send, a held import, and a mailbox without its calendar.
+// One account on Connections in each state its services can be in. Syncing with
+// the import reading, up to date, and a service needing a reconnect. Then a
+// grant too narrow to send, a held import, and a mailbox without its calendar.
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
 type BackfillStatus = components["schemas"]["BackfillStatus"];

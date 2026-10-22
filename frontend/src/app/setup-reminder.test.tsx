@@ -15,7 +15,8 @@ import { ignoreSearch, newClient, renderWith } from "../testing/shellharness";
 import { TopBar } from "./topbar";
 
 // The top bar's "Finish setup" chip: what it counts, what opening it shows, and
-// the three ways it stands down (finished, hidden for this sign-in, nothing to ask).
+// the three ways it stands down. Those are finished, hidden for this sign-in,
+// and nothing to ask.
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
 

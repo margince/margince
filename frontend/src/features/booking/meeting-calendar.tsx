@@ -55,7 +55,7 @@ export function ConnectRefusal({
 
 /**
  * The calendar each booking lands in and the ones that block time, saved from
- * the page's save bar: blocking is a multi-pick, and every save runs the live
+ * the page's save bar. Blocking is a multi-pick and every save runs the live
  * calendar check, so a write per tick would check the calendar per tick.
  */
 export function MeetingCalendarCard({

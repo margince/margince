@@ -17,7 +17,7 @@ import (
 )
 
 // errBackfillEnqueue marks a start the queue refused. It is its own answer
-// because nothing was written, so the caller can say "try again" honestly.
+// because nothing was written, so the caller can say "try again".
 var errBackfillEnqueue = errors.New("backfill: the paging job could not be scheduled")
 
 // begin opens a past-email import and schedules its pager: the one engine

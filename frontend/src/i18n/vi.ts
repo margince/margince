@@ -8495,14 +8495,14 @@ export const vi = {
 
   // Connected inboxes (Settings → Integrations): the "manage in Settings"
   // surface the onboarding copy promises.
-  // Các đơn vị bản cài đặt này ghép vào, đặt trên trang cài đặt vốn đã giữ đúng
-  // loại thông tin đăng nhập mà đơn vị đó dùng để cấu hình.
+  // Các đơn vị bản cài đặt này ghép vào, đặt trên trang cài đặt giữ loại thông tin
+  // đăng nhập mà đơn vị đó dùng.
   "extUnits.open": "Mở",
 
   // Connected inboxes (Settings → Integrations): the "manage in Settings"
   // surface the onboarding copy promises.
-  // Các đơn vị bản cài đặt này ghép vào, đặt trên trang cài đặt vốn đã giữ đúng
-  // loại thông tin đăng nhập mà đơn vị đó dùng để cấu hình.
+  // Các đơn vị bản cài đặt này ghép vào, đặt trên trang cài đặt giữ loại thông tin
+  // đăng nhập mà đơn vị đó dùng.
   "extUnits.openNamed": "Cài đặt cho {name}",
   "extUnits.user.title": "Tài khoản khác",
   "extUnits.user.sub":

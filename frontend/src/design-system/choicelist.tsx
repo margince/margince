@@ -6,37 +6,25 @@ import { Checkbox, Radio } from "./atoms";
 import "./choicelist.css";
 
 /**
- * One answer out of a few, with every answer READABLE AT REST. With `multiple`
- * it is any number of answers out of a few, drawn as checkboxes in the same
- * fieldset, so a pick-several question keeps its name and its group too.
+ * One answer out of a few, with every answer readable at rest. With `multiple`
+ * it is any number of answers, drawn as checkboxes in the same fieldset.
  *
- * It exists because the product had the `Radio` atom and no radio GROUP, so
- * every caller wrapped it by hand — each with its own stack gap, its own idea of
- * whether the question was named at all, and at least one with no `fieldset`,
- * which leaves a screen reader announcing loose radios rather than one question
- * with two answers. The invariant this holds: a set of radios IS a question, so
- * it carries a name and a group, and neither is the caller's to forget.
+ * A set of radios is a question, so it carries a name and a group (a
+ * `fieldset`) and neither is the caller's to forget. Without one, a screen
+ * reader announces loose radios rather than one question.
  *
- * When to reach for this instead of the neighbours, because the difference is
- * about the reader and not about taste:
+ * Reach for it instead of the neighbours when the reader must weigh answers:
  *
- *  - **`Select`** hides every option but one behind a click. Right for a long or
- *    boring list — a stage, a currency, a date field. Wrong for a decision the
- *    reader has to weigh, and wrong for a BINARY: a dropdown covering two
- *    choices makes somebody open a menu to find out what the alternative even
- *    was.
- *  - **`SegmentedControl`** shows a closed set at once, in a tab strip, at 12.5px
- *    and bold. Right for short labels that name a view. Wrong the moment an
- *    option is a sentence.
- *  - **`Switch`** is one thing on or off. An either/or where BOTH sides need
- *    naming is not that: "everyone except the contacts I leave out" has no
- *    off-state a reader could infer.
+ *  - `Select` hides every option but one behind a click. Right for a long list.
+ *    Wrong for a decision and for a binary.
+ *  - `SegmentedControl` shows a closed set in a tab strip. Right for short
+ *    labels that name a view. Wrong once an option is a sentence.
+ *  - `Switch` is one thing on or off. An either/or has no off-state a reader
+ *    could infer.
  *
- * `description` is part of the LABEL, not a sibling — which is deliberate, and
- * the reason `Radio` takes a node: for a tick the words are the other half of
- * the click target, so a help line rendered outside the label is a line the
- * reader cannot click and a screen reader does not read with the option it
- * belongs to. Both go in, and the type carries the hierarchy.
+ * `description` is part of the label, not a sibling, which is why `Radio`
+ * takes a node. A help line outside the label cannot be clicked, and a screen
+ * reader does not read it with the option.
  *
  * Copy never lives here: every word arrives as a prop, translated by the caller.
  */
@@ -46,7 +34,7 @@ export type Choice<Value extends string> = Readonly<{
   label: string;
   /**
    * What choosing it means, when the label cannot carry it alone. A node so a
-   * refused answer can link to what unlocks it; keep that to one short link,
+   * refused answer can link to what unlocks it. Keep that to one short link,
    * since its words join the answer's accessible name.
    */
   description?: ReactNode;

@@ -15,9 +15,9 @@ import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { permissionDenied } from "../testing/story-utils";
 import { MailSharingCard, MailSharingPlate } from "./mail-sharing";
 
-// The workspace mail-sharing posture (Settings > Capture rules): every role
-// reads it, only capture_settings:update holders change it, each switch writes
-// on flip, and the cost of the posture stays stated beside it.
+// The workspace mail-sharing posture (Settings > Capture rules). Every role
+// reads it and only capture_settings:update holders change it. Each switch
+// writes on flip, and the cost of the posture stays stated beside it.
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -145,7 +145,7 @@ describe("MailSharingCard", () => {
     expect(screen.queryByText(/works-council/)).toBeNull();
 
     await user.click(toggle);
-    // The PATCH carries ONLY this setting: the opt-in must not also rewrite
+    // The PATCH carries only this setting: the opt-in must not also rewrite
     // the workspace sharing posture the reader did not touch.
     await waitFor(() =>
       expect(backend.getCapturedPatch()).toEqual({
@@ -258,8 +258,8 @@ describe("MailSharingCard", () => {
   });
 });
 
-// The rule as it reads under the reader's own Mail and calendar card: a
-// statement about the whole company, and the way to change it only for a
+// The rule as it reads under the reader's own Mail and calendar card. It is a
+// statement about the whole company, with a way to change it only for a
 // reader who may.
 describe("MailSharingPlate", () => {
   it("says the company shares, scopes it to the whole company and links an editor to the switch", async () => {

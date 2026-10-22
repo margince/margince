@@ -15,9 +15,9 @@ import type { ConversationState } from "./conversation-machine";
 import { initialConversationState } from "./conversation-machine";
 
 // An account whose company app is missing or will not open. The onboarding
-// gate bounces any link to Settings back to this step, so the fix has to live
-// here: an administrator registers the app in place, anyone else hands the
-// request on or picks another mail provider.
+// gate bounces any link to Settings back to this step, so the fix lives here.
+// An administrator registers the app in place; anyone else hands the request
+// on or picks another mail provider.
 
 function renderAct() {
   const state: ConversationState = {
@@ -186,8 +186,8 @@ describe("a reader who cannot register the app", () => {
     ).toBeNull();
   });
 
-  // A stored app whose secret will not open is a DIFFERENT fix from no app at
-  // all: asking for a new app sends the administrator to register a second one.
+  // A stored app whose secret will not open is a different fix from no app at
+  // all. Asking for a new app sends the administrator to register a second one.
   it("asks for a new client secret when the stored app will not open", async () => {
     stub([
       { provider: "gmail", reason: "ready" },

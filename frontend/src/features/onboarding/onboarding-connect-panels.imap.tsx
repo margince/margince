@@ -28,13 +28,11 @@ export function ReturnWarn({
   );
 }
 
-// IMAP: a standing connection, mirroring the Settings inline form's typed
-// POST (imap-connect-form.tsx) — the same nested `{imap:{...}}` shape and the
-// same two IMAP-specific error sentences, so onboarding and Settings can
-// never drift onto two different ideas of what "connect" means for this
-// provider. The connect call returns BEFORE any mail is read: there is no
-// capture count to show here, honestly — only a live row (last_synced_at)
-// that fills in a few minutes later, once the sweep runs.
+// IMAP: a standing connection, mirroring the typed POST of the Settings inline
+// form (imap-connect-form.tsx). It uses the same nested `{imap:{...}}` shape
+// and IMAP error sentences, so onboarding and Settings cannot drift apart.
+// The connect call returns before any mail is read. There is no capture count
+// to show, only a live row (last_synced_at) that fills in minutes later.
 const IMAP_DEFAULT_PORT = "993";
 
 // `onDismiss` puts the form away without connecting: the reader changed their
@@ -82,9 +80,9 @@ export function ImapConnectPanel({
         }),
       );
     },
-    // The mailbox is live once the shared roster says so: the step's account
-    // panel (and Settings) read that key, so the form closes only after it
-    // has been read again, onto a step that already shows the mailbox.
+    // The mailbox is live once the shared roster says so. The step's account panel
+    // and Settings read that key. The form closes only after it has been read
+    // again, onto a step that already shows the mailbox.
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ["connectors"] });
       onDone();
@@ -201,8 +199,8 @@ export function ImapConnectPanel({
       <div className="ob-connect-actions">
         <Button
           variant="ghost"
-          // Dismissal is a decision NOT to connect, so it waits for the POST
-          // it would abandon: a success landing after it contradicts it.
+          // Dismissal is a decision not to connect, so it waits for the POST it would
+          // abandon: a success landing after it contradicts it.
           disabled={connect.isPending}
           onClick={onDismiss}
         >

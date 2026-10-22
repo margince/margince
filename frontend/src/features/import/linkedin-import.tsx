@@ -34,7 +34,7 @@ import {
   useSaveLinkedInAccount,
 } from "../../lib/use-linkedin-account";
 
-// The LinkedIn network (ADR-0078 §2.1b): the member's own Connections.csv
+// The LinkedIn network: the member's own Connections.csv
 // export, the profile it is credited to, and the companies it reaches. No app
 // approval, no OAuth. The imported rows never become contacts, and the row says
 // so before the member uploads their address book into a company system.
@@ -77,9 +77,9 @@ function useLinkedInAccount() {
   });
 }
 
-// Your own LinkedIn profile, shown back so it can be corrected; the API has no
-// path to another member's. Value and verb on the row, the field in a modal, so
-// the row says what it is set to rather than only that something is editable.
+// Your own LinkedIn profile, shown back so it can be corrected. The API has no
+// path to another member's. Value and verb sit on the row, the field in a
+// modal. The row says what it is set to, not only that it is editable.
 function LinkedInProfileRow() {
   const t = useT();
   const account = useLinkedInAccount();

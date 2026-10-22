@@ -31,8 +31,8 @@ import {
 
 // The connect step's ask, inline on the step: the work account picked once,
 // then what to bring in from it. Mail and calendar are two grants of one
-// account, so one press asks for both and the server chains the second
-// consent onto the first's return.
+// account, so one press asks for both. The server chains the second consent
+// onto the first's return.
 
 export type MailProvider = AccountVendor | "imap";
 
@@ -58,10 +58,10 @@ const VENDOR_COPY: Readonly<
 
 /**
  * Where the reader's work account lives. `notes` replaces a choice's own line
- * with what the roster says about it (connected, refused), and a choice with a
+ * with what the roster says about it (connected, refused). A choice with a
  * note in `refused` cannot be picked. While an account waits on an
- * administrator, each description says which wait and which are open now, in
- * words, so the way round it is visible before anything is picked.
+ * administrator, each description says which wait and which are open now. The
+ * way round it is visible before anything is picked.
  */
 export function VendorChoice({
   value,
@@ -207,8 +207,8 @@ function OAuthAsk({
 }>) {
   const t = useT();
   const [services, setServices] = useState<Service[]>(["mail", "calendar"]);
-  // The mark is what lets the return tell this tab's own trip from a stale
-  // link, so it is written only once the vendor's address is in hand.
+  // The mark lets the return tell this tab's own trip from a stale link. So it is
+  // written only once the vendor's address is in hand.
   const connect = useConnectAccount({
     onRedirect: (input) => markOAuthAttempt(input.provider),
   });
@@ -300,9 +300,9 @@ const PROMISES: readonly { lead: MessageKey; rest: MessageKey }[] = [
 
 /**
  * The four step-level promises and what happens to the mail, behind one fold
- * the summary names, so nothing is hidden the reader is not told about. Shut
- * like every other disclosure: a panel that opens on a block of reassurance
- * buries the press it exists to offer.
+ * the summary names, so nothing is hidden unannounced. Shut like every other
+ * disclosure: a panel that opens on a block of reassurance buries the press it
+ * exists to offer.
  */
 function ConnectingMeans() {
   const t = useT();

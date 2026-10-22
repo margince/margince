@@ -40,8 +40,8 @@ const calendars = [
   },
 ];
 
-// A server that keeps what it is sent, so every card's GET-latest-then-PUT
-// reads what the card before it wrote, and a test can change it underneath.
+// A server that keeps what it is sent, so every card's GET-latest-then-PUT reads
+// what the card before it wrote. A test can change it underneath.
 function mount(profile: Partial<Profile> = {}, overrides: RouteMap = {}) {
   const start: Profile = {
     ...bookingProfile,

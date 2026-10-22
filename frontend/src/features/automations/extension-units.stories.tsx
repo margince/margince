@@ -13,11 +13,10 @@ import { StoryProviders } from "../../testing/story-utils";
 import { ExtensionUnitsCard, ExtensionUnitsPanel } from "./extension-units";
 
 // Where an installation's own units are offered: the manifest's declared secret
-// scope decides which of two settings pages holds the unit, because each page
-// already means exactly the kind of credential that scope names.
+// scope decides which of two settings pages holds the unit.
 //
 // The card reads the composed registry, which is empty in the vanilla lane every
-// story runs against, so the two "no unit" stories show the card withholding
+// story runs against. So the two "no unit" stories show the card withholding
 // itself under the page's real last card. The unit rows are drawn through
 // ExtensionUnitsPanel with descriptors of the story's own.
 
@@ -70,8 +69,7 @@ type Story = StoryObj<typeof ExtensionUnitsCard>;
  * the credential is theirs, at a provider they signed into.
  *
  * No unit is composed, so nothing follows the page's last card. A heading over
- * an empty list would be a promise the installation never made, the same
- * reason the navigation group this replaced was absent rather than empty.
+ * an empty list would promise something the installation never made.
  */
 export const NoUnitOnConnections: Story = { render: story("user") };
 
@@ -79,9 +77,8 @@ export const NoUnitOnConnections: Story = { render: story("user") };
  * Integrations, where a `workspace`-scoped secret puts a unit: the credential
  * is the installation's, like the cards above it.
  *
- * The same absence on the other page, and it is worth its own frame because the
- * two pages are the whole of the placement rule: a unit lands on one of them
- * or on neither, and never on both.
+ * The same absence on the other page. It earns its own frame because the two
+ * pages are the whole of the placement rule: a unit lands on one or neither.
  */
 export const NoUnitOnIntegrations: Story = { render: story("workspace") };
 

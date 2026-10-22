@@ -65,7 +65,7 @@ export const InADefinitionList: Story = {
   render: () => <DefinitionDemo />,
 };
 
-// A step line over a page title: an h2 in the outline, set small so the title
+// A step line over a page title: an h2 in the outline, set small. The title
 // under it stays the largest line on the screen.
 function OverATitleDemo() {
   return (

@@ -79,10 +79,10 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// A workspace may hold more than one live bot (nothing in the API forbids
-// connecting a second one), and a send refuses outright while it does. This
-// panel is the only surface that can take one of them away again, so it has
-// to show every one it is handed.
+// A workspace may hold more than one live bot, since nothing in the API forbids
+// connecting a second one. A send refuses outright while it does. This panel is
+// the only surface that can take one away again, so it has to show every one it
+// is handed.
 describe("the Telegram connector panel", () => {
   const salesBot: ChannelConnection = {
     id: "018f3a1b-0000-7000-8000-0000000000d1",
@@ -107,15 +107,14 @@ describe("the Telegram connector panel", () => {
     stubApi({ channels: [salesBot, supportBot], me: botManager });
     render(<TelegramConnectorsPanel />);
 
-    // One SettingRow per bot: the roster is a list of decisions now, so a bot
-    // is identified by its own row rather than by an <li> the list wrapper
-    // used to supply.
+    // One SettingRow per bot. The roster is a list of decisions now. A bot is
+    // identified by its own row rather than by an <li> from the list wrapper.
     const rows = await screen.findAllByTestId("telegram-connection");
     expect(rows.length).toBe(2);
     expect(within(rows[0]).getByText("@acme_sales_bot")).toBeTruthy();
     expect(within(rows[1]).getByText("@acme_support_bot")).toBeTruthy();
     // One shared Disconnect for two bots could only ever remove one of them,
-    // which is exactly the state an admin is here to escape.
+    // which is the state an admin is here to escape.
     for (const row of rows) {
       expect(
         within(row).getByRole("button", { name: "Disconnect" }),
@@ -131,8 +130,8 @@ describe("the Telegram connector panel", () => {
     await userEvent.click(
       within(rows[1]).getByRole("button", { name: "Replace token" }),
     );
-    // The second bot is the pending one: the form showing its status is the
-    // observable proof it bound to that row and not to the first.
+    // The second bot is the pending one. The form showing its status proves it
+    // bound to that row and not to the first.
     const dialog = screen.getByRole("dialog");
     expect(within(dialog).getByText(/^Pending/)).toBeTruthy();
   });
@@ -149,7 +148,7 @@ describe("the Telegram connector panel", () => {
     expect(screen.queryByText(readOnlyNote)).toBeNull();
   });
 
-  // The seeded rep reads the bot and may change none of it: three buttons the
+  // The seeded rep reads the bot and may change none of it. Three buttons the
   // server would refuse are withheld, and the line says who can act instead.
   it("gives a reader without write grants the roster and the reason, no verbs", async () => {
     stubApi({
@@ -210,8 +209,8 @@ describe("the Telegram connector panel", () => {
     expect(screen.queryByText(readOnlyNote)).toBeNull();
   });
 
-  // No channels on this deployment withholds the verbs from an admin too, so
-  // the seat is not the reason and the read-only line would misdirect a rep.
+  // No channels on this deployment withholds the verbs from an admin too. The
+  // seat is then not the reason, and the read-only line would misdirect a rep.
   it("lets the not-configured notice speak alone when neither applies", async () => {
     stubApi({
       channelsNotConfigured: true,

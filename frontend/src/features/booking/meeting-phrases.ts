@@ -11,7 +11,7 @@ import { dayLabelKey, WEEK } from "./working-hours";
 
 type WorkingHours = components["schemas"]["WorkingHours"];
 
-/** A span in the largest whole unit that says it exactly: 120 is 2 hours. */
+/** A span in the largest whole unit that says it without rounding: 120 is 2 hours. */
 export function amountLabel(
   t: Translator,
   plural: PluralTranslator,
@@ -52,7 +52,7 @@ export function hoursSentence(
       });
 }
 
-// A run of three or more days reads as a range, Monday to Friday; anything
+// A run of three or more days reads as a range, Monday to Friday. Anything
 // else is named day by day in the reader's own list grammar.
 function daysPhrase(
   t: Translator,

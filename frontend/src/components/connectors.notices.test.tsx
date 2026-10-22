@@ -55,9 +55,9 @@ describe("the OAuth return note", () => {
     expect(screen.getByText("Connected")).toBeTruthy();
   });
 
-  // On a plain object literal `constructor` and its siblings are INHERITED
-  // members, so a bare index would answer with a function and draw a note
-  // that says nothing.
+  // On a plain object literal `constructor` and its siblings are inherited
+  // members. A bare index would answer with a function and draw a note that
+  // says nothing.
   it.each([
     "constructor",
     "toString",

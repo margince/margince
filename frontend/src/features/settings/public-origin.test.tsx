@@ -64,7 +64,7 @@ afterEach(() => {
 });
 
 // A deployment configured with a localhost origin sends mail whose unsubscribe
-// links open nothing; this card is where somebody can see that before a
+// links open nothing. This card is where somebody can see that before a
 // recipient clicks one.
 describe("the public address card", () => {
   it("shows the address used in emailed links, and that it answers", async () => {

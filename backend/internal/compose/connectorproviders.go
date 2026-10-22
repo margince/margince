@@ -85,10 +85,10 @@ func calendarProvidersFrom(oauth []string) []string {
 	return calendars
 }
 
-// listedProviders are what the connect screen offers, which is the mail set:
+// listedProviders are what the connect screen offers: the mail set.
 // gcal and graphcal ride their paired mail provider's app, so the mail entry
-// already answers for them. Derived rather than listed again, because the two
-// answers were the same three names written twice.
+// already answers for them. Derived rather than listed again: the same three
+// names written twice drift apart.
 var listedProviders = MailProviders()
 
 // pairedCalendar is the calendar a mail consent may chain straight into: the

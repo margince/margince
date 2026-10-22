@@ -100,8 +100,8 @@ function mount(
     const url = new URL(request.url).pathname;
     if (request.method === "GET") {
       if (url.endsWith("/me")) {
-        // Through the fixture rather than a hand-built body: the grant shape is
-        // the capability layer's, and a test that spelled its own would prove
+        // Through the fixture rather than a hand-built body. The grant shape is
+        // the capability layer's, so a test that spelled its own would prove
         // nothing about what the real /me returns.
         return jsonResponse(
           meFixture({
@@ -148,10 +148,10 @@ function mount(
   return { calls, qc, onClose };
 }
 
-// The reads an app write changes besides its own: the connector roster decides
+// The reads an app write changes besides its own. The connector roster decides
 // availability from the app, and the sign-in policy decides whether the
-// provider's button can show. Seeded so a test can ask whether a write marked
-// them stale.
+// provider's button can show. Seeded so a test can ask if a write marked them
+// stale.
 const DEPENDENTS = [["connectors"], ["authentication-policy"]];
 
 function seedDependents(qc: QueryClient) {
@@ -236,8 +236,8 @@ describe("removing an app", () => {
 // The table an operator copies from into the vendor's console. Drawn through
 // the setup drawer, the surface it is read on.
 describe("the redirect address table", () => {
-  // A row's copy control used to guard a missing clipboard and return, so on a
-  // plain-http deployment it did nothing and an empty address got pasted.
+  // A copy control that returned on a missing clipboard did nothing on plain
+  // http, and an empty address got pasted.
   it("says the clipboard refused a row rather than leaving a dead button", async () => {
     const user = userEvent.setup();
     mount(stored(), "google", { view: "redirects" });
@@ -250,7 +250,7 @@ describe("the redirect address table", () => {
     expect(screen.getByText(/copy it manually/i)).toBeTruthy();
   });
 
-  // The clipboard holds ONE address, so only the row copied last reads Copied.
+  // The clipboard holds one address, so only the row copied last reads Copied.
   it("lets only the row the clipboard actually holds say it was copied", async () => {
     const user = userEvent.setup();
     mount(stored(), "google", { view: "redirects" });
@@ -374,8 +374,8 @@ describe("the app setup drawer", () => {
   });
 
   // Replacing a stored app is usually a secret rotation. The drawer opens with
-  // the stored client id and directory in place, so the rotation is one field
-  // and never widens a pinned app to every company.
+  // the stored client id and directory in place. The rotation is one field and
+  // never widens a pinned app to every company.
   it("opens a stored app with its client id and directory, and sends both back", async () => {
     const user = userEvent.setup();
     const { calls } = mount(pinnedMicrosoft(), "microsoft", {
@@ -442,9 +442,9 @@ describe("the app setup drawer", () => {
     ).toHaveProperty("disabled", true);
   });
 
-  // Widening a pinned app is possible, but only as a deliberate act: an empty
-  // field is "not pinned", and the server refuses a tenant of "", so the field
-  // is omitted rather than sent blank.
+  // Widening a pinned app takes an explicit act. An empty field means "not
+  // pinned" and the server refuses a tenant of "", so the field is omitted
+  // rather than sent blank.
   it("widens a pinned app only when the directory is cleared", async () => {
     const user = userEvent.setup();
     const { calls } = mount(pinnedMicrosoft(), "microsoft", {

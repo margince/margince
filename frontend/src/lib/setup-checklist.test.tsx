@@ -17,9 +17,9 @@ import {
 } from "./setup-checklist";
 import { forgetSeat } from "./storage";
 
-// The reminder and the settings home both draw these steps, so these cases
-// pin what each roster asks of the reader and that nothing about it is stored
-// except the reader's own "hide until next sign-in".
+// The reminder and the settings home both draw these steps. These cases pin
+// what each roster asks of the reader. Nothing is stored except the reader's
+// own "hide until next sign-in".
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
 type Provider = CaptureConnection["provider"];

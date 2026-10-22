@@ -163,10 +163,9 @@ export const StaleReturn: Story = {
 
 /**
  * No Microsoft app registered for this company. The account says it waits for
- * an administrator and the others say they are open now; picking it shows who
+ * an administrator and the others say they are open now. Picking it shows who
  * fixes it rather than a connect that would be refused. Google and IMAP are
- * unaffected, which is the point: this is one vendor's configuration, not a
- * broken screen.
+ * unaffected: this is one vendor's configuration, not a broken screen.
  */
 export const MicrosoftAppMissing: Story = {
   render: act(state("cn.consent"), {}, undefined, [
@@ -177,7 +176,7 @@ export const MicrosoftAppMissing: Story = {
 };
 
 /**
- * A Microsoft app IS registered and its secret will not open. The same badge
+ * A Microsoft app is registered and its secret will not open. The same badge
  * as above, and a different panel once picked: telling this operator that no
  * app exists sends them to register a second one.
  */

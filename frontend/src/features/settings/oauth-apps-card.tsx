@@ -59,11 +59,12 @@ const SOURCE_STATUS: Readonly<
 };
 
 /**
- * The company's Google and Microsoft apps, one row each: whether it is there,
- * where it came from, what it unlocks for everyone, and the one verb that fits.
+ * The company's Google and Microsoft apps, one row each. A row shows whether
+ * the app is there, where it came from, what it unlocks for everyone, and the
+ * one verb that fits.
  *
  * A reader who may not write the apps still sees every verb, refused with one
- * sentence the card says once, so the page explains itself to them too.
+ * sentence the card says once. The page explains itself to them too.
  */
 export function OAuthAppsCard() {
   const t = useT();

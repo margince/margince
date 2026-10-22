@@ -27,9 +27,9 @@ export function GrantCostNotice() {
 /**
  * The onboarding question: a preselected Switch row for the caller's SettingList.
  *
- * PRESELECTED: the features it feeds are the ones the product opens on, so an
- * off default would ship a morning brief that stays empty for reasons nobody is
- * told. Turning it off is warned about, never blocked.
+ * Preselected: the features it feeds are the ones the product opens on. An
+ * off default would ship a morning brief that stays empty for reasons nobody
+ * is told. Turning it off is warned about, never blocked.
  *
  * It does not write. The answer rides with the step's continue (`checked` /
  * `onChange`), so a rep who abandons onboarding here has granted nothing.

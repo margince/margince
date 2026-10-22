@@ -16,7 +16,7 @@ import type { ConversationState } from "./conversation-machine";
 import { initialConversationState } from "./conversation-machine";
 
 // The connect step once a mailbox is live, and the extras beside it in either
-// state. The page carries one primary in every state: the import press starts
+// state. The page carries one primary in every state. The import press starts
 // the run and leaves, declining it leaves with nothing started, and a run
 // already going leaves plain Continue. The posture and a calendar redirect in
 // flight hold the way on, because leaving mid-write lands under either answer.
@@ -187,8 +187,8 @@ describe("a live Google mailbox", () => {
     expect(dispatch).not.toHaveBeenCalled();
   });
 
-  // A reload after the import started lands here with the run going: starting
-  // a second one is not on offer, and Continue is the way on.
+  // A reload after the import started lands here with the run going. Starting a
+  // second one is not on offer, and Continue is the way on.
   it("leaves plain Continue over a run already going", async () => {
     stub({
       "GET /connectors": roster(
@@ -259,7 +259,7 @@ describe("a live Google mailbox", () => {
   });
 
   // A chained press whose calendar leg was refused lands on the calendar's
-  // outcome with the mailbox already live: the page is the connected one, the
+  // outcome with the mailbox already live. The page is the connected one, the
   // refusal is named, and the calendar can be asked for again on its own.
   it("keeps the mailbox and offers the calendar again after a refused calendar leg", async () => {
     sessionStorage.setItem("ob.connect.oauthAttempt", "gcal");

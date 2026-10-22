@@ -13,10 +13,10 @@ import {
 } from "../../testing/story-utils";
 import { ConnectorsCard } from "./connectors";
 
-// ConnectorsCard stories for the fe-uat render gate: a healthy connection, a
-// reauth-needed one (the reconnect affordance), a sync-error one, the empty
-// state, and a load failure — all off the same GET /connectors shape the
-// unit tests (connectors.test.tsx) already exercise.
+// ConnectorsCard stories for the fe-uat render gate. They cover a healthy
+// connection, a reauth-needed one (the reconnect affordance), a sync-error one,
+// the empty state, and a load failure. All use the same GET /connectors shape
+// the unit tests (connectors.test.tsx) exercise.
 //
 // One ProviderRow per account, with its services listed under it. The
 // workspace's Telegram bot has its own stories on Integrations.
@@ -168,8 +168,8 @@ export const ImapPolled: Story = {
   render: cardStory([imapPolled]),
 };
 
-// No mailbox at all: the card leads, the steps once on top, a tile per vendor
-// with its own Connect, the other-host row and the sharing plate.
+// No mailbox at all. The card leads with the steps once on top, then a tile per
+// vendor with its own Connect, the other-host row and the sharing plate.
 export const Empty: Story = {
   render: cardStory([]),
 };
@@ -186,7 +186,7 @@ const MICROSOFT_UNWIRED: components["schemas"]["CaptureProviderAvailability"][] 
     { provider: "imap", reason: "ready" },
   ];
 
-// Microsoft's company app is not registered here, so its tile keeps its place,
+// Microsoft's company app is not registered here. Its tile keeps its place,
 // says Not set up and names who turns it on, with no Connect to press.
 export const EmptyOneVendorUnwired: Story = {
   render: cardStory([], MICROSOFT_UNWIRED),
@@ -245,7 +245,7 @@ export const OneConnectedWithHeaderVerb: Story = {
 };
 
 // A refused connect reports itself where the press happened, not in a band of
-// its own further down the card: in the connect dialog, and on a roster row's
+// its own further down the card. That is the connect dialog, and a roster row's
 // Reconnect.
 function connectFailureStory(connections: CaptureConnection[], path: string) {
   return () => {

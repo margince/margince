@@ -93,7 +93,7 @@ function Section({
 }
 
 // The figures the list row already carries, so the drawer opens on them at
-// once and only the attempt ladder and the payload wait on the detail read.
+// once. Only the attempt ladder and the payload wait on the detail read.
 function summaryFacts(
   call: AiCallSummary,
   detail: AiCallRecord | undefined,
@@ -200,7 +200,7 @@ function AttemptLine({ attempt }: Readonly<{ attempt: AiCallAttempt }>) {
   const t = useT();
   const { locale } = useLocale();
   // Which rung, which binding, why it ran, how long. A reason names what went
-  // wrong BEFORE it, so beside the tier it says where the walk went next.
+  // wrong before it, so beside the tier it says where the walk went next.
   const answered =
     attempt.decision_choice !== undefined &&
     attempt.decision_confidence !== undefined;
@@ -325,8 +325,8 @@ function Payload({
 
 /**
  * One call, opened beside the trace. A drawer rather than a row that opens in
- * place, so the table keeps its height and its column widths whichever call is
- * being read, and the neighbouring calls are one press away.
+ * place, so the table keeps its height and column widths whichever call is read.
+ * The neighbouring calls are one press away.
  */
 export function CallDrawer({
   call,
@@ -355,8 +355,8 @@ export function CallDrawer({
       onClose={onClose}
       labelledBy={titleId}
       intent="drawer-reading"
-      // The reader opened a call to read it: focus lands on the drawer itself,
-      // so the first thing drawn as focused is not a stepping arrow.
+      // The reader opened a call to read it: focus lands on the drawer itself.
+      // The first thing drawn as focused is then not a stepping arrow.
       initialFocusTo={() =>
         document
           .getElementById(titleId)

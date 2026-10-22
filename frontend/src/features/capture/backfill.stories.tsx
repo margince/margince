@@ -11,12 +11,11 @@ import {
 } from "../../testing/story-utils";
 import { BackfillPanel } from "./backfill";
 
-// BackfillPanel stories for the fe-uat render gate: one per honest branch
-// the panel now covers: the ordinary setup/running/done/error/cancelled run
-// (seeded via `initial`, matching how the import dialog on a Connections
-// account mounts this panel off the embedded CaptureConnection.backfill), plus the three added by this
-// change: a provider with no Backfiller, a stalled running run, and a
-// refused window narrowing.
+// BackfillPanel stories for the fe-uat render gate, one per branch the panel
+// covers. The ordinary setup/running/done/error/cancelled run is seeded via
+// `initial`, as the import dialog on a Connections account mounts it off the
+// embedded CaptureConnection.backfill. The rest are a provider with no
+// Backfiller, a stalled running run, and a refused window narrowing.
 
 type BackfillStatus = components["schemas"]["BackfillStatus"];
 type Provider = components["schemas"]["CaptureConnection"]["provider"];
@@ -187,8 +186,8 @@ export const NullEstimate: Story = {
 };
 
 // IMAP has no Backfiller: the setup screen's auto-preview hits
-// connector_unsupported and the panel states the capability gap plainly
-// instead of rendering a window picker that can only fail again.
+// connector_unsupported. The panel states the capability gap plainly instead of
+// rendering a window picker that can only fail again.
 export const Unsupported: Story = {
   render: panelStory(
     "imap",
@@ -200,9 +199,9 @@ export const Unsupported: Story = {
   ),
 };
 
-// A prior wider run already covers more history than the newly-picked
-// window would: start refuses with window_narrowing, and the panel
-// explains the widen-only rule rather than a generic failure.
+// A prior wider run already covers more history than the newly-picked window
+// would. Start refuses with window_narrowing, and the panel explains the
+// widen-only rule rather than a generic failure.
 export const Narrowing: Story = {
   render: panelStory(
     "gmail",

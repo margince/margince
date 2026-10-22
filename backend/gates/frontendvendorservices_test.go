@@ -9,10 +9,9 @@ package gates
 // wire, and the two answers must be the same pairs.
 //
 // The server chains a mail consent into its vendor's calendar only for the pair
-// it knows (also_connect answers 422 otherwise), and the screens offer Mail and
-// Calendar together, name an account and pick the calendar a Meetings connect
-// asks for from the frontend's own table. A pair one side knows and the other
-// does not is a connect button whose request the server refuses.
+// it knows (also_connect answers 422 otherwise). The screens read the frontend's
+// own table to offer Mail and Calendar together and to pick the calendar.
+// A pair only one side knows is a connect button the server refuses.
 
 import (
 	"os"

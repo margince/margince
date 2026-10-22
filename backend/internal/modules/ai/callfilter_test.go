@@ -15,8 +15,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// The SQL buckets are the contract's enum, both ways: a bucket the SQL can
-// return that the enum lacks would fail a client, and an enum value the SQL
+// The SQL buckets are the contract's enum, both ways. A bucket the SQL can
+// return that the enum lacks would fail a client. An enum value the SQL
 // never returns is a filter that always matches nothing.
 func TestTheOutcomeBucketsAreTheContractEnum(t *testing.T) {
 	var buckets []string

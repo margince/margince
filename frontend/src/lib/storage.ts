@@ -83,7 +83,7 @@ export const STORAGE_KEYS = {
     lifetime: "seat",
   },
   // "Hide until next sign-in": local so a new tab keeps it, seat so the end of
-  // the session, deliberate or expired, brings the reminder back.
+  // the session brings the reminder back.
   setupReminderHidden: {
     name: "margince.setup.reminderHidden",
     area: "local",

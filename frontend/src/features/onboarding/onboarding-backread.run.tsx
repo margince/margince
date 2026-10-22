@@ -16,7 +16,7 @@ import { errorClassKey } from "../../lib/connector-status";
 import "./onboarding-backread.css";
 
 // A started import as onboarding draws it: progress, what it found, and how it
-// ended. Leaving is the step footer's, so this view offers only the run's own
+// ended. Leaving is the step footer's. This view offers only the run's own
 // verbs: stop a live run, or pick a window again over a stopped one.
 
 type BackfillStatus = components["schemas"]["BackfillStatus"];
@@ -32,9 +32,9 @@ const TALLIES: readonly { key: keyof BackfillCounts; label: MessageKey }[] = [
   { key: "companies_created", label: "ob.backread.tallyCompanies" },
 ];
 
-// Heading per state: a live read and a finished one each get one, while a
-// failed or cancelled read leads with its sentence: "The backread stopped" is
-// prose, and setting it as a heading would shout the failure.
+// Heading per state: a live read and a finished one each get one. A failed or
+// cancelled read leads with its sentence: "The backread stopped" is prose, and
+// a heading would shout the failure.
 function headingKey(state: BackfillStatus["state"]): MessageKey | null {
   if (isLiveRun(state)) return "ob.backread.running";
   return state === "done" ? "ob.backread.doneHeading" : null;
@@ -127,9 +127,9 @@ function BackreadProgress({ run }: Readonly<{ run: BackfillStatus }>) {
   );
 }
 
-// Every count the run actually reported, and only those: a tally the wire left
-// out is a measurement that does not exist yet, and printing 0 for it would
-// report an emptiness the server never claimed.
+// Every count the run reported, and only those. A tally the wire left out is a
+// measurement that does not exist yet. Printing 0 for it would report an
+// emptiness the server never claimed.
 function BackreadTallies({
   counts,
 }: Readonly<{ counts: BackfillCounts | undefined }>) {
@@ -185,11 +185,10 @@ function BackreadOutcome({ run }: Readonly<{ run: BackfillStatus }>) {
         </ErrorLine>
       );
     case "cancelled": {
-      // "Nothing was written" is only true of a cancel that landed before any
-      // page finished. Once at least one row is `captured`, the read is
-      // partial, not empty, and saying otherwise would be a false statement
-      // about the reader's own data: the captured rows are already sitting
-      // in the inbox, waiting on review, whether or not the run kept going.
+      // "Nothing was written" is only true of a cancel that landed before any page
+      // finished. Once one row is `captured`, the read is partial, not empty. Those
+      // rows already sit in the inbox waiting on review, whether or not the run
+      // kept going.
       const captured = run.counts?.captured ?? 0;
       return (
         <p>

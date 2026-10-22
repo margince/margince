@@ -22,11 +22,11 @@ export type ServiceRowTone = (typeof SERVICE_ROW_TONES)[number];
 
 /**
  * One thing an account brings in or asks to read (new mail, past email, the
- * calendar): a glyph, its name, one caption, then at most one status and one
- * verb. A ProviderRow is the account; these are the lines under it.
+ * calendar). It has a glyph, a name, one caption, then at most one status and
+ * one verb. A ProviderRow is the account; these are the lines under it.
  *
- * A row that needs attention says so once: the amber status plus `reason`,
- * never a second badge. Copy arrives translated.
+ * A row that needs attention says so once, with the amber status plus
+ * `reason` and never a second badge. Copy arrives translated.
  */
 export function ServiceRow({
   icon: Icon,

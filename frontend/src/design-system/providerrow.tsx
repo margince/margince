@@ -29,12 +29,12 @@ const ListHeadingLevel = createContext<ProviderHeadingLevel | undefined>(
 );
 
 /**
- * One connected account: the vendor's mark, its name with a status, the account
- * it reads, what it brings in, and the one verb that matters now.
+ * One connected account. It shows the vendor's mark, its name with a status,
+ * the account it reads, what it brings in, and the one verb that matters now.
  *
- * Reach for SettingRow when the row is a DECISION (a label and the control that
- * answers it); reach for this when the row is a THING somebody connected. The
- * mark column and the status beside the name are what SettingRow cannot draw.
+ * Use SettingRow for a decision (a label and the control that answers it).
+ * Use this for a thing somebody connected. SettingRow cannot draw the mark
+ * column or the status beside the name.
  *
  * Every slot is a node so a screen composes its own facts (chips, a sync time)
  * without the row learning what a mailbox is. Copy arrives translated.

@@ -20,13 +20,12 @@ import {
 
 // The rep's standing answer: may an agent work as them overnight?
 //
-// ONE QUESTION, ASKED IN TWO PLACES: beside the mailbox connect in onboarding,
-// where the rep is already deciding what Margince may see, and again in
-// Settings, where an answer given once has to be findable later. Both surfaces
-// read and write through lib/overnight-grant.ts so the two cannot drift apart.
+// The question is asked in two places. Onboarding asks beside the mailbox
+// connect. Settings asks again, because an answer given once has to be findable
+// later. Both read and write through lib/overnight-grant.ts so they cannot drift.
 //
-// Both draw a Switch row. Settings writes on flip; onboarding's switch holds the
-// answer until the step continues, and its description says so in words.
+// Settings writes on flip. Onboarding's switch holds the answer until the step
+// continues, and its description says so in words.
 
 // Lapsed and outgrown differ from a decline (the rep already agreed); each
 // names its cause, since either degrades the 2am run silently.
@@ -46,8 +45,8 @@ function grantStanding(grants: readonly MyAgentGrant[]) {
 /**
  * The settings card: the same question, answered again later.
  *
- * It writes on flip rather than behind a Save button: it changes only whether an
- * agent works for the one rep flipping it, and it is reversible in the same click.
+ * It writes on flip rather than behind a Save button. It changes only whether
+ * an agent works for the one rep flipping it, and is reversible in one click.
  */
 export function OvernightGrantCard() {
   const t = useT();
@@ -136,7 +135,7 @@ export function OvernightGrantCard() {
 }
 
 /** A yes that no longer does the job, kept out of the card so its own body
- * stays the question rather than the answers to it. */
+ * stays the question. */
 function RenewalNotices({
   showRenewal,
   showScopeRenewal,

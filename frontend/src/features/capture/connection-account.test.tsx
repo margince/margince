@@ -22,7 +22,7 @@ import { locationDouble } from "../../testing/locationdouble";
 import { ConnectionAccountRow } from "./connection-account";
 
 // One account on Connections: its services each say how they are doing and
-// carry their own verb, and the verbs about the whole account sit in its menu.
+// carry their own verb. The verbs about the whole account sit in its menu.
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
 type BackfillStatus = components["schemas"]["BackfillStatus"];
@@ -228,7 +228,7 @@ describe("the past email service", () => {
   });
 
   // A reconnect asked for a wider window than the import that already ran, and
-  // the server held it: the finished run must not hide the one press it owes.
+  // the server held it. The finished run must not hide the press it owes.
   it("offers a held window over an import that already finished", async () => {
     const calls = stubApi({
       "POST /connectors/gmail/backfill/preview": () =>
@@ -349,8 +349,8 @@ describe("each service's health", () => {
 });
 
 describe("the account's settings", () => {
-  // The tag is one answer per connection, so a mailbox with its calendar has
-  // three rarer settings behind Advanced, and the summary says so while shut.
+  // The tag is one answer per connection. A mailbox with its calendar has three
+  // rarer settings behind Advanced, and the summary says so while shut.
   it("counts what Advanced holds for a mailbox and its calendar", async () => {
     stubApi();
     renderAccount([gmail, gcal]);

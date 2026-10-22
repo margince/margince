@@ -199,11 +199,11 @@ function AuthedApp({
   // 401 and say nothing about the installation.
   const recordZone = useConfiguredRecordZone(authed);
 
-  // The route is a dependency on purpose: the gate must hold on every
-  // navigation, not only on first load: otherwise the palette or a typed hash
-  // walks straight past onboarding. passesOnboardingGate's screens are exempt
-  // or this effect would fight its own destination (onboarding) or destroy a
-  // request that cannot survive the rewrite (oauth-consent).
+  // The route is a dependency so the gate holds on every navigation. Otherwise
+  // the palette or a typed hash walks past onboarding.
+  // passesOnboardingGate's screens are exempt, or this effect would fight its
+  // own destination (onboarding) or destroy a request that cannot survive the
+  // rewrite (oauth-consent).
   const { screen: gateScreen, id: gateId, id2: gateId2 } = route;
   useEffect(() => {
     if (

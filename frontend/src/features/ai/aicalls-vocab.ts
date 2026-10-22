@@ -10,7 +10,7 @@ type T = ReturnType<typeof useT>;
 export type AiCallSummary = components["schemas"]["AiCallSummary"];
 
 // The server buckets each call (callfilter.go `callOutcomeSQL`) and filters on
-// the same expression, so the badge, the dial and the drawer read the bucket
+// the same expression. The badge, the dial and the drawer read the bucket
 // rather than re-deriving it from the sentinel.
 export type CallOutcome = components["schemas"]["AiCallOutcome"];
 export const CALL_OUTCOMES = [
@@ -22,8 +22,8 @@ export const CALL_OUTCOMES = [
 
 /**
  * The attempts the ladder itself made. A decision model that fell back is the
- * first of `calls_attempted`, and the rung after it is a second model asked,
- * not a retry of the first.
+ * first of `calls_attempted`. The rung after it is a second model asked, not a
+ * retry of the first.
  */
 export function ladderAttempts(call: AiCallSummary): number {
   return call.decision_attempted

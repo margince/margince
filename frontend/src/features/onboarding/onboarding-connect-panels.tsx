@@ -39,13 +39,11 @@ const PERMANENT_FAILURE_BODY: Record<string, MessageKey | undefined> = {
 // asOAuthConnectProvider. null means "no provider this build knows", which is
 // NOT the same fact as the segment being absent: the caller keeps the two apart.
 
-// A real "allow" click leaves the page entirely for the provider's own
-// consent screen, and this tab's sessionStorage is the only thing that survives
-// that round trip, so it is what tells a genuine return apart from a stale
-// or bookmarked `/connect/ok/...` URL replayed with no live attempt behind
-// it. `sessionStorage` (not `localStorage`) is deliberate: the mark belongs
-// to the ONE tab that started the trip, the same scope the redirect itself
-// stays within.
+// A real "allow" click leaves the page for the provider's consent screen. Only
+// this tab's sessionStorage survives that round trip. It tells a real return
+// apart from a stale or bookmarked `/connect/ok/...` URL replayed with no live
+// attempt. `sessionStorage` (not `localStorage`) keeps the mark in the one tab
+// that started the trip.
 export function markOAuthAttempt(provider: OAuthConnectProvider): void {
   writeStored(STORAGE_KEYS.oauthAttempt, provider);
 }
@@ -72,13 +70,10 @@ function isOAuthMailbox(provider: string): boolean {
 }
 
 // What a consent round trip came back with, said only where the connect
-// surface cannot say it: a refusal or a failure, in place of the account panel.
-// A granted mailbox and calendar need no word here, because the roster the
-// surface draws its account panel from is the proof, never a static claim.
-//
-// A mail-and-calendar press lands on the calendar's own outcome, because the
-// calendar consent is the last leg the server ran; the mailbox it was chained
-// after is already on the account panel either way.
+// surface cannot. That is a refusal or a failure, in place of the account
+// panel. A granted mailbox or calendar needs no word, because the roster is the
+// proof. A mail-and-calendar press lands on the calendar's outcome, the last
+// leg the server ran. The chained mailbox is already on the account panel.
 export function OAuthReturnPanel({
   outcome,
   provider,

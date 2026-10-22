@@ -18,9 +18,9 @@ import { OvernightGrantCard } from "./overnight-grant";
 
 // The rep's standing overnight authority, asked in two places.
 //
-// What is worth holding: the onboarding DEFAULT is on and turning it off names
-// what stops working; onboarding never writes; Settings writes on flip and,
-// once off, says so quietly with an Off badge instead of a warning.
+// What is worth holding: the onboarding default is on, and turning it off names
+// what stops working. Onboarding never writes. Settings writes on flip and,
+// once off, says so with an Off badge instead of a warning.
 
 function render(ui: ReactNode) {
   return rtlRender(
@@ -115,7 +115,7 @@ it("the settings card shows the stored answer and writes when flipped", async ()
   const toggle = await screen.findByTestId("overnight-grant-toggle");
   await waitFor(() => expect(toggle.getAttribute("aria-checked")).toBe("true"));
   await userEvent.click(toggle);
-  // Unlike onboarding's, this switch IS the action: flipping it writes.
+  // Unlike onboarding's, this switch is the action: flipping it writes.
   await waitFor(() => expect(written).toEqual([{ granted: false }]));
 });
 
@@ -203,10 +203,10 @@ it("tells the rep their authority died rather than that they declined", async ()
   render(<OvernightGrantCard />);
 
   expect(await screen.findByText(en["overnightGrant.renew"])).toBeTruthy();
-  // NOT the off sentence: they already answered, and showing that would put
-  // a settled question back in front of them. And not the scope notice either:
-  // a lapsed passport funds nothing, so BOTH would be true of it and a rep
-  // reading two notices cannot tell which one to act on.
+  // Not the off sentence. They already answered, and it would put a settled
+  // question back in front of them. Not the scope notice either. A lapsed
+  // passport funds nothing, so both would be true. A rep reading two notices
+  // cannot tell which to act on.
   expect(screen.queryByText(en["overnightGrant.offNote"])).toBeNull();
   expect(screen.queryByText(en["overnightGrant.renewScope"])).toBeNull();
 });

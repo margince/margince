@@ -13,9 +13,9 @@ import {
   OAuthReturnPanel,
 } from "./onboarding-connect-panels";
 
-// The onboarding connect panels for the fe-uat render gate (G-10): the
-// idle IMAP form, its post-connect state (the honest "building itself"
-// framing, no fabricated capture counts), and its rejected-login error; plus
+// The onboarding connect panels for the fe-uat render gate (G-10). They show
+// the idle IMAP form, its post-connect state (the "building itself" framing,
+// no fabricated capture counts) and its rejected-login error. They also show
 // the post-consent return view, for a mailbox and for a chained calendar.
 
 const meta: Meta<typeof ImapConnectPanel> = {

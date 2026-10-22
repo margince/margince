@@ -113,8 +113,8 @@ export const LabelHidden: Story = {
   ),
 };
 
-// The save rule for a lone Switch: the flip is the write, and a toast confirms
-// it because the switch already showed the new value before the server agreed.
+// The save rule for a lone Switch: the flip is the write. A toast confirms it
+// because the switch showed the new value before the server agreed.
 function DigestRow() {
   const toast = useToast();
   const [on, setOn] = useState(false);

@@ -25,9 +25,9 @@ import {
 } from "./connect-vendor";
 
 // The connect act's work surface, inline and status first: where the work
-// account lives and what to bring in from it, or, once a mailbox is live, what
-// is connected and how far back to read it. Mail and calendar come from the
-// same account, so the account is picked once.
+// account lives and what to bring in from it. Once a mailbox is live, it shows
+// what is connected and how far back to read it. Mail and calendar come from
+// the same account, so the account is picked once.
 
 // The roster row each account's mailbox carries. The calendar is a grant of
 // the same account and never decides which account the reader picked.
@@ -76,12 +76,11 @@ type CaptureConnection = components["schemas"]["CaptureConnection"];
 type Waiting = Readonly<{ vendor: AccountVendor; wait: AdminWait }>;
 
 /**
- * Which mailboxes are already live, read fresh here rather than assumed from
- * the pre-consent selection: a reload can land on this step with a mailbox
- * already connected from an earlier session, and the step has to say so
- * without the reader clicking anything. Shares the `["connectors"]` query key
- * with `OAuthReturnPanel` and the connected account panel, so react-query
- * dedupes them into one request.
+ * Which mailboxes are already live, read fresh rather than assumed from the
+ * pre-consent selection. A reload can land on this step with a mailbox
+ * connected in an earlier session, and the step has to say so without a click.
+ * Shares the `["connectors"]` query key with `OAuthReturnPanel` and the
+ * connected account panel, so react-query dedupes them into one request.
  */
 function useConnectedMailProviders(): ConnectedMailRoster {
   const roster = useConnectors();
@@ -324,8 +323,8 @@ function SkipWayOnward({
   );
 }
 
-/** The honest failure the step shows when the roster read itself fails, with
- *  the one recovery it has. */
+/** The failure the step shows when the roster read itself fails, with the one
+ *  recovery it has. */
 function MailRosterFailed({ onRetry }: Readonly<{ onRetry: () => void }>) {
   const t = useT();
   return (

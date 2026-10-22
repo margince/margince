@@ -73,8 +73,8 @@ func (h installationSettingsHandlers) GetInstallationSettings(w http.ResponseWri
 //
 // Apart from `sign_in_screen`, the values are identical to the aggregate's
 // `sign_in_providers`; what differs is who may read them. Every role reads the
-// installation's name, timezone and currency, and who may sign in is not, so it answers to
-// `authentication_policy`, which the store checks before it reads the entry.
+// installation's name, timezone and currency, but not who may sign in.
+// So this answers to `authentication_policy`, which the store checks first.
 func (h installationSettingsHandlers) GetAuthenticationPolicy(w http.ResponseWriter, r *http.Request) {
 	if h.store == nil {
 		httperr.NotImplemented(w, r, "GetAuthenticationPolicy")
@@ -109,9 +109,8 @@ func (h installationSettingsHandlers) GetAuthenticationPolicy(w http.ResponseWri
 	})
 }
 
-// signInScreenKeys rides the policy read and not the aggregate, because
-// resolving it reads stored sign-in clients, which a rep reading the currency
-// has no business causing. Empty, never null, when nothing is drawn.
+// signInScreenKeys rides the policy read and not the aggregate. Resolving it
+// reads stored sign-in clients, which a rep reading the currency must not cause. Empty, never null, when nothing is drawn.
 func (h installationSettingsHandlers) signInScreenKeys(ctx context.Context) []string {
 	keys := make([]string, 0)
 	if h.signInScreen == nil {

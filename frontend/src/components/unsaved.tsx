@@ -168,10 +168,10 @@ export function UnsavedGuard<Address extends string>({
 }
 
 /**
- * The question asked on the way out of a draft. Closing it is the SAFE answer,
- * so Escape and the backdrop both keep the edit: a dialog whose dismissal
- * destroys work punishes the reader for not reading it. With `savers` it offers
- * Save, and leaves only once every one of them has written.
+ * The question asked on the way out of a draft. Closing it is the safe answer,
+ * so Escape and the backdrop both keep the edit. A dialog whose dismissal
+ * destroys work punishes the reader for not reading it. With `savers` it
+ * offers Save, and leaves only once every one of them has written.
  */
 function LeaveQuestion({
   open,

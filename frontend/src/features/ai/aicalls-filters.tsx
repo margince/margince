@@ -24,7 +24,7 @@ function isOutcome(value: string): value is CallOutcome {
 
 /**
  * The dials `GET /ai/calls` narrows by, all held in the address so a filtered
- * trace is a link. The window is kept as its name, not an instant: the instant
+ * trace is a link. The window is kept as its name, not an instant. The instant
  * is cut when the request runs, so the query key does not move every render.
  */
 export type CallFilters = Readonly<{

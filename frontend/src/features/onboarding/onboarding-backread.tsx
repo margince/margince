@@ -21,25 +21,16 @@ import { BackreadRun } from "./onboarding-backread.run";
 
 /**
  * The last act of onboarding: a mailbox is connected, so the flow asks how far
- * back to read it, starts the read, and shows what it found. Without this step
- * a fresh install knows nothing about relationships the user already has, which
- * is the empty-install problem the whole wizard exists to solve.
+ * back to read it. It starts the read and shows what it found.
  *
- * Connecting and reading are two operations and the surface keeps them apart:
- * the grant is already given, this spends budget on history. So the scope is
- * previewed before the spend (ADR-0020) and the read is explicitly started, by
- * the step footer's "Import {period} and continue": the choice lives here, the
- * press lives with the step's other ways on, so the page has one primary.
+ * Connecting and reading are two operations. The scope is previewed before the
+ * spend (ADR-0020), and the step footer's "Import {period} and continue"
+ * starts the read, so the page has one primary.
  *
- * Three honesty rules run through every render here:
- *
- *  - `BackfillStatus` requires only `state`. Every count, the window and the
- *    denominator are optional, so each is absent-until-present: a tally with no
- *    count is omitted, never drawn as a 0 that looks like a finding.
- *  - progress is a fraction only when the server gave a denominator. Without
- *    `estimated_messages` the line is an open count and no percentage exists.
- *  - the run is a server-side job, so leaving is always available: the user can
- *    walk into the app with the read still going, and it keeps going.
+ * `BackfillStatus` requires only `state`, so a tally with no count is
+ * omitted, never drawn as a 0. Progress is a fraction only when the server gave
+ * `estimated_messages`. The run is a server-side job, so leaving is always
+ * available.
  */
 
 export type BackfillStatus = components["schemas"]["BackfillStatus"];
@@ -68,7 +59,7 @@ function safeDetail(
 /**
  * The import choice for one connected mailbox, shared by the panel that draws
  * it and the footer that starts it. `initial` is the run row embedded in the
- * `GET /connectors` roster row, so returning to a read in progress shows it at
+ * `GET /connectors` roster row. Returning to a read in progress shows it at
  * once and never offers to start a second one.
  */
 export function useOnboardingBackread({
@@ -98,15 +89,12 @@ export function BackreadPanel({
   const { status, preview, start, cancel } = choice;
   const selected = choice.window;
 
-  // `preview.data`/`preview.error` are the mutation's LAST result, which
-  // survives past the render where `selected` changes to a window nobody has
-  // previewed yet. `preview.variables` is the window that result belongs to, so
-  // a stale estimate for the old window is withheld rather than shown as though
-  // it answered the new pick.
-  //
-  // Start does not wait on it. The window is the consent, while the estimate
-  // only describes that window, and counting a large mailbox takes seconds. A
-  // verb held shut for those seconds reads as a broken button.
+  // `preview.data`/`preview.error` are the mutation's last result. It outlives a
+  // change of `selected` to a window nobody has previewed. `preview.variables`
+  // names the window that result belongs to, so a stale estimate is withheld.
+  // Start does not wait on it. The window is the consent and the estimate only
+  // describes it. A verb held shut while a large mailbox is counted reads as a
+  // broken button.
   const previewForSelection = preview.variables === selected;
   const previewSettled = previewForSelection && !preview.isPending;
 
@@ -154,7 +142,7 @@ export function BackreadPanel({
 }
 
 // The window pick and the consent it carries. The read-only note closes the
-// panel, right above the footer button that acts on it: a reassurance read
+// panel, right above the footer button that acts on it. A reassurance read
 // after the click is a reassurance nobody read.
 function BackreadSetup({
   selected,

@@ -80,9 +80,9 @@ const drawerCopy = {
  * vendor's console, register the redirect addresses, paste the pair. Every
  * step stays open, because the product cannot see the vendor's console.
  *
- * One form for first setup and for replacing a stored app, and one mount for
- * every surface that offers it: Settings opens it from the vendor's row, and
- * onboarding opens it in place for an admin whose company has no app yet.
+ * One form and one mount serve first setup and replacement. Settings opens it
+ * from the vendor's row; onboarding opens it for an admin whose company has
+ * no app yet.
  */
 export function OAuthAppDrawer({
   provider,
@@ -148,9 +148,9 @@ function SetupForm({
   const canManage = useCanWrite("capture_settings", "update");
   const app = useOAuthApp(provider);
   // Both `undefined` until edited. A stored app opens with its own client id
-  // and directory in place, so rotating a secret is one field and never widens
-  // a pinned app by accident; an app this installation's configuration
-  // supplies is not ours to carry over, so replacing it starts from blank.
+  // and directory in place, so rotating a secret never widens a pinned app.
+  // An app supplied by this installation's configuration is not ours to carry
+  // over, so replacing it starts from blank.
   const [clientId, setClientId] = useState<string | undefined>(undefined);
   const [tenant, setTenant] = useState<string | undefined>(undefined);
   const [clientSecret, setClientSecret] = useState("");
@@ -312,8 +312,8 @@ function SetupForm({
 }
 
 /**
- * The redirect addresses of an app that is already set up, on their own: the
- * table an operator copies from when a connection fails with a mismatch.
+ * The redirect addresses of an app that is already set up, on their own.
+ * An operator copies from this table when a connection fails with a mismatch.
  */
 export function RedirectAddressesDialog({
   provider,

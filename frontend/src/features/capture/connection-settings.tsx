@@ -24,15 +24,15 @@ import { HistoryBaselineRow } from "./connectors.historybaseline";
 import { useHeldThreads } from "./held-threads";
 
 // The standing decisions about one connected mailbox, drawn under its account
-// on Connections: who may read what it brings in, where its held threads are
-// reviewed, and the rarer answers behind Advanced.
+// on Connections. They cover who may read what it brings in, where its held
+// threads are reviewed, and the rarer answers behind Advanced.
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
 type MailPosture = NonNullable<CaptureConnection["mail_posture"]>;
 
 /**
- * The settings block for an account. A connected mailbox gets the whole block;
- * a service without mail (a calendar, the test mailbox) keeps only the tag the
+ * The settings block for an account. A connected mailbox gets the whole block.
+ * A service without mail (a calendar, the test mailbox) keeps only the tag the
  * contacts it brings in are filed under.
  */
 export function AccountSettings({
@@ -134,17 +134,17 @@ function HeldPointerRow() {
 }
 
 // What this mailbox asks of the mail it brings in. A Select rather than a
-// Switch, because the three answers are not one thing turned on and off:
-// `held` and `classified` both hold a message to the contacts on it, and what
-// separates them is whether a classifier may ever open it later.
+// Switch, because the three answers are not one thing turned on and off.
+// `held` and `classified` both hold a message to the contacts on it, and differ
+// in whether a classifier may ever open it later.
 //
-// `shared` is present and REFUSED rather than absent when the workspace has not
-// allowed it, so a reader learns there is a third answer and who can turn it
+// `shared` is present and refused rather than absent when the workspace has not
+// allowed it. A reader then learns there is a third answer and who can turn it
 // on. The server refuses it too (422 `shared_posture_not_allowed`).
 //
-// How strict each posture is, so the row can tell a NARROWING from a widening.
-// Only a narrowing has anything to offer history: `apply_to_history` only ever
-// narrows.
+// Each posture has a strictness, so the row can tell a narrowing from a
+// widening. Only a narrowing has anything to offer history, because
+// `apply_to_history` only ever narrows.
 const postureRank: Record<MailPosture, number> = {
   shared: 0,
   classified: 1,
@@ -269,7 +269,7 @@ function useSetMailPosture(provider: CaptureConnection["provider"]) {
 }
 
 // This mailbox's own answer to the nightly signature pass. Tri-state on the
-// wire, two states on screen: the description says whether the answer is the
+// wire, two states on screen. The description says whether the answer is the
 // mailbox's own or the company's, and turning the switch makes it its own.
 function SignatureEnrichmentRow({
   conn,

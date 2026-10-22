@@ -23,19 +23,13 @@ import { useMe } from "../../lib/session";
 type ResetSummary =
   operations["resetData"]["responses"][200]["content"]["application/json"];
 
-// The danger-zone reset action wipes the installation back to its first-boot
-// state. It needs two conditions of different kinds. The grant
-// `system_reset:delete` says this reader may wipe an installation that permits
-// wiping. The server-driven `data_reset_available` flag on /me says whether this
-// one does; its compiled default is false in every posture.
-//
-// The flag is not VITE_UI_PREVIEW_RESET, which is the unrelated password-reset
-// link. The server gates the endpoint on the same flag and answers 404 without it.
-//
-// The phrase is me.workspace_name, the Name setting the server compares against,
-// and the confirm sends that name rather than the typed text, so a stray space
-// cannot become a 422. A rename in another tab still ends in one, shown
-// verbatim in the dialog.
+// The danger-zone reset wipes the installation back to its first-boot state.
+// It needs the grant `system_reset:delete` and the server-driven
+// `data_reset_available` flag on /me. The flag defaults to false in every
+// posture, and the endpoint answers 404 without it. It is not
+// VITE_UI_PREVIEW_RESET, the unrelated password-reset link.
+// The confirm sends me.workspace_name, not the typed text, so a stray space
+// cannot become a 422. A rename in another tab still ends in one.
 export function ResetDataCard() {
   const t = useT();
   const { locale } = useLocale();

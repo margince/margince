@@ -23,17 +23,18 @@ import { navigate } from "../../lib/router";
 import { settingsHref } from "../../lib/settingsrouting";
 import { usePastEmail } from "./connection-past-email";
 
-// One thing an account brings in (new mail, past email, the calendar) as a
-// line under the account's row: what it is and how it is doing. A broken
-// service says so with its badge; why, and the Reconnect, are the account's.
+// One thing an account brings in (new mail, past email, the calendar) as a line
+// under the account's row. It says what it is and how it is doing. A broken
+// service says so with its badge. The why, and the Reconnect, are the
+// account's.
 
 type CaptureConnection = components["schemas"]["CaptureConnection"];
 type Provider = CaptureConnection["provider"];
 
 /**
- * The services an account brings in, one line each: new mail, past email and
- * the calendar for a Google or Microsoft 365 account, new mail alone for any
- * other. A vendor account names the service it is missing, with its connect.
+ * The services an account brings in, one line each. A Google or Microsoft 365
+ * account has new mail, past email and the calendar. Any other has new mail
+ * alone. A vendor account names the service it is missing, with its connect.
  */
 export function AccountServices({
   account,
