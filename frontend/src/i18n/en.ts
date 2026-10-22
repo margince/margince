@@ -3851,6 +3851,7 @@ export const en = {
   "co.evidence.previous": "Previous claim",
   "co.evidence.next": "Next claim",
   "co.evidence.title": "Source",
+  "co.evidence.record": "Record",
   "co.prep.withheld":
     "Parts of this company are hidden from you, so this summary is incomplete.",
   "co.read.newActivity_one": "1 new item since your last visit.",
@@ -13579,6 +13580,8 @@ export const en = {
   "contact.intro.fallbackNextRouteHelp":
     "Move to the next colleague on the list.",
   "contact.intro.decideTitle": "Introduction to {name}",
+  "contact.intro.askedBy": "Asked by",
+  "contact.intro.askedThrough": "Through",
   "contact.intro.decideLegend": "Your answer",
   "contact.intro.decideAction": "Record answer",
   "contact.intro.decideFailed": "The answer was not recorded. Retry.",

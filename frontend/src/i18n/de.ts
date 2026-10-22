@@ -3846,6 +3846,7 @@ export const de = {
   "co.evidence.previous": "Vorherige Aussage",
   "co.evidence.next": "Nächste Aussage",
   "co.evidence.title": "Quelle",
+  "co.evidence.record": "Datensatz",
   "co.prep.withheld":
     "Diese Zusammenfassung ist unvollständig, da Teile dieses Unternehmens für dich ausgeblendet sind.",
   "co.read.newActivity_one": "1 neuer Eintrag seit deinem letzten Besuch.",
@@ -13631,6 +13632,8 @@ export const de = {
   "contact.intro.fallbackNextRouteHelp":
     "Weiter zum nächsten Teammitglied auf der Liste.",
   "contact.intro.decideTitle": "Vorstellung bei {name}",
+  "contact.intro.askedBy": "Angefragt von",
+  "contact.intro.askedThrough": "Über",
   "contact.intro.decideLegend": "Deine Antwort",
   "contact.intro.decideAction": "Antwort speichern",
   "contact.intro.decideFailed":
