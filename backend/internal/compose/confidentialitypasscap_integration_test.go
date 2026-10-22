@@ -205,3 +205,43 @@ func TestTheBacklogLeavesOutThreadsThePassWillNotClaim(t *testing.T) {
 			backlog.Waiting, len(claimed))
 	}
 }
+
+// The scrape reads the backlog through the same installation binding as every
+// other capture read.
+func TestTheScrapeReaderAnswersTheBacklog(t *testing.T) {
+	e := integration.Setup(t)
+	seedHeldThreads(t, e, 2)
+
+	got, err := threadBacklogReader(e.Pool)(context.Background())
+	if err != nil {
+		t.Fatalf("reading the backlog for a scrape: %v", err)
+	}
+	if got.Waiting != 2 {
+		t.Fatalf("the scrape reader counts %d waiting threads, want 2", got.Waiting)
+	}
+}
+
+// A database that cannot be reached surfaces from the backlog read and from the
+// pass cap read, never as a caught-up ledger. A pass that cannot read its cap
+// stops before it judges anything.
+func TestAnUnreachableDatabaseFailsThePassCapAndTheBacklogReads(t *testing.T) {
+	e := integration.Setup(t)
+	seedHeldThreads(t, e, 1)
+	cancelled, cancel := context.WithCancel(principal.WithWorkspaceID(context.Background(), e.WS))
+	cancel()
+
+	if _, err := capture.ReadThreadBacklog(cancelled, InstallationDB(e.Pool)); err == nil {
+		t.Error("a cancelled read of the backlog reported success")
+	}
+	if _, err := capture.NewThreadVerdictStore(InstallationDB(e.Pool)).PassCap(cancelled); err == nil {
+		t.Error("a cancelled read of the pass cap reported success")
+	}
+	brain := &answerEveryThreadBrain{}
+	engine := NewConfidentialityVerdictEngine(e.Pool, brain, slog.Default())
+	if err := engine.RunWorkspace(cancelled, 0); err == nil {
+		t.Error("a pass that could not read its cap reported success")
+	}
+	if got := brain.calls.Load(); got != 0 {
+		t.Errorf("a pass that could not read its cap still judged %d threads", got)
+	}
+}
