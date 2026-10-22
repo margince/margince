@@ -6,6 +6,7 @@ package capture
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -20,9 +21,11 @@ import (
 // One text for both, so the gauge counts what the pass works. A second copy
 // could stay green over threads the pass refuses to claim.
 //
-// Names are unqualified because both queries select from the ledger alone.
-const threadOwedAnswerSQL = `status = 'pending'
+// Both queries select from capture_thread_verdict without an alias, because the
+// connection check names the table.
+var threadOwedAnswerSQL = `status = 'pending'
 	AND next_attempt_at IS NOT NULL
+	AND attempts < ` + strconv.Itoa(ThreadVerdictMaxAttempts) + `
 	AND EXISTS (SELECT 1 FROM activity a
 	             WHERE a.id = first_activity_id
 	               AND a.restricted_at IS NULL)
@@ -54,8 +57,7 @@ func ReadThreadBacklog(ctx context.Context, db *database.DB) (ThreadBacklog, err
 			       COALESCE(EXTRACT(EPOCH FROM now() - min(
 			         (SELECT a.created_at FROM activity a WHERE a.id = first_activity_id))), 0)
 			  FROM capture_thread_verdict
-			 WHERE `+threadOwedAnswerSQL+`
-			   AND attempts < $1`, ThreadVerdictMaxAttempts).Scan(&out.Waiting, &seconds); err != nil {
+			 WHERE `+threadOwedAnswerSQL).Scan(&out.Waiting, &seconds); err != nil {
 			return err
 		}
 		out.OldestWait = time.Duration(seconds * float64(time.Second))

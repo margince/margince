@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -65,12 +66,18 @@ func setPassCap(t *testing.T, e *integration.Env, passCap int) {
 	}
 }
 
-func runPass(t *testing.T, e *integration.Env, brain *answerEveryThreadBrain) {
+// runPassOn runs one pass on engine under the cap in force, the way the worker
+// does.
+func runPassOn(t *testing.T, e *integration.Env, engine *ConfidentialityVerdictEngine) {
 	t.Helper()
-	engine := NewConfidentialityVerdictEngine(e.Pool, brain, slog.Default())
 	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
 		t.Fatalf("confidentiality pass: %v", err)
 	}
+}
+
+func runPass(t *testing.T, e *integration.Env, brain *answerEveryThreadBrain) {
+	t.Helper()
+	runPassOn(t, e, NewConfidentialityVerdictEngine(e.Pool, brain, slog.Default()))
 }
 
 // The cap is a hard bound, also when it is not a multiple of the claim size.
@@ -80,16 +87,17 @@ func TestThePassJudgesNoMoreThanTheSavedCapAndReadsItEveryRun(t *testing.T) {
 	e := integration.Setup(t)
 	seedHeldThreads(t, e, 12)
 	brain := &answerEveryThreadBrain{}
+	engine := NewConfidentialityVerdictEngine(e.Pool, brain, slog.Default())
 
 	setPassCap(t, e, 3)
-	runPass(t, e, brain)
+	runPassOn(t, e, engine)
 	if got := brain.calls.Load(); got != 3 {
-		t.Fatalf("a pass under a cap of 3 judged %d threads, want exactly 3", got)
+		t.Fatalf("a pass under a cap of 3 judged %d threads, want 3", got)
 	}
 
 	// The same engine, a larger cap saved between two passes.
 	setPassCap(t, e, 5)
-	runPass(t, e, brain)
+	runPassOn(t, e, engine)
 	if got := brain.calls.Load(); got != 8 {
 		t.Fatalf("after raising the cap to 5 the second pass brought the total to %d, want 8", got)
 	}
@@ -159,11 +167,11 @@ func TestTheBacklogLeavesOutThreadsThePassWillNotClaim(t *testing.T) {
 	db := InstallationDB(e.Pool)
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	seedThreadQuestion(t, e, "thread-unclaimable", seedHeldThreadMail(t, e, "thread-unclaimable", "kunde@example.test", "Anfrage"))
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(context.Background(),
-			`UPDATE capture_connection SET mail_posture = 'shared' WHERE user_id = $1`, e.Rep1)
-		return err
-	}); err != nil {
+	// The seat leaves the classified posture through the registry's own writer.
+	registry := capture.NewRegistry(e.DB(), capture.NewSink(e.DB()), backfillAuthority{}, keyvault.NewMemory())
+	registry.Register(plainSyncConnector{name: "gmail"})
+	seat := e.As(e.Rep1, nil, integration.AdminPerms)
+	if _, err := registry.SetMailPosture(seat, "gmail", capture.PostureHeld, false); err != nil {
 		t.Fatalf("switching the seat's posture: %v", err)
 	}
 

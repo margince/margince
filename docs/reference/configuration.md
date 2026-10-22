@@ -946,7 +946,7 @@ slowing the import down.
 ### Reading the mail review backlog
 
 A mailbox in the classified posture holds every captured message until the review pass answers its
-thread. The pass judges up to `capture.confidentiality_pass_cap` threads per run, and the rest wait
+thread. The pass answers up to `capture.confidentiality_pass_cap` threads per run, and the rest wait
 for the next run. The job gauges cannot show a pass that runs on time and still falls
 behind, so `cmd/api` serves two more gauges beside them. They are read from the thread ledger at
 scrape time, and every api replica answers the same numbers, so read them with `max`, never `sum`:

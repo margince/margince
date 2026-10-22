@@ -247,8 +247,6 @@ function readingBackend(allow: GrantSpec) {
             mail_sync_interval_seconds:
               patch.mail_sync_interval_seconds ??
               state.mail_sync_interval_seconds,
-            confidentiality_pass_cap:
-              patch.confidentiality_pass_cap ?? state.confidentiality_pass_cap,
           };
         }
         return jsonResponse(state);
@@ -343,59 +341,6 @@ describe("the website-read limits on the enrichment card", () => {
       );
     },
   );
-});
-
-describe("the privacy-review cap on the enrichment card", () => {
-  it("shows the cap in force and saves a new one on Enter", async () => {
-    const backend = readingBackend(CAPTURE_EDITOR);
-    vi.stubGlobal("fetch", backend.fetchMock);
-    const user = userEvent.setup();
-    render(<CaptureSettingsCard />);
-
-    const cap = await screen.findByTestId<HTMLInputElement>(
-      "capture-review-pass-cap",
-    );
-    expect(cap.value).toBe("40");
-    await user.clear(cap);
-    await user.type(cap, "100{Enter}");
-
-    await waitFor(() =>
-      expect(backend.patches).toEqual([{ confidentiality_pass_cap: 100 }]),
-    );
-  });
-
-  it.each(["0", "201"])("refuses %s without sending it", async (bad) => {
-    const backend = readingBackend(CAPTURE_EDITOR);
-    vi.stubGlobal("fetch", backend.fetchMock);
-    const user = userEvent.setup();
-    render(<CaptureSettingsCard />);
-
-    const cap = await screen.findByTestId<HTMLInputElement>(
-      "capture-review-pass-cap",
-    );
-    await user.clear(cap);
-    await user.type(cap, `${bad}{Enter}`);
-
-    expect(
-      await screen.findByText(translate("en", "captureReview.passCap.refusal")),
-    ).toBeTruthy();
-    expect(backend.patches).toEqual([]);
-  });
-
-  it("shows the cap read-only to a seat without the update grant", async () => {
-    vi.stubGlobal("fetch", readingBackend({}).fetchMock);
-    render(<CaptureSettingsCard />);
-
-    const cap = await screen.findByTestId<HTMLInputElement>(
-      "capture-review-pass-cap",
-    );
-    expect(cap.disabled).toBe(true);
-    expect(
-      within(screen.getByTestId("capture-privacy-review")).getByText(
-        translate("en", "captureSettings.adminOnly"),
-      ),
-    ).toBeTruthy();
-  });
 });
 
 describe("a refused save on the enrichment card", () => {

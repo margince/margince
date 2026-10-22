@@ -147,27 +147,26 @@ func (s *ThreadVerdictStore) ClaimDue(ctx context.Context, limit int) ([]Pending
 			UPDATE capture_thread_verdict v
 			   SET attempts = v.attempts + 1,
 			       claimed_until = now() + make_interval(secs => $2),
-			       claimed_by = $4,
+			       claimed_by = $3,
 			       updated_at = now()
 			 WHERE v.id IN (
 			   SELECT id FROM capture_thread_verdict
 			    WHERE `+threadOwedAnswerSQL+`
 			      AND next_attempt_at <= now()
 			      AND (claimed_until IS NULL OR claimed_until <= now())
-			      AND attempts < $3
 			    ORDER BY next_attempt_at
 			    LIMIT $1
 			    FOR UPDATE SKIP LOCKED)
 			RETURNING v.id, v.thread_key, v.user_id, v.first_activity_id,
 			          coalesce(left((SELECT a.subject FROM activity a
-			                          WHERE a.id = v.first_activity_id AND a.restricted_at IS NULL), $5), ''),
+			                          WHERE a.id = v.first_activity_id AND a.restricted_at IS NULL), $4), ''),
 			          coalesce(left((SELECT a.body FROM activity a
-			                          WHERE a.id = v.first_activity_id AND a.restricted_at IS NULL), $6), ''),
+			                          WHERE a.id = v.first_activity_id AND a.restricted_at IS NULL), $5), ''),
 			          coalesce((SELECT array_agg(at.filename ORDER BY at.filename)
 			                      FROM attachment at
 			                     WHERE at.entity_type = 'activity' AND at.entity_id = v.first_activity_id
 			                       AND at.archived_at IS NULL), '{}')`,
-			limit, threadVerdictLease.Seconds(), ThreadVerdictMaxAttempts, claim,
+			limit, threadVerdictLease.Seconds(), claim,
 			MaxCapturedSubjectChars, MaxCapturedBodyChars)
 		if err != nil {
 			return err

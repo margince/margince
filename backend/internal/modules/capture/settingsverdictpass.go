@@ -17,17 +17,18 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 )
 
-// The default and the ceiling. Every thread is one model call, so the ceiling is
-// what a pass can finish inside the job's declared twenty-minute timeout. At 200
-// that leaves six seconds a thread; more would only be cut short.
+// The default and the ceiling. The ceiling catches a typo and is not a computed
+// capacity. A pass the job timeout cuts short loses nothing, because each answer
+// commits on its own and the rest stays claimable for the next pass.
 const (
 	DefaultConfidentialityPassCap = 40
 	MaxConfidentialityPassCap     = 200
 )
 
-// ConfidentialityPassCap is how many held threads one pass judges per
-// workspace. The rest stay claimable for the next pass, so the cap sets how fast
-// a backlog drains and never whether a thread is judged.
+// ConfidentialityPassCap is how many held threads one pass answers per
+// workspace. A thread the model fails on does not count. The rest stay
+// claimable for the next pass, so the cap sets how fast a backlog drains and
+// never whether a thread is judged.
 //
 // It is MachineryApplied because the engine runs as a system principal that
 // holds no `capture_settings` grant.
@@ -41,7 +42,7 @@ var ConfidentialityPassCap = config.DefineStored(config.Spec[int]{
 	Doc:     "Held mail threads one review pass may judge; the rest wait for the next pass.",
 }, config.Store{
 	RBACObject: captureSettingsObject, AuditVerb: captureAuditVerb,
-	MachineryApplied: true, // the engine reads it at the start of every pass
+	MachineryApplied: true,
 })
 
 // PassCap is the cap in force for the pass about to start. It is read per pass

@@ -22122,12 +22122,12 @@ export interface components {
         CaptureSettings: {
             locks?: components["schemas"]["SettingLocks"];
             /**
-             * @description How many held mail threads one confidentiality pass judges, per run. The threads
-             *     beyond the cap wait for the next run, so the cap sets how fast a backlog drains and
-             *     never whether a thread is judged. Raise it when
-             *     `margince_capture_confidentiality_oldest_wait_seconds` stays above how often the pass
-             *     runs. Each thread is one model call. Read at the start of every pass, so a change
-             *     applies without a restart. Default 40.
+             * @description How many held mail threads one confidentiality pass answers, per run. A thread the
+             *     model fails on does not count. The threads beyond the cap wait for the next run, so
+             *     the cap sets how fast a backlog drains and never whether a thread is judged. Raise it
+             *     when `margince_capture_confidentiality_oldest_wait_seconds` stays above how often the
+             *     pass runs. Read at the start of every pass, so a change applies without a restart.
+             *     Default 40.
              */
             confidentiality_pass_cap: number;
             /**
