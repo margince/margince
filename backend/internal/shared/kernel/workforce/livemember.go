@@ -40,3 +40,13 @@ func ActivatableMemberSQL(alias string) string {
 	}
 	return fmt.Sprintf("%sstatus IN ('invited', 'active') AND %sarchived_at IS NULL", prefix, prefix)
 }
+
+// AskableMemberSQL is the set an approval may be put to: a human who is
+// active, or invited and so finds the request waiting at sign-in.
+func AskableMemberSQL(alias string) string {
+	prefix := ""
+	if alias != "" {
+		prefix = alias + "."
+	}
+	return prefix + "is_agent = false AND " + ActivatableMemberSQL(alias)
+}

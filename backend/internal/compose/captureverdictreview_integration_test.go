@@ -345,3 +345,36 @@ func TestAgeingOutLosesToAHumanWhoDecidedFirst(t *testing.T) {
 		t.Fatal("the sweep overwrote a decision a human had already made")
 	}
 }
+
+// A sender question goes only to the colleague whose mail it came from. When
+// that colleague has left, the question is staged for nobody. The row also
+// leaves the backlog, so it cannot hold up senders who can still be asked.
+func TestASenderQuestionWhoseMailboxOwnerLeftIsStagedForNobody(t *testing.T) {
+	e := integration.Setup(t)
+	askable := seedPendingDisposition(t, e, "erin@stays.example", "stays.example", seedCapturedMail(t, e, "erin@stays.example", "hello"))
+	orphaned := seedPendingDisposition(t, e, "finn@left.example", "left.example", seedCapturedMail(t, e, "finn@left.example", "hello"))
+	retireToUnsure(t, e, askable)
+	retireToUnsure(t, e, orphaned)
+	e.WsExec(t, `UPDATE capture_pending_counterparty SET owner_id = $2 WHERE id = $1`, orphaned, e.Rep3)
+	e.WsExec(t, `UPDATE app_user SET status = 'deactivated' WHERE id = $1`, e.Rep3)
+
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
+	if err := engine.StageReviewsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), 0); err != nil {
+		t.Fatalf("staging reviews: %v", err)
+	}
+	if n := countIn(t, e, `SELECT count(*) FROM capture_pending_counterparty WHERE id = $1 AND proposal_id IS NOT NULL`, askable); n != 1 {
+		t.Fatal("the question for a colleague who can be asked was not staged; the case below would prove nothing")
+	}
+	if n := countIn(t, e, `SELECT count(*) FROM approval WHERE kind = 'capture_counterparty'`); n != 1 {
+		t.Fatalf("%d sender questions staged, want only the one for the colleague still here", n)
+	}
+	awaiting, err := capture.NewPendingStore(InstallationDB(e.Pool)).AwaitingReview(e.Admin(), 50)
+	if err != nil {
+		t.Fatalf("reading the review backlog: %v", err)
+	}
+	for _, row := range awaiting {
+		if row.ID == orphaned {
+			t.Fatal("the backlog still offers a question whose mailbox owner cannot be asked")
+		}
+	}
+}
