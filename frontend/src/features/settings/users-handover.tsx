@@ -13,6 +13,7 @@ import {
 } from "../../components/entityref";
 import { Field } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
+import { ErrorLine } from "../../design-system/errorline";
 import { Select } from "../../design-system/select";
 import { useToast } from "../../design-system/toast";
 import { formatNumber, INTL_LOCALE } from "../../format/format";
@@ -73,7 +74,7 @@ export function HandoverSummary({
   const phrase = useRecordsPhrase();
   const owned = useMemberHandover(member.id, enabled);
   if (owned.isError) {
-    return <p className="t-caption">{problemMessageOf(owned.error, t)}</p>;
+    return <ErrorLine error={owned.error} />;
   }
   const records = owned.data ? phrase(owned.data) : "";
   if (!records) {
@@ -173,9 +174,7 @@ export function HandoverModal({
             : t("users.handover.ownsNothing", { name: member.display_name })}
         </p>
       )}
-      {owned.isError && (
-        <p className="t-caption">{problemMessageOf(owned.error, t)}</p>
-      )}
+      {owned.isError && <ErrorLine error={owned.error} />}
       <Field
         label={t("users.handover.receiver")}
         hint={roster.isError ? t("owner.rosterFailed") : partialHint}
