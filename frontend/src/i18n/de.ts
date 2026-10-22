@@ -5820,6 +5820,7 @@ export const de = {
     "Beschreibe den Zweck. Margince nutzt den Kontext des Datensatzes.",
   "compose.draftEmail": "E-Mail entwerfen",
   "compose.drafting": "Wird entworfen…",
+  "compose.askAgain": "Auftrag ändern",
   "compose.discardDraft": "Entwurf verwerfen",
   "compose.discardDraftHint":
     "Markiert diesen Entwurf für deine Voice DNA als Fehlgriff. Der erzeugte Text wird nie gespeichert.",

@@ -5856,6 +5856,7 @@ export const en = {
     "Describe the purpose. Margince uses the record context.",
   "compose.draftEmail": "Draft email",
   "compose.drafting": "Drafting…",
+  "compose.askAgain": "Change the ask",
   "compose.discardDraft": "Discard draft",
   "compose.discardDraftHint":
     "Marks this draft as a miss for your Voice DNA. The generated text is never kept.",

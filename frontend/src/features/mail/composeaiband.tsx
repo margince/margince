@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { RefreshCw, RotateCcw } from "lucide-react";
+import { useId, useState } from "react";
 import type { components } from "../../api/schema";
 import { ErrorLine } from "../../design-system/errorline";
 import { IconAction } from "../../design-system/iconaction";
@@ -15,8 +16,8 @@ type VoiceProfile = components["schemas"]["VoiceProfile"];
 
 /**
  * The line above the words that a model writes through: the ask for a draft.
- * Once a draft stands, one line discloses it and holds its rewrites, a fresh
- * draft and the discard. Discarding brings the ask back.
+ * Once a draft stands, one line discloses it and holds its rewrites, the ask
+ * again (folded, so a changed steer can redraft) and the discard.
  */
 export function AiDraftBand({
   replying,
@@ -37,19 +38,22 @@ export function AiDraftBand({
   const untouched = fields.body !== "" && fields.body === fields.servedBody;
   const discard = voice.discardControl;
   const control = voice.control;
+  const offerId = useId();
+  // Held per draft: a new draft is a new provenance, which folds the ask away.
+  const [askingOver, setAskingOver] = useState<typeof provenance>(null);
+  const offer = (
+    <DraftOffer
+      replying={replying}
+      intent={fields.intent}
+      onIntentChange={fields.setIntent}
+      draft={control}
+      unavailable={fields.draftUnavailable}
+    />
+  );
   if (!drafted || !provenance) {
-    return (
-      <div className="compose-aiband">
-        <DraftOffer
-          replying={replying}
-          intent={fields.intent}
-          onIntentChange={fields.setIntent}
-          draft={control}
-          unavailable={fields.draftUnavailable}
-        />
-      </div>
-    );
+    return <div className="compose-aiband">{offer}</div>;
   }
+  const asking = askingOver === provenance;
   return (
     <div className="compose-aiband">
       <DraftBand
@@ -65,11 +69,10 @@ export function AiDraftBand({
               />
             )}
             <IconAction
-              label={t(replying ? "compose.draftReply" : "compose.draftEmail")}
+              label={t("compose.askAgain")}
               icon={<RefreshCw aria-hidden="true" />}
-              onClick={control.run}
-              pending={control.pending}
-              disabled={control.disabled}
+              onClick={() => setAskingOver(asking ? null : provenance)}
+              disclosure={{ expanded: asking, controls: offerId }}
             />
             {discard && (
               <IconAction
@@ -86,7 +89,11 @@ export function AiDraftBand({
           </>
         }
       />
-      {control.error && <ErrorLine>{control.error}</ErrorLine>}
+      {asking ? (
+        <div id={offerId}>{offer}</div>
+      ) : (
+        control.error && <ErrorLine>{control.error}</ErrorLine>
+      )}
       {discard?.error && <ErrorLine>{discard.error}</ErrorLine>}
     </div>
   );

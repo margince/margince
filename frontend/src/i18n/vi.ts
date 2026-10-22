@@ -5686,6 +5686,7 @@ export const vi = {
     "Mô tả mục đích. Margince dùng ngữ cảnh của hồ sơ.",
   "compose.draftEmail": "Soạn email",
   "compose.drafting": "Đang soạn…",
+  "compose.askAgain": "Đổi yêu cầu",
   "compose.discardDraft": "Bỏ bản nháp",
   "compose.discardDraftHint":
     "Đánh dấu bản nháp này là chưa đạt để Voice DNA ghi nhận. Văn bản đã tạo sẽ không được lưu.",

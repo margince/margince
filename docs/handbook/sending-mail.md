@@ -137,6 +137,9 @@ If Margince could not load the profile, the draft says so:
 > Your voice profile could not be loaded,
 > so this draft does not use your voice. Draft again, or edit before sending.
 
+Once a draft stands, **Change the ask** opens the ask again, so you can change
+what the next draft says.
+
 **Discard draft** marks the draft as a miss for your Voice DNA. Margince never
 keeps the text it wrote.
 
