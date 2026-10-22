@@ -50,7 +50,10 @@ These skip the row:
 - a row with no value in its `ref` column, or a `ref` that an earlier row of the same file already used;
 - an email address, domain or LinkedIn address that another live record already holds, when the row would create a second record under it;
 - a row whose record was archived since the earlier import;
+- a contact row whose email belongs to a sending system rather than a person, such as `noreply@`, `notifications@` or `receipts@`;
 - a record type you may not create, or a change to a record you may not edit.
+
+A contact row with **First name** and **Last name** filled takes its full name from those two.
 
 These stop nothing. The row lands, and the problem is listed:
 - an owner email that no user has (**Unknown owner**): you become the owner, except for a lead, which stays unassigned;
