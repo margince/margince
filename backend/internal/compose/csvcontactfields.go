@@ -75,7 +75,7 @@ func contactUpdateFrom(changed map[string]string, typed map[string]any) contacts
 }
 
 // contactFullName is the name ladder contactCreateFrom documents. A row that
-// states both name parts takes its full name from them: the row cannot be asked
+// states both name parts takes its full name from them. The row cannot be asked
 // again, and the store refuses a full name that disagrees with its parts.
 func contactFullName(fields map[string]string) string {
 	if joined := joinedNameParts(fields); joined != "" {
@@ -91,10 +91,9 @@ func contactFullName(fields map[string]string) string {
 	return strings.TrimSpace(fields[fieldEmail])
 }
 
-// withNamePartsAsFullName is the row as its full name reads it: one that states
-// both name parts carries them as its full name, whether or not it maps a full
-// name column. The update comparison reads it, so a full name that disagrees
-// with the parts can never be sent on its own.
+// withNamePartsAsFullName gives a row that states both name parts those parts
+// as its full name, whether or not it maps a full name column. The update
+// comparison reads it, so a disagreeing full name is never sent on its own.
 func withNamePartsAsFullName(fields map[string]string) map[string]string {
 	joined := joinedNameParts(fields)
 	if joined == "" || fields[fieldFullName] == joined {

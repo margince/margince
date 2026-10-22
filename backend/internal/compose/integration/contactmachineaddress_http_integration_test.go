@@ -28,8 +28,8 @@ func (f fieldFaults) only() (string, string) {
 	return f.Details.Errors[0].Field, f.Details.Errors[0].Code
 }
 
-// Each door names the refusal on its own field: the typed create on emails,
-// quick capture on email, and a full name that disagrees on full_name.
+// Each door names the refusal on its own field. The typed create uses emails,
+// quick capture uses email, and a disagreeing full name uses full_name.
 func TestEachContactDoorRefusesASendingSystemsAddressOnItsOwnField(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)

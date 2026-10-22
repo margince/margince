@@ -15,8 +15,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 )
 
-// An agent's proposed contact on a sending system's address cannot be created,
-// and the approver is told why before deciding rather than shown a bare preview.
+// An agent's proposed contact on a sending system's address cannot be created.
+// The approver is told why before deciding, not shown a bare preview.
 func TestAContactCreationOnASendingSystemsAddressShowsABlockingConflict(t *testing.T) {
 	e := integration.Setup(t)
 	e.GrantRole(t, e.AdminUser, "admin")

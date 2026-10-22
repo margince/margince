@@ -6,8 +6,8 @@
 package contacts
 
 // An address whose local part names a sending system (noreply@, receipts@)
-// becomes no contact on any path, and a full name that disagrees with the
-// first and last name beside it is refused rather than stored.
+// becomes no contact on any path. A full name that disagrees with the first
+// and last name beside it is refused rather than stored.
 
 import (
 	"context"

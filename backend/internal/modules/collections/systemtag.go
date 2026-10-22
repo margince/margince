@@ -14,11 +14,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// ApplySystemTagTx files each record under the tag with this name, restoring
-// or coining it as tagNamedTx says, so a word a user already made is reused.
-// A record already filed there counts as done, which lets a correction run
-// twice and change nothing the second time. It answers how many records it
-// tagged. System principal only.
+// ApplySystemTagTx files each record under the tag with this name, as
+// tagNamedTx finds or makes it. A word a user already made is reused. A record
+// already filed there counts as done, so a second run changes nothing. It
+// answers how many records it tagged. System principal only.
 func ApplySystemTagTx(ctx context.Context, tx pgx.Tx, name, entityType string, entityIDs []ids.UUID, evidence map[string]any) (int, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return 0, err
@@ -48,8 +47,8 @@ func ApplySystemTagTx(ctx context.Context, tx pgx.Tx, name, entityType string, e
 }
 
 // tagNamedTx is the tag holding this name, live first. An archived one is
-// restored rather than coined again, so the records it already files stay
-// under one word; a name no tag ever held is coined.
+// restored rather than coined again, so its records stay under one word.
+// A name no tag ever held is coined.
 func tagNamedTx(ctx context.Context, tx pgx.Tx, name string) (ids.TagID, error) {
 	name, err := ValidateTagName(name)
 	if err != nil {

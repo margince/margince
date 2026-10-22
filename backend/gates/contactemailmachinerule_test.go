@@ -7,8 +7,8 @@ package gates
 
 // Every product statement that inserts into contact_email sits in a function
 // that asks refuseMachineAddress first. An address whose local part names a
-// sending system (noreply@, notifications@) names no contact, and a writer that
-// skips the question puts one on a record no matter what the other writers do.
+// sending system (noreply@, notifications@) names no contact. A writer that
+// skips the question puts one on a record whatever the other writers do.
 
 import (
 	"go/ast"
@@ -26,8 +26,8 @@ var contactEmailInsert = regexp.MustCompile(`(?i)INSERT\s+INTO\s+contact_email\b
 // contactEmailRefusal is the contacts store's one check for a machine address.
 const contactEmailRefusal = "refuseMachineAddress"
 
-// contactEmailScope is built with a name only because the walk needs one; it is
-// not inside the owning package, so no call is claimed and every argument is judged.
+// contactEmailScope names the refusal only because the walk needs a name.
+// It is not inside the owning package, so no call is claimed.
 var contactEmailScope = helperScope{names: map[string]bool{contactEmailRefusal: true}}
 
 func TestEveryContactEmailInsertAsksTheMachineAddressRule(t *testing.T) {

@@ -163,7 +163,7 @@ func TestAContactRowWithASendingSystemsAddressIsSkipped(t *testing.T) {
 	}
 }
 
-// A row that states both name parts takes its full name from them, so the store
+// A row that states both name parts takes its full name from them. The store
 // never sees a full name that disagrees with the parts beside it.
 func TestAnImportRowsNamePartsSetItsFullName(t *testing.T) {
 	fields := map[string]string{fieldFullName: "Signing-Noreply", "first_name": "Contact", "last_name": "A"}

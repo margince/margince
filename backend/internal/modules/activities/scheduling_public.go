@@ -347,14 +347,8 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 		return
 	}
 
-	contactID, err := h.publicContacts.EnsureContactByEmail(r.Context(), req.Booker.Name, string(req.Booker.Email), "public_booking")
-	if badValue, ok := errors.AsType[*values.ParseError](err); ok {
-		// The contacts store names its own field; this form's address is booker.email.
-		httperr.Write(w, r, httperr.Validation("booker.email", badValue.Code, badValue.Message))
-		return
-	}
-	if err != nil {
-		writeStoreErr(w, r, err)
+	contactID, ok := h.ensureBooker(w, r, req)
+	if !ok {
 		return
 	}
 	if err := h.store.calendar.CheckRecipient(r.Context(), page.HostUserID, contactID, string(req.Booker.Email)); err != nil {
@@ -373,6 +367,21 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 	}
 
 	h.bookPublicInvitation(w, r, page, req, contactID, marketingOutcome, intent)
+}
+
+// ensureBooker is the contact the booking lands on, or the refusal written.
+func (h Handlers) ensureBooker(w http.ResponseWriter, r *http.Request, req crmcontracts.BookPublicMeetingJSONRequestBody) (ids.UUID, bool) {
+	contactID, err := h.publicContacts.EnsureContactByEmail(r.Context(), req.Booker.Name, string(req.Booker.Email), "public_booking")
+	if badValue, ok := errors.AsType[*values.ParseError](err); ok {
+		// The contacts store names its own field; this form's address is booker.email.
+		httperr.Write(w, r, httperr.Validation("booker.email", badValue.Code, badValue.Message))
+		return ids.Nil, false
+	}
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return ids.Nil, false
+	}
+	return contactID, true
 }
 
 // admitBookingMarketing settles the marketing tick BEFORE any write: it refuses

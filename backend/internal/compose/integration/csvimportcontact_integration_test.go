@@ -569,7 +569,7 @@ func TestUploadRefusesAFileThatIsNotUTF8(t *testing.T) {
 }
 
 // A row whose address belongs to a sending system names no contact. The dry run
-// skips it with its reason, and the commit skips the same row, so the report a
+// skips it with its reason, and the commit skips the same row. The report a
 // reader approves is the one the import carries out.
 func TestCSVImportSkipsARowWithASendingSystemsAddressInPreviewAndCommit(t *testing.T) {
 	e := setupImportApp(t)

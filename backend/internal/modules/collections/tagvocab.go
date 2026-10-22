@@ -405,9 +405,8 @@ func (s *Store) RestoreTag(ctx context.Context, id ids.TagID) (tagRow, error) {
 
 // restoreTagTx is RestoreTag on the caller's transaction, with its audit row.
 func restoreTagTx(ctx context.Context, tx pgx.Tx, id ids.TagID) (tagRow, error) {
-	// Lock first: two restores racing would both read an archived row and
-	// both report success, and the audit trail would show the word coming
-	// back twice.
+	// Lock first: two racing restores would both read an archived row and
+	// both report success. The audit trail would show the word back twice.
 	if _, err := storekit.LockRow(ctx, tx, "tag", id.UUID, storekit.IncludeArchived); err != nil {
 		return tagRow{}, err
 	}
