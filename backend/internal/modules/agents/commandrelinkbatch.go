@@ -33,7 +33,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/baselanguage"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -174,19 +173,4 @@ func destinationSubject(ctx context.Context, destination *anchoredRecord, entity
 		TargetVersion: &rec.Version,
 		Summary:       summary(recordLabel(rec)),
 	}, nil
-}
-
-// destinationLabel names the record a single relink files under. That relink
-// binds to the activity and never refuses on its destination (Guards says why),
-// so a destination the caller cannot see is named by its id, as the store will
-// refuse it at execution anyway. Any other failed read fails the staging.
-func destinationLabel(ctx context.Context, destination *anchoredRecord, id ids.UUID) (string, error) {
-	rec, err := destination.row(ctx, id)
-	if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
-		return id.String(), nil
-	}
-	if err != nil {
-		return "", err
-	}
-	return recordLabel(rec), nil
 }

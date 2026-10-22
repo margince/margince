@@ -141,9 +141,8 @@ type RelinkActivityCommand struct {
 func NewRelinkActivityCall(records datasource.SystemOfRecordProvider, language baselanguage.Resolver, cmd RelinkActivityCommand) GovernedCall {
 	return destinationTieredCall{
 		GovernedCall: bind[RelinkActivityCommand](&relinkActivityResolver{
-			language:    language,
-			activity:    anchoredRecord{records: records, entityType: datasource.EntityActivity},
-			destination: destinationRecord(records, cmd.EntityType),
+			language: language,
+			activity: anchoredRecord{records: records, entityType: datasource.EntityActivity},
 		}, cmd),
 		entityType: cmd.EntityType,
 		pinnable:   true,
@@ -302,21 +301,17 @@ var relinkDestinationTools = map[string]bool{
 }
 
 type relinkActivityResolver struct {
-	activity    anchoredRecord
-	destination anchoredRecord
-	language    baselanguage.Resolver
+	activity anchoredRecord
+	language baselanguage.Resolver
 }
 
 // Subject names the ACTIVITY the approval binds to — the row that changes —
 // and pins its version, with the destination carried into the summary: moving
 // a captured email onto THIS deal and onto that one are different decisions
-// wearing one shape.
+// wearing one shape. The destination stays an id: this card's decider is judged
+// on the activity, so the destination's name may not be theirs to read.
 func (r *relinkActivityResolver) Subject(ctx context.Context, cmd RelinkActivityCommand) (StageInfo, error) {
 	rec, err := r.activity.row(ctx, cmd.ActivityID)
-	if err != nil {
-		return StageInfo{}, err
-	}
-	destination, err := destinationLabel(ctx, &r.destination, cmd.EntityID)
 	if err != nil {
 		return StageInfo{}, err
 	}
@@ -325,7 +320,7 @@ func (r *relinkActivityResolver) Subject(ctx context.Context, cmd RelinkActivity
 		TargetType:    string(datasource.EntityActivity),
 		TargetID:      cmd.ActivityID,
 		TargetVersion: &rec.Version,
-		Summary:       fmt.Sprintf(said.relinkActivity, recordLabel(rec), said.noun(cmd.EntityType), destination),
+		Summary:       fmt.Sprintf(said.relinkActivity, recordLabel(rec), said.noun(cmd.EntityType), cmd.EntityID),
 	}, nil
 }
 
