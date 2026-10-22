@@ -59,9 +59,9 @@ func seedHeldThreads(t *testing.T, e *integration.Env, n int) {
 }
 
 // dueByTheDatabaseClock makes every seeded thread due by the database's clock.
-// seedThreadQuestion stamps the due time from this process's clock and the claim
-// compares it with the database's, so a database clock a minute behind this
-// host's would make every thread not yet due, and a pass would judge none.
+// seedThreadQuestion stamps the due time from this process's clock, but the
+// claim compares it with the database's. A database clock a minute behind this
+// host's would leave every thread not yet due, and a pass would judge none.
 func dueByTheDatabaseClock(t *testing.T, e *integration.Env) {
 	t.Helper()
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {

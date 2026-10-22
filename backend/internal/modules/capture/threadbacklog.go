@@ -15,14 +15,11 @@ import (
 )
 
 // threadOwedAnswerSQL selects the thread questions a pass can still answer,
-// whether or not their next attempt is due. ClaimDue adds the clock and the
-// lease. The gauge adds neither: a thread backing off is still hidden mail.
-//
-// One text for both, so the gauge counts what the pass works. A second copy
-// could stay green over threads the pass refuses to claim.
-//
-// Both queries select from capture_thread_verdict without an alias, because the
-// connection check names the table.
+// due or not. ClaimDue adds the clock and the lease; the gauge adds neither,
+// because a thread backing off is still hidden mail. One text for both, so the
+// gauge counts what the pass works. Both queries select from
+// capture_thread_verdict without an alias, because the connection check names
+// the table.
 var threadOwedAnswerSQL = `status = 'pending'
 	AND next_attempt_at IS NOT NULL
 	AND attempts < ` + strconv.Itoa(ThreadVerdictMaxAttempts) + `
