@@ -51,7 +51,7 @@ export function CompanyContactCard({
         )
       }
       email={contact.primary_email ?? undefined}
-      aside={role && <Badge>{t(role)}</Badge>}
+      aside={role && <Badge wrap>{t(role)}</Badge>}
     />
   );
 }

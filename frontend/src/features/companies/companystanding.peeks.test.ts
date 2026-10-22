@@ -28,7 +28,7 @@ const view = (over: object): Company360 =>
     sections_omitted: [],
     as_of: "2026-10-22T09:00:00Z",
     ...over,
-  }) as unknown as Company360;
+  }) as unknown as Company360; // contract:cast only the fields this peek reads are filled
 
 describe("contactsInTouch", () => {
   const contact = (id: string, last: string | null) => ({

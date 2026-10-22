@@ -7,10 +7,10 @@ import { providerName } from "../../format/connectorprovider";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import type { Locale } from "../../i18n/locale";
+import { approvalKindLabel } from "../../lib/approvalkindlabel";
 import { ENTITY, isEntityKind } from "../../lib/entity";
 import { routeHash } from "../../lib/router";
 import { approvalHref } from "../automations/approvaldrawer";
-import { approvalKindLabel } from "../automations/approvalkind";
 import { MagicApproval } from "./magic.approval";
 import {
   magicByKey,

@@ -164,7 +164,7 @@ function CompanyCard({
       identity={companyId}
       logo={summary?.logo_url}
       position={facts.length > 0 ? facts.join(" · ") : undefined}
-      aside={lifecycle && <Badge>{lifecycle}</Badge>}
+      aside={lifecycle && <Badge wrap>{lifecycle}</Badge>}
     />
   );
 }

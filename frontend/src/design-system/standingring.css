@@ -42,7 +42,6 @@
 .standing-ring-score {
   font: var(--fontHeadingLarge);
   font-variant-numeric: tabular-nums;
-  line-height: 1;
 }
 .standing-ring-caption {
   font: var(--fontBodySmall);

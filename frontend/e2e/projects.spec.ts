@@ -104,7 +104,11 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   await page.getByRole("button", { name: "Speichern", exact: true }).click();
   expect((await patched).postDataJSON().project_id).toBe("pr-new-1");
   // The saved drawer stays open for more edits, so close it before the page
-  // behind it is used again.
+  // behind it is used again. Escape while the save is in flight would ask to
+  // discard it, so wait for the group to leave its edit state first.
+  await expect(
+    page.getByRole("button", { name: "Speichern", exact: true }),
+  ).toBeHidden();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toBeHidden();
   // The deal header now carries the project as a chip linking to its page.

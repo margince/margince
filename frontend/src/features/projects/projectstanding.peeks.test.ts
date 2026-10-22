@@ -31,7 +31,7 @@ const view = (over: object): Project360 =>
       target_end_date: "2026-11-30",
     },
     ...over,
-  }) as unknown as Project360;
+  }) as unknown as Project360; // contract:cast only the fields this peek reads are filled
 
 describe("commitmentsPeek", () => {
   it("says how many of the open tasks the page shows when the rollup counts more", () => {

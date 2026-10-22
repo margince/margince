@@ -489,7 +489,6 @@ reach features/sign-in/installation-setup.platform.tsx features/capture/imap-con
 reach features/sign-in/installation-setup.tsx features/onboarding/onboarding-first-run.css
 reach features/sign-in/installation-setup.tsx features/onboarding/onboarding-ignition.tsx
 reach features/sign-in/magic.lines.tsx features/automations/approvaldrawer.tsx
-reach features/sign-in/magic.lines.tsx features/automations/approvalkind.ts
 reach features/sign-in/magic.records.tsx features/brief/brief.css
 reach features/sign-in/magic.stories.tsx features/brief/brief.changes.tsx
 reach features/sign-in/magic.tsx features/brief/brief.css

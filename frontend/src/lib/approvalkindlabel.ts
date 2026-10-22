@@ -1,4 +1,7 @@
-import type { MessageKey } from "../../i18n/en";
+import type { components } from "../api/schema";
+import type { Translator } from "../i18n";
+import type { MessageKey } from "../i18n/en";
+import { dealCloseOutcome } from "./approvalpreview";
 
 // What a staged proposal is, in words a reader recognises.
 //
@@ -82,3 +85,36 @@ export const KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   send_company_email: "approval.kind.send_company_email",
   send_message: "approval.kind.send_message",
 };
+
+/** humanize turns an unmapped wire enum into readable words. */
+export function humanizeKind(kind: string): string {
+  return kind.replaceAll("_", " ");
+}
+
+export function approvalKindLabel(kind: string, t: Translator): string {
+  const key = KIND_LABEL[kind];
+  return key ? t(key) : humanizeKind(kind);
+}
+
+// approvalLabel names one request's action. A deal move that closes the deal
+// says so; "Advance deal" over a close-as-lost tells the reader the opposite.
+type ApprovalPreview = components["schemas"]["ApprovalPreview"];
+
+export function approvalLabel(
+  approval: Readonly<{
+    kind: string;
+    preview?: ApprovalPreview | null;
+    proposed_change?: Readonly<Record<string, unknown>> | null;
+  }>,
+  t: Translator,
+): string {
+  if (approval.kind === "advance_deal" || approval.kind === "progress_deal") {
+    const outcome = dealCloseOutcome(
+      approval.preview,
+      approval.proposed_change,
+    );
+    if (outcome === "won") return t("approval.kind.closeDealWon");
+    if (outcome === "lost") return t("approval.kind.closeDealLost");
+  }
+  return approvalKindLabel(approval.kind, t);
+}

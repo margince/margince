@@ -8,9 +8,9 @@ import { provenanceOf } from "../../../design-system/provenanceof";
 import { Row } from "../../../design-system/stack";
 import { AutonomyDot, ProvenanceTag } from "../../../design-system/trust";
 import { useT } from "../../../i18n";
+import { approvalLabel } from "../../../lib/approvalkindlabel";
 import { approvalDotTier, useAgentTierMap } from "../../../lib/autonomy";
 import { useViewerId } from "../../../lib/session";
-import { approvalLabel } from "../../automations/approvalkind";
 
 type Approval = components["schemas"]["Approval"];
 

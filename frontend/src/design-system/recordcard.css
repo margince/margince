@@ -114,17 +114,6 @@ a.record-card-open:focus-visible {
   align-items: center;
 }
 
-/* A role word that is long in a translation wraps inside its pill instead of
-   being cut: the role is what the card says about the record. */
-.record-card-aside .badge {
-  white-space: normal;
-  border-radius: var(--r-sm);
-}
-.record-card-aside .badge-label {
-  white-space: normal;
-  overflow: visible;
-}
-
 /* A list of them. The gap is the card's own edge doing the separating, so no
    rule between rows — two borders a token apart read as a table someone drew
    badly rather than as a stack of cards. */

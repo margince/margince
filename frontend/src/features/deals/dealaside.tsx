@@ -356,7 +356,7 @@ function DealAccount({ companyId }: Readonly<{ companyId: string }>) {
       href={routeHash({ screen: "companies", id: companyId })}
       logo={company?.logo_url}
       position={facts.length > 0 ? facts.join(" · ") : undefined}
-      aside={stage && <Badge>{stage}</Badge>}
+      aside={stage && <Badge wrap>{stage}</Badge>}
     />
   );
 }

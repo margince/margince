@@ -37,7 +37,7 @@ const view = (over: object): Contact360 =>
     sections_omitted: [],
     as_of: "2026-10-22T09:00:00Z",
     ...over,
-  }) as unknown as Contact360;
+  }) as unknown as Contact360; // contract:cast only the fields this peek reads are filled
 
 describe("contactPeeks", () => {
   it("shows as many messages as the 90 day counts say, newest first, and none older", () => {

@@ -207,7 +207,7 @@ function EmployerCard({ employment }: Readonly<{ employment: Employment }>) {
       identity={employment.company_id}
       logo={company?.logo_url}
       position={facts || undefined}
-      aside={<Badge>{t("rel.current")}</Badge>}
+      aside={<Badge wrap>{t("rel.current")}</Badge>}
     />
   );
 }
