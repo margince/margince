@@ -50119,7 +50119,7 @@ type SchedulingProfile struct {
 	BufferMinutes     int       `json:"buffer_minutes"`
 	CalendarId        string    `json:"calendar_id"`
 
-	// CompanyName Derived from the anchor company; request values are ignored. Names longer than 200 characters are abbreviated for this profile.
+	// CompanyName The name of the legal entity an admin assigns the host to; request values are ignored. Names longer than 200 characters are abbreviated for this profile.
 	CompanyName     *string `json:"company_name,omitempty"`
 	DurationMinutes int     `json:"duration_minutes"`
 
@@ -50132,7 +50132,7 @@ type SchedulingProfile struct {
 	HostName *string `json:"host_name,omitempty"`
 	Location string  `json:"location"`
 
-	// LogoUrl Derived from the anchor company; request values are ignored. Absolute when the public origin is configured; otherwise relative to the API origin.
+	// LogoUrl The logo of the legal entity the host works for and absent when it has none; request values are ignored. Absolute when the public origin is configured; otherwise relative to the API origin.
 	LogoUrl       *string                   `json:"logo_url,omitempty"`
 	NoticeMinutes int                       `json:"notice_minutes"`
 	Provider      SchedulingProfileProvider `json:"provider"`
@@ -62360,6 +62360,12 @@ type ConnectProviderParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// GetPublicBookingCompanyLogoParams defines parameters for GetPublicBookingCompanyLogo.
+type GetPublicBookingCompanyLogoParams struct {
+	// Entity A live legal entity other than the default one.
+	Entity *openapi_types.UUID `form:"entity,omitempty" json:"entity,omitempty"`
 }
 
 // BookPublicMeetingJSONBody defines parameters for BookPublicMeeting.
@@ -78175,9 +78181,9 @@ type ServerInterface interface {
 	// Delete retained provider claims and identifying run metadata.
 	// (DELETE /provider-connections/{provider}/data)
 	DeleteProviderData(w http.ResponseWriter, r *http.Request, provider Provider)
-	// Read the anchor company's public booking logo.
+	// Read the logo a public booking page shows.
 	// (GET /public/booking/company-logo)
-	GetPublicBookingCompanyLogo(w http.ResponseWriter, r *http.Request)
+	GetPublicBookingCompanyLogo(w http.ResponseWriter, r *http.Request, params GetPublicBookingCompanyLogoParams)
 	// Book a meeting from the public page (anonymous) — captures the booker + mandatory consent.
 	// (POST /public/booking/{host_slug})
 	BookPublicMeeting(w http.ResponseWriter, r *http.Request, hostSlug string, params BookPublicMeetingParams)
@@ -83065,9 +83071,9 @@ func (_ Unimplemented) DeleteProviderData(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Read the anchor company's public booking logo.
+// Read the logo a public booking page shows.
 // (GET /public/booking/company-logo)
-func (_ Unimplemented) GetPublicBookingCompanyLogo(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) GetPublicBookingCompanyLogo(w http.ResponseWriter, r *http.Request, params GetPublicBookingCompanyLogoParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -114503,8 +114509,27 @@ func (siw *ServerInterfaceWrapper) DeleteProviderData(w http.ResponseWriter, r *
 // GetPublicBookingCompanyLogo operation middleware
 func (siw *ServerInterfaceWrapper) GetPublicBookingCompanyLogo(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetPublicBookingCompanyLogoParams
+
+	// ------------- Optional query parameter "entity" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "entity", r.URL.Query(), &params.Entity, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "entity"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetPublicBookingCompanyLogo(w, r)
+		siw.Handler.GetPublicBookingCompanyLogo(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

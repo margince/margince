@@ -6310,7 +6310,12 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Read the anchor company's public booking logo. */
+        /**
+         * Read the logo a public booking page shows.
+         * @description The logo of the legal entity the host works for. With no `entity`, the default
+         *     entity's logo, which is the anchor company's. A booking profile's `logo_url` names
+         *     the right one, so a client follows that link rather than building it.
+         */
         get: operations["getPublicBookingCompanyLogo"];
         put?: never;
         post?: never;
@@ -34578,9 +34583,9 @@ export interface components {
             location: string;
             /** @description Derived from the host account display name; request values are ignored. Names longer than 200 characters are abbreviated for this profile. */
             host_name?: string;
-            /** @description Derived from the anchor company; request values are ignored. Names longer than 200 characters are abbreviated for this profile. */
+            /** @description The name of the legal entity an admin assigns the host to; request values are ignored. Names longer than 200 characters are abbreviated for this profile. */
             company_name?: string;
-            /** @description Derived from the anchor company; request values are ignored. Absolute when the public origin is configured; otherwise relative to the API origin. */
+            /** @description The logo of the legal entity the host works for and absent when it has none; request values are ignored. Absolute when the public origin is configured; otherwise relative to the API origin. */
             logo_url?: string;
             readonly slug?: string;
             readonly public_url?: string;
@@ -60312,14 +60317,17 @@ export interface operations {
     };
     getPublicBookingCompanyLogo: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description A live legal entity other than the default one. */
+                entity?: string;
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description The anchor company's normalized PNG logo. */
+            /** @description The entity's normalized PNG logo. */
             200: {
                 headers: {
                     [name: string]: unknown;

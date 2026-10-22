@@ -55,7 +55,7 @@ func (h Handlers) GetPublicSchedulingProfile(w http.ResponseWriter, r *http.Requ
 		writeStoreErr(w, r, err)
 		return
 	}
-	profile = h.store.brandSchedulingProfile(r.Context(), profile)
+	profile = h.store.brandSchedulingProfile(r.Context(), page.HostUserID, profile)
 	httperr.WriteJSON(w, http.StatusOK, publicProfile(profile, nil))
 }
 
