@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
@@ -345,14 +346,14 @@ func TestRevertingTwoBoughtCurrentEmployersPromotesTheOneTypedIn(t *testing.T) {
 		t.Fatal(err)
 	}
 	applyPurchase(t, e, subject, "surfe", []provider.Claim{{Key: provider.ClaimJobHistory, Value: []byte(
-		`[{"company_name":"Side Employer","company_domain":"side-employer.example","job_title":"Advisor"}]`)}})
+		`[{"company_name":"Side Employer","company_domain":"side-employer.example","job_title":"Advisor","employment_status":"current"}]`)}})
 	if _, err := store.ApplyEmploymentImport(e.Admin(), ids.From[ids.ContactKind](subject),
 		crmcontracts.EmploymentImportRequest{}); err != nil {
 		t.Fatal(err)
 	}
 	var boughtCurrent int
 	queryAsOwner(t, e, `SELECT count(*) FROM relationship WHERE contact_id = $1 AND kind = 'employment'
-		AND archived_at IS NULL AND ended_at IS NULL`, &boughtCurrent, subject)
+		AND archived_at IS NULL AND `+employment.IsCurrentSQL("ended_at"), &boughtCurrent, subject)
 	if boughtCurrent != 2 {
 		t.Fatalf("the purchases left %d current employments, want 2, so this case tests nothing", boughtCurrent)
 	}
