@@ -118,6 +118,10 @@ export function Modal({
   const { mounted, state } = usePresence({ open, element: overlay });
   const drafts = useUnsavedRegistry(useContext(UnsavedContext));
   const [asking, setAsking] = useState(false);
+  // A caller that closes the dialog itself leaves no question behind for the next open.
+  if (!open && asking) {
+    setAsking(false);
+  }
   // The X, Escape and the backdrop all close through here, so each one asks
   // before it throws away a draft. A save closes through the caller instead.
   const dirty = unsaved || drafts.dirty;

@@ -896,6 +896,30 @@ describe("a dialog holding typed text asks before it closes", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
+  it("opens again without the question when the caller closed it mid-question", async () => {
+    const onClose = vi.fn();
+    const dialog = (open: boolean) => (
+      <Modal
+        open={open}
+        onClose={onClose}
+        labelledBy="n"
+        intent="drawer"
+        unsaved
+      >
+        <Heading size="large" id="n">
+          Log activity
+        </Heading>
+      </Modal>
+    );
+    const view = render(dialog(true));
+    await userEvent.keyboard("{Escape}");
+    expect(question()).not.toBeNull();
+    view.rerender(dialog(false));
+    view.rerender(dialog(true));
+    expect(question()).toBeNull();
+    expect(screen.getByRole("dialog", { name: "Log activity" })).toBeTruthy();
+  });
+
   it("asks for a draft the caller holds", async () => {
     const onClose = vi.fn();
     render(<NoteDialog onClose={onClose} unsaved />);
