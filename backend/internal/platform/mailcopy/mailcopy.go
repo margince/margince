@@ -129,6 +129,7 @@ type Copy struct {
 	// why the reader is asked.
 	MailAbout           string
 	MailProposal        string
+	MailSetOnApproval   string
 	MailReadFrom        string
 	MailPromisedBy      string
 	MailInTheirWords    string

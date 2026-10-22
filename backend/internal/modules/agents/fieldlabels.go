@@ -269,8 +269,8 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 
 // FieldLabel is one field as a reader of lang names it. A custom field reads as
 // its slug, because its label lives in a catalog this module cannot read. A
-// field the table lacks reads as its wire name with spaces, which the census
-// keeps from happening to any field the contract can change.
+// field the table lacks, such as one the server sets, reads as its wire name in
+// words. The census keeps that from happening to a field the contract changes.
 func FieldLabel(lang textlang.Lang, field string) string {
 	labels, ok := fieldLabelsByLang[lang]
 	if !ok {
@@ -279,7 +279,11 @@ func FieldLabel(lang textlang.Lang, field string) string {
 	if label, ok := labels[field]; ok {
 		return label
 	}
-	return strings.ReplaceAll(strings.TrimPrefix(field, datasource.CustomFieldPrefix), "_", " ")
+	words := strings.ReplaceAll(strings.TrimPrefix(field, datasource.CustomFieldPrefix), "_", " ")
+	if words == "" {
+		return field
+	}
+	return strings.ToUpper(words[:1]) + words[1:]
 }
 
 // FieldLabels joins fields as one list a reader of lang can read.

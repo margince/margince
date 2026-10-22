@@ -39,6 +39,7 @@ func workPresentationLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.MailDeadline }, "Decision deadline", "Frist", "Hạn quyết định")
 	line(func(c *Copy) *string { return &c.MailAbout }, "About", "Betrifft", "Về")
 	line(func(c *Copy) *string { return &c.MailProposal }, "Proposal", "Vorschlag", "Đề xuất")
+	line(func(c *Copy) *string { return &c.MailSetOnApproval }, "set when approved", "wird bei Freigabe gesetzt", "được đặt khi phê duyệt")
 	line(func(c *Copy) *string { return &c.MailReadFrom }, "Read from", "Gelesen aus", "Đọc từ")
 	line(func(c *Copy) *string { return &c.MailPromisedBy }, "Promised by", "Zugesagt von", "Người hứa")
 	line(func(c *Copy) *string { return &c.MailInTheirWords }, "In their words", "Im Wortlaut", "Nguyên văn")

@@ -45,9 +45,9 @@ func TestEveryUpdatableFieldHasALabelInEveryLanguage(t *testing.T) {
 func TestFieldLabelsNameFieldsInTheReadersLanguage(t *testing.T) {
 	fields := []string{"amount_minor", "expected_close_date", "cf_contract_tier"}
 	cases := map[textlang.Lang]string{
-		textlang.English: "Value, Expected close, contract tier",
-		textlang.German:  "Wert, Voraussichtlicher Abschluss, contract tier",
-		textlang.Unknown: "Value, Expected close, contract tier",
+		textlang.English: "Value, Expected close, Contract tier",
+		textlang.German:  "Wert, Voraussichtlicher Abschluss, Contract tier",
+		textlang.Unknown: "Value, Expected close, Contract tier",
 	}
 	for lang, want := range cases {
 		if got := FieldLabels(lang, fields); got != want {

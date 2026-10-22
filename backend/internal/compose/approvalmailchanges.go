@@ -11,6 +11,7 @@ package compose
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
@@ -20,6 +21,14 @@ import (
 
 // mailChangeLimit bounds the changes one email lists; the card shows the rest.
 const mailChangeLimit = 8
+
+// The preview value kinds the email renders in a form of its own.
+const (
+	previewValueMoney       = "money"
+	previewValueUnavailable = "unavailable_name"
+	previewValueLifecycle   = "lifecycle"
+	previewValueExecution   = "execution"
+)
 
 // changeMailFacts is the facts for an approval whose preview is ready.
 func changeMailFacts(approval crmcontracts.Approval, words mailcopy.Copy) approvalMailFacts {
@@ -31,37 +40,46 @@ func changeMailFacts(approval crmcontracts.Approval, words mailcopy.Copy) approv
 		facts.add(words.MailProposal, *approval.Summary)
 	}
 	lang := textlang.Lang(words.Language)
-	listed := 0
+	var shown []approvalMailLine
 	for _, change := range approval.Preview.Changes {
 		before, beforeShown := mailPreviewValue(change.Before, words)
 		after, afterShown := mailPreviewValue(change.After, words)
-		if !beforeShown || !afterShown {
-			continue
+		if beforeShown && afterShown {
+			shown = append(shown, approvalMailLine{Label: agents.FieldLabel(lang, change.Field), Value: before + " → " + after})
 		}
-		if listed == mailChangeLimit {
-			facts.add("", fmt.Sprintf(agents.MoreFields(lang), len(approval.Preview.Changes)-listed))
+	}
+	for i, line := range shown {
+		if i == mailChangeLimit {
+			facts.add("", fmt.Sprintf(agents.MoreFields(lang), len(shown)-i))
 			break
 		}
-		facts.add(agents.FieldLabel(lang, change.Field), before+" → "+after)
-		listed++
+		facts.add(line.Label, line.Value)
 	}
 	facts.add(words.MailWhyYou, reviewerSentence(approval.Preview.ReviewerReason, words))
 	return facts
 }
 
 // mailPreviewValue is one preview value as plain text. A value the reader may
-// not see, or one with no plain form, is not shown, and neither is its line.
+// not see is not shown, and neither is its line. A lifecycle code reads as its
+// words, because this side holds no translation of it.
 func mailPreviewValue(value crmcontracts.ApprovalPreviewValue, words mailcopy.Copy) (string, bool) {
 	switch value.Kind {
 	case previewValueEmpty:
 		return "—", true
-	case "money":
+	case previewValueExecution:
+		return words.MailSetOnApproval, true
+	case previewValueUnavailable:
+		return "", false
+	case previewValueMoney:
 		minor, err := strconv.ParseInt(value.Text, 10, 64)
 		if err == nil && value.Currency != nil {
 			return words.Money(minor, *value.Currency), true
 		}
-	case "unavailable_name", "structured":
-		return "", false
+	case previewValueLifecycle:
+		code := strings.ReplaceAll(value.Text, "_", " ")
+		if code != "" {
+			return strings.ToUpper(code[:1]) + code[1:], true
+		}
 	}
 	return value.Text, value.Text != ""
 }

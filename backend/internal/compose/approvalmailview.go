@@ -69,8 +69,8 @@ func refreshApprovalNotice(
 }
 
 // withApprovalWords writes the notice's subject and digest line for the
-// recipient, and the facts its single email adds: a commitment's own, else the
-// changes its ready preview lists.
+// recipient, and the facts its single email adds. A commitment has its own;
+// any other approval lists the changes its ready preview shows.
 func withApprovalWords(
 	ctx context.Context, pool *pgxpool.Pool, attempt notices.EmailAttempt, current crmcontracts.Approval, expires time.Time, use approvalNoticeUse,
 ) (notices.EmailAttempt, approvalMailFacts, bool, error) {
