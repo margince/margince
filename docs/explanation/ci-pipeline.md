@@ -429,13 +429,15 @@ Two kinds of input stay hidden from that check, and each is declared through `ga
 - **What a process the test started read.** A test that runs `git ls-files` or `go list` opens nothing itself. So it
   walks the paths the process read.
 
-The first kind is held by a census, not a scan, because such paths are mostly built at run time. Before
-`cache-warm` saves an entry, it runs the cached pass again through
+The first kind is held by a census, not a scan, because such paths are mostly built at run time.
+`make test-input-census` runs the cached pass again through
 [`scripts/testlog-exec.sh`](../../scripts/testlog-exec.sh), with Go's test log on. Then
 `backend/tools/check-test-inputs` fails on any package that read outside its module without reading the
 matching digest.
 
-A failing census holds back the entry, so readers stay on the last good one. The second kind is held by
+The `backend-lint` job runs the census on every PR, so the PR that adds such a read fails. `cache-warm`
+runs it before it saves an entry, and a failing census holds back the entry, so readers stay on the last
+good one. The second kind is held by
 a gate: a cached test file that runs `git` or `go` must declare its inputs.
 
 ## The jobs
