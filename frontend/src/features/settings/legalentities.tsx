@@ -123,6 +123,7 @@ function NewEntityDialog({ onClose }: Readonly<{ onClose: () => void }>) {
       title={t("legalEntities.addTitle")}
       onClose={onClose}
       fieldCount={3}
+      unsaved={Object.values(form).some((value) => value.trim() !== "")}
       form={
         <form id={formId} onSubmit={submit} className="form-stack">
           <TextField

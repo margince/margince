@@ -830,13 +830,15 @@ describe("a backdrop click closes only a press that starts and ends there", () =
   });
 });
 
+type User = ReturnType<typeof userEvent.setup>;
+
 describe("a dialog holding typed text asks before it closes", () => {
   const ways = {
-    Escape: async () => {
-      await userEvent.keyboard("{Escape}");
+    Escape: async (user: User) => {
+      await user.keyboard("{Escape}");
     },
-    "the corner X": async () => {
-      await userEvent.click(closeControl());
+    "the corner X": async (user: User) => {
+      await user.click(closeControl());
     },
     "the backdrop": async () => {
       pressBackdrop(overlayOf(document.body));
@@ -846,17 +848,19 @@ describe("a dialog holding typed text asks before it closes", () => {
   for (const [way, close] of Object.entries(ways)) {
     it(`asks on ${way}, and closes nothing yet`, async () => {
       const onClose = vi.fn();
+      const user = userEvent.setup();
       render(<NoteDialog onClose={onClose} />);
-      await userEvent.type(screen.getByLabelText("Details"), "Pricing call");
-      await close();
+      await user.type(screen.getByLabelText("Details"), "Pricing call");
+      await close(user);
       expect(question()).not.toBeNull();
       expect(onClose).not.toHaveBeenCalled();
     });
 
     it(`closes at once on ${way} when nothing is typed`, async () => {
       const onClose = vi.fn();
+      const user = userEvent.setup();
       render(<NoteDialog onClose={onClose} />);
-      await close();
+      await close(user);
       expect(question()).toBeNull();
       expect(onClose).toHaveBeenCalledTimes(1);
     });
@@ -864,21 +868,21 @@ describe("a dialog holding typed text asks before it closes", () => {
 
   it("closes once on Discard changes", async () => {
     const onClose = vi.fn();
+    const user = userEvent.setup();
     render(<NoteDialog onClose={onClose} />);
-    await userEvent.type(screen.getByLabelText("Details"), "Pricing call");
-    await userEvent.keyboard("{Escape}");
-    await userEvent.click(
-      screen.getByRole("button", { name: "Discard changes" }),
-    );
+    await user.type(screen.getByLabelText("Details"), "Pricing call");
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "Discard changes" }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it("keeps the dialog and the text when the question is closed", async () => {
     const onClose = vi.fn();
+    const user = userEvent.setup();
     render(<NoteDialog onClose={onClose} />);
-    await userEvent.type(screen.getByLabelText("Details"), "Pricing call");
-    await userEvent.click(closeControl());
-    await userEvent.keyboard("{Escape}");
+    await user.type(screen.getByLabelText("Details"), "Pricing call");
+    await user.click(closeControl());
+    await user.keyboard("{Escape}");
     expect(question()).toBeNull();
     expect(onClose).not.toHaveBeenCalled();
     expect(screen.getByLabelText("Details")).toHaveProperty(
@@ -889,8 +893,9 @@ describe("a dialog holding typed text asks before it closes", () => {
 
   it("neither closes nor asks on a drag from the text to the backdrop", async () => {
     const onClose = vi.fn();
+    const user = userEvent.setup();
     const { baseElement } = render(<NoteDialog onClose={onClose} />);
-    await userEvent.type(screen.getByLabelText("Details"), "Pricing call");
+    await user.type(screen.getByLabelText("Details"), "Pricing call");
     pressBackdrop(overlayOf(baseElement), screen.getByLabelText("Details"));
     expect(question()).toBeNull();
     expect(onClose).not.toHaveBeenCalled();
@@ -898,6 +903,7 @@ describe("a dialog holding typed text asks before it closes", () => {
 
   it("opens again without the question when the caller closed it mid-question", async () => {
     const onClose = vi.fn();
+    const user = userEvent.setup();
     const dialog = (open: boolean) => (
       <Modal
         open={open}
@@ -912,7 +918,7 @@ describe("a dialog holding typed text asks before it closes", () => {
       </Modal>
     );
     const view = render(dialog(true));
-    await userEvent.keyboard("{Escape}");
+    await user.keyboard("{Escape}");
     expect(question()).not.toBeNull();
     view.rerender(dialog(false));
     view.rerender(dialog(true));
@@ -922,8 +928,9 @@ describe("a dialog holding typed text asks before it closes", () => {
 
   it("asks for a draft the caller holds", async () => {
     const onClose = vi.fn();
+    const user = userEvent.setup();
     render(<NoteDialog onClose={onClose} unsaved />);
-    await userEvent.keyboard("{Escape}");
+    await user.keyboard("{Escape}");
     expect(question()).not.toBeNull();
     expect(onClose).not.toHaveBeenCalled();
   });

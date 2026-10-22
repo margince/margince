@@ -85,3 +85,39 @@ it("describes the name field by its hint, the key in the code face", async () =>
     "deal.cf_fleet_size",
   );
 });
+
+function Name({ onClose }: Readonly<{ onClose: () => void }>) {
+  return (
+    <LocaleProvider initial="en">
+      <NameDialog
+        open
+        onClose={onClose}
+        title="Rename"
+        label="Name"
+        initial="Berlin"
+        confirmLabel="Save"
+        onSave={() => undefined}
+      />
+    </LocaleProvider>
+  );
+}
+
+it("asks before Escape drops a changed name", async () => {
+  const onClose = vi.fn();
+  const user = userEvent.setup({ delay: null });
+  render(<Name onClose={onClose} />);
+  await user.type(screen.getByRole("textbox", { name: "Name" }), " Mitte");
+  await user.keyboard("{Escape}");
+  expect(
+    screen.getByRole("dialog", { name: "Discard unsaved changes?" }),
+  ).toBeInTheDocument();
+  expect(onClose).not.toHaveBeenCalled();
+});
+
+it("closes on Escape at once while the name is unchanged", async () => {
+  const onClose = vi.fn();
+  const user = userEvent.setup({ delay: null });
+  render(<Name onClose={onClose} />);
+  await user.keyboard("{Escape}");
+  expect(onClose).toHaveBeenCalledOnce();
+});

@@ -890,9 +890,10 @@ describe("the Details field", () => {
 describe("closing the drawer over a typed note", () => {
   it("asks first, and keeps the drawer open", async () => {
     stubApi({});
+    const user = userEvent.setup();
     render(<LogActivityAction entityType="deal" entityId="d1" openOnMount />);
-    await userEvent.type(screen.getByLabelText("Subject *"), "Recap");
-    await userEvent.keyboard("{Escape}");
+    await user.type(screen.getByLabelText("Subject *"), "Recap");
+    await user.keyboard("{Escape}");
     expect(
       screen.getByRole("dialog", { name: "Discard unsaved changes?" }),
     ).toBeTruthy();
@@ -901,9 +902,10 @@ describe("closing the drawer over a typed note", () => {
 
   it("closes without asking once the note is saved", async () => {
     stubApi({ "POST /activities": createdActivity });
+    const user = userEvent.setup();
     render(<LogActivityAction entityType="deal" entityId="d1" openOnMount />);
-    await userEvent.type(screen.getByLabelText("Subject *"), "Recap");
-    await userEvent.click(screen.getByRole("button", { name: "Log" }));
+    await user.type(screen.getByLabelText("Subject *"), "Recap");
+    await user.click(screen.getByRole("button", { name: "Log" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 });
