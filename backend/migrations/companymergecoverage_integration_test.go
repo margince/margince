@@ -80,6 +80,10 @@ var sqlWriteTarget = regexp.MustCompile(`(?i)\b(?:UPDATE|INSERT\s+INTO|DELETE\s+
 // one bound through pgx.NamedArgs (the merge's mergeTargetKey).
 var assignsToSurvivor = regexp.MustCompile(`(?i)([a-z_][a-z0-9_]*)\s*=\s*[^=]*?(?:\$(?:2|%d)|@target\b)`)
 
+// edgeWriteSet matches the SET clause handed to the contacts module's one edge
+// writer, which runs it as an UPDATE of relationship that no literal names.
+var edgeWriteSet = regexp.MustCompile("mergeEdgeWrite\\(\\s*ctx\\s*,\\s*tx\\s*,\\s*`([^`]*)`")
+
 // updateSetClause is the assignment list of an UPDATE: what follows `SET`, up
 // to its `WHERE`.
 var updateSetClause = regexp.MustCompile(`(?is)\bUPDATE\b.*?\bSET\b(.*?)(?:\bWHERE\b|$)`)
@@ -230,6 +234,11 @@ func tablesTheMergeWrites(t *testing.T) map[string]bool {
 			// statement is ever given.
 			if concatenatedColumn.MatchString(stmt) {
 				written[table+".company_id"] = true
+			}
+		}
+		for _, call := range edgeWriteSet.FindAllStringSubmatch(string(body), -1) {
+			for _, moved := range assignsToSurvivor.FindAllStringSubmatch(call[1], -1) {
+				written["relationship."+strings.ToLower(moved[1])] = true
 			}
 		}
 	}
