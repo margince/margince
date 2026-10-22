@@ -141,9 +141,8 @@ func TestEveryWorkflowJobCarriesATimeoutCeiling(t *testing.T) {
 // variants would miss the next one somebody writes — a bare `playwright install`
 // fetches every browser and would have escaped a list naming chromium.
 //
-// The package manager is named too: the recovery after a killed install runs
-// `dpkg --configure -a`, which finishes installs and so reaches the same mirror
-// state, and an unbounded one would hang the lane the bound exists to end.
+// The package manager is named too. `dpkg --configure -a` finishes installs, so
+// an unbounded one would hang the lane the bound exists to end.
 var unpinnedInstalls = []string{"playwright install", "dpkg --configure", "apt-get install", "apt-get update", "apt install"}
 
 // elevatedPrefix is what may stand before `timeout` without un-bounding the
