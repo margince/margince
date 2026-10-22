@@ -118,7 +118,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `jsonsafeinteger_test.go` | H1 | A bigint that reaches a JSON client is bounded to what the client can hold. |
 | `labelinstructions_test.go` | H2 | Every label the docs put in front of a session is one `.github/labels.yml` declares. |
 | `languageset_test.go` | H3 | The languages the product speaks are declared in more than one place, and they have to agree. |
-| `lastactivitymeetingrule_test.go` | H2 | last\_activity\_at on deal, contact and company skips a called-off meeting by the same rule as contact strength, and counts only what has happened, both spelled once in relstrength.LastActivityCountsSQL. |
+| `lastactivitymeetingrule_test.go` | H2 | last\_activity\_at on deal, contact and company skips a called-off meeting and counts only what has happened. |
 | `linkceilingparity_test.go` | H2 | The per-activity link ceiling is one number, wherever it is spelled. |
 | `listsortdeclared_test.go` | H2 | An operation that declares the shared `Sort` parameter has a handler that reads it. |
 | `listsortvocabulary_test.go` | H3 | A sort the list offers is a sort the server accepts. |
