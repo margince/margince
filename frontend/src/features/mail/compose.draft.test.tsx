@@ -7,6 +7,7 @@ import {
   messageText,
   writeMessage,
 } from "../../design-system/richtext-testing";
+import { draftButton } from "../../testing/composedraft.testkit";
 import { ComposeModal } from "./compose";
 import {
   activity202,
@@ -110,9 +111,7 @@ describe("ComposeModal draft binding", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     await pickWhy(WHY_LABEL.requestedFollowup);
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
@@ -145,14 +144,10 @@ describe("ComposeModal draft binding", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     writeMessage("Body", "Draft A body. And my own line.");
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
     await waitFor(() =>
       expect(
         sent.filter((r) => r.key === "POST /activities/act-1/draft-email")
@@ -185,9 +180,7 @@ describe("ComposeModal draft binding", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     // Emptied, then written afresh: two acts, and the first is the one under
     // test. Replacing the words in one stroke keeps the reference, because
@@ -219,9 +212,7 @@ describe("ComposeModal draft binding", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     await userEvent.click(
       screen.getByRole("button", { name: "Discard draft" }),
@@ -255,9 +246,7 @@ describe("ComposeModal draft binding", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     await pickWhy(WHY_LABEL.requestedFollowup);
     // The form is sendable before the judgment starts, so the refusal below is
@@ -304,9 +293,7 @@ describe("ComposeModal draft binding", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     await userEvent.click(
       screen.getByRole("button", { name: "Discard draft" }),
@@ -341,9 +328,7 @@ describe("ComposeModal draft binding", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     await userEvent.click(
       screen.getByRole("button", { name: "Discard draft" }),
@@ -379,9 +364,7 @@ describe("ComposeModal draft binding", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     await userEvent.click(
       screen.getByRole("button", { name: "Discard draft" }),
@@ -402,9 +385,7 @@ describe("ComposeModal draft binding", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
 
     const announced = await screen.findAllByRole("alert");
     expect(announced.map((node) => node.textContent)).toContain("no model");
@@ -430,9 +411,7 @@ describe("ComposeModal draft binding", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     const bodyField = messageBox("Body");
     const subjectField = screen.getByDisplayValue("Re: Q3");
@@ -467,11 +446,9 @@ describe("ComposeModal draft binding", () => {
     const onClose = renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
-    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
 
     expect(onClose).toHaveBeenCalled();
     expect(sent.some((r) => r.key.includes("draft-rejections"))).toBe(false);
@@ -493,9 +470,7 @@ describe("ComposeModal draft provenance", () => {
     await screen.findByRole("combobox", { name: WHY_ASK });
 
     writeMessage("Body", "My own words.");
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
 
     // Wait for draft completion before checking the discarded body's provenance.
     expect(await screen.findByDisplayValue("Re: Q3")).toBeTruthy();
@@ -514,14 +489,10 @@ describe("ComposeModal draft provenance", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     writeMessage("Body", "Draft A body. And my own line.");
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
     await waitFor(() =>
       expect(
         sent.filter((r) => r.key === "POST /activities/act-1/draft-email")
@@ -547,9 +518,7 @@ describe("ComposeModal draft provenance", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     expect(screen.getByRole("heading", DISCLOSURE)).toBeTruthy();
 
@@ -576,9 +545,7 @@ describe("ComposeModal draft provenance", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
 
     await screen.findByRole("heading", { name: "AI-assisted draft" });
     expect(screen.queryByText("Provisional voice")).toBeNull();
@@ -694,12 +661,14 @@ describe("ComposeModal send refusals", () => {
     renderComposer();
     await screen.findByRole("combobox", { name: WHY_ASK });
     await fillSendableForm();
+    await userEvent.click(screen.getByRole("button", { name: "Cc and Bcc" }));
     await userEvent.type(screen.getByLabelText("Cc"), "second@x.com");
     await userEvent.tab();
 
     expect(screen.queryByText(/more than one recipient/i)).toBeNull();
     await pickWhy(WHY_LABEL.marketing);
 
+    // The warning bar above the foot says what it is.
     expect(await screen.findByText(/more than one recipient/i)).toBeTruthy();
     // A warning, not a gate, and nothing was sent to earn it.
     expect(

@@ -152,6 +152,7 @@ export const SETTINGS_SECTIONS = {
     "captureReading.maxPages.label",
     "captureReading.maxMiB.label",
     "captureReading.wall.label",
+    "captureReview.passCap.label",
     "consumerMail.baselineTitle",
     "consumerMail.baselineSearchLabel",
   ],

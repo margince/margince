@@ -186,6 +186,9 @@ func resolveOfferTemplateRef(ctx context.Context, tx pgx.Tx, templateID *ids.Off
 // under a transaction-scoped advisory lock — two concurrent creates
 // serialize on the mint instead of racing into offer_number_rev_unique.
 func nextOfferNumber(ctx context.Context, tx pgx.Tx, wsID ids.UUID) (string, error) {
+	if err := requireReadCommitted(ctx, tx); err != nil {
+		return "", err
+	}
 	if _, err := tx.Exec(ctx,
 		`SELECT pg_advisory_xact_lock(hashtextextended('offer_number:' || $1::text, 0))`, wsID); err != nil {
 		return "", fmt.Errorf("acquire offer-number lock: %w", err)
@@ -197,6 +200,20 @@ func nextOfferNumber(ctx context.Context, tx pgx.Tx, wsID ids.UUID) (string, err
 		return "", fmt.Errorf("mint offer number: %w", err)
 	}
 	return fmt.Sprintf("A-%d", next), nil
+}
+
+// requireReadCommitted refuses a mint on a transaction that is not at
+// `read committed`. A mint reads MAX after taking its lock. Under a snapshot
+// taken before the lock, that read is stale and two mints share one number.
+func requireReadCommitted(ctx context.Context, tx pgx.Tx) error {
+	var isolation string
+	if err := tx.QueryRow(ctx, `SHOW transaction_isolation`).Scan(&isolation); err != nil {
+		return fmt.Errorf("read the mint's isolation level: %w", err)
+	}
+	if isolation != "read committed" {
+		return fmt.Errorf("deals: a number is minted only at read committed, not %s", isolation)
+	}
+	return nil
 }
 
 // offerTotalsChange is the transition recomputeOfferTotals wrote to the

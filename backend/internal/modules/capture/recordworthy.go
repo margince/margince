@@ -87,7 +87,7 @@ func AddressCouldNameAContact(email, domain string, list *TransactionalList) boo
 	// The local part is asked FIRST, and no allowlist overrules it. An operator
 	// vouches for a DOMAIN — that its contacts are real counterparties — and says
 	// nothing about `noreply@` on it, where still nobody answers.
-	if machineLocalpart(address) {
+	if mailidentity.HasMachineLocalpart(address) {
 		return false
 	}
 	if list != nil && list.Allowlisted(domain) {
@@ -109,17 +109,6 @@ func AddressCouldNameAContact(email, domain string, list *TransactionalList) boo
 	// reads that one and a named human here is a real customer.
 	_, service := personalServiceDomains[base]
 	return !service
-}
-
-// machineLocalpart reports whether the local part of an address names a sending
-// system rather than a contact, by both vocabularies the registry keeps.
-func machineLocalpart(address string) bool {
-	at := strings.LastIndex(address, "@")
-	if at <= 0 || at == len(address)-1 {
-		return false
-	}
-	local := address[:at]
-	return isMachineLocalpart(local) || mailidentity.HasMachineMarker(local)
 }
 
 // consumerMailSender answers T3: is this sender a personal mailbox rather than

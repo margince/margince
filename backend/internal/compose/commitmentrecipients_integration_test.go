@@ -7,6 +7,7 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"testing"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/attention"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -216,5 +218,60 @@ func TestUnlinkedRecipientPreventsAutomaticTaskCompletion(t *testing.T) {
 	k.deliver(t, k.newest(t, eventClaimChanged, `envelope->'payload'->>'claim_id' = $2`, other.Id.String()))
 	if k.taskDone(t) != "true" {
 		t.Fatal("fully settled recipients left the task open")
+	}
+}
+
+// A promise request about a task follows the task's current assignee. A human
+// hands the task on, and a re-read finds another recipient. The request put to
+// the former assignee is withdrawn, and only the new one is asked.
+func TestARequestAboutAReassignedTaskLeavesTheFormerAssignee(t *testing.T) {
+	e := setupCompletionTranscript(t, "Priya Raman: Ines, Morgan and Pat, I will send the recording to all three of you.")
+	for _, seat := range []ids.UUID{e.Rep1, e.Rep2, e.Rep3} {
+		e.GrantRole(t, seat, "rep")
+	}
+	refs := []string{}
+	for _, name := range []string{"Ines Huber", "Morgan Recipient", "Pat Buyer"} {
+		contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: name, OwnerID: new(ids.From[ids.UserKind](e.Rep2))})
+		if err != nil {
+			t.Fatal(err)
+		}
+		e.linkTranscriptContact(t, ids.UUID(contact.Id))
+		refs = append(refs, "contact:"+ids.UUID(contact.Id).String())
+	}
+	readFor := func(recipients int) {
+		t.Helper()
+		raw, err := json.Marshal(map[string][]proposedStep{"proposals": {{
+			Summary: "Send the recording", Owner: "Priya Raman", PromiserRef: "seat:" + e.Rep2.String(), RecipientRefs: refs[:recipients],
+			SourceLines: []int{1}, Confidence: 0.95, Meaning: openCommitmentMeaning("", ""),
+		}}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		e.readAt(t, cannedBrain{reply: string(raw)}, func() time.Time { return completionReadTime })
+	}
+	handTo := func(seat ids.UUID) {
+		t.Helper()
+		updateCampaignTask(t, e, activities.UpdateActivityInput{AssigneeID: new(ids.From[ids.UserKind](seat))})
+	}
+	pendingFor := func(seat ids.UUID) int {
+		t.Helper()
+		return e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = 'commitment_task' AND status = 'pending'
+			AND requested_decider_id = $1`, seat)
+	}
+
+	readFor(1)
+	handTo(e.Rep3)
+	readFor(2)
+	if pendingFor(e.Rep3) != 1 {
+		t.Fatalf("want the new recipient put to the task's holder; got %d request(s)", pendingFor(e.Rep3))
+	}
+	handTo(e.Rep1)
+	readFor(3)
+
+	if n := pendingFor(e.Rep3); n != 0 {
+		t.Errorf("%d request(s) still put to the former assignee, want none", n)
+	}
+	if n := pendingFor(e.Rep1); n != 1 {
+		t.Errorf("%d request(s) put to the current assignee, want 1", n)
 	}
 }

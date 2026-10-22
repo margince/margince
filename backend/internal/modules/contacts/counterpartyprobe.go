@@ -5,26 +5,34 @@ package contacts
 
 import (
 	"context"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
-// ProbeCounterpartyMatch refuses an address that already belongs to a contact
-// the caller may not file onto. Ensuring it on the caller's say-so files mail
-// onto that contact and promotes it to the workspace, so a read-only share is
-// not enough.
-func (s *Store) ProbeCounterpartyMatch(ctx context.Context, email string) error {
+// ProbeCounterpartyMatch refuses a sender whose address or domain already
+// belongs to a record the caller may not file onto. Ensuring them files mail
+// onto that contact, publishes it, and employs it at the domain's company.
+// Those are writes, so a read-only share is not enough.
+func (s *Store) ProbeCounterpartyMatch(ctx context.Context, email, domain string) error {
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		return s.ProbeCounterpartyMatchTx(ctx, tx, email)
+		return s.ProbeCounterpartyMatchTx(ctx, tx, email, domain)
 	})
 }
 
 // ProbeCounterpartyMatchTx is ProbeCounterpartyMatch on the caller's
-// transaction. It matches the address as ensureContact does, and holds each
-// matched contact FOR SHARE until the ensure that follows has written.
-func (s *Store) ProbeCounterpartyMatchTx(ctx context.Context, tx pgx.Tx, email string) error {
+// transaction. It matches as the ensure does, and holds each matched record
+// FOR SHARE until the ensure that follows has written.
+func (s *Store) ProbeCounterpartyMatchTx(ctx context.Context, tx pgx.Tx, email, domain string) error {
+	// An erased address creates nothing, so there is no record to ask about;
+	// the ensure resolves it as suppressed.
+	suppressed, err := storekit.EmailSuppressed(ctx, tx, strings.ToLower(strings.TrimSpace(email)))
+	if err != nil || suppressed {
+		return err
+	}
 	matched, err := exactContactByEmail(ctx, tx, []string{email})
 	if err != nil {
 		return err
@@ -34,5 +42,12 @@ func (s *Store) ProbeCounterpartyMatchTx(ctx context.Context, tx pgx.Tx, email s
 			return err
 		}
 	}
-	return nil
+	if domain == "" {
+		return nil
+	}
+	employer, _, ok, err := employerMatchTx(ctx, tx, domain)
+	if err != nil || !ok || employer.Decision != DecisionExactCollision {
+		return err
+	}
+	return auth.EnsureAttachTarget(ctx, tx, entityCompany, employer.CompanyID.UUID)
 }

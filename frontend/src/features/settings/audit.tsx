@@ -71,6 +71,7 @@ const AUDIT_ACTION_LABEL = {
   import_undo: "audit.action.importUndo",
   reset_data: "audit.action.resetData",
   password_link_issued: "audit.action.passwordLinkIssued",
+  mfa_removed: "audit.action.mfaRemoved",
   connect: "audit.action.connect",
   disconnect: "audit.action.disconnect",
   schedule: "audit.action.schedule",

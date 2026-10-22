@@ -209,6 +209,7 @@ describe("a moment action that opens the composer", () => {
   // The steering field's own value, read off the element rather than through a
   // matcher: this file carries no jest-dom, and narrowing beats asserting.
   async function intentValue(): Promise<string> {
+    await screen.findByRole("button", { name: /^Draft (reply|email)$/ });
     const field = await screen.findByRole("textbox", {
       name: /Purpose of the email|Purpose of the reply/,
     });
@@ -245,7 +246,7 @@ describe("a moment action that opens the composer", () => {
     await user.click(within(header).getByRole("button", { name: "Email" }));
 
     expect(
-      await screen.findByRole("dialog", { name: /Send email/ }),
+      await screen.findByRole("dialog", { name: /New email/ }),
     ).toBeTruthy();
     // The steer field is here, and EMPTY: pressing the generic verb must not
     // inherit the reason the last rung left behind.
@@ -269,7 +270,7 @@ describe("a moment action that opens the composer", () => {
     await user.click(address);
 
     expect(
-      await screen.findByRole("dialog", { name: /Send email/ }),
+      await screen.findByRole("dialog", { name: /New email/ }),
     ).toBeTruthy();
     expect(screen.getAllByRole("dialog").length).toBe(1);
   });

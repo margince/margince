@@ -51,42 +51,33 @@
 
 /* The sender's own words. Wrapped, not clamped: this is the reading surface,
  * and the row is what had to stay one line. */
-/* The heading and the way out, on one line. */
+/* The subject, the line of facts under it and who may read the thread. */
 .emaildetail__head {
   display: flex;
-  align-items: start;
+  flex-direction: column;
   gap: var(--space-2);
-  justify-content: space-between;
-  /* The gap under the header, which used to come from the title's own bottom
-     margin. It moved here when the markers joined the title in a block: a
-     margin on the type would have sat between the subject and its badges
-     instead of under both. */
-  margin-bottom: var(--space-3);
-  /* Room at the end for the dialog's own close, which is drawn over this
-     corner. Without it the reply verb sits under the glyph. */
-  padding-inline-end: calc(var(--controlHeight) + var(--space-4));
+}
+.emaildetail__facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  margin: 0;
+}
+.emaildetail__filed {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
 }
 
-/* Answer the message — the header's verb, at its far end. It does not shrink:
-   the subject beside it wraps, and a Reply that gave up its width to a long one
-   would ellipsize into a verb nobody can read. */
-.emaildetail__actions {
+/* The verbs for the conversation, at the foot where the reading ends. */
+.emaildetail__foot {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  flex-shrink: 0;
+  gap: var(--gapActions);
 }
-
-/* The subject with its access line under it, as one block beside the header's
-   verbs. Stacked rather than inline: a subject runs to a line and a half on a
-   narrow drawer, and a mark sharing that line would sit wherever it happened
-   to end. */
-.emaildetail__heading {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  flex: 1;
-  min-width: 0;
+.emaildetail__foot > .emaildetail__more {
+  margin-inline-start: auto;
 }
 
 /* What came with the message: a shelf of `FileChip` cards under a count.

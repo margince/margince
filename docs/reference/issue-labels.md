@@ -21,8 +21,9 @@ next reader something false about your finding.
 ## Priority
 
 **Priority** says how serious the problem is; the milestone holds the schedule. Do not lower a real
-bug because it is not work for this week. Use the milestone, or `status: deferred` when no
-milestone fits it yet:
+bug because it is not work for this week. Use the milestone, named like the release tag
+([cut-a-release.md](../how-to/cut-a-release.md#plan-it-with-a-milestone)), or `status: deferred` when
+no milestone fits it yet:
 
 | Label | It fits when |
 |---|---|

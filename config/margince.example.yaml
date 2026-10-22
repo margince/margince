@@ -255,6 +255,9 @@ bootstrap_admin:
 #   # Automatic company web-page reads the installation may start in one UTC day.
 #   # default: 500
 #   auto_enrich_daily_cap: 500
+#   # Held mail threads one review pass may judge; the rest wait for the next pass.
+#   # default: 40
+#   confidentiality_pass_cap: 40
 #   # Ignored, with a warning at boot; the consumer-mail list is edited under Settings.
 #   freemail_extra:
 #   # Ignored, with a warning at boot; the consumer-mail list is edited under Settings.

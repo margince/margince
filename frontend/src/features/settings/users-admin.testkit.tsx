@@ -75,7 +75,13 @@ export const ROSTER: {
       status: "active",
       is_agent: false,
       roles: [],
-      allowed_actions: ["change_role", "issue_password_link", "deactivate"],
+      // The one member holding a confirmed second factor.
+      allowed_actions: [
+        "change_role",
+        "issue_password_link",
+        "remove_mfa",
+        "deactivate",
+      ],
     },
     // An agent identity. Bootstrap no longer seeds one, so a fresh installation
     // shows a contacts-only roster — but the roster still LISTS such a row where

@@ -2679,6 +2679,7 @@ const (
 	AuditActionInvite              AuditAction = "invite"
 	AuditActionLiftLegalHold       AuditAction = "lift_legal_hold"
 	AuditActionMerge               AuditAction = "merge"
+	AuditActionMfaRemoved          AuditAction = "mfa_removed"
 	AuditActionPasswordLinkIssued  AuditAction = "password_link_issued"
 	AuditActionPause               AuditAction = "pause"
 	AuditActionPay                 AuditAction = "pay"
@@ -2760,6 +2761,8 @@ func (e AuditAction) Valid() bool {
 	case AuditActionLiftLegalHold:
 		return true
 	case AuditActionMerge:
+		return true
+	case AuditActionMfaRemoved:
 		return true
 	case AuditActionPasswordLinkIssued:
 		return true
@@ -11211,6 +11214,7 @@ const (
 	ImportReasonCodeDuplicateEmail               ImportReasonCode = "duplicate_email"
 	ImportReasonCodeDurationNotValidForKind      ImportReasonCode = "duration_not_valid_for_kind"
 	ImportReasonCodeDurationOutOfRange           ImportReasonCode = "duration_out_of_range"
+	ImportReasonCodeEmailNamesNoContact          ImportReasonCode = "email_names_no_contact"
 	ImportReasonCodeEmployerColumnEmpty          ImportReasonCode = "employer_column_empty"
 	ImportReasonCodeEmployerColumnEmptyDropped   ImportReasonCode = "employer_column_empty_dropped"
 	ImportReasonCodeEmployerNotFound             ImportReasonCode = "employer_not_found"
@@ -11370,6 +11374,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeDurationNotValidForKind:
 		return true
 	case ImportReasonCodeDurationOutOfRange:
+		return true
+	case ImportReasonCodeEmailNamesNoContact:
 		return true
 	case ImportReasonCodeEmployerColumnEmpty:
 		return true
@@ -19030,6 +19036,7 @@ const (
 	UserAllowedActionsDeactivate        UserAllowedActions = "deactivate"
 	UserAllowedActionsIssuePasswordLink UserAllowedActions = "issue_password_link"
 	UserAllowedActionsReactivate        UserAllowedActions = "reactivate"
+	UserAllowedActionsRemoveMfa         UserAllowedActions = "remove_mfa"
 )
 
 // Valid indicates whether the value is a known member of the UserAllowedActions enum.
@@ -19042,6 +19049,8 @@ func (e UserAllowedActions) Valid() bool {
 	case UserAllowedActionsIssuePasswordLink:
 		return true
 	case UserAllowedActionsReactivate:
+		return true
+	case UserAllowedActionsRemoveMfa:
 		return true
 	default:
 		return false
@@ -26786,7 +26795,7 @@ type ApproveImportRunRequest struct {
 // scratch (re-tiered, re-RBAC-checked, new diff_hash) before a token is minted — an edit can
 // never escalate a 🟢 staged note into an external send without re-gating (ADR-0036).
 type ApproveRequest struct {
-	// EditedPayload Optional edits — the edited payload is re-admitted, then it executes (edit-then-send).
+	// EditedPayload Optional edits — the edited payload is re-admitted, then it executes (edit-then-send). It replaces the whole staged change. A `linkedin_match` card takes only one kind of edit, the two boxes a member ticks in the app: `use_as_title` and `use_as_employer`, each a boolean the staged change already carries. Every other member must stay as staged. An agent never sends an edited payload.
 	EditedPayload *map[string]interface{} `json:"edited_payload,omitempty"`
 
 	// Reason Why, in the approver's own words. Recorded with the decision, as a rejection's reason is.
@@ -29766,6 +29775,14 @@ type CaptureSettings struct {
 	// budget. Read at the top of every sweep and on every capture, so a change applies
 	// without a restart. Default 500.
 	AutoEnrichDailyCap int `json:"auto_enrich_daily_cap"`
+
+	// ConfidentialityPassCap How many held mail threads one confidentiality pass answers, per run. A thread the
+	// model fails on does not count. The threads beyond the cap wait for the next run, so
+	// the cap sets how fast a backlog drains and never whether a thread is judged. Raise it
+	// when `margince_capture_confidentiality_oldest_wait_seconds` stays above how often the
+	// pass runs. Read at the start of every pass, so a change applies without a restart.
+	// Default 40.
+	ConfidentialityPassCap int `json:"confidentiality_pass_cap"`
 
 	// Locks The settings in this response that a boot source sets, each with its source. A client
 	// shows each as read-only. Empty when nothing is locked. A write ignores it.
@@ -33071,8 +33088,11 @@ type ConfirmRequestIssued struct {
 	// became of it is the delivery's own answer and changes as the dispatcher learns more.
 	Queued bool `json:"queued"`
 
-	// Sendable Whether this installation has an outbound relay and a link origin configured. False
-	// means nothing was attempted — the link exists and must be passed on by hand.
+	// Sendable Whether this installation has an outbound relay and a link origin configured.
+	//
+	// Always true on a 201: the request is refused outright without that lane, because the
+	// plaintext link is mailed and never returned, so one that cannot be sent is one
+	// nobody can pass on. Read `confirm_requests_sendable` on `/me` to know before asking.
 	Sendable bool `json:"sendable"`
 }
 
@@ -33897,6 +33917,7 @@ type ContactEmailEmailType string
 // ContactEmailInput One address on a contact, as a writer supplies it. One schema for create and update,
 // so the two cannot describe an address differently.
 type ContactEmailInput struct {
+	// Email An address whose local part names a sending system (noreply@, notifications@, receipts@ and the like) is refused with 422 `email_names_no_one`: nobody answers there, so it names no contact.
 	Email     openapi_types.Email         `json:"email"`
 	EmailType *ContactEmailInputEmailType `json:"email_type,omitempty"`
 	IsPrimary *bool                       `json:"is_primary,omitempty"`
@@ -38611,6 +38632,13 @@ type FxRate struct {
 	ToCurrency string `json:"to_currency"`
 }
 
+// FxRateCurrencyListResponse defines model for FxRateCurrencyListResponse.
+type FxRateCurrencyListResponse struct {
+	// BaseCurrency The workspace's base currency, which every code in `data` converts into. Served here as well as on the installation settings, so a role that may read deals but not those settings still learns which currency a picker leads with.
+	BaseCurrency string   `json:"base_currency"`
+	Data         []string `json:"data"`
+}
+
 // FxRateListResponse defines model for FxRateListResponse.
 type FxRateListResponse struct {
 	// BaseCurrency The workspace's base currency — every rate in `data` converts TO this (AAD-PARAM-N-1, ADR-0085). Served from the workspace itself rather than inferred from the first rate row, so a workspace that has entered no rates can still state its own base.
@@ -42392,6 +42420,11 @@ type MeResponse struct {
 	// This is a snapshot, not an authority. A role change does not revoke live sessions, so a client refetches on window focus and after any 403, and treats the server's answer as the only one that counts. It does not express the human-principal gate, nor the few routes that still key on the literal admin role independently of any grant — a permitted grant here is necessary, never sufficient.
 	Authorization *Authorization `json:"authorization,omitempty"`
 
+	// ConfirmRequestsSendable Whether THIS CALLER may ask a contact to confirm what is held about them (`requestDetailsConfirmation`, `sendPrivacyNotice`, `issueDoubleOptIn`) — true only when the caller may update a contact AND the installation has the lane those messages ride: an outbound relay, a link vault and a public base URL.
+	// A caller capability rather than a deployment-posture flag, for the reason `admin_password_link` states: a bare posture boolean would tell every seat whether this installation has email. It folds the grant in, so it answers only the holders who could act on it.
+	// The endpoint refuses what it cannot deliver, so a client that renders the action on this never offers one that would be. Each of those links is mailed and never returned, which is why an unsendable one is unusable rather than merely undelivered.
+	ConfirmRequestsSendable *bool `json:"confirm_requests_sendable,omitempty"`
+
 	// DataResetAvailable True when this installation armed `operations.allow_data_reset` in its deployment file. It is the SAME value `POST /admin/reset-data` gates on, so a client never renders an action for a route that would answer 404. Absent or false means the capability does not exist here — the compiled default in every posture, dev included.
 	DataResetAvailable *bool `json:"data_reset_available,omitempty"`
 
@@ -45570,10 +45603,12 @@ type QuickCaptureContactRequest struct {
 	CompanyId *openapi_types.UUID `json:"company_id,omitempty"`
 
 	// CompanyName A new employer to create, when no existing record was picked.
-	CompanyName *string              `json:"company_name,omitempty"`
-	Email       *openapi_types.Email `json:"email,omitempty"`
-	FullName    string               `json:"full_name"`
-	Phone       *string              `json:"phone,omitempty"`
+	CompanyName *string `json:"company_name,omitempty"`
+
+	// Email Refused with 422 `email_names_no_one` when the local part names a sending system, as ContactEmailInput.email is.
+	Email    *openapi_types.Email `json:"email,omitempty"`
+	FullName string               `json:"full_name"`
+	Phone    *string              `json:"phone,omitempty"`
 
 	// ProfileUrl The public profile this was read from. Stored, never fetched.
 	ProfileUrl *string `json:"profile_url,omitempty"`
@@ -50441,6 +50476,9 @@ type UpdateCaptureSettingsRequest struct {
 	// AutoEnrichDailyCap Set the daily ceiling on automatic website reads.
 	AutoEnrichDailyCap *int `json:"auto_enrich_daily_cap,omitempty"`
 
+	// ConfidentialityPassCap Set how many held mail threads one confidentiality pass judges.
+	ConfidentialityPassCap *int `json:"confidentiality_pass_cap,omitempty"`
+
 	// MailSharing Toggle the workspace mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member.
 	MailSharing *bool `json:"mail_sharing,omitempty"`
 
@@ -51498,7 +51536,7 @@ type UpsertPartnerRequestRelationshipStage string
 
 // User A seat — human or first-party agent. Mirrors `app_user`.
 type User struct {
-	// AllowedActions The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, and whether this installation can build a set-password link. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
+	// AllowedActions The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
 	AllowedActions *[]UserAllowedActions `json:"allowed_actions,omitempty"`
 	ArchivedAt     *time.Time            `json:"archived_at,omitempty"`
 	CreatedAt      *time.Time            `json:"created_at,omitempty"`
@@ -51591,7 +51629,8 @@ type VCardImportResult struct {
 	// Outcome `created` — nobody matched, so the card became a contact, their company and the edge
 	// between them. `updated` — an exact match, filled only where the record was empty.
 	// `needs_review` — a resemblance, written nowhere; open the candidate and decide.
-	// `skipped` — the card states no name, so there is no contact in it.
+	// `skipped` — the card states no name, carries a sending system's address, or matches a
+	// contact the caller may not write; `reason` says which.
 	Outcome VCardImportResultOutcome `json:"outcome"`
 
 	// Reason Why a card was skipped, in words a reader can act on.
@@ -51601,7 +51640,8 @@ type VCardImportResult struct {
 // VCardImportResultOutcome `created` — nobody matched, so the card became a contact, their company and the edge
 // between them. `updated` — an exact match, filled only where the record was empty.
 // `needs_review` — a resemblance, written nowhere; open the candidate and decide.
-// `skipped` — the card states no name, so there is no contact in it.
+// `skipped` — the card states no name, carries a sending system's address, or matches a
+// contact the caller may not write; `reason` says which.
 type VCardImportResultOutcome string
 
 // VoiceBuild defines model for VoiceBuild.
@@ -59768,6 +59808,7 @@ type ConnectProviderParams struct {
 // BookPublicMeetingJSONBody defines parameters for BookPublicMeeting.
 type BookPublicMeetingJSONBody struct {
 	Booker struct {
+		// Email Refused with 422 `email_names_no_one` on `booker.email` when the local part names a sending system (noreply@ and the like).
 		Email openapi_types.Email `json:"email"`
 		Name  string              `json:"name"`
 	} `json:"booker"`
@@ -73602,7 +73643,7 @@ type ServerInterface interface {
 	// Send a refused message anyway, on a named human's recorded decision.
 	// (POST /communication-reviews/{id}/direct-send)
 	DirectCommunicationSend(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// Ask somebody who may override the engine to decide this refused send.
+	// Retired. Asking a colleague to decide a refused send is no longer offered.
 	// (POST /communication-reviews/{id}/request-decision)
 	RequestCommunicationDecision(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// List companies (live by default; cursor-paginated).
@@ -74361,6 +74402,9 @@ type ServerInterface interface {
 	// Set an FX rate effective today or later (append-forward).
 	// (POST /fx-rates)
 	SetFxRate(w http.ResponseWriter, r *http.Request)
+	// List the base currency and the currency codes on the FX rate sheet, without their rates.
+	// (GET /fx-rates/currencies)
+	ListFxRateCurrencies(w http.ResponseWriter, r *http.Request)
 	// Enqueue an async FX-rate refresh (stages 🟡 proposals).
 	// (POST /fx-rates/propose-refresh)
 	ProposeFxRateRefresh(w http.ResponseWriter, r *http.Request)
@@ -75372,6 +75416,9 @@ type ServerInterface interface {
 	// Deactivate a member and revoke their live access. Admin-only, human-only.
 	// (POST /users/{id}/deactivate)
 	DeactivateUser(w http.ResponseWriter, r *http.Request, id Id)
+	// Remove a member's second factor. Admin-only, human-only.
+	// (DELETE /users/{id}/mfa)
+	RemoveUserMfa(w http.ResponseWriter, r *http.Request, id Id)
 	// Mint a single-use set-password link for a member. Admin-only, human-only.
 	// (POST /users/{id}/password-link)
 	IssueUserPasswordLink(w http.ResponseWriter, r *http.Request, id Id)
@@ -76974,7 +77021,7 @@ func (_ Unimplemented) DirectCommunicationSend(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Ask somebody who may override the engine to decide this refused send.
+// Retired. Asking a colleague to decide a refused send is no longer offered.
 // (POST /communication-reviews/{id}/request-decision)
 func (_ Unimplemented) RequestCommunicationDecision(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -78489,6 +78536,12 @@ func (_ Unimplemented) ListFxRates(w http.ResponseWriter, r *http.Request, param
 // Set an FX rate effective today or later (append-forward).
 // (POST /fx-rates)
 func (_ Unimplemented) SetFxRate(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List the base currency and the currency codes on the FX rate sheet, without their rates.
+// (GET /fx-rates/currencies)
+func (_ Unimplemented) ListFxRateCurrencies(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -80511,6 +80564,12 @@ func (_ Unimplemented) GetUserAccess(w http.ResponseWriter, r *http.Request, id 
 // Deactivate a member and revoke their live access. Admin-only, human-only.
 // (POST /users/{id}/deactivate)
 func (_ Unimplemented) DeactivateUser(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Remove a member's second factor. Admin-only, human-only.
+// (DELETE /users/{id}/mfa)
+func (_ Unimplemented) RemoveUserMfa(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -101886,6 +101945,26 @@ func (siw *ServerInterfaceWrapper) SetFxRate(w http.ResponseWriter, r *http.Requ
 	handler.ServeHTTP(w, r)
 }
 
+// ListFxRateCurrencies operation middleware
+func (siw *ServerInterfaceWrapper) ListFxRateCurrencies(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListFxRateCurrencies(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ProposeFxRateRefresh operation middleware
 func (siw *ServerInterfaceWrapper) ProposeFxRateRefresh(w http.ResponseWriter, r *http.Request) {
 
@@ -115912,6 +115991,38 @@ func (siw *ServerInterfaceWrapper) DeactivateUser(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// RemoveUserMfa operation middleware
+func (siw *ServerInterfaceWrapper) RemoveUserMfa(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveUserMfa(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // IssueUserPasswordLink operation middleware
 func (siw *ServerInterfaceWrapper) IssueUserPasswordLink(w http.ResponseWriter, r *http.Request) {
 
@@ -120025,6 +120136,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/fx-rates", wrapper.SetFxRate)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/fx-rates/currencies", wrapper.ListFxRateCurrencies)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/fx-rates/propose-refresh", wrapper.ProposeFxRateRefresh)
 	})
 	r.Group(func(r chi.Router) {
@@ -121034,6 +121148,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/users/{id}/deactivate", wrapper.DeactivateUser)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/users/{id}/mfa", wrapper.RemoveUserMfa)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/users/{id}/password-link", wrapper.IssueUserPasswordLink)

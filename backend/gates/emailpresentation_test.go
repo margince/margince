@@ -95,6 +95,9 @@ const (
 var emailRenderers = map[string]bool{
 	"design-system/emailentry.tsx":  true,
 	"design-system/emaildetail.tsx": true,
+	// The parts of one message EmailDetail and SourceEmailPanel both draw:
+	// the envelope and the files, split out so the thread view shares them.
+	"design-system/emailmessage.tsx": true,
 	// The message a task was read out of, drawn IN the task instead of behind
 	// a second drawer over the first. It is a renderer, not a passthrough: it
 	// shows the subject, the date and the body (through EmailText, the same
@@ -124,6 +127,8 @@ var emailPassthroughs = gatekit.Waive(map[string]string{
 	"features/brief/brief.focus.tsx":                 "draws no part of the message: the moment it arrived, for the card's label row, and its audience status as one more fact about whose row it is — the same access reading emailaccesseditor.tsx takes. No subject, no body, no party, no attachment: the ranked column beside the card names its rows from the row's own `title` and `contact` (itemTitle, aboutRecord), never off the message. The message itself is handed to WorklistRow, which draws it through EmailEntry",
 	"testing/brief.fixtures.ts":                      "builds the rows a story and a test hand to the Brief; it constructs an EmailSummary and renders nothing",
 	"features/capture/emailaccesseditor.tsx":         "draws the ACCESS block and no part of the message: who may read it, the named members, and the control to change that. No subject, no body, no party, no attachment. It takes the whole presentation because the audience write needs the id and version off it",
+	"features/mail/composethread.tsx":                "maps the record's recent mail onto the composer's Conversation model, the newest message's email_summary included, for composethreadbar.tsx to draw through EmailEntry; it holds the reads and renders nothing",
+	"features/mail/compose.parts.tsx":                "quotes the thread's earlier messages under a reply as read-only text the send never carries. It reads the summary's counterparty only to say who wrote each one; the thread itself is offered through EmailEntry in composethreadbar.tsx",
 	"features/mail/emailrecords.tsx":                 "draws WHICH RECORDS the message is filed against and no part of the message: each link is an EntityRef naming a contact, an account or a deal. No subject, no body, no party, no attachment. It takes the whole presentation because the drawer hands it one",
 	"features/mail/emailreply.tsx":                   "draws no part of the message at all: it reads can_reply and links to decide whether the drawer may offer the verb and which record a reply files under, and mounts ChannelReplyAction, which is the product's one reply affordance",
 	"app/palettesearch.ts":                           "builds the palette's rows from search hits. For a message it carries the subject and the formatted date onto the row's `cite`, which paletterow.tsx draws through EmailReference; it renders nothing itself",

@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func refreshApprovalNotice(ctx context.Context, pool *pgxpool.Pool, attempt notices.EmailAttempt, now time.Time) (notices.EmailAttempt, bool, error) {
@@ -40,6 +41,9 @@ func refreshApprovalNotice(ctx context.Context, pool *pgxpool.Pool, attempt noti
 	}
 	if err != nil {
 		return attempt, false, err
+	}
+	if current.RequestedDeciderId == nil || ids.UUID(*current.RequestedDeciderId) != attempt.Recipient.UUID {
+		return attempt, false, nil
 	}
 	if approvals.PreviewRefusal(current.Preview) != nil {
 		return attempt, false, nil //nolint:nilerr // A refused preview suppresses mail; delivery itself has not failed.

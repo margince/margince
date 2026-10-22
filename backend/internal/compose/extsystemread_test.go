@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -74,6 +75,50 @@ func TestOnlyATickAndADeliveryAnswerASystemRead(t *testing.T) {
 		if !answers && !errors.Is(err, extension.ErrAttendedRead) {
 			t.Errorf("%s: err = %v, want ErrAttendedRead", name, err)
 		}
+	}
+}
+
+// On an attended call CanRead answers its human caller about themselves, and
+// refuses every other question. The gate is passed when the record type, not
+// the caller, is what refuses: a company is no record CanRead answers for.
+func TestAnAttendedCanReadAnswersOnlyItsHumanCallerAboutThemselves(t *testing.T) {
+	composeReader(t, extension.SystemReadAuthority)
+	self, other := ids.NewV7(), ids.NewV7()
+	human := principal.Principal{Type: principal.PrincipalHuman, UserID: self}
+	agent := principal.Principal{Type: principal.PrincipalAgent, ID: "agent:probe", OnBehalfOf: self}
+	connector := principal.Principal{Type: principal.PrincipalConnector, ID: "connector:probe", OnBehalfOf: self}
+	company := extension.EntityRef{Type: "company", ID: ids.NewV7().String()}
+	for name, c := range map[string]struct {
+		actor principal.Principal
+		about ids.UUID
+		want  error
+	}{
+		"a human about themselves":     {human, self, extension.ErrInvalid},
+		"a human about a colleague":    {human, other, extension.ErrAttendedRead},
+		"an agent about its own human": {agent, self, extension.ErrAttendedRead},
+		"a connector about its human":  {connector, self, extension.ErrAttendedRead},
+		"the same id in upper case":    {human, self, extension.ErrInvalid},
+	} {
+		ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), ids.NewV7()), c.actor)
+		rt := runtimeFor(ctx, "dealmirror", "1.0.0", "tool/probe", extensionRuntimeBinding{pool: &pgxpool.Pool{}})
+		about := c.about.String()
+		if name == "the same id in upper case" {
+			about = strings.ToUpper(about)
+		}
+		_, err := rt.Authority().CanRead(ctx, extension.UserID(about), company, nil)
+		rt.release()
+		if !errors.Is(err, c.want) {
+			t.Errorf("%s: err = %v, want %v", name, err, c.want)
+		}
+	}
+	ctx := principal.WithActor(principal.WithWorkspaceID(context.Background(), ids.NewV7()), human)
+	rt := runtimeFor(ctx, "dealmirror", "1.0.0", "tool/probe", extensionRuntimeBinding{pool: &pgxpool.Pool{}})
+	defer rt.release()
+	// A deal, so the refusal is the user id's and not the record type's.
+	deal := extension.EntityRef{Type: "deal", ID: ids.NewV7().String()}
+	if _, err := rt.Authority().CanRead(ctx, "not-a-user", deal, nil); !errors.Is(err, extension.ErrInvalid) ||
+		!strings.Contains(err.Error(), "user") {
+		t.Errorf("a malformed user id: err = %v, want ErrInvalid naming the user", err)
 	}
 }
 

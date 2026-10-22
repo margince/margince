@@ -185,34 +185,33 @@ func TestAContactWithNoAddressIsRefusedRatherThanSilentlyNotMailed(t *testing.T)
 	}
 }
 
-func TestAnInstallationThatCannotDeliverStillMintsTheLink(t *testing.T) {
+// An installation that cannot deliver mints nothing.
+//
+// The plaintext never leaves the server, so a link that cannot be sent is one
+// nobody can pass on by hand. Minting it recorded a disclosure the contact had
+// no way to read.
+func TestAnInstallationThatCannotDeliverMintsNoLink(t *testing.T) {
 	e := setupChannelConsent(t)
 	seedSubjectAddress(t, e)
-	// No lane at all: the ordinary state of an installation that has configured
-	// no outbound relay.
-	h := Handlers{store: e.store}
+	// A store built without the lane, which is the ordinary state of an
+	// installation with no outbound relay. The env's own store carries one,
+	// because every other case here needs a link that can be mailed.
+	h := Handlers{store: e.storeNoLane}
 
 	rec := confirmRequest(t, e, h)
-	if rec.Code != http.StatusCreated {
-		t.Fatalf("status = %d, want 201 (body: %s)", rec.Code, rec.Body.String())
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("status = %d, want 409 (body: %s)", rec.Code, rec.Body.String())
 	}
-	var got struct {
-		Queued   bool `json:"queued"`
-		Sendable bool `json:"sendable"`
+	if !strings.Contains(rec.Body.String(), "cannot send its own mail") {
+		t.Errorf("the refusal does not name the missing relay: %s", rec.Body.String())
 	}
-	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
-		t.Fatalf("decode the issue response: %v", err)
+	var minted int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM confirm_token WHERE contact_id = $1`, e.contact).Scan(&minted); err != nil {
+		t.Fatalf("count tokens: %v", err)
 	}
-	// The write happened. Reporting it as a failure would invite a second
-	// request that mints another token and supersedes the first.
-	if got.Queued {
-		t.Fatal("queued = true with no lane configured")
-	}
-	// And the reason is NOT a failed send. A reader told "the mail did not go
-	// out" would press again forever against an installation that cannot send
-	// at all.
-	if got.Sendable {
-		t.Fatal("sendable = true with no lane wired")
+	if minted != 0 {
+		t.Errorf("%d token(s) minted by an installation that cannot send one", minted)
 	}
 }
 

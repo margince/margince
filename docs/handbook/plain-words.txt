@@ -1299,7 +1299,6 @@ upload
 urgent
 usable
 usage
-usd
 use
 user
 user's

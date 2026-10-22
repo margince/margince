@@ -1091,7 +1091,10 @@ public.approval.approval_decided_by_fkey FOREIGN KEY (decided_by) REFERENCES app
 public.approval.approval_effect_failure_is_stated CHECK (((effect_failed_at IS NULL) = (effect_failure IS NULL)))
 public.approval.approval_on_behalf_of_fkey FOREIGN KEY (on_behalf_of) REFERENCES app_user(id) ON DELETE SET NULL (on_behalf_of)
 public.approval.approval_passport_id_fkey FOREIGN KEY (passport_id) REFERENCES passport(id) ON DELETE SET NULL (passport_id)
+public.approval.approval_pending_names_decider CHECK (((status <> 'pending'::text) OR ((requested_decider_id IS NOT NULL) AND (requested_decider_source IS NOT NULL))))
 public.approval.approval_pkey PRIMARY KEY (id)
+public.approval.approval_requested_decider_fkey FOREIGN KEY (requested_decider_id) REFERENCES app_user(id) ON DELETE SET NULL
+public.approval.approval_requested_decider_source_check CHECK ((requested_decider_source = ANY (ARRAY['payload_owner'::text, 'on_behalf_of'::text, 'stager'::text, 'record_owner'::text])))
 public.approval.approval_staged_by_connection_fkey FOREIGN KEY (staged_by_connection) REFERENCES oauth_grant(id) ON DELETE SET NULL
 public.approval.approval_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text, 'expired'::text])))
 public.approval.approval_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
@@ -1117,6 +1120,8 @@ public.approval.on_behalf_of uuid gen=- def=-
 public.approval.passport_id uuid gen=- def=-
 public.approval.proposed_by text NOT NULL gen=- def=-
 public.approval.proposed_change jsonb NOT NULL gen=- def=-
+public.approval.requested_decider_id uuid gen=- def=-
+public.approval.requested_decider_source text gen=- def=-
 public.approval.staged_by_connection uuid gen=- def=-
 public.approval.status text NOT NULL gen=- def='pending'::text
 public.approval.summary text gen=- def=-
@@ -1413,7 +1418,7 @@ public.audit_log.action text NOT NULL gen=- def=-
 public.audit_log.actor_id text NOT NULL gen=- def=-
 public.audit_log.actor_type text NOT NULL gen=- def=-
 public.audit_log.after jsonb gen=- def=-
-public.audit_log.audit_log_action_check CHECK ((action = ANY (ARRAY['create'::text, 'update'::text, 'archive'::text, 'merge'::text, 'promote'::text, 'restore'::text, 'export'::text, 'erase'::text, 'assign'::text, 'advance_stage'::text, 'advance_phase'::text, 'approve'::text, 'reject'::text, 'consent_grant'::text, 'consent_withdraw'::text, 'activity_relink'::text, 'record_share'::text, 'record_unshare'::text, 'resolve'::text, 'demote'::text, 'import'::text, 'import_undo'::text, 'disqualify'::text, 'anonymize'::text, 'send_email'::text, 'reset_data'::text, 'password_link_issued'::text, 'connect'::text, 'disconnect'::text, 'schedule'::text, 'reschedule'::text, 'cancel'::text, 'release'::text, 'hold'::text, 'expire'::text, 'restrict'::text, 'pin'::text, 'accrue'::text, 'pay'::text, 'publish'::text, 'pause'::text, 'resume'::text, 'close'::text, 'invite'::text, 'revoke'::text, 'delete'::text, 'place_legal_hold'::text, 'lift_legal_hold'::text, 'request_legal_review'::text, 'withdraw_legal_review'::text])))
+public.audit_log.audit_log_action_check CHECK ((action = ANY (ARRAY['create'::text, 'update'::text, 'archive'::text, 'merge'::text, 'promote'::text, 'restore'::text, 'export'::text, 'erase'::text, 'assign'::text, 'advance_stage'::text, 'advance_phase'::text, 'approve'::text, 'reject'::text, 'consent_grant'::text, 'consent_withdraw'::text, 'activity_relink'::text, 'record_share'::text, 'record_unshare'::text, 'resolve'::text, 'demote'::text, 'import'::text, 'import_undo'::text, 'disqualify'::text, 'anonymize'::text, 'send_email'::text, 'reset_data'::text, 'password_link_issued'::text, 'connect'::text, 'disconnect'::text, 'schedule'::text, 'reschedule'::text, 'cancel'::text, 'release'::text, 'hold'::text, 'expire'::text, 'restrict'::text, 'pin'::text, 'accrue'::text, 'pay'::text, 'publish'::text, 'pause'::text, 'resume'::text, 'close'::text, 'invite'::text, 'revoke'::text, 'delete'::text, 'place_legal_hold'::text, 'lift_legal_hold'::text, 'request_legal_review'::text, 'withdraw_legal_review'::text, 'mfa_removed'::text])))
 public.audit_log.audit_log_actor_type_check CHECK ((actor_type = ANY (ARRAY['human'::text, 'agent'::text, 'connector'::text, 'system'::text, 'buyer'::text])))
 public.audit_log.audit_log_images_are_absent_or_present CHECK (((before <> 'null'::jsonb) AND (after <> 'null'::jsonb)))
 public.audit_log.audit_log_on_behalf_of_fkey FOREIGN KEY (on_behalf_of) REFERENCES app_user(id) ON DELETE SET NULL (on_behalf_of)
@@ -1807,7 +1812,9 @@ public.capture_owner_identity_withdrawn_user_idx CREATE INDEX capture_owner_iden
 public.capture_pending_counterparty acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_pending_counterparty.activity_id uuid NOT NULL gen=- def=-
 public.capture_pending_counterparty.attempts integer NOT NULL gen=- def=0
+public.capture_pending_counterparty.backfill_id uuid gen=- def=-
 public.capture_pending_counterparty.capture_pending_counterparty_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE
+public.capture_pending_counterparty.capture_pending_counterparty_backfill_id_fkey FOREIGN KEY (backfill_id) REFERENCES capture_backfill(id) ON DELETE SET NULL
 public.capture_pending_counterparty.capture_pending_counterparty_confidence_range CHECK (((confidence IS NULL) OR ((confidence >= (0)::numeric) AND (confidence <= (1)::numeric))))
 public.capture_pending_counterparty.capture_pending_counterparty_kind_check CHECK (((kind IS NULL) OR (kind = ANY (ARRAY['contact'::text, 'role_mailbox'::text, 'company_sender'::text, 'newsletter'::text, 'transactional'::text, 'spam'::text, 'personal'::text, 'advisor'::text]))))
 public.capture_pending_counterparty.capture_pending_counterparty_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE CASCADE
@@ -1833,6 +1840,7 @@ public.capture_pending_counterparty.served_model text gen=- def=-
 public.capture_pending_counterparty.status text NOT NULL gen=- def='pending'::text
 public.capture_pending_counterparty.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.capture_pending_counterparty.withheld_from_workspace boolean NOT NULL gen=- def=false
+public.capture_pending_counterparty_backfill_idx CREATE INDEX capture_pending_counterparty_backfill_idx ON public.capture_pending_counterparty USING btree (backfill_id) WHERE (backfill_id IS NOT NULL)
 public.capture_pending_counterparty_pkey CREATE UNIQUE INDEX capture_pending_counterparty_pkey ON public.capture_pending_counterparty USING btree (id)
 public.capture_sender_override acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_sender_override.address text NOT NULL gen=- def=-
@@ -5725,6 +5733,7 @@ public.offer.offer_gross_minor_js_safe CHECK (((gross_minor >= '-900719925474099
 public.offer.offer_net_minor_js_safe CHECK (((net_minor >= '-9007199254740991'::bigint) AND (net_minor <= '9007199254740991'::bigint)))
 public.offer.offer_number text NOT NULL gen=- def=-
 public.offer.offer_number_rev_unique UNIQUE (offer_number, revision)
+public.offer.offer_number_shape CHECK ((offer_number ~ '^A-[0-9]+$'::text))
 public.offer.offer_pkey PRIMARY KEY (id)
 public.offer.offer_revision_check CHECK ((revision >= 1))
 public.offer.offer_status_check CHECK ((status = ANY (ARRAY['draft'::text, 'sent'::text, 'accepted'::text, 'rejected'::text, 'expired'::text, 'superseded'::text])))

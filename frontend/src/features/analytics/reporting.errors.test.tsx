@@ -282,8 +282,7 @@ it("does not describe an old snapshot with the current ownership rule", async ()
   ).not.toBeInTheDocument();
 });
 
-it("closes the evidence drawer when opening its underlying deal", async () => {
-  const user = userEvent.setup({ delay: null });
+it("links the underlying deal in a new tab and keeps the evidence open", async () => {
   const close = vi.fn();
   installFetchStub(reportingStoryRoutes());
   render(
@@ -295,13 +294,11 @@ it("closes the evidence drawer when opening its underlying deal", async () => {
       />
     </StoryProviders>,
   );
-  await user.click(
-    await screen.findByRole("button", {
-      name: "Northstar rollout",
-    }),
-  );
-  expect(close).toHaveBeenCalledOnce();
-  expect(window.location.hash).toBe(
+  const link = await screen.findByRole("link", { name: /Northstar rollout/ });
+  expect(link).toHaveAttribute(
+    "href",
     "#/deals/00000000-0000-4000-8000-000000000012",
   );
+  expect(link).toHaveAttribute("target", "_blank");
+  expect(close).not.toHaveBeenCalled();
 });

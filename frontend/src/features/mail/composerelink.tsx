@@ -4,6 +4,7 @@ import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
 import { Checkbox } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
+import { emailDetailKey } from "../../design-system/emailmessage";
 import {
   RecordPicker,
   type RecordPickerCandidate,
@@ -158,6 +159,9 @@ export function RelinkModal({
       // line keeps naming the project the activity was moved AWAY from, which
       // is a wrong answer to the one question it exists to answer.
       queryClient.invalidateQueries({ queryKey: ["activity", activityId] });
+      // The email drawer can still be open behind this dialog, naming the
+      // records the message was filed under before the move.
+      queryClient.invalidateQueries({ queryKey: emailDetailKey(activityId) });
       onClose();
     },
   });

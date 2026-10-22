@@ -10,6 +10,7 @@ import {
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
 import { AiKeyFields } from "./installation-setup.ai-key";
@@ -19,7 +20,10 @@ import { AiKeyFields } from "./installation-setup.ai-key";
 // asked for locations, so the location field offers eu and says why.
 function story(choice: SetupProviderId, attempted = false) {
   return function Render() {
+    // No ai_routing grant: the field reads routing locks only to disable
+    // itself, and these stories are about the credential.
     installFetchStub({
+      "GET /me": meRoute({}),
       "GET /ai/provider-locations/gemini_vertex": () =>
         jsonResponse({
           provider: "gemini_vertex",

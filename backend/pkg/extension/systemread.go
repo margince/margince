@@ -6,7 +6,8 @@ package extension
 // System reads for a job tick or a bus delivery. No caller's grants narrow
 // them, so each answers ErrAttendedRead wherever a user gets the result.
 // That guards the call, not a unit that stores what it read and serves it
-// later. A unit asks Authority().CanRead before it shows a colleague anything.
+// later. A unit asks Authority().CanRead before it shows a colleague anything,
+// and CanRead answers a signed-in human about themselves on any call.
 
 import (
 	"context"
@@ -29,7 +30,7 @@ type SystemRead string
 const (
 	// SystemReadDeals admits Deals().Get and Deals().Responsible.
 	SystemReadDeals SystemRead = "deals"
-	// SystemReadAuthority admits Authority().CanRead.
+	// SystemReadAuthority admits Authority().CanRead and Authority().CanWrite.
 	SystemReadAuthority SystemRead = "authority"
 	// SystemReadDirectory admits Directory().Emails.
 	SystemReadDirectory SystemRead = "directory"
@@ -103,10 +104,21 @@ type Authority interface {
 	// fields, named as the contract names them (`owner_id`). A mask that
 	// lifts only where the user could write counts as withholding.
 	//
+	// An archived deal answers as a live one; a deal no row holds, false.
 	// Only Type "deal" is answered. Another type, an unknown field or a
 	// malformed id answers ErrInvalid; an agent seat or a user who cannot sign
 	// in, false.
+	//
+	// On a call a human makes, it answers only about that human. So a route
+	// can check its own caller before serving what the unit stored. An agent's
+	// or a connector's call, or a question about anyone else, answers
+	// ErrAttendedRead.
 	CanRead(ctx context.Context, user UserID, record EntityRef, fields []string) (bool, error)
+
+	// CanWrite reports whether user could change record now. It is live and
+	// they hold a full seat. Their own grants and the row's sharing let them
+	// update it. It answers on the same calls, about the same users, as CanRead.
+	CanWrite(ctx context.Context, user UserID, record EntityRef) (bool, error)
 }
 
 // Directory reads colleagues' details for a job tick or a bus delivery.

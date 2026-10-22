@@ -123,7 +123,7 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		// object because "issued" alone would not say what was issued, and on
 		// an identity stream that also mints passports the distinction is the
 		// whole point of the event.
-		"password_link_issued": true,
+		"password_link_issued": true, "mfa_removed": true,
 		// A won deal earned its partner a commission. Past tense like the rest;
 		// `decided` above already covers the approve/pay/void half.
 		"accrued": true,

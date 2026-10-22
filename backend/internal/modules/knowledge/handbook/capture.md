@@ -216,6 +216,15 @@ To see every email with a contact in Margince, open the contact and choose its *
 You see only the messages whose audience includes you; a held message stays with those who were on it. See [Who can see an email](who-can-see-an-email.md).
 Also called: email history, correspondence, all mails with a customer.
 
+### How do I read a whole email thread?
+To read a whole thread in Margince, press an email on the **History** tab. The thread opens beside the record, oldest message first.
+1. The message you pressed is open. Press any other message to open it, and press its sender to fold it again.
+2. Press the "to …" line under a sender to see the whole envelope and where it is filed.
+3. At the foot, **Reply** answers in the thread, and **Forward** starts a new email with the message in it. **More actions** holds **File under another record…**.
+
+**Reply** and **Forward** open the composer at the bottom of the page. The thread comes back when you close the composer, and after a reply it says "Sent and added to this thread." A forward does not carry the message's files.
+Also called: open an email, read a conversation, forward an email.
+
 ### How do I move an email to the right contact or deal?
 To move a captured email that was filed on the wrong record, choose **Relink** on it in the timeline. Search for the right contact, company, deal, lead or project.
 Tick **Replace existing link** to replace it instead of adding a second link, and choose **Relink**. Tick **Move rest of thread** to move the whole conversation.

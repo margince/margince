@@ -59,6 +59,7 @@ func (h captureSettingsHandlers) UpdateCaptureSettings(w http.ResponseWriter, r 
 		SiteReadMaxMiB:          req.SiteReadMaxMib,
 		SiteReadWallSeconds:     req.SiteReadWallSeconds,
 		MailSyncIntervalSeconds: req.MailSyncIntervalSeconds,
+		ConfidentialityPassCap:  req.ConfidentialityPassCap,
 	})
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -81,6 +82,7 @@ func toContractCaptureSettings(s capture.Settings) crmcontracts.CaptureSettings 
 			WallSeconds: s.SiteRead.WallSeconds,
 		},
 		MailSyncIntervalSeconds: s.MailSyncIntervalSeconds,
+		ConfidentialityPassCap:  s.ConfidentialityPassCap,
 		Locks:                   loadedLocks(capture.ConfigSettings()),
 	}
 }

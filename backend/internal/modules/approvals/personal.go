@@ -13,8 +13,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// requestedDecider uses explicit responsibility, not permission to decide.
+// requestedDecider is the member stored at staging. A row decided before the
+// column existed falls back to the rule that named people then.
 func requestedDecider(a row) ids.UUID {
+	if a.RequestedDecider != nil {
+		return *a.RequestedDecider
+	}
+	return legacyRequestedDecider(a)
+}
+
+func legacyRequestedDecider(a row) ids.UUID {
 	if approvalsubject.PayloadOwned(a.Kind) {
 		return approvalsubject.Owner(a.ProposedChange)
 	}

@@ -334,13 +334,25 @@ func EnsureVisibleForSubjectRights(ctx context.Context, tx pgx.Tx, table string,
 // object grant as well as the row scope: a seat that may create a type and
 // not read it is told a duplicate exists, never which one.
 func VisibleTo(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) (bool, error) {
+	return visibleThrough(ctx, tx, table, id, EnsureVisible)
+}
+
+// VisibleToExisting is VisibleTo that also answers false for an id no row
+// holds, even to a caller whose row scope is every row.
+func VisibleToExisting(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) (bool, error) {
+	return visibleThrough(ctx, tx, table, id, EnsureVisibleExisting)
+}
+
+func visibleThrough(ctx context.Context, tx pgx.Tx, table string, id ids.UUID,
+	probe func(context.Context, pgx.Tx, string, ids.UUID) error,
+) (bool, error) {
 	if err := Require(ctx, table, principal.ActionRead); err != nil {
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			return false, nil
 		}
 		return false, err
 	}
-	err := EnsureVisible(ctx, tx, table, id)
+	err := probe(ctx, tx, table, id)
 	switch {
 	case err == nil:
 		return true, nil

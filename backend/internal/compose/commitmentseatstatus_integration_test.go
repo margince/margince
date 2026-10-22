@@ -29,8 +29,7 @@ const taskWorthyConfidence = 0.95
 
 const seatStatusPromise = "I will send the revised pricing by Friday."
 
-// A promise in mail from a colleague who cannot hold work is proposed, and the pass
-// finishes.
+// A promise in mail from a colleague who cannot hold work does not fail the pass.
 //
 // An automatic writer may only assign to an ACTIVE seat, and on an installation whose
 // history arrived by import most seats on mail never signed in or have left. Writing
@@ -38,9 +37,11 @@ const seatStatusPromise = "I will send the revised pricing by Friday."
 // failed the conversation and the pass with it — and a failed conversation's
 // watermark does not move, so the same message was read again every hour, for ever.
 //
-// The promise is still owed to the customer, so it goes to a human as a proposal.
+// An invited colleague is asked about their own promise and finds it when they sign
+// in. A colleague who has left can be asked nothing, and a request names a member,
+// so nothing is staged for them.
 func TestAMailedPromiseByAColleagueWhoCannotHoldWorkIsProposed(t *testing.T) {
-	for _, status := range []string{"invited", "deactivated"} {
+	for status, want := range map[string]int{"invited": 1, "deactivated": 0} {
 		t.Run(status, func(t *testing.T) {
 			e, reply := seedMailedPromise(t, status)
 			if err := runSignalPass(t, e, reply); err != nil {
@@ -51,32 +52,38 @@ func TestAMailedPromiseByAColleagueWhoCannotHoldWorkIsProposed(t *testing.T) {
 			if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE kind = 'task'`); n != 0 {
 				t.Errorf("%d task(s) written to an %s seat", n, status)
 			}
-			if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = 'commitment_task'`); n != 1 {
-				t.Errorf("%d commitment proposals staged, want one: a promise nobody can be "+
-					"given is still owed, and dropping it loses what the customer was told", n)
-			}
 			if n := e.WsCount(t, `SELECT count(*) FROM approval
               WHERE kind = 'commitment_task'
                 AND proposed_change->>'promiser_seat_id' = $1
                 AND NOT (proposed_change ? 'seat_id')
-                AND on_behalf_of IS NULL`, e.Rep2.String()); n != 1 {
-				t.Fatal("inactive promiser attribution was lost or became an assigned decision")
+                AND requested_decider_id = $1::uuid`, e.Rep2.String()); n != want {
+				t.Fatalf("%d proposals asked of the %s promiser, want %d", n, status, want)
 			}
-
-			approval, err := ids.Parse(e.WsScalar(t, `SELECT id::text FROM approval WHERE kind = 'commitment_task'`))
-			if err != nil {
-				t.Fatal(err)
-			}
-			if _, err := approvalsServiceWithEffects(e.Pool).Decide(e.Admin(), ids.From[ids.ApprovalKind](approval), true, nil); err != nil {
-				t.Fatal(err)
-			}
-			if got := e.WsScalar(t, `SELECT assignee_id::text FROM activity WHERE kind = 'task'`); got != e.AdminUser.String() {
-				t.Fatalf("accepted reassignment belongs to %s, want the decider", got)
-			}
-			if got := e.WsScalar(t, `SELECT proposed_change->>'promiser_seat_id' FROM approval WHERE id = $1`, approval); got != e.Rep2.String() {
-				t.Fatal("acceptance replaced the original promiser")
+			if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = 'commitment_task'`); n != want {
+				t.Fatalf("%d commitment proposals staged, want %d", n, want)
 			}
 		})
+	}
+}
+
+// An archived colleague's promise asks nobody: no task, no proposal, and so no
+// notice or email to anyone else in their place.
+func TestAMailedPromiseByAnArchivedColleagueAsksNobody(t *testing.T) {
+	e, reply := seedMailedPromise(t, "active")
+	e.WsExec(t, `UPDATE app_user SET archived_at = now() WHERE id = $1`, e.Rep2)
+	if err := runSignalPass(t, e, reply); err != nil {
+		t.Fatalf("the pass failed on a promise by an archived colleague: %v", err)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE kind = 'task'`); n != 0 {
+		t.Errorf("%d task(s) written for an archived promiser, want none", n)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = 'commitment_task'`); n != 0 {
+		t.Errorf("%d proposal(s) staged for an archived promiser, want none", n)
+	}
+	// The finding stays on its source, under Commitment review.
+	if n := e.WsCount(t, `SELECT count(*) FROM activity_commitment_admission
+		WHERE outcome = 'promiser_not_assignable' AND NOT current_work`); n != 1 {
+		t.Errorf("the unassignable promise is recorded %d time(s) on its source, want once", n)
 	}
 }
 
@@ -370,23 +377,21 @@ func TestAPrivatePromiseIsProposedToItsOwnOwner(t *testing.T) {
 	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE kind = 'task'`); n != 0 {
 		t.Errorf("%d task(s) written to a seat that cannot hold work", n)
 	}
-	// Named to the owner, not to nobody: an unnamed proposal on a private
-	// conversation is the mail shown to whoever opens the queue.
+	// Put to the owner, who made the promise: nobody else may read the mail.
 	named := e.WsScalar(t, `
-		SELECT coalesce(proposed_change->>'seat_id', '')
+		SELECT coalesce(requested_decider_id::text, '')
 		  FROM approval WHERE kind = 'commitment_task'`)
 	if named != e.Rep2.String() {
-		t.Errorf("the private proposal names %q, want the conversation's owner %s: anyone else "+
-			"reviewing it is being shown mail kept to one seat", named, e.Rep2)
+		t.Errorf("the private proposal is put to %q, want the conversation's owner %s, who made it", named, e.Rep2)
 	}
 }
 
-// An AGENT seat cannot hold work either, and a promise naming one is proposed.
+// An AGENT seat cannot hold work or decide, and a promise naming one stages nothing.
 //
 // Its own case because an agent is refused by a different arm of the same check —
 // AgentAssigneeError rather than not-found — and a dispatcher reading only the
 // not-found answer would mint a task onto an agent seat that fails to move afterwards.
-func TestAPromiseNamingAnAgentSeatIsProposed(t *testing.T) {
+func TestAPromiseNamingAnAgentSeatStagesNothing(t *testing.T) {
 	e, reply := seedMailedPromise(t, "active")
 	e.WsExec(t, `UPDATE app_user SET is_agent = true WHERE id = $1`, e.Rep2)
 
@@ -397,19 +402,15 @@ func TestAPromiseNamingAnAgentSeatIsProposed(t *testing.T) {
 	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE kind = 'task'`); n != 0 {
 		t.Errorf("%d task(s) written to an agent seat", n)
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = 'commitment_task'`); n != 1 {
-		t.Errorf("%d proposals staged, want one", n)
+	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = 'commitment_task'`); n != 0 {
+		t.Errorf("%d proposals staged for an agent seat, which cannot be asked to decide", n)
 	}
 }
 
-// A private promise naming NOBODY still reaches its owner.
-//
-// The seat comes off the message's own sender, so a thread whose sender is not a
-// colleague names none — and the question "can this seat hold work" has no subject.
-// Answering it as no and stopping there would drop the promise, since a private
-// conversation has exactly one reader to propose to and that reader is unaffected by
-// whoever sent the mail.
-func TestAPrivatePromiseNamingNobodyStillReachesItsOwner(t *testing.T) {
+// A private promise naming nobody asks nobody, not even the conversation's
+// owner: taking on a promise somebody else made is explicit, never a fallback.
+// The finding stays on its source, which only that owner may read.
+func TestAPrivatePromiseNamingNobodyAsksNobody(t *testing.T) {
 	e, reply := seedMailedPromise(t, "active")
 	reply = mailedReplyWithoutPromiser(t, reply)
 	// No colleague on the line: the sender participant goes, so nothing names a seat.
@@ -422,12 +423,11 @@ func TestAPrivatePromiseNamingNobodyStillReachesItsOwner(t *testing.T) {
 		t.Fatalf("the pass failed on a private promise naming nobody: %v", err)
 	}
 
-	named := e.WsScalar(t, `
-		SELECT coalesce(proposed_change->>'seat_id', '')
-		  FROM approval WHERE kind = 'commitment_task'`)
-	if named != e.Rep2.String() {
-		t.Errorf("the proposal names %q, want the conversation's owner %s: a promise with no "+
-			"sender still belongs to the one colleague who may read the thread", named, e.Rep2)
+	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = 'commitment_task'`); n != 0 {
+		t.Errorf("%d proposal(s) put to the mailbox owner for a promise nobody made by name, want none", n)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE kind = 'task'`); n != 0 {
+		t.Errorf("%d task(s) written for a promise nobody made by name, want none", n)
 	}
 }
 

@@ -185,7 +185,7 @@ func confirmOneMatch(ctx context.Context, tx pgx.Tx, c matchCandidate) (bool, er
 	if err != nil {
 		return false, fmt.Errorf("contacts: auto-confirming a LinkedIn match: %w", err)
 	}
-	if err := confirmMatchWriteTail(ctx, tx, c.ghost, c.owner, c.contact, wasStatus, wasContact); err != nil {
+	if err := confirmMatchWriteTail(ctx, tx, c.ghost, c.owner, c.contact, wasStatus, wasContact, linkedInFieldsWritten{}); err != nil {
 		return false, err
 	}
 	return true, nil

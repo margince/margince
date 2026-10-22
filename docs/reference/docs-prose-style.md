@@ -13,7 +13,7 @@ reads a docs change against this page.
   handbook, the identifier in a reference page.
 - **Specific.** A reason names the mechanism and what fails without it. "Retries are capped at five because the
   provider bans a key after ten failures" is a reason. "This keeps things robust" is not.
-- **Current.** A page says what is true now. History belongs in git and in [CHANGELOG.md](../../CHANGELOG.md).
+- **Current.** A page says what is true now. History belongs in git and in the release notes.
 - **Checkable.** Every number, path, command and default is one a reader can find in the tree. A count the code owns
   is linked from the page that generates it, never typed by hand.
 - **Public.** Name nothing a reader cannot open: no private repository, document, pull request or spec id. State the
@@ -52,7 +52,7 @@ Each rule runs on prose with fenced code, inline code, link targets and HTML com
 | `count` | A typed count of 5 or more modules, AI tasks, tools, gates, tables and similar | A link to the page that lists them |
 | `leadin` | "Three things:" over a list that is not three long | No number, or the right one |
 
-Capitals for acronyms and runs of SQL keywords (`NOT NULL`, `ON CONFLICT DO UPDATE`) are fine. `CHANGELOG.md`,
+Capitals for acronyms and runs of SQL keywords (`NOT NULL`, `ON CONFLICT DO UPDATE`) are fine.
 `docs/evidence/` and the pull-request template may describe history; every other rule still applies to them.
 `CODE_OF_CONDUCT.md` is adopted text and is exempt.
 

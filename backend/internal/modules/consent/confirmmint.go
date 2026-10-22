@@ -41,8 +41,12 @@ type mintRequest struct {
 	kind            string
 	purposeID       ids.PurposeID
 	expectedAddress string
-	tokenHash       string
-	link            string
+	// lane says whether this caller's mint refuses an installation that cannot
+	// mail the link, which the booking form and the operator doors answer
+	// differently.
+	lane      mailLanePolicy
+	tokenHash string
+	link      string
 	// askedByTheSubject lifts the re-solicitation guard; see linkRequest.
 	askedByTheSubject bool
 }
@@ -89,6 +93,12 @@ func (s *Store) issueLinkTx(
 		})
 		if err != nil {
 			return err
+		}
+		// After admitLinkTx and not before it. The caller earns the existence
+		// answers first. Refusing earlier tells an id that names nothing apart
+		// from one the caller may not see.
+		if req.lane == refuseWithoutMailLane && !s.canSendConfirm() {
+			return ErrNoMailLane
 		}
 		issued := s.now().UTC()
 		expires := issued.Add(confirmTokenTTL)

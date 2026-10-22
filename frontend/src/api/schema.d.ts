@@ -14161,22 +14161,13 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Ask somebody who may override the engine to decide this refused send.
-         * @description A rep refused at the keyboard usually cannot direct the send themselves — that takes the
-         *     `communication_exception` grant, which most seats do not hold. This is how they ask somebody
-         *     who does: the review is staged as an approval card, and whoever approves it is the human
-         *     whose name goes on the instruction.
-         *
-         *     ASKING GRANTS NOTHING. The caller still cannot direct the send, and the card is answered by
-         *     somebody who can or by nobody at all. What routing changes is that the question becomes
-         *     findable instead of sitting in a review only its author reads.
-         *
-         *     SCOPED TO THE REVIEW'S OWN INITIATOR. A seat that could route anybody's review would be
-         *     raising cards about other colleagues' correspondence, so this answers 404 for a review that
-         *     belongs to somebody else — the same answer reading one does, and for the same reason.
-         *
-         *     Pressing it twice raises ONE card. The question is about one refused message however many
-         *     times it is asked.
+         * Retired. Asking a colleague to decide a refused send is no longer offered.
+         * @deprecated
+         * @description Always answers 422 `review_not_routable`. A rep overrules a machine refusal with their own
+         *     reason (`POST /contacts/{id}/consent/allow`); a refusal names what may be overruled in its
+         *     problem details (`available_actions` carries `overrule`, and `overrulable` lists each
+         *     contact and category). A seat holding `communication_exception` directs the send from the
+         *     review (`POST /communication-reviews/{id}/direct-send`).
          */
         post: operations["requestCommunicationDecision"];
         delete?: never;
@@ -15830,6 +15821,40 @@ export interface paths {
          *     both the acting admin and the member.
          */
         delete: operations["revokeUserSession"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/{id}/mfa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a member's second factor. Admin-only, human-only.
+         * @description For a member who lost both their authenticator and their recovery codes. In one
+         *     transaction it removes the member's confirmed factor and its recovery codes, ends every
+         *     session the member holds, and emits `user.mfa_removed`, which names the admin and the
+         *     member. The sealed secret is erased after that commit; nothing references it by then.
+         *     The member then signs in with their password and sets a factor up again, at once if the
+         *     installation requires one.
+         *
+         *     It takes the same ceiling as `issueUserPasswordLink`: a delegated admin may act only on a
+         *     member whose whole access they already hold, and never on a full admin (403). Your own
+         *     factor is refused (403): `disableMyMfa` removes it, and asks for a current code, so a
+         *     borrowed session cannot strip it. Idempotent: a member with no confirmed factor is a
+         *     no-op, and a pending enrolment is left as it is.
+         */
+        delete: operations["removeUserMfa"];
         options?: never;
         head?: never;
         patch?: never;
@@ -20738,7 +20763,8 @@ export interface paths {
          * List current FX rates (latest per currency), or one pair's history.
          * @description Admin/ops-only view. Without `from`, returns the latest effective rate per
          *     foreign currency (to = the workspace base currency). With `from=USD`, returns
-         *     that pair's full effective-dated history, newest first.
+         *     that pair's full effective-dated history, newest first. A caller that needs
+         *     only the sheet's currency codes reads `GET /fx-rates/currencies`.
          */
         get: operations["listFxRates"];
         put?: never;
@@ -20794,6 +20820,31 @@ export interface paths {
          *     (x-agent-access: human-only). Audit-only write (no event stream, EVT-NOEVT-3).
          */
         delete: operations["deleteAiModelRate"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/fx-rates/currencies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the base currency and the currency codes on the FX rate sheet, without their rates.
+         * @description The workspace base currency, and the foreign currencies of the sheet
+         *     head (the same rows `GET /fx-rates` lists without `from`) as codes in
+         *     code order. Readable by every role that
+         *     may read deals, so a currency picker can offer the workspace's own
+         *     currencies first; the rates themselves stay on the admin/ops-only
+         *     `GET /fx-rates`. An empty sheet answers an empty list.
+         */
+        get: operations["listFxRateCurrencies"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -21222,6 +21273,11 @@ export interface components {
             /** @description The workspace's base currency — every rate in `data` converts TO this (AAD-PARAM-N-1, ADR-0085). Served from the workspace itself rather than inferred from the first rate row, so a workspace that has entered no rates can still state its own base. */
             readonly base_currency?: string;
             data: components["schemas"]["FxRate"][];
+        };
+        FxRateCurrencyListResponse: {
+            /** @description The workspace's base currency, which every code in `data` converts into. Served here as well as on the installation settings, so a role that may read deals but not those settings still learns which currency a picker leads with. */
+            base_currency: string;
+            data: string[];
         };
         SetFxRateRequest: {
             /** @description 3-letter ISO; must not equal the base currency. */
@@ -22069,6 +22125,15 @@ export interface components {
         CaptureSettings: {
             locks?: components["schemas"]["SettingLocks"];
             /**
+             * @description How many held mail threads one confidentiality pass answers, per run. A thread the
+             *     model fails on does not count. The threads beyond the cap wait for the next run, so
+             *     the cap sets how fast a backlog drains and never whether a thread is judged. Raise it
+             *     when `margince_capture_confidentiality_oldest_wait_seconds` stays above how often the
+             *     pass runs. Read at the start of every pass, so a change applies without a restart.
+             *     Default 40.
+             */
+            confidentiality_pass_cap: number;
+            /**
              * @description The installation-wide ceiling on AUTOMATIC website reads started in one UTC day.
              *     Company auto-enrichment and domain triage spend it from one counter. It paces and only
              *     paces: concurrency is bounded by the deep-read worker pool and model spend by the AI
@@ -22892,6 +22957,8 @@ export interface components {
             site_read_wall_seconds?: number;
             /** @description Set how long a mailbox waits between syncs, in seconds. */
             mail_sync_interval_seconds?: number;
+            /** @description Set how many held mail threads one confidentiality pass judges. */
+            confidentiality_pass_cap?: number;
             /** @description Toggle the workspace mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member. */
             mail_sharing?: boolean;
             /** @description Toggle the tenant-wide default for reading contact details out of captured mail — its signature and any attached vCard. A mailbox that set its own switch keeps it. */
@@ -25401,7 +25468,7 @@ export interface components {
          * @description Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.
          * @enum {string}
          */
-        ImportReasonCode: "activity_empty" | "activity_held" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_not_found" | "contact_not_found_dropped" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_unreadable";
+        ImportReasonCode: "activity_empty" | "activity_held" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_not_found" | "contact_not_found_dropped" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_unreadable";
         /**
          * @description Exactly one of two shapes: `object` and `mapping` (and optionally
          *     `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
@@ -26829,7 +26896,10 @@ export interface components {
             role?: string | null;
             /** @description The public profile this was read from. Stored, never fetched. */
             profile_url?: string | null;
-            /** Format: email */
+            /**
+             * Format: email
+             * @description Refused with 422 `email_names_no_one` when the local part names a sending system, as ContactEmailInput.email is.
+             */
             email?: string | null;
             phone?: string | null;
         };
@@ -26861,7 +26931,8 @@ export interface components {
              * @description `created` — nobody matched, so the card became a contact, their company and the edge
              *     between them. `updated` — an exact match, filled only where the record was empty.
              *     `needs_review` — a resemblance, written nowhere; open the candidate and decide.
-             *     `skipped` — the card states no name, so there is no contact in it.
+             *     `skipped` — the card states no name, carries a sending system's address, or matches a
+             *     contact the caller may not write; `reason` says which.
              * @enum {string}
              */
             outcome: "created" | "updated" | "needs_review" | "skipped";
@@ -26878,7 +26949,10 @@ export interface components {
          *     so the two cannot describe an address differently.
          */
         ContactEmailInput: {
-            /** Format: email */
+            /**
+             * Format: email
+             * @description An address whose local part names a sending system (noreply@, notifications@, receipts@ and the like) is refused with 422 `email_names_no_one`: nobody answers there, so it names no contact.
+             */
             email: string;
             /**
              * @default work
@@ -30953,6 +31027,17 @@ export interface components {
              *     recorded no profile URL of their own, and on every rejection.
              */
             profile_url_written: boolean;
+            /**
+             * @description Whether the confirmation put the export's position on the contact as its title.
+             *     Only a member who ticked "Use as title" on the match card writes it.
+             */
+            title_written?: boolean;
+            /**
+             * @description Whether the confirmation made the company the import placed the connection at
+             *     the contact's current employer. Only a member who ticked "Use as employer" on
+             *     the match card writes it.
+             */
+            employer_written?: boolean;
         };
         /** @description One account this member's network reaches. */
         LinkedInReachAccount: {
@@ -37633,8 +37718,8 @@ export interface components {
             roles?: string[];
             /** @description The live teams this user belongs to, ordered by team name. Present ONLY for an admin caller, on the same terms as `roles`: the roster answers every authenticated user because the share and assignee pickers read it, and who is in which team is not theirs to enumerate. An ARCHIVED team is absent — its memberships resolve no scope and no share, so listing one would describe access the user does not have. */
             team_ids?: string[];
-            /** @description The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, and whether this installation can build a set-password link. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer. */
-            allowed_actions?: ("change_role" | "issue_password_link" | "deactivate" | "reactivate")[];
+            /** @description The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer. */
+            allowed_actions?: ("change_role" | "issue_password_link" | "remove_mfa" | "deactivate" | "reactivate")[];
             /**
              * Format: date-time
              * @description When this member last used the product: the latest request any of their sign-in sessions made, including a session since signed out, revoked or expired. Clearing dead sessions records the latest of their requests on the member first, so the value outlives the sessions. Signing in counts as activity. Work an agent or a connected app did on their behalf does not.
@@ -37840,6 +37925,12 @@ export interface components {
             data_reset_available?: boolean;
             /** @description Whether THIS CALLER may issue member set-password links (`issueUserPasswordLink`) — true only when the caller holds `admin` AND the installation has no outbound-email channel AND a public base URL is configured. Deliberately a caller capability rather than a deployment-posture flag: `/me` answers every authenticated member, and a bare posture boolean would tell every rep whether the installation has email configured. Clients render the action on this, so an admin never sees a control that can only fail (ADR-0061 Amendment 1). */
             admin_password_link: boolean;
+            /**
+             * @description Whether THIS CALLER may ask a contact to confirm what is held about them (`requestDetailsConfirmation`, `sendPrivacyNotice`, `issueDoubleOptIn`) — true only when the caller may update a contact AND the installation has the lane those messages ride: an outbound relay, a link vault and a public base URL.
+             *     A caller capability rather than a deployment-posture flag, for the reason `admin_password_link` states: a bare posture boolean would tell every seat whether this installation has email. It folds the grant in, so it answers only the holders who could act on it.
+             *     The endpoint refuses what it cannot deliver, so a client that renders the action on this never offers one that would be. Each of those links is mailed and never returned, which is why an unsendable one is unusable rather than merely undelivered.
+             */
+            confirm_requests_sendable?: boolean;
             /** @description Effective role keys for this principal, and the one authority for them — `user.roles` is deliberately left unset here rather than repeating the same fact. */
             roles: string[];
             teams: string[];
@@ -39309,7 +39400,7 @@ export interface components {
          *     serve it. One list, so the two reads cannot name the same row two ways.
          * @enum {string}
          */
-        AuditAction: "create" | "update" | "archive" | "merge" | "promote" | "demote" | "disqualify" | "restore" | "export" | "erase" | "anonymize" | "assign" | "advance_stage" | "advance_phase" | "send_email" | "consent_grant" | "consent_withdraw" | "approve" | "reject" | "record_share" | "record_unshare" | "activity_relink" | "import" | "import_undo" | "reset_data" | "password_link_issued" | "connect" | "disconnect" | "schedule" | "reschedule" | "cancel" | "release" | "hold" | "expire" | "resolve" | "restrict" | "pin" | "accrue" | "pay" | "publish" | "pause" | "resume" | "close" | "invite" | "revoke" | "delete" | "place_legal_hold" | "lift_legal_hold" | "request_legal_review" | "withdraw_legal_review";
+        AuditAction: "create" | "update" | "archive" | "merge" | "promote" | "demote" | "disqualify" | "restore" | "export" | "erase" | "anonymize" | "assign" | "advance_stage" | "advance_phase" | "send_email" | "consent_grant" | "consent_withdraw" | "approve" | "reject" | "record_share" | "record_unshare" | "activity_relink" | "import" | "import_undo" | "reset_data" | "password_link_issued" | "connect" | "disconnect" | "schedule" | "reschedule" | "cancel" | "release" | "hold" | "expire" | "resolve" | "restrict" | "pin" | "accrue" | "pay" | "publish" | "pause" | "resume" | "close" | "invite" | "revoke" | "delete" | "place_legal_hold" | "lift_legal_hold" | "request_legal_review" | "withdraw_legal_review" | "mfa_removed";
         /** @description An append-only audit row. Mirrors the `audit_log` table. */
         AuditLogEntry: {
             /** Format: uuid */
@@ -41061,8 +41152,11 @@ export interface components {
              */
             queued: boolean;
             /**
-             * @description Whether this installation has an outbound relay and a link origin configured. False
-             *     means nothing was attempted — the link exists and must be passed on by hand.
+             * @description Whether this installation has an outbound relay and a link origin configured.
+             *
+             *     Always true on a 201: the request is refused outright without that lane, because the
+             *     plaintext link is mailed and never returned, so one that cannot be sent is one
+             *     nobody can pass on. Read `confirm_requests_sendable` on `/me` to know before asking.
              */
             sendable: boolean;
         };
@@ -41420,7 +41514,7 @@ export interface components {
          *     never escalate a 🟢 staged note into an external send without re-gating (ADR-0036).
          */
         ApproveRequest: {
-            /** @description Optional edits — the edited payload is re-admitted, then it executes (edit-then-send). */
+            /** @description Optional edits — the edited payload is re-admitted, then it executes (edit-then-send). It replaces the whole staged change. A `linkedin_match` card takes only one kind of edit, the two boxes a member ticks in the app: `use_as_title` and `use_as_employer`, each a boolean the staged change already carries. Every other member must stay as staged. An agent never sends an edited payload. */
             edited_payload?: {
                 [key: string]: unknown;
             };
@@ -58991,7 +59085,10 @@ export interface operations {
                     subject?: string;
                     booker: {
                         name: string;
-                        /** Format: email */
+                        /**
+                         * Format: email
+                         * @description Refused with 422 `email_names_no_one` on `booker.email` when the local part names a sending system (noreply@ and the like).
+                         */
                         email: string;
                     };
                     consent: components["schemas"]["CaptureConsent"];
@@ -72588,6 +72685,39 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    removeUserMfa: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The member has no second factor now, or had none. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Refused with `code: archived_role_held`: the member holds an archived role, which would hand the account its grants back the moment the role is restored. An admin gives them a live role first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     issueUserPasswordLink: {
         parameters: {
             query?: never;
@@ -79750,6 +79880,28 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    listFxRateCurrencies: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The sheet's currency codes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FxRateCurrencyListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     proposeFxRateRefresh: {

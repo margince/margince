@@ -228,6 +228,7 @@ func changedFields(encoded []byte, mapped map[string]string, typed map[string]an
 		return nil, fmt.Errorf("import: reading the stored record: %w", err)
 	}
 
+	mapped = withNamePartsAsFullName(mapped)
 	changed := make(map[string]string, len(mapped))
 	for field, incoming := range mapped {
 		// A deal's company is a column of the deal: its row carries the id its

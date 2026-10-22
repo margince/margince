@@ -606,6 +606,7 @@ const (
 	UserGreetingNameChanged               SubscribableEventType = "user_greeting_name.changed"
 	UserInvited                           SubscribableEventType = "user.invited"
 	UserLocaleChanged                     SubscribableEventType = "user_locale.changed"
+	UserMfaRemoved                        SubscribableEventType = "user.mfa_removed"
 	UserPasswordLinkIssued                SubscribableEventType = "user.password_link_issued"
 	UserReactivated                       SubscribableEventType = "user.reactivated"
 	VoiceBuildChanged                     SubscribableEventType = "voice.build_changed"
@@ -869,6 +870,8 @@ func (e SubscribableEventType) Valid() bool {
 	case UserInvited:
 		return true
 	case UserLocaleChanged:
+		return true
+	case UserMfaRemoved:
 		return true
 	case UserPasswordLinkIssued:
 		return true
@@ -1976,8 +1979,14 @@ type PublicEventLinkedinAccountChanged struct {
 
 // PublicEventLinkedinMatchDecided Payload for linkedin_match.decided. A connection was linked to a contact on file, by an exact-name match or by a member approving the proposal. It carries no verdict. A refusal is an approval row that stays rejected and never becomes a link, so there is no "no" to publish. The payload does not name the connection, a third party who never consented to being in this CRM. The imported rows are kept invisible, and their names travelling through the outbox would defeat that. The verdict and whether a profile URL reached the contact are the auditable facts. The records themselves are reachable through the audit row this event is linked to.
 type PublicEventLinkedinMatchDecided struct {
+	// EmployerWritten Whether the decision made the company the import placed the connection at the contact's current employer. True only when the member ticked "Use as employer". False on every automatic confirmation.
+	EmployerWritten *bool `json:"employer_written,omitempty"`
+
 	// ProfileUrlWritten Whether the decision put a LinkedIn handle on the contact. False on every rejection, and false on a confirmation whose contact already carried one — a value on a record is somebody's statement and is never overwritten.
 	ProfileUrlWritten bool `json:"profile_url_written"`
+
+	// TitleWritten Whether the decision put the export's position on the contact as its title. True only when the member ticked "Use as title" and the title changed. False on every automatic confirmation.
+	TitleWritten *bool `json:"title_written,omitempty"`
 }
 
 // PublicEventLinkedinNetworkImported Payload for linkedin_network.imported. A member uploaded their own LinkedIn connections export. The import act emits a single event, never one per row. An export is thousands of rows, and a per-row event would bury every other event in the stream. The auditable fact is that a member imported their network at all. No connection is named in the payload. The imported rows are third parties who never consented to being in this CRM. Publishing their names would defeat the point of keeping them invisible everywhere else.
@@ -2470,6 +2479,18 @@ type PublicEventUserInvited struct {
 type PublicEventUserLocaleChanged struct {
 	// Locale The language now chosen — one of the catalogs the product ships. Never empty: this event fires on a choice, and a member who has never chosen has no row and produces no event.
 	Locale string `json:"locale"`
+}
+
+// PublicEventUserMfaRemoved Payload for user.mfa_removed. An admin removed a member's confirmed second factor. Every session the member held ended with it. The password alone opens the account until the member sets a factor up again. So `by` and `user_id` are both required: this event records who weakened which sign-in.
+type PublicEventUserMfaRemoved struct {
+	// By The admin who removed it.
+	By openapi_types.UUID `json:"by"`
+
+	// SessionsEnded How many live sessions of the member the removal ended.
+	SessionsEnded int `json:"sessions_ended"`
+
+	// UserId The member whose second factor was removed.
+	UserId openapi_types.UUID `json:"user_id"`
 }
 
 // PublicEventUserPasswordLinkIssued Payload for user.password_link_issued. On an installation with no outbound-email channel, an admin minted a single-use set-password link for a member (ADR-0061). The admin delivers it out-of-band. Issuing supersedes the target's outstanding unused tokens. The link may be minted for a member who already has a password. That is an account takeover an admin is trusted to perform. This event is the detective control that records it, so `by` and `user_id` are both required and are the point of the event. The token itself is never a property here, and must never be added. The raw value is returned to the issuing admin once, over the response body, and reaches no ledger, log or bus.
@@ -3173,6 +3194,10 @@ func (PublicEventUserLocaleChanged) EventType() string { return "user_locale.cha
 
 func (PublicEventUserLocaleChanged) EntityType() string { return "user" }
 
+func (PublicEventUserMfaRemoved) EventType() string { return "user.mfa_removed" }
+
+func (PublicEventUserMfaRemoved) EntityType() string { return "user" }
+
 func (PublicEventUserPasswordLinkIssued) EventType() string { return "user.password_link_issued" }
 
 func (PublicEventUserPasswordLinkIssued) EntityType() string { return "user" }
@@ -3343,6 +3368,7 @@ var PublicEventVersions = map[string]int{
 	"user.activated":                            1,
 	"user.deactivated":                          1,
 	"user.invited":                              1,
+	"user.mfa_removed":                          1,
 	"user.password_link_issued":                 1,
 	"user.reactivated":                          1,
 	"user_delivery.changed":                     1,
@@ -3444,7 +3470,7 @@ var PublicEventSamples = map[string]string{
 	"lead_disqualify_reason.changed":            "{\"change\":\"created\",\"label\":\"Sample label\",\"reason_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"lead_source.changed":                       "{\"change\":\"created\",\"key\":\"Sample key\",\"source_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"linkedin_account.changed":                  "{\"connected\":true,\"has_profile_url\":true}",
-	"linkedin_match.decided":                    "{\"profile_url_written\":true}",
+	"linkedin_match.decided":                    "{\"employer_written\":true,\"profile_url_written\":true,\"title_written\":true}",
 	"linkedin_network.imported":                 "{\"imported\":1,\"rows\":1,\"skipped\":1}",
 	"list.archived":                             "{}",
 	"list.created":                              "{\"list_type\":\"Sample list type\",\"record_type\":\"Sample record type\",\"sharing\":\"Sample sharing\"}",
@@ -3483,6 +3509,7 @@ var PublicEventSamples = map[string]string{
 	"user.activated":                            "{\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"user.deactivated":                          "{\"by\":\"0190a7f2-0000-7000-8000-000000000010\",\"reason\":\"Sample reason\",\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"user.invited":                              "{\"by\":\"0190a7f2-0000-7000-8000-000000000010\",\"role\":\"Sample role\",\"team_ids\":[\"0190a7f2-0000-7000-8000-000000000010\"],\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
+	"user.mfa_removed":                          "{\"by\":\"0190a7f2-0000-7000-8000-000000000010\",\"sessions_ended\":1,\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"user.password_link_issued":                 "{\"by\":\"0190a7f2-0000-7000-8000-000000000010\",\"expires_at\":\"2026-10-14T09:12:00Z\",\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"user.reactivated":                          "{\"by\":\"0190a7f2-0000-7000-8000-000000000010\",\"status\":\"invited\",\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"user_delivery.changed":                     "{\"changed_fields\":[\"Sample changed fields\"]}",

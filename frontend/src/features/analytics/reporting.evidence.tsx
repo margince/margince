@@ -2,6 +2,7 @@ import "./reporting.css";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useRef } from "react";
 import { api } from "../../api/client";
+import { EntityRef } from "../../components/entityref";
 import { Button } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
@@ -14,8 +15,8 @@ import { Stack } from "../../design-system/stack";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { isEntityKind } from "../../lib/entity";
 import { isVersionSkewOf, throwProblem, unwrap } from "../../lib/problem";
-import { navigate } from "../../lib/router";
 import {
   metricLabel,
   type ReportingEvaluation,
@@ -210,25 +211,23 @@ export function ReportingEvidenceDrawer({
                       {
                         key: "source",
                         header: t("reporting.record"),
-                        render: (row) =>
-                          row.restricted ? (
-                            t("reporting.restricted")
-                          ) : row.source_id && row.source_type === "deal" ? (
-                            <Button
-                              variant="link"
-                              onClick={() => {
-                                onClose();
-                                navigate({
-                                  screen: "deals",
-                                  id: row.source_id,
-                                });
-                              }}
-                            >
-                              {row.label}
-                            </Button>
+                        render: (row) => {
+                          if (row.restricted) return t("reporting.restricted");
+                          // Every record type with a page links, in a new tab so the evidence
+                          // stays open. Anything else (an activity, a governance row) stays its label.
+                          return row.source_id &&
+                            row.source_type &&
+                            isEntityKind(row.source_type) ? (
+                            <EntityRef
+                              kind={row.source_type}
+                              id={row.source_id}
+                              name={row.label}
+                              newTab
+                            />
                           ) : (
                             row.label
-                          ),
+                          );
+                        },
                       },
                       {
                         key: "date",

@@ -16,6 +16,7 @@ import { useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { type ReviewActions, useReviewActions } from "../../lib/reviewactions";
+import { CheckFacts } from "./inputcheck.facts";
 
 type InputCheck = components["schemas"]["InputCheck"];
 type Props = Omit<ComponentProps<typeof ResolveSheet>, "onSubmit"> & {
@@ -26,7 +27,12 @@ type Props = Omit<ComponentProps<typeof ResolveSheet>, "onSubmit"> & {
 export function InputCheckAnswerSheet(props: Readonly<Props>) {
   const actions = useReviewActions();
   if (props.check?.type !== "unlinked_signal") {
-    return <ResolveSheet {...props} />;
+    return (
+      <ResolveSheet
+        {...props}
+        context={props.check ? <CheckFacts check={props.check} /> : undefined}
+      />
+    );
   }
   if (!actions) {
     throw new Error("The app shell must supply review actions");

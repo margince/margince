@@ -4,16 +4,13 @@
 package compose
 
 // The cg:approval-notify consumer: a staged proposal becomes a line in the
-// queue of every seat that could actually answer it.
+// queue of the one member it names.
 //
-// THERE IS NO APPROVER COLUMN, and there is no query that could grow one.
-// Whether a seat may decide a staged row is a per-(reader, row) predicate — the
-// grants the released effect would spend, the narrowing to the one seat some
-// kinds are staged for, and a live probe that the reader may act on the target
-// record — so the only honest fan-out is to ask that predicate once per seat.
-// approvals answers it (PendingDecidableBy); this file never re-derives it,
-// because a second reading of "who may decide" drifts from the inbox and starts
-// telling colleagues about cards their own inbox then hides.
+// Staging stores that member (approvals/decider.go). A manager or an admin may
+// still answer the card from the approvals inbox, but only the named member is
+// told. Whether that member may still decide it is approvals' predicate
+// (PendingAskedOfInTx), asked under their own authority; this file never
+// re-derives it.
 //
 // It lives here because the question crosses three modules: approvals owns the
 // predicate, identity owns the roster and each seat's authority, notices owns
@@ -22,7 +19,7 @@ package compose
 // THE ENVELOPE CAN BE STALE. Supersession and withdrawal write `expired` with
 // no event of their own, so a row that was pending when the outbox recorded
 // this envelope may have stopped being pending long before the lane reads it.
-// The re-read inside PendingDecidableBy is what keeps this from announcing a
+// The re-read inside PendingAskedOfInTx is what keeps this from announcing a
 // card nobody can answer.
 //
 // Idempotency is the notice table's own unique index on (recipient, dedupe key),
@@ -75,7 +72,7 @@ type noticeMailQueue interface {
 
 var _ noticeMailQueue = (*jobs.Runner)(nil)
 
-// ApprovalNotify announces a staged approval to the seats that could decide it.
+// ApprovalNotify announces a staged approval to the member it names.
 type ApprovalNotify struct {
 	db        *database.DB
 	approvals *approvals.Service
@@ -225,7 +222,7 @@ func (a *ApprovalNotify) announceToSeat(
 	// line itself is written whatever they chose, because their centre keeps it
 	// either way.
 	return a.db.Tx(ctx, func(tx pgx.Tx) error {
-		decidable, err := a.approvals.PendingDecidableInTx(seatCtx, tx, approvalID)
+		decidable, err := a.approvals.PendingAskedOfInTx(seatCtx, tx, approvalID)
 		if err != nil || !decidable {
 			return err
 		}

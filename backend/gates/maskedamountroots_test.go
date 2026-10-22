@@ -24,13 +24,16 @@ package gates
 // produced by SQL, every such statement is in `internal`, and the census
 // subjects all of those. The composition holds exactly while this does.
 //
-// So: nothing outside `internal` may name a deal amount column in SQL. The
-// binaries compose, the published surface is stdlib-only by its own gate, and
-// an extension unit reaches core data through the seam — none of the three has
-// business writing this statement, and if one ever does, the census it would
-// need is the one that cannot see it.
+// So: nothing outside `internal` may hold a read the census would subject. The
+// binaries compose, and the published surface is stdlib-only by its own gate.
+// An extension unit reaches core data through the seam. None of the three has
+// business writing this statement, and the census cannot see one that does.
+//
+// The census's own subject, not a wider one. A unit asking Authority().CanRead
+// names `amount_minor` as a field in a Go list and reads no table.
 
 import (
+	"go/parser"
 	"os"
 	"path/filepath"
 	"slices"
@@ -40,8 +43,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// outsideInternal is the register of files here that name the column and are
-// not a reader of it. Empty, and the emptiness is the finding.
+// outsideInternal is the register of files outside internal/ that hold such a
+// read, each with why the census need not see it. Empty, and the emptiness is
+// the finding.
 var outsideInternal = gatekit.Waive(map[string]string{})
 
 func TestNoDealAmountStatementLivesWhereTheCensusCannotSeeIt(t *testing.T) {
@@ -51,6 +55,7 @@ func TestNoDealAmountStatementLivesWhereTheCensusCannotSeeIt(t *testing.T) {
 	// rather than spelled again — a second spelling here is how this gate would
 	// come to guard a narrower column set than the census it exists to bound.
 	columns := dealMaskedColumns(t)
+	builders := dealAmountBuilderNames(t, columns)
 	roots := moduleRootsBesideInternal(t)
 	// A walk that found no root is a walk that agrees with everything.
 	if len(roots) == 0 {
@@ -73,11 +78,11 @@ func TestNoDealAmountStatementLivesWhereTheCensusCannotSeeIt(t *testing.T) {
 			if !sweptLikeTheCensus(filepath.ToSlash(path)) {
 				return nil
 			}
-			body, readErr := os.ReadFile(path)
-			if readErr != nil {
-				return readErr
+			file, parseErr := gatekit.ParseFile(path, 0)
+			if parseErr != nil {
+				return parseErr
 			}
-			if columns.Match(body) && !outsideInternal.Waived(t, filepath.ToSlash(path)) {
+			if readsADealAmount(path, file, columns, builders) && !outsideInternal.Waived(t, filepath.ToSlash(path)) {
 				offenders = append(offenders, filepath.ToSlash(path))
 			}
 			return nil
@@ -93,13 +98,53 @@ func TestNoDealAmountStatementLivesWhereTheCensusCannotSeeIt(t *testing.T) {
 	outsideInternal.AssertAllMatched(t)
 
 	if len(offenders) > 0 {
-		t.Errorf("%d file(s) outside internal/ name a deal amount column, where the masked-amount "+
+		t.Errorf("%d file(s) outside internal/ read a deal amount, where the masked-amount "+
 			"census cannot see them:\n\t%s\n\n"+
 			"That census sweeps `internal` alone, so a statement here is not a failure it reports — "+
 			"it is one it never reads, and it would go on answering PASS. Move the statement into a "+
 			"module, or widen maskedAmountScope's Roots and say here why the tree it now reads is "+
 			"the whole of it.",
 			len(offenders), strings.Join(offenders, "\n\t"))
+	}
+}
+
+// TestTheRootsGateJudgesReadsAndNotFieldNames holds the gate's boundary. A unit
+// naming the money field to the seam reads nothing. A statement reading the
+// deal's money is what the gate exists for.
+func TestTheRootsGateJudgesReadsAndNotFieldNames(t *testing.T) {
+	t.Parallel()
+	columns := dealMaskedColumns(t)
+	builders := dealAmountBuilderNames(t, columns)
+	for _, c := range []struct {
+		name   string
+		source string
+		reads  bool
+	}{
+		{
+			name:   "a unit's field list for the authority seam",
+			source: "var cardFields = []string{\"name\", \"stage_id\", \"amount_minor\", \"currency\"}",
+		},
+		{
+			name:   "a statement reading the deal's money",
+			source: "func total() string { return `SELECT sum(d.amount_minor) FROM deal d WHERE d.archived_at IS NULL` }",
+			reads:  true,
+		},
+		{
+			name:   "the converted column read the same way",
+			source: "func base() string { return \"SELECT d.amount_minor_base \" + \"FROM deal d\" }",
+			reads:  true,
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			file, err := parser.ParseFile(gatekit.SourceFileSet(), "unit.go", "package unit\n"+c.source, 0)
+			if err != nil {
+				t.Fatalf("parsing the fixture: %v", err)
+			}
+			if got := readsADealAmount("unit.go", file, columns, builders); got != c.reads {
+				t.Fatalf("readsADealAmount = %v, want %v", got, c.reads)
+			}
+		})
 	}
 }
 

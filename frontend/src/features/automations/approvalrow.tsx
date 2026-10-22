@@ -49,11 +49,13 @@ import { ApprovalEvidence } from "./approvalevidence";
 import {
   approvalAcceptLabel,
   approvalExpiryLabel,
-  approvalKindLabel,
+  approvalLabel,
   decisionSkewKey,
 } from "./approvalkind";
 import { approvalAcceptable, useApprovalNames } from "./approvalresponsibility";
 import { stagedSendOf } from "./approvalsend";
+import { ApprovalDecider, ApprovalTarget } from "./approvaltarget";
+import { LinkedInMatchChoice, useLinkedInChoice } from "./linkedinmatchchoice";
 import "./approvalrow.css";
 
 // One staged proposal as a decidable row, and the screen-level sink that
@@ -274,6 +276,7 @@ export function ApprovalRow({
   });
 
   const change = approval.proposed_change ?? {};
+  const linkedIn = useLinkedInChoice(approval);
   const approvalNames = useApprovalNames([approval]);
   const strings = editableStrings(approval.kind, change);
   const display = resolveDisplay(
@@ -331,7 +334,13 @@ export function ApprovalRow({
       layout="row"
       className="approval-row"
       display={display}
-      detail={<ApprovalEvidence approval={approval} />}
+      detail={
+        <>
+          <ApprovalTarget approval={approval} />
+          <ApprovalDecider approval={approval} />
+          <ApprovalEvidence approval={approval} />
+        </>
+      }
       now={now}
       labels={{
         ...rowLabels(t),
@@ -359,9 +368,7 @@ export function ApprovalRow({
             <AutonomyDot tier={approvalDotTier(approval.kind, tierMap)} />
           )}
           {/* kind is meta, not the headline — the human reads the summary first */}
-          <span className="t-caption">
-            {approvalKindLabel(approval.kind, t)}
-          </span>
+          <span className="t-caption">{approvalLabel(approval, t)}</span>
           <DecisionStatusChip
             approval={approval}
             decided={!!decided}
@@ -405,7 +412,11 @@ export function ApprovalRow({
       }
       onAccept={
         approvalAcceptable(approval)
-          ? () => decide.mutate({ verdict: "approve" })
+          ? () =>
+              decide.mutate({
+                verdict: "approve",
+                editedPayload: linkedIn?.edited,
+              })
           : undefined
       }
       // Offered only where the kind has something a reader may change. Disabled
@@ -423,6 +434,11 @@ export function ApprovalRow({
           {/* Read-only: the approver may release or refuse the message, and an
               override of the engine belongs to whoever is writing to the
               contact, recorded against their own name. */}
+          <LinkedInMatchChoice
+            offer={linkedIn}
+            decided={decided}
+            disabled={decide.isPending}
+          />
           {!decided && staged !== undefined && (
             <SendPermission
               preview={permission.preview}

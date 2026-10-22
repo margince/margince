@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ReactNode } from "react";
-import { userEvent, within } from "storybook/test";
+import { expect, within } from "storybook/test";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useLocale, useT } from "../../i18n";
 import { openAnalyticsSection } from "../../lib/analytics.address";
@@ -31,7 +31,7 @@ import {
 } from "../../testing/story-utils";
 import { weeklyNumericStatus } from "./brief.numeric";
 import { OutlookPanel } from "./brief.waterfall";
-import { WeeklySection } from "./brief.weekly";
+import { WeeklySection, WeekStepper } from "./brief.weekly";
 import { LearningsPanel } from "./brief.weekly.learnings";
 import { ScorecardPanel } from "./brief.weekly.scorecard";
 import { WeeklyWorkings } from "./brief.weekly.workings";
@@ -209,24 +209,31 @@ export const WinsCouldNotBePriced: Story = {
   ),
 };
 
-// The archive, open. The picker is the only door to a past week — the product
-// deliberately gives the retrospective no nav entry — so a header that drew no
-// picker for a rep with weeks behind them would strand every one of them.
+// The archive: a rep with weeks behind them. The retrospective has no nav
+// entry, so the stepper is the only door to a past week. The newest week offers
+// an earlier one and no later one.
 export const ArchiveOfWeeks: Story = {
-  render: panel(
-    weekly(
-      () => jsonResponse(narratedWeek),
-      [WEEK_START, PRIOR_WEEK_START, "2026-06-15", "2026-06-08"],
-    ),
-  ),
-  play: async ({ canvasElement }) => {
-    // The trigger, not the list: the listbox portals to the document, and a
-    // canvas-scoped lookup for it would reject after the frame was taken.
-    await userEvent.click(
-      await within(canvasElement).findByRole("combobox", {
-        name: "Open another week",
-      }),
+  render: () => {
+    installFetchStub(
+      weekly(
+        () => jsonResponse(narratedWeek),
+        [WEEK_START, PRIOR_WEEK_START, "2026-06-15", "2026-06-08"],
+      ),
     );
+    return (
+      <StoryProviders>
+        <WeekStepper />
+        <WeeklySection />
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const earlier = await canvas.findByRole("button", { name: "Earlier week" });
+    await expect(earlier).toBeEnabled();
+    await expect(
+      canvas.getByRole("button", { name: "Later week" }),
+    ).toBeDisabled();
   },
 };
 

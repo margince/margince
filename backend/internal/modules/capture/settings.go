@@ -36,6 +36,8 @@ type Settings struct {
 	SiteRead             SiteReadLimits
 	// MailSyncIntervalSeconds is how long a mailbox waits between syncs.
 	MailSyncIntervalSeconds int
+	// ConfidentialityPassCap is how many held threads one pass judges.
+	ConfidentialityPassCap int
 }
 
 // SiteReadLimits is what one deep read may fetch (settingssiteread.go).
@@ -61,6 +63,7 @@ type SettingsPatch struct {
 	SiteReadMaxMiB          *int
 	SiteReadWallSeconds     *int
 	MailSyncIntervalSeconds *int
+	ConfidentialityPassCap  *int
 }
 
 // SettingsStore is the store over the workspace capture posture.
@@ -102,6 +105,7 @@ func (s *SettingsStore) Get(ctx context.Context) (Settings, error) {
 	}{
 		{&out.AutoEnrichDailyCap, AutoEnrichDailyCap},
 		{&out.MailSyncIntervalSeconds, MailSyncIntervalSeconds},
+		{&out.ConfidentialityPassCap, ConfidentialityPassCap},
 	} {
 		value, err := config.StoredVal(ctx, s.config, f.entry)
 		if err != nil {
@@ -203,6 +207,7 @@ func (s *SettingsStore) Update(ctx context.Context, patch SettingsPatch) (Settin
 			{patch.SiteReadMaxMiB, SiteReadMaxMiB},
 			{patch.SiteReadWallSeconds, SiteReadWallSeconds},
 			{patch.MailSyncIntervalSeconds, MailSyncIntervalSeconds},
+			{patch.ConfidentialityPassCap, ConfidentialityPassCap},
 		} {
 			if f.want == nil {
 				continue

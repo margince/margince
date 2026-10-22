@@ -6,7 +6,10 @@ import type {
   DisplayField,
   ResolvedDisplayField,
 } from "../../lib/approvaldisplay.types";
-import { commercialPreviewDisplay } from "../../lib/approvalpreview";
+import {
+  commercialPreviewDisplay,
+  stagedDealMove,
+} from "../../lib/approvalpreview";
 import { humanizeKind } from "./approvalkind";
 import { commitmentResponsibility } from "./approvalresponsibility";
 
@@ -27,6 +30,11 @@ const CLOSE_DATE_FLAGS = {
   unrealistic_soon: "approval.field.closeDateFlag.unrealistic_soon",
   unrealistic_stale: "approval.field.closeDateFlag.unrealistic_stale",
 } as const satisfies Readonly<Record<string, MessageKey>>;
+
+// A field whose value is already a word, under its caption.
+function textRow(field: string, label: MessageKey): DisplayField {
+  return { field, label, as: "text" };
+}
 
 export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
   {
@@ -57,6 +65,24 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
         as: "enum",
         optionLabels: CLOSE_DATE_FLAGS,
       },
+    ],
+    // A deal move's reason for a loss and its note. While pending, the preview
+    // shows both as changes, so neither leads. Once decided there is no
+    // preview, and these tell a reader why the deal closed.
+    advance_deal: [
+      {
+        field: "lost_reason",
+        label: "approval.field.lost_reason",
+        as: "prose",
+      },
+    ],
+    progress_deal: [
+      {
+        field: "lost_reason",
+        label: "approval.field.lost_reason",
+        as: "prose",
+      },
+      { field: "note", label: "approval.field.note", as: "prose" },
     ],
     // `because` is the signal's own words for why the stage should move. The two
     // stages already render as a proper old→new comparison on the card
@@ -94,23 +120,14 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
       { field: "email", label: "approval.field.email", as: "text" },
       { field: "domain", label: "approval.field.domain", as: "text" },
     ],
-    // Two records that look like one contact. The names are the whole comparison.
+    // Two records that look like one contact. The names are the comparison; the
+    // position and the title beside them are what "Use as job title" weighs.
     linkedin_match: [
-      {
-        field: "connection_name",
-        label: "approval.field.connection_name",
-        as: "text",
-      },
-      {
-        field: "connection_company",
-        label: "approval.field.connection_company",
-        as: "text",
-      },
-      {
-        field: "contact_name",
-        label: "approval.field.contact_name",
-        as: "text",
-      },
+      textRow("connection_name", "approval.field.connection_name"),
+      textRow("connection_company", "approval.field.connection_company"),
+      textRow("connection_position", "approval.field.connection_position"),
+      textRow("contact_name", "approval.field.contact_name"),
+      textRow("contact_title", "approval.field.contact_title"),
     ],
     // A message that was scheduled and then stopped. Why it stopped is the whole
     // question, and the SUMMARY already carries that sentence: the server maps
@@ -356,12 +373,16 @@ export function resolveDisplay(
   preview?: components["schemas"]["ApprovalPreview"],
   locale: Locale = "en",
 ): readonly ResolvedDisplayField[] {
+  const args =
+    kind === "advance_deal" || kind === "progress_deal"
+      ? stagedDealMove(change)
+      : change;
   const resolved = displayFields(kind).map((entry) => ({
     field: entry.field,
     label: t(entry.label),
     value: displayValue(
       entry,
-      Object.hasOwn(change, entry.field) ? change[entry.field] : undefined,
+      Object.hasOwn(args, entry.field) ? args[entry.field] : undefined,
       t,
       formatDay,
     ),

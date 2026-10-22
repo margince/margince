@@ -405,6 +405,8 @@ export const en = {
     "Archive this offer and hide it from the active offer list. Its line items remain stored.",
   "approval.preview.importScopeUnavailable":
     "This import proposal has no complete row-by-row change set. Open Data import to review the source and test run before starting the import.",
+  "approval.preview.machineAddress":
+    "The approval cannot run: the address belongs to a sending system, not a human.",
   "approval.preview.confirmationOnly":
     "Record this confirmation and complete the waiting automation run. No record update or message send is authorized.",
   "approval.preview.confirmationQuestion": "Question to confirm",
@@ -1856,6 +1858,8 @@ export const en = {
   "history.verb.resetData": "{subject} reset the record",
   "history.verb.passwordLinkIssued":
     "{subject} issued a set-password link for the record",
+  "history.verb.mfaRemoved":
+    "{subject} removed two-step sign-in for the record",
   "history.verb.connect": "{subject} connected the record",
   "history.verb.disconnect": "{subject} disconnected the record",
   "history.verb.schedule": "{subject} scheduled the record",
@@ -2081,8 +2085,9 @@ export const en = {
   "screen.pending": "This screen is not available yet.",
 
   // The composed extension tier (ADR-0120): #/ext/<unit>. The registry is
-  // generated per installation, so these two strings are the only part of a
+  // generated per installation, so these strings are the only part of a
   // unit surface the core catalogs own.
+  "ext.panels.label": "Extensions",
   "ext.notFound":
     "No extension named “{name}” is enabled on this installation.",
 
@@ -2146,6 +2151,8 @@ export const en = {
   "common.close": "Close",
   "common.expand": "Expand",
   "common.collapse": "Collapse",
+  "common.minimize": "Minimize",
+  "common.restoreNamed": "Open {name}",
   // The one sentence every copy failure opens with. It is a fact about the
   // BROWSER rather than about the link, the secret or the agenda, so the
   // screens differ only in the way out they offer after it.
@@ -2668,7 +2675,11 @@ export const en = {
     "Mails this contact a private link to see what you hold about them, correct it, and say whether they want to hear from you. It goes to their own recorded address; you cannot send it anywhere else.",
   "consent.askQueued": "Link queued for {address}.",
   "consent.askNotDelivered":
-    "The link was created for {address}, but this installation sends no mail, so it was not sent.",
+    "The link was created for {address} but has not gone out yet. The delivery record says where it stands.",
+  "consent.askNoSystemMail":
+    "System mail is not set up, so confirmation requests cannot be sent. An admin configures it in the installation’s email settings.",
+  "consent.askSendableUnknown":
+    "Whether this can be sent is not known yet. Reload the page to check again.",
   "consent.askExpires": "The link works until",
   "consent.noRecord": "no record",
   "consent.noPurposes": "This company tracks no consent purposes yet.",
@@ -3330,6 +3341,8 @@ export const en = {
   "co.brief.cite.fact.many": "{count} facts",
   "co.brief.cite.profile_field.many": "{count} profile fields",
   "approval.kind.advance_deal": "Advance deal",
+  "approval.kind.closeDealWon": "Close deal as won",
+  "approval.kind.closeDealLost": "Close deal as lost",
   "approval.kind.close_date_correction": "Correct close date",
   "approval.kind.deal_follow_up": "Add deal follow-up",
   "approval.kind.promote_lead": "Qualify lead",
@@ -3361,6 +3374,8 @@ export const en = {
   "approval.preview.optionalCriterionMet": "Optional criterion met",
   "approval.preview.optionalCriterionUnmet": "Optional criterion not met",
   "approval.field.because": "Reason",
+  "approval.field.lost_reason": "Why it was lost",
+  "approval.field.note": "Note",
   "approval.field.from_stage": "From",
   "approval.field.to_stage": "To",
   "approval.kind.transcript_proposal": "Add next step from transcript",
@@ -3413,6 +3428,11 @@ export const en = {
   "approval.field.connection_name": "Name on LinkedIn",
   "approval.field.connection_company": "Company on LinkedIn",
   "approval.field.contact_name": "Contact in CRM",
+  "approval.field.connection_position": "Position on LinkedIn",
+  "approval.field.contact_title": "Job title in CRM",
+  "approval.linkedin.useAsTitle": "Use as job title",
+  "approval.linkedin.useAsEmployer": "Use {company} as employer",
+  "approval.linkedin.employerNow": "Works at {company} now",
   "approval.responsibility.requestedFrom": "Decision requested from",
   "approval.commitment.promiser": "Promised by",
   "approval.commitment.effect": "On approval",
@@ -3659,6 +3679,17 @@ export const en = {
   "email.detail.cc": "Cc",
   "email.detail.filedUnder": "Filed under",
   "email.detail.when": "Sent",
+  "email.thread.count_one": "{count} message",
+  "email.thread.count_other": "{count} messages",
+  "email.thread.countLatest_one": "Latest message",
+  "email.thread.countLatest_other": "Latest {count} messages",
+  "email.thread.fold": "Fold the message from {name}",
+  "email.thread.toLine": "to {names}",
+  "email.thread.details": "Details",
+  "email.thread.replied": "Sent and added to this thread.",
+  "email.forward": "Forward",
+  "email.forwardHeader": "Forwarded message",
+  "email.fileUnder": "File under another record…",
   "commitment.review.count_one": "Commitment to review: {count}",
   "commitment.review.count_other": "Commitments to review: {count}",
   "commitment.review.conditionWords": "Condition: {words}",
@@ -3666,6 +3697,8 @@ export const en = {
   "commitment.review.title": "Commitment review",
   "commitment.review.detail":
     "No task was created from these readings. Review the source and later replies before adding a follow-up from a linked record.",
+  "commitment.review.noPromiser":
+    "No colleague who made this commitment can be asked, so nobody was.",
   "commitment.review.historical":
     "Historical commitment without a current deadline.",
   "commitment.review.beforeBaseline":
@@ -3854,6 +3887,7 @@ export const en = {
   "co.evidence.previous": "Previous claim",
   "co.evidence.next": "Next claim",
   "co.evidence.title": "Source",
+  "co.evidence.record": "Record",
   "co.prep.withheld":
     "Parts of this company are hidden from you, so this summary is incomplete.",
   "co.read.newActivity_one": "1 new item since your last visit.",
@@ -4930,6 +4964,10 @@ export const en = {
   "decision.expired": "Expired",
   "decision.expiresIn": "expires in {countdown}",
   "decision.detail": "Approval detail",
+  "decision.target": "Record",
+  "decision.openToDecide": "Open to decide",
+  "decision.approvedBy": "Approved by",
+  "decision.rejectedBy": "Rejected by",
   "decision.detailLoading": "Loading approval…",
   "decision.detailTechnical": "Technical details",
   "decision.evidenceSource.activity": "Activity",
@@ -5788,21 +5826,44 @@ export const en = {
   "compose.writeEmail": "Write email",
   "compose.relink": "Relink",
   "compose.previewEmail": "Preview",
-  "compose.readEmail": "Read full email",
+  "compose.earlierShow_one": "Show {count} earlier message",
+  "compose.earlierShow_other": "Show {count} earlier messages",
+  "compose.earlierHide": "Hide earlier messages",
+  "compose.quotedHeader": "On {when}, {who} wrote:",
+  "compose.quotedYou": "you",
+  "compose.filesTotal_one": "{count} file · {size}",
+  "compose.filesTotal_other": "{count} files · {size}",
+  "compose.filesLimit": "Up to {most} files per message.",
+  "compose.newEmailTo": "New email to {name}",
+  "compose.discardMessage": "Delete draft",
+  "compose.draftSaving": "Saving…",
+  "compose.earlierThreads_one": "{count} earlier thread",
+  "compose.earlierThreads_other": "{count} earlier threads",
+  "compose.threadChange": "Change",
+  "compose.threadContinue": "Continue a thread",
+  "compose.threads": "Continue a thread",
+  "compose.threadsWith": "Continue a thread with {name}",
+  "compose.newThread": "New thread",
+  "compose.copies": "Cc and Bcc",
+  "compose.signsOffAs": "Signs off as “{closing}”.",
+  "compose.reasonLabel": "Why you may write to {address}",
+  "compose.reasonHint":
+    "Recorded under your name for this kind of message. It is not consent.",
+  "compose.reasonRecord": "Record reason",
+  "compose.reasonRecording": "Recording…",
   "compose.replyIntent": "Purpose of the reply",
   "compose.newIntent": "Purpose of the email",
-  "compose.draftReply": "Draft reply with AI",
+  "compose.draftReply": "Draft reply",
   "compose.newEmail": "New email",
   "compose.replyingTo": "Replying to “{subject}” · {when}",
   "compose.followingUp": "Following up on your email “{subject}” · {when}",
   "compose.draftContextHint":
     "Describe the purpose. Margince uses the record context.",
-  "compose.draftWithAi": "Draft with AI",
+  "compose.draftEmail": "Draft email",
   "compose.drafting": "Drafting…",
   "compose.discardDraft": "Discard draft",
   "compose.discardDraftHint":
     "Marks this draft as a miss for your Voice DNA. The generated text is never kept.",
-  "compose.saveDraft": "Save as draft",
   "compose.savedDraftSaved": "Draft saved",
   "compose.savedDraftDelete": "Delete",
   "compose.savedDraftDeleted": "Saved draft deleted",
@@ -5856,7 +5917,6 @@ export const en = {
   "compose.basedOn": "Based on: {inputs}",
   "compose.whyThisDraft": "Why this draft?",
   "compose.body": "Body",
-  "compose.bodyHint": "Click the text to edit it.",
   "compose.signOff": "Added when you send",
   "compose.signOffClosing": "You have no signature, so this closing is added.",
   "compose.signOffSet": "Set your signature",
@@ -5864,11 +5924,8 @@ export const en = {
   "compose.transport": "Send via",
   "compose.transportEmail": "Email",
   "compose.recipientHint": "Name or address",
-  "compose.subjectHint": "Topic of the email",
   "compose.bodyPlaceholder": "Message text",
   "compose.bcc": "Bcc",
-  "compose.bccHint":
-    "Other recipients cannot see these addresses or that anyone else was copied.",
   "compose.threadGone":
     "That thread can no longer be answered, so a new email was opened instead. Check the recipient before sending.",
   "compose.colleagueMailbox_one":
@@ -5880,7 +5937,7 @@ export const en = {
   "compose.colleagueMailboxTitle": "Delivered to a colleague",
   "compose.deadRecipientsTitle": "Mail to these addresses bounces",
   "compose.attach": "Attach",
-  "compose.filesOnRecord": "On this record",
+  "compose.filesOnRecord": "Attach from this record",
   "compose.filesLoading": "Loading record files…",
   "compose.filesNone": "No files on this record yet.",
   "compose.filesFull":
@@ -5929,8 +5986,9 @@ export const en = {
   "compose.scheduleMonday": "Monday morning",
   "compose.scheduleNow": "Send now",
   "compose.why": "Reason for contact",
-  "compose.whyHint":
-    "The record determines what is allowed; the reason lets the send be checked against it.",
+  "compose.whyMissing": "No contact reason.",
+  "compose.whyMissingText": "Sending is refused until one is recorded.",
+  "compose.whyPick": "Record a reason…",
   "compose.why.requestedFollowup": "Follow-up they requested",
   "compose.why.activeDeal": "Active deal",
   "compose.why.quote": "Quote or proposal they requested",
@@ -5969,20 +6027,9 @@ export const en = {
     "The recipient has not confirmed they want to receive messages. Only the recipient can confirm.",
   "sendPermission.reason.other":
     "This message cannot be sent, and no seat here can override that.",
-  "compose.derivedReply":
-    "This replies to the recipient’s own message, so no reason is needed.",
   "compose.send": "Send",
   "compose.sendConfirmTitle": "Send email",
-  "compose.threadHeading": "This thread",
-  "compose.continueHeading": "Continue thread?",
   "compose.threadLeave": "New email",
-  "compose.threadShow": "Show this thread",
-  "compose.threadHide": "Hide this thread",
-  "compose.choicesShow": "Show earlier threads",
-  "compose.choicesHide": "Hide earlier threads",
-  "compose.messageCount_one": "{count} message",
-  "compose.messageCount_other": "{count} messages",
-  "compose.threadContinuing": "Last exchange in this thread",
   "compose.draftKept": "Your edits were kept. Draft again when ready.",
   "compose.threadFailed":
     "The message could not be loaded. Select Retry in the thread.",
@@ -6037,12 +6084,15 @@ export const en = {
   "directSend.reason.legal_obligation": "Legal obligation",
   "directSend.reason.other": "Other",
   "compose.reviewReference": "Review",
-  "compose.reviewRequest": "Request review",
-  "compose.reviewRequesting": "Requesting…",
-  "compose.reviewRequested":
-    "Review requested. A user allowed to send this decides, and the message waits until then.",
-  "compose.reviewRequestFailed":
-    "The review request failed. Retry, or open the review from the refusal above.",
+  "compose.overrule.open": "Overrule with a reason",
+  "compose.overrule.reasonLabel": "Why may this message go?",
+  "compose.overrule.hint":
+    "Your reason is recorded on each contact. It covers this kind of message to them until someone revokes it.",
+  "compose.overrule.confirm": "Record the overrule",
+  "compose.overrule.recording": "Recording…",
+  "compose.overrule.recorded": "Overrule recorded. Press Send again.",
+  "compose.overrule.failed":
+    "The overrule was not recorded. Retry, or open the review from the refusal above.",
   "compose.consentGoto": "Review consent",
   "compose.draftUnavailable":
     "AI drafting is unavailable because no model is configured. The email can still be written manually.",
@@ -7458,6 +7508,8 @@ export const en = {
     "This domain is already held by another company in the CRM, so the row cannot create a second company under it.",
   "import.reason.duplicate_email":
     "This email address already belongs to another contact.",
+  "import.reason.email_names_no_contact":
+    "“{value}” belongs to a sending system, not a human, so it does not become a contact.",
   "import.reason.employer_column_empty":
     "The company column is empty, so the row names no employer.",
   "import.reason.employer_column_empty_dropped":
@@ -7974,6 +8026,7 @@ export const en = {
   "audit.action.importUndo": "Import undone",
   "audit.action.resetData": "Data reset",
   "audit.action.passwordLinkIssued": "Password link issued",
+  "audit.action.mfaRemoved": "Two-step sign-in removed",
   "audit.action.connect": "Connected",
   "audit.action.disconnect": "Disconnected",
   "audit.action.schedule": "Scheduled",
@@ -11540,6 +11593,11 @@ export const en = {
   "users.status.invited": "Invited",
   "users.status.deactivated": "Deactivated",
   "users.status.suspended": "Suspended",
+  "users.removeMfa": "Remove two-step sign-in",
+  "users.removeMfaConfirmTitle": "Remove two-step sign-in for {name}?",
+  "users.removeMfaConfirmBody":
+    "Do this only for a member who lost both their authenticator app and their recovery codes. They are signed out everywhere and can then sign in with their password alone, until they set up two-step sign-in again.",
+  "users.mfaRemoved": "Two-step sign-in removed for {name}",
   "users.link.action": "Get set-password link",
   "users.link.title": "Set-password link for {name}",
   "users.link.pending": "Creating link…",
@@ -12810,6 +12868,11 @@ export const en = {
     "Maximum time one read runs before it keeps what it found, 30 to 600 seconds.",
   "captureReading.wall.refusal":
     "Enter a whole number of seconds from 30 to 600.",
+  "captureReview.passCap.label": "Held threads reviewed per run",
+  "captureReview.passCap.help":
+    "How many held mail threads one privacy review decides, 1 to 200. The rest wait for the next run. Raise it when new mail stays hidden from colleagues for longer than the run schedule, which System health sets. Default 40.",
+  "captureReview.passCap.refusal":
+    "Enter a whole number of threads from 1 to 200.",
   "agentConnections.title": "Agent connections",
   "agentConnections.sub":
     "How long an agent connected over MCP keeps its passport before it renews. A change applies to the next passport issued.",
@@ -13582,6 +13645,9 @@ export const en = {
   "webhooks.event.user.password_link_issued.label": "Password link issued",
   "webhooks.event.user.password_link_issued.when":
     "An administrator creates a set-password link to pass on outside Margince, where no outbound email is set up.",
+  "webhooks.event.user.mfa_removed.label": "Second factor removed",
+  "webhooks.event.user.mfa_removed.when":
+    "An administrator removes a member’s two-step sign-in and signs them out everywhere.",
   "webhooks.event.user.deactivated.label": "Member deactivated",
   "webhooks.event.user.deactivated.when":
     "A member’s sessions and agent passports are revoked.",
@@ -13921,6 +13987,8 @@ export const en = {
   "contact.intro.fallbackNextRouteHelp":
     "Move to the next colleague on the list.",
   "contact.intro.decideTitle": "Introduction to {name}",
+  "contact.intro.askedBy": "Asked by",
+  "contact.intro.askedThrough": "Through",
   "contact.intro.decideLegend": "Your answer",
   "contact.intro.decideAction": "Record answer",
   "contact.intro.decideFailed": "The answer was not recorded. Retry.",
@@ -15189,27 +15257,21 @@ export const en = {
   "worklist.completeness.cards_one": "{cards} card on screen",
   "worklist.completeness.cards_other": "{cards} cards on screen",
   "worklist.completeness.bounded":
-    "Read limit reached for {kinds}. See the source limits.",
+    "{kinds} may have more items than this list shows.",
+  "worklist.completeness.boundedSome":
+    "Some categories may have more items than this list shows.",
   "worklist.completeness.unread_one": "{count} source did not load",
   "worklist.completeness.unread_other": "{count} sources did not load",
   "worklist.review.partial":
     "{loaded} of {total} shown. Load more below to see the rest.",
-  "worklist.limits.title": "Source read limits",
-  "worklist.limits.source": "{source}: read limit reached · {scope}",
   "worklist.emptyPage": "Nothing on this page. Load more to continue.",
   "worklist.review.more":
     "More pages may contain review items. Load more below to continue.",
-  "worklist.limits.boundary":
-    "Load more continues this snapshot. It cannot read beyond the source limits.",
-  "worklist.limits.personal": "your personal source",
-  "worklist.limits.selected": "the selected record scope",
-  "worklist.limits.remedy":
-    "Review the available items, then refresh. If needed work is still missing, ask an admin to investigate the source read limit.",
   "worklist.review.snapshotChanged":
     "{loaded} of {total} snapshot items shown. The day has changed; refresh to update the totals.",
   "worklist.review.partialDone": "{loaded} of {total} shown.",
   "worklist.review.floor":
-    "{loaded}+ shown. A source read limit was reached; see the source limits.",
+    "{loaded}+ shown. There may be more items than this list shows.",
   "worklist.clear": "Nothing is waiting on you.",
   "worklist.clearFor": "Nothing is waiting on {name}.",
   "worklist.clearOfTasksToday":

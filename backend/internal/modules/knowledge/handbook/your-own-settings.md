@@ -111,7 +111,7 @@ For new backup codes, or to move to a new phone, remove it and set it up again.
 If your installation requires two-step sign-in, Margince asks you to set it up again straight away. That is also how you get new backup codes there.
 Also called: new phone, new backup codes, lost phone.
 
-Keep your backup codes where you can find them without your phone. An administrator cannot turn two-step sign-in off for you.
+Keep your backup codes where you can find them without your phone. If you lose both, an administrator can remove two-step sign-in for you from **Settings → Members**. You then sign in with your password and set it up again.
 
 ### How do I change my display name?
 To change your display name in Margince, open Settings → **Account**, edit the **Display name** field, and choose **Save** or press Enter. **Save** shows once you change the name.

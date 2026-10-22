@@ -70,6 +70,7 @@ var recordHistoryVerbs = map[string]string{ // #nosec G101 -- audit verbs and th
 	// names what was issued, because on a member's history "issued" alone
 	// would not distinguish a credential from anything else granted to them.
 	"password_link_issued": "issued a set-password link for",
+	"mfa_removed":          "removed the second factor of",
 	// The subject is the provider connection, so the phrases name what the act
 	// did to the installation's relationship with that provider rather than to
 	// a record: connecting binds a paid credential, disconnecting destroys it

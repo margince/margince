@@ -21,7 +21,8 @@ import (
 
 // New returns the unit's declaration. hello_ping in api/crm.yaml has no Tools
 // entry: a contract-only request reaches the manifest and serves
-// nothing. The subscription puts a declared system read in the extension lane.
+// nothing. The subscription puts a declared system read in the extension lane,
+// and the panel puts the frontend layer and a panel slot there.
 func New() extension.Extension {
 	return extension.Extension{
 		Name:          "crm-hello",
@@ -32,6 +33,9 @@ func New() extension.Extension {
 			{Name: "note_deal_change", Events: []string{"deal.updated"}, Handle: noteDealChange},
 		},
 		SystemReads: []extension.SystemRead{extension.SystemReadDeals},
+		Panels: []extension.Panel{
+			{Slot: extension.SlotDealPanel, Export: "DealHello", Object: "ext_crm_hello_ping"},
+		},
 	}
 }
 

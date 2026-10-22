@@ -222,8 +222,13 @@ export function CaptureSettingsCard() {
   );
 }
 
-// How often a connected mailbox is checked for new mail, mirrored as
-// READ_LIMITS is.
+// How often a connected mailbox is checked for new mail, and how many held
+// threads one privacy-review run decides, mirrored as READ_LIMITS is. Both
+// sit on the mail card, which draws them from here.
 export const MAIL_SYNC_BOUNDS = {
   mail_sync_interval_seconds: { min: 30, max: 3_600 },
+} as const;
+
+export const MAIL_REVIEW_BOUNDS = {
+  confidentiality_pass_cap: { min: 1, max: 200 },
 } as const;

@@ -419,6 +419,8 @@ export const vi = {
     "Lưu trữ báo giá này và ẩn khỏi danh sách báo giá đang hoạt động. Các hạng mục vẫn được lưu.",
   "approval.preview.importScopeUnavailable":
     "Đề xuất nhập này không có đầy đủ thay đổi theo từng dòng. Mở Nhập dữ liệu để xem nguồn và lần chạy thử trước khi bắt đầu nhập.",
+  "approval.preview.machineAddress":
+    "Không thể chạy phê duyệt: địa chỉ thuộc về một hệ thống gửi thư, không phải của một cá nhân.",
   "approval.preview.confirmationOnly":
     "Ghi nhận xác nhận này và hoàn tất lượt tự động hóa đang chờ. Không cho phép cập nhật bản ghi hoặc gửi tin nhắn.",
   "approval.preview.confirmationQuestion": "Câu hỏi cần xác nhận",
@@ -1862,6 +1864,7 @@ export const vi = {
   "history.verb.resetData": "{subject} đã đặt lại hồ sơ",
   "history.verb.passwordLinkIssued":
     "{subject} đã tạo liên kết đặt mật khẩu cho hồ sơ",
+  "history.verb.mfaRemoved": "{subject} đã gỡ đăng nhập hai bước của hồ sơ",
   "history.verb.connect": "{subject} đã kết nối hồ sơ",
   "history.verb.disconnect": "{subject} đã ngắt kết nối hồ sơ",
   "history.verb.schedule": "{subject} đã lên lịch hồ sơ",
@@ -2072,6 +2075,7 @@ export const vi = {
 
   "screen.pending": "Màn hình này chưa khả dụng.",
 
+  "ext.panels.label": "Tiện ích mở rộng",
   "ext.notFound":
     "Bản cài đặt này không bật tiện ích mở rộng nào tên “{name}”.",
 
@@ -2130,6 +2134,8 @@ export const vi = {
   "common.close": "Đóng",
   "common.expand": "Mở rộng",
   "common.collapse": "Thu gọn",
+  "common.minimize": "Thu nhỏ",
+  "common.restoreNamed": "Mở {name}",
   "clipboard.copyFailedTitle": "Truy cập bộ nhớ tạm bị từ chối",
 
   "explain.open": "Giải thích con số này",
@@ -2597,7 +2603,11 @@ export const vi = {
     "Gửi email cho người này một liên kết riêng để họ xem thông tin đang lưu về họ, chỉnh sửa nếu có sai sót và cho biết họ có muốn nhận tin từ bạn không. Email chỉ được gửi đến đúng địa chỉ đã lưu của họ, không thể gửi đến nơi khác.",
   "consent.askQueued": "Liên kết đang chờ gửi tới {address}.",
   "consent.askNotDelivered":
-    "Đã tạo liên kết cho {address}, nhưng bản cài đặt này không gửi thư nên liên kết không được gửi đi.",
+    "Đã tạo liên kết cho {address} nhưng chưa gửi đi. Bản ghi gửi cho biết tình trạng.",
+  "consent.askNoSystemMail":
+    "Thư hệ thống chưa được thiết lập nên không thể gửi yêu cầu xác nhận. Quản trị viên thiết lập thư hệ thống trong cài đặt email của bản cài đặt.",
+  "consent.askSendableUnknown":
+    "Chưa biết có gửi được hay không. Hãy tải lại trang để kiểm tra.",
   "consent.askExpires": "Liên kết có hiệu lực đến",
   "consent.noRecord": "chưa ghi nhận",
   "consent.noPurposes": "Công ty chưa theo dõi mục đích đồng ý nào.",
@@ -3236,6 +3246,8 @@ export const vi = {
   "co.brief.cite.fact.many": "{count} dữ kiện",
   "co.brief.cite.profile_field.many": "{count} trường hồ sơ",
   "approval.kind.advance_deal": "Đẩy deal tiến lên",
+  "approval.kind.closeDealWon": "Đóng deal là thắng",
+  "approval.kind.closeDealLost": "Đóng deal là thua",
   "approval.kind.close_date_correction": "Sửa ngày chốt",
   "approval.kind.deal_follow_up": "Thêm việc tiếp theo cho deal",
   "approval.kind.promote_lead": "Xác nhận lead đủ điều kiện",
@@ -3268,6 +3280,8 @@ export const vi = {
   "approval.preview.optionalCriterionUnmet":
     "Chưa đáp ứng tiêu chí không bắt buộc",
   "approval.field.because": "Lý do",
+  "approval.field.lost_reason": "Lý do thua",
+  "approval.field.note": "Ghi chú",
   "approval.field.from_stage": "Từ",
   "approval.field.to_stage": "Đến",
   "approval.kind.transcript_proposal": "Thêm bước tiếp theo từ bản chép lời",
@@ -3318,6 +3332,11 @@ export const vi = {
   "approval.field.connection_name": "Tên trên LinkedIn",
   "approval.field.connection_company": "Công ty trên LinkedIn",
   "approval.field.contact_name": "Liên hệ trong CRM",
+  "approval.field.connection_position": "Chức vụ trên LinkedIn",
+  "approval.field.contact_title": "Chức danh trong CRM",
+  "approval.linkedin.useAsTitle": "Dùng làm chức danh",
+  "approval.linkedin.useAsEmployer": "Dùng {company} làm nơi làm việc",
+  "approval.linkedin.employerNow": "Hiện làm việc tại {company}",
   "approval.responsibility.requestedFrom": "Người được yêu cầu quyết định",
   "approval.commitment.promiser": "Người cam kết",
   "approval.commitment.effect": "Khi phê duyệt",
@@ -3557,6 +3576,17 @@ export const vi = {
   "email.detail.cc": "Cc",
   "email.detail.filedUnder": "Xếp vào",
   "email.detail.when": "Thời gian gửi",
+  "email.thread.count_one": "{count} thư",
+  "email.thread.count_other": "{count} thư",
+  "email.thread.countLatest_one": "Thư gần nhất",
+  "email.thread.countLatest_other": "{count} thư gần nhất",
+  "email.thread.fold": "Thu gọn thư của {name}",
+  "email.thread.toLine": "gửi {names}",
+  "email.thread.details": "Chi tiết",
+  "email.thread.replied": "Đã gửi và thêm vào chuỗi thư này.",
+  "email.forward": "Chuyển tiếp",
+  "email.forwardHeader": "Thư được chuyển tiếp",
+  "email.fileUnder": "Lưu vào hồ sơ khác…",
   "commitment.review.count_one": "Cam kết cần xem lại: {count}",
   "commitment.review.count_other": "Cam kết cần xem lại: {count}",
   "commitment.review.conditionWords": "Điều kiện: {words}",
@@ -3564,6 +3594,8 @@ export const vi = {
   "commitment.review.title": "Xem lại cam kết",
   "commitment.review.detail":
     "Chưa tạo việc từ các kết quả này. Xem lại nguồn và phản hồi sau đó trước khi thêm việc tiếp theo từ hồ sơ liên kết.",
+  "commitment.review.noPromiser":
+    "Không thể hỏi đồng nghiệp đã đưa ra cam kết này, nên không hỏi ai.",
   "commitment.review.historical": "Cam kết cũ không có hạn chót hiện tại.",
   "commitment.review.beforeBaseline":
     "Gửi trước ngày hộp thư này bắt đầu gợi ý cam kết.",
@@ -3752,6 +3784,7 @@ export const vi = {
   "co.evidence.previous": "Thông tin trước",
   "co.evidence.next": "Thông tin sau",
   "co.evidence.title": "Nguồn",
+  "co.evidence.record": "Bản ghi",
   "co.prep.withheld":
     "Một số phần của công ty này bị ẩn với bạn, nên bản tóm tắt này chưa đầy đủ.",
   "co.read.newActivity_one": "1 mục mới từ lần truy cập gần nhất.",
@@ -4822,6 +4855,10 @@ export const vi = {
   "decision.expired": "Đã hết hạn",
   "decision.expiresIn": "hết hạn sau {countdown}",
   "decision.detail": "Chi tiết phê duyệt",
+  "decision.target": "Bản ghi",
+  "decision.openToDecide": "Mở để quyết định",
+  "decision.approvedBy": "Được duyệt bởi",
+  "decision.rejectedBy": "Bị từ chối bởi",
   "decision.detailLoading": "Đang tải phê duyệt…",
   "decision.detailTechnical": "Chi tiết kỹ thuật",
   "decision.evidenceSource.activity": "Hoạt động",
@@ -5620,21 +5657,44 @@ export const vi = {
   "compose.writeEmail": "Viết email",
   "compose.relink": "Liên kết lại",
   "compose.previewEmail": "Xem trước",
-  "compose.readEmail": "Đọc toàn bộ email",
+  "compose.earlierShow_one": "Hiện {count} thư trước",
+  "compose.earlierShow_other": "Hiện {count} thư trước",
+  "compose.earlierHide": "Ẩn các thư trước",
+  "compose.quotedHeader": "Vào {when}, {who} đã viết:",
+  "compose.quotedYou": "bạn",
+  "compose.filesTotal_one": "{count} tệp · {size}",
+  "compose.filesTotal_other": "{count} tệp · {size}",
+  "compose.filesLimit": "Tối đa {most} tệp mỗi thư.",
+  "compose.newEmailTo": "Email mới gửi {name}",
+  "compose.discardMessage": "Xóa bản nháp",
+  "compose.draftSaving": "Đang lưu…",
+  "compose.earlierThreads_one": "{count} chuỗi thư trước",
+  "compose.earlierThreads_other": "{count} chuỗi thư trước",
+  "compose.threadChange": "Đổi",
+  "compose.threadContinue": "Tiếp tục chuỗi thư",
+  "compose.threads": "Tiếp tục chuỗi thư",
+  "compose.threadsWith": "Tiếp tục chuỗi thư với {name}",
+  "compose.newThread": "Chuỗi thư mới",
+  "compose.copies": "Cc và Bcc",
+  "compose.signsOffAs": "Kết thư bằng “{closing}”.",
+  "compose.reasonLabel": "Vì sao bạn có thể viết cho {address}",
+  "compose.reasonHint":
+    "Được ghi dưới tên bạn cho loại thư này. Đây không phải là sự đồng ý.",
+  "compose.reasonRecord": "Ghi lý do",
+  "compose.reasonRecording": "Đang ghi…",
   "compose.replyIntent": "Mục đích trả lời",
   "compose.newIntent": "Mục đích email",
-  "compose.draftReply": "Soạn trả lời bằng AI",
+  "compose.draftReply": "Soạn trả lời",
   "compose.newEmail": "Email mới",
   "compose.replyingTo": "Trả lời “{subject}” · {when}",
   "compose.followingUp": "Liên hệ lại sau email “{subject}” đã gửi · {when}",
   "compose.draftContextHint":
     "Mô tả mục đích. Margince dùng ngữ cảnh của hồ sơ.",
-  "compose.draftWithAi": "Soạn bằng AI",
+  "compose.draftEmail": "Soạn email",
   "compose.drafting": "Đang soạn…",
   "compose.discardDraft": "Bỏ bản nháp",
   "compose.discardDraftHint":
     "Đánh dấu bản nháp này là chưa đạt để Voice DNA ghi nhận. Văn bản đã tạo sẽ không được lưu.",
-  "compose.saveDraft": "Lưu bản nháp",
   "compose.savedDraftSaved": "Đã lưu bản nháp",
   "compose.savedDraftDelete": "Xóa",
   "compose.savedDraftDeleted": "Đã xóa bản nháp đã lưu",
@@ -5686,7 +5746,6 @@ export const vi = {
   "compose.basedOn": "Dựa trên: {inputs}",
   "compose.whyThisDraft": "Vì sao có bản nháp này?",
   "compose.body": "Nội dung",
-  "compose.bodyHint": "Nhấp vào văn bản để chỉnh sửa.",
   "compose.signOff": "Tự thêm khi gửi",
   "compose.signOffClosing": "Chưa có chữ ký, nên lời kết này sẽ được thêm vào.",
   "compose.signOffSet": "Thiết lập chữ ký",
@@ -5694,11 +5753,8 @@ export const vi = {
   "compose.transport": "Gửi qua",
   "compose.transportEmail": "Email",
   "compose.recipientHint": "Tên hoặc địa chỉ",
-  "compose.subjectHint": "Chủ đề email",
   "compose.bodyPlaceholder": "Nội dung tin nhắn",
   "compose.bcc": "Bcc",
-  "compose.bccHint":
-    "Người nhận khác không thấy các địa chỉ này, cũng không biết có ai khác được gửi bản sao.",
   "compose.threadGone":
     "Không thể trả lời chuỗi thư đó nữa, nên đã mở email mới thay thế. Kiểm tra người nhận trước khi gửi.",
   "compose.colleagueMailbox_one":
@@ -5710,7 +5766,7 @@ export const vi = {
   "compose.colleagueMailboxTitle": "Thư đến hộp thư của đồng nghiệp",
   "compose.deadRecipientsTitle": "Thư đến các địa chỉ này bị trả lại",
   "compose.attach": "Đính kèm",
-  "compose.filesOnRecord": "Tệp của hồ sơ này",
+  "compose.filesOnRecord": "Đính kèm từ hồ sơ này",
   "compose.filesLoading": "Đang tải tệp của hồ sơ…",
   "compose.filesNone": "Hồ sơ này chưa có tệp nào.",
   "compose.filesFull":
@@ -5759,8 +5815,9 @@ export const vi = {
   "compose.scheduleMonday": "Sáng thứ Hai",
   "compose.scheduleNow": "Gửi ngay",
   "compose.why": "Lý do liên hệ",
-  "compose.whyHint":
-    "Hồ sơ quy định những gì được phép gửi; lý do dùng để đối chiếu lần gửi này với quy định đó.",
+  "compose.whyMissing": "Chưa có lý do liên hệ.",
+  "compose.whyMissingText": "Không thể gửi cho đến khi ghi lý do.",
+  "compose.whyPick": "Ghi lý do…",
   "compose.why.requestedFollowup": "Liên hệ lại theo yêu cầu của họ",
   "compose.why.activeDeal": "Deal đang hoạt động",
   "compose.why.quote": "Báo giá hoặc đề xuất họ yêu cầu",
@@ -5799,20 +5856,9 @@ export const vi = {
     "Người nhận chưa xác nhận muốn nhận tin nhắn. Chỉ người nhận mới có thể xác nhận.",
   "sendPermission.reason.other":
     "Không thể gửi tin nhắn này và không tài khoản nào ở đây có thể bỏ qua hạn chế đó.",
-  "compose.derivedReply":
-    "Đây là thư trả lời tin nhắn do chính người nhận gửi, nên không cần lý do.",
   "compose.send": "Gửi",
   "compose.sendConfirmTitle": "Gửi email",
-  "compose.threadHeading": "Chuỗi thư này",
-  "compose.continueHeading": "Tiếp tục chuỗi thư?",
   "compose.threadLeave": "Email mới",
-  "compose.threadShow": "Hiển thị chuỗi thư này",
-  "compose.threadHide": "Ẩn chuỗi thư này",
-  "compose.choicesShow": "Hiển thị các chuỗi thư trước",
-  "compose.choicesHide": "Ẩn các chuỗi thư trước",
-  "compose.messageCount_one": "{count} tin nhắn",
-  "compose.messageCount_other": "{count} tin nhắn",
-  "compose.threadContinuing": "Trao đổi gần nhất trong chuỗi thư này",
   "compose.draftKept": "Đã giữ các chỉnh sửa. Soạn lại khi sẵn sàng.",
   "compose.threadFailed":
     "Không thể tải tin nhắn. Chọn Thử lại trong chuỗi thư.",
@@ -5858,12 +5904,15 @@ export const vi = {
   "directSend.reason.legal_obligation": "Nghĩa vụ pháp lý",
   "directSend.reason.other": "Khác",
   "compose.reviewReference": "Phê duyệt",
-  "compose.reviewRequest": "Yêu cầu duyệt",
-  "compose.reviewRequesting": "Đang gửi yêu cầu…",
-  "compose.reviewRequested":
-    "Đã yêu cầu duyệt. Thành viên có quyền gửi tin nhắn này sẽ quyết định; đến lúc đó tin nhắn vẫn chờ.",
-  "compose.reviewRequestFailed":
-    "Không thể gửi yêu cầu duyệt. Thử lại, hoặc mở yêu cầu duyệt từ thông báo từ chối ở trên.",
+  "compose.overrule.open": "Cho phép kèm lý do",
+  "compose.overrule.reasonLabel": "Vì sao tin nhắn này được gửi?",
+  "compose.overrule.hint":
+    "Lý do của bạn được lưu trên từng liên hệ và áp dụng cho loại tin nhắn này cho đến khi bị thu hồi.",
+  "compose.overrule.confirm": "Lưu lý do cho phép",
+  "compose.overrule.recording": "Đang lưu…",
+  "compose.overrule.recorded": "Đã lưu. Hãy bấm Gửi lại.",
+  "compose.overrule.failed":
+    "Chưa lưu được. Hãy thử lại, hoặc mở mục duyệt từ thông báo từ chối ở trên.",
   "compose.consentGoto": "Xem lại sự đồng ý",
   "compose.draftUnavailable":
     "Không thể soạn nháp bằng AI vì chưa cấu hình mô hình. Vẫn có thể tự viết email.",
@@ -7203,6 +7252,8 @@ export const vi = {
     "Tên miền này đã thuộc về một công ty khác trong CRM nên hàng không thể tạo công ty thứ hai với nó.",
   "import.reason.duplicate_email":
     "Địa chỉ email này đã thuộc về một liên hệ khác.",
+  "import.reason.email_names_no_contact":
+    "“{value}” thuộc về một hệ thống gửi thư, không phải của một cá nhân, nên không trở thành liên hệ.",
   "import.reason.employer_column_empty":
     "Cột công ty để trống nên hàng không nêu nhà tuyển dụng nào.",
   "import.reason.employer_column_empty_dropped":
@@ -7710,6 +7761,7 @@ export const vi = {
   "audit.action.importUndo": "Đã hoàn tác nhập",
   "audit.action.resetData": "Đã đặt lại dữ liệu",
   "audit.action.passwordLinkIssued": "Đã tạo liên kết mật khẩu",
+  "audit.action.mfaRemoved": "Đã gỡ đăng nhập hai bước",
   "audit.action.connect": "Đã kết nối",
   "audit.action.disconnect": "Đã ngắt kết nối",
   "audit.action.schedule": "Đã lên lịch",
@@ -11224,6 +11276,11 @@ export const vi = {
   "users.status.invited": "Đã mời",
   "users.status.deactivated": "Đã vô hiệu hóa",
   "users.status.suspended": "Đã tạm khóa",
+  "users.removeMfa": "Gỡ đăng nhập hai bước",
+  "users.removeMfaConfirmTitle": "Gỡ đăng nhập hai bước của {name}?",
+  "users.removeMfaConfirmBody":
+    "Chỉ làm việc này cho thành viên đã mất cả ứng dụng xác thực lẫn mã khôi phục. Họ sẽ bị đăng xuất ở mọi nơi và sau đó có thể đăng nhập chỉ bằng mật khẩu, cho đến khi thiết lập lại đăng nhập hai bước.",
+  "users.mfaRemoved": "Đã gỡ đăng nhập hai bước của {name}",
   "users.link.action": "Lấy liên kết đặt mật khẩu",
   "users.link.title": "Liên kết đặt mật khẩu cho {name}",
   "users.link.pending": "Đang tạo liên kết…",
@@ -12504,6 +12561,11 @@ export const vi = {
   "captureReading.wall.help":
     "Thời gian tối đa một lần đọc chạy trước khi giữ lại những gì đã tìm được, từ 30 đến 600 giây.",
   "captureReading.wall.refusal": "Nhập số giây là số nguyên từ 30 đến 600.",
+  "captureReview.passCap.label": "Số chuỗi thư đang giữ được rà soát mỗi lượt",
+  "captureReview.passCap.help":
+    "Số chuỗi thư đang bị giữ mà một lượt rà soát quyết định, từ 1 đến 200. Các chuỗi còn lại chờ lượt sau. Hãy tăng khi thư mới bị ẩn với đồng nghiệp lâu hơn lịch chạy, do Tình trạng hệ thống đặt. Mặc định 40.",
+  "captureReview.passCap.refusal":
+    "Nhập số chuỗi thư là số nguyên từ 1 đến 200.",
   "agentConnections.title": "Kết nối agent",
   "agentConnections.sub":
     "Thời gian một agent kết nối qua MCP giữ passport trước khi gia hạn. Thay đổi áp dụng cho passport cấp tiếp theo.",
@@ -13300,6 +13362,9 @@ export const vi = {
     "Đã cấp liên kết đặt mật khẩu",
   "webhooks.event.user.password_link_issued.when":
     "Quản trị viên tạo liên kết đặt mật khẩu để chuyển cho thành viên ngoài Margince, khi chưa thiết lập gửi email.",
+  "webhooks.event.user.mfa_removed.label": "Đã gỡ đăng nhập hai bước",
+  "webhooks.event.user.mfa_removed.when":
+    "Quản trị viên gỡ đăng nhập hai bước của thành viên và đăng xuất họ ở mọi nơi.",
   "webhooks.event.user.deactivated.label": "Đã vô hiệu hóa thành viên",
   "webhooks.event.user.deactivated.when":
     "Phiên đăng nhập và passport của agent thuộc thành viên bị thu hồi.",
@@ -13635,6 +13700,8 @@ export const vi = {
   "contact.intro.fallbackNextRouteHelp":
     "Chuyển sang đồng nghiệp tiếp theo trong danh sách.",
   "contact.intro.decideTitle": "Giới thiệu với {name}",
+  "contact.intro.askedBy": "Được hỏi bởi",
+  "contact.intro.askedThrough": "Qua",
   "contact.intro.decideLegend": "Câu trả lời",
   "contact.intro.decideAction": "Ghi nhận câu trả lời",
   "contact.intro.decideFailed": "Không thể ghi nhận câu trả lời. Thử lại.",
@@ -14866,27 +14933,21 @@ export const vi = {
   "worklist.completeness.cards_one": "{cards} thẻ trên màn hình",
   "worklist.completeness.cards_other": "{cards} thẻ trên màn hình",
   "worklist.completeness.bounded":
-    "Đã đạt giới hạn đọc ở {kinds}. Xem giới hạn của từng nguồn.",
+    "{kinds} có thể có nhiều mục hơn danh sách này hiển thị.",
+  "worklist.completeness.boundedSome":
+    "Một số danh mục có thể có nhiều mục hơn danh sách này hiển thị.",
   "worklist.completeness.unread_one": "{count} nguồn chưa tải được",
   "worklist.completeness.unread_other": "{count} nguồn chưa tải được",
   "worklist.review.partial":
     "Hiển thị {loaded} trên {total}. Tải thêm ở bên dưới để xem phần còn lại.",
-  "worklist.limits.title": "Giới hạn đọc của nguồn",
-  "worklist.limits.source": "{source}: đã đạt giới hạn đọc · {scope}",
   "worklist.emptyPage": "Trang này chưa có mục nào. Tải thêm để tiếp tục.",
   "worklist.review.more":
     "Các trang tiếp theo có thể chứa mục cần xét duyệt. Tải thêm bên dưới để tiếp tục.",
-  "worklist.limits.boundary":
-    "Tải thêm tiếp tục lần xem này. Thao tác này không đọc vượt giới hạn của nguồn.",
-  "worklist.limits.personal": "nguồn cá nhân của bạn",
-  "worklist.limits.selected": "phạm vi hồ sơ đã chọn",
-  "worklist.limits.remedy":
-    "Xem xét các mục hiện có rồi làm mới. Nếu vẫn thiếu công việc cần xử lý, hãy liên hệ quản trị viên để kiểm tra giới hạn đọc của nguồn.",
   "worklist.review.snapshotChanged":
     "Hiển thị {loaded} trên {total} mục của lần xem ban đầu. Công việc đã thay đổi; hãy làm mới để cập nhật tổng số.",
   "worklist.review.partialDone": "Hiển thị {loaded} trên {total}.",
   "worklist.review.floor":
-    "Hiển thị {loaded}+. Một nguồn đã đạt giới hạn đọc; xem giới hạn của từng nguồn.",
+    "Đã hiển thị {loaded}+. Có thể có nhiều mục hơn danh sách này hiển thị.",
   "worklist.clear": "Không có việc nào đang chờ bạn.",
   "worklist.clearFor": "Không có việc nào đang chờ {name}.",
   "worklist.clearOfTasksToday":

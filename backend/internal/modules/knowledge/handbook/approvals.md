@@ -80,6 +80,10 @@ Also called: approval failed, approved but nothing happened, retry an approval.
 An agent action in Margince is approved by the colleague the agent acts for, or by a colleague who could have made the same change. You only see approvals whose target you can see and whose effect you could carry out. No agent may approve a proposal staged for somebody else, or a send it proposed itself. An administrator has no override past their own permissions.
 Also called: approver, who signs off, permission to approve.
 
+### Who is told about an approval?
+Margince tells one colleague about each approval: the one it is for. That is the colleague an agent acts for, or the colleague who asked for the change, or else the owner of the record it changes. Other colleagues who may decide it can still answer it from their approvals list, but get no notice and no email. When a deal changes owner, its waiting approvals move to the new owner. Margince proposes nothing about a record nobody owns.
+Also called: approval email, decision needed, who gets notified, approval notice.
+
 ### How do I stop Margince making automatic changes?
 To make Margince ask before changing close dates, company names or lifecycle stages, open **Settings → AI access**, then **For developers**, then **Agent rules**. Turn off the matching switch under **Automatic changes**. The switches apply to your work only. A kind you switch off comes back to your Worklist as an approval.
 Also called: autopilot, auto-apply, stop the AI editing my records.

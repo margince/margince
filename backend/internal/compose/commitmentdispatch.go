@@ -22,6 +22,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"time"
 
@@ -106,7 +107,8 @@ type CommitmentOutcome string
 
 const (
 	// CommitmentRemembered means it was already a task, already proposed or
-	// refused, or dismissed by a human. Nothing new was written.
+	// refused, dismissed by a human, or nobody is responsible for it. Nothing
+	// new was written.
 	CommitmentRemembered CommitmentOutcome = "remembered"
 	// CommitmentWatched is the customer's promise, filed on their record.
 	CommitmentWatched CommitmentOutcome = "watched"
@@ -116,6 +118,10 @@ const (
 	CommitmentTaskWritten CommitmentOutcome = "task_written"
 	// CommitmentProposed is staged for a human to accept.
 	CommitmentProposed CommitmentOutcome = "proposed"
+	// CommitmentPromiserUnassignable is a promise nobody may be asked about. Its
+	// maker is unknown, has left, or does not own the private mail it is in. It
+	// is recorded on its source as a finding, and no work is created for anyone.
+	CommitmentPromiserUnassignable CommitmentOutcome = "promiser_not_assignable"
 )
 
 // commitmentLocator names one promise across readings of one source: the same
@@ -375,25 +381,34 @@ func (d *CommitmentDispatcher) fileClaim(
 func (d *CommitmentDispatcher) propose(
 	ctx context.Context, tx pgx.Tx, c Commitment, holdsWork bool, claimID *ids.UUID, claimIDs []ids.UUID, bundleID ids.UUID,
 ) (CommitmentOutcome, ids.UUID, error) {
-	seat := c.Seat
-	if !holdsWork {
-		seat = nil
+	asked, err := commitmentAskedOf(ctx, tx, c)
+	if err != nil {
+		return CommitmentRemembered, ids.UUID{}, err
 	}
-	if c.PrivateTo != nil && !mayHoldPrivateTask(c.PrivateTo, derefSeat(seat)) {
-		seat = c.PrivateTo
+	if asked.IsZero() {
+		return CommitmentPromiserUnassignable, ids.UUID{}, nil
 	}
-	if seat != nil {
-		ctx = onBehalfOf(ctx, *seat)
+	// The seat the accepted task lands on: the promiser, when they may hold
+	// work now. An invited promiser decides it and gets the task on sign-in.
+	var seat *ids.UUID
+	if holdsWork {
+		seat = &asked
 	}
 	proposal := CommitmentTaskProposal{
 		SourceActivityID: c.SourceActivityID, Summary: c.Summary, Party: c.Party,
 		SeatID: seat, PromiserSeatID: c.Seat, PromiserUnresolved: c.Seat == nil, DueDate: c.DueDate, Links: c.Links, Quote: c.Quote,
 		Locator: c.Locator, ClaimID: claimID, ClaimIDs: claimIDs, Body: c.Body, PrivateTo: c.PrivateTo,
 	}
-	return d.stageCommitmentProposal(ctx, tx, c, proposal, bundleID)
+	return d.stageCommitmentProposal(ctx, tx, c, proposal, bundleID, asked)
 }
 
-func (d *CommitmentDispatcher) stageCommitmentProposal(ctx context.Context, tx pgx.Tx, c Commitment, proposal CommitmentTaskProposal, bundleID ids.UUID) (CommitmentOutcome, ids.UUID, error) {
+// stageCommitmentProposal puts one promise to the one colleague asked. With
+// nobody asked it stages nothing: a promise is never left for whoever reads it.
+func (d *CommitmentDispatcher) stageCommitmentProposal(ctx context.Context, tx pgx.Tx, c Commitment, proposal CommitmentTaskProposal, bundleID ids.UUID, asked ids.UUID) (CommitmentOutcome, ids.UUID, error) {
+	if asked.IsZero() {
+		return CommitmentPromiserUnassignable, ids.UUID{}, nil
+	}
+	ctx = onBehalfOf(ctx, asked)
 	raw, err := json.Marshal(proposal)
 	if err != nil {
 		return CommitmentRemembered, ids.UUID{}, fmt.Errorf("compose: marshal commitment proposal: %w", err)
@@ -422,6 +437,9 @@ func (d *CommitmentDispatcher) stageCommitmentProposal(ctx context.Context, tx p
 		BundleID:       bundleID,
 		JoinPending:    true,
 	})
+	if errors.Is(err, approvals.ErrNoDecider) {
+		return CommitmentRemembered, ids.UUID{}, nil
+	}
 	if err != nil || !staged {
 		return CommitmentRemembered, ids.UUID{}, err
 	}

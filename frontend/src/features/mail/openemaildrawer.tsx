@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useRef } from "react";
+import { useState } from "react";
 import type { components } from "../../api/schema";
 import { CommitmentReview } from "../../design-system/commitmentreview";
 import { EmailDetail } from "../../design-system/emaildetail";
@@ -10,10 +10,14 @@ import { formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useActivity } from "../../lib/activityread";
 import { EmailAccessEditor } from "../capture/emailaccesseditor";
+import { ComposeModal } from "./compose";
+import { RelinkModal } from "./composerelink";
 import { EmailRecordLinks } from "./emailrecords";
-import { EmailReplyAction } from "./emailreply";
+import { EmailDrawerActions, replyAnchor } from "./emailreply";
+import { forwardSubject } from "./replysubject";
 
 type Activity = components["schemas"]["Activity"];
+type EmailPresentation = components["schemas"]["EmailPresentation"];
 
 /**
  * The record page's one email drawer.
@@ -52,57 +56,198 @@ export function OpenEmailDrawer({
   onClose: () => void;
   /**
    * A reply left the drawer, for a host whose own reading of the message the
-   * send changes.
-   *
-   * A record page needs nothing: the composer refreshes the record timelines
-   * it files under. A page listing the UNANSWERED does — the worklist's row
-   * verb already invalidates its queue on send, and a drawer that answered the
-   * same message without doing so left the row still asking for a reply that
-   * had gone.
+   * send changes. A record page needs nothing: the composer refreshes the
+   * record timelines it files under. The worklist's waiting lane does, or its
+   * row goes on asking for a reply that has gone.
    */
   onReplySent?: () => void;
   /** The answer of a live read of this activity the host already holds, so
    *  the drawer does not read it a second time. Absent, the drawer reads it. */
   activity?: Activity;
 }>) {
+  const t = useT();
   const { locale } = useLocale();
+  const formatWhen = (iso: string) => formatDateTime(iso, locale, zone);
+  // What the reader started from the drawer: a reply or a forward, in the
+  // docked composer. The drawer steps aside while it is open, so the page and
+  // the composer are both in view, and comes back when it closes.
+  const [writing, setWriting] = useState<Writing | null>(null);
+  const [relinking, setRelinking] = useState<EmailPresentation | null>(null);
+  // The message whose thread a reply from here was added to.
+  const [replied, setReplied] = useState<string | null>(null);
   // The id the drawer was opened with, kept after the host clears it: the
   // drawer is still on screen while it closes, and it has to name a message to
   // draw one. The next open replaces it.
-  const shown = useRef<string | null>(null);
-  if (activityId !== null) {
-    shown.current = activityId;
+  const [shown, setShown] = useState<string | null>(activityId);
+  if (activityId !== null && activityId !== shown) {
+    setShown(activityId);
+    setReplied(null);
+    setWriting(null);
   }
-  if (shown.current === null) {
+  if (shown === null) {
     return null;
   }
   return (
-    <EmailDetail
-      activityId={shown.current}
-      open={activityId !== null}
-      onClose={onClose}
-      formatWhen={(iso) => formatDateTime(iso, locale, zone)}
-      renderRelated={() => (
-        <SourceCommitmentReview
-          activityId={activityId ?? undefined}
-          open={activityId !== null}
-          zone={zone}
-          given={
-            activity !== undefined && activity.id === activityId
-              ? activity
-              : undefined
-          }
+    <>
+      <EmailDetail
+        activityId={shown}
+        open={activityId !== null && writing === null}
+        onClose={onClose}
+        formatWhen={formatWhen}
+        notice={replied === shown ? t("email.thread.replied") : undefined}
+        renderRelated={() => (
+          <SourceCommitmentReview
+            activityId={activityId ?? undefined}
+            open={activityId !== null}
+            zone={zone}
+            given={
+              activity !== undefined && activity.id === activityId
+                ? activity
+                : undefined
+            }
+          />
+        )}
+        renderAccess={(presentation) => (
+          <EmailAccessEditor presentation={presentation} />
+        )}
+        renderRecords={(presentation) => (
+          <EmailRecordLinks presentation={presentation} />
+        )}
+        renderActions={(presentation) => (
+          <EmailDrawerActions
+            presentation={presentation}
+            onReply={() => setWriting({ kind: "reply", presentation })}
+            onForward={() => setWriting({ kind: "forward", presentation })}
+            onRelink={() => setRelinking(presentation)}
+          />
+        )}
+      />
+      {writing && (
+        <DrawerComposer
+          writing={writing}
+          formatWhen={formatWhen}
+          onClose={() => setWriting(null)}
+          onSent={() => {
+            if (writing.kind === "reply") {
+              setReplied(shown);
+              onReplySent?.();
+            }
+          }}
         />
       )}
-      renderAccess={(presentation) => (
-        <EmailAccessEditor presentation={presentation} />
+      {relinking && (
+        <DrawerRelink
+          presentation={relinking}
+          onClose={() => setRelinking(null)}
+        />
       )}
-      renderRecords={(presentation) => (
-        <EmailRecordLinks presentation={presentation} />
-      )}
-      renderReply={(presentation) => (
-        <EmailReplyAction presentation={presentation} onSent={onReplySent} />
-      )}
+    </>
+  );
+}
+
+type Writing = Readonly<{
+  kind: "reply" | "forward";
+  presentation: EmailPresentation;
+}>;
+
+// The composer a drawer verb opens: a reply anchored to the message, or a new
+// message carrying it forward. Either files under the message's own record.
+function DrawerComposer({
+  writing,
+  formatWhen,
+  onClose,
+  onSent,
+}: Readonly<{
+  writing: Writing;
+  formatWhen: (iso: string) => string;
+  onClose: () => void;
+  onSent: () => void;
+}>) {
+  const t = useT();
+  const { presentation } = writing;
+  const anchor = replyAnchor(presentation.links);
+  if (!anchor) {
+    return null;
+  }
+  const contactId =
+    anchor.entity_type === "contact" ? anchor.entity_id : undefined;
+  if (writing.kind === "reply") {
+    return (
+      <ComposeModal
+        activityId={presentation.id}
+        kind="email"
+        entityType={anchor.entity_type}
+        entityId={anchor.entity_id}
+        contactId={contactId}
+        open
+        onClose={onClose}
+        onSent={onSent}
+      />
+    );
+  }
+  return (
+    <ComposeModal
+      entityType={anchor.entity_type}
+      entityId={anchor.entity_id}
+      contactId={contactId}
+      initialMessage={{
+        subject: forwardSubject(presentation.summary.subject ?? ""),
+        body: forwardedText(presentation, formatWhen, t),
+      }}
+      open
+      onClose={onClose}
+      onSent={onSent}
+    />
+  );
+}
+
+// The forwarded message under the reader's own words, with the header lines
+// a mail client puts above it. Its files stay with the original.
+export function forwardedText(
+  presentation: EmailPresentation,
+  formatWhen: (iso: string) => string,
+  t: ReturnType<typeof useT>,
+): string {
+  const names = (parties: EmailPresentation["to"]) =>
+    parties
+      .map((party) =>
+        party.display_name?.trim()
+          ? `${party.display_name.trim()} <${party.address}>`
+          : party.address,
+      )
+      .join(", ");
+  const lines = [
+    "",
+    `---------- ${t("email.forwardHeader")} ----------`,
+    `${t("email.detail.from")}: ${names(presentation.from)}`,
+    `${t("email.detail.when")}: ${formatWhen(presentation.occurred_at)}`,
+    `${t("compose.subject")}: ${presentation.summary.subject ?? ""}`,
+    `${t("email.detail.to")}: ${names(presentation.to)}`,
+  ];
+  if (presentation.cc.length > 0) {
+    lines.push(`${t("email.detail.cc")}: ${names(presentation.cc)}`);
+  }
+  return [...lines, "", presentation.body ?? ""].join("\n");
+}
+
+// Filing the message under another record, from the drawer's More menu.
+function DrawerRelink({
+  presentation,
+  onClose,
+}: Readonly<{ presentation: EmailPresentation; onClose: () => void }>) {
+  const anchor = replyAnchor(presentation.links);
+  if (!anchor) {
+    return null;
+  }
+  return (
+    <RelinkModal
+      activityId={presentation.id}
+      activityVersion={presentation.version}
+      threadKey={presentation.thread_key}
+      entityType={anchor.entity_type}
+      entityId={anchor.entity_id}
+      open
+      onClose={onClose}
     />
   );
 }

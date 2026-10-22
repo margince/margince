@@ -429,6 +429,10 @@ type Extension struct {
 	// Entries are the unit's ways into its own screen from core screens: the
 	// Log activity form and the contact, company and deal headers. See Entry.
 	Entries []Entry
+
+	// Panels are the unit's components drawn inline on core pages, such as a
+	// deal page's side column. See Panel.
+	Panels []Panel
 }
 
 // MigrationsDir is the one spelling of the subdirectory a unit's

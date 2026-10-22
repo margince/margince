@@ -42,6 +42,7 @@ import {
 } from "./dealsuggestions.queries";
 import "./dealsuggestion.css";
 import { currencyOptions } from "../../format/currencychoices";
+import { useLeadingCurrencies } from "../../lib/leadingcurrencies";
 import { usePipelines } from "../../lib/pipelines.queries";
 
 function confidenceLevel(confidence: number): ConfidenceLevel {
@@ -216,11 +217,15 @@ export function suggestedName(
   });
 }
 
-function draftOf(suggestion: DealSuggestion, name: string): Draft {
+function draftOf(
+  suggestion: DealSuggestion,
+  name: string,
+  defaultCurrency: string,
+): Draft {
   return {
     name,
     amountMinor: suggestion.amount_minor ?? 0,
-    currency: suggestion.currency ?? "EUR",
+    currency: suggestion.currency ?? defaultCurrency,
     stageId: suggestion.stage_id,
     ownerId: "",
     closeDate: suggestion.close_date ?? "",
@@ -270,8 +275,9 @@ export function AcceptSuggestionDialog({
   // ONE key per dialog, held across retries: a response lost after the deal
   // was opened replays that acceptance rather than being refused as a second.
   const [idempotencyKey] = useState(() => crypto.randomUUID());
+  const leading = useLeadingCurrencies();
   const [draft, setDraft] = useState(() =>
-    draftOf(suggestion, suggestedName(suggestion, t)),
+    draftOf(suggestion, suggestedName(suggestion, t), leading[0]),
   );
   const accept = useAcceptDealSuggestion();
   const owners = useAssignableUserOptions();
@@ -336,7 +342,7 @@ export function AcceptSuggestionDialog({
             {(control) => (
               <Select
                 {...control}
-                options={currencyOptions(draft.currency)}
+                options={currencyOptions(leading, draft.currency)}
                 value={draft.currency}
                 onChange={(currency) => set({ currency })}
               />

@@ -25,7 +25,7 @@ What you can expect:
 - We answer within **3 business days** to say we have your report.
 - Within **10 business days** we say whether it is in scope, and how serious we think it is.
 - After that, we keep you up to date in the advisory until the fix ships.
-- We name you in the advisory and the changelog, unless you ask us not to.
+- We name you in the advisory and the release notes, unless you ask us not to.
 
 Margince is an early proof of concept, kept by a small team. So we do not promise a date for a fix. We
 do promise to tell you where your report stands.
@@ -81,7 +81,7 @@ branches yet, and we do not copy fixes to older versions. Fixes go to `main`.
 ## No bounty
 
 There is no bug bounty program today and no promise of money. We name you in the advisory and the
-changelog, and we name each reporter whose report we fix, unless they ask us not to.
+release notes, and we name each reporter whose report we fix, unless they ask us not to.
 
 ## Safe harbour
 

@@ -419,6 +419,8 @@ export const de = {
     "Dieses Angebot archivieren und aus der aktiven Angebotsliste ausblenden. Seine Positionen bleiben gespeichert.",
   "approval.preview.importScopeUnavailable":
     "Dieser Importvorschlag enthält keine vollständigen Änderungen je Zeile. Öffne Datenimport und prüfe die Quelle und den Testlauf, bevor du den Import startest.",
+  "approval.preview.machineAddress":
+    "Die Freigabe kann nicht ausgeführt werden: Die Adresse gehört zu einem Versandsystem, nicht zu einem Menschen.",
   "approval.preview.confirmationOnly":
     "Diese Bestätigung erfassen und den wartenden Automatisierungslauf abschließen. Es wird keine Datensatzänderung und kein Nachrichtenversand freigegeben.",
   "approval.preview.confirmationQuestion": "Zu bestätigende Frage",
@@ -1919,6 +1921,8 @@ export const de = {
   "history.verb.resetData": "{subject} hat den Datensatz zurückgesetzt",
   "history.verb.passwordLinkIssued":
     "{subject} hat einen Passwort-Link für den Datensatz erstellt",
+  "history.verb.mfaRemoved":
+    "{subject} hat die zweistufige Anmeldung für den Datensatz entfernt",
   "history.verb.connect": "{subject} hat den Datensatz verbunden",
   "history.verb.disconnect":
     "{subject} hat die Verbindung des Datensatzes getrennt",
@@ -2137,6 +2141,7 @@ export const de = {
 
   "screen.pending": "Diese Ansicht ist noch nicht verfügbar.",
 
+  "ext.panels.label": "Erweiterungen",
   "ext.notFound":
     "In dieser Installation ist keine Erweiterung namens „{name}“ aktiviert.",
 
@@ -2195,6 +2200,8 @@ export const de = {
   "common.close": "Schließen",
   "common.expand": "Vergrößern",
   "common.collapse": "Verkleinern",
+  "common.minimize": "Minimieren",
+  "common.restoreNamed": "{name} öffnen",
   "clipboard.copyFailedTitle": "Zugriff auf die Zwischenablage verweigert",
 
   "explain.open": "Diese Zahl erklären",
@@ -2680,7 +2687,11 @@ export const de = {
     "Sendet diesem Kontakt per E-Mail einen privaten Link. Über diesen Link sieht der Kontakt die gespeicherten Daten, kann sie korrigieren und angeben, ob Nachrichten von deinem Unternehmen erwünscht sind. Der Link wird an die hinterlegte Adresse des Kontakts gesendet. Eine andere Adresse ist nicht möglich.",
   "consent.askQueued": "Link für {address} zum Versand vorgemerkt.",
   "consent.askNotDelivered":
-    "Der Link wurde für {address} erstellt, aber nicht gesendet, da diese Installation keine E-Mails versendet.",
+    "Der Link wurde für {address} erstellt, ist aber noch nicht hinausgegangen. Der Versandeintrag sagt, wie es steht.",
+  "consent.askNoSystemMail":
+    "Der Systemversand ist nicht eingerichtet, daher sind keine Bestätigungsanfragen möglich. Ein Admin richtet ihn in den E-Mail-Einstellungen der Installation ein.",
+  "consent.askSendableUnknown":
+    "Ob sich das senden lässt, ist noch nicht bekannt. Ein Neuladen der Seite prüft es erneut.",
   "consent.askExpires": "Der Link gilt bis",
   "consent.noRecord": "kein Eintrag",
   "consent.noPurposes":
@@ -3322,6 +3333,8 @@ export const de = {
   "co.brief.cite.fact.many": "{count} Fakten",
   "co.brief.cite.profile_field.many": "{count} Profilfelder",
   "approval.kind.advance_deal": "Deal voranbringen",
+  "approval.kind.closeDealWon": "Deal als gewonnen schließen",
+  "approval.kind.closeDealLost": "Deal als verloren schließen",
   "approval.kind.promote_lead": "Lead qualifizieren",
   "approval.kind.close_date_correction": "Abschlussdatum korrigieren",
   "approval.kind.deal_follow_up": "Follow-up zum Deal erstellen",
@@ -3355,6 +3368,8 @@ export const de = {
   "approval.preview.optionalCriterionUnmet":
     "Optionales Kriterium nicht erfüllt",
   "approval.field.because": "Grund",
+  "approval.field.lost_reason": "Warum er verloren ging",
+  "approval.field.note": "Notiz",
   "approval.field.from_stage": "Von",
   "approval.field.to_stage": "Nach",
   "approval.kind.transcript_proposal":
@@ -3406,6 +3421,11 @@ export const de = {
   "approval.field.connection_name": "Name auf LinkedIn",
   "approval.field.connection_company": "Unternehmen auf LinkedIn",
   "approval.field.contact_name": "Kontakt im CRM",
+  "approval.field.connection_position": "Position auf LinkedIn",
+  "approval.field.contact_title": "Jobtitel im CRM",
+  "approval.linkedin.useAsTitle": "Als Jobtitel übernehmen",
+  "approval.linkedin.useAsEmployer": "{company} als Arbeitgeber übernehmen",
+  "approval.linkedin.employerNow": "Arbeitet jetzt bei {company}",
   "approval.responsibility.requestedFrom": "Entscheidung angefragt bei",
   "approval.commitment.promiser": "Zugesagt von",
   "approval.commitment.effect": "Bei Freigabe",
@@ -3650,6 +3670,17 @@ export const de = {
   "email.detail.cc": "Cc",
   "email.detail.filedUnder": "Abgelegt unter",
   "email.detail.when": "Gesendet",
+  "email.thread.count_one": "{count} Nachricht",
+  "email.thread.count_other": "{count} Nachrichten",
+  "email.thread.countLatest_one": "Die letzte Nachricht",
+  "email.thread.countLatest_other": "Die letzten {count} Nachrichten",
+  "email.thread.fold": "Nachricht von {name} einklappen",
+  "email.thread.toLine": "an {names}",
+  "email.thread.details": "Details",
+  "email.thread.replied": "Antwort gesendet und zum Thread hinzugefügt",
+  "email.forward": "Weiterleiten",
+  "email.forwardHeader": "Weitergeleitete Nachricht",
+  "email.fileUnder": "Unter einem anderen Datensatz ablegen…",
   "commitment.review.count_one": "Zusage zur Prüfung: {count}",
   "commitment.review.count_other": "Zusagen zur Prüfung: {count}",
   "commitment.review.conditionWords": "Bedingung: {words}",
@@ -3657,6 +3688,8 @@ export const de = {
   "commitment.review.title": "Zusagen prüfen",
   "commitment.review.detail":
     "Aus diesen Auswertungen wurden keine Aufgaben erstellt. Prüfe die Quelle und spätere Antworten, bevor du im verknüpften Datensatz eine Folgeaufgabe anlegst.",
+  "commitment.review.noPromiser":
+    "Niemand aus dem Team, der diese Zusage gemacht hat, kann gefragt werden. Deshalb wurde niemand gefragt.",
   "commitment.review.historical": "Ältere Zusage ohne aktuelle Frist.",
   "commitment.review.beforeBaseline":
     "Vor dem Datum gesendet, ab dem dieses Postfach Zusagen vorschlägt.",
@@ -3849,6 +3882,7 @@ export const de = {
   "co.evidence.previous": "Vorherige Aussage",
   "co.evidence.next": "Nächste Aussage",
   "co.evidence.title": "Quelle",
+  "co.evidence.record": "Datensatz",
   "co.prep.withheld":
     "Diese Zusammenfassung ist unvollständig, da Teile dieses Unternehmens für dich ausgeblendet sind.",
   "co.read.newActivity_one": "1 neuer Eintrag seit deinem letzten Besuch.",
@@ -4938,6 +4972,10 @@ export const de = {
   "decision.expired": "Abgelaufen",
   "decision.expiresIn": "läuft in {countdown} ab",
   "decision.detail": "Details zur Freigabe",
+  "decision.target": "Datensatz",
+  "decision.openToDecide": "Zum Entscheiden öffnen",
+  "decision.approvedBy": "Genehmigt von",
+  "decision.rejectedBy": "Abgelehnt von",
   "decision.detailLoading": "Freigabe wird geladen…",
   "decision.detailTechnical": "Technische Details",
   "decision.evidenceSource.activity": "Aktivität",
@@ -5752,21 +5790,44 @@ export const de = {
   "compose.writeEmail": "E-Mail schreiben",
   "compose.relink": "Neu verknüpfen",
   "compose.previewEmail": "Vorschau",
-  "compose.readEmail": "Ganze E-Mail lesen",
+  "compose.earlierShow_one": "{count} frühere Nachricht zeigen",
+  "compose.earlierShow_other": "{count} frühere Nachrichten zeigen",
+  "compose.earlierHide": "Frühere Nachrichten ausblenden",
+  "compose.quotedHeader": "Am {when} schrieb {who}:",
+  "compose.quotedYou": "du",
+  "compose.filesTotal_one": "{count} Datei · {size}",
+  "compose.filesTotal_other": "{count} Dateien · {size}",
+  "compose.filesLimit": "Bis zu {most} Dateien pro Nachricht.",
+  "compose.newEmailTo": "Neue E-Mail an {name}",
+  "compose.discardMessage": "Entwurf löschen",
+  "compose.draftSaving": "Wird gespeichert…",
+  "compose.earlierThreads_one": "{count} früherer Thread",
+  "compose.earlierThreads_other": "{count} frühere Threads",
+  "compose.threadChange": "Ändern",
+  "compose.threadContinue": "Thread fortsetzen",
+  "compose.threads": "Thread fortsetzen",
+  "compose.threadsWith": "Thread mit {name} fortsetzen",
+  "compose.newThread": "Neuer Thread",
+  "compose.copies": "Cc und Bcc",
+  "compose.signsOffAs": "Die Nachricht endet mit „{closing}“.",
+  "compose.reasonLabel": "Warum du an {address} schreiben darfst",
+  "compose.reasonHint":
+    "Der Grund wird für diese Art von Nachricht unter deinem Namen erfasst. Er ist keine Einwilligung.",
+  "compose.reasonRecord": "Grund erfassen",
+  "compose.reasonRecording": "Wird erfasst…",
   "compose.replyIntent": "Zweck der Antwort",
   "compose.newIntent": "Zweck der E-Mail",
-  "compose.draftReply": "Antwort mit KI entwerfen",
+  "compose.draftReply": "Antwort entwerfen",
   "compose.newEmail": "Neue E-Mail",
   "compose.replyingTo": "Antwort auf „{subject}“ · {when}",
   "compose.followingUp": "Follow-up zu deiner E-Mail „{subject}“ · {when}",
   "compose.draftContextHint":
     "Beschreibe den Zweck. Margince nutzt den Kontext des Datensatzes.",
-  "compose.draftWithAi": "Mit KI entwerfen",
+  "compose.draftEmail": "E-Mail entwerfen",
   "compose.drafting": "Wird entworfen…",
   "compose.discardDraft": "Entwurf verwerfen",
   "compose.discardDraftHint":
     "Markiert diesen Entwurf für deine Voice DNA als Fehlgriff. Der erzeugte Text wird nie gespeichert.",
-  "compose.saveDraft": "Als Entwurf speichern",
   "compose.savedDraftSaved": "Entwurf gespeichert",
   "compose.savedDraftDelete": "Löschen",
   "compose.savedDraftDeleted": "Gespeicherter Entwurf gelöscht",
@@ -5819,7 +5880,6 @@ export const de = {
   "compose.basedOn": "Grundlage: {inputs}",
   "compose.whyThisDraft": "Warum dieser Entwurf?",
   "compose.body": "Nachrichtentext",
-  "compose.bodyHint": "Klicke auf den Text, um ihn zu bearbeiten.",
   "compose.signOff": "Wird beim Senden angefügt",
   "compose.signOffClosing":
     "Diese Grußformel wird angefügt, da du keine Signatur hast.",
@@ -5829,11 +5889,8 @@ export const de = {
   "compose.transport": "Senden über",
   "compose.transportEmail": "E-Mail",
   "compose.recipientHint": "Name oder Adresse",
-  "compose.subjectHint": "Thema der E-Mail",
   "compose.bodyPlaceholder": "Nachrichtentext",
   "compose.bcc": "Bcc",
-  "compose.bccHint":
-    "Andere Empfangende sehen diese Adressen nicht und auch nicht, dass jemand in Kopie gesetzt wurde.",
   "compose.threadGone":
     "Stattdessen wurde eine neue E-Mail geöffnet, da dieser Thread nicht mehr beantwortet werden kann. Prüfe die Empfangsadresse vor dem Senden.",
   "compose.colleagueMailbox_one":
@@ -5845,7 +5902,7 @@ export const de = {
   "compose.colleagueMailboxTitle": "An ein Teammitglied zugestellt",
   "compose.deadRecipientsTitle": "E-Mails an diese Adressen kommen nicht an",
   "compose.attach": "Anhängen",
-  "compose.filesOnRecord": "An diesem Datensatz",
+  "compose.filesOnRecord": "Aus diesem Datensatz anhängen",
   "compose.filesLoading": "Dateien des Datensatzes werden geladen…",
   "compose.filesNone": "Noch keine Dateien an diesem Datensatz.",
   "compose.filesFull":
@@ -5896,8 +5953,9 @@ export const de = {
   "compose.scheduleMonday": "Montagmorgen",
   "compose.scheduleNow": "Jetzt senden",
   "compose.why": "Kontaktgrund",
-  "compose.whyHint":
-    "Der Datensatz legt fest, was erlaubt ist. Mit dem Grund lässt sich der Versand an dieser Vorgabe prüfen.",
+  "compose.whyMissing": "Kein Kontaktgrund.",
+  "compose.whyMissingText": "Senden ist gesperrt, bis einer erfasst ist.",
+  "compose.whyPick": "Grund erfassen…",
   "compose.why.requestedFollowup": "Angefragtes Follow-up",
   "compose.why.activeDeal": "Laufender Deal",
   "compose.why.quote": "Angefragtes Angebot",
@@ -5938,20 +5996,9 @@ export const de = {
     "Die empfangende Person hat nicht bestätigt, dass sie Nachrichten erhalten möchte. Nur die empfangende Person selbst kann das bestätigen.",
   "sendPermission.reason.other":
     "Diese Nachricht kann nicht gesendet werden, und niemand hier kann das übergehen.",
-  "compose.derivedReply":
-    "Ein Grund ist nicht nötig, da diese E-Mail auf eine eigene Nachricht der Gegenseite antwortet.",
   "compose.send": "Senden",
   "compose.sendConfirmTitle": "E-Mail senden",
-  "compose.threadHeading": "Dieser Thread",
-  "compose.continueHeading": "Thread fortsetzen?",
   "compose.threadLeave": "Neue E-Mail",
-  "compose.threadShow": "Diesen Thread anzeigen",
-  "compose.threadHide": "Diesen Thread ausblenden",
-  "compose.choicesShow": "Frühere Threads anzeigen",
-  "compose.choicesHide": "Frühere Threads ausblenden",
-  "compose.messageCount_one": "{count} Nachricht",
-  "compose.messageCount_other": "{count} Nachrichten",
-  "compose.threadContinuing": "Letzter Austausch in diesem Thread",
   "compose.draftKept":
     "Deine Änderungen bleiben erhalten. Erstelle einen neuen Entwurf, wenn du so weit bist.",
   "compose.threadFailed":
@@ -6002,12 +6049,16 @@ export const de = {
   "directSend.reason.legal_obligation": "Rechtliche Verpflichtung",
   "directSend.reason.other": "Sonstiges",
   "compose.reviewReference": "Prüfung",
-  "compose.reviewRequest": "Prüfung anfordern",
-  "compose.reviewRequesting": "Wird angefordert…",
-  "compose.reviewRequested":
-    "Prüfung angefordert. Jemand, der diese Nachricht senden darf, entscheidet darüber. Bis dahin wartet die Nachricht.",
-  "compose.reviewRequestFailed":
-    "Die Prüfung konnte nicht angefordert werden. Bitte versuche es erneut oder öffne die Prüfung über die Ablehnung oben.",
+  "compose.overrule.open": "Mit Begründung freigeben",
+  "compose.overrule.reasonLabel": "Warum darf diese Nachricht raus?",
+  "compose.overrule.hint":
+    "Deine Begründung wird bei jedem Kontakt gespeichert und gilt für diese Art Nachricht, bis jemand sie widerruft.",
+  "compose.overrule.confirm": "Freigabe speichern",
+  "compose.overrule.recording": "Wird gespeichert…",
+  "compose.overrule.recorded":
+    "Freigabe gespeichert. Drücke erneut auf Senden.",
+  "compose.overrule.failed":
+    "Die Freigabe wurde nicht gespeichert. Versuche es erneut oder öffne die Prüfung über die Ablehnung oben.",
   "compose.consentGoto": "Einwilligung prüfen",
   "compose.draftUnavailable":
     "KI-Entwürfe sind nicht verfügbar, da kein Modell konfiguriert ist. Die E-Mail lässt sich weiterhin selbst schreiben.",
@@ -7404,6 +7455,8 @@ export const de = {
     "Diese Domain gehört im CRM bereits einem anderen Unternehmen, daher kann die Zeile kein zweites Unternehmen damit anlegen.",
   "import.reason.duplicate_email":
     "Diese E-Mail-Adresse gehört bereits einem anderen Kontakt.",
+  "import.reason.email_names_no_contact":
+    "„{value}“ gehört zu einem Versandsystem, nicht zu einem Menschen, und wird darum kein Kontakt.",
   "import.reason.employer_column_empty":
     "Die Unternehmensspalte ist leer, daher nennt die Zeile keinen Arbeitgeber.",
   "import.reason.employer_column_empty_dropped":
@@ -7921,6 +7974,7 @@ export const de = {
   "audit.action.importUndo": "Import rückgängig gemacht",
   "audit.action.resetData": "Daten zurückgesetzt",
   "audit.action.passwordLinkIssued": "Passwort-Link erstellt",
+  "audit.action.mfaRemoved": "Zweistufige Anmeldung entfernt",
   "audit.action.connect": "Verbunden",
   "audit.action.disconnect": "Getrennt",
   "audit.action.schedule": "Geplant",
@@ -11525,6 +11579,11 @@ export const de = {
   "users.status.invited": "Eingeladen",
   "users.status.deactivated": "Deaktiviert",
   "users.status.suspended": "Gesperrt",
+  "users.removeMfa": "Zweistufige Anmeldung entfernen",
+  "users.removeMfaConfirmTitle": "Zweistufige Anmeldung für {name} entfernen?",
+  "users.removeMfaConfirmBody":
+    "Tu das nur für ein Mitglied, das seine Authenticator-App und seine Wiederherstellungscodes verloren hat. Es wird überall abgemeldet und kann sich danach allein mit seinem Passwort anmelden, bis es die zweistufige Anmeldung wieder einrichtet.",
+  "users.mfaRemoved": "Zweistufige Anmeldung für {name} entfernt",
   "users.link.action": "Passwort-Link erstellen",
   "users.link.title": "Passwort-Link für {name}",
   "users.link.pending": "Link wird erstellt…",
@@ -12827,6 +12886,12 @@ export const de = {
     "Längste Dauer einer Analyse, bevor sie das Gefundene behält, 30 bis 600 Sekunden.",
   "captureReading.wall.refusal":
     "Gib eine ganze Zahl von 30 bis 600 Sekunden ein.",
+  "captureReview.passCap.label":
+    "Geprüfte zurückgehaltene Threads pro Durchlauf",
+  "captureReview.passCap.help":
+    "Wie viele zurückgehaltene Mail-Threads eine Prüfung der Vertraulichkeit entscheidet, 1 bis 200. Die übrigen warten auf den nächsten Durchlauf. Erhöhe den Wert, wenn neue Mails für das Team länger unsichtbar bleiben als der Rhythmus der Durchläufe. Den Rhythmus legt der Systemzustand fest. Standard 40.",
+  "captureReview.passCap.refusal":
+    "Gib eine ganze Zahl von Threads von 1 bis 200 ein.",
   "agentConnections.title": "Agent-Verbindungen",
   "agentConnections.sub":
     "Wie lange ein Passport für MCP-Verbindungen gültig ist, bevor eine Erneuerung nötig ist. Eine Änderung gilt ab dem nächsten ausgestellten Passport.",
@@ -13638,6 +13703,9 @@ export const de = {
   "webhooks.event.user.password_link_issued.label": "Passwort-Link ausgestellt",
   "webhooks.event.user.password_link_issued.when":
     "Ein Admin erstellt einen Link zum Festlegen des Passworts, der außerhalb von Margince weitergegeben wird, wenn kein E-Mail-Versand eingerichtet ist.",
+  "webhooks.event.user.mfa_removed.label": "Zweistufige Anmeldung entfernt",
+  "webhooks.event.user.mfa_removed.when":
+    "Ein Admin entfernt die zweistufige Anmeldung eines Mitglieds und meldet es überall ab.",
   "webhooks.event.user.deactivated.label": "Mitglied deaktiviert",
   "webhooks.event.user.deactivated.when":
     "Die Sitzungen und Agent-Passports eines Mitglieds werden widerrufen.",
@@ -13988,6 +14056,8 @@ export const de = {
   "contact.intro.fallbackNextRouteHelp":
     "Weiter zum nächsten Teammitglied auf der Liste.",
   "contact.intro.decideTitle": "Vorstellung bei {name}",
+  "contact.intro.askedBy": "Angefragt von",
+  "contact.intro.askedThrough": "Über",
   "contact.intro.decideLegend": "Deine Antwort",
   "contact.intro.decideAction": "Antwort speichern",
   "contact.intro.decideFailed":
@@ -15237,28 +15307,22 @@ export const de = {
   "worklist.completeness.cards_one": "{cards} Karte sichtbar",
   "worklist.completeness.cards_other": "{cards} Karten sichtbar",
   "worklist.completeness.bounded":
-    "Lesegrenze erreicht bei {kinds}. Sieh dir die Quellengrenzen an.",
+    "Für {kinds} kann es mehr Einträge geben, als diese Liste zeigt.",
+  "worklist.completeness.boundedSome":
+    "Einige Kategorien können mehr Einträge haben, als diese Liste zeigt.",
   "worklist.completeness.unread_one": "{count} Quelle nicht geladen",
   "worklist.completeness.unread_other": "{count} Quellen nicht geladen",
   "worklist.review.partial":
     "{loaded} von {total} angezeigt. Lade unten mehr, um den Rest zu sehen.",
-  "worklist.limits.title": "Lesegrenzen der Quellen",
-  "worklist.limits.source": "{source}: Lesegrenze erreicht · {scope}",
   "worklist.emptyPage":
     "Keine Einträge auf dieser Seite. Lade mehr, um fortzufahren.",
   "worklist.review.more":
     "Weitere Seiten können Einträge zur Prüfung enthalten. Lade unten mehr, um fortzufahren.",
-  "worklist.limits.boundary":
-    "Mehr laden setzt diesen Stand fort. Die Lesegrenzen der Quellen bleiben bestehen.",
-  "worklist.limits.personal": "deine persönliche Quelle",
-  "worklist.limits.selected": "der gewählte Datensatzbereich",
-  "worklist.limits.remedy":
-    "Prüfe die verfügbaren Einträge und aktualisiere dann die Ansicht. Fehlt weiterhin benötigte Arbeit, wende dich an einen Admin, um die Lesegrenze der Quelle zu prüfen.",
   "worklist.review.snapshotChanged":
     "{loaded} von {total} Einträgen des gespeicherten Stands angezeigt. Der Tag hat sich geändert. Aktualisiere die Ansicht, um die Zahlen neu zu laden.",
   "worklist.review.partialDone": "{loaded} von {total} angezeigt.",
   "worklist.review.floor":
-    "{loaded}+ angezeigt. Eine Quelle hat ihre Lesegrenze erreicht. Sieh dir die Quellengrenzen an.",
+    "{loaded}+ angezeigt. Es kann mehr Einträge geben, als diese Liste zeigt.",
   "worklist.clear": "Nichts wartet auf dich.",
   "worklist.clearFor": "Nichts wartet auf {name}.",
   "worklist.clearOfTasksToday":

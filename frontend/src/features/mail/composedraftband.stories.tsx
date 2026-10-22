@@ -2,11 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useState } from "react";
 import type { components } from "../../api/schema";
 import { StoryProviders } from "../../testing/story-utils";
 import { DraftBand, RewriteRow } from "./composedraftband";
-import { DraftOffer } from "./composedraftcontext";
 // The drawer's own sheet: `.compose-band-body` and `.compose-rewrite` are
 // reached BY CLASS, and a story's module graph stops short of compose.tsx,
 // which loads it.
@@ -45,22 +43,6 @@ const REASONS: readonly DraftReason[] = [
   },
 ];
 
-// The offer owns no state, so the story lends it some: the intent field is half
-// of what the band's child IS, and a field nobody can type in shows the other
-// half only. `run` is inert — the catalog has no model behind the button, and a
-// story that faked a draft arriving would picture words no endpoint wrote.
-function Offer() {
-  const [intent, setIntent] = useState("Ask for the signed order");
-  return (
-    <DraftOffer
-      intent={intent}
-      onIntentChange={setIntent}
-      draft={{ run: () => {}, pending: false, disabled: false, error: null }}
-      unavailable={null}
-    />
-  );
-}
-
 function band(provenance: Provenance, maturity: Maturity | undefined) {
   return () => (
     <StoryProviders>
@@ -68,9 +50,8 @@ function band(provenance: Provenance, maturity: Maturity | undefined) {
         provenance={provenance}
         maturity={maturity}
         reasons={[...REASONS]}
-      >
-        <Offer />
-      </DraftBand>
+        actions={<RewriteRow onRewrite={() => {}} disabled={false} />}
+      />
     </StoryProviders>
   );
 }
@@ -83,8 +64,8 @@ const meta: Meta<typeof DraftBand> = {
 export default meta;
 type Story = StoryObj<typeof DraftBand>;
 
-/** A draft nobody typed: the disclosure, what it was written from, the profile
- *  version that styled it, and the steer that asks for another. */
+/** A draft nobody typed: the disclosure, the rewrites a rep may ask of it, what
+ *  it was written from, and the profile version that styled it. */
 export const MachineWroteIt: Story = { render: band(WROTE_IT, "building") };
 
 /** The profile is still provisional. The label reports what the voice is TODAY
@@ -118,10 +99,9 @@ export const MachineWroteItDark: Story = {
   render: band(WROTE_IT, "building"),
 };
 
-// The four rewrites sit under the machine's own untouched words, in the drawer
-// below the band. Offered at all only while the body is still what the model
-// wrote, which is the caller's condition — these two frames are the states the
-// row itself has.
+// The four rewrites sit beside the disclosure over the machine's own untouched
+// words. They are offered only while the body is still what the model wrote,
+// which is the caller's condition. These two frames are the row's own states.
 
 /** Ready: one press each, and each is an instruction for ONE call. */
 export const RewritesReady: Story = {

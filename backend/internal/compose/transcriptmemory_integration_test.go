@@ -66,10 +66,10 @@ func (e *transcriptEnv) rejectFirst(t *testing.T, proposalIDs []ids.UUID) {
 // A refused proposal does not come back when the transcript is read again.
 func TestARejectedTranscriptProposalIsNotStagedAgainOnASecondReading(t *testing.T) {
 	e := setupTranscript(t)
-	first := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9)})
+	first := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9, e.Rep1)})
 	e.rejectFirst(t, first.ProposalIDs)
 
-	second := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9)})
+	second := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9, e.Rep1)})
 	if got := e.pendingProposals(t); got != 0 {
 		t.Errorf("a second reading staged %d proposals over a rejection, want 0 — "+
 			"the rep is shown what they already turned down", got)
@@ -86,7 +86,7 @@ func TestARejectedTranscriptProposalIsNotStagedAgainOnASecondReading(t *testing.
 // memory keyed on the payload's diff hash forgets the refusal immediately.
 func TestARejectedTranscriptProposalStaysRefusedWhenTheModelRewordsIt(t *testing.T) {
 	e := setupTranscript(t)
-	first := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9)})
+	first := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9, e.Rep1)})
 	e.rejectFirst(t, first.ProposalIDs)
 
 	// Same line of the transcript, different words for what it says.
@@ -105,11 +105,11 @@ func TestARejectedTranscriptProposalStaysRefusedWhenTheModelRewordsIt(t *testing
 // at.
 func TestADifferentLineIsStillProposedAfterARefusal(t *testing.T) {
 	e := setupTranscript(t)
-	first := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9)})
+	first := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9, e.Rep1)})
 	e.rejectFirst(t, first.ProposalIDs)
 
 	// A different sentence of the same call.
-	e.read(t, cannedBrain{reply: reworded(t, "Dana to review the pricing", 4)})
+	e.read(t, cannedBrain{reply: rewordedAttributed(t, "Dana to review the pricing", 4, "seat:"+e.Rep1.String())})
 	if got := e.pendingProposals(t); got != 1 {
 		t.Errorf("a commitment from a line nobody refused staged %d proposals, want 1 — "+
 			"one refusal has ended transcript reading on this activity for good", got)
@@ -122,8 +122,8 @@ func TestADifferentLineIsStillProposedAfterARefusal(t *testing.T) {
 // reading twice put two identical cards in front of the rep.
 func TestASecondReadingDoesNotDuplicateAProposalStillWaiting(t *testing.T) {
 	e := setupTranscript(t)
-	e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9)})
-	e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9)})
+	e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9, e.Rep1)})
+	e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9, e.Rep1)})
 	if got := e.pendingProposals(t); got != 1 {
 		t.Errorf("two readings left %d proposals waiting, want 1 — the rep is shown "+
 			"the same commitment twice", got)
@@ -137,10 +137,10 @@ func TestASecondReadingDoesNotDuplicateAProposalStillWaiting(t *testing.T) {
 // The run record refuses to let them collapse, which is what caught this.
 func TestAReadingWhoseStepsWereAllAnsweredSaysSo(t *testing.T) {
 	e := setupTranscript(t)
-	first := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9)})
+	first := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9, e.Rep1)})
 	e.rejectFirst(t, first.ProposalIDs)
 
-	second := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9)})
+	second := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9, e.Rep1)})
 	if second.StatusDetail == nil || *second.StatusDetail == "" {
 		t.Fatal("a reading that raised nothing recorded no reason, so it cannot be " +
 			"told from one that failed")
@@ -160,11 +160,11 @@ func TestTwoCommitmentsOnOneLineBothReachTheQueue(t *testing.T) {
 	e := setupTranscript(t)
 	both, err := json.Marshal(map[string]any{"proposals": []map[string]any{
 		{
-			"summary": "Send the revised pricing", "owner": "Priya",
+			"summary": "Send the revised pricing", "owner": "Priya", "promiser_ref": "seat:" + e.Rep1.String(),
 			"source_lines": []int{3}, "confidence": 0.9, "commitment": openCommitmentMeaning("", ""),
 		},
 		{
-			"summary": "Book the follow-up call", "owner": "Dana",
+			"summary": "Book the follow-up call", "owner": "Dana", "promiser_ref": "seat:" + e.Rep2.String(),
 			"source_lines": []int{3}, "confidence": 0.9, "commitment": openCommitmentMeaning("", ""),
 		},
 	}})

@@ -19,6 +19,7 @@ import { useCanWrite } from "../lib/capability";
 import { unwrap } from "../lib/problem";
 import { useMe } from "../lib/session";
 import {
+  MAIL_REVIEW_BOUNDS,
   MAIL_SYNC_BOUNDS,
   useCaptureSettings,
   useUpdateCaptureSettings,
@@ -179,6 +180,27 @@ export function MailSharingCard() {
                     inPage
                       ? sync.mutateAsync({ mail_sync_interval_seconds: next })
                       : sync.mutate({ mail_sync_interval_seconds: next })
+                  }
+                />
+                <NumberSettingRow
+                  label={t("captureReview.passCap.label")}
+                  description={t("captureReview.passCap.help")}
+                  testId="capture-review-pass-cap"
+                  value={settings.confidentiality_pass_cap}
+                  {...MAIL_REVIEW_BOUNDS.confidentiality_pass_cap}
+                  refusal={t("captureReview.passCap.refusal")}
+                  disabled={!canManage || sync.isPending}
+                  reason={lockReasonOr(
+                    settings.locks,
+                    "capture.confidentiality_pass_cap",
+                    t,
+                    notAdmin,
+                  )}
+                  describedBy={syncRefused}
+                  onCommit={(next) =>
+                    inPage
+                      ? sync.mutateAsync({ confidentiality_pass_cap: next })
+                      : sync.mutate({ confidentiality_pass_cap: next })
                   }
                 />
               </SettingList>

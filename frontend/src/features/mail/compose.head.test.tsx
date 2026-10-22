@@ -217,21 +217,24 @@ describe("the recipient lines", () => {
   });
 });
 
-describe("the blind copy", () => {
-  // A blind copy is the rare half of addressing, and an always-drawn third row
-  // made every ordinary mail read as a form with an empty field in it. It is
-  // also the one field that reaches somebody the recipients cannot see, which
-  // is worth an explicit press.
-  it("is a button until it is asked for", async () => {
+describe("the copies", () => {
+  // Copies are the rare half of addressing, and always-drawn rows made every
+  // ordinary mail read as a form with empty fields in it. Bcc is also the one
+  // field that reaches somebody the recipients cannot see, which is worth an
+  // explicit press.
+  it("are one link until they are asked for", async () => {
     const user = userEvent.setup();
     stubRoutes();
     render(drawer());
 
-    await screen.findByLabelText("Cc");
+    await screen.findByLabelText("To");
+    expect(screen.queryByLabelText("Cc")).toBeNull();
     expect(screen.queryByLabelText("Bcc")).toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "Bcc" }));
-    expect(await screen.findByLabelText("Bcc")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Cc and Bcc" }));
+    expect(await screen.findByLabelText("Cc")).toBeTruthy();
+    expect(screen.getByLabelText("Bcc")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Cc and Bcc" })).toBeNull();
   });
 
   it("travels on the send once the reader fills it", async () => {
@@ -239,7 +242,7 @@ describe("the blind copy", () => {
     const sent = stubRoutes();
     render(drawer());
 
-    await user.click(await screen.findByRole("button", { name: "Bcc" }));
+    await user.click(await screen.findByRole("button", { name: "Cc and Bcc" }));
     await user.type(
       screen.getByLabelText("Bcc"),
       "records@brandt.example{Enter}",
@@ -302,10 +305,9 @@ describe("what the message carries", () => {
     expect(sentMail(sent)).not.toHaveProperty("attachment_ids");
   });
 
-  // A file already on the message is not on offer: the row refuses rather than
-  // adding a second copy of one document, which is not something a message can
-  // mean — the recipient would see the same paper twice.
-  it("refuses a file the message already carries", async () => {
+  // A file already on the message shows as held, and pressing it again takes
+  // it off. A message never carries a second copy of one document.
+  it("holds a file the message carries once, and a second press takes it off", async () => {
     const user = userEvent.setup();
     stubRoutes();
     render(drawer());
@@ -316,13 +318,13 @@ describe("what the message carries", () => {
     });
     await user.click(row);
 
-    await waitFor(() =>
-      expect(
-        screen
-          .getByRole("button", { name: /^Offer_Nordwand_v3\.pdf/ })
-          .hasAttribute("disabled"),
-      ).toBe(true),
-    );
+    const held = () =>
+      screen
+        .getByRole("button", { name: /^Offer_Nordwand_v3\.pdf/ })
+        .getAttribute("aria-pressed");
+    await waitFor(() => expect(held()).toBe("true"));
+    await user.click(row);
+    await waitFor(() => expect(held()).toBe("false"));
   });
 });
 
@@ -408,7 +410,9 @@ describe("the project a message files under", () => {
 
     // The sole live project is the default, SHOWN in the picker rather than
     // sent silently.
-    expect(await screen.findByText("Scoped to NW-12")).toBeTruthy();
+    await waitFor(() =>
+      expect(screen.getByLabelText("Project").textContent).toContain("NW-12"),
+    );
   });
 
   it("sends a project's mail linked to the project", async () => {

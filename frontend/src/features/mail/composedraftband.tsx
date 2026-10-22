@@ -2,7 +2,6 @@ import { Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { Badge, Button } from "../../design-system/atoms";
-import { Callout } from "../../design-system/callout";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { Heading } from "../../design-system/heading";
 import { identifierNumber } from "../../format/format";
@@ -32,16 +31,19 @@ type DraftProvenance = Pick<
 >;
 
 // Keep the server's disclosure verbatim, with a fallback when it is missing.
+// One line at the head of the band, then the rep's verbs on the machine's
+// words, then what the draft was written from.
 export function DraftBand({
   provenance,
   maturity,
   reasons,
-  children,
+  actions,
 }: Readonly<{
   provenance: DraftProvenance;
   maturity: VoiceProfile["maturity"] | undefined;
   reasons: components["schemas"]["AccountDraftReason"][];
-  children: ReactNode;
+  /** The rewrites and the discard, beside the disclosure they answer. */
+  actions?: ReactNode;
 }>) {
   const t = useT();
   // One shared email drawer keeps sources from opening competing dialogs.
@@ -52,17 +54,16 @@ export function DraftBand({
   }
   return (
     <div className="compose-band-body">
-      <Callout
-        tone="ai"
-        kind="standing"
-        title={
+      <div className="compose-band-line">
+        <Sparkles aria-hidden="true" />
+        <p>
           <Heading as="span" size="xsmall" role="heading" aria-level={3}>
             {t("compose.aiDisclosureTitle")}
-          </Heading>
-        }
-      >
-        {provenance.ai_disclosure || t("compose.aiDisclosureFallback")}
-      </Callout>
+          </Heading>{" "}
+          {provenance.ai_disclosure || t("compose.aiDisclosureFallback")}
+        </p>
+      </div>
+      {actions}
       <DraftReasons
         reasons={reasons}
         onOpenRecord={openCitation}
@@ -91,7 +92,6 @@ export function DraftBand({
           )}
         </>
       )}
-      {children}
     </div>
   );
 }

@@ -104,7 +104,7 @@ GOWORK_ROOT := GOWORK=$(abspath ../go.work)
 UNCACHED_TEST_PKGS := ./gates ./internal/modules/ai/
 
 # TEST_EXEC=<wrapper> runs every cached test binary through a `go test -exec`
-# wrapper, uncached. cache-warm sets it to scripts/testlog-exec.sh, which logs
+# wrapper, uncached. `make test-input-census` sets it to scripts/testlog-exec.sh, which logs
 # what each package read, and backend/tools/check-test-inputs judges the logs:
 # the census over the same packages the cached pass replays.
 TEST_EXEC_FLAGS = $(if $(TEST_EXEC),-count=1 -exec $(TEST_EXEC))
