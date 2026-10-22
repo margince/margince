@@ -44,11 +44,14 @@ They must sign in again after that. Bringing them back takes a full seat again, 
 Also called: restore a user, re-enable an account.
 
 ### A colleague left: who gets their deals, and how do I reassign their records?
-When a colleague leaves and you deactivate them in Margince, they stay the owner of their deals, leads, contacts, companies and projects. Nothing gets a new owner on its own. Give the work to others before you deactivate them.
-1. List what they own: **Filters and views** → **New filter** → **Contacts** → **Add condition** → **Owner**.
-2. **Deals** and **Leads**: tick the rows and press **Assign** in the bar for many rows. See [Lists, filters and views](lists-filters-and-views.md).
-3. **Contacts** and **Companies**, one at a time: **Owner** in **Details**.
-4. **Projects**, one at a time: open the project and choose **More actions** → **Assign to a colleague**.
+When a colleague leaves and you deactivate them in Margince, they stay the owner of their deals, leads, contacts, companies and projects. Nothing gets a new owner on its own. Hand the work over in **Settings → Members**, before or after you deactivate them.
+1. Open **Settings → Members**.
+2. Open the **Actions for {name}** menu on their row and choose **Hand over work**.
+3. The box says what they still own. Pick the colleague under **Give it to** and press **Hand over**.
+
+Every lead, contact, company, deal and project you may change moves to that colleague. Their tasks, automations and Deal Rooms stay where they are. The **Deactivate {name}?** box also says what they still own and offers **Hand over work**.
+
+To give their records to several colleagues, filter a list by **Owner** instead. A colleague who left shows there as "(deactivated)". Tick the rows and press **Assign** in the bar for many rows. See [Lists, filters and views](lists-filters-and-views.md).
 Also called: offboarding, handover, a rep left, transfer a colleague's accounts.
 
 ### How do I reset someone's password?

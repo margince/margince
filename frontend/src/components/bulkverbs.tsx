@@ -17,6 +17,7 @@ import {
 } from "./bulkchange";
 import { ShortlistVerb } from "./bulkshortlist";
 import { TagVerbs } from "./bulktag";
+import { mayOwnRecords } from "./assigneepicker";
 import { TaskVerb } from "./bulktask";
 import { RosterPartialNote, useRoster, useRosterPartial } from "./entityref";
 
@@ -105,7 +106,7 @@ export function BulkVerbs({
         onChange={setOwnerId}
         // The caveat sits last in the row (below), so the picker names it.
         aria-describedby={rosterPartial ? partialNoteId : undefined}
-        options={(roster.data ?? []).map((entry) => ({
+        options={(roster.data ?? []).filter(mayOwnRecords).map((entry) => ({
           value: entry.id,
           label: "display_name" in entry ? entry.display_name : entry.id,
         }))}

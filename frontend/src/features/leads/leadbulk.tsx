@@ -3,6 +3,7 @@ import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useRoster } from "../../components/entityref";
+import { mayOwnRecords } from "../../components/assigneepicker";
 import { Button } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { ErrorLine } from "../../design-system/errorline";
@@ -273,7 +274,7 @@ export function LeadBulkBar({
         placeholder={t("lead.bulkOwnerPick")}
         disabled={run.isPending}
         onChange={setOwnerId}
-        options={(roster.data ?? []).map((entry) => ({
+        options={(roster.data ?? []).filter(mayOwnRecords).map((entry) => ({
           value: entry.id,
           // The user roster: every entry carries a display name; a team
           // (the other roster kind) is never asked for here.

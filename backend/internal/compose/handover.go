@@ -219,6 +219,13 @@ func handOverRow(
 	return false, nil
 }
 
+// handoverReceiver refuses an omitted to_user_id by name: it decodes to the
+// zero UUID, which would otherwise read as a colleague who may not own records.
+func handoverReceiver(body crmcontracts.HandOverUserWorkRequest) (ids.UUID, error) {
+	receiver := ids.UUID(body.ToUserId)
+	return receiver, httperr.RequireBodyID("to_user_id", receiver)
+}
+
 // handoverHandlers is the REST door onto the handover.
 type handoverHandlers struct {
 	seam handoverSeam
@@ -248,7 +255,12 @@ func (h handoverHandlers) HandOverUserWork(
 	if !httperr.Decode(w, r, &body) {
 		return
 	}
-	out, err := h.seam.HandOver(r.Context(), ids.UUID(id), ids.UUID(body.ToUserId))
+	receiver, err := handoverReceiver(body)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	out, err := h.seam.HandOver(r.Context(), ids.UUID(id), receiver)
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

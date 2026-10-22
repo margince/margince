@@ -9,6 +9,7 @@
 
 import { type ReactNode, useId, useState } from "react";
 import type { components } from "../../api/schema";
+import { mayOwnRecords } from "../../components/assigneepicker";
 import {
   EntityRef,
   RosterPartialNote,
@@ -198,7 +199,7 @@ function LeadOwner({
   // yourself is the common case on a small team, and it is now an option in
   // this one control rather than a button of its own (ADR-0108 §5).
   const candidates = (roster.data ?? [])
-    .filter((entry) => !("is_agent" in entry) || !entry.is_agent)
+    .filter(mayOwnRecords)
     .filter((entry) => entry.id !== lead.owner_id)
     .sort((a, b) => {
       if (a.id === meId) return -1;

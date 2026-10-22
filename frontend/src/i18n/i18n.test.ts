@@ -234,6 +234,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "filters.library.records.lead_one",
   "leadSources.leads_one",
   "acqSources.deals_one",
+  "users.handover.leads_one",
+  "users.handover.deals_one",
   "contracts.renew.deal",
   "contracts.deal",
 

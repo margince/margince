@@ -284,7 +284,7 @@ func (s *Service) ListUsers(ctx context.Context, in ListUsersInput) (RosterPage,
 }
 
 // markAssignable answers, per row, the owner-change check the write would run
-// for this caller, so the picker and the write cannot disagree.
+// for this caller, so a picker offers the owners the write accepts.
 func (s *Service) markAssignable(ctx context.Context, rows []userRow) error {
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		eligible, err := auth.EligibleAssignees(ctx, tx, rowIDs(rows))

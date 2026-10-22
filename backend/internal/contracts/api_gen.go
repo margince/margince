@@ -18950,6 +18950,7 @@ func (e UpsertPartnerRequestRelationshipStage) Valid() bool {
 const (
 	UserAllowedActionsChangeRole        UserAllowedActions = "change_role"
 	UserAllowedActionsDeactivate        UserAllowedActions = "deactivate"
+	UserAllowedActionsHandOver          UserAllowedActions = "hand_over"
 	UserAllowedActionsIssuePasswordLink UserAllowedActions = "issue_password_link"
 	UserAllowedActionsReactivate        UserAllowedActions = "reactivate"
 	UserAllowedActionsRemoveMfa         UserAllowedActions = "remove_mfa"
@@ -18961,6 +18962,8 @@ func (e UserAllowedActions) Valid() bool {
 	case UserAllowedActionsChangeRole:
 		return true
 	case UserAllowedActionsDeactivate:
+		return true
+	case UserAllowedActionsHandOver:
 		return true
 	case UserAllowedActionsIssuePasswordLink:
 		return true
@@ -51372,7 +51375,7 @@ type UpsertPartnerRequestRelationshipStage string
 
 // User A seat — human or first-party agent. Mirrors `app_user`.
 type User struct {
-	// AllowedActions The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
+	// AllowedActions The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
 	AllowedActions *[]UserAllowedActions `json:"allowed_actions,omitempty"`
 	ArchivedAt     *time.Time            `json:"archived_at,omitempty"`
 
