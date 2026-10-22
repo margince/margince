@@ -1650,6 +1650,7 @@ export const de = {
 
   "trust.accept": "Annehmen",
   "trust.edit": "Bearbeiten",
+  "trust.dismiss": "Ausblenden",
   "trust.save": "Speichern",
   "trust.typedByYou": "Von dir eingetragen",
   "trust.typedByHuman": "Von einer Person eingetragen",
@@ -4907,6 +4908,7 @@ export const de = {
   "worklist.bulk.doneCount_one": "{count} Eintrag für dich erledigt.",
   "worklist.bulk.doneCount_other": "{count} Einträge für dich erledigt.",
 
+  "deal.pendingApprovals": "Wartet auf Freigabe",
   "deal.offers": "Angebote",
   "deal.newOffer": "Neues Angebot",
   "deal.offerNeedsCurrency":

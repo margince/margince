@@ -1606,6 +1606,7 @@ export const vi = {
 
   "trust.accept": "Chấp nhận",
   "trust.edit": "Sửa",
+  "trust.dismiss": "Bỏ qua",
   "trust.save": "Lưu",
   "trust.typedByYou": "Do bạn nhập",
   "trust.typedByHuman": "Nhập thủ công",
@@ -4793,6 +4794,7 @@ export const vi = {
   "worklist.bulk.doneCount_one": "Đã đánh dấu xong {count} việc cho bạn.",
   "worklist.bulk.doneCount_other": "Đã đánh dấu xong {count} việc cho bạn.",
 
+  "deal.pendingApprovals": "Chờ duyệt",
   "deal.offers": "Báo giá",
   "deal.newOffer": "Báo giá mới",
   "deal.offerNeedsCurrency":

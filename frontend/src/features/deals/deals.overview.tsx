@@ -1,4 +1,5 @@
 import { useId } from "react";
+import type { components } from "../../api/schema";
 import { Badge, Button } from "../../design-system/atoms";
 import {
   OverviewCard,
@@ -10,6 +11,7 @@ import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { tasksPeek } from "../../lib/standingpeeks";
 import { dealRoleLabel } from "../records/record360";
+import { DealApprovals } from "./deal360/dealapprovals";
 import { DealBrief } from "./deal360/dealbrief";
 import { DealCommitteeCard } from "./deal360/dealcommitteecard";
 import { DealHowItStands } from "./deal360/dealhowitstands";
@@ -19,6 +21,8 @@ import type { DealStandingInputs } from "./deal360/dealstanding";
 import type { Offer } from "./deals";
 import { DealStatusCardPanel, unreadHead } from "./dealstatus";
 import "./deal360/deal360.css";
+
+type Approval = components["schemas"]["Approval"];
 
 // Exported so a render test can reach the refusal state directly. Whether the
 // New-offer link is refused depends on its props alone.
@@ -119,6 +123,8 @@ export function DealOverviewPane({
   onOpenTab,
   onEditDetails,
   threadComplete,
+  dealApprovals,
+  onDecide,
 }: Readonly<{
   // What How it stands reads, and the ladder's write path.
   inputs: DealStandingInputs;
@@ -143,6 +149,12 @@ export function DealOverviewPane({
   // with more behind it would be a floor the bar cannot mark. So it is left
   // out until then.
   threadComplete: boolean;
+  // The deal's pending approvals, answered in place under How it stands.
+  dealApprovals: Approval[];
+  onDecide: (input: {
+    approvalId: string;
+    verdict: "approve" | "reject";
+  }) => void;
 }>) {
   const t = useT();
   const plural = usePlural();
@@ -198,6 +210,7 @@ export function DealOverviewPane({
           )}
         />
       )}
+      <DealApprovals approvals={dealApprovals} decide={onDecide} />
       <div className="deal-overview-grid">
         <div className="deal-overview-column">
           <OffersPanel
