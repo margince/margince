@@ -88,6 +88,7 @@ const DISPATCH_UNIT: ExtensionDescriptor = {
   secretScope: "workspace",
   verbs: [],
   entries: [],
+  panels: [],
 };
 
 function unitsStory(units: readonly ExtensionDescriptor[]) {
