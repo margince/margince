@@ -28,7 +28,7 @@ const clockRefoldSettle = 5 * time.Minute
 // clockRefoldMigration is the migration that made the clocks count only the
 // past. Every activity dated before it ran was already in the stored clocks,
 // so a run with no mark stored yet starts there.
-const clockRefoldMigration = "1792645053"
+const clockRefoldMigration = "1792656701"
 
 // ClockRefoldMark is how far the refold has come, in (occurred_at, id) order.
 type ClockRefoldMark struct {

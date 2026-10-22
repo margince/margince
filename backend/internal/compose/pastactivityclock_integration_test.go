@@ -246,7 +246,7 @@ func TestTheDataTaskMovesBackAClockTheOldRuleLeftInTheFuture(t *testing.T) {
 	mailed := f.now.AddDate(0, 0, -3)
 	f.log(t, "email", mailed)
 	f.log(t, "meeting", f.now.AddDate(0, 0, 9))
-	// The rule before 1792645053 stored the meeting's start; this is that row.
+	// The rule before 1792656701 stored the meeting's start; this is that row.
 	for _, table := range []string{"contact", "company", "deal"} {
 		f.e.WsExec(t, `UPDATE `+pgx.Identifier{table}.Sanitize()+` SET last_activity_at = now() + interval '9 days'
 			WHERE id = ANY($1)`, []ids.UUID{f.contact, f.company, f.deal})

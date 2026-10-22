@@ -28,8 +28,8 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 321 |
-| Columns | 3800 |
+| Tables | 322 |
+| Columns | 3803 |
 | Foreign keys | 527 |
 | Owning areas | 36 |
 
@@ -89,7 +89,7 @@ erDiagram
 
 | Area | Tables |
 |---|--:|
-| [activities](activities.md) | 28 |
+| [activities](activities.md) | 29 |
 | [agents](agents.md) | 3 |
 | [ai](ai.md) | 12 |
 | [aiactivity](aiactivity.md) | 1 |
@@ -133,6 +133,7 @@ erDiagram
 | [`activity`](activities.md#activity) | activities | 63 | 38 |
 | [`activity_audience_member`](activities.md#activity_audience_member) | activities | 5 | 0 |
 | [`activity_calendar_method_backfill`](activities.md#activity_calendar_method_backfill) | activities | 4 | 0 |
+| [`activity_clock_refold_mark`](activities.md#activity_clock_refold_mark) | activities | 3 | 0 |
 | [`activity_commitment_admission`](activities.md#activity_commitment_admission) | activities | 13 | 0 |
 | [`activity_identity`](activities.md#activity_identity) | activities | 5 | 0 |
 | [`activity_kind`](compose.md#activity_kind) | compose | 1 | 1 |
