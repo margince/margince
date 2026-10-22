@@ -368,7 +368,7 @@ function AccountFacts({ account }: Readonly<{ account: ConnectionAccount }>) {
   const { mail, calendar } = account;
   const createdAt = [mail?.created_at, calendar?.created_at]
     .filter((at): at is string => typeof at === "string")
-    .sort()[0];
+    .sort((a, b) => Date.parse(a) - Date.parse(b))[0];
   return (
     <>
       {mail && (

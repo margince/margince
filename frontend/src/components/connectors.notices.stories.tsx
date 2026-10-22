@@ -25,9 +25,11 @@ export default meta;
 
 type Story = StoryObj<typeof OAuthOutcomeNote>;
 
+const doneBackfill: CaptureConnection["backfill"] = { state: "done" };
+
 function connection(
   provider: CaptureConnection["provider"],
-  backfill: CaptureConnection["backfill"] = { state: "done" },
+  backfill: CaptureConnection["backfill"] = doneBackfill,
 ): CaptureConnection {
   return {
     id: `connection-${provider}`,
