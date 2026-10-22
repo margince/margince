@@ -18,9 +18,9 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { TaskQuickActions, useTaskUpdate } from "../../components/taskactions";
 import { LocaleProvider } from "../../i18n";
 import { RecordZoneProvider } from "../../lib/recordzone";
-import { TaskQuickActions, useTaskUpdate } from "./taskactions";
 
 const TASK = "01a05500-0000-7000-8000-000000000a01";
 

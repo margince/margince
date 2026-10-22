@@ -301,3 +301,105 @@ it("shows commitment review counts on a thread without exposing private readings
   expect(screen.queryByText("Commitments to review: 7")).toBeNull();
   expect(screen.queryByText("Commitments to review: 9")).toBeNull();
 });
+
+describe("the files a thread carried", () => {
+  const summary = (
+    attachments: number,
+    status: "team" | "withheld" = "team",
+  ): NonNullable<TimelineEntry["emailSummary"]> => ({
+    activity_id: "11111111-1111-4111-8111-111111111111",
+    occurred_at: "2026-07-01T10:00:00Z",
+    display_status: status,
+    attachment_count: attachments,
+    move: "none",
+    version: 1,
+    preview: "words",
+  });
+
+  it("totals them under the card's subject and keeps each message's own count on it", () => {
+    render(
+      <GroupedTimelineList
+        zone="UTC"
+        groups={[
+          thread([
+            entry({ id: "m3", emailSummary: summary(2) }),
+            entry({
+              id: "m2",
+              atIso: "2026-07-02T10:00:00Z",
+              emailSummary: summary(0),
+            }),
+            entry({
+              id: "m1",
+              atIso: "2026-07-01T10:00:00Z",
+              emailSummary: summary(1),
+            }),
+          ]),
+        ]}
+      />,
+    );
+    const card = document.querySelector(".tl-thread");
+    expect(
+      card?.querySelector(":scope > .tl-meta .emailentry__files")?.textContent,
+    ).toBe("3 attachments");
+    const members = Array.from(document.querySelectorAll(".tl-msg")).map(
+      (message) => message.querySelector(".emailentry__files")?.textContent,
+    );
+    expect(members).toEqual(["2 attachments", undefined, "1 attachment"]);
+  });
+
+  it("counts no files for a message the reader may not open, and says the rest once", () => {
+    render(
+      <GroupedTimelineList
+        zone="UTC"
+        groups={[
+          thread([
+            entry({
+              id: "m2",
+              withheld: true,
+              emailSummary: summary(4, "withheld"),
+            }),
+            entry({
+              id: "m1",
+              atIso: "2026-07-01T10:00:00Z",
+              emailSummary: summary(1),
+            }),
+          ]),
+        ]}
+      />,
+    );
+    // The one readable message carries the only file and is on screen, so its
+    // own mark is the total.
+    expect(document.querySelectorAll(".emailentry__files")).toHaveLength(1);
+    expect(
+      document.querySelector(".tl-msg .emailentry__files")?.textContent,
+    ).toBe("1 attachment");
+  });
+
+  it("totals the files when the message carrying them is folded away", async () => {
+    const user = userEvent.setup();
+    render(
+      <GroupedTimelineList
+        zone="UTC"
+        groups={[
+          thread(
+            [4, 3, 2, 1].map((n) =>
+              entry({
+                id: `m${n}`,
+                atIso: `2026-07-0${n}T10:00:00Z`,
+                emailSummary: summary(n === 1 ? 2 : 0),
+              }),
+            ),
+          ),
+        ]}
+      />,
+    );
+    expect(
+      document.querySelector(".tl-thread > .tl-meta .emailentry__files")
+        ?.textContent,
+    ).toBe("2 attachments");
+
+    await user.click(screen.getByRole("button", { name: /earlier/ }));
+    // Once the carrying message is on screen its mark says it, not the card.
+    expect(document.querySelectorAll(".emailentry__files")).toHaveLength(1);
+  });
+});

@@ -99,9 +99,12 @@ export function EmailVerb({
   disabled,
   reason,
   reasonId,
+  word,
 }: Readonly<{
   /** The verb, translated — spoken as the name and shown as the tip. */
   label?: string;
+  /** The tile word in the verb bar; "Email" while `label` is the default. */
+  word?: string;
   icon?: ReactNode;
   onClick: () => void;
   disabled?: boolean;
@@ -112,6 +115,7 @@ export function EmailVerb({
   return (
     <IconAction
       label={label ?? t("contact.action.email")}
+      word={word ?? (label === undefined ? t("record.verb.email") : undefined)}
       icon={icon ?? <Mail aria-hidden="true" />}
       disabled={disabled}
       reason={reason}

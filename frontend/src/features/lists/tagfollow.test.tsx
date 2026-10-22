@@ -17,7 +17,7 @@ import {
   ASYNC_UTIL_TIMEOUT_MS,
   SLOWEST_MEASURED_TEST_MS,
 } from "../../../vitest.budget";
-
+import { TagsPanel } from "../../components/tagspanel";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { en } from "../../i18n/en";
 import {
@@ -26,7 +26,6 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { TagsPanel } from "./tagspanel";
 
 // Applying a tag on a contact offers it to their company; applying one on a
 // company offers it to its contacts. Neither writes before the reader presses.

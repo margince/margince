@@ -1,27 +1,25 @@
 /** @vitest-environment happy-dom */
 
-// What the account page's recent-exchange list draws for each kind it holds.
-//
-// The list shipped drawing `activity.subject` for every kind, email included,
-// so a message here had no access badge, no counterparty, no preview and no
-// way to open it — while the same message on the History tab had all four.
-// Nothing failed, because this file did not exist.
-//
-// The claims are separable on purpose: an email is the canonical row, a
-// withheld one discloses nothing, and every other kind keeps the kind chip and
-// direction line that are the only things telling a call from a note.
+// What the Overview's Latest card draws: the newest exchanges that already
+// happened. Each is one line, with who, kind and day under the title, and
+// "Unanswered" where an email waits on us.
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
-import { CompanyRecentList } from "./companyrecent";
+import { LatestCard } from "./companyoverviewlatest";
 
 type Activity = components["schemas"]["Activity"];
+type Company360 = components["schemas"]["Company360"];
 type EmailSummary = components["schemas"]["EmailSummary"];
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 
 const EMAIL_ID = "01a05500-0000-7000-8000-00000000cc01";
 const CALL_ID = "01a05500-0000-7000-8000-00000000cc02";
@@ -85,78 +83,95 @@ const callRow: Activity = {
   is_done: false,
 };
 
-function renderList(
-  activities: Activity[],
-  onOpenEmail?: (activityId: string) => void,
+function view(activities: Activity[]): Company360 {
+  return {
+    as_of: "2026-09-01T09:00:00Z",
+    company: {
+      id: "o-1",
+      display_name: "Brandt Automotive GmbH",
+      source: "manual",
+      captured_by: "human:u-1",
+      created_at: "2026-06-01T08:00:00Z",
+      updated_at: "2026-06-01T08:00:00Z",
+    },
+    sections_omitted: [],
+    activities: {
+      data: activities,
+      page: { has_more: false, next_cursor: null },
+    },
+  };
+}
+
+function renderCard(
+  three60: Company360,
+  onOpenEmail: (activityId: string) => void = () => {},
 ) {
+  // The recorder's name is read from the roster; the stub answers it.
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({ id: "u-1", display_name: "Lena Fischer" }),
+          { headers: { "content-type": "application/json" } },
+        ),
+    ),
+  );
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   return render(
-    <LocaleProvider initial="en">
-      <CompanyRecentList activities={activities} onOpenEmail={onOpenEmail} />
-    </LocaleProvider>,
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <LatestCard
+          view={three60}
+          onOpenTab={() => {}}
+          onOpenEmail={onOpenEmail}
+        />
+      </LocaleProvider>
+    </QueryClientProvider>,
   );
 }
 
-describe("the account's recent exchanges", () => {
-  it("draws a retained email as the canonical row, with its preview and not its body", () => {
-    renderList([emailRow()]);
-
-    expect(screen.getByText("Re: the renewal quote")).toBeTruthy();
-    expect(
-      screen.getByText("Can you hold the price until Friday?"),
-    ).toBeTruthy();
+describe("the Overview's Latest card", () => {
+  it("names the other side of an email and marks it unanswered", () => {
+    renderCard(view([emailRow()]));
+    const row = screen.getByText("Re: the renewal quote").closest("li");
+    expect(row).not.toBeNull();
+    const inRow = within(row as HTMLElement);
+    expect(inRow.getByText("Dana Buyer · email · 29 Aug")).toBeTruthy();
+    expect(inRow.getByText("Unanswered")).toBeTruthy();
     expect(screen.queryByText(WHOLE_BODY)).toBeNull();
-    // Who may read it, which this list could not say at all before.
-    expect(screen.getByText("Team")).toBeTruthy();
   });
 
   it("opens the message through the host's email door", async () => {
-    const user = userEvent.setup();
-    const onOpenEmail = vi.fn();
-    renderList([emailRow()], onOpenEmail);
-
-    await user.click(
-      screen.getByRole("button", { name: /Re: the renewal quote/ }),
+    const opened = vi.fn();
+    renderCard(view([emailRow()]), opened);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Re: the renewal quote" }),
     );
-
-    expect(onOpenEmail).toHaveBeenCalledWith(EMAIL_ID);
+    expect(opened).toHaveBeenCalledWith(EMAIL_ID);
   });
 
-  it("discloses nothing from a withheld message", () => {
-    renderList(
-      [
-        emailRow({
-          content_state: "withheld",
-          subject: null,
-          body: null,
-          email_summary: emailSummary({
-            display_status: "withheld",
-            subject: null,
-            preview: null,
-            counterparty: null,
-          }),
-        }),
-      ],
-      vi.fn(),
-    );
-
-    expect(screen.queryByText("Re: the renewal quote")).toBeNull();
-    expect(screen.queryByText("Dana Buyer")).toBeNull();
-    expect(screen.queryByText(WHOLE_BODY)).toBeNull();
-    // The row still draws. A section that silently dropped what this reader
-    // may not see would report a quieter account than the one on file.
-    expect(screen.getByText("Withheld")).toBeTruthy();
+  it("lists the newest first and leaves out what has not happened yet", () => {
+    const booked: Activity = {
+      ...callRow,
+      id: "01a05500-0000-7000-8000-00000000cc03",
+      kind: "meeting",
+      subject: "Retrofit walkthrough",
+      occurred_at: "2026-09-20T10:00:00Z",
+    };
+    renderCard(view([callRow, emailRow(), booked]));
+    const titles = screen
+      .getAllByRole("listitem")
+      .map((item) => item.textContent ?? "");
+    expect(titles[0]).toContain("Re: the renewal quote");
+    expect(titles[1]).toContain("Depot walkthrough");
+    expect(screen.queryByText("Retrofit walkthrough")).toBeNull();
   });
 
-  it("leaves every other kind with its chip and its direction", () => {
-    renderList([callRow], vi.fn());
-
-    expect(screen.getByText("Depot walkthrough")).toBeTruthy();
-    // The chip and the direction phrase are what tell a call from a note here,
-    // and an email's own row states both in its own words instead.
-    expect(screen.getByText("Call")).toBeTruthy();
-    expect(screen.getByText("your team called")).toBeTruthy();
-    expect(
-      screen.queryByRole("button", { name: /Depot walkthrough/ }),
-    ).toBeNull();
+  it("says there is nothing yet on an account with no exchange", () => {
+    renderCard(view([]));
+    expect(screen.getByText("No activity logged yet.")).toBeTruthy();
   });
 });

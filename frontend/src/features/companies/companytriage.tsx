@@ -4,7 +4,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { SectionSummary } from "../../components/companyrailshared";
 import { Badge, Disclosure } from "../../design-system/atoms";
 import { PanelBody } from "../../design-system/panel";
 import { reasonText, STATUS_TONE } from "../../design-system/pipelineladder";
@@ -13,6 +12,7 @@ import { formatDateTime } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { type Locale, useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
+import { SectionSummary } from "./companyrailshared";
 import "./companytriage.css";
 
 // GET /companies/{id}/capture-triage — why this company record exists.
@@ -60,10 +60,7 @@ export function CompanyTriageSection({
     // answers every time they open the account — a section that took space on
     // every visit for a question nobody was asking would push the day-to-day
     // slices down the column.
-    <Disclosure
-      className="co-sect"
-      summary={<SectionSummary title={t("companyTriage.title")} />}
-    >
+    <Disclosure summary={<SectionSummary title={t("companyTriage.title")} />}>
       <PanelBody>
         <p className="t-sub">{t("companyTriage.sub")}</p>
         <SurfaceState

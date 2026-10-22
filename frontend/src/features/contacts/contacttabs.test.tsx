@@ -255,6 +255,47 @@ describe("the timeline tab", () => {
     );
   });
 
+  it("draws a mail conversation as one thread", () => {
+    const link = (activityId: string) => ({
+      id: `l-${activityId}`,
+      activity_id: activityId,
+      entity_type: "contact" as const,
+      entity_id: "p-1",
+    });
+    const threaded: Contact360 = {
+      ...view,
+      activities: {
+        data: [
+          activity({
+            id: "t-2",
+            kind: "email",
+            subject: "Re: Fleet renewal",
+            direction: "inbound",
+            thread_key: "thread-1",
+            links: [link("t-2")],
+            occurred_at: "2026-08-12T12:00:00Z",
+          }),
+          activity({
+            id: "t-1",
+            kind: "email",
+            subject: "Fleet renewal",
+            direction: "outbound",
+            thread_key: "thread-1",
+            links: [link("t-1")],
+            occurred_at: "2026-08-11T12:00:00Z",
+          }),
+        ],
+        page: { has_more: false },
+      },
+    };
+    const { container } = withProviders(
+      <ContactTimelineTab contactId="p-1" view={threaded} />,
+    );
+
+    expect(container.querySelectorAll(".tl-thread")).toHaveLength(1);
+    expect(screen.getByText("2 messages")).toBeTruthy();
+  });
+
   it("says the section is withheld rather than drawing it empty", () => {
     withProviders(<ContactTimelineTab contactId="p-1" view={withheld} />);
     expect(screen.queryByText(/Nothing has been logged/)).toBeNull();
@@ -351,11 +392,9 @@ describe("the deals tab", () => {
     withProviders(<ContactDealsTab view={noRole} />);
     // The row carries the name and NO role caption — not a word standing in for
     // one, which is what a reader would have to trust otherwise.
-    const row = screen
-      .getByText("Sacha Brandt")
-      .closest(".pe-deal-card-committee-row");
+    const row = screen.getByText("Sacha Brandt").closest(".ct-seat");
     expect(row).toBeTruthy();
-    expect(row?.querySelector(".t-caption")).toBeNull();
+    expect(row?.querySelector(".ct-seat-role")).toBeNull();
     // The roled seat beside it still reads: one roleless seat took the whole
     // list down before, so this says the list survived rather than emptied.
     expect(screen.getByText("Rae Toft")).toBeTruthy();

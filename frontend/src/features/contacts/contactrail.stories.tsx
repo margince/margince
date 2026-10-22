@@ -255,7 +255,16 @@ function rail(view: View, entries = guard.entries) {
   return (
     <StoryProviders>
       <div style={{ maxWidth: 320 }}>
-        <ContactRail view={view} guard={{ ...guard, entries }} />
+        <ContactRail
+          view={view}
+          consent={{
+            guard: { ...guard, entries },
+            loading: false,
+            failed: false,
+            onRetry: () => undefined,
+          }}
+          writeRefusalId="write-refused"
+        />
       </div>
     </StoryProviders>
   );

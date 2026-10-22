@@ -24,7 +24,6 @@ import {
   type ComponentPropsWithRef,
   type ReactNode,
   useCallback,
-  useEffect,
   useId,
   useRef,
   useState,
@@ -32,8 +31,8 @@ import {
 import { createPortal } from "react-dom";
 import { useAnchoredToTrigger } from "./anchored";
 import { Button, type ButtonVariant } from "./atoms";
-import { coveredByDialog } from "./dialogfocus";
 import { useHoverIntent } from "./hoverintent";
+import { usePanelDismiss } from "./popoverdismiss";
 import { usePortalPanelFocus } from "./portalfocus";
 import "./popover.css";
 
@@ -164,40 +163,10 @@ export function Popover({
     setOpen(!open);
   };
 
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || coveredByDialog(trigger.current)) {
-        return;
-      }
-      event.preventDefault();
-      // Focus goes back to the trigger through `panelFocus`, once the panel
-      // has really gone: a controlled caller may refuse the close.
-      setOpen(false);
-    };
-    const onPointer = (event: MouseEvent) => {
-      if (!(event.target instanceof Node)) {
-        return;
-      }
-      // The panel lives at the body rather than inside the trigger's box, so
-      // "outside" means outside BOTH — a click on a link inside the panel is
-      // otherwise a click away from it.
-      if (
-        !trigger.current?.contains(event.target) &&
-        !panel.current?.contains(event.target)
-      ) {
-        setOpen(false);
-      }
-    };
-    globalThis.addEventListener("keydown", onKey);
-    globalThis.addEventListener("mousedown", onPointer);
-    return () => {
-      globalThis.removeEventListener("keydown", onKey);
-      globalThis.removeEventListener("mousedown", onPointer);
-    };
-  }, [open, setOpen]);
+  // Focus goes back to the trigger through `panelFocus`, once the panel has
+  // really gone: a controlled caller may refuse the close.
+  const close = useCallback(() => setOpen(false), [setOpen]);
+  usePanelDismiss({ open, anchor: trigger, panel, close });
 
   return (
     <>

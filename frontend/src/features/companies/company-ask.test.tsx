@@ -14,11 +14,10 @@ import { companyBackstop, jsonResponse } from "../../testing/company.fixtures";
 import { stubFetch } from "../../testing/company.testkit";
 import { CompanyScreen } from "./companies";
 
-// "Ask about this company" spent months reachable only from a test file: the
-// panel existed, its round-trip worked, and no route rendered it. So the claim
-// this file makes is deliberately the one mounting the component in isolation
-// cannot make — that a reader who opens a company finds the questions on the
-// page, and that pressing one answers there.
+// The ask panel can be built and round-trip fine while no route renders it. So
+// this file makes the claim that mounting the component in isolation cannot.
+// A reader who opens a company's Profile finds the questions on the page, and
+// pressing one answers there.
 
 afterEach(() => {
   cleanup();
@@ -27,6 +26,8 @@ afterEach(() => {
 });
 
 function render(ui: ReactNode) {
+  // The ask surface stands on the Profile tab, which the page reads off the URL.
+  window.location.hash = "#/companies/o-1/profile";
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -50,15 +51,15 @@ const answer = {
   ],
 };
 
-describe("the company overview carries the ask surface", () => {
+describe("the company profile carries the ask surface", () => {
   it("offers the prepared questions on the page a reader opens the account to", async () => {
     stubFetch(companyBackstop);
 
     render(<CompanyScreen id="o-1" />);
 
     // The panel's own title, so this passes only while something on the
-    // overview actually draws AssistantPanel — a question button alone would
-    // still be found if the panel were mounted anywhere else on the record.
+    // Profile tab draws AssistantPanel. A question button alone would still be
+    // found if the panel were mounted anywhere else on the record.
     expect(
       await screen.findByRole("heading", { name: "Ask about this company" }),
     ).toBeTruthy();

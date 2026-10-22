@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../../../api/client";
 import type { components } from "../../../api/schema";
 import { StatCard } from "../../../design-system/atoms";
-import { StatStrip } from "../../../design-system/statstrip";
+import { ReadingsGrid } from "../../../design-system/readingsgrid";
 import { formatNumber } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
 import { ENTITY } from "../../../lib/entity";
@@ -69,14 +69,13 @@ export function CoverageBand({
   // folds like the row it stands in for.
   if (query.isError) {
     return (
-      <StatStrip testId="coverage-band">
+      <ReadingsGrid label={t("co.contacts.band.label")} testId="coverage-band">
         <StatCard
-          narrow="row"
           label={t("co.contacts.band.coverage")}
           value={t("co.contacts.band.unavailable")}
           detail={t("co.contacts.band.unavailableWhy")}
         />
-      </StatStrip>
+      </ReadingsGrid>
     );
   }
   if (!query.data?.summary) {
@@ -85,16 +84,16 @@ export function CoverageBand({
   const coverage = query.data;
   return (
     <>
-      {/* Every slot declares the NARROW shape, and every slot on the row must:
-          below the two-up width a `row` slot folds to one full-width line
-          (statstrip.css), and a strip where only some carry it draws a
-          bordered box among a column of borderless rows. */}
-      <StatStrip testId="coverage-band">
-        <WayIn coverage={coverage} />
-        <CommitteeReading coverage={coverage} />
+      {/* The roster's size first, then who answers, which role is open and
+          the way in: four cards a reader uses one at a time. */}
+      <ReadingsGrid label={t("co.contacts.band.label")} testId="coverage-band">
         <StatCard
-          narrow="row"
-          label={t("co.contacts.band.coverage")}
+          label={t("co.contacts.band.contacts")}
+          value={formatNumber(coverage.summary.contacts_total, locale)}
+          detail={t("co.contacts.band.onFile")}
+        />
+        <StatCard
+          label={t("co.contacts.band.inTouch")}
           // Everyone who has written to us in the window, whichever side wrote
           // last, against the ROSTER: a bare "6" says nothing until the reader
           // knows whether the account holds seven contacts or seventy.
@@ -113,7 +112,9 @@ export function CoverageBand({
           })}
           onOpen={() => onNarrow("untried")}
         />
-      </StatStrip>
+        <CommitteeReading coverage={coverage} />
+        <WayIn coverage={coverage} />
+      </ReadingsGrid>
       <CommitteeBoard
         coverage={coverage}
         accountName={accountName}
@@ -132,7 +133,7 @@ export function CoverageBand({
 function WayIn({ coverage }: Readonly<{ coverage: Coverage }>) {
   const t = useT();
   const way = coverage.best_way_in;
-  const slot = { label: t("co.contacts.band.wayIn"), narrow: "row" } as const;
+  const slot = { label: t("co.contacts.band.wayIn") };
   if (!way) {
     return (
       <StatCard
@@ -173,10 +174,7 @@ function CommitteeReading({ coverage }: Readonly<{ coverage: Coverage }>) {
   // tells them apart: the reader may not look, or there is nothing to look at.
   // Absence alone read as "hidden" accuses the reader's own role on every
   // account that simply has no open deal.
-  const slot = {
-    label: t("co.contacts.band.committee"),
-    narrow: "row",
-  } as const;
+  const slot = { label: t("co.contacts.band.committee") };
   if (!coverage.committee) {
     const withheld = !coverage.completeness.committee_read;
     return (

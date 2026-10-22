@@ -22,11 +22,11 @@ import { project } from "../../testing/projects.fixtures";
 import { dealProjectFields } from "./dealproject";
 import { DealScreen, DealsScreen } from "./deals";
 
-// Where a deal meets its project: the picker on the create form posts the
-// chosen project's id, the inline "new project" answer is born on the deal's
-// company before the deal is, the deal page draws its project as a linked
-// chip, and a won deal without one is offered the company's single open
-// project once.
+// Where a deal meets its project. The picker on the create form posts the
+// chosen project's id. The inline "new project" answer is born on the deal's
+// company before the deal is. The deal page names its project in a linked
+// line. A won deal without one is offered the company's single open project
+// once.
 
 type Deal = components["schemas"]["Deal"];
 
@@ -444,24 +444,31 @@ describe("the deal form's company picker", () => {
   });
 });
 
+// The delivery offer sits above the History tab's chronology, not on the
+// Overview.
+async function openHistory() {
+  await userEvent
+    .setup()
+    .click(await screen.findByRole("button", { name: /history/i }));
+}
+
 describe("the deal page", () => {
-  it("draws the deal's project as a chip linking to the project page", async () => {
+  it("names the deal's project in a line linking to the project page", async () => {
     dealBackend({
       deals: [deal({ project_id: "pr-1" })],
       projects: [project({ id: "pr-1", name: "CRM rollout" })],
     });
     render(<DealScreen id="d1" />);
-    const chip = await screen.findByTestId("deal-project");
-    await waitFor(() => expect(chip.textContent).toBe("CRM rollout"));
-    expect(chip.getAttribute("href")).toBe("#/projects/pr-1");
+    const line = await screen.findByTestId("deal-project");
+    await waitFor(() => expect(line.textContent).toBe("CRM rollout"));
+    expect(line.getAttribute("href")).toBe("#/projects/pr-1");
   });
 
-  it("says a withheld project is withheld rather than drawing no chip at all", async () => {
-    // A withheld project is null with the field named in `masked_fields`, and
-    // the chip used to return nothing on a null id — so a deal whose project
-    // this reader may not see read exactly like a deal with no project. The
-    // mask says there IS one; it carries no link, because there is no id to
-    // send anybody to.
+  it("says a withheld project is withheld rather than drawing no line at all", async () => {
+    // A withheld project is null with the field named in `masked_fields`.
+    // Drawing nothing on a null id would read like a deal with no project. The
+    // mask says there is one, with no link, because there is no id to send
+    // anybody to.
     dealBackend({
       deals: [deal({ project_id: null, masked_fields: ["project_id"] })],
       projects: [project({ id: "pr-1", name: "CRM rollout" })],
@@ -479,6 +486,7 @@ describe("the deal page", () => {
       projects: [project({ id: "pr-1", name: "CRM rollout", version: 3 })],
     });
     render(<DealScreen id="d1" />);
+    await openHistory();
     const start = await screen.findByTestId("deal-start-delivery");
     expect(
       screen.getByText(/Attach it to CRM rollout and move the project/),
@@ -514,7 +522,7 @@ describe("the deal page", () => {
       projects: [project({ id: "pr-1", name: "CRM rollout" })],
     });
     render(<DealScreen id="d1" />);
-    await screen.findByRole("heading", { name: "Fleet retrofit" });
+    await openHistory();
     expect(screen.queryByTestId("deal-start-delivery")).toBeNull();
     cleanup();
 
@@ -530,7 +538,7 @@ describe("the deal page", () => {
       projects: [project({ id: "pr-1", name: "CRM rollout" })],
     });
     render(<DealScreen id="d1" />);
-    await screen.findByRole("heading", { name: "Fleet retrofit" });
+    await openHistory();
     expect(screen.queryByTestId("deal-start-delivery")).toBeNull();
   });
 
@@ -549,6 +557,7 @@ describe("the deal page", () => {
       afterPatch: (row) => ({ ...row, project_id: "pr-1", version: 8 }),
     });
     render(<DealScreen id="d1" />);
+    await openHistory();
     await user.click(await screen.findByTestId("deal-start-delivery"));
     // The PATCH landed, the advance did not: the deal re-reads as attached,
     // and the offer now says only the project is still owed.
@@ -561,6 +570,17 @@ describe("the deal page", () => {
     expect(writes.filter((write) => write.method === "PATCH")).toHaveLength(1);
   });
 
+  it("keeps the delivery offer off the Overview", async () => {
+    dealBackend({
+      deals: [deal({ status: "won", stage_id: "s3", project_id: null })],
+      projects: [project({ id: "pr-1", name: "CRM rollout" })],
+    });
+    render(<DealScreen id="d1" />);
+    await screen.findByRole("heading", { name: "Fleet retrofit" });
+    await screen.findByRole("heading", { name: "Offers" });
+    expect(screen.queryByTestId("deal-start-delivery")).toBeNull();
+  });
+
   it("makes no offer when the company has two open projects", async () => {
     dealBackend({
       deals: [deal({ status: "won", stage_id: "s3", project_id: null })],
@@ -570,7 +590,7 @@ describe("the deal page", () => {
       ],
     });
     render(<DealScreen id="d1" />);
-    await screen.findByRole("heading", { name: "Fleet retrofit" });
+    await openHistory();
     expect(screen.queryByTestId("deal-start-delivery")).toBeNull();
   });
 

@@ -127,9 +127,12 @@ export function CreateAction<Created extends { id: string }>({
   onValuesChange,
   testId,
   reason,
+  link,
 }: Readonly<{
   label: string;
   fields: CreateField[];
+  // Draws the verb as a card's text link. See NewRecordButton.
+  link?: boolean;
   // Why this reader may not create, drawn beside the refused button. The verb
   // stays visible, because a hidden create reads as "there is nothing to add".
   reason?: string;
@@ -206,6 +209,7 @@ export function CreateAction<Created extends { id: string }>({
         testId={testId}
         pending={creating && !shown}
         reason={reason}
+        link={link}
       />
       <CreateRecordModal
         // A refusal that lands while the dialog is open closes it. A verb the
@@ -239,9 +243,12 @@ export function NewRecordButton({
   testId = "new-record",
   pending,
   reason,
+  link,
 }: Readonly<{
   label: string;
   onClick: () => void;
+  // A record page card's header link ("New deal"): text only, no plus glyph.
+  link?: boolean;
   // Two create buttons can share a list header (full form, quick capture); a
   // shared id would make both unaddressable.
   testId?: string;
@@ -254,8 +261,15 @@ export function NewRecordButton({
       data-testid={testId}
       pending={pending}
       reason={reason}
+      variant={link ? "link" : undefined}
     >
-      <Plus aria-hidden /> {label}
+      {link ? (
+        label
+      ) : (
+        <>
+          <Plus aria-hidden /> {label}
+        </>
+      )}
     </Button>
   );
 }

@@ -9,6 +9,7 @@
 // beside it would be a second answer without the restore.
 
 import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
 import type { components } from "../../api/schema";
 import { Panel, PanelBody } from "../../design-system/panel";
 import {
@@ -16,14 +17,12 @@ import {
   useTimelineFilters,
 } from "../../design-system/recordtimeline";
 import { GroupedTimelineList } from "../../design-system/timeline";
-import { TimelineFilterBar } from "../../design-system/timelinefilterbar";
 import { groupChronology } from "../../design-system/timelinegroups";
 import { useLocale, useT } from "../../i18n";
 import { invalidateRecord } from "../../lib/recordwritekeys";
 import { useRecordZone } from "../../lib/recordzone";
-import { RecordHistoryTab } from "../records/history";
+import { RecordHistoryTab, useFieldHistory } from "../records/history";
 import {
-  ChronologyFilter,
   ChronologyFooter,
   chronologyNotice,
   hasChronologyFooter,
@@ -31,8 +30,34 @@ import {
   useRecordChronology,
 } from "../records/recordchronology";
 import { TimelineActions } from "../records/timelineactions";
+import { useLeadHistoryDials } from "./leadhistorydials";
 
 type Lead = components["schemas"]["Lead"];
+type FieldHistoryEntry = components["schemas"]["FieldHistoryEntry"];
+
+/**
+ * The lead's status changes, newest first, for the dates on its ladder. Only
+ * the first page: a rung is dated by the newest move into it. Empty while
+ * the read is out or refused, which leaves those rungs undated.
+ *
+ * Read again when the status moves with no write from this page, so a new
+ * rung does not stand undated until the next visit. A write already refreshes
+ * every field-history read through the query client.
+ */
+export function useLeadStatusChanges(
+  lead: Pick<Lead, "id" | "status">,
+): readonly FieldHistoryEntry[] {
+  const query = useFieldHistory("lead", lead.id, { field: "status" });
+  const { refetch } = query;
+  const seen = useRef(lead.status);
+  useEffect(() => {
+    if (seen.current !== lead.status) {
+      seen.current = lead.status;
+      refetch();
+    }
+  }, [lead.status, refetch]);
+  return query.data?.pages[0]?.data ?? [];
+}
 
 export function LeadHistoryTab({
   lead,
@@ -74,10 +99,17 @@ export function LeadHistoryTab({
       />
     ),
   });
+  const dials = useLeadHistoryDials({
+    filter,
+    onFilter: setFilter,
+    filters,
+    onFilters: setFilters,
+  });
 
   return (
     <Panel
       title={t("tab.history")}
+      titleAction={dials.cuts}
       actions={
         hasChronologyFooter(filter, chronology) ? (
           <ChronologyFooter filter={filter} chronology={chronology} />
@@ -85,15 +117,7 @@ export function LeadHistoryTab({
       }
     >
       <PanelBody>
-        {/* Both sets of dials in one block: the cuts through the chronology,
-            then the narrowing of whichever cut is open — the same block the
-            contact and the account draw them in. */}
-        <div className="timeline-header">
-          <ChronologyFilter filter={filter} onFilter={setFilter} />
-          {filter !== "changes" && (
-            <TimelineFilterBar value={filters} onChange={setFilters} />
-          )}
-        </div>
+        {dials.narrowing}
         {/* The Changes view IS the record's history: one reading of what
             changed on this lead, and the one that can put a change back. */}
         {filter === "changes" ? (

@@ -41,7 +41,7 @@ const ASSERTABLE_STATUSES: ContractStatus[] = [
   "cancelled",
 ];
 
-const STATUS_LABEL_KEY: Record<ContractStatus, MessageKey> = {
+export const CONTRACT_STATUS_LABEL: Record<ContractStatus, MessageKey> = {
   draft: "contracts.status.draft",
   active: "contracts.status.active",
   expired: "contracts.status.expired",
@@ -334,7 +334,7 @@ export function ContractStatusModal({
               onChange={(value) => setStatus(value as ContractStatus)}
               options={ASSERTABLE_STATUSES.map((value) => ({
                 value,
-                label: t(STATUS_LABEL_KEY[value]),
+                label: t(CONTRACT_STATUS_LABEL[value]),
               }))}
             />
           )}

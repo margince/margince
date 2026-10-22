@@ -54,9 +54,10 @@ export function StatStrip({
   // invites the reading where the others are exact.
   floor?: ReactNode;
   // Compact keeps every slot on one line at a work column's width and sets
-  // each card smaller, for a row that sits above the content a reader came
-  // for rather than being that content.
-  density?: "compact";
+  // each card smaller. It suits a row above the content a reader came for,
+  // rather than being that content. Plate drops the panes for one ground
+  // with rules between the cells, for the figures at the foot of a card.
+  density?: "compact" | "plate";
 }>) {
   // The column count follows the slots the caller actually drew. A fixed
   // template reserves cells nobody fills, and an empty cell on a plate reads

@@ -62,3 +62,38 @@
     gap: var(--space-1);
   }
 }
+
+/* The details card's list: a fixed 96px term column, so values start at one
+ * edge in every language, and no rules, because the card's groups already
+ * part the rows. */
+.factlist-flat .factlist-row {
+  grid-template-columns: 96px minmax(0, 1fr);
+  gap: var(--space-2);
+  align-items: center;
+  min-block-size: var(--space-8);
+  padding: 0;
+  border-top: none;
+}
+.factlist-flat .factlist-term {
+  color: var(--textSecondary);
+}
+.factlist-flat .factlist-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--textPrimary);
+}
+.factlist-flat .factlist-row:not(.factlist-row-block) .factlist-value {
+  overflow-wrap: anywhere;
+}
+/* A value that is a link starts where a plain value does; the link
+ * affordance's own side padding would push it in. */
+.factlist-flat .factlist-value > :is(.btn.btn-link, .cell-link, .link-button) {
+  padding-inline: 0;
+}
+.factlist-flat .factlist-row-block {
+  grid-template-columns: minmax(0, 1fr);
+  padding-block: var(--space-1);
+}
+.factlist-flat .factlist-row-block .factlist-value {
+  overflow: visible;
+}

@@ -22,17 +22,18 @@
 // own text field. They are adapted here rather than merged upstream, because
 // they are genuinely different rows that happen to name the same message.
 
-import type { components } from "../../../api/schema";
+import {
+  Citations,
+  type Cited,
+  type OpenReceipt,
+} from "../../../components/citations";
 import { EmailEntry } from "../../../design-system/emailentry";
 import { formatDateTime } from "../../../format/format";
 import { useLocale } from "../../../i18n";
 import { useRecordZone } from "../../../lib/recordzone";
-import { Citations, type Cited, type OpenReceipt } from "./citations";
 // The basis block is styled beside the citation chips it falls back to, in the
 // stylesheet those rules already live in.
 import "../../companies/company360.css";
-
-type DealMoveEvidence = components["schemas"]["DealNextBestActionEvidence"];
 
 /**
  * One line of an action's basis, in the shape this component draws.
@@ -59,34 +60,6 @@ export function fromCitations(evidence: readonly Cited[]): Source[] {
           cited,
         };
   });
-}
-
-/**
- * The deal move's own basis as sources.
- *
- * Its non-email lines carry `text` and no record at all — a close date inside
- * the week is a fact about the deal, not a row to open — so they stay the
- * sentence the server wrote rather than becoming a citation with nothing behind
- * it.
- */
-export function fromDealMove(evidence: readonly DealMoveEvidence[]): {
-  sources: Source[];
-  prose: string[];
-} {
-  const sources: Source[] = [];
-  const prose: string[] = [];
-  for (const [index, row] of evidence.entries()) {
-    if (row.email_summary) {
-      sources.push({
-        kind: "email",
-        key: `email:${row.email_summary.activity_id}:${index}`,
-        summary: row.email_summary,
-      });
-      continue;
-    }
-    prose.push(row.text);
-  }
-  return { sources, prose };
 }
 
 /**

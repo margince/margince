@@ -223,15 +223,23 @@ it("leads Log activity and Add task with a glyph, keeping their words", async ()
   }
 });
 
-// The Email verb is icon-only, found by its accessible name rather than by
-// visible text, the same shape contactactions.tsx draws for the identical
-// verb on every other record header.
-it("draws the Email verb icon-only, with its name on hover", async () => {
+// The verb bar draws each verb as a glyph over one short word, the full verb
+// staying its accessible name.
+it("draws the bar's verbs in the design's order with their short words", async () => {
   stubGrants({ activity: ["create"] });
   renderActions();
 
   const email = await screen.findByRole("button", { name: "Email" });
-  expect(email.textContent?.trim()).toBe("");
+  expect(email.textContent?.trim()).toBe("Email");
+  const log = await screen.findByRole("button", { name: en["log.title"] });
+  expect(log.querySelector(".verb-word")?.textContent).toBe("Log");
+  const book = screen.getByRole("button", {
+    name: en["scheduling.bookContact"],
+  });
+  // Meet stands with Email, ahead of the two that record.
+  expect(
+    book.compareDocumentPosition(log) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
 });
 
 type Posted = { path: string; body: unknown };

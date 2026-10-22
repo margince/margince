@@ -4,6 +4,7 @@
 import { Bell } from "lucide-react";
 import { useCallback, useId, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useNoticeRead } from "../components/taskactions";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -16,7 +17,6 @@ import {
   useMarkAllNoticesRead,
   useNotifications,
 } from "../features/settings/notifications.queries";
-import { useNoticeRead } from "../features/worklist/taskactions";
 import { worklistKey } from "../features/worklist/worklist.queries";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";

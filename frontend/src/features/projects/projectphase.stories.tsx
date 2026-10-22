@@ -57,6 +57,21 @@ export const Closed: Story = {
   ),
 };
 
+/** The shape inside How it stands: one bar per phase with the days spent in
+ *  it, the current bar in green, Closed as a way out. A phase not reached
+ *  carries no line. */
+export const Bars: Story = {
+  render: phase(
+    <PhaseStepper
+      variant="bars"
+      phase="delivering"
+      subs={{ initiative: "31 days", delivering: "134 days · now" }}
+      pending={false}
+      onMove={() => {}}
+    />,
+  ),
+};
+
 /** A move already in flight: every rung refuses a second press. */
 export const Moving: Story = {
   render: phase(

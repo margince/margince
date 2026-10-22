@@ -135,7 +135,10 @@ export function sourceKeyLabel(
   const known = administeredOf(sources);
   const administered = known.find((s) => s.key === source);
   if (administered) return administered.label;
-  const shipped = SHIPPED_SOURCE_LABELS[source];
+  // A source stored as `web_form` names the shipped `webform` key.
+  const shipped =
+    SHIPPED_SOURCE_LABELS[source] ??
+    SHIPPED_SOURCE_LABELS[source.replace(/[_-]+/g, "")];
   if (shipped) return t(shipped);
   const parts = source.split(":").filter(Boolean);
   const family =
@@ -144,8 +147,9 @@ export function sourceKeyLabel(
       : undefined;
   if (family) return family.label;
   const meaningful = parts[0] === "connector" ? parts[1] : parts[0];
-  return meaningful
-    ? meaningful.charAt(0).toUpperCase() + meaningful.slice(1)
+  const spoken = meaningful?.replace(/[_-]+/g, " ");
+  return spoken
+    ? spoken.charAt(0).toUpperCase() + spoken.slice(1)
     : t("lead.source.unknown");
 }
 

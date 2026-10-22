@@ -11,9 +11,13 @@ import { describe, expect, it } from "vitest";
 const KEY_OWNERS = [
   {
     page: "src/features/projects/project360.tsx",
-    key: '["project", id, "360"]',
-    writers: ["src/features/projects/projectcompanies.tsx"],
-    invalidates: '["project", projectId, "360"]',
+    key: "project360Key(id)",
+    writers: [
+      "src/features/projects/projectcompanies.tsx",
+      "src/features/projects/projectstakeholders.tsx",
+      "src/features/projects/projecthealth.queries.ts",
+    ],
+    invalidates: "project360Key(projectId)",
   },
   {
     page: "src/features/companies/company360.tsx",

@@ -3,6 +3,10 @@ import type { components } from "../../api/schema";
 import { usePageName } from "../../app/pagemeta";
 import { useBulkSelection } from "../../components/bulkverbs";
 import {
+  contactCreateFields,
+  mapContactBody,
+} from "../../components/contactformfields";
+import {
   CreateAction,
   type CreateField,
   type FormRows,
@@ -17,6 +21,7 @@ import {
   listFetchLimit,
   useListQuery,
 } from "../../components/listquery";
+import { normalizeProfileUrl } from "../../components/profileurl";
 import {
   createdColumn,
   lastActivityColumn,
@@ -37,8 +42,6 @@ import { useViewerId } from "../../lib/session";
 import { listQueryParams } from "../../lib/tagfilter";
 import { VCardImportAction, VCardImportPage } from "../import/vcard-import";
 import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
-import { contactCreateFields, mapContactBody } from "./contactformfields";
-import { normalizeProfileUrl } from "./profileurl";
 
 // Contacts list + contact 360 (B-EP09.10a/b). Every row carries its
 // provenance chip (captured_by is server truth); the 360 renders the

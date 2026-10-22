@@ -3,6 +3,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { components } from "../../api/schema";
+import {
+  LIFECYCLE_LABELS,
+  LIFECYCLE_OPTIONS,
+} from "../../components/companylookups";
 import { Badge, Field } from "../../design-system/atoms";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
@@ -12,16 +16,12 @@ import {
   useCompanyFieldPatch,
   useCompanyReadOnlyReason,
 } from "./companyheader";
-import { LIFECYCLE_LABELS, LIFECYCLE_OPTIONS } from "./companylookups";
 
 type Company = components["schemas"]["Company"];
 type Lifecycle = NonNullable<Company["lifecycle"]>;
 type UpdateCompanyRequest = components["schemas"]["UpdateCompanyRequest"];
 
-// The name's own line on the company record: the name and where the account
-// stands, nothing else; what it is and the way in read on the marks row under
-// it (CompanyMarks). Centred against the name rather than on the compact
-// head's shared baseline, which drops a button low beside display type.
+// Where the account stands, first in the head's pills row (CompanyMarks).
 // Keyed by the record: a refused pick belongs to this account and must not
 // carry over when the page moves to the next.
 export function CompanyNameLine({ company }: Readonly<{ company: Company }>) {

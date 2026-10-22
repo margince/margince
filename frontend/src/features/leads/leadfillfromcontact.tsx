@@ -48,51 +48,49 @@ export function LeadFillFromContact({
   }
   const label = t("lead.fillFromContact");
   return (
-    <div className="card-actions">
-      <ListPopover
-        label={label}
-        title={label}
-        searchLabel={t("lead.fillFromContactSearch")}
-        reasonId={reasonId}
-        open={open}
-        onOpenChange={(next) => {
-          if (next || !writer.patch.isPending) {
-            setOpen(next);
-          }
-        }}
-        search={async (term): Promise<readonly ListPopoverOption[]> => {
-          const contacts = await searchContacts(term);
-          for (const contact of contacts) {
-            found.current.set(contact.id, contact);
-          }
-          return contacts.map((contact) => ({
-            id: contact.id,
-            name: contact.full_name,
-            hint: contact.primary_email ?? undefined,
-            keywords: contact.primary_email ? [contact.primary_email] : [],
-          }));
-        }}
-        onPick={(option) => {
-          const contact = found.current.get(option.id);
-          if (!contact) {
-            return;
-          }
-          // Only what the contact holds is sent: a field it lacks is left as
-          // the server has it, never rewritten from this page's copy of the
-          // lead, which may predate a save still settling.
-          const { full_name, email, title, company_name } =
-            leadFillsFrom(contact);
-          writer.save(
-            Object.fromEntries(
-              Object.entries({ full_name, email, title, company_name }).filter(
-                ([, value]) => value,
-              ),
+    <ListPopover
+      label={label}
+      title={label}
+      searchLabel={t("lead.fillFromContactSearch")}
+      reasonId={reasonId}
+      open={open}
+      onOpenChange={(next) => {
+        if (next || !writer.patch.isPending) {
+          setOpen(next);
+        }
+      }}
+      search={async (term): Promise<readonly ListPopoverOption[]> => {
+        const contacts = await searchContacts(term);
+        for (const contact of contacts) {
+          found.current.set(contact.id, contact);
+        }
+        return contacts.map((contact) => ({
+          id: contact.id,
+          name: contact.full_name,
+          hint: contact.primary_email ?? undefined,
+          keywords: contact.primary_email ? [contact.primary_email] : [],
+        }));
+      }}
+      onPick={(option) => {
+        const contact = found.current.get(option.id);
+        if (!contact) {
+          return;
+        }
+        // Only what the contact holds is sent. A field it lacks is left as the
+        // server has it. This page's copy of the lead may predate a save still
+        // settling, so it never rewrites one.
+        const { full_name, email, title, company_name } =
+          leadFillsFrom(contact);
+        writer.save(
+          Object.fromEntries(
+            Object.entries({ full_name, email, title, company_name }).filter(
+              ([, value]) => value,
             ),
-          );
-        }}
-        pending={writer.patch.isPending}
-        error={failed ? problemMessageOf(writer.patch.error, t) : undefined}
-      />
-    </div>
+          ),
+        );
+      }}
+      pending={writer.patch.isPending}
+      error={failed ? problemMessageOf(writer.patch.error, t) : undefined}
+    />
   );
 }

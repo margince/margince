@@ -35,13 +35,16 @@
   gap: var(--space-2);
 }
 
-/* One factor of the score: its name, its points, and what decayed them.
-   Baseline-aligned rather than centred, so the figure sits on the same
-   line as the words beside it however tall the row grows. */
-.lead-factor {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-2);
+/* The owner row is one line, like every details row: the name gives way,
+   the Assign verb never drops under it. */
+.lead-owner-line {
+  flex-wrap: nowrap;
+  min-inline-size: 0;
+}
+.lead-owner-line > :first-child {
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* A list of sentences, not of bullets: these are reasons a reader scans, and
@@ -58,14 +61,55 @@
   max-width: 20rem;
 }
 
-.lead-email {
-  min-width: 0;
-  max-width: 100%;
-  overflow-wrap: anywhere;
-  white-space: normal;
-  /* A button centres its text; a wrapped address reads from the left like
-     the name above it. */
-  text-align: left;
+/* The visibility pill under the name: a badge that opens the share screen. */
+.lead-share-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--textSecondary);
+  cursor: pointer;
+}
+
+.lead-share-pill > svg {
+  inline-size: 12px;
+  block-size: 12px;
+}
+
+.lead-share-pill:hover {
+  color: var(--textPrimary);
+}
+
+/* The email row: the address on one line, cut with an ellipsis, and its edit
+   verb only while the row is pointed at or holds focus. */
+.lead-row-value {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+.lead-row-link {
+  display: block;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+  text-align: start;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lead-row-verb {
+  flex: none;
+  max-inline-size: 0;
+  overflow: hidden;
+}
+
+.factlist-row:hover .lead-row-verb,
+.lead-row-verb:focus-within {
+  max-inline-size: none;
 }
 
 @media (max-width: 720px) {
@@ -103,10 +147,54 @@
   grid-column: 1 / -1;
 }
 
-.lead-score-summary {
+/* One factor of the score card: its name and kind, and its points at the
+   row's end. */
+.lead-score-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+/* The overview's cards under How it stands: two stacks side by side, the
+   score and what you know on the left, what they asked and the qualify
+   preview on the right. One stack once the feed is too narrow for two. */
+.lead-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gapCards);
+  align-items: start;
+}
+
+.lead-cards-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gapCards);
+  min-inline-size: 0;
+}
+
+@container (max-width: 40rem) {
+  .lead-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* The lead's own words in "What they asked for", held to a few lines. */
+.lead-enquiry {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+/* The History head's dials: the search toggle, then the cuts. */
+.lead-history-dials {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--gapActions);
 }
 
 /* A lead's status and its SLA state, side by side in one table cell. */
@@ -114,4 +202,14 @@
   display: inline-flex;
   gap: var(--space-1);
   align-items: center;
+}
+
+/* The lists a lead is on, as chips under the left column's Lists label. */
+.lead-aside-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }

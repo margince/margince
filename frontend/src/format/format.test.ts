@@ -12,6 +12,7 @@ import {
   formatMoney,
   formatMoneyCompact,
   formatMoneyOrAbsent,
+  formatMoneyWhole,
   formatNumber,
   formatSignedMoney,
   formatTimeOfDay,
@@ -427,5 +428,12 @@ describe("formatDayRange", () => {
     expect(
       formatDayRange("2026-06-29", "2026-07-05", "en", "Europe/Berlin"),
     ).toMatch(/29 June\s*[–-]\s*5 July/);
+  });
+});
+
+describe("formatMoneyWhole", () => {
+  it("drops the cents of a whole amount and keeps them otherwise", () => {
+    expect(formatMoneyWhole(4_800_000, "EUR", "en")).toBe("€48,000");
+    expect(formatMoneyWhole(4_800_050, "EUR", "en")).toBe("€48,000.50");
   });
 });

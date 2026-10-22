@@ -10,9 +10,9 @@
 // makes — and draws this one with its evidence and its two answers.
 
 import type { ReactNode } from "react";
+import { DealSuggestionCard } from "../../components/dealsuggestion";
+import { useDealSuggestions } from "../../components/dealsuggestions.queries";
 import { useT } from "../../i18n";
-import { DealSuggestionCard } from "../deals/dealsuggestion";
-import { useDealSuggestions } from "../deals/dealsuggestions.queries";
 import { PairDecision } from "./worklist.pair";
 import type { WorklistItem } from "./worklist.queries";
 import { TagSuggestionDecision } from "./worklist.tagsuggestion";

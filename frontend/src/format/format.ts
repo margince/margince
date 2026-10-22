@@ -54,6 +54,26 @@ export function formatMoney(
   }).format(toMajorUnits(amountMinor, currency));
 }
 
+/**
+ * A money figure as a record page's rows write it: whole units when the amount
+ * has no cents (€48,000), the exact figure otherwise.
+ */
+export function formatMoneyWhole(
+  amountMinor: number,
+  currency: string,
+  locale: Locale,
+): string {
+  const major = toMajorUnits(amountMinor, currency);
+  if (!Number.isInteger(major)) {
+    return formatMoney(amountMinor, currency, locale);
+  }
+  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 0,
+  }).format(major);
+}
+
 // What the product shows for a money figure it does not have. Not a zero and
 // not a guessed currency: "€0 open" and "we do not know" are different claims,
 // and a euro sign on a figure that might be dong is worse than no figure.

@@ -19,6 +19,10 @@ const meta: Meta<typeof CommitteeReading> = {
   title: "Records/Deal 360/Committee",
   component: CommitteeReading,
   parameters: { layout: "padded" },
+  args: {
+    owner: "Lena Fischer",
+    roleLabel: (role: string) => role.replaceAll("_", " "),
+  },
   decorators: [
     (Story) => (
       <StoryProviders>

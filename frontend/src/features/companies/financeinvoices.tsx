@@ -1,103 +1,131 @@
 import type { components } from "../../api/schema";
-import { Badge, TableScroll } from "../../design-system/atoms";
+import { Badge } from "../../design-system/atoms";
+import { DataTable, type DataTableColumn } from "../../design-system/datatable";
+import { Panel } from "../../design-system/panel";
 import { formatDate, formatMoney, formatNumber } from "../../format/format";
-import { type PluralBase, useLocale, usePlural, useT } from "../../i18n";
+import {
+  type Locale,
+  type PluralBase,
+  useLocale,
+  usePlural,
+  useT,
+} from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useRecordZone } from "../../lib/recordzone";
 
 type FinanceSummary = components["schemas"]["CompanyFinanceSummary"];
 type FinanceInvoice = components["schemas"]["FinanceInvoice"];
 
+type Cells = {
+  t: ReturnType<typeof useT>;
+  plural: ReturnType<typeof usePlural>;
+  locale: Locale;
+  zone: string;
+};
+
+/**
+ * RecentInvoices is the latest invoices as their own card under the finance
+ * figures. It shows every date the server sent, so each row is checkable
+ * against the invoice itself. Absent when the summary carries none.
+ */
 export function RecentInvoices({
   summary,
 }: Readonly<{ summary: FinanceSummary }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
+  const zone = useRecordZone();
   const invoices = summary.recent_invoices ?? [];
   if (invoices.length === 0) {
     return null;
   }
   return (
-    // Four columns, and nothing is dropped to get there: the issue, due and
-    // settlement dates read as one life of one invoice rather than three
-    // columns a reader has to line up by eye. It is still every date the
-    // server sent, which is what an invoice is checkable against. The table
-    // scrolls sideways inside its panel rather than widening the record page:
-    // `TableScroll` is the one spelling of that box, the same one DataTable
-    // puts every list it draws inside (atoms.tsx).
-    <TableScroll label={t("finance.recentInvoices")}>
-      <table className="table fin-table">
-        <thead>
-          <tr>
-            <th>{t("finance.col.invoice")}</th>
-            <th>{t("finance.col.dates")}</th>
-            <th className="fin-col-amount">{t("finance.col.amount")}</th>
-            <th className="fin-col-status">{t("finance.col.status")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {invoices.map((invoice) => (
-            <InvoiceRow key={invoice.id} invoice={invoice} locale={locale} />
-          ))}
-        </tbody>
-      </table>
-    </TableScroll>
+    <Panel
+      title={t("finance.recentInvoices")}
+      footer={
+        summary.truncated ? (
+          <span className="t-caption">{t("finance.moreInvoices")}</span>
+        ) : undefined
+      }
+    >
+      <DataTable
+        bleed
+        fold
+        label={t("finance.recentInvoices")}
+        columns={invoiceColumns({ t, plural, locale, zone })}
+        rows={invoices}
+        rowKey={(invoice) => invoice.id}
+      />
+    </Panel>
   );
 }
 
-function InvoiceRow({
+function invoiceColumns(cells: Cells): DataTableColumn<FinanceInvoice>[] {
+  const { t, locale, zone } = cells;
+  return [
+    {
+      key: "number",
+      header: t("finance.col.invoice"),
+      grow: true,
+      render: (invoice) => invoice.number ?? t("finance.unnumbered"),
+    },
+    {
+      key: "issued",
+      header: t("finance.col.issued"),
+      render: (invoice) => formatDate(invoice.issued_at, locale, zone),
+    },
+    {
+      key: "amount",
+      header: t("finance.col.amount"),
+      align: "end",
+      render: (invoice) =>
+        formatMoney(invoice.gross_minor, invoice.currency, locale),
+    },
+    {
+      key: "due",
+      header: t("finance.col.due"),
+      // When it was settled rides with the due day, not in its own column.
+      // An unpaid invoice has no date to put there.
+      render: (invoice) => (
+        <span>
+          {invoice.due_at ? formatDate(invoice.due_at, locale, zone) : ""}
+          {invoice.paid_at && (
+            <span className="t-caption">
+              {invoice.due_at ? " · " : ""}
+              {t("finance.paidOn", {
+                when: formatDate(invoice.paid_at, locale, zone),
+              })}
+            </span>
+          )}
+        </span>
+      ),
+    },
+    {
+      key: "status",
+      header: t("finance.col.status"),
+      fold: "end",
+      render: (invoice) => <InvoiceStatus invoice={invoice} cells={cells} />,
+    },
+  ];
+}
+
+// How late, and whether it was, as one reading. "Paid" and "paid 22 days
+// late" are different facts about a customer. On time says nothing the status
+// does not.
+function InvoiceStatus({
   invoice,
-  locale,
-}: Readonly<{
-  invoice: FinanceInvoice;
-  locale: ReturnType<typeof useLocale>["locale"];
-}>) {
-  const t = useT();
-  const plural = usePlural();
-  const recordZone = useRecordZone();
+  cells,
+}: Readonly<{ invoice: FinanceInvoice; cells: Cells }>) {
+  const { t, plural, locale } = cells;
   const late = invoice.days_late != null && invoice.days_late > 0;
   return (
-    // A row the customer still owes past its due date carries the tint, so the
-    // rows that need chasing are findable without reading the status column of
-    // every one of them. A settled invoice that was paid late is history, not
-    // work, and takes no tint however late it was.
-    <tr className={late && invoice.status !== "paid" ? "fin-row-late" : ""}>
-      <td className="fin-cell-id">
-        {invoice.number ?? t("finance.unnumbered")}
-      </td>
-      <td className="fin-cell-dates">
-        {formatDate(invoice.issued_at, locale, recordZone)} →{" "}
-        {invoice.due_at ? formatDate(invoice.due_at, locale, recordZone) : "—"}
-        {/* When it was actually settled, appended rather than given a column
-            of its own: an unpaid invoice has no date to put there, and a
-            column of dashes states nothing the status does not. */}
-        {invoice.paid_at && (
-          <span>
-            {" · "}
-            {t("finance.paidOn", {
-              when: formatDate(invoice.paid_at, locale, recordZone),
-            })}
-          </span>
-        )}
-      </td>
-      <td className="fin-col-amount">
-        {formatMoney(invoice.gross_minor, invoice.currency, locale)}
-      </td>
-      {/* HOW late, and whether it was, as ONE reading. "Paid" and "paid 22
-          days late" are different facts about a customer, and splitting them
-          across a badge and a caption made the reader assemble the sentence.
-          Zero and negative say nothing worth a line: on time is what the
-          status alone already says. */}
-      <td className="fin-col-status">
-        <Badge tone={STATUS_TONE[invoice.status]}>
-          {late && invoice.days_late != null
-            ? plural(daysLateBase(invoice.status), invoice.days_late, {
-                days: formatNumber(invoice.days_late, locale),
-              })
-            : t(STATUS_LABEL[invoice.status])}
-        </Badge>
-      </td>
-    </tr>
+    <Badge tone={STATUS_TONE[invoice.status]}>
+      {late && invoice.days_late != null
+        ? plural(daysLateBase(invoice.status), invoice.days_late, {
+            days: formatNumber(invoice.days_late, locale),
+          })
+        : t(STATUS_LABEL[invoice.status])}
+    </Badge>
   );
 }
 

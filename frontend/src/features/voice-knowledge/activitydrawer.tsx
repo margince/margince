@@ -9,6 +9,7 @@ import {
 } from "../../components/customfields.form";
 import { EntityRef } from "../../components/entityref";
 import { mostSpecificFirst, RecordLinks } from "../../components/recordlinks";
+import { TaskDetailDialog, useTaskUpdate } from "../../components/taskactions";
 import { writtenAsMarkdown } from "../../design-system/activitytimeline";
 import { Badge, Modal } from "../../design-system/atoms";
 import { CommitmentReview } from "../../design-system/commitmentreview";
@@ -28,7 +29,6 @@ import { useCanWrite } from "../../lib/capability";
 import { problemCodeOf } from "../../lib/problem";
 import { ActivityFiles } from "../records/activityfiles";
 import { ActivityFollowUps } from "../records/activityfollowups";
-import { TaskDetailDialog, useTaskUpdate } from "../worklist/taskactions";
 import { worklistKey } from "../worklist/worklist.queries";
 import "../../design-system/emaildetail.css";
 

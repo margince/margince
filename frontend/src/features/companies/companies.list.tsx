@@ -1,6 +1,17 @@
 import { api } from "../../api/client";
 import { usePageName } from "../../app/pagemeta";
 import { useBulkSelection } from "../../components/bulkverbs";
+import {
+  companyCreateFields,
+  createCompany,
+  RELATIONSHIP_TYPE_OPTIONS,
+} from "../../components/companyform";
+import {
+  LIFECYCLE_LABELS,
+  LIFECYCLE_OPTIONS,
+  RELATIONSHIP_TYPE_LABELS,
+  SIZE_BAND_OPTIONS,
+} from "../../components/companylookups";
 import { CreateAction } from "../../components/create";
 import { useObjectCustomFields } from "../../components/customfields.form";
 import {
@@ -31,18 +42,7 @@ import { useViewerId } from "../../lib/session";
 import { listQueryParams } from "../../lib/tagfilter";
 import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
 import type { Company } from "./companies";
-import {
-  companyCreateFields,
-  createCompany,
-  RELATIONSHIP_TYPE_OPTIONS,
-} from "./companyform";
 import { displayHost } from "./companyheader";
-import {
-  LIFECYCLE_LABELS,
-  LIFECYCLE_OPTIONS,
-  RELATIONSHIP_TYPE_LABELS,
-  SIZE_BAND_OPTIONS,
-} from "./companylookups";
 
 async function fetchCompaniesPage(
   query: ListQuery,

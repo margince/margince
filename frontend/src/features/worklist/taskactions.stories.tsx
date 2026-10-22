@@ -3,6 +3,11 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import {
+  TaskCompleteCheck,
+  TaskQuickActions,
+  useTaskUpdate,
+} from "../../components/taskactions";
 import { en } from "../../i18n/en";
 import { taskWriteKeys } from "../../lib/activitykeys";
 import {
@@ -11,11 +16,6 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import {
-  TaskCompleteCheck,
-  TaskQuickActions,
-  useTaskUpdate,
-} from "./taskactions";
 import { TaskDetailModal } from "./taskdetailmodal";
 
 // Acting on a task from the record it belongs to: the tick, the quick-action

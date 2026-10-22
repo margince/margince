@@ -95,6 +95,22 @@ export const Live: Story = {
   ),
 };
 
+export const Dot: Story = {
+  parameters: badgeDocs(
+    "A status that asks for the reader's move; the dot rests.",
+  ),
+  render: () => (
+    <div style={row}>
+      <Badge tone="warning" dot>
+        Your move
+      </Badge>
+      <Badge tone="danger" dot>
+        Overdue
+      </Badge>
+    </div>
+  ),
+};
+
 export const LongLabel: Story = {
   parameters: badgeDocs("At 200px, alone and beside a sibling: an ellipsis."),
   render: () => (

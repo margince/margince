@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import { usePageName } from "../../app/pagemeta";
+import { searchCompanyTargets } from "../../components/companyform";
 import { CreateAction } from "../../components/create";
 import {
   type ObjectCustomFields,
@@ -20,11 +21,16 @@ import { currencyOptions } from "../../format/currencychoices";
 import { formatNumber } from "../../format/format";
 import { translatePlural, useLocale, useT } from "../../i18n";
 import { useAcquisitionSources } from "../../lib/acquisitionsources.queries";
+import {
+  totalsRefusedBecause,
+  totalsWithheldBecause,
+  useDeals,
+  useStageTotals,
+} from "../../lib/deals.queries";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { useViewerId } from "../../lib/session";
-import { searchCompanyTargets } from "../companies/companyform";
 import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
 import { LegalReviewQueueLink } from "../privacy/legalreviews";
 import { useOwnerPicker } from "../records/recordreferences";
@@ -59,12 +65,6 @@ import {
   savableDealQuery,
   useDealScreenDials,
 } from "./deals.listtools";
-import {
-  totalsRefusedBecause,
-  totalsWithheldBecause,
-  useDeals,
-  useStageTotals,
-} from "./deals.queries";
 import { mapDealCreate } from "./deals.write";
 
 // The create form, with the one question it has to ask the server: which

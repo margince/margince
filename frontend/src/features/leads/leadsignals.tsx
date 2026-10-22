@@ -35,7 +35,7 @@ const SIGNAL_BANDS: Readonly<Record<SignalFactor, readonly string[]>> = {
   employees: ["1-10", "11-50", "51-200", "201+"],
   budget_hint: ["none", "unknown", "some", "confirmed"],
 };
-const SIGNAL_FACTORS = Object.keys(SIGNAL_BANDS) as SignalFactor[];
+export const SIGNAL_FACTORS = Object.keys(SIGNAL_BANDS) as SignalFactor[];
 const SIGNAL_KINDS: readonly SignalKind[] = ["fact", "assumption", "judgement"];
 
 const CONFIDENCE_LEVELS = ["0.5", "0.7", "0.9", "1"] as const;
@@ -72,6 +72,21 @@ const NO_ANSWERS: Answers = {
   budget_hint: "",
 };
 
+/** Every manual signal on the lead, live and superseded. */
+export function useManualSignals(id: string) {
+  return useQuery({
+    queryKey: leadManualSignalsKey(id),
+    queryFn: async () => {
+      const data = unwrap(
+        await api.GET("/leads/{id}/manual-signals", {
+          params: { path: { id } },
+        }),
+      );
+      return data.data;
+    },
+  });
+}
+
 /**
  * LeadManualSignals is the human half of the score (S-E13.6, ADR-0105 §4):
  * a rep enters what capture cannot fetch — a traffic band, an employee
@@ -92,22 +107,13 @@ const NO_ANSWERS: Answers = {
 export function LeadManualSignals({
   id,
   readOnlyReason,
-}: Readonly<{ id: string; readOnlyReason?: string }>) {
+  onSaved,
+}: Readonly<{ id: string; readOnlyReason?: string; onSaved?: () => void }>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
   const queryClient = useQueryClient();
-  const signals = useQuery({
-    queryKey: leadManualSignalsKey(id),
-    queryFn: async () => {
-      const data = unwrap(
-        await api.GET("/leads/{id}/manual-signals", {
-          params: { path: { id } },
-        }),
-      );
-      return data.data;
-    },
-  });
+  const signals = useManualSignals(id);
   const [answers, setAnswers] = useState<Answers>(NO_ANSWERS);
   const [note, setNote] = useState("");
   const [kind, setKind] = useState<SignalKind>(DEFAULT_SIGNAL_KIND);
@@ -151,6 +157,7 @@ export function LeadManualSignals({
       setNote("");
       setKind(DEFAULT_SIGNAL_KIND);
       setConfidence(CONFIDENCE_UNSTATED);
+      onSaved?.();
     },
     // On failure too: a batch can stop part-way through, and the list above is
     // then the only place the rep can see which answers actually landed.

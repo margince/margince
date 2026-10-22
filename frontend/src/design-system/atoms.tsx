@@ -62,17 +62,20 @@ export const BADGE_TONES = [
 
 type BadgeTone = (typeof BADGE_TONES)[number];
 
-// ONE leading mark, a glyph or the `live` dot; an `ai` badge's is Sparkles.
+type PlainTone = Exclude<BadgeTone, "ai">;
+
+// One leading mark, a glyph or the `live` dot; an `ai` badge's is Sparkles.
 type BadgeMark =
-  | { tone?: Exclude<BadgeTone, "ai">; icon?: LucideIcon; live?: never }
-  | { tone?: Exclude<BadgeTone, "ai">; icon?: never; live?: boolean }
-  | { tone: "ai"; icon?: never; live?: never };
+  | { tone?: PlainTone; icon?: LucideIcon; live?: never; dot?: never }
+  | { tone?: PlainTone; icon?: never; live?: boolean; dot?: boolean }
+  | { tone: "ai"; icon?: never; live?: never; dot?: never };
 
 export function Badge({
   variant = "soft",
   tone = "default",
   icon,
   live,
+  dot,
   wrap,
   children,
 }: Readonly<
@@ -95,6 +98,9 @@ export function Badge({
   return (
     <span className={classes.join(" ")}>
       {live && !provenance && <span className="badge-live-dot" aria-hidden />}
+      {dot && !live && !provenance && (
+        <span className="badge-dot" aria-hidden />
+      )}
       {Icon && <Icon size={12} aria-hidden="true" />}
       <span className="badge-label">{children}</span>
     </span>

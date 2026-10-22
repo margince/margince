@@ -33,10 +33,11 @@ import { ConfirmModal } from "../../../design-system/confirmmodal";
 import { ErrorLine } from "../../../design-system/errorline";
 import { Panel, PanelBody } from "../../../design-system/panel";
 import { QueryStates } from "../../../design-system/querystates";
-import { formatNumber } from "../../../format/format";
+import { formatDateAbbrev, formatNumber } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
 import { useCanWrite } from "../../../lib/capability";
 import { problemMessageOf, unwrap } from "../../../lib/problem";
+import { useRecordZone } from "../../../lib/recordzone";
 import { navigate } from "../../../lib/router";
 import {
   buyerLink,
@@ -135,6 +136,7 @@ function ManageRoomButton({ room }: Readonly<{ room: DealRoom }>) {
 export function RoomFacts({ room }: Readonly<{ room: DealRoom }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const { invited, active, lastSeen, counted } = useRoomAttendance(room.id);
   if (!counted) {
     return null;
@@ -148,7 +150,11 @@ export function RoomFacts({ room }: Readonly<{ room: DealRoom }>) {
         })}
       </span>
       {lastSeen ? (
-        <span>{t("room.card.lastSeen", { when: lastSeen.slice(0, 10) })}</span>
+        <span>
+          {t("room.card.lastSeen", {
+            when: formatDateAbbrev(lastSeen, locale, recordZone),
+          })}
+        </span>
       ) : null}
     </p>
   );

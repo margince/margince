@@ -215,10 +215,6 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Proves a date-only provisional close keeps its day east and west of UTC.",
   },
   {
-    file: "features/projects/projectheaderfacts.test.tsx",
-    why: "The head's target-end cell prints a date and the count of mornings to it, and the case is that the two name the SAME day — which needs a record zone far enough east of UTC that they would not. It is supplied through RecordZoneProvider, the seam the product itself reads; the other cases pass UTC so the count in the assertion is the one a reader on that day sees.",
-  },
-  {
     file: "features/worklist/taskduedate.test.tsx",
     why: "The picker's day and the instant it sends are asserted across a zone boundary, so the record zone has to be a NAMED one the fixture also computes its expectation from: the case is that a deadline reads as the day it was agreed on for a colleague elsewhere, and a zone taken off the runner would make the assertion true wherever the suite happened to run. It is provided through RecordZoneProvider, the seam the product itself reads.",
   },
@@ -464,7 +460,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Installation-settings fixture backing the leads screen's settings read.",
   },
   {
-    file: "features/records/logactivity.test.tsx",
+    file: "components/logactivity.test.tsx",
     why: "Reads back the calendar day an entry files under — backdated or logged at the moment — which needs both a named zone to pretend to be in and a named zone to compare the filing against.",
   },
   {

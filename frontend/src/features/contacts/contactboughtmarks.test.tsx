@@ -10,6 +10,8 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
+import { ContactDetails } from "./contactdetails";
+import { Employers } from "./contactemployers";
 import { ContactRail } from "./contactrail";
 import { ContactSubtitle } from "./contactsubtitle";
 
@@ -135,7 +137,30 @@ function mount(shown: Contact360 = view) {
   render(
     <StoryProviders>
       <ContactSubtitle view={shown} />
-      <ContactRail view={shown} guard={undefined} />
+      <ContactRail
+        view={shown}
+        consent={{
+          guard: undefined,
+          loading: false,
+          failed: false,
+          onRetry: () => undefined,
+        }}
+        writeRefusalId="write-refused"
+      />
+      <Employers view={shown} />
+    </StoryProviders>,
+  );
+}
+
+// What a provider sold beyond the fields is drawn with the full details on the
+// Research tab, not in the left column.
+function mountDetails() {
+  render(
+    <StoryProviders>
+      <ContactDetails
+        contact={view.contact}
+        profiles={view.provider_profiles}
+      />
     </StoryProviders>,
   );
 }
@@ -208,7 +233,7 @@ describe("bought values on the contact page", () => {
 
   it("dates each bought location and department by the run that last reported it", async () => {
     const user = userEvent.setup();
-    mount();
+    mountDetails();
     await screen.findByText("Bought from Surfe");
     // The month, in words, is what tells the two runs apart in any zone.
     for (const [value, at] of [

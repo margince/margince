@@ -48,6 +48,7 @@ export function Panel({
   titleAction,
   tone,
   titleLevel,
+  flatHead,
   actions,
   footer,
   children,
@@ -91,6 +92,10 @@ export function Panel({
   // title is one size, so a nested panel does not announce its depth by
   // shrinking — the outline says where it sits.
   titleLevel?: 2 | 3;
+  // The head as one line over the body, with no band: the title at the small
+  // rung beside its action, and no rule under them. For a card that reads as a
+  // list under a verdict rather than as a zone of its own (`OverviewCard`).
+  flatHead?: boolean;
   // Verbs that CHANGE this panel, in their own band under the body — not one
   // more row, and not a footer, which reports rather than acts. A caller
   // renders them only when the panel's content is real: an "add a deal"
@@ -123,12 +128,14 @@ export function Panel({
       aria-labelledby={title ? titleId : undefined}
     >
       {title && (
-        <header className="panel-head">
+        <header
+          className={flatHead ? "panel-head panel-head-flat" : "panel-head"}
+        >
           {/* The title is the row's far-end push: it absorbs the free space, so
               a titleAction lands at the end of the band whatever the title's
               length. */}
           <Heading
-            size="medium"
+            size={flatHead ? "small" : "medium"}
             as={TITLE_ELEMENT[titleLevel ?? 2]}
             className="panel-title"
             id={titleId}

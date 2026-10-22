@@ -2,11 +2,10 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { TaskQuickActions, useTaskUpdate } from "../../components/taskactions";
 import { taskWriteKeys } from "../../lib/activitykeys";
 import { SentenceList } from "../records/record360";
-import { TaskQuickActions, useTaskUpdate } from "../worklist/taskactions";
 import { CompanyScreen } from "./companies";
-import { NextSteps } from "./company360";
 import {
   type Company360,
   company,
@@ -18,6 +17,7 @@ import {
   stub,
   view,
 } from "./company360.testkit";
+import { CompanyTaskTable } from "./companytaskstable";
 
 beforeEach(() => {
   globalThis.localStorage.setItem("margince.workspaceSlug", "acme");
@@ -29,13 +29,13 @@ afterEach(() => {
   globalThis.localStorage.clear();
 });
 
-// NextSteps plus the per-row verbs, which the list takes as a render slot
+// The Tasks tab's list plus the per-row verbs, which it takes as a render slot
 // rather than owning. Mounting the two together pins the pairing under test. A
 // row offers Done always, and Snooze only when there is a date to move.
 function NextStepsWithVerbs({ three60 }: Readonly<{ three60: Company360 }>) {
   const update = useTaskUpdate(taskWriteKeys("company", "o-1"));
   return (
-    <NextSteps
+    <CompanyTaskTable
       view={three60}
       onOpenTask={() => {}}
       renderAction={(step) => (
@@ -230,7 +230,7 @@ describe("company view — the citations under a finding", () => {
   });
 });
 
-describe("company view — what is waiting on a decision", () => {
+describe("company view — what is waiting on a decision stays off the page", () => {
   // `status` is a closed union on the wire, so it is annotated rather than
   // inferred as `string`. A widened fixture could name a status the server
   // never sends, and the card would go on drawing it.
@@ -251,7 +251,10 @@ describe("company view — what is waiting on a decision", () => {
     evidence: [],
   };
 
-  it("offers a way into the queue it counts, grouped by what is proposed", async () => {
+  // The design's record menu has no queue entry. The queue itself is the
+  // brief's decisions list. A proposal waiting on this account is decided
+  // there rather than in a panel on the account.
+  it("offers no queue on the account, however many proposals wait", async () => {
     stub(
       view({
         pending_approvals: {
@@ -267,24 +270,9 @@ describe("company view — what is waiting on a decision", () => {
       }),
     );
     renderCompany();
-    // The way into the queue sits with the record's other rare verbs, not
-    // beside the account's name. It opens a queue and decides nothing. In the
-    // header it would outrank the verbs that do decide.
-    (await screen.findByRole("button", { name: "More actions" })).click();
-    const open = await screen.findByRole("button", {
-      name: "Review 2 pending",
-    });
-    open.click();
-    await waitFor(() =>
-      expect(screen.getByText("2 × Add contact from website")).toBeTruthy(),
-    );
-  });
-
-  it("says nothing is waiting rather than offering an empty queue", async () => {
-    stub(view());
-    renderCompany();
     await screen.findByText("Brandt Automotive GmbH");
     (await screen.findByRole("button", { name: "More actions" })).click();
+    await screen.findByTestId("company-full-history");
     expect(screen.queryByRole("button", { name: /Review/ })).toBeNull();
   });
 });
@@ -328,7 +316,7 @@ describe("company view — an open task can be acted on", () => {
   it("draws no checkbox when the caller has no write path for it", async () => {
     const three60 = view({ next_steps: { data: [step], page: emptyPage } });
     stub(three60);
-    render(<NextSteps view={three60} />);
+    render(<CompanyTaskTable view={three60} />);
     await waitFor(() =>
       expect(screen.getByText("Send the retrofit proposal")).toBeTruthy(),
     );
@@ -354,7 +342,7 @@ describe("company view — Partner is not a permanent tab", () => {
     // about a commercial arrangement almost none of them have.
     expect(screen.getByRole("button", { name: "Overview" })).toBeTruthy();
     expect(screen.getByRole("button", { name: /^Contacts/ })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "History" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^History/ })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Partner" })).toBeNull();
   });
 
@@ -438,7 +426,7 @@ describe("company view — where the record came from", () => {
 });
 
 describe("company view — the account's own tabs", () => {
-  it("keeps the rail summary beside the Contacts tab", async () => {
+  it("lists the roster once, on the Contacts tab", async () => {
     stub(
       view({
         contacts: {
@@ -472,12 +460,11 @@ describe("company view — the account's own tabs", () => {
     await screen.findByRole("complementary", { name: "Context" });
 
     await userEvent.click(screen.getByRole("button", { name: /^Contacts/ }));
-    // Twice: the tab is the roster in full, and the rail's capped summary
-    // stands beside it as the reader's anchor across tabs. Both are checked on
-    // their own, so the test fails if either goes missing.
-    const rail = await screen.findByRole("complementary", { name: "Context" });
-    expect(within(rail).getByText("Christian Hagemeyer")).toBeTruthy();
-    expect(screen.getAllByText("Christian Hagemeyer")).toHaveLength(2);
+    // The details beside the tab carry the best route in, never a second
+    // copy of the roster the tab already lists in full.
+    expect(await screen.findByText("Christian Hagemeyer")).toBeTruthy();
+    const rail = screen.getByRole("complementary", { name: "Context" });
+    expect(within(rail).queryByText("Christian Hagemeyer")).toBeNull();
   });
 
   it("offers the four tabs the record page has, in order", async () => {
@@ -487,7 +474,7 @@ describe("company view — the account's own tabs", () => {
 
     // An account with no partner programme still gets all four: Partner is
     // the only conditional tab.
-    for (const name of ["Overview", /^Contacts/, "History", "Documents"]) {
+    for (const name of ["Overview", /^Contacts/, /^History/, "Documents"]) {
       expect(screen.getByRole("button", { name })).toBeTruthy();
     }
     expect(screen.queryByRole("button", { name: "Partner" })).toBeNull();

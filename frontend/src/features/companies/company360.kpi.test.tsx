@@ -34,9 +34,16 @@ type StateStrip360 = NonNullable<Company360["state_strip"]>;
 // primitives. The header's is the design system's dropdown worn as a button
 // beside the name (a combobox named by its field). The grid's is the inline
 // value a row of values carries ("Change Lifecycle"). One of each, so a third
-// mount point or a lost one fails here.
+// mount point or a lost one fails here. An account nobody has assessed has an
+// empty lifecycle row, which folds behind the details' "Show N empty fields".
 async function lifecycleControls(): Promise<HTMLElement[]> {
   const header = await screen.findAllByRole("combobox", { name: "Lifecycle" });
+  const unfold = screen.queryByRole("button", {
+    name: /^Show \d+ empty fields$/,
+  });
+  if (unfold) {
+    await userEvent.click(unfold);
+  }
   const grid = await screen.findAllByRole("button", {
     name: "Change Lifecycle",
   });
@@ -46,8 +53,8 @@ async function lifecycleControls(): Promise<HTMLElement[]> {
 }
 
 describe("company view — where the account stands, and what it is to us", () => {
-  it("shows where the account stands, and the types it does not already say", async () => {
-    // Not "partner". That type also raises the Partner tab, so the badge and
+  it("shows where the account stands, and draws no relationship type beside it", async () => {
+    // Not "partner". That type also raises the Partner tab, so the type and
     // the tab would share a label and tell the test nothing.
     //
     // The same override goes into both reads: the 360's own `company` (read by
@@ -73,14 +80,13 @@ describe("company view — where the account stands, and what it is to us", () =
     for (const control of await lifecycleControls()) {
       expect(control.textContent).toContain("Former customer");
     }
-    // A type the lifecycle already speaks for is not drawn beside it. This
-    // account is a former customer and still carries the `customer` type.
-    // Printed together they read "Former customer" and "Customer" on one line:
-    // one fact and its own contradiction.
+    // The design draws no relationship badge beside the name and no type row
+    // in the details: the types are a Profile tab field. This account is a
+    // former customer and still carries the `customer` type. Printing both
+    // would read "Former customer" and "Customer" as one fact and its own
+    // contradiction.
     expect(screen.queryByText("Customer")).toBeNull();
-    // Supplier survives: the lifecycle has nothing to say about it, so it is
-    // a second fact rather than a second tense of the first.
-    expect(screen.getByText("Supplier")).toBeTruthy();
+    expect(screen.queryByText("Supplier")).toBeNull();
   });
 
   it("offers the lifecycle control on an account nobody has assessed yet", async () => {
@@ -94,11 +100,10 @@ describe("company view — where the account stands, and what it is to us", () =
 
     // At 'unknown' a badge would be noise, but a control must still show.
     // Hiding it takes the field away from the account that needs it set, and
-    // there is no other way in from here. It must not read as a verdict, so it
-    // carries the field name and 'Not assessed' never stands alone. Both mount
-    // points (header, grid) show it.
+    // there is no other way in from here. It reads "Unknown", the stage's own
+    // word, never a verdict. Both mount points (header, grid) show it.
     for (const control of await lifecycleControls()) {
-      expect(control.textContent).toContain("Not assessed");
+      expect(control.textContent).toContain("Unknown");
     }
   });
 
@@ -204,42 +209,6 @@ describe("company view — the KPI row never invents a figure", () => {
     // the fact this account has.
     expect(within(strip).getByText("2")).toBeTruthy();
     expect(within(strip).getByText("No amount")).toBeTruthy();
-  });
-
-  // Two cards saying "in conversation" in different words take two of six slots
-  // for one card's worth of information. On a live account the health card
-  // reports the balance of the exchange, which the engagement card does not
-  // answer. "They write and we do not reply" and "we write into silence" are
-  // both recent, and are opposite problems.
-  it("reports who is carrying a live relationship, not that it is live", async () => {
-    stub(
-      view({
-        health: { days_since_last_inbound: 0, reply_balance: 0.86 },
-        state_strip: {
-          account: { lifecycle: "customer", relationship_types: [] },
-          engagement: {
-            state: "active",
-            last_inbound_at: "2026-08-08T10:00:00Z",
-          },
-          commercial: {
-            open_count: 1,
-            stalled_count: 0,
-            priced_count: 1,
-            converted_count: 0,
-            open_pipeline_minor_base: 100000,
-            base_currency: "EUR",
-          },
-        },
-      }),
-    );
-    renderCompany();
-    const strip = await screen.findByRole("region", {
-      name: "Company status",
-    });
-
-    // 86% of the exchange is theirs: they are asking more than we answer.
-    expect(within(strip).getByText("One-sided")).toBeTruthy();
-    expect(within(strip).getByText("86% inbound")).toBeTruthy();
   });
 
   it("says an empty pipeline is empty, not unpriced", async () => {
@@ -364,11 +333,11 @@ describe("company view — the KPI row never invents a figure", () => {
     });
     expect(within(strip).getByText("Not invoiced")).toBeTruthy();
     expect(within(strip).getByText("Prospect")).toBeTruthy();
-    // The relationship and health are on both rows: a prospect still learns how
-    // the relationship stands.
-    expect(within(strip).getAllByText("Relationship").length).toBeGreaterThan(
-      0,
-    );
+    // The strip never carries an overdue cell: what is owed past due is the
+    // Payment row's reading and the Finance tab's.
+    expect(within(strip).queryByText("Overdue")).toBeNull();
+    // A prospect still learns how the relationship stands, in How it stands.
+    expect(screen.getAllByText("Relationship").length).toBeGreaterThan(0);
 
     cleanup();
     stub(
@@ -391,10 +360,8 @@ describe("company view — the KPI row never invents a figure", () => {
     strip = await screen.findByRole("region", {
       name: "Company status",
     });
-    expect(within(strip).getAllByText("Relationship").length).toBeGreaterThan(
-      0,
-    );
-    expect(within(strip).getByText("Quiet")).toBeTruthy();
+    expect(screen.getAllByText("Relationship").length).toBeGreaterThan(0);
+    expect(within(strip).queryByText("Overdue")).toBeNull();
     expect(within(strip).queryByText("Not invoiced")).toBeNull();
   });
 });
@@ -592,14 +559,10 @@ describe("a customer's KPI row reports what the account is worth", () => {
     expect(within(region).getByText(/428(\.0)?K lifetime/i)).toBeTruthy();
   });
 
-  // Open balance and overdue are Finance-tab headline readings. A strip that
-  // answered them too would be a second copy of that card, and would drift from
-  // it.
-  //
-  // The lifetime total is not one of them. The Finance tab shows open balance
-  // and overdue but not lifetime. So the strip is the only place the trailing
-  // year can be compared against it.
-  it("does not draw the Finance tab's own readings a second time", async () => {
+  // The year's revenue reads off the same finance summary the Finance tab
+  // reads, so the two cannot drift. The lifetime total rides in the revenue
+  // cell's detail line; what is overdue is the Finance tab's.
+  it("reads the year's revenue and leaves what is overdue to the Finance tab", async () => {
     stub(
       view({ state_strip: customer }),
       200,
@@ -615,15 +578,11 @@ describe("a customer's KPI row reports what the account is worth", () => {
     const region = await strip();
     await waitFor(() => expect(region.textContent).not.toMatch(/Loading…/));
 
-    // No slot of its own for any of them, lifetime included. Lifetime rides in
-    // the money slot's detail line, where it cannot be mistaken for the
-    // headline.
     expect(within(region).queryByText("Net invoiced · lifetime")).toBeNull();
+    expect(within(region).getByText(/186(\.4)?K/i)).toBeTruthy();
     expect(within(region).queryByText("Overdue")).toBeNull();
-    expect(within(region).queryByText("Open invoices")).toBeNull();
-    // The two figures the Finance tab already headlines appear nowhere at all.
-    expect(region.textContent).not.toMatch(/34(\.2)?K/i);
-    expect(region.textContent).not.toMatch(/12(\.4)?K/i);
+    expect(within(region).queryByText(/12(\.4)?K/i)).toBeNull();
+    expect(within(region).queryByText(/Open .*34(\.\d)?K/i)).toBeNull();
   });
 });
 
@@ -814,11 +773,9 @@ describe("the money slot says its reason once and borrows no figure", () => {
       ),
     );
 
-    // One statement, not three blanks. The other money windows are the Finance
-    // tab's. Asking each of them here would repeat one fact about the
-    // connection three times, on a row that has to stay one line.
+    // One statement, not one per cell: the overdue cell beside it has no
+    // figure either, and leaves the reason to the revenue cell.
     expect(within(region).queryByText("Net invoiced · lifetime")).toBeNull();
-    expect(within(region).queryByText("Overdue")).toBeNull();
   });
 
   // The lifetime total is the figure most likely present when the trailing year
@@ -842,13 +799,10 @@ describe("the money slot says its reason once and borrows no figure", () => {
     expect(within(region).getAllByText("Customer not matched").length).toBe(1);
   });
 
-  // The team lead's two required shapes: a customer whose finance connection
-  // cannot answer, and one whose connection can. Both must still carry the
-  // account's standing (pipeline, relationship, health). The defect this suite
-  // guards is the standing readings disappearing behind the money. A
-  // relationship dimension and a live reply balance give HealthStat and
-  // HealthSummaryStat real verdicts, so the standing half of the row is worth
-  // asserting.
+  // Two shapes: a customer whose finance connection cannot answer, and one
+  // whose connection can. Both must still carry the account's standing
+  // (pipeline, relationship); the defect guarded is the standing disappearing
+  // behind the money.
   const withStanding = () =>
     view({
       state_strip: {
@@ -884,17 +838,11 @@ describe("the money slot says its reason once and borrows no figure", () => {
     );
 
     expect(within(region).getByText("Open deals")).toBeTruthy();
-    // The card's own label, which the health receipt's dimension name
-    // matches: one word for one reading across the page.
-    expect(
-      within(region).getByText("Relationship", {
-        selector: ".stat-card-label-text",
-      }),
-    ).toBeTruthy();
-    // The other two doors: the last contact and the calendar, whatever the
-    // money slot could or could not read.
+    // The relationship reads in How it stands above the figures, whatever the
+    // money cells could or could not read.
+    expect(screen.getAllByText("Relationship").length).toBeGreaterThan(0);
     expect(within(region).getByText("Last contact")).toBeTruthy();
-    expect(within(region).getByText("Next meeting")).toBeTruthy();
+    expect(within(region).queryByText("Overdue")).toBeNull();
     // One label on the money slot whatever it can report, so a reader never has
     // to notice the slot renamed itself.
     expect(within(region).getByText("Revenue · 12 mo")).toBeTruthy();
@@ -914,13 +862,9 @@ describe("the money slot says its reason once and borrows no figure", () => {
     await waitFor(() => expect(region.textContent).not.toMatch(/Loading…/));
 
     expect(within(region).getByText("Open deals")).toBeTruthy();
-    expect(
-      within(region).getByText("Relationship", {
-        selector: ".stat-card-label-text",
-      }),
-    ).toBeTruthy();
+    expect(screen.getAllByText("Relationship").length).toBeGreaterThan(0);
     expect(within(region).getByText("Last contact")).toBeTruthy();
-    expect(within(region).getByText("Next meeting")).toBeTruthy();
+    expect(within(region).queryByText("Overdue")).toBeNull();
     expect(within(region).getByText("Revenue · 12 mo")).toBeTruthy();
     expect(within(region).getByText(/186(\.4)?K/i)).toBeTruthy();
     // The slot never renames itself: "Finance" was the label it wore with no

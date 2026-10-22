@@ -15,12 +15,8 @@ import {
   Textarea,
 } from "../../../design-system/atoms";
 import { ConfirmModal } from "../../../design-system/confirmmodal";
-import {
-  Panel,
-  PanelBody,
-  PanelIntro,
-  PanelRow,
-} from "../../../design-system/panel";
+import { DataTable } from "../../../design-system/datatable";
+import { Panel, PanelBody, PanelIntro } from "../../../design-system/panel";
 import { QueryGate } from "../../../design-system/querystates";
 import { formatDateTime } from "../../../format/format";
 import { viewerZone } from "../../../format/timezone";
@@ -36,6 +32,7 @@ import {
 } from "../../../lib/legalreviews.queries";
 import { problemMessageOf } from "../../../lib/problem";
 import { navigate } from "../../../lib/router";
+import "./deallegaltab.css";
 
 type Deal = components["schemas"]["Deal"];
 
@@ -120,108 +117,144 @@ function RequestDialog({
   );
 }
 
-/** The deal's legal review tab. */
+/** The deal's legal review tab: the request, then every answer legal gave. */
 export function DealLegalTab({ deal }: Readonly<{ deal: Deal }>) {
   const t = useT();
   const available = useLegalReviewAvailable();
   const reviews = useDealLegalReviews(deal.id, available === true);
-  return (
-    <Panel title={t("legalReview.tab")}>
-      <QueryGate query={reviews} pendingLabel={t("legalReview.tab")}>
-        {(list) => <ReviewList deal={deal} reviews={list} />}
-      </QueryGate>
-    </Panel>
-  );
-}
-
-function ReviewList({
-  deal,
-  reviews,
-}: Readonly<{ deal: Deal; reviews: readonly LegalReviewSummary[] }>) {
-  const t = useT();
-  const newest = reviews[0];
-  const open = newest?.status === "requested";
+  const newest = reviews.data?.[0];
   return (
     <>
-      <PanelBody>
-        <PanelIntro>{t("legalReview.packIntro")}</PanelIntro>
-        {!open && (
-          <div className="card-actions">
-            <RequestLegalReviewAction
-              deal={deal}
-              previousReviewId={
-                newest?.status === "changes_needed" ? newest.id : undefined
-              }
-            />
-          </div>
-        )}
-      </PanelBody>
-      {reviews.length === 0 ? (
+      <Panel title={t("legalReview.tab")}>
         <PanelBody>
-          <EmptyState>{t("legalReview.empty")}</EmptyState>
+          <PanelIntro>{t("legalReview.packIntro")}</PanelIntro>
+          {reviews.isSuccess && newest?.status !== "requested" && (
+            <div className="card-actions">
+              <RequestLegalReviewAction
+                deal={deal}
+                previousReviewId={
+                  newest?.status === "changes_needed" ? newest.id : undefined
+                }
+              />
+            </div>
+          )}
         </PanelBody>
-      ) : (
-        reviews.map((review) => (
-          <ReviewRow key={review.id} deal={deal} review={review} />
-        ))
-      )}
+      </Panel>
+      <Panel title={t("legalReview.reviews")}>
+        <QueryGate query={reviews} pendingLabel={t("legalReview.reviews")}>
+          {(list) =>
+            list.length === 0 ? (
+              <PanelBody>
+                <EmptyState>{t("legalReview.empty")}</EmptyState>
+              </PanelBody>
+            ) : (
+              <PanelBody>
+                <ReviewTable deal={deal} reviews={list} />
+              </PanelBody>
+            )
+          }
+        </QueryGate>
+      </Panel>
     </>
   );
 }
 
-function ReviewRow({
+function ReviewTable({
+  deal,
+  reviews,
+}: Readonly<{ deal: Deal; reviews: readonly LegalReviewSummary[] }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = viewerZone();
+  const someone = t("legalReview.someoneShort");
+  return (
+    <DataTable
+      label={t("legalReview.reviews")}
+      fold
+      rows={[...reviews]}
+      rowKey={(review) => review.id}
+      columns={[
+        {
+          key: "status",
+          header: t("legalReview.col.status"),
+          fold: "title",
+          render: (review) => <LegalReviewStatusBadge status={review.status} />,
+        },
+        {
+          key: "requested",
+          header: t("legalReview.col.requestedBy"),
+          render: (review) => review.requested_by_name ?? someone,
+        },
+        {
+          key: "when",
+          header: t("legalReview.col.when"),
+          render: (review) => formatDateTime(review.created_at, locale, zone),
+        },
+        {
+          key: "decided",
+          header: t("legalReview.col.decidedBy"),
+          render: (review) =>
+            review.decided_at ? (review.decided_by_name ?? someone) : null,
+        },
+        {
+          key: "comments",
+          header: t("legalReview.col.comments"),
+          grow: true,
+          render: (review) => <ReviewWords review={review} />,
+        },
+        {
+          key: "actions",
+          header: t("table.actions"),
+          headerHidden: true,
+          fold: "end",
+          render: (review) => <ReviewVerbs deal={deal} review={review} />,
+        },
+      ]}
+    />
+  );
+}
+
+// What legal answered, and under it what the requester asked them to look at.
+function ReviewWords({ review }: Readonly<{ review: LegalReviewSummary }>) {
+  const t = useT();
+  if (!review.comments && !review.note) {
+    return null;
+  }
+  return (
+    <span className="legal-review-words">
+      {review.comments && <span>{review.comments}</span>}
+      {review.note && (
+        <span className="t-caption">
+          {t("legalReview.noteShown", { note: review.note })}
+        </span>
+      )}
+    </span>
+  );
+}
+
+function ReviewVerbs({
   deal,
   review,
 }: Readonly<{ deal: Deal; review: LegalReviewSummary }>) {
   const t = useT();
-  const { locale } = useLocale();
-  const zone = viewerZone();
   const reviewer = useCan("legal_review", "read");
   const canWrite = useCanWriteRecord("deal", deal);
   return (
-    <PanelRow className="meta-row">
-      <span className="meta-row-line t-caption">
-        <LegalReviewStatusBadge status={review.status} />
-        <span>
-          {t("legalReview.requestedBy", {
-            name: review.requested_by_name ?? t("legalReview.someone"),
-          })}
-        </span>
-        <span>{formatDateTime(review.created_at, locale, zone)}</span>
-        {review.decided_at && (
-          <span>
-            {t("legalReview.decidedBy", {
-              name: review.decided_by_name ?? t("legalReview.someone"),
-            })}
-          </span>
-        )}
-      </span>
-      {review.note && (
-        <span className="meta-row-entry t-body">
-          {t("legalReview.noteShown", { note: review.note })}
-        </span>
+    <span className="cell-actions">
+      {reviewer && (
+        <Button
+          variant="link"
+          onClick={() =>
+            navigate({ screen: LEGAL_REVIEWS_SCREEN, id: review.id })
+          }
+        >
+          {t("legalReview.openPack")}
+        </Button>
       )}
-      {review.comments && (
-        <span className="meta-row-entry t-body">
-          {t("legalReview.commentsShown", { comments: review.comments })}
-        </span>
+      {review.status === "requested" && canWrite && (
+        <WithdrawAction reviewId={review.id} />
       )}
-      <span className="meta-row-action">
-        {reviewer && (
-          <Button
-            variant="link"
-            onClick={() =>
-              navigate({ screen: LEGAL_REVIEWS_SCREEN, id: review.id })
-            }
-          >
-            {t("legalReview.openPack")}
-          </Button>
-        )}
-        {review.status === "requested" && canWrite && (
-          <WithdrawAction reviewId={review.id} />
-        )}
-      </span>
-    </PanelRow>
+    </span>
   );
 }
 

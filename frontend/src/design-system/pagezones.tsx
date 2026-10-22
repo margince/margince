@@ -8,22 +8,20 @@ import "./pagezones.css";
 // PageZones is the page-level column layout: one work column, and up to two
 // rails of context beside it.
 //
-// It carries the grid and nothing else — no name, no mark, no badge, no tabs.
-// Those belong to whatever composes it (`RecordView` for a record page), which
-// is what makes the shape available to a page that is not a record: the Brief
-// screen's work column with its context rail is the same layout as a company's,
-// and a second stylesheet spelling the same three ratios and the same two folds
-// would drift the first time either moved.
+// It carries the grid and nothing else: no name, no mark, no badge, no tabs.
+// Those belong to whatever composes it, which makes the shape available to any
+// page. A second stylesheet spelling the same three ratios and the same two
+// folds would drift the first time either moved.
 
 /**
  * Which columns the page has, and therefore which grid it draws.
  *
- * `single` is not a one-column grid — it is NO grid: the work column is the
- * page's only block and wrapping it in a one-track grid would add a rhythm
- * nothing needs. A shape names the TEMPLATE; the slots below carry the
- * content, and a caller keeps the two in agreement (`rail` with no rail slot
+ * `single` is not a one-column grid: it is no grid. The work column is the
+ * page's only block, and wrapping it in a one-track grid would add a rhythm
+ * nothing needs. A shape names the template. The slots below carry the
+ * content, and a caller keeps the two in agreement. A `rail` with no rail slot
  * draws an empty track, because a grid track does not collapse when its item
- * is missing — which is the whole reason the shape is explicit).
+ * is missing. That is the whole reason the shape is explicit.
  *
  * A shape does not change when the details pane folds: `asideOpen` travels the
  * aside's TRACK to zero and leaves the named areas where they are, because two
@@ -49,9 +47,8 @@ export function PageZones({
   // Required, because a page with only rails is a page with no subject.
   main: ReactNode;
   // Classes for the work column, on top of the one this component needs to
-  // place it in the grid. For the composing page's own rhythm —
-  // `RecordView` marks it as an arrival stack so its blocks fade in one after
-  // the next rather than as one plate.
+  // place it in the grid. For the composing page's own rhythm: an arrival
+  // stack, so its blocks fade in one after the next rather than as one plate.
   mainClassName?: string;
   // The left rail: what this page's subject IS. Absent leaves the column out
   // of the DOM entirely rather than rendering an empty landmark.

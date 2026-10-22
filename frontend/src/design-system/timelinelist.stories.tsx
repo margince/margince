@@ -325,6 +325,63 @@ export const NoteThatReadsLikeASignOff: Story = {
   ),
 };
 
+// A conversation with files: the card totals what the whole thread carried
+// and each message keeps its own count. The withheld message adds none, though its
+// wire summary still holds a number.
+function summaryOf(
+  id: string,
+  attachments: number,
+  displayStatus: "team" | "withheld" = "team",
+): NonNullable<TimelineEntry["emailSummary"]> {
+  return {
+    activity_id: id,
+    occurred_at: "2026-08-14T15:20:00Z",
+    display_status: displayStatus,
+    attachment_count: attachments,
+    move: "none",
+    version: 1,
+  };
+}
+
+export const ThreadWithFiles: Story = {
+  render: () => (
+    <ul className="timeline">
+      <ThreadRow
+        zone={ZONE}
+        group={{
+          id: "files-thread",
+          kind: "thread",
+          partial: false,
+          entries: [
+            entry("files-3", "2026-08-14T15:20:00Z", {
+              direction: "inbound",
+              counterparts: "Dana Buyer",
+              body: "Signed copy attached.",
+              emailSummary: {
+                ...summaryOf("files-3", 1),
+                preview: "Signed copy attached.",
+              },
+            }),
+            entry("files-2", "2026-08-13T10:00:00Z", {
+              direction: "outbound",
+              counterparts: "Dana Buyer",
+              body: "Contract and annex attached.",
+              emailSummary: {
+                ...summaryOf("files-2", 2),
+                preview: "Contract and annex attached.",
+              },
+            }),
+            entry("files-1", "2026-08-12T10:00:00Z", {
+              withheld: true,
+              emailSummary: summaryOf("files-1", 4, "withheld"),
+            }),
+          ],
+        }}
+      />
+    </ul>
+  ),
+};
+
 export const CommitmentsToReview: Story = {
   render: () => (
     <ul className="timeline">

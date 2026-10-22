@@ -56,7 +56,7 @@ function MomentVerb({
 }>) {
   return (
     <span className="today-verb">
-      <Button variant={primary ? "ai" : "ghost"} onClick={onAct}>
+      <Button variant={primary ? "primary" : "ghost"} onClick={onAct}>
         {icon}
         {label}
       </Button>
@@ -90,10 +90,8 @@ export function momentVerb({
     return fallback;
   }
   const { entity_type: type, entity_id: id } = destination;
-  // Indigo marks the verb the agent RECOMMENDS: the moment proposed this
-  // move, whatever the press then does — open a record, start a draft. The
-  // accent is the brand asking, and it would claim the move as the reader's
-  // own rather than the one Margince found.
+  // The accent, not indigo: the moment is picked from a fixed rule ladder and
+  // never written by a model. Indigo would claim that an agent wrote it.
   return (
     <MomentVerb primary label={label} onAct={() => onOpenRecord(type, id)} />
   );

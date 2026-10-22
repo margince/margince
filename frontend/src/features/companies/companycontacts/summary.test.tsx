@@ -166,10 +166,7 @@ test("reads coverage against the roster, and names both gaps", async () => {
   ).not.toBeNull();
 });
 
-// The fold is the PLATE's — `.stat-strip:has(.stat-card-narrow-row)` restyles
-// the whole row — so a strip where only some cards declared it would draw a
-// bordered box among a column of borderless rows.
-test("every slot on the band declares the narrow shape", async () => {
+test("the band reads the roster size, who answers, the open role and the way in", async () => {
   stub({
     best_way_in: {
       contact_id: "p-1",
@@ -186,8 +183,10 @@ test("every slot on the band declares the narrow shape", async () => {
   );
 
   const band = await screen.findByTestId("coverage-band");
-  expect(band.childElementCount).toBe(3);
-  expect(band.querySelectorAll(".stat-card-narrow-row").length).toBe(3);
+  expect(band.childElementCount).toBe(4);
+  expect(band.closest("section")?.getAttribute("aria-label")).toBe(
+    "Coverage at this company",
+  );
 });
 
 test("names the missing critical role", async () => {
@@ -254,7 +253,7 @@ test("does not name a gap when seats are hidden", async () => {
   expect(screen.queryByText(/No champion/)).toBeNull();
 });
 
-test("the Coverage door narrows the list to the untried", async () => {
+test("the In touch door narrows the list to the untried", async () => {
   const narrowed: string[] = [];
   stub({
     best_way_in: {
@@ -273,7 +272,7 @@ test("the Coverage door narrows the list to the untried", async () => {
 
   const untried = await screen.findByRole("button", {
     name: "Open",
-    description: "Coverage",
+    description: "In touch",
   });
   untried.click();
   expect(narrowed).toContain("untried");
@@ -290,7 +289,7 @@ test("renders the German words under a German locale", async () => {
     "de",
   );
 
-  await waitFor(() => expect(screen.getByText("Abdeckung")).not.toBeNull());
+  await waitFor(() => expect(screen.getByText("In Kontakt")).not.toBeNull());
 });
 
 // An account with no open deal has no committee to READ, which is not the same

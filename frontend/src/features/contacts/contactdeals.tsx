@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { Avatar } from "../../design-system/atoms";
-import { Panel, PanelBody } from "../../design-system/panel";
+import { Badge } from "../../design-system/atoms";
+import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
 import { SurfaceState, sectionState } from "../../design-system/surfacestate";
 import { formatDayMonth, formatMoneyCompact } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
@@ -11,9 +11,10 @@ import { throwProblem } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import "./contact360.css";
+import { dealRoleLabel } from "../../lib/recordlabels";
 import { AddRelationshipAction } from "../records/relationships";
-import { readableRole } from "./contactcards";
 import { ContactDealRooms } from "./contactdealrooms";
+import "./contacttabs.css";
 
 type Contact360 = components["schemas"]["Contact360"];
 type Deal = components["schemas"]["Deal"];
@@ -81,22 +82,14 @@ function useDealCompany(companyId: string | null | undefined) {
 
 // One deal this contact sits on: the seat `deal_roles` carries, and the
 // money, the close date and the company `useDealSummary`/`useDealCompany`
-// fetch for it. `committee` is passed only for the one deal the commercial
-// section is tracking as open: the other stakeholders in the room, which no
-// per-deal fetch here carries.
-function DealCard({
-  role,
-  committee,
-}: Readonly<{
-  role: DealRole;
-  committee?: CommitteeMember[];
-}>) {
+// fetch for it.
+function DealRow({ role }: Readonly<{ role: DealRole }>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   const deal = useDealSummary(role.deal_id).data;
   const company = useDealCompany(deal?.company_id).data;
-  const roleWord = readableRole(role.role);
+  const roleWord = dealRoleLabel(role.role, t);
   const meta = [
     deal?.amount_minor != null && deal.currency
       ? formatMoneyCompact(deal.amount_minor, deal.currency, locale)
@@ -116,37 +109,43 @@ function DealCard({
     .filter(Boolean)
     .join(" · ");
   return (
-    <div className="pe-deal-card">
-      <span className="pe-deal-card-title">
+    <PanelRow record className="ct-item">
+      <div className="ct-item-main">
         <button
           type="button"
-          className="pe-meta-link"
+          className="ct-item-link"
           onClick={() => navigate({ screen: "deals", id: role.deal_id })}
         >
           {role.deal_title ?? t("contact.deals.untitled")}
         </button>
-      </span>
-      <span className="pe-deal-card-meta t-caption">{meta}</span>
-      {roleWord && <span className="t-caption">{roleWord}</span>}
-      {committee && committee.length > 0 && (
-        <div className="pe-deal-card-committee">
-          <span className="t-caption">{t("contact.commercial.committee")}</span>
-          {committee.map((member) => (
-            <div className="pe-deal-card-committee-row" key={member.contact_id}>
-              <Avatar
-                name={member.full_name}
-                identity={member.contact_id}
-                src={member.photo_url}
-              />
-              <span>{member.full_name}</span>
-              {member.role && (
-                <span className="t-caption">{readableRole(member.role)}</span>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
+        <span className="t-caption">{meta}</span>
+      </div>
+      {roleWord && <Badge>{roleWord}</Badge>}
+    </PanelRow>
+  );
+}
+
+// The other seats on the one deal the commercial section tracks as open, said
+// once under the list. A seat with no recorded role shows the name alone.
+function Committee({ members }: Readonly<{ members: CommitteeMember[] }>) {
+  const t = useT();
+  return (
+    <p className="t-caption ct-committee">
+      <span>{t("contact.commercial.committee")}</span>
+      {members.map((member) => (
+        <span className="ct-seat" key={member.contact_id}>
+          <span className="ct-seat-name">{member.full_name}</span>
+          {member.role && (
+            <>
+              {" "}
+              <span className="ct-seat-role">
+                {dealRoleLabel(member.role, t)}
+              </span>
+            </>
+          )}
+        </span>
+      ))}
+    </p>
   );
 }
 
@@ -155,7 +154,7 @@ function DealCard({
 // Appended rather than dropped, because losing it here would be the seat and
 // the committee disappearing off the edge of a page cut the reader never
 // asked about.
-function dealCards(view?: Contact360): DealRole[] {
+export function dealCards(view?: Contact360): DealRole[] {
   const roles = view?.deal_roles?.data ?? [];
   const openDeal = view?.commercial?.deal;
   if (openDeal && !roles.some((role) => role.deal_id === openDeal.deal_id)) {
@@ -174,13 +173,10 @@ function dealCards(view?: Contact360): DealRole[] {
 }
 
 /**
- * ContactDealsTab is one list of cards: every deal this contact is recorded
- * on, each carrying its seat, its money, its stage and the company it is
- * with, plus (for the one deal the commercial section is tracking as open)
- * the buying committee besides. The committee used to live a second time in a
- * panel of its own below the list; folded into the matching card instead,
- * because a second wording of the same deal is how the two started to
- * disagree.
+ * ContactDealsTab is one list of every deal this contact is recorded on. Each
+ * row carries its money, its stage, its close date and its company, with the
+ * seat at the far edge. The buying committee of the one deal the commercial
+ * section tracks as open is said once, under the list.
  */
 export function ContactDealsTab({
   view,
@@ -202,6 +198,7 @@ export function ContactDealsTab({
     cards.length,
     loading,
   );
+  const committee = view?.commercial?.committee ?? [];
   return (
     <div className="record-stack">
       <Panel
@@ -223,26 +220,27 @@ export function ContactDealsTab({
             />
           ) : undefined
         }
+        footer={
+          state === "ready" && committee.length > 0 ? (
+            <Committee members={committee} />
+          ) : undefined
+        }
       >
-        <PanelBody>
-          <SurfaceState
-            state={state}
-            emptyLabel={t("contact.deals.empty")}
-            loadingLabel={t("tab.deals")}
-          >
-            {cards.map((role) => (
-              <DealCard
-                key={role.relationship_id}
-                role={role}
-                committee={
-                  view?.commercial?.deal?.deal_id === role.deal_id
-                    ? view.commercial.committee
-                    : undefined
-                }
-              />
-            ))}
-          </SurfaceState>
-        </PanelBody>
+        {state === "ready" ? (
+          cards.map((role) => (
+            <DealRow key={role.relationship_id} role={role} />
+          ))
+        ) : (
+          <PanelBody>
+            <SurfaceState
+              state={state}
+              emptyLabel={t("contact.deals.empty")}
+              loadingLabel={t("tab.deals")}
+            >
+              {null}
+            </SurfaceState>
+          </PanelBody>
+        )}
       </Panel>
       <ContactRooms view={view} />
     </div>

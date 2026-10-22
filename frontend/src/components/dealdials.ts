@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { operations } from "../api/schema";
-import { dealStatusFilter } from "../format/dealstatus";
+import { dealStatusFilter, forecastCategoryFilter } from "../format/dealstatus";
 import { useT } from "../i18n";
 
 export {
@@ -10,6 +10,7 @@ export {
   DEAL_STATUS_VALUES,
   dealStatusFilter,
   dealStatusLabel,
+  forecastCategoryFilter,
 } from "../format/dealstatus";
 
 import { useEntityName } from "./entityref.queries";
@@ -23,25 +24,6 @@ import { useEntityName } from "./entityref.queries";
 
 type DealQuery = NonNullable<operations["listDeals"]["parameters"]["query"]>;
 export type DealStatus = NonNullable<DealQuery["status"]>;
-type ForecastFilter = NonNullable<DealQuery["forecast_category"]>;
-
-// Each record is keyed by the contract's own union, so a value the wire adds
-// fails the build here until it is listed. `slipped` is not in the forecast
-// union: the report derives it from a claimed category and a close date.
-const FORECAST_FILTER: Readonly<Record<ForecastFilter, true>> = {
-  commit: true,
-  best_case: true,
-  pipeline: true,
-  omitted: true,
-};
-
-export function forecastCategoryFilter(
-  value: string | undefined,
-): ForecastFilter | undefined {
-  return Object.keys(FORECAST_FILTER).find(
-    (admitted): admitted is ForecastFilter => admitted === value,
-  );
-}
 
 const ENUM_DIALS: Readonly<
   Record<string, (value: string | undefined) => string | undefined>

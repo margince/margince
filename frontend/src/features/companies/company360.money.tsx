@@ -1,4 +1,10 @@
 import type { components } from "../../api/schema";
+import {
+  HEALTH_DIMENSION_LABEL,
+  HEALTH_RATING_LABEL,
+  LIFECYCLE_LABELS,
+} from "../../components/companylookups";
+import { useFinanceSummary } from "../../components/financesummary";
 import { StatCard } from "../../design-system/atoms";
 import { FactList } from "../../design-system/factlist";
 import { formatMoneyCompact } from "../../format/format";
@@ -7,12 +13,6 @@ import type { MessageKey } from "../../i18n/en";
 import { problemCodeOf } from "../../lib/problem";
 import type { Company360 } from "./company360";
 import { WITHHELD_READING } from "./company360health";
-import {
-  HEALTH_DIMENSION_LABEL,
-  HEALTH_RATING_LABEL,
-  LIFECYCLE_LABELS,
-} from "./companylookups";
-import { useFinanceSummary } from "./financesummary";
 
 type Health = NonNullable<Company360["health"]>;
 
@@ -152,7 +152,7 @@ export function MoneyStat({
   // The finance card and the payment health dimension run this same query.
   // So every money reading on one page agrees, and all but the first are free.
   const { data, isPending, isError, error } = useFinanceSummary(companyId);
-  const slot = { label: t("co.strip.netInvoiced"), narrow: "row" } as const;
+  const slot = { label: t("co.strip.netInvoiced") } as const;
   const basis = dimension ? (
     <FactList
       facts={[

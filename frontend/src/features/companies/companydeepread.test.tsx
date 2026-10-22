@@ -28,6 +28,8 @@ afterEach(() => {
 // than a stand-in. A test that supplied its own column would prove nothing
 // about the one the product draws.
 function render(ui: ReactNode) {
+  // The research offer is on the Profile tab, which the page reads off the URL.
+  window.location.hash ||= "#/companies/o-1/profile";
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -104,10 +106,7 @@ async function startDeepRead(calls: string[]) {
   await waitFor(() =>
     expect(screen.getByText("Brandt Automotive GmbH")).toBeTruthy(),
   );
-  // No navigation: this fixture's account has nothing on file, so the 360
-  // leads with the research offer rather than filing it under the record's
-  // tools. An account that HAS something meets it on Profile instead, and the
-  // offer renders in exactly one of the two.
+  // The offer stands on the Profile tab, where render() opens the page.
   await userEvent.click(
     screen.getByRole("button", { name: "Start company research" }),
   );
@@ -140,9 +139,6 @@ describe("company-360 deep read", () => {
       render(<CompanyScreen id="o-1" />);
       await flush();
       await flush();
-      // No navigation: this fixture's account has nothing on file, so the 360
-      // itself leads with the research offer rather than filing it under the
-      // record's tools.
       fireEvent.click(
         screen.getByRole("button", { name: "Start company research" }),
       );
@@ -277,11 +273,13 @@ describe("company-360 deep read", () => {
       latest: () => jsonResponse(settled),
       report: () => jsonResponse(settled),
     });
+    // Opened on the Overview, where the offer must be absent.
+    window.location.hash = "#/companies/o-1";
     render(<CompanyScreen id="o-1" />);
 
-    // On PROFILE, because an account that has been read no longer leads its
-    // Overview with the offer — offerResearchOnOverview stands it down, and
-    // the panel is on the tab holding the record's other tools.
+    // On Profile, because an account that has been read no longer leads its
+    // Overview with the offer. offerResearchOnOverview stands it down. The
+    // panel is on the tab holding the record's other tools.
     await waitFor(() =>
       expect(screen.getByText("Brandt Automotive GmbH")).toBeTruthy(),
     );

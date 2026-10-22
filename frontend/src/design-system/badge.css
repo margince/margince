@@ -149,13 +149,18 @@
  * rather than one the record remembers. `currentColor`, so it says what the
  * label says, in either variant — and the only moving thing in this
  * vocabulary. */
-.badge-live-dot {
+/* The resting dot marks a status that asks for the reader's move, the same
+   geometry standing still. */
+.badge-live-dot,
+.badge-dot {
   width: 6px;
   height: 6px;
   border-radius: var(--r-full);
   corner-shape: round;
   background: currentColor;
   flex: none;
+}
+.badge-live-dot {
   animation: badge-live-breathe 2.2s var(--ease-in-out) infinite;
 }
 @keyframes badge-live-breathe {

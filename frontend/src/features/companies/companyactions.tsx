@@ -59,9 +59,12 @@ export function NewDealAction({
   companyName,
   projectId,
   onCreated,
+  link,
 }: Readonly<{
   companyId: string;
   companyName: string;
+  // Drawn as a card's header link rather than a button.
+  link?: boolean;
   // The project the new deal is born into, when the verb is offered from a
   // project page. The deal then names the project at birth, which is the only
   // moment the deal and the project are guaranteed to share a company.
@@ -143,6 +146,7 @@ export function NewDealAction({
       aboutId={companyId}
       stay={onCreated !== undefined}
       onCreated={onCreated}
+      link={link}
     />
   );
 }

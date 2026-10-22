@@ -4,8 +4,10 @@
 // The record-360 kit's public surface. Deal360, Company360 and Contact360 all
 // import from here; see README.md for what belongs in it.
 
-export { BriefTitle } from "./brieftitle";
-export { citationOpensRecord, openCitation } from "./citationroute";
+export {
+  citationOpensRecord,
+  openCitation,
+} from "../../../components/citationroute";
 export {
   type BriefSentence,
   type CitationChip,
@@ -18,38 +20,18 @@ export {
   SentenceList,
   WrittenBy,
   type WrittenByWriter,
-} from "./citations";
-export {
-  EvidenceSources,
-  fromCitations,
-  fromDealMove,
-} from "./evidencesources";
-export { incompleteGraph } from "./graphcompleteness";
+} from "../../../components/citations";
 export {
   dealRoleLabel,
   projectRoleLabel,
   signalKindLabel,
   signalTone,
-} from "./labels";
-export { basisAddsARecord, momentIsARow, momentKicker } from "./moment";
+} from "../../../lib/recordlabels";
+export { EvidenceSources, fromCitations } from "./evidencesources";
+export { incompleteGraph } from "./graphcompleteness";
+export { basisAddsARecord } from "./moment";
 export { MomentEvidence } from "./momentevidence";
-export { CallCard, RecordReading, RecordReadingPair } from "./reading";
+export { RecordReadingPair } from "./reading";
 export { useSetAside } from "./setaside";
-export {
-  RecordSpine,
-  type SpineCommercial,
-  type SpineSource,
-} from "./spine";
-export { ThreadFailed } from "./threadfailed";
-export { timelineSpineSource } from "./timelinespine";
-export { TimelineThread } from "./timelinethread";
 export { FoundMove, TodayPanel, TodoRow, WithheldNotice } from "./today";
-export {
-  type Grounding,
-  Proof,
-  type Signal,
-  SignalStrip,
-  type SignalTone,
-  type StandingTone,
-  VerdictHead,
-} from "./verdict";
+export { type Signal, SignalStrip, type SignalTone } from "./verdict";

@@ -61,7 +61,7 @@ describe("the header's core record verbs — edit, merge, archive", () => {
       ...view,
       contact: { ...view.contact, version: 3, title: "Old title" },
     };
-    mount("overview", withVersion, [], {
+    mount("research", withVersion, [], {
       "PATCH /contacts/p-1": (body) => {
         patchBody = body;
         saved = true;
@@ -81,8 +81,9 @@ describe("the header's core record verbs — edit, merge, archive", () => {
         ),
     });
 
-    const subtitle = () => document.querySelector(".record-sub");
-    await waitFor(() => expect(subtitle()?.textContent).toBe("Old title"));
+    const subtitle = () =>
+      document.querySelector(".record-split-lines")?.textContent ?? "";
+    await waitFor(() => expect(subtitle()).toContain("Old title"));
     await userEvent.click(
       await screen.findByRole("button", { name: "Change Title" }),
     );
@@ -92,7 +93,7 @@ describe("the header's core record verbs — edit, merge, archive", () => {
 
     await waitFor(() => expect(patchBody).toBeTruthy());
     expect(patchBody).toMatchObject({ title: "New title" });
-    await waitFor(() => expect(subtitle()?.textContent).toBe("New title"));
+    await waitFor(() => expect(subtitle()).toContain("New title"));
   });
 
   it("archives the record from the header", async () => {
@@ -135,7 +136,7 @@ async function headerActions(): Promise<HTMLElement> {
   const trigger = await screen.findByRole("button", {
     name: en["record.moreActions"],
   });
-  const row = trigger.closest(".record-actions");
+  const row = trigger.closest(".record-split-verbs");
   if (!(row instanceof HTMLElement)) {
     throw new Error("the header's menu does not sit in an action row");
   }

@@ -4,18 +4,22 @@
 import type { ReactNode } from "react";
 import { useId } from "react";
 import type { components } from "../../api/schema";
+import { mapCompanyUpdate } from "../../components/companyform";
 import { Callout } from "../../design-system/callout";
-import { FieldGrid } from "../../design-system/fieldgrid";
+import { FieldGrid, FieldRow } from "../../design-system/fieldgrid";
+import { InlineText } from "../../design-system/inlinetext";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
-import { useCompanyProfileFields } from "../records/evidenceverdict";
 import type { OpenReceipt } from "../records/record360";
 import { profileFieldLabel } from "./companies";
 import { DossierPanel } from "./companydossier";
 import { CompanyFactsPanel } from "./companyfactspanel";
 import { useCompanyReadOnlyReason } from "./companyheader";
+import { CompanyProfileDetails } from "./companyprofiledetails";
 import { SidecarFieldRow } from "./companyraildetails";
+import { useCompanyFieldSave } from "./companyrailedit";
+import { useCompanyProfileFields } from "./evidenceverdict";
 
 type Company = components["schemas"]["Company"];
 type ProfileFieldKey = components["parameters"]["ProfileFieldKey"];
@@ -108,9 +112,10 @@ export function CompanyProfileForm({
   const canEdit = writable && !specificReason;
   const profileQuery = useCompanyProfileFields(company.id);
   const fields = profileQuery.data ?? [];
+  const save = useCompanyFieldSave(company);
 
   return (
-    <div className="record-stack">
+    <div className="co-tab-stack">
       {/* The account in prose, leading the tab the same way it leads the
           overview: what the account IS, before its fields and facts. The
           overview keeps its own copy so a reader who never opens this tab
@@ -131,9 +136,31 @@ export function CompanyProfileForm({
           title={<span id={reasonId}>{reason}</span>}
         />
       )}
+      <CompanyProfileDetails
+        company={company}
+        edit={{ canEdit, reason }}
+        fields={fields}
+        fieldsLoaded={profileQuery.isSuccess}
+      />
       <Panel title={t("co.narrative.title")}>
         <PanelBody>
           <FieldGrid>
+            {/* The account's own description: prose, so it reads here with
+                the account's story rather than in the details column. */}
+            <FieldRow label={t("co.description.label")}>
+              <InlineText
+                label={t("co.description.label")}
+                value={company.description ?? ""}
+                placeholder={t("co.narrative.add")}
+                multiline
+                maxLength={500}
+                canEdit={canEdit}
+                readOnlyReason={reason}
+                onSave={(next) =>
+                  save(mapCompanyUpdate({ description: next }, {}))
+                }
+              />
+            </FieldRow>
             {NARRATIVE_FIELDS.map((field) => (
               <SidecarFieldRow
                 key={field}

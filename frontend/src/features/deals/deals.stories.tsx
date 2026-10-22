@@ -113,21 +113,6 @@ const withheldDeal = {
   masked_fields: ["amount_minor", "company_id", "partner_company_id"],
 };
 
-// One staged move waiting on this deal's own page: what the confirm-first
-// queue looks like when it has something in it. Every other DealScreen story
-// answers /approvals empty, so the panel is absent from all of them.
-const stagedApproval = {
-  id: "ap-1",
-  kind: "advance_deal",
-  status: "pending",
-  summary: "Move Fleet retrofit to Proposal",
-  proposed_by: "agent:capture",
-  target_entity_type: "deal",
-  target_entity_id: "d1",
-  created_at: "2026-07-01T08:00:00Z",
-  evidence: [],
-};
-
 // The caller the page asks about by default. It holds no grant at all, which is
 // the reading the frames below document; a frame about an AVAILABLE verb has to
 // name the grant that verb reads, or the page draws a refusal.
@@ -143,7 +128,6 @@ const ungrantedCaller = {
 function installDealStub(
   offers: unknown[],
   record: unknown = deal,
-  approvals: unknown[] = [],
   me: unknown = ungrantedCaller,
 ) {
   installFetchStub({
@@ -156,7 +140,7 @@ function installDealStub(
     "GET /deals/d1/stakeholders": () => jsonResponse(emptyPage),
     "GET /pipelines": () => jsonResponse(emptyPage),
     "GET /approvals": () =>
-      jsonResponse({ data: approvals, page: { next_cursor: null } }),
+      jsonResponse({ data: [], page: { next_cursor: null } }),
     "GET /activities": () => jsonResponse(emptyPage),
     "GET /records/deal/d1/context": () =>
       jsonResponse({ anchor: { type: "deal", id: "d1" }, sections: [] }),
@@ -178,17 +162,6 @@ export const WithOffers: Story = {
 export const NoOffers: Story = {
   render: () => {
     installDealStub([]);
-    return (
-      <StoryProviders>
-        <DealScreen id="d1" />
-      </StoryProviders>
-    );
-  },
-};
-
-export const PendingApprovals: Story = {
-  render: () => {
-    installDealStub([offer], deal, [stagedApproval]);
     return (
       <StoryProviders>
         <DealScreen id="d1" />
@@ -244,7 +217,7 @@ export const HeaderMenu: Story = {
     });
   },
   render: () => {
-    installDealStub([offer], wonDeal, [], writer);
+    installDealStub([offer], wonDeal, writer);
     return (
       <StoryProviders>
         <DealScreen id="d1" />

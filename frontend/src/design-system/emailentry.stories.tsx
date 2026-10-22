@@ -11,7 +11,7 @@ import {
 } from "../testing/story-utils";
 import { Card } from "./atoms";
 import { EmailDetail } from "./emaildetail";
-import { EmailEntry } from "./emailentry";
+import { EmailEntry, EmailFiles } from "./emailentry";
 import { EmailReference } from "./emailreference";
 import { Panel, PanelBody } from "./panel";
 
@@ -97,6 +97,21 @@ export const NoSubject: Story = {
 /** Nothing the sender wrote: a forward carrying no words of its own. */
 export const NoPreview: Story = {
   args: { summary: { ...BASE, preview: undefined, move: "waiting_for_them" } },
+};
+
+/** The paperclip mark alone: one message, then several summed. */
+export const Files: StoryObj = {
+  render: () => (
+    <div style={{ display: "grid", gap: "var(--space-2)" }}>
+      <EmailFiles summaries={[{ ...BASE, attachment_count: 1 }]} />
+      <EmailFiles
+        summaries={[
+          { ...BASE, attachment_count: 2 },
+          { ...BASE, attachment_count: 3 },
+        ]}
+      />
+    </div>
+  ),
 };
 
 /** A long subject truncates rather than pushing the timestamp off the line. */

@@ -36,6 +36,7 @@ import { useId, useState } from "react";
 import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
 import { ActivityBodyField } from "../../components/activitybodyfield";
+import { useMeetingOutcome } from "../../components/taskactions";
 import { Button, Field, Modal, TextInput } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
@@ -48,7 +49,6 @@ import { outgoingBody } from "../../lib/activitybody";
 import { useActivity } from "../../lib/activityread";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
-import { useMeetingOutcome } from "./taskactions";
 import { worklistKey } from "./worklist.queries";
 
 // The two statuses the dialog can record. `canceled` is deliberately absent:

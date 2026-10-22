@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
-import { viewerZone } from "../../format/timezone";
+import { UTC_ZONE, viewerZone } from "../../format/timezone";
 import type { Translator } from "../../i18n";
 import { leadStanding } from "./leadstanding";
 
@@ -10,8 +10,8 @@ type Lead = components["schemas"]["Lead"];
 // which fact each word is read from — and that nothing is read from a silence
 // the server did not judge.
 
-const t: Translator = ((key: string, params?: Record<string, unknown>) =>
-  params ? `${key}:${JSON.stringify(params)}` : key) as Translator;
+const t: Translator = (key: string, params?: Record<string, string>) =>
+  params ? `${key}:${JSON.stringify(params)}` : key;
 
 // The zone only satisfies the signature: no case here asserts a rendered date,
 // so the reader's own zone is the honest one to hand over.
@@ -32,10 +32,7 @@ function lead(extra: Partial<Lead>): Lead {
 
 describe("leadStanding", () => {
   // The merge leaves the ladder alone, so the pointer is the only thing that
-  // says this lead ended. Read from `status` instead, a lead merged away mid
-  // conversation is open work forever — and the terminal reading it would
-  // eventually get is "disqualified", which says a human judged the prospect
-  // not worth pursuing rather than that two records were one prospect.
+  // says this lead ended. Read from `status`, it would be open work forever.
   it("says a merged-away lead was merged, whatever its ladder still says", () => {
     const merged = leadStanding(
       lead({
@@ -48,11 +45,11 @@ describe("leadStanding", () => {
       "en",
       zone,
     );
-    expect(merged.label).toBe("lead.standing.merged");
-    expect(merged.because).toBe("lead.standing.mergedBecause");
-    expect(merged.restsOn.map((r) => r.quote)).toContain(
-      "lead.standing.rests.merged",
-    );
+    expect(merged).toEqual({
+      word: "lead.standing.merged",
+      sentence: "lead.standing.mergedBecause",
+      tone: "neutral",
+    });
   });
 
   it.each(["manual", "import", "webform"])(
@@ -68,10 +65,11 @@ describe("leadStanding", () => {
         "en",
         zone,
       );
-      expect(standing.label).toBe("lead.status.new");
-      expect(standing.tone).toBe("unknown");
-      expect(standing.because).toBe("lead.standing.noResponse");
-      expect(standing.restsOn.map((r) => r.key)).toEqual(["status"]);
+      expect(standing).toEqual({
+        word: "lead.status.new",
+        sentence: "lead.standing.noResponse",
+        tone: "neutral",
+      });
     },
   );
 
@@ -82,12 +80,13 @@ describe("leadStanding", () => {
       "en",
       zone,
     );
-    expect(answered.label).toBe("lead.standing.theirMove");
-    expect(answered.tone).toBe("accent");
+    expect(answered.word).toBe("lead.standing.theirMove");
+    expect(answered.tone).toBe("success");
 
     const engaged = leadStanding(
       lead({
         status: "engaged",
+        full_name: "Jonas Weber",
         first_response_at: "2026-08-21T09:12:00Z",
         qualification_evidence: {
           trigger: "meeting_booked",
@@ -96,13 +95,23 @@ describe("leadStanding", () => {
       }),
       t,
       "en",
-      zone,
+      UTC_ZONE,
     );
-    expect(engaged.label).toBe("lead.standing.inMotion");
-    expect(engaged.restsOn.map((row) => row.key)).toEqual([
-      "response",
-      "evidence",
-    ]);
+    expect(engaged.word).toBe("lead.standing.inMotion");
+    expect(engaged.sentence).toBe(
+      'lead.standing.meetingBookedFor:{"name":"Jonas Weber","at":"23 Aug 2026"}',
+    );
+  });
+
+  // A lead moved to Engaged by hand has no captured signal to date, so it
+  // keeps the general sentence rather than a date nothing recorded.
+  it("keeps the general sentence for an engaged lead with no evidence", () => {
+    const engaged = leadStanding(lead({ status: "engaged" }), t, "en", zone);
+    expect(engaged).toEqual({
+      word: "lead.status.engaged",
+      sentence: "lead.standing.engagedBecause",
+      tone: "success",
+    });
   });
 
   it("reads a closed lead off how it was closed", () => {
@@ -112,8 +121,8 @@ describe("leadStanding", () => {
       "en",
       zone,
     );
-    expect(qualified.label).toBe("lead.standing.qualified");
-    expect(qualified.tone).toBe("calm");
+    expect(qualified.word).toBe("lead.standing.qualified");
+    expect(qualified.tone).toBe("success");
 
     const closed = leadStanding(
       lead({
@@ -124,9 +133,11 @@ describe("leadStanding", () => {
       "en",
       zone,
     );
-    expect(closed.label).toBe("lead.standing.closed");
+    expect(closed.word).toBe("lead.standing.closed");
     // Neutral, not the all-clear: a closed lead is not good news dressed green.
-    expect(closed.tone).toBe("unknown");
-    expect(closed.restsOn[0].quote).toBe("No budget this year");
+    expect(closed.tone).toBe("neutral");
+    expect(closed.sentence).toBe(
+      'lead.standing.closedFor:{"reason":"No budget this year"}',
+    );
   });
 });

@@ -1,0 +1,86 @@
+/* The rows of the contact's tab panels: a title over one caption line, with a
+   mark or the row's verbs at the far edge. A `PanelRow` brings the hairline
+   and the gutters; this lays its content out. */
+.ct-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: var(--space-3);
+  align-items: start;
+}
+
+.ct-item-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.ct-item-title {
+  font-weight: var(--fontWeightMedium);
+  color: var(--textPrimary);
+  overflow-wrap: anywhere;
+}
+
+/* A one-line row (a title and its verbs) centres on the verbs' height. */
+.ct-item > .ct-item-title {
+  align-self: center;
+}
+
+.ct-item-end {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* A title that opens its record: the row's ink, underlined on hover, so a
+   list of names does not read as a list of accent links. */
+.ct-item-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-weight: var(--fontWeightMedium);
+  color: var(--textPrimary);
+  text-align: left;
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}
+
+.ct-item-link:hover {
+  text-decoration: underline;
+}
+
+.ct-item-link:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+/* The seats on the open deal, said once under the list it belongs to. */
+.ct-committee {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+}
+
+/* A dot between the label and each seat, drawn by the line rather than typed
+   into the copy, so a committee of one carries no stray separator. */
+.ct-committee > * + *::before {
+  content: "·";
+  margin-inline-end: var(--space-2);
+}
+
+/* A seat's name and role stay on one line; the line breaks between seats. */
+.ct-seat {
+  white-space: nowrap;
+}
+
+.ct-seat-name {
+  color: var(--textPrimary);
+}
+
+.ct-seat-role {
+  color: var(--textSecondary);
+}

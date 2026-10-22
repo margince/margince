@@ -156,6 +156,9 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // A human being in a sentence about contacts rather than about the record.
     "deals.winReasonVerbal",
     "privacy.inboxAdminOnly",
+    // A human being on the committee, or who owns or sets something, not the record type.
+    "contact.card.committee_one",
+    "contact.card.committee_other",
   ],
   de: [
     // Reviewed work names its human author, never a contact record.
@@ -260,6 +263,10 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "sendPermission.reason.tooMany",
     "sendPermission.reason.unconfirmed",
     "sendPermission.reason.withdrawn",
+    // A human being on the committee, or who owns or sets something, not the record type.
+    "co.aside.visibleOnlyOwner",
+    "contact.card.committee_one",
+    "contact.card.committee_other",
   ],
   vi: [
     // Reviewed work names its human author, never a contact record.
@@ -598,7 +605,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "approval.field.owner",
     "lead.bulkOwner",
     "lead.ownerLabel",
-    "deal.briefEmptyDetail",
     "recordRoles.intro",
     "bulk.owner",
     "whoCanSee.group.owner",
@@ -626,6 +632,19 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "magic.consequence.owner_changed",
     "legalReview.packOwner",
     "legalReview.settingsHint",
+    "legalReview.col.requestedBy",
+    "legalReview.col.decidedBy",
+    // A human being on the committee, or who owns or sets something, not the record type.
+    "co.overview.noEconomicBuyer",
+    "co.aside.visibleEveryone",
+    "co.aside.visibleOnlyOwner",
+    "deal.committee.gap.singleThreaded",
+    "deal.committee.foot",
+    "contact.card.noEconomicBuyer",
+    "contact.card.committee_one",
+    "contact.card.committee_other",
+    "contact.aside.ownerGone",
+    "lead.signal.setBy",
   ],
 };
 
