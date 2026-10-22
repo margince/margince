@@ -50,6 +50,37 @@ func TestAnOfferIsNotMintedUnderARepeatableReadSnapshot(t *testing.T) {
 	}
 }
 
+// A revision reads the highest revision after its lock too, so it refuses a
+// stale snapshot the same way.
+func TestAnOfferRevisionIsNotMintedUnderARepeatableReadSnapshot(t *testing.T) {
+	e := setupSeamEnv(t)
+	deal := offerNumberDeal(t, e)
+	description, price, tax := "Implementation", int64(500_000), "19.00"
+	created, err := e.provider.store.CreateOffer(e.passport(), deal, CreateOfferInput{
+		Currency: "EUR", Source: "manual",
+		LineItems: []OfferLineInputRow{{Description: &description, Quantity: "1", UnitPriceMinor: &price, TaxRate: &tax}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	offer := ids.From[ids.OfferKind](ids.UUID(created.Id))
+	if _, err := e.provider.store.SendOffer(e.passport(), offer, nil); err != nil {
+		t.Fatalf("sending the offer: %v", err)
+	}
+
+	err = database.WithWorkspaceSnapshot(e.passport(), e.pool, func(ctx context.Context) error {
+		_, err := e.provider.store.RegenerateOffer(ctx, offer)
+		return err
+	})
+	if err == nil || !strings.Contains(err.Error(), "read committed") {
+		t.Fatalf("revising under a repeatable-read snapshot: err = %v, want it refused", err)
+	}
+	revised, err := e.provider.store.RegenerateOffer(e.passport(), offer)
+	if err != nil || revised.Revision == nil || *revised.Revision != 2 {
+		t.Fatalf("revising at read committed = (revision %v, %v), want revision 2", revised.Revision, err)
+	}
+}
+
 // A number the mint could not have issued is refused by the database itself.
 // The mint would not see it, and would reissue the number after it.
 func TestAnOfferNumberInAnotherShapeIsRefused(t *testing.T) {
