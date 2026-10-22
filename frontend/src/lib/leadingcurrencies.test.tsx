@@ -55,7 +55,9 @@ const failed = { body: { title: "boom" }, status: 500 };
 
 describe("useLeadingCurrencies", () => {
   it("leads with the base, then the sheet's codes without the base twice", async () => {
-    stubReads(NOK, { body: { data: ["NOK", "SEK", "DKK"] } });
+    stubReads(NOK, {
+      body: { base_currency: "NOK", data: ["NOK", "SEK", "DKK"] },
+    });
     const { result } = renderLeading();
     await waitFor(() => expect(result.current).toEqual(["NOK", "SEK", "DKK"]));
   });
@@ -72,8 +74,17 @@ describe("useLeadingCurrencies", () => {
     await waitFor(() => expect(result.current).toEqual(["NOK"]));
   });
 
-  it("falls back to the four common codes when the settings read fails", async () => {
-    stubReads(failed, { body: { data: ["SEK"] } });
+  it("takes the base from the sheet read for a role refused the settings", async () => {
+    stubReads(
+      { body: { title: "forbidden" }, status: 403 },
+      { body: { base_currency: "NOK", data: ["SEK"] } },
+    );
+    const { result } = renderLeading();
+    await waitFor(() => expect(result.current).toEqual(["NOK", "SEK"]));
+  });
+
+  it("falls back to the four common codes when neither read names a base", async () => {
+    stubReads(failed, failed);
     const { result } = renderLeading();
     await waitFor(() => expect(vi.mocked(fetch)).toHaveBeenCalledTimes(2));
     expect(result.current).toEqual(["EUR", "USD", "GBP", "CHF"]);

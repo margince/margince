@@ -193,15 +193,15 @@ func TestDeleteAiModelRateOverHTTP(t *testing.T) {
 }
 
 // GET /fx-rates/currencies over the wire: an empty sheet is the array `[]`
-// and never `null`, a written rate shows as its code, and an agent bearer is
+// and never `null`, the base and a written rate's code come back, and an agent bearer is
 // refused because the read feeds the web app's pickers only.
 func TestFxRateCurrenciesOverHTTP(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
 	status, _, body := getRaw(t, e, "/v1/fx-rates/currencies", nil)
-	if status != http.StatusOK || strings.TrimSpace(string(body)) != `{"data":[]}` {
-		t.Fatalf("empty sheet GET /fx-rates/currencies → %d %s, want 200 {\"data\":[]}", status, body)
+	if status != http.StatusOK || !strings.Contains(string(body), `"data":[]`) {
+		t.Fatalf("empty sheet GET /fx-rates/currencies → %d %s, want 200 with \"data\":[]", status, body)
 	}
 
 	from := "USD"
@@ -214,13 +214,14 @@ func TestFxRateCurrenciesOverHTTP(t *testing.T) {
 		t.Fatalf("POST /fx-rates → %d, want 201", status)
 	}
 	var codes struct {
-		Data []string `json:"data"`
+		BaseCurrency string   `json:"base_currency"`
+		Data         []string `json:"data"`
 	}
 	if status := e.Call(t, "GET", "/v1/fx-rates/currencies", nil, nil, &codes); status != http.StatusOK {
 		t.Fatalf("GET /fx-rates/currencies → %d, want 200", status)
 	}
-	if len(codes.Data) != 1 || codes.Data[0] != from {
-		t.Fatalf("codes = %v, want [%s]", codes.Data, from)
+	if base := baseCurrency(t, e); codes.BaseCurrency != base || len(codes.Data) != 1 || codes.Data[0] != from {
+		t.Fatalf("answer = %+v, want base %s and codes [%s]", codes, base, from)
 	}
 
 	bearer := apptest.PassportBearer(t, e, "currency picker probe", "read")

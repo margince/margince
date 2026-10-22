@@ -67,12 +67,14 @@ func (h Handlers) ListFxRateCurrencies(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, err)
 		return
 	}
-	codes, err := h.store.RateSheetCurrencies(r.Context())
+	base, codes, err := h.store.RateSheetCurrencies(r.Context())
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.FxRateCurrencyListResponse{Data: codes})
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.FxRateCurrencyListResponse{
+		BaseCurrency: base, Data: codes,
+	})
 }
 
 // SetFxRate appends (or same-day corrects) one effective-dated FX rate.

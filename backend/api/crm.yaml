@@ -30230,10 +30230,11 @@ paths:
       operationId: listFxRateCurrencies
       security: [ { cookieAuth: [] } ]   # human session only — feeds the currency pickers of the web app
       x-agent-access: human-only
-      summary: List the currency codes on the FX rate sheet, without their rates.
+      summary: List the base currency and the currency codes on the FX rate sheet, without their rates.
       description: |
-        The foreign currencies of the sheet head (the same rows `GET /fx-rates`
-        lists without `from`), as codes in code order. Readable by every role that
+        The workspace base currency, and the foreign currencies of the sheet
+        head (the same rows `GET /fx-rates` lists without `from`) as codes in
+        code order. Readable by every role that
         may read deals, so a currency picker can offer the workspace's own
         currencies first; the rates themselves stay on the admin/ops-only
         `GET /fx-rates`. An empty sheet answers an empty list.
@@ -31358,8 +31359,16 @@ components:
         data: { type: array, items: { $ref: '#/components/schemas/FxRate' } }
     FxRateCurrencyListResponse:
       type: object
-      required: [data]
+      required: [base_currency, data]
       properties:
+        base_currency:
+          type: string
+          pattern: '^[A-Z]{3}$'
+          description: >-
+            The workspace's base currency, which every code in `data` converts
+            into. Served here as well as on the installation settings, so a role
+            that may read deals but not those settings still learns which
+            currency a picker leads with.
         data:
           type: array
           uniqueItems: true

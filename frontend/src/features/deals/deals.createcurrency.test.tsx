@@ -77,7 +77,7 @@ function stubApi(posted: unknown[]) {
         return jsonResponse(settings);
       }
       if (path === "/fx-rates/currencies") {
-        return jsonResponse({ data: ["NOK", "SEK"] });
+        return jsonResponse({ base_currency: "NOK", data: ["NOK", "SEK"] });
       }
       if (path === "/pipelines") {
         return jsonResponse({ data: [pipeline], page: { next_cursor: null } });

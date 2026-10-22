@@ -42,7 +42,7 @@ func TestARepReadsTheSheetCurrenciesButNotTheRates(t *testing.T) {
 	seedSheet(t, e)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, RepPerms)
 
-	codes, err := e.Deals.RateSheetCurrencies(rep)
+	_, codes, err := e.Deals.RateSheetCurrencies(rep)
 	if err != nil {
 		t.Fatalf("rep read of the sheet currencies: %v", err)
 	}
@@ -56,7 +56,8 @@ func TestARepReadsTheSheetCurrenciesButNotTheRates(t *testing.T) {
 }
 
 // A custom role may hold deal read without installation_settings read. The
-// picker still needs the codes, so the base is read without that gate.
+// picker still needs the base and the codes, so the base is read without that
+// gate.
 func TestDealReadAloneIsEnoughForTheSheetCurrencies(t *testing.T) {
 	e := Setup(t)
 	seedSheet(t, e)
@@ -64,9 +65,12 @@ func TestDealReadAloneIsEnoughForTheSheetCurrencies(t *testing.T) {
 		Objects:  map[string]principal.ObjectGrant{objDeal: {Read: true}},
 		RowScope: principal.RowScopeAll,
 	})
-	codes, err := e.Deals.RateSheetCurrencies(dealReader)
+	base, codes, err := e.Deals.RateSheetCurrencies(dealReader)
 	if err != nil {
 		t.Fatalf("deal-read-only caller: %v", err)
+	}
+	if base != "EUR" {
+		t.Fatalf("base = %q, want EUR", base)
 	}
 	if want := []string{"GBP", "USD"}; !slices.Equal(codes, want) {
 		t.Fatalf("codes = %v, want %v", codes, want)
@@ -79,14 +83,14 @@ func TestDealReadAloneIsEnoughForTheSheetCurrencies(t *testing.T) {
 		},
 		RowScope: principal.RowScopeAll,
 	})
-	if _, err := e.Deals.RateSheetCurrencies(noDeal); !errors.Is(err, apperrors.ErrPermissionDenied) {
+	if _, _, err := e.Deals.RateSheetCurrencies(noDeal); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("caller without deal read = %v, want ErrPermissionDenied", err)
 	}
 }
 
 func TestAnEmptySheetAnswersAnEmptyList(t *testing.T) {
 	e := Setup(t)
-	codes, err := e.Deals.RateSheetCurrencies(e.Admin())
+	_, codes, err := e.Deals.RateSheetCurrencies(e.Admin())
 	if err != nil {
 		t.Fatalf("empty sheet: %v", err)
 	}
@@ -105,7 +109,7 @@ func TestARateInAnotherBaseIsNotOnTheSheet(t *testing.T) {
 	e.WsExec(t, `INSERT INTO fx_rate (from_currency, to_currency, rate, rate_date)
 		VALUES ('JPY', 'USD', 0.0068, $1::date)`, fxTestNow)
 
-	codes, err := e.Deals.RateSheetCurrencies(e.Admin())
+	_, codes, err := e.Deals.RateSheetCurrencies(e.Admin())
 	if err != nil {
 		t.Fatalf("read: %v", err)
 	}

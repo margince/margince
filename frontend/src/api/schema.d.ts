@@ -20805,9 +20805,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List the currency codes on the FX rate sheet, without their rates.
-         * @description The foreign currencies of the sheet head (the same rows `GET /fx-rates`
-         *     lists without `from`), as codes in code order. Readable by every role that
+         * List the base currency and the currency codes on the FX rate sheet, without their rates.
+         * @description The workspace base currency, and the foreign currencies of the sheet
+         *     head (the same rows `GET /fx-rates` lists without `from`) as codes in
+         *     code order. Readable by every role that
          *     may read deals, so a currency picker can offer the workspace's own
          *     currencies first; the rates themselves stay on the admin/ops-only
          *     `GET /fx-rates`. An empty sheet answers an empty list.
@@ -21246,6 +21247,8 @@ export interface components {
             data: components["schemas"]["FxRate"][];
         };
         FxRateCurrencyListResponse: {
+            /** @description The workspace's base currency, which every code in `data` converts into. Served here as well as on the installation settings, so a role that may read deals but not those settings still learns which currency a picker leads with. */
+            base_currency: string;
             data: string[];
         };
         SetFxRateRequest: {

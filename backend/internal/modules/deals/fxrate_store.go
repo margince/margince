@@ -294,19 +294,20 @@ func (s *Store) ListLatestFxRates(ctx context.Context) ([]FxRateRow, error) {
 	return rows, err
 }
 
-// RateSheetCurrencies returns the foreign currencies on the sheet head, in
-// code order, so a currency picker can offer them right after the base.
+// RateSheetCurrencies returns the base currency and the foreign currencies on
+// the sheet head, in code order, so a currency picker can offer them first.
 // The gate is deal read, not fx_rate read: the answer holds codes and never
 // a rate, and every role that may create a deal needs it for the picker. The
 // base is read without the installation_settings gate for the same reason.
-func (s *Store) RateSheetCurrencies(ctx context.Context) ([]string, error) {
+func (s *Store) RateSheetCurrencies(ctx context.Context) (string, []string, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
-		return nil, err
+		return "", nil, err
 	}
+	var base string
 	codes := []string{}
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
-		base, err := s.installation.BaseCurrencyApplied(ctx, tx)
-		if err != nil {
+		var err error
+		if base, err = s.installation.BaseCurrencyApplied(ctx, tx); err != nil {
 			return err
 		}
 		rows, err := sheetHeadTx(ctx, tx, base)
@@ -318,7 +319,7 @@ func (s *Store) RateSheetCurrencies(ctx context.Context) ([]string, error) {
 		}
 		return nil
 	})
-	return codes, err
+	return base, codes, err
 }
 
 // sheetHeadTx is the one definition of the sheet head: the latest-dated row

@@ -19,8 +19,10 @@ export const FX_RATE_CURRENCIES_KEY = ["fx-rates", "currencies"] as const;
  * currencies of the rate sheet. A form opens on the first of them, and sends
  * it when the field is left empty.
  *
- * The base alone while the sheet is pending or failed, so the order never
- * waits on the second read. The fallback four while the base is unknown.
+ * The base comes from the installation settings, or from the sheet read for a
+ * role that may read deals but not those settings. The base alone while the
+ * sheet is pending or failed, and the fallback four while no read has named a
+ * base.
  */
 export function useLeadingCurrencies(): LeadingCurrencies {
   const base = useInstallationSettings().data?.base_currency;
@@ -31,11 +33,15 @@ export function useLeadingCurrencies(): LeadingCurrencies {
       if (error || !response.ok) {
         throwProblem(error);
       }
-      return data.data;
+      return data;
     },
   });
-  if (!base) {
+  const leader = base ?? sheet.data?.base_currency;
+  if (!leader) {
     return FALLBACK_LEADING_CURRENCIES;
   }
-  return [base, ...(sheet.data ?? []).filter((code) => code !== base)];
+  return [
+    leader,
+    ...(sheet.data?.data ?? []).filter((code) => code !== leader),
+  ];
 }

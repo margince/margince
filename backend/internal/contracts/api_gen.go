@@ -38457,7 +38457,9 @@ type FxRate struct {
 
 // FxRateCurrencyListResponse defines model for FxRateCurrencyListResponse.
 type FxRateCurrencyListResponse struct {
-	Data []string `json:"data"`
+	// BaseCurrency The workspace's base currency, which every code in `data` converts into. Served here as well as on the installation settings, so a role that may read deals but not those settings still learns which currency a picker leads with.
+	BaseCurrency string   `json:"base_currency"`
+	Data         []string `json:"data"`
 }
 
 // FxRateListResponse defines model for FxRateListResponse.
@@ -74198,7 +74200,7 @@ type ServerInterface interface {
 	// Set an FX rate effective today or later (append-forward).
 	// (POST /fx-rates)
 	SetFxRate(w http.ResponseWriter, r *http.Request)
-	// List the currency codes on the FX rate sheet, without their rates.
+	// List the base currency and the currency codes on the FX rate sheet, without their rates.
 	// (GET /fx-rates/currencies)
 	ListFxRateCurrencies(w http.ResponseWriter, r *http.Request)
 	// Enqueue an async FX-rate refresh (stages 🟡 proposals).
@@ -78332,7 +78334,7 @@ func (_ Unimplemented) SetFxRate(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List the currency codes on the FX rate sheet, without their rates.
+// List the base currency and the currency codes on the FX rate sheet, without their rates.
 // (GET /fx-rates/currencies)
 func (_ Unimplemented) ListFxRateCurrencies(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
