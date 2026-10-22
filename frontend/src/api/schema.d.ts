@@ -505,6 +505,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/automatic-work-health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Per colleague and day, how much work automation handed out and what became of it.
+         * @description Admin and ops only (`job_health:read`). Counts the items Margince created by itself for one colleague (a task from a promise, a reply reminder, an approval request) in the last `days` days, and what each one has become since. An item counts once, on the day it was created, in the installation's time zone, with the outcome it holds now, so an outcome that arrives on a later day still counts against its creation day. The colleague is the one the item first named. Derived from the audit log and the items themselves; no counter is kept. COUNTS ONLY: never a subject or a body. Human session only (x-agent-access: human-only).
+         */
+        get: operations["getAutomaticWorkHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/passports": {
         parameters: {
             query?: never;
@@ -39211,6 +39231,98 @@ export interface components {
             /** @description The most recent drill, or null when none was ever recorded. */
             last_drill: components["schemas"]["RestoreDrill"] | null;
         };
+        /**
+         * @description What automation handed out per colleague, per day and per kind of item, and what each item
+         *     has become. An item is counted once, on its creation day, with the outcome it holds now.
+         *     `not_mine_share` is the routing number: the items a colleague said were not theirs, out of the
+         *     items created for them. It is a reading for an admin to look at, never a trigger.
+         */
+        AutomaticWorkHealth: {
+            /** Format: date-time */
+            generated_at: string;
+            /** @description How many days the window covers, today included. */
+            days: number;
+            /**
+             * Format: date
+             * @description The first day of the window, in the installation's time zone, which decides the day an item falls on.
+             */
+            first_day: string;
+            /** Format: date */
+            last_day: string;
+            /** @description The share above which a kind's routing needs a look, as a fraction (0.1 is 10%). */
+            share_threshold: number;
+            /** @description Below this many created items a share is shown but never flagged. */
+            small_sample_below: number;
+            /** @description Every kind of item, always all of them, with what its records can tell. */
+            kinds: components["schemas"]["AutomaticWorkKind"][];
+            /**
+             * @description Every active colleague, with a tally for every kind even when it is zero, and any other
+             *     seat that was named by an item in the window.
+             */
+            colleagues: components["schemas"]["AutomaticWorkColleague"][];
+            /** @description Items in the window whose first named colleague no longer exists. */
+            unattributed: number;
+        };
+        AutomaticWorkKind: {
+            kind: components["schemas"]["AutomaticWorkKindName"];
+            /**
+             * @description Whether a colleague can say an item of this kind is not theirs. An approval request has
+             *     no such choice: its decider can only accept or reject it, so its share is null.
+             */
+            records_not_mine: boolean;
+        };
+        /** @enum {string} */
+        AutomaticWorkKindName: "promise_task" | "reply_reminder" | "approval_request";
+        AutomaticWorkColleague: {
+            /** Format: uuid */
+            user_id: string;
+            display_name: string;
+            /** @enum {string} */
+            status: "invited" | "active" | "suspended" | "deactivated";
+            /** @description One per kind, in the order of `kinds`. */
+            tallies: components["schemas"]["AutomaticWorkTally"][];
+            /**
+             * @description Waiting messages this colleague marked "Not mine" on the Worklist in the window, each
+             *     message once. A waiting message is not an item automation creates, so it has no
+             *     created count and no share.
+             */
+            waiting_not_mine: number;
+        };
+        AutomaticWorkTally: {
+            kind: components["schemas"]["AutomaticWorkKindName"];
+            counts: components["schemas"]["AutomaticWorkCounts"];
+            /** @description not_mine out of created, as a fraction. Null when nothing was created or the kind has no "Not mine". */
+            not_mine_share: number | null;
+            /** @description Fewer items were created than `small_sample_below`, so the share says little. */
+            small_sample: boolean;
+            /** @description The share is above `share_threshold` on a sample large enough to judge. */
+            above_threshold: boolean;
+            /** @description The days with at least one created item, oldest first. A day absent from it created nothing. */
+            by_day: components["schemas"]["AutomaticWorkDay"][];
+        };
+        AutomaticWorkDay: {
+            /** Format: date */
+            date: string;
+            counts: components["schemas"]["AutomaticWorkCounts"];
+        };
+        /** @description Each created item holds exactly one outcome, so the outcomes add up to `created`. */
+        AutomaticWorkCounts: {
+            created: number;
+            /** @description A colleague moved the task to someone else, which says it was not theirs. It stays Not mine if the task comes back later. */
+            not_mine: number;
+            /** @description A rule moved the item to someone else, as an approval follows a deal's new owner. Every move of an approval request counts here. */
+            rerouted: number;
+            /** @description A colleague archived the task without doing it. */
+            dismissed: number;
+            /** @description The decider rejected the approval request. A rejection judges the change, not who was asked. */
+            rejected: number;
+            /** @description The task is done, or the decider accepted the approval request. */
+            completed: number;
+            /** @description The item aged out unanswered. */
+            expired: number;
+            /** @description The item is still waiting. */
+            open: number;
+        };
         /** @description One rehearsal of the restore procedure, as the drill ledger holds it. */
         RestoreDrill: {
             /** Format: date-time */
@@ -49581,6 +49693,40 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    getAutomaticWorkHealth: {
+        parameters: {
+            query?: {
+                /** @description How many days back the window reaches, today included. */
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The installation's automatic-work counts. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutomaticWorkHealth"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description Refused: the caller is an agent/passport principal (this endpoint is human-only) or a seat without `job_health:read` (held by the admin and ops roles). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
         };
     };
     listPassports: {

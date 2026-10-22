@@ -57,6 +57,9 @@ func admitOperator(w http.ResponseWriter, r *http.Request, object string, action
 	return true
 }
 
+// utcNow is the wall clock the health reports stamp and measure their windows by.
+func utcNow() time.Time { return time.Now().UTC() }
+
 // healthReadTimeout bounds an operational read. An operator waiting on a page
 // tolerates more latency than a scrape does, but an unbounded read holds a
 // request thread and a pool connection for as long as it takes.

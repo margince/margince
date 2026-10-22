@@ -7658,6 +7658,50 @@ export const vi = {
   "settings.recoveryHealth": "Diễn tập khôi phục",
   "settings.recoveryHealthSub":
     "Lần gần nhất diễn tập khôi phục từ bản sao lưu và thời gian thực hiện.",
+  "settings.automaticWork": "Việc tự động",
+  "settings.automaticWorkSub":
+    "Những việc Margince tự giao cho từng đồng nghiệp, và bao nhiêu trong số đó họ nói không thuộc về họ.",
+  "automaticWork.adminOnly":
+    "Việc tự động được đếm cho toàn bộ hệ thống và cần quyền mà vai trò của bạn không có.",
+  "automaticWork.window": "Số ngày được đếm",
+  "automaticWork.last7": "7 ngày qua",
+  "automaticWork.last30": "30 ngày qua",
+  "automaticWork.howCounted":
+    "Mỗi mục được đếm một lần, vào ngày nó được tạo ({range}), với kết quả hiện tại. Nếu tỷ lệ Không phải của tôi trên {threshold} với ít nhất {sample} mục, cần xem lại cách giao việc cho loại đó. Tỷ lệ này tự nó không thay đổi gì.",
+  "automaticWork.none":
+    "Margince không tạo việc tự động nào trong những ngày này.",
+  "automaticWork.col.colleague": "Đồng nghiệp",
+  "automaticWork.col.kind": "Loại",
+  "automaticWork.col.created": "Đã tạo",
+  "automaticWork.col.notMine": "Không phải của tôi",
+  "automaticWork.col.rerouted": "Quy tắc đã chuyển",
+  "automaticWork.col.dismissed": "Đã bỏ qua",
+  "automaticWork.col.rejected": "Đã từ chối",
+  "automaticWork.col.completed": "Đã xong hoặc đã chấp nhận",
+  "automaticWork.col.expired": "Đã hết hạn",
+  "automaticWork.col.open": "Đang mở",
+  "automaticWork.col.share": "Tỷ lệ Không phải của tôi",
+  "automaticWork.col.day": "Ngày",
+  "automaticWork.col.waitingNotMine": "Đã đánh dấu Không phải của tôi",
+  "automaticWork.kind.promise_task": "Việc từ một cam kết",
+  "automaticWork.kind.reply_reminder": "Nhắc trả lời",
+  "automaticWork.kind.approval_request": "Yêu cầu phê duyệt",
+  "automaticWork.noNotMine": "Không có lựa chọn Không phải của tôi",
+  "automaticWork.needsLook": "{share}, cần xem lại",
+  "automaticWork.fewItems": "{share}, quá ít mục để đánh giá",
+  "automaticWork.inactive": "{name} (không hoạt động)",
+  "automaticWork.days": "Các ngày của {name}, {kind}",
+  "automaticWork.quiet_one":
+    "{count} đồng nghiệp không có việc tự động trong những ngày này.",
+  "automaticWork.quiet_other":
+    "{count} đồng nghiệp không có việc tự động trong những ngày này.",
+  "automaticWork.unattributed_one":
+    "{count} mục thuộc về đồng nghiệp đã bị xóa.",
+  "automaticWork.unattributed_other":
+    "{count} mục thuộc về đồng nghiệp đã bị xóa.",
+  "automaticWork.waiting": "Tin nhắn đang chờ được đánh dấu Không phải của tôi",
+  "automaticWork.waitingSub":
+    "Margince không tạo tin nhắn đang chờ cho ai, nên nó không có tỷ lệ. Mỗi tin nhắn được đếm một lần.",
   "recoveryHealth.adminOnly":
     "Diễn tập khôi phục áp dụng cho toàn bộ hệ thống và cần quyền mà vai trò của bạn không có.",
   "recoveryHealth.lastDrill": "Lần diễn tập khôi phục gần nhất",

@@ -9,6 +9,7 @@ import { useCan } from "../../lib/capability";
 import { routeHash } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import { ProviderHealthCard } from "../capture/providerhealth";
+import { AutomaticWorkHealthCard } from "./automaticworkhealth";
 import { CaptureHealthCard, useCaptureHealth } from "./capturehealth";
 import { DataTasksHealthCard } from "./datataskshealth";
 import {
@@ -159,6 +160,7 @@ export function SystemHealthPage() {
       {readings.intake.panel && <ExtensionIngestHealthCard />}
       {readings.providers.panel && <ProviderHealthCard />}
       <CaptureHealthCard />
+      <AutomaticWorkHealthCard />
       <RecoveryHealthCard />
       <DataTasksHealthCard />
       {/* The values the background work runs on, under the readings of what

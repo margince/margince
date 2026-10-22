@@ -196,6 +196,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/activities/{id}/transcript-proposals/latest":                   {Op: "getLatestTranscriptRead", Access: "tool", Tool: "read_view", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/activities/{id}/transcript-proposals/{readId}":                 {Op: "getTranscriptRead", Access: "tool", Tool: "read_view", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/activity-review-templates":                                     {Op: "listActivityReviewTemplates", Access: "tool", Tool: "read_view", RecordType: "", Tier: "auto_execute", Scope: "read"},
+	"GET /v1/admin/automatic-work-health":                                   {Op: "getAutomaticWorkHealth", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/admin/capture-health":                                          {Op: "getCaptureHealth", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/admin/data-tasks":                                              {Op: "listDataTasks", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/admin/extension-ingest-health":                                 {Op: "getExtensionIngestHealth", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

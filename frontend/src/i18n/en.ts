@@ -7924,6 +7924,49 @@ export const en = {
   "settings.recoveryHealth": "Restore drills",
   "settings.recoveryHealthSub":
     "When the restore from backup was last rehearsed, and how long it took.",
+  "settings.automaticWork": "Automatic work",
+  "settings.automaticWorkSub":
+    "What Margince gave each colleague by itself, and how much of it they said was not theirs.",
+  "automaticWork.adminOnly":
+    "Automatic work is counted for the whole installation and needs a permission your role does not have.",
+  "automaticWork.window": "Days counted",
+  "automaticWork.last7": "Last 7 days",
+  "automaticWork.last30": "Last 30 days",
+  "automaticWork.howCounted":
+    "Each item counts once, on the day it was created ({range}), with the outcome it has now. A Not mine share above {threshold} on at least {sample} items means the routing for that kind needs a look. The share changes nothing by itself.",
+  "automaticWork.none": "Margince created no automatic work in these days.",
+  "automaticWork.col.colleague": "Colleague",
+  "automaticWork.col.kind": "Kind",
+  "automaticWork.col.created": "Created",
+  "automaticWork.col.notMine": "Not mine",
+  "automaticWork.col.rerouted": "Moved by a rule",
+  "automaticWork.col.dismissed": "Dismissed",
+  "automaticWork.col.rejected": "Rejected",
+  "automaticWork.col.completed": "Done or accepted",
+  "automaticWork.col.expired": "Aged out",
+  "automaticWork.col.open": "Open",
+  "automaticWork.col.share": "Not mine share",
+  "automaticWork.col.day": "Day",
+  "automaticWork.col.waitingNotMine": "Marked Not mine",
+  "automaticWork.kind.promise_task": "Task from a commitment",
+  "automaticWork.kind.reply_reminder": "Reply reminder",
+  "automaticWork.kind.approval_request": "Approval request",
+  "automaticWork.noNotMine": "No Not mine choice",
+  "automaticWork.needsLook": "{share}, needs a look",
+  "automaticWork.fewItems": "{share}, too few items to judge",
+  "automaticWork.inactive": "{name} (not active)",
+  "automaticWork.days": "Days for {name}, {kind}",
+  "automaticWork.quiet_one":
+    "{count} colleague had no automatic work in these days.",
+  "automaticWork.quiet_other":
+    "{count} colleagues had no automatic work in these days.",
+  "automaticWork.unattributed_one":
+    "{count} item was for a colleague who was removed.",
+  "automaticWork.unattributed_other":
+    "{count} items were for colleagues who were removed.",
+  "automaticWork.waiting": "Waiting messages marked Not mine",
+  "automaticWork.waitingSub":
+    "Margince does not create a waiting message for anybody, so it has no share. Each message counts once.",
   "recoveryHealth.adminOnly":
     "Restore drills cover the whole installation and need a permission your role does not have.",
   "recoveryHealth.lastDrill": "Last restore drill",
