@@ -6,85 +6,128 @@ package ai
 import (
 	"bytes"
 	"log/slog"
+	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
 )
 
-const ladderBrokerHost = "https://openrouter.ai/api"
-
-func boundToBroker(model string, pin *OpenRouterRouting) ProviderConfig {
-	return ProviderConfig{Provider: providerOpenAICompatible, Model: model, BaseURL: ladderBrokerHost, Routing: pin}
+func collapsedOnBroker(model string) ProviderConfig {
+	return ProviderConfig{Provider: providerOpenAICompatible, Model: model, BaseURL: "https://openrouter.ai/api"}
 }
 
-func warningNaming(warnings []string, task Task) bool {
-	return slices.ContainsFunc(warnings, func(w string) bool { return strings.Contains(w, string(task)) })
+func servedLadders(t *testing.T, cfg RoutingConfig) []SingleRungLadder {
+	t.Helper()
+	if cfg.Profile == ProfileSovereign {
+		cfg.Embeddings = EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: "ollama", Model: "embed"}}
+	} else {
+		cfg.Embeddings = EmbeddingsConfig{ProviderConfig: collapsedOnBroker("embed")}
+	}
+	_, served, err := cfg.settle()
+	if err != nil {
+		t.Fatalf("settle: %v", err)
+	}
+	return served.SingleRungLadders()
 }
 
-func TestALadderWhoseBoundRungsAreOneUpstreamIsNamed(t *testing.T) {
-	pinned := &OpenRouterRouting{Provider: OpenRouterProvider{Order: []string{"mistral"}}}
+func namesTask(ladders []SingleRungLadder, task Task) bool {
+	return slices.ContainsFunc(ladders, func(l SingleRungLadder) bool { return slices.Contains(l.Tasks, task) })
+}
+
+func TestALadderWhoseBoundRungsReachOneAPIIsNamed(t *testing.T) {
+	one := collapsedOnBroker("m")
 	cases := []struct {
 		name  string
 		tiers map[Tier]ProviderConfig
 		want  bool
 	}{
-		{"every rung one binding", map[Tier]ProviderConfig{
-			TierCheapCloud: boundToBroker("m", nil), TierPremium: boundToBroker("m", nil), TierFrontier: boundToBroker("m", nil),
-		}, true},
-		{"the host's spelling does not make a second upstream", map[Tier]ProviderConfig{
-			TierCheapCloud: boundToBroker("m", nil),
-			TierPremium:    {Provider: providerOpenAICompatible, Model: "m", BaseURL: ladderBrokerHost + "/"},
-			TierFrontier:   boundToBroker("m", nil),
-		}, true},
-		{"a second model is a second rung", map[Tier]ProviderConfig{
-			TierCheapCloud: boundToBroker("m", nil), TierPremium: boundToBroker("n", nil), TierFrontier: boundToBroker("n", nil),
-		}, false},
-		{"a different upstream pin is a second rung", map[Tier]ProviderConfig{
-			TierCheapCloud: boundToBroker("m", nil), TierPremium: boundToBroker("m", pinned), TierFrontier: boundToBroker("m", pinned),
-		}, false},
+		{"every rung one model", map[Tier]ProviderConfig{TierCheapCloud: one, TierPremium: one, TierFrontier: one}, true},
+		{"a second model above is a fallback", map[Tier]ProviderConfig{TierCheapCloud: one, TierPremium: collapsedOnBroker("n"), TierFrontier: collapsedOnBroker("n")}, false},
+		{"one bound rung is no ladder", map[Tier]ProviderConfig{TierPremium: one}, false},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := RoutingConfig{Tiers: tc.tiers}.SingleRungLadderWarnings()
-			if named := warningNaming(got, TaskSummarize); named != tc.want {
-				t.Fatalf("task with a multi-rung ladder named = %v, want %v; warnings: %q", named, tc.want, got)
+			got := servedLadders(t, RoutingConfig{Profile: ProfileCloudFrontier, Tiers: tc.tiers})
+			if named := namesTask(got, TaskSummarize); named != tc.want {
+				t.Fatalf("summarize named = %v, want %v: %+v", named, tc.want, got)
 			}
 		})
 	}
 }
 
-func TestATaskThatBindsOneTierByDesignIsNotWarnedAbout(t *testing.T) {
-	cfg := RoutingConfig{Tiers: map[Tier]ProviderConfig{TierPremium: boundToBroker("m", nil)}}
-	got := cfg.SingleRungLadderWarnings()
-	if len(got) != 0 {
-		t.Fatalf("one bound tier cannot be a ladder with no failover, got %q", got)
+func TestASovereignLadderThatCollapsesOnLocalTiersIsNotReported(t *testing.T) {
+	local := func(model string) ProviderConfig { return ProviderConfig{Provider: "ollama", Model: model} }
+	got := servedLadders(t, RoutingConfig{Profile: ProfileSovereign, Tiers: map[Tier]ProviderConfig{
+		TierCheapCloud: local("a"), TierPremium: local("a"), TierFrontier: local("a"), TierLocalSmall: local("b"),
+	}})
+	if namesTask(got, TaskSummarize) {
+		t.Fatalf("sovereign remaps every rung to local_small, a ladder that never held the model named: %+v", got)
 	}
 }
 
-func TestOneBindingAcrossManyTasksIsOneWarning(t *testing.T) {
-	one := boundToBroker("m", nil)
-	got := RoutingConfig{Tiers: map[Tier]ProviderConfig{TierCheapCloud: one, TierPremium: one, TierFrontier: one, TierLocalSmall: one}}.SingleRungLadderWarnings()
-	if len(got) != 1 {
-		t.Fatalf("one shared binding gave %d warnings, want 1 so a boot log is not a wall: %q", len(got), got)
+func TestOneAPIAcrossManyTasksIsOneFinding(t *testing.T) {
+	one := collapsedOnBroker("m")
+	got := servedLadders(t, RoutingConfig{Profile: ProfileCloudFrontier, Tiers: map[Tier]ProviderConfig{
+		TierCheapCloud: one, TierPremium: one, TierFrontier: one, TierLocalSmall: one,
+	}})
+	if len(got) != 1 || len(got[0].Tasks) < 2 {
+		t.Fatalf("one shared API gave %+v, want a single finding covering several tasks", got)
 	}
 }
 
-func TestLadderWarningsJoinsBothKinds(t *testing.T) {
-	one := boundToBroker("m", nil)
-	cfg := RoutingConfig{Tiers: map[Tier]ProviderConfig{TierCheapCloud: one, TierPremium: one}}
-	got, want := len(cfg.LadderWarnings()), len(cfg.UnboundLadderWarnings())+len(cfg.SingleRungLadderWarnings())
-	if got != want || want == 0 {
-		t.Fatalf("LadderWarnings gave %d, want the %d of both kinds", got, want)
+// The sovereign presets bind one local model too, but that profile remaps every
+// cloud rung onto local_small, so their ladders are one rung by construction and
+// are not a finding.
+func TestTheShippedPresetsThatBindOneModelOnSeveralTiersAreNamed(t *testing.T) {
+	collapses := map[string]bool{
+		"consumer_class_brokered.yaml": true,
+		"gemini_cloud.yaml":            true,
+		"gemini_vertex_eu.yaml":        true,
+		"gemma4_local_ollama.yaml":     false,
+		"openrouter_cloud.yaml":        true,
+		"openrouter_cloud_eu.yaml":     false,
+		"openrouter_openai.yaml":       true,
+		"qwen3_local_vllm.yaml":        false,
+	}
+	files, err := filepath.Glob("../../../../config/presets/*.yaml")
+	if err != nil || len(files) == 0 {
+		t.Fatalf("no presets found: %v", err)
+	}
+	for _, file := range files {
+		name := filepath.Base(file)
+		want, listed := collapses[name]
+		if !listed {
+			t.Errorf("preset %s is not in the table; say whether its ladders collapse", name)
+			continue
+		}
+		raw, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		preset, err := ParsePreset(raw)
+		if err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+		if got := len(preset.SingleRungLadders()) > 0; got != want {
+			t.Errorf("%s: ladders collapse = %v, want %v", name, got, want)
+		}
 	}
 }
 
-func TestLogLadderWarningsWritesEachFindingAtWarn(t *testing.T) {
+func TestLogSingleRungLaddersWritesOneWarningPerAPI(t *testing.T) {
 	var buf bytes.Buffer
 	log := slog.New(slog.NewTextHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn}))
-	one := boundToBroker("m", nil)
-	cfg := RoutingConfig{Tiers: map[Tier]ProviderConfig{TierCheapCloud: one, TierPremium: one}}
-	LogLadderWarnings(log, cfg)
-	if got, want := strings.Count(buf.String(), "level=WARN"), len(cfg.LadderWarnings()); got != want || want == 0 {
-		t.Fatalf("logged %d warnings, want %d: %s", got, want, buf.String())
+	one := collapsedOnBroker("m")
+	cfg := RoutingConfig{Profile: ProfileCloudFrontier, Tiers: map[Tier]ProviderConfig{TierCheapCloud: one, TierPremium: one}}
+	cfg.Embeddings = EmbeddingsConfig{ProviderConfig: collapsedOnBroker("embed")}
+	_, served, err := cfg.settle()
+	if err != nil {
+		t.Fatal(err)
+	}
+	LogSingleRungLadders(log, served)
+	out := buf.String()
+	if strings.Count(out, "level=WARN") != 1 || !strings.Contains(out, "ai: routing:") || !strings.Contains(out, "model=m") {
+		t.Fatalf("want one structured warning naming the model, got %q", out)
 	}
 }

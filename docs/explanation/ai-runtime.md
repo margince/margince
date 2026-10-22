@@ -132,11 +132,14 @@ embeddings:    {provider: gemini}
 - **A tier may be left with no binding.** A deployment may run only some jobs. A ladder with no bound tier is
   not a start error, but it is reported. Boot warns per task, for example:
   `task cold_start: no bound tier on ladder [cheap_cloud premium]; calls will be refused`.
-- **Rungs that bind one upstream give no failover.** When a task's ladder has two or more bound rungs and
-  every one is the same provider, model, endpoint and upstream selection, a refusal there burns each rung
-  at once. Boot and every saved routing document warn once per binding, naming the tasks it covers. It is
-  a warning, not a refusal, because one model on several tiers is legal. A ladder with a single bound rung
-  is not reported.
+- **Rungs that reach one API give no failover.** When a task's ladder has two or more bound rungs and
+  every one is the same provider, model and endpoint, a refusal there is met again on the next rung. Boot
+  and every saved routing document warn once per API, naming the tasks it covers. The test is the one the
+  router uses to stop retrying a rejected request in place; upstream pins and the thinking level are not
+  part of it, because they change how a request is served, never which API answers. The sovereign profile
+  remaps every cloud rung onto `local_small`, so those ladders have one rung by construction and draw
+  no warning. A ladder with a single bound rung draws none either. The finding is a warning because one
+  model on several tiers is legal.
 - `/readyz` names the AI state (`configured` | `fake` | `unconfigured`). So an operator reads the gap
   off the boot log, not off a refused call at `3am`.
 - **The models that can serve a task** are the ladder plus its closure under `degrade_to`, and readers
@@ -466,7 +469,7 @@ The full steps: [how-to/certify-an-ai-model.md](../how-to/certify-an-ai-model.md
 | Budget deferral | `BudgetDeferralError` / `ErrBudgetDeferred` (`internal/modules/ai/budget.go`) |
 | Deferred carriers & resume | `site_read` / `company_scan` / `voice_build`, each with a `BudgetDeferred*` predicate; resumed by the fleet job `ai_budget_resume` (`internal/compose/jobs_aibudget.go`) through `ResumeScheduledTx` (`internal/platform/jobs/resume.go`) |
 | Company context | `companycontextprompt.go` (compose) · switch `company_context.rollout` (`margince.yaml`, `compose/companycontextrollout.go`, migration `0105`) |
-| Boot and `ops` surface | `/readyz` AI state; a boot warning per task for a ladder with no bound tier, and one per binding for a ladder whose rungs are one upstream |
+| Boot and `ops` surface | `/readyz` AI state; a boot warning per task for a ladder with no bound tier, and one per API for a ladder whose rungs reach one API |
 | The certification lane | `internal/compose/aicert`: `make e2e-ai`, `make e2e-ai-report` |
 
 **See also:**
