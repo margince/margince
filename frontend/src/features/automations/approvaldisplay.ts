@@ -31,6 +31,11 @@ const CLOSE_DATE_FLAGS = {
   unrealistic_stale: "approval.field.closeDateFlag.unrealistic_stale",
 } as const satisfies Readonly<Record<string, MessageKey>>;
 
+// A field whose value is already a word, under its caption.
+function textRow(field: string, label: MessageKey): DisplayField {
+  return { field, label, as: "text" };
+}
+
 export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
   {
     // The question is "is this deal still alive?", and `basis` is the server's
@@ -118,31 +123,11 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
     // Two records that look like one contact. The names are the comparison; the
     // position and the title beside them are what "Use as job title" weighs.
     linkedin_match: [
-      {
-        field: "connection_name",
-        label: "approval.field.connection_name",
-        as: "text",
-      },
-      {
-        field: "connection_company",
-        label: "approval.field.connection_company",
-        as: "text",
-      },
-      {
-        field: "connection_position",
-        label: "approval.field.connection_position",
-        as: "text",
-      },
-      {
-        field: "contact_name",
-        label: "approval.field.contact_name",
-        as: "text",
-      },
-      {
-        field: "contact_title",
-        label: "approval.field.contact_title",
-        as: "text",
-      },
+      textRow("connection_name", "approval.field.connection_name"),
+      textRow("connection_company", "approval.field.connection_company"),
+      textRow("connection_position", "approval.field.connection_position"),
+      textRow("contact_name", "approval.field.contact_name"),
+      textRow("contact_title", "approval.field.contact_title"),
     ],
     // A message that was scheduled and then stopped. Why it stopped is the whole
     // question, and the SUMMARY already carries that sentence: the server maps
