@@ -212,6 +212,32 @@ describe("TaskSheet", () => {
     ]);
   });
 
+  it("asks before Escape throws away a changed setting", async () => {
+    server();
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(
+      <TaskSheet
+        route={DECIDING}
+        canManage
+        canSeeCalls={false}
+        onClose={onClose}
+      />,
+    );
+
+    const sheet = await screen.findByRole("dialog");
+    await user.click(
+      within(sheet).getByRole("combobox", { name: /Decision model timeout/ }),
+    );
+    await user.click(screen.getByRole("option", { name: "30 s" }));
+    await user.keyboard("{Escape}");
+
+    expect(
+      screen.getByRole("dialog", { name: "Discard unsaved changes?" }),
+    ).toBeTruthy();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it("resets a customised task to its defaults", async () => {
     server({
       overrides: {

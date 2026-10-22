@@ -1,10 +1,17 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { Modal } from "../design-system/modal";
 import { navigate, useHash } from "../lib/router";
 import { UnsavedGuard, useGuardedLeave, useUnsavedGuard } from "./unsaved";
 
@@ -16,7 +23,10 @@ afterEach(() => {
 // A page with two addresses and a draft on the first one, which is the shape the
 // settings screen has: the content is chosen by an address the sidebar changes,
 // and the draft lives several components below whatever holds the answer.
-function Page({ onKeep }: Readonly<{ onKeep?: (address: string) => void }>) {
+function Page({
+  onKeep,
+  inDialog = false,
+}: Readonly<{ onKeep?: (address: string) => void; inDialog?: boolean }>) {
   const [address, setAddress] = useState("first");
   return (
     <LocaleProvider>
@@ -30,7 +40,10 @@ function Page({ onKeep }: Readonly<{ onKeep?: (address: string) => void }>) {
           onKeep?.(kept);
         }}
       >
-        {(shown) => (shown === "first" ? <DraftCard /> : <p>Second page</p>)}
+        {(shown) => {
+          if (shown !== "first") return <p>Second page</p>;
+          return inDialog ? <DraftDialog /> : <DraftCard />;
+        }}
       </UnsavedGuard>
     </LocaleProvider>
   );
@@ -44,6 +57,21 @@ function DraftCard() {
       Signature
       <input value={typed} onChange={(event) => setTyped(event.target.value)} />
     </label>
+  );
+}
+
+function DraftDialog() {
+  const [open, setOpen] = useState(true);
+  return (
+    <Modal
+      open={open}
+      onClose={() => setOpen(false)}
+      labelledBy="d"
+      intent="form"
+    >
+      <h2 id="d">Signature</h2>
+      <DraftCard />
+    </Modal>
   );
 }
 
@@ -71,6 +99,29 @@ describe("UnsavedGuard", () => {
       "Jane",
     );
     expect(screen.queryByText("Second page")).toBeNull();
+  });
+
+  it("holds the page for a draft inside a dialog too", async () => {
+    const user = userEvent.setup();
+    render(<Page inDialog />);
+    await user.type(screen.getByRole("textbox", { name: /Signature/ }), "Jane");
+    fireEvent.click(
+      screen.getByRole("button", { name: "go second", hidden: true }),
+    );
+
+    expect(screen.getByText(/Leaving this page discards/)).toBeInTheDocument();
+    expect(screen.queryByText("Second page")).toBeNull();
+  });
+
+  it("lets the page go once the dialog's draft is discarded", async () => {
+    const user = userEvent.setup();
+    render(<Page inDialog />);
+    await user.type(screen.getByRole("textbox", { name: /Signature/ }), "Jane");
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "Discard changes" }));
+    await user.click(screen.getByRole("button", { name: "go second" }));
+
+    expect(screen.getByText("Second page")).toBeInTheDocument();
   });
 
   it("puts the address back when the reader keeps the edit", async () => {

@@ -6512,6 +6512,7 @@ export const en = {
   "unsaved.title": "Discard unsaved changes?",
   "unsaved.body":
     "Leaving this page discards what you entered. Go back to save it first.",
+  "unsaved.dialogBody": "Closing this dialog discards what you entered.",
   "unsaved.discard": "Discard changes",
   "settings.addedItem": "“{name}” added",
   "settings.removedItem": "“{name}” removed",

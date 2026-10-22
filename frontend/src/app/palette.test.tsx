@@ -223,6 +223,24 @@ describe("CommandPalette (AC-shell-3/4/5/6)", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it("closes on a backdrop press, never on a drag that ends there", () => {
+    const onClose = vi.fn();
+    const { baseElement } = render(
+      <CommandPalette open onClose={onClose} commands={commands} />,
+    );
+    const overlay = baseElement.querySelector<HTMLElement>(".palette-overlay");
+    if (!overlay) throw new Error("the palette draws no overlay");
+    fireEvent.pointerDown(screen.getByRole("searchbox"));
+    fireEvent.pointerUp(overlay);
+    fireEvent.click(overlay);
+    expect(onClose).not.toHaveBeenCalled();
+
+    fireEvent.pointerDown(overlay);
+    fireEvent.pointerUp(overlay);
+    fireEvent.click(overlay);
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it("Esc closes; opening clears the previous query (AC-shell-3)", async () => {
     const onClose = vi.fn();
     const view = render(

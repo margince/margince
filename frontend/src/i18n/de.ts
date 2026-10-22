@@ -6485,6 +6485,8 @@ export const de = {
   "unsaved.title": "Ungespeicherte Änderungen verwerfen?",
   "unsaved.body":
     "Wenn du diese Seite verlässt, gehen deine Eingaben verloren. Gehe zurück, um deine Eingaben zuerst zu speichern.",
+  "unsaved.dialogBody":
+    "Wenn du diesen Dialog schließt, gehen deine Eingaben verloren.",
   "unsaved.discard": "Änderungen verwerfen",
   "settings.addedItem": "„{name}“ hinzugefügt",
   "settings.removedItem": "„{name}“ entfernt",

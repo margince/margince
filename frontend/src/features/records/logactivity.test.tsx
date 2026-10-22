@@ -887,6 +887,27 @@ describe("the Details field", () => {
   });
 });
 
+describe("closing the drawer over a typed note", () => {
+  it("asks first, and keeps the drawer open", async () => {
+    stubApi({});
+    render(<LogActivityAction entityType="deal" entityId="d1" openOnMount />);
+    await userEvent.type(screen.getByLabelText("Subject *"), "Recap");
+    await userEvent.keyboard("{Escape}");
+    expect(
+      screen.getByRole("dialog", { name: "Discard unsaved changes?" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("dialog", { name: "Log activity" })).toBeTruthy();
+  });
+
+  it("closes without asking once the note is saved", async () => {
+    stubApi({ "POST /activities": createdActivity });
+    render(<LogActivityAction entityType="deal" entityId="d1" openOnMount />);
+    await userEvent.type(screen.getByLabelText("Subject *"), "Recap");
+    await userEvent.click(screen.getByRole("button", { name: "Log" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+});
+
 describe("assigning a task at create time", () => {
   // Two contacts and an agent seat, so the picker's eligibility is a real filter
   // rather than an empty list agreeing with itself. The agent is who the server

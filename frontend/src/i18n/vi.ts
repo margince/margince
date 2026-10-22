@@ -6330,6 +6330,7 @@ export const vi = {
   "unsaved.title": "Bỏ thay đổi chưa lưu?",
   "unsaved.body":
     "Rời trang này sẽ bỏ những gì đã nhập. Quay lại để lưu trước.",
+  "unsaved.dialogBody": "Đóng hộp thoại này sẽ bỏ những gì đã nhập.",
   "unsaved.discard": "Bỏ thay đổi",
   "settings.addedItem": "Đã thêm “{name}”",
   "settings.removedItem": "Đã gỡ “{name}”",
