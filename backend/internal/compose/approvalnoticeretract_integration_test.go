@@ -39,11 +39,11 @@ func (a approvalNotifyEnv) unreadFor(t *testing.T, seat ids.UUID) int {
 	return len(unread)
 }
 
-// A DECIDED CARD TAKES ITS LINES BACK.
+// Only the member a request is for is told, and a decision takes the line back.
 //
-// Two seats can answer, so two are told; one answers and the other is left
-// holding a request for a decision that has been made. Nothing they can do
-// clears it: the card refuses when opened, and the badge counts it forever.
+// Two seats may answer the card, but it names the deal's owner, so only the
+// owner is told. Once it is decided, the owner's line no longer counts: the card
+// refuses when opened, and a badge that kept counting it would never clear.
 func TestADecidedApprovalTakesBackEveryDecidersNotice(t *testing.T) {
 	a := newApprovalNotifyEnv(t)
 	a.grantRole(t, a.e.AdminUser)
@@ -51,13 +51,14 @@ func TestADecidedApprovalTakesBackEveryDecidersNotice(t *testing.T) {
 
 	approvalID, staged := a.stageCorrection(t)
 	a.deliver(t, staged)
-	if got := len(a.delivered(t)); got != 2 {
-		t.Fatalf("two seats could decide this; %d notice(s) were written", got)
+	if got := len(a.delivered(t)); got != 1 {
+		t.Fatalf("one member is asked to decide this; %d notice(s) were written", got)
 	}
-	for _, seat := range []ids.UUID{a.e.AdminUser, a.e.Rep2} {
-		if got := a.unreadFor(t, seat); got != 1 {
-			t.Fatalf("seat %s has %d unread notice(s) before the decision, want 1", seat, got)
-		}
+	if got := a.unreadFor(t, a.e.AdminUser); got != 1 {
+		t.Fatalf("the deal's owner has %d unread notice(s) before the decision, want 1", got)
+	}
+	if got := a.unreadFor(t, a.e.Rep2); got != 0 {
+		t.Fatalf("a colleague who may decide but was not asked has %d notice(s), want 0", got)
 	}
 
 	retract := NewApprovalNoticeRetract(
@@ -74,8 +75,8 @@ func TestADecidedApprovalTakesBackEveryDecidersNotice(t *testing.T) {
 	// The ROW stays: the unique index on (recipient, dedupe_key) is what makes a
 	// redelivered announcement free, and a deleted line would let the next
 	// replay of the staging envelope put the request back.
-	if got := len(a.delivered(t)); got != 2 {
-		t.Errorf("%d notice row(s) survive the retraction, want both — deleting them reopens the replay", got)
+	if got := len(a.delivered(t)); got != 1 {
+		t.Errorf("%d notice row(s) survive the retraction, want the one — deleting it reopens the replay", got)
 	}
 	a.deliver(t, staged)
 	for _, seat := range []ids.UUID{a.e.AdminUser, a.e.Rep2} {

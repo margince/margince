@@ -246,6 +246,9 @@ func (p *SignalProposer) offerStageChange(ctx context.Context, said approvalSumm
 		JoinPending:    true,
 		Evidence:       []approvals.Evidence{{Snippet: approvals.SanitizeSummary(account.Summary), SourceType: tableSignal, SourceID: account.SignalID}},
 	})
+	if errors.Is(err, approvals.ErrNoDecider) {
+		return false, nil
+	}
 	if err != nil {
 		return false, err
 	}

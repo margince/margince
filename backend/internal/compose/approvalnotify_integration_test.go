@@ -264,23 +264,6 @@ func (a approvalNotifyEnv) delivered(t *testing.T) []deliveredNotice {
 	return out
 }
 
-// noticeRecipient answers whose line a staged message names, read from the row
-// rather than inferred: the job carries a notice id, and which seat it belongs
-// to is the thing a staging bug would get wrong.
-func (a approvalNotifyEnv) noticeRecipient(t *testing.T, noticeID string) ids.UUID {
-	t.Helper()
-	id, err := ids.Parse(noticeID)
-	if err != nil {
-		t.Fatalf("the staged job names %q, which is not a notice id: %v", noticeID, err)
-	}
-	var recipient ids.UUID
-	a.read(t, func(ctx context.Context, tx pgx.Tx) error {
-		return tx.QueryRow(ctx,
-			`SELECT recipient_user_id FROM notice WHERE id = $1`, id).Scan(&recipient)
-	})
-	return recipient
-}
-
 func TestApprovalNotifyReachesTheSeatsThatCouldDecideAndNobodyElse(t *testing.T) {
 	a := newApprovalNotifyEnv(t)
 	a.grantRole(t, a.e.AdminUser)
@@ -354,11 +337,9 @@ func TestApprovalNotifySaysNothingAboutAnApprovalThatStoppedBeingPending(t *test
 
 // SWITCHING THE CLASS OFF STOPS THE MESSAGE AND NOT THE LINE.
 //
-// A preference decides where a notice is delivered, never whether it exists —
-// so a seat who wants no mail about approvals still gets the card in their own
-// centre, and nothing is staged to leave the product about it. The seat beside
-// them, who changed nothing, is what proves the silence is the preference and
-// not the fan-out failing to reach anybody.
+// A preference decides where a notice is delivered, never whether it exists.
+// The member asked wants no mail about approvals, so they still get the card in
+// their own centre, and no message is staged about it.
 func TestApprovalNotifyRecordsTheLineButStagesNoMailForASeatWhoSwitchedApprovalsOff(t *testing.T) {
 	a := newApprovalNotifyEnv(t)
 	a.grantRole(t, a.e.AdminUser)
@@ -374,25 +355,12 @@ func TestApprovalNotifyRecordsTheLineButStagesNoMailForASeatWhoSwitchedApprovals
 	_, env := a.stageCorrection(t)
 	a.deliver(t, env)
 
-	// Both seats hold the line. The one who switched the class off reads it in
-	// their centre like any other.
 	rows := a.delivered(t)
-	told := map[ids.UUID]bool{}
-	for _, row := range rows {
-		told[row.recipient] = true
+	if len(rows) != 1 || rows[0].recipient != a.e.AdminUser {
+		t.Fatalf("want one line, for the deal's owner the request names; got %+v", rows)
 	}
-	if len(rows) != 2 || !told[a.e.AdminUser] || !told[a.e.Rep2] {
-		t.Fatalf("want a line for both deciding seats; got %+v", rows)
-	}
-
-	// Only the seat who left the class on has a message staged about them.
-	staged := a.queue.staged()
-	if len(staged) != 1 {
-		t.Fatalf("%d mail job(s) staged, want the one for the seat who did not switch it off: %+v", len(staged), staged)
-	}
-	mailed := a.noticeRecipient(t, staged[0].args.NoticeID)
-	if mailed != a.e.Rep2 {
-		t.Fatalf("the staged message is about %s's notice, and that seat asked for no mail", mailed)
+	if staged := a.queue.staged(); len(staged) != 0 {
+		t.Fatalf("%d mail job(s) staged for a member who asked for no mail: %+v", len(staged), staged)
 	}
 }
 

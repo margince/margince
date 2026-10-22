@@ -12,7 +12,6 @@ package approvals
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -25,8 +24,15 @@ import (
 // approvalKeyOnBehalfOf is the audit field a seat move writes both images of.
 const approvalKeyOnBehalfOf = "on_behalf_of"
 
+// approvalKeyDecider is the audit field naming who a request is for.
+const approvalKeyDecider = "requested_decider_id"
+
 // ownerMovedAway is the reason a withdrawn draft's audit row carries.
 const ownerMovedAway = "the deal changed owner; a message drafted for the previous owner is not handed on"
+
+// ownerRemoved is the reason a request is withdrawn when its deal is left with
+// no owner. A pending request always names the member it is for.
+const ownerRemoved = "the deal no longer has an owner, so nobody is responsible for this request"
 
 // FollowDealOwnerInTx moves a deal's pending proposals from its previous owner
 // to its new one, on the deal writer's transaction so the two commit together.
@@ -35,13 +41,14 @@ const ownerMovedAway = "the deal changed owner; a message drafted for the previo
 // Per kind:
 //   - deal_follow_up: every pending card on the deal moves. Its text is the
 //     product describing the deal, so it reads the same for any owner.
-//   - commitment_task: a promise nobody could be named for moves when its
-//     task would land on the deal — the promise is the deal's, and so is the
-//     owner who acts on it. A promise a named colleague made stays theirs,
-//     whoever owns the deal.
+//   - commitment_task: never moves. A promise is put only to the colleague who
+//     made it, so the deal's owner does not inherit it.
 //   - held_draft: a reply drafted for the previous owner is withdrawn. It was
 //     composed under their authority, to be sent from their mailbox, so it is
 //     not handed on; the next sweep drafts one for the new owner.
+//   - any other kind whose decider was named as the deal's owner moves with it.
+//
+// A deal left with no owner withdraws every request that would move.
 //
 // The caller has already taken write authority on the deal, which is what
 // admits this write. It is audit-only, for the reason the writeshape gate
@@ -52,8 +59,12 @@ func FollowDealOwnerInTx(ctx context.Context, tx pgx.Tx, dealID ids.UUID, from, 
 		return err
 	}
 	for _, p := range moving {
-		if p.kind == kindHeldDraft {
-			if _, err := withdrawInTx(ctx, tx, p.id, ownerMovedAway); err != nil {
+		if p.kind == kindHeldDraft || to == nil {
+			reason := ownerMovedAway
+			if p.kind != kindHeldDraft {
+				reason = ownerRemoved
+			}
+			if _, err := withdrawInTx(ctx, tx, p.id, reason); err != nil {
 				return err
 			}
 			continue
@@ -70,6 +81,7 @@ type followingProposal struct {
 	id         ids.ApprovalID
 	kind       string
 	onBehalfOf *ids.UUID
+	decider    *ids.UUID
 }
 
 // lockProposalsFollowingDeal locks, in the canonical order, every pending row
@@ -77,54 +89,43 @@ type followingProposal struct {
 func lockProposalsFollowingDeal(
 	ctx context.Context, tx pgx.Tx, dealID ids.UUID, from, to *ids.UUID,
 ) ([]followingProposal, error) {
-	onDeal := proposalLinksDeal(dealID)
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	deal, prev, next := arg(dealID), arg(from), arg(to)
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT id, kind, on_behalf_of FROM approval
+		SELECT id, kind, on_behalf_of, requested_decider_id FROM approval
 		 WHERE status = 'pending' AND expires_at > now()
 		   AND (
 		     (kind = $%[4]d AND target_entity_type = 'deal' AND target_entity_id = $%[1]d
 		        AND on_behalf_of IS DISTINCT FROM $%[3]d)
-		  OR (kind = $%[5]d AND NOT proposed_change ? 'seat_id'
-		        AND proposed_change->'links' @> $%[6]d
-		        AND on_behalf_of IS DISTINCT FROM $%[3]d)
-		  OR (kind = $%[7]d AND target_entity_type = 'deal' AND target_entity_id = $%[1]d
+		  OR (kind = $%[5]d AND target_entity_type = 'deal' AND target_entity_id = $%[1]d
 		        AND on_behalf_of IS NOT NULL AND on_behalf_of IS NOT DISTINCT FROM $%[2]d)
+		  OR (target_entity_type = 'deal' AND target_entity_id = $%[1]d
+		        AND requested_decider_source = 'record_owner'
+		        AND requested_decider_id IS DISTINCT FROM $%[3]d)
 		   )
 		 `+lockOrder+`
 		 FOR UPDATE`,
-		deal, prev, next, arg(kindDealFollowUp), arg(kindCommitmentTask), arg(onDeal), arg(kindHeldDraft)),
+		deal, prev, next, arg(kindDealFollowUp), arg(kindHeldDraft)),
 		args...)
 	if err != nil {
 		return nil, fmt.Errorf("lock the proposals following the deal's owner: %w", err)
 	}
 	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (followingProposal, error) {
 		var p followingProposal
-		err := row.Scan(&p.id, &p.kind, &p.onBehalfOf)
+		err := row.Scan(&p.id, &p.kind, &p.onBehalfOf, &p.decider)
 		return p, err
 	})
 }
 
-// proposalLinksDeal is the containment document matching a commitment proposal
-// whose task lands on this deal. The keys are the Go field names of
-// activities.ActivityLinkInput, which the payload's links carry untagged.
-//
-// Held by: TestEveryTranscriptCardOnTheDealFollowsIt
-// (backend/internal/compose/proposalsfollowdeal_integration_test.go), which
-// stages through the real transcript reader.
-func proposalLinksDeal(dealID ids.UUID) json.RawMessage {
-	// Spelled rather than marshalled: a uuid's text needs no escaping, so the
-	// document has one possible shape and no encoding step that could fail.
-	return json.RawMessage(`[{"EntityType":"deal","EntityID":"` + dealID.String() + `"}]`)
-}
-
-// retargetInTx names the new owner as the seat one proposal is for. The row is
-// already locked; the compare on the seat it was read with keeps the write
-// honest if that ever stops being true.
+// retargetInTx names the new owner as the member one proposal is for. A row
+// named through its record's owner never recorded on_behalf_of, and keeps it
+// empty. The row is already locked; the compare on the seat it was read with
+// refuses the write if that ever stops being true.
 func retargetInTx(ctx context.Context, tx pgx.Tx, p followingProposal, to *ids.UUID) error {
-	tag, err := tx.Exec(ctx, `UPDATE approval SET on_behalf_of = $2
+	tag, err := tx.Exec(ctx, `UPDATE approval
+		   SET on_behalf_of = CASE WHEN requested_decider_source = 'record_owner' THEN on_behalf_of ELSE $2 END,
+		       requested_decider_id = $2
 		 WHERE id = $1 AND status = 'pending' AND on_behalf_of IS NOT DISTINCT FROM $3`,
 		p.id, to, p.onBehalfOf)
 	if err != nil {
@@ -134,8 +135,8 @@ func retargetInTx(ctx context.Context, tx pgx.Tx, p followingProposal, to *ids.U
 		return fmt.Errorf("%w: the proposal changed while its deal was reassigned", apperrors.ErrConflict)
 	}
 	if _, err := storekit.AuditWithEvidence(ctx, tx, "update", entityApproval, p.id.UUID,
-		map[string]any{approvalKeyOnBehalfOf: p.onBehalfOf},
-		map[string]any{approvalKeyOnBehalfOf: to},
+		map[string]any{approvalKeyOnBehalfOf: p.onBehalfOf, approvalKeyDecider: p.decider},
+		map[string]any{approvalKeyOnBehalfOf: to, approvalKeyDecider: to},
 		map[string]any{approvalKeyKind: p.kind, approvalKeyReason: "the deal changed owner"}); err != nil {
 		return fmt.Errorf("audit re-targeted approval: %w", err)
 	}

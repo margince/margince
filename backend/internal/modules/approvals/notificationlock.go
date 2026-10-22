@@ -12,8 +12,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// PendingDecidableInTx orders notification copies against decisions and erasure.
-func (s *Service) PendingDecidableInTx(ctx context.Context, tx pgx.Tx, id ids.ApprovalID) (bool, error) {
+// PendingAskedOfInTx reports whether the acting seat is the one member this
+// pending request names, and may still decide it. Nobody else is told about it.
+// It locks the row, ordering notification copies against decisions and erasure.
+func (s *Service) PendingAskedOfInTx(ctx context.Context, tx pgx.Tx, id ids.ApprovalID) (bool, error) {
 	if err := actingForAHuman(ctx); err != nil {
 		return false, err
 	}
@@ -24,5 +26,5 @@ func (s *Service) PendingDecidableInTx(ctx context.Context, tx pgx.Tx, id ids.Ap
 		}
 		return false, err
 	}
-	return s.pendingDecidable(ctx, tx, id)
+	return s.pendingDecidableInScope(ctx, tx, id, ListInput{RequestedForReader: true})
 }

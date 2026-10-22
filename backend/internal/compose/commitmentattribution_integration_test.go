@@ -49,8 +49,8 @@ func TestAnUnresolvedPromiserDoesNotBecomeTheSender(t *testing.T) {
 	if got := e.WsCount(t, `SELECT count(*) FROM activity WHERE kind = 'task'`); got != 0 {
 		t.Fatalf("unresolved attribution created %d assigned tasks", got)
 	}
-	if got := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = 'commitment_task' AND NOT (proposed_change ? 'promiser_seat_id') AND proposed_change->>'promiser_unresolved'='true' AND proposed_change->>'party'='' AND on_behalf_of IS NULL`); got != 1 {
-		t.Fatalf("unresolved reassignment proposals = %d, want one", got)
+	if got := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = 'commitment_task'`); got != 0 {
+		t.Fatalf("a promise nobody can be named for staged %d proposals, want none", got)
 	}
 }
 

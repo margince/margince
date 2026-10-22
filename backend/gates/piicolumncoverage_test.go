@@ -181,6 +181,8 @@ var erasureColumnBaseline = map[string][]string{
 		// outside this gate's subject.
 		"target_entity_type",
 		"co_target_entity_type",
+		// Which staging rule named the decider: one of four fixed words.
+		"requested_decider_source",
 	},
 	"comms_outbound": {
 		// The delivery's half of the decision vocabulary, read by the worker

@@ -3668,6 +3668,8 @@ export const en = {
   "commitment.review.title": "Commitment review",
   "commitment.review.detail":
     "No task was created from these readings. Review the source and later replies before adding a follow-up from a linked record.",
+  "commitment.review.noPromiser":
+    "No colleague who made this commitment can be asked, so nobody was.",
   "commitment.review.historical":
     "Historical commitment without a current deadline.",
   "commitment.review.beforeBaseline":
