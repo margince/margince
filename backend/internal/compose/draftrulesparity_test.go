@@ -31,6 +31,7 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -41,6 +42,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/accountdraft"
 	"github.com/margince/margince/backend/internal/compose/contactdraft"
 	"github.com/margince/margince/backend/internal/compose/draftrules"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
@@ -73,6 +75,29 @@ func draftingSurfaces(fence promptfence.Fence) map[string][]string {
 			accountdraft.SystemPromptFor(fence),
 			accountdraft.VoicedSystemPromptFor(fence),
 		},
+	}
+}
+
+// exemptFromSharedRules names the files that assemble a drafting call and are
+// kept out of draftingSurfaces, each with the reason. A row is an
+// assertion rather than an absence: TestAnExemptWriterStillWritesWithoutTheSharedRules
+// fails when the file starts reading the block or stops existing.
+var exemptFromSharedRules = gatekit.Waive(map[string]string{
+	"voicebuildeval.go": "the voice evaluator scores voice only, and the shared block adds variance the judge ignores " +
+		"and names inputs the call never gets (a recipient, a conversation state); it becomes a drafting surface " +
+		"once it scores correspondence or supplies those inputs",
+	"voicebuilddemo.go": "the profile-card demonstration answers a fixed sample task with no recipient and no " +
+		"conversation, so the block's sender, recipient and time rules have nothing to apply to; it becomes a " +
+		"drafting surface once it writes to a real recipient or conversation",
+})
+
+// exemptWriterPrompts is each exempt file's assembled system turn, keyed like
+// draftingSurfaces. The absence of the block is checked against what the model
+// is sent, and a row without a prompt fails.
+func exemptWriterPrompts(fence promptfence.Fence) map[string]string {
+	return map[string]string{
+		"voicebuildeval.go": voiceEvalDraftSystemFor(fence),
+		"voicebuilddemo.go": voiceDemoDraftSystemFor(fence),
 	}
 }
 
@@ -145,6 +170,32 @@ func TestTheParityTableCoversEveryFileThatComposesTheSharedRules(t *testing.T) {
 				where)
 		}
 	}
+}
+
+// An exemption holds only while its file really writes without the block. One
+// that has since adopted the block is a surface the table must assemble, and
+// one whose file is gone is a row describing nothing.
+func TestAnExemptWriterStillWritesWithoutTheSharedRules(t *testing.T) {
+	swept := filesComposingTheSharedRules(t)
+	prompts := exemptWriterPrompts(promptfence.New())
+	for _, file := range exemptFromSharedRules.Subjects() {
+		prompt, assembled := prompts[file]
+		if !assembled {
+			t.Errorf("exempt file %s has no entry in exemptWriterPrompts, so nothing checks what it sends", file)
+		} else if strings.Contains(prompt, draftrules.Shared) {
+			t.Errorf("the prompt assembled in %s carries the shared block but the file is still exempt", file)
+		}
+		if _, err := os.Stat(file); err != nil {
+			t.Errorf("exempt file %s is gone (%v): remove its row", file, err)
+		}
+		if slicesContains(swept, file) {
+			t.Errorf("%s now composes draftrules.Shared, so its exemption has lapsed: move it into "+
+				"draftingSurfaces with its assembled system turn", file)
+			continue
+		}
+		exemptFromSharedRules.Waived(t, file)
+	}
+	exemptFromSharedRules.AssertAllMatched(t)
 }
 
 // filesComposingTheSharedRules sweeps the compose tree for the production files
