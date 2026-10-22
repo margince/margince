@@ -226,3 +226,32 @@ it("writes a reply again on its thread and withdraws the old one after", async (
   expect(reply?.body).toMatchObject({ to: ["ceo@acme.test"] });
   expect(sent.some((call) => call.key === "POST /emails")).toBe(false);
 });
+
+it("says so and opens nothing when the reply's thread has no record to file under", async () => {
+  const user = userEvent.setup();
+  stubRoutes({
+    "GET /scheduled-sends": () => jsonResponse([REPLY]),
+    [`GET /activities/${REPLY.anchor_activity_id}`]: () =>
+      jsonResponse({ ...THREAD_EMAIL, links: [] }),
+  });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <ToastProvider>
+          <ScheduledSendsScreen />
+          <ToastRegion />
+        </ToastProvider>
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  await user.click(
+    await screen.findByRole("button", { name: "Edit: Re: the quote" }),
+  );
+  expect(
+    await screen.findByText(/no longer available to reply to/),
+  ).toBeVisible();
+  expect(screen.queryByRole("dialog")).toBeNull();
+});

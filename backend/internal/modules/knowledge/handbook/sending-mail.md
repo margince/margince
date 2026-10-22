@@ -267,7 +267,8 @@ Held messages come first, under **Held for your action**. Messages already sent
 or withdrawn wait behind **Sent or withdrawn**.
 
 **Reschedule** changes the time only. Margince checked the text itself, so to
-change the text, withdraw the message and write it again. **Withdraw** warns
+change the text, press **Edit**. A message without **Edit** has to be withdrawn
+and written again. **Withdraw** warns
 that the message will not be sent, nothing reaches the timeline, and sending it
 later means writing it again.
 

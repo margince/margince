@@ -31,13 +31,15 @@ export function EditComposer({
   const toast = useToast();
   const thread = useThreadProject(send?.anchor_activity_id ?? undefined);
   const seed = send ? editSeedOf(send, thread.activity?.links) : undefined;
-  const unreadable = Boolean(send?.anchor_activity_id) && thread.failed;
+  const answers = Boolean(send?.anchor_activity_id);
+  // A thread that read fine but carries no record to file under cannot open.
+  const cannotOpen = answers && (thread.failed || (thread.settled && !seed));
   useEffect(() => {
-    if (unreadable) {
+    if (cannotOpen) {
       toast.show(t("compose.anchorGone"), { tone: "danger" });
       onClose();
     }
-  }, [unreadable, toast, t, onClose]);
+  }, [cannotOpen, toast, t, onClose]);
   if (!send || !seed) {
     return null;
   }
