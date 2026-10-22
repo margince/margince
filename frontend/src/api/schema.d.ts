@@ -15832,6 +15832,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/users/{id}/mfa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Remove a member's second factor. Admin-only, human-only.
+         * @description For a member who lost both their authenticator and their recovery codes. Removes the
+         *     member's enrolment, its recovery codes and the sealed secret, and ends every session the
+         *     member holds, in one transaction. The member then signs in with their password and sets
+         *     a factor up again, at once if the installation requires one. Emits `user.mfa_removed`,
+         *     which names the admin and the member.
+         *
+         *     It takes the same ceiling as `issueUserPasswordLink`: a delegated admin may act only on a
+         *     member whose whole access they already hold, and never on a full admin (403). Your own
+         *     factor is refused (403): `disableMyMfa` removes it, and asks for a current code, so a
+         *     borrowed session cannot strip it. Idempotent: a member with no factor is a no-op.
+         */
+        delete: operations["removeUserMfa"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/{id}/password-link": {
         parameters: {
             query?: never;
@@ -37579,8 +37611,8 @@ export interface components {
             roles?: string[];
             /** @description The live teams this user belongs to, ordered by team name. Present ONLY for an admin caller, on the same terms as `roles`: the roster answers every authenticated user because the share and assignee pickers read it, and who is in which team is not theirs to enumerate. An ARCHIVED team is absent — its memberships resolve no scope and no share, so listing one would describe access the user does not have. */
             team_ids?: string[];
-            /** @description The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, and whether this installation can build a set-password link. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer. */
-            allowed_actions?: ("change_role" | "issue_password_link" | "deactivate" | "reactivate")[];
+            /** @description The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer. */
+            allowed_actions?: ("change_role" | "issue_password_link" | "remove_mfa" | "deactivate" | "reactivate")[];
             /**
              * Format: date-time
              * @description When this member last used the product: the latest request any of their sign-in sessions made, including a session since signed out, revoked or expired. Clearing dead sessions records the latest of their requests on the member first, so the value outlives the sessions. Signing in counts as activity. Work an agent or a connected app did on their behalf does not.
@@ -39255,7 +39287,7 @@ export interface components {
          *     serve it. One list, so the two reads cannot name the same row two ways.
          * @enum {string}
          */
-        AuditAction: "create" | "update" | "archive" | "merge" | "promote" | "demote" | "disqualify" | "restore" | "export" | "erase" | "anonymize" | "assign" | "advance_stage" | "advance_phase" | "send_email" | "consent_grant" | "consent_withdraw" | "approve" | "reject" | "record_share" | "record_unshare" | "activity_relink" | "import" | "import_undo" | "reset_data" | "password_link_issued" | "connect" | "disconnect" | "schedule" | "reschedule" | "cancel" | "release" | "hold" | "expire" | "resolve" | "restrict" | "pin" | "accrue" | "pay" | "publish" | "pause" | "resume" | "close" | "invite" | "revoke" | "delete" | "place_legal_hold" | "lift_legal_hold" | "request_legal_review" | "withdraw_legal_review";
+        AuditAction: "create" | "update" | "archive" | "merge" | "promote" | "demote" | "disqualify" | "restore" | "export" | "erase" | "anonymize" | "assign" | "advance_stage" | "advance_phase" | "send_email" | "consent_grant" | "consent_withdraw" | "approve" | "reject" | "record_share" | "record_unshare" | "activity_relink" | "import" | "import_undo" | "reset_data" | "password_link_issued" | "connect" | "disconnect" | "schedule" | "reschedule" | "cancel" | "release" | "hold" | "expire" | "resolve" | "restrict" | "pin" | "accrue" | "pay" | "publish" | "pause" | "resume" | "close" | "invite" | "revoke" | "delete" | "place_legal_hold" | "lift_legal_hold" | "request_legal_review" | "withdraw_legal_review" | "mfa_removed";
         /** @description An append-only audit row. Mirrors the `audit_log` table. */
         AuditLogEntry: {
             /** Format: uuid */
@@ -72524,6 +72556,39 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    removeUserMfa: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The member has no second factor now, or had none. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Refused with `code: archived_role_held`: the member holds an archived role, which would hand the account its grants back the moment the role is restored. An admin gives them a live role first. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     issueUserPasswordLink: {

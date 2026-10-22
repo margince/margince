@@ -606,6 +606,7 @@ const (
 	UserGreetingNameChanged               SubscribableEventType = "user_greeting_name.changed"
 	UserInvited                           SubscribableEventType = "user.invited"
 	UserLocaleChanged                     SubscribableEventType = "user_locale.changed"
+	UserMfaRemoved                        SubscribableEventType = "user.mfa_removed"
 	UserPasswordLinkIssued                SubscribableEventType = "user.password_link_issued"
 	UserReactivated                       SubscribableEventType = "user.reactivated"
 	VoiceBuildChanged                     SubscribableEventType = "voice.build_changed"
@@ -869,6 +870,8 @@ func (e SubscribableEventType) Valid() bool {
 	case UserInvited:
 		return true
 	case UserLocaleChanged:
+		return true
+	case UserMfaRemoved:
 		return true
 	case UserPasswordLinkIssued:
 		return true
@@ -2472,6 +2475,18 @@ type PublicEventUserLocaleChanged struct {
 	Locale string `json:"locale"`
 }
 
+// PublicEventUserMfaRemoved Payload for user.mfa_removed. An admin removed a member's second factor, for a member who lost both their authenticator and their recovery codes. Every session the member held ended with it. The password alone opens the account until the member sets a factor up again. So `by` and `user_id` are both required: this event records who weakened which sign-in.
+type PublicEventUserMfaRemoved struct {
+	// By The admin who removed it.
+	By openapi_types.UUID `json:"by"`
+
+	// SessionsEnded How many live sessions of the member the removal ended.
+	SessionsEnded int `json:"sessions_ended"`
+
+	// UserId The member whose second factor was removed.
+	UserId openapi_types.UUID `json:"user_id"`
+}
+
 // PublicEventUserPasswordLinkIssued Payload for user.password_link_issued. On an installation with no outbound-email channel, an admin minted a single-use set-password link for a member (ADR-0061). The admin delivers it out-of-band. Issuing supersedes the target's outstanding unused tokens. The link may be minted for a member who already has a password. That is an account takeover an admin is trusted to perform. This event is the detective control that records it, so `by` and `user_id` are both required and are the point of the event. The token itself is never a property here, and must never be added. The raw value is returned to the issuing admin once, over the response body, and reaches no ledger, log or bus.
 type PublicEventUserPasswordLinkIssued struct {
 	// By The admin who issued the link.
@@ -3173,6 +3188,10 @@ func (PublicEventUserLocaleChanged) EventType() string { return "user_locale.cha
 
 func (PublicEventUserLocaleChanged) EntityType() string { return "user" }
 
+func (PublicEventUserMfaRemoved) EventType() string { return "user.mfa_removed" }
+
+func (PublicEventUserMfaRemoved) EntityType() string { return "user" }
+
 func (PublicEventUserPasswordLinkIssued) EventType() string { return "user.password_link_issued" }
 
 func (PublicEventUserPasswordLinkIssued) EntityType() string { return "user" }
@@ -3343,6 +3362,7 @@ var PublicEventVersions = map[string]int{
 	"user.activated":                            1,
 	"user.deactivated":                          1,
 	"user.invited":                              1,
+	"user.mfa_removed":                          1,
 	"user.password_link_issued":                 1,
 	"user.reactivated":                          1,
 	"user_delivery.changed":                     1,
@@ -3483,6 +3503,7 @@ var PublicEventSamples = map[string]string{
 	"user.activated":                            "{\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"user.deactivated":                          "{\"by\":\"0190a7f2-0000-7000-8000-000000000010\",\"reason\":\"Sample reason\",\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"user.invited":                              "{\"by\":\"0190a7f2-0000-7000-8000-000000000010\",\"role\":\"Sample role\",\"team_ids\":[\"0190a7f2-0000-7000-8000-000000000010\"],\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
+	"user.mfa_removed":                          "{\"by\":\"0190a7f2-0000-7000-8000-000000000010\",\"sessions_ended\":1,\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"user.password_link_issued":                 "{\"by\":\"0190a7f2-0000-7000-8000-000000000010\",\"expires_at\":\"2026-10-14T09:12:00Z\",\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"user.reactivated":                          "{\"by\":\"0190a7f2-0000-7000-8000-000000000010\",\"status\":\"invited\",\"user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"user_delivery.changed":                     "{\"changed_fields\":[\"Sample changed fields\"]}",

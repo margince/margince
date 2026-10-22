@@ -71,6 +71,7 @@ var auditVerbNoGrant = gatekit.Waive(map[string]string{
 	// audit as create/update on `user` and reach the map only through those
 	// generic verbs, which is the same non-attribution wearing a CRUD name.
 	"password_link_issued": "audited on user, which is not an RBAC policy object; the governing check is the admin role gate, not an object CRUD grant",
+	"mfa_removed":          "audited on user, which is not an RBAC policy object; the governing check is the user_admin grant, not an object CRUD grant on the audited row",
 	// Both audit on the ACTIVITY they hold, and Rule() renders the grant
 	// against the AUDITED entity — so a mapping in auditActionGrant would
 	// record `activity.update`, naming a grant nobody checked. The authority

@@ -3319,6 +3319,10 @@ func (stubs) DeactivateUser(w nethttp.ResponseWriter, r *nethttp.Request, id crm
 	httperr.NotImplemented(w, r, "DeactivateUser")
 }
 
+func (stubs) RemoveUserMfa(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RemoveUserMfa")
+}
+
 func (stubs) IssueUserPasswordLink(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "IssueUserPasswordLink")
 }
