@@ -86,6 +86,8 @@ Margince tells one colleague about each approval: the one it is for. That is the
 A promise read from mail or a meeting is the exception: only the colleague who made it is told, and only they may answer it. If they cannot be asked, nobody is.
 
 The email names the record as its heading and says what is proposed. For a change to a record, it lists each field with its value now and the value after the change, up to eight fields. It also says why you are asked. It leaves out any value you may not see.
+
+The email goes out about three minutes after the approval is staged. Approvals waiting for you from those few minutes arrive together in one email, one section each. An approval you already answered in Margince is left out.
 Also called: approval email, decision needed, who gets notified, approval notice.
 
 ### Who is asked about a promise read from mail or a meeting?

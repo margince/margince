@@ -130,6 +130,7 @@ type Copy struct {
 	MailAbout           string
 	MailProposal        string
 	MailSetOnApproval   string
+	MailBurstCount      string
 	MailReadFrom        string
 	MailPromisedBy      string
 	MailInTheirWords    string
