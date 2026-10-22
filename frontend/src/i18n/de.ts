@@ -14887,28 +14887,20 @@ export const de = {
   "worklist.completeness.cards_one": "{cards} Karte sichtbar",
   "worklist.completeness.cards_other": "{cards} Karten sichtbar",
   "worklist.completeness.bounded":
-    "Lesegrenze erreicht bei {kinds}. Sieh dir die Quellengrenzen an.",
+    "Für {kinds} gibt es mehr Einträge, als diese Liste zeigen kann.",
   "worklist.completeness.unread_one": "{count} Quelle nicht geladen",
   "worklist.completeness.unread_other": "{count} Quellen nicht geladen",
   "worklist.review.partial":
     "{loaded} von {total} angezeigt. Lade unten mehr, um den Rest zu sehen.",
-  "worklist.limits.title": "Lesegrenzen der Quellen",
-  "worklist.limits.source": "{source}: Lesegrenze erreicht · {scope}",
   "worklist.emptyPage":
     "Keine Einträge auf dieser Seite. Lade mehr, um fortzufahren.",
   "worklist.review.more":
     "Weitere Seiten können Einträge zur Prüfung enthalten. Lade unten mehr, um fortzufahren.",
-  "worklist.limits.boundary":
-    "Mehr laden setzt diesen Stand fort. Die Lesegrenzen der Quellen bleiben bestehen.",
-  "worklist.limits.personal": "deine persönliche Quelle",
-  "worklist.limits.selected": "der gewählte Datensatzbereich",
-  "worklist.limits.remedy":
-    "Prüfe die verfügbaren Einträge und aktualisiere dann die Ansicht. Fehlt weiterhin benötigte Arbeit, wende dich an einen Admin, um die Lesegrenze der Quelle zu prüfen.",
   "worklist.review.snapshotChanged":
     "{loaded} von {total} Einträgen des gespeicherten Stands angezeigt. Der Tag hat sich geändert. Aktualisiere die Ansicht, um die Zahlen neu zu laden.",
   "worklist.review.partialDone": "{loaded} von {total} angezeigt.",
   "worklist.review.floor":
-    "{loaded}+ angezeigt. Eine Quelle hat ihre Lesegrenze erreicht. Sieh dir die Quellengrenzen an.",
+    "{loaded}+ angezeigt. Es gibt mehr Einträge, als diese Liste zeigen kann.",
   "worklist.clear": "Nichts wartet auf dich.",
   "worklist.clearFor": "Nichts wartet auf {name}.",
   "worklist.clearOfTasksToday":

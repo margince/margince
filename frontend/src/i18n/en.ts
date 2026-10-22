@@ -14855,27 +14855,19 @@ export const en = {
   "worklist.completeness.cards_one": "{cards} card on screen",
   "worklist.completeness.cards_other": "{cards} cards on screen",
   "worklist.completeness.bounded":
-    "Read limit reached for {kinds}. See the source limits.",
+    "More items exist for {kinds} than this list can show.",
   "worklist.completeness.unread_one": "{count} source did not load",
   "worklist.completeness.unread_other": "{count} sources did not load",
   "worklist.review.partial":
     "{loaded} of {total} shown. Load more below to see the rest.",
-  "worklist.limits.title": "Source read limits",
-  "worklist.limits.source": "{source}: read limit reached · {scope}",
   "worklist.emptyPage": "Nothing on this page. Load more to continue.",
   "worklist.review.more":
     "More pages may contain review items. Load more below to continue.",
-  "worklist.limits.boundary":
-    "Load more continues this snapshot. It cannot read beyond the source limits.",
-  "worklist.limits.personal": "your personal source",
-  "worklist.limits.selected": "the selected record scope",
-  "worklist.limits.remedy":
-    "Review the available items, then refresh. If needed work is still missing, ask an admin to investigate the source read limit.",
   "worklist.review.snapshotChanged":
     "{loaded} of {total} snapshot items shown. The day has changed; refresh to update the totals.",
   "worklist.review.partialDone": "{loaded} of {total} shown.",
   "worklist.review.floor":
-    "{loaded}+ shown. A source read limit was reached; see the source limits.",
+    "{loaded}+ shown. More items exist than this list can show.",
   "worklist.clear": "Nothing is waiting on you.",
   "worklist.clearFor": "Nothing is waiting on {name}.",
   "worklist.clearOfTasksToday":

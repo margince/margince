@@ -175,7 +175,7 @@ describe("what the page says about what it is not showing", () => {
     // Waited on the caveat, so the absence below is asserted over a drawn line.
     await waitFor(() => {
       expect(
-        screen.getByText(/Read limit reached for Approvals \(200\+\)/),
+        screen.getByText(/More items exist for Approvals \(200\+\)/),
       ).toBeTruthy();
     });
     // "200 of 200 shown - 1 source has more" contradicts itself in one
@@ -183,7 +183,7 @@ describe("what the page says about what it is not showing", () => {
     expect(screen.queryByText(/200 of 200/)).toBeNull();
   });
 
-  it("names the cut whose read hit its limit, and the remedy", async () => {
+  it("names the cut whose read hit its limit", async () => {
     stub(
       day([
         {
@@ -199,7 +199,7 @@ describe("what the page says about what it is not showing", () => {
     await waitFor(() => {
       expect(
         screen.getByText(
-          "1 item shown · Read limit reached for Approvals (200+). See the source limits.",
+          "1 item shown · More items exist for Approvals (200+) than this list can show.",
         ),
       ).toBeTruthy();
     });
@@ -226,8 +226,34 @@ describe("what the page says about what it is not showing", () => {
 
     await waitFor(() => {
       expect(
+        screen.getByText(/exist for Approvals \(200\+\), Tasks \(40\+\) than/),
+      ).toBeTruthy();
+    });
+  });
+
+  it("does not name a bounded cut that read nothing", async () => {
+    stub(
+      day([
+        {
+          category: "decisions",
+          considered: 200,
+          shown: 1,
+          more_available: true,
+        },
+        {
+          category: "deals_at_risk",
+          considered: 0,
+          shown: 0,
+          more_available: true,
+        },
+      ]),
+    );
+    renderWorklist();
+
+    await waitFor(() => {
+      expect(
         screen.getByText(
-          /limit reached for Approvals \(200\+\), Tasks \(40\+\)/,
+          "1 item shown · More items exist for Approvals (200+) than this list can show.",
         ),
       ).toBeTruthy();
     });
@@ -336,7 +362,9 @@ describe("the line compares items with items", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText(/^200\+ shown\. A source read limit/),
+        screen.getByText(
+          /^200\+ shown\. More items exist than this list can show\.$/,
+        ),
       ).toBeTruthy();
     });
     expect(screen.queryByText(/200 of 230/)).toBeNull();

@@ -74,10 +74,12 @@ export function completenessText(
       }),
     );
   }
-  if (limited.length > 0) {
+  // "Deals at risk (0)" beside "more items exist" contradicts itself on screen.
+  const named = limited.filter((count) => count.considered > 0);
+  if (named.length > 0) {
     parts.push(
       t("worklist.completeness.bounded", {
-        kinds: limited.map((count) => limitedKind(count, t, locale)).join(", "),
+        kinds: named.map((count) => limitedKind(count, t, locale)).join(", "),
       }),
     );
   }
