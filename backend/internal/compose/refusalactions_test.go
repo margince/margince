@@ -23,12 +23,15 @@ func TestARefusalOffersOnlyWhatThisCallerCanDo(t *testing.T) {
 	t.Parallel()
 	contact := ids.NewV7()
 	refused := func(reason string) consent.RefusedRecipient {
-		return consent.RefusedRecipient{SubjectKind: "contact", SubjectID: contact.String(),
-			ReasonCode: reason, Category: string(commsauthz.CategoryRequestedFollowup)}
+		return consent.RefusedRecipient{
+			SubjectKind: "contact", SubjectID: contact.String(),
+			ReasonCode: reason, Category: string(commsauthz.CategoryRequestedFollowup),
+		}
 	}
 	held := consent.Review{IntentID: ids.NewV7(), Refusals: []consent.RefusedRecipient{refused(commsauthz.ReasonNoEvidence)}}
 	mixed := consent.Review{IntentID: held.IntentID, Refusals: []consent.RefusedRecipient{
-		refused(commsauthz.ReasonNoEvidence), refused(commsauthz.ReasonHardBounce)}}
+		refused(commsauthz.ReasonNoEvidence), refused(commsauthz.ReasonHardBounce),
+	}}
 	bounced := consent.Review{IntentID: held.IntentID, Refusals: []consent.RefusedRecipient{refused(commsauthz.ReasonHardBounce)}}
 
 	for _, tc := range []struct {

@@ -62,11 +62,11 @@ func (s *Store) WithReviewRouter(router ReviewRouter) *Store {
 
 // RequestDecision refuses: asking a colleague to decide a refused send is not
 // offered any more. The refusal names the moves that are.
-func (s *Store) RequestDecision(ctx context.Context, _ ids.UUID, _ string) (ids.UUID, error) {
+func (s *Store) RequestDecision(ctx context.Context) error {
 	if err := auth.RequireHuman(ctx); err != nil {
-		return ids.UUID{}, err
+		return err
 	}
-	return ids.UUID{}, &ReviewNotRoutableError{Why: askingRetired}
+	return &ReviewNotRoutableError{Why: askingRetired}
 }
 
 // askingRetired is what a caller of the retired ask is told instead.

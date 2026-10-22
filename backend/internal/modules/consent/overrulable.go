@@ -5,10 +5,12 @@ package consent
 
 import (
 	"context"
+	"errors"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -50,15 +52,16 @@ func (r Review) Overrulable() []OverrulableRecipient {
 // that contact would be refused.
 func (g *Gate) OverrulableBy(ctx context.Context, review Review) ([]OverrulableRecipient, error) {
 	overrulable := review.Overrulable()
-	if len(overrulable) == 0 || auth.Require(ctx, "contact", principal.ActionUpdate) != nil {
+	if len(overrulable) == 0 || !mayUpdateContacts(ctx) {
 		return nil, nil
 	}
 	writable := true
 	err := g.store.db.Tx(ctx, func(tx pgx.Tx) error {
 		for _, o := range overrulable {
-			if err := auth.EnsureWritable(ctx, tx, entityContact, o.ContactID); err != nil {
-				writable = false
-				return nil
+			ok, err := contactWritable(ctx, tx, o.ContactID)
+			if err != nil || !ok {
+				writable = ok
+				return err
 			}
 		}
 		return nil
@@ -67,4 +70,18 @@ func (g *Gate) OverrulableBy(ctx context.Context, review Review) ([]OverrulableR
 		return nil, err
 	}
 	return overrulable, nil
+}
+
+func mayUpdateContacts(ctx context.Context) bool {
+	return auth.Require(ctx, entityContact, principal.ActionUpdate) == nil
+}
+
+// contactWritable separates a refusal (the caller may not write this contact,
+// or may not see it) from a failure, which the caller must hear about.
+func contactWritable(ctx context.Context, tx pgx.Tx, contact ids.UUID) (bool, error) {
+	err := auth.EnsureWritable(ctx, tx, entityContact, contact)
+	if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound) {
+		return false, nil
+	}
+	return err == nil, err
 }
