@@ -20,8 +20,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// seedSheet writes USD on two days and GBP on one through the real writer, so
-// the sheet head holds two currencies and one of them has a history.
+// seedSheet writes USD on two days and GBP on one through the real writer.
+// The sheet head then holds two currencies, and one of them has a history.
 func seedSheet(t *testing.T, e *Env) {
 	t.Helper()
 	e.Deals.WithClock(func() time.Time { return fxTestNow })
@@ -101,7 +101,7 @@ func TestAnEmptySheetAnswersAnEmptyList(t *testing.T) {
 }
 
 // A row priced into another base is not on this sheet. The writer refuses a
-// base change while any rate is priced, so it cannot leave such a row; one
+// base change while any rate is priced, so it cannot leave such a row. One
 // written straight in stands for a sheet older than that refusal.
 func TestARateInAnotherBaseIsNotOnTheSheet(t *testing.T) {
 	e := Setup(t)

@@ -15,14 +15,12 @@ import { useInstallationSettings } from "./uploadlimit";
 export const FX_RATE_CURRENCIES_KEY = ["fx-rates", "currencies"] as const;
 
 /**
- * The codes every currency picker leads with: the base currency, then the
- * currencies of the rate sheet. A form opens on the first of them, and sends
- * it when the field is left empty.
+ * The codes every currency picker leads with: the base, then the rate sheet's
+ * currencies. A form opens on the first, and sends it for an empty field.
  *
- * The base comes from the installation settings, or from the sheet read for a
- * role that may read deals but not those settings. The base alone while the
- * sheet is pending or failed, and the fallback four while no read has named a
- * base.
+ * The sheet read also names the base, for a role refused the settings read.
+ * The base alone while the sheet is pending or failed; the fallback four while
+ * no read has named a base.
  */
 export function useLeadingCurrencies(): LeadingCurrencies {
   const base = useInstallationSettings().data?.base_currency;

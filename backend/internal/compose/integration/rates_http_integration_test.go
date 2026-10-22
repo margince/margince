@@ -192,9 +192,9 @@ func TestDeleteAiModelRateOverHTTP(t *testing.T) {
 	}
 }
 
-// GET /fx-rates/currencies over the wire: an empty sheet is the array `[]`
-// and never `null`, the base and a written rate's code come back, and an agent bearer is
-// refused because the read feeds the web app's pickers only.
+// GET /fx-rates/currencies over the wire. An empty sheet is the array `[]`,
+// never `null`. The base and a written rate's code come back. An agent bearer
+// is refused, because the read feeds the web app's pickers only.
 func TestFxRateCurrenciesOverHTTP(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)

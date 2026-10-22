@@ -295,10 +295,10 @@ func (s *Store) ListLatestFxRates(ctx context.Context) ([]FxRateRow, error) {
 }
 
 // RateSheetCurrencies returns the base currency and the foreign currencies on
-// the sheet head, in code order, so a currency picker can offer them first.
+// the sheet head, in code order, for a currency picker to offer first.
 // The gate is deal read, not fx_rate read: the answer holds codes and never
-// a rate, and every role that may create a deal needs it for the picker. The
-// base is read without the installation_settings gate for the same reason.
+// a rate. Every role that may create a deal needs it for the picker, so the
+// base is read without the installation_settings gate too.
 func (s *Store) RateSheetCurrencies(ctx context.Context) (string, []string, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return "", nil, err
