@@ -69,13 +69,14 @@
   background: var(--bgHover);
 }
 
-.calendar-day[aria-pressed="true"] {
-  background: var(--accent);
-  color: var(--textOnAccentControl);
-}
+/* The chosen day: the chip ground, an ink ring and weight, so it reads apart
+   from today's disc and stays neutral like every other selected state. */
+.calendar-day[aria-pressed="true"],
 .calendar-day[aria-pressed="true"]:hover:not(:disabled) {
-  background: var(--accent);
-  filter: brightness(1.05);
+  background: var(--bgChip);
+  box-shadow: inset 0 0 0 1px var(--textPrimary);
+  color: var(--textPrimary);
+  font-weight: var(--fontWeightMedium);
 }
 
 /* A day nothing can be chosen on: secondary ink and a line through it, so the

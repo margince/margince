@@ -89,7 +89,7 @@ func ExplainAnalyticsCell(
 	if err != nil {
 		return AnalyticsExplanation{}, err
 	}
-	sql, args, err := bindReportTokens(ctx, frame, plan.SQL, plan.Args)
+	sql, args, err := bindReportTokens(ctx, tx, frame, plan.SQL, plan.Args)
 	if err != nil {
 		return AnalyticsExplanation{}, err
 	}

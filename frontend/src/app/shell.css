@@ -772,28 +772,25 @@
   padding: 0;
   justify-content: center;
 }
-/* A pointer resting on a row takes the accent wash the current row is painted
+/* A pointer resting on a row takes the inset ground the current row is painted
    in, one step quieter: hover and current are then one gesture read at two
    strengths rather than two unrelated tints. */
 .rail .navitem:hover {
-  background: color-mix(in srgb, var(--accentLight) 50%, transparent);
+  background: color-mix(in srgb, var(--bgInset) 50%, transparent);
   color: var(--textPrimary);
 }
 /* The current row is one more pane on the glass: the pane's ground with the
    pane's hairline as an EDGE, which is what makes it a surface with a boundary
    rather than a smudge, and quieter than hover's tint so the two states are
    never the same gesture read twice.
-   Three signals, because a ground alone is colour-only (WCAG 1.4.1, Level A):
-   the accent wash, semibold weight, and the accent on the glyph. The INK stays
-   neutral: the accent as 14px text measures under the 4.5:1 AA needs on the
-   dark theme, and weight does not rescue that below 18.66px. The glyph is where
-   the accent goes, and at 3:1 non-text (1.4.11) it clears. */
+   A ground alone is colour-only (WCAG 1.4.1, Level A), so semibold weight
+   goes with it. All of it is neutral: the current row says where the reader
+   is, and the accent is for the action. The opaque inset ground rather than
+   the chip fill, because the row's caption ink does not clear AA on the chip. */
 .rail .navitem.active {
-  background: var(--accentLight);
+  background: var(--bgInset);
   color: var(--textPrimary);
-}
-.rail .navitem.active svg {
-  color: var(--accentText);
+  font-weight: var(--fontWeightMedium);
 }
 /* One icon size in both states. Animating the glyph's box relayouts the whole
    sidebar every frame, and a resizing icon is the jitter — 18px reads correctly
@@ -1121,15 +1118,12 @@
 .sectionpickgroup a svg {
   flex: none;
 }
-/* The entry the reader came from, in the same signals the sidebar's rows use —
-   a tint and the accent on the glyph — because a tint alone is colour-only
-   (WCAG 1.4.1). */
+/* The entry the reader came from, on the inset ground the sidebar's current
+   row uses. */
 .sectionpickgroup a[aria-current="page"] {
-  background: var(--accentLight);
+  background: var(--bgInset);
   color: var(--textPrimary);
-}
-.sectionpickgroup a[aria-current="page"] svg {
-  color: var(--accentText);
+  font-weight: var(--fontWeightMedium);
 }
 
 /* ===== ⌘K palette ===== */
@@ -1413,13 +1407,11 @@
     border-radius: var(--r-lg);
     box-shadow: var(--shadow-pop);
   }
-  /* The current cell takes the accent tint rather than the desktop row's grey
-     one — the same signal `.railmore.active` below already uses for a
-     destination that lives in the sheet, so the bar has ONE way of saying "this
-     one", whichever cell is carrying it. The weight and the accent glyph from
-     the desktop rule still apply, so the state keeps its three signals. */
+  /* The current cell takes the inset ground without the desktop row's edge —
+     the same signal `.railmore.active` below uses for a destination that lives
+     in the sheet, so the bar has ONE way of saying "this one". */
   .rail .navitem.active {
-    background: var(--accentLight);
+    background: var(--bgInset);
     border-color: transparent;
   }
   /* The layer the sheet sits on. It fades in rather than appearing, because the
@@ -1546,10 +1538,9 @@
   /* A destination inside the More sheet is still the current one; without this
      the closed bar shows no active tab at all on those routes. */
   .rail .railmore.active {
-    color: var(--accentText);
-  }
-  .rail .railmore.active {
-    background: var(--accentLight);
+    color: var(--textPrimary);
+    font-weight: var(--fontWeightMedium);
+    background: var(--bgInset);
     border-radius: var(--r-md);
   }
 

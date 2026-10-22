@@ -56,11 +56,11 @@
 .suggest-option.is-active {
   background: var(--bgHover);
 }
+/* The row the field holds, by weight in the primary ink, neutral like
+   Select's chosen option. */
 .suggest-option[aria-selected="true"] {
-  color: var(--accentText);
-}
-.suggest-option[aria-selected="true"].is-active {
-  background: var(--accentLight);
+  color: var(--textPrimary);
+  font-weight: var(--fontWeightMedium);
 }
 /* Select's disabled row, for the same reason: no highlight, because a
    highlight promises that a press does something. The second selector

@@ -6,7 +6,10 @@ import { Stack } from "../../design-system/stack";
 import { middayInstant } from "../../format/calendarday";
 import { formatDate } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
-import { commercialPreviewDisplay } from "../../lib/approvalpreview";
+import {
+  commercialPreviewDisplay,
+  dealCloseOutcome,
+} from "../../lib/approvalpreview";
 import { useRecordZone } from "../../lib/recordzone";
 import type { MagicLine } from "./magic.queries";
 
@@ -58,13 +61,11 @@ export function MagicApproval({
     const detail = preview.details?.[index];
     return detail !== undefined && COMMERCIAL_FIELDS.has(detail.field);
   });
-  const status = preview.changes.find(
-    (change) => change.field === "status",
-  )?.after;
+  const outcome = dealCloseOutcome(preview);
   const title =
-    status?.text === "won"
+    outcome === "won"
       ? "magic.approval.markWon"
-      : status?.text === "lost"
+      : outcome === "lost"
         ? "magic.approval.markLost"
         : "magic.approval.reviewChange";
   return (

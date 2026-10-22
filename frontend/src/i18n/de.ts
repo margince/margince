@@ -3320,6 +3320,8 @@ export const de = {
   "co.brief.cite.fact.many": "{count} Fakten",
   "co.brief.cite.profile_field.many": "{count} Profilfelder",
   "approval.kind.advance_deal": "Deal voranbringen",
+  "approval.kind.closeDealWon": "Deal als gewonnen schließen",
+  "approval.kind.closeDealLost": "Deal als verloren schließen",
   "approval.kind.promote_lead": "Lead qualifizieren",
   "approval.kind.close_date_correction": "Abschlussdatum korrigieren",
   "approval.kind.deal_follow_up": "Follow-up zum Deal erstellen",
@@ -3353,6 +3355,8 @@ export const de = {
   "approval.preview.optionalCriterionUnmet":
     "Optionales Kriterium nicht erfüllt",
   "approval.field.because": "Grund",
+  "approval.field.lost_reason": "Warum er verloren ging",
+  "approval.field.note": "Notiz",
   "approval.field.from_stage": "Von",
   "approval.field.to_stage": "Nach",
   "approval.kind.transcript_proposal":
@@ -3846,6 +3850,7 @@ export const de = {
   "co.evidence.previous": "Vorherige Aussage",
   "co.evidence.next": "Nächste Aussage",
   "co.evidence.title": "Quelle",
+  "co.evidence.record": "Datensatz",
   "co.prep.withheld":
     "Diese Zusammenfassung ist unvollständig, da Teile dieses Unternehmens für dich ausgeblendet sind.",
   "co.read.newActivity_one": "1 neuer Eintrag seit deinem letzten Besuch.",
@@ -4942,6 +4947,10 @@ export const de = {
   "decision.expired": "Abgelaufen",
   "decision.expiresIn": "läuft in {countdown} ab",
   "decision.detail": "Details zur Freigabe",
+  "decision.target": "Datensatz",
+  "decision.openToDecide": "Zum Entscheiden öffnen",
+  "decision.approvedBy": "Genehmigt von",
+  "decision.rejectedBy": "Abgelehnt von",
   "decision.detailLoading": "Freigabe wird geladen…",
   "decision.detailTechnical": "Technische Details",
   "decision.evidenceSource.activity": "Aktivität",
@@ -6485,6 +6494,8 @@ export const de = {
   "unsaved.title": "Ungespeicherte Änderungen verwerfen?",
   "unsaved.body":
     "Wenn du diese Seite verlässt, gehen deine Eingaben verloren. Gehe zurück, um deine Eingaben zuerst zu speichern.",
+  "unsaved.dialogBody":
+    "Wenn du diesen Dialog schließt, gehen deine Eingaben verloren.",
   "unsaved.discard": "Änderungen verwerfen",
   "settings.addedItem": "„{name}“ hinzugefügt",
   "settings.removedItem": "„{name}“ entfernt",
@@ -13629,6 +13640,8 @@ export const de = {
   "contact.intro.fallbackNextRouteHelp":
     "Weiter zum nächsten Teammitglied auf der Liste.",
   "contact.intro.decideTitle": "Vorstellung bei {name}",
+  "contact.intro.askedBy": "Angefragt von",
+  "contact.intro.askedThrough": "Über",
   "contact.intro.decideLegend": "Deine Antwort",
   "contact.intro.decideAction": "Antwort speichern",
   "contact.intro.decideFailed":
@@ -14976,6 +14989,9 @@ export const de = {
   "worklist.scope.unassigned": "Nicht zugewiesen",
   "worklist.scope.team": "Team",
   "worklist.scope.all": "Alle",
+  "worklist.owner.shared": "Gemeinsam zuständig: {names}",
+  "worklist.owner.sharedCount_one": "{count} zuständige Empfangende",
+  "worklist.owner.sharedCount_other": "{count} zuständige Empfangende",
   "worklist.owner.visibleLabel": "Ansicht",
   "worklist.manager.cancel": "Abbrechen",
   "worklist.owner.wholeTeam": "Das ganze Team",

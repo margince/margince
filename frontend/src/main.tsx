@@ -11,6 +11,7 @@ import { FilePreviewProvider } from "./design-system/filepreview";
 import { ToastProvider, ToastRegion } from "./design-system/toast";
 import { LocaleProvider } from "./i18n";
 import { listenForInstall, registerServiceWorker } from "./lib/pwa";
+import { restoreReturnRoute } from "./lib/returnroute";
 import { sessionRefusalWatch } from "./lib/session";
 import { startTheme } from "./lib/theme";
 import "./app.css";
@@ -30,6 +31,9 @@ const queryClient = createQueryClient();
 // only while it is open — a tab nobody opened the menu in would otherwise stay
 // deaf to the switch.
 startTheme();
+
+// Before the first render reads the address: a provider sign-in lands bare.
+restoreReturnRoute();
 
 listenForInstall();
 registerServiceWorker();

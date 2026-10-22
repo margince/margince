@@ -44,6 +44,7 @@ const (
 	ownerUnstated ownerKind = iota
 	// ownerNamed: this lane resolved a contact.
 	ownerNamed
+	ownerShared
 	// ownerNobody: this lane's rows are genuinely unheld.
 	ownerNobody
 	// ownerTheReader: this lane's read is bound to the acting user.
@@ -74,7 +75,8 @@ const (
 type ownerRef struct {
 	kind ownerKind
 	// user is who answers, for ownerNamed.
-	user ids.UUID
+	user  ids.UUID
+	users []ids.UUID
 }
 
 // ownedBy is a producer naming the contact who answers for a row.
@@ -119,6 +121,12 @@ func ownerOnTheWire(row ranked, reader ids.UUID) *crmcontracts.WorklistOwner {
 			Kind: crmcontracts.WorklistOwnerKindWorklistOwnerUser,
 			Id:   idPtr(row.ownerRef.user),
 		}
+	case ownerShared:
+		users := make([]crmcontracts.WorklistOwnerMember, 0, len(row.ownerRef.users))
+		for _, user := range row.ownerRef.users {
+			users = append(users, crmcontracts.WorklistOwnerMember{Id: *idPtr(user)})
+		}
+		return &crmcontracts.WorklistOwner{Kind: crmcontracts.WorklistOwnerKindWorklistOwnerShared, Users: &users}
 	case ownerNobody:
 		return &crmcontracts.WorklistOwner{Kind: crmcontracts.WorklistOwnerKindWorklistOwnerUnassigned}
 	case ownerUnreadable:
@@ -262,6 +270,13 @@ func (s *Service) nameTheOwners(ctx context.Context, queue []crmcontracts.Workli
 // nameAnOwner labels one owner with their roster name. One rule for every
 // surface that names an owner: an id the roster knows, with a non-empty name.
 func nameAnOwner(owner *crmcontracts.WorklistOwner, names map[ids.UUID]string) {
+	if owner.Users != nil {
+		for i := range *owner.Users {
+			if name := names[ids.UUID((*owner.Users)[i].Id)]; name != "" {
+				(*owner.Users)[i].Label = &name
+			}
+		}
+	}
 	if owner.Id == nil {
 		return
 	}
@@ -285,7 +300,7 @@ func rosterNames(roster []TeamMember) map[ids.UUID]string {
 // label nothing is a query per page for no reader's benefit.
 func anyOwnerNeedsAName(queue []crmcontracts.WorklistItem) bool {
 	for _, item := range queue {
-		if (item.Owner != nil && item.Owner.Id != nil) || item.Host != nil {
+		if (item.Owner != nil && (item.Owner.Id != nil || item.Owner.Users != nil && len(*item.Owner.Users) > 0)) || item.Host != nil {
 			return true
 		}
 	}
@@ -293,9 +308,12 @@ func anyOwnerNeedsAName(queue []crmcontracts.WorklistItem) bool {
 }
 
 // A missing owner is unassigned only when the owning record was readable.
-func waitingOwner(owner ids.UUID, known bool) ownerRef {
+func waitingOwner(owner ids.UUID, known bool, recipients []ids.UUID) ownerRef {
 	if !owner.IsZero() {
 		return ownedBy(owner)
+	}
+	if len(recipients) > 1 {
+		return ownerRef{kind: ownerShared, users: recipients}
 	}
 	if known {
 		return unassigned()

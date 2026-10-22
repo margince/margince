@@ -18,6 +18,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -110,9 +111,4 @@ func selfOnly(ctx context.Context, user ids.UUID) error {
 		apperrors.ErrPermissionDenied)
 }
 
-func ownReaderAddress(label, source string) string {
-	if discoveredMachineAddress(source, label) {
-		return ""
-	}
-	return strings.ToLower(strings.TrimSpace(bareAddress(label)))
-}
+func ownReaderAddress(label, source string) string { return mailidentity.ReaderAddress(label, source) }

@@ -29,7 +29,11 @@ import { hostText } from "./worklist.meetingparties";
 import { useRowSource } from "./worklist.noticesource";
 import { lastTouch } from "./worklist.pane";
 import type { WorklistItem } from "./worklist.queries";
-import { noticeDetail, readerTask } from "./worklist.reader";
+import {
+  noticeDetail,
+  readerTask,
+  sharedResponsibility,
+} from "./worklist.reader";
 import { PromiseRecipients } from "./worklist.recipients";
 import { useDrawerDials, withWorklistReturn } from "./worklist.return";
 import { aboutRecord, shapedReadings, touchOf } from "./worklist.row.captions";
@@ -177,6 +181,7 @@ export function WorklistRow({
     : aboutRecord(item, emailOpener !== undefined, drawer);
   const touch = lastTouch(touchOf(item, framed), t, locale, zone);
   const host = hostText(item, viewer?.id, t);
+  const responsibility = sharedResponsibility(item, locale, t);
   // Whether the day put a state on this row — overdue, or a meeting with
   // nothing prepared. They ride on the title line, which is why it is drawn on
   // a row that has no title of its own to draw.
@@ -278,6 +283,7 @@ export function WorklistRow({
               badged={badged}
             />
           )}
+          {responsibility && <p className="t-caption">{responsibility}</p>}
           <PromiseRecipients recipients={item.promise_recipients} />
         </div>
         {/* Every verb on one right-aligned line, the row's menu last. Under the

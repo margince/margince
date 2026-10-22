@@ -23,6 +23,7 @@ import { Heading } from "./heading";
 // its own labels would give the same answer three names.
 export function ResolveSheet({
   open,
+  context,
   labels,
   onSubmit,
   onClose,
@@ -33,6 +34,9 @@ export function ResolveSheet({
   canSubmit,
 }: Readonly<{
   open: boolean;
+  // What is being answered, shown above the choices. The sheet covers the list
+  // that opened it, so without this the reader answers blind.
+  context?: ReactNode;
   outcomeFields?: (outcome: ResolveOutcome | "") => ReactNode;
   canSubmit?: (outcome: ResolveOutcome) => boolean;
   labels: ResolveSheetLabels;
@@ -78,6 +82,7 @@ export function ResolveSheet({
       </DrawerHead>
       <DrawerBody>
         <div className="form-stack">
+          {context}
           <ChoiceList
             legend={labels.outcomeLegend}
             value={outcome}

@@ -6,7 +6,10 @@ import type {
   DisplayField,
   ResolvedDisplayField,
 } from "../../lib/approvaldisplay.types";
-import { commercialPreviewDisplay } from "../../lib/approvalpreview";
+import {
+  commercialPreviewDisplay,
+  stagedDealMove,
+} from "../../lib/approvalpreview";
 import { humanizeKind } from "./approvalkind";
 import { commitmentResponsibility } from "./approvalresponsibility";
 
@@ -57,6 +60,24 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
         as: "enum",
         optionLabels: CLOSE_DATE_FLAGS,
       },
+    ],
+    // A deal move's reason for a loss and its note. While pending, the preview
+    // shows both as changes, so neither leads. Once decided there is no
+    // preview, and these tell a reader why the deal closed.
+    advance_deal: [
+      {
+        field: "lost_reason",
+        label: "approval.field.lost_reason",
+        as: "prose",
+      },
+    ],
+    progress_deal: [
+      {
+        field: "lost_reason",
+        label: "approval.field.lost_reason",
+        as: "prose",
+      },
+      { field: "note", label: "approval.field.note", as: "prose" },
     ],
     // `because` is the signal's own words for why the stage should move. The two
     // stages already render as a proper old→new comparison on the card
@@ -356,12 +377,16 @@ export function resolveDisplay(
   preview?: components["schemas"]["ApprovalPreview"],
   locale: Locale = "en",
 ): readonly ResolvedDisplayField[] {
+  const args =
+    kind === "advance_deal" || kind === "progress_deal"
+      ? stagedDealMove(change)
+      : change;
   const resolved = displayFields(kind).map((entry) => ({
     field: entry.field,
     label: t(entry.label),
     value: displayValue(
       entry,
-      Object.hasOwn(change, entry.field) ? change[entry.field] : undefined,
+      Object.hasOwn(args, entry.field) ? args[entry.field] : undefined,
       t,
       formatDay,
     ),

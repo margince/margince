@@ -529,6 +529,25 @@ describe("AutomationsAdmin (B-EP09.15)", () => {
     expect(within(dialog).getByRole("button", { name: "Save" })).toBeTruthy();
   });
 
+  it("asks before Escape drops an edited definition, and closes an untouched one", async () => {
+    vi.stubGlobal("fetch", automationsBackend([instance({})], []));
+    render(<AutomationsAdmin />);
+    await screen.findByText("Nudge stalled fleet deals");
+    await openRowEditor();
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+    const dialog = await openRowEditor();
+    await userEvent.type(
+      within(dialog).getByRole("spinbutton", { name: "due_in_days" }),
+      "4",
+    );
+    await userEvent.keyboard("{Escape}");
+    expect(
+      screen.getByRole("dialog", { name: "Discard unsaved changes?" }),
+    ).toBeTruthy();
+  });
+
   it("reports a refused definition edit inside the dialog, never behind it", async () => {
     const automations = [instance({})];
     vi.stubGlobal(

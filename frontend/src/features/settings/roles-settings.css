@@ -131,8 +131,8 @@
 }
 
 .roles-row-press[aria-current="true"] {
-  background: var(--accentLight);
-  box-shadow: inset 3px 0 var(--accentText);
+  background: var(--bgInset);
+  box-shadow: inset 3px 0 var(--textPrimary);
 }
 
 .roles-row-press > .cell-stack {

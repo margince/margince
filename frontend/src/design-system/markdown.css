@@ -95,6 +95,12 @@
   background: var(--bgChip);
 }
 
+/* The global reset makes `strong` inherit its weight. `.md-strong` is on the
+   element itself, so `InlineMarkdown`, which has no `.md` around it, is bold too. */
+.md-strong {
+  font-weight: var(--fontWeightBold);
+}
+
 .md a {
   color: var(--accent);
   text-decoration: underline;

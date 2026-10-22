@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
-	"net/mail"
 	"slices"
 	"sort"
 	"strings"
@@ -20,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -476,10 +476,4 @@ func (r *Registry) connector(name string) (connector.Connector, error) {
 // yields "acme.com>", which matches no domain anyone registered, so the gate
 // would quietly never fire. An unparseable label is returned as it came: it is
 // then judged as an address, which is what it was before this.
-func bareAddress(label string) string {
-	parsed, err := mail.ParseAddress(strings.TrimSpace(label))
-	if err != nil {
-		return label
-	}
-	return parsed.Address
-}
+func bareAddress(label string) string { return mailidentity.BareAddress(label) }

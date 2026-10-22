@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Hash } from "lucide-react";
+import type { ComponentProps } from "react";
 import { api } from "../../api/client";
 import { usePageName } from "../../app/pagemeta";
 import { CreateAction } from "../../components/create";
@@ -68,14 +69,20 @@ async function fetchProjectsPage(
   };
 }
 
+// A phase under way is work still running, so `info`; no phase means "ended
+// well", so none takes `success`. Keyed by every phase, so a new one does not
+// compile until it has a tone.
+const PHASE_TONE = {
+  initiative: "info",
+  pursuing: "info",
+  delivering: "info",
+  closed: "default",
+} as const satisfies Record<ProjectPhase, ComponentProps<typeof Badge>["tone"]>;
+
 /** The phase as a status pill: closed is the one terminal reading. */
 export function PhaseBadge({ phase }: Readonly<{ phase: ProjectPhase }>) {
   const t = useT();
-  return (
-    <Badge tone={phase === "closed" ? undefined : "success"}>
-      {t(PHASE_LABEL[phase])}
-    </Badge>
-  );
+  return <Badge tone={PHASE_TONE[phase]}>{t(PHASE_LABEL[phase])}</Badge>;
 }
 
 /**
