@@ -13260,7 +13260,7 @@ export const en = {
     "An administrator creates a set-password link to pass on outside Margince, where no outbound email is set up.",
   "webhooks.event.user.mfa_removed.label": "Second factor removed",
   "webhooks.event.user.mfa_removed.when":
-    "An administrator removes a member’s two-step sign-in, for a member who lost their phone app and backup codes.",
+    "An administrator removes a member’s two-step sign-in and signs them out everywhere.",
   "webhooks.event.user.deactivated.label": "Member deactivated",
   "webhooks.event.user.deactivated.when":
     "A member’s sessions and agent passports are revoked.",

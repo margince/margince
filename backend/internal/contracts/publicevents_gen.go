@@ -2475,7 +2475,7 @@ type PublicEventUserLocaleChanged struct {
 	Locale string `json:"locale"`
 }
 
-// PublicEventUserMfaRemoved Payload for user.mfa_removed. An admin removed a member's second factor, for a member who lost both their authenticator and their recovery codes. Every session the member held ended with it. The password alone opens the account until the member sets a factor up again. So `by` and `user_id` are both required: this event records who weakened which sign-in.
+// PublicEventUserMfaRemoved Payload for user.mfa_removed. An admin removed a member's confirmed second factor. Every session the member held ended with it. The password alone opens the account until the member sets a factor up again. So `by` and `user_id` are both required: this event records who weakened which sign-in.
 type PublicEventUserMfaRemoved struct {
 	// By The admin who removed it.
 	By openapi_types.UUID `json:"by"`

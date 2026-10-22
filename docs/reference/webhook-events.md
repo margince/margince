@@ -1611,7 +1611,7 @@ Payload for user.invited, an admin provisioned a new active member with a single
 
 Record: `user` · version 1
 
-Payload for user.mfa_removed. An admin removed a member's second factor, for a member who lost both their authenticator and their recovery codes. Every session the member held ended with it. The password alone opens the account until the member sets a factor up again. So `by` and `user_id` are both required: this event records who weakened which sign-in.
+Payload for user.mfa_removed. An admin removed a member's confirmed second factor. Every session the member held ended with it. The password alone opens the account until the member sets a factor up again. So `by` and `user_id` are both required: this event records who weakened which sign-in.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|

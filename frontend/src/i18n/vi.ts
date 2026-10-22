@@ -12967,7 +12967,7 @@ export const vi = {
     "Quản trị viên tạo liên kết đặt mật khẩu để chuyển cho thành viên ngoài Margince, khi chưa thiết lập gửi email.",
   "webhooks.event.user.mfa_removed.label": "Đã gỡ đăng nhập hai bước",
   "webhooks.event.user.mfa_removed.when":
-    "Quản trị viên gỡ đăng nhập hai bước của thành viên đã mất ứng dụng xác thực và mã khôi phục.",
+    "Quản trị viên gỡ đăng nhập hai bước của thành viên và đăng xuất họ ở mọi nơi.",
   "webhooks.event.user.deactivated.label": "Đã vô hiệu hóa thành viên",
   "webhooks.event.user.deactivated.when":
     "Phiên đăng nhập và passport của agent thuộc thành viên bị thu hồi.",

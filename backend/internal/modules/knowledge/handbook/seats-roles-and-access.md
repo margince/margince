@@ -64,7 +64,7 @@ To let a colleague in who lost both their phone app and their backup codes, open
 1. Choose **Remove two-step sign-in**.
 2. Read the box and choose **Remove two-step sign-in** again.
 
-They are signed out everywhere, and their password alone signs them in until they set up two-step sign-in again. If your installation requires it, Margince asks them to at once. The menu offers this only for a colleague who has two-step sign-in on. It never shows on your own row: you remove your own in **Settings → Account**, with a code. The audit log records who removed it.
+They are signed out everywhere, and their password alone signs them in until they set up two-step sign-in again. If your installation requires it, Margince asks them to set it up again at once. The menu offers this only for a colleague who has two-step sign-in on. It never shows on your own row: you remove your own in **Settings → Account**, with a code. The audit log records who removed it.
 Also called: lost phone, lost backup codes, reset two-step sign-in, reset MFA.
 
 ### How do I create a team?

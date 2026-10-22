@@ -23257,16 +23257,18 @@ paths:
       x-agent-access: human-only
       summary: Remove a member's second factor. Admin-only, human-only.
       description: |
-        For a member who lost both their authenticator and their recovery codes. Removes the
-        member's enrolment, its recovery codes and the sealed secret, and ends every session the
-        member holds, in one transaction. The member then signs in with their password and sets
-        a factor up again, at once if the installation requires one. Emits `user.mfa_removed`,
-        which names the admin and the member.
+        For a member who lost both their authenticator and their recovery codes. In one
+        transaction it removes the member's confirmed factor and its recovery codes, ends every
+        session the member holds, and emits `user.mfa_removed`, which names the admin and the
+        member. The sealed secret is erased after that commit; nothing references it by then.
+        The member then signs in with their password and sets a factor up again, at once if the
+        installation requires one.
 
         It takes the same ceiling as `issueUserPasswordLink`: a delegated admin may act only on a
         member whose whole access they already hold, and never on a full admin (403). Your own
         factor is refused (403): `disableMyMfa` removes it, and asks for a current code, so a
-        borrowed session cannot strip it. Idempotent: a member with no factor is a no-op.
+        borrowed session cannot strip it. Idempotent: a member with no confirmed factor is a
+        no-op, and a pending enrolment is left as it is.
       responses:
         '204': { description: 'The member has no second factor now, or had none.' }
         '401': { $ref: '#/components/responses/Unauthorized' }
