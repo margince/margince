@@ -7,6 +7,7 @@ Margince settings open from the **account menu** at the top right. They are not 
 To open Settings in Margince, open the account menu at the top right of the screen and choose **Settings**.
 Settings opens on **Overview**, which lists every page you can open. The page list down the side is in groups: **You**, **Company**, **People**, **Sales**, **Data**, **AI** and **Governance**.
 To go right to one page, press ⌘K (Ctrl+K) and type its name, or the name of a setting on it. Or type into **Search settings** at the top of the settings list. When the page was found by one of its settings, **Search settings** shows that setting under the page name.
+
 Also called: preferences, admin settings, configuration, options.
 
 ### What settings pages are there?
@@ -311,23 +312,17 @@ System health and Reset data sit in the **Governance** group, and Data import in
 - **Data import**: a ZIP of CSV files, or one CSV, of companies, contacts,
   prospects (leads), deals and activities. The limit is 10 MB unless the installation sets another.
   Nothing is written until you check the test run.
-- **Search index**: building the index again, behind search and behind what the
-  AI finds.
-- **Data updates**: progress and controls for background changes. Work that needs
-  review waits until an authorized user starts it.
-- **Background jobs**: jobs that wait to run, and jobs that failed, by owner.
-  Admin and Ops.
-- **AI provider status**: whether each AI provider is answering, as the app
-  and its background jobs found it, in one view. See [AI providers](ai-providers.md).
+- **Search index**: building the index again, behind search and behind what the AI finds.
+- **Data updates**: progress and controls for background changes. Work that needs review waits until an authorized user starts it.
+- **Background jobs**: jobs that wait to run, and jobs that failed, by owner. Admin and Ops.
+- **AI provider status**: whether each AI provider is answering, as the app and its background jobs found it, in one view. See [AI providers](ai-providers.md).
 - **Mail capture checks**: whether the passes that fix mail capture in the
   background keep up. It shows when each last worked, and how many contacts and
   threads wait in each mailbox. It also shows how many filed meetings are held
   back in the whole installation. It shows counts only; the contacts and messages stay
   in view to their mailbox owner alone. The same readers as Background jobs see
   it.
-- **Links in outgoing mail**: the address Margince puts in the links it emails,
-  such as unsubscribe links, marked **Reachable**, **Unreachable** or **Not
-  checked**. If nobody outside can reach it, those links open nothing.
+- **Links in outgoing mail**: the address Margince puts in the links it emails, such as unsubscribe links, marked **Reachable**, **Unreachable** or **Not checked**. If nobody outside can reach it, those links open nothing.
 - **Automatic work**: the tasks, reply reminders and approval requests Margince made for each colleague in 7 or 30 days, and their outcome.
   **Not mine** counts a task moved to someone else; a rejected request is not Not mine. Over 10% on at least 10 items shows **needs a look**, and changes nothing. The same readers as Background jobs see it.
 - **Restore drills**: when a restore from a backup was last tested, if it

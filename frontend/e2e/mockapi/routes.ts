@@ -51,7 +51,7 @@ const empty = reply(page([]));
 export const routes: readonly MockRoute[] = [
   { path: "/me", handle: session.me },
   ...importRoutes,
-  { path: "/me/working-hours", handle: reply(session.workingHours) },
+  { path: "/me/working-hours", handle: session.myWorkingHours },
   {
     method: "GET",
     path: "/me/notification-preferences",

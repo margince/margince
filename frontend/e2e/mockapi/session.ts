@@ -8,8 +8,8 @@ import {
   PUBLISHED_CLIENT,
 } from "../../src/testing/agent-clients.fixtures";
 import { defaultAgentAllowances } from "../../src/testing/agentallowances.fixtures";
-import { defaultOperations } from "../../src/testing/operationsettings.fixtures";
 import { meFixture } from "../../src/testing/mefixture";
+import { defaultOperations } from "../../src/testing/operationsettings.fixtures";
 import { E2E_ADMIN_GRANTS } from "./fixtures";
 import { type Handler, notFound } from "./server";
 
@@ -45,15 +45,16 @@ export const me: Handler = ({ json }, { options }) => {
   });
 };
 
-// When this reader is bookable. The Account page draws a card from it.
-export const workingHours = {
-  chosen: false,
-  working_hours: {
-    start_time: "09:00",
-    end_time: "17:00",
-    days: [1, 2, 3, 4, 5],
-    timezone: "Europe/Berlin",
-  },
+// When this reader is bookable. A PUT stores the hours as chosen and answers
+// with them, as the server does, so a saved card stops offering its default.
+export const myWorkingHours: Handler = ({ route, json }, state) => {
+  if (route.request().method() === "PUT") {
+    state.workingHours = {
+      chosen: true,
+      working_hours: route.request().postDataJSON(),
+    };
+  }
+  return json(state.workingHours);
 };
 
 // All six classes, because the contract promises the whole set and the

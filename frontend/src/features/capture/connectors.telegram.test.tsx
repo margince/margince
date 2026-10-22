@@ -6,6 +6,7 @@ import {
   cleanup,
   render as rtlRender,
   screen,
+  waitFor,
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -166,15 +167,22 @@ describe("the Telegram connector panel", () => {
     expect(row.querySelector(".provider-row-actions")).toBeNull();
   });
 
-  it("withholds Connect on an empty roster from a reader without channel_connection:create", async () => {
+  it("draws nothing for a reader who has no bot to see and cannot connect one", async () => {
     stubApi({
       me: meFixture({
         roles: ["rep"],
         allow: { channel_connection: ["read"] },
       }),
     });
-    render(<TelegramConnectorsPanel />);
-    expect(await screen.findByText(readOnlyNote)).toBeTruthy();
+    render(
+      <>
+        <TelegramConnectorsPanel />
+        <SessionSettled />
+      </>,
+    );
+    // Absence proves nothing while /me is in flight, when every grant is false.
+    await screen.findByText("session settled");
+    await waitFor(() => expect(screen.queryByText("Telegram bot")).toBeNull());
     expect(screen.queryByTestId("telegram-connect")).toBeNull();
   });
 

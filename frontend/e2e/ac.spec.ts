@@ -469,6 +469,11 @@ test("features/10 §7: the locale switch flips the chrome DE↔EN", async ({
   ).toBeVisible();
   await page.getByRole("combobox", { name: "Sprache" }).click();
   await page.getByRole("option", { name: "English" }).click();
+  // The pick waits in the page's save bar; the language turns once it is saved.
+  await page
+    .getByRole("region", { name: de["saveBar.unsaved"] })
+    .getByRole("button", { name: de["saveBar.save"], exact: true })
+    .click();
   // The surface around the control follows the choice, not just the control's
   // own face: every word on it is rendered from the catalog that just changed.
   await expect(

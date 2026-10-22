@@ -151,7 +151,10 @@ test("connected calendar setup keeps the draft, then sends and cancels an invita
   await page.getByRole("link", { name: de["scheduling.openSettings"] }).click();
   const settings = await settingsPromise;
   await expect(
-    settings.getByRole("heading", { name: de["scheduling.calendarTitle"] }),
+    settings.getByRole("heading", {
+      name: de["scheduling.calendarTitle"],
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(
     settings.getByRole("combobox", { name: de["scheduling.provider"] }),

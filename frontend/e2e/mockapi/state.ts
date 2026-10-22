@@ -174,6 +174,16 @@ export function createMockState(options: MockApiOptions = {}) {
       ...briefRun,
       items: briefRun.items.map((item) => ({ ...item })),
     },
+    // Nobody has chosen hours yet, so the card offers the default.
+    workingHours: {
+      chosen: false,
+      working_hours: {
+        start_time: "09:00",
+        end_time: "17:00",
+        days: [1, 2, 3, 4, 5],
+        timezone: "Europe/Berlin",
+      },
+    },
     captureSettings: captureSettings(),
     captureConnections: captureConnections(),
     captureSenders: captureSenders(),

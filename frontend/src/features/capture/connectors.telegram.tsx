@@ -164,6 +164,8 @@ export function TelegramConnectorsPanel() {
     setConnectOpen(false);
     setEditingConnection(null);
   };
+  // No bot and no way to add one leaves the card nothing to show or offer.
+  if (readOnly && connections.length === 0) return null;
 
   return (
     <Panel
