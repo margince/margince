@@ -19,6 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -196,5 +197,5 @@ func storableAddress(deliveredTo string) (string, bool) {
 // rather than deleted, so the capture path never fails over bookkeeping. A
 // claim a human declared is theirs to make and is never second-guessed.
 func discoveredMachineAddress(source, value string) bool {
-	return source == IdentitySourceDeliveredTo && IsMachineAddress(bareAddress(value))
+	return mailidentity.DiscoveredMachineAddress(source, value)
 }

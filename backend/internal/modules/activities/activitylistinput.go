@@ -20,8 +20,9 @@ import (
 // ListActivitiesInput narrows a timeline read: the page, the kind, the
 // transport, and the record the activities hang off.
 type ListActivitiesInput struct {
-	Cursor *string
-	Limit  *int
+	mailIdentities map[string][]string
+	Cursor         *string
+	Limit          *int
 	// Sort is the caller's order, validated against activitySortFields. Nil
 	// means the order the rest of this narrowing implies: newest-first for a
 	// timeline, nearest-deadline-first for the task queue.

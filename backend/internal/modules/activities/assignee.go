@@ -120,16 +120,29 @@ func (e *AgentAssigneeError) FieldFault() (field, code, message string) {
 // fieldAssignee is the wire name of the column this module points a caller at.
 const fieldAssignee = "assignee_id"
 
-// A human's unassigned task defaults to them; automatic work stays unassigned.
+// A task with no assignee named belongs to the human behind the call: the
+// writer, or the one an agent or connector acts for. Automatic work stays unassigned.
 func taskAssignee(ctx context.Context, in LogActivityInput) *ids.UserID {
 	if in.AssigneeID != nil || in.Kind != string(crmcontracts.ActivityKindTask) {
 		return in.AssigneeID
 	}
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID == ids.Nil {
+	if !ok {
 		return nil
 	}
-	owner := ids.From[ids.UserKind](actor.UserID)
+	var human ids.UUID
+	switch actor.Type {
+	case principal.PrincipalHuman:
+		human = actor.UserID
+	case principal.PrincipalAgent, principal.PrincipalConnector:
+		human = actor.OnBehalfOf
+	default:
+		return nil
+	}
+	if human.IsZero() {
+		return nil
+	}
+	owner := ids.From[ids.UserKind](human)
 	return &owner
 }
 

@@ -9,6 +9,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { useEffect, useRef, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { useUnsavedGuard } from "../lib/unsavedclaims";
 import { Button, Modal } from "./atoms";
 import { Heading } from "./heading";
 import { armHoverIntent } from "./hoverintent-testing";
@@ -530,7 +531,7 @@ describe("a dialog that is leaving", () => {
       expect(overlay?.getAttribute("aria-hidden")).toBe("true");
       expect(screen.queryByRole("dialog")).toBeNull();
       if (overlay !== null) {
-        fireEvent.click(overlay);
+        pressBackdrop(overlay);
       }
       expect(onClose).not.toHaveBeenCalled();
 
@@ -748,5 +749,189 @@ describe("a form's field count picks its shape", () => {
   it("moves the seventh field and beyond into the drawer", () => {
     expect(intentForFieldCount(7)).toBe("drawer");
     expect(intentForFieldCount(30)).toBe("drawer");
+  });
+});
+
+// A browser sends a drag's click to the element the press and the release
+// share. For a press in the dialog released on the backdrop, that is the overlay.
+function pressBackdrop(overlay: Element, pressedOn: Element = overlay) {
+  fireEvent.pointerDown(pressedOn);
+  fireEvent.pointerUp(overlay);
+  fireEvent.click(overlay);
+}
+
+function overlayOf(baseElement: HTMLElement): HTMLElement {
+  const overlay = baseElement.querySelector<HTMLElement>(".overlay");
+  if (!overlay) throw new Error("no dialog is open");
+  return overlay;
+}
+
+// A note form inside the dialog, which claims a draft once anything is typed.
+function NoteDialog({
+  onClose,
+  unsaved,
+}: Readonly<{ onClose: () => void; unsaved?: boolean }>) {
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      labelledBy="n"
+      intent="drawer"
+      unsaved={unsaved}
+    >
+      <Heading size="large" id="n">
+        Log activity
+      </Heading>
+      <NoteField />
+    </Modal>
+  );
+}
+
+function NoteField() {
+  const [typed, setTyped] = useState("");
+  useUnsavedGuard(typed !== "");
+  return (
+    <label>
+      Details
+      <textarea
+        value={typed}
+        onChange={(event) => setTyped(event.target.value)}
+      />
+    </label>
+  );
+}
+
+const question = () =>
+  screen.queryByRole("dialog", { name: "Discard unsaved changes?" });
+
+describe("a backdrop click closes only a press that starts and ends there", () => {
+  it("stays open when a press inside ends on the backdrop", () => {
+    const onClose = vi.fn();
+    const { baseElement } = render(<NoteDialog onClose={onClose} />);
+    pressBackdrop(overlayOf(baseElement), screen.getByLabelText("Details"));
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("closes once when the press and the release are both on the backdrop", () => {
+    const onClose = vi.fn();
+    const { baseElement } = render(<NoteDialog onClose={onClose} />);
+    pressBackdrop(overlayOf(baseElement));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("stays open when a press on the backdrop is released inside", () => {
+    const onClose = vi.fn();
+    const { baseElement } = render(<NoteDialog onClose={onClose} />);
+    const overlay = overlayOf(baseElement);
+    fireEvent.pointerDown(overlay);
+    fireEvent.pointerUp(screen.getByLabelText("Details"));
+    fireEvent.click(overlay);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
+type User = ReturnType<typeof userEvent.setup>;
+
+describe("a dialog holding typed text asks before it closes", () => {
+  const ways = {
+    Escape: async (user: User) => {
+      await user.keyboard("{Escape}");
+    },
+    "the corner X": async (user: User) => {
+      await user.click(closeControl());
+    },
+    "the backdrop": async () => {
+      pressBackdrop(overlayOf(document.body));
+    },
+  };
+
+  for (const [way, close] of Object.entries(ways)) {
+    it(`asks on ${way}, and closes nothing yet`, async () => {
+      const onClose = vi.fn();
+      const user = userEvent.setup();
+      render(<NoteDialog onClose={onClose} />);
+      await user.type(screen.getByLabelText("Details"), "Pricing call");
+      await close(user);
+      expect(question()).not.toBeNull();
+      expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it(`closes at once on ${way} when nothing is typed`, async () => {
+      const onClose = vi.fn();
+      const user = userEvent.setup();
+      render(<NoteDialog onClose={onClose} />);
+      await close(user);
+      expect(question()).toBeNull();
+      expect(onClose).toHaveBeenCalledTimes(1);
+    });
+  }
+
+  it("closes once on Discard changes", async () => {
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    render(<NoteDialog onClose={onClose} />);
+    await user.type(screen.getByLabelText("Details"), "Pricing call");
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "Discard changes" }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the dialog and the text when the question is closed", async () => {
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    render(<NoteDialog onClose={onClose} />);
+    await user.type(screen.getByLabelText("Details"), "Pricing call");
+    await user.click(closeControl());
+    await user.keyboard("{Escape}");
+    expect(question()).toBeNull();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByLabelText("Details")).toHaveProperty(
+      "value",
+      "Pricing call",
+    );
+  });
+
+  it("neither closes nor asks on a drag from the text to the backdrop", async () => {
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    const { baseElement } = render(<NoteDialog onClose={onClose} />);
+    await user.type(screen.getByLabelText("Details"), "Pricing call");
+    pressBackdrop(overlayOf(baseElement), screen.getByLabelText("Details"));
+    expect(question()).toBeNull();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it("opens again without the question when the caller closed it mid-question", async () => {
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    const dialog = (open: boolean) => (
+      <Modal
+        open={open}
+        onClose={onClose}
+        labelledBy="n"
+        intent="drawer"
+        unsaved
+      >
+        <Heading size="large" id="n">
+          Log activity
+        </Heading>
+      </Modal>
+    );
+    const view = render(dialog(true));
+    await user.keyboard("{Escape}");
+    expect(question()).not.toBeNull();
+    view.rerender(dialog(false));
+    view.rerender(dialog(true));
+    expect(question()).toBeNull();
+    expect(screen.getByRole("dialog", { name: "Log activity" })).toBeTruthy();
+  });
+
+  it("asks for a draft the caller holds", async () => {
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    render(<NoteDialog onClose={onClose} unsaved />);
+    await user.keyboard("{Escape}");
+    expect(question()).not.toBeNull();
+    expect(onClose).not.toHaveBeenCalled();
   });
 });

@@ -211,7 +211,7 @@ const waitingRefillRounds = 3
 // page's truncation.
 func (w attentionWaiting) waitingPages(ctx context.Context, asOf time.Time, owner *ids.UUID) ([]activities.WaitingReply, bool, error) {
 	var kept []activities.WaitingReply
-	var before time.Time
+	var before activities.WaitingPosition
 	cut := false
 	for range waitingRefillRounds {
 		var rows []activities.WaitingReply
@@ -238,7 +238,8 @@ func (w attentionWaiting) waitingPages(ctx context.Context, asOf time.Time, owne
 		}
 		// The page is ordered newest first, so the oldest row on it is where
 		// the next page starts.
-		before = rows[len(rows)-1].OccurredAt
+		last := rows[len(rows)-1]
+		before = activities.WaitingPosition{At: last.OccurredAt, ID: last.ActivityID}
 	}
 	// Folded across pages as well as within one: two mails with the same sender
 	// and subject are one conversation whichever page each arrived on, and a

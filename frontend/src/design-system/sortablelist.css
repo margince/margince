@@ -33,11 +33,11 @@
     border-color var(--dur-state) var(--ease-out);
 }
 
-/* The row the surface is showing. A tint and an accent edge, the same pair a
-   selected choice wears elsewhere, so "this one" reads without a word. */
+/* The row the surface is showing, on the inset ground with a strong edge, so
+   "this one" reads without a word and without claiming an action. */
 .sortable-item.is-selected {
-  border-color: var(--accentMed);
-  background: var(--accentLight);
+  border-color: var(--borderStrong);
+  background: var(--bgInset);
 }
 
 /* The carried row lifts off the page: the pop shadow every raised surface

@@ -98,6 +98,7 @@ export function NameDialog({
       confirmDisabled={!ready}
       pending={pending}
       error={problem}
+      unsaved={draft.trim() !== initial.trim()}
       onConfirm={save}
     >
       {/* A form of one text box, so Enter saves it. */}

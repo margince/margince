@@ -2,7 +2,11 @@ import { expect, it } from "vitest";
 import { translate } from "../../i18n";
 import { taskRow } from "../../testing/brief.fixtures";
 import { whenText } from "./worklist.copy";
-import { noticeDetail, readerTask } from "./worklist.reader";
+import {
+  noticeDetail,
+  readerTask,
+  sharedResponsibility,
+} from "./worklist.reader";
 
 const t = (
   key: Parameters<typeof translate>[1],
@@ -133,4 +137,37 @@ it("renders domain maintenance reasons in the reader's language", () => {
       ),
     ).toBe(translate(language, "blockedDomains.source.forwardedIdentity"));
   }
+});
+
+it("names shared recipients without claiming nobody owns their reply", () => {
+  const shared = {
+    ...task,
+    owner: {
+      kind: "shared" as const,
+      users: [
+        { id: "alice", label: "Alice" },
+        { id: "bob", label: "Bob" },
+      ],
+    },
+  };
+  expect(sharedResponsibility(shared, "en", t)).toBe(
+    "Shared responsibility: Alice and Bob",
+  );
+  expect(
+    sharedResponsibility(
+      {
+        ...shared,
+        owner: {
+          kind: "shared",
+          users: [{ id: "alice", label: "Alice" }, { id: "bob" }],
+        },
+      },
+      "en",
+      t,
+    ),
+  ).toBe("2 responsible recipients");
+  expect(
+    sharedResponsibility({ ...shared, owner: { kind: "shared" } }, "en", t),
+  ).toBeNull();
+  expect(sharedResponsibility(task, "en", t)).toBeNull();
 });

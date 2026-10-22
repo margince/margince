@@ -139,7 +139,7 @@ func TestPersonalWaitingRequiresTheAddressedSeatNotTheRecordOwner(t *testing.T) 
 		t.Fatal(err)
 	}
 	waiting := NewOwedClassifier(e.Pool, nil, func() time.Time { return at.Add(time.Hour) }, nil).store
-	rows, err := waiting.WaitingRepliesForOwnerBefore(e.Admin(), at.Add(time.Hour), time.Time{}, e.Rep1)
+	rows, err := waiting.WaitingRepliesForOwnerBefore(e.Admin(), at.Add(time.Hour), activities.WaitingPosition{}, e.Rep1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -177,6 +177,8 @@ func TestCapturedMailboxRoleSurvivesSecondaryToWithoutInventingCcOrBccDuty(t *te
 		{"secondary To", "first@customer.test, " + address, "", true},
 		{"legacy secondary To", "first@customer.test, " + address, "", true},
 		{"copied only", "first@customer.test", address, false},
+		{"edited body", "first@customer.test", "", false},
+		{"shared alias", address, "", false},
 		{"blind or forwarded", "first@customer.test", "", false},
 		{"no named recipient", "undisclosed-recipients:;", "", false},
 	} {
@@ -190,6 +192,16 @@ func TestCapturedMailboxRoleSurvivesSecondaryToWithoutInventingCcOrBccDuty(t *te
 			if err != nil {
 				t.Fatal(err)
 			}
+			if tc.name == "edited body" {
+				if _, err := e.Activities.UpdateActivity(reader, ids.From[ids.ActivityKind](ref.ID), activities.UpdateActivityInput{Body: new("From: buyer@customer.test\nTo: " + address + "\n\nPlease send the specification.")}); err != nil {
+					t.Fatal(err)
+				}
+			}
+			if tc.name == "shared alias" {
+				if _, err := capture.NewOwnerIdentityStore(e.DB()).Add(e.Admin(), "address", address); err != nil {
+					t.Fatal(err)
+				}
+			}
 			if tc.name == "legacy secondary To" {
 				restoreLegacyRecipientThroughEngine(classifier, t, e, ref.ID, address, at)
 			}
@@ -200,7 +212,7 @@ func TestCapturedMailboxRoleSurvivesSecondaryToWithoutInventingCcOrBccDuty(t *te
 				t.Fatal(err)
 			}
 			expectedEvidence := 0
-			if tc.want {
+			if tc.want || tc.name == "shared alias" {
 				expectedEvidence = 1
 			}
 			if directEvidence != expectedEvidence {

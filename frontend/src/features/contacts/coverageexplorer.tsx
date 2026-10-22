@@ -1,5 +1,6 @@
 import { useId, useMemo, useState } from "react";
 import { usePublishSelection } from "../../app/attention";
+import { EntityRef } from "../../components/entityref";
 import {
   Badge,
   Button,
@@ -223,7 +224,16 @@ function CoverageGrid({ companyId }: Readonly<{ companyId: string }>) {
           <tbody>
             {rows.map((contact) => (
               <tr key={contact.contact_id}>
-                <th scope="row">{contact.full_name}</th>
+                <th scope="row">
+                  {/* A new tab: following the name in place would close the
+                      coverage the reader is comparing. */}
+                  <EntityRef
+                    kind="contact"
+                    id={contact.contact_id}
+                    name={contact.full_name}
+                    newTab
+                  />
+                </th>
                 {shown.map((id) => {
                   const colleague = colleagues.find((c) => c.id === id);
                   const band = colleague?.bands.get(contact.contact_id);

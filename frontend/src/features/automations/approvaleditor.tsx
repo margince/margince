@@ -31,12 +31,14 @@ import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { Approval } from "../../lib/approvals.queries";
 import { resolveDisplay, stagedDayFormatter } from "./approvaldisplay";
+import { approvalHref } from "./approvalhref";
 import {
   EDITABLE_FIELDS,
   type EditableField,
   humanizeKind,
 } from "./approvalkind";
 import { useApprovalNames } from "./approvalresponsibility";
+import { ApprovalDecider, ApprovalTarget } from "./approvaltarget";
 import "./approvalrow.css";
 import { QueryGate } from "../../design-system/querystates";
 import { unwrap } from "../../lib/problem";
@@ -120,11 +122,24 @@ export function ApprovalDetailModal({
         {open && (
           <QueryGate query={detail} pendingLabel={t("decision.detailLoading")}>
             {(approval) => (
-              <ApprovalDetailBody
-                approval={approval}
-                locale={locale}
-                zone={zone}
-              />
+              <>
+                <ApprovalDetailBody
+                  approval={approval}
+                  locale={locale}
+                  zone={zone}
+                />
+                {/* A pending request is answered on its decision card; the
+                    detail only reads it. */}
+                {approval.status === "pending" && (
+                  <a
+                    href={approvalHref(approval.id)}
+                    className="link-button"
+                    onClick={onClose}
+                  >
+                    {t("decision.openToDecide")}
+                  </a>
+                )}
+              </>
             )}
           </QueryGate>
         )}
@@ -186,6 +201,8 @@ function ApprovalDetailBody({
   return (
     <div className="form-stack">
       {approval.summary && <p className="t-body">{approval.summary}</p>}
+      <ApprovalTarget approval={approval} />
+      <ApprovalDecider approval={approval} />
       {named.length > 0
         ? named.map((entry) => (
             <FieldLine

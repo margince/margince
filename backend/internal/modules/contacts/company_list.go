@@ -190,7 +190,7 @@ func (s *Store) ListCompanies(ctx context.Context, in ListCompaniesInput) ([]crm
 	shared := companyCommonFilters(in)
 	return listPage(ctx, s, in.Sort, in.Limit, listPageSpec[crmcontracts.Company]{
 		entity:  companyEntity,
-		columns: func(context.Context, func(any) int) string { return companyColumns },
+		columns: func(context.Context, func(any) int) (string, error) { return companyColumns, nil },
 		fields:  companyListFields,
 		filters: func(ctx context.Context, active []fieldcatalog.Column, sorted *storekit.ListSort, arg func(any) int) ([]string, error) {
 			where, err := shared.clauses(ctx, active, sorted, arg)

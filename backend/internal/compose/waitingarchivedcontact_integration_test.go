@@ -175,8 +175,9 @@ func TestAContactTheReaderCannotSeeDoesNotKeepTheMessage(t *testing.T) {
 	}
 }
 
-// The reply is owed by the named contact's owner. An unowned live contact is
-// named, so the archived sender's owner does not owe it.
+// The reply is owed by the colleague the mail was addressed to, whoever owns
+// the contacts on it. Archiving the sender moves the row to the live contact
+// and leaves it with that recipient, never with the sender's owner.
 func TestTheArchivedContactsOwnerDoesNotOweTheReply(t *testing.T) {
 	o := setupOwed(t)
 	rep2 := ids.From[ids.UserKind](o.e.Rep2)
@@ -201,8 +202,8 @@ func TestTheArchivedContactsOwnerDoesNotOweTheReply(t *testing.T) {
 	}
 	asked := o.ccMail(t, "pat@customer.example", "robin@customer.example", "Rollout dates")
 	o.judgeAsRequest(t, asked)
-	if row, ok := o.waitingRow(t, asked); !ok || row.OwnerID != o.e.Rep2 {
-		t.Fatalf("before the archive the row is %+v (present=%v); want the sender's owner %v to owe it", row, ok, o.e.Rep2)
+	if row, ok := o.waitingRow(t, asked); !ok || row.OwnerID != o.owner {
+		t.Fatalf("before the archive the row is %+v (present=%v); want the direct recipient %v to owe it", row, ok, o.owner)
 	}
 
 	o.archiveContact(t, pat)
@@ -211,7 +212,7 @@ func TestTheArchivedContactsOwnerDoesNotOweTheReply(t *testing.T) {
 	if !ok || row.ContactID != robin {
 		t.Fatalf("after the archive the row is %+v (present=%v); want it naming the live contact %v", row, ok, robin)
 	}
-	if row.OwnerID == o.e.Rep2 {
-		t.Fatalf("the reply is owed by %v, the archived sender's owner, rather than by whoever owns the named contact", row.OwnerID)
+	if row.OwnerID != o.owner {
+		t.Fatalf("the reply is owed by %v, want the direct recipient %v; the archived sender's owner is %v", row.OwnerID, o.owner, o.e.Rep2)
 	}
 }

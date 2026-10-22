@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { Panel } from "../../design-system/panel";
+import { waitingEmailRow } from "../../testing/brief.fixtures";
 import { jsonResponse, StoryProviders } from "../../testing/story-utils";
 import { WorklistRow } from "./worklist.row";
 import "./worklist.css";
@@ -238,5 +239,36 @@ export const UpdateAboutAMail: Story = {
   render: (args) => {
     stubRow();
     return <WorklistRow {...args} />;
+  },
+};
+
+export const SharedReply: Story = {
+  ...OneLine,
+  args: {
+    ...COMPACT,
+    item: {
+      ...waitingEmailRow(),
+      owner: {
+        kind: "shared",
+        users: [
+          { id: "alice", label: "Alice Nguyen" },
+          { id: "bob", label: "Bob Fischer" },
+        ],
+      },
+    },
+  },
+};
+
+export const SharedReplyWithheldName: Story = {
+  ...OneLine,
+  args: {
+    ...COMPACT,
+    item: {
+      ...waitingEmailRow(),
+      owner: {
+        kind: "shared",
+        users: [{ id: "alice", label: "Alice Nguyen" }, { id: "bob" }],
+      },
+    },
   },
 };

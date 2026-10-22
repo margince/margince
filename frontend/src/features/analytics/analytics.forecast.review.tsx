@@ -2,7 +2,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { EntityRef } from "../../components/entityref";
 import { Badge, Button, Disclosure } from "../../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -13,12 +12,12 @@ import type {
 } from "../../design-system/resolvesheet";
 import { formatDate, formatMoneyOrAbsent } from "../../format/format";
 import { type Locale, useLocale, useT } from "../../i18n";
-import { isEntityKind } from "../../lib/entity";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { type AnalyticsScope, scopeQuery } from "./analytics.context";
 import { FirstCheck, Recheck } from "./analytics.forecast.firstcheck";
 import { InputCheckAnswerSheet } from "./inputcheck.answer";
+import { checkLabel, SubjectCell } from "./inputcheck.facts";
 
 type InputCheck = components["schemas"]["InputCheck"];
 type Assurance = components["schemas"]["ForecastAssurance"];
@@ -394,49 +393,6 @@ export function SeverityBadge({
   } as const;
   return <Badge tone={tone[severity]}>{t(label[severity])}</Badge>;
 }
-
-// WHICH deal. Without it a manager reading the review before a call knew
-// something was wrong and not what it was wrong about. An older server sends no
-// subject, and a kind the registry has no screen for is left out the same way
-// the Worklist's own rows leave it: the cell stays empty.
-function SubjectCell({ check }: Readonly<{ check: InputCheck }>) {
-  if (!check.subject || !isEntityKind(check.subject.type)) {
-    return null;
-  }
-  return (
-    <EntityRef
-      kind={check.subject.type}
-      id={check.subject.id}
-      name={check.subject.label}
-    />
-  );
-}
-
-// A finding's own name, keyed by the check that noticed it.
-//
-// An unknown type falls back to a generic line rather than rendering the raw
-// key: a server that grew a tenth rule before this screen learned its name
-// should show a finding a reader can still act on, not `close_pushed_v2`.
-export function checkLabel(
-  type: string,
-): Parameters<ReturnType<typeof useT>>[0] {
-  const known: Record<string, string> = {
-    unlinked_signal: "review.unlinkedSignal",
-    close_past: "review.closePast",
-    close_unconfirmed: "review.closeUnconfirmed",
-    close_pushed: "review.closePushed",
-    amount_vs_offer: "review.amountVsOffer",
-    amount_vs_contract: "review.amountVsContract",
-    no_next_step: "review.noNextStep",
-    no_economic_buyer: "review.noEconomicBuyer",
-    buyer_silent: "review.buyerSilent",
-    commit_unpriced: "review.commitUnpriced",
-  };
-  return (known[type] ?? "review.unknownCheck") as Parameters<
-    ReturnType<typeof useT>
-  >[0];
-}
-
 export function sheetLabels(t: ReturnType<typeof useT>): ResolveSheetLabels {
   return {
     title: t("review.sheetTitle"),

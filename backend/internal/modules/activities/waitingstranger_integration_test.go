@@ -16,6 +16,7 @@ import (
 // proven through the real sink in compose's strangermail integration test.
 func TestBccIsTheReadersOwnImportUnlessToOrCcNamesThem(t *testing.T) {
 	e := setupLoad(t)
+	e.exec(t, `UPDATE app_user SET email=$2 WHERE id=$1`, e.rep, "reader-"+e.rep.String()+"@ourco.example")
 	message := e.waitingFrom(t, "View the document", "sender@example.com", e.buyer(t))
 	e.exec(t, `UPDATE activity SET sender_was_stranger = true, foreign_link = true WHERE id = $1`, message)
 
@@ -34,7 +35,7 @@ func TestBccIsTheReadersOwnImportUnlessToOrCcNamesThem(t *testing.T) {
 	}
 
 	e.exec(t, `INSERT INTO activity_participant (id, activity_id, role, address)
-		VALUES ($1, $2, 'cc', 'reader@ourco.example')`, ids.NewV7(), message)
+		VALUES ($1, $2, 'cc', $3)`, ids.NewV7(), message, "reader-"+e.rep.String()+"@ourco.example")
 	if row, _ := present(t, storeAddressing(e, "reader@ourco.example"), e, message); row.BccOnly {
 		t.Error("a reader named in Cc read the message as a Bcc copy")
 	}

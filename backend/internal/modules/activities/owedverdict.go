@@ -452,8 +452,7 @@ func setOwedVerdictTx(ctx context.Context, tx pgx.Tx, id ids.UUID, verdict, rule
 }
 
 func humanReviewedOwedSQL(alias string) string {
-	return storekit.SQLf(`EXISTS(SELECT 1 FROM audit_log reviewed WHERE reviewed.entity_type='activity'
- AND reviewed.entity_id=%s.id AND reviewed.actor_type='human' AND reviewed.after ? 'owed_verdict' AND reviewed.evidence->>'reviewed_classification'='true')`, alias)
+	return storekit.HumanReviewedOwedClause(alias)
 }
 
 func validateOwedVerdictWrite(ctx context.Context, verdict, ruleset string) error {

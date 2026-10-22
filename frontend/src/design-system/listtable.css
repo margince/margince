@@ -75,9 +75,13 @@
   background: var(--bgHover);
   color: var(--textPrimary);
 }
+/* The view in use takes the pressed filter pill's neutral pair
+   (filterpills.css): it says where the reader is, and the accent is kept for
+   the action on the same row. */
 .lt-vtab.on {
-  background: var(--accentLight);
-  color: var(--accentText);
+  background: var(--bgChip);
+  box-shadow: inset 0 0 0 1px var(--borderStrong);
+  color: var(--textPrimary);
 }
 
 /* The count and the verbs wrap as ONE item, so a row that cannot hold the
@@ -929,7 +933,7 @@
   color: var(--textPrimary);
 }
 .lt-sort.on {
-  color: var(--accentText);
+  color: var(--textPrimary);
 }
 
 /* The arrow occupies its slot at all times and only becomes visible on the
@@ -1022,11 +1026,12 @@
   background: var(--bgHover);
   color: var(--textPrimary);
 }
+/* The page in view, in the pressed filter pill's neutral pair: a filled
+   accent here read as the pager's one action. */
 .lt-pager button.on {
-  background: var(--accent);
-  /* A filled control, so it takes the control foreground: dark mode lightens
-     the accent fill, and the non-control token goes thin against it. */
-  color: var(--textOnAccentControl);
+  background: var(--bgChip);
+  box-shadow: inset 0 0 0 1px var(--borderStrong);
+  color: var(--textPrimary);
 }
 .lt-pager button:disabled {
   cursor: default;

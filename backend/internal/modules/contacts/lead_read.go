@@ -44,8 +44,12 @@ const leadSourceLabelSQL = `(SELECT s.label FROM lead_source s WHERE s.key = lea
 // leadNextTaskDueSQL is when the next open task a reader may open falls due —
 // the deadline the Next task column prints, taking the audience for the reason
 // the pair beside it does.
-func leadTaskWorkSQL(ctx context.Context, arg func(any) int) string {
-	return " AND " + auth.LiveIntakeTaskClause("a") + " AND " + storekit.CurrentCommitmentTaskClause("a", slaNow(ctx), arg)
+func leadTaskWorkSQL(ctx context.Context, arg func(any) int) (string, error) {
+	identities, err := leadTaskIdentitiesSQL(ctx, arg)
+	if err != nil {
+		return "", err
+	}
+	return " AND " + auth.LiveIntakeTaskClause("a") + " AND " + storekit.CurrentTaskClause("a", slaNow(ctx), identities, arg), nil
 }
 
 func leadNextTaskDueSQL(work string) string {
@@ -69,8 +73,11 @@ func leadLastActivitySQL() string {
 	     AND ` + relstrength.NotCalledOffSQL("a") + auth.OriginIsEngagement("a") + `)`
 }
 
-func leadColumns(ctx context.Context, arg func(any) int) string {
-	work := leadTaskWorkSQL(ctx, arg)
+func leadColumns(ctx context.Context, arg func(any) int) (string, error) {
+	work, err := leadTaskWorkSQL(ctx, arg)
+	if err != nil {
+		return "", err
+	}
 	return `id, full_name, email, phone, title, company_name, candidate_company_key,
 	linkedin_url, status, score, score_override_reason, score_computed, owner_id, project_id, source_system, source_id,
 	promoted_contact_id, promoted_at, merged_into_id, from_contact_id, source, captured_by,
@@ -127,16 +134,25 @@ func leadColumns(ctx context.Context, arg func(any) int) string {
 	                    THEN (factor.value->>'points')::numeric END) DESC,
 	           factor.position
 	  LIMIT 1),
-	legal_hold, ` + leadHasInboundSQL
+	legal_hold, ` + leadHasInboundSQL, nil
 }
 
 // readLead resolves one lead row; active names the custom-field columns
 // to carry alongside the core ones — nil for internal decision reads whose
 // result never reaches the wire.
 func readLead(ctx context.Context, tx pgx.Tx, id ids.LeadID, archived storekit.ArchivedFilter, active []fieldcatalog.Column) (crmcontracts.Lead, error) {
+	var err error
+	ctx, err = withLeadTaskIdentities(ctx, tx)
+	if err != nil {
+		return crmcontracts.Lead{}, err
+	}
 	args := []any{id}
 	arg := func(value any) int { args = append(args, value); return len(args) }
-	q := `SELECT ` + leadColumns(ctx, arg) + storekit.SelectSuffix(active) + ` FROM lead WHERE id = $1`
+	columns, err := leadColumns(ctx, arg)
+	if err != nil {
+		return crmcontracts.Lead{}, err
+	}
+	q := `SELECT ` + columns + storekit.SelectSuffix(active) + ` FROM lead WHERE id = $1`
 	if archived == storekit.LiveOnly {
 		q += liveOnlyClause
 	}

@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useId } from "react";
+import { type FormEvent, useEffect, useId, useState } from "react";
 import { Button, Field } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { useSinglePress } from "../design-system/presslatch";
@@ -71,8 +71,17 @@ export function RecordFormBody({
   // A write must not bring back an answer to a question withdrawn in between.
   // Otherwise the first partner's claim would carry onto a second one named
   // after it.
-  const setVisibleValues = (next: Record<string, string>) =>
+  const [edited, setEdited] = useState(false);
+  const [editedOpen, setEditedOpen] = useState(dialog?.open);
+  // Each opening starts unchanged; a close that is not a save asks only after an edit.
+  if (dialog && dialog.open !== editedOpen) {
+    setEditedOpen(dialog.open);
+    setEdited(false);
+  }
+  const setVisibleValues = (next: Record<string, string>) => {
+    setEdited(true);
     setValues(submittedValues(fields, next));
+  };
   const requiredMissing = shown.some((field) => {
     if (field.type === "repeatable") {
       return !rowsRequirementMet(field, rows[field.key] ?? []);
@@ -118,7 +127,10 @@ export function RecordFormBody({
               field={field}
               formId={formId}
               rows={rows[field.key] ?? []}
-              setRows={(next) => setRows({ ...rows, [field.key]: next })}
+              setRows={(next) => {
+                setEdited(true);
+                setRows({ ...rows, [field.key]: next });
+              }}
             />
           );
         }
@@ -215,6 +227,7 @@ export function RecordFormBody({
       title={dialog.title}
       onClose={onClose}
       fieldCount={fields.filter((field) => !field.divider).length}
+      unsaved={edited}
       form={
         <form id={formId} className="form-stack" onSubmit={submit}>
           {stack}

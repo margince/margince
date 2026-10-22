@@ -20619,6 +20619,7 @@ func (e WorklistMoveAction) Valid() bool {
 
 // Defines values for WorklistOwnerKind.
 const (
+	WorklistOwnerKindWorklistOwnerShared     WorklistOwnerKind = "shared"
 	WorklistOwnerKindWorklistOwnerUnassigned WorklistOwnerKind = "unassigned"
 	WorklistOwnerKindWorklistOwnerUser       WorklistOwnerKind = "user"
 )
@@ -20626,6 +20627,8 @@ const (
 // Valid indicates whether the value is a known member of the WorklistOwnerKind enum.
 func (e WorklistOwnerKind) Valid() bool {
 	switch e {
+	case WorklistOwnerKindWorklistOwnerShared:
+		return true
 	case WorklistOwnerKindWorklistOwnerUnassigned:
 		return true
 	case WorklistOwnerKindWorklistOwnerUser:
@@ -53720,7 +53723,7 @@ type WorklistOwner struct {
 	// Id The owning user. Present when `kind` is `user`.
 	Id *openapi_types.UUID `json:"id,omitempty"`
 
-	// Kind Whether a contact answers for this row, or nobody does yet.
+	// Kind Whether one user, several direct recipients, or nobody answers for this row.
 	Kind WorklistOwnerKind `json:"kind"`
 
 	// Label The owner's display name, resolved under the CALLER's own grants.
@@ -53730,10 +53733,21 @@ type WorklistOwner struct {
 	// row without a name rather than inventing one, and never treats an absent
 	// label as an absent owner: `kind` is what says whether anybody answers.
 	Label *string `json:"label,omitempty"`
+
+	// Users Direct recipients responsible together. Present only for shared ownership; names follow the caller’s roster access.
+	Users *[]WorklistOwnerMember `json:"users,omitempty"`
 }
 
-// WorklistOwnerKind Whether a contact answers for this row, or nobody does yet.
+// WorklistOwnerKind Whether one user, several direct recipients, or nobody answers for this row.
 type WorklistOwnerKind string
+
+// WorklistOwnerMember defines model for WorklistOwnerMember.
+type WorklistOwnerMember struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Label The user’s name when the caller may resolve it.
+	Label *string `json:"label,omitempty"`
+}
 
 // WorklistPinRequest defines model for WorklistPinRequest.
 type WorklistPinRequest struct {

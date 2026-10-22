@@ -9,6 +9,7 @@
 // their own name — and only then do they answer.
 
 import { useId, useState } from "react";
+import { EntityRef } from "../../components/entityref";
 import {
   Badge,
   Button,
@@ -19,7 +20,9 @@ import {
 import { ChoiceList } from "../../design-system/choicelist";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
-import { useT } from "../../i18n";
+import { formatDate } from "../../format/format";
+import { useLocale, useT } from "../../i18n";
+import { useRecordZone } from "../../lib/recordzone";
 import {
   type IntroDecision,
   type IntroRequest,
@@ -48,6 +51,8 @@ export function IntroDecisionDrawer({
   onClose: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const titleId = useId();
   const [answer, setAnswer] = useState<IntroDecision>("accepted");
   const [reason, setReason] = useState("");
@@ -85,6 +90,27 @@ export function IntroDecisionDrawer({
       </Heading>
 
       <div className="form-stack">
+        <p>
+          <strong>{t("contact.intro.askedBy")}: </strong>
+          <EntityRef
+            kind="user"
+            id={request.requester_user_id}
+            name={request.requester_display_name}
+          />
+          {", "}
+          {formatDate(request.requested_at, locale, recordZone)}
+        </p>
+        {request.through_contact_id ? (
+          <p>
+            <strong>{t("contact.intro.askedThrough")}: </strong>
+            <EntityRef
+              kind="contact"
+              id={request.through_contact_id}
+              name={request.through_display_name}
+              newTab
+            />
+          </p>
+        ) : null}
         <p>{request.internal_reason}</p>
         {request.value_for_target ? (
           <p>

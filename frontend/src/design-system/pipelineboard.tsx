@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Fragment } from "react";
+import { Fragment, useEffect, useRef } from "react";
 import { formatMoneyOrAbsent, formatNumber } from "../format/format";
 import { translatePlural, useLocale, useT } from "../i18n";
 import { OptionCount } from "./atoms";
@@ -174,6 +174,12 @@ export type BoardMoneyColumn = BoardColumn<BoardDeal> & {
 type BoardHandlers<Record extends BoardRecord> = {
   countLabel?: (count: number) => string;
   /**
+   * When this changes to a non-empty value, the first column holding a card
+   * scrolls into view. A search whose only match sits in an off-screen stage
+   * otherwise reads as a board with nothing on it.
+   */
+  revealKey?: string;
+  /**
    * Fold or unfold one column. Given only by a board that has a collapsed
    * column. Without it the head is inert text, so a board with no such column
    * grows no button a reader can press to no effect.
@@ -222,9 +228,18 @@ type BoardLayoutProps<Record extends BoardRecord> = BoardHandlers<Record> & {
   moneyFor: (column: BoardColumn<Record>) => BoardMoneyColumn | undefined;
 };
 
+// firstFilledColumn is the stage of the first column holding a card, or
+// undefined when none does.
+export function firstFilledColumn<Record extends BoardRecord>(
+  columns: readonly BoardColumn<Record>[],
+): string | undefined {
+  return columns.find((column) => column.deals.length > 0)?.stage;
+}
+
 function BoardLayout<Record extends BoardRecord>({
   columns,
   renderCard,
+  revealKey,
   countLabel,
   columnExtras,
   columnDropHandlers,
@@ -233,6 +248,23 @@ function BoardLayout<Record extends BoardRecord>({
 }: Readonly<BoardLayoutProps<Record>>) {
   const t = useT();
   const { locale } = useLocale();
+  const sections = useRef(new Map<string, HTMLElement>());
+  // Once per search: a later page or a refresh must not pull the board away
+  // from a column the reader has since scrolled to.
+  const revealedFor = useRef<string | undefined>(undefined);
+  const reveal = revealKey ? firstFilledColumn(columns) : undefined;
+  useEffect(() => {
+    if (!revealKey) {
+      revealedFor.current = undefined;
+      return;
+    }
+    if (!reveal || revealedFor.current === revealKey) return;
+    revealedFor.current = revealKey;
+    // "nearest" leaves a column already on screen where it is.
+    sections.current
+      .get(reveal)
+      ?.scrollIntoView?.({ inline: "nearest", block: "nearest" });
+  }, [revealKey, reveal]);
   // The head's interactive half, or nothing at all. Written as a function so
   // the column's JSX stays one line of props rather than a spread conditional
   // the reader has to unpick.
@@ -263,6 +295,10 @@ function BoardLayout<Record extends BoardRecord>({
               column.collapsed ? "board-col board-col-collapsed" : "board-col"
             }
             data-stage={column.stage}
+            ref={(node) => {
+              if (node) sections.current.set(column.stage, node);
+              else sections.current.delete(column.stage);
+            }}
             aria-label={column.label}
             // listtable.css gives every column `overflow-y: auto` so a stage
             // with many deals scrolls its own cards instead of stretching the

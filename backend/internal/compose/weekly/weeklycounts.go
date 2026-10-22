@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
@@ -58,11 +59,16 @@ func countWeek(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.
 
 	verbsPos := arg(privacy.ScrubVerbs())
 	completion := taskCompletionAtSQL("a", fmt.Sprintf("$%d", endPos), fmt.Sprintf("$%d", verbsPos))
+	identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+	if err != nil {
+		return Counts{}, err
+	}
+	current := storekit.CurrentTaskClause("a", end, identities, arg)
 	var c Counts
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
         WITH tasks AS (
           SELECT a.due_at, %[6]s AS completed_at FROM activity a
-           WHERE a.kind='task' AND a.archived_at IS NULL
+           WHERE a.kind='task' AND a.archived_at IS NULL AND (a.is_done OR %[7]s)
              AND a.created_at < $%[2]d AND a.assignee_id=$%[3]d AND (%[4]s)
              AND ((a.due_at >= $%[1]d AND a.due_at < $%[2]d)
                OR a.done_at >= $%[1]d OR (a.due_at < $%[2]d AND NOT a.is_done)
@@ -102,7 +108,7 @@ func countWeek(ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.
 		     JOIN brief_run br ON br.id = bi.brief_run_id
 		    WHERE br.user_id = $%[3]d AND bi.state = 'dismissed'
 		      AND bi.state_at >= $%[1]d AND bi.state_at < $%[2]d)`,
-		startPos, endPos, userPos, activityScope, dealScope, completion), args...).
+		startPos, endPos, userPos, activityScope, dealScope, completion, current), args...).
 		Scan(&c.TasksCompleted, &c.TasksDue, &c.TasksDone, &c.TasksCarriedOver,
 			&c.DealsMoved, &c.DealsWon, &c.DealsLost,
 			&c.ProposalsAccepted, &c.ProposalsRejected,
