@@ -119,3 +119,25 @@ it("describes a further entity with its name, legal name and country", async () 
     ),
   ).toBe(true);
 });
+
+it("asks before Escape drops a typed entity, and closes an empty one at once", async () => {
+  const user = userEvent.setup();
+  vi.stubGlobal("fetch", backend(ADMIN, DEFAULT_ONLY));
+  render(<LegalEntitiesCard />);
+  const add = await screen.findByRole("button", {
+    name: en["legalEntities.addOpen"],
+  });
+  await user.click(add);
+  await user.keyboard("{Escape}");
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+  await user.click(add);
+  const [name] = within(await screen.findByRole("dialog")).getAllByRole(
+    "textbox",
+  );
+  await user.type(name as HTMLElement, "Wien");
+  await user.keyboard("{Escape}");
+  expect(
+    screen.getByRole("dialog", { name: en["unsaved.title"] }),
+  ).toBeInTheDocument();
+});

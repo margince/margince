@@ -297,7 +297,8 @@ function renderRun(run: Run): ReactNode[] {
 function renderInline(node: Inline): ReactNode {
   if (node.kind === "text") return node.text;
   if (node.kind === "code") return <code>{node.text}</code>;
-  if (node.kind === "strong") return <strong>{children(node.children)}</strong>;
+  if (node.kind === "strong")
+    return <strong className="md-strong">{children(node.children)}</strong>;
   if (node.kind === "em") return <em>{children(node.children)}</em>;
   if (node.kind === "mark") return <mark>{children(node.children)}</mark>;
   return (

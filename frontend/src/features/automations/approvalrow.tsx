@@ -49,11 +49,12 @@ import { ApprovalEvidence } from "./approvalevidence";
 import {
   approvalAcceptLabel,
   approvalExpiryLabel,
-  approvalKindLabel,
+  approvalLabel,
   decisionSkewKey,
 } from "./approvalkind";
 import { approvalAcceptable, useApprovalNames } from "./approvalresponsibility";
 import { stagedSendOf } from "./approvalsend";
+import { ApprovalDecider, ApprovalTarget } from "./approvaltarget";
 import "./approvalrow.css";
 
 // One staged proposal as a decidable row, and the screen-level sink that
@@ -331,7 +332,13 @@ export function ApprovalRow({
       layout="row"
       className="approval-row"
       display={display}
-      detail={<ApprovalEvidence approval={approval} />}
+      detail={
+        <>
+          <ApprovalTarget approval={approval} />
+          <ApprovalDecider approval={approval} />
+          <ApprovalEvidence approval={approval} />
+        </>
+      }
       now={now}
       labels={{
         ...rowLabels(t),
@@ -359,9 +366,7 @@ export function ApprovalRow({
             <AutonomyDot tier={approvalDotTier(approval.kind, tierMap)} />
           )}
           {/* kind is meta, not the headline — the human reads the summary first */}
-          <span className="t-caption">
-            {approvalKindLabel(approval.kind, t)}
-          </span>
+          <span className="t-caption">{approvalLabel(approval, t)}</span>
           <DecisionStatusChip
             approval={approval}
             decided={!!decided}

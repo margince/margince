@@ -37,6 +37,7 @@ it("keeps the exact approval review reachable from Focus without a second receip
           preview: wonProposal.approval_preview,
           target_entity_type: "deal",
           target_entity_id: wonProposal.entity?.id,
+          target_label: wonProposal.entity?.label,
           proposed_change: { to_stage_id: "won" },
         }),
       ),

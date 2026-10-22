@@ -205,6 +205,7 @@ export function DealBoardBody({
                   rosterOwnerNaming(ownerNames),
                 )}
                 onOpen={openDeal}
+                revealKey={dealFilters.q}
                 cardDragHandlers={cardDragHandlers}
                 columnDropHandlers={columnDropHandlers}
                 columnExtras={suggestionGhosts}

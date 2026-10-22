@@ -245,7 +245,7 @@ func TestTheAssigneeClauseStaysExact(t *testing.T) {
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	assignee := ids.From[ids.UserKind](ids.MustParse("01a05500-0000-7000-8000-000000000001"))
 
-	if clause := openTaskAssigneeClause(&assignee, new(time.Date(2026, 10, 21, 12, 0, 0, 0, time.UTC)), arg); !strings.HasPrefix(clause, "a.assignee_id = $1 AND a.kind") {
+	if clause := openTaskAssigneeClause(&assignee, new(time.Date(2026, 10, 21, 12, 0, 0, 0, time.UTC)), nil, arg); !strings.HasPrefix(clause, "a.assignee_id = $1 AND a.kind") {
 		t.Fatalf("the exact-assignee clause %q now admits unassigned work", clause)
 	}
 }

@@ -14,7 +14,7 @@ import { type Locale, useT } from "../../i18n";
 import { approvalDotTier, useAgentTierMap } from "../../lib/autonomy";
 import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
-import { approvalKindLabel } from "../automations/approvalkind";
+import { approvalLabel } from "../automations/approvalkind";
 import { RecordReading, RecordReadingPair } from "../records/record360";
 import { DealBrief } from "./deal360/dealbrief";
 import { DEAL_OFFERS_ANCHOR } from "./deal360/dealcockpit";
@@ -61,9 +61,7 @@ function DealApprovals({
                 way. Printed off the wire they read `advance_deal` and
                 `agent:capture`: the vocabulary the API speaks, on a page
                 whose reader never sees the API. */}
-              <span className="t-label">
-                {approvalKindLabel(approval.kind, t)}
-              </span>
+              <span className="t-label">{approvalLabel(approval, t)}</span>
               <ProvenanceTag
                 provenance={provenanceOf(approval.proposed_by, viewerId)}
               />

@@ -257,3 +257,31 @@ func TestPrivateReplyStillAnswersAnUnclassifiedThread(t *testing.T) {
 		}
 	}
 }
+
+func TestAcceptingAReadableColleagueReminderDoesNotClaimSuccess(t *testing.T) {
+	e := setupLoad(t)
+	source := seedEmailRequest(t, e, "Send the report", "commitment", OwedVerdictAsksUs)
+	store := storeKnowing(e)
+	if err := store.CaptureEmailRequests(asClassifier(e), requestInstant.Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	var task ids.UUID
+	if err := e.owner.QueryRow(e.as(), `SELECT id FROM activity WHERE source_system='email_request' AND source_activity_id=$1`, source).Scan(&task); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.SetAudience(e.asSeat(e.rep), ids.From[ids.ActivityKind](task), SetAudienceInput{Audience: "selected", Members: []AudienceMember{{SubjectType: "user", SubjectID: e.rep}, {SubjectType: "user", SubjectID: e.other}}}); err != nil {
+		t.Fatal(err)
+	}
+	_, _, err := store.LogActivity(e.asSeat(e.other), LogActivityInput{Kind: "task", RequestActivityID: &source, Source: "manual"})
+	var held *requestHeldError
+	if !errors.Is(err, apperrors.ErrConflict) || !errors.As(err, &held) {
+		t.Fatalf("accepting colleague reminder returned %v, want actionable conflict", err)
+	}
+	got, err := store.GetActivity(e.asSeat(e.rep), ids.From[ids.ActivityKind](task), storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.AssigneeId == nil || ids.UUID(*got.AssigneeId) != e.rep {
+		t.Fatal("failed acceptance changed another seat's assignment")
+	}
+}

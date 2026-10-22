@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { Button } from "../../design-system/atoms";
 import { Panel } from "../../design-system/panel";
 import { en } from "../../i18n/en";
 import { StoryProviders, stubWithSession } from "../../testing/story-utils";
@@ -23,6 +24,7 @@ export const HistoricalFinding: Story = {
       <StoryProviders>
         <Panel title={en["contact.loops.title"]}>
           <ContactClaimsReview
+            dismiss={() => <Button>{en["commitment.dismiss"]}</Button>}
             claims={[
               {
                 id: "claim-old",

@@ -18,6 +18,7 @@ package attention
 // it has in common with the rest.
 
 import (
+	"slices"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/worklistsnap"
@@ -427,7 +428,7 @@ func ownerOfTheGroup(members []ranked) ownerRef {
 	}
 	first := members[0].ownerRef
 	for _, member := range members[1:] {
-		if member.ownerRef != first {
+		if member.ownerRef.kind != first.kind || member.ownerRef.user != first.user || !slices.Equal(member.ownerRef.users, first.users) {
 			return ownerRef{}
 		}
 	}

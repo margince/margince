@@ -91,7 +91,8 @@ export function BindingEditor({
     [],
   );
   // A move away mid-edit asks first, as the page's other editors do.
-  useUnsavedGuard(!sameSlice(draft, initial));
+  const changed = !sameSlice(draft, initial);
+  useUnsavedGuard(changed);
   const save = useMutation({
     mutationFn: (vars: { base: SliceValue; edit: SliceValue }) =>
       writeSlice(() => readLatest(queryClient), vars.base, vars.edit),
@@ -146,6 +147,7 @@ export function BindingEditor({
       onClose={onClose}
       labelledBy={headingId}
       intent="drawer-reading"
+      unsaved={changed}
     >
       <DrawerHead>
         <Heading size="large" id={headingId} className="t-h2 modal-title">

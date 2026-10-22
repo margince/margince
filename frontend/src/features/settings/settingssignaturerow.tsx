@@ -95,7 +95,13 @@ export function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
           </Button>
         }
       />
-      <Modal open={open} onClose={close} labelledBy={titleId} intent="form">
+      <Modal
+        open={open}
+        onClose={close}
+        labelledBy={titleId}
+        intent="form"
+        unsaved={dirty}
+      >
         <Heading size="large" className="t-h3 modal-title" id={titleId}>
           {t("settings.signature")}
         </Heading>

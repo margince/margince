@@ -279,14 +279,14 @@ func RequireProjectScope(ctx context.Context, tx pgx.Tx, projectID ids.ProjectID
 // `kind` is stated rather than implied. The `activity_task_fields` CHECK
 // already keeps assignee_id NULL on every other kind, so it narrows nothing —
 // it is what lets the planner match the partial index.
-func openTaskAssigneeClause(assignee *ids.UserID, asOf *time.Time, arg func(any) int) string {
+func openTaskAssigneeClause(assignee *ids.UserID, asOf *time.Time, identities map[string][]string, arg func(any) int) string {
 	if assignee == nil {
 		return ""
 	}
 	if asOf == nil || asOf.IsZero() {
 		return "FALSE"
 	}
-	return sprintf("a.assignee_id = $%d AND a.kind = 'task' AND NOT a.is_done", arg(*assignee)) + " AND " + CurrentCommitmentTaskClause("a", *asOf, arg)
+	return sprintf("a.assignee_id = $%d AND a.kind = 'task' AND NOT a.is_done", arg(*assignee)) + " AND " + CurrentTaskClause("a", *asOf, sprintf("$%d::jsonb", arg(identities)), arg)
 }
 
 // Personal queues contain assigned work; taskAssignee owns a human's new task.

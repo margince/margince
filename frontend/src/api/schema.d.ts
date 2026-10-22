@@ -46828,10 +46828,10 @@ export interface components {
          */
         WorklistOwner: {
             /**
-             * @description Whether a contact answers for this row, or nobody does yet.
+             * @description Whether one user, several direct recipients, or nobody answers for this row.
              * @enum {string}
              */
-            kind: "user" | "unassigned";
+            kind: "user" | "unassigned" | "shared";
             /**
              * Format: uuid
              * @description The owning user. Present when `kind` is `user`.
@@ -46845,6 +46845,14 @@ export interface components {
              *     row without a name rather than inventing one, and never treats an absent
              *     label as an absent owner: `kind` is what says whether anybody answers.
              */
+            label?: string;
+            /** @description Direct recipients responsible together. Present only for shared ownership; names follow the caller’s roster access. */
+            users?: components["schemas"]["WorklistOwnerMember"][];
+        };
+        WorklistOwnerMember: {
+            /** Format: uuid */
+            id: string;
+            /** @description The user’s name when the caller may resolve it. */
             label?: string;
         };
         /**

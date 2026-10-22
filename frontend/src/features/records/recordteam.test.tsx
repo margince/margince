@@ -109,7 +109,17 @@ it("invites an assignment on a record that has none", async () => {
   stubFetch([]);
   render(<RecordTeam recordType="deal" recordId={RECORD_ID} />);
   expect(await screen.findByText(/No one is assigned yet/)).toBeTruthy();
-  expect(screen.getByRole("button", { name: "Assign" })).toBeTruthy();
+  const assign = screen.getByRole("button", { name: "Assign" });
+  expect(assign.classList.contains("btn-primary")).toBe(true);
+});
+
+it("drops the filled verb to an outlined one once someone is assigned", async () => {
+  stubFetch([ROW]);
+  render(<RecordTeam recordType="deal" recordId={RECORD_ID} />);
+  expect(await screen.findByText(/Mara Feld/)).toBeTruthy();
+  const assign = screen.getByRole("button", { name: "Assign" });
+  expect(assign.classList.contains("btn-ghost")).toBe(true);
+  expect(assign.classList.contains("btn-primary")).toBe(false);
 });
 
 it("draws no panel of its own when a section already names it", async () => {

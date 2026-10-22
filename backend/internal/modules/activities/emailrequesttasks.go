@@ -24,11 +24,8 @@ const EmailRequestTaskSource = provenance.EmailRequestSource
 
 const automaticRequestHorizonDays = 14
 
-// capture_import proves mailbox delivery, not who was addressed. Participant
-// user IDs are stamped by import too; only addresses or the mapper's To header
-// establish a direct recipient. mailmap.Message.Record prepends the parsed
-// envelope before all sender text; only that captured-email path may use it.
-// Resolve before the waiting scan's bound.
+// capture_import proves mailbox delivery, not who was addressed. Only parsed
+// recipient addresses establish a direct recipient before the waiting scan's bound.
 func emailRequestAssigneeSQL(identities string) string {
 	return `SELECT min(u.id::text)::uuid AS user_id FROM capture_import ci
       JOIN (SELECT id AS owner_id, app_user.* FROM app_user) u ON u.id = ci.user_id AND %s
@@ -70,7 +67,7 @@ func (s *Store) CaptureEmailRequests(ctx context.Context, asOf time.Time) error 
 		wake := messageSnoozeLiftedSQL(fmt.Sprintf("$%d", arg(asOf)), "TRUE")
 		eligible, err := waitingReplyExistsClause(ctx, arg, asOf, nil, nil, domains, nil, automaticRequestHorizonDays,
 			outstandingRequestSQL+`
-     AND a.capture_label IS DISTINCT FROM 'noise'
+     AND `+storekit.AutomaticRequestIntentClause("a")+`
      AND a.occurred_at >= $`+fmt.Sprint(arg(asOf.AddDate(0, 0, -automaticRequestHorizonDays)))+`
      AND a.audience = 'workspace' AND a.restricted_at IS NULL
      AND NOT EXISTS (SELECT 1 FROM activity task WHERE task.source_system = 'email_request' AND task.source_activity_id = a.id)

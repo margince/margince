@@ -136,6 +136,29 @@ const pipeline = {
 };
 
 describe("contact create flow", () => {
+  it("asks before Escape drops a typed contact, and closes an untouched form", async () => {
+    stubApi({});
+    const user = userEvent.setup();
+    render(<ContactsScreen />);
+    await user.click(screen.getByText(en["create.contact"]));
+    await screen.findByLabelText("Full name *");
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+    await user.click(screen.getByText(en["create.contact"]));
+    await user.type(await screen.findByLabelText("Full name *"), "Peter Neu");
+    await user.keyboard("{Escape}");
+    await user.click(
+      screen.getByRole("button", { name: en["unsaved.discard"] }),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+
+    await user.click(screen.getByText(en["create.contact"]));
+    await screen.findByLabelText("Full name *");
+    await user.keyboard("{Escape}");
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
   it("posts the typed values with source=manual and navigates to the new 360", async () => {
     const captured: Captured[] = [];
     stubApi(

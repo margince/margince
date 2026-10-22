@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { Disclosure } from "../../design-system/disclosure";
 import { PanelBody, PanelRow } from "../../design-system/panel";
 import { formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
-import { DismissClaimButton } from "../records/claimdismiss";
 
 type Claim = components["schemas"]["ConversationClaim"];
 
@@ -17,9 +17,15 @@ export function claimsForReview(claims: readonly Claim[]): readonly Claim[] {
   );
 }
 
+// The dismiss control is handed in: it belongs to another feature, and a
+// feature imports no other feature.
 export function ContactClaimsReview({
   claims,
-}: Readonly<{ claims: readonly Claim[] }>) {
+  dismiss,
+}: Readonly<{
+  claims: readonly Claim[];
+  dismiss: (claimId: string) => ReactNode;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = useRecordZone();
@@ -41,7 +47,7 @@ export function ContactClaimsReview({
                 .join(" · ")}
             </p>
             <p>{t("commitment.quote", { quote: claim.source_quote })}</p>
-            <DismissClaimButton id={claim.id} />
+            {dismiss(claim.id)}
           </PanelRow>
         ))}
       </Disclosure>

@@ -3,11 +3,12 @@
    rules travel with the component rather than with either page's sheet. */
 /* The selected row, marked on its edge rather than by a fill. The first row is
    selected on arrival, so a fill would paint a block of colour across the top of
-   every day rather than answering which row is in hand. The rank tile goes to
-   the accent with it (worklist.css), so the mark is read on the row's gutter
-   as well as on its edge. */
+   every day rather than answering which row is in hand. The rank tile is
+   marked with it (worklist.css), so the mark is read on the row's gutter as
+   well as on its edge. Both are neutral: the row in hand is where the reader
+   is, and the accent is for the row's verbs. */
 .worklist-row-selected {
-  box-shadow: inset 3px 0 0 0 var(--accent);
+  box-shadow: inset 3px 0 0 0 var(--textPrimary);
 }
 
 /* A row lights under the pointer: the queue is a list of things to press —

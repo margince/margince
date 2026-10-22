@@ -579,6 +579,9 @@ describe("TeamsCard", () => {
     );
     expect(await within(first).findByText("the team was merged")).toBeTruthy();
     await user.keyboard("{Escape}");
+    await user.click(
+      screen.getByRole("button", { name: en["unsaved.discard"] }),
+    );
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 
     const second = await open();

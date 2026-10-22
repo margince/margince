@@ -140,7 +140,7 @@ func TestAutomaticCommitmentPinFollowsAssigneeAcrossViews(t *testing.T) {
 				t.Fatal(err)
 			}
 			assignee := ids.From[ids.UserKind](e.Rep1)
-			task, _, err := e.Activities.LogActivity(principal.SystemActing(e.Admin(), "system:signal_scan"), activities.LogActivityInput{Kind: "task", Subject: new("Send plan"), Source: "manual", SourceSystem: new(activities.CommitmentTaskSource), SourceActivityID: new(ids.UUID(source.Id)), SourceID: new("old-plan"), AssigneeID: &assignee})
+			task, _, err := e.Activities.LogActivity(principal.SystemActing(e.Admin(), "system:signal_scan"), activities.LogActivityInput{Kind: "task", Subject: new("Send plan"), Source: "manual", SourceSystem: new(activities.CommitmentTaskSource), SourceActivityID: new(ids.UUID(source.Id)), SourceID: new("old-plan"), AssigneeID: &assignee, DueAt: &old})
 			if err != nil {
 				t.Fatal(err)
 			}
