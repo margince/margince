@@ -44,6 +44,12 @@ func TestALadderWhoseBoundRungsReachOneAPIIsNamed(t *testing.T) {
 	}{
 		{"every rung one model", map[Tier]ProviderConfig{TierCheapCloud: one, TierPremium: one, TierFrontier: one}, true},
 		{"a second model above is a fallback", map[Tier]ProviderConfig{TierCheapCloud: one, TierPremium: collapsedOnBroker("n"), TierFrontier: collapsedOnBroker("n")}, false},
+		// A Vertex location belongs to the provider, so settling keeps one for
+		// every tier and the rungs reach one API whatever each tier wrote.
+		{"Vertex tiers written with two locations settle to one", map[Tier]ProviderConfig{
+			TierCheapCloud: {Provider: providerGeminiVertex, Model: "m", Location: "europe-west1"},
+			TierPremium:    {Provider: providerGeminiVertex, Model: "m", Location: "europe-west4"},
+		}, true},
 		{"one bound rung is no ladder", map[Tier]ProviderConfig{TierPremium: one}, false},
 	}
 	for _, tc := range cases {
