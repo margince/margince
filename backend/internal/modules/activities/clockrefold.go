@@ -46,6 +46,7 @@ type PassedActivities struct {
 
 // ClockRefoldStartTx answers the stored mark and the instant this run reads up
 // to. The instant is the database's, because the clock functions read now().
+// With no mark stored yet, the run starts before every activity.
 func ClockRefoldStartTx(ctx context.Context, tx pgx.Tx) (ClockRefoldMark, time.Time, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return ClockRefoldMark{}, time.Time{}, err
@@ -53,8 +54,9 @@ func ClockRefoldStartTx(ctx context.Context, tx pgx.Tx) (ClockRefoldMark, time.T
 	var mark ClockRefoldMark
 	var asOf time.Time
 	err := tx.QueryRow(ctx, `
-		SELECT passed_up_to, passed_id, now() - make_interval(secs => $1)
-		  FROM activity_clock_refold_mark`, clockRefoldSettle.Seconds()).Scan(&mark.At, &mark.ID, &asOf)
+		SELECT coalesce(m.passed_up_to, '0001-01-01 00:00:00+00'), coalesce(m.passed_id, '00000000-0000-0000-0000-000000000000'),
+		       now() - make_interval(secs => $1)
+		  FROM (SELECT) one LEFT JOIN activity_clock_refold_mark m ON true`, clockRefoldSettle.Seconds()).Scan(&mark.At, &mark.ID, &asOf)
 	if err != nil {
 		return ClockRefoldMark{}, time.Time{}, fmt.Errorf("activities: reading the clock refold mark: %w", err)
 	}
@@ -114,9 +116,11 @@ func AdvanceClockRefoldMarkTx(ctx context.Context, tx pgx.Tx, to ClockRefoldMark
 	if err := auth.RequireSystem(ctx); err != nil {
 		return err
 	}
-	if _, err := tx.Exec(ctx,
-		`UPDATE activity_clock_refold_mark SET passed_up_to = $1, passed_id = $2
-		  WHERE (passed_up_to, passed_id) < ($1, $2)`, to.At, to.ID); err != nil {
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO activity_clock_refold_mark (passed_up_to, passed_id) VALUES ($1, $2)
+		ON CONFLICT (singleton) DO UPDATE SET passed_up_to = EXCLUDED.passed_up_to, passed_id = EXCLUDED.passed_id
+		 WHERE (activity_clock_refold_mark.passed_up_to, activity_clock_refold_mark.passed_id) < (EXCLUDED.passed_up_to, EXCLUDED.passed_id)`,
+		to.At, to.ID); err != nil {
 		return fmt.Errorf("activities: advancing the clock refold mark: %w", err)
 	}
 	return nil

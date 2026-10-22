@@ -14,10 +14,9 @@
 --
 -- No row changes when a meeting's start passes, so the past_activity_clock_refold
 -- job refolds the records an activity reached once its time has come. Its
--- watermark, activity_clock_refold_mark, starts at this migration's now():
--- the rule before this one already counted every activity dated before it.
--- Stored clocks that rule left in the future are moved back by the
--- past_activity_clocks data task, not here.
+-- watermark, activity_clock_refold_mark, starts empty, so the first run walks
+-- every activity written before it happened once. Stored clocks the old rule
+-- left in the future are moved back by the past_activity_clocks data task.
 --
 -- move_last_activity now writes only a value that changed, so a refold over
 -- records it does not move rewrites nothing.
@@ -119,6 +118,3 @@ CREATE TABLE activity_clock_refold_mark (
     CONSTRAINT activity_clock_refold_mark_pkey PRIMARY KEY (singleton),
     CONSTRAINT activity_clock_refold_mark_singleton_check CHECK (singleton)
 );
-
-INSERT INTO activity_clock_refold_mark (passed_up_to, passed_id)
-VALUES (now(), 'ffffffff-ffff-ffff-ffff-ffffffffffff');
