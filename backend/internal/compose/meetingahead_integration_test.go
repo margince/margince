@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -149,21 +150,29 @@ func TestABookedMeetingAheadGivesDealHealthFullRecency(t *testing.T) {
 }
 
 // Around the meeting's start, before the refold has moved the clock and after,
-// the deal neither drops recency nor reads as stalled.
+// the deal neither drops recency nor reads as stalled. Each read runs on a pool
+// whose now() is the moment it asks about.
 func TestDealHealthHoldsAcrossTheMeetingsStart(t *testing.T) {
 	f := newClockFixture(t)
 	deal := f.idleDeal(t, "Meeting starts", 70)
 	meetsAt := f.now.AddDate(0, 0, 2)
 	f.logOn(t, "meeting", onRecord("deal", deal), meetsAt)
+	ws := ids.From[ids.WorkspaceKind](f.e.WS)
 	for _, read := range []struct {
-		when string
-		at   time.Time
+		when  string
+		shift time.Duration
 	}{
-		{"just before it starts", meetsAt.Add(-time.Minute)},
-		{"just after it starts, before the refold", meetsAt.Add(time.Minute)},
-		{"three days later, no refold run", meetsAt.AddDate(0, 0, 3)},
+		{"just before it starts", 2*24*time.Hour - 2*time.Minute},
+		{"just after it starts, before the refold", 2*24*time.Hour + 2*time.Minute},
+		{"three days later, no refold run", 5 * 24 * time.Hour},
 	} {
-		if h := f.health(t, deal, read.at); h.Factors.ActivityRecency != 1.0 || h.Evidence.Stalled {
+		at := time.Now().UTC().Add(read.shift)
+		store := deals.NewStore(database.BindTo(shiftedPool(t, read.shift), ws), DealsInstallation())
+		h, err := store.DealHealth(f.e.Admin(), ids.From[ids.DealKind](deal), at)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if h.Factors.ActivityRecency != 1.0 || h.Evidence.Stalled {
 			t.Errorf("%s: recency %v, stalled %v; want 1.0 and not stalled", read.when, h.Factors.ActivityRecency, h.Evidence.Stalled)
 		}
 	}
