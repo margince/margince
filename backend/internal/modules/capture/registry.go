@@ -406,9 +406,9 @@ func seedDomainOfAddressTx(ctx context.Context, tx pgx.Tx, address string) error
 	if err := lockOwnDomain(ctx, tx, domain); err != nil {
 		return err
 	}
-	// Recorded unverified, always. Whether the domain is OURS is not a fact
-	// about this mailbox and is not frozen here — it is derived at read time
-	// from what the own company currently claims (trustedOwnDomainsTx). Writing
+	// Recorded unverified, always. Whether the domain is OURS is derived at
+	// read time from what the own company currently claims
+	// (TrustedOwnDomainsTx). Writing
 	// the answer down would mean a domain that stopped being ours went on
 	// suppressing mail forever.
 	if _, err := tx.Exec(ctx, `

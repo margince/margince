@@ -87,7 +87,7 @@ func (s *OwnDomainStore) List(ctx context.Context) (OwnDomainList, error) {
 		}
 		// The same set the capture drop reads, so the screen cannot call a
 		// domain unconfirmed while capture already treats it as ours.
-		trusted, err := trustedOwnDomainsTx(ctx, tx)
+		trusted, err := TrustedOwnDomainsTx(ctx, tx)
 		if err != nil {
 			return err
 		}
@@ -154,7 +154,7 @@ func (s *OwnDomainStore) Colleagues(ctx context.Context) (InternalDomains, error
 	var own InternalDomains
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		own, err = trustedOwnDomainsTx(ctx, tx)
+		own, err = TrustedOwnDomainsTx(ctx, tx)
 		return err
 	})
 	return own, err
@@ -364,7 +364,7 @@ func (s *OwnDomainStore) ColleagueDomainsTx(ctx context.Context, tx pgx.Tx) ([]s
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, err
 	}
-	own, err := trustedOwnDomainsTx(ctx, tx)
+	own, err := TrustedOwnDomainsTx(ctx, tx)
 	if err != nil {
 		return nil, err
 	}

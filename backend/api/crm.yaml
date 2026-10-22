@@ -46421,6 +46421,8 @@ components:
             capturing mailbox owner, anyone stamped as a participant by seat); `selected` — the
             participants plus the users and teams named through PATCH /activities/{id}/audience.
             Set only through that endpoint, by a human with write authority over the activity.
+            The colleague who sent a mail that only another member's mailbox captured may read
+            that one copy, when their login address is at one of the workspace's own domains.
         audience_reason:
           type: [string, 'null']
           readOnly: true

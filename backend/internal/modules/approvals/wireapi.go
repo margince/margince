@@ -40,6 +40,7 @@ func (s *Service) ListWire(ctx context.Context, in ListInput) ([]crmcontracts.Ap
 	if err := s.readDecisionContext(ctx, out, rows); err != nil {
 		return nil, storekit.Page{}, err
 	}
+	withoutOwnersRecords(ctx, out)
 	return out, page, nil
 }
 
@@ -75,6 +76,7 @@ func (s *Service) contextWire(ctx context.Context, a row) (crmcontracts.Approval
 	if err := s.readDecisionContext(ctx, out, []row{a}); err != nil {
 		return crmcontracts.Approval{}, err
 	}
+	withoutOwnersRecords(ctx, out)
 	return out[0], nil
 }
 
@@ -93,6 +95,7 @@ func (s *Service) DecideBundleWire(ctx context.Context, bundleID ids.UUID, appro
 		subjects = append(subjects, member.Approval)
 	}
 	s.readCommittedContext(ctx, rows, subjects)
+	withoutOwnersRecords(ctx, rows)
 	out := make([]crmcontracts.ApprovalBundleMember, 0, len(members))
 	for index, member := range members {
 		out = append(out, crmcontracts.ApprovalBundleMember{
@@ -117,5 +120,6 @@ func (s *Service) readCommittedContext(ctx context.Context, rows []crmcontracts.
 func (s *Service) committedWire(ctx context.Context, a row) crmcontracts.Approval {
 	out := []crmcontracts.Approval{wire(a, s.now())}
 	s.readCommittedContext(ctx, out, []row{a})
+	withoutOwnersRecords(ctx, out)
 	return out[0]
 }

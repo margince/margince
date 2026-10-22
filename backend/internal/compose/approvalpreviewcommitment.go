@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func (r approvalPreviewReader) commitmentPreview(ctx context.Context, approval crmcontracts.Approval) (*crmcontracts.ApprovalPreview, error) {
@@ -42,7 +43,7 @@ func (r approvalPreviewReader) commitmentPreview(ctx context.Context, approval c
 	if err != nil {
 		return nil, err
 	}
-	recipients, err := r.commitmentRecipientNames(ctx, proposal)
+	recipients, err := r.commitmentRecipientNames(ctx, raw, proposal)
 	if state := evidenceFailureState(err); state != "" {
 		out.State = state
 		return out, nil
@@ -96,9 +97,19 @@ func commitmentCreateValue(field, kind, text string) crmcontracts.ApprovalPrevie
 	return crmcontracts.ApprovalPreviewChange{Field: field, Before: crmcontracts.ApprovalPreviewValue{Kind: previewValueEmpty}, After: crmcontracts.ApprovalPreviewValue{Kind: kind, Text: approvals.SanitizeSummary(text)}}
 }
 
-func (r approvalPreviewReader) commitmentRecipientNames(ctx context.Context, proposal CommitmentTaskProposal) ([]string, error) {
+// commitmentRecipientNames names who the promise was made to, once its claims
+// are still open. A colleague holding a promise from another member's private
+// mail reads no name. Those claims are on that member's private records, so
+// the reader that filed them checks them, and they stay unnamed.
+func (r approvalPreviewReader) commitmentRecipientNames(ctx context.Context, raw []byte, proposal CommitmentTaskProposal) ([]string, error) {
 	named := commitmentClaimIDs(proposal.ClaimID, proposal.ClaimIDs)
-	claims, err := contacts.NewStore(r.db).ClaimsByIDs(ctx, named)
+	reader := ctx
+	asked, _ := approvalsubject.CommitmentAskedOf(raw)
+	unnamed := heldByAnotherThanOwner(proposal.PrivateTo, asked)
+	if unnamed {
+		reader = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: signalScanActor})
+	}
+	claims, err := contacts.NewStore(r.db).ClaimsByIDs(reader, named)
 	if err != nil {
 		return nil, err
 	}
@@ -116,6 +127,9 @@ func (r approvalPreviewReader) commitmentRecipientNames(ctx context.Context, pro
 	}
 	if !open {
 		return nil, apperrors.ErrVersionSkew
+	}
+	if unnamed {
+		return nil, nil
 	}
 	return names, nil
 }

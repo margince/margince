@@ -15,6 +15,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"golang.org/x/net/idna"
 	"golang.org/x/net/publicsuffix"
+
+	"github.com/margince/margince/backend/internal/platform/auth"
 )
 
 // normalizeDomain folds a mail domain to the one form the own-domain set is
@@ -168,15 +170,8 @@ func (d InternalDomains) External(addresses []string) []string {
 	return out
 }
 
-// anchorDomains is what the installation's own company currently claims. It is
-// a READ of another module's table, which reads are free to be: the question is
-// "does a human say this domain is ours", and the anchor company is the
-// only place that answer lives.
-const anchorDomains = `
-	SELECT d.domain
-	  FROM company_domain d
-	  JOIN company o ON o.id = d.company_id
-	 WHERE o.is_anchor AND o.archived_at IS NULL AND d.archived_at IS NULL`
+// anchorDomains is what the installation's own company currently claims.
+const anchorDomains = auth.OwnCompanyDomainsSQL
 
 // ownDomainsTx reads every domain that might be ours — the company's own, plus
 // every candidate a connected mailbox contributed. This is the set for
@@ -186,7 +181,7 @@ func ownDomainsTx(ctx context.Context, tx pgx.Tx) (InternalDomains, error) {
 	return queryDomains(ctx, tx, `SELECT domain FROM workspace_email_domain UNION `+anchorDomains)
 }
 
-// trustedOwnDomainsTx reads only the domains a human vouched for: those the own
+// TrustedOwnDomainsTx reads only the domains a human vouched for: those the own
 // company claims, and those an administrator confirmed.
 //
 // Storing a message or not is a stronger consequence than creating a contact or
@@ -199,9 +194,8 @@ func ownDomainsTx(ctx context.Context, tx pgx.Tx) (InternalDomains, error) {
 // seen. A company that corrects a mistyped domain, or changes it, stops
 // suppressing the old one immediately — a cached answer would go on hiding mail
 // for a domain nobody claims any more, and nothing would ever revoke it.
-func trustedOwnDomainsTx(ctx context.Context, tx pgx.Tx) (InternalDomains, error) {
-	return queryDomains(ctx, tx,
-		`SELECT domain FROM workspace_email_domain WHERE verified UNION `+anchorDomains)
+func TrustedOwnDomainsTx(ctx context.Context, tx pgx.Tx) (InternalDomains, error) {
+	return queryDomains(ctx, tx, auth.TrustedOwnDomainsSQL)
 }
 
 func queryDomains(ctx context.Context, tx pgx.Tx, query string) (InternalDomains, error) {

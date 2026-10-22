@@ -25,7 +25,8 @@ import (
 // receiving server must have authenticated it (fromAuthenticated), since a
 // sender types From. The row is still not attested: no provider filed it as
 // sent. It names the colleague in SentByColleague, which no correspondence
-// gate reads.
+// gate reads. The stamp also lets that colleague open this one copy
+// (auth.activityAttendanceArm).
 //
 // The counterparty is the ladder's stand-in, picked among the recipients only.
 // rec.Addresses also lists every From address, so a co-author beside the
@@ -75,10 +76,18 @@ func (s *Sink) asSentByColleagueTx(
 // address; zero when there is none. Invited and deactivated seats count. Most
 // colleagues are invited and never sign in. A departed one's mail was still
 // the workspace's mail. An archived seat does not count.
+//
+// The address must be at one of the workspace's own trusted domains. A seat can
+// be invited at any address, and the stamp lets that seat open the copy. A seat
+// at a customer's domain must never be read as the sender of its mail.
 func colleagueTx(ctx context.Context, tx pgx.Tx, address string) (ids.UUID, error) {
+	own, err := TrustedOwnDomainsTx(ctx, tx)
+	if err != nil || !own.Covers(address) {
+		return ids.Nil, err
+	}
 	_, seat := capturePrincipal(ctx)
 	var colleague ids.UUID
-	err := tx.QueryRow(ctx, `SELECT id FROM app_user
+	err = tx.QueryRow(ctx, `SELECT id FROM app_user
 		 WHERE lower(email) = $1 AND id <> $2 AND archived_at IS NULL`, foldAddress(address), seat).Scan(&colleague)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.Nil, nil

@@ -105,14 +105,9 @@ func TestAcceptingACommitmentRefusesWhatItCannotWrite(t *testing.T) {
 		if err := effect(decider, ids.From[ids.ApprovalKind](ids.NewV7()), mustJSON(t, proposal), "h"); !errors.Is(err, apperrors.ErrConflict) {
 			t.Errorf("%s: accepting as another colleague: err = %v, want conflict", name, err)
 		}
-		if err := commitmentTaskPrecheck(nil)(decider, mustJSON(t, proposal), nil); !errors.Is(err, apperrors.ErrConflict) {
+		if err := commitmentTaskPrecheck(nil, nil)(decider, mustJSON(t, proposal), nil); !errors.Is(err, apperrors.ErrConflict) {
 			t.Errorf("%s: the precheck let another colleague accept: err = %v, want conflict", name, err)
 		}
-	}
-	// A promise in private mail lands on its owner or nobody.
-	private := mustJSON(t, CommitmentTaskProposal{Summary: "Send pricing", Locator: "abc", SeatID: &other, PromiserSeatID: &other, PrivateTo: &owner})
-	if err := effect(decider, ids.From[ids.ApprovalKind](ids.NewV7()), private, "h"); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("a colleague accepting a promise from another member's private mail: err = %v, want permission denied", err)
 	}
 }
 
