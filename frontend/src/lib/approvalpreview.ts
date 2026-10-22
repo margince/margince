@@ -276,6 +276,7 @@ const PREVIEW_CONFLICT_LABELS: Record<string, MessageKey> = {
   ...LIFECYCLE_CONFLICT_LABELS,
   sender_signature_private: "approval.preview.signaturePrivate",
   import_scope_unavailable: "approval.preview.importScopeUnavailable",
+  email_names_no_one: "approval.preview.machineAddress",
 };
 
 export function commercialPreviewDisplay(

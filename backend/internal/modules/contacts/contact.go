@@ -136,6 +136,9 @@ func (s *Store) CreateContactTx(ctx context.Context, tx pgx.Tx, in CreateContact
 // attribution the write shape stamps. Both entry points call it, so neither
 // can drift from the other's validation.
 func (s *Store) readyContactCreate(ctx context.Context, in *CreateContactInput) (string, error) {
+	if err := refuseDisagreeingNames(in.FullName, in.FirstName, in.LastName); err != nil {
+		return "", err
+	}
 	if err := parseContactContacts(in.Emails, in.Phones); err != nil {
 		return "", err
 	}
@@ -266,6 +269,11 @@ func (s *Store) GetContactTx(ctx context.Context, tx pgx.Tx, id ids.ContactID,
 // when none does — where an address seen on a message becomes a record.
 func (s *Store) EnsureContactByEmail(ctx context.Context, fullName, email, source string) (ids.UUID, error) {
 	if err := auth.Require(ctx, "contact", principal.ActionCreate); err != nil {
+		return ids.Nil, err
+	}
+	// Before the lookup, so a machine-address contact made before the refusal
+	// existed is not handed back either.
+	if err := refuseMachineAddress(email); err != nil {
 		return ids.Nil, err
 	}
 	lookup := func() (ids.UUID, bool, error) {

@@ -16,6 +16,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
@@ -181,6 +182,9 @@ func parseContactContacts(emails []ContactEmailInput, phones []ContactPhoneInput
 		if err != nil {
 			return err
 		}
+		if err := refuseMachineAddress(parsed.String()); err != nil {
+			return err
+		}
 		emails[i].Email = parsed.String()
 	}
 	for i, p := range phones {
@@ -200,9 +204,30 @@ func parseContactContacts(emails []ContactEmailInput, phones []ContactPhoneInput
 	})
 }
 
+// MachineAddressCode is the field-fault code for an address whose local part
+// names a sending system. The CSV import maps it to its own skip reason.
+const MachineAddressCode = "email_names_no_one"
+
+// refuseMachineAddress refuses an address nobody answers at, by the same
+// local-part rule capture applies before it mints a contact from mail.
+func refuseMachineAddress(email string) error {
+	if !mailidentity.HasMachineLocalpart(email) {
+		return nil
+	}
+	return &values.ParseError{
+		Field: "emails", Code: MachineAddressCode,
+		Message: "this address belongs to a sending system, not a person; add the person's own address",
+	}
+}
+
 //nolint:unparam // the same shape as its siblings; see replaceContactSocial.
 func insertContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, contactID ids.ContactID, source, by string, emails []ContactEmailInput) error {
 	for _, e := range emails {
+		// Capture, channel, promotion and booking reach this writer without
+		// parseContactContacts, so the refusal is asked here too.
+		if err := refuseMachineAddress(e.Email); err != nil {
+			return err
+		}
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO contact_email (contact_id, email, email_type, is_primary, position, source, captured_by, from_correspondence)
 			 VALUES ($1, lower($2), $3, $4, $5, $6, $7, $8)`,

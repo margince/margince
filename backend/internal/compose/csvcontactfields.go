@@ -68,14 +68,22 @@ func contactUpdateFrom(changed map[string]string, typed map[string]any) contacts
 		Address:      addressFrom(changed),
 		CustomFields: customFieldsFrom(changed, typed),
 	}
+	if joined := joinedNameParts(changed); joined != "" && in.FullName != nil {
+		in.FullName = &joined
+	}
 	in.Emails = contactEmailsFrom(changed)
 	in.Phones = contactPhonesFrom(changed, typed)
 	in.Social = contactSocialFrom(changed, typed)
 	return in
 }
 
-// contactFullName is the name ladder contactCreateFrom documents.
+// contactFullName is the name ladder contactCreateFrom documents. A row that
+// states both name parts takes its full name from them: the row cannot be asked
+// again, and the store refuses a full name that disagrees with its parts.
 func contactFullName(fields map[string]string) string {
+	if joined := joinedNameParts(fields); joined != "" {
+		return joined
+	}
 	if name := strings.TrimSpace(fields[fieldFullName]); name != "" {
 		return name
 	}
@@ -84,6 +92,15 @@ func contactFullName(fields map[string]string) string {
 		return joined
 	}
 	return strings.TrimSpace(fields[fieldEmail])
+}
+
+// joinedNameParts is "first last" when the row states both parts, else "".
+func joinedNameParts(fields map[string]string) string {
+	first, last := strings.TrimSpace(fields["first_name"]), strings.TrimSpace(fields["last_name"])
+	if first == "" || last == "" {
+		return ""
+	}
+	return first + " " + last
 }
 
 // contactEmailsFrom reads the single email column a spreadsheet carries into the

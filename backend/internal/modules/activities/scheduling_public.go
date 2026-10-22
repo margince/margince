@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // BookingPage is the slug's resolution: which workspace, whose calendar.
@@ -347,6 +348,11 @@ func (h Handlers) BookPublicMeeting(w http.ResponseWriter, r *http.Request, host
 	}
 
 	contactID, err := h.publicContacts.EnsureContactByEmail(r.Context(), req.Booker.Name, string(req.Booker.Email), "public_booking")
+	if badValue, ok := errors.AsType[*values.ParseError](err); ok {
+		// The contacts store names its own field; this form's address is booker.email.
+		httperr.Write(w, r, httperr.Validation("booker.email", badValue.Code, badValue.Message))
+		return
+	}
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

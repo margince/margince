@@ -11130,6 +11130,7 @@ const (
 	ImportReasonCodeDuplicateEmail               ImportReasonCode = "duplicate_email"
 	ImportReasonCodeDurationNotValidForKind      ImportReasonCode = "duration_not_valid_for_kind"
 	ImportReasonCodeDurationOutOfRange           ImportReasonCode = "duration_out_of_range"
+	ImportReasonCodeEmailNamesNoContact          ImportReasonCode = "email_names_no_contact"
 	ImportReasonCodeEmployerColumnEmpty          ImportReasonCode = "employer_column_empty"
 	ImportReasonCodeEmployerColumnEmptyDropped   ImportReasonCode = "employer_column_empty_dropped"
 	ImportReasonCodeEmployerNotFound             ImportReasonCode = "employer_not_found"
@@ -11289,6 +11290,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeDurationNotValidForKind:
 		return true
 	case ImportReasonCodeDurationOutOfRange:
+		return true
+	case ImportReasonCodeEmailNamesNoContact:
 		return true
 	case ImportReasonCodeEmployerColumnEmpty:
 		return true
@@ -33744,6 +33747,7 @@ type ContactEmailEmailType string
 // ContactEmailInput One address on a contact, as a writer supplies it. One schema for create and update,
 // so the two cannot describe an address differently.
 type ContactEmailInput struct {
+	// Email An address whose local part names a sending system (noreply@, notifications@, receipts@ and the like) is refused with 422 `email_names_no_one`: nobody answers there, so it names no contact.
 	Email     openapi_types.Email         `json:"email"`
 	EmailType *ContactEmailInputEmailType `json:"email_type,omitempty"`
 	IsPrimary *bool                       `json:"is_primary,omitempty"`
@@ -34929,15 +34933,17 @@ type CreateContactEnrichmentRunRequest struct {
 // CreateContactRequest defines model for CreateContactRequest.
 type CreateContactRequest struct {
 	// Address Structured postal address.
-	Address   *Address                `json:"address,omitempty"`
-	Emails    *[]ContactEmailInput    `json:"emails,omitempty"`
-	FirstName *string                 `json:"first_name,omitempty"`
-	FullName  string                  `json:"full_name"`
-	LastName  *string                 `json:"last_name,omitempty"`
-	OwnerId   *openapi_types.UUID     `json:"owner_id,omitempty"`
-	Phones    *[]ContactPhoneInput    `json:"phones,omitempty"`
-	Social    *map[string]interface{} `json:"social,omitempty"`
-	Source    string                  `json:"source"`
+	Address   *Address             `json:"address,omitempty"`
+	Emails    *[]ContactEmailInput `json:"emails,omitempty"`
+	FirstName *string              `json:"first_name,omitempty"`
+
+	// FullName When first_name and last_name are both sent, full_name must be the two in either order (case and spacing aside), or the create is refused with 422 `full_name_disagrees` naming both values.
+	FullName string                  `json:"full_name"`
+	LastName *string                 `json:"last_name,omitempty"`
+	OwnerId  *openapi_types.UUID     `json:"owner_id,omitempty"`
+	Phones   *[]ContactPhoneInput    `json:"phones,omitempty"`
+	Social   *map[string]interface{} `json:"social,omitempty"`
+	Source   string                  `json:"source"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
 	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
@@ -45429,10 +45435,12 @@ type QuickCaptureContactRequest struct {
 	CompanyId *openapi_types.UUID `json:"company_id,omitempty"`
 
 	// CompanyName A new employer to create, when no existing record was picked.
-	CompanyName *string              `json:"company_name,omitempty"`
-	Email       *openapi_types.Email `json:"email,omitempty"`
-	FullName    string               `json:"full_name"`
-	Phone       *string              `json:"phone,omitempty"`
+	CompanyName *string `json:"company_name,omitempty"`
+
+	// Email Refused with 422 `email_names_no_one` when the local part names a sending system, as ContactEmailInput.email is.
+	Email    *openapi_types.Email `json:"email,omitempty"`
+	FullName string               `json:"full_name"`
+	Phone    *string              `json:"phone,omitempty"`
 
 	// ProfileUrl The public profile this was read from. Stored, never fetched.
 	ProfileUrl *string `json:"profile_url,omitempty"`
@@ -50426,9 +50434,11 @@ type UpdateContactRequest struct {
 	// contact who no longer has a working address is a fact worth recording.
 	Emails    *[]ContactEmailInput `json:"emails,omitempty"`
 	FirstName *string              `json:"first_name,omitempty"`
-	FullName  *string              `json:"full_name,omitempty"`
-	LastName  *string              `json:"last_name,omitempty"`
-	OwnerId   *openapi_types.UUID  `json:"owner_id,omitempty"`
+
+	// FullName Sent together with first_name and last_name, it must be the two in either order (case and spacing aside), or the update is refused with 422 `full_name_disagrees`.
+	FullName *string             `json:"full_name,omitempty"`
+	LastName *string             `json:"last_name,omitempty"`
+	OwnerId  *openapi_types.UUID `json:"owner_id,omitempty"`
 
 	// Phones REPLACES the contact's numbers with exactly this list, the same way `emails`
 	// replaces addresses. A number that has been reassigned is corrected by sending
@@ -51450,7 +51460,8 @@ type VCardImportResult struct {
 	// Outcome `created` — nobody matched, so the card became a contact, their company and the edge
 	// between them. `updated` — an exact match, filled only where the record was empty.
 	// `needs_review` — a resemblance, written nowhere; open the candidate and decide.
-	// `skipped` — the card states no name, so there is no contact in it.
+	// `skipped` — the card states no name, carries an address of a sending system rather than
+	// a person, or matches a contact the caller may not write; `reason` says which.
 	Outcome VCardImportResultOutcome `json:"outcome"`
 
 	// Reason Why a card was skipped, in words a reader can act on.
@@ -51460,7 +51471,8 @@ type VCardImportResult struct {
 // VCardImportResultOutcome `created` — nobody matched, so the card became a contact, their company and the edge
 // between them. `updated` — an exact match, filled only where the record was empty.
 // `needs_review` — a resemblance, written nowhere; open the candidate and decide.
-// `skipped` — the card states no name, so there is no contact in it.
+// `skipped` — the card states no name, carries an address of a sending system rather than
+// a person, or matches a contact the caller may not write; `reason` says which.
 type VCardImportResultOutcome string
 
 // VoiceBuild defines model for VoiceBuild.
@@ -59615,6 +59627,7 @@ type ConnectProviderParams struct {
 // BookPublicMeetingJSONBody defines parameters for BookPublicMeeting.
 type BookPublicMeetingJSONBody struct {
 	Booker struct {
+		// Email Refused with 422 `email_names_no_one` on `booker.email` when the local part names a sending system (noreply@ and the like).
 		Email openapi_types.Email `json:"email"`
 		Name  string              `json:"name"`
 	} `json:"booker"`

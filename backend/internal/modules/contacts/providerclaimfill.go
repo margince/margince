@@ -164,7 +164,7 @@ func fillEmail(ctx context.Context, tx pgx.Tx, subject ids.UUID, providerName st
 	if err != nil {
 		return nothingFilled, fmt.Errorf("contacts: checking a bought address against the erasure list: %w", err)
 	}
-	if suppressed {
+	if suppressed || refuseMachineAddress(address.String()) != nil {
 		return nothingFilled, nil
 	}
 	rowID, landed, err := insertChildRow(ctx, tx, `
