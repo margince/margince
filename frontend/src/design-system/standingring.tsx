@@ -168,7 +168,12 @@ export function ScoreRing({
 }>) {
   const { locale } = useLocale();
   const card = peek && peek.items.length > 0 ? peek : undefined;
-  const opener = usePeek<HTMLButtonElement>({
+  const {
+    ref: peekRef,
+    props: peekProps,
+    panel: peekPanel,
+    open: peekOpen,
+  } = usePeek<HTMLButtonElement>({
     content: card,
     pressOpens: true,
   });
@@ -191,13 +196,13 @@ export function ScoreRing({
         </span>
         {card ? (
           <button
-            ref={opener.ref}
+            ref={peekRef}
             type="button"
             className="standing-ring-caption standing-ring-peek"
             aria-label={label}
             aria-haspopup="true"
-            aria-expanded={opener.open}
-            {...opener.props}
+            aria-expanded={peekOpen}
+            {...peekProps}
           >
             {caption}
           </button>
@@ -205,7 +210,7 @@ export function ScoreRing({
           <span className="standing-ring-caption">{caption}</span>
         )}
       </span>
-      {opener.panel}
+      {peekPanel}
     </RingFrame>
   );
 }

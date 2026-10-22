@@ -306,7 +306,12 @@ function MarkChip({
               : undefined,
         }
       : undefined;
-  const peek = usePeek<HTMLButtonElement>({ content, pressOpens: true });
+  const {
+    ref: peekRef,
+    props: peekProps,
+    panel: peekPanel,
+    open: peekOpen,
+  } = usePeek<HTMLButtonElement>({ content, pressOpens: true });
   if (!newest || !content) {
     return null;
   }
@@ -314,14 +319,14 @@ function MarkChip({
   return (
     <>
       <button
-        ref={peek.ref}
+        ref={peekRef}
         type="button"
         className="standing-timeline-mark"
         style={{ left: `${px}px` }}
         aria-label={content.head}
         aria-haspopup="true"
-        aria-expanded={peek.open}
-        {...peek.props}
+        aria-expanded={peekOpen}
+        {...peekProps}
       >
         <Icon aria-hidden="true" />
         {members.length === 1 && newest.direction && (
@@ -339,7 +344,7 @@ function MarkChip({
           </span>
         )}
       </button>
-      {peek.panel}
+      {peekPanel}
     </>
   );
 }

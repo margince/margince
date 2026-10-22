@@ -59,7 +59,12 @@ function Dim({ dim }: Readonly<{ dim: StandingDim }>) {
     "--standing-dim-ink": colours.ink,
   };
   const card = dim.peek && dim.peek.items.length > 0 ? dim.peek : undefined;
-  const peek = usePeek<HTMLButtonElement>({ content: card, pressOpens: true });
+  const {
+    ref: peekRef,
+    props: peekProps,
+    panel: peekPanel,
+    open: peekOpen,
+  } = usePeek<HTMLButtonElement>({ content: card, pressOpens: true });
   const reading = (
     <>
       <span className="standing-dim-value">{dim.value}</span>
@@ -83,17 +88,17 @@ function Dim({ dim }: Readonly<{ dim: StandingDim }>) {
         {card ? (
           <>
             <button
-              ref={peek.ref}
+              ref={peekRef}
               type="button"
               className="standing-dim-peek"
               data-peek-on={card.on ?? "value"}
               aria-haspopup="true"
-              aria-expanded={peek.open}
-              {...peek.props}
+              aria-expanded={peekOpen}
+              {...peekProps}
             >
               {reading}
             </button>
-            {peek.panel}
+            {peekPanel}
           </>
         ) : (
           reading

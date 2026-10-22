@@ -97,20 +97,17 @@ export function NextBar({
 function MoreTasks({ more }: Readonly<{ more: NextBarMore }>) {
   const plural = usePlural();
   const { locale } = useLocale();
-  const peek = usePeek<HTMLButtonElement>({ content: more.peek });
+  const { ref, props, panel } = usePeek<HTMLButtonElement>({
+    content: more.peek,
+  });
   return (
     <>
-      <Button
-        ref={peek.ref}
-        variant="link"
-        onClick={more.onOpen}
-        {...peek.props}
-      >
+      <Button ref={ref} variant="link" onClick={more.onOpen} {...props}>
         {plural("standing.next.more", more.count, {
           count: formatNumber(more.count, locale),
         })}
       </Button>
-      {peek.panel}
+      {panel}
     </>
   );
 }

@@ -176,7 +176,11 @@ export function StatCard({
   const t = useT();
   const labelId = useId();
   const doorless = !href && !onOpen;
-  const peeking = usePeek<HTMLElement>({
+  const {
+    ref: peekRef,
+    props: peekProps,
+    panel: peekPanel,
+  } = usePeek<HTMLElement>({
     content: peek,
     focusable: doorless,
     pressOpens: doorless,
@@ -199,10 +203,10 @@ export function StatCard({
     // The full figure on hover, on the CARD: the door's overlay covers the value,
     // and a tooltip shows the nearest title above the pointer.
     <section
-      ref={peeking.ref}
+      ref={peekRef}
       className={cardClass}
       title={peek ? undefined : value}
-      {...peeking.props}
+      {...peekProps}
     >
       <span className="stat-card-label">
         {/* Its own box, so the name wraps and the badge and trigger keep their place. */}
@@ -262,7 +266,7 @@ export function StatCard({
           </Door>
         </span>
       )}
-      {peeking.panel}
+      {peekPanel}
     </section>
   );
 }
