@@ -18,9 +18,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // rosterActions reads the management roster through the handler, as caller.
@@ -70,7 +72,8 @@ func callMemberVerb(e *revocationEnv, h Handlers, caller Identity, action member
 		h.ReactivateUser(rec, req, id)
 	case actionHandOver:
 		// The handover is served outside this module, behind this gate.
-		if err := e.svc.AdmitMemberAdministration(actorCtx(e.wsCtx(caller), caller), target, principal.ActionUpdate); err != nil {
+		ctx := actorCtx(e.wsCtx(caller), caller)
+		if err := e.svc.db.Tx(ctx, func(tx pgx.Tx) error { return AdmitMemberHandover(ctx, tx, target) }); err != nil {
 			return http.StatusForbidden
 		}
 		return http.StatusOK

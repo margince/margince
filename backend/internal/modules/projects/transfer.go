@@ -61,33 +61,43 @@ func (e *SameOwnerError) FieldFault() (field, code, message string) {
 // projects and projects outside the caller's write authority stay put and are
 // not counted; the caller is told a number, never which rows were withheld.
 func (s *Store) TransferProjectOwnership(ctx context.Context, in TransferProjectOwnershipInput) (int, error) {
+	moved := 0
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		moved, err = TransferProjectOwnershipTx(ctx, tx, in)
+		return err
+	})
+	return moved, err
+}
+
+// TransferProjectOwnershipTx is TransferProjectOwnership's body inside the
+// caller's transaction, for a handover that moves other records beside the
+// projects and must commit or fail as one.
+func TransferProjectOwnershipTx(ctx context.Context, tx pgx.Tx, in TransferProjectOwnershipInput) (int, error) {
 	if err := auth.Require(ctx, projectObject, principal.ActionUpdate); err != nil {
 		return 0, err
 	}
 	if in.FromOwnerID == in.ToOwnerID {
 		return 0, &SameOwnerError{}
 	}
+	if err := ensureActiveOwner(ctx, tx, in.ToOwnerID); err != nil {
+		return 0, err
+	}
+	candidates, err := transferableProjectIDs(ctx, tx, in.FromOwnerID)
+	if err != nil {
+		return 0, err
+	}
 	moved := 0
-	err := s.Tx(ctx, func(tx pgx.Tx) error {
-		if err := ensureActiveOwner(ctx, tx, in.ToOwnerID); err != nil {
-			return err
-		}
-		candidates, err := transferableProjectIDs(ctx, tx, in.FromOwnerID)
+	for _, id := range candidates {
+		ok, err := transferProjectOwner(ctx, tx, id, in)
 		if err != nil {
-			return err
+			return 0, err
 		}
-		for _, id := range candidates {
-			ok, err := transferProjectOwner(ctx, tx, id, in)
-			if err != nil {
-				return err
-			}
-			if ok {
-				moved++
-			}
+		if ok {
+			moved++
 		}
-		return nil
-	})
-	return moved, err
+	}
+	return moved, nil
 }
 
 // ensureActiveOwner refuses a receiver who could not be handed a project by a

@@ -357,27 +357,26 @@ func lockAuthorization(ctx context.Context, tx pgx.Tx) error {
 // it — the way a hand-kept list silently stops covering the newest authority.
 var administrationObjects = policy.AdministrationObjects()
 
-// AdmitMemberAdministration is the gate a member verb served outside this
-// module passes: the user_admin grant for action, a member who is not archived
-// (404 otherwise), and the ceiling every member verb here carries, so a
-// delegated administrator never acts on an admin.
+// AdmitMemberHandover is the gate in front of handing a member's work on,
+// asked inside the handover's own transaction: the user_admin update grant, a
+// member who is not archived (404 otherwise), and the ceiling every member verb
+// here carries, so a delegated administrator never acts on an admin. The
+// member's row stays locked until that transaction ends, so a role change
+// cannot land between this answer and the writes it admits.
 //
 // The caller is read off the request's principal, whose role keys and grants
-// are exactly the two facts a denial-reach ceiling compares.
-func (s *Service) AdmitMemberAdministration(ctx context.Context, member ids.UserID, action principal.Action) error {
-	if err := auth.Require(ctx, objectUserAdmin, action); err != nil {
+// are the two facts a denial-reach ceiling compares.
+func AdmitMemberHandover(ctx context.Context, tx pgx.Tx, member ids.UserID) error {
+	if err := auth.Require(ctx, objectUserAdmin, principal.ActionUpdate); err != nil {
 		return err
 	}
 	p, ok := principal.Actor(ctx)
 	if !ok {
 		return apperrors.ErrPermissionDenied
 	}
-	actor := Identity{Roles: p.Permissions.RoleKeys, Permissions: p.Permissions}
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		target, err := lockTargetGrants(ctx, tx, member)
-		if err != nil {
-			return err
-		}
-		return callerOutranks(actor, target, reachDenial)
-	})
+	target, err := lockTargetGrants(ctx, tx, member)
+	if err != nil {
+		return err
+	}
+	return callerOutranks(Identity{Roles: p.Permissions.RoleKeys, Permissions: p.Permissions}, target, reachDenial)
 }

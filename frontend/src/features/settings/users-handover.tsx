@@ -6,6 +6,11 @@ import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useRecordOwnerOptions } from "../../components/assigneepicker";
+import {
+  useRoster,
+  useRosterPartial,
+  useRosterPartialHint,
+} from "../../components/entityref";
 import { Field } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Select } from "../../design-system/select";
@@ -105,6 +110,10 @@ export function HandoverModal({
   const options = useRecordOwnerOptions(open).filter(
     (option) => option.value !== member.id,
   );
+  // A roster that failed or stopped short is said so: a picker missing
+  // colleagues looks just like a team without them.
+  const roster = useRoster("user", open);
+  const partialHint = useRosterPartialHint(useRosterPartial("user", open));
   const receiverName =
     options.find((option) => option.value === receiver)?.label ?? receiver;
 
@@ -164,7 +173,10 @@ export function HandoverModal({
       {owned.isError && (
         <p className="t-caption">{problemMessageOf(owned.error, t)}</p>
       )}
-      <Field label={t("users.handover.receiver")}>
+      <Field
+        label={t("users.handover.receiver")}
+        hint={roster.isError ? t("owner.rosterFailed") : partialHint}
+      >
         {(control) => (
           <Select
             {...control}

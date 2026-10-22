@@ -115,7 +115,7 @@ func memberActionsOn(ctx context.Context, actor Identity, target memberTarget, s
 			!target.holdsArchivedRole &&
 			refuseUnlessDeactivated(status) == nil &&
 			(target.row.SeatType != principal.SeatFull || seatLeft),
-		// AdmitMemberAdministration is the handover's gate; this is its offer.
+		// AdmitMemberHandover is the handover's gate; this is its offer.
 		actionHandOver: !target.row.IsAgent && callerOutranks(actor, target.grants, reachDenial) == nil,
 	}
 	out := []memberAction{}

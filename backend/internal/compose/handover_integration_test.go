@@ -11,7 +11,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -19,7 +18,7 @@ import (
 )
 
 func handoverSeamFor(e *integration.Env) handoverSeam {
-	return newHandoverSeam(bulkEngineFor(e), ProjectsStoreOver(e.DB()), identity.NewService(e.Pool))
+	return newHandoverSeam(bulkEngineFor(e))
 }
 
 func ownerOf(t *testing.T, e *integration.Env, table string, id ids.UUID) ids.UUID {
