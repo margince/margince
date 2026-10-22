@@ -323,12 +323,8 @@ System health and Reset data sit in the **Governance** group, and Data import in
   back in the whole installation. It shows counts only; the contacts and messages stay
   in view to their mailbox owner alone. The same readers as Background jobs see
   it.
-- **Automatic work**: per colleague, the tasks from commitments, reply reminders and approval
-  requests Margince made for them in the last 7 or 30 days. Each item shows what happened to it, on
-  the day it was made. **Not mine** counts a task the colleague moved to someone else. A rejected
-  request is the right colleague saying no, so it is not Not mine. A share above 10% on at least 10
-  items shows **needs a look**, and changes nothing by itself. The same readers as Background jobs
-  see it.
+- **Automatic work**: the tasks, reply reminders and approval requests Margince made for each colleague in 7 or 30 days, and their outcome.
+  **Not mine** counts a task moved to someone else; a rejected request is not Not mine. Over 10% on at least 10 items shows **needs a look**, and changes nothing. The same readers as Background jobs see it.
 - **Restore drills**: when a restore from a backup was last tested, if it
   passed, and how long it took against the targets. Whoever runs the
   installation records each test. Margince does not see backups, so the card
