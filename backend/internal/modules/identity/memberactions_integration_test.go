@@ -21,7 +21,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 

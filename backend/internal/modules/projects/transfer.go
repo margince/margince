@@ -120,10 +120,9 @@ func ensureActiveOwner(ctx context.Context, tx pgx.Tx, owner ids.UserID) error {
 }
 
 // transferableProjectIDs enumerates the live projects the from-owner holds
-// that the caller may both see and write. The write arm is the one every
-// single-row mutation asks (auth.WritableBy), so a `read` share of a
-// colleague's project lets the caller see it in the list and still leaves it
-// where it is here.
+// that the caller may both see and write. The write arm is auth.WritableBy,
+// which every single-row mutation asks. So a `read` share of a colleague's
+// project shows it in the list and still leaves it where it is here.
 func transferableProjectIDs(ctx context.Context, tx pgx.Tx, from ids.UserID) ([]ids.UUID, error) {
 	seen, err := auth.VisibleOwnedIDs(ctx, tx, projectObject, from.UUID)
 	if err != nil {

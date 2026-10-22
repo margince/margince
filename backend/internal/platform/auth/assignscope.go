@@ -89,10 +89,9 @@ func EnsureAssignee(ctx context.Context, tx pgx.Tx, dest ids.UUID) error {
 	return ensureAssigneeWith(ctx, tx, dest, AssigneeEligibleSQL)
 }
 
-// EligibleAssignees answers EnsureAssignee for many seats in one query: the
-// subset of candidates the caller may make an owner, asked of the same
-// hypothetical row, so a picker built on it offers exactly what the write
-// accepts.
+// EligibleAssignees answers EnsureAssignee for many seats in one query. It
+// returns the candidates the caller may make an owner. It asks the same
+// hypothetical row, so a picker built on it offers what the write accepts.
 func EligibleAssignees(ctx context.Context, tx pgx.Tx, candidates []ids.UUID) (map[ids.UUID]bool, error) {
 	eligible := make(map[ids.UUID]bool, len(candidates))
 	if len(candidates) == 0 {

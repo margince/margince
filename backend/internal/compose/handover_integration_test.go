@@ -31,8 +31,8 @@ func ownerOf(t *testing.T, e *integration.Env, table string, id ids.UUID) ids.UU
 }
 
 // A departed rep's leads, contacts, company, deal and project all move to the
-// colleague named, each through its own owner-change write; another rep's deal
-// stays where it is, and nothing the admin can see is left behind.
+// colleague named, each through its own owner-change write. Another rep's deal
+// stays where it is. Nothing the admin can see is left behind.
 func TestAHandoverMovesEverythingADepartedColleagueOwned(t *testing.T) {
 	e := integration.Setup(t)
 	leads := seedBulkLeads(t, e, e.Rep1, 2)
@@ -71,8 +71,11 @@ func TestAHandoverMovesEverythingADepartedColleagueOwned(t *testing.T) {
 		table string
 		id    ids.UUID
 	}{
-		{"lead", ids.UUID(leads[0].Id)}, {"contact", ids.UUID(contactRows[1].Id)},
-		{"company", company}, {"deal", deal}, {"project", ids.UUID(project.Id)},
+		{"lead", ids.UUID(leads[0].Id)},
+		{"contact", ids.UUID(contactRows[1].Id)},
+		{"company", company},
+		{"deal", deal},
+		{"project", ids.UUID(project.Id)},
 	} {
 		if got := ownerOf(t, e, row.table, row.id); got != e.Rep2 {
 			t.Errorf("%s %s is owned by %s, want the colleague it was handed to", row.table, row.id, got)
@@ -114,9 +117,9 @@ func TestAHandoverLeavesWhatTheCallerCannotSee(t *testing.T) {
 	}
 }
 
-// The receiver must be somebody the caller may make an owner, the member
-// themselves is no receiver, and a caller without member administration may
-// not hand anybody's work on.
+// The receiver must be somebody the caller may make an owner. The member is no
+// receiver of their own work. A caller without member administration hands on
+// nobody's work.
 func TestAHandoverRefusesWhatASingleReassignmentWouldRefuse(t *testing.T) {
 	e := integration.Setup(t)
 	pipeline, open, _ := integration.DealFixture(t, e)

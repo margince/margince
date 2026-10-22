@@ -3,11 +3,10 @@
 
 package compose
 
-// The handover of a member's work: every live record they own moves to a named
-// colleague through that record's own owner-change write, so each record gets
-// the audit row, event and follow-on moves (a deal's pending proposals) one
-// reassignment writes. Deactivating a member moves nothing, so this is how the
-// work a leaver owned gets a new owner.
+// The handover of a member's work. Every live record they own moves to a named
+// colleague through that record's own owner-change write. So each record gets
+// the audit row, event and follow-on moves one reassignment writes, a deal's
+// pending proposals included. Deactivating a member moves nothing.
 
 import (
 	"context"
@@ -59,7 +58,7 @@ func (e *handoverReceiverError) FieldFault() (field, code, message string) {
 }
 
 // handoverSeam reuses the bulk engine's record targets, so a handover writes
-// each record exactly as a bulk reassignment of it would.
+// each record as a bulk reassignment of it would.
 type handoverSeam struct {
 	db      *database.DB
 	targets map[crmcontracts.BulkRecordType]bulkTarget
@@ -69,9 +68,9 @@ func newHandoverSeam(engine *bulkEngine) handoverSeam {
 	return handoverSeam{db: engine.db, targets: engine.targets}
 }
 
-// admit is the gate both the count and the move pass, in their own
-// transaction: a human whom the member verbs would admit to act on this
-// member. Every record moved after it is still gated by its own write check.
+// admit is the gate the count and the move both pass, in their own transaction.
+// It admits a human whom the member verbs would let act on this member. Every
+// record moved after it is still gated by its own write check.
 func admit(ctx context.Context, tx pgx.Tx, member ids.UUID) error {
 	if err := auth.RequireHuman(ctx); err != nil {
 		return err
@@ -171,9 +170,9 @@ func (s handoverSeam) handOverInTx(
 	return crmcontracts.UserHandoverResult{Moved: moved, Left: left}, err
 }
 
-// handOverKind moves one record type, each row in its own savepoint: a row its
-// own write refuses stays with the member, and an error that is no refusal
-// aborts the handover.
+// handOverKind moves one record type, each row in its own savepoint. A row its
+// own write refuses stays with the member. An error that is no refusal aborts
+// the handover.
 func (s handoverSeam) handOverKind(
 	ctx context.Context, tx pgx.Tx, kind crmcontracts.BulkRecordType, member ids.UUID, receiver ids.UserID,
 ) (int, error) {

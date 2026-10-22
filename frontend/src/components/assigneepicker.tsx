@@ -17,8 +17,8 @@ type MemberStatus = components["schemas"]["User"]["status"];
 /**
  * Whether the server says the reader may make this entry a record's owner.
  *
- * The rule is the server's and depends on the reader's own write scope, so the
- * roster answers it per row (`assignable`) instead of the client re-deriving it.
+ * The rule is the server's and depends on the reader's own write scope. So the
+ * roster answers it per row (`assignable`) and the client does not re-derive it.
  * An entry without the answer (an older server) is offered, and the write
  * decides.
  */
@@ -52,8 +52,7 @@ const STATUS_SUFFIX: Partial<
 
 /**
  * Every member a list can be filtered by owner, those who left included and
- * named as such, so the records a former colleague still owns can be found and
- * handed on.
+ * named as such. That is how a former colleague's records are found to hand on.
  */
 export function useMemberFilterOptions(enabled: boolean) {
   const t = useT();

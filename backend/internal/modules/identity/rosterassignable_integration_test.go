@@ -13,9 +13,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// The roster marks each member the way an owner change would answer for THIS
-// caller: the admin may hand work to an active rep, a rep may not hand work to
-// the admin outside their scope, and nobody may hand work to a member who left.
+// The roster marks each member as an owner change would answer for this caller.
+// The admin may hand work to an active rep. A rep may not hand work to the admin
+// outside their scope. Nobody may hand work to a member who left.
 func TestTheRosterSaysWhoTheCallerMayMakeAnOwner(t *testing.T) {
 	e := setupRevocationEnv(t, "roster-assignable")
 	ctx := context.Background()

@@ -14,10 +14,9 @@ import (
 )
 
 // VisibleOwnedIDs lists the live rows of table that owner owns and the caller
-// can see, in id order so two handovers over the same owner lock rows in the
-// same sequence. Visibility is ScopeClauseFor's, the predicate the record list
-// renders, behind the same read grant on the record type, so a row the caller
-// could not find in a list is not counted here.
+// can see. Id order makes two handovers over one owner lock rows alike. It asks
+// the record type's read grant and ScopeClauseFor, as the record list does. A
+// row the caller could not find in a list is not counted.
 func VisibleOwnedIDs(ctx context.Context, tx pgx.Tx, table string, owner ids.UUID) ([]ids.UUID, error) {
 	if err := Require(ctx, table, principal.ActionRead); err != nil {
 		return nil, err

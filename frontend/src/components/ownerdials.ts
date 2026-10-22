@@ -50,13 +50,10 @@ function useApplied(param: string): string | undefined {
 
 /**
  * You first, then every colleague by name, then the unowned queue. A member
- * administrator also sees those who left, marked so, because their records
- * still need finding to be handed on.
+ * administrator also sees those who left, marked so, to find their records.
  *
- * An applied owner the roster does not list still gets an option, named by id
- * lookup. A saved view can restore a deactivated seat for a reader who cannot
- * list it. Without its option the list would stay narrowed with no dial to
- * clear it.
+ * An applied owner the roster does not list still gets an option, named by id.
+ * Without it a saved view could leave the list narrowed with no dial to clear.
  */
 function useOwnerDial(t: Translate): ListChip | undefined {
   const { locale } = useLocale();

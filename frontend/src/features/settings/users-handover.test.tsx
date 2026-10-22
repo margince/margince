@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { UsersAdminCard } from "./users-admin";
 import { backend, render, rowMenu } from "./users-admin.testkit";
 
-// Deactivating moves nothing a member owns, so the members screen says what is
+// Deactivating moves nothing a member owns. So the members screen says what is
 // left behind and hands it to a colleague the server says may own records.
 
 afterEach(() => {

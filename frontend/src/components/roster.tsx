@@ -129,11 +129,10 @@ export function useRosterWalk(kind: RosterKind, enabled: boolean) {
 /**
  * Every member a list can be FILTERED by, including those who left.
  *
- * A filter asks which records somebody owns, and a colleague who left still
- * owns theirs until someone takes them over; this is how those records are
- * found. The server widens the walk for a member administrator only and serves
- * everyone else the live roster. Its own cache entry under the `users` prefix,
- * so a roster refresh reaches it too.
+ * A colleague who left still owns their records until someone takes them over,
+ * and this is how a filter finds them. The server widens the walk for a member
+ * administrator only and serves everyone else the live roster. The cache entry
+ * sits under the `users` prefix, so a roster refresh reaches it too.
  */
 export function useEveryMember(enabled: boolean) {
   return useQuery({

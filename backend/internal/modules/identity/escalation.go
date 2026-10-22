@@ -357,15 +357,11 @@ func lockAuthorization(ctx context.Context, tx pgx.Tx) error {
 // it — the way a hand-kept list silently stops covering the newest authority.
 var administrationObjects = policy.AdministrationObjects()
 
-// AdmitMemberHandover is the gate in front of handing a member's work on,
-// asked inside the handover's own transaction: the user_admin update grant, a
-// member who is not archived (404 otherwise), and the ceiling every member verb
-// here carries, so a delegated administrator never acts on an admin. The
-// member's row stays locked until that transaction ends, so a role change
-// cannot land between this answer and the writes it admits.
-//
-// The caller is read off the request's principal, whose role keys and grants
-// are the two facts a denial-reach ceiling compares.
+// AdmitMemberHandover gates handing a member's work on, inside the handover's
+// transaction. It asks the user_admin update grant, a live member (404
+// otherwise), and the ceiling every member verb carries. The member's row stays
+// locked until that transaction ends, so a role change cannot land in between.
+// The caller comes off the principal, whose role keys and grants the ceiling reads.
 func AdmitMemberHandover(ctx context.Context, tx pgx.Tx, member ids.UserID) error {
 	if err := auth.Require(ctx, objectUserAdmin, principal.ActionUpdate); err != nil {
 		return err
