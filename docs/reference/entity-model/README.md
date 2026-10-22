@@ -29,8 +29,8 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 321 |
-| Columns | 3797 |
-| Foreign keys | 525 |
+| Columns | 3798 |
+| Foreign keys | 526 |
 | Owning areas | 36 |
 
 ## The 12 records everything else hangs off
@@ -190,7 +190,7 @@ erDiagram
 | [`capture_alias_sighting`](capture.md#capture_alias_sighting) | capture | 5 | 0 |
 | [`capture_auto_enrich_budget`](capture.md#capture_auto_enrich_budget) | capture | 2 | 0 |
 | [`capture_auto_enrich_state`](capture.md#capture_auto_enrich_state) | capture | 7 | 0 |
-| [`capture_backfill`](capture.md#capture_backfill) | capture | 25 | 1 |
+| [`capture_backfill`](capture.md#capture_backfill) | capture | 25 | 2 |
 | [`capture_backfill_creation`](capture.md#capture_backfill_creation) | capture | 4 | 0 |
 | [`capture_connection`](capture.md#capture_connection) | capture | 24 | 2 |
 | [`capture_counterparty_hold`](capture.md#capture_counterparty_hold) | capture | 6 | 0 |
@@ -200,7 +200,7 @@ erDiagram
 | [`capture_import`](capture.md#capture_import) | capture | 12 | 0 |
 | [`capture_owner_identity`](capture.md#capture_owner_identity) | capture | 7 | 0 |
 | [`capture_owner_identity_withdrawn`](capture.md#capture_owner_identity_withdrawn) | capture | 10 | 0 |
-| [`capture_pending_counterparty`](capture.md#capture_pending_counterparty) | capture | 21 | 0 |
+| [`capture_pending_counterparty`](capture.md#capture_pending_counterparty) | capture | 22 | 0 |
 | [`capture_sender_override`](capture.md#capture_sender_override) | capture | 7 | 0 |
 | [`capture_sweep_run`](capture.md#capture_sweep_run) | capture | 8 | 0 |
 | [`capture_sync_state`](capture.md#capture_sync_state) | capture | 10 | 0 |
