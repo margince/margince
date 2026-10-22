@@ -86,7 +86,20 @@ var exemptFromSharedRules = gatekit.Waive(map[string]string{
 	"voicebuildeval.go": "the voice evaluator scores voice only, and the shared block adds variance the judge ignores " +
 		"and names inputs the call never gets (a recipient, a conversation state); it becomes a drafting surface " +
 		"once it scores correspondence or supplies those inputs",
+	"voicebuilddemo.go": "the profile-card demonstration answers a fixed sample task with no recipient and no " +
+		"conversation, so the block's sender, recipient and time rules have nothing to apply to; it becomes a " +
+		"drafting surface once it writes to a real recipient or conversation",
 })
+
+// exemptWriterPrompts is each exempt file's assembled system turn, keyed like
+// draftingSurfaces, so the absence of the block is checked against what the
+// model is sent and a row without a prompt fails.
+func exemptWriterPrompts(fence promptfence.Fence) map[string]string {
+	return map[string]string{
+		"voicebuildeval.go": voiceEvalDraftSystemFor(fence),
+		"voicebuilddemo.go": voiceDemoDraftSystemFor(fence),
+	}
+}
 
 // Every surface's assembled system turn carries the shared block verbatim.
 //
@@ -164,7 +177,14 @@ func TestTheParityTableCoversEveryFileThatComposesTheSharedRules(t *testing.T) {
 // one whose file is gone is a row describing nothing.
 func TestAnExemptWriterStillWritesWithoutTheSharedRules(t *testing.T) {
 	swept := filesComposingTheSharedRules(t)
+	prompts := exemptWriterPrompts(promptfence.New())
 	for _, file := range exemptFromSharedRules.Subjects() {
+		prompt, assembled := prompts[file]
+		if !assembled {
+			t.Errorf("exempt file %s has no entry in exemptWriterPrompts, so nothing checks what it sends", file)
+		} else if strings.Contains(prompt, draftrules.Shared) {
+			t.Errorf("the prompt assembled in %s carries the shared block but the file is still exempt", file)
+		}
 		if _, err := os.Stat(file); err != nil {
 			t.Errorf("exempt file %s is gone (%v): remove its row", file, err)
 		}
@@ -176,9 +196,6 @@ func TestAnExemptWriterStillWritesWithoutTheSharedRules(t *testing.T) {
 		exemptFromSharedRules.Waived(t, file)
 	}
 	exemptFromSharedRules.AssertAllMatched(t)
-	if strings.Contains(voiceEvalDraftSystemFor(promptfence.New()), draftrules.Shared) {
-		t.Error("the voice evaluator's prompt carries the shared block but voicebuildeval.go is still exempt")
-	}
 }
 
 // filesComposingTheSharedRules sweeps the compose tree for the production files
