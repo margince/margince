@@ -77,6 +77,14 @@ describe("ExtensionPanels", () => {
     expect(texts).toEqual(["channel for d-1", "tally for d-1"]);
   });
 
+  it("groups the panels under one Extensions label, apart from core's cards", () => {
+    renderSlot({ ext_alpha_x: ["read"] }, [unit("alpha", "ext_alpha_x")], {
+      alpha: { "record_panel.deal": Says },
+    });
+    const group = screen.getByRole("region", { name: "Extensions" });
+    expect(group.textContent).toContain("channel for d-1");
+  });
+
   it("hides a panel from a reader without read on its object", () => {
     renderSlot(
       { ext_beta_x: ["read"] },

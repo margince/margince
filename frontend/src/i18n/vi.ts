@@ -2070,6 +2070,7 @@ export const vi = {
 
   "screen.pending": "Màn hình này chưa khả dụng.",
 
+  "ext.panels.label": "Tiện ích mở rộng",
   "ext.notFound":
     "Bản cài đặt này không bật tiện ích mở rộng nào tên “{name}”.",
 

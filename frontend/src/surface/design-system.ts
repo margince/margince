@@ -88,6 +88,10 @@ export { ErrorLine } from "../design-system/errorline";
 // primitive that gets published rather than FieldGrid: a unit describing what it
 // connected is not editing it.
 export { type Fact, FactList } from "../design-system/factlist";
+// IconAction, because a unit's quiet verb beside a value (copy a link) is
+// otherwise a worded button that crowds its own panel, or a bare glyph with no
+// name. This one is named for a screen reader and on hover from one label.
+export { IconAction } from "../design-system/iconaction";
 // Panel and PanelBody, because a unit's deal panel stands in the page's own
 // column beside core's panels. A titled Card there is a second pane chrome,
 // which the catalog's Card row forbids and no gate can see in unit code.

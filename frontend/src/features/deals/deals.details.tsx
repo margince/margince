@@ -206,12 +206,6 @@ export function DealContext({
       {/* What the deal is commercially, then who of ours is on it. The buyer's
           seats are not here: they live in the committee card in the column, with
           the verbs that change them. The rail holds no second copy of that list. */}
-      {/* Units' panels lead the column: each is the unit's own card about this
-          deal, fenced off so one unit's failure stays in its card. */}
-      <ExtensionPanels
-        slot="record_panel.deal"
-        record={{ type: "deal", id: deal.id }}
-      />
       <DealDetails deal={deal} meId={meId} />
       <RecordTeam recordType="deal" recordId={deal.id} readOnly={!canWrite} />
       <DealTagsSection deal={deal} />
@@ -221,6 +215,12 @@ export function DealContext({
         archived={Boolean(deal.archived_at)}
       />
       <DealEmailAside dealId={deal.id} live={!deal.archived_at} />
+      {/* Units' panels close the column, grouped under their own label: each is
+          an add-on's card about this deal, fenced off so its failure stays there. */}
+      <ExtensionPanels
+        slot="record_panel.deal"
+        record={{ type: "deal", id: deal.id }}
+      />
     </>
   );
 }

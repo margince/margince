@@ -57,6 +57,9 @@ describe("the published frontend surface", () => {
       // hand-wrote a `<dl>` that nothing styled. See the note beside its export.
       "FactList",
       "Field",
+      // IconAction: a unit's glyph verb beside a value, named once for both a
+      // screen reader and a pointer. See the note beside its export.
+      "IconAction",
       // Panel and PanelBody: a unit's deal panel stands in the page's own
       // column, where the catalog wants a Panel and forbids a titled Card.
       "Panel",

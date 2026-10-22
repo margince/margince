@@ -2135,6 +2135,7 @@ export const de = {
 
   "screen.pending": "Diese Ansicht ist noch nicht verfügbar.",
 
+  "ext.panels.label": "Erweiterungen",
   "ext.notFound":
     "In dieser Installation ist keine Erweiterung namens „{name}“ aktiviert.",
 

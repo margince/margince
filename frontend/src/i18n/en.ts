@@ -2079,8 +2079,9 @@ export const en = {
   "screen.pending": "This screen is not available yet.",
 
   // The composed extension tier (ADR-0120): #/ext/<unit>. The registry is
-  // generated per installation, so these two strings are the only part of a
+  // generated per installation, so these strings are the only part of a
   // unit surface the core catalogs own.
+  "ext.panels.label": "Extensions",
   "ext.notFound":
     "No extension named “{name}” is enabled on this installation.",
 
