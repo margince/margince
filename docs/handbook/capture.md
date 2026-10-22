@@ -130,9 +130,11 @@ is still below, it becomes **unsure** and goes to a human. A low score costs one
 more question; it never deletes anything by mistake.
 
 An unsure sender reaches you as an approval card, **Add contact from mail**.
-Accept creates the contact. **Reject does nothing at all**: the mail stays where
-it is. These proposals can only add, so rejecting one by mistake deletes
-nothing.
+Only the colleague whose mailbox the sender wrote to gets the card. If that
+colleague has left, nobody else is asked: the sender stays unsure, and after 30
+days the question closes with no contact created. Accept creates the contact.
+**Reject does nothing at all**: the mail stays where it is. These proposals can
+only add, so rejecting one by mistake deletes nothing.
 
 ### Two limits on the queue
 

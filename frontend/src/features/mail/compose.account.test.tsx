@@ -412,7 +412,9 @@ describe("ComposeModal started from an account", () => {
 
     await draftButton();
     // A list whose only entry is None asks a question with one answer.
-    expect(screen.queryByLabelText("Project")).toBeNull();
+    expect(screen.getByLabelText("Project").hasAttribute("disabled")).toBe(
+      true,
+    );
     expect(subject().value).toBe("");
   });
 

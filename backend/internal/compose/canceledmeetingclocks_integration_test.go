@@ -7,7 +7,7 @@ package compose
 
 // A canceled or no-show meeting does not keep last_activity_at on a deal, a
 // contact or a company, or the recency evidence deal health cites, on itself.
-// A booked meeting still moves the clock, wherever it is dated. A calendar
+// A booked meeting moves the clock once it has started. A calendar
 // meeting lands and is called off through the real Sink; a logged one through
 // LogActivity and UpdateActivity.
 
@@ -23,22 +23,26 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// clockFixture is one workspace under test and the moment it treats as now.
+// clockFixture is one workspace under test, the pipeline its deals open in and
+// the moment it treats as now.
 type clockFixture struct {
-	e   *integration.Env
-	now time.Time
+	e        *integration.Env
+	pipeline ids.PipelineID
+	open     ids.StageID
+	now      time.Time
 }
 
 func newClockFixture(t *testing.T) clockFixture {
 	t.Helper()
-	return clockFixture{e: integration.Setup(t), now: time.Now().UTC().Truncate(time.Second)}
+	e := integration.Setup(t)
+	pipeline, open, _ := integration.DealFixture(t, e)
+	return clockFixture{e: e, pipeline: pipeline, open: open, now: time.Now().UTC().Truncate(time.Second)}
 }
 
 func (f clockFixture) newDeal(t *testing.T, name string, company *ids.CompanyID) ids.UUID {
 	t.Helper()
-	pipeline, open, _ := integration.DealFixture(t, f.e)
 	deal, err := f.e.Deals.CreateDeal(f.e.Admin(), deals.CreateDealInput{
-		Name: name, PipelineID: pipeline, StageID: open, CompanyID: company, Source: "manual",
+		Name: name, PipelineID: f.pipeline, StageID: f.open, CompanyID: company, Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("creating %s: %v", name, err)
@@ -125,13 +129,13 @@ func TestANoShowLoggedMeetingLeavesTheDealClock(t *testing.T) {
 	assertClock(t, f.dealClock(t, deal), missedAt, "a meeting marked held after all counts again")
 }
 
-func TestABookedFutureMeetingStillMovesTheDealClock(t *testing.T) {
+func TestABookedFutureMeetingDoesNotMoveTheDealClockBeforeItStarts(t *testing.T) {
 	f := newClockFixture(t)
 	deal := f.newDeal(t, "Clock future deal", nil)
-	f.logMeeting(t, onRecord("deal", deal), "held", f.now.AddDate(0, 0, -10))
-	ahead := f.now.AddDate(0, 0, 14)
-	f.logMeeting(t, onRecord("deal", deal), "booked", ahead)
-	assertClock(t, f.dealClock(t, deal), ahead, "a booked meeting counts as contact wherever it is dated")
+	heldAt := f.now.AddDate(0, 0, -10)
+	f.logMeeting(t, onRecord("deal", deal), "held", heldAt)
+	f.logMeeting(t, onRecord("deal", deal), "booked", f.now.AddDate(0, 0, 14))
+	assertClock(t, f.dealClock(t, deal), heldAt, "a booked meeting counts as contact once it has started")
 }
 
 func TestACanceledCalendarMeetingLeavesTheContactClock(t *testing.T) {

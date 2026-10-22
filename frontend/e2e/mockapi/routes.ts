@@ -228,6 +228,11 @@ export const routes: readonly MockRoute[] = [
       path.startsWith("/deals/") && path.endsWith("/stakeholders"),
     handle: empty,
   },
+  {
+    method: "GET",
+    path: /^\/deals\/([^/]+)\/win-evidence$/,
+    handle: records.getDealWinEvidence,
+  },
   { path: (path) => path.startsWith("/deals/"), handle: records.getDeal },
   { method: "GET", path: "/magic", handle: reply(work.magicReceipt) },
   { method: "GET", path: "/brief", handle: work.getBrief },

@@ -118,7 +118,7 @@ func (w *financeSyncSweepWorker) syncWorkspace(ctx context.Context, workspace id
 		// connected nothing, and a sweep over them has nothing to do.
 		return nil
 	}
-	store := finance.NewStore(InstallationDB(w.pool), identity.BaseCurrencyOf)
+	store := finance.NewStore(InstallationDB(w.pool), FinanceRates())
 	result, err := store.SyncConnection(wsCtx, provider)
 	if err != nil {
 		return jobs.FaultContext(ctx, store.RecordSyncFailure(wsCtx, err))

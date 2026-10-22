@@ -425,7 +425,7 @@ export const CommitmentProposal: Story = {
       {
         field: "assignment",
         label: "On approval",
-        value: "Creates a task assigned to the person who approves.",
+        value: "Creates a task assigned to Lena Fischer.",
       },
       { field: "due_date", label: "Due", value: "No day stated" },
       {

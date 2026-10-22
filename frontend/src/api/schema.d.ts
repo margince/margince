@@ -505,6 +505,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/automatic-work-health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Per colleague and day, how much work automation handed out and what became of it.
+         * @description Admin and ops only (`job_health:read`). Counts the items Margince created by itself for one colleague (a task from a promise, a reply reminder, an approval request) in the last `days` days, and what each one has become since. An item counts once, on the day it was created, in the installation's time zone, with the outcome it holds now, so an outcome that arrives on a later day still counts against its creation day. The colleague is the one the item first named. Derived from the audit log and the items themselves; no counter is kept. COUNTS ONLY: never a subject or a body. Human session only (x-agent-access: human-only).
+         */
+        get: operations["getAutomaticWorkHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/passports": {
         parameters: {
             query?: never;
@@ -4784,6 +4804,37 @@ export interface paths {
          *     authored it.
          */
         get: operations["listStageEvidence"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/deals/{id}/win-evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Whether the deal has the signed agreement a win rests on.
+         * @description The question `POST /deals/{id}/advance` asks before it lets a deal land on a won
+         *     stage: does the deal carry a contract that left draft, has a signing date, and has
+         *     a current or final contract or legal file attached. It is the same check, run at the
+         *     moment of the read.
+         *
+         *     A client reads this before it asks someone to confirm a win. With
+         *     `has_signed_contract: false` the win needs `won_without_contract_reason`, and the
+         *     client can ask for it up front instead of after a refused attempt. The advance
+         *     still checks again when it runs, because the agreement can be archived in between.
+         */
+        get: operations["getDealWinEvidence"];
         put?: never;
         post?: never;
         delete?: never;
@@ -14073,43 +14124,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/communication-reviews": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Refused sends waiting on somebody who may decide them.
-         * @description The reviewer's own queue: every refused send a rep has handed on, oldest first.
-         *
-         *     Gated on `communication_exception` at `read`, which is the verb for SEEING refusals rather
-         *     than acting on them: directing a send takes `create`, and an installation can grant the
-         *     first without the second. The rows name other contacts' recipient addresses and why each was
-         *     refused, so a seat without that grant is not shown them.
-         *
-         *     Installation-wide, with no team or ownership narrowing. Granting the read verb means
-         *     trusting that seat with every refused send in the installation.
-         *
-         *     EVERY WAITING REVIEW, not only the ones routed to the caller. Routing names no assignee: a
-         *     rep asks the installation rather than a colleague, and whoever holds the authority answers.
-         *     An assignee-scoped list would leave a card nobody could find the moment the colleague it named
-         *     went on leave.
-         *
-         *     Bounded, and continuable. A list at its limit has more behind it: `total` says how many are
-         *     waiting and `page.next_cursor` reaches the rest. A queue whose tail no caller could ask for
-         *     stranded the oldest reviews, which are the ones a reviewer most needs.
-         */
-        get: operations["listCommunicationReviews"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/communication-reviews/{id}": {
         parameters: {
             query?: never;
@@ -14126,14 +14140,12 @@ export interface paths {
          *     each one carries.
          *
          *     TWO DOORS OPEN THIS ROW. The initiator, because it is their message. A holder of
-         *     `communication_exception` at `read`, because they are the human being asked to decide it —
-         *     a reviewer handed a card who could not read the refusal behind it would be acknowledging a
-         *     warning about a message they had never seen.
+         *     `communication_exception` at `read`, because a seat that may direct the send must be able
+         *     to read the refusal it is overriding.
          *
          *     That second door is installation-wide and worth stating plainly: granting somebody the read
          *     verb hands them every refused send in the installation, with the recipient addresses and the
-         *     reason each was refused. There is no team or ownership narrowing on it. Reading is not
-         *     routing — handing a review on stays the initiator's own action.
+         *     reason each was refused. There is no team or ownership narrowing on it.
          *
          *     A caller holding neither door receives 404 rather than 403, because "forbidden" would
          *     confirm the id exists and disclose a message the caller may not see.
@@ -14143,33 +14155,6 @@ export interface paths {
         get: operations["getCommunicationReview"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/communication-reviews/{id}/request-decision": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Retired. Asking a colleague to decide a refused send is no longer offered.
-         * @deprecated
-         * @description Always answers 422 `review_not_routable`. A rep overrules a machine refusal with their own
-         *     reason (`POST /contacts/{id}/consent/allow`); a refusal names what may be overruled in its
-         *     problem details (`available_actions` carries `overrule`, and `overrulable` lists each
-         *     contact and category). A seat holding `communication_exception` directs the send from the
-         *     review (`POST /communication-reviews/{id}/direct-send`).
-         */
-        post: operations["requestCommunicationDecision"];
         delete?: never;
         options?: never;
         head?: never;
@@ -15763,6 +15748,43 @@ export interface paths {
          *     Emits `user.reactivated`. Admin-only.
          */
         post: operations["reactivateUser"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/{id}/handover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Count the live records a member still owns. Member administration, human-only.
+         * @description How many live leads, contacts, companies, deals and projects the member owns that the
+         *     caller can see. Deactivating a member moves none of them, so the deactivate dialog reads
+         *     this to say what would be left behind. Works for any non-archived member, deactivated or
+         *     not, because work is best handed over before the account is closed.
+         */
+        get: operations["getUserHandover"];
+        put?: never;
+        /**
+         * Move every live record a member owns to a colleague. Member administration, human-only.
+         * @description Hands each live lead, contact, company, deal and project the member owns to `to_user_id`.
+         *     Every record moves through its own owner-change write, so each gets the audit row and
+         *     event a single reassignment writes, and a deal's pending proposals follow it to the new
+         *     owner. A record the caller may not change stays with the member and is counted in
+         *     `left`; nothing else is said about it. `to_user_id` must be a seat the caller may make an
+         *     owner (an active human seat that can write, inside the caller's write scope), else `422`
+         *     with `code: owner_not_assignable` and nothing moves. Tasks, automations and deal-room
+         *     stewardships are not moved.
+         */
+        post: operations["handOverUserWork"];
         delete?: never;
         options?: never;
         head?: never;
@@ -20769,9 +20791,13 @@ export interface paths {
         get: operations["listFxRates"];
         put?: never;
         /**
-         * Set an FX rate effective today or later (append-forward).
+         * Set an FX rate effective today or later, or in the past before any stored rate.
          * @description Admin/ops-only. Appends one effective-dated rate; the same day in the
-         *     installation's zone corrects in place, a past date is refused (422). `to`
+         *     installation's zone corrects in place. A past date is accepted only when
+         *     `from_currency` has no rate yet, or when it is earlier than every rate
+         *     stored for it. That extends the history back without changing any day
+         *     that already had a rate;
+         *     any other past date is refused (422 `fx_rate_past`). `to`
          *     is resolved to the workspace base currency server-side; `from == base` is
          *     refused. Human session only
          *     (x-agent-access: human-only) — an agent never sets a rate directly.
@@ -21286,7 +21312,7 @@ export interface components {
             rate: string;
             /**
              * Format: date
-             * @description Defaults to today; must not be in the past (append-forward).
+             * @description Defaults to today. A past date is accepted only when the currency has no rate yet or the date is earlier than every rate stored for it.
              */
             effective_date?: string;
         };
@@ -26820,7 +26846,7 @@ export interface components {
             version?: components["schemas"]["RowVersion"];
             /**
              * Format: date-time
-             * @description When something last happened with this contact: the newest `occurred_at` of an activity linked to it, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first linked activity. Sortable (DM-VOCAB-1).
+             * @description When something last happened with this contact: the newest `occurred_at` at or before now of an activity linked to it, so a booked meeting counts once it starts, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first linked activity. Sortable (DM-VOCAB-1).
              */
             readonly last_activity_at?: string | null;
             /** Format: date-time */
@@ -27182,7 +27208,7 @@ export interface components {
             version?: components["schemas"]["RowVersion"];
             /**
              * Format: date-time
-             * @description When something last happened with this account: the newest `occurred_at` of a workspace-audience activity linked to it, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first such activity. Sortable (DM-VOCAB-2).
+             * @description When something last happened with this account: the newest `occurred_at` at or before now of a workspace-audience activity linked to it, so a booked meeting counts once it starts, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first such activity. Sortable (DM-VOCAB-2).
              *     A message limited to its participants does NOT move this date, even for a reader who may read that message. The value is one number every reader sees, so it can only count what every reader may see.
              */
             readonly last_activity_at?: string | null;
@@ -28222,7 +28248,7 @@ export interface components {
             amount?: components["schemas"]["Money"];
             /** Format: date */
             expected_close_date?: string | null;
-            /** @description No linked activity inside the 60-day stall window. */
+            /** @description No linked activity inside the 60-day stall window, and no booked meeting ahead. */
             stalled: boolean;
             attention?: components["schemas"]["Company360WorkAttention"];
         };
@@ -31676,10 +31702,10 @@ export interface components {
             closed_at?: string | null;
             /**
              * Format: date-time
-             * @description Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.
+             * @description The newest `occurred_at` at or before now of a workspace-audience activity filed under the deal, so a booked meeting counts once it starts. Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.
              */
             last_activity_at?: string | null;
-            /** @description Derived — no activity past the threshold (absolute duration). */
+            /** @description Derived — no activity past the threshold (absolute duration). A booked workspace-audience meeting ahead keeps the deal off stalled until it starts or is called off. */
             readonly stalled?: boolean;
             /** @description The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant. */
             readonly last_email?: components["schemas"]["DealLastEmail"] | null;
@@ -32568,6 +32594,28 @@ export interface components {
              */
             to_owner_id: string;
         };
+        /** @description Live records per kind. */
+        HandoverCounts: {
+            lead: number;
+            contact: number;
+            company: number;
+            deal: number;
+            project: number;
+        };
+        UserHandover: {
+            owned: components["schemas"]["HandoverCounts"];
+        };
+        HandOverUserWorkRequest: {
+            /**
+             * Format: uuid
+             * @description The colleague who takes the work over.
+             */
+            to_user_id: string;
+        };
+        UserHandoverResult: {
+            moved: components["schemas"]["HandoverCounts"];
+            left: components["schemas"]["HandoverCounts"];
+        };
         /**
          * @description The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
          *     verb but `archive` and `complete`: a lead leaves the queue by being disqualified, which has
@@ -32980,6 +33028,14 @@ export interface components {
         StageEvidenceListResponse: {
             data: components["schemas"]["StageEvidence"][];
             page: components["schemas"]["PageInfo"];
+        };
+        DealWinEvidence: {
+            /**
+             * @description True when the deal has a contract that left draft, with a signing date and a
+             *     current or final contract or legal file attached. A win on such a deal needs
+             *     no reason; any other win names why there is none.
+             */
+            has_signed_contract: boolean;
         };
         /**
          * @description One thing that must be true of a deal before it leaves a stage. Mirrors the
@@ -35338,7 +35394,7 @@ export interface components {
             readonly sla_state?: "within_target" | "at_risk" | "breached" | null;
             /**
              * Format: date-time
-             * @description Most recent activity linked to this lead — the "last touch" a work queue row shows (ADR-0118). Derived from activity_link, not stored on the lead.
+             * @description Most recent activity at or before now linked to this lead — the "last touch" a work queue row shows (ADR-0118). Derived from activity_link, not stored on the lead.
              */
             readonly last_activity_at?: string | null;
             /** @description Open `kind=task` activities linked to this lead; the derived next step is the earliest of them (ADR-0118). */
@@ -37714,12 +37770,14 @@ export interface components {
              * @default false
              */
             is_agent: boolean;
+            /** @description Whether the CALLER may make this member the owner of a record right now: the same check an owner change runs (an active human seat that can write, inside the caller's own write scope), so a picker built on it offers only owners the write will accept. Present on `listUsers`; absent means not computed, and a client then offers the member and lets the write decide. A deactivated member is listed with `false` on the management view, so a list can still be filtered by the work they left behind. */
+            assignable?: boolean;
             /** @description This member's assigned system role keys. Present ONLY for an admin caller — the roster is readable by every authenticated member (it feeds the share/assignee pickers), and a rep has no business enumerating who holds `admin`. Normally exactly one key: `inviteUser` assigns one and `changeUserRole` replaces the whole set with one. Clients that render a single current role must still handle the empty and multi-key cases. Deliberately absent on `MeResponse.user`, whose sibling `MeResponse.roles` is the one authority for the caller's own roles — the same fact spelled twice could disagree. */
             roles?: string[];
             /** @description The live teams this user belongs to, ordered by team name. Present ONLY for an admin caller, on the same terms as `roles`: the roster answers every authenticated user because the share and assignee pickers read it, and who is in which team is not theirs to enumerate. An ARCHIVED team is absent — its memberships resolve no scope and no share, so listing one would describe access the user does not have. */
             team_ids?: string[];
-            /** @description The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer. */
-            allowed_actions?: ("change_role" | "issue_password_link" | "remove_mfa" | "deactivate" | "reactivate")[];
+            /** @description The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer. */
+            allowed_actions?: ("change_role" | "issue_password_link" | "remove_mfa" | "deactivate" | "reactivate" | "hand_over")[];
             /**
              * Format: date-time
              * @description When this member last used the product: the latest request any of their sign-in sessions made, including a session since signed out, revoked or expired. Clearing dead sessions records the latest of their requests on the member first, so the value outlives the sessions. Signing in counts as activity. Work an agent or a connected app did on their behalf does not.
@@ -39143,6 +39201,19 @@ export interface components {
              */
             error_class?: string;
         };
+        /** @description The span between where a held first-sync anchor pointed and where the sync had to start instead. Both ends or neither: a start with no end is a period nobody can ask for again. */
+        CaptureUnreadPeriod: {
+            /**
+             * Format: date-time
+             * @description The first moment nobody read.
+             */
+            from: string;
+            /**
+             * Format: date-time
+             * @description The moment reading resumed.
+             */
+            to: string;
+        };
         CaptureMailboxHealth: {
             /**
              * Format: uuid
@@ -39162,6 +39233,11 @@ export interface components {
             oldest_contact_age_seconds?: number | null;
             /** @description Threads whose confidentiality question is still open, so their messages stay held. */
             threads_awaiting_verdict: number;
+            /**
+             * @description A period no sync read, when a first sync failed for longer than the point it had held. Absent when there is none, which is the ordinary case.
+             *     It is reported because the alternative is a mailbox that looks synced and is missing a week. The backfill reaches this period, so the owner can ask for it back, and the dates are what they point it at.
+             */
+            unread_period?: components["schemas"]["CaptureUnreadPeriod"] | null;
             oldest_thread_age_seconds?: number | null;
         };
         /** @description The sender queue as a whole, across every mailbox. */
@@ -39208,6 +39284,98 @@ export interface components {
             data_loss_target_seconds: number;
             /** @description The most recent drill, or null when none was ever recorded. */
             last_drill: components["schemas"]["RestoreDrill"] | null;
+        };
+        /**
+         * @description What automation handed out per colleague, per day and per kind of item, and what each item
+         *     has become. An item is counted once, on its creation day, with the outcome it holds now.
+         *     `not_mine_share` is the routing number: the items a colleague said were not theirs, out of the
+         *     items created for them. It is a reading for an admin to look at, never a trigger.
+         */
+        AutomaticWorkHealth: {
+            /** Format: date-time */
+            generated_at: string;
+            /** @description How many days the window covers, today included. */
+            days: number;
+            /**
+             * Format: date
+             * @description The first day of the window, in the installation's time zone, which decides the day an item falls on.
+             */
+            first_day: string;
+            /** Format: date */
+            last_day: string;
+            /** @description The share above which a kind's routing needs a look, as a fraction (0.1 is 10%). */
+            share_threshold: number;
+            /** @description Below this many created items a share is shown but never flagged. */
+            small_sample_below: number;
+            /** @description Every kind of item, always all of them, with what its records can tell. */
+            kinds: components["schemas"]["AutomaticWorkKind"][];
+            /**
+             * @description Every active colleague, with a tally for every kind even when it is zero, and any other
+             *     seat that was named by an item in the window.
+             */
+            colleagues: components["schemas"]["AutomaticWorkColleague"][];
+            /** @description Items in the window whose first named colleague no longer exists. */
+            unattributed: number;
+        };
+        AutomaticWorkKind: {
+            kind: components["schemas"]["AutomaticWorkKindName"];
+            /**
+             * @description Whether a colleague can say an item of this kind is not theirs. An approval request has
+             *     no such choice: its decider can only accept or reject it, so its share is null.
+             */
+            records_not_mine: boolean;
+        };
+        /** @enum {string} */
+        AutomaticWorkKindName: "promise_task" | "reply_reminder" | "approval_request";
+        AutomaticWorkColleague: {
+            /** Format: uuid */
+            user_id: string;
+            display_name: string;
+            /** @enum {string} */
+            status: "invited" | "active" | "suspended" | "deactivated";
+            /** @description One per kind, in the order of `kinds`. */
+            tallies: components["schemas"]["AutomaticWorkTally"][];
+            /**
+             * @description Waiting messages this colleague marked "Not mine" on the Worklist in the window, each
+             *     message once. A waiting message is not an item automation creates, so it has no
+             *     created count and no share.
+             */
+            waiting_not_mine: number;
+        };
+        AutomaticWorkTally: {
+            kind: components["schemas"]["AutomaticWorkKindName"];
+            counts: components["schemas"]["AutomaticWorkCounts"];
+            /** @description not_mine out of created, as a fraction. Null when nothing was created or the kind has no "Not mine". */
+            not_mine_share: number | null;
+            /** @description Fewer items were created than `small_sample_below`, so the share says little. */
+            small_sample: boolean;
+            /** @description The share is above `share_threshold` on a sample large enough to judge. */
+            above_threshold: boolean;
+            /** @description The days with at least one created item, oldest first. A day absent from it created nothing. */
+            by_day: components["schemas"]["AutomaticWorkDay"][];
+        };
+        AutomaticWorkDay: {
+            /** Format: date */
+            date: string;
+            counts: components["schemas"]["AutomaticWorkCounts"];
+        };
+        /** @description Each created item holds exactly one outcome, so the outcomes add up to `created`. */
+        AutomaticWorkCounts: {
+            created: number;
+            /** @description A colleague moved the task to someone else, which says it was not theirs. It stays Not mine if the task comes back later. */
+            not_mine: number;
+            /** @description A rule moved the item to someone else, as an approval follows a deal's new owner. Every move of an approval request counts here. */
+            rerouted: number;
+            /** @description A colleague archived the task without doing it. */
+            dismissed: number;
+            /** @description The decider rejected the approval request. A rejection judges the change, not who was asked. */
+            rejected: number;
+            /** @description The task is done, or the decider accepted the approval request. */
+            completed: number;
+            /** @description The item aged out unanswered. */
+            expired: number;
+            /** @description The item is still waiting. */
+            open: number;
         };
         /** @description One rehearsal of the restore procedure, as the drill ledger holds it. */
         RestoreDrill: {
@@ -41428,7 +41596,7 @@ export interface components {
         /** @description A staged 🟡 confirm-first action awaiting human decision. */
         Approval: {
             preview?: components["schemas"]["ApprovalPreview"];
-            /** @description For a pending commitment, whether its named task assignee cannot receive the task. True for invited, deactivated, archived, missing, or agent seats. Absent for an unassigned proposal. This is current decision context, not a change to the staged assignee. */
+            /** @description For a pending commitment, whether its named task assignee cannot receive the task. True for deactivated, archived, missing, or agent seats. An invited colleague can. Absent for an unassigned proposal. This is current decision context, not a change to the staged assignee. */
             readonly assignee_inactive?: boolean;
             /**
              * Format: uuid
@@ -42206,12 +42374,10 @@ export interface components {
              * @description What is NEEDED rather than who is blocked: `needs_context` is a fact about the message
              *     and stays true whoever is looking at it. `needs_repair` is a refusal no evidence can
              *     answer — an objection, a dead address — where offering a context form would invite a rep
-             *     to argue with a withdrawal. `awaiting_decision` is a refusal the rep has handed to
-             *     somebody who may override it: their work no longer, so a surface should say so rather
-             *     than showing them a form they have already filled in.
+             *     to argue with a withdrawal.
              * @enum {string}
              */
-            state: "needs_context" | "needs_repair" | "awaiting_decision" | "resolved" | "superseded" | "cancelled";
+            state: "needs_context" | "needs_repair" | "resolved" | "superseded" | "cancelled";
             /** @enum {string} */
             kind: "single";
             /**
@@ -42231,33 +42397,12 @@ export interface components {
             /** @description What was refused, per recipient. Empty once an erasure has cleared the subject from it. */
             refusals: components["schemas"]["RefusedRecipient"][];
             /**
-             * Format: uuid
-             * @description The card a routed review was handed to, so a decider reading this can find the decision
-             *     they are being asked to make. Null on a review nobody has asked about, which is most of
-             *     them.
-             */
-            approval_id?: string | null;
-            /**
              * @description What somebody must be shown before they direct this send, and the version their
              *     acknowledgement will name. Served rather than composed by the client: an instruction's
              *     claim is that a named human read particular words, and a client free to write its own
              *     would have the record assert an acknowledgement of text nobody published.
              */
             warning?: components["schemas"]["OverrideWarning"];
-        };
-        /** @description A page of refused sends waiting for a decision. */
-        CommunicationReviewList: {
-            data: components["schemas"]["CommunicationReview"][];
-            /**
-             * @description Where this page was cut. `total` beside it is the same count this object may carry, kept
-             *     at the top level because it shipped there: a client reading it keeps working.
-             */
-            page: components["schemas"]["PageInfo"];
-            /**
-             * @description How many are waiting in total. A page at its limit has more behind it, and this is how
-             *     the caller knows rather than by discovering it.
-             */
-            total: number;
         };
         /**
          * @description The caution a human reads before overruling the engine, with the version that identifies
@@ -42276,28 +42421,6 @@ export interface components {
              *     server's words while showing them its own.
              */
             text: string;
-        };
-        /** @description What the colleague asking wants the decider to know. */
-        RequestCommunicationDecisionRequest: {
-            /**
-             * @description Why this message should go, in the asker's own words. Optional — a refusal is often
-             *     self-explanatory — but it is what the approver reads and therefore what the record says
-             *     they acted on.
-             *
-             *     Bounded by what an instruction's explanation accepts, because that is where these words
-             *     end up. A note the record could not hold would stage a card that fails when somebody
-             *     approves it.
-             */
-            note?: string;
-        };
-        /** @description The approval card a routed refusal was staged as. */
-        CommunicationDecisionRequested: {
-            /**
-             * Format: uuid
-             * @description The card carrying the question. A second ask about the same review answers the same id:
-             *     one refused message is one decision.
-             */
-            approval_id: string;
         };
         /**
          * @description A designated human's decision that one refused message goes out anyway. Every field is frozen
@@ -49626,6 +49749,40 @@ export interface operations {
             };
         };
     };
+    getAutomaticWorkHealth: {
+        parameters: {
+            query?: {
+                /** @description How many days back the window reaches, today included. */
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The installation's automatic-work counts. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutomaticWorkHealth"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description Refused: the caller is an agent/passport principal (this endpoint is human-only) or a seat without `job_health:read` (held by the admin and ops roles). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
     listPassports: {
         parameters: {
             query?: never;
@@ -54221,7 +54378,7 @@ export interface operations {
                  *     the buckets partition the CATEGORISED pipeline, not the pipeline.
                  */
                 forecast_category?: "commit" | "best_case" | "pipeline" | "omitted";
-                /** @description Deterministic stalled flag (no activity past the threshold). */
+                /** @description Deterministic stalled flag (no activity past the threshold, and no booked meeting ahead). */
                 stalled?: boolean;
                 /** @description Filter to the deals belonging to one body of work. */
                 project_id?: string;
@@ -56339,6 +56496,32 @@ export interface operations {
                     "application/json": components["schemas"]["StageEvidenceListResponse"];
                 };
             };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getDealWinEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Whether the agreement a win needs is on the deal. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealWinEvidence"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
@@ -70272,40 +70455,6 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    listCommunicationReviews: {
-        parameters: {
-            query?: {
-                limit?: number;
-                /**
-                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
-                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
-                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
-                 *     together with a `sort` that differs from the one the cursor was minted under returns
-                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
-                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
-                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
-                 */
-                cursor?: components["parameters"]["Cursor"];
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description What is waiting. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommunicationReviewList"];
-                };
-            };
-            403: components["responses"]["Forbidden"];
-        };
-    };
     getCommunicationReview: {
         parameters: {
             query?: never;
@@ -70327,34 +70476,6 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
-        };
-    };
-    requestCommunicationDecision: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["RequestCommunicationDecisionRequest"];
-            };
-        };
-        responses: {
-            /** @description The card the question was staged as. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommunicationDecisionRequested"];
-                };
-            };
-            404: components["responses"]["NotFound"];
-            422: components["responses"]["ValidationError"];
         };
     };
     recordCommunicationContext: {
@@ -72632,6 +72753,86 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    getUserHandover: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What the member still owns. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserHandover"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    handOverUserWork: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HandOverUserWorkRequest"];
+            };
+        };
+        responses: {
+            /** @description What moved, and what the member still owns. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserHandoverResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listUserSessions: {

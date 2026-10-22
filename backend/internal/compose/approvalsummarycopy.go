@@ -103,7 +103,7 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 		siteLeadFound:            "Found on %s: %s — %s",
 		enrichmentOf:             "Enrichment of %s",
 		contractEndedMove:        "Their mail says the contract ended. Move this account from %s to %s?",
-		overwriteHumanEdited:     "overwrite human-edited %s — %s",
+		overwriteHumanEdited:     "overwrite %s, edited by hand — %s",
 		linkedInLooksLike:        "%s at %s looks like %s",
 		unnamedEmployer:          "an unnamed employer",
 		vcardResemblesContact:    "This card resembles an existing contact. Create %s anyway?",

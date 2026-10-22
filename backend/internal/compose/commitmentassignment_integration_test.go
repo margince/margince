@@ -58,8 +58,10 @@ func TestCommitmentReadsMatchTheTaskWritersAssigneeRule(t *testing.T) {
 			if len(listed) != 1 || len(targeted) != 1 {
 				t.Fatalf("list/target rows = %d/%d", len(listed), len(targeted))
 			}
+			// An invited colleague can hold work, as creating a task by hand allows.
+			eligible := state == "active" || state == "invited"
 			for _, approval := range []crmcontracts.Approval{got, listed[0], targeted[0]} {
-				if approval.AssigneeInactive == nil || *approval.AssigneeInactive != (state != "active") {
+				if approval.AssigneeInactive == nil || *approval.AssigneeInactive == eligible {
 					t.Fatalf("%s unavailable = %v", state, approval.AssigneeInactive)
 				}
 				if approval.ProposedChange == nil || (*approval.ProposedChange)["seat_id"] != e.Rep2.String() {
@@ -67,7 +69,7 @@ func TestCommitmentReadsMatchTheTaskWritersAssigneeRule(t *testing.T) {
 				}
 			}
 			_, err = e.svc.Decide(ctx, id, true, nil)
-			if state == "active" {
+			if eligible {
 				if err != nil || e.taskCount(t) != 1 {
 					t.Fatalf("eligible acceptance: tasks=%d error=%v", e.taskCount(t), err)
 				}

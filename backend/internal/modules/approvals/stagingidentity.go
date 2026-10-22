@@ -421,7 +421,7 @@ func (s *Service) prepareUnlessDeclined(ctx context.Context, in StageInput) (Sta
 		}
 		in.Identity = canonical
 	}
-	if err := stagerIsAttributable(ctx); err != nil {
+	if err := stagerIsAttributable(ctx, in); err != nil {
 		return StageInput{}, err
 	}
 	return in, nil

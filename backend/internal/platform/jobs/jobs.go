@@ -131,6 +131,12 @@ func NewInserter(pool *pgxpool.Pool, log *slog.Logger) (*Runner, error) {
 	return &Runner{client: client}, nil
 }
 
+// NewTxInserter builds a Runner with no pool, for a caller that holds only a
+// transaction. EnqueueTx is the one method that works on it; Enqueue fails.
+func NewTxInserter(log *slog.Logger) (*Runner, error) {
+	return NewInserter(nil, log)
+}
+
 // Enqueue inserts one job for the worker role to pick up. Uniqueness
 // policy rides opts (e.g. UniqueOpts.ByArgs deduplicates a re-submitted
 // job): the caller owns the policy, this method only carries it to River.

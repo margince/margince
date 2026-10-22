@@ -24,8 +24,8 @@ type Handlers struct {
 
 // NewHandlers binds the transport to the pool the mirror is read through.
 // NewHandlers builds the module's HTTP surface over a workspace-bound handle.
-func NewHandlers(db *database.DB, baseCurrency BaseCurrencyFunc) Handlers {
-	return Handlers{store: NewStore(db, baseCurrency)}
+func NewHandlers(db *database.DB, rates Rates) Handlers {
+	return Handlers{store: NewStore(db, rates)}
 }
 
 // GetCompanyFinanceSummary implements

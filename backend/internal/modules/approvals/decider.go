@@ -35,17 +35,16 @@ type deciderCandidate struct {
 	source deciderSource
 }
 
-// resolveDecider names the one member a staging is for. The candidates, in
-// order: the payload's owner, the human the work is done for, the human staging
-// it, the owner of the record it changes. The first who is or may become active
-// wins, so an invited colleague finds the request waiting when they sign in.
-// The migration that added the column backfilled pending rows in this order.
+// resolveDecider names the one member a staging is for. A payload-owned kind
+// has one candidate, its payload's owner, because Withheld lets nobody else
+// open it. Any other kind tries, in order: the human the work is done for, the
+// human staging it, the owner of the record it changes. The first who is or may
+// become active wins, so an invited colleague finds the request waiting.
 func resolveDecider(ctx context.Context, tx pgx.Tx, p principal.Principal, in StageInput) (deciderCandidate, error) {
-	candidates := []deciderCandidate{}
 	if approvalsubject.PayloadOwned(in.Kind) {
-		candidates = append(candidates, deciderCandidate{approvalsubject.Owner(in.ProposedChange), deciderPayloadOwner})
+		return firstAskable(ctx, tx, []deciderCandidate{{approvalsubject.Owner(in.Kind, in.ProposedChange), deciderPayloadOwner}})
 	}
-	candidates = append(candidates, deciderCandidate{p.OnBehalfOf, deciderOnBehalfOf})
+	candidates := []deciderCandidate{{p.OnBehalfOf, deciderOnBehalfOf}}
 	if p.Type == principal.PrincipalHuman {
 		candidates = append(candidates, deciderCandidate{p.UserID, deciderStager})
 	}
@@ -54,6 +53,10 @@ func resolveDecider(ctx context.Context, tx pgx.Tx, p principal.Principal, in St
 		return deciderCandidate{}, err
 	}
 	candidates = append(candidates, deciderCandidate{owner, deciderRecordOwner})
+	return firstAskable(ctx, tx, candidates)
+}
+
+func firstAskable(ctx context.Context, tx pgx.Tx, candidates []deciderCandidate) (deciderCandidate, error) {
 	for _, c := range candidates {
 		askable, err := CanBeAsked(ctx, tx, c.member)
 		if err != nil {
@@ -86,14 +89,14 @@ func targetOwner(ctx context.Context, tx pgx.Tx, targetType string, targetID ids
 	return *owner, nil
 }
 
-// CanBeAsked reports whether a request may name this member. That is a human
-// who is active, or invited and so finds the request waiting at sign-in.
+// CanBeAsked reports whether a request may name this member
+// (workforce.AskableMemberSQL).
 func CanBeAsked(ctx context.Context, tx pgx.Tx, colleague ids.UUID) (bool, error) {
 	if colleague.IsZero() {
 		return false, nil
 	}
 	var activatable bool
 	err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM app_user
-		 WHERE id = $1 AND is_agent = false AND `+workforce.ActivatableMemberSQL("")+`)`, colleague).Scan(&activatable)
+		 WHERE id = $1 AND `+workforce.AskableMemberSQL("")+`)`, colleague).Scan(&activatable)
 	return activatable, err
 }

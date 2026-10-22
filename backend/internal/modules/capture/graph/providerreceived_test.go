@@ -19,7 +19,7 @@ func TestDeltaCapturePreservesProviderArrival(t *testing.T) {
 			if resume {
 				from = "https://graph/delta?token=prior"
 			}
-			if _, err := pinnedConn(api).pullFolder(context.Background(), "access", folderInbox, from, sink, owner, false); err != nil {
+			if _, err := pinnedConn(api).pullFolder(context.Background(), "access", folderInbox, from, time.Time{}, sink, owner, false); err != nil {
 				t.Fatal(err)
 			}
 			if len(sink.recs) != 2 {

@@ -371,11 +371,6 @@ func (s *Store) CancelInTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 // for its review. Closing the review first would take the two locks in the
 // opposite order, and a cancel racing a resume would deadlock — Postgres aborts
 // one of them with a fault neither caller can act on.
-//
-// The closer then takes a third lock, on the approval card, and takes it BEFORE
-// the review's for the same kind of reason — see CloseReviewForIntentTx. So the
-// whole order through here is scheduled_send, approval, review, and it is the
-// order every path that touches those rows already used.
 func (s *Store) closeReview(
 	ctx context.Context, tx pgx.Tx, id ids.UUID, outcome ReviewOutcome,
 ) error {

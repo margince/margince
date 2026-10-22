@@ -405,7 +405,7 @@ func TestDealsByStageStalledFilterAgreesWithIsStalled(t *testing.T) {
 
 	var wantStalled int64
 	for _, c := range cases {
-		if deals.IsStalled("open", c.created, c.lastAct, c.wait, now) {
+		if deals.IsStalled("open", c.created, c.lastAct, c.wait, false, now) {
 			wantStalled++
 		}
 	}

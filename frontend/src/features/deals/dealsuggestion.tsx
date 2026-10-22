@@ -10,7 +10,7 @@
 // column, a total or a forecast.
 
 import { type ReactNode, useId, useState } from "react";
-import { useAssignableUserOptions } from "../../components/assigneepicker";
+import { useRecordOwnerOptions } from "../../components/assigneepicker";
 import { EntityRef } from "../../components/entityref";
 import { Button, Field, Modal, TextInput } from "../../design-system/atoms";
 import { DateInput, isISODate } from "../../design-system/dateinput";
@@ -280,7 +280,7 @@ export function AcceptSuggestionDialog({
     draftOf(suggestion, suggestedName(suggestion, t), leading[0]),
   );
   const accept = useAcceptDealSuggestion();
-  const owners = useAssignableUserOptions();
+  const owners = useRecordOwnerOptions();
   const pipelines = usePipelines();
   const stages = (
     pipelines.data?.find((pipeline) => pipeline.id === suggestion.pipeline_id)

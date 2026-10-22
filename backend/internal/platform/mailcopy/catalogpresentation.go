@@ -37,6 +37,28 @@ func workPresentationLines(line writeLine) {
 	line(func(c *Copy) *string { return &c.MailOwner }, "Owner", "Verantwortlich", "Người chịu trách nhiệm")
 	line(func(c *Copy) *string { return &c.MailDue }, "Due", "Fällig", "Đến hạn")
 	line(func(c *Copy) *string { return &c.MailDeadline }, "Decision deadline", "Frist", "Hạn quyết định")
+	line(func(c *Copy) *string { return &c.MailAbout }, "About", "Betrifft", "Về")
+	line(func(c *Copy) *string { return &c.MailProposal }, "Proposal", "Vorschlag", "Đề xuất")
+	line(func(c *Copy) *string { return &c.MailBurstCount }, "%d requests", "%d Anfragen", "%d yêu cầu")
+	line(func(c *Copy) *string { return &c.MailSetOnApproval }, "set when approved", "wird bei Freigabe gesetzt", "được đặt khi phê duyệt")
+	line(func(c *Copy) *string { return &c.MailReadFrom }, "Read from", "Gelesen aus", "Đọc từ")
+	line(func(c *Copy) *string { return &c.MailPromisedBy }, "Promised by", "Zugesagt von", "Người hứa")
+	line(func(c *Copy) *string { return &c.MailInTheirWords }, "In their words", "Im Wortlaut", "Nguyên văn")
+	line(func(c *Copy) *string { return &c.MailWhyYou }, "Why you", "Warum du", "Vì sao là bạn")
+	line(func(c *Copy) *string { return &c.MailTranscriptOf },
+		"a meeting transcript of", "ein Gesprächsprotokoll vom", "biên bản cuộc họp ngày")
+	line(func(c *Copy) *string { return &c.MailReasonRequested },
+		"You were asked to review this proposal.",
+		"Du wurdest gebeten, diesen Vorschlag zu prüfen.",
+		"Bạn được yêu cầu xem xét đề xuất này.")
+	line(func(c *Copy) *string { return &c.MailReasonOnBehalf },
+		"The agent proposed this change on your behalf.",
+		"Der Agent hat diese Änderung in deinem Namen vorgeschlagen.",
+		"Trợ lý AI đã đề xuất thay đổi này thay mặt bạn.")
+	line(func(c *Copy) *string { return &c.MailReasonAuthority },
+		"You have permission to make this change.",
+		"Du darfst diese Änderung vornehmen.",
+		"Bạn có quyền thực hiện thay đổi này.")
 	line(func(c *Copy) *string { return &c.MailOpenNow }, "Still open now", "Noch offen", "Hiện vẫn chưa hoàn tất")
 	line(func(c *Copy) *string { return &c.MailDecisions }, "Requests to review", "Offene Anfragen", "Yêu cầu cần xem xét")
 	line(func(c *Copy) *string { return &c.MailUpdates }, "For your information", "Zur Information", "Thông tin cập nhật")

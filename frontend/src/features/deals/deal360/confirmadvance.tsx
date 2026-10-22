@@ -13,6 +13,7 @@ import {
 } from "../../../lib/winreason";
 import { closeReason, isSavedDeal } from "./closereviewoffer";
 import { CloseTasksQuestion, useCloseTasks } from "./closetasks";
+import { useWinQuestion } from "./winevidence";
 import "./deal360.css";
 
 type Deal = components["schemas"]["Deal"];
@@ -140,13 +141,10 @@ export function ConfirmAdvanceModal({
   };
 
   const needsLostReason = shown?.toStage.semantic === "lost";
-  // The reason panel appears only once the server has asked for it, and only
-  // for the deal it asked about. A win with a signed contract is one click,
-  // exactly as before: making every rep justify a win the paperwork already
-  // explains is how a required field becomes a field everyone fills with the
-  // same lie.
-  const needsWonReason =
-    pending?.toStage.semantic === "won" && refusedDealId === pending.dealId;
+  // Only a win with no signed contract is asked how it happened. A question
+  // every rep must answer gets the same lie from every rep.
+  const winQuestion = useWinQuestion(pending, refusedDealId, submitting);
+  const needsWonReason = winQuestion.needed;
   const detailMissing =
     wonReason === WON_REASON_NEEDING_DETAIL && !saysSomething(wonDetail);
   // Said beside Confirm rather than left to a grey button: the reader is told
@@ -162,15 +160,20 @@ export function ConfirmAdvanceModal({
       ? t("deals.winDetailNeeded")
       : undefined;
   })();
-  const refusal = unanswered ?? closeTasks.refusal;
+  const refusal =
+    unanswered ??
+    (winQuestion.checking ? t("deals.winEvidenceChecking") : undefined) ??
+    closeTasks.refusal;
 
   const confirm = async (asked: PendingAdvance) => {
     setSubmitting(true);
     // Captured BEFORE the await: `dismiss()` clears what was typed, and the
     // review starts from the words this reader actually wrote for THIS close.
     const tasksToComplete = closeTasks.chosen;
+    const withoutPaper =
+      needsWonReason && (await winQuestion.stillBare(asked.dealId));
     const why = closeReason({
-      wonAsked: needsWonReason,
+      wonAsked: withoutPaper,
       lost: lostReason,
       won: wonReason,
       detail: wonDetail,
@@ -181,7 +184,7 @@ export function ConfirmAdvanceModal({
       version: asked.version,
       toStage: asked.toStage,
       lostReason: lostReason.trim() || undefined,
-      ...wonAnswer(needsWonReason, wonReason, wonDetail),
+      ...wonAnswer(withoutPaper, wonReason, wonDetail),
     }).catch((error: unknown) => error);
     setSubmitting(false);
     // Only the missing-evidence refusal stays open: the reader can answer it

@@ -132,6 +132,11 @@ embeddings:    {provider: gemini}
 - **A tier may be left with no binding.** A deployment may run only some jobs. A ladder with no bound tier is
   not a start error, but it is reported. Boot warns per task, for example:
   `task cold_start: no bound tier on ladder [cheap_cloud premium]; calls will be refused`.
+- **Rungs that reach one API give no failover.** A ladder can bind two or more rungs that use the same
+  provider, model and endpoint. A refusal at that API then comes back on every rung. Boot and every saved
+  routing document warn once per API and name its tasks. The router's own retry guard uses the same test, and
+  upstream pins and the thinking level are not part of it. The sovereign profile sends every cloud rung to
+  `local_small`, so those ladders have one rung and draw no warning.
 - `/readyz` names the AI state (`configured` | `fake` | `unconfigured`). So an operator reads the gap
   off the boot log, not off a refused call at `3am`.
 - **The models that can serve a task** are the ladder plus its closure under `degrade_to`, and readers
@@ -461,7 +466,7 @@ The full steps: [how-to/certify-an-ai-model.md](../how-to/certify-an-ai-model.md
 | Budget deferral | `BudgetDeferralError` / `ErrBudgetDeferred` (`internal/modules/ai/budget.go`) |
 | Deferred carriers & resume | `site_read` / `company_scan` / `voice_build`, each with a `BudgetDeferred*` predicate; resumed by the fleet job `ai_budget_resume` (`internal/compose/jobs_aibudget.go`) through `ResumeScheduledTx` (`internal/platform/jobs/resume.go`) |
 | Company context | `companycontextprompt.go` (compose) · switch `company_context.rollout` (`margince.yaml`, `compose/companycontextrollout.go`, migration `0105`) |
-| Boot and `ops` surface | `/readyz` AI state; a boot warning per task for a ladder with no bound tier |
+| Boot and `ops` surface | `/readyz` AI state; a boot warning per task for a ladder with no bound tier, and one per API for a ladder whose rungs reach one API |
 | The certification lane | `internal/compose/aicert`: `make e2e-ai`, `make e2e-ai-report` |
 
 **See also:**

@@ -215,6 +215,7 @@ export const SETTINGS_SECTIONS = {
     "settings.extIngest",
     "settings.providerHealth",
     "settings.captureHealth",
+    "settings.automaticWork",
     "settings.recoveryHealth",
     "operations.schedules.title",
     "operations.pacing.title",

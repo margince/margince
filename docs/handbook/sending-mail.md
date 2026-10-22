@@ -48,7 +48,7 @@ Rest the mouse on **Preview** to see a message's text, and press **Read full ema
 To file an email you send under a project in Margince, choose the project in the composer's head, beside its title. Margince puts its key, such as `[NER-1]`, at the start of the **Subject**.
 Choosing **No project** takes the key out; deleting it from the text does not.
 
-The list starts on the thread's own project. If there is none, it starts on the deal's, and then on the company's only live project. Writing from a project page files under that project. With no live project to offer, the list is not shown. Also called: tag an email with a project, project key in the subject.
+The list starts on the thread's own project. If there is none, it starts on the deal's, and then on the company's only live project. Writing from a project page files under that project. With no live project to offer, the list shows **No project** and cannot be changed. Also called: tag an email with a project, project key in the subject.
 
 ### What do the composer's error messages mean?
 The composer in Margince does not send until four things are filled in, and names each one under its field.
@@ -74,10 +74,13 @@ the reply action on any message.
 The composer opens as a window at the bottom of the page, so the page stays in view
 behind it. It stays open when you go to another page. Fold it to its title bar
 with **Minimize**, make it larger with **Expand**, or drag its top or left
-side. On a phone it fills the screen.
+side. Drag its title bar to slide it left or right. On a phone it fills the
+screen.
 
 The bar at the top says which thread you answer. Press **Change** or **Continue
-a thread** to pick another thread, or **New email** to start a new one. On a
+a thread** to pick another thread, or **New email** to start a new one. Type in
+the search box to find an older thread, and press **Show more** to see more of
+them. On a
 reply, **Show earlier messages** under the text shows what came before. That
 text is only for you to read; it is not sent.
 
@@ -92,10 +95,10 @@ A channel reply, such as Telegram, drops the subject and Cc, because the channel
 has neither.
 
 ### How do I attach a file to an email?
-To attach a file to an email in Margince, press **Attach** beside **Send**. Pick a file under **Attach from this record**, or choose **Upload file**.
-1. In the composer, press **Attach** beside **Send**.
+To attach a file to an email in Margince, press **Attach** beside the text formatting, next to **Send**. Pick a file under **Attach from this record**, or choose **Upload file**.
+1. In the composer, press **Attach** beside the text formatting, next to **Send**.
 2. Pick a file under **Attach from this record**, or use **Upload file** ("Drop a file here, or choose one"). Press a file again to take it off.
-3. The file shows above **Send**; take it out with its **Remove** button.
+3. The file shows under the text; take it out with its **Remove** button.
 
 **Attach from this record** shows the 25 newest files filed on the record. **Upload
 file** first files the upload on the record, then attaches it, so the history
@@ -137,6 +140,9 @@ If Margince could not load the profile, the draft says so:
 > Your voice profile could not be loaded,
 > so this draft does not use your voice. Draft again, or edit before sending.
 
+Once a draft stands, **Change the ask** opens the ask again, so you can change
+what the next draft says.
+
 **Discard draft** marks the draft as a miss for your Voice DNA. Margince never
 keeps the text it wrote.
 
@@ -146,7 +152,7 @@ anything. **Delete draft** deletes the message.
 
 ### The four rewrites
 
-The AI draft offers four rewrites under **Rewrite**, beside the note that AI
+The AI draft offers four rewrites on its line, beside the note that AI
 wrote it. They work on text the model wrote that you have not edited yet. They are **Shorter**, **Warmer**, **More formal** and
 **Add a deadline**.
 
@@ -187,7 +193,7 @@ security notice.
 ### Why can't I send an email to this contact?
 When Margince will not send an email to a contact, the warning bar above **Send** names the reason. Where there is a fix, it names that too.
 - **Send blocked: no consent**: there is no consent for this purpose. Use **Review consent**, or press **Overrule with a reason** where it is offered.
-- **No recorded reason to contact this recipient**: press **Record reason for contact**, say why you may write, and press **Record reason**. It is recorded under your name for this kind of message, and it is not consent. If Margince still refuses when you press **Send**, press **Overrule with a reason**.
+- **No recorded reason to contact this recipient**: pick why you may write from the list beside the refusal. When **Reason for contact** already names it, press **Record this reason**. It is recorded at once under your name for this kind of message, and it is not consent. If Margince still refuses when you press **Send**, press **Overrule with a reason**.
 - **Overrule with a reason**: write why the message may go and press **Record the overrule**, then press **Send** again. Your reason is recorded on each contact, under your name, and covers that kind of message to them until someone revokes it. It is offered only where Margince itself refused. It is not offered when the contact objected or the address does not accept mail.
 - **Message cannot be sent**: a reason nobody can lift, such as "The recipient objected to marketing."
 - A mailbox connected only to read mail: press **Reconnect your mailbox** and allow sending.

@@ -272,7 +272,14 @@ func (r *Registry) SyncOnce(ctx context.Context, connectionID ids.UUID) error {
 		registry: r, connectionID: connectionID, generation: generation,
 		readRef: credentialRef, log: slog.Default(),
 	})
-	next, syncErr := syncer.Sync(runCtx, auth, connector.Cursor(cursor), r.sink)
+	// Where a first pull starts, held so a retry reads the same point. A
+	// connector with no bounded first pull answers the zero time and takes
+	// the plain Sync below.
+	from, err := r.syncStart(ctx, connectionID, generation, c.Descriptor(), connector.Cursor(cursor), r.now())
+	if err != nil {
+		return err
+	}
+	next, syncErr := syncFrom(runCtx, syncer, auth, connector.Cursor(cursor), from, r.sink)
 	if syncErr != nil {
 		// A transient failure never kills the connection (ADR-0063): the
 		// state machine classifies, backs off, degrades to a daily probe at
@@ -323,6 +330,14 @@ func (r *Registry) commitSyncCursor(ctx context.Context, connectionID ids.UUID, 
 		if tag.RowsAffected() == 0 {
 			superseded = true
 			return nil
+		}
+		// In the same transaction as the watermark. A cursor stored with the
+		// anchor still held leaves a stale lower bound, which a later
+		// re-anchor would read as a point somebody chose.
+		if len(cur) > 0 {
+			if err := releaseSyncAnchor(ctx, tx, connectionID, generation); err != nil {
+				return err
+			}
 		}
 		return nil
 	})

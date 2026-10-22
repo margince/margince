@@ -266,7 +266,7 @@ func seedTaskWithProposal(t *testing.T) (keptCommitment, ids.ApprovalID) {
 	if task.SourceId == nil {
 		t.Fatal("commitment task lost its identity")
 	}
-	raw, err := json.Marshal(CommitmentTaskProposal{SourceActivityID: e.activity.UUID, Summary: "Send revised pricing", Locator: *task.SourceId, SeatID: &e.Rep2})
+	raw, err := json.Marshal(CommitmentTaskProposal{SourceActivityID: e.activity.UUID, Summary: "Send revised pricing", Locator: *task.SourceId, SeatID: &e.Rep2, PromiserSeatID: &e.Rep2})
 	if err != nil {
 		t.Fatal(err)
 	}

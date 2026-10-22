@@ -15,8 +15,8 @@
   flex-direction: column;
   inline-size: min(var(--dockWidth), calc(100vw - var(--space-5) * 2));
   block-size: min(var(--dockHeight), calc(100dvh - var(--space-6)));
-  border-start-start-radius: var(--r-lg);
-  border-start-end-radius: var(--r-lg);
+  border-start-start-radius: var(--r-sm);
+  border-start-end-radius: var(--r-sm);
   background: var(--bgElevated);
   box-shadow: var(--shadow-pop);
   overflow: clip;
@@ -41,11 +41,18 @@
   align-items: center;
   gap: var(--space-1);
   min-block-size: var(--controlHeight);
+  padding-block: var(--space-1);
   padding-inline: var(--space-4) var(--space-1);
   background: var(--bgRail);
   color: var(--railIconActive);
+  /* The bar is the handle that slides the window along the bottom edge. */
+  cursor: grab;
+  touch-action: none;
 }
-.docked-title {
+.docked-head.is-sliding {
+  cursor: grabbing;
+}
+.docked-head .docked-title {
   flex: 1;
   min-inline-size: 0;
   margin: 0;
@@ -53,6 +60,8 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   color: inherit;
+  /* The bar names the window; the page's headings carry the weight. */
+  font-weight: var(--fontWeightMedium);
 }
 /* Bare glyphs on the dark bar: a ghost button's own fill and edge are drawn
    for a light page and read as grey boxes here. */
@@ -118,13 +127,13 @@
   min-block-size: var(--controlHeight);
   padding-inline: var(--space-4) var(--space-3);
   border: 0;
-  border-start-start-radius: var(--r-lg);
-  border-start-end-radius: var(--r-lg);
+  border-start-start-radius: var(--r-sm);
+  border-start-end-radius: var(--r-sm);
   background: var(--bgRail);
   color: var(--railIconActive);
   box-shadow: var(--shadow-pop);
   font: inherit;
-  font-weight: var(--fontWeightBold);
+  font-weight: var(--fontWeightMedium);
   cursor: pointer;
   text-align: start;
 }

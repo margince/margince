@@ -100,8 +100,6 @@ export const vi = {
     "Lượt xử lý đã xem xét đang chờ chạy. Tiến độ hiển thị ở trên.",
   "approval.scheduled.rearm":
     "Lên lịch thử gửi lại tin nhắn đang giữ sau khoảng chờ hiển thị. Quyền, người nhận và quy tắc liên lạc hiện tại được kiểm tra lại trước khi gửi.",
-  "approval.scheduled.direct":
-    "Ghi lại quyết định gửi tin nhắn bị từ chối này theo thẩm quyền của bạn và thử gửi ngay. Quyết định và giải thích được lưu; các kiểm tra gửi thông thường vẫn áp dụng.",
   "approval.scheduled.delay": "Thời gian chờ thử lại (phút)",
   "approval.read.profileField": "Trường hồ sơ",
   "approval.read.factField": "Thông tin công ty",
@@ -1697,6 +1695,7 @@ export const vi = {
   "systemJob.owed_verdict": "Kiểm tra thư cần trả lời",
   "systemJob.own_sent_mail_repair": "Sửa thư đã gửi",
   "systemJob.participant_backfill": "Bổ sung bên tham gia thư",
+  "systemJob.past_activity_clock_refold": "Cập nhật ngày hoạt động gần nhất",
   "systemJob.private_thread_strip": "Gỡ chuỗi thư riêng tư",
   "systemJob.provider_recovery": "Khôi phục nhà cung cấp bổ sung dữ liệu",
   "systemJob.provider_run_worker": "Yêu cầu tới nhà cung cấp bổ sung dữ liệu",
@@ -2556,6 +2555,9 @@ export const vi = {
   "list.lastActivity": "Hoạt động gần nhất",
   "list.filterOwnerMe": "Bạn chịu trách nhiệm",
   "list.filterOwnerAll": "Bất kỳ ai chịu trách nhiệm",
+  "list.ownerDeactivated": "{name} (đã vô hiệu hóa)",
+  "list.ownerSuspended": "{name} (đã tạm khóa)",
+  "list.ownerInvited": "{name} (đã mời)",
   "list.filterOwnerUnassigned": "Chưa giao",
   "list.team": "Nhóm",
   "list.filterTeamAll": "Mọi nhóm",
@@ -3344,8 +3346,6 @@ export const vi = {
   "approval.commitment.unverifiedNamed": "Chưa xác minh: {name}",
   "approval.commitment.unresolved": "Chưa xác định người cam kết",
   "approval.commitment.assignNamed": "Tạo công việc giao cho {name}.",
-  "approval.commitment.assignDecider":
-    "Tạo công việc giao cho người phê duyệt.",
   "approval.field.owner": "Người chịu trách nhiệm",
   "approval.field.sourceText": "Văn bản gốc",
   "approval.field.to": "Đến",
@@ -4409,6 +4409,9 @@ export const vi = {
     "Deal đã đóng, nhưng một số việc chưa hoàn thành được. Hãy hoàn thành chúng trong Danh sách công việc.",
   "deals.winNoEvidence":
     "Chưa đính kèm hợp đồng đã ký. Ghi lại cách chốt được deal; câu trả lời sẽ được lưu trên deal và tính vào báo cáo.",
+  "deals.winEvidenceChecking": "Đang kiểm tra hợp đồng của deal…",
+  "deals.winEvidenceRequired":
+    "Deal này chưa có hợp đồng đã ký kèm tệp đính kèm. Hãy ghi lại cách chốt được deal rồi xác nhận.",
   "deals.winReason": "Chốt được deal bằng cách nào?",
   "deals.winReasonPick": "Chọn cách chốt được deal",
   "deals.winReasonImported": "Nhập từ hệ thống khác",
@@ -5672,16 +5675,20 @@ export const vi = {
   "compose.earlierThreads_other": "{count} chuỗi thư trước",
   "compose.threadChange": "Đổi",
   "compose.threadContinue": "Tiếp tục chuỗi thư",
-  "compose.threads": "Tiếp tục chuỗi thư",
-  "compose.threadsWith": "Tiếp tục chuỗi thư với {name}",
+  "compose.threadsRecent": "Chuỗi thư gần đây",
+  "compose.threadsFound": "Chuỗi thư phù hợp",
+  "compose.threadSearch": "Tìm chuỗi thư",
+  "compose.threadSearchWith": "Tìm chuỗi thư với {name}",
+  "compose.threadSearchNone": "Không có chuỗi thư nào chứa các từ này.",
+  "compose.threadsMoreFailed":
+    "Không tải được các chuỗi thư cũ hơn. Nhấn Xem thêm để thử lại.",
+  "compose.threadsMore": "Xem thêm",
   "compose.newThread": "Chuỗi thư mới",
   "compose.copies": "Cc và Bcc",
   "compose.signsOffAs": "Kết thư bằng “{closing}”.",
+  "compose.reasonRecord": "Ghi lý do này",
+  "compose.reasonRecordFor": "Ghi lý do này: {reason}, cho {address}",
   "compose.reasonLabel": "Vì sao bạn có thể viết cho {address}",
-  "compose.reasonHint":
-    "Được ghi dưới tên bạn cho loại thư này. Đây không phải là sự đồng ý.",
-  "compose.reasonRecord": "Ghi lý do",
-  "compose.reasonRecording": "Đang ghi…",
   "compose.replyIntent": "Mục đích trả lời",
   "compose.newIntent": "Mục đích email",
   "compose.draftReply": "Soạn trả lời",
@@ -5692,6 +5699,7 @@ export const vi = {
     "Mô tả mục đích. Margince dùng ngữ cảnh của hồ sơ.",
   "compose.draftEmail": "Soạn email",
   "compose.drafting": "Đang soạn…",
+  "compose.askAgain": "Đổi yêu cầu",
   "compose.discardDraft": "Bỏ bản nháp",
   "compose.discardDraftHint":
     "Đánh dấu bản nháp này là chưa đạt để Voice DNA ghi nhận. Văn bản đã tạo sẽ không được lưu.",
@@ -7642,6 +7650,50 @@ export const vi = {
   "settings.recoveryHealth": "Diễn tập khôi phục",
   "settings.recoveryHealthSub":
     "Lần gần nhất diễn tập khôi phục từ bản sao lưu và thời gian thực hiện.",
+  "settings.automaticWork": "Việc tự động",
+  "settings.automaticWorkSub":
+    "Những việc Margince tự giao cho từng đồng nghiệp, và bao nhiêu trong số đó họ nói không thuộc về họ.",
+  "automaticWork.adminOnly":
+    "Việc tự động được đếm cho toàn bộ hệ thống và cần quyền mà vai trò của bạn không có.",
+  "automaticWork.window": "Số ngày được đếm",
+  "automaticWork.last7": "7 ngày qua",
+  "automaticWork.last30": "30 ngày qua",
+  "automaticWork.howCounted":
+    "Mỗi mục được đếm một lần, vào ngày nó được tạo ({range}), với kết quả hiện tại. Nếu tỷ lệ Không phải của tôi trên {threshold} với ít nhất {sample} mục, cần xem lại cách giao việc cho loại đó. Tỷ lệ này tự nó không thay đổi gì.",
+  "automaticWork.none":
+    "Margince không tạo việc tự động nào trong những ngày này.",
+  "automaticWork.col.colleague": "Đồng nghiệp",
+  "automaticWork.col.kind": "Loại",
+  "automaticWork.col.created": "Đã tạo",
+  "automaticWork.col.notMine": "Không phải của tôi",
+  "automaticWork.col.rerouted": "Quy tắc đã chuyển",
+  "automaticWork.col.dismissed": "Đã bỏ qua",
+  "automaticWork.col.rejected": "Đã từ chối",
+  "automaticWork.col.completed": "Đã xong hoặc đã chấp nhận",
+  "automaticWork.col.expired": "Đã hết hạn",
+  "automaticWork.col.open": "Đang mở",
+  "automaticWork.col.share": "Tỷ lệ Không phải của tôi",
+  "automaticWork.col.day": "Ngày",
+  "automaticWork.col.waitingNotMine": "Đã đánh dấu Không phải của tôi",
+  "automaticWork.kind.promise_task": "Việc từ một cam kết",
+  "automaticWork.kind.reply_reminder": "Nhắc trả lời",
+  "automaticWork.kind.approval_request": "Yêu cầu phê duyệt",
+  "automaticWork.noNotMine": "Không có lựa chọn Không phải của tôi",
+  "automaticWork.needsLook": "{share}, cần xem lại",
+  "automaticWork.fewItems": "{share}, quá ít mục để đánh giá",
+  "automaticWork.inactive": "{name} (không hoạt động)",
+  "automaticWork.days": "Các ngày của {name}, {kind}",
+  "automaticWork.quiet_one":
+    "{count} đồng nghiệp không có việc tự động trong những ngày này.",
+  "automaticWork.quiet_other":
+    "{count} đồng nghiệp không có việc tự động trong những ngày này.",
+  "automaticWork.unattributed_one":
+    "{count} mục thuộc về đồng nghiệp đã bị xóa.",
+  "automaticWork.unattributed_other":
+    "{count} mục thuộc về đồng nghiệp đã bị xóa.",
+  "automaticWork.waiting": "Tin nhắn đang chờ được đánh dấu Không phải của tôi",
+  "automaticWork.waitingSub":
+    "Margince không tạo tin nhắn đang chờ cho ai, nên nó không có tỷ lệ. Mỗi tin nhắn được đếm một lần.",
   "recoveryHealth.adminOnly":
     "Diễn tập khôi phục áp dụng cho toàn bộ hệ thống và cần quyền mà vai trò của bạn không có.",
   "recoveryHealth.lastDrill": "Lần diễn tập khôi phục gần nhất",
@@ -7689,6 +7741,10 @@ export const vi = {
   "captureHealth.col.runsEvery": "Chu kỳ chạy",
   "captureHealth.col.processed": "Đã xử lý",
   "captureHealth.col.state": "Trạng thái",
+  "captureHealth.col.unread": "Chưa đọc",
+  "captureHealth.unreadPeriod": "{from} đến {to}",
+  "captureHealth.unreadPeriodFolded":
+    "Thư từ {from} đến {to} chưa được đọc. Hãy bắt đầu nhập với khoảng thời gian lấy lại được tới {from}.",
   "captureHealth.col.owner": "Chủ hộp thư",
   "captureHealth.col.contacts": "Liên hệ đang chờ",
   "captureHealth.col.threads": "Chuỗi thư đang chờ",
@@ -11276,6 +11332,32 @@ export const vi = {
   "users.status.invited": "Đã mời",
   "users.status.deactivated": "Đã vô hiệu hóa",
   "users.status.suspended": "Đã tạm khóa",
+  "users.handover.action": "Bàn giao công việc",
+  "users.handover.title": "Bàn giao công việc của {name}",
+  "users.handover.body":
+    "Mọi lead, liên hệ, công ty, deal và dự án mà {name} chịu trách nhiệm sẽ chuyển cho đồng nghiệp bạn chọn. Việc cần làm, tự động hóa và Deal Room của họ vẫn giữ nguyên.",
+  "users.handover.receiver": "Giao cho",
+  "users.handover.choose": "Chọn đồng nghiệp",
+  "users.handover.confirm": "Bàn giao",
+  "users.handover.owns": "{name} vẫn chịu trách nhiệm {records}.",
+  "users.handover.ownsNothing":
+    "{name} không chịu trách nhiệm hồ sơ nào mà bạn xem được.",
+  "users.handover.deactivateNote":
+    "Vô hiệu hóa không chuyển hồ sơ nào. Hãy bàn giao trước, hoặc sau đó từ menu này.",
+  "users.handover.done": "Đã bàn giao {records} cho {name}.",
+  "users.handover.nothingMoved": "Không còn gì để bàn giao.",
+  "users.handover.left":
+    "Vẫn ở chỗ {name}: {records}. Bạn không được thay đổi những hồ sơ này.",
+  "users.handover.leads_one": "{count} lead",
+  "users.handover.leads_other": "{count} lead",
+  "users.handover.contacts_one": "{count} liên hệ",
+  "users.handover.contacts_other": "{count} liên hệ",
+  "users.handover.companies_one": "{count} công ty",
+  "users.handover.companies_other": "{count} công ty",
+  "users.handover.deals_one": "{count} deal",
+  "users.handover.deals_other": "{count} deal",
+  "users.handover.projects_one": "{count} dự án",
+  "users.handover.projects_other": "{count} dự án",
   "users.removeMfa": "Gỡ đăng nhập hai bước",
   "users.removeMfaConfirmTitle": "Gỡ đăng nhập hai bước của {name}?",
   "users.removeMfaConfirmBody":

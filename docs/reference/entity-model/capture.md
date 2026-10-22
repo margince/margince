@@ -178,7 +178,7 @@ The 24 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_connection
 
-24 columns · primary key `(id)` · referenced by 2 foreign keys
+27 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -200,7 +200,10 @@ The 24 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `share_acknowledged_at` | `timestamp with time zone` |  |  |
 | `signature_enrich_enabled` | `boolean` |  | This mailbox's own answer to reading contact details out of its mail, or null to follow the tenant default (`CaptureSettings.signature_enrich`). |
 | `status` | `text`, default `'disconnected'::text` | yes | Connection state; `reauth_required` when the stored token expired/was revoked upstream. |
+| `sync_anchor` | `timestamp with time zone` |  |  |
 | `sync_cursor` | `jsonb` |  | Opaque provider watermark (Gmail historyId / IMAP UID / Graph delta) for incremental capture; read-only. |
+| `unread_from` | `timestamp with time zone` |  |  |
+| `unread_to` | `timestamp with time zone` |  |  |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
 | `watch_expires_at` | `timestamp with time zone` |  | Push/delta subscription renewal deadline (Gmail Pub/Sub / Graph change-notification), or null. |
 | `watch_ref` | `text` |  |  |
@@ -221,6 +224,7 @@ The 24 tables owned by `capture`, as the migrations build them. [Back to the ent
 - `capture_connection_provider_check`: `CHECK ((provider = ANY (ARRAY['gmail', 'gcal', 'imap', 'graph', 'graphcal', 'whatsapp', 'telegram', 'offline_demo', 'test_mailbox'])))`
 - `capture_connection_status_check`: `CHECK ((status = ANY (ARRAY['connected', 'disconnected', 'error', 'reauth_required'])))`
 - `capture_connection_unique`: `UNIQUE (user_id, provider)`
+- `capture_connection_unread_period_whole`: `CHECK ((((unread_from IS NULL) AND (unread_to IS NULL)) OR ((unread_from IS NOT NULL) AND (unread_to IS NOT NULL) AND (unread_from < unread_to))))`
 
 **Indexes**
 

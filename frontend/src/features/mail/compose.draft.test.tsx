@@ -85,6 +85,12 @@ function draftsInTurn(...drafts: object[]) {
   };
 }
 
+// Once a draft stands, the ask is folded behind its own control on the line.
+async function askAgain() {
+  await userEvent.click(screen.getByRole("button", { name: "Change the ask" }));
+  await userEvent.click(draftButton());
+}
+
 function renderComposer(onClose = vi.fn()) {
   render(
     <ComposeModal
@@ -128,6 +134,37 @@ describe("ComposeModal draft binding", () => {
     });
   });
 
+  it("drafts again with a changed ask", async () => {
+    const sent = stubRoutes({
+      "GET /voice-profiles": () => jsonResponse(PROVISIONAL_VOICE_PROFILE),
+      "POST /activities/act-1/draft-email": draftsInTurn(
+        voiceDraft("vd-a", "Re: Q3", "Draft A body."),
+        voiceDraft("vd-b", "Re: Q3", "Draft B body."),
+      ),
+      // Typing the ask is long enough for the composer to keep a draft.
+      "PUT /mail-drafts": () => emptyResponse(204),
+    });
+    renderComposer();
+    await screen.findByRole("combobox", { name: WHY_ASK });
+
+    await userEvent.click(draftButton());
+    await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
+    await userEvent.click(
+      screen.getByRole("button", { name: "Change the ask" }),
+    );
+    const ask = screen.getByRole("textbox", { name: "Purpose of the reply" });
+    await userEvent.clear(ask);
+    await userEvent.type(ask, "Offer Tuesday instead");
+    await userEvent.click(draftButton());
+
+    await waitFor(() =>
+      expect(
+        sent.filter((r) => r.key === "POST /activities/act-1/draft-email")[1]
+          ?.body,
+      ).toMatchObject({ intent: "Offer Tuesday instead" }),
+    );
+  });
+
   it("keeps the earlier reference when a re-draft leaves the typed body alone", async () => {
     // The fill rule never clobbers text the rep has touched, so the second
     // draft's words are discarded. Adopting its reference anyway would submit
@@ -147,7 +184,7 @@ describe("ComposeModal draft binding", () => {
     await userEvent.click(draftButton());
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     writeMessage("Body", "Draft A body. And my own line.");
-    await userEvent.click(draftButton());
+    await askAgain();
     await waitFor(() =>
       expect(
         sent.filter((r) => r.key === "POST /activities/act-1/draft-email")
@@ -492,7 +529,7 @@ describe("ComposeModal draft provenance", () => {
     await userEvent.click(draftButton());
     await waitFor(() => expect(messageText("Body")).toBe("Draft A body."));
     writeMessage("Body", "Draft A body. And my own line.");
-    await userEvent.click(draftButton());
+    await askAgain();
     await waitFor(() =>
       expect(
         sent.filter((r) => r.key === "POST /activities/act-1/draft-email")

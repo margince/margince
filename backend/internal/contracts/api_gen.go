@@ -2908,6 +2908,51 @@ func (e AuthorizationSeatType) Valid() bool {
 	}
 }
 
+// Defines values for AutomaticWorkColleagueStatus.
+const (
+	AutomaticWorkColleagueStatusActive      AutomaticWorkColleagueStatus = "active"
+	AutomaticWorkColleagueStatusDeactivated AutomaticWorkColleagueStatus = "deactivated"
+	AutomaticWorkColleagueStatusInvited     AutomaticWorkColleagueStatus = "invited"
+	AutomaticWorkColleagueStatusSuspended   AutomaticWorkColleagueStatus = "suspended"
+)
+
+// Valid indicates whether the value is a known member of the AutomaticWorkColleagueStatus enum.
+func (e AutomaticWorkColleagueStatus) Valid() bool {
+	switch e {
+	case AutomaticWorkColleagueStatusActive:
+		return true
+	case AutomaticWorkColleagueStatusDeactivated:
+		return true
+	case AutomaticWorkColleagueStatusInvited:
+		return true
+	case AutomaticWorkColleagueStatusSuspended:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AutomaticWorkKindName.
+const (
+	AutomaticWorkKindNameApprovalRequest AutomaticWorkKindName = "approval_request"
+	AutomaticWorkKindNamePromiseTask     AutomaticWorkKindName = "promise_task"
+	AutomaticWorkKindNameReplyReminder   AutomaticWorkKindName = "reply_reminder"
+)
+
+// Valid indicates whether the value is a known member of the AutomaticWorkKindName enum.
+func (e AutomaticWorkKindName) Valid() bool {
+	switch e {
+	case AutomaticWorkKindNameApprovalRequest:
+		return true
+	case AutomaticWorkKindNamePromiseTask:
+		return true
+	case AutomaticWorkKindNameReplyReminder:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AutomationLastRunOutcome.
 const (
 	AutomationLastRunOutcomeBlocked           AutomationLastRunOutcome = "blocked"
@@ -4392,19 +4437,16 @@ func (e CommunicationReviewKind) Valid() bool {
 
 // Defines values for CommunicationReviewState.
 const (
-	CommunicationReviewStateAwaitingDecision CommunicationReviewState = "awaiting_decision"
-	CommunicationReviewStateCancelled        CommunicationReviewState = "cancelled"
-	CommunicationReviewStateNeedsContext     CommunicationReviewState = "needs_context"
-	CommunicationReviewStateNeedsRepair      CommunicationReviewState = "needs_repair"
-	CommunicationReviewStateResolved         CommunicationReviewState = "resolved"
-	CommunicationReviewStateSuperseded       CommunicationReviewState = "superseded"
+	CommunicationReviewStateCancelled    CommunicationReviewState = "cancelled"
+	CommunicationReviewStateNeedsContext CommunicationReviewState = "needs_context"
+	CommunicationReviewStateNeedsRepair  CommunicationReviewState = "needs_repair"
+	CommunicationReviewStateResolved     CommunicationReviewState = "resolved"
+	CommunicationReviewStateSuperseded   CommunicationReviewState = "superseded"
 )
 
 // Valid indicates whether the value is a known member of the CommunicationReviewState enum.
 func (e CommunicationReviewState) Valid() bool {
 	switch e {
-	case CommunicationReviewStateAwaitingDecision:
-		return true
 	case CommunicationReviewStateCancelled:
 		return true
 	case CommunicationReviewStateNeedsContext:
@@ -19034,6 +19076,7 @@ func (e UpsertPartnerRequestRelationshipStage) Valid() bool {
 const (
 	UserAllowedActionsChangeRole        UserAllowedActions = "change_role"
 	UserAllowedActionsDeactivate        UserAllowedActions = "deactivate"
+	UserAllowedActionsHandOver          UserAllowedActions = "hand_over"
 	UserAllowedActionsIssuePasswordLink UserAllowedActions = "issue_password_link"
 	UserAllowedActionsReactivate        UserAllowedActions = "reactivate"
 	UserAllowedActionsRemoveMfa         UserAllowedActions = "remove_mfa"
@@ -19045,6 +19088,8 @@ func (e UserAllowedActions) Valid() bool {
 	case UserAllowedActionsChangeRole:
 		return true
 	case UserAllowedActionsDeactivate:
+		return true
+	case UserAllowedActionsHandOver:
 		return true
 	case UserAllowedActionsIssuePasswordLink:
 		return true
@@ -26531,7 +26576,7 @@ type ApplyTagRequestEntityType string
 
 // Approval A staged 🟡 confirm-first action awaiting human decision.
 type Approval struct {
-	// AssigneeInactive For a pending commitment, whether its named task assignee cannot receive the task. True for invited, deactivated, archived, missing, or agent seats. Absent for an unassigned proposal. This is current decision context, not a change to the staged assignee.
+	// AssigneeInactive For a pending commitment, whether its named task assignee cannot receive the task. True for deactivated, archived, missing, or agent seats. An invited colleague can. Absent for an unassigned proposal. This is current decision context, not a change to the staged assignee.
 	AssigneeInactive *bool `json:"assignee_inactive,omitempty"`
 
 	// BundleId The act that staged this proposal together with its siblings: today, a website read's company facts and the leads it published. Null for a proposal staged on its own. It is a grouping id, not a foreign key: there is no
@@ -28247,6 +28292,117 @@ type AuthorizationRowScope string
 // AuthorizationSeatType The licensing seat. A read seat may read but never mutate over REST, whatever its role grants. A client that cannot read a recognized value MUST assume a read seat: the ceiling fails closed, so an omission never buys the ability to mutate.
 type AuthorizationSeatType string
 
+// AutomaticWorkColleague defines model for AutomaticWorkColleague.
+type AutomaticWorkColleague struct {
+	DisplayName string                       `json:"display_name"`
+	Status      AutomaticWorkColleagueStatus `json:"status"`
+
+	// Tallies One per kind, in the order of `kinds`.
+	Tallies []AutomaticWorkTally `json:"tallies"`
+	UserId  openapi_types.UUID   `json:"user_id"`
+
+	// WaitingNotMine Waiting messages this colleague marked "Not mine" on the Worklist in the window, each
+	// message once. A waiting message is not an item automation creates, so it has no
+	// created count and no share.
+	WaitingNotMine int `json:"waiting_not_mine"`
+}
+
+// AutomaticWorkColleagueStatus defines model for AutomaticWorkColleague.Status.
+type AutomaticWorkColleagueStatus string
+
+// AutomaticWorkCounts Each created item holds exactly one outcome, so the outcomes add up to `created`.
+type AutomaticWorkCounts struct {
+	// Completed The task is done, or the decider accepted the approval request.
+	Completed int `json:"completed"`
+	Created   int `json:"created"`
+
+	// Dismissed A colleague archived the task without doing it.
+	Dismissed int `json:"dismissed"`
+
+	// Expired The item aged out unanswered.
+	Expired int `json:"expired"`
+
+	// NotMine A colleague moved the task to someone else, which says it was not theirs. It stays Not mine if the task comes back later.
+	NotMine int `json:"not_mine"`
+
+	// Open The item is still waiting.
+	Open int `json:"open"`
+
+	// Rejected The decider rejected the approval request. A rejection judges the change, not who was asked.
+	Rejected int `json:"rejected"`
+
+	// Rerouted A rule moved the item to someone else, as an approval follows a deal's new owner. Every move of an approval request counts here.
+	Rerouted int `json:"rerouted"`
+}
+
+// AutomaticWorkDay defines model for AutomaticWorkDay.
+type AutomaticWorkDay struct {
+	// Counts Each created item holds exactly one outcome, so the outcomes add up to `created`.
+	Counts AutomaticWorkCounts `json:"counts"`
+	Date   openapi_types.Date  `json:"date"`
+}
+
+// AutomaticWorkHealth What automation handed out per colleague, per day and per kind of item, and what each item
+// has become. An item is counted once, on its creation day, with the outcome it holds now.
+// `not_mine_share` is the routing number: the items a colleague said were not theirs, out of the
+// items created for them. It is a reading for an admin to look at, never a trigger.
+type AutomaticWorkHealth struct {
+	// Colleagues Every active colleague, with a tally for every kind even when it is zero, and any other
+	// seat that was named by an item in the window.
+	Colleagues []AutomaticWorkColleague `json:"colleagues"`
+
+	// Days How many days the window covers, today included.
+	Days int `json:"days"`
+
+	// FirstDay The first day of the window, in the installation's time zone, which decides the day an item falls on.
+	FirstDay    openapi_types.Date `json:"first_day"`
+	GeneratedAt time.Time          `json:"generated_at"`
+
+	// Kinds Every kind of item, always all of them, with what its records can tell.
+	Kinds   []AutomaticWorkKind `json:"kinds"`
+	LastDay openapi_types.Date  `json:"last_day"`
+
+	// ShareThreshold The share above which a kind's routing needs a look, as a fraction (0.1 is 10%).
+	ShareThreshold float32 `json:"share_threshold"`
+
+	// SmallSampleBelow Below this many created items a share is shown but never flagged.
+	SmallSampleBelow int `json:"small_sample_below"`
+
+	// Unattributed Items in the window whose first named colleague no longer exists.
+	Unattributed int `json:"unattributed"`
+}
+
+// AutomaticWorkKind defines model for AutomaticWorkKind.
+type AutomaticWorkKind struct {
+	Kind AutomaticWorkKindName `json:"kind"`
+
+	// RecordsNotMine Whether a colleague can say an item of this kind is not theirs. An approval request has
+	// no such choice: its decider can only accept or reject it, so its share is null.
+	RecordsNotMine bool `json:"records_not_mine"`
+}
+
+// AutomaticWorkKindName defines model for AutomaticWorkKindName.
+type AutomaticWorkKindName string
+
+// AutomaticWorkTally defines model for AutomaticWorkTally.
+type AutomaticWorkTally struct {
+	// AboveThreshold The share is above `share_threshold` on a sample large enough to judge.
+	AboveThreshold bool `json:"above_threshold"`
+
+	// ByDay The days with at least one created item, oldest first. A day absent from it created nothing.
+	ByDay []AutomaticWorkDay `json:"by_day"`
+
+	// Counts Each created item holds exactly one outcome, so the outcomes add up to `created`.
+	Counts AutomaticWorkCounts   `json:"counts"`
+	Kind   AutomaticWorkKindName `json:"kind"`
+
+	// NotMineShare not_mine out of created, as a fraction. Null when nothing was created or the kind has no "Not mine".
+	NotMineShare *float32 `json:"not_mine_share"`
+
+	// SmallSample Fewer items were created than `small_sample_below`, so the share says little.
+	SmallSample bool `json:"small_sample"`
+}
+
 // Automation A configured automation instance (feedback/14).
 type Automation struct {
 	CreatedAt time.Time          `json:"created_at"`
@@ -29597,6 +29753,10 @@ type CaptureMailboxHealth struct {
 	// ThreadsAwaitingVerdict Threads whose confidentiality question is still open, so their messages stay held.
 	ThreadsAwaitingVerdict int `json:"threads_awaiting_verdict"`
 
+	// UnreadPeriod A period no sync read, when a first sync failed for longer than the point it had held. Absent when there is none, which is the ordinary case.
+	// It is reported because the alternative is a mailbox that looks synced and is missing a week. The backfill reaches this period, so the owner can ask for it back, and the dates are what they point it at.
+	UnreadPeriod *CaptureUnreadPeriod `json:"unread_period,omitempty"`
+
 	// UserId The mailbox owner.
 	UserId openapi_types.UUID `json:"user_id"`
 }
@@ -29944,6 +30104,15 @@ type CaptureTraceResolution struct {
 
 // CaptureTraceResolutionStatus defines model for CaptureTraceResolution.Status.
 type CaptureTraceResolutionStatus string
+
+// CaptureUnreadPeriod The span between where a held first-sync anchor pointed and where the sync had to start instead. Both ends or neither: a start with no end is a period nobody can ask for again.
+type CaptureUnreadPeriod struct {
+	// From The first moment nobody read.
+	From time.Time `json:"from"`
+
+	// To The moment reading resumed.
+	To time.Time `json:"to"`
+}
 
 // CaptureVerdictClock When one verdict pass runs. Derived from the cadence the job declares and from the queue itself, never from a number written down beside the screen: a second copy of the schedule drifts from the one the worker actually keeps, and the reader would be told a time nothing fires at.
 type CaptureVerdictClock struct {
@@ -30413,13 +30582,6 @@ type CommitmentMeaning struct {
 // security warning.
 type CommunicationContext string
 
-// CommunicationDecisionRequested The approval card a routed refusal was staged as.
-type CommunicationDecisionRequested struct {
-	// ApprovalId The card carrying the question. A second ask about the same review answers the same id:
-	// one refused message is one decision.
-	ApprovalId openapi_types.UUID `json:"approval_id"`
-}
-
 // CommunicationEvidence Records the caller can name in support of a send, each by id. Evidence is
 // CHECKED, never trusted: the engine reads the named record and asks whether it
 // actually supports the category claimed — a deal id that is closed, an invoice
@@ -30452,11 +30614,6 @@ type CommunicationEvidence struct {
 // given — a reader asking why a message was refused on Tuesday needs Tuesday's answer, not
 // what the consent rows say today.
 type CommunicationReview struct {
-	// ApprovalId The card a routed review was handed to, so a decider reading this can find the decision
-	// they are being asked to make. Null on a review nobody has asked about, which is most of
-	// them.
-	ApprovalId *openapi_types.UUID `json:"approval_id,omitempty"`
-
 	// DeliveryIntentId The held message this review can resume. A refused send freezes the message into a held
 	// `scheduled_send` — subject, body, recipients, attachments and the claimed purpose — so
 	// resolving the review fires what the rep wrote rather than something retyped from memory.
@@ -30478,9 +30635,7 @@ type CommunicationReview struct {
 	// State What is NEEDED rather than who is blocked: `needs_context` is a fact about the message
 	// and stays true whoever is looking at it. `needs_repair` is a refusal no evidence can
 	// answer — an objection, a dead address — where offering a context form would invite a rep
-	// to argue with a withdrawal. `awaiting_decision` is a refusal the rep has handed to
-	// somebody who may override it: their work no longer, so a surface should say so rather
-	// than showing them a form they have already filled in.
+	// to argue with a withdrawal.
 	State CommunicationReviewState `json:"state"`
 
 	// Warning The caution a human reads before overruling the engine, with the version that identifies
@@ -30495,23 +30650,8 @@ type CommunicationReviewKind string
 // CommunicationReviewState What is NEEDED rather than who is blocked: `needs_context` is a fact about the message
 // and stays true whoever is looking at it. `needs_repair` is a refusal no evidence can
 // answer — an objection, a dead address — where offering a context form would invite a rep
-// to argue with a withdrawal. `awaiting_decision` is a refusal the rep has handed to
-// somebody who may override it: their work no longer, so a surface should say so rather
-// than showing them a form they have already filled in.
+// to argue with a withdrawal.
 type CommunicationReviewState string
-
-// CommunicationReviewList A page of refused sends waiting for a decision.
-type CommunicationReviewList struct {
-	Data []CommunicationReview `json:"data"`
-
-	// Page Where this page was cut. `total` beside it is the same count this object may carry, kept
-	// at the top level because it shipped there: a client reading it keeps working.
-	Page PageInfo `json:"page"`
-
-	// Total How many are waiting in total. A page at its limit has more behind it, and this is how
-	// the caller knows rather than by discovering it.
-	Total int `json:"total"`
-}
 
 // Company A company. Mirrors the `company` table.
 type Company struct {
@@ -30551,7 +30691,7 @@ type Company struct {
 	// cannot be archived or merged. A caller that offers company actions should tell it apart.
 	IsAnchor *bool `json:"is_anchor,omitempty"`
 
-	// LastActivityAt When something last happened with this account: the newest `occurred_at` of a workspace-audience activity linked to it, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first such activity. Sortable (DM-VOCAB-2).
+	// LastActivityAt When something last happened with this account: the newest `occurred_at` at or before now of a workspace-audience activity linked to it, so a booked meeting counts once it starts, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first such activity. Sortable (DM-VOCAB-2).
 	// A message limited to its participants does NOT move this date, even for a reader who may read that message. The value is one number every reader sees, so it can only count what every reader may see.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
@@ -30859,7 +30999,7 @@ type Company360Deal struct {
 	StageId           *openapi_types.UUID      `json:"stage_id,omitempty"`
 	StageName         *string                  `json:"stage_name,omitempty"`
 
-	// Stalled No linked activity inside the 60-day stall window.
+	// Stalled No linked activity inside the 60-day stall window, and no booked meeting ahead.
 	Stalled bool `json:"stalled"`
 
 	// Status Always `open` in the 360's `deals.data` — closed deals are reported by
@@ -33529,7 +33669,7 @@ type Contact struct {
 	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
 	ImportedFrom *string `json:"imported_from,omitempty"`
 
-	// LastActivityAt When something last happened with this contact: the newest `occurred_at` of an activity linked to it, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first linked activity. Sortable (DM-VOCAB-1).
+	// LastActivityAt When something last happened with this contact: the newest `occurred_at` at or before now of an activity linked to it, so a booked meeting counts once it starts, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first linked activity. Sortable (DM-VOCAB-1).
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 	LastName       *string    `json:"last_name,omitempty"`
 
@@ -36183,7 +36323,7 @@ type Deal struct {
 	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
 	ImportedFrom *string `json:"imported_from,omitempty"`
 
-	// LastActivityAt Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.
+	// LastActivityAt The newest `occurred_at` at or before now of a workspace-audience activity filed under the deal, so a booked meeting counts once it starts. Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
 	// LastEmail The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
@@ -36220,7 +36360,7 @@ type Deal struct {
 	// StageId The deal's current stage; must belong to pipeline_id.
 	StageId *openapi_types.UUID `json:"stage_id"`
 
-	// Stalled Derived — no activity past the threshold (absolute duration).
+	// Stalled Derived — no activity past the threshold (absolute duration). A booked workspace-audience meeting ahead keeps the deal off stalled until it starts or is called off.
 	Stalled   *bool      `json:"stalled,omitempty"`
 	Status    DealStatus `json:"status"`
 	Tags      *[]RowTag  `json:"tags,omitempty"`
@@ -36999,6 +37139,14 @@ type DealSuggestionEvidenceKind string
 type DealSuggestionListResponse struct {
 	Data []DealSuggestion `json:"data"`
 	Page PageInfo         `json:"page"`
+}
+
+// DealWinEvidence defines model for DealWinEvidence.
+type DealWinEvidence struct {
+	// HasSignedContract True when the deal has a contract that left draft, with a signing date and a
+	// current or final contract or legal file attached. A win on such a deal needs
+	// no reason; any other win names why there is none.
+	HasSignedContract bool `json:"has_signed_contract"`
 }
 
 // DecideCommissionRequest defines model for DecideCommissionRequest.
@@ -38675,6 +38823,12 @@ type GrowthFitSubScore struct {
 // GrowthFitSubScoreDimension The four the assessment decomposes into. A closed enum rather than free text, so a surface can label and order them and a model cannot invent a fifth.
 type GrowthFitSubScoreDimension string
 
+// HandOverUserWorkRequest defines model for HandOverUserWorkRequest.
+type HandOverUserWorkRequest struct {
+	// ToUserId The colleague who takes the work over.
+	ToUserId openapi_types.UUID `json:"to_user_id"`
+}
+
 // HandledForYou What the product did on this reader's behalf, reported rather than asked about.
 //
 // The queue is a list of obligations; this is the opposite surface — work that is
@@ -38697,6 +38851,15 @@ type HandledForYou struct {
 
 	// Truncated True when more was done than was read. The list is a floor, not a total.
 	Truncated bool `json:"truncated"`
+}
+
+// HandoverCounts Live records per kind.
+type HandoverCounts struct {
+	Company int `json:"company"`
+	Contact int `json:"contact"`
+	Deal    int `json:"deal"`
+	Lead    int `json:"lead"`
+	Project int `json:"project"`
 }
 
 // HealthDimension One named part of the relationship's health, with the reason for its rating.
@@ -40996,7 +41159,7 @@ type Lead struct {
 	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
 	ImportedFrom *string `json:"imported_from,omitempty"`
 
-	// LastActivityAt Most recent activity linked to this lead — the "last touch" a work queue row shows (ADR-0118). Derived from activity_link, not stored on the lead.
+	// LastActivityAt Most recent activity at or before now linked to this lead — the "last touch" a work queue row shows (ADR-0118). Derived from activity_link, not stored on the lead.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
 	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
@@ -47258,18 +47421,6 @@ type RequestAccessResponse struct {
 	Requested bool `json:"requested"`
 }
 
-// RequestCommunicationDecisionRequest What the colleague asking wants the decider to know.
-type RequestCommunicationDecisionRequest struct {
-	// Note Why this message should go, in the asker's own words. Optional — a refusal is often
-	// self-explanatory — but it is what the approver reads and therefore what the record says
-	// they acted on.
-	//
-	// Bounded by what an instruction's explanation accepts, because that is where these words
-	// end up. A note the record could not hold would stage a card that fails when somebody
-	// approves it.
-	Note *string `json:"note,omitempty"`
-}
-
 // RequestDeadline The deadline a request of one kind received at one instant gets, and the rule that set it.
 type RequestDeadline struct {
 	DueAt time.Time `json:"due_at"`
@@ -48652,7 +48803,7 @@ type SetDealRoomExpiryRequest struct {
 
 // SetFxRateRequest defines model for SetFxRateRequest.
 type SetFxRateRequest struct {
-	// EffectiveDate Defaults to today; must not be in the past (append-forward).
+	// EffectiveDate Defaults to today. A past date is accepted only when the currency has no rate yet or the date is earlier than every rate stored for it.
 	EffectiveDate *openapi_types.Date `json:"effective_date,omitempty"`
 
 	// FromCurrency 3-letter ISO; must not equal the base currency.
@@ -51536,12 +51687,15 @@ type UpsertPartnerRequestRelationshipStage string
 
 // User A seat — human or first-party agent. Mirrors `app_user`.
 type User struct {
-	// AllowedActions The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
+	// AllowedActions The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
 	AllowedActions *[]UserAllowedActions `json:"allowed_actions,omitempty"`
 	ArchivedAt     *time.Time            `json:"archived_at,omitempty"`
-	CreatedAt      *time.Time            `json:"created_at,omitempty"`
-	DisplayName    string                `json:"display_name"`
-	Email          openapi_types.Email   `json:"email"`
+
+	// Assignable Whether the CALLER may make this member the owner of a record right now: the same check an owner change runs (an active human seat that can write, inside the caller's own write scope), so a picker built on it offers only owners the write will accept. Present on `listUsers`; absent means not computed, and a client then offers the member and lets the write decide. A deactivated member is listed with `false` on the management view, so a list can still be filtered by the work they left behind.
+	Assignable  *bool               `json:"assignable,omitempty"`
+	CreatedAt   *time.Time          `json:"created_at,omitempty"`
+	DisplayName string              `json:"display_name"`
+	Email       openapi_types.Email `json:"email"`
 
 	// GreetingName The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said. Read through one rule on both sides: this when set, else the first word of `display_name`. Present on the caller's own seat; absent on the roster.
 	GreetingName *string            `json:"greeting_name,omitempty"`
@@ -51583,6 +51737,21 @@ type UserLocale string
 // UserStatus `invited` is a seat that exists and has never been entered: the member holds a licensed seat and appears in the roster, but has set no password and can sign in by no method until they redeem their invitation link. Redeeming it makes them `active`, which is the only status that may sign in.
 // An invited member counts against the licensed seat count, so an invitation that was sent to the wrong address is released by deactivating it.
 type UserStatus string
+
+// UserHandover defines model for UserHandover.
+type UserHandover struct {
+	// Owned Live records per kind.
+	Owned HandoverCounts `json:"owned"`
+}
+
+// UserHandoverResult defines model for UserHandoverResult.
+type UserHandoverResult struct {
+	// Left Live records per kind.
+	Left HandoverCounts `json:"left"`
+
+	// Moved Live records per kind.
+	Moved HandoverCounts `json:"moved"`
+}
 
 // UserListResponse defines model for UserListResponse.
 type UserListResponse struct {
@@ -54904,6 +55073,12 @@ type SendMessageParams struct {
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
 }
 
+// GetAutomaticWorkHealthParams defines parameters for GetAutomaticWorkHealth.
+type GetAutomaticWorkHealthParams struct {
+	// Days How many days back the window reaches, today included.
+	Days *int `form:"days,omitempty" json:"days,omitempty"`
+}
+
 // ActivateHomeRepairJSONBody defines parameters for ActivateHomeRepair.
 type ActivateHomeRepairJSONBody struct {
 	Review  HomeRepairReview `json:"review"`
@@ -55760,21 +55935,6 @@ type ListOpenCommitmentsParams struct {
 
 	// Limit Cap the set. 50 is also the ceiling.
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
-}
-
-// ListCommunicationReviewsParams defines parameters for ListCommunicationReviews.
-type ListCommunicationReviewsParams struct {
-	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
-
-	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
-	// effective `sort` of the originating request (field + direction) plus the last row's keyset
-	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
-	// together with a `sort` that differs from the one the cursor was minted under returns
-	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
-	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
-	// remaining pages see, so re-issue the query without the cursor when changing filters.
-	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
 }
 
 // ListCompaniesParams defines parameters for ListCompanies.
@@ -57620,7 +57780,7 @@ type ListDealsParams struct {
 	// the buckets partition the CATEGORISED pipeline, not the pipeline.
 	ForecastCategory *ListDealsParamsForecastCategory `form:"forecast_category,omitempty" json:"forecast_category,omitempty"`
 
-	// Stalled Deterministic stalled flag (no activity past the threshold).
+	// Stalled Deterministic stalled flag (no activity past the threshold, and no booked meeting ahead).
 	Stalled *bool `form:"stalled,omitempty" json:"stalled,omitempty"`
 
 	// ProjectId Filter to the deals belonging to one body of work.
@@ -60867,6 +61027,30 @@ type NameSeatsParams struct {
 	Id []openapi_types.UUID `form:"id" json:"id"`
 }
 
+// HandOverUserWorkParams defines parameters for HandOverUserWork.
+type HandOverUserWorkParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // ListSavedViewsParams defines parameters for ListSavedViews.
 type ListSavedViewsParams struct {
 	Resource *SavedViewResource `form:"resource,omitempty" json:"resource,omitempty"`
@@ -61690,9 +61874,6 @@ type RecordCommunicationContextJSONRequestBody = RecordCommunicationContextReque
 // DirectCommunicationSendJSONRequestBody defines body for DirectCommunicationSend for application/json ContentType.
 type DirectCommunicationSendJSONRequestBody = DirectCommunicationSendRequest
 
-// RequestCommunicationDecisionJSONRequestBody defines body for RequestCommunicationDecision for application/json ContentType.
-type RequestCommunicationDecisionJSONRequestBody = RequestCommunicationDecisionRequest
-
 // CreateCompanyJSONRequestBody defines body for CreateCompany for application/json ContentType.
 type CreateCompanyJSONRequestBody = CreateCompanyRequest
 
@@ -62403,6 +62584,9 @@ type CreateFormerMemberJSONRequestBody = FormerMemberRequest
 
 // DeactivateUserJSONRequestBody defines body for DeactivateUser for application/json ContentType.
 type DeactivateUserJSONRequestBody = DeactivateUserRequest
+
+// HandOverUserWorkJSONRequestBody defines body for HandOverUserWork for application/json ContentType.
+type HandOverUserWorkJSONRequestBody = HandOverUserWorkRequest
 
 // ChangeUserRoleJSONRequestBody defines body for ChangeUserRole for application/json ContentType.
 type ChangeUserRoleJSONRequestBody = ChangeUserRoleRequest
@@ -73037,6 +73221,9 @@ type ServerInterface interface {
 	// Edit the questions for future outcome reviews.
 	// (PATCH /activity-review-templates/{id})
 	UpdateActivityReviewTemplate(w http.ResponseWriter, r *http.Request, id Id)
+	// Per colleague and day, how much work automation handed out and what became of it.
+	// (GET /admin/automatic-work-health)
+	GetAutomaticWorkHealth(w http.ResponseWriter, r *http.Request, params GetAutomaticWorkHealthParams)
 	// What capture's judgement queues are holding, and in whose mailbox.
 	// (GET /admin/capture-health)
 	GetCaptureHealth(w http.ResponseWriter, r *http.Request)
@@ -73631,9 +73818,6 @@ type ServerInterface interface {
 	// The promises still open, overdue first.
 	// (GET /commitments)
 	ListOpenCommitments(w http.ResponseWriter, r *http.Request, params ListOpenCommitmentsParams)
-	// Refused sends waiting on somebody who may decide them.
-	// (GET /communication-reviews)
-	ListCommunicationReviews(w http.ResponseWriter, r *http.Request, params ListCommunicationReviewsParams)
 	// What a refused send was refused for, and for whom.
 	// (GET /communication-reviews/{id})
 	GetCommunicationReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -73643,9 +73827,6 @@ type ServerInterface interface {
 	// Send a refused message anyway, on a named human's recorded decision.
 	// (POST /communication-reviews/{id}/direct-send)
 	DirectCommunicationSend(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// Retired. Asking a colleague to decide a refused send is no longer offered.
-	// (POST /communication-reviews/{id}/request-decision)
-	RequestCommunicationDecision(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// List companies (live by default; cursor-paginated).
 	// (GET /companies)
 	ListCompanies(w http.ResponseWriter, r *http.Request, params ListCompaniesParams)
@@ -74261,6 +74442,9 @@ type ServerInterface interface {
 	// Where the deal stands, what could lose it, and the one thing to do next.
 	// (GET /deals/{id}/status)
 	GetDealStatus(w http.ResponseWriter, r *http.Request, id Id, params GetDealStatusParams)
+	// Whether the deal has the signed agreement a win rests on.
+	// (GET /deals/{id}/win-evidence)
+	GetDealWinEvidence(w http.ResponseWriter, r *http.Request, id Id)
 	// The dedupe review queue, confidence-sorted.
 	// (GET /dedupe/candidates)
 	ListDedupeCandidates(w http.ResponseWriter, r *http.Request, params ListDedupeCandidatesParams)
@@ -74399,7 +74583,7 @@ type ServerInterface interface {
 	// List current FX rates (latest per currency), or one pair's history.
 	// (GET /fx-rates)
 	ListFxRates(w http.ResponseWriter, r *http.Request, params ListFxRatesParams)
-	// Set an FX rate effective today or later (append-forward).
+	// Set an FX rate effective today or later, or in the past before any stored rate.
 	// (POST /fx-rates)
 	SetFxRate(w http.ResponseWriter, r *http.Request)
 	// List the base currency and the currency codes on the FX rate sheet, without their rates.
@@ -75416,6 +75600,12 @@ type ServerInterface interface {
 	// Deactivate a member and revoke their live access. Admin-only, human-only.
 	// (POST /users/{id}/deactivate)
 	DeactivateUser(w http.ResponseWriter, r *http.Request, id Id)
+	// Count the live records a member still owns. Member administration, human-only.
+	// (GET /users/{id}/handover)
+	GetUserHandover(w http.ResponseWriter, r *http.Request, id Id)
+	// Move every live record a member owns to a colleague. Member administration, human-only.
+	// (POST /users/{id}/handover)
+	HandOverUserWork(w http.ResponseWriter, r *http.Request, id Id, params HandOverUserWorkParams)
 	// Remove a member's second factor. Admin-only, human-only.
 	// (DELETE /users/{id}/mfa)
 	RemoveUserMfa(w http.ResponseWriter, r *http.Request, id Id)
@@ -75806,6 +75996,12 @@ func (_ Unimplemented) ListActivityReviewTemplates(w http.ResponseWriter, r *htt
 // Edit the questions for future outcome reviews.
 // (PATCH /activity-review-templates/{id})
 func (_ Unimplemented) UpdateActivityReviewTemplate(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Per colleague and day, how much work automation handed out and what became of it.
+// (GET /admin/automatic-work-health)
+func (_ Unimplemented) GetAutomaticWorkHealth(w http.ResponseWriter, r *http.Request, params GetAutomaticWorkHealthParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -76997,12 +77193,6 @@ func (_ Unimplemented) ListOpenCommitments(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Refused sends waiting on somebody who may decide them.
-// (GET /communication-reviews)
-func (_ Unimplemented) ListCommunicationReviews(w http.ResponseWriter, r *http.Request, params ListCommunicationReviewsParams) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
 // What a refused send was refused for, and for whom.
 // (GET /communication-reviews/{id})
 func (_ Unimplemented) GetCommunicationReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
@@ -77018,12 +77208,6 @@ func (_ Unimplemented) RecordCommunicationContext(w http.ResponseWriter, r *http
 // Send a refused message anyway, on a named human's recorded decision.
 // (POST /communication-reviews/{id}/direct-send)
 func (_ Unimplemented) DirectCommunicationSend(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Retired. Asking a colleague to decide a refused send is no longer offered.
-// (POST /communication-reviews/{id}/request-decision)
-func (_ Unimplemented) RequestCommunicationDecision(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -78257,6 +78441,12 @@ func (_ Unimplemented) GetDealStatus(w http.ResponseWriter, r *http.Request, id 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Whether the deal has the signed agreement a win rests on.
+// (GET /deals/{id}/win-evidence)
+func (_ Unimplemented) GetDealWinEvidence(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // The dedupe review queue, confidence-sorted.
 // (GET /dedupe/candidates)
 func (_ Unimplemented) ListDedupeCandidates(w http.ResponseWriter, r *http.Request, params ListDedupeCandidatesParams) {
@@ -78533,7 +78723,7 @@ func (_ Unimplemented) ListFxRates(w http.ResponseWriter, r *http.Request, param
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Set an FX rate effective today or later (append-forward).
+// Set an FX rate effective today or later, or in the past before any stored rate.
 // (POST /fx-rates)
 func (_ Unimplemented) SetFxRate(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -80567,6 +80757,18 @@ func (_ Unimplemented) DeactivateUser(w http.ResponseWriter, r *http.Request, id
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Count the live records a member still owns. Member administration, human-only.
+// (GET /users/{id}/handover)
+func (_ Unimplemented) GetUserHandover(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Move every live record a member owns to a colleague. Member administration, human-only.
+// (POST /users/{id}/handover)
+func (_ Unimplemented) HandOverUserWork(w http.ResponseWriter, r *http.Request, id Id, params HandOverUserWorkParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Remove a member's second factor. Admin-only, human-only.
 // (DELETE /users/{id}/mfa)
 func (_ Unimplemented) RemoveUserMfa(w http.ResponseWriter, r *http.Request, id Id) {
@@ -82534,6 +82736,45 @@ func (siw *ServerInterfaceWrapper) UpdateActivityReviewTemplate(w http.ResponseW
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateActivityReviewTemplate(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAutomaticWorkHealth operation middleware
+func (siw *ServerInterfaceWrapper) GetAutomaticWorkHealth(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetAutomaticWorkHealthParams
+
+	// ------------- Optional query parameter "days" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "days", r.URL.Query(), &params.Days, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "days"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "days", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAutomaticWorkHealth(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -90139,58 +90380,6 @@ func (siw *ServerInterfaceWrapper) ListOpenCommitments(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
-// ListCommunicationReviews operation middleware
-func (siw *ServerInterfaceWrapper) ListCommunicationReviews(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params ListCommunicationReviewsParams
-
-	// ------------- Optional query parameter "limit" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "cursor" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
-		}
-		return
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListCommunicationReviews(w, r, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // GetCommunicationReview operation middleware
 func (siw *ServerInterfaceWrapper) GetCommunicationReview(w http.ResponseWriter, r *http.Request) {
 
@@ -90278,38 +90467,6 @@ func (siw *ServerInterfaceWrapper) DirectCommunicationSend(w http.ResponseWriter
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DirectCommunicationSend(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// RequestCommunicationDecision operation middleware
-func (siw *ServerInterfaceWrapper) RequestCommunicationDecision(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id openapi_types.UUID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.RequestCommunicationDecision(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -100332,6 +100489,38 @@ func (siw *ServerInterfaceWrapper) GetDealStatus(w http.ResponseWriter, r *http.
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetDealStatus(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetDealWinEvidence operation middleware
+func (siw *ServerInterfaceWrapper) GetDealWinEvidence(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDealWinEvidence(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -115991,6 +116180,94 @@ func (siw *ServerInterfaceWrapper) DeactivateUser(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// GetUserHandover operation middleware
+func (siw *ServerInterfaceWrapper) GetUserHandover(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetUserHandover(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// HandOverUserWork operation middleware
+func (siw *ServerInterfaceWrapper) HandOverUserWork(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params HandOverUserWorkParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.HandOverUserWork(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RemoveUserMfa operation middleware
 func (siw *ServerInterfaceWrapper) RemoveUserMfa(w http.ResponseWriter, r *http.Request) {
 
@@ -118771,6 +119048,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/activity-review-templates/{id}", wrapper.UpdateActivityReviewTemplate)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/automatic-work-health", wrapper.GetAutomaticWorkHealth)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/admin/capture-health", wrapper.GetCaptureHealth)
 	})
 	r.Group(func(r chi.Router) {
@@ -119365,9 +119645,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/commitments", wrapper.ListOpenCommitments)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/communication-reviews", wrapper.ListCommunicationReviews)
-	})
-	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/communication-reviews/{id}", wrapper.GetCommunicationReview)
 	})
 	r.Group(func(r chi.Router) {
@@ -119375,9 +119652,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/communication-reviews/{id}/direct-send", wrapper.DirectCommunicationSend)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/communication-reviews/{id}/request-decision", wrapper.RequestCommunicationDecision)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/companies", wrapper.ListCompanies)
@@ -119993,6 +120267,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/deals/{id}/status", wrapper.GetDealStatus)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/deals/{id}/win-evidence", wrapper.GetDealWinEvidence)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/dedupe/candidates", wrapper.ListDedupeCandidates)
@@ -121148,6 +121425,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/users/{id}/deactivate", wrapper.DeactivateUser)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/users/{id}/handover", wrapper.GetUserHandover)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/users/{id}/handover", wrapper.HandOverUserWork)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/users/{id}/mfa", wrapper.RemoveUserMfa)

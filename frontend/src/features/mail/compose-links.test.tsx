@@ -216,7 +216,14 @@ describe("what a sent message files under", () => {
       />,
     );
 
-    await screen.findByLabelText("Project");
+    // The picker holds its place from the start; it opens once the record's
+    // projects have arrived.
+    await waitFor(() =>
+      expect(screen.getByLabelText("Project").hasAttribute("disabled")).toBe(
+        false,
+      ),
+    );
+    await screen.findByLabelText("Related to");
     await pickBy("Related to", "Acme Renewal");
     await pickBy("Project", "ERP-27 · ERP rollout");
     // The choice is visible in the head, and so is its tag in the subject.

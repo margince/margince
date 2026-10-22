@@ -11,7 +11,7 @@ import {
   stagedDealMove,
 } from "../../lib/approvalpreview";
 import { humanizeKind } from "./approvalkind";
-import { commitmentResponsibility } from "./approvalresponsibility";
+import { commitmentResponsibility, madeByRow } from "./approvalresponsibility";
 
 // Typed proposals expose declared business facts; raw-argument kinds retain their fields.
 export type {
@@ -393,6 +393,7 @@ export function resolveDisplay(
       ...resolved.filter(
         (entry) => preview.state === "ready" && entry.lead && entry.value,
       ),
+      ...madeByRow(kind, change, names, t),
       ...commercialPreviewDisplay(preview, t, locale, formatDay),
     ];
   if (

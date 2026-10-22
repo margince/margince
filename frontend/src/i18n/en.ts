@@ -94,8 +94,6 @@ export const en = {
 
   "approval.scheduled.rearm":
     "Schedules the displayed held message to be retried after the delay shown. Current permissions, recipients and communication rules are checked again before sending.",
-  "approval.scheduled.direct":
-    "Records your decision to send this refused message on your own authority and attempts delivery now. Your decision and explanation are recorded; the normal delivery safeguards still apply.",
   "approval.scheduled.delay": "Retry delay (minutes)",
   "approval.read.profileField": "Profile field",
   "approval.read.factField": "Company fact",
@@ -1693,6 +1691,7 @@ export const en = {
   "systemJob.owed_verdict": "Owed reply check",
   "systemJob.own_sent_mail_repair": "Sent mail correction",
   "systemJob.participant_backfill": "Mail participant fill-in",
+  "systemJob.past_activity_clock_refold": "Last activity date update",
   "systemJob.private_thread_strip": "Private thread removal",
   "systemJob.provider_recovery": "Enrichment provider recovery",
   "systemJob.provider_run_worker": "Enrichment provider request",
@@ -2621,6 +2620,9 @@ export const en = {
   "list.lastActivity": "Last activity",
   "list.filterOwnerMe": "Owned by you",
   "list.filterOwnerAll": "Any owner",
+  "list.ownerDeactivated": "{name} (deactivated)",
+  "list.ownerSuspended": "{name} (suspended)",
+  "list.ownerInvited": "{name} (invited)",
   "list.filterOwnerUnassigned": "Unassigned",
   "list.team": "Team",
   "list.filterTeamAll": "Any team",
@@ -3440,8 +3442,6 @@ export const en = {
   "approval.commitment.unverifiedNamed": "Unverified: {name}",
   "approval.commitment.unresolved": "Promiser unresolved",
   "approval.commitment.assignNamed": "Creates a task assigned to {name}.",
-  "approval.commitment.assignDecider":
-    "Creates a task assigned to the person who approves.",
   "approval.field.owner": "Owner",
   "approval.field.sourceText": "Original text",
   "approval.field.to": "To",
@@ -4513,6 +4513,9 @@ export const en = {
     "The deal closed, but some of its tasks could not be completed. Complete them from the Worklist.",
   "deals.winNoEvidence":
     "No signed contract is attached. Record how the deal was won; the answer is kept on the deal and counted in reports.",
+  "deals.winEvidenceChecking": "Checking the deal’s contract…",
+  "deals.winEvidenceRequired":
+    "This deal has no signed contract with its file attached. Say how it was won, then confirm.",
   "deals.winReason": "How was it won?",
   "deals.winReasonPick": "Pick how it was won",
   "deals.winReasonImported": "Imported from another system",
@@ -5841,16 +5844,20 @@ export const en = {
   "compose.earlierThreads_other": "{count} earlier threads",
   "compose.threadChange": "Change",
   "compose.threadContinue": "Continue a thread",
-  "compose.threads": "Continue a thread",
-  "compose.threadsWith": "Continue a thread with {name}",
+  "compose.threadsRecent": "Recent threads",
+  "compose.threadsFound": "Matching threads",
+  "compose.threadSearch": "Search threads",
+  "compose.threadSearchWith": "Search threads with {name}",
+  "compose.threadSearchNone": "No thread matches these words.",
+  "compose.threadsMoreFailed":
+    "Older threads could not be loaded. Press Show more to try again.",
+  "compose.threadsMore": "Show more",
   "compose.newThread": "New thread",
   "compose.copies": "Cc and Bcc",
   "compose.signsOffAs": "Signs off as “{closing}”.",
+  "compose.reasonRecord": "Record this reason",
+  "compose.reasonRecordFor": "Record this reason: {reason}, for {address}",
   "compose.reasonLabel": "Why you may write to {address}",
-  "compose.reasonHint":
-    "Recorded under your name for this kind of message. It is not consent.",
-  "compose.reasonRecord": "Record reason",
-  "compose.reasonRecording": "Recording…",
   "compose.replyIntent": "Purpose of the reply",
   "compose.newIntent": "Purpose of the email",
   "compose.draftReply": "Draft reply",
@@ -5861,6 +5868,7 @@ export const en = {
     "Describe the purpose. Margince uses the record context.",
   "compose.draftEmail": "Draft email",
   "compose.drafting": "Drafting…",
+  "compose.askAgain": "Change the ask",
   "compose.discardDraft": "Discard draft",
   "compose.discardDraftHint":
     "Marks this draft as a miss for your Voice DNA. The generated text is never kept.",
@@ -7907,6 +7915,49 @@ export const en = {
   "settings.recoveryHealth": "Restore drills",
   "settings.recoveryHealthSub":
     "When the restore from backup was last rehearsed, and how long it took.",
+  "settings.automaticWork": "Automatic work",
+  "settings.automaticWorkSub":
+    "What Margince gave each colleague by itself, and how much of it they said was not theirs.",
+  "automaticWork.adminOnly":
+    "Automatic work is counted for the whole installation and needs a permission your role does not have.",
+  "automaticWork.window": "Days counted",
+  "automaticWork.last7": "Last 7 days",
+  "automaticWork.last30": "Last 30 days",
+  "automaticWork.howCounted":
+    "Each item counts once, on the day it was created ({range}), with the outcome it has now. A Not mine share above {threshold} on at least {sample} items means the routing for that kind needs a look. The share changes nothing by itself.",
+  "automaticWork.none": "Margince created no automatic work in these days.",
+  "automaticWork.col.colleague": "Colleague",
+  "automaticWork.col.kind": "Kind",
+  "automaticWork.col.created": "Created",
+  "automaticWork.col.notMine": "Not mine",
+  "automaticWork.col.rerouted": "Moved by a rule",
+  "automaticWork.col.dismissed": "Dismissed",
+  "automaticWork.col.rejected": "Rejected",
+  "automaticWork.col.completed": "Done or accepted",
+  "automaticWork.col.expired": "Aged out",
+  "automaticWork.col.open": "Open",
+  "automaticWork.col.share": "Not mine share",
+  "automaticWork.col.day": "Day",
+  "automaticWork.col.waitingNotMine": "Marked Not mine",
+  "automaticWork.kind.promise_task": "Task from a commitment",
+  "automaticWork.kind.reply_reminder": "Reply reminder",
+  "automaticWork.kind.approval_request": "Approval request",
+  "automaticWork.noNotMine": "No Not mine choice",
+  "automaticWork.needsLook": "{share}, needs a look",
+  "automaticWork.fewItems": "{share}, too few items to judge",
+  "automaticWork.inactive": "{name} (not active)",
+  "automaticWork.days": "Days for {name}, {kind}",
+  "automaticWork.quiet_one":
+    "{count} colleague had no automatic work in these days.",
+  "automaticWork.quiet_other":
+    "{count} colleagues had no automatic work in these days.",
+  "automaticWork.unattributed_one":
+    "{count} item was for a colleague who was removed.",
+  "automaticWork.unattributed_other":
+    "{count} items were for colleagues who were removed.",
+  "automaticWork.waiting": "Waiting messages marked Not mine",
+  "automaticWork.waitingSub":
+    "Margince does not create a waiting message for anybody, so it has no share. Each message counts once.",
   "recoveryHealth.adminOnly":
     "Restore drills cover the whole installation and need a permission your role does not have.",
   "recoveryHealth.lastDrill": "Last restore drill",
@@ -7954,6 +8005,10 @@ export const en = {
   "captureHealth.col.runsEvery": "Runs every",
   "captureHealth.col.processed": "Processed",
   "captureHealth.col.state": "State",
+  "captureHealth.col.unread": "Not read",
+  "captureHealth.unreadPeriod": "{from} to {to}",
+  "captureHealth.unreadPeriodFolded":
+    "Mail from {from} to {to} was never read. Start an import with a window that reaches back to {from}.",
   "captureHealth.col.owner": "Mailbox owner",
   "captureHealth.col.contacts": "Contacts waiting",
   "captureHealth.col.threads": "Threads waiting",
@@ -11593,6 +11648,31 @@ export const en = {
   "users.status.invited": "Invited",
   "users.status.deactivated": "Deactivated",
   "users.status.suspended": "Suspended",
+  "users.handover.action": "Hand over work",
+  "users.handover.title": "Hand over the work of {name}",
+  "users.handover.body":
+    "Every lead, contact, company, deal and project {name} owns moves to the colleague you choose. Their tasks, automations and Deal Rooms stay where they are.",
+  "users.handover.receiver": "Give it to",
+  "users.handover.choose": "Choose a colleague",
+  "users.handover.confirm": "Hand over",
+  "users.handover.owns": "{name} still owns {records}.",
+  "users.handover.ownsNothing": "{name} owns no records you can see.",
+  "users.handover.deactivateNote":
+    "Deactivating moves none of them. Hand them over first, or later from this menu.",
+  "users.handover.done": "{records} handed over to {name}.",
+  "users.handover.nothingMoved": "Nothing was left to hand over.",
+  "users.handover.left":
+    "Still with {name}: {records}. You may not change these.",
+  "users.handover.leads_one": "{count} lead",
+  "users.handover.leads_other": "{count} leads",
+  "users.handover.contacts_one": "{count} contact",
+  "users.handover.contacts_other": "{count} contacts",
+  "users.handover.companies_one": "{count} company",
+  "users.handover.companies_other": "{count} companies",
+  "users.handover.deals_one": "{count} deal",
+  "users.handover.deals_other": "{count} deals",
+  "users.handover.projects_one": "{count} project",
+  "users.handover.projects_other": "{count} projects",
   "users.removeMfa": "Remove two-step sign-in",
   "users.removeMfaConfirmTitle": "Remove two-step sign-in for {name}?",
   "users.removeMfaConfirmBody":

@@ -205,7 +205,8 @@ var tableOwners = map[string]string{
 	"activity_calendar_method_backfill": "internal/modules/activities",
 	// The waiting horizon the worker pass measured, one row for the installation.
 	// The queue's own predicates are what read it, and they live in this module.
-	"activity_waiting_horizon": "internal/modules/activities",
+	"activity_waiting_horizon":   "internal/modules/activities",
+	"activity_clock_refold_mark": "internal/modules/activities",
 	// The external identities one message answers to — its RFC Message-ID, its
 	// calendar occurrence. It hangs off `activity` and decides which row a
 	// second provider's copy of a message resolves to, so it belongs to the

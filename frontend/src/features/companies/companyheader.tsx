@@ -5,6 +5,7 @@ import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
 import { AddToShortlistAction } from "../../components/addtoshortlist";
 import { ArchiveAction } from "../../components/archive";
+import { mayOwnRecords } from "../../components/assigneepicker";
 import { rosterOwnerName, useRoster } from "../../components/entityref";
 import { MergeAction } from "../../components/merge";
 import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
@@ -159,7 +160,7 @@ export function CompanyOwnerControl({
   const roster = useRoster("user", true);
   const ownerName = useMemberName(company.owner_id);
   const owners = (roster.data ?? []).flatMap((entry) =>
-    "display_name" in entry
+    "display_name" in entry && mayOwnRecords(entry)
       ? [{ value: entry.id, label: entry.display_name }]
       : [],
   );

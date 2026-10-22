@@ -2,10 +2,17 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
-import { type Dispatch, type SetStateAction, useEffect, useRef } from "react";
+import {
+  type Dispatch,
+  type SetStateAction,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useRoster } from "../../components/entityref";
+import { useSettledValue } from "../../design-system/debouncedsearch";
 import { formatDateTime } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { type Locale, useLocale, useT } from "../../i18n";
@@ -223,6 +230,17 @@ export function useComposeThread({
     open && offeringThreads,
     { nameOf, t, locale },
   );
+  // A search reads its own list. The bar's count, and whether threads are
+  // offered at all, stay those of the record.
+  const [search, setSearch] = useState("");
+  const searched = useSettledValue(search).trim();
+  const found = useRecentConversations(
+    entityType,
+    entityId,
+    open && offeringThreads && searched !== "",
+    { nameOf, t, locale },
+    searched,
+  );
   useReplySubject(answering, anchorActivity, setSubject);
   const showConversation = conversationShown({
     isChannelReply,
@@ -232,16 +250,22 @@ export function useComposeThread({
     conversation,
   });
   // A pending or failed read keeps the rail, so the record never looks as
-  // though it had no history.
+  // though it had no history. So does older mail not read yet.
   const offered =
     offeringThreads &&
-    (recent.pending || recent.failed || recent.conversations.length > 0);
+    (recent.pending ||
+      recent.failed ||
+      recent.more ||
+      recent.conversations.length > 0);
   return {
     anchorRead,
     anchorActivity,
     conversation,
     anchorUnresolved,
     recent,
+    listed: searched ? found : recent,
+    search,
+    setSearch,
     answeringLine: answeringLineOf(answering, anchorRead, t, locale),
     splitColumns: showConversation || offered,
   };

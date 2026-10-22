@@ -541,5 +541,9 @@ const (
 	//
 	// 124: privacy.leadTwinOf follows the same subject through merged contacts
 	// to the leads they were, for the same rights case.
-	modulesTierUnscopedCeiling = 124
+	//
+	// 125-127: activities.PassedActivitiesTx reads the contact, deal and company
+	// an activity whose time has come is filed under. System-only, and the ids
+	// go straight into the clock refold; nothing returns one to a reader.
+	modulesTierUnscopedCeiling = 127
 )

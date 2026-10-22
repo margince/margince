@@ -87,16 +87,22 @@ func (w *approvalNoticeReconcileWorker) Work(ctx context.Context, job *river.Job
 	return river.JobSnooze(time.Second)
 }
 
+// reconcilePage retracts every copy of a settled decision. It also retracts a
+// copy of a pending payload-owned one sent to a member it is not asked of.
 func (w *approvalNoticeReconcileWorker) reconcilePage(ctx context.Context, after ids.UUID) (ids.UUID, int64, error) {
 	var page notices.OutstandingApprovalPage
 	var pending map[ids.ApprovalID]bool
+	var asked map[approvals.AskedPair]bool
 	err := w.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
 		page, err = w.notices.OutstandingApprovalNotices(ctx, tx, after, approvalNoticePageSize)
 		if err != nil {
 			return err
 		}
-		pending, err = w.approvals.StillPending(ctx, tx, page.ApprovalIDs)
+		if pending, err = w.approvals.StillPending(ctx, tx, page.ApprovalIDs); err != nil {
+			return err
+		}
+		asked, err = w.approvals.StillAskedOf(ctx, tx, askedPairs(page.Notices))
 		return err
 	})
 	if err != nil {
@@ -113,5 +119,23 @@ func (w *approvalNoticeReconcileWorker) reconcilePage(ctx context.Context, after
 		}
 		retracted += count
 	}
+	for _, held := range page.Notices {
+		if !pending[held.Approval] || asked[approvals.AskedPair{Approval: held.Approval, Recipient: held.Recipient}] {
+			continue
+		}
+		count, err := w.retract.retractCopy(ctx, held.ID)
+		if err != nil {
+			return ids.Nil, retracted, err
+		}
+		retracted += count
+	}
 	return page.AfterID, retracted, nil
+}
+
+func askedPairs(copies []notices.OutstandingApprovalNotice) []approvals.AskedPair {
+	pairs := make([]approvals.AskedPair, 0, len(copies))
+	for _, held := range copies {
+		pairs = append(pairs, approvals.AskedPair{Approval: held.Approval, Recipient: held.Recipient})
+	}
+	return pairs
 }

@@ -13,6 +13,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -59,7 +60,11 @@ func homeRepairCommitmentProposalTx(ctx context.Context, tx pgx.Tx, proposal app
 		}
 		due = &at
 	}
-	action, reason, err := homeRepairCommitmentAdmissionTx(ctx, tx, Commitment{SourceActivityID: staged.SourceActivityID, Seat: staged.SeatID, AsOf: asOf}, due, repairWithdrawProposal, forDecision)
+	var seat *ids.UUID
+	if asked, named := approvalsubject.CommitmentAskedOf(proposal.Change); named {
+		seat = &asked
+	}
+	action, reason, err := homeRepairCommitmentAdmissionTx(ctx, tx, Commitment{SourceActivityID: staged.SourceActivityID, Seat: seat, AsOf: asOf}, due, repairWithdrawProposal, forDecision)
 	if err != nil {
 		return item, err
 	}

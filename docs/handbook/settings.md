@@ -116,7 +116,9 @@ The company's name is the **Company name** row under **Business context**. Savin
 
 **Date format** and **Time format** sit on the **Installation** card too, and set the notation for formatted dates and times across the interface. For dates the choices are **Use interface language**, **DD.MM.YYYY · 23.09.2026**, **MM/DD/YYYY · 09/23/2026** and **YYYY-MM-DD · 2026-09-23**. For times they are **Use interface language**, **24-hour · 17:30** and **12-hour · 05:30 pm**. Native date fields use the browser's own date picker and date format. Stored dates and time zones stay the same.
 
-**Currency rates** are the exchange rates that turn money in another currency into the base currency. A new rate starts today or later, and a past rate never changes. So a new rate never changes the numbers of past months. Seeing the rates needs the permission to read exchange rates. The Admin and Ops roles hold it by default, and a custom role can get it too.
+**Currency rates** are the exchange rates that turn money in another currency into the base currency. A new rate usually starts today or later. A past date works in two cases: the currency has no rate yet, or the date is before its first rate. A rate dated today can be corrected the same day. An older rate never changes, so a new rate never changes a figure that a past month already had.
+
+Seeing the rates needs the permission to read exchange rates. The Admin and Ops roles hold it by default, and a custom role can get it too.
 
 **Company context** is what Margince knows about your own company, where it read it, and a place to tell it facts yourself. Only an Admin sees this card and edits it; Ops finds the page without it.
 
@@ -326,6 +328,8 @@ System health and Reset data sit in the **Governance** group, and Data import in
 - **Links in outgoing mail**: the address Margince puts in the links it emails,
   such as unsubscribe links, marked **Reachable**, **Unreachable** or **Not
   checked**. If nobody outside can reach it, those links open nothing.
+- **Automatic work**: the tasks, reply reminders and approval requests Margince made for each colleague in 7 or 30 days, and their outcome.
+  **Not mine** counts a task moved to someone else; a rejected request is not Not mine. Over 10% on at least 10 items shows **needs a look**, and changes nothing. The same readers as Background jobs see it.
 - **Restore drills**: when a restore from a backup was last tested, if it
   passed, and how long it took against the targets. Whoever runs the
   installation records each test. Margince does not see backups, so the card

@@ -71,7 +71,7 @@ func TestTranscriptAdmissionPreservesHistoryAndFutureDeadlines(t *testing.T) {
 				t.Fatalf("proposals = %d, want %d", got, want)
 			}
 			if e.taskCount(t) != 0 {
-				t.Fatal("an unnamed owner received an automatic task")
+				t.Fatal("a promise its colleague did not say aloud became an automatic task")
 			}
 		})
 	}

@@ -61,33 +61,43 @@ func (e *SameOwnerError) FieldFault() (field, code, message string) {
 // projects and projects outside the caller's write authority stay put and are
 // not counted; the caller is told a number, never which rows were withheld.
 func (s *Store) TransferProjectOwnership(ctx context.Context, in TransferProjectOwnershipInput) (int, error) {
+	moved := 0
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		moved, err = TransferProjectOwnershipTx(ctx, tx, in)
+		return err
+	})
+	return moved, err
+}
+
+// TransferProjectOwnershipTx is TransferProjectOwnership's body inside the
+// caller's transaction, for a handover that moves other records beside the
+// projects and must commit or fail as one.
+func TransferProjectOwnershipTx(ctx context.Context, tx pgx.Tx, in TransferProjectOwnershipInput) (int, error) {
 	if err := auth.Require(ctx, projectObject, principal.ActionUpdate); err != nil {
 		return 0, err
 	}
 	if in.FromOwnerID == in.ToOwnerID {
 		return 0, &SameOwnerError{}
 	}
+	if err := ensureActiveOwner(ctx, tx, in.ToOwnerID); err != nil {
+		return 0, err
+	}
+	candidates, err := transferableProjectIDs(ctx, tx, in.FromOwnerID)
+	if err != nil {
+		return 0, err
+	}
 	moved := 0
-	err := s.Tx(ctx, func(tx pgx.Tx) error {
-		if err := ensureActiveOwner(ctx, tx, in.ToOwnerID); err != nil {
-			return err
-		}
-		candidates, err := transferableProjectIDs(ctx, tx, in.FromOwnerID)
+	for _, id := range candidates {
+		ok, err := transferProjectOwner(ctx, tx, id, in)
 		if err != nil {
-			return err
+			return 0, err
 		}
-		for _, id := range candidates {
-			ok, err := transferProjectOwner(ctx, tx, id, in)
-			if err != nil {
-				return err
-			}
-			if ok {
-				moved++
-			}
+		if ok {
+			moved++
 		}
-		return nil
-	})
-	return moved, err
+	}
+	return moved, nil
 }
 
 // ensureActiveOwner refuses a receiver who could not be handed a project by a
@@ -110,31 +120,13 @@ func ensureActiveOwner(ctx context.Context, tx pgx.Tx, owner ids.UserID) error {
 }
 
 // transferableProjectIDs enumerates the live projects the from-owner holds
-// that the caller may both see and write, in id order so two concurrent
-// handovers lock rows in the same sequence. The visibility clause is the one
-// the project list renders (auth.ScopeClauseFor); the write arm is the one
-// every single-row mutation asks (auth.WritableBy), so a `read` share of a
-// colleague's project lets the caller see it in the list and still leaves it
-// where it is here.
+// that the caller may both see and write. The write arm is auth.WritableBy,
+// which every single-row mutation asks. So a `read` share of a colleague's
+// project shows it in the list and still leaves it where it is here.
 func transferableProjectIDs(ctx context.Context, tx pgx.Tx, from ids.UserID) ([]ids.UUID, error) {
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	ownerPos := arg(from)
-	visible, err := auth.ScopeClauseFor(ctx, projectObject, "", arg)
+	seen, err := auth.VisibleOwnedIDs(ctx, tx, projectObject, from.UUID)
 	if err != nil {
 		return nil, err
-	}
-	query := fmt.Sprintf(`SELECT id FROM project WHERE owner_id = $%d AND archived_at IS NULL`, ownerPos)
-	if visible != "" {
-		query += " AND " + visible
-	}
-	rows, err := tx.Query(ctx, query+" ORDER BY id", args...)
-	if err != nil {
-		return nil, fmt.Errorf("list projects to transfer: %w", err)
-	}
-	seen, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
-	if err != nil {
-		return nil, fmt.Errorf("list projects to transfer: %w", err)
 	}
 	writable := make([]ids.UUID, 0, len(seen))
 	for _, id := range seen {

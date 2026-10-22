@@ -31,6 +31,7 @@ const (
 	actionRemoveMFA         memberAction = "remove_mfa"
 	actionDeactivate        memberAction = "deactivate"
 	actionReactivate        memberAction = "reactivate"
+	actionHandOver          memberAction = "hand_over"
 )
 
 // verb is the user_admin verb the action's endpoint takes. Turning a seat off
@@ -93,7 +94,7 @@ func (s *Service) allowedMemberActions(
 	return out, nil
 }
 
-// memberActionsOn is the five verbs' admission over one target, in the
+// memberActionsOn is the six verbs' admission over one target, in the
 // contract's order.
 func memberActionsOn(ctx context.Context, actor Identity, target memberTarget, seatLeft bool) []memberAction {
 	status, userID := target.row.Status, ids.UserID{UUID: target.row.ID}
@@ -114,9 +115,13 @@ func memberActionsOn(ctx context.Context, actor Identity, target memberTarget, s
 			!target.holdsArchivedRole &&
 			refuseUnlessDeactivated(status) == nil &&
 			(target.row.SeatType != principal.SeatFull || seatLeft),
+		// AdmitMemberHandover is the handover's gate; this is its offer.
+		actionHandOver: !target.row.IsAgent && callerOutranks(actor, target.grants, reachDenial) == nil,
 	}
 	out := []memberAction{}
-	for _, action := range []memberAction{actionChangeRole, actionIssuePasswordLink, actionRemoveMFA, actionDeactivate, actionReactivate} {
+	for _, action := range []memberAction{
+		actionChangeRole, actionIssuePasswordLink, actionRemoveMFA, actionDeactivate, actionReactivate, actionHandOver,
+	} {
 		if admitted[action] && callerMay(ctx, actor, action) {
 			out = append(out, action)
 		}

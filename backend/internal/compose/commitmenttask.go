@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -38,12 +39,14 @@ type CommitmentTaskProposal struct {
 	Summary          string    `json:"summary"`
 	// Party is who made the promise, as the source names them.
 	Party string `json:"party"`
-	// SeatID is the colleague the task is for. Nil when nobody could be named,
-	// and then accepting it makes it the decider's.
+	// SeatID is the colleague the task is for: the promiser for a new task,
+	// the task's holder for added recipients (approvalsubject.CommitmentAskedOf).
 	SeatID *ids.UUID `json:"seat_id,omitempty"`
-	// PromiserSeatID preserves attribution when the proposed assignee must differ.
-	PromiserSeatID     *ids.UUID `json:"promiser_seat_id,omitempty"`
-	PromiserUnresolved bool      `json:"promiser_unresolved,omitempty"`
+	// PromiserSeatID is who made the promise.
+	PromiserSeatID *ids.UUID `json:"promiser_seat_id,omitempty"`
+	// PromiserUnresolved marks a proposal staged before every request named its
+	// promiser; nothing stages one now.
+	PromiserUnresolved bool `json:"promiser_unresolved,omitempty"`
 	// DueDate is a day, YYYY-MM-DD, or empty. Text rather than an instant, so a
 	// reviewer edits a day and acceptance decides when that day ends.
 	DueDate  string                         `json:"due_date,omitempty"`
@@ -102,6 +105,9 @@ func writeCommitmentTask(
 		AssigneeID:       &assignee,
 		Origin:           activities.OriginAgent,
 	}
+	// The promiser's own task waits for them as a task made by hand would,
+	// also before they first sign in.
+	in.AdmitInvitedAssignee()
 	if t.PrivateTo != nil {
 		in.VisibleOnlyTo(*t.PrivateTo)
 	}
@@ -158,9 +164,9 @@ func commitmentDueInstant(ctx context.Context, tx pgx.Tx, day string) (time.Time
 // commitmentTaskEffect executes an accepted commitment: redeem and write in ONE
 // transaction, so the approval is spent if and only if the task exists.
 //
-// The task goes to the colleague the proposal named. A proposal that named
-// nobody goes to the human who accepted it: it was staged for them, and a task
-// nobody holds reminds nobody. They can hand it on like any task.
+// The task goes to the colleague the proposal is for, who is the only member
+// who may accept it (commitmentTaskPrecheck). Accepting never makes the
+// decider the owner of somebody else's promise.
 func commitmentTaskEffect(
 	svc *approvals.Service, tasks *activities.Store, claims *contacts.Store,
 ) approvals.ApprovedEffect {
@@ -169,17 +175,10 @@ func commitmentTaskEffect(
 		if err := json.Unmarshal(proposedChange, &proposal); err != nil {
 			return fmt.Errorf("compose: unmarshal commitment proposal: %w", err)
 		}
-		decider, ok := principal.Actor(ctx)
-		if !ok {
-			return errors.New("compose: commitment proposal effect without a deciding principal")
+		assignee, err := commitmentDecider(ctx, proposedChange)
+		if err != nil {
+			return err
 		}
-		assignee := decider.UserID
-		if proposal.SeatID != nil {
-			assignee = *proposal.SeatID
-		}
-		// Refused before the approval is touched when what was staged already
-		// says so; asked again inside the transaction for a thread made private
-		// since.
 		if !mayHoldPrivateTask(proposal.PrivateTo, assignee) {
 			return fmt.Errorf("compose: a commitment read out of private mail is its owner's to accept: %w",
 				apperrors.ErrPermissionDenied)
@@ -249,14 +248,33 @@ func sourcePrivateToNow(ctx context.Context, tx pgx.Tx, source ids.UUID, staged 
 	return &owner, nil
 }
 
-// commitmentTaskPrecheck refuses a proposal filed under a record the decider
-// cannot see. It runs before the decision, so the card stays pending. The
+// commitmentDecider is the member deciding this proposal, when the proposal is
+// for them. A proposal for somebody else, or for nobody, is refused as a
+// conflict, and the card stays pending.
+func commitmentDecider(ctx context.Context, proposal json.RawMessage) (ids.UUID, error) {
+	decider, ok := principal.Actor(ctx)
+	if !ok {
+		return ids.Nil, errors.New("compose: commitment proposal decided without a deciding principal")
+	}
+	asked, named := approvalsubject.CommitmentAskedOf(proposal)
+	if !named || asked != decider.UserID {
+		return ids.Nil, fmt.Errorf("compose: only the colleague who made this promise may accept it: %w",
+			apperrors.ErrConflict)
+	}
+	return asked, nil
+}
+
+// commitmentTaskPrecheck refuses a proposal that is not the decider's, or one
+// filed under a record the decider cannot see. It runs before the decision, so the card stays pending. The
 // effect asks again as it writes.
 func commitmentTaskPrecheck(tasks *activities.Store) approvals.ReleasePrecheck {
 	return func(ctx context.Context, staged, edited json.RawMessage) error {
 		var proposal CommitmentTaskProposal
 		if err := json.Unmarshal(staged, &proposal); err != nil {
 			return fmt.Errorf("compose: unmarshal staged commitment proposal: %w", err)
+		}
+		if _, err := commitmentDecider(ctx, staged); err != nil {
+			return err
 		}
 		if err := tasks.ProbeLinkWrites(ctx, proposal.Links); err != nil {
 			return err

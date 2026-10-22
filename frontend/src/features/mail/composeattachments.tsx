@@ -145,7 +145,7 @@ export function AttachAction({
       // NO `variant`: a variant draws the trigger as a full control, and this
       // one stands in the composer's foot among flat glyphs. Bare, it takes the
       // glyph button's own box, so it reads as one more glyph and not a button.
-      className="iconbtn"
+      className="richtext-btn"
       label={
         <>
           <Paperclip aria-hidden="true" />

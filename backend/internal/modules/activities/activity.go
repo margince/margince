@@ -48,10 +48,10 @@ type LogActivityInput struct {
 	recordedAt   *time.Time
 	// Internal creation policy; public activity input cannot set an audience.
 	audienceMembers []AudienceMember
-	// invitedAssignee admits an invited colleague as the task's assignee. Only
-	// the HTTP create handler sets it, for an assignee the caller NAMED; every
-	// automatic writer (deal check-up, lead SLA, email requests) leaves it
-	// false and keeps handing work to active seats only.
+	// invitedAssignee admits an invited colleague as the task's assignee. The
+	// HTTP create handler sets it for an assignee the caller NAMED, and
+	// AdmitInvitedAssignee for a promiser's own task. Every other automatic
+	// writer leaves it false and hands work to active seats only.
 	invitedAssignee bool
 	Kind            string
 	// LinksFromRequest says the caller typed Links, so a missing record is
@@ -312,7 +312,6 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 	if err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
-	occurredAt := occurredAtOf(in)
 	assignee, err := checkedTaskAssignee(ctx, tx, in)
 	if err != nil {
 		return crmcontracts.Activity{}, false, err
@@ -356,7 +355,7 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 	authorCols, authorHolders, args := storekit.AuthorInsertFragments(in.Author, []any{
 		// NULLIF on channel_provider: the column FKs into channel_provider, and
 		// '' names no provider, so anything without a transport stores NULL.
-		id, in.Kind, in.ChannelProvider, in.Subject, in.Body, occurredAt, in.Direction, in.MeetingStatus,
+		id, in.Kind, in.ChannelProvider, in.Subject, in.Body, in.OccurredAt, in.Direction, in.MeetingStatus,
 		in.DueAt, in.RemindAt, assignee, host, in.ClaimsHostSlot, in.SourceSystem, in.SourceID, in.Source, by,
 		in.ThreadKey, counterparty, in.CounterpartyOutboundAttested, origin,
 		in.SourceActivityID, in.Raw, in.DurationSeconds,
@@ -365,14 +364,17 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 	if err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
-	_, err = tx.Exec(ctx,
+	// An undated activity takes the transaction's now(): the last-activity clock
+	// counts only occurred_at <= now(), and a Go clock read here runs ahead of it.
+	var occurredAt time.Time
+	err = tx.QueryRow(ctx,
 		`INSERT INTO activity (id, kind, channel_provider, subject, body, occurred_at, direction, meeting_status,
 		                       due_at, remind_at, assignee_id, host_user_id, claims_host_slot, booking_interval_exact, source_system, source_id, source, captured_by,
 		                       thread_key, counterparty_email, counterparty_outbound_attested, origin,
 		                       source_activity_id, raw, duration_seconds`+authorCols+cfCols+`)
-		 VALUES ($1, $2, NULLIF($3, ''), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $13, $14, $15, $16, $17, NULLIF($18, ''),
-		         NULLIF($19, ''), $20, $21, $22, $23, $24`+authorHolders+cfHolders+`)`,
-		args...)
+		 VALUES ($1, $2, NULLIF($3, ''), $4, $5, coalesce($6, now()), $7, $8, $9, $10, $11, $12, $13, $13, $14, $15, $16, $17, NULLIF($18, ''),
+		         NULLIF($19, ''), $20, $21, $22, $23, $24`+authorHolders+cfHolders+`) RETURNING occurred_at`,
+		args...).Scan(&occurredAt)
 	if err != nil {
 		if storekit.IsUniqueViolation(err) {
 			return crmcontracts.Activity{}, false, apperrors.ErrConflict
@@ -380,7 +382,7 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 		return crmcontracts.Activity{}, false, err
 	}
 
-	if err := writeActivitySatellites(ctx, tx, id, in, occurredAt, by); err != nil {
+	if err := writeActivitySatellites(ctx, tx, id, in, occurredAt.UTC(), by); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
 	out, err := readActivity(ctx, tx, id, storekit.LiveOnly)
@@ -388,13 +390,6 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 		return crmcontracts.Activity{}, false, err
 	}
 	return out, true, nil
-}
-
-func occurredAtOf(in LogActivityInput) time.Time {
-	if in.OccurredAt != nil {
-		return in.OccurredAt.UTC()
-	}
-	return time.Now().UTC()
 }
 
 // writeActivitySatellites writes the rows that ride with a new activity and

@@ -6,6 +6,7 @@ package approvals
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -16,6 +17,12 @@ import (
 // pending request names, and may still decide it. Nobody else is told about it.
 // It locks the row, ordering notification copies against decisions and erasure.
 func (s *Service) PendingAskedOfInTx(ctx context.Context, tx pgx.Tx, id ids.ApprovalID) (bool, error) {
+	return PendingAskedOfAtTx(ctx, tx, id, s.now())
+}
+
+// PendingAskedOfAtTx is PendingAskedOfInTx for a caller that holds only a
+// transaction, such as the deal writer handing a request to a new owner.
+func PendingAskedOfAtTx(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, now time.Time) (bool, error) {
 	if err := actingForAHuman(ctx); err != nil {
 		return false, err
 	}
@@ -26,5 +33,5 @@ func (s *Service) PendingAskedOfInTx(ctx context.Context, tx pgx.Tx, id ids.Appr
 		}
 		return false, err
 	}
-	return s.pendingDecidableInScope(ctx, tx, id, ListInput{RequestedForReader: true})
+	return pendingDecidableInScopeAt(ctx, tx, id, ListInput{RequestedForReader: true}, now)
 }

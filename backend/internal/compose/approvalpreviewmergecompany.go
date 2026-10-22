@@ -13,7 +13,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/finance"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -157,7 +156,7 @@ func (r approvalPreviewReader) companyMergeReference(ctx context.Context, ref da
 }
 
 func (r approvalPreviewReader) mergeFinanceReference(ctx context.Context, ref datasource.EntityRef) ([]crmcontracts.ApprovalPreviewDetail, error) {
-	entry, err := finance.NewStore(r.db, identity.BaseCurrencyOf).MergeReference(ctx, string(ref.Type), ref.ID)
+	entry, err := finance.NewStore(r.db, FinanceRates()).MergeReference(ctx, string(ref.Type), ref.ID)
 	if err != nil {
 		return nil, err
 	}

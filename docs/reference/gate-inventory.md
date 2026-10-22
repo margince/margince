@@ -28,6 +28,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `aitaskrunenum_test.go` | H3 | The ai\_task.state\_changed payload's closed vocabularies must equal the ai\_task\_run column CHECKs they are projected into. |
 | `analyticsrefusalkinds_test.go` | H2 | The contract's refusal kinds are the kinds the engine constructs, no more and no fewer. |
 | `analyticsvocabularylabels_test.go` | H3 | The question builder names the analytics vocabulary the server serves, no more and no fewer. |
+| `approvalfieldlabels_test.go` | H2 | An approval names a withheld field with the label the record's history panel gives it. |
 | `appviewfixtures_test.go` | H2 | Each MCP App view's test fixture has the member names of the Go result its tool returns. |
 | `attachmenttypes_test.go` | H3 | The file picker offers the kinds of file the server keeps, no more and no fewer. |
 | `auditcoherence_test.go` | H3 | The audit\_log action and actor\_type vocabularies in crm.yaml match the table's CHECK constraints. |
@@ -119,7 +120,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `jsonsafeinteger_test.go` | H1 | A bigint that reaches a JSON client is bounded to what the client can hold. |
 | `labelinstructions_test.go` | H2 | Every label the docs put in front of a session is one `.github/labels.yml` declares. |
 | `languageset_test.go` | H3 | The languages the product speaks are declared in more than one place, and they have to agree. |
-| `lastactivitymeetingrule_test.go` | H2 | last\_activity\_at on deal, contact and company skips a called-off meeting by the same rule as contact strength, spelled once in relstrength. |
+| `lastactivitymeetingrule_test.go` | H2 | last\_activity\_at on deal, contact and company skips a called-off meeting and counts only what has happened. |
 | `linkceilingparity_test.go` | H2 | The per-activity link ceiling is one number, wherever it is spelled. |
 | `listsortdeclared_test.go` | H2 | An operation that declares the shared `Sort` parameter has a handler that reads it. |
 | `listsortvocabulary_test.go` | H3 | A sort the list offers is a sort the server accepts. |

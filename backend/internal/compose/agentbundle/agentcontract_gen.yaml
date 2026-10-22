@@ -1339,7 +1339,7 @@ paths:
         - name: stalled
           in: query
           schema: {type: boolean}
-          description: Deterministic stalled flag (no activity past the threshold).
+          description: Deterministic stalled flag (no activity past the threshold, and no booked meeting ahead).
         - name: project_id
           in: query
           schema: {type: string, format: uuid}
@@ -9566,7 +9566,7 @@ components:
           format: date-time
           readOnly: true
           description: >-
-            When something last happened with this contact: the newest `occurred_at` of an activity linked to it, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first linked activity. Sortable.
+            When something last happened with this contact: the newest `occurred_at` at or before now of an activity linked to it, so a booked meeting counts once it starts, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first linked activity. Sortable.
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
         archived_at: {type: [string, 'null'], format: date-time}
@@ -9846,7 +9846,7 @@ components:
           format: date-time
           readOnly: true
           description: >-
-            When something last happened with this account: the newest `occurred_at` of a workspace-audience activity linked to it, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first such activity. Sortable.
+            When something last happened with this account: the newest `occurred_at` at or before now of a workspace-audience activity linked to it, so a booked meeting counts once it starts, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first such activity. Sortable.
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
         archived_at: {type: [string, 'null'], format: date-time}
@@ -10458,7 +10458,7 @@ components:
         stage_name: {type: [string, 'null']}
         amount: {$ref: '#/components/schemas/Money'}
         expected_close_date: {type: [string, 'null'], format: date}
-        stalled: {type: boolean, description: No linked activity inside the 60-day stall window.}
+        stalled: {type: boolean, description: 'No linked activity inside the 60-day stall window, and no booked meeting ahead.'}
         attention: {$ref: '#/components/schemas/Company360WorkAttention'}
     Company360ProjectPhase:
       type: string
@@ -13211,8 +13211,8 @@ components:
         close_date_provisional: {type: boolean, readOnly: true, description: 'True while the close date is a machine-computed replacement awaiting human confirmation; a provisional deal stays out of Commit/Best-case. Cleared when a human sets the date.'}
         wait_until: {type: [string, 'null'], format: date, description: "'Customer asked us to wait until' date; suppresses the stalled flag but not the overdue close-date flag."}
         closed_at: {type: [string, 'null'], format: date-time}
-        last_activity_at: {type: [string, 'null'], format: date-time, description: 'Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.'}
-        stalled: {type: boolean, readOnly: true, description: Derived — no activity past the threshold (absolute duration).}
+        last_activity_at: {type: [string, 'null'], format: date-time, description: 'The newest `occurred_at` at or before now of a workspace-audience activity filed under the deal, so a booked meeting counts once it starts. Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.'}
+        stalled: {type: boolean, readOnly: true, description: 'Derived — no activity past the threshold (absolute duration). A booked workspace-audience meeting ahead keeps the deal off stalled until it starts or is called off.'}
         last_email:
           allOf: [{$ref: '#/components/schemas/DealLastEmail'}]
           nullable: true
@@ -15578,7 +15578,7 @@ components:
           enum: [within_target, at_risk, breached]
           readOnly: true
           description: 'Derived from sla_deadline_at and first_response_at; null once responded or on a terminal lead. Orders the work queue above score.'
-        last_activity_at: {type: [string, 'null'], format: date-time, readOnly: true, description: 'Most recent activity linked to this lead — the "last touch" a work queue row shows.'}
+        last_activity_at: {type: [string, 'null'], format: date-time, readOnly: true, description: 'Most recent activity at or before now linked to this lead — the "last touch" a work queue row shows.'}
         open_task_count: {type: [integer, 'null'], readOnly: true, description: 'Open `kind=task` activities linked to this lead; the derived next step is the earliest of them.'}
         next_task_subject: {type: [string, 'null'], readOnly: true, description: 'Subject of the earliest open task linked to this lead.'}
         next_task_due_at: {type: [string, 'null'], format: date-time, readOnly: true, description: 'Due time of the earliest open task linked to this lead; undated tasks follow dated ones.'}
@@ -17757,6 +17757,10 @@ components:
           description: >-
             `invited` is a seat that exists and has never been entered: the member holds a licensed seat and appears in the roster, but has set no password and can sign in by no method until they redeem their invitation link. Redeeming it makes them `active`, which is the only status that may sign in.
         is_agent: {type: boolean, default: false, description: First-party Agent Runner identity vs a human seat.}
+        assignable:
+          type: boolean
+          description: >-
+            Whether the CALLER may make this member the owner of a record right now: the same check an owner change runs (an active human seat that can write, inside the caller's own write scope), so a picker built on it offers only owners the write will accept. Present on `listUsers`; absent means not computed, and a client then offers the member and lets the write decide. A deactivated member is listed with `false` on the management view, so a list can still be filtered by the work they left behind.
         roles:
           type: array
           items: {type: string}
@@ -17771,9 +17775,9 @@ components:
           type: array
           items:
             type: string
-            enum: [change_role, issue_password_link, remove_mfa, deactivate, reactivate]
+            enum: [change_role, issue_password_link, remove_mfa, deactivate, reactivate, hand_over]
           description: >-
-            The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
+            The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
         last_active_at:
           type: [string, 'null']
           format: date-time
@@ -19127,7 +19131,7 @@ components:
           type: boolean
           readOnly: true
           description: >-
-            For a pending commitment, whether its named task assignee cannot receive the task. True for invited, deactivated, archived, missing, or agent seats. Absent for an unassigned proposal. This is current decision context, not a change to the staged assignee.
+            For a pending commitment, whether its named task assignee cannot receive the task. True for deactivated, archived, missing, or agent seats. An invited colleague can. Absent for an unassigned proposal. This is current decision context, not a change to the staged assignee.
         requested_decider_id:
           type: string
           format: uuid

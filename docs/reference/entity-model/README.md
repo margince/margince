@@ -28,8 +28,8 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 321 |
-| Columns | 3800 |
+| Tables | 322 |
+| Columns | 3805 |
 | Foreign keys | 527 |
 | Owning areas | 36 |
 
@@ -89,7 +89,7 @@ erDiagram
 
 | Area | Tables |
 |---|--:|
-| [activities](activities.md) | 28 |
+| [activities](activities.md) | 29 |
 | [agents](agents.md) | 3 |
 | [ai](ai.md) | 12 |
 | [aiactivity](aiactivity.md) | 1 |
@@ -133,6 +133,7 @@ erDiagram
 | [`activity`](activities.md#activity) | activities | 63 | 38 |
 | [`activity_audience_member`](activities.md#activity_audience_member) | activities | 5 | 0 |
 | [`activity_calendar_method_backfill`](activities.md#activity_calendar_method_backfill) | activities | 4 | 0 |
+| [`activity_clock_refold_mark`](activities.md#activity_clock_refold_mark) | activities | 3 | 0 |
 | [`activity_commitment_admission`](activities.md#activity_commitment_admission) | activities | 13 | 0 |
 | [`activity_identity`](activities.md#activity_identity) | activities | 5 | 0 |
 | [`activity_kind`](compose.md#activity_kind) | compose | 1 | 1 |
@@ -192,7 +193,7 @@ erDiagram
 | [`capture_auto_enrich_state`](capture.md#capture_auto_enrich_state) | capture | 7 | 0 |
 | [`capture_backfill`](capture.md#capture_backfill) | capture | 25 | 2 |
 | [`capture_backfill_creation`](capture.md#capture_backfill_creation) | capture | 4 | 0 |
-| [`capture_connection`](capture.md#capture_connection) | capture | 24 | 2 |
+| [`capture_connection`](capture.md#capture_connection) | capture | 27 | 2 |
 | [`capture_counterparty_hold`](capture.md#capture_counterparty_hold) | capture | 6 | 0 |
 | [`capture_digest`](capture.md#capture_digest) | capture | 5 | 0 |
 | [`capture_exclusion`](capture.md#capture_exclusion) | capture | 7 | 0 |
@@ -217,7 +218,7 @@ erDiagram
 | [`communication_decision`](consent.md#communication_decision) | consent | 24 | 0 |
 | [`communication_instruction`](consent.md#communication_instruction) | consent | 17 | 2 |
 | [`communication_override`](consent.md#communication_override) | consent | 10 | 1 |
-| [`communication_review`](consent.md#communication_review) | consent | 11 | 2 |
+| [`communication_review`](consent.md#communication_review) | consent | 10 | 2 |
 | [`communication_suppression`](consent.md#communication_suppression) | consent | 12 | 1 |
 | [`company`](contacts.md#company) | contacts | 43 | 42 |
 | [`company_brief`](compose.md#company_brief) | compose | 7 | 0 |

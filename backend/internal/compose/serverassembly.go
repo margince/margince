@@ -100,7 +100,7 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 // company page's own billing section, so a second one would let the finance
 // card and the account panel disagree about who the recipient is.
 func newFinanceHandlers(pool *pgxpool.Pool) finance.Handlers {
-	return finance.NewHandlers(InstallationDB(pool), identity.BaseCurrencyOf).
+	return finance.NewHandlers(InstallationDB(pool), FinanceRates()).
 		WithBillingContacts(financeBillingContacts{contacts: contacts.NewStore(InstallationDB(pool))})
 }
 
@@ -211,6 +211,7 @@ func (s *Server) wireSurfaces(pool *pgxpool.Pool, log *slog.Logger) {
 	s.wireOnboardingSurface(pool)
 	s.wireSystemOfRecordReads(pool)
 	s.wireBulkSurface(pool)
+	s.wireHandoverSurface()
 }
 
 // wireStagedSurfaces binds the two surfaces that read the staged queue. They
@@ -470,10 +471,6 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 // confirmation lane's all-three-or-none rule.
 func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 	return consent.NewHandlers(InstallationDB(pool)).
-		// THE SAME APPROVALS ENGINE the inbox decides through, so a card raised
-		// here is answered there rather than sitting in a second queue nobody
-		// reads.
-		WithReviewRouter(reviewRouter{approvals: approvalsServiceWithEffects(pool)}).
 		WithEraser(privacy.NewEraser(InstallationDB(pool)).WithCountry(identity.CountryForDecision)).
 		WithSubjectAccessAssembler(newSubjectAccessAssembler(InstallationDB(pool))).
 		WithInstallationName(consent.InstallationNameFunc(func(ctx context.Context) (string, error) {

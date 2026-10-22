@@ -19,6 +19,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { unwrap } from "../lib/problem";
+import { useMemberFilterOptions } from "./assigneepicker";
 import { type RosterKind, useRoster, useRosterPartial } from "./entityref";
 
 /** The record type an id field points at, as the vocabulary reports it. */
@@ -108,8 +109,11 @@ export function useReferenceOptions(reference: Reference | undefined) {
   // `enabled` is what decides whether either read runs, so the kind handed over
   // when the target is not a roster one is inert — a disabled query fetches
   // nothing, and the branch below never looks at its result.
-  const roster = useRoster(kind ?? "user", kind !== null);
-  const rosterPartial = useRosterPartial(kind ?? "user", kind !== null);
+  // A member is filtered from the list that includes those who left, so their
+  // records can still be found; a team from the team roster.
+  const members = useMemberFilterOptions(kind === "user");
+  const roster = useRoster("team", kind === "team");
+  const rosterPartial = useRosterPartial("team", kind === "team");
   const query = useQuery({
     queryKey: ["filter-reference", reference],
     enabled: boundedReference(reference) && kind === null,
@@ -118,6 +122,9 @@ export function useReferenceOptions(reference: Reference | undefined) {
     staleTime: 60_000,
     queryFn: async (): Promise<ReferenceOption[]> => readOptions(reference),
   });
+  if (kind === "user") {
+    return members;
+  }
   if (kind !== null) {
     return {
       options: (roster.data ?? []).map((entry) => ({

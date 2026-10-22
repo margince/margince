@@ -151,6 +151,10 @@ func (stubs) UpdateActivityReviewTemplate(w nethttp.ResponseWriter, r *nethttp.R
 	httperr.NotImplemented(w, r, "UpdateActivityReviewTemplate")
 }
 
+func (stubs) GetAutomaticWorkHealth(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetAutomaticWorkHealthParams) {
+	httperr.NotImplemented(w, r, "GetAutomaticWorkHealth")
+}
+
 func (stubs) GetCaptureHealth(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetCaptureHealth")
 }
@@ -943,10 +947,6 @@ func (stubs) ListOpenCommitments(w nethttp.ResponseWriter, r *nethttp.Request, p
 	httperr.NotImplemented(w, r, "ListOpenCommitments")
 }
 
-func (stubs) ListCommunicationReviews(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListCommunicationReviewsParams) {
-	httperr.NotImplemented(w, r, "ListCommunicationReviews")
-}
-
 func (stubs) GetCommunicationReview(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "GetCommunicationReview")
 }
@@ -957,10 +957,6 @@ func (stubs) RecordCommunicationContext(w nethttp.ResponseWriter, r *nethttp.Req
 
 func (stubs) DirectCommunicationSend(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "DirectCommunicationSend")
-}
-
-func (stubs) RequestCommunicationDecision(w nethttp.ResponseWriter, r *nethttp.Request, id openapi_types.UUID) {
-	httperr.NotImplemented(w, r, "RequestCommunicationDecision")
 }
 
 func (stubs) ListCompanies(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListCompaniesParams) {
@@ -1781,6 +1777,10 @@ func (stubs) ListDealStakeholders(w nethttp.ResponseWriter, r *nethttp.Request, 
 
 func (stubs) GetDealStatus(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.GetDealStatusParams) {
 	httperr.NotImplemented(w, r, "GetDealStatus")
+}
+
+func (stubs) GetDealWinEvidence(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetDealWinEvidence")
 }
 
 func (stubs) ListDedupeCandidates(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListDedupeCandidatesParams) {
@@ -3321,6 +3321,14 @@ func (stubs) GetUserAccess(w nethttp.ResponseWriter, r *nethttp.Request, id crmc
 
 func (stubs) DeactivateUser(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DeactivateUser")
+}
+
+func (stubs) GetUserHandover(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetUserHandover")
+}
+
+func (stubs) HandOverUserWork(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.HandOverUserWorkParams) {
+	httperr.NotImplemented(w, r, "HandOverUserWork")
 }
 
 func (stubs) RemoveUserMfa(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

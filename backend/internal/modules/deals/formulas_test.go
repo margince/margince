@@ -35,9 +35,12 @@ func TestIsStalled(t *testing.T) {
 		{"expired wait un-suppresses", "open", now.AddDate(0, 0, -90), at(80), at(5), true},
 	}
 	for _, c := range cases {
-		if got := IsStalled(c.status, c.created, c.lastAct, c.wait, now); got != c.want {
+		if got := IsStalled(c.status, c.created, c.lastAct, c.wait, false, now); got != c.want {
 			t.Errorf("%s: IsStalled = %v, want %v", c.name, got, c.want)
 		}
+	}
+	if IsStalled("open", now.AddDate(0, 0, -90), at(80), nil, true, now) {
+		t.Error("an idle deal with a booked meeting ahead reads as stalled, want not stalled")
 	}
 }
 
@@ -54,29 +57,34 @@ func TestIsQuietForIsTheSameRuleAtADifferentWindow(t *testing.T) {
 	created := now.AddDate(0, 0, -90)
 
 	// Twenty days idle: quiet at the shorter window, not yet stalled.
-	if !IsQuietFor(QuietThresholdDays, "open", created, at(20), nil, now) {
+	if !IsQuietFor(QuietThresholdDays, "open", created, at(20), nil, false, now) {
 		t.Error("a deal idle 20 days is not quiet at the 19-day window, want quiet")
 	}
-	if IsStalled("open", created, at(20), nil, now) {
+	if IsStalled("open", created, at(20), nil, false, now) {
 		t.Error("a deal idle 20 days reads as stalled, want not stalled")
 	}
 
 	// Every suppression the stalled rule keeps, the shorter window keeps too.
-	if IsQuietFor(QuietThresholdDays, "won", created, at(300), nil, now) {
+	if IsQuietFor(QuietThresholdDays, "won", created, at(300), nil, false, now) {
 		t.Error("a closed deal reads as quiet, want never")
 	}
-	if IsQuietFor(QuietThresholdDays, "open", created, at(80), at(-10), now) {
+	if IsQuietFor(QuietThresholdDays, "open", created, at(80), at(-10), false, now) {
 		t.Error("an active wait failed to suppress quiet, want suppressed")
+	}
+	if IsQuietFor(QuietThresholdDays, "open", created, at(80), nil, true, now) {
+		t.Error("a booked meeting ahead failed to suppress quiet, want suppressed")
 	}
 
 	// The stalled spelling IS the quiet one at its own threshold. Asserted over
 	// the same table the rule is specified by, so a change to either that made
 	// them disagree fails here rather than in whichever surface noticed first.
 	for _, idle := range []int{0, 5, 18, 19, 20, 59, 60, 61, 200} {
-		if got, want := IsQuietFor(StalledThresholdDays, "open", created, at(idle), nil, now),
-			IsStalled("open", created, at(idle), nil, now); got != want {
-			t.Errorf("idle %dd: IsQuietFor(stalled window) = %v, IsStalled = %v — one rule, two answers",
-				idle, got, want)
+		for _, ahead := range []bool{false, true} {
+			if got, want := IsQuietFor(StalledThresholdDays, "open", created, at(idle), nil, ahead, now),
+				IsStalled("open", created, at(idle), nil, ahead, now); got != want {
+				t.Errorf("idle %dd, meeting ahead %v: IsQuietFor(stalled window) = %v, IsStalled = %v — one rule, two answers",
+					idle, ahead, got, want)
+			}
 		}
 	}
 }

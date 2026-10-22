@@ -15,7 +15,7 @@
 // activity_request_settlement, activity_identity, mail_draft,
 // booking_page, meeting_invitation, meeting_proposal,
 // activity_calendar_method_backfill, activity_waiting_horizon.
-// Also owns activity_commitment_admission.
+// Also owns activity_commitment_admission and activity_clock_refold_mark.
 //
 // mail_draft is the composer's own state — a message the rep has started and
 // not sent — and it is here because sending it is: the transaction that sends

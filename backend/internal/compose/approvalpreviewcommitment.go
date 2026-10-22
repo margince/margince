@@ -14,9 +14,9 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func (r approvalPreviewReader) commitmentPreview(ctx context.Context, approval crmcontracts.Approval) (*crmcontracts.ApprovalPreview, error) {
@@ -60,19 +60,18 @@ func (r approvalPreviewReader) commitmentPreview(ctx context.Context, approval c
 		}
 		return out, nil
 	}
-	return r.commitmentCreationPreview(ctx, proposal, out, recipients, citation)
-}
-
-func (r approvalPreviewReader) commitmentCreationPreview(ctx context.Context, proposal CommitmentTaskProposal, out *crmcontracts.ApprovalPreview, recipients []string, citation crmcontracts.ApprovalEvidence) (*crmcontracts.ApprovalPreview, error) {
-	changes := []crmcontracts.ApprovalPreviewChange{commitmentCreateValue("summary", previewValueText, proposal.Summary)}
-	actor, found := principal.Actor(ctx)
-	if !found {
+	assignee, named := approvalsubject.CommitmentAskedOf(raw)
+	if !named {
+		// A proposal for nobody is withheld from every reader; one reached
+		// anyway names no owner rather than the reader.
 		return out, nil
 	}
-	assignee := actor.UserID
-	if proposal.SeatID != nil {
-		assignee = *proposal.SeatID
-	}
+	return r.commitmentCreationPreview(ctx, proposal, assignee, out, recipients, citation)
+}
+
+// commitmentCreationPreview names the promiser as the owner, for every reader.
+func (r approvalPreviewReader) commitmentCreationPreview(ctx context.Context, proposal CommitmentTaskProposal, assignee ids.UUID, out *crmcontracts.ApprovalPreview, recipients []string, citation crmcontracts.ApprovalEvidence) (*crmcontracts.ApprovalPreview, error) {
+	changes := []crmcontracts.ApprovalPreviewChange{commitmentCreateValue("summary", previewValueText, proposal.Summary)}
 	owner, err := r.referenceValue(ctx, bulkParamOwner, assignee.String())
 	if previewUnavailable(err) {
 		out.State = previewUnavailableState

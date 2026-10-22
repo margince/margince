@@ -5,10 +5,13 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -18,43 +21,44 @@ import (
 // somebody else's promise is an explicit act, never a fallback. A private
 // conversation is put only to its own owner, and only when they made the
 // promise. The zero id means nobody is asked; the finding stays on its source.
-func commitmentAskedOf(ctx context.Context, tx pgx.Tx, c Commitment) (ids.UUID, error) {
-	if c.Seat == nil || c.Seat.IsZero() {
-		return ids.Nil, nil
+//
+// It asks the task writer's own rule, so the dispatcher never stages or writes
+// for a seat the writer then refuses. It also says whether they signed in yet.
+func commitmentAskedOf(ctx context.Context, tx pgx.Tx, c Commitment) (ids.UUID, activities.SeatWorkState, error) {
+	if c.Seat == nil || c.Seat.IsZero() || !mayHoldPrivateTask(c.PrivateTo, *c.Seat) {
+		return ids.Nil, activities.SeatCannotHoldWork, nil
 	}
-	if c.PrivateTo != nil && *c.PrivateTo != *c.Seat {
-		return ids.Nil, nil
+	state, err := activities.NewTaskSeatState(ctx, tx, ids.From[ids.UserKind](*c.Seat))
+	if err != nil || state == activities.SeatCannotHoldWork {
+		return ids.Nil, activities.SeatCannotHoldWork, err
 	}
-	askable, err := approvals.CanBeAsked(ctx, tx, *c.Seat)
-	if err != nil || !askable {
-		return ids.Nil, err
-	}
-	return *c.Seat, nil
+	return *c.Seat, state, nil
 }
 
 // pendingProposalAskedOf is who a waiting proposal stays with when its
 // recipients change. One about an existing task goes to that task's current
-// assignee, read afresh, so a reassigned task reaches its new holder. Any other stays with its seat, else its promiser, while they may still
-// be asked.
-func (d *CommitmentDispatcher) pendingProposalAskedOf(ctx context.Context, tx pgx.Tx, c Commitment, proposal *CommitmentTaskProposal) (ids.UUID, error) {
-	colleague := derefSeat(proposal.SeatID)
+// assignee, read afresh, so a reassigned task reaches its new holder. Any
+// other stays with the colleague who made the promise
+// (approvalsubject.CommitmentAskedOf), while they may still be asked.
+func (d *CommitmentDispatcher) pendingProposalAskedOf(ctx context.Context, tx pgx.Tx, c Commitment, proposal *CommitmentTaskProposal) (ids.UUID, activities.SeatWorkState, error) {
 	if proposal.ExistingTaskID != nil {
 		target, _, err := d.recipientTaskTarget(ctx, tx, c)
 		if err != nil || target.ID != *proposal.ExistingTaskID {
-			return ids.Nil, err
+			return ids.Nil, activities.SeatCannotHoldWork, err
 		}
 		proposal.SeatID = target.Assignee
-		colleague = derefSeat(target.Assignee)
 	}
-	if colleague.IsZero() {
-		colleague = derefSeat(proposal.PromiserSeatID)
+	raw, err := json.Marshal(proposal)
+	if err != nil {
+		return ids.Nil, activities.SeatCannotHoldWork, fmt.Errorf("compose: marshal a pending commitment proposal: %w", err)
 	}
-	if colleague.IsZero() {
-		return ids.Nil, nil
+	colleague, named := approvalsubject.CommitmentAskedOf(raw)
+	if !named {
+		return ids.Nil, activities.SeatCannotHoldWork, nil
 	}
-	askable, err := approvals.CanBeAsked(ctx, tx, colleague)
-	if err != nil || !askable {
-		return ids.Nil, err
+	state, err := activities.NewTaskSeatState(ctx, tx, ids.From[ids.UserKind](colleague))
+	if err != nil || state == activities.SeatCannotHoldWork {
+		return ids.Nil, activities.SeatCannotHoldWork, err
 	}
-	return colleague, nil
+	return colleague, state, nil
 }

@@ -93,7 +93,7 @@ The 23 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `forecast_category` | `text` |  | One of `commit`, `best_case`, `pipeline`, `omitted`. |
 | `fx_rate_date` | `date` |  |  |
 | `fx_rate_to_base` | `numeric(20,10)` |  | Native→base, frozen at close (null while open). |
-| `last_activity_at` | `timestamp with time zone` |  | Drives the deterministic stalled flag. |
+| `last_activity_at` | `timestamp with time zone` |  | The newest `occurred_at` at or before now of a workspace-audience activity filed under the deal, so a booked meeting counts once it starts. |
 | `lost_reason` | `text` |  | Required when status=lost. |
 | `name` | `text` | yes |  |
 | `owner_id` | `uuid` |  | Points at `app_user.id`. |

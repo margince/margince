@@ -27,7 +27,7 @@ The 42 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `geocoded_at` | `timestamp with time zone` |  |  |
 | `industry` | `text` |  |  |
 | `is_anchor` | `boolean`, default `false` | yes | True only for this installation's own company. |
-| `last_activity_at` | `timestamp with time zone` |  | When something last happened with this account: the newest `occurred_at` of a workspace-audience activity linked to it, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). |
+| `last_activity_at` | `timestamp with time zone` |  | When something last happened with this account: the newest `occurred_at` at or before now of a workspace-audience activity linked to it, so a booked meeting counts once it starts, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). |
 | `legal_name` | `text` |  |  |
 | `lifecycle` | `text`, default `'unknown'::text` | yes | Where the account stands with us. |
 | `linkedin_url` | `text` |  | Canonical LinkedIn company URL. |
@@ -473,7 +473,7 @@ The 42 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `entered_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `first_name` | `text` |  |  |
 | `full_name` | `text` | yes | Always present (display name). |
-| `last_activity_at` | `timestamp with time zone` |  | When something last happened with this contact: the newest `occurred_at` of an activity linked to it, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). |
+| `last_activity_at` | `timestamp with time zone` |  | When something last happened with this contact: the newest `occurred_at` at or before now of an activity linked to it, so a booked meeting counts once it starts, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). |
 | `last_name` | `text` |  |  |
 | `merged_into_id` | `uuid` |  | Set when this row was merged away. |
 | `narrowing_reason` | `text` |  | One of `awaiting_verdict`, `outbound_no_answer`, `confidentiality_hold`, `advisor`, `human_decided`. |

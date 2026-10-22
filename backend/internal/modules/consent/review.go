@@ -48,10 +48,6 @@ const (
 	// ReviewNeedsRepair is a refusal no evidence can answer, because something
 	// about the message or the address is wrong.
 	ReviewNeedsRepair = "needs_repair"
-	// ReviewAwaitingDecision is a refusal the rep has handed to somebody who
-	// may override it. It is the rep's work no longer, and a surface should say
-	// so rather than showing them a form they have already filled in.
-	ReviewAwaitingDecision = "awaiting_decision"
 	// ReviewResolved is work somebody finished.
 	ReviewResolved = "resolved"
 	// ReviewSuperseded is a review replaced by a fresher attempt at the same
@@ -92,9 +88,6 @@ type Review struct {
 	InitiatedBy ids.UUID
 	Refusals    []RefusedRecipient
 	ReasonCode  string
-	// ApprovalID is the card a routed review was handed to. Zero on a review
-	// nobody has asked about, which is most of them.
-	ApprovalID ids.UUID
 }
 
 // OpenReviewTx records one refusal, inside the transaction that refused.
@@ -220,13 +213,12 @@ func (s *Store) ReviewForReader(ctx context.Context, id ids.UUID) (Review, error
 		err := tx.QueryRow(ctx, `
 			SELECT id, state, kind, coalesce(delivery_intent_id, '00000000-0000-0000-0000-000000000000'::uuid),
 			       refusals, reason_code,
-			       coalesce(approval_id, '00000000-0000-0000-0000-000000000000'::uuid),
 			       coalesce(initiated_by, '00000000-0000-0000-0000-000000000000'::uuid)
 			  FROM communication_review
 			 WHERE id = $1
 			   AND (($2::uuid IS NOT NULL AND initiated_by = $2) OR $3)`, id, zeroSeatAsNull(seat), decider).
 			Scan(&out.ID, &out.State, &out.Kind, &out.IntentID, &payload, &out.ReasonCode,
-				&out.ApprovalID, &out.InitiatedBy)
+				&out.InitiatedBy)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
@@ -471,7 +463,7 @@ func (e *SendRefusedError) FaultReference() map[string]any {
 		return nil
 	}
 	reference := map[string]any{
-		FieldReviewID: e.ReviewID.String(),
+		fieldReviewID: e.ReviewID.String(),
 		// Both moves are human-only; an agent gets an empty list and the
 		// reference, which a human reading its transcript can pick up.
 		"available_actions": e.Actions,

@@ -95,7 +95,7 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 		FROM contact c
 		WHERE c.id = ANY($%[3]d) AND c.archived_at IS NULL AND (%[4]s)`,
 		reached, contacts.SenderPredicate("c.id", "a"), wantedPos, visible,
-		relstrength.NotCalledOffSQL("a"), activities.ImportedHistorySQL), args...)
+		relstrength.LastActivityCountsSQL("a", "now()"), activities.ImportedHistorySQL), args...)
 	if err != nil {
 		return nil, err
 	}

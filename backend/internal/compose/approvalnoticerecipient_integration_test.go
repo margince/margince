@@ -63,7 +63,7 @@ func TestTheSendTimeCheckKeepsOnlyTheDecidersNotice(t *testing.T) {
 			Notice:     notices.Notice{Kind: notices.KindApprovalPending, Subject: stagedSummary},
 			Recipient:  ids.From[ids.UserKind](seat),
 		}
-		_, ok, err := refreshApprovalNotice(a.e.As(seat, nil, integration.AdminPerms), a.e.Pool, attempt, clocktest.Now(t))
+		_, _, ok, err := refreshApprovalNotice(a.e.As(seat, nil, integration.AdminPerms), a.e.Pool, attempt, clocktest.Now(t), forSingleEmail)
 		if err != nil {
 			t.Fatalf("checking the notice for %s: %v", seat, err)
 		}

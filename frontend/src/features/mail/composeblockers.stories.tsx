@@ -70,18 +70,17 @@ function Composer() {
   );
 }
 
-/** Nothing on record says the rep may write to this address. The band above
- *  the foot offers to record a reason under their own name. */
+/** Nothing on record says the rep may write to this address. The strip above
+ *  the foot carries a reason pick that records it under their own name. */
 export const ReasonMissing: StoryObj = {
   render: () => <Composer />,
   play: async () => {
     const dialog = within(await screen.findByRole("dialog"));
     await userEvent.type(dialog.getByLabelText("To"), "anna@example.test");
     await userEvent.tab();
-    await userEvent.click(
-      await dialog.findByRole("button", { name: "Record reason for contact" }),
-    );
-    await screen.findByLabelText("Why you may write to anna@example.test");
+    await dialog.findByRole("combobox", {
+      name: "Why you may write to anna@example.test",
+    });
   },
 };
 

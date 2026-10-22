@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery } from "@tanstack/react-query";
-import { api } from "../../api/client";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { api, FIRST_PAGE } from "../../api/client";
 import type { components } from "../../api/schema";
 import { activityTimeline } from "../../design-system/activitytimeline";
 import type { NameOf } from "../../design-system/participants";
@@ -19,14 +19,8 @@ type EmailSummary = components["schemas"]["EmailSummary"];
 // message in the drawer, and fetching all of it costs the composer's open.
 const SHOWN = 12;
 
-// How many conversations to offer as a way in. A reader picking up an account
-// is continuing something recent or starting fresh; a list long enough to
-// scroll is a list they read instead of writing.
-const OFFERED = 5;
-
-// How much of the record's mail to read to find those conversations. Enough
-// that five threads are actually five, on an account whose recent traffic is
-// one busy exchange.
+// How much of the record's mail one page reads to find conversations. A record
+// with a hundred threads is paged and searched rather than read whole.
 const SCANNED = 40;
 
 /**
@@ -112,16 +106,24 @@ export function useRecentConversations(
     t: ReturnType<typeof useT>;
     locale: Locale;
   }>,
+  /** Words the threads must hold; empty lists them all, newest first. */
+  search = "",
 ): {
   conversations: readonly Conversation[];
   pending: boolean;
   failed: boolean;
   retry: () => void;
+  /** Older mail is still unread; `loadMore` reads its next page. */
+  more: boolean;
+  loadMore: () => void;
+  loadingMore: boolean;
+  moreFailed: boolean;
 } {
-  const query = useQuery({
-    queryKey: ["compose-recent-threads", entityType, entityId],
-    queryFn: async () => {
-      return unwrap(
+  const term = search.trim();
+  const query = useInfiniteQuery({
+    queryKey: ["compose-recent-threads", entityType, entityId, term],
+    queryFn: async ({ pageParam }) =>
+      unwrap(
         await api.GET("/activities", {
           params: {
             query: {
@@ -129,18 +131,26 @@ export function useRecentConversations(
               entity_id: entityId,
               kind: "email",
               limit: SCANNED,
+              ...(pageParam ? { cursor: pageParam } : {}),
+              ...(term ? { q: term } : {}),
             },
           },
         }),
-      );
-    },
+      ),
+    initialPageParam: FIRST_PAGE,
+    // A response without its page block is read as the last page.
+    getNextPageParam: (last) =>
+      last.page?.has_more && last.page.next_cursor
+        ? last.page.next_cursor
+        : undefined,
     enabled,
   });
   // A message this reader is not in the audience for cannot be a way in: its
   // subject and body come back null, and the draft endpoint — which gates on
   // content, not discovery — answers 404 for it. Offered, it would be a blank
   // row that dead-ends the composer.
-  const readable = (query.data?.data ?? []).filter(
+  const loaded = (query.data?.pages ?? []).flatMap((page) => page.data ?? []);
+  const readable = loaded.filter(
     (activity) => activity.content_state !== "withheld",
   );
   const entries = activityTimeline(readable, undefined, undefined, who);
@@ -151,7 +161,6 @@ export function useRecentConversations(
   // draws them.
   const conversations = groupChronology(entries)
     .filter((group) => group.kind !== "bulk")
-    .slice(0, OFFERED)
     .map((group) => ({
       // The newest member: continuing a conversation means answering its last
       // message, which is the same activity a Reply on the History tab names.
@@ -172,10 +181,18 @@ export function useRecentConversations(
   return {
     conversations,
     pending: query.isPending,
-    failed: query.isError,
+    // A failed older page keeps the threads already read on screen; only a
+    // failed first read is a failed list.
+    failed: query.isLoadingError,
     retry: () => {
       void query.refetch();
     },
+    more: query.hasNextPage,
+    loadMore: () => {
+      void query.fetchNextPage();
+    },
+    loadingMore: query.isFetchingNextPage,
+    moreFailed: query.isFetchNextPageError,
   };
 }
 

@@ -6,3 +6,6 @@
 1792641896_every_request_names_who_decides_it_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1792655143_a_rep_overrules_a_refusal_instead_of_asking.up.sql | *, approval, audit_log, communication_review | only PENDING communication_review cards and reviews awaiting one are touched; a card lives at most its expiry window, so the set is the live queue
 1792655143_a_rep_overrules_a_refusal_instead_of_asking.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1792670893_a_review_is_never_waiting_on_a_card.up.sql | *, audit_log, communication_review | only reviews still reading awaiting_decision are touched, and the migration that retired the ask already moved every live one, so the set is empty or a handful
+1792670894_a_review_is_never_waiting_on_a_card_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1792672839_the_unread_period_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

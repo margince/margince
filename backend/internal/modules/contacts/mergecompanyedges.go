@@ -28,18 +28,18 @@ func relinkCompanyEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.C
 		return err
 	}
 	mergeArgs := pgx.NamedArgs{mergeSourceKey: sourceID, mergeTargetKey: targetID, archiveStateKey: time.Now().UTC()}
-	if _, err := tx.Exec(ctx, `UPDATE relationship a SET archived_at=@archived WHERE `+mergeCompanyEdgeSource+` AND `+mergeCompanyEdgeSelf, mergeArgs); err != nil {
+	if _, err := mergeEdgeWrite(ctx, tx, `archived_at=@archived`, mergeCompanyEdgeSource+` AND `+mergeCompanyEdgeSelf, mergeArgs); err != nil {
 		return err
 	}
 	if err := foldFirstObservations(ctx, tx, companyFK, sourceID.UUID, targetID.UUID); err != nil {
 		return err
 	}
-	if _, err := tx.Exec(ctx, `UPDATE relationship a SET archived_at=@archived WHERE `+mergeCompanyEdgeSource+` AND `+mergeCompanyEdgeDuplicate, mergeArgs); err != nil {
+	if _, err := mergeEdgeWrite(ctx, tx, `archived_at=@archived`, mergeCompanyEdgeSource+` AND `+mergeCompanyEdgeDuplicate, mergeArgs); err != nil {
 		return err
 	}
-	if _, err := tx.Exec(ctx, `UPDATE relationship a SET company_id=@target,is_current_primary=`+mergeCompanyEdgePrimary+` WHERE `+mergeCompanyForwardSource, mergeArgs); err != nil {
+	if _, err := mergeEdgeWrite(ctx, tx, `company_id=@target,is_current_primary=`+mergeCompanyEdgePrimary, mergeCompanyForwardSource, mergeArgs); err != nil {
 		return err
 	}
-	_, err := tx.Exec(ctx, `UPDATE relationship SET counterparty_company_id=@target WHERE counterparty_company_id=@source AND archived_at IS NULL`, mergeArgs)
+	_, err := mergeEdgeWrite(ctx, tx, `counterparty_company_id=@target`, `a.counterparty_company_id=@source AND a.archived_at IS NULL`, mergeArgs)
 	return err
 }

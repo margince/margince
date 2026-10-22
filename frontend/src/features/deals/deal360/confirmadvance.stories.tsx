@@ -12,9 +12,9 @@ import {
 } from "../../../testing/story-utils";
 import { ConfirmAdvanceModal } from "./confirmadvance";
 
-// The confirm a terminal stage move goes through. A loss asks for a reason.
-// A loss on a deal with open tasks also asks what happens to them. An ordinary
-// win is one press. A win naming no evidence keeps this dialog open.
+// The confirm a terminal stage move goes through. A loss asks for a reason
+// and for what happens to the open tasks. A win with a signed contract is one
+// press. A win without one asks how it was won first.
 //
 // `Modal` portals to document.body, so the story canvas holds nothing and the
 // dialog is queried off the document. Each play is what proves the dialog drew
@@ -84,16 +84,25 @@ function advance(
     stage: Stage;
     onConfirm: () => Promise<unknown>;
     tasks?: unknown;
+    // Whether the deal has a signed contract. Left out, the read answers
+    // nothing usable and the dialog asks only if the server refuses.
+    signed?: boolean;
   }>,
 ) {
   return () => {
-    // The autonomy dot beside the title reads the agent-tool tiers, and the
-    // deal's own tasks are read for the question about them.
+    // The dot beside the title reads the agent-tool tiers. The deal's tasks
+    // feed the question about them, and a win reads its signed contract.
     installFetchStub({
       "GET /agent-tools": () =>
         jsonResponse({ data: [{ name: "progress_deal", tier: "confirm" }] }),
       "GET /activities": () =>
         jsonResponse(args.tasks ?? { data: [], page: { has_more: false } }),
+      ...(args.signed === undefined
+        ? {}
+        : {
+            "GET /deals/deal-1/win-evidence": () =>
+              jsonResponse({ has_signed_contract: args.signed }),
+          }),
     });
     return (
       <StoryProviders>
@@ -132,11 +141,42 @@ export const ClosingWon: Story = {
   render: advance({
     stage: terminal("Won", "won"),
     onConfirm: () => Promise.resolve(SAVED),
+    signed: true,
   }),
   play: async () => {
     const dialog = within(await screen.findByRole("dialog"));
     await dialog.findByText(/closes the deal as won/);
+    await waitFor(() =>
+      expect(dialog.getByRole("button", { name: "Confirm" })).toBeEnabled(),
+    );
   },
+};
+
+const winWithoutContract = advance({
+  stage: terminal("Won", "won"),
+  onConfirm: () => Promise.resolve(SAVED),
+  signed: false,
+});
+
+// A win on a deal with no signed contract. The question is there from the
+// start, and Confirm waits for the answer instead of being refused for it.
+async function askedBeforeConfirm() {
+  const dialog = within(await screen.findByRole("dialog"));
+  await dialog.findByRole("combobox", { name: "How was it won?" });
+  expect(
+    dialog.getByRole("button", { name: "Confirm" }),
+  ).toHaveAccessibleDescription("Pick how the deal was won.");
+}
+
+export const WinWithoutContract: Story = {
+  render: winWithoutContract,
+  play: askedBeforeConfirm,
+};
+
+export const WinWithoutContractDark: Story = {
+  globals: { theme: "dark" },
+  render: winWithoutContract,
+  play: askedBeforeConfirm,
 };
 
 const lostWithTasks = advance({

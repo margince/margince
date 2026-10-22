@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -96,6 +97,7 @@ func lastTouchCandidateQuery(mailbox *OwnerMailbox, providersPos int) string {
 				SELECT a.id, a.occurred_at
 				FROM activity a
 				WHERE `+genuineEngagement("a", 1, 4, 5)+`
+				  AND `+relstrength.LastActivityCountsSQL("a", "now()")+`
 			), live_accounts AS (
 				SELECT o.id, o.owner_id
 				FROM company o

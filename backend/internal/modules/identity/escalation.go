@@ -356,3 +356,23 @@ func lockAuthorization(ctx context.Context, tx pgx.Tx) error {
 // object added later is inside this ceiling without anybody remembering to add
 // it — the way a hand-kept list silently stops covering the newest authority.
 var administrationObjects = policy.AdministrationObjects()
+
+// AdmitMemberHandover gates handing a member's work on, inside the handover's
+// transaction. It asks the user_admin update grant, a live member (404
+// otherwise), and the ceiling every member verb carries. The member's row stays
+// locked until that transaction ends, so a role change cannot land in between.
+// The caller comes off the principal, whose role keys and grants the ceiling reads.
+func AdmitMemberHandover(ctx context.Context, tx pgx.Tx, member ids.UserID) error {
+	if err := auth.Require(ctx, objectUserAdmin, principal.ActionUpdate); err != nil {
+		return err
+	}
+	p, ok := principal.Actor(ctx)
+	if !ok {
+		return apperrors.ErrPermissionDenied
+	}
+	target, err := lockTargetGrants(ctx, tx, member)
+	if err != nil {
+		return err
+	}
+	return callerOutranks(Identity{Roles: p.Permissions.RoleKeys, Permissions: p.Permissions}, target, reachDenial)
+}

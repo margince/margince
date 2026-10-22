@@ -138,7 +138,6 @@ Anna" stops being true when Anna leaves:
 |---|---|
 | `needs_context` | More proof could answer this. The engine has no reason for the message to stand on. |
 | `needs_repair` | No proof can answer it. Something about the message or the address is wrong. |
-| `awaiting_decision` | Handed to someone who may override it. No longer the work of the sender. |
 | `resolved` | Someone closed it. |
 | `superseded` | A newer attempt at the same message stands in its place. |
 | `cancelled` | Nobody plans to send it. |

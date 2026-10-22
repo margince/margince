@@ -256,7 +256,6 @@ function FxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
             <TextInput
               {...control}
               type="date"
-              min={today()}
               value={effectiveDate}
               onChange={(e) => setEffectiveDate(e.target.value)}
             />

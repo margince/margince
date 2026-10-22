@@ -13,6 +13,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // The newest email on each deal of a page, as the board card states it.
@@ -44,7 +45,7 @@ func attachLastEmail(ctx context.Context, tx pgx.Tx, deals []crmcontracts.Deal) 
 		  JOIN activity a ON a.id = l.activity_id
 		 WHERE l.deal_id = ANY($1)
 		   AND a.kind = 'email'
-		   AND a.archived_at IS NULL
+		   AND a.archived_at IS NULL AND `+relstrength.LastActivityCountsSQL("a", "now()")+`
 		   `+auth.OriginIsEngagement("a")+auth.AudienceWorkspaceOnly("a")+`
 		 ORDER BY l.deal_id, a.occurred_at DESC, a.id DESC`, dealIDs)
 	if err != nil {
