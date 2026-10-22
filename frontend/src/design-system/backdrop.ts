@@ -8,9 +8,9 @@ type BackdropHandlers = Readonly<{
 
 /**
  * The handlers that let a click on a dialog's overlay dismiss it. A browser
- * sends the click of a drag to the element the press and the release share, so
- * a text selection dragged from the dialog out to the backdrop arrives as a
- * click on the overlay. Only a press and a release both on the overlay count.
+ * sends a drag's click to the element the press and the release share. So a
+ * text selection dragged out of the dialog arrives as a click on the overlay.
+ * Only a press and a release both on the overlay count.
  */
 export function useBackdropDismiss(
   onDismiss: () => void,

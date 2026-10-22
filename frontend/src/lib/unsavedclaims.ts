@@ -94,28 +94,18 @@ export function useHasUnsavedChanges(scope?: string): boolean {
 /**
  * Declare that this component holds an unsaved edit, or no longer does.
  *
- * A hook rather than a prop chain because the draft and the guard are usually
- * several components apart — the card that owns the textarea is inside the tab
- * that is inside the screen that would hold the answer — and threading a boolean
- * up through that is how one card ends up guarded and the next one does not.
- *
- * Safe to call outside a provider: it reports nothing, which is the honest
- * behaviour for a card rendered somewhere no guard is installed (a story, a
- * test, a record page). A hook that threw there would make the provider a
- * requirement of every caller rather than of the surfaces that want guarding.
+ * A hook, because the draft sits several components below the guard. Outside
+ * a provider (a story, a test) it claims nothing.
  */
 export function useUnsavedGuard(dirty: boolean, scope?: string): void {
   const { claim, release } = useContext(UnsavedContext) ?? {};
-  // A stable identity per mounting, so two instances of the same card — two
-  // rows, two panels — are two claims rather than one that the second overwrites.
+  // One token per mounting, so two rows of the same card are two claims.
   const token = useId();
 
   useEffect(() => {
     claim?.(token, dirty, scope);
   }, [claim, token, dirty, scope]);
 
-  // Released on unmount, and this is the one that has to be right: a card that
-  // left the tree still holding a claim would guard the surface against a draft
-  // that no longer exists, and nothing the reader can do would clear it.
+  // A claim left after unmount would guard a draft that no longer exists.
   useEffect(() => () => release?.(token), [release, token]);
 }
