@@ -95,6 +95,24 @@ when you import. A record is archived, not deleted: an archive operation sets `a
 record stays readable by id. A few operations remove a part of a record, such as
 `removeOfferLineItem`.
 
+## An id from your system
+
+A contact, company, deal or project can keep `source_id`, its id in your system. You set it on
+create, next to `source_system`. The reasons are in [outside-ids.md](../explanation/outside-ids.md).
+
+| Create request | Answer |
+|---|---|
+| `source_id` with no `source_system` | `422` |
+| An empty `source_id` | `422` |
+| `source_system` or `source_id` over 128 characters | `422` |
+| A `source_system` that starts with `mirror:`, from a caller that is not a declared importer | `422` |
+| The same pair as a record of the same kind, whether or not you may read it | `409` |
+
+Only `listCompanies` and `listDeals` can look a record up by it. Send both query parameters to find
+the one record. Each also works alone. `source_system` lists every record from that system, and
+`source_id` matches that id in any system. An empty value, or one over 128 characters, is also `422`
+on the parameters.
+
 ## Events out
 
 Margince sends events to your system as signed webhooks. To register one, see

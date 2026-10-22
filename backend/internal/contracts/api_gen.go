@@ -34893,6 +34893,9 @@ type CreateCompanyRequest struct {
 	// SourceAuthorName The source system's own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.
 	SourceAuthorName *string `json:"source_author_name,omitempty"`
 
+	// SourceId The id this company has in source_system. Needs source_system, and the pair is unique: a second company with the same pair is 409. Look a company up by it with the `source_system` and `source_id` filters on `listCompanies`.
+	SourceId *string `json:"source_id,omitempty"`
+
 	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).
 	SourceSystem         *string                `json:"source_system,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
@@ -34941,6 +34944,9 @@ type CreateContactRequest struct {
 
 	// SourceAuthorName The source system's own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.
 	SourceAuthorName *string `json:"source_author_name,omitempty"`
+
+	// SourceId The id this contact has in source_system. Needs source_system, and the pair is unique: a second contact with the same pair is 409.
+	SourceId *string `json:"source_id,omitempty"`
 
 	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).
 	SourceSystem         *string                `json:"source_system,omitempty"`
@@ -35058,6 +35064,9 @@ type CreateDealRequest struct {
 
 	// SourceAuthorName The source system's own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.
 	SourceAuthorName *string `json:"source_author_name,omitempty"`
+
+	// SourceId The id this deal has in source_system. Needs source_system, and the pair is unique: a second deal with the same pair is 409. Look a deal up by it with the `source_system` and `source_id` filters on `listDeals`.
+	SourceId *string `json:"source_id,omitempty"`
 
 	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).
 	SourceSystem         *string                `json:"source_system,omitempty"`
@@ -35483,6 +35492,9 @@ type CreateProjectRequest struct {
 
 	// SourceAuthorName The source system's own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.
 	SourceAuthorName *string `json:"source_author_name,omitempty"`
+
+	// SourceId The id this project has in source_system. Needs source_system, and the pair is unique: a second project with the same pair is 409.
+	SourceId *string `json:"source_id,omitempty"`
 
 	// SourceSystem Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).
 	SourceSystem         *string                `json:"source_system,omitempty"`
@@ -55716,6 +55728,14 @@ type ListCompaniesParams struct {
 	// reads them in one request instead of one each. An id the caller cannot see, or that
 	// is archived without `include_archived`, is simply absent from the page.
 	Id *[]openapi_types.UUID `form:"id,omitempty" json:"id,omitempty"`
+
+	// SourceSystem Companies that came from this outside system, matched exactly. Send `source_id`
+	// too to find the one company holding that id there. A company the caller cannot
+	// see, or that is archived without `include_archived`, is simply absent from the page.
+	SourceSystem *string `form:"source_system,omitempty" json:"source_system,omitempty"`
+
+	// SourceId An id in an outside system, matched exactly. Send `source_system` with it, because the same id can mean different companies in different systems.
+	SourceId *string `form:"source_id,omitempty" json:"source_id,omitempty"`
 }
 
 // ListCompaniesParamsCapturedByKind defines parameters for ListCompanies.
@@ -57448,6 +57468,14 @@ type ListDealsParams struct {
 	//
 	// Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
 	TagMode *ListDealsParamsTagMode `form:"tag_mode,omitempty" json:"tag_mode,omitempty"`
+
+	// SourceSystem Deals that came from this outside system, matched exactly. Send `source_id` too to
+	// find the one deal holding that id there. A deal that is archived without
+	// `include_archived` is simply absent from the page.
+	SourceSystem *string `form:"source_system,omitempty" json:"source_system,omitempty"`
+
+	// SourceId An id in an outside system, matched exactly. Send `source_system` with it, because the same id can mean different deals in different systems.
+	SourceId *string `form:"source_id,omitempty" json:"source_id,omitempty"`
 }
 
 // ListDealsParamsStatus defines parameters for ListDeals.
@@ -65221,6 +65249,14 @@ func (a *CreateCompanyRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "source_author_name")
 	}
 
+	if raw, found := object["source_id"]; found {
+		err = json.Unmarshal(raw, &a.SourceId)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_id': %w", err)
+		}
+		delete(object, "source_id")
+	}
+
 	if raw, found := object["source_system"]; found {
 		err = json.Unmarshal(raw, &a.SourceSystem)
 		if err != nil {
@@ -65325,6 +65361,13 @@ func (a CreateCompanyRequest) MarshalJSON() ([]byte, error) {
 		object["source_author_name"], err = json.Marshal(a.SourceAuthorName)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'source_author_name': %w", err)
+		}
+	}
+
+	if a.SourceId != nil {
+		object["source_id"], err = json.Marshal(a.SourceId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_id': %w", err)
 		}
 	}
 
@@ -65457,6 +65500,14 @@ func (a *CreateContactRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "source_author_name")
 	}
 
+	if raw, found := object["source_id"]; found {
+		err = json.Unmarshal(raw, &a.SourceId)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_id': %w", err)
+		}
+		delete(object, "source_id")
+	}
+
 	if raw, found := object["source_system"]; found {
 		err = json.Unmarshal(raw, &a.SourceSystem)
 		if err != nil {
@@ -65562,6 +65613,13 @@ func (a CreateContactRequest) MarshalJSON() ([]byte, error) {
 		object["source_author_name"], err = json.Marshal(a.SourceAuthorName)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'source_author_name': %w", err)
+		}
+	}
+
+	if a.SourceId != nil {
+		object["source_id"], err = json.Marshal(a.SourceId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_id': %w", err)
 		}
 	}
 
@@ -66046,6 +66104,14 @@ func (a *CreateDealRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "source_author_name")
 	}
 
+	if raw, found := object["source_id"]; found {
+		err = json.Unmarshal(raw, &a.SourceId)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_id': %w", err)
+		}
+		delete(object, "source_id")
+	}
+
 	if raw, found := object["source_system"]; found {
 		err = json.Unmarshal(raw, &a.SourceSystem)
 		if err != nil {
@@ -66198,6 +66264,13 @@ func (a CreateDealRequest) MarshalJSON() ([]byte, error) {
 		object["source_author_name"], err = json.Marshal(a.SourceAuthorName)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'source_author_name': %w", err)
+		}
+	}
+
+	if a.SourceId != nil {
+		object["source_id"], err = json.Marshal(a.SourceId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_id': %w", err)
 		}
 	}
 
@@ -66594,6 +66667,14 @@ func (a *CreateProjectRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "source_author_name")
 	}
 
+	if raw, found := object["source_id"]; found {
+		err = json.Unmarshal(raw, &a.SourceId)
+		if err != nil {
+			return fmt.Errorf("error reading 'source_id': %w", err)
+		}
+		delete(object, "source_id")
+	}
+
 	if raw, found := object["source_system"]; found {
 		err = json.Unmarshal(raw, &a.SourceSystem)
 		if err != nil {
@@ -66677,6 +66758,13 @@ func (a CreateProjectRequest) MarshalJSON() ([]byte, error) {
 		object["source_author_name"], err = json.Marshal(a.SourceAuthorName)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'source_author_name': %w", err)
+		}
+	}
+
+	if a.SourceId != nil {
+		object["source_id"], err = json.Marshal(a.SourceId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'source_id': %w", err)
 		}
 	}
 
@@ -90317,6 +90405,32 @@ func (siw *ServerInterfaceWrapper) ListCompanies(w http.ResponseWriter, r *http.
 		return
 	}
 
+	// ------------- Optional query parameter "source_system" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "source_system", r.URL.Query(), &params.SourceSystem, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "source_system"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "source_system", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "source_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "source_id", r.URL.Query(), &params.SourceId, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "source_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "source_id", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListCompanies(w, r, params)
 	}))
@@ -98632,6 +98746,32 @@ func (siw *ServerInterfaceWrapper) ListDeals(w http.ResponseWriter, r *http.Requ
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tag_mode"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tag_mode", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "source_system" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "source_system", r.URL.Query(), &params.SourceSystem, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "source_system"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "source_system", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "source_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "source_id", r.URL.Query(), &params.SourceId, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "source_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "source_id", Err: err})
 		}
 		return
 	}

@@ -141,6 +141,9 @@ func dealCreateInputAdmitting(req crmcontracts.CreateDealRequest, importer bool)
 	if err != nil {
 		return CreateDealInput{}, err
 	}
+	if err := provenance.AdmitSourceID(req.SourceSystem, req.SourceId); err != nil {
+		return CreateDealInput{}, err
+	}
 	// A deal is born INTO a stage of a pipeline, and neither is defaultable here:
 	// which pipeline a workspace means is a config question, and guessing would
 	// file deals somewhere nobody chose. Unchecked, both zero UUIDs travel to
@@ -162,6 +165,7 @@ func dealCreateInputAdmitting(req crmcontracts.CreateDealRequest, importer bool)
 		StageID:               pathID[ids.StageKind](req.StageId),
 		Source:                req.Source,
 		SourceSystem:          req.SourceSystem,
+		SourceID:              req.SourceId,
 		Author:                author,
 		CompanyID:             idArg[ids.CompanyKind](req.CompanyId),
 		PartnerCompanyID:      idArg[ids.CompanyKind](req.PartnerCompanyId),

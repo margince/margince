@@ -105,7 +105,11 @@ type ListDealsInput struct {
 	CommercialMotion  *string
 	Priority          *string
 	AcquisitionSource *string
-	Stalled           *bool
+	// SourceSystem and SourceID narrow, together, to the deal holding that id
+	// in the outside system.
+	SourceSystem *string
+	SourceID     *string
+	Stalled      *bool
 	// QuietForDays narrows to open deals idle at least this long, which is the
 	// stalled rule at a caller-named window (QuietSQL). Separate from Stalled
 	// because they answer different questions: Stalled is the product-wide
@@ -367,7 +371,11 @@ func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, a
 		where = append(where, storekit.SQLf("expected_close_date < $%d", arg(in.CloseBefore.Format(time.DateOnly))))
 	}
 	where = appendCommercialFilters(where, in, arg)
-	return appendIdleFilters(where, in), nil
+	sourceKey, err := storekit.SourceKeyClauses(in.SourceSystem, in.SourceID, arg)
+	if err != nil {
+		return nil, err
+	}
+	return appendIdleFilters(append(where, sourceKey...), in), nil
 }
 
 // appendIdleFilters adds the two activity-clock filters: the product-wide

@@ -45,6 +45,8 @@ var dealFilterOperands = map[string]string{
 	filterIncludeArchived:    "true",
 	filterSort:               "-created_at",
 	filterListID:             filterOperandID,
+	filterSourceSystem:       "acme-erp",
+	filterSourceID:           "D-1",
 }
 
 // Every filter this module declares narrows something — the deal half of the
@@ -68,8 +70,8 @@ func TestEachDealsEntityIsOfferedItsOwnVocabulary(t *testing.T) {
 		{datasource.EntityDeal, []string{
 			"acquisition_source", "commercial_motion", "company_id", "forecast_category", "include_archived",
 			"list_id", "owner_id", "owner_team_id", "partner_attribution", "partner_company_id", "partner_sourced",
-			"pipeline_id", "priority", "project_id", "sort", "stage_id", "stalled", "status", "tag_id", "tag_mode",
-			"unassigned",
+			"pipeline_id", "priority", "project_id", "sort", "source_id", "source_system", "stage_id", "stalled",
+			"status", "tag_id", "tag_mode", "unassigned",
 		}},
 	} {
 		if got := p.ListFilters(tc.entity); !slices.Equal(got, tc.want) {

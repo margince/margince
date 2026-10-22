@@ -528,6 +528,17 @@ paths:
             A screen that names many companies it did not list itself, such as the deals board,
             reads them in one request instead of one each. An id the caller cannot see, or that
             is archived without `include_archived`, is simply absent from the page.
+        - name: source_system
+          in: query
+          schema: {type: string, maxLength: 128}
+          description: |-
+            Companies that came from this outside system, matched exactly. Send `source_id`
+            too to find the one company holding that id there. A company the caller cannot
+            see, or that is archived without `include_archived`, is simply absent from the page.
+        - name: source_id
+          in: query
+          schema: {type: string, maxLength: 128}
+          description: An id in an outside system, matched exactly. Send `source_system` with it, because the same id can mean different companies in different systems.
       responses:
         '200':
           description: A page of companies.
@@ -1385,6 +1396,17 @@ paths:
           description: |-
             How several `tag_id` values combine. `any` selects a record carrying at least one
             of them, `all` a record carrying every one, `none` a record carrying not one.
+        - name: source_system
+          in: query
+          schema: {type: string, maxLength: 128}
+          description: |-
+            Deals that came from this outside system, matched exactly. Send `source_id` too to
+            find the one deal holding that id there. A deal that is archived without
+            `include_archived` is simply absent from the page.
+        - name: source_id
+          in: query
+          schema: {type: string, maxLength: 128}
+          description: An id in an outside system, matched exactly. Send `source_system` with it, because the same id can mean different deals in different systems.
       responses:
         '200':
           description: A page of deals.
@@ -9612,7 +9634,8 @@ components:
           type: array
           items: {$ref: '#/components/schemas/ContactPhoneInput'}
         source: {type: string}
-        source_system: {type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it.'}
+        source_id: {type: [string, 'null'], maxLength: 128, description: 'The id this contact has in source_system. Needs source_system, and the pair is unique: a second contact with the same pair is 409.'}
+        source_system: {type: [string, 'null'], maxLength: 128, description: 'Which external system this record came from, when a caller imported it.'}
         source_author_id: {type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer, only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.'}
         source_author_name: {type: [string, 'null'], maxLength: 200, description: 'The source system''s own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.'}
       additionalProperties: true
@@ -9872,7 +9895,8 @@ components:
           type: array
           items: {$ref: '#/components/schemas/CompanyDomainInput'}
         source: {type: string}
-        source_system: {type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it.'}
+        source_system: {type: [string, 'null'], maxLength: 128, description: 'Which external system this record came from, when a caller imported it.'}
+        source_id: {type: [string, 'null'], maxLength: 128, description: 'The id this company has in source_system. Needs source_system, and the pair is unique: a second company with the same pair is 409. Look a company up by it with the `source_system` and `source_id` filters on `listCompanies`.'}
         source_author_id: {type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer, only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.'}
         source_author_name: {type: [string, 'null'], maxLength: 200, description: 'The source system''s own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.'}
       additionalProperties: true
@@ -13275,7 +13299,8 @@ components:
         owner_id: {type: [string, 'null'], format: uuid}
         expected_close_date: {type: [string, 'null'], format: date, description: 'Deals are born open, so a date before today is rejected 422.'}
         source: {type: string}
-        source_system: {type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it.'}
+        source_system: {type: [string, 'null'], maxLength: 128, description: 'Which external system this record came from, when a caller imported it.'}
+        source_id: {type: [string, 'null'], maxLength: 128, description: 'The id this deal has in source_system. Needs source_system, and the pair is unique: a second deal with the same pair is 409. Look a deal up by it with the `source_system` and `source_id` filters on `listDeals`.'}
         source_author_id: {type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer, only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.'}
         source_author_name: {type: [string, 'null'], maxLength: 200, description: 'The source system''s own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.'}
       additionalProperties: true
@@ -13825,7 +13850,8 @@ components:
         started_at: {type: [string, 'null'], format: date}
         target_end_date: {type: [string, 'null'], format: date}
         source: {type: string}
-        source_system: {type: [string, 'null'], description: 'Which external system this record came from, when a caller imported it.'}
+        source_id: {type: [string, 'null'], maxLength: 128, description: 'The id this project has in source_system. Needs source_system, and the pair is unique: a second project with the same pair is 409.'}
+        source_system: {type: [string, 'null'], maxLength: 128, description: 'Which external system this record came from, when a caller imported it.'}
         source_author_id: {type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer, only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.'}
         source_author_name: {type: [string, 'null'], maxLength: 200, description: 'The source system''s own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.'}
       additionalProperties: true

@@ -123,6 +123,8 @@ type ContactSpec struct {
 	// every path that creates a contact HERE, which is what tells attribution
 	// the row has no external author to name.
 	SourceSystem *string
+	// SourceID is this contact's id in SourceSystem; unique with it.
+	SourceID     *string
 	Author       storekit.SourceAuthorInput
 	CustomFields map[string]any
 	// Active is the custom-field catalog for `contact`; nil on the capture
@@ -148,7 +150,7 @@ func createContact(ctx context.Context, tx pgx.Tx, match ContactResolution, spec
 	if err := storekit.RefuseUnknownSeat(ctx, tx, spec.Author); err != nil {
 		return ids.ContactID{}, err
 	}
-	authorCols, authorHolders, base := storekit.AuthorInsertFragments(spec.Author, []any{
+	provenanceCols, provenanceHolders, base := storekit.ProvenanceInsertFragments(spec.SourceID, spec.Author, []any{
 		id, spec.FullName, spec.FirstName, spec.LastName, spec.Title, spec.OwnerID,
 		addr.Line1, addr.Line2, addr.City, addr.Region, addr.PostalCode, addr.Country,
 		spec.Source, spec.CapturedBy, spec.Visibility, spec.Quarantined, spec.ConvertedFromLeadID,
@@ -158,12 +160,12 @@ func createContact(ctx context.Context, tx pgx.Tx, match ContactResolution, spec
 	if err != nil {
 		return ids.ContactID{}, err
 	}
-	if _, err := tx.Exec(ctx,
-		`INSERT INTO contact (id, full_name, first_name, last_name, title, owner_id, address_line1, address_line2, address_city, address_region, address_postal_code, address_country, source, captured_by, visibility, quarantined_at, converted_from_lead_id, source_system, narrowing_reason`+authorCols+cfCols+`)
+	if err := storekit.ExecSourceInsert(ctx, tx, contactEntity,
+		`INSERT INTO contact (id, full_name, first_name, last_name, title, owner_id, address_line1, address_line2, address_city, address_region, address_postal_code, address_country, source, captured_by, visibility, quarantined_at, converted_from_lead_id, source_system, narrowing_reason`+provenanceCols+cfCols+`)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14,
 		         coalesce(NULLIF($15, ''), 'workspace'),
-		         CASE WHEN $16 THEN now() ELSE NULL END, $17, $18, NULLIF($19, '')`+authorHolders+cfHolders+`)`,
-		args...); err != nil {
+		         CASE WHEN $16 THEN now() ELSE NULL END, $17, $18, NULLIF($19, '')`+provenanceHolders+cfHolders+`)`,
+		args); err != nil {
 		return ids.ContactID{}, fmt.Errorf("insert contact: %w", err)
 	}
 	if err := replaceContactSocial(ctx, tx, wsID, id, spec.Social); err != nil {
@@ -254,6 +256,8 @@ type CompanySpec struct {
 	// every path that creates a company HERE — including the anchor and the
 	// domain-triage ensure — so attribution knows there is no external author.
 	SourceSystem *string
+	// SourceID is this company's id in SourceSystem; unique with it.
+	SourceID     *string
 	Author       storekit.SourceAuthorInput
 	CustomFields map[string]any
 	Active       []fieldcatalog.Column
@@ -295,7 +299,7 @@ func createCompany(ctx context.Context, tx pgx.Tx, match CompanyMatch, spec Comp
 	if err := storekit.RefuseUnknownSeat(ctx, tx, spec.Author); err != nil {
 		return ids.CompanyID{}, err
 	}
-	authorCols, authorHolders, base := storekit.AuthorInsertFragments(spec.Author, []any{
+	provenanceCols, provenanceHolders, base := storekit.ProvenanceInsertFragments(spec.SourceID, spec.Author, []any{
 		id, spec.DisplayName, spec.LegalName, spec.Description, spec.Industry, spec.SizeBand, spec.OwnerID, spec.ParentCompanyID,
 		addr.Line1, addr.Line2, addr.City, addr.Region, addr.PostalCode, addr.Country,
 		spec.Source, spec.CapturedBy, spec.NameSource, spec.Visibility, spec.IsAnchor,
@@ -305,12 +309,12 @@ func createCompany(ctx context.Context, tx pgx.Tx, match CompanyMatch, spec Comp
 	if err != nil {
 		return ids.CompanyID{}, err
 	}
-	if _, err := tx.Exec(ctx,
-		`INSERT INTO company (id, display_name, legal_name, description, industry, size_band, owner_id, parent_company_id, address_line1, address_line2, address_city, address_region, address_postal_code, address_country, source, captured_by, name_source, visibility, is_anchor, source_system, linkedin_url`+authorCols+cfCols+`)
+	if err := storekit.ExecSourceInsert(ctx, tx, companyEntity,
+		`INSERT INTO company (id, display_name, legal_name, description, industry, size_band, owner_id, parent_company_id, address_line1, address_line2, address_city, address_region, address_postal_code, address_country, source, captured_by, name_source, visibility, is_anchor, source_system, linkedin_url`+provenanceCols+cfCols+`)
 		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
 		         coalesce(NULLIF($17, ''), 'human'),
-		         coalesce(NULLIF($18, ''), 'workspace'), $19, $20, $21`+authorHolders+cfHolders+`)`,
-		args...); err != nil {
+		         coalesce(NULLIF($18, ''), 'workspace'), $19, $20, $21`+provenanceHolders+cfHolders+`)`,
+		args); err != nil {
 		if constraint, ok := storekit.UniqueViolation(err); ok && constraint == companyLinkedInKey {
 			return ids.CompanyID{}, &DuplicateCompanyLinkedInError{URL: deref(spec.LinkedInURL)}
 		}

@@ -1,0 +1,3 @@
+-- A validated CHECK cannot be marked unvalidated again. The previous
+-- migration's down drops the columns, and the checks go with them, so this down
+-- migrates nothing back.

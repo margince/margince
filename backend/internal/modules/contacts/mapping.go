@@ -86,6 +86,9 @@ func contactCreateInputAdmitting(req crmcontracts.CreateContactRequest, importer
 	if err != nil {
 		return CreateContactInput{}, err
 	}
+	if err := provenance.AdmitSourceID(req.SourceSystem, req.SourceId); err != nil {
+		return CreateContactInput{}, err
+	}
 	in := CreateContactInput{
 		FullName:     req.FullName,
 		FirstName:    req.FirstName,
@@ -93,6 +96,7 @@ func contactCreateInputAdmitting(req crmcontracts.CreateContactRequest, importer
 		Title:        req.Title,
 		Source:       req.Source,
 		SourceSystem: req.SourceSystem,
+		SourceID:     req.SourceId,
 		Author:       author,
 		OwnerID:      idArg[ids.UserKind](req.OwnerId),
 		// The body's extra top-level keys (custom-field values); the
@@ -249,6 +253,9 @@ func companyCreateInputAdmitting(req crmcontracts.CreateCompanyRequest, importer
 	if err != nil {
 		return CreateCompanyInput{}, err
 	}
+	if err := provenance.AdmitSourceID(req.SourceSystem, req.SourceId); err != nil {
+		return CreateCompanyInput{}, err
+	}
 	in := CreateCompanyInput{
 		DisplayName:     req.DisplayName,
 		LegalName:       req.LegalName,
@@ -256,6 +263,7 @@ func companyCreateInputAdmitting(req crmcontracts.CreateCompanyRequest, importer
 		Industry:        req.Industry,
 		Source:          req.Source,
 		SourceSystem:    req.SourceSystem,
+		SourceID:        req.SourceId,
 		Author:          author,
 		OwnerID:         idArg[ids.UserKind](req.OwnerId),
 		ParentCompanyID: idArg[ids.CompanyKind](req.ParentCompanyId),

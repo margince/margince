@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 321 |
-| Columns | 3797 |
+| Columns | 3801 |
 | Foreign keys | 525 |
 | Owning areas | 36 |
 
@@ -40,12 +40,12 @@ Ranked by how many foreign keys point at them.
 | Record | Lives in | Columns | Foreign keys pointing at it |
 |---|---|--:|--:|
 | [`app_user`](identity.md#app_user) | [identity](identity.md) | 30 | 138 |
-| [`contact`](contacts.md#contact) | [contacts](contacts.md) | 32 | 45 |
-| [`company`](contacts.md#company) | [contacts](contacts.md) | 43 | 42 |
+| [`contact`](contacts.md#contact) | [contacts](contacts.md) | 33 | 45 |
+| [`company`](contacts.md#company) | [contacts](contacts.md) | 44 | 42 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 63 | 38 |
-| [`deal`](deals.md#deal) | [deals](deals.md) | 43 | 26 |
+| [`deal`](deals.md#deal) | [deals](deals.md) | 44 | 26 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 38 | 17 |
-| [`project`](projects.md#project) | [projects](projects.md) | 23 | 10 |
+| [`project`](projects.md#project) | [projects](projects.md) | 24 | 10 |
 | [`stage`](deals.md#stage) | [deals](deals.md) | 10 | 10 |
 | [`team`](identity.md#team) | [identity](identity.md) | 6 | 9 |
 | [`passport`](identity.md#passport) | [identity](identity.md) | 11 | 8 |
@@ -219,7 +219,7 @@ erDiagram
 | [`communication_override`](consent.md#communication_override) | consent | 10 | 1 |
 | [`communication_review`](consent.md#communication_review) | consent | 11 | 2 |
 | [`communication_suppression`](consent.md#communication_suppression) | consent | 12 | 1 |
-| [`company`](contacts.md#company) | contacts | 43 | 42 |
+| [`company`](contacts.md#company) | contacts | 44 | 42 |
 | [`company_brief`](compose.md#company_brief) | compose | 7 | 0 |
 | [`company_domain`](contacts.md#company_domain) | contacts | 10 | 0 |
 | [`company_domain_disposition`](contacts.md#company_domain_disposition) | contacts | 22 | 1 |
@@ -239,7 +239,7 @@ erDiagram
 | [`consent_purpose`](consent.md#consent_purpose) | consent | 7 | 7 |
 | [`consent_qualifying_event`](consent.md#consent_qualifying_event) | consent | 10 | 0 |
 | [`consent_text_version`](consent.md#consent_text_version) | consent | 14 | 1 |
-| [`contact`](contacts.md#contact) | contacts | 32 | 45 |
+| [`contact`](contacts.md#contact) | contacts | 33 | 45 |
 | [`contact_acquisition_evidence`](contacts.md#contact_acquisition_evidence) | contacts | 10 | 1 |
 | [`contact_brief`](compose.md#contact_brief) | compose | 6 | 0 |
 | [`contact_channel_identity`](contacts.md#contact_channel_identity) | contacts | 14 | 0 |
@@ -260,7 +260,7 @@ erDiagram
 | [`data_task_review`](platform.md#data_task_review) | platform | 6 | 0 |
 | [`data_task_run`](platform.md#data_task_run) | platform | 22 | 0 |
 | [`data_task_run_history`](platform.md#data_task_run_history) | platform | 5 | 0 |
-| [`deal`](deals.md#deal) | deals | 43 | 26 |
+| [`deal`](deals.md#deal) | deals | 44 | 26 |
 | [`deal_acquisition_source`](deals.md#deal_acquisition_source) | deals | 9 | 1 |
 | [`deal_correction`](deals.md#deal_correction) | deals | 18 | 0 |
 | [`deal_document_hide`](activities.md#deal_document_hide) | activities | 4 | 0 |
@@ -353,7 +353,7 @@ erDiagram
 | [`preference_token`](consent.md#preference_token) | consent | 8 | 0 |
 | [`privacy_notice_case`](consent.md#privacy_notice_case) | consent | 18 | 0 |
 | [`product`](deals.md#product) | deals | 18 | 1 |
-| [`project`](projects.md#project) | projects | 23 | 10 |
+| [`project`](projects.md#project) | projects | 24 | 10 |
 | [`project_health_assessment`](projects.md#project_health_assessment) | projects | 10 | 1 |
 | [`project_phase_history`](projects.md#project_phase_history) | projects | 7 | 0 |
 | [`provider_applied_field`](contacts.md#provider_applied_field) | contacts | 10 | 0 |

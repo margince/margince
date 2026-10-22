@@ -26744,6 +26744,8 @@ export interface components {
             emails?: components["schemas"]["ContactEmailInput"][];
             phones?: components["schemas"]["ContactPhoneInput"][];
             source: string;
+            /** @description The id this contact has in source_system. Needs source_system, and the pair is unique: a second contact with the same pair is 409. */
+            source_id?: string | null;
             /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused). */
             source_system?: string | null;
             /**
@@ -27090,6 +27092,8 @@ export interface components {
             source: string;
             /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused). */
             source_system?: string | null;
+            /** @description The id this company has in source_system. Needs source_system, and the pair is unique: a second company with the same pair is 409. Look a company up by it with the `source_system` and `source_id` filters on `listCompanies`. */
+            source_id?: string | null;
             /**
              * Format: uuid
              * @description Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
@@ -31625,6 +31629,8 @@ export interface components {
             source: string;
             /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused). */
             source_system?: string | null;
+            /** @description The id this deal has in source_system. Needs source_system, and the pair is unique: a second deal with the same pair is 409. Look a deal up by it with the `source_system` and `source_id` filters on `listDeals`. */
+            source_id?: string | null;
             /**
              * Format: uuid
              * @description Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
@@ -32363,6 +32369,8 @@ export interface components {
             /** Format: date */
             target_end_date?: string | null;
             source: string;
+            /** @description The id this project has in source_system. Needs source_system, and the pair is unique: a second project with the same pair is 409. */
+            source_id?: string | null;
             /** @description Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused). */
             source_system?: string | null;
             /**
@@ -51524,6 +51532,14 @@ export interface operations {
                  *     is archived without `include_archived`, is simply absent from the page.
                  */
                 id?: string[];
+                /**
+                 * @description Companies that came from this outside system, matched exactly. Send `source_id`
+                 *     too to find the one company holding that id there. A company the caller cannot
+                 *     see, or that is archived without `include_archived`, is simply absent from the page.
+                 */
+                source_system?: string;
+                /** @description An id in an outside system, matched exactly. Send `source_system` with it, because the same id can mean different companies in different systems. */
+                source_id?: string;
             };
             header?: never;
             path?: never;
@@ -54104,6 +54120,14 @@ export interface operations {
                  *     Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
                  */
                 tag_mode?: "any" | "all" | "none";
+                /**
+                 * @description Deals that came from this outside system, matched exactly. Send `source_id` too to
+                 *     find the one deal holding that id there. A deal that is archived without
+                 *     `include_archived` is simply absent from the page.
+                 */
+                source_system?: string;
+                /** @description An id in an outside system, matched exactly. Send `source_system` with it, because the same id can mean different deals in different systems. */
+                source_id?: string;
             };
             header?: never;
             path?: never;

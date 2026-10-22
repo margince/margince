@@ -177,6 +177,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
   write one.
 - [gate-inventory.md](reference/gate-inventory.md): every check in `backend/`, by kind. Generated.
 - [configuration.md](reference/configuration.md): every setting of each program.
+- [extension-doors-for-core-data.md](reference/extension-doors-for-core-data.md): what an extension can read
+  and write in core records, one row for each feature, and which are built.
 - [rest-api.md](reference/rest-api.md): the rules every REST call follows, and where its OpenAPI document is.
 - [ai-provider-key-test.md](reference/ai-provider-key-test.md): what the Test button on the Models page
   checks.
@@ -219,6 +221,8 @@ A generated page, and each `perfbench/` record, says so in its first line. Do no
 
 - [backend-onboarding.md](explanation/backend-onboarding.md): start here. A map of the backend, and the
   order to read it in.
+- [outside-ids.md](explanation/outside-ids.md): where a record keeps its id in an outside system,
+  and why it has no table of its own.
 - [architecture.md](explanation/architecture.md): how the modules work together.
 - [contract-first.md](explanation/contract-first.md): how code is built from `crm.yaml`.
 - [authorization.md](explanation/authorization.md): where the code checks rights, and what a passport

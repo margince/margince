@@ -2382,6 +2382,8 @@ public.company.company_refuse_anchor_retirement CREATE TRIGGER company_refuse_an
 public.company.company_size_band_check CHECK (((size_band IS NULL) OR (size_band = ANY (ARRAY['1-10'::text, '11-50'::text, '51-200'::text, '201-500'::text, '501-1000'::text, '1001-5000'::text, '5000+'::text]))))
 public.company.company_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.company.company_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))
+public.company.company_source_id_length CHECK (((source_id IS NULL) OR ((char_length(source_id) >= 1) AND (char_length(source_id) <= 128))))
+public.company.company_source_id_needs_a_source CHECK (((source_id IS NULL) OR (source_system IS NOT NULL)))
 public.company.company_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.company.company_visibility_check CHECK ((visibility = ANY (ARRAY['workspace'::text, 'owner'::text])))
 public.company.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -2415,6 +2417,7 @@ public.company.size_band text gen=- def=-
 public.company.source text NOT NULL gen=- def=-
 public.company.source_author_id uuid gen=- def=-
 public.company.source_author_name text gen=- def=-
+public.company.source_id text gen=- def=-
 public.company.source_system text gen=- def=-
 public.company.trg_company_geocode_stale CREATE TRIGGER trg_company_geocode_stale BEFORE UPDATE OF address_line1, address_line2, address_city, address_region, address_postal_code, address_country ON public.company FOR EACH ROW WHEN (((old.address_line1 IS DISTINCT FROM new.address_line1) OR (old.address_line2 IS DISTINCT FROM new.address_line2) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_region IS DISTINCT FROM new.address_region) OR (old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION company_geocode_goes_stale()
 public.company.trg_company_no_cycle CREATE TRIGGER trg_company_no_cycle BEFORE INSERT OR UPDATE OF parent_company_id ON public.company FOR EACH ROW WHEN ((new.parent_company_id IS NOT NULL)) EXECUTE FUNCTION company_no_ancestor_cycle()
@@ -2989,6 +2992,8 @@ public.contact.contact_owner_private_names_its_owner CHECK (((visibility <> 'own
 public.contact.contact_pkey PRIMARY KEY (id)
 public.contact.contact_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.contact.contact_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))
+public.contact.contact_source_id_length CHECK (((source_id IS NULL) OR ((char_length(source_id) >= 1) AND (char_length(source_id) <= 128))))
+public.contact.contact_source_id_needs_a_source CHECK (((source_id IS NULL) OR (source_system IS NOT NULL)))
 public.contact.contact_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.contact.contact_visibility_check CHECK ((visibility = ANY (ARRAY['workspace'::text, 'owner'::text])))
 public.contact.converted_from_lead_id uuid gen=- def=-
@@ -3010,6 +3015,7 @@ public.contact.search_tsv tsvector gen=s def=(((setweight(to_tsvector('simple'::
 public.contact.source text NOT NULL gen=- def=-
 public.contact.source_author_id uuid gen=- def=-
 public.contact.source_author_name text gen=- def=-
+public.contact.source_id text gen=- def=-
 public.contact.source_system text gen=- def=-
 public.contact.title text gen=- def=-
 public.contact.trg_contact_updated CREATE TRIGGER trg_contact_updated BEFORE UPDATE ON public.contact FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
@@ -3481,6 +3487,8 @@ public.deal.deal_priority_check CHECK (((priority IS NULL) OR (priority = ANY (A
 public.deal.deal_project_id_fkey FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE SET NULL (project_id)
 public.deal.deal_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.deal.deal_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))
+public.deal.deal_source_id_length CHECK (((source_id IS NULL) OR ((char_length(source_id) >= 1) AND (char_length(source_id) <= 128))))
+public.deal.deal_source_id_needs_a_source CHECK (((source_id IS NULL) OR (source_system IS NOT NULL)))
 public.deal.deal_stage_id_fkey FOREIGN KEY (stage_id) REFERENCES stage(id) ON DELETE RESTRICT
 public.deal.deal_stage_in_pipeline FOREIGN KEY (stage_id, pipeline_id) REFERENCES stage(id, pipeline_id)
 public.deal.deal_status_check CHECK ((status = ANY (ARRAY['open'::text, 'won'::text, 'lost'::text])))
@@ -3517,6 +3525,7 @@ public.deal.search_tsv tsvector gen=s def=((setweight(to_tsvector('simple'::regc
 public.deal.source text NOT NULL gen=- def=-
 public.deal.source_author_id uuid gen=- def=-
 public.deal.source_author_name text gen=- def=-
+public.deal.source_id text gen=- def=-
 public.deal.source_system text gen=- def=-
 public.deal.stage_id uuid NOT NULL gen=- def=-
 public.deal.status text NOT NULL gen=- def='open'::text
@@ -6012,11 +6021,14 @@ public.project.project_phase_check CHECK ((phase = ANY (ARRAY['initiative'::text
 public.project.project_pkey PRIMARY KEY (id)
 public.project.project_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.project.project_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))
+public.project.project_source_id_length CHECK (((source_id IS NULL) OR ((char_length(source_id) >= 1) AND (char_length(source_id) <= 128))))
+public.project.project_source_id_needs_a_source CHECK (((source_id IS NULL) OR (source_system IS NOT NULL)))
 public.project.project_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.project.search_tsv tsvector gen=s def=(setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(key, ''::text))), 'A'::"char"))
 public.project.source text NOT NULL gen=- def=-
 public.project.source_author_id uuid gen=- def=-
 public.project.source_author_name text gen=- def=-
+public.project.source_id text gen=- def=-
 public.project.source_system text gen=- def=-
 public.project.started_at date gen=- def=-
 public.project.target_end_date date gen=- def=-
@@ -7595,11 +7607,13 @@ public.uq_company_domain_primary CREATE UNIQUE INDEX uq_company_domain_primary O
 public.uq_company_fact CREATE UNIQUE INDEX uq_company_fact ON public.company_fact USING btree (company_id, category, field, value_key)
 public.uq_company_profile_field CREATE UNIQUE INDEX uq_company_profile_field ON public.company_profile_field USING btree (company_id, field)
 public.uq_company_rel_type CREATE UNIQUE INDEX uq_company_rel_type ON public.company_relationship_type USING btree (company_id, relationship_type) WHERE (archived_at IS NULL)
+public.uq_company_source CREATE UNIQUE INDEX uq_company_source ON public.company USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))
 public.uq_contact_channel_identity CREATE UNIQUE INDEX uq_contact_channel_identity ON public.contact_channel_identity USING btree (provider, channel_user_id) WHERE (archived_at IS NULL)
 public.uq_contact_email_dedupe CREATE UNIQUE INDEX uq_contact_email_dedupe ON public.contact_email USING btree (email) WHERE (archived_at IS NULL)
 public.uq_contact_email_primary CREATE UNIQUE INDEX uq_contact_email_primary ON public.contact_email USING btree (contact_id, email_type) WHERE (is_primary AND (archived_at IS NULL))
 public.uq_contact_phone_primary CREATE UNIQUE INDEX uq_contact_phone_primary ON public.contact_phone USING btree (contact_id, phone_type) WHERE (is_primary AND (archived_at IS NULL))
 public.uq_contact_profile_field CREATE UNIQUE INDEX uq_contact_profile_field ON public.contact_profile_field USING btree (contact_id, field, value_key)
+public.uq_contact_source CREATE UNIQUE INDEX uq_contact_source ON public.contact USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))
 public.uq_custom_field_column CREATE UNIQUE INDEX uq_custom_field_column ON public.custom_field USING btree (object, column_name)
 public.uq_custom_field_slug CREATE UNIQUE INDEX uq_custom_field_slug ON public.custom_field USING btree (object, slug)
 public.uq_deal_risk_day CREATE UNIQUE INDEX uq_deal_risk_day ON public.deal_risk_day USING btree (local_day)
@@ -7615,6 +7629,7 @@ public.uq_deal_room_participant_in_room CREATE UNIQUE INDEX uq_deal_room_partici
 public.uq_deal_room_preview_per_rep CREATE UNIQUE INDEX uq_deal_room_preview_per_rep ON public.deal_room_participant USING btree (room_id, invited_by) WHERE ((revoked_at IS NULL) AND preview)
 public.uq_deal_room_session_token CREATE UNIQUE INDEX uq_deal_room_session_token ON public.deal_room_session USING btree (token_hash)
 public.uq_deal_room_thread_request CREATE UNIQUE INDEX uq_deal_room_thread_request ON public.deal_room_thread USING btree (room_id, request_id) WHERE (request_id IS NOT NULL)
+public.uq_deal_source CREATE UNIQUE INDEX uq_deal_source ON public.deal USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))
 public.uq_deal_suggestion_fingerprint CREATE UNIQUE INDEX uq_deal_suggestion_fingerprint ON public.deal_suggestion USING btree (fingerprint)
 public.uq_deal_suggestion_open_company CREATE UNIQUE INDEX uq_deal_suggestion_open_company ON public.deal_suggestion USING btree (company_id) WHERE (state = 'open'::text)
 public.uq_dedupe_candidate_pair CREATE UNIQUE INDEX uq_dedupe_candidate_pair ON public.dedupe_candidate USING btree (entity_type, COALESCE(left_contact_id, left_company_id, left_lead_id), COALESCE(right_contact_id, right_company_id, right_lead_id))
@@ -7645,6 +7660,7 @@ public.uq_preference_token_contact_address CREATE UNIQUE INDEX uq_preference_tok
 public.uq_product_sku CREATE UNIQUE INDEX uq_product_sku ON public.product USING btree (sku) WHERE ((sku IS NOT NULL) AND (archived_at IS NULL))
 public.uq_project_health_one_successor CREATE UNIQUE INDEX uq_project_health_one_successor ON public.project_health_assessment USING btree (supersedes_assessment_id) WHERE (supersedes_assessment_id IS NOT NULL)
 public.uq_project_key CREATE UNIQUE INDEX uq_project_key ON public.project USING btree (lower(key)) WHERE ((key IS NOT NULL) AND (archived_at IS NULL))
+public.uq_project_source CREATE UNIQUE INDEX uq_project_source ON public.project USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))
 public.uq_record_assignment_company_team CREATE UNIQUE INDEX uq_record_assignment_company_team ON public.record_assignment USING btree (company_id, role_id, team_id) WHERE ((company_id IS NOT NULL) AND (team_id IS NOT NULL) AND (archived_at IS NULL))
 public.uq_record_assignment_company_user CREATE UNIQUE INDEX uq_record_assignment_company_user ON public.record_assignment USING btree (company_id, role_id, user_id) WHERE ((company_id IS NOT NULL) AND (user_id IS NOT NULL) AND (archived_at IS NULL))
 public.uq_record_assignment_deal_team CREATE UNIQUE INDEX uq_record_assignment_deal_team ON public.record_assignment USING btree (deal_id, role_id, team_id) WHERE ((deal_id IS NOT NULL) AND (team_id IS NOT NULL) AND (archived_at IS NULL))

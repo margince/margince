@@ -63,6 +63,10 @@ type ListCompaniesInput struct {
 	// Industry is free text on the record; SizeBand is the contract's enum.
 	Industry *string
 	SizeBand *string
+	// SourceSystem and SourceID narrow, together, to the company holding that
+	// id in the outside system.
+	SourceSystem *string
+	SourceID     *string
 	// Domain narrows to the account that lists one domain — the
 	// employer-inference lookup, spelled as a filter over the same
 	// company_domain rows the page attaches.
@@ -212,6 +216,11 @@ func (s *Store) ListCompanies(ctx context.Context, in ListCompaniesInput) ([]crm
 			if len(in.IDs) > 0 {
 				where = append(where, storekit.SQLf("company.id = ANY($%d)", arg(in.IDs)))
 			}
+			sourceKey, err := storekit.SourceKeyClauses(in.SourceSystem, in.SourceID, arg)
+			if err != nil {
+				return nil, err
+			}
+			where = append(where, sourceKey...)
 			where = appendCompanyLinkClauses(ctx, where, in, arg)
 			// A value outside the enum is a client mistake, not a selection
 			// that happens to match nothing: answering 200 with an empty page
