@@ -1,5 +1,5 @@
 import { expect, type Locator, type Page, test } from "@playwright/test";
-import { signIn } from "./waits";
+import { itemsOf, signIn } from "./waits";
 
 /**
  * The company record page against the design's glance (DESIGN.md §7).
@@ -223,7 +223,7 @@ test.describe("company record — the glance's page shape", () => {
     const headings = rail.getByRole("heading");
     await expect(headings.first()).toBeVisible();
     expect(await headings.count()).toBeGreaterThanOrEqual(4);
-    for (const heading of await headings.all()) {
+    for (const heading of await itemsOf(headings)) {
       await expect(heading).not.toBeEmpty();
     }
     const railBox = await rail.boundingBox();

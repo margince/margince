@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { INTL_LOCALE } from "../../format/format";
 import { type Locale, type Translator, translatePlural } from "../../i18n";
 import {
   actorAttribution,
@@ -100,7 +101,7 @@ export function sharedResponsibility(
   );
   if (names.length === owner.users.length) {
     return t("worklist.owner.shared", {
-      names: new Intl.ListFormat(locale, {
+      names: new Intl.ListFormat(INTL_LOCALE[locale], {
         style: "long",
         type: "conjunction",
       }).format(names),
