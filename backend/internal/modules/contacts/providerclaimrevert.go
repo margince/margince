@@ -33,6 +33,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -90,10 +91,20 @@ func RevertProviderFills(ctx context.Context, tx pgx.Tx, providerName string, su
 	if _, err := storekit.LockRow(ctx, tx, entityContact, subject, storekit.IncludeArchived); err != nil {
 		return out, err
 	}
+	// After the contact row, the order the attach writers and the import take
+	// the two in: retiring a bought employer may promote another one.
+	if err := storekit.LockWriteIdentity(ctx, tx, employmentKind, subject.String()); err != nil {
+		return out, err
+	}
+	heldEmployer, err := holdsCurrentEmployer(ctx, tx, subject)
+	if err != nil {
+		return out, err
+	}
 	filled, err := appliedFieldsFor(ctx, tx, providerName, subject)
 	if err != nil {
 		return out, err
 	}
+	retiredEmployment := false
 	for _, f := range filled {
 		cleared, err := revertOne(ctx, tx, f)
 		if err != nil {
@@ -101,6 +112,14 @@ func RevertProviderFills(ctx context.Context, tx pgx.Tx, providerName string, su
 		}
 		if cleared {
 			out.Fields = append(out.Fields, f.field)
+			retiredEmployment = retiredEmployment || f.table == tableRelationship
+		}
+	}
+	// Once, after every bought edge is gone: asked per edge, the answer depends
+	// on the order the ledger rows came back in.
+	if heldEmployer && retiredEmployment {
+		if err := promoteLoneSurvivingEmployment(ctx, tx, ids.From[ids.ContactKind](subject)); err != nil {
+			return out, err
 		}
 	}
 	if _, err := tx.Exec(ctx,
@@ -112,6 +131,17 @@ func RevertProviderFills(ctx context.Context, tx pgx.Tx, providerName string, su
 		return out, nil
 	}
 	return out, auditReverted(ctx, tx, providerName, out)
+}
+
+// holdsCurrentEmployer reports whether the contact's current-employer slot is
+// taken, so the revert knows whether it was the one to free it.
+func holdsCurrentEmployer(ctx context.Context, tx pgx.Tx, subject ids.UUID) (bool, error) {
+	var held bool
+	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM relationship WHERE contact_id = $1 AND `+
+		employment.CurrentPrimarySlotSQL("")+`)`, subject).Scan(&held); err != nil {
+		return false, fmt.Errorf("contacts: reading whether the contact has a current employer: %w", err)
+	}
+	return held, nil
 }
 
 // appliedFieldsFor reads what one provider filled on one contact.

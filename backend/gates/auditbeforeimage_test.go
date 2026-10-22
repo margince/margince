@@ -204,7 +204,7 @@ var unresolvableAuditActions = gatekit.Waive(map[string]string{
 	"internal/modules/contacts/coldstartprofile.go:applyColdStartTx":                    "a created record diffs against an explicitly empty image and an existing one against its own columns, so both verbs carry a before-image by construction",
 	"internal/modules/contacts/anchorcompany.go:SaveCompany":                            "the anchor's columns are read before the save and narrowed against what it wrote, so the update branch records what each one held",
 	"internal/modules/contacts/companysiteread.go:recordSiteReadConfirmation":           "the confirmation shares the anchor's column images, so its update branch records what the record held before the read was applied",
-	"internal/modules/contacts/relationshipimage.go:emitRelationshipChangeWithEvidence": "create and archive carry the edge whole and update carries the columns that moved, narrowed against the row read under the lock",
+	"internal/modules/contacts/relationshipimage.go:emitRelationshipNarrowedImagePairs": "create and archive carry the edge whole and update carries the columns that moved, narrowed against the row read under the lock",
 	"internal/modules/ai/voice_source_store.go:recordSourceIngest":                      "a first ingest has no prior row and records none; a re-ingest records the corpus source it replaced",
 	"internal/modules/ai/voice_versions.go:recordVoiceVersionTransition":                "the image is the version's own status on either side, and the verb names which transition it was",
 	"internal/modules/ai/ratewrite.go:writeModelRate":                                   "an upsert resolves to create or update, and the replaced rate is read and passed in either way",
