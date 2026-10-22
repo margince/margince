@@ -286,6 +286,30 @@ Copy `extensions/openchannel/api/crm.yaml`. These rules fail you if you miss the
 - **`x-rbac-object` and `x-rbac-action`** declare the object grant the caller must hold. The object is
   registered into the RBAC word list that `/me` serves, and must be named `ext_<name>_*`. Declare both or
   neither.
+- **`x-rbac-defaults`** gives each system role a starting grant on that operation's object. A unit cannot
+  write a role document, so without it nobody can use the unit until an admin ticks its objects:
+
+  ```yaml
+  x-rbac-object: ext_notes_widget
+  x-rbac-action: read
+  x-rbac-defaults:
+    admin: [read, create, update, delete]
+    manager: [read, create, update]
+    rep: [read, create]
+    read_only: [read]
+  ```
+
+  The keys are system role keys, the values are the four object verbs, and a role with no entry gets
+  nothing. The start writes an entry once, for each system role whose document has none for the object,
+  and records an audit row. It never touches an entry that exists, so a right an admin turned off stays
+  off after a restart or an upgrade.
+
+  A new installation gets the entries with its roles. Custom roles are never filled. A read seat that
+  holds `create` still cannot write, because the seat's limit still applies. Operations that share an
+  object may each carry the block, and the blocks must match.
+
+  `make gen` and the start refuse a block on an operation with no `x-rbac-object`. They also refuse a key
+  that is not a system role, and an action outside the four verbs.
 - **A 🟡 operation declares what it waits on**, under `x-mcp-tool.subject`:
 
   ```yaml
@@ -614,7 +638,8 @@ Panels: []extension.Panel{{
   A declared export the package does not have fails the composed typecheck.
 - **`Object`** is one of your RBAC objects. The panel shows only to a reader whose role grants `read` on it.
   `make gen` and the start both refuse an object that none of your operations gates on. No role holds a
-  grant on a unit's object, admin included, until an admin gives it in **Settings → Roles and permissions**.
+  grant on a unit's object, admin included. An admin gives it in **Settings → Roles and permissions**,
+  unless your unit declares `x-rbac-defaults` for the object.
 - One panel per slot per unit. A unit that declares a panel and ships no `frontend/package.json` is refused.
 
 The page hands that function the record it shows, typed by `ExtensionPanelProps` from

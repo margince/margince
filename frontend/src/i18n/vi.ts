@@ -1700,6 +1700,7 @@ export const vi = {
   "systemJob.public_booking": "Trang đặt lịch công khai",
   "systemJob.public_confirm": "Xác nhận thông tin qua trang công khai",
   "systemJob.public_preferences": "Trang tùy chọn công khai",
+  "systemJob.rbac_defaults": "Quyền khởi đầu của tiện ích mở rộng",
   "systemJob.release_version": "Kiểm tra bản phát hành",
   "systemJob.report_schedule": "Báo cáo theo lịch",
   "systemJob.request_settlement": "Hoàn tất yêu cầu",

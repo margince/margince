@@ -1748,6 +1748,7 @@ export const de = {
   "systemJob.public_booking": "Öffentliche Buchungsseite",
   "systemJob.public_confirm": "Öffentliche Bestätigung der Angaben",
   "systemJob.public_preferences": "Öffentliche Einstellungsseite",
+  "systemJob.rbac_defaults": "Anfangsberechtigungen der Erweiterungen",
   "systemJob.release_version": "Versionsprüfung",
   "systemJob.report_schedule": "Geplante Berichte",
   "systemJob.request_settlement": "Abschluss von Anfragen",

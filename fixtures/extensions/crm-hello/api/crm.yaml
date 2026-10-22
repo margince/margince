@@ -32,6 +32,13 @@ actions:
         # operation of the unit gates on too.
         x-rbac-object: ext_crm_hello_ping
         x-rbac-action: read
+        # The reference for a unit's starting posture: every role that reads
+        # deals reads the panel, and no role is left to an admin's tick.
+        x-rbac-defaults:
+          admin: [read]
+          manager: [read]
+          rep: [read]
+          read_only: [read]
         x-mcp-tool:
           verb: hello_ping
           version: 1.0.0

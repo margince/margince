@@ -1696,6 +1696,7 @@ export const en = {
   "systemJob.public_booking": "Public booking page",
   "systemJob.public_confirm": "Public details confirmation",
   "systemJob.public_preferences": "Public preference page",
+  "systemJob.rbac_defaults": "Extension starting permissions",
   "systemJob.release_version": "Release check",
   "systemJob.report_schedule": "Scheduled reports",
   "systemJob.request_settlement": "Request settlement",

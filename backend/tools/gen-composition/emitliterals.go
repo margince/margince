@@ -67,6 +67,7 @@ func writeVerbLiterals(b *strings.Builder, verbs []declaredVerb) {
 			fmt.Fprintf(b, "\t\t\tSubject:        extension.Subject{Arg: %q, Table: %q},\n", v.Subject.Arg, v.Subject.Table)
 		}
 		fmt.Fprintf(b, "\t\t\tRbacAction:     %q,\n", string(v.RbacAction))
+		writeRbacDefaultsLiteral(b, v.RbacDefaults)
 		if v.HumanOnly {
 			// Emitted only when true, matching Subject's own convention just
 			// above: the zero value is every verb as it behaves today, and a
@@ -77,6 +78,23 @@ func writeVerbLiterals(b *strings.Builder, verbs []declaredVerb) {
 		b.WriteString("\t\t},\n")
 	}
 	b.WriteString("\t}\n}\n")
+}
+
+// writeRbacDefaultsLiteral emits the default grants only when declared, as
+// Subject is: most verbs carry none, and an empty literal would bury the rest.
+func writeRbacDefaultsLiteral(b *strings.Builder, defaults []extension.RbacDefault) {
+	if len(defaults) == 0 {
+		return
+	}
+	b.WriteString("\t\t\tRbacDefaults: []extension.RbacDefault{\n")
+	for _, d := range defaults {
+		actions := make([]string, 0, len(d.Actions))
+		for _, a := range d.Actions {
+			actions = append(actions, fmt.Sprintf("%q", string(a)))
+		}
+		fmt.Fprintf(b, "\t\t\t\t{Role: %q, Actions: []extension.RbacAction{%s}},\n", d.Role, strings.Join(actions, ", "))
+	}
+	b.WriteString("\t\t\t},\n")
 }
 
 // writeSchemaLiteral emits a json.RawMessage field. A nil schema is emitted as
