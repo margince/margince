@@ -91,33 +91,39 @@ runs:
       run: timeout --kill-after=30s 3m pnpm exec playwright install-deps chromium
 
     # A killed install is retried only once its leftovers are gone: no apt or dpkg
-    # process alive, no lock held, and the half-done package state finished. The
-    # lock files are never deleted — a flock is released by its holder dying, and
-    # removing one under a live holder would let two installs run together.
+    # process alive and the half-done package state finished. Lock files are never
+    # deleted — a lock is released when its holder dies, and removing one under a
+    # live holder would let two installs run together. `pkill -x` matches by name
+    # on the whole host, which is one job's own runner here.
     - name: Clear what the killed install left behind
       id: release
       if: steps.deps.outcome == 'failure' && (steps.deps.outputs.code == '124' || steps.deps.outputs.code == '137')
       shell: bash
       run: |
         sudo pkill -KILL -x 'apt|apt-get|dpkg' || true
-        locks="/var/lib/dpkg/lock-frontend /var/lib/dpkg/lock /var/lib/apt/lists/lock /var/cache/apt/archives/lock"
         for _ in $(seq 1 30); do
-          # shellcheck disable=SC2086
-          sudo fuser $locks >/dev/null 2>&1 || break
+          pgrep -x 'apt|apt-get|dpkg' >/dev/null || break
           sleep 2
         done
-        # shellcheck disable=SC2086
-        if sudo fuser $locks >/dev/null 2>&1; then
-          echo "::error::a killed apt install still holds the package lock after 60s" >&2
+        if pgrep -x 'apt|apt-get|dpkg' >/dev/null; then
+          echo "::error::the killed apt process is still alive after 60s" >&2
           exit 1
         fi
-        sudo dpkg --configure -a
+        # sudo drops the environment, so the frontend is named again here.
+        sudo DEBIAN_FRONTEND=noninteractive timeout --kill-after=30s 2m dpkg --configure -a
 
     - name: Install the system libraries Chromium needs (retry after clearing)
       if: steps.release.outcome == 'success'
       working-directory: ${{ inputs.working-directory }}
       shell: bash
-      run: timeout --kill-after=30s 3m pnpm exec playwright install-deps chromium
+      run: |
+        set +e
+        timeout --kill-after=30s 3m pnpm exec playwright install-deps chromium
+        code=$?
+        if [ "$code" = 124 ] || [ "$code" = 137 ]; then
+          echo "::error::the system libraries did not install inside their bound, even after the first hang was cleared" >&2
+        fi
+        exit $code
 
     - name: Download the Chromium build
       id: browser
