@@ -5,6 +5,7 @@ import { RecordFields, rawRecord } from "../../components/recordfields";
 import { useT } from "../../i18n";
 import { useAcquisitionSources } from "../../lib/acquisitionsources.queries";
 import { useCanWriteRecord } from "../../lib/capability";
+import { useLeadingCurrencies } from "../../lib/leadingcurrencies";
 import { TagsPanel } from "../lists/tagspanel";
 import { RecordCustomFields } from "../records/recordcustomfields";
 import { saveRecordEdit } from "../records/recordedit";
@@ -37,6 +38,7 @@ export function DealDetails({
   const t = useT();
   const partnerOptions = usePartnerOptions([]);
   const acquisitionSources = useAcquisitionSources().data;
+  const leadingCurrencies = useLeadingCurrencies();
   const masked = deal.masked_fields ?? [];
   const companyName = useEntityName("company", deal.company_id).name;
   const partnerName = useEntityName("company", deal.partner_company_id).name;
@@ -122,6 +124,7 @@ export function DealDetails({
             me: meId,
             currentOwner: deal.owner_id ?? null,
             currency: deal.currency ?? "",
+            leadingCurrencies,
             acquisitionSources,
             currentAcquisitionSource: deal.acquisition_source,
           }).map(
