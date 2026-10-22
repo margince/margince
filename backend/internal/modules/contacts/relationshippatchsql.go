@@ -23,11 +23,10 @@ func demoteForRelationshipPatch(ctx context.Context, tx pgx.Tx, current relation
 	ended := storekit.SQLf("CASE WHEN %s::boolean THEN NULL ELSE coalesce(%s::date, patched.ended_at) END", arg(in.ClearEndedAt), arg(in.EndedAt))
 	status := storekit.SQLf("coalesce(%s::text, patched.employment_status)", arg(in.EmploymentStatus))
 	precision := storekit.SQLf("coalesce(%s::text, patched.ended_precision)", arg(in.EndedPrecision))
-	_, err := tx.Exec(ctx, storekit.SQLf(`UPDATE relationship SET is_current_primary=false
+	return flipCurrentPrimary(ctx, tx, storekit.SQLf(`UPDATE relationship SET is_current_primary=false
  WHERE contact_id=%s AND id<>%s AND %s
  AND EXISTS(SELECT 1 FROM relationship patched WHERE patched.id=%s AND %s)`,
 		contact, row, employment.CurrentPrimarySlotSQL(""), row, employment.IsCurrentSQL(ended, status, precision)), args...)
-	return err
 }
 
 func patchRelationshipRow(ctx context.Context, tx pgx.Tx, id ids.UUID, in UpdateRelationshipInput, capturedBy string) (relationshipRow, error) {
