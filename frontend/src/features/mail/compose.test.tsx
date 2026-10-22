@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import { QueryClient } from "@tanstack/react-query";
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -35,6 +36,7 @@ describe("RelinkModal", () => {
         }),
       "POST /activities/act-1/relink": () => jsonResponse(activity202),
     });
+    const invalidate = vi.spyOn(QueryClient.prototype, "invalidateQueries");
     render(
       <RelinkModal
         activityId="act-1"
@@ -66,6 +68,10 @@ describe("RelinkModal", () => {
     // are one header slot, so a regression that wrote them separately would
     // send whichever came last — the key alone, silently unconditioned.
     expect(relink?.headers.get("If-Match")).toBe("4");
+    // An email drawer still open behind the dialog reads its filing again.
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: ["email-presentation", "act-1"],
+    });
   });
 
   // A copy read without a version cannot say what it is changing, so the relink

@@ -3669,7 +3669,7 @@ export const de = {
   "email.thread.fold": "Nachricht von {name} einklappen",
   "email.thread.toLine": "an {names}",
   "email.thread.details": "Details",
-  "email.thread.replied": "Gesendet und zu diesem Verlauf hinzugefügt.",
+  "email.thread.replied": "Antwort gesendet und zum Thread hinzugefügt",
   "email.forward": "Weiterleiten",
   "email.forwardHeader": "Weitergeleitete Nachricht",
   "email.fileUnder": "Unter einem anderen Datensatz ablegen…",
