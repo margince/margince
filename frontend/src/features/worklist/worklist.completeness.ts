@@ -95,8 +95,8 @@ export function completenessText(
   return parts.join(" · ");
 }
 
-// A bounded category can read zero when the scope dropped every row it read,
-// so it is named without a figure: "(0)" beside "may have more" reads as a contradiction.
+// A bounded category reads zero when the scope dropped every row it read.
+// It is named without a figure, because "(0)" beside "may have more" contradicts itself.
 function limitedKind(count: WorklistCount, t: T, locale: Locale): string {
   const name = t(`worklist.filter.${count.category}` as const);
   if (count.considered === 0) return name;

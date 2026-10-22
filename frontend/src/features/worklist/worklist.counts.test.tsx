@@ -290,14 +290,10 @@ describe("what the page says about what it is not showing", () => {
     expect(unfiltered).toContain("5/35");
   });
 
-  // The two link-only narrowings give no figure, and for one reason each.
-  //
-  // `changed_since_brief` cuts across every category on a per-row freshness the
-  // counts do not carry. `except_decisions` excludes by SOURCE — the approvals a
-  // brief draws as cards — and these figures are keyed by category, so the
-  // near-miss complement of the `decisions` category would undercount: it drops
-  // an introduction request, which is a decision and is not an approval, that
-  // the server keeps. A bounded day still says it may hold more, without a number.
+  // `changed_since_brief` cuts across categories on a per-row freshness the
+  // counts do not carry. `except_decisions` excludes by source, not category.
+  // Its category complement would drop an introduction request the server keeps.
+  // So neither gets a figure; a bounded day still says it may hold more.
   it("gives no figure where the counts cannot describe the narrowing", () => {
     const page = day([
       { category: "tasks", considered: 30, shown: 5, more_available: true },

@@ -31,10 +31,9 @@ export function dayPartlyRead(
 // Callout is for.
 //
 // A teammate's unread plan is the same claim as an unread source, so it rides
-// in the same notice. A team read that covered every plan has nothing to warn
-// about and still says whose it covered, quietly: that is what tells a lead an
-// empty week is empty rather than unasked. A source read to its bound is not
-// here: the line under the filter pills names it, by the pill a reader sees.
+// in the same notice. A team read that covered every plan says whose it covered
+// in a caption: that tells a lead an empty week is empty, not unasked.
+// A source read to its bound is named by the line under the filter pills.
 export function DayUnread({ day }: Readonly<{ day: Worklist }>) {
   const t = useT();
   const { locale } = useLocale();
