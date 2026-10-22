@@ -117,7 +117,9 @@ The company's name is the **Company name** row under **Business context**. Savin
 
 **Date format** and **Time format** sit on the **Installation** card too, and set the notation for formatted dates and times across the interface. For dates the choices are **Use interface language**, **DD.MM.YYYY · 23.09.2026**, **MM/DD/YYYY · 09/23/2026** and **YYYY-MM-DD · 2026-09-23**. For times they are **Use interface language**, **24-hour · 17:30** and **12-hour · 05:30 pm**. Native date fields use the browser's own date picker and date format. Stored dates and time zones stay the same.
 
-**Currency rates** are the exchange rates that turn money in another currency into the base currency. A new rate starts today or later. To add older history, give a date before the first rate of that currency. A rate already in the list never changes, so a new rate never changes a figure that a past month already had. Seeing the rates needs the permission to read exchange rates. The Admin and Ops roles hold it by default, and a custom role can get it too.
+**Currency rates** are the exchange rates that turn money in another currency into the base currency. A new rate starts today or later. To add older history, give a date before the first rate of that currency, or any past date for a currency with no rate yet. A rate dated today can be corrected the same day. An older rate never changes, so a new rate never changes a figure that a past month already had.
+
+Seeing the rates needs the permission to read exchange rates. The Admin and Ops roles hold it by default, and a custom role can get it too.
 
 **Company context** is what Margince knows about your own company, where it read it, and a place to tell it facts yourself. Only an Admin sees this card and edits it; Ops finds the page without it.
 
