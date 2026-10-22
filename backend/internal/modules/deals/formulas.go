@@ -94,8 +94,9 @@ func QuietSQL(alias string, days int) string {
 
 // MeetingAheadSQL is true when the deal has a booked meeting its stored clock
 // has not reached: one still to come, or one that started before the refold
-// job moved the clock to it. It reads the clock's own filters, so a meeting
-// only some colleagues may see changes no number everyone reads.
+// job moved the clock to it. It reads the clock's own filters, the audience as
+// last_activity_of_deal spells it, so a meeting only some colleagues may see
+// changes no number everyone reads.
 func MeetingAheadSQL(alias string) string {
 	deal := "deal"
 	if alias != "" {
@@ -105,7 +106,7 @@ func MeetingAheadSQL(alias string) string {
 		JOIN activity ahead ON ahead.id = ahead_link.activity_id
 		WHERE ahead_link.deal_id = ` + deal + `.id AND ahead.archived_at IS NULL
 		  AND ahead.kind = 'meeting' AND ` + relstrength.NotCalledOffSQL("ahead") +
-		auth.OriginIsEngagement("ahead") + auth.AudienceWorkspaceOnly("ahead") + `
+		auth.OriginIsEngagement("ahead") + ` AND ahead.audience = 'workspace'
 		  AND ahead.occurred_at > coalesce(` + deal + `.last_activity_at, '-infinity'))`
 }
 

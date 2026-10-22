@@ -88,12 +88,8 @@ func CountFutureClocks(ctx context.Context, q clockQuerier, table ClockTable, ma
 // clockTableIdent renders one of the three constants as its literal, so no
 // caller's string is ever formatted into a statement.
 func clockTableIdent(table ClockTable) string {
-	switch table {
-	case ClockCompanies:
-		return "company"
-	case ClockDeals:
-		return "deal"
-	default:
-		return "contact"
+	if table == ClockCompanies || table == ClockDeals {
+		return string(table)
 	}
+	return string(ClockContacts)
 }

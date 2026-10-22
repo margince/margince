@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/datatask"
@@ -64,7 +65,7 @@ func shiftedPool(t *testing.T, shift time.Duration) *pgxpool.Pool {
 	if err := pool.QueryRow(ctx, `SELECT now() - pg_catalog.now()`).Scan(new(time.Duration)); err != nil {
 		t.Fatalf("the shifted pool cannot read its clock: %v", err)
 	}
-	if err := pool.QueryRow(ctx, `SELECT now()`).Scan(&moved); err != nil || moved.Before(time.Now().Add(shift-time.Minute)) {
+	if err := pool.QueryRow(ctx, `SELECT now()`).Scan(&moved); err != nil || moved.Before(clocktest.Now(t).Add(shift-time.Minute)) {
 		t.Fatalf("the shifted pool reads now() = %v (%v), want about %v ahead", moved, err, shift)
 	}
 	return pool
@@ -96,7 +97,7 @@ func newAccountFixture(t *testing.T) accountFixture {
 }
 
 // log files one activity on the contact and the deal.
-func (f accountFixture) log(t *testing.T, kind string, at time.Time) ids.ActivityID {
+func (f accountFixture) log(t *testing.T, kind string, at time.Time) {
 	t.Helper()
 	subject := "Past clock " + kind
 	in := activities.LogActivityInput{
@@ -109,11 +110,9 @@ func (f accountFixture) log(t *testing.T, kind string, at time.Time) ids.Activit
 	if kind == "email" {
 		in.Direction = new("inbound")
 	}
-	logged, _, err := f.e.Activities.LogActivity(f.e.Admin(), in)
-	if err != nil {
+	if _, _, err := f.e.Activities.LogActivity(f.e.Admin(), in); err != nil {
 		t.Fatalf("logging the %s: %v", kind, err)
 	}
-	return ids.From[ids.ActivityKind](ids.UUID(logged.Id))
 }
 
 // assertClocks holds the contact, company and deal clock to want.

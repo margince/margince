@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -166,7 +167,7 @@ func TestDealHealthHoldsAcrossTheMeetingsStart(t *testing.T) {
 		{"just after it starts, before the refold", 2*24*time.Hour + 2*time.Minute},
 		{"three days later, no refold run", 5 * 24 * time.Hour},
 	} {
-		at := time.Now().UTC().Add(read.shift)
+		at := clocktest.Now(t).UTC().Add(read.shift)
 		store := deals.NewStore(database.BindTo(shiftedPool(t, read.shift), ws), DealsInstallation())
 		h, err := store.DealHealth(f.e.Admin(), ids.From[ids.DealKind](deal), at)
 		if err != nil {
@@ -187,7 +188,7 @@ func TestDealHealthHoldsAcrossTheMeetingsStart(t *testing.T) {
 func TestABookedMeetingAheadKeepsTheCloseDateSweepFromDowngrading(t *testing.T) {
 	e := setupCloseDate(t)
 	id := e.seedSweepDeal(t, "Quiet but booked", e.late, new("commit"), new(30), 90)
-	subject, booked, at := "Next step", "booked", time.Now().UTC().AddDate(0, 0, 5)
+	subject, booked, at := "Next step", "booked", clocktest.Now(t).UTC().AddDate(0, 0, 5)
 	if _, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 		Kind: "meeting", Subject: &subject, MeetingStatus: &booked, OccurredAt: &at, Source: "manual",
 		Links: []activities.ActivityLinkInput{onRecord("deal", id)},

@@ -97,8 +97,10 @@ func TestTheMeetingAheadIsReadWithTheClock(t *testing.T) {
 func readsTheClock(expr ast.Expr) bool {
 	found := false
 	ast.Inspect(expr, func(n ast.Node) bool {
-		if lit, ok := n.(*ast.BasicLit); ok && lit.Kind == token.STRING && strings.Contains(lit.Value, "d.last_activity_at") {
-			found = true
+		if lit, ok := n.(*ast.BasicLit); ok {
+			if text, isString := gatekit.LiteralText(lit); isString && strings.Contains(text, "d.last_activity_at") {
+				found = true
+			}
 		}
 		return !found
 	})
