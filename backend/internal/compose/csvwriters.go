@@ -357,6 +357,9 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 			// onto a company that is not its owner.
 			return skippedFor(domainClaimedWhy), nil
 		}
+		if _, ok := errors.AsType[*contacts.DuplicateLeadError](err); ok {
+			return skippedFor(naturalKeyTakenWhy), nil
+		}
 		if linkedInClaimed(err) {
 			return skippedFor(linkedInClaimedWhy), nil
 		}
