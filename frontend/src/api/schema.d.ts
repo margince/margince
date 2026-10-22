@@ -14078,25 +14078,15 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Refused sends waiting on somebody who may decide them.
-         * @description The reviewer's own queue: every refused send a rep has handed on, oldest first.
+         * Retired. Always answers an empty page.
+         * @deprecated
+         * @description This was the deciders' queue of refused sends a rep had handed on. A rep no longer hands a
+         *     refusal to a colleague, so no review waits here and the page is always empty, with a `total`
+         *     of 0. The endpoint stays for clients that still call it.
          *
-         *     Gated on `communication_exception` at `read`, which is the verb for SEEING refusals rather
-         *     than acting on them: directing a send takes `create`, and an installation can grant the
-         *     first without the second. The rows name other contacts' recipient addresses and why each was
-         *     refused, so a seat without that grant is not shown them.
-         *
-         *     Installation-wide, with no team or ownership narrowing. Granting the read verb means
-         *     trusting that seat with every refused send in the installation.
-         *
-         *     EVERY WAITING REVIEW, not only the ones routed to the caller. Routing names no assignee: a
-         *     rep asks the installation rather than a colleague, and whoever holds the authority answers.
-         *     An assignee-scoped list would leave a card nobody could find the moment the colleague it named
-         *     went on leave.
-         *
-         *     Bounded, and continuable. A list at its limit has more behind it: `total` says how many are
-         *     waiting and `page.next_cursor` reaches the rest. A queue whose tail no caller could ask for
-         *     stranded the oldest reviews, which are the ones a reviewer most needs.
+         *     Gated as before, on a human session holding `communication_exception` at `read`. A caller
+         *     without it receives 403. Paging parameters are accepted and ignored, since there is no
+         *     second page.
          */
         get: operations["listCommunicationReviews"];
         put?: never;
@@ -14123,14 +14113,12 @@ export interface paths {
          *     each one carries.
          *
          *     TWO DOORS OPEN THIS ROW. The initiator, because it is their message. A holder of
-         *     `communication_exception` at `read`, because they are the human being asked to decide it —
-         *     a reviewer handed a card who could not read the refusal behind it would be acknowledging a
-         *     warning about a message they had never seen.
+         *     `communication_exception` at `read`, because a seat that may direct the send must be able
+         *     to read the refusal it is overriding.
          *
          *     That second door is installation-wide and worth stating plainly: granting somebody the read
          *     verb hands them every refused send in the installation, with the recipient addresses and the
-         *     reason each was refused. There is no team or ownership narrowing on it. Reading is not
-         *     routing — handing a review on stays the initiator's own action.
+         *     reason each was refused. There is no team or ownership narrowing on it.
          *
          *     A caller holding neither door receives 404 rather than 403, because "forbidden" would
          *     confirm the id exists and disclose a message the caller may not see.
@@ -42152,12 +42140,10 @@ export interface components {
              * @description What is NEEDED rather than who is blocked: `needs_context` is a fact about the message
              *     and stays true whoever is looking at it. `needs_repair` is a refusal no evidence can
              *     answer — an objection, a dead address — where offering a context form would invite a rep
-             *     to argue with a withdrawal. `awaiting_decision` is a refusal the rep has handed to
-             *     somebody who may override it: their work no longer, so a surface should say so rather
-             *     than showing them a form they have already filled in.
+             *     to argue with a withdrawal.
              * @enum {string}
              */
-            state: "needs_context" | "needs_repair" | "awaiting_decision" | "resolved" | "superseded" | "cancelled";
+            state: "needs_context" | "needs_repair" | "resolved" | "superseded" | "cancelled";
             /** @enum {string} */
             kind: "single";
             /**
@@ -42177,13 +42163,6 @@ export interface components {
             /** @description What was refused, per recipient. Empty once an erasure has cleared the subject from it. */
             refusals: components["schemas"]["RefusedRecipient"][];
             /**
-             * Format: uuid
-             * @description The card a routed review was handed to, so a decider reading this can find the decision
-             *     they are being asked to make. Null on a review nobody has asked about, which is most of
-             *     them.
-             */
-            approval_id?: string | null;
-            /**
              * @description What somebody must be shown before they direct this send, and the version their
              *     acknowledgement will name. Served rather than composed by the client: an instruction's
              *     claim is that a named human read particular words, and a client free to write its own
@@ -42191,7 +42170,7 @@ export interface components {
              */
             warning?: components["schemas"]["OverrideWarning"];
         };
-        /** @description A page of refused sends waiting for a decision. */
+        /** @description The page `GET /communication-reviews` answers, which is always empty. */
         CommunicationReviewList: {
             data: components["schemas"]["CommunicationReview"][];
             /**
@@ -70212,27 +70191,14 @@ export interface operations {
     };
     listCommunicationReviews: {
         parameters: {
-            query?: {
-                limit?: number;
-                /**
-                 * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
-                 *     effective `sort` of the originating request (field + direction) plus the last row's keyset
-                 *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
-                 *     together with a `sort` that differs from the one the cursor was minted under returns
-                 *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
-                 *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
-                 *     remaining pages see, so re-issue the query without the cursor when changing filters.
-                 */
-                cursor?: components["parameters"]["Cursor"];
-            };
+            query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description What is waiting. */
+            /** @description An empty page. */
             200: {
                 headers: {
                     [name: string]: unknown;

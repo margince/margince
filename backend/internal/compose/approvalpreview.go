@@ -68,7 +68,7 @@ func (r approvalPreviewReader) read(ctx context.Context, approval crmcontracts.A
 	}
 	out := &crmcontracts.ApprovalPreview{Version: 1, State: previewUnavailableState, Changes: []crmcontracts.ApprovalPreviewChange{}, ReviewerReason: previewReviewer(ctx, approval)}
 	out.Evidence = &[]crmcontracts.ApprovalEvidence{}
-	if approval.Kind == heldScheduledSendKind || approval.Kind == "communication_review" {
+	if approval.Kind == heldScheduledSendKind {
 		return r.scheduledApprovalPreview(ctx, approval, out)
 	}
 	if approval.Kind == "coldstart" {

@@ -100,8 +100,6 @@ export const vi = {
     "Lượt xử lý đã xem xét đang chờ chạy. Tiến độ hiển thị ở trên.",
   "approval.scheduled.rearm":
     "Lên lịch thử gửi lại tin nhắn đang giữ sau khoảng chờ hiển thị. Quyền, người nhận và quy tắc liên lạc hiện tại được kiểm tra lại trước khi gửi.",
-  "approval.scheduled.direct":
-    "Ghi lại quyết định gửi tin nhắn bị từ chối này theo thẩm quyền của bạn và thử gửi ngay. Quyết định và giải thích được lưu; các kiểm tra gửi thông thường vẫn áp dụng.",
   "approval.scheduled.delay": "Thời gian chờ thử lại (phút)",
   "approval.read.profileField": "Trường hồ sơ",
   "approval.read.factField": "Thông tin công ty",

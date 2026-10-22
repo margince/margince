@@ -75,13 +75,6 @@ func wireReview(review Review) crmcontracts.CommunicationReview {
 		intent := openapi_types.UUID(review.IntentID)
 		out.DeliveryIntentId = &intent
 	}
-	// Null rather than a zero uuid for the same reason the intent is: an id a
-	// caller could take to a lookup that answers not found reads as a broken
-	// reference rather than an absent one.
-	if !review.ApprovalID.IsZero() {
-		card := openapi_types.UUID(review.ApprovalID)
-		out.ApprovalId = &card
-	}
 	// SERVED ON EVERY REVIEW, not only on ones somebody may direct. Whether
 	// this reader holds the grant is a question the direct-send door answers,
 	// and withholding the words here would make a surface guess whether to ask
@@ -135,38 +128,16 @@ func (h Handlers) RecordCommunicationContext(
 	httperr.WriteJSON(w, http.StatusOK, wireReview(review))
 }
 
-// ListCommunicationReviews serves GET /communication-reviews.
-//
-// Wire-only, for GetCommunicationReview's reason: the store owns who may read
-// this queue, and a handler deciding it here would be a second answer to a
-// question the store already answers.
-func (h Handlers) ListCommunicationReviews(
-	w http.ResponseWriter, r *http.Request, params crmcontracts.ListCommunicationReviewsParams,
-) {
-	limit := 0
-	if params.Limit != nil {
-		limit = *params.Limit
-	}
-	cursor := ""
-	if params.Cursor != nil {
-		cursor = *params.Cursor
-	}
-	reviews, total, next, err := h.store.AwaitingDecision(r.Context(), limit, cursor)
-	if err != nil {
+// ListCommunicationReviews serves GET /communication-reviews, which is
+// deprecated. No review waits on a colleague any more, so the page is always
+// empty. The door and the response shape are the ones the queue had.
+func (h Handlers) ListCommunicationReviews(w http.ResponseWriter, r *http.Request) {
+	if err := h.store.MayReadDecidersQueue(r.Context()); err != nil {
 		writeConsentErr(w, r, err)
 		return
 	}
-	out := make([]crmcontracts.CommunicationReview, 0, len(reviews))
-	for _, review := range reviews {
-		out = append(out, wireReview(review))
-	}
-	// total stays at the top level where it shipped, and page carries where
-	// this read was cut. A caller reading only total keeps working.
-	page := crmcontracts.PageInfo{HasMore: next != "", Total: &total}
-	if next != "" {
-		page.NextCursor = &next
-	}
+	total := 0
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.CommunicationReviewList{
-		Data: out, Page: page, Total: total,
+		Data: []crmcontracts.CommunicationReview{}, Page: crmcontracts.PageInfo{Total: &total}, Total: total,
 	})
 }

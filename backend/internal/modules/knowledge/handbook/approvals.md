@@ -141,8 +141,11 @@ for which actions wait by default.
 
 **Messages**
 - Send an email · Send an email to an account · Send a message
-- Review a drafted email · Decide a refused email · Release a stopped message
+- Review a drafted email · Release a stopped message
 - Book a meeting
+
+**Review refused email** shows only on older approvals in your history. Margince no longer
+raises it.
 
 **Filing**
 - Refile an activity · Refile a conversation · Refile several activities

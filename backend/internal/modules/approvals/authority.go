@@ -88,7 +88,7 @@ const (
 
 // retiredKinds are governed for reading and refused for approving: see
 // kindTranscriptProposal.
-var retiredKinds = map[string]bool{kindTranscriptProposal: true}
+var retiredKinds = map[string]bool{kindTranscriptProposal: true, kindCommunicationReview: true}
 
 // KindScheduledSendHeld is the card a stopped scheduled message raises for the
 // rep who scheduled it (ADR-0104 §5). Exported because compose stages it and
@@ -96,20 +96,13 @@ var retiredKinds = map[string]bool{kindTranscriptProposal: true}
 // lives here, so the edge is injected there and both halves name one kind.
 const KindScheduledSendHeld = "scheduled_send_held"
 
-// KindCommunicationReview is a send the engine refused, put in front of
-// somebody who may decide it goes anyway.
-//
-// NOT SELF-ONLY, unlike the held-message kind above, and that is the whole
-// point of routing one. A rep refused at the keyboard may not hold the
-// authority to override the engine; this card exists so they can ask somebody
-// who does. A kind only its initiator could decide would put the question back
-// in front of the colleague who could not answer it.
-const KindCommunicationReview = "communication_review"
+// kindCommunicationReview is retired: it asked a colleague to decide a refused
+// send, and nothing stages or applies it now. It stays governed so the cards
+// already decided under it stay readable.
+const kindCommunicationReview = "communication_review"
 
 // objectCommunicationException is the RBAC object directing a send answers to,
-// spelled here as identity's policy spells it. Deciding one of these cards IS
-// directing a send, so it takes the same grant the direct-send door takes —
-// anything less would make the card a way around that door.
+// spelled here as identity's policy spells it.
 const objectCommunicationException = "communication_exception"
 
 // decisionGrants maps each stageable kind onto the RBAC its effect needs given
@@ -145,12 +138,9 @@ var decisionGrants = map[string][]grantRequirement{
 	// the two entries are one decision and TestAStepUpIsDecidedByTheLenderAlone
 	// holds them together.
 	KindVolumeRelease: {},
-	// Deciding a refused send is directing it, so it takes the grant the
-	// direct-send door takes. The card is a route to that act, not a second
-	// authority for it — a reviewer who could approve here but not direct
-	// would be releasing work they could not perform, and the effect would
-	// refuse after the decision had already committed.
-	KindCommunicationReview: {{objectCommunicationException, principal.ActionCreate}},
+	// Retired; read only, see kindCommunicationReview. Reading one takes the
+	// grant directing a send takes, as deciding one did.
+	kindCommunicationReview: {{objectCommunicationException, principal.ActionCreate}},
 
 	"advance_deal": {{tableDeal, principal.ActionUpdate}},
 	// progress_deal is advance_deal plus a timeline note; the gated effect

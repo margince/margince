@@ -4368,19 +4368,16 @@ func (e CommunicationReviewKind) Valid() bool {
 
 // Defines values for CommunicationReviewState.
 const (
-	CommunicationReviewStateAwaitingDecision CommunicationReviewState = "awaiting_decision"
-	CommunicationReviewStateCancelled        CommunicationReviewState = "cancelled"
-	CommunicationReviewStateNeedsContext     CommunicationReviewState = "needs_context"
-	CommunicationReviewStateNeedsRepair      CommunicationReviewState = "needs_repair"
-	CommunicationReviewStateResolved         CommunicationReviewState = "resolved"
-	CommunicationReviewStateSuperseded       CommunicationReviewState = "superseded"
+	CommunicationReviewStateCancelled    CommunicationReviewState = "cancelled"
+	CommunicationReviewStateNeedsContext CommunicationReviewState = "needs_context"
+	CommunicationReviewStateNeedsRepair  CommunicationReviewState = "needs_repair"
+	CommunicationReviewStateResolved     CommunicationReviewState = "resolved"
+	CommunicationReviewStateSuperseded   CommunicationReviewState = "superseded"
 )
 
 // Valid indicates whether the value is a known member of the CommunicationReviewState enum.
 func (e CommunicationReviewState) Valid() bool {
 	switch e {
-	case CommunicationReviewStateAwaitingDecision:
-		return true
 	case CommunicationReviewStateCancelled:
 		return true
 	case CommunicationReviewStateNeedsContext:
@@ -30345,11 +30342,6 @@ type CommunicationEvidence struct {
 // given — a reader asking why a message was refused on Tuesday needs Tuesday's answer, not
 // what the consent rows say today.
 type CommunicationReview struct {
-	// ApprovalId The card a routed review was handed to, so a decider reading this can find the decision
-	// they are being asked to make. Null on a review nobody has asked about, which is most of
-	// them.
-	ApprovalId *openapi_types.UUID `json:"approval_id,omitempty"`
-
 	// DeliveryIntentId The held message this review can resume. A refused send freezes the message into a held
 	// `scheduled_send` — subject, body, recipients, attachments and the claimed purpose — so
 	// resolving the review fires what the rep wrote rather than something retyped from memory.
@@ -30371,9 +30363,7 @@ type CommunicationReview struct {
 	// State What is NEEDED rather than who is blocked: `needs_context` is a fact about the message
 	// and stays true whoever is looking at it. `needs_repair` is a refusal no evidence can
 	// answer — an objection, a dead address — where offering a context form would invite a rep
-	// to argue with a withdrawal. `awaiting_decision` is a refusal the rep has handed to
-	// somebody who may override it: their work no longer, so a surface should say so rather
-	// than showing them a form they have already filled in.
+	// to argue with a withdrawal.
 	State CommunicationReviewState `json:"state"`
 
 	// Warning The caution a human reads before overruling the engine, with the version that identifies
@@ -30388,12 +30378,10 @@ type CommunicationReviewKind string
 // CommunicationReviewState What is NEEDED rather than who is blocked: `needs_context` is a fact about the message
 // and stays true whoever is looking at it. `needs_repair` is a refusal no evidence can
 // answer — an objection, a dead address — where offering a context form would invite a rep
-// to argue with a withdrawal. `awaiting_decision` is a refusal the rep has handed to
-// somebody who may override it: their work no longer, so a surface should say so rather
-// than showing them a form they have already filled in.
+// to argue with a withdrawal.
 type CommunicationReviewState string
 
-// CommunicationReviewList A page of refused sends waiting for a decision.
+// CommunicationReviewList The page `GET /communication-reviews` answers, which is always empty.
 type CommunicationReviewList struct {
 	Data []CommunicationReview `json:"data"`
 
@@ -55594,21 +55582,6 @@ type ListOpenCommitmentsParams struct {
 	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
-// ListCommunicationReviewsParams defines parameters for ListCommunicationReviews.
-type ListCommunicationReviewsParams struct {
-	Limit *int `form:"limit,omitempty" json:"limit,omitempty"`
-
-	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
-	// effective `sort` of the originating request (field + direction) plus the last row's keyset
-	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
-	// together with a `sort` that differs from the one the cursor was minted under returns
-	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
-	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
-	// remaining pages see, so re-issue the query without the cursor when changing filters.
-	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
-}
-
 // ListCompaniesParams defines parameters for ListCompanies.
 type ListCompaniesParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -73463,9 +73436,9 @@ type ServerInterface interface {
 	// The promises still open, overdue first.
 	// (GET /commitments)
 	ListOpenCommitments(w http.ResponseWriter, r *http.Request, params ListOpenCommitmentsParams)
-	// Refused sends waiting on somebody who may decide them.
+	// Retired. Always answers an empty page.
 	// (GET /communication-reviews)
-	ListCommunicationReviews(w http.ResponseWriter, r *http.Request, params ListCommunicationReviewsParams)
+	ListCommunicationReviews(w http.ResponseWriter, r *http.Request)
 	// What a refused send was refused for, and for whom.
 	// (GET /communication-reviews/{id})
 	GetCommunicationReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -76829,9 +76802,9 @@ func (_ Unimplemented) ListOpenCommitments(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Refused sends waiting on somebody who may decide them.
+// Retired. Always answers an empty page.
 // (GET /communication-reviews)
-func (_ Unimplemented) ListCommunicationReviews(w http.ResponseWriter, r *http.Request, params ListCommunicationReviewsParams) {
+func (_ Unimplemented) ListCommunicationReviews(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -89922,46 +89895,14 @@ func (siw *ServerInterfaceWrapper) ListOpenCommitments(w http.ResponseWriter, r 
 // ListCommunicationReviews operation middleware
 func (siw *ServerInterfaceWrapper) ListCommunicationReviews(w http.ResponseWriter, r *http.Request) {
 
-	var err error
-	_ = err
-
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
 
-	// Parameter object where we will unmarshal all parameters from the context
-	var params ListCommunicationReviewsParams
-
-	// ------------- Optional query parameter "limit" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "limit"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "limit", Err: err})
-		}
-		return
-	}
-
-	// ------------- Optional query parameter "cursor" -------------
-
-	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
-	if err != nil {
-		var requiredError *runtime.RequiredParameterError
-		if errors.As(err, &requiredError) {
-			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
-		} else {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
-		}
-		return
-	}
-
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListCommunicationReviews(w, r, params)
+		siw.Handler.ListCommunicationReviews(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {

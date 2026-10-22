@@ -32,7 +32,7 @@ func TestReviewReadsRejectNonHumanPrincipalsWithExceptionGrants(t *testing.T) {
 			if _, err := store.ReviewForReader(ctx, ids.NewV7()); !errors.Is(err, apperrors.ErrPermissionDenied) {
 				t.Errorf("reading a review: %v, want permission denied", err)
 			}
-			if _, _, _, err := store.AwaitingDecision(ctx, 100, ""); !errors.Is(err, apperrors.ErrPermissionDenied) {
+			if err := store.MayReadDecidersQueue(ctx); !errors.Is(err, apperrors.ErrPermissionDenied) {
 				t.Errorf("reading the queue: %v, want permission denied", err)
 			}
 		})

@@ -98,8 +98,6 @@ export const de = {
 
   "approval.scheduled.rearm":
     "Plant einen erneuten Versuch der angehaltenen Nachricht nach der angegebenen Wartezeit. Berechtigungen, Empfangende und Kommunikationsregeln werden vor dem Versand erneut geprüft.",
-  "approval.scheduled.direct":
-    "Dokumentiert deine Entscheidung, diese abgelehnte Nachricht in eigener Verantwortung zu senden, und versucht den Versand jetzt. Entscheidung und Erklärung werden festgehalten; die üblichen Versandprüfungen gelten weiterhin.",
   "approval.scheduled.delay": "Wartezeit bis zum erneuten Versuch (Minuten)",
   "approval.read.profileField": "Profilfeld",
   "approval.read.factField": "Unternehmensfakt",

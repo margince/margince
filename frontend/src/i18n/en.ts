@@ -94,8 +94,6 @@ export const en = {
 
   "approval.scheduled.rearm":
     "Schedules the displayed held message to be retried after the delay shown. Current permissions, recipients and communication rules are checked again before sending.",
-  "approval.scheduled.direct":
-    "Records your decision to send this refused message on your own authority and attempts delivery now. Your decision and explanation are recorded; the normal delivery safeguards still apply.",
   "approval.scheduled.delay": "Retry delay (minutes)",
   "approval.read.profileField": "Profile field",
   "approval.read.factField": "Company fact",
