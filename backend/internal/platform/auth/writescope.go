@@ -227,14 +227,15 @@ func WritableBy(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) (bool
 }
 
 // WritableLiveBy is WritableBy for a row that must also be live, asked with no
-// handler gate in front. So it checks the caller's read and update verbs
-// itself, as WritableSubset does.
+// handler gate in front. So it checks the seat and the read and update verbs
+// itself. A read seat's role may hold update; only the HTTP clamp refuses it.
 func WritableLiveBy(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) (bool, error) {
 	p, err := rbacActor(ctx)
 	if err != nil {
 		return false, err
 	}
-	if !p.Permissions.Allows(table, principal.ActionRead) || !p.Permissions.Allows(table, principal.ActionUpdate) {
+	if !p.SeatType.CanMutate() ||
+		!p.Permissions.Allows(table, principal.ActionRead) || !p.Permissions.Allows(table, principal.ActionUpdate) {
 		return false, nil
 	}
 	return writableAnswer(EnsureWritableLive(ctx, tx, table, id))

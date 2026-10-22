@@ -104,6 +104,7 @@ type Authority interface {
 	// fields, named as the contract names them (`owner_id`). A mask that
 	// lifts only where the user could write counts as withholding.
 	//
+	// An archived deal answers as a live one; a deal no row holds, false.
 	// Only Type "deal" is answered. Another type, an unknown field or a
 	// malformed id answers ErrInvalid; an agent seat or a user who cannot sign
 	// in, false.
@@ -114,9 +115,9 @@ type Authority interface {
 	// ErrAttendedRead.
 	CanRead(ctx context.Context, user UserID, record EntityRef, fields []string) (bool, error)
 
-	// CanWrite reports whether user could change record now: it is live, they
-	// may open it, and their own grants let them update it. It answers on the
-	// same calls, about the same users, as CanRead.
+	// CanWrite reports whether user could change record now. It is live and
+	// they hold a full seat. Their own grants and the row's sharing let them
+	// update it. It answers on the same calls, about the same users, as CanRead.
 	CanWrite(ctx context.Context, user UserID, record EntityRef) (bool, error)
 }
 

@@ -608,12 +608,13 @@ Panels: []extension.Panel{{
 
 | Slot | Where the panel shows |
 |---|---|
-| `extension.SlotDealPanel` (`record_panel.deal`) | A deal page's side column, above Details |
+| `extension.SlotDealPanel` (`record_panel.deal`) | The end of a deal page's side column, after Email |
 
 - **`Export`** is a named export of your frontend package's `main` module: the function the page mounts.
   A declared export the package does not have fails the composed typecheck.
 - **`Object`** is one of your RBAC objects. The panel shows only to a reader whose role grants `read` on it.
-  `make gen` and the start both refuse an object that none of your operations gates on.
+  `make gen` and the start both refuse an object that none of your operations gates on. No role holds a
+  grant on a unit's object, admin included, until an admin gives it in **Settings → Roles and permissions**.
 - One panel per slot per unit. A unit that declares a panel and ships no `frontend/package.json` is refused.
 
 The page hands that function the record it shows, typed by `ExtensionPanelProps` from
@@ -636,15 +637,18 @@ export function VisitsPanel({ record }: ExtensionPanelProps) {
 
 Draw it as a `Panel` with a `PanelBody`, both from `@margince/frontend/design-system`, as the page's own
 panels are. A titled `Card` in the page's column would be a second pane, and no gate reads unit code to
-catch it. Return `null` when there is nothing to say.
+catch it. Return `null` when there is nothing to say. For a verb a reader knows from its glyph, such as
+copy beside a link, use `IconAction`: its one `label` is the name a screen reader hears and the tip a
+pointer shows. A verb whose result the reader must read first keeps a worded `Button`.
 
-The page holds each unit's panel apart. A panel that fails to draw shows a retry card in its place. The page
-and the other units' panels go on. Several units fill one slot in the order of the composed
-registry. A slot that no enabled unit fills draws nothing, so a page looks as it does without the tier.
+The page draws every unit's panel for a slot in one group, under an **Extensions** label, so a reader can
+tell an installed add-on from the page's own panels. It holds each panel apart. A panel that fails to draw
+shows a retry card in its place. The page and the other units' panels go on. Several units fill one slot in
+the order of the composed registry. A slot that no enabled unit fills draws nothing, the label included, so a
+page looks as it does without the tier.
 
-The panel calls your own routes like a screen does. A route that serves something about the record first
-asks `Authority().CanRead` about its own caller. A route that acts asks `CanWrite`. See
-[Read deals and colleagues from a handler](#read-deals-and-colleagues-from-a-handler).
+The panel calls your own routes like a screen does. A route asks core about its own caller before it serves
+or acts. See [Ask what a colleague may do](#ask-what-a-colleague-may-do-canread-and-canwrite).
 
 ## Own scheduled jobs
 
@@ -719,11 +723,8 @@ In all other places `Deals().Get`, `Deals().Responsible` and
 edge, a finance source's read and a transport's send. There the answer, or an error that quotes it, could reach a user whose
 own rights hide it.
 
-`CanRead` and `CanWrite` answer in those places too, but only a signed-in human asking about their own rights. So a route can ask
-whether its own caller may open the deal before it serves what your unit stored about it. Any other question
-there, and any call an agent or a connector makes, answers `extension.ErrAttendedRead`: an agent's scopes may
-be narrower than its human's rights. A user id that is no UUID answers `extension.ErrInvalid`. A unit that did
-not declare `authority` in `SystemReads` is refused, as for any read it did not declare.
+`Authority().CanRead` and `CanWrite` also answer on a route, but only about the signed-in person. See
+[Ask what a colleague may do](#ask-what-a-colleague-may-do-canread-and-canwrite).
 
 The refusal guards the call, not your own tables. If you save what a read returned and show it later, ask
 `CanRead` first.
@@ -733,7 +734,7 @@ Declare each group of reads your unit makes:
 ```go
 SystemReads: []extension.SystemRead{
 	extension.SystemReadDeals,     // Deals().Get and Deals().Responsible
-	extension.SystemReadAuthority, // Authority().CanRead
+	extension.SystemReadAuthority, // Authority().CanRead and CanWrite
 	extension.SystemReadDirectory, // Directory().Emails
 },
 ```
@@ -746,7 +747,6 @@ subscription that reads the deal its event names.
 ```go
 deal, err := rt.Deals().Get(ctx, d.Entity.ID)            // extension.ErrNotFound once the deal is gone
 team, err := rt.Deals().Responsible(ctx, d.Entity.ID)    // owner first, then by email
-ok, err := rt.Authority().CanRead(ctx, member.UserID, d.Entity, []string{"name", "amount_minor"})
 emails, err := rt.Directory().Emails(ctx, ids)           // active human members only
 ```
 
@@ -757,19 +757,100 @@ emails, err := rt.Directory().Emails(ctx, ids)           // active human members
 - **`Responsible` names who works the deal.** That is the owner, the users on the deal, and the members of the
   teams on it. It leaves out agents, members who cannot sign in, users taken off the deal, and archived teams. It stops at
   `extension.MaxResponsible` colleagues.
-- **Ask `CanRead` first.** Before you show a colleague what you read, ask about them. It answers under their
-  own rights: they must be allowed to open the deal, and no field mask may hide a field you name. A mask that
-  does not hide a field from a user who may change the deal still counts as hiding it. An agent seat is never
-  let in.
-- **Name fields the way the contract's `Deal` does** (`amount_minor`, `expected_close_date`, `owner_id`).
-  `CanRead` answers only for a deal.
-- **Ask about the whole list, then cut it.** Say your provider takes some number of members at most. Ask
-  `CanRead` about each colleague in order, and keep the first ones it lets in. If you cut the list first,
-  colleagues it refuses can take the place of one it would let in.
 - **`Emails` takes at most `extension.MaxResponsible` users**, so the list `Responsible` gave always fits.
-- `CanWrite` comes before you act for someone on a deal. It reports whether the user could change the deal
-  now: it is live, they may open it, and their own role lets them update it. It answers on the same calls,
-  about the same users, as `CanRead`, and it takes no fields.
+
+### Ask what a colleague may do: CanRead and CanWrite
+
+Your unit stores and sends facts about core deals: a copy of a card, a channel, a message. Core cannot see
+who reads those later. So before your unit shows a person anything about a deal, or acts on a deal for them,
+it asks core what that person may do, under their own role:
+
+```go
+shown, err := rt.Authority().CanRead(ctx, user, deal, []string{"name", "amount_minor"})
+writable, err := rt.Authority().CanWrite(ctx, user, deal)
+```
+
+- **`CanRead(user, record, fields)`**: may `user` open the deal and read every field in `fields`? A field
+  mask that hides one of them answers no. So does a mask that lifts only for someone who may change the deal.
+- **`CanWrite(user, record)`**: could `user` change the deal now? The deal is live, they hold a full seat,
+  their role holds `read` and `update` on deals, and they may change this deal, not only open it. A deal
+  shared with them read-only answers no. It takes no fields.
+
+Name the fields the way the contract's `Deal` does. Each `DealSummary` field you show maps to one:
+
+| `DealSummary` | Field to name |
+|---|---|
+| `Name` | `name` |
+| `StageName` | `stage_id` |
+| `Status` | `status` |
+| `AmountMinor`, `AmountDisplay` | `amount_minor` and `currency` |
+| `ExpectedClose` | `expected_close_date` |
+| `OwnerID` | `owner_id` |
+
+Both need `extension.SystemReadAuthority` in `SystemReads`, and both answer only for a deal
+(`EntityRef{Type: "deal"}`).
+
+**Which use case, which question.**
+
+| You want to | Where your code runs | Ask | On no |
+|---|---|---|---|
+| Invite a colleague to, or send them, what you read about a deal | job tick or bus delivery | `CanRead(colleague, deal, the fields you send)` | Leave them out. |
+| Serve the signed-in person something your unit stored about a deal | route | `CanRead(caller, deal, the fields you serve)` | Answer `ErrNotFound`, so no answer says which deals exist. |
+| Let the signed-in person act on a deal (create, link, post) | route | `CanRead` as above, then `CanWrite(caller, deal)` | `CanRead` no: `ErrNotFound`. `CanWrite` no: `ErrForbidden`. |
+| Show or hide an edit control | the route that serves the panel's data | `CanWrite(caller, deal)`, sent as a `writable` field in that answer | The panel draws no control. |
+| Let the signed-in person add a colleague | route | Nothing about the colleague: store the request | Ask `CanRead(colleague, …)` on the next job tick, and leave them out on no. |
+
+**Ask about the whole list, then cut it.** Say your provider takes some number of members at most. Ask
+`CanRead` about each colleague in order, and keep the first ones it lets in. If you cut the list first,
+colleagues it refuses can take the place of one it would let in.
+
+**Name every field the person will see.** A route that acts asks
+`CanRead` with every field your unit will later show the person, not only the name. Otherwise a person whose
+role hides the amount could have your unit send it to them.
+
+**Whom you may ask about.** It depends on where your code runs.
+
+- **On a job tick or a bus delivery**, ask about any colleague. No one is signed in, so nobody's rights limit
+  the question.
+- **On an attended call** (a route, a tool call), ask only about the signed-in human: pass
+  `rt.Caller().UserID`. A question about anyone else answers `extension.ErrAttendedRead`. So does any call
+  an agent or a connector makes, even about its own human, because an agent's scopes may be narrower than
+  its human's rights. Check `Caller().Type == extension.CallerHuman` and `!Caller().IsAgent` first, and
+  refuse otherwise with `ErrForbidden`. Core turns `ErrAttendedRead` into no 4xx, so an agent would see a
+  server fault.
+
+```go
+caller := rt.Caller()
+if caller.Type != extension.CallerHuman || caller.IsAgent {
+	return nil, fmt.Errorf("%w: a person opens this", extension.ErrForbidden)
+}
+user := extension.UserID(caller.UserID)
+deal := extension.EntityRef{Type: "deal", ID: args.DealID}
+shown, err := rt.Authority().CanRead(ctx, user, deal, cardFields)
+if err != nil {
+	return nil, err
+}
+if !shown {
+	return nil, extension.ErrNotFound
+}
+```
+
+**What each answers.**
+
+| Case | `CanRead` | `CanWrite` |
+|---|---|---|
+| A live deal the person may open, no field hidden | true | true on a full seat whose role holds `update` on deals, unless the deal was shared with them read-only |
+| The same, on a read seat | true | false, whatever the role holds |
+| An archived deal | true | false: an archived deal takes no new work |
+| A deal no row holds, or one the person may not open | false | false |
+| A field mask hides a named field | false | (takes no fields) |
+| An agent seat, or a user who cannot sign in | false | false |
+| Another record type, an unknown field, or an id that is no UUID (checked before the attended rule) | `ErrInvalid` | `ErrInvalid` |
+| An attended call about someone else, or from an agent or a connector | `ErrAttendedRead` | `ErrAttendedRead` |
+| `authority` not in `SystemReads` | `ErrUndeclaredRead` | `ErrUndeclaredRead` |
+
+A yes is the core's answer at that moment. Ask again each time: a role, a mask or the deal can change between
+two calls.
 
 ## Capture records from your own provider
 

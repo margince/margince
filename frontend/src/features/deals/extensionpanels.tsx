@@ -23,9 +23,9 @@ import "./extensionpanels.css";
 
 /**
  * The composed units' panels for one slot, each drawn with the record the page
- * shows, under one "Extensions" label so a reader can tell an installed add-on
- * from the product's own cards. A panel shows only to a reader holding read on
- * its object. A slot with nothing to show draws nothing, label included.
+ * shows. One "Extensions" label heads them, so a reader tells an add-on from
+ * the product's own cards. A panel shows only to a reader holding read on its
+ * object. A slot with nothing to show draws nothing, label included.
  *
  * Each panel sits in its own CardBoundary, so a unit's render failure stays in
  * that unit's card. The page and the other units' panels never learn of it.

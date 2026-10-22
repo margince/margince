@@ -541,6 +541,24 @@ func TestCanWriteNeedsTheRowScopeAndTheReadVerb(t *testing.T) {
 	}
 }
 
+// A read seat changes nothing, whatever its role holds, even on its own deal.
+func TestCanWriteRefusesAReadSeat(t *testing.T) {
+	s := setupSystemRead(t)
+	reader := s.seat(t, "reader@example.test", "active", false)
+	s.grant(t, reader, dealWriterGrants)
+	s.WsExec(t, `UPDATE app_user SET seat_type = 'read' WHERE id = $1`, reader)
+	if s.canWrite(t, reader, s.deal) {
+		t.Error("a read seat whose role may change every deal may change one")
+	}
+	owner := s.seat(t, "owner@example.test", "active", false)
+	s.grant(t, owner, `{"objects":{"deal":{"read":true,"update":true}},"row_scope":"own"}`)
+	s.WsExec(t, `UPDATE app_user SET seat_type = 'read' WHERE id = $1`, owner)
+	s.WsExec(t, `UPDATE deal SET owner_id = $1 WHERE id = $2`, owner, s.deal)
+	if s.canWrite(t, owner, s.deal) {
+		t.Error("a read seat may change the deal it owns")
+	}
+}
+
 // On an attended call CanWrite answers its human caller about themselves.
 func TestAnAttendedCanWriteAnswersTheCaller(t *testing.T) {
 	s := setupSystemRead(t)
