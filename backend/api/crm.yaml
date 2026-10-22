@@ -20619,30 +20619,6 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
-  /communication-reviews:
-    get:
-      tags: [Communication]
-      operationId: listCommunicationReviews
-      deprecated: true
-      security: [ { cookieAuth: [] } ]   # human session only
-      x-agent-access: human-only
-      summary: Retired. Always answers an empty page.
-      description: |
-        This was the deciders' queue of refused sends a rep had handed on. A rep no longer hands a
-        refusal to a colleague, so no review waits here and the page is always empty, with a `total`
-        of 0. The endpoint stays for clients that still call it.
-
-        Gated as before, on a human session holding `communication_exception` at `read`. A caller
-        without it receives 403. Paging parameters are accepted and ignored, since there is no
-        second page.
-      responses:
-        '200':
-          description: An empty page.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/CommunicationReviewList' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-
   /communication-reviews/{id}:
     parameters:
       - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
@@ -20676,36 +20652,6 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/CommunicationReview' }
         '404': { $ref: '#/components/responses/NotFound' }
-
-  /communication-reviews/{id}/request-decision:
-    parameters:
-      - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
-    post:
-      tags: [Communication]
-      operationId: requestCommunicationDecision
-      deprecated: true
-      security: [ { cookieAuth: [] } ]   # human session only
-      x-agent-access: human-only
-      summary: Retired. Asking a colleague to decide a refused send is no longer offered.
-      description: |
-        Always answers 422 `review_not_routable`. A rep overrules a machine refusal with their own
-        reason (`POST /contacts/{id}/consent/allow`); a refusal names what may be overruled in its
-        problem details (`available_actions` carries `overrule`, and `overrulable` lists each
-        contact and category). A seat holding `communication_exception` directs the send from the
-        review (`POST /communication-reviews/{id}/direct-send`).
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/RequestCommunicationDecisionRequest' }
-      responses:
-        '201':
-          description: The card the question was staged as.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/CommunicationDecisionRequested' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '422': { $ref: '#/components/responses/ValidationError' }
 
   /communication-reviews/{id}/context:
     parameters:
@@ -57530,26 +57476,6 @@ components:
             claim is that a named human read particular words, and a client free to write its own
             would have the record assert an acknowledgement of text nobody published.
 
-    CommunicationReviewList:
-      type: object
-      description: The page `GET /communication-reviews` answers, which is always empty.
-      required: [data, page, total]
-      properties:
-        data:
-          type: array
-          items: { $ref: '#/components/schemas/CommunicationReview' }
-        page:
-          allOf:
-            - $ref: '#/components/schemas/PageInfo'
-          description: |
-            Where this page was cut. `total` beside it is the same count this object may carry, kept
-            at the top level because it shipped there: a client reading it keeps working.
-        total:
-          type: integer
-          description: |
-            How many are waiting in total. A page at its limit has more behind it, and this is how
-            the caller knows rather than by discovering it.
-
     OverrideWarning:
       type: object
       description: |
@@ -57569,34 +57495,6 @@ components:
           description: |
             Shown verbatim. A surface that paraphrased it would record somebody as having read the
             server's words while showing them its own.
-
-    RequestCommunicationDecisionRequest:
-      type: object
-      description: What the colleague asking wants the decider to know.
-      properties:
-        note:
-          type: string
-          maxLength: 1000
-          description: |
-            Why this message should go, in the asker's own words. Optional — a refusal is often
-            self-explanatory — but it is what the approver reads and therefore what the record says
-            they acted on.
-
-            Bounded by what an instruction's explanation accepts, because that is where these words
-            end up. A note the record could not hold would stage a card that fails when somebody
-            approves it.
-
-    CommunicationDecisionRequested:
-      type: object
-      description: The approval card a routed refusal was staged as.
-      required: [approval_id]
-      properties:
-        approval_id:
-          type: string
-          format: uuid
-          description: |
-            The card carrying the question. A second ask about the same review answers the same id:
-            one refused message is one decision.
 
     DirectCommunicationSendRequest:
       type: object

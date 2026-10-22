@@ -37,17 +37,3 @@ func TestLiveReviewsForNoIntentsIsEmpty(t *testing.T) {
 		t.Errorf("no messages answered %v, %v; want an empty map and no error", got, err)
 	}
 }
-
-// The retired ask refuses a caller with no identity, and refuses a rep by
-// naming the moves that are still offered.
-func TestTheRetiredAskRefusesEveryCaller(t *testing.T) {
-	store := NewStore(nil)
-	if err := store.RequestDecision(context.Background()); err == nil {
-		t.Error("a caller with no identity was not refused")
-	}
-	var refused *ReviewNotRoutableError
-	err := store.RequestDecision(reader(nil))
-	if !errors.As(err, &refused) || err.Error() != askingRetired {
-		t.Errorf("a rep asking: %v, want the retired-ask refusal", err)
-	}
-}

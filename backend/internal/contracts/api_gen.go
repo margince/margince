@@ -30303,13 +30303,6 @@ type CommitmentMeaning struct {
 // security warning.
 type CommunicationContext string
 
-// CommunicationDecisionRequested The approval card a routed refusal was staged as.
-type CommunicationDecisionRequested struct {
-	// ApprovalId The card carrying the question. A second ask about the same review answers the same id:
-	// one refused message is one decision.
-	ApprovalId openapi_types.UUID `json:"approval_id"`
-}
-
 // CommunicationEvidence Records the caller can name in support of a send, each by id. Evidence is
 // CHECKED, never trusted: the engine reads the named record and asks whether it
 // actually supports the category claimed — a deal id that is closed, an invoice
@@ -30380,19 +30373,6 @@ type CommunicationReviewKind string
 // answer — an objection, a dead address — where offering a context form would invite a rep
 // to argue with a withdrawal.
 type CommunicationReviewState string
-
-// CommunicationReviewList The page `GET /communication-reviews` answers, which is always empty.
-type CommunicationReviewList struct {
-	Data []CommunicationReview `json:"data"`
-
-	// Page Where this page was cut. `total` beside it is the same count this object may carry, kept
-	// at the top level because it shipped there: a client reading it keeps working.
-	Page PageInfo `json:"page"`
-
-	// Total How many are waiting in total. A page at its limit has more behind it, and this is how
-	// the caller knows rather than by discovering it.
-	Total int `json:"total"`
-}
 
 // Company A company. Mirrors the `company` table.
 type Company struct {
@@ -47098,18 +47078,6 @@ type RequestAccessResponse struct {
 	Requested bool `json:"requested"`
 }
 
-// RequestCommunicationDecisionRequest What the colleague asking wants the decider to know.
-type RequestCommunicationDecisionRequest struct {
-	// Note Why this message should go, in the asker's own words. Optional — a refusal is often
-	// self-explanatory — but it is what the approver reads and therefore what the record says
-	// they acted on.
-	//
-	// Bounded by what an instruction's explanation accepts, because that is where these words
-	// end up. A note the record could not hold would stage a card that fails when somebody
-	// approves it.
-	Note *string `json:"note,omitempty"`
-}
-
 // RequestDeadline The deadline a request of one kind received at one instant gets, and the rule that set it.
 type RequestDeadline struct {
 	DueAt time.Time `json:"due_at"`
@@ -61503,9 +61471,6 @@ type RecordCommunicationContextJSONRequestBody = RecordCommunicationContextReque
 // DirectCommunicationSendJSONRequestBody defines body for DirectCommunicationSend for application/json ContentType.
 type DirectCommunicationSendJSONRequestBody = DirectCommunicationSendRequest
 
-// RequestCommunicationDecisionJSONRequestBody defines body for RequestCommunicationDecision for application/json ContentType.
-type RequestCommunicationDecisionJSONRequestBody = RequestCommunicationDecisionRequest
-
 // CreateCompanyJSONRequestBody defines body for CreateCompany for application/json ContentType.
 type CreateCompanyJSONRequestBody = CreateCompanyRequest
 
@@ -73444,9 +73409,6 @@ type ServerInterface interface {
 	// The promises still open, overdue first.
 	// (GET /commitments)
 	ListOpenCommitments(w http.ResponseWriter, r *http.Request, params ListOpenCommitmentsParams)
-	// Retired. Always answers an empty page.
-	// (GET /communication-reviews)
-	ListCommunicationReviews(w http.ResponseWriter, r *http.Request)
 	// What a refused send was refused for, and for whom.
 	// (GET /communication-reviews/{id})
 	GetCommunicationReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -73456,9 +73418,6 @@ type ServerInterface interface {
 	// Send a refused message anyway, on a named human's recorded decision.
 	// (POST /communication-reviews/{id}/direct-send)
 	DirectCommunicationSend(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// Retired. Asking a colleague to decide a refused send is no longer offered.
-	// (POST /communication-reviews/{id}/request-decision)
-	RequestCommunicationDecision(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// List companies (live by default; cursor-paginated).
 	// (GET /companies)
 	ListCompanies(w http.ResponseWriter, r *http.Request, params ListCompaniesParams)
@@ -76813,12 +76772,6 @@ func (_ Unimplemented) ListOpenCommitments(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Retired. Always answers an empty page.
-// (GET /communication-reviews)
-func (_ Unimplemented) ListCommunicationReviews(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
 // What a refused send was refused for, and for whom.
 // (GET /communication-reviews/{id})
 func (_ Unimplemented) GetCommunicationReview(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
@@ -76834,12 +76787,6 @@ func (_ Unimplemented) RecordCommunicationContext(w http.ResponseWriter, r *http
 // Send a refused message anyway, on a named human's recorded decision.
 // (POST /communication-reviews/{id}/direct-send)
 func (_ Unimplemented) DirectCommunicationSend(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Retired. Asking a colleague to decide a refused send is no longer offered.
-// (POST /communication-reviews/{id}/request-decision)
-func (_ Unimplemented) RequestCommunicationDecision(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -89909,26 +89856,6 @@ func (siw *ServerInterfaceWrapper) ListOpenCommitments(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
-// ListCommunicationReviews operation middleware
-func (siw *ServerInterfaceWrapper) ListCommunicationReviews(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListCommunicationReviews(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // GetCommunicationReview operation middleware
 func (siw *ServerInterfaceWrapper) GetCommunicationReview(w http.ResponseWriter, r *http.Request) {
 
@@ -90016,38 +89943,6 @@ func (siw *ServerInterfaceWrapper) DirectCommunicationSend(w http.ResponseWriter
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DirectCommunicationSend(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// RequestCommunicationDecision operation middleware
-func (siw *ServerInterfaceWrapper) RequestCommunicationDecision(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id openapi_types.UUID
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.RequestCommunicationDecision(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -119135,9 +119030,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/commitments", wrapper.ListOpenCommitments)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/communication-reviews", wrapper.ListCommunicationReviews)
-	})
-	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/communication-reviews/{id}", wrapper.GetCommunicationReview)
 	})
 	r.Group(func(r chi.Router) {
@@ -119145,9 +119037,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/communication-reviews/{id}/direct-send", wrapper.DirectCommunicationSend)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/communication-reviews/{id}/request-decision", wrapper.RequestCommunicationDecision)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/companies", wrapper.ListCompanies)

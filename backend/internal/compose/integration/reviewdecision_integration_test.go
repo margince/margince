@@ -11,11 +11,10 @@ import (
 	"testing"
 )
 
-// ASKING A COLLEAGUE TO DECIDE A REFUSED SEND IS NOT OFFERED.
-//
-// A rep overrules a machine refusal with their own reason instead. The retired
-// door refuses, raises no approval card, and leaves the review with the rep.
-func TestAskingAColleagueToDecideARefusedSendIsRefused(t *testing.T) {
+// Asking a colleague to decide a refused send is not offered, and neither is
+// the deciders' queue: both routes are gone. Calling the old ask raises no
+// approval card and leaves the review with the rep.
+func TestTheRetiredAskAndQueueAreGone(t *testing.T) {
 	c := setupConsent(t)
 	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
 		t.Fatalf("marketing send with no grant → %d, want 409", status)
@@ -24,8 +23,11 @@ func TestAskingAColleagueToDecideARefusedSendIsRefused(t *testing.T) {
 	before := reviewState(t, c, review)
 
 	if status := c.Call(t, "POST", "/v1/communication-reviews/"+review+"/request-decision",
-		AnyMap{}, nil, nil); status != http.StatusUnprocessableEntity {
-		t.Fatalf("asking a colleague → %d, want 422", status)
+		AnyMap{}, nil, nil); status != http.StatusNotFound && status != http.StatusMethodNotAllowed {
+		t.Fatalf("the retired ask → %d, want the route gone", status)
+	}
+	if status := c.Call(t, "GET", "/v1/communication-reviews", nil, nil, nil); status != http.StatusNotFound && status != http.StatusMethodNotAllowed {
+		t.Fatalf("the retired deciders' queue → %d, want the route gone", status)
 	}
 	var cards int
 	if err := c.Owner.QueryRow(context.Background(),
@@ -33,33 +35,10 @@ func TestAskingAColleagueToDecideARefusedSendIsRefused(t *testing.T) {
 		t.Fatal(err)
 	}
 	if cards != 0 {
-		t.Fatalf("%d approval card(s) raised by a door that no longer asks anybody", cards)
+		t.Fatalf("%d approval card(s) raised by a route that no longer exists", cards)
 	}
 	if after := reviewState(t, c, review); after != before {
-		t.Fatalf("the refused ask moved the review from %s to %s", before, after)
-	}
-}
-
-// The deprecated deciders' queue still answers its callers, with an empty page,
-// though a review is waiting for it.
-func TestTheDecidersQueueAnswersAnEmptyPage(t *testing.T) {
-	c := setupConsent(t)
-	if status, _ := c.send(t, "marketing_email"); status != http.StatusConflict {
-		t.Fatalf("marketing send with no grant → %d, want 409", status)
-	}
-	liveReviewID(t, c)
-	var page struct {
-		Data  []AnyMap `json:"data"`
-		Total *int     `json:"total"`
-		Page  struct {
-			HasMore bool `json:"has_more"`
-		} `json:"page"`
-	}
-	if status := c.Call(t, "GET", "/v1/communication-reviews?limit=5", nil, nil, &page); status != http.StatusOK {
-		t.Fatalf("reading the deciders' queue → %d, want 200", status)
-	}
-	if page.Data == nil || len(page.Data) != 0 || page.Total == nil || *page.Total != 0 || page.Page.HasMore {
-		t.Fatalf("the queue answered %+v, want an empty page with a total of 0", page)
+		t.Fatalf("calling the retired ask moved the review from %s to %s", before, after)
 	}
 }
 

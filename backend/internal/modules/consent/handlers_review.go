@@ -86,18 +86,6 @@ func wireReview(review Review) crmcontracts.CommunicationReview {
 	return out
 }
 
-// RequestCommunicationDecision answers the retired ask with a refusal that
-// names the moves a rep has instead.
-func (h Handlers) RequestCommunicationDecision(
-	w http.ResponseWriter, r *http.Request, _ crmcontracts.Id,
-) {
-	var body crmcontracts.RequestCommunicationDecisionRequest
-	if !httperr.Decode(w, r, &body) {
-		return
-	}
-	httperr.Write(w, r, h.store.RequestDecision(r.Context()))
-}
-
 // RecordCommunicationContext takes one rep's statement about one contact and
 // answers with the review as it now stands.
 //
@@ -126,18 +114,4 @@ func (h Handlers) RecordCommunicationContext(
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, wireReview(review))
-}
-
-// ListCommunicationReviews serves GET /communication-reviews, which is
-// deprecated. No review waits on a colleague any more, so the page is always
-// empty. The door and the response shape are the ones the queue had.
-func (h Handlers) ListCommunicationReviews(w http.ResponseWriter, r *http.Request) {
-	if err := h.store.MayReadDecidersQueue(r.Context()); err != nil {
-		writeConsentErr(w, r, err)
-		return
-	}
-	total := 0
-	httperr.WriteJSON(w, http.StatusOK, crmcontracts.CommunicationReviewList{
-		Data: []crmcontracts.CommunicationReview{}, Page: crmcontracts.PageInfo{Total: &total}, Total: total,
-	})
 }

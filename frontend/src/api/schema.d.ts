@@ -14101,33 +14101,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/communication-reviews": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Retired. Always answers an empty page.
-         * @deprecated
-         * @description This was the deciders' queue of refused sends a rep had handed on. A rep no longer hands a
-         *     refusal to a colleague, so no review waits here and the page is always empty, with a `total`
-         *     of 0. The endpoint stays for clients that still call it.
-         *
-         *     Gated as before, on a human session holding `communication_exception` at `read`. A caller
-         *     without it receives 403. Paging parameters are accepted and ignored, since there is no
-         *     second page.
-         */
-        get: operations["listCommunicationReviews"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/communication-reviews/{id}": {
         parameters: {
             query?: never;
@@ -14159,33 +14132,6 @@ export interface paths {
         get: operations["getCommunicationReview"];
         put?: never;
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/communication-reviews/{id}/request-decision": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Retired. Asking a colleague to decide a refused send is no longer offered.
-         * @deprecated
-         * @description Always answers 422 `review_not_routable`. A rep overrules a machine refusal with their own
-         *     reason (`POST /contacts/{id}/consent/allow`); a refusal names what may be overruled in its
-         *     problem details (`available_actions` carries `overrule`, and `overrulable` lists each
-         *     contact and category). A seat holding `communication_exception` directs the send from the
-         *     review (`POST /communication-reviews/{id}/direct-send`).
-         */
-        post: operations["requestCommunicationDecision"];
         delete?: never;
         options?: never;
         head?: never;
@@ -42209,20 +42155,6 @@ export interface components {
              */
             warning?: components["schemas"]["OverrideWarning"];
         };
-        /** @description The page `GET /communication-reviews` answers, which is always empty. */
-        CommunicationReviewList: {
-            data: components["schemas"]["CommunicationReview"][];
-            /**
-             * @description Where this page was cut. `total` beside it is the same count this object may carry, kept
-             *     at the top level because it shipped there: a client reading it keeps working.
-             */
-            page: components["schemas"]["PageInfo"];
-            /**
-             * @description How many are waiting in total. A page at its limit has more behind it, and this is how
-             *     the caller knows rather than by discovering it.
-             */
-            total: number;
-        };
         /**
          * @description The caution a human reads before overruling the engine, with the version that identifies
          *     it. Both together, because a surface that could get one without the other would show words
@@ -42240,28 +42172,6 @@ export interface components {
              *     server's words while showing them its own.
              */
             text: string;
-        };
-        /** @description What the colleague asking wants the decider to know. */
-        RequestCommunicationDecisionRequest: {
-            /**
-             * @description Why this message should go, in the asker's own words. Optional — a refusal is often
-             *     self-explanatory — but it is what the approver reads and therefore what the record says
-             *     they acted on.
-             *
-             *     Bounded by what an instruction's explanation accepts, because that is where these words
-             *     end up. A note the record could not hold would stage a card that fails when somebody
-             *     approves it.
-             */
-            note?: string;
-        };
-        /** @description The approval card a routed refusal was staged as. */
-        CommunicationDecisionRequested: {
-            /**
-             * Format: uuid
-             * @description The card carrying the question. A second ask about the same review answers the same id:
-             *     one refused message is one decision.
-             */
-            approval_id: string;
         };
         /**
          * @description A designated human's decision that one refused message goes out anyway. Every field is frozen
@@ -70254,27 +70164,6 @@ export interface operations {
             422: components["responses"]["ValidationError"];
         };
     };
-    listCommunicationReviews: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description An empty page. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommunicationReviewList"];
-                };
-            };
-            403: components["responses"]["Forbidden"];
-        };
-    };
     getCommunicationReview: {
         parameters: {
             query?: never;
@@ -70296,34 +70185,6 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
-        };
-    };
-    requestCommunicationDecision: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["RequestCommunicationDecisionRequest"];
-            };
-        };
-        responses: {
-            /** @description The card the question was staged as. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["CommunicationDecisionRequested"];
-                };
-            };
-            404: components["responses"]["NotFound"];
-            422: components["responses"]["ValidationError"];
         };
     };
     recordCommunicationContext: {
