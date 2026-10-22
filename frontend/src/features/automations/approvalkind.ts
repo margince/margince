@@ -1,3 +1,4 @@
+import type { components } from "../../api/schema";
 import {
   COMPANY_LIFECYCLE_LABELS,
   COMPANY_LIFECYCLE_STAGES,
@@ -5,6 +6,7 @@ import {
 import { formatNumber } from "../../format/format";
 import type { Locale, PluralTranslator, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { dealCloseOutcome } from "../../lib/approvalpreview";
 import { WON_REASON_LABELS, WON_REASONS } from "../../lib/winreason";
 import { KIND_LABEL } from "./approvalkindlabel";
 
@@ -160,6 +162,29 @@ export function humanizeKind(kind: string): string {
 export function approvalKindLabel(kind: string, t: Translator): string {
   const key = KIND_LABEL[kind];
   return key ? t(key) : humanizeKind(kind);
+}
+
+// approvalLabel names one request's action. A deal move that closes the deal
+// says so; "Advance deal" over a close-as-lost tells the reader the opposite.
+type ApprovalPreview = components["schemas"]["ApprovalPreview"];
+
+export function approvalLabel(
+  approval: Readonly<{
+    kind: string;
+    preview?: ApprovalPreview | null;
+    proposed_change?: Readonly<Record<string, unknown>> | null;
+  }>,
+  t: Translator,
+): string {
+  if (approval.kind === "advance_deal" || approval.kind === "progress_deal") {
+    const outcome = dealCloseOutcome(
+      approval.preview,
+      approval.proposed_change,
+    );
+    if (outcome === "won") return t("approval.kind.closeDealWon");
+    if (outcome === "lost") return t("approval.kind.closeDealLost");
+  }
+  return approvalKindLabel(approval.kind, t);
 }
 
 // A rate proposal's apply re-reads the sheet, so its lost race is answered by

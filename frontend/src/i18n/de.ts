@@ -3320,6 +3320,8 @@ export const de = {
   "co.brief.cite.fact.many": "{count} Fakten",
   "co.brief.cite.profile_field.many": "{count} Profilfelder",
   "approval.kind.advance_deal": "Deal voranbringen",
+  "approval.kind.closeDealWon": "Deal als gewonnen schließen",
+  "approval.kind.closeDealLost": "Deal als verloren schließen",
   "approval.kind.promote_lead": "Lead qualifizieren",
   "approval.kind.close_date_correction": "Abschlussdatum korrigieren",
   "approval.kind.deal_follow_up": "Follow-up zum Deal erstellen",
@@ -3353,6 +3355,8 @@ export const de = {
   "approval.preview.optionalCriterionUnmet":
     "Optionales Kriterium nicht erfüllt",
   "approval.field.because": "Grund",
+  "approval.field.lost_reason": "Warum er verloren ging",
+  "approval.field.note": "Notiz",
   "approval.field.from_stage": "Von",
   "approval.field.to_stage": "Nach",
   "approval.kind.transcript_proposal":
@@ -4942,6 +4946,10 @@ export const de = {
   "decision.expired": "Abgelaufen",
   "decision.expiresIn": "läuft in {countdown} ab",
   "decision.detail": "Details zur Freigabe",
+  "decision.target": "Datensatz",
+  "decision.openToDecide": "Zum Entscheiden öffnen",
+  "decision.approvedBy": "Genehmigt von",
+  "decision.rejectedBy": "Abgelehnt von",
   "decision.detailLoading": "Freigabe wird geladen…",
   "decision.detailTechnical": "Technische Details",
   "decision.evidenceSource.activity": "Aktivität",
