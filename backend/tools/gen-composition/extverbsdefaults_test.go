@@ -61,6 +61,14 @@ func TestDefaultGrantsTheGeneratorRefuses(t *testing.T) {
 			pathItem: withDefaults("      x-rbac-defaults:\n        rep: []\n"),
 			wantErr:  "no action",
 		},
+		"a null block": {
+			pathItem: withDefaults("      x-rbac-defaults:\n"),
+			wantErr:  "declares no role",
+		},
+		"an empty block": {
+			pathItem: withDefaults("      x-rbac-defaults: {}\n"),
+			wantErr:  "declares no role",
+		},
 		"a block that is not a role map": {
 			pathItem: withDefaults("      x-rbac-defaults: [read]\n"),
 			wantErr:  "x-rbac-defaults",
