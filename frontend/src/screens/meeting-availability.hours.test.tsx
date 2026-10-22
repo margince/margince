@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { PageSaveBar, SavePageProvider } from "../design-system/savepage";
 import { type Locale, LocaleProvider } from "../i18n";
 import { meFixture } from "../testing/mefixture";
 import { AvailabilityCard } from "./meeting-availability";
@@ -66,7 +67,12 @@ const render = (ui: ReactNode, locale: Locale = "en") => {
   });
   return rtlRender(
     <QueryClientProvider client={client}>
-      <LocaleProvider initial={locale}>{ui}</LocaleProvider>
+      <LocaleProvider initial={locale}>
+        <SavePageProvider>
+          {ui}
+          <PageSaveBar />
+        </SavePageProvider>
+      </LocaleProvider>
     </QueryClientProvider>,
   );
 };
@@ -135,9 +141,7 @@ describe("AvailabilityCard, hours only", () => {
 
     const saturday = await screen.findByLabelText("Saturday");
     await user.click(saturday);
-    await user.click(
-      screen.getByRole("button", { name: /save working hours/i }),
-    );
+    await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(backend.writes()).toHaveLength(1));
     // Ascending: the days are a set, and the server stores them that way, so a
@@ -156,9 +160,7 @@ describe("AvailabilityCard, hours only", () => {
     // week however long each day is.
     const friday = await screen.findByLabelText("Friday");
     await user.click(friday);
-    await user.click(
-      screen.getByRole("button", { name: /save working hours/i }),
-    );
+    await user.click(screen.getByRole("button", { name: "Save" }));
 
     expect(await screen.findByText(/Fewer bookable hours/i)).not.toBeNull();
   });
@@ -171,9 +173,7 @@ describe("AvailabilityCard, hours only", () => {
 
     const saturday = await screen.findByLabelText("Saturday");
     await user.click(saturday);
-    await user.click(
-      screen.getByRole("button", { name: /save working hours/i }),
-    );
+    await user.click(screen.getByRole("button", { name: "Save" }));
 
     await waitFor(() => expect(backend.writes()).toHaveLength(1));
     // A warning that fires on every save is one a reader learns to skip, and
@@ -197,9 +197,7 @@ describe("AvailabilityCard, hours only", () => {
     await user.click(picker);
     await user.keyboard("Bangkok{Enter}");
     expect(picker.textContent).toContain("Bangkok (Asia) · UTC+7");
-    await user.click(
-      screen.getByRole("button", { name: /save working hours/i }),
-    );
+    await user.click(screen.getByRole("button", { name: "Save" }));
     await waitFor(() => expect(backend.writes()).toHaveLength(1));
     expect(backend.writes()[0].timezone).toBe("Asia/Bangkok");
   });

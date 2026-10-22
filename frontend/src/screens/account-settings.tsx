@@ -2,24 +2,29 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { api } from "../api/client";
 import { THEME_LABEL_KEYS } from "../app/account";
 import { Avatar, Button, SegmentedControl } from "../design-system/atoms";
 import { Heading } from "../design-system/heading";
 import { IdentityFact, IdentityLine } from "../design-system/identityline";
 import { Panel, PanelBody } from "../design-system/panel";
-import { PanelNotices } from "../design-system/panelnotices";
-import { PanelSave } from "../design-system/panelsave";
 import { QueryGate } from "../design-system/querystates";
 import { RoleBadge } from "../design-system/rbac";
+import { useSaveDraft } from "../design-system/savepage";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { type Toast, useToast } from "../design-system/toast";
 import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
-import { problemMessageOf, unwrap } from "../lib/problem";
+import { unwrap } from "../lib/problem";
 import { useInstallState } from "../lib/pwa";
 import { useLogout, useMe } from "../lib/session";
-import { setThemeChoice, THEME_CHOICES, useThemeChoice } from "../lib/theme";
+import {
+  setThemeChoice,
+  THEME_CHOICES,
+  type ThemeChoice,
+  useThemeChoice,
+} from "../lib/theme";
 import { BriefDeliveryRows } from "./briefdelivery";
 import { PasswordSettingRow } from "./passwordcard";
 import { NameSettingRows, useAccountNames } from "./settings-names";
@@ -28,8 +33,8 @@ import { InstallSettingRow } from "./thisdevice";
 
 // The Account page as task cards, each one job a reader comes here to do: how
 // colleagues see you, how you sign in, the language that follows the account,
-// and what this browser alone remembers. Fields commit through the card's
-// PanelSave; a lone choice writes as it changes and toasts.
+// and what this browser alone remembers. Every field and choice commits through
+// the page's save bar.
 export function AccountCard() {
   // The page owns where an announcement lands, not the row that produced it: a
   // toast region between two rows would take the hairline the list draws.
@@ -38,9 +43,9 @@ export function AccountCard() {
     <>
       <ProfilePanel toast={toast} />
       <SignInPanel />
-      <LanguagePanel toast={toast} />
+      <LanguagePanel />
       <BrowserPanel />
-      <ScheduledEmailsPanel toast={toast} />
+      <ScheduledEmailsPanel />
     </>
   );
 }
@@ -50,17 +55,7 @@ function ProfilePanel({ toast }: Readonly<{ toast: Toast }>) {
   const query = useMe();
   const names = useAccountNames(toast);
   return (
-    <Panel
-      title={t("account.profileCard")}
-      actions={
-        <PanelSave
-          dirty={names.dirty}
-          pending={names.pending}
-          onSave={names.save}
-          onDiscard={names.discard}
-        />
-      }
-    >
+    <Panel title={t("account.profileCard")}>
       <PanelBody>
         <QueryGate query={query} pendingLabel={t("account.profileCard")}>
           {(me) => (
@@ -94,13 +89,6 @@ function ProfilePanel({ toast }: Readonly<{ toast: Toast }>) {
         <NameSettingRows names={names} />
         <SignatureSettingRow toast={toast} />
       </SettingList>
-      <PanelNotices
-        refused={
-          names.error === undefined
-            ? undefined
-            : { title: t("settings.saveFailed"), error: names.error }
-        }
-      />
     </Panel>
   );
 }
@@ -136,12 +124,12 @@ function SignInPanel() {
   );
 }
 
-function LanguagePanel({ toast }: Readonly<{ toast: Toast }>) {
+function LanguagePanel() {
   const t = useT();
   return (
     <Panel title={t("account.languageCard")}>
       <SettingList bleed="settings">
-        <LanguageSettingRow toast={toast} />
+        <LanguageSettingRow />
       </SettingList>
     </Panel>
   );
@@ -163,37 +151,43 @@ function BrowserPanel() {
   );
 }
 
-function ScheduledEmailsPanel({ toast }: Readonly<{ toast: Toast }>) {
+function ScheduledEmailsPanel() {
   const t = useT();
   return (
     <Panel title={t("account.emailsCard")}>
       <SettingList bleed="settings">
-        <BriefDeliveryRows toast={toast} />
+        <BriefDeliveryRows />
       </SettingList>
     </Panel>
   );
 }
 
-function LanguageSettingRow({ toast }: Readonly<{ toast: Toast }>) {
+function LanguageSettingRow() {
   const t = useT();
   const { locale, setLocale } = useLocale();
   const queryClient = useQueryClient();
-  // Written to the seat so it follows this colleague to their next browser;
-  // `setLocale` keeps the local copy that renders before the request lands.
-  // A failed write does not revert: the page is already in the language asked
-  // for, so the toast says only that the account did not keep it.
+  const [draft, setDraft] = useState<Locale | null>(null);
+  // Written to the seat so it follows this colleague to their next browser. The
+  // page switches language only once the seat kept it, so a refusal changes
+  // nothing on screen.
   const remember = useMutation({
     mutationFn: async (next: Locale) => {
       unwrap(await api.PUT("/me/locale", { body: { locale: next } }), t);
+      return next;
     },
-    onSuccess: () => {
-      toast.show(t("settings.saved"));
+    onSuccess: (next) => {
+      setLocale(next);
+      setDraft(null);
       void queryClient.invalidateQueries({ queryKey: ["me"] });
     },
-    onError: (error) => {
-      toast.show(problemMessageOf(error, t, t("settings.saveFailed")), {
-        tone: "danger",
-      });
+  });
+  const shown = draft ?? locale;
+  useSaveDraft({
+    dirty: shown !== locale,
+    save: () => remember.mutateAsync(shown),
+    discard: () => {
+      remember.reset();
+      setDraft(null);
     },
   });
   return (
@@ -204,15 +198,12 @@ function LanguageSettingRow({ toast }: Readonly<{ toast: Toast }>) {
         <Select
           {...control}
           className="settingrow-measure"
-          value={locale}
+          value={shown}
           // Narrowed through the list the options were built from, so the
           // answer is a Locale with no assertion.
           onChange={(next) => {
             const picked = LOCALES.find((option) => option === next);
-            if (picked) {
-              setLocale(picked);
-              remember.mutate(picked);
-            }
+            if (picked) setDraft(picked);
           }}
           // Each language name is in its own language, so each carries `lang`
           // (WCAG 2.2 AA 3.1.2); a locale code is already a BCP 47 subtag.
@@ -230,12 +221,22 @@ function LanguageSettingRow({ toast }: Readonly<{ toast: Toast }>) {
 /**
  * The appearance choice, here as well as in the account menu.
  *
- * One state, two faces: both read `useThemeChoice` and write `setThemeChoice`,
- * so changing it in either place moves the other.
+ * Both read `useThemeChoice` and write `setThemeChoice`. This row holds its pick
+ * as a draft and paints it only on Save, so the menu never shows an unsaved theme.
  */
 function AppearanceSettingRow() {
   const t = useT();
   const choice = useThemeChoice();
+  const [draft, setDraft] = useState<ThemeChoice | null>(null);
+  const shown = draft ?? choice;
+  useSaveDraft({
+    dirty: shown !== choice,
+    save: async () => {
+      setThemeChoice(shown);
+      setDraft(null);
+    },
+    discard: () => setDraft(null),
+  });
   const labels = {
     light: t(THEME_LABEL_KEYS.light),
     dark: t(THEME_LABEL_KEYS.dark),
@@ -249,9 +250,9 @@ function AppearanceSettingRow() {
         <SegmentedControl
           label={t("settings.appearance")}
           options={THEME_CHOICES}
-          value={choice}
+          value={shown}
           labels={labels}
-          onChange={setThemeChoice}
+          onChange={setDraft}
         />
       }
     />

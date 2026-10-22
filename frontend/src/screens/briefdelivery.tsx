@@ -6,13 +6,14 @@
 // language, not under anything an admin configures for the team.
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useSaveDraft } from "../design-system/savepage";
 import { Select } from "../design-system/select";
 import { SettingRow } from "../design-system/settingrow";
-import type { Toast } from "../design-system/toast";
 import { useT } from "../i18n";
-import { problemMessageOf, unwrap } from "../lib/problem";
+import { unwrap } from "../lib/problem";
 
 type BriefDelivery = components["schemas"]["BriefDelivery"];
 
@@ -27,9 +28,9 @@ type Choice = (typeof CHOICES)[number];
  * a blank: the server distinguishes "never chose" from "chose none", and the
  * screen's job is to show what happens today, which for an unchosen setting is
  * whatever the installation does. Sending is that default, so the control shows
- * it — and touching the control is what turns a default into a decision.
+ * it, and saving a pick is what turns a default into a decision.
  */
-export function BriefDeliveryRows({ toast }: Readonly<{ toast: Toast }>) {
+export function BriefDeliveryRows() {
   const t = useT();
   const queryClient = useQueryClient();
   const settings = useQuery({
@@ -39,23 +40,37 @@ export function BriefDeliveryRows({ toast }: Readonly<{ toast: Toast }>) {
       return data ?? {};
     },
   });
-  // Each control sends only ITSELF. The endpoint is a patch, so a row that sent
-  // the whole form would let a stale render of one dropdown overwrite a choice
-  // the reader had just made in another.
+  // Only the picked keys: the endpoint is a patch, and a key left at its
+  // default must stay "never chose" rather than become a decision.
+  const [draft, setDraft] = useState<BriefDelivery>({});
   const save = useMutation({
     mutationFn: async (patch: BriefDelivery) => {
       unwrap(await api.PUT("/me/brief-delivery", { body: patch }));
     },
-    onSuccess: () => {
-      toast.show(t("settings.saved"));
-      void queryClient.invalidateQueries({
+    onSuccess: async () => {
+      // Awaited before the draft drops, so the rows never flash the old choice.
+      await queryClient.invalidateQueries({
         queryKey: ["me", "brief-delivery"],
       });
+      setDraft({});
     },
-    onError: (error) => {
-      toast.show(problemMessageOf(error, t, t("settings.saveFailed")), {
-        tone: "danger",
-      });
+  });
+
+  const stored = settings.data ?? {};
+  const morning = draft.morning_brief_delivery ?? stored.morning_brief_delivery;
+  const weekly = draft.weekly_delivery ?? stored.weekly_delivery;
+  const changed: BriefDelivery = {
+    ...(morning !== stored.morning_brief_delivery && {
+      morning_brief_delivery: morning,
+    }),
+    ...(weekly !== stored.weekly_delivery && { weekly_delivery: weekly }),
+  };
+  useSaveDraft({
+    dirty: Object.keys(changed).length > 0,
+    save: () => save.mutateAsync(changed),
+    discard: () => {
+      save.reset();
+      setDraft({});
     },
   });
 
@@ -64,6 +79,12 @@ export function BriefDeliveryRows({ toast }: Readonly<{ toast: Toast }>) {
     value: choice,
     label: t(choice === "email" ? "delivery.byEmail" : "delivery.none"),
   }));
+  // Narrowed through the same list the options are built from, so nothing is
+  // drafted that the control was never offering.
+  const pick = (key: keyof BriefDelivery) => (next: string) => {
+    const picked = CHOICES.find((option) => option === next);
+    if (picked) setDraft((held) => ({ ...held, [key]: picked }));
+  };
 
   return (
     <>
@@ -75,15 +96,8 @@ export function BriefDeliveryRows({ toast }: Readonly<{ toast: Toast }>) {
           <Select
             {...control}
             className="settingrow-measure"
-            value={chosen(settings.data?.morning_brief_delivery)}
-            onChange={(next) => {
-              // Narrowed through the same list the options are built from, so
-              // nothing is acted on that the control was never offering.
-              const picked = CHOICES.find((option) => option === next);
-              if (picked) {
-                save.mutate({ morning_brief_delivery: picked });
-              }
-            }}
+            value={chosen(morning)}
+            onChange={pick("morning_brief_delivery")}
             options={options}
           />
         )}
@@ -96,13 +110,8 @@ export function BriefDeliveryRows({ toast }: Readonly<{ toast: Toast }>) {
           <Select
             {...control}
             className="settingrow-measure"
-            value={chosen(settings.data?.weekly_delivery)}
-            onChange={(next) => {
-              const picked = CHOICES.find((option) => option === next);
-              if (picked) {
-                save.mutate({ weekly_delivery: picked });
-              }
-            }}
+            value={chosen(weekly)}
+            onChange={pick("weekly_delivery")}
             options={options}
           />
         )}

@@ -6,6 +6,7 @@ import { NumberSettingRow } from "../design-system/numbersetting";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { PanelNotices } from "../design-system/panelnotices";
 import { QueryGate } from "../design-system/querystates";
+import { useSavePage } from "../design-system/savepage";
 import { SettingList } from "../design-system/settingrow";
 import { formatInterval } from "../format/interval";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
@@ -128,6 +129,8 @@ function OperationsCard({
   const canManage = useCanWrite("installation_settings", "update");
   const query = useInstallationSettings(canRead);
   const update = useUpdateInstallationSettings(() => undefined);
+  // In a page the bar shows a refused save, so the card would say it twice.
+  const inPage = useSavePage() !== null;
   if (!canRead) {
     return null;
   }
@@ -152,7 +155,9 @@ function OperationsCard({
                 refusal={t("operations.refusal")}
                 reading={inWords(row, t, locale)}
                 disabled={!canManage || update.isPending}
-                onCommit={(next) => update.mutate({ [row.property]: next })}
+                onCommit={(next) =>
+                  update.mutateAsync({ [row.property]: next })
+                }
               />
             ))}
           </SettingList>
@@ -160,7 +165,7 @@ function OperationsCard({
       </QueryGate>
       <PanelNotices
         refused={
-          update.isError
+          update.isError && !inPage
             ? { title: t("operations.updateFailed"), error: update.error }
             : undefined
         }

@@ -64,8 +64,9 @@ look for one.
 **A status is one `StatusBadge`**: green done, grey neutral (waiting, invited, results like Lost; running
 adds `live`), amber someone must act, red something broke. `info` and `accent` never mean a status.
 
-**A settings `Panel` has no `tone`** and at most one primary. A card with several fields ends in
-`PanelSave`; a `Switch` alone writes when you turn it.
+**A settings `Panel` has no `tone`** and at most one primary. A settings page saves through one
+`PageSaveBar`: each card hands its draft over with `useSaveDraft`, and no card or row has a Save of
+its own. A `Switch` alone writes when you turn it.
 
 ### Indigo is a claim about the source
 

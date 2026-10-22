@@ -79,6 +79,7 @@ import { AgentToolsCard } from "./settings-agenttools";
 import { AuditLogCard } from "./settings-audit";
 import { AutonomyTiersCard } from "./settings-autonomytiers";
 import { PassportCard } from "./settings-passports";
+import { SettingsSavePage } from "./settingssavepage";
 import { SignInMethodsCard } from "./sign-in-methods";
 import { SignatureTemplateCard } from "./signaturetemplatecard";
 import { TagVocabularyCard } from "./tagadmin";
@@ -461,21 +462,22 @@ export function SettingsScreen({ route }: Readonly<{ route: Route }>) {
           (App.tsx), not by this screen. A guard installed HERE could only see
           moves between settings entries: it unmounts with the screen, so a draft
           was safe from one tab to the next and still discarded without a word the
-          moment the reader clicked Contacts. The cards below claim through
-          `useUnsavedGuard` and need to know nothing about where the answer is
-          asked. */}
-      <div className="settings-stack arrive-stack">
-        {/* Said ONCE, at the top, and only for a page with NO open control —
+          moment the reader clicked Contacts. The cards below hand their drafts
+          to the page's one save bar, which claims for them. */}
+      <SettingsSavePage>
+        <div className="settings-stack arrive-stack">
+          {/* Said ONCE, at the top, and only for a page with NO open control —
             the `looksUp` half of the partition: a reader who can change nothing
             would otherwise infer it from a screenful of disabled cards, and a
             banner over a control that works is worse than silence. */}
-        {readOnlyPage && (
-          <Callout kind="standing" title={t("settings.readOnlyPageTitle")}>
-            {t("settings.readOnlyPage")}
-          </Callout>
-        )}
-        {tabContent(active.id, route)}
-      </div>
+          {readOnlyPage && (
+            <Callout kind="standing" title={t("settings.readOnlyPageTitle")}>
+              {t("settings.readOnlyPage")}
+            </Callout>
+          )}
+          {tabContent(active.id, route)}
+        </div>
+      </SettingsSavePage>
     </div>
   );
 }

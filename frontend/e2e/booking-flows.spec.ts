@@ -156,10 +156,9 @@ test("connected calendar setup keeps the draft, then sends and cancels an invita
   await expect(
     settings.getByRole("combobox", { name: de["scheduling.provider"] }),
   ).toHaveCount(0);
-  const saveCalendar = settings.getByRole("button", {
-    name: de["scheduling.saveCalendar"],
-    exact: true,
-  });
+  const saveCalendar = settings
+    .getByRole("region", { name: de["saveBar.unsaved"] })
+    .getByRole("button", { name: de["saveBar.save"], exact: true });
   await saveCalendar.click();
   await expect(saveCalendar).toHaveCount(0);
   await settings.close();
@@ -371,10 +370,8 @@ test("meeting settings shows the reusable link, saves hours, and previews a paus
   await page.getByRole("option", { name: de["scheduling.ruleOther"] }).click();
   await page.getByLabel(de["scheduling.ruleMinutes"]).fill("1440");
   await page
-    .getByRole("button", {
-      name: de["scheduling.saveAvailability"],
-      exact: true,
-    })
+    .getByRole("region", { name: de["saveBar.unsaved"] })
+    .getByRole("button", { name: de["saveBar.save"], exact: true })
     .click();
   await expect(
     page.getByText(de["settings.saved"], { exact: true }),
@@ -446,10 +443,9 @@ test("calendar setup enables booking with the existing Account name", async ({
     name: de["scheduling.acceptBookings"],
   });
   await expect(accept).toBeDisabled();
-  const saveCalendar = page.getByRole("button", {
-    name: de["scheduling.saveCalendar"],
-    exact: true,
-  });
+  const saveCalendar = page
+    .getByRole("region", { name: de["saveBar.unsaved"] })
+    .getByRole("button", { name: de["saveBar.save"], exact: true });
   await saveCalendar.click();
   await expect(saveCalendar).toHaveCount(0);
   await expect(accept).toBeEnabled();

@@ -183,8 +183,8 @@ function trimmedChoices(question: ReviewQuestion): ReviewQuestion {
   };
 }
 
-// The drawer's verbs, laid out like PanelSave: the count and the unsaved
-// caption lead, Cancel beside them, the one primary Save at the end.
+// The drawer's verbs, laid out like the page save bar: the count and the
+// unsaved caption lead, Cancel beside them, the one primary Save at the end.
 function EditorFoot({
   questions,
   dirty,

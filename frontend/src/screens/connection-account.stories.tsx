@@ -6,6 +6,7 @@ import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { Panel, PanelBody } from "../design-system/panel";
 import { ProviderList } from "../design-system/providerrow";
+import { PageSaveBar, SavePageProvider } from "../design-system/savepage";
 import { accountsOf } from "../format/connectorprovider";
 import {
   installFetchStub,
@@ -85,20 +86,24 @@ function accountStory(
     installFetchStub(routes);
     return (
       <StoryProviders>
-        <Panel title="Mail and calendar">
-          <PanelBody>
-            <ProviderList>
-              {accountsOf(connections).map((account) => (
-                <ConnectionAccountRow
-                  key={account.key}
-                  account={account}
-                  heldWindow={heldWindow}
-                  onImapReconnect={() => undefined}
-                />
-              ))}
-            </ProviderList>
-          </PanelBody>
-        </Panel>
+        {/* A changed setting waits on the page's one save bar, as on Settings. */}
+        <SavePageProvider>
+          <Panel title="Mail and calendar">
+            <PanelBody>
+              <ProviderList>
+                {accountsOf(connections).map((account) => (
+                  <ConnectionAccountRow
+                    key={account.key}
+                    account={account}
+                    heldWindow={heldWindow}
+                    onImapReconnect={() => undefined}
+                  />
+                ))}
+              </ProviderList>
+            </PanelBody>
+          </Panel>
+          <PageSaveBar />
+        </SavePageProvider>
       </StoryProviders>
     );
   };
@@ -280,6 +285,23 @@ export const BringsInDialogDark: Story = {
   globals: { theme: "dark" },
   render: accountStory([gmail]),
   play: async ({ canvasElement }) => openBringsIn(canvasElement),
+};
+
+// A narrowing waits on the bar, and asks beside the choice whether mail already
+// captured narrows with it.
+export const NarrowingPosture: Story = {
+  render: accountStory([gmail]),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("combobox", { name: "Mail visibility" }),
+    );
+    await userEvent.click(
+      await within(canvasElement.ownerDocument.body).findByRole("option", {
+        name: "Always held",
+      }),
+    );
+  },
 };
 
 export const Phone: Story = {

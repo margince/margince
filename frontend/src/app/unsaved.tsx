@@ -8,6 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { useT } from "../i18n";
 import { navigate, type Route, useHash } from "../lib/router";
@@ -46,9 +47,14 @@ type UnsavedRegistry = Readonly<{
   /** Whether anything inside this scope has an edit that has not been written. */
   dirty: boolean;
   dirtyScopes: ReadonlySet<string>;
-  claim: (token: string, dirty: boolean, scope?: string) => void;
+  claim: (token: string, dirty: boolean, scope?: string, save?: Saver) => void;
   release: (token: string) => void;
 }>;
+
+/** Writes a claim's draft; resolves true once it is saved. */
+export type Saver = () => Promise<boolean>;
+
+type Claim = Readonly<{ dirty: boolean; scope?: string; save?: Saver }>;
 
 const UnsavedContext = createContext<UnsavedRegistry | null>(null);
 
@@ -71,16 +77,23 @@ export function useHasUnsavedChanges(scope?: string): boolean {
  * behaviour for a card rendered somewhere no guard is installed (a story, a
  * test, a record page). A hook that threw there would make the provider a
  * requirement of every caller rather than of the surfaces that want guarding.
+ *
+ * `save` lets the question offer Save as well as Discard. It must be stable
+ * across renders, or every render re-claims.
  */
-export function useUnsavedGuard(dirty: boolean, scope?: string): void {
+export function useUnsavedGuard(
+  dirty: boolean,
+  scope?: string,
+  save?: Saver,
+): void {
   const { claim, release } = useContext(UnsavedContext) ?? {};
   // A stable identity per mounting, so two instances of the same card — two
   // rows, two panels — are two claims rather than one that the second overwrites.
   const token = useId();
 
   useEffect(() => {
-    claim?.(token, dirty, scope);
-  }, [claim, token, dirty, scope]);
+    claim?.(token, dirty, scope, save);
+  }, [claim, token, dirty, scope, save]);
 
   // Released on unmount, and this is the one that has to be right: a card that
   // left the tree still holding a claim would guard the surface against a draft
@@ -181,10 +194,7 @@ export function UnsavedGuard<Address extends string>({
   onKeep: (address: Address) => void;
   children: (address: Address) => ReactNode;
 }>) {
-  const t = useT();
-  const [claims, setClaims] = useState<
-    ReadonlyMap<string, { dirty: boolean; scope?: string }>
-  >(new Map());
+  const [claims, setClaims] = useState<ReadonlyMap<string, Claim>>(new Map());
   // The address whose content is on screen. It follows `address` freely until a
   // draft is at stake, and then stops until the question is answered.
   const [shown, setShown] = useState(address);
@@ -192,16 +202,18 @@ export function UnsavedGuard<Address extends string>({
   const dirty = [...claims.values()].some((claim) => claim.dirty);
   useBeforeUnload(dirty);
 
-  const claim = useCallback((token: string, next: boolean, scope?: string) => {
-    setClaims((held) => {
-      if (held.get(token)?.dirty === next && held.get(token)?.scope === scope) {
-        return held;
-      }
-      const grown = new Map(held);
-      grown.set(token, { dirty: next, scope });
-      return grown;
-    });
-  }, []);
+  const claim = useCallback(
+    (token: string, next: boolean, scope?: string, save?: Saver) => {
+      setClaims((held) => {
+        const was = held.get(token);
+        if (was?.dirty === next && was.scope === scope && was.save === save) {
+          return held;
+        }
+        return new Map(held).set(token, { dirty: next, scope, save });
+      });
+    },
+    [],
+  );
 
   const release = useCallback((token: string) => {
     setClaims((held) => {
@@ -237,23 +249,90 @@ export function UnsavedGuard<Address extends string>({
   }
 
   const asking = address !== shown && dirty;
+  // Save is offered only when it would leave nothing unsaved behind.
+  const dirtyClaims = [...claims.values()].filter((entry) => entry.dirty);
+  const savers = dirtyClaims.every((entry) => entry.save)
+    ? dirtyClaims.flatMap((entry) => (entry.save ? [entry.save] : []))
+    : [];
 
   return (
     <UnsavedContext.Provider value={registry}>
       {children(shown)}
-      <ConfirmModal
+      <LeaveQuestion
         open={asking}
+        savers={savers}
+        onStay={() => onKeep(shown)}
+        onLeave={() => setShown(address)}
+      />
+    </UnsavedContext.Provider>
+  );
+}
+
+/**
+ * The question asked on the way out of a draft. Closing it is the SAFE answer,
+ * so Escape and the backdrop both keep the edit. With `savers` it offers Save,
+ * and leaves only once every one of them has written.
+ */
+function LeaveQuestion({
+  open,
+  savers,
+  onStay,
+  onLeave,
+}: Readonly<{
+  open: boolean;
+  savers: readonly Saver[];
+  onStay: () => void;
+  onLeave: () => void;
+}>) {
+  const t = useT();
+  const [saving, setSaving] = useState(false);
+  const [refused, setRefused] = useState(false);
+  if (savers.length === 0) {
+    return (
+      <ConfirmModal
+        open={open}
         title={t("unsaved.title")}
         confirmLabel={t("unsaved.discard")}
         confirmVariant="danger"
-        // Closing the question is the SAFE answer, so Escape and the backdrop
-        // both keep the edit. A dialog whose dismissal destroys work is a
-        // dialog that punishes the reader for not reading it.
-        onClose={() => onKeep(shown)}
-        onConfirm={() => setShown(address)}
+        onClose={onStay}
+        onConfirm={onLeave}
       >
         <p>{t("unsaved.body")}</p>
       </ConfirmModal>
-    </UnsavedContext.Provider>
+    );
+  }
+  // A refusal belongs to this asking; the next one starts clean.
+  const answer = (then: () => void) => () => {
+    setRefused(false);
+    then();
+  };
+  const save = async () => {
+    setSaving(true);
+    setRefused(false);
+    const saved = await Promise.all(savers.map((saver) => saver()));
+    setSaving(false);
+    if (saved.every(Boolean)) onLeave();
+    else setRefused(true);
+  };
+  return (
+    <ConfirmModal
+      open={open}
+      title={t("unsaved.saveTitle")}
+      confirmLabel={t("saveBar.save")}
+      cancelLabel={t("unsaved.stay")}
+      pending={saving}
+      error={refused ? t("unsaved.saveRefused") : null}
+      actionsLead={
+        <Button variant="ghost" disabled={saving} onClick={answer(onLeave)}>
+          {t("saveBar.discard")}
+        </Button>
+      }
+      onClose={answer(onStay)}
+      onConfirm={() => {
+        void save();
+      }}
+    >
+      <p>{t("unsaved.saveBody")}</p>
+    </ConfirmModal>
   );
 }

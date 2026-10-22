@@ -2,6 +2,7 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { PageSaveBar, SavePageProvider } from "../design-system/savepage";
 import { en } from "../i18n/en";
 import { jsonResponse, render, stubApi } from "./brief.testkit";
 import { BriefDeliveryRows } from "./briefdelivery";
@@ -15,8 +16,23 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function toastSpy() {
-  return { show: vi.fn(() => 0), dismiss: vi.fn() };
+function renderRows() {
+  return render(
+    <SavePageProvider>
+      <BriefDeliveryRows />
+      <PageSaveBar />
+    </SavePageProvider>,
+  );
+}
+
+async function pickWeeklyNone(user: ReturnType<typeof userEvent.setup>) {
+  const weekly = await screen.findByTestId("delivery-weekly");
+  await user.click(within(weekly).getByRole("combobox"));
+  await user.click(
+    within(screen.getByRole("listbox")).getByRole("option", {
+      name: en["delivery.none"],
+    }),
+  );
 }
 
 describe("the delivery settings", () => {
@@ -25,7 +41,7 @@ describe("the delivery settings", () => {
     // behaviour for an unchosen setting is that the mail is sent. A blank
     // control would tell the reader nothing about what actually happens.
     stubApi({ "GET /me/brief-delivery": () => jsonResponse({}) });
-    render(<BriefDeliveryRows toast={toastSpy()} />);
+    renderRows();
 
     const morning = await screen.findByTestId("delivery-morning");
     await waitFor(() =>
@@ -35,9 +51,9 @@ describe("the delivery settings", () => {
     );
   });
 
-  // Each control sends only ITSELF. A row that sent the whole form would let a
-  // stale render of one dropdown overwrite a choice just made in another.
-  it("sends only the setting that was touched, and confirms it with a toast", async () => {
+  // Only the touched setting goes out. A body carrying the other too would turn
+  // its standing default into a decision the reader never made.
+  it("sends only the setting that was touched, once Save is pressed", async () => {
     const calls = stubApi({
       "GET /me/brief-delivery": () =>
         jsonResponse({
@@ -46,27 +62,36 @@ describe("the delivery settings", () => {
         }),
       "PUT /me/brief-delivery": () => jsonResponse({}),
     });
-    const toast = toastSpy();
-    render(<BriefDeliveryRows toast={toast} />);
-
-    const weekly = await screen.findByTestId("delivery-weekly");
+    renderRows();
     const user = userEvent.setup();
-    await user.click(within(weekly).getByRole("combobox"));
-    await user.click(
-      within(screen.getByRole("listbox")).getByRole("option", {
-        name: en["delivery.none"],
-      }),
-    );
+    await pickWeeklyNone(user);
+
+    expect(calls.filter((call) => call.method === "PUT")).toHaveLength(0);
+    await user.click(screen.getByRole("button", { name: en["saveBar.save"] }));
 
     await waitFor(() => {
       const saves = calls.filter((call) => call.method === "PUT");
       expect(saves).toHaveLength(1);
-      // Only the weekly. A body carrying the morning setting too would let a
-      // stale render of that dropdown overwrite a choice made elsewhere.
       expect(saves[0].body).toEqual({ weekly_delivery: "none" });
     });
-    await waitFor(() =>
-      expect(toast.show).toHaveBeenCalledWith(en["settings.saved"]),
+  });
+
+  it("puts the stored choice back on Discard and sends nothing", async () => {
+    const calls = stubApi({
+      "GET /me/brief-delivery": () =>
+        jsonResponse({ weekly_delivery: "email" }),
+    });
+    renderRows();
+    const user = userEvent.setup();
+    await pickWeeklyNone(user);
+    await user.click(
+      screen.getByRole("button", { name: en["saveBar.discard"] }),
     );
+
+    const weekly = screen.getByTestId("delivery-weekly");
+    expect(within(weekly).getByRole("combobox").textContent).toContain(
+      en["delivery.byEmail"],
+    );
+    expect(calls.filter((call) => call.method === "PUT")).toHaveLength(0);
   });
 });

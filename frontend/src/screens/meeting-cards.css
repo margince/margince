@@ -9,6 +9,12 @@
   outline: none;
 }
 
+/* From, Until and Timezone: a field that wraps to a line of its own stops at
+   the settings field measure instead of spanning the card. */
+.meeting-hours > .field {
+  max-width: var(--settingsFieldMeasure);
+}
+
 /* A rule's preset list and, once Other is picked, the number under it. */
 .meeting-rule {
   display: flex;

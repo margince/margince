@@ -1,9 +1,16 @@
 /** @vitest-environment happy-dom */
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { stubClipboard } from "../design-system/clipboard-testing";
+import { PageSaveBar, SavePageProvider } from "../design-system/savepage";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { locationDouble } from "../testing/locationdouble";
 import {
@@ -67,7 +74,10 @@ function mount(profile: Partial<Profile> = {}, overrides: RouteMap = {}) {
   render(
     <StoryProviders>
       <ToastProvider>
-        <MeetingSettings />
+        <SavePageProvider>
+          <MeetingSettings />
+          <PageSaveBar />
+        </SavePageProvider>
         <ToastRegion />
       </ToastProvider>
     </StoryProviders>,
@@ -87,10 +97,24 @@ async function ruleName(name: string) {
   return name;
 }
 
-async function enabledButton(name: string) {
-  const button = await screen.findByRole("button", { name });
-  await waitFor(() => expect(button).toHaveProperty("disabled", false));
-  return button;
+// The page's one save bar, drawn only while some card holds a draft.
+function saveBar() {
+  return screen.queryByRole("region", { name: "Unsaved changes" });
+}
+
+function barSave() {
+  const bar = saveBar();
+  if (bar === null) throw new Error("the page has no save bar");
+  return within(bar).getByRole("button", { name: "Save" });
+}
+
+async function enabledSave() {
+  // Re-read each time: the held Save and the live one are not the same node.
+  return waitFor(() => {
+    const button = barSave();
+    expect(button).toHaveProperty("disabled", false);
+    return button;
+  });
 }
 
 afterEach(() => {
@@ -109,7 +133,7 @@ it("uses the only connected calendar, saves it with the calendars that block tim
       "Available once a calendar for bookings is saved under Calendar.",
     ),
   ).toBeTruthy();
-  const save = await enabledButton("Save calendar");
+  const save = await enabledSave();
   expect(screen.queryByRole("combobox", { name: "Calendar provider" })).toBe(
     null,
   );
@@ -128,7 +152,7 @@ it("uses the only connected calendar, saves it with the calendars that block tim
     enabled: false,
   });
   await waitFor(() => {
-    expect(screen.queryByRole("button", { name: "Save calendar" })).toBeNull();
+    expect(saveBar()).toBeNull();
     expect(screen.getByText("Saved")).toBeTruthy();
   });
   expect(document.activeElement?.textContent).toBe("Calendar");
@@ -169,9 +193,9 @@ it("offers a provider choice only when both calendars are connected", async () =
   expect(screen.getByRole("option", { name: "Google Calendar" })).toBeTruthy();
   expect(screen.getByRole("option", { name: "Outlook Calendar" })).toBeTruthy();
   expect(screen.queryByRole("option", { name: "Gmail" })).toBeNull();
-  expect(screen.queryByRole("button", { name: "Save calendar" })).toBeNull();
+  expect(saveBar()).toBeNull();
   await user.click(screen.getByRole("option", { name: "Outlook Calendar" }));
-  await enabledButton("Save calendar");
+  await enabledSave();
 });
 
 it("does not offer a disconnected provider or keep its old calendar ids", async () => {
@@ -197,7 +221,7 @@ it("does not offer a disconnected provider or keep its old calendar ids", async 
         }),
     },
   );
-  await user.click(await enabledButton("Save calendar"));
+  await user.click(await enabledSave());
   await waitFor(() => expect(server.profileWrites).toHaveLength(1));
   expect(server.profileWrites[0]).toMatchObject({
     provider: "gcal",
@@ -256,9 +280,9 @@ it("explains a missing saved calendar and saves only once another is chosen", as
   expect(
     await screen.findByText(/saved event calendar is unavailable/),
   ).toBeTruthy();
-  expect(screen.queryByRole("button", { name: "Save calendar" })).toBeNull();
+  expect(saveBar()).toBeNull();
   await pick(user, "Add booked meetings to", "Work calendar");
-  await user.click(await enabledButton("Save calendar"));
+  await user.click(await enabledSave());
   await waitFor(() => expect(server.profileWrites).toHaveLength(1));
   expect(server.profileWrites[0]).toMatchObject({ calendar_id: "work" });
 });
@@ -302,7 +326,7 @@ it("writes only the changed rule over another tab's latest profile", async () =>
     title: "Renamed in another tab",
     horizon_days: 90,
   };
-  await user.click(await enabledButton("Save availability"));
+  await user.click(await enabledSave());
   await waitFor(() => expect(server.profileWrites).toHaveLength(1));
   expect(server.profileWrites[0]).toMatchObject({
     buffer_minutes: 15,
@@ -320,7 +344,7 @@ it("saves a paused page's rules with no calendar connected", async () => {
     { "GET /connectors": () => jsonResponse({ data: [] }) },
   );
   await pick(user, await ruleName("Minimum notice"), "1 day");
-  await user.click(await enabledButton("Save availability"));
+  await user.click(await enabledSave());
   await waitFor(() => expect(server.profileWrites).toHaveLength(1));
   expect(server.profileWrites[0]).toMatchObject({
     provider: "",
@@ -338,7 +362,7 @@ it("saves never-chosen hours as offered, without a change first", async () => {
         jsonResponse({ ...bookingHours, chosen: false }),
     },
   );
-  await user.click(await enabledButton("Save availability"));
+  await user.click(await enabledSave());
   await waitFor(() => expect(server.hourWrites).toHaveLength(1));
   expect(server.hourWrites[0]).toMatchObject({
     start_time: "09:00",
@@ -357,7 +381,7 @@ it.each([
   const field = screen.getByRole("spinbutton", { name: "Minutes" });
   await user.clear(field);
   await user.type(field, typed);
-  await user.click(await enabledButton("Save availability"));
+  await user.click(await enabledSave());
   await waitFor(() => expect(server.profileWrites).toHaveLength(1));
   expect(server.profileWrites[0]).toMatchObject({ notice_minutes: minutes });
 });
@@ -374,7 +398,7 @@ it.each(["10081", "1.5", ""])(
     expect(
       await screen.findByText("Enter a whole number from 0 to 10,080."),
     ).toBeTruthy();
-    await user.click(screen.getByRole("button", { name: "Save availability" }));
+    await user.click(barSave());
     expect(server.profileWrites).toEqual([]);
   },
 );
@@ -387,7 +411,7 @@ it("keeps an off-preset value as its own choice and leaves it alone on other sav
   });
   expect(notice.textContent).toContain("50 minutes");
   await pick(user, "How far ahead", "60 days");
-  await user.click(await enabledButton("Save availability"));
+  await user.click(await enabledSave());
   await waitFor(() => expect(server.profileWrites).toHaveLength(1));
   expect(server.profileWrites[0]).toMatchObject({
     notice_minutes: 50,
@@ -404,17 +428,13 @@ it("saves hours and rules from one Save, with the days in week order", async () 
   await user.click(monday);
   await user.click(screen.getByRole("checkbox", { name: "Saturday" }));
   await pick(user, "Break between meetings", "15 minutes");
-  await user.click(await enabledButton("Save availability"));
+  await user.click(await enabledSave());
   await waitFor(() => expect(server.profileWrites).toHaveLength(1));
   expect(server.hourWrites).toEqual([
     expect.objectContaining({ days: [1, 2, 3, 4, 5, 6] }),
   ]);
   expect(server.profileWrites[0]).toMatchObject({ buffer_minutes: 15 });
-  await waitFor(() =>
-    expect(
-      screen.queryByRole("button", { name: "Save availability" }),
-    ).toBeNull(),
-  );
+  await waitFor(() => expect(saveBar()).toBeNull());
 });
 
 it("keeps hours the server saved when the rules write after them fails", async () => {
@@ -429,13 +449,15 @@ it("keeps hours the server saved when the rules write after them fails", async (
   const saturday = await screen.findByRole("checkbox", { name: "Saturday" });
   await user.click(saturday);
   await pick(user, "Break between meetings", "15 minutes");
-  await user.click(await enabledButton("Save availability"));
-  expect(await screen.findByText("Booking rules not saved")).toBeTruthy();
+  await user.click(await enabledSave());
+  expect(
+    await within(barSave().closest("section") ?? document.body).findByRole(
+      "alert",
+    ),
+  ).toBeTruthy();
   expect(saturday).toHaveProperty("checked", true);
-  await user.click(screen.getByRole("button", { name: "Save availability" }));
-  await waitFor(() =>
-    expect(screen.getAllByText("Booking rules not saved")).toHaveLength(1),
-  );
+  await user.click(barSave());
+  await waitFor(() => expect(screen.getAllByRole("alert")).toHaveLength(1));
   expect(server.hourWrites).toHaveLength(1);
 });
 

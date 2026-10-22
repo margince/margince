@@ -10,6 +10,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { PageSaveBar, SavePageProvider } from "../design-system/savepage";
 import { pickOption } from "../design-system/select-testing";
 import { type Locale, LocaleProvider } from "../i18n";
 import { meFixture } from "../testing/mefixture";
@@ -82,7 +83,12 @@ const render = (ui: ReactNode, locale: Locale = "en") => {
   });
   return rtlRender(
     <QueryClientProvider client={client}>
-      <LocaleProvider initial={locale}>{ui}</LocaleProvider>
+      <LocaleProvider initial={locale}>
+        <SavePageProvider>
+          {ui}
+          <PageSaveBar />
+        </SavePageProvider>
+      </LocaleProvider>
     </QueryClientProvider>,
   );
 };
@@ -188,7 +194,7 @@ describe("NotificationSettingsCard", () => {
     ).not.toBeNull();
   });
 
-  it("sends the class it was set on, and shows the server's answer", async () => {
+  it("sends the class it was set on once Save is pressed, and shows the server's answer", async () => {
     const backend = backendFor(everyClass());
     vi.stubGlobal("fetch", backend.fetchMock);
     const user = userEvent.setup();
@@ -199,8 +205,10 @@ describe("NotificationSettingsCard", () => {
       await screen.findByRole("combobox", { name: /Automations that ran/i }),
       "Daily digest",
     );
+    expect(backend.puts()).toEqual([]);
+    await user.click(screen.getByRole("button", { name: "Save" }));
 
-    // The class on the wire is the row's, not the first row's — the bug a
+    // The class on the wire is the row's, not the first row's: the bug a
     // shared handler closing over the list would produce.
     await waitFor(() =>
       expect(backend.puts()).toEqual([
@@ -208,11 +216,12 @@ describe("NotificationSettingsCard", () => {
       ]),
     );
     await waitFor(() =>
-      expect(
-        screen.getByRole("combobox", { name: /Automations that ran/i })
-          .textContent,
-      ).toContain("Daily digest"),
+      expect(screen.queryByRole("button", { name: "Save" })).toBeNull(),
     );
+    expect(
+      screen.getByRole("combobox", { name: /Automations that ran/i })
+        .textContent,
+    ).toContain("Daily digest");
     // The set came back whole and the untouched rows came back with it.
     expect(
       screen.getByRole("combobox", { name: /Approvals waiting on you/i })
@@ -220,7 +229,53 @@ describe("NotificationSettingsCard", () => {
     ).toContain("Email");
   });
 
-  it("says why when the server refuses the choice", async () => {
+  it("writes two changed classes one after the other on one Save", async () => {
+    const backend = backendFor(everyClass());
+    vi.stubGlobal("fetch", backend.fetchMock);
+    const user = userEvent.setup();
+    render(<NotificationSettingsCard />);
+
+    await pickOption(
+      user,
+      await screen.findByRole("combobox", { name: /Automations that ran/i }),
+      "Off",
+    );
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: /Approvals waiting on you/i }),
+      "In the app",
+    );
+    await user.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() =>
+      expect(backend.puts()).toEqual([
+        { class: "approval_pending", delivery: "in_app" },
+        { class: "automation", delivery: "off" },
+      ]),
+    );
+  });
+
+  it("puts the stored delivery back on Discard and sends nothing", async () => {
+    const backend = backendFor(everyClass());
+    vi.stubGlobal("fetch", backend.fetchMock);
+    const user = userEvent.setup();
+    render(<NotificationSettingsCard />);
+
+    await pickOption(
+      user,
+      await screen.findByRole("combobox", { name: /Automations that ran/i }),
+      "Daily digest",
+    );
+    await user.click(screen.getByRole("button", { name: "Discard" }));
+
+    expect(
+      screen.getByRole("combobox", { name: /Automations that ran/i })
+        .textContent,
+    ).toContain("In the app");
+    expect(backend.puts()).toEqual([]);
+  });
+
+  it("says why when the server refuses the choice, and keeps it drafted", async () => {
     // A reader who sets a delivery and is refused must be told. A page that
     // swallowed the problem would leave them believing a class is muted when
     // the server still sends it.
@@ -255,73 +310,18 @@ describe("NotificationSettingsCard", () => {
       await screen.findByRole("combobox", { name: /Automations that ran/i }),
       "Daily digest",
     );
+    await user.click(screen.getByRole("button", { name: "Save" }));
 
-    const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toContain("coaching cannot be switched off");
-    // AND IT NAMES THE ROW. Six dropdowns share this one surface and it sits
-    // under all of them, so a failure that named none would leave the reader
-    // checking each in turn to find which did not take.
-    expect(alert.textContent).toContain("Automations that ran");
-    // And the control does not pretend the choice landed.
+    const alerts = await screen.findAllByRole("alert");
+    // Said once, on the bar: the card draws no second copy.
+    expect(alerts).toHaveLength(1);
+    expect(alerts[0].textContent).toContain("coaching cannot be switched off");
+    // The refused pick stays on the control and the bar stays open to retry.
     expect(
       screen.getByRole("combobox", { name: /Automations that ran/i })
         .textContent,
-    ).toContain("In the app");
-  });
-
-  // ONE WRITE FREEZES ONE ROW. The mutation is shared so a single error surface
-  // can name the class that failed, and a wait spread across all six would stop
-  // a reader changing a second class while the first is still in the air —
-  // which is exactly what the hook's scope is there to serialise.
-  it("freezes only the class being written", async () => {
-    let answer = () => {};
-    const inFlight = new Promise<void>((resolve) => {
-      answer = resolve;
-    });
-    const fetchMock = vi.fn(
-      async (input: RequestInfo | URL, init?: RequestInit) => {
-        const req =
-          input instanceof Request ? input : new Request(String(input), init);
-        if (req.url.endsWith("/v1/me")) {
-          return jsonResponse(meFixture({}));
-        }
-        if (req.method === "PUT") {
-          await inFlight;
-        }
-        return jsonResponse({ items: everyClass() });
-      },
-    );
-    vi.stubGlobal("fetch", fetchMock);
-    const user = userEvent.setup();
-    render(<NotificationSettingsCard />);
-
-    await pickOption(
-      user,
-      await screen.findByRole("combobox", { name: /Automations that ran/i }),
-      "Daily digest",
-    );
-
-    await waitFor(() =>
-      expect(
-        screen
-          .getByRole("combobox", { name: /Automations that ran/i })
-          .hasAttribute("disabled"),
-      ).toBe(true),
-    );
-    expect(
-      screen
-        .getByRole("combobox", { name: /Approvals waiting on you/i })
-        .hasAttribute("disabled"),
-    ).toBe(false);
-
-    answer();
-    await waitFor(() =>
-      expect(
-        screen
-          .getByRole("combobox", { name: /Automations that ran/i })
-          .hasAttribute("disabled"),
-      ).toBe(false),
-    );
+    ).toContain("Daily digest");
+    expect(screen.getByRole("button", { name: "Save" })).not.toBeNull();
   });
 
   it("reads the rows in the reader's own language", async () => {

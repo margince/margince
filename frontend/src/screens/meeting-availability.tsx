@@ -5,14 +5,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { useUnsavedGuard } from "../app/unsaved";
 import { EmptyState, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ChoiceList } from "../design-system/choicelist";
 import { Panel, PanelBody } from "../design-system/panel";
-import { PanelNotices } from "../design-system/panelnotices";
-import { PanelSave } from "../design-system/panelsave";
 import { QueryGate } from "../design-system/querystates";
+import { useSaveDraft } from "../design-system/savepage";
 import { StatusBadge } from "../design-system/statusbadge";
 import { TimezoneSelect } from "../design-system/timezoneselect";
 import { useToast } from "../design-system/toast";
@@ -40,7 +38,7 @@ export const AVAILABILITY_ID = "meeting-availability";
 
 /**
  * Working days and hours, and with the booking grant the rules a guest books
- * under, behind one Save. The calendar's state never blocks it: the rules are
+ * under, saved together through the page's save bar. The calendar's state never blocks it: the rules are
  * the host's own, and saving them does not ask the calendar anything.
  */
 export function AvailabilityCard({
@@ -131,31 +129,28 @@ function useAvailabilityDraft(
   );
   const ruleChanges = changedRules(savedRules, next);
   const dirty = hoursDirty || Object.keys(ruleChanges).length > 0;
-  useUnsavedGuard(dirty);
-  const submit = () => {
-    // PanelSave has no refused state yet; the Other field already says why.
-    if (invalid) return;
-    // Never-saved hours are saved as offered: accepting the defaults is an answer.
-    const nextHours = hoursDirty || !chosen ? sortedHours(draftHours) : null;
-    setNarrowed(nextHours !== null && narrowing(savedHours, nextHours));
-    save.mutate({ hours: nextHours, rules: ruleChanges });
-  };
-  const discard = () => {
-    save.reset();
-    setDraftHours(savedHours);
-    setDraftRules(savedRules);
-    setOther({});
-  };
+  useSaveDraft({
+    dirty,
+    // Never-chosen hours are an answer waiting to be saved as offered.
+    offered: !chosen,
+    invalid,
+    save: () => {
+      const nextHours = hoursDirty || !chosen ? sortedHours(draftHours) : null;
+      setNarrowed(nextHours !== null && narrowing(savedHours, nextHours));
+      return save.mutateAsync({ hours: nextHours, rules: ruleChanges });
+    },
+    discard: () => {
+      save.reset();
+      setDraftHours(savedHours);
+      setDraftRules(savedRules);
+      setOther({});
+    },
+  });
   const pickPreset = (field: RuleField, value: number) => {
     const { [field]: _picked, ...kept } = other;
     setOther(kept);
     if (next) setDraftRules({ ...next, [field]: value });
   };
-  // Which write failed: hours go first, so a refusal with hours in it is theirs.
-  const refusedKey: MessageKey =
-    hoursDirty || !chosen
-      ? "workingHours.saveFailed"
-      : "scheduling.rulesSaveFailed";
   return {
     draftHours,
     setDraftHours,
@@ -163,12 +158,8 @@ function useAvailabilityDraft(
     other,
     setOther,
     pickPreset,
-    refusedKey,
-    dirty,
     narrowed,
     save,
-    submit,
-    discard,
   };
 }
 
@@ -197,18 +188,6 @@ function AvailabilityForm({
           <StatusBadge kind="neutral" label={t("workingHours.unsetTitle")} />
         )
       }
-      actions={
-        // Never-chosen hours are an answer waiting to be saved as offered.
-        <PanelSave
-          dirty={draft.dirty || !chosen}
-          pending={save.isPending}
-          saveLabel={t(
-            rules ? "scheduling.saveAvailability" : "workingHours.save",
-          )}
-          onSave={draft.submit}
-          onDiscard={draft.discard}
-        />
-      }
       footer={foot && <span className="t-caption">{t(foot)}</span>}
     >
       <PanelBody className="form-stack">
@@ -234,16 +213,6 @@ function AvailabilityForm({
           </Callout>
         </PanelBody>
       )}
-      <PanelNotices
-        refused={
-          save.isError
-            ? {
-                title: t(draft.refusedKey),
-                error: save.error,
-              }
-            : undefined
-        }
-      />
     </Panel>
   );
 }
@@ -273,7 +242,7 @@ function HoursFields({
         value={value.days.map(String)}
         onChange={(days) => onChange({ ...value, days: days.map(Number) })}
       />
-      <div className="form-row">
+      <div className="form-row meeting-hours">
         <Field label={t("workingHours.from")}>
           {(control) => (
             <TextInput

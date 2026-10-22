@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { PageSaveBar, SavePageProvider } from "../design-system/savepage";
 import {
   installFetchStub,
   jsonResponse,
@@ -46,7 +47,11 @@ function story(items: Preference[]) {
     });
     return (
       <StoryProviders>
-        <NotificationSettingsCard />
+        {/* A pick waits on the page's one save bar, as on Settings. */}
+        <SavePageProvider>
+          <NotificationSettingsCard />
+          <PageSaveBar />
+        </SavePageProvider>
       </StoryProviders>
     );
   };

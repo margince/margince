@@ -470,6 +470,9 @@
      drawn outside the shell — a settings card's own story renders one — and a
      measure that resolved to nothing there would silently uncap it. */
   --settingsColumn: 720px;
+  /* The widest a typed answer gets in a settings row: past it a short value
+     sits in a box that reads as a banner. */
+  --settingsFieldMeasure: 30rem;
 
   /* THE OVERLAY MEASURES, one per `Modal` intent (modal.tsx). A box is its
      measure or the glass less its gutter, whichever is narrower. */

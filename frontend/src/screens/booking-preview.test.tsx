@@ -12,6 +12,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { createQueryClient } from "../app/queryclient";
+import { PageSaveBar, SavePageProvider } from "../design-system/savepage";
 import { formatTimeOfDay, fullDayName } from "../format/format";
 import { formatDayFull, formatTimeRange } from "../format/meetingtime";
 import { dayInZone, viewerZone } from "../format/timezone";
@@ -335,7 +336,14 @@ function Journey() {
       <button type="button" onClick={() => setPreview(!preview)}>
         Switch view
       </button>
-      {preview ? <BookingScreen hostSlug="preview" /> : <MeetingSettings />}
+      {preview ? (
+        <BookingScreen hostSlug="preview" />
+      ) : (
+        <SavePageProvider>
+          <MeetingSettings />
+          <PageSaveBar />
+        </SavePageProvider>
+      )}
     </>
   );
 }
@@ -433,7 +441,7 @@ it("refreshes cached preview times after saving working hours", async () => {
   fireEvent.change(await screen.findByLabelText("From"), {
     target: { value: "10:00" },
   });
-  await user.click(screen.getByRole("button", { name: "Save availability" }));
+  await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() =>
     expect(client.getQueryData(["working-hours"])).toMatchObject({
       working_hours: { start_time: "10:00" },

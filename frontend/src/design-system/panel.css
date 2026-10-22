@@ -310,8 +310,8 @@
   gap: var(--gapActions);
   padding: 0 var(--padPanel) var(--padPanel);
 }
-/* A clean PanelSave renders nothing, and the band must not keep its padding
-   as a blank strip under the rows. */
+/* An action that renders nothing must not leave the band's padding as a
+   blank strip under the rows. */
 .panel-actions:empty {
   display: none;
 }

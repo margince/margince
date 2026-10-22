@@ -5337,6 +5337,10 @@ export const vi = {
   "unsaved.body":
     "Rời trang này sẽ bỏ những gì đã nhập. Quay lại để lưu trước.",
   "unsaved.discard": "Bỏ thay đổi",
+  "unsaved.saveTitle": "Lưu thay đổi?",
+  "unsaved.saveBody": "Trang này có thay đổi chưa được lưu.",
+  "unsaved.stay": "Ở lại",
+  "unsaved.saveRefused": "Chưa lưu được. Ở lại trang để xem lý do.",
   "settings.addedItem": "Đã thêm “{name}”",
   "settings.removedItem": "Đã gỡ “{name}”",
   "settings.removed": "Đã gỡ",
@@ -6287,8 +6291,6 @@ export const vi = {
   "notifications.title": "Cách từng loại thông báo đến với bạn",
   "notifications.sub":
     "Mọi thông báo luôn nằm trong trung tâm thông báo, dù chọn gì ở đây. Lựa chọn này quyết định những gì xảy ra thêm khi có thông báo đến.",
-  "notifications.saveFailed": "Không thể lưu lựa chọn đó",
-  "notifications.saveFailedFor": "Không thể lưu “{setting}”",
   "notifications.class.approval_pending.label": "Phê duyệt đang chờ bạn",
   "notifications.class.approval_pending.help":
     "Đồng nghiệp cần bạn quyết định để công việc của họ tiếp tục.",
@@ -7150,7 +7152,6 @@ export const vi = {
   "connectors.mailPosture.historyTitle": "Áp dụng cho thư đã thu thập?",
   "connectors.mailPosture.historyBody":
     "Cài đặt này áp dụng cho thư thu thập từ giờ trở đi. Thư đã có trong CRM giữ nguyên phạm vi hiển thị, trừ khi thu hẹp lại cho khớp.",
-  "connectors.mailPosture.historyConfirm": "Đổi phạm vi hiển thị thư",
   "connectors.mailPosture.historyApply": "Thu hẹp cả thư đã thu thập",
   "connectors.disconnectBodyGoogleNote":
     "Google có thể vẫn liệt kê Margince trong phần quyền truy cập của bên thứ ba trên tài khoản Google. Gỡ ở đó để thu hồi hoàn toàn quyền truy cập.",
@@ -10607,8 +10608,6 @@ export const vi = {
     "Trình duyệt đang dùng {zone}. Múi giờ chọn ở trên là múi giờ dùng để tính thời gian trống.",
   "workingHours.narrowedTitle": "Ít giờ nhận đặt lịch hơn",
   "workingHours.narrowed": "Khách hàng có ít khung giờ để chọn hơn.",
-  "workingHours.saveFailed": "Không thể lưu giờ làm việc",
-  "workingHours.save": "Lưu giờ làm việc",
   "workingHours.day.1": "Thứ Hai",
   "workingHours.day.2": "Thứ Ba",
   "workingHours.day.3": "Thứ Tư",
@@ -13487,7 +13486,6 @@ export const vi = {
   "scheduling.noLinkYet": "Chưa có liên kết đặt lịch.",
   "scheduling.noLinkYetBody":
     "Tạo một liên kết để chia sẻ trang cho khách chọn giờ.",
-  "scheduling.calendarSaveFailed": "Chưa lưu lịch",
   "scheduling.replaceAddress": "Thay địa chỉ",
   "scheduling.replaceConfirmTitle": "Thay địa chỉ liên kết?",
   "scheduling.personalLinksFoot":
@@ -13563,7 +13561,6 @@ export const vi = {
   "scheduling.calendarCount_one": "{count} lịch",
   "scheduling.calendarCount_other": "{count} lịch",
   "scheduling.noneChosen": "Không có",
-  "scheduling.saveCalendar": "Lưu lịch",
   "scheduling.setup.title": "Kết nối lịch để nhận đặt lịch",
   "scheduling.setup.intro":
     "Margince đọc giờ bận của bạn để khách chỉ thấy khung giờ trống, rồi thêm mọi lượt đặt vào lịch của bạn, có mời khách và đính kèm liên kết video. Cho đến lúc đó, liên kết của bạn vẫn tạm dừng.",
@@ -13608,8 +13605,6 @@ export const vi = {
   "scheduling.rulesFoot": "Áp dụng cho mọi lượt đặt.",
   "scheduling.rulesFootAttention":
     "Áp dụng cho mọi lượt đặt. Bạn có thể lưu mục này trong lúc lịch đang được kết nối lại.",
-  "scheduling.saveAvailability": "Lưu thời gian rảnh",
-  "scheduling.rulesSaveFailed": "Chưa lưu được quy tắc đặt lịch",
   "scheduling.bookNeedsGrant": "Đặt cuộc hẹn cần quản trị viên cấp quyền.",
   "scheduling.guestView": "Khách thấy gì",
   "scheduling.previewLabel": "Xem trước trang đặt lịch công khai của bạn",
@@ -13632,8 +13627,10 @@ export const vi = {
   "checklist.stepOpen": "Chưa xong",
   "checklist.stepWaiting": "Đang chờ",
   "checklist.count": "Đã xong {done}/{total}",
-  "panelSave.save": "Lưu",
-  "panelSave.discard": "Hủy thay đổi",
+  "saveBar.save": "Lưu",
+  "saveBar.discard": "Hủy thay đổi",
+  "saveBar.unsaved": "Thay đổi chưa lưu",
+  "saveBar.invalid": "Sửa các ô được đánh dấu để lưu.",
   "privacy.typeErasePrompt": "Nhập từ này để xác nhận:",
   "aiFigures.window.24h": "24 giờ",
   "aiFigures.window.7d": "7 ngày",

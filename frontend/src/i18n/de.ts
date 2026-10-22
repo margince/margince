@@ -5445,6 +5445,12 @@ export const de = {
   "unsaved.body":
     "Wenn du diese Seite verlässt, gehen deine Eingaben verloren. Gehe zurück, um sie zuerst zu speichern.",
   "unsaved.discard": "Änderungen verwerfen",
+  "unsaved.saveTitle": "Änderungen speichern?",
+  "unsaved.saveBody":
+    "Auf dieser Seite gibt es Änderungen, die noch nicht gespeichert sind.",
+  "unsaved.stay": "Bleiben",
+  "unsaved.saveRefused":
+    "Nicht gespeichert. Bleib auf der Seite, um den Grund zu sehen.",
   "settings.addedItem": "„{name}“ hinzugefügt",
   "settings.removedItem": "„{name}“ entfernt",
   "settings.removed": "Entfernt",
@@ -6427,8 +6433,6 @@ export const de = {
   "notifications.title": "Wie du von welcher Art erfährst",
   "notifications.sub":
     "Jede Meldung bleibt in deinem Meldungszentrum, was du hier auch wählst. Dies entscheidet, was außerdem geschieht, wenn eine eintrifft.",
-  "notifications.saveFailed": "Diese Wahl wurde nicht gespeichert",
-  "notifications.saveFailedFor": "„{setting}“ wurde nicht gespeichert",
   "notifications.class.approval_pending.label":
     "Freigaben, die auf dich warten",
   "notifications.class.approval_pending.help":
@@ -7302,7 +7306,6 @@ export const de = {
   "connectors.mailPosture.historyTitle": "Auf erfasste E-Mails anwenden?",
   "connectors.mailPosture.historyBody":
     "Diese Einstellung gilt für E-Mails, die ab jetzt erfasst werden. E-Mails, die bereits im CRM sind, behalten ihre Sichtbarkeit, es sei denn, du schränkst sie entsprechend ein.",
-  "connectors.mailPosture.historyConfirm": "E-Mail-Sichtbarkeit ändern",
   "connectors.mailPosture.historyApply": "Auch erfasste E-Mails einschränken",
   "connectors.disconnectBodyGoogleNote":
     "Google führt Margince möglicherweise weiterhin unter den Drittanbieterzugriffen deines Kontos. Entferne es dort, um den Zugriff vollständig zu widerrufen.",
@@ -10830,8 +10833,6 @@ export const de = {
     "Dein Browser verwendet {zone}. Die Auswahl oben ist die Zeitzone für die Verfügbarkeit.",
   "workingHours.narrowedTitle": "Weniger buchbare Zeiten",
   "workingHours.narrowed": "Für Buchungen stehen weniger Zeiten zur Auswahl.",
-  "workingHours.saveFailed": "Arbeitszeiten nicht gespeichert",
-  "workingHours.save": "Arbeitszeiten speichern",
   "workingHours.day.1": "Montag",
   "workingHours.day.2": "Dienstag",
   "workingHours.day.3": "Mittwoch",
@@ -13783,7 +13784,6 @@ export const de = {
   "scheduling.noLinkYet": "Noch kein Buchungslink.",
   "scheduling.noLinkYetBody":
     "Erstelle einen, um eine Seite zu teilen, auf der Gäste eine Zeit wählen.",
-  "scheduling.calendarSaveFailed": "Kalender nicht gespeichert",
   "scheduling.replaceAddress": "Adresse ersetzen",
   "scheduling.replaceConfirmTitle": "Linkadresse ersetzen?",
   "scheduling.personalLinksFoot":
@@ -13860,7 +13860,6 @@ export const de = {
   "scheduling.calendarCount_one": "{count} Kalender",
   "scheduling.calendarCount_other": "{count} Kalender",
   "scheduling.noneChosen": "Keiner",
-  "scheduling.saveCalendar": "Kalender speichern",
   "scheduling.setup.title": "Verbinde einen Kalender für Buchungen",
   "scheduling.setup.intro":
     "Margince liest deine belegten Zeiten, damit Gäste nur freie Zeiten sehen, und trägt dann jede Buchung in deinen Kalender ein, mit eingeladenem Gast und angehängtem Videolink. Bis dahin bleibt dein Link pausiert.",
@@ -13906,8 +13905,6 @@ export const de = {
   "scheduling.rulesFoot": "Gilt für jede Buchung.",
   "scheduling.rulesFootAttention":
     "Gilt für jede Buchung. Du kannst das speichern, während der Kalender neu verbunden wird.",
-  "scheduling.saveAvailability": "Verfügbarkeit speichern",
-  "scheduling.rulesSaveFailed": "Buchungsregeln nicht gespeichert",
   "scheduling.bookNeedsGrant":
     "Termine buchen braucht eine Berechtigung von einem Admin.",
   "scheduling.guestView": "Was Gäste sehen",
@@ -13932,8 +13929,10 @@ export const de = {
   "checklist.stepOpen": "Noch offen",
   "checklist.stepWaiting": "Wartet",
   "checklist.count": "{done} von {total} erledigt",
-  "panelSave.save": "Speichern",
-  "panelSave.discard": "Verwerfen",
+  "saveBar.save": "Speichern",
+  "saveBar.discard": "Verwerfen",
+  "saveBar.unsaved": "Ungespeicherte Änderungen",
+  "saveBar.invalid": "Korrigiere die markierten Felder, um zu speichern.",
   "privacy.typeErasePrompt": "Gib zur Bestätigung dieses Wort ein:",
   "aiFigures.window.24h": "24 Std.",
   "aiFigures.window.7d": "7 T.",

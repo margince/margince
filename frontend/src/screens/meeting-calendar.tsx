@@ -7,12 +7,11 @@ import type { components } from "../api/schema";
 import { Button, OverflowMenu, PendingBody } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { Panel, PanelBody } from "../design-system/panel";
-import { PanelNotices } from "../design-system/panelnotices";
-import { PanelSave } from "../design-system/panelsave";
 import { ProviderMark } from "../design-system/provider-mark";
 import { ProviderList, ProviderRow } from "../design-system/providerrow";
 import { QueryGate } from "../design-system/querystates";
 import { Chip } from "../design-system/readings";
+import { useSaveDraft } from "../design-system/savepage";
 import { MultiSelect, Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { type StatusKind, statusTone } from "../design-system/statusbadge";
@@ -53,7 +52,7 @@ export function ConnectRefusal({
 
 /**
  * The calendar each booking lands in and the ones that block time, saved from
- * the card foot: blocking is a multi-pick, and every save runs the live
+ * the page's save bar: blocking is a multi-pick, and every save runs the live
  * calendar check, so a write per tick would check the calendar per tick.
  */
 export function MeetingCalendarCard({
@@ -62,7 +61,7 @@ export function MeetingCalendarCard({
   const t = useT();
   const titleRef = useRef<HTMLSpanElement>(null);
   const draft = useCalendarDraft(profile, titleRef);
-  const { calendar, patch } = draft;
+  const { calendar } = draft;
   const { provider, ready, connections } = calendar;
   if (connections.isPending)
     return (
@@ -81,17 +80,6 @@ export function MeetingCalendarCard({
           {t("scheduling.calendarTitle")}
         </span>
       }
-      actions={
-        // A calendar that is not ready cannot be saved, and its row's Reconnect
-        // is then the card's one primary.
-        <PanelSave
-          dirty={draft.dirty && ready}
-          pending={patch.isPending}
-          saveLabel={t("scheduling.saveCalendar")}
-          onSave={draft.save}
-          onDiscard={draft.discard}
-        />
-      }
     >
       {connection && (
         <PanelBody>
@@ -101,13 +89,6 @@ export function MeetingCalendarCard({
         </PanelBody>
       )}
       <CalendarFields draft={draft} />
-      <PanelNotices
-        refused={
-          patch.isError
-            ? { title: t("scheduling.calendarSaveFailed"), error: patch.error }
-            : undefined
-        }
-      />
     </Panel>
   );
 }
@@ -134,40 +115,30 @@ function useCalendarDraft(
     (provider !== "" && provider !== baseline.provider);
   const writable =
     ready && !!selected?.writable && !calendars.isFetching && !!provider;
-  const save = () => {
-    // PanelSave has no refused state yet; the card says why beside the choice.
-    if (!selected || !writable) return;
-    patch.mutate(
-      {
+  useSaveDraft({
+    // A calendar that is not ready cannot be saved; its row's Reconnect says so.
+    dirty: dirty && ready,
+    // The card says why beside the choice.
+    invalid: !selected || !writable,
+    save: async () => {
+      if (!selected) return;
+      const value = await patch.mutateAsync({
         provider,
         calendar_id: selected.id,
         blocking_calendars: calendar.blocking,
-      },
-      {
-        onSuccess: (value) => {
-          // The foot unmounts with the draft, so focus moves to the title first.
-          titleRef.current?.focus();
-          setBaseline(value);
-          setForm(value);
-          toast.show(t("settings.saved"));
-        },
-      },
-    );
-  };
-  const discard = () => {
-    patch.reset();
-    setForm(baseline);
-  };
-  return {
-    baseline,
-    form,
-    setForm,
-    calendar,
-    patch,
-    dirty,
-    save,
-    discard,
-  };
+      });
+      // The bar unmounts once the page is clean, so focus moves to the title.
+      titleRef.current?.focus();
+      setBaseline(value);
+      setForm(value);
+      toast.show(t("settings.saved"));
+    },
+    discard: () => {
+      patch.reset();
+      setForm(baseline);
+    },
+  });
+  return { baseline, form, setForm, calendar };
 }
 
 /** Which calendar takes the bookings and which ones block time. */

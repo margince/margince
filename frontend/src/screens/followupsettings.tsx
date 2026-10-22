@@ -75,7 +75,7 @@ export function FollowUpSettingsCard() {
                 refusal={t("followUpSettings.outOfRange")}
                 disabled={!canEdit || update.isPending}
                 onCommit={(days) =>
-                  update.mutate({ follow_up_after_days: days })
+                  update.mutateAsync({ follow_up_after_days: days })
                 }
               />
             </SettingList>

@@ -7,15 +7,15 @@ import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button, Checkbox, Disclosure } from "../design-system/atoms";
-import { ConfirmModal } from "../design-system/confirmmodal";
 import { Heading } from "../design-system/heading";
+import { useSaveDraft } from "../design-system/savepage";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf, throwProblem } from "../lib/problem";
+import { throwProblem } from "../lib/problem";
 import { navigate } from "../lib/router";
 import { useCaptureSettings } from "./capture-settings";
 import { ConnectorContextTagRow } from "./connectors.contexttag";
@@ -162,22 +162,31 @@ function MailPostureRow({ conn }: Readonly<{ conn: CaptureConnection }>) {
   const t = useT();
   const settings = useCaptureSettings();
   const save = useSetMailPosture(conn.provider);
-  const [pendingPosture, setPendingPosture] = useState<MailPosture | null>(
-    null,
-  );
+  const [draft, setDraft] = useState<MailPosture | null>(null);
   const [applyToHistory, setApplyToHistory] = useState(false);
   const sharedAllowed = settings.data?.shared_posture_allowed ?? false;
   const posture = conn.mail_posture ?? "classified";
-
-  // A narrowing asks about history; anything else is saved on the spot.
-  const choose = (next: MailPosture) => {
-    if (postureRank[next] > postureRank[posture]) {
-      setPendingPosture(next);
-      return;
-    }
-    save.mutate({ posture: next, applyToHistory: false });
+  const shown = draft ?? posture;
+  // Only a narrowing asks about history; a widening sends false whatever was ticked.
+  const narrowing = postureRank[shown] > postureRank[posture];
+  const discard = () => {
+    save.reset();
+    setDraft(null);
+    setApplyToHistory(false);
   };
-  const help = t(postureHelp[posture]);
+  useSaveDraft({
+    dirty: shown !== posture,
+    save: async () => {
+      await save.mutateAsync({
+        posture: shown,
+        applyToHistory: narrowing && applyToHistory,
+      });
+      setDraft(null);
+      setApplyToHistory(false);
+    },
+    discard,
+  });
+  const help = t(postureHelp[shown]);
 
   return (
     <>
@@ -194,10 +203,10 @@ function MailPostureRow({ conn }: Readonly<{ conn: CaptureConnection }>) {
         control={(controlProps) => (
           <Select
             {...controlProps}
-            value={posture}
+            value={shown}
             disabled={save.isPending}
             onChange={(next) => {
-              if (isMailPosture(next)) choose(next);
+              if (isMailPosture(next)) setDraft(next);
             }}
             options={[
               {
@@ -214,39 +223,21 @@ function MailPostureRow({ conn }: Readonly<{ conn: CaptureConnection }>) {
           />
         )}
       />
-      <ConfirmModal
-        open={pendingPosture !== null}
-        onClose={() => {
-          setPendingPosture(null);
-          setApplyToHistory(false);
-        }}
-        title={t("connectors.mailPosture.historyTitle")}
-        confirmLabel={t("connectors.mailPosture.historyConfirm")}
-        pending={save.isPending}
-        error={save.error ? problemMessageOf(save.error, t) : undefined}
-        onConfirm={() => {
-          if (pendingPosture) {
-            save.mutate(
-              { posture: pendingPosture, applyToHistory },
-              {
-                onSuccess: () => {
-                  setPendingPosture(null);
-                  setApplyToHistory(false);
-                },
-              },
-            );
+      {narrowing && (
+        <SettingRow
+          testId={`connector-${conn.provider}-mail-posture-history`}
+          label={t("connectors.mailPosture.historyTitle")}
+          description={t("connectors.mailPosture.historyBody")}
+          control={
+            <Checkbox
+              checked={applyToHistory}
+              disabled={save.isPending}
+              onChange={(e) => setApplyToHistory(e.target.checked)}
+              label={t("connectors.mailPosture.historyApply")}
+            />
           }
-        }}
-      >
-        <p>{t("connectors.mailPosture.historyBody")}</p>
-        {/* One question, one modifier: two verbs of similar weight side by
-            side read as rival answers to "are you sure". */}
-        <Checkbox
-          checked={applyToHistory}
-          onChange={(e) => setApplyToHistory(e.target.checked)}
-          label={t("connectors.mailPosture.historyApply")}
         />
-      </ConfirmModal>
+      )}
     </>
   );
 }
@@ -268,9 +259,9 @@ function useSetMailPosture(provider: CaptureConnection["provider"]) {
         throwProblem(error);
       }
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["connectors"] });
-    },
+    // Awaited, so the row never flashes the old posture once the draft drops.
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["connectors"] }),
   });
 }
 

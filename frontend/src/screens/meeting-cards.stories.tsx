@@ -1,5 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { ReactNode } from "react";
 import { userEvent, within } from "storybook/test";
+import { PageSaveBar, SavePageProvider } from "../design-system/savepage";
 import { jsonResponse } from "../testing/story-utils";
 import { bookingFrame } from "./book.storykit";
 import { bookingConnection, bookingProfile } from "./book.testkit";
@@ -11,6 +13,16 @@ import { MeetingSetupCard } from "./meeting-setup";
 
 // Each Meetings card alone, in the states the page composes them in. The
 // whole page is in meeting-settings.stories.tsx.
+// A card's draft saves through the page's bar, as it does in settings.
+function onPage(card: ReactNode) {
+  return (
+    <SavePageProvider>
+      {card}
+      <PageSaveBar />
+    </SavePageProvider>
+  );
+}
+
 const meta: Meta = {
   title: "Settings/You/Meetings/Cards",
   parameters: { layout: "padded" },
@@ -94,12 +106,14 @@ export const NoLinkYet: Story = {
 };
 
 export const Calendar: Story = {
-  render: bookingFrame(() => <MeetingCalendarCard profile={bookingProfile} />),
+  render: bookingFrame(() =>
+    onPage(<MeetingCalendarCard profile={bookingProfile} />),
+  ),
 };
 export const CalendarDark: Story = { ...Calendar, globals: { theme: "dark" } };
 export const CalendarExpired: Story = {
   render: bookingFrame(
-    () => <MeetingCalendarCard profile={bookingProfile} />,
+    () => onPage(<MeetingCalendarCard profile={bookingProfile} />),
     expired,
   ),
 };
@@ -109,7 +123,9 @@ export const CalendarExpiredDark: Story = {
 };
 
 export const Availability: Story = {
-  render: bookingFrame(() => <AvailabilityCard profile={bookingProfile} />),
+  render: bookingFrame(() =>
+    onPage(<AvailabilityCard profile={bookingProfile} />),
+  ),
 };
 export const AvailabilityDark: Story = {
   ...Availability,
@@ -117,7 +133,9 @@ export const AvailabilityDark: Story = {
 };
 /** A ticked day makes the card dirty: Discard and Save appear at its foot. */
 export const AvailabilityDirty: Story = {
-  render: bookingFrame(() => <AvailabilityCard profile={bookingProfile} />),
+  render: bookingFrame(() =>
+    onPage(<AvailabilityCard profile={bookingProfile} />),
+  ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
@@ -125,23 +143,24 @@ export const AvailabilityDirty: Story = {
     );
   },
 };
-/** The hours write refused: the card says so once, above its foot. */
+/** The hours write refused: the save bar says so once. */
 export const AvailabilityRefused: Story = {
-  render: bookingFrame(() => <AvailabilityCard profile={bookingProfile} />, {
-    "PUT /me/working-hours": refused,
-  }),
+  render: bookingFrame(
+    () => onPage(<AvailabilityCard profile={bookingProfile} />),
+    {
+      "PUT /me/working-hours": refused,
+    },
+  ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
       await canvas.findByRole("checkbox", { name: "Saturday" }),
     );
-    await userEvent.click(
-      await canvas.findByRole("button", { name: "Save availability" }),
-    );
+    await userEvent.click(await canvas.findByRole("button", { name: "Save" }));
   },
 };
 export const HoursOnly: Story = {
-  render: bookingFrame(() => <AvailabilityCard hoursOnly />),
+  render: bookingFrame(() => onPage(<AvailabilityCard hoursOnly />)),
 };
 
 export const GuestView: Story = {

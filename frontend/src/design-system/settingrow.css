@@ -209,7 +209,7 @@
 .settingrow-stack > .settingrow-control > .field,
 .settingrow-stack > .settingrow-control > .settingrow-measure {
   min-width: 0;
-  max-width: none;
+  max-width: var(--settingsFieldMeasure);
   width: 100%;
 }
 
@@ -285,7 +285,7 @@
   .settingrow-control > .field,
   .settingrow-control > .settingrow-measure {
     min-width: 0;
-    max-width: none;
+    max-width: var(--settingsFieldMeasure);
     width: 100%;
   }
 }

@@ -82,7 +82,7 @@ export function LeadHandlingCard() {
                 !canEdit || !settings.first_response_enabled || update.isPending
               }
               onCommit={(minutes) =>
-                update.mutate({ first_response_target_minutes: minutes })
+                update.mutateAsync({ first_response_target_minutes: minutes })
               }
             />
           </SettingList>

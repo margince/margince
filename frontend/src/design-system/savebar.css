@@ -8,3 +8,11 @@
   box-shadow: var(--shadow-pop);
   padding: var(--space-4);
 }
+
+.save-bar-caption {
+  margin: 0;
+}
+
+.save-bar > .t-danger {
+  margin: var(--space-2) 0 0;
+}

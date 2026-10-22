@@ -7,7 +7,6 @@ import { Button, Card, Disclosure, SegmentedControl, TextInput } from "./atoms";
 import { ChoiceList } from "./choicelist";
 import { DataTable } from "./datatable";
 import { Panel, PanelBody, PanelIntro } from "./panel";
-import { PanelSave } from "./panelsave";
 import { Select } from "./select";
 import { SettingList, SettingRow } from "./settingrow";
 import { Switch } from "./switch";
@@ -307,55 +306,4 @@ function DensityRow() {
 
 export const SegmentedControlControl: Story = {
   render: () => <DensityRow />,
-};
-
-// Several fields commit together: Discard and Save appear at the card's foot
-// only while a field differs from what was saved.
-function SignatureForm() {
-  const [saved, setSaved] = useState({ title: "Account Executive", phone: "" });
-  const [draft, setDraft] = useState(saved);
-  const dirty = draft.title !== saved.title || draft.phone !== saved.phone;
-  return (
-    <Panel
-      title="Signature"
-      actions={
-        <PanelSave
-          dirty={dirty}
-          onSave={() => setSaved(draft)}
-          onDiscard={() => setDraft(saved)}
-        />
-      }
-    >
-      <SettingList bleed="settings">
-        <SettingRow
-          label="Job title"
-          control={(control) => (
-            <TextInput
-              {...control}
-              className="settingrow-measure"
-              value={draft.title}
-              onChange={(e) => setDraft({ ...draft, title: e.target.value })}
-            />
-          )}
-        />
-        <SettingRow
-          label="Phone"
-          description="Printed under your name in mail you send."
-          control={(control) => (
-            <TextInput
-              {...control}
-              className="settingrow-measure"
-              type="tel"
-              value={draft.phone}
-              onChange={(e) => setDraft({ ...draft, phone: e.target.value })}
-            />
-          )}
-        />
-      </SettingList>
-    </Panel>
-  );
-}
-
-export const FieldsWithPanelSave: Story = {
-  render: () => <SignatureForm />,
 };

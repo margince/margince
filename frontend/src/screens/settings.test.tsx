@@ -42,21 +42,16 @@ import { settingsHref } from "./settingsrouting";
 
 type MeResponse = components["schemas"]["MeResponse"];
 
-// The Profile card's foot Save, which exists only while a name differs from
-// what was saved.
+// The page's save bar Save, which exists only while a name differs from what
+// was saved.
 function profileSave(): HTMLElement | null {
-  const card = screen
-    .getByRole("heading", { name: "Profile" })
-    .closest("section");
-  if (!(card instanceof HTMLElement)) {
-    throw new Error("the Profile card is not a section");
-  }
-  return within(card).queryByRole("button", { name: "Save" });
+  const bar = screen.queryByRole("region", { name: "Unsaved changes" });
+  return bar && within(bar).queryByRole("button", { name: "Save" });
 }
 
 function pressProfileSave(): HTMLElement {
   const save = profileSave();
-  if (save === null) throw new Error("the Profile card offers no Save");
+  if (save === null) throw new Error("the page offers no Save");
   return save;
 }
 
@@ -146,7 +141,7 @@ describe("SettingsScreen RBAC surfaces", () => {
   // never notifies anybody — the menu would sit there stale, which is the exact
   // failure "one state" is supposed to rule out. So the real account menu is
   // mounted beside the settings screen, and the assertion is that it followed.
-  it("shares its answer with the account menu", async () => {
+  it("shares its saved answer with the account menu", async () => {
     const user = userEvent.setup();
     render(
       <>
@@ -162,6 +157,8 @@ describe("SettingsScreen RBAC surfaces", () => {
         { name: "Dark" },
       ),
     );
+    await user.click(pressProfileSave());
+    await waitFor(() => expect(profileSave()).toBeNull());
 
     // The menu's own radio, read through the menu rather than through the store
     // underneath it. `setThemeChoice` publishes to `useSyncExternalStore`
@@ -314,7 +311,7 @@ describe("SettingsScreen RBAC surfaces", () => {
     });
   });
 
-  it("shows a refused name once for the card, keeping the draft", async () => {
+  it("shows a refused name once on the save bar, keeping the draft", async () => {
     const user = userEvent.setup();
     const backend = settingsBackend();
     vi.stubGlobal(
@@ -347,8 +344,9 @@ describe("SettingsScreen RBAC surfaces", () => {
     await user.type(field, "Ada Lovelace");
     await user.click(pressProfileSave());
 
-    expect(await screen.findByText("Change not saved")).toBeTruthy();
-    expect(screen.getByText("Display name is too long.")).toBeTruthy();
+    expect(
+      await screen.findAllByText("Display name is too long."),
+    ).toHaveLength(1);
     expect(field).toHaveValue("Ada Lovelace");
     expect(profileSave()).not.toBeNull();
   });
@@ -374,8 +372,8 @@ describe("SettingsScreen RBAC surfaces", () => {
     expect(profileSave()).toBeNull();
   });
 
-  // A name of only whitespace is not a name: the field says so, and Save sends
-  // nothing.
+  // A name of only whitespace is not a name: the field says so, and the bar's
+  // Save is held, so nothing is sent.
   it("refuses an empty display name on the field, sending nothing", async () => {
     const user = userEvent.setup();
     const sent: unknown[] = [];
@@ -445,7 +443,7 @@ describe("SettingsScreen RBAC surfaces", () => {
     expect(sent[0]).toEqual({ greeting_name: null });
   });
 
-  it("switches the language from the Account tab, through the design-system select", async () => {
+  it("switches the language from the Account tab once the page is saved", async () => {
     const user = userEvent.setup();
     render(<SettingsScreen route={settingsHref("account")} />);
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
@@ -455,9 +453,14 @@ describe("SettingsScreen RBAC surfaces", () => {
       screen.getByRole("combobox", { name: "Language" }),
       "Deutsch",
     );
+    // A pick is a draft: the page stays in its language until Save.
+    expect(screen.getByRole("heading", { name: "Sign-in" })).toBeTruthy();
+    await user.click(pressProfileSave());
     // The choice reaches the chrome around the control, not just the control's
     // own face — which is the whole point of changing a language here.
-    expect(screen.getByRole("combobox", { name: "Sprache" })).toBeTruthy();
+    expect(
+      await screen.findByRole("combobox", { name: "Sprache" }),
+    ).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Anmeldung" })).toBeTruthy();
   });
 

@@ -14,14 +14,14 @@
 // muted "an automation fired" has not muted "somebody is waiting on your
 // approval".
 
-import { Callout } from "../design-system/callout";
+import { useState } from "react";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { QueryGate } from "../design-system/querystates";
+import { useSaveDraft } from "../design-system/savepage";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { problemMessageOf } from "../lib/problem";
 import {
   type NotificationClass,
   type NotificationDelivery,
@@ -122,63 +122,63 @@ export function NotificationSettingsCard() {
   );
 }
 
+type Picks = Partial<Record<NotificationClass, NotificationDelivery>>;
+
 function DeliveryChoices({
   rows,
 }: Readonly<{ rows: readonly NotificationPreference[] }>) {
-  const t = useT();
   const save = useSaveNotificationPreference();
+  const [picks, setPicks] = useState<Picks>({});
+  const changed = rows.filter(
+    (row) =>
+      picks[row.class] !== undefined && picks[row.class] !== row.delivery,
+  );
+  useSaveDraft({
+    dirty: changed.length > 0,
+    // One class per write, in turn: the endpoint takes one, and a refusal stops
+    // the rest so the bar's error belongs to the row still drafted.
+    save: async () => {
+      for (const row of changed) {
+        const delivery = picks[row.class];
+        if (delivery === undefined) continue;
+        await save.mutateAsync({ class: row.class, delivery });
+        setPicks((held) => {
+          const rest = { ...held };
+          delete rest[row.class];
+          return rest;
+        });
+      }
+    },
+    discard: () => {
+      save.reset();
+      setPicks({});
+    },
+  });
   return (
-    <>
-      <SettingList bleed="settings">
-        {rows.map((row) => (
-          <DeliveryRow
-            key={row.class}
-            row={row}
-            onPick={(delivery) => save.mutate({ class: row.class, delivery })}
-            // THIS row's write, not any row's. The mutation is shared so one
-            // error surface can name the class that failed, and a bare
-            // `isPending` spread that wait across all six — freezing five
-            // dropdowns nobody touched, and hiding the queued second change the
-            // hook's own scope exists to serialise.
-            saving={save.isPending && save.variables?.class === row.class}
-          />
-        ))}
-      </SettingList>
-      {/* THE CALLOUT NAMES THE ROW IT IS ABOUT. Six rows share one error
-          surface, and it sits under all of them, so an unnamed failure leaves
-          the reader checking each dropdown to find which one did not take.
-          The class comes from the failed write's own variable rather than from
-          a render — it is the same value that went on the wire, so the sentence
-          cannot name a different row from the one the server refused. */}
-      {save.isError && (
-        <PanelBody>
-          <Callout
-            tone="danger"
-            kind="outcome"
-            title={
-              save.variables === undefined
-                ? t("notifications.saveFailed")
-                : t("notifications.saveFailedFor", {
-                    setting: t(CLASS_COPY[save.variables.class].label),
-                  })
-            }
-          >
-            {problemMessageOf(save.error, t)}
-          </Callout>
-        </PanelBody>
-      )}
-    </>
+    <SettingList bleed="settings">
+      {rows.map((row) => (
+        <DeliveryRow
+          key={row.class}
+          row={row}
+          delivery={picks[row.class] ?? row.delivery}
+          onPick={(delivery) =>
+            setPicks((held) => ({ ...held, [row.class]: delivery }))
+          }
+        />
+      ))}
+    </SettingList>
   );
 }
 
 function DeliveryRow({
   row,
+  delivery,
   onPick,
-  saving,
 }: Readonly<{
   row: NotificationPreference;
+  /** The drafted choice, or the stored one while the row is untouched. */
+  delivery: NotificationDelivery;
   onPick: (delivery: NotificationDelivery) => void;
-  saving: boolean;
 }>) {
   const t = useT();
   const offered = choicesFor(row.class);
@@ -193,13 +193,12 @@ function DeliveryRow({
           className="settingrow-measure"
           // A row the seat has never decided sits on the STANDING DEFAULT the
           // server reports, not on a blank or an invented "Default" option:
-          // what the control shows is what happens today, and touching it is
+          // what the control shows is what happens today, and saving a pick is
           // what turns a default into a decision.
-          value={row.delivery}
-          disabled={saving}
+          value={delivery}
           onChange={(next) => {
             // Narrowed through the same list the options are built from, so
-            // nothing is sent that the control was never offering — the coach
+            // nothing is drafted that the control was never offering: the coach
             // row can no more send `off` than it can show it.
             const picked = offered.find((choice) => choice === next);
             if (picked) {

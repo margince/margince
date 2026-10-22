@@ -5,6 +5,7 @@ import { Callout } from "../design-system/callout";
 import { NumberSettingRow } from "../design-system/numbersetting";
 import { Panel, PanelBody, PanelIntro } from "../design-system/panel";
 import { QueryGate } from "../design-system/querystates";
+import { useSavePage } from "../design-system/savepage";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { useToast } from "../design-system/toast";
@@ -192,6 +193,8 @@ export function WebsiteReadingCard() {
   const canManage = useCanWrite("capture_settings", "update");
   const query = useCaptureSettings();
   const update = useUpdateCaptureSettings();
+  // In a page the bar shows a refused save, so the card would say it twice.
+  const inPage = useSavePage() !== null;
   const locked = !canManage || update.isPending;
   return (
     <Panel title={t("captureReading.title")}>
@@ -214,13 +217,15 @@ export function WebsiteReadingCard() {
                 {...READ_LIMITS[row.property]}
                 refusal={t(`captureReading.${row.copy}.refusal`)}
                 disabled={locked}
-                onCommit={(next) => update.mutate({ [row.property]: next })}
+                onCommit={(next) =>
+                  update.mutateAsync({ [row.property]: next })
+                }
               />
             ))}
           </SettingList>
         )}
       </QueryGate>
-      {update.isError && (
+      {update.isError && !inPage && (
         <PanelBody>
           <Callout
             tone="danger"
@@ -247,6 +252,8 @@ export function MailSyncCard() {
   const canManage = useCanWrite("capture_settings", "update");
   const query = useCaptureSettings();
   const update = useUpdateCaptureSettings();
+  // In a page the bar shows a refused save, so the card would say it twice.
+  const inPage = useSavePage() !== null;
   return (
     <Panel title={t("captureMailSync.title")}>
       <PanelBody>
@@ -267,13 +274,13 @@ export function MailSyncCard() {
               refusal={t("captureMailSync.interval.refusal")}
               disabled={!canManage || update.isPending}
               onCommit={(next) =>
-                update.mutate({ mail_sync_interval_seconds: next })
+                update.mutateAsync({ mail_sync_interval_seconds: next })
               }
             />
           </SettingList>
         )}
       </QueryGate>
-      {update.isError && (
+      {update.isError && !inPage && (
         <PanelBody>
           <Callout
             tone="danger"

@@ -5533,6 +5533,10 @@ export const en = {
   "unsaved.body":
     "Leaving this page discards what you entered. Go back to save it first.",
   "unsaved.discard": "Discard changes",
+  "unsaved.saveTitle": "Save your changes?",
+  "unsaved.saveBody": "This page has changes you have not saved yet.",
+  "unsaved.stay": "Stay",
+  "unsaved.saveRefused": "Not saved. Stay on the page to see why.",
   "settings.addedItem": "“{name}” added",
   "settings.removedItem": "“{name}” removed",
   "settings.removed": "Removed",
@@ -6567,8 +6571,6 @@ export const en = {
   "notifications.title": "How each kind reaches you",
   "notifications.sub":
     "Every notice is kept in your notification center whatever you choose here. This decides what else happens when one lands.",
-  "notifications.saveFailed": "That choice was not saved",
-  "notifications.saveFailedFor": "“{setting}” was not saved",
   "notifications.class.approval_pending.label": "Approvals waiting on you",
   "notifications.class.approval_pending.help":
     "Somebody needs your decision before their work can go on.",
@@ -7431,7 +7433,6 @@ export const en = {
   "connectors.mailPosture.historyTitle": "Apply to captured mail?",
   "connectors.mailPosture.historyBody":
     "This setting applies to mail captured from now on. Mail already in the CRM keeps its visibility unless you narrow it to match.",
-  "connectors.mailPosture.historyConfirm": "Change mail visibility",
   "connectors.mailPosture.historyApply": "Also narrow captured mail",
   "connectors.disconnectBodyGoogleNote":
     "Google may still list Margince under your account’s third-party access. Remove it there to revoke access fully.",
@@ -10927,8 +10928,6 @@ export const en = {
     "Your browser uses {zone}. The selection above is the timezone used for availability.",
   "workingHours.narrowedTitle": "Fewer bookable hours",
   "workingHours.narrowed": "Customers have fewer times to choose from.",
-  "workingHours.saveFailed": "Working hours not saved",
-  "workingHours.save": "Save working hours",
   "workingHours.day.1": "Monday",
   "workingHours.day.2": "Tuesday",
   "workingHours.day.3": "Wednesday",
@@ -13887,7 +13886,6 @@ export const en = {
   "scheduling.noLinkYet": "No booking link yet.",
   "scheduling.noLinkYetBody":
     "Create one to share a page where guests pick a time.",
-  "scheduling.calendarSaveFailed": "Calendar not saved",
   "scheduling.replaceAddress": "Replace address",
   "scheduling.replaceConfirmTitle": "Replace link address?",
   "scheduling.personalLinksFoot":
@@ -13962,7 +13960,6 @@ export const en = {
   "scheduling.calendarCount_one": "{count} calendar",
   "scheduling.calendarCount_other": "{count} calendars",
   "scheduling.noneChosen": "None",
-  "scheduling.saveCalendar": "Save calendar",
   "scheduling.setup.title": "Connect a calendar to take bookings",
   "scheduling.setup.intro":
     "Margince reads your busy times so guests only see free slots, then adds every booking to your calendar with the guest invited and a video link attached. Until then your link stays paused.",
@@ -14007,8 +14004,6 @@ export const en = {
   "scheduling.rulesFoot": "Applies to every booking.",
   "scheduling.rulesFootAttention":
     "Applies to every booking. You can save this while the calendar is being reconnected.",
-  "scheduling.saveAvailability": "Save availability",
-  "scheduling.rulesSaveFailed": "Booking rules not saved",
   "scheduling.bookNeedsGrant":
     "Booking meetings needs permission from an administrator.",
   "scheduling.guestView": "What guests see",
@@ -14033,8 +14028,10 @@ export const en = {
   "checklist.stepOpen": "Still to do",
   "checklist.stepWaiting": "Waiting",
   "checklist.count": "{done} of {total} done",
-  "panelSave.save": "Save",
-  "panelSave.discard": "Discard",
+  "saveBar.save": "Save",
+  "saveBar.discard": "Discard",
+  "saveBar.unsaved": "Unsaved changes",
+  "saveBar.invalid": "Fix the marked fields to save.",
   "privacy.typeErasePrompt": "Type this word to confirm:",
   "aiFigures.window.24h": "24 h",
   "aiFigures.window.7d": "7 d",

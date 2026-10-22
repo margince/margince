@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../api/client";
 import { Field, TextInput } from "../design-system/atoms";
+import { useSaveDraft } from "../design-system/savepage";
 import { SettingRow } from "../design-system/settingrow";
 import type { Toast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
@@ -11,7 +12,7 @@ import { unwrap } from "../lib/problem";
 import { useMe } from "../lib/session";
 
 // The two names on the Profile card: the one colleagues see you by and the one
-// they greet you by. They commit together through the card's PanelSave.
+// they greet you by. They commit together through the page's save bar.
 
 const DISPLAY_MAX_RUNES = 255;
 const GREETING_MAX_RUNES = 100;
@@ -27,12 +28,9 @@ export type AccountNames = Readonly<{
   display: NameDraft;
   greeting: NameDraft;
   greetingFallback: string | undefined;
-  dirty: boolean;
-  pending: boolean;
-  error: unknown;
-  save: () => void;
-  discard: () => void;
 }>;
+
+type NamesPatch = Readonly<{ display?: string; greeting?: string }>;
 
 // Characters, which is what the contract's `maxLength` means and what the
 // server counts; `String.length` counts UTF-16 units instead.
@@ -41,8 +39,8 @@ function runeCount(text: string): number {
 }
 
 /**
- * The drafts of both names and the one save that commits them. A null draft
- * means "not edited", so a `/me` refetch never overwrites what is being typed.
+ * The drafts of both names, handed to the page's save bar. A null draft means
+ * "not edited", so a `/me` refetch never overwrites what is being typed.
  */
 export function useAccountNames(toast: Toast): AccountNames {
   const t = useT();
@@ -61,19 +59,21 @@ export function useAccountNames(toast: Toast): AccountNames {
   const greetingChanged = greeting !== storedGreeting;
 
   const save = useMutation({
-    mutationFn: async () => {
-      if (displayChanged) {
+    mutationFn: async (patch: NamesPatch) => {
+      if (patch.display !== undefined) {
         unwrap(
           await api.PUT("/me/display-name", {
-            body: { display_name: display },
+            body: { display_name: patch.display },
           }),
           t,
         );
       }
-      if (greetingChanged) {
+      if (patch.greeting !== undefined) {
         unwrap(
           await api.PUT("/me/greeting-name", {
-            body: { greeting_name: greeting === "" ? null : greeting },
+            body: {
+              greeting_name: patch.greeting === "" ? null : patch.greeting,
+            },
           }),
           t,
         );
@@ -94,6 +94,23 @@ export function useAccountNames(toast: Toast): AccountNames {
       ? t("record.fieldRequired")
       : tooLong(display, DISPLAY_MAX_RUNES, t, locale);
   const greetingInvalid = tooLong(greeting, GREETING_MAX_RUNES, t, locale);
+  useSaveDraft({
+    dirty: displayChanged || greetingChanged,
+    // The field already says what is wrong; the bar holds Save until it is fixed.
+    invalid:
+      (displayChanged && displayInvalid !== undefined) ||
+      (greetingChanged && greetingInvalid !== undefined),
+    save: () =>
+      save.mutateAsync({
+        display: displayChanged ? display : undefined,
+        greeting: greetingChanged ? greeting : undefined,
+      }),
+    discard: () => {
+      save.reset();
+      setDisplay(null);
+      setGreeting(null);
+    },
+  });
 
   return {
     display: {
@@ -109,20 +126,6 @@ export function useAccountNames(toast: Toast): AccountNames {
     // What greetings fall back to while the greeting name is empty.
     greetingFallback:
       greetingNameOf({ display_name: me.data?.user.display_name }) ?? undefined,
-    dirty: displayChanged || greetingChanged,
-    pending: save.isPending,
-    error: save.error ?? undefined,
-    save: () => {
-      // The field already says what is wrong, so a Save on it sends nothing.
-      if (displayInvalid === undefined && greetingInvalid === undefined) {
-        save.mutate();
-      }
-    },
-    discard: () => {
-      save.reset();
-      setDisplay(null);
-      setGreeting(null);
-    },
   };
 }
 
