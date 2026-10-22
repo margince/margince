@@ -14855,7 +14855,9 @@ export const en = {
   "worklist.completeness.cards_one": "{cards} card on screen",
   "worklist.completeness.cards_other": "{cards} cards on screen",
   "worklist.completeness.bounded":
-    "More items exist for {kinds} than this list can show.",
+    "{kinds} may have more items than this list shows.",
+  "worklist.completeness.boundedSome":
+    "Some categories may have more items than this list shows.",
   "worklist.completeness.unread_one": "{count} source did not load",
   "worklist.completeness.unread_other": "{count} sources did not load",
   "worklist.review.partial":
@@ -14867,7 +14869,7 @@ export const en = {
     "{loaded} of {total} snapshot items shown. The day has changed; refresh to update the totals.",
   "worklist.review.partialDone": "{loaded} of {total} shown.",
   "worklist.review.floor":
-    "{loaded}+ shown. More items exist than this list can show.",
+    "{loaded}+ shown. There may be more items than this list shows.",
   "worklist.clear": "Nothing is waiting on you.",
   "worklist.clearFor": "Nothing is waiting on {name}.",
   "worklist.clearOfTasksToday":

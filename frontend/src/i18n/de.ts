@@ -14887,7 +14887,9 @@ export const de = {
   "worklist.completeness.cards_one": "{cards} Karte sichtbar",
   "worklist.completeness.cards_other": "{cards} Karten sichtbar",
   "worklist.completeness.bounded":
-    "Für {kinds} gibt es mehr Einträge, als diese Liste zeigen kann.",
+    "Für {kinds} kann es mehr Einträge geben, als diese Liste zeigt.",
+  "worklist.completeness.boundedSome":
+    "Einige Kategorien können mehr Einträge haben, als diese Liste zeigt.",
   "worklist.completeness.unread_one": "{count} Quelle nicht geladen",
   "worklist.completeness.unread_other": "{count} Quellen nicht geladen",
   "worklist.review.partial":
@@ -14900,7 +14902,7 @@ export const de = {
     "{loaded} von {total} Einträgen des gespeicherten Stands angezeigt. Der Tag hat sich geändert. Aktualisiere die Ansicht, um die Zahlen neu zu laden.",
   "worklist.review.partialDone": "{loaded} von {total} angezeigt.",
   "worklist.review.floor":
-    "{loaded}+ angezeigt. Es gibt mehr Einträge, als diese Liste zeigen kann.",
+    "{loaded}+ angezeigt. Es kann mehr Einträge geben, als diese Liste zeigt.",
   "worklist.clear": "Nichts wartet auf dich.",
   "worklist.clearFor": "Nichts wartet auf {name}.",
   "worklist.clearOfTasksToday":

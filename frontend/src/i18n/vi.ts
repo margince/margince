@@ -14522,7 +14522,9 @@ export const vi = {
   "worklist.completeness.cards_one": "{cards} thẻ trên màn hình",
   "worklist.completeness.cards_other": "{cards} thẻ trên màn hình",
   "worklist.completeness.bounded":
-    "{kinds} có nhiều mục hơn danh sách này có thể hiển thị.",
+    "{kinds} có thể có nhiều mục hơn danh sách này hiển thị.",
+  "worklist.completeness.boundedSome":
+    "Một số danh mục có thể có nhiều mục hơn danh sách này hiển thị.",
   "worklist.completeness.unread_one": "{count} nguồn chưa tải được",
   "worklist.completeness.unread_other": "{count} nguồn chưa tải được",
   "worklist.review.partial":
@@ -14534,7 +14536,7 @@ export const vi = {
     "Hiển thị {loaded} trên {total} mục của lần xem ban đầu. Công việc đã thay đổi; hãy làm mới để cập nhật tổng số.",
   "worklist.review.partialDone": "Hiển thị {loaded} trên {total}.",
   "worklist.review.floor":
-    "Đã hiển thị {loaded}+. Có nhiều mục hơn danh sách này có thể hiển thị.",
+    "Đã hiển thị {loaded}+. Có thể có nhiều mục hơn danh sách này hiển thị.",
   "worklist.clear": "Không có việc nào đang chờ bạn.",
   "worklist.clearFor": "Không có việc nào đang chờ {name}.",
   "worklist.clearOfTasksToday":

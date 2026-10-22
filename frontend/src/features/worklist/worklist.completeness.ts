@@ -37,7 +37,11 @@ export function completenessText(
 ): string | null {
   // Null is a narrowing these figures cannot describe. See countsUnder.
   const counted = countsUnder(day, filter);
-  if (counted === null) return null;
+  if (counted === null) {
+    return day.counts.some((count) => count.more_available)
+      ? t("worklist.completeness.boundedSome")
+      : null;
+  }
   const onScreen: Represented = loaded
     ? represented(loaded)
     : {
@@ -74,12 +78,10 @@ export function completenessText(
       }),
     );
   }
-  // "Deals at risk (0)" beside "more items exist" contradicts itself on screen.
-  const named = limited.filter((count) => count.considered > 0);
-  if (named.length > 0) {
+  if (limited.length > 0) {
     parts.push(
       t("worklist.completeness.bounded", {
-        kinds: named.map((count) => limitedKind(count, t, locale)).join(", "),
+        kinds: limited.map((count) => limitedKind(count, t, locale)).join(", "),
       }),
     );
   }
@@ -93,11 +95,15 @@ export function completenessText(
   return parts.join(" · ");
 }
 
+// A bounded category can read zero when the scope dropped every row it read,
+// so it is named without a figure: "(0)" beside "may have more" reads as a contradiction.
 function limitedKind(count: WorklistCount, t: T, locale: Locale): string {
+  const name = t(`worklist.filter.${count.category}` as const);
+  if (count.considered === 0) return name;
   const figure = floorFigure(
     formatNumber(count.considered, locale),
     true,
     count.considered,
   );
-  return `${t(`worklist.filter.${count.category}` as const)} (${figure})`;
+  return `${name} (${figure})`;
 }
