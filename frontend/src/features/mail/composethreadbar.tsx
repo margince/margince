@@ -150,10 +150,13 @@ export function ThreadBar({
               ) : (
                 <>
                   <strong>{t("compose.newThread")}</strong>
-                  {count > 0 &&
-                    ` · ${plural("compose.earlierThreads", count, {
-                      count: formatNumber(count, locale),
-                    })}`}
+                  {count > 0 && (
+                    <span className="compose-threadbar-count">
+                      {plural("compose.earlierThreads", count, {
+                        count: formatNumber(count, locale),
+                      })}
+                    </span>
+                  )}
                 </>
               )}
             </span>

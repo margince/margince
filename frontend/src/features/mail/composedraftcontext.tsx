@@ -196,7 +196,13 @@ export function DraftOffer({
       <Field
         label={t(ask)}
         labelHidden
-        hint={replying ? undefined : t("compose.draftContextHint")}
+        hint={
+          // Read to a screen reader; on screen the placeholder says it, and a
+          // second line made the band heavy.
+          replying ? undefined : (
+            <span className="sr-only">{t("compose.draftContextHint")}</span>
+          )
+        }
       >
         {(control) => (
           <div className="compose-draftbar">

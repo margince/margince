@@ -33,6 +33,13 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.compose-threadbar-text > strong {
+  font-weight: var(--fontWeightBold);
+}
+.compose-threadbar-count {
+  margin-inline-start: var(--space-2);
+  color: var(--textSecondary);
+}
 .compose-threadbar-action {
   flex: none;
   color: var(--accentText);

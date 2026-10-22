@@ -56,6 +56,14 @@
   /* A floor the fields above cannot squeeze the writing surface below. */
   min-block-size: 10rem;
 }
+/* The words sit on the sheet itself, as a mail client's do; the window is the
+   frame, so the editor draws none of its own. */
+.compose-sheet > .richtext,
+.compose-sheet > .richtext:focus-within {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
 
 /* The subject and the project whose tag it carries, on one ruled line. The
    subject is a bare line of text, named by its placeholder. */
@@ -215,6 +223,10 @@
 .compose-draftbar .input {
   flex: 1 1 12rem;
   min-inline-size: 0;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  padding-inline: 0;
 }
 
 /* The AI provenance notice card: the offer surface's banner treatment, stacked to
@@ -410,6 +422,7 @@
 }
 .compose-strip-warning .compose-strip-text > strong {
   color: var(--warningText);
+  font-weight: var(--fontWeightBold);
 }
 .compose-strip-field {
   flex: none;
@@ -434,6 +447,12 @@
 .compose-foot-status {
   flex: 1;
   min-inline-size: 0;
+  text-align: end;
+}
+/* The editor's marks, drawn here beside Send rather than under the words. */
+.compose-foot-marks > .richtext-foot {
+  padding: 0;
+  background: none;
 }
 /* The schedule caret is a narrow tab on the send, not a second button. */
 .compose-foot .compose-sendmenu {

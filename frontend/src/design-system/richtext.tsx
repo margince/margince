@@ -3,6 +3,7 @@
 
 import { Bold, Heading2, Italic, Link2, List, ListOrdered } from "lucide-react";
 import { type ClipboardEvent, useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { plainTextOf, safeEditorHTML } from "./richtext-html";
 import {
   editorHTMLFromMarkdown,
@@ -66,6 +67,7 @@ export function RichText({
   format = "html",
   id,
   disabled = false,
+  footIn,
 }: Readonly<{
   /**
    * The markup to show, or the markdown in markdown mode. Read on mount and
@@ -129,6 +131,12 @@ export function RichText({
    * changes nothing.
    */
   disabled?: boolean;
+  /**
+   * Where the footer draws instead of under the surface: the composer keeps
+   * the marks in its own foot, beside Send. Null while that place is not
+   * mounted yet; absent draws the footer in the frame.
+   */
+  footIn?: Element | null;
 }>) {
   const generatedId = useId();
   const fieldId = id ?? generatedId;
@@ -236,6 +244,62 @@ export function RichText({
     report();
   };
 
+  const foot = (
+    <div className="richtext-foot">
+      {hint && (
+        <p id={hintId} className="t-caption richtext-hint">
+          {hint}
+        </p>
+      )}
+      <div className="richtext-bar" role="toolbar" aria-label={label}>
+        {markdown && labels.heading && (
+          <RichTextButton
+            onClick={toggleHeading}
+            title={labels.heading}
+            disabled={disabled}
+          >
+            <Heading2 size={14} aria-hidden="true" />
+          </RichTextButton>
+        )}
+        <RichTextButton
+          onClick={() => apply("bold")}
+          title={labels.bold}
+          disabled={disabled}
+        >
+          <Bold size={14} aria-hidden="true" />
+        </RichTextButton>
+        <RichTextButton
+          onClick={() => apply("italic")}
+          title={labels.italic}
+          disabled={disabled}
+        >
+          <Italic size={14} aria-hidden="true" />
+        </RichTextButton>
+        <RichTextButton
+          onClick={() => apply("insertUnorderedList")}
+          title={labels.bulletList}
+          disabled={disabled}
+        >
+          <List size={14} aria-hidden="true" />
+        </RichTextButton>
+        <RichTextButton
+          onClick={() => apply("insertOrderedList")}
+          title={labels.numberList}
+          disabled={disabled}
+        >
+          <ListOrdered size={14} aria-hidden="true" />
+        </RichTextButton>
+        <RichTextButton
+          onClick={addLink}
+          title={labels.link}
+          disabled={disabled}
+        >
+          <Link2 size={14} aria-hidden="true" />
+        </RichTextButton>
+      </div>
+      {actions}
+    </div>
+  );
   return (
     <div
       className={`richtext${grow ? " is-growing" : ""}${disabled ? " is-disabled" : ""}`}
@@ -278,60 +342,7 @@ export function RichText({
 
           The buttons keep their names for a screen reader and their tooltips
           for a pointer: quieter is about ink, never about who can use it. */}
-      <div className="richtext-foot">
-        {hint && (
-          <p id={hintId} className="t-caption richtext-hint">
-            {hint}
-          </p>
-        )}
-        <div className="richtext-bar" role="toolbar" aria-label={label}>
-          {markdown && labels.heading && (
-            <RichTextButton
-              onClick={toggleHeading}
-              title={labels.heading}
-              disabled={disabled}
-            >
-              <Heading2 size={14} aria-hidden="true" />
-            </RichTextButton>
-          )}
-          <RichTextButton
-            onClick={() => apply("bold")}
-            title={labels.bold}
-            disabled={disabled}
-          >
-            <Bold size={14} aria-hidden="true" />
-          </RichTextButton>
-          <RichTextButton
-            onClick={() => apply("italic")}
-            title={labels.italic}
-            disabled={disabled}
-          >
-            <Italic size={14} aria-hidden="true" />
-          </RichTextButton>
-          <RichTextButton
-            onClick={() => apply("insertUnorderedList")}
-            title={labels.bulletList}
-            disabled={disabled}
-          >
-            <List size={14} aria-hidden="true" />
-          </RichTextButton>
-          <RichTextButton
-            onClick={() => apply("insertOrderedList")}
-            title={labels.numberList}
-            disabled={disabled}
-          >
-            <ListOrdered size={14} aria-hidden="true" />
-          </RichTextButton>
-          <RichTextButton
-            onClick={addLink}
-            title={labels.link}
-            disabled={disabled}
-          >
-            <Link2 size={14} aria-hidden="true" />
-          </RichTextButton>
-        </div>
-        {actions}
-      </div>
+      {footIn === undefined ? foot : footIn && createPortal(foot, footIn)}
     </div>
   );
 }

@@ -250,6 +250,8 @@ export function ComposeWindow({
   );
   // Whether the moment picker is up, apart from whether a moment is chosen.
   const [pickingMoment, setPickingMoment] = useState(false);
+  // The foot's place for the editor's marks, so they sit beside Send.
+  const [markRow, setMarkRow] = useState<HTMLDivElement | null>(null);
   const offer = useRecipientOffer({
     open,
     isChannelReply,
@@ -437,6 +439,7 @@ export function ComposeWindow({
                 carriageBlocks={carriageBlocks}
                 flagged={send.flagged}
                 voice={voice}
+                marksIn={markRow}
                 attach={
                   <AttachAction
                     key={fileTarget}
@@ -478,6 +481,7 @@ export function ComposeWindow({
             sendAt={fields.sendAt}
             savedDraft={savedDraft}
             busy={busy}
+            marksRef={setMarkRow}
           />
         </ComposeFrame>
       )}

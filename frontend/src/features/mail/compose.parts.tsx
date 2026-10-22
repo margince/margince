@@ -114,6 +114,7 @@ export function ComposeFoot({
   sendAt,
   savedDraft,
   busy,
+  marksRef,
 }: Readonly<{
   confirmLabel: string;
   send: ComposeSend;
@@ -126,6 +127,8 @@ export function ComposeFoot({
   savedDraft: ReturnType<typeof useSavedDraft>;
   /** A send or a rejection is in flight. */
   busy: boolean;
+  /** The place the body's formatting marks draw, beside Send. */
+  marksRef: (node: HTMLDivElement | null) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -135,6 +138,19 @@ export function ComposeFoot({
     <div className="compose-foot">
       {error && <ErrorLine>{error}</ErrorLine>}
       <div className="compose-foot-row">
+        <span className="actions-split">
+          <Button
+            variant="primary"
+            onClick={send.confirm}
+            pending={send.send.isPending}
+            disabled={held}
+          >
+            {confirmLabel}
+          </Button>
+          {!isChannelReply && <ScheduleMenu onOpen={onPickMoment} />}
+        </span>
+        {!isChannelReply && <SendMark {...send.permission} />}
+        <div className="compose-foot-marks" ref={marksRef} />
         <span className="t-caption compose-foot-status" role="status">
           {scheduled
             ? t("compose.willGoOut", {
@@ -151,18 +167,6 @@ export function ComposeFoot({
             pending={savedDraft.removing}
           />
         )}
-        {!isChannelReply && <SendMark {...send.permission} />}
-        <span className="actions-split">
-          <Button
-            variant="primary"
-            onClick={send.confirm}
-            pending={send.send.isPending}
-            disabled={held}
-          >
-            {confirmLabel}
-          </Button>
-          {!isChannelReply && <ScheduleMenu onOpen={onPickMoment} />}
-        </span>
       </div>
     </div>
   );
@@ -221,6 +225,7 @@ export function ComposeBody({
   carriageBlocks,
   flagged,
   voice,
+  marksIn,
   attach,
 }: Readonly<{
   bodyId: string;
@@ -235,6 +240,8 @@ export function ComposeBody({
   carriageBlocks: readonly CarriageViolation[];
   flagged: ReadonlySet<MissingField>;
   voice: VoiceDraft;
+  /** Where the editor's marks draw, in the foot; null until it mounts. */
+  marksIn: Element | null;
   /** The paperclip, among the editor's own marks. */
   attach: ReactNode;
 }>) {
@@ -264,6 +271,7 @@ export function ComposeBody({
         grow
         disabled={frozen}
         actions={attach}
+        footIn={marksIn}
       />
       <FieldNeed show={flagged.has("body")} need={t("compose.missingBody")} />
       {mail && <SignOffPreview body={fields.body} subject={fields.subject} />}

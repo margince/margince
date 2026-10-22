@@ -92,8 +92,8 @@ A channel reply, such as Telegram, drops the subject and Cc, because the channel
 has neither.
 
 ### How do I attach a file to an email?
-To attach a file to an email in Margince, press **Attach** in the editor's toolbar. Pick a file under **Attach from this record**, or choose **Upload file**.
-1. In the composer, press **Attach** in the editor's toolbar, beside the text formatting.
+To attach a file to an email in Margince, press **Attach** beside the text formatting, next to **Send**. Pick a file under **Attach from this record**, or choose **Upload file**.
+1. In the composer, press **Attach** beside the text formatting, next to **Send**.
 2. Pick a file under **Attach from this record**, or use **Upload file** ("Drop a file here, or choose one"). Press a file again to take it off.
 3. The file shows under the text; take it out with its **Remove** button.
 
