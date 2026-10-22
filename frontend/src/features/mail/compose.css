@@ -27,17 +27,44 @@
 .compose-fields > * {
   flex-shrink: 0;
 }
-.compose-fields > .richtext {
+
+/* The composer window's scrolling sheet: the envelope rows and strips run edge
+   to edge and sit flush on one another; what follows keeps the margin. */
+.compose-sheet {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-block-size: 0;
+  overflow-y: auto;
+  padding: 0 var(--space-4) var(--space-3);
+}
+.compose-sheet > * {
+  flex-shrink: 0;
+}
+.compose-sheet > .compose-address-field,
+.compose-sheet > .compose-subject,
+.compose-sheet > .compose-strip {
+  margin-inline: calc(var(--space-4) * -1);
+  margin-block-end: calc(var(--space-2) * -1);
+}
+.compose-sheet > .compose-aiband {
+  margin-block-start: var(--space-2);
+}
+.compose-sheet > .richtext {
   flex: 1 0 auto;
   /* A floor the fields above cannot squeeze the writing surface below. */
   min-block-size: 10rem;
 }
 
-/* The subject and the project whose tag it carries, on one line. */
+/* The subject and the project whose tag it carries, on one ruled line. The
+   subject is a bare line of text, named by its placeholder. */
 .compose-subject {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--borderSubtle);
 }
 .compose-subject > :first-child {
   flex: 1;
@@ -45,7 +72,13 @@
 }
 .compose-subject > :last-child:not(:first-child) {
   flex: none;
-  inline-size: 12rem;
+  inline-size: 11.875rem;
+}
+.compose-subject-field .input {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  font-weight: var(--fontWeightMedium);
 }
 
 .compose-band-body {
@@ -338,6 +371,9 @@
   border: 0;
   border-radius: 0;
   font: var(--fontBodySmall);
+}
+.compose-strip-ai {
+  background: var(--aiLight);
 }
 .compose-blockers .callout-warning,
 .compose-strip-warning {

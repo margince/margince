@@ -5888,11 +5888,8 @@ export const de = {
   "compose.transport": "Senden über",
   "compose.transportEmail": "E-Mail",
   "compose.recipientHint": "Name oder Adresse",
-  "compose.subjectHint": "Thema der E-Mail",
   "compose.bodyPlaceholder": "Nachrichtentext",
   "compose.bcc": "Bcc",
-  "compose.bccHint":
-    "Andere Empfangende sehen diese Adressen nicht und auch nicht, dass jemand in Kopie gesetzt wurde.",
   "compose.threadGone":
     "Stattdessen wurde eine neue E-Mail geöffnet, da dieser Thread nicht mehr beantwortet werden kann. Prüfe die Empfangsadresse vor dem Senden.",
   "compose.colleagueMailbox_one":

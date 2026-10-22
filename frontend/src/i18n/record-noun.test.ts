@@ -442,7 +442,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "compose.audienceParticipantsHint",
     "compose.audienceSelected",
     "compose.audienceSelectedHint",
-    "compose.bccHint",
     "compose.consentBlocked",
     "compose.emptyRecipients",
     "compose.multiRecipientWarning",

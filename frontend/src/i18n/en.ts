@@ -5923,11 +5923,8 @@ export const en = {
   "compose.transport": "Send via",
   "compose.transportEmail": "Email",
   "compose.recipientHint": "Name or address",
-  "compose.subjectHint": "Topic of the email",
   "compose.bodyPlaceholder": "Message text",
   "compose.bcc": "Bcc",
-  "compose.bccHint":
-    "Other recipients cannot see these addresses or that anyone else was copied.",
   "compose.threadGone":
     "That thread can no longer be answered, so a new email was opened instead. Check the recipient before sending.",
   "compose.colleagueMailbox_one":

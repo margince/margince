@@ -227,14 +227,7 @@ export function AddressBlock({
               />
             )}
           </Field>
-          {/* What "blind" MEANS, beside the field that does it. A rep who reads
-              Bcc as "a quieter Cc" has told somebody about a conversation the
-              named recipients believe is between them. */}
-          <Field
-            className="compose-address-field"
-            label={t("compose.bcc")}
-            hint={t("compose.bccHint")}
-          >
+          <Field className="compose-address-field" label={t("compose.bcc")}>
             {(control) => (
               <TokenInput
                 {...control}
@@ -290,14 +283,15 @@ export function SubjectRow({
   return (
     <div className="compose-subject">
       <Field
-        className="compose-address-field"
+        className="compose-subject-field"
         label={t("compose.subject")}
+        labelHidden
         error={invalid ? need : undefined}
       >
         {(control) => (
           <TextInput
             {...control}
-            placeholder={t("compose.subjectHint")}
+            placeholder={t("compose.subject")}
             value={subject}
             disabled={disabled}
             onChange={(event) => onChange(event.target.value)}

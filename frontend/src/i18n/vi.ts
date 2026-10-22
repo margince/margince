@@ -5751,11 +5751,8 @@ export const vi = {
   "compose.transport": "Gửi qua",
   "compose.transportEmail": "Email",
   "compose.recipientHint": "Tên hoặc địa chỉ",
-  "compose.subjectHint": "Chủ đề email",
   "compose.bodyPlaceholder": "Nội dung tin nhắn",
   "compose.bcc": "Bcc",
-  "compose.bccHint":
-    "Người nhận khác không thấy các địa chỉ này, cũng không biết có ai khác được gửi bản sao.",
   "compose.threadGone":
     "Không thể trả lời chuỗi thư đó nữa, nên đã mở email mới thay thế. Kiểm tra người nhận trước khi gửi.",
   "compose.colleagueMailbox_one":

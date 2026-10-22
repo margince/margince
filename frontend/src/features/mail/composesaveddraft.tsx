@@ -483,17 +483,18 @@ export function SavedDraftNotices({ draft }: Readonly<{ draft: SavedDraft }>) {
   // them, so they are read before they are sent.
   const byAgent = draft.held?.agent_drafted === true;
   return (
-    <Callout
-      kind="standing"
-      tone={byAgent ? "ai" : "info"}
-      title={t(
-        byAgent ? "compose.savedDraftByAgent" : "compose.savedDraftRestored",
-      )}
-      actions={
-        <Button onClick={draft.remove} pending={draft.removing}>
-          {t("compose.savedDraftRemove")}
-        </Button>
-      }
-    />
+    <div
+      className={byAgent ? "compose-strip compose-strip-ai" : "compose-strip"}
+      role="status"
+    >
+      <p className="compose-strip-text">
+        {t(
+          byAgent ? "compose.savedDraftByAgent" : "compose.savedDraftRestored",
+        )}
+      </p>
+      <Button variant="link" onClick={draft.remove} pending={draft.removing}>
+        {t("compose.savedDraftRemove")}
+      </Button>
+    </div>
   );
 }

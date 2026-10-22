@@ -402,7 +402,7 @@ export function ComposeWindow({
             />
           )}
           <div ref={send.fieldsRef} className="compose-window">
-            <div className="compose-fields">
+            <div className="compose-sheet">
               <ComposeHead
                 fields={fields}
                 savedDraft={savedDraft}
