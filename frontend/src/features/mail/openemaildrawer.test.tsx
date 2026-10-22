@@ -8,6 +8,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { messageText } from "../../design-system/richtext-testing";
+import { viewerZone } from "../../format/timezone";
 import {
   activity202,
   jsonResponse,
@@ -91,7 +92,13 @@ function drawer() {
         direction: "inbound",
       }),
   });
-  render(<OpenEmailDrawer activityId={MESSAGE} zone="UTC" onClose={vi.fn()} />);
+  render(
+    <OpenEmailDrawer
+      activityId={MESSAGE}
+      zone={viewerZone()}
+      onClose={vi.fn()}
+    />,
+  );
 }
 
 describe("the email drawer's verbs", () => {

@@ -116,8 +116,8 @@ export function threadOrder(
   const others = (presentation.thread?.members ?? []).filter(
     (member) => member.activity_id !== presentation.id,
   );
-  return [...others, presentation.summary].sort((a, b) =>
-    a.occurred_at.localeCompare(b.occurred_at),
+  return [...others, presentation.summary].sort(
+    (a, b) => Date.parse(a.occurred_at) - Date.parse(b.occurred_at),
   );
 }
 
