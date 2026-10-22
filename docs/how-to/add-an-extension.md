@@ -637,12 +637,14 @@ export function VisitsPanel({ record }: ExtensionPanelProps) {
 
 Draw it as a `Panel` with a `PanelBody`, both from `@margince/frontend/design-system`, as the page's own
 panels are. A titled `Card` in the page's column would be a second pane, and no gate reads unit code to
-catch it. Return `null` when there is nothing to say. For a verb a reader knows from its glyph, such as
-copy beside a link, use `IconAction`: its one `label` is the name a screen reader hears and the tip a
+catch it. Return `null` when there is nothing to say. Use `IconAction` for a verb a reader knows from its
+icon, such as copy beside a link. Its one `label` is both the name a screen reader reads out and the tip a
 pointer shows. A verb whose result the reader must read first keeps a worded `Button`.
 
-The page draws every unit's panel for a slot in one group, under an **Extensions** label, so a reader can
-tell an installed add-on from the page's own panels. It holds each panel apart. A panel that fails to draw
+The page draws every unit's panel for a slot in one group, under an **Extensions** label. So a reader can
+tell an installed add-on from the page's own panels.
+
+The page holds each panel apart. A panel that fails to draw
 shows a retry card in its place. The page and the other units' panels go on. Several units fill one slot in
 the order of the composed registry. A slot that no enabled unit fills draws nothing, the label included, so a
 page looks as it does without the tier.
@@ -723,7 +725,7 @@ In all other places `Deals().Get`, `Deals().Responsible` and
 edge, a finance source's read and a transport's send. There the answer, or an error that quotes it, could reach a user whose
 own rights hide it.
 
-`Authority().CanRead` and `CanWrite` also answer on a route, but only about the signed-in person. See
+`Authority().CanRead` and `CanWrite` also answer on a route, but only about the signed-in user. See
 [Ask what a colleague may do](#ask-what-a-colleague-may-do-canread-and-canwrite).
 
 The refusal guards the call, not your own tables. If you save what a read returned and show it later, ask
@@ -759,11 +761,11 @@ emails, err := rt.Directory().Emails(ctx, ids)           // active human members
   `extension.MaxResponsible` colleagues.
 - **`Emails` takes at most `extension.MaxResponsible` users**, so the list `Responsible` gave always fits.
 
-### Ask what a colleague may do: CanRead and CanWrite
+### Ask what a colleague may do: `CanRead` and `CanWrite`
 
 Your unit stores and sends facts about core deals: a copy of a card, a channel, a message. Core cannot see
-who reads those later. So before your unit shows a person anything about a deal, or acts on a deal for them,
-it asks core what that person may do, under their own role:
+who reads those later. So your unit asks core what a user may do, under their own role. It asks before it
+shows them anything about a deal, and before it acts on a deal for them:
 
 ```go
 shown, err := rt.Authority().CanRead(ctx, user, deal, []string{"name", "amount_minor"})
@@ -771,10 +773,10 @@ writable, err := rt.Authority().CanWrite(ctx, user, deal)
 ```
 
 - **`CanRead(user, record, fields)`**: may `user` open the deal and read every field in `fields`? A field
-  mask that hides one of them answers no. So does a mask that lifts only for someone who may change the deal.
-- **`CanWrite(user, record)`**: could `user` change the deal now? The deal is live, they hold a full seat,
-  their role holds `read` and `update` on deals, and they may change this deal, not only open it. A deal
-  shared with them read-only answers no. It takes no fields.
+  mask that hides one of them answers no. A mask counts even when users who may change the deal can see past it.
+- **`CanWrite(user, record)`**: could `user` change the deal now? The deal is live, and they hold a full
+  seat. Their role holds `read` and `update` on deals, and they may change this deal, not only open it. A
+  deal shared with them read-only answers no. It takes no fields.
 
 Name the fields the way the contract's `Deal` does. Each `DealSummary` field you show maps to one:
 
@@ -795,34 +797,34 @@ Both need `extension.SystemReadAuthority` in `SystemReads`, and both answer only
 | You want to | Where your code runs | Ask | On no |
 |---|---|---|---|
 | Invite a colleague to, or send them, what you read about a deal | job tick or bus delivery | `CanRead(colleague, deal, the fields you send)` | Leave them out. |
-| Serve the signed-in person something your unit stored about a deal | route | `CanRead(caller, deal, the fields you serve)` | Answer `ErrNotFound`, so no answer says which deals exist. |
-| Let the signed-in person act on a deal (create, link, post) | route | `CanRead` as above, then `CanWrite(caller, deal)` | `CanRead` no: `ErrNotFound`. `CanWrite` no: `ErrForbidden`. |
+| Serve the signed-in user something your unit stored about a deal | route | `CanRead(caller, deal, the fields you serve)` | Answer `ErrNotFound`, so no answer says which deals exist. |
+| Let the signed-in user act on a deal (create, link, send) | route | `CanRead` as above, then `CanWrite(caller, deal)` | `CanRead` no: `ErrNotFound`. `CanWrite` no: `ErrForbidden`. |
 | Show or hide an edit control | the route that serves the panel's data | `CanWrite(caller, deal)`, sent as a `writable` field in that answer | The panel draws no control. |
-| Let the signed-in person add a colleague | route | Nothing about the colleague: store the request | Ask `CanRead(colleague, …)` on the next job tick, and leave them out on no. |
+| Let the signed-in user add a colleague | route | Nothing about the colleague: store the request | Ask `CanRead(colleague, …)` on the next job tick, and leave them out on no. |
 
 **Ask about the whole list, then cut it.** Say your provider takes some number of members at most. Ask
 `CanRead` about each colleague in order, and keep the first ones it lets in. If you cut the list first,
 colleagues it refuses can take the place of one it would let in.
 
-**Name every field the person will see.** A route that acts asks
-`CanRead` with every field your unit will later show the person, not only the name. Otherwise a person whose
-role hides the amount could have your unit send it to them.
+**Name every field the user will see.** A route that acts asks
+`CanRead` with every field your unit will later show the user, not only the name. Otherwise a user whose
+role hides the value could have your unit send it to them.
 
 **Whom you may ask about.** It depends on where your code runs.
 
 - **On a job tick or a bus delivery**, ask about any colleague. No one is signed in, so nobody's rights limit
   the question.
-- **On an attended call** (a route, a tool call), ask only about the signed-in human: pass
-  `rt.Caller().UserID`. A question about anyone else answers `extension.ErrAttendedRead`. So does any call
-  an agent or a connector makes, even about its own human, because an agent's scopes may be narrower than
-  its human's rights. Check `Caller().Type == extension.CallerHuman` and `!Caller().IsAgent` first, and
-  refuse otherwise with `ErrForbidden`. Core turns `ErrAttendedRead` into no 4xx, so an agent would see a
-  server fault.
+- **On a call a user makes** (a route, a tool call), ask only about the signed-in human: pass
+  `rt.Caller().UserID`. A question about another user answers `extension.ErrAttendedRead`. So does any call
+  an agent or a connector makes, even about its own human. An agent's scopes may be narrower than its
+  human's rights. Check `Caller().Type == extension.CallerHuman` and `!Caller().IsAgent` first, and
+  refuse otherwise with `ErrForbidden`. Core maps `ErrAttendedRead` to no client error, so an agent would see a
+  server error.
 
 ```go
 caller := rt.Caller()
 if caller.Type != extension.CallerHuman || caller.IsAgent {
-	return nil, fmt.Errorf("%w: a person opens this", extension.ErrForbidden)
+	return nil, fmt.Errorf("%w: only a signed-in user opens this", extension.ErrForbidden)
 }
 user := extension.UserID(caller.UserID)
 deal := extension.EntityRef{Type: "deal", ID: args.DealID}
@@ -839,17 +841,17 @@ if !shown {
 
 | Case | `CanRead` | `CanWrite` |
 |---|---|---|
-| A live deal the person may open, no field hidden | true | true on a full seat whose role holds `update` on deals, unless the deal was shared with them read-only |
+| A live deal the user may open, with no named field under a mask | true | true on a full seat whose role holds `update` on deals, unless the deal was shared with them read-only |
 | The same, on a read seat | true | false, whatever the role holds |
 | An archived deal | true | false: an archived deal takes no new work |
-| A deal no row holds, or one the person may not open | false | false |
+| A deal no row holds, or one the user may not open | false | false |
 | A field mask hides a named field | false | (takes no fields) |
 | An agent seat, or a user who cannot sign in | false | false |
-| Another record type, an unknown field, or an id that is no UUID (checked before the attended rule) | `ErrInvalid` | `ErrInvalid` |
-| An attended call about someone else, or from an agent or a connector | `ErrAttendedRead` | `ErrAttendedRead` |
+| Another record type, an unknown field, or an id that is no UUID (checked first) | `ErrInvalid` | `ErrInvalid` |
+| A user's call about another user, or a call from an agent or a connector | `ErrAttendedRead` | `ErrAttendedRead` |
 | `authority` not in `SystemReads` | `ErrUndeclaredRead` | `ErrUndeclaredRead` |
 
-A yes is the core's answer at that moment. Ask again each time: a role, a mask or the deal can change between
+A true answer holds only at that moment. Ask again each time: a role, a mask or the deal can change between
 two calls.
 
 ## Capture records from your own provider
