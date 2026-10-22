@@ -247,8 +247,8 @@ func applyRoleObjectGrant(ctx context.Context, tx pgx.Tx, actor Identity, roleKe
 	// in the images, which name only the edited key — a full-document image
 	// would bury a one-verb change under thirty unchanged ones.
 	_, err = storekit.Audit(ctx, tx, "update", roleEntity, roleID,
-		map[string]any{"objects": map[string]storedGrant{object: before[object]}},
-		map[string]any{"objects": map[string]storedGrant{object: grant}})
+		roleObjectsImage(map[string]storedGrant{object: before[object]}),
+		roleObjectsImage(map[string]storedGrant{object: grant}))
 	if err != nil {
 		return roleRow{}, err
 	}

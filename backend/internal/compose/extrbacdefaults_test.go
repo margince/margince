@@ -11,9 +11,9 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-func verbWithDefaults(unit, tool, object string, defaults ...extension.RbacDefault) extension.Verb {
-	v := unitVerb(unit, tool, extension.TierAutoExecute, extension.ScopeRead)
-	v.RbacObject = object
+func verbWithDefaults(tool string, defaults ...extension.RbacDefault) extension.Verb {
+	v := unitVerb("crm-demo", tool, extension.TierAutoExecute, extension.ScopeRead)
+	v.RbacObject = "ext_crm_demo_widget"
 	v.RbacAction = extension.RbacRead
 	v.RbacDefaults = defaults
 	return v
@@ -27,9 +27,9 @@ var widgetDefaults = []extension.RbacDefault{
 // The defaults a boot applies are the ones the composed verbs declare, one entry
 // per (object, role), however many operations share the object.
 func TestExtensionRbacDefaultsComeFromTheDeclaredOperations(t *testing.T) {
-	first := verbWithDefaults("crm-demo", "demo_sync", "ext_crm_demo_widget", widgetDefaults...)
-	second := verbWithDefaults("crm-demo", "demo_read", "ext_crm_demo_widget", widgetDefaults...)
-	bare := verbWithDefaults("crm-demo", "demo_peek", "ext_crm_demo_widget")
+	first := verbWithDefaults("demo_sync", widgetDefaults...)
+	second := verbWithDefaults("demo_read", widgetDefaults...)
+	bare := verbWithDefaults("demo_peek")
 	ungated := unitVerb("yogi", "yogi_quote", extension.TierAutoExecute, extension.ScopeRead)
 
 	got, err := extensionRbacDefaults([]extension.Verb{first, second, bare, ungated})
@@ -56,8 +56,8 @@ func TestExtensionRbacDefaultsComeFromTheDeclaredOperations(t *testing.T) {
 // Two operations on one object may not state different defaults. The first one
 // read would win, and the contract would say two things.
 func TestTwoOperationsStatingDifferentDefaultsForOneObjectAreRefused(t *testing.T) {
-	first := verbWithDefaults("crm-demo", "demo_sync", "ext_crm_demo_widget", widgetDefaults...)
-	second := verbWithDefaults("crm-demo", "demo_read", "ext_crm_demo_widget",
+	first := verbWithDefaults("demo_sync", widgetDefaults...)
+	second := verbWithDefaults("demo_read",
 		extension.RbacDefault{Role: "admin", Actions: []extension.RbacAction{extension.RbacRead}})
 
 	_, err := extensionRbacDefaults([]extension.Verb{first, second})
@@ -74,7 +74,7 @@ func TestTwoOperationsStatingDifferentDefaultsForOneObjectAreRefused(t *testing.
 // The role key is the one fact the contract reader cannot check, because the
 // role set is identity's. The boot's preflight is where it is refused.
 func TestADefaultNamingARoleThatIsNotASystemRoleIsRefusedAtBoot(t *testing.T) {
-	v := verbWithDefaults("crm-demo", "demo_sync", "ext_crm_demo_widget",
+	v := verbWithDefaults("demo_sync",
 		extension.RbacDefault{Role: "field_partner", Actions: []extension.RbacAction{extension.RbacRead}})
 	_, err := extensionRbacDefaults([]extension.Verb{v})
 	if err == nil || !strings.Contains(err.Error(), "not a system role") {

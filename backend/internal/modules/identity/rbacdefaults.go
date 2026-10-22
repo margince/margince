@@ -52,14 +52,14 @@ func SystemRoleKeys() []string {
 func (d RbacDefault) grant() (storedGrant, error) {
 	var g storedGrant
 	for _, a := range d.Actions {
-		switch a {
-		case "create":
+		switch principal.Action(a) {
+		case principal.ActionCreate:
 			g.Create = true
-		case "read":
+		case principal.ActionRead:
 			g.Read = true
-		case "update":
+		case principal.ActionUpdate:
 			g.Update = true
-		case "delete":
+		case principal.ActionDelete:
 			g.Delete = true
 		default:
 			return storedGrant{}, fmt.Errorf("identity: default grant for role %q on %q names action %q, which is not one of create, read, update, delete", d.Role, d.Object, a)
@@ -161,8 +161,7 @@ func (s *Service) FillRbacDefaults(ctx context.Context) (int, error) {
 				return err
 			}
 			if _, err := storekit.Audit(ctx, tx, "update", roleEntity, roleID,
-				map[string]any{"objects": map[string]storedGrant{}},
-				map[string]any{"objects": map[string]storedGrant{string(d.Object): g}}); err != nil {
+				roleObjectsImage(nil), roleObjectsImage(map[string]storedGrant{string(d.Object): g})); err != nil {
 				return err
 			}
 			filled++
@@ -170,6 +169,15 @@ func (s *Service) FillRbacDefaults(ctx context.Context) (int, error) {
 		return nil
 	})
 	return filled, err
+}
+
+// roleObjectsImage is the audit image of the grants a fill changed. The empty
+// before-image is a non-nil map, because an update must carry one.
+func roleObjectsImage(grants map[string]storedGrant) map[string]any {
+	if grants == nil {
+		grants = map[string]storedGrant{}
+	}
+	return map[string]any{"objects": grants}
 }
 
 // fillRoleObjectDefault writes the default into the role's document when it has
