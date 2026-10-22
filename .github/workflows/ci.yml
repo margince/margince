@@ -231,7 +231,6 @@ jobs:
               - 'pnpm-lock.yaml'
               - 'renovate.json'
               - 'README.md'
-              - 'CHANGELOG.md'
               - 'CLA.md'
               - 'LICENSING.md'
               - 'CODE_OF_CONDUCT.md'

@@ -212,7 +212,6 @@ var retired = gatekit.Waive(map[string]string{
 	"backend/migrations/contactretentionscope_integration_test.go": "it seeds the retention rows " +
 		"an installation stored under the retired name, which is what the migration it replays exists " +
 		"to carry over",
-	"CHANGELOG.md": "entries say what they said when they were written",
 	"LICENSE": "the licence defines a Seat as a natural person, a legal term the licensor " +
 		"chose, and a licence is not restyled by a vocabulary rule",
 	"CODE_OF_CONDUCT.md": "the adopted Contributor Covenant, held verbatim by " +
