@@ -160,8 +160,8 @@ func destinationRecord(records datasource.SystemOfRecordProvider, entityType str
 }
 
 // destinationSubject is the one spelling of a batch card's subject: the
-// destination's type and id, its version as read, and the sentence, which names
-// the destination by its label.
+// destination's type and id, its version as read, and the sentence. The
+// sentence names the destination by its label.
 func destinationSubject(ctx context.Context, destination *anchoredRecord, entityType string, entityID ids.UUID, summary func(label string) string) (StageInfo, error) {
 	rec, err := destination.row(ctx, entityID)
 	if err != nil {

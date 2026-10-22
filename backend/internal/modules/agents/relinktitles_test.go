@@ -26,7 +26,7 @@ func TestABatchRelinkTitleNamesTheDestination(t *testing.T) {
 }
 
 // The single form binds to the activity, so it names the activity and reads
-// nothing else: its decider may not be one who can see the destination.
+// nothing else. Its decider may not be able to see the destination.
 func TestASingleRelinkTitleNamesTheActivityAndReadsNoDestination(t *testing.T) {
 	activity, project := ids.NewV7(), ids.NewV7()
 	provider := oneRecord(datasource.EntityActivity, activity, `{"kind":"email","subject":"Kickoff Migration"}`, 3)

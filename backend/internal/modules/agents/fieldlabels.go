@@ -7,9 +7,8 @@ package agents
 //
 // A withheld field reaches a human in the approval card, its email and the
 // record's history panel. The history panel reads the frontend's
-// history.field.* catalog, and backend/gates/approvalfieldlabels_test.go holds
-// every label here to that catalog wherever it names the same field, so the
-// three surfaces call one field by one name.
+// history.field.* catalog. backend/gates/approvalfieldlabels_test.go holds each
+// label here to that catalog where both name a field, so one field has one name.
 
 import (
 	"maps"
