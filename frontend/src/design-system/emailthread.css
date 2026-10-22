@@ -1,0 +1,92 @@
+/* EmailThread — a conversation in the email drawer, oldest message first. */
+
+.emailthread {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.emailthread__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* An open message: a card, so its edges show where one message ends. */
+.emailthread__message {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  background: var(--bgElevated);
+}
+.emailthread__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* The sender's line folds the message back to its row. */
+.emailthread__fold {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.emailthread__fold:focus-visible,
+.emailthread__envelope:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+.emailthread__who {
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.emailthread__name {
+  font-weight: var(--fontWeightBold);
+}
+
+/* "to …" under the sender, which opens the envelope. */
+.emailthread__envelope {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+.emailthread__envelope > svg {
+  inline-size: 0.875rem;
+  block-size: 0.875rem;
+}
+
+.emailthread__notice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--textSecondary);
+}
+.emailthread__notice > svg {
+  flex: none;
+  inline-size: 1rem;
+  block-size: 1rem;
+  color: var(--success);
+}

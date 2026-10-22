@@ -1,21 +1,16 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Answering the message that is open, from the drawer that is showing it.
-//
-// Reply lived only on the timeline row. A reader who opened a mail to read it
-// whole — from a record, from the worklist, from a search hit — had to put it
-// away and find the row again to answer it, and on the surfaces whose rows are
-// citations rather than timeline entries there was no row to find: the message
-// could be read in the product and not answered in it.
-//
-// It is `ChannelReplyAction` and not a second reply. That component exists so
-// the surfaces offering this verb cannot come to offer different things — the
-// same composer, anchored to the same activity, filing the same way — and a
-// drawer that assembled its own would be exactly the divergence it prevents.
+// What the email drawer offers to do with the thread it shows: answer it,
+// pass it on, or file it under another record. Each opens the app's own
+// composer or relink dialog, so the drawer offers what the timeline offers.
 
+import { Forward, Reply } from "lucide-react";
 import type { components } from "../../api/schema";
-import { ChannelReplyAction, type RelinkKind } from "./compose";
+import { Button } from "../../design-system/atoms";
+import { OverflowMenu } from "../../design-system/overflowmenu";
+import { useT } from "../../i18n";
+import type { RelinkKind } from "./composerelink";
 
 type EmailPresentation = components["schemas"]["EmailPresentation"];
 type ActivityLink = components["schemas"]["ActivityLink"];
@@ -62,55 +57,47 @@ export function replyAnchor(
 }
 
 /**
- * The reply verb for the message the drawer is showing, or nothing when this
- * message cannot honestly offer one.
+ * The foot of the email drawer: Reply, Forward, and the rest behind More.
  *
- * `can_reply` is the SERVER's answer and the only thing consulted: a withheld
- * presentation carries false, which is what keeps the drawer from offering to
- * answer a message it is at the same time refusing to show.
- *
- * A message filed against nothing also offers none. The composer files the
- * send under the record it was anchored to, and there is no such record here —
- * a reply anchored to nothing would be a message the product sends and then
- * cannot show on any timeline.
+ * Reply follows the server's `can_reply`, so a withheld message offers none.
+ * Every verb needs a record to file under. A message filed against nothing
+ * offers none of them, since its send could show on no timeline.
  */
-export function EmailReplyAction({
+export function EmailDrawerActions({
   presentation,
-  onSent,
+  onReply,
+  onForward,
+  onRelink,
 }: Readonly<{
   presentation: EmailPresentation;
-  /**
-   * Told when the message actually went, for a host whose own list the send
-   * changes. `ComposeModal` refreshes the RECORD timelines it knows about, so
-   * a record page needs nothing here; a surface listing the UNANSWERED — the
-   * worklist's waiting lane — is not one of them, and without this its row
-   * goes on saying nobody has replied and goes on offering to reply again.
-   */
-  onSent?: () => void;
+  onReply: () => void;
+  onForward: () => void;
+  onRelink: () => void;
 }>) {
-  const anchor = presentation.can_reply
-    ? replyAnchor(presentation.links)
-    : null;
-  if (!anchor) {
+  const t = useT();
+  const anchor = replyAnchor(presentation.links);
+  if (!anchor || presentation.access.content_state === "withheld") {
     return null;
   }
   return (
-    <ChannelReplyAction
-      activityId={presentation.id}
-      // The drawer reads delivered correspondence and nothing else, so the
-      // reply is a mail. Reading the kind off the row would be reading a field
-      // whose only value this surface can ever meet is this one.
-      kind="email"
-      entityType={anchor.entity_type}
-      entityId={anchor.entity_id}
-      // Read off the anchor rather than searched for a second time: a contact
-      // leads the order above, so a message that names one has it AS its
-      // anchor. A second `find` here would be a second answer to the same
-      // question, free to disagree with the first the day the order changes.
-      contactId={
-        anchor.entity_type === "contact" ? anchor.entity_id : undefined
-      }
-      onSent={onSent}
-    />
+    <>
+      {presentation.can_reply && (
+        <Button variant="primary" onClick={onReply}>
+          <Reply aria-hidden="true" />
+          {t("compose.reply")}
+        </Button>
+      )}
+      <Button variant="ghost" onClick={onForward}>
+        <Forward aria-hidden="true" />
+        {t("email.forward")}
+      </Button>
+      {presentation.can_relink && (
+        <span className="emaildetail__more">
+          <OverflowMenu label={t("record.moreActions")}>
+            <Button onClick={onRelink}>{t("email.fileUnder")}</Button>
+          </OverflowMenu>
+        </span>
+      )}
+    </>
   );
 }

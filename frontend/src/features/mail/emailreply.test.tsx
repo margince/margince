@@ -11,13 +11,13 @@
 // offering to answer it in the same header.
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
-import { EmailReplyAction, replyAnchor } from "./emailreply";
+import { EmailDrawerActions, replyAnchor } from "./emailreply";
 
 type EmailPresentation = components["schemas"]["EmailPresentation"];
 type ActivityLink = components["schemas"]["ActivityLink"];
@@ -110,9 +110,20 @@ function reply() {
   return screen.queryByRole("button", { name: "Reply" });
 }
 
+function actions(over: Partial<EmailPresentation>) {
+  return (
+    <EmailDrawerActions
+      presentation={presentation(over)}
+      onReply={vi.fn()}
+      onForward={vi.fn()}
+      onRelink={vi.fn()}
+    />
+  );
+}
+
 describe("answering the message the drawer is showing", () => {
   it("offers the verb for a message this reader may answer", () => {
-    draw(<EmailReplyAction presentation={presentation({})} />);
+    draw(actions({}));
 
     expect(reply()).not.toBeNull();
   });
@@ -122,29 +133,57 @@ describe("answering the message the drawer is showing", () => {
     // the same header that refuses to show it claims access to words this
     // reader was just told are not theirs.
     draw(
-      <EmailReplyAction
-        presentation={presentation({
-          can_reply: false,
-          access: {
-            content_state: "withheld",
-            display_status: "withheld",
-            can_change: false,
-            change_mode: "none",
-          },
-        })}
-      />,
+      actions({
+        can_reply: false,
+        access: {
+          content_state: "withheld",
+          display_status: "withheld",
+          can_change: false,
+          change_mode: "none",
+        },
+      }),
     );
 
     expect(reply()).toBeNull();
+    expect(screen.queryByRole("button", { name: "Forward" })).toBeNull();
   });
 
   it("offers nothing for a message filed against no record", () => {
     // The composer files a send under the record it was anchored to. A reply
     // anchored to nothing is a message the product sends and can then show on
     // no timeline, so the verb is withheld rather than the send being made.
-    draw(<EmailReplyAction presentation={presentation({ links: [] })} />);
+    draw(actions({ links: [] }));
 
     expect(reply()).toBeNull();
+    expect(screen.queryByRole("button", { name: "Forward" })).toBeNull();
+  });
+
+  // Forward is a new message, so it needs no `can_reply`: a reader who may
+  // read a mail may pass it on.
+  it("offers Forward where Reply is not, and files elsewhere only on can_relink", () => {
+    const onRelink = vi.fn();
+    draw(
+      <EmailDrawerActions
+        presentation={presentation({ can_reply: false, can_relink: true })}
+        onReply={vi.fn()}
+        onForward={vi.fn()}
+        onRelink={onRelink}
+      />,
+    );
+
+    expect(reply()).toBeNull();
+    expect(screen.getByRole("button", { name: "Forward" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "More actions" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "File under another record…" }),
+    );
+    expect(onRelink).toHaveBeenCalledTimes(1);
+  });
+
+  it("hides More when the message may not be moved", () => {
+    draw(actions({ can_relink: false }));
+
+    expect(screen.queryByRole("button", { name: "More actions" })).toBeNull();
   });
 });
 

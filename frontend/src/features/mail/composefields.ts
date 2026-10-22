@@ -125,7 +125,11 @@ export function useComposeFields({
   // The plain part every gate reads, and the markup part beside it. Both
   // travel, because the wire is multipart/alternative.
   const [body, setBody] = useState(edit?.body ?? initialMessage?.body ?? "");
-  const [html, setHtml] = useState(edit?.html ?? "");
+  // A seeded message arrives as plain text, and the editor draws the markup.
+  const [html, setHtml] = useState(
+    () =>
+      edit?.html ?? (initialMessage ? paragraphsFrom(initialMessage.body) : ""),
+  );
   const [intent, setIntent] = useState(askedIntent ?? "");
   // Keyed on the caller's ask, so a second moment action replaces the reason
   // the first one seeded.

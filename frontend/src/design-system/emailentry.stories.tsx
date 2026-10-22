@@ -9,7 +9,7 @@ import {
   jsonResponse,
   StoryProviders,
 } from "../testing/story-utils";
-import { Card } from "./atoms";
+import { Button, Card } from "./atoms";
 import { EmailDetail } from "./emaildetail";
 import { EmailEntry } from "./emailentry";
 import { EmailReference } from "./emailreference";
@@ -162,8 +162,8 @@ export const Reference: StoryObj = {
 };
 
 /**
- * The drawer a row opens: the message whole, its recipients, and the sign-off
- * folded behind a control rather than dropped.
+ * The drawer a row opens: the thread oldest first. The opened message is
+ * whole, the earlier one folded to its row, and the verbs sit in the foot.
  */
 export const Detail: StoryObj = {
   render: () => {
@@ -185,6 +185,20 @@ export const Detail: StoryObj = {
             bcc_withheld: true,
             attachments: [],
             links: [],
+            thread: {
+              members: [
+                {
+                  ...BASE,
+                  activity_id: "22222222-2222-4222-8222-222222222222",
+                  occurred_at: "2026-08-28T15:40:00Z",
+                  direction: "outbound",
+                  subject: "Angebot Q4",
+                  preview: "Anbei das Angebot für das vierte Quartal.",
+                  move: "none",
+                },
+              ],
+              next_cursor: null,
+            },
             access: {
               content_state: "available",
               display_status: "team",
@@ -202,6 +216,12 @@ export const Detail: StoryObj = {
           activityId={BASE.activity_id}
           onClose={() => {}}
           formatWhen={() => "1 Sep 09:12"}
+          renderActions={() => (
+            <>
+              <Button variant="primary">Reply</Button>
+              <Button variant="ghost">Forward</Button>
+            </>
+          )}
         />
       </StoryProviders>
     );
