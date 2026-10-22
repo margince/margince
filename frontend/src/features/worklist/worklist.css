@@ -383,17 +383,17 @@
     color var(--dur-state) var(--ease-out);
 }
 
-/* The tile of the row in hand goes to the accent: it is the one control on
-   the row that opens the pane, and the pane is what the accent says is open.
-   Lit under the pointer a step before that, so a rank that can be pressed
-   answers the pointer where a bare digit would not. */
+/* The tile of the row in hand is filled in the primary ink: it is the one
+   control on the row that opens the pane. Lit in the accent under the pointer,
+   so a rank that can be pressed answers the pointer where a bare digit would
+   not. */
 .worklist-rank-select:hover .worklist-rank {
   background: var(--accentLight);
   color: var(--accentText);
 }
 .worklist-row-selected .worklist-rank {
-  background: var(--accent);
-  color: var(--textOnAccentControl);
+  background: var(--textPrimary);
+  color: var(--bgElevated);
 }
 
 /* The guardrail over the queue's own hiding rules. A diagnostic behind a

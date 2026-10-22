@@ -210,10 +210,11 @@ words as one array. The type, the story and the gate all read it: `BADGE_TONES` 
 
 Two colours are not states. `--accent` is the brand and the primary action. Think of a check mark, a
 "Connected", a done disc or a "Strong" reading in that colour. Each says *press me* about something
-that already happened, so those read `--success*`. A selected view tab, a pressed toggle, a current
-record tab or a current row says where the reader is, so it is neutral, like a pressed `FilterPills`
-pill. `selectedstate.test.ts` fails a selected, pressed or current state in any shipped sheet that
-takes its ground, ink, edge or bar from an `--accent*` token.
+that already happened, so those read `--success*`. 
+
+A selected view tab, a pressed button, the current record tab or the current row says where the
+reader is. So it is neutral, like a pressed `FilterPills` pill. `selectedstate.test.ts` fails such a
+state in any shipped sheet when its ground, ink, edge or bar comes from an `--accent*` token.
 
 `--ai` is provenance. A progress bar or a running step
 in that colour claims a model decided the figure. So work still running reads `--info*`: the ring
@@ -775,7 +776,7 @@ a comment or a string.
 | `design-system/stylesheetnamespace.test.ts` | One stylesheet per class prefix: a screen's prefix (`auth-`, `book-`, `offers-` …) declared in any sheet but its home, across every `.css` under `src/` and each extension's frontend layer. Comments are removed first |
 | `design-system/timelinerows.test.ts` | A rule that reaches the `li` of a `.timeline` list by anything but `>` right after `.timeline`, since that also reaches the `li` items deeper inside a row. A sibling (`+`, `~`) of such a row passes. It reads every `.css` under `src/` and each extension's frontend layer, and fails when its parsed selectors and a plain-text count disagree |
 | `design-system/actionrow.test.ts` | A container of two or more sibling buttons without `gap: var(--gapActions)`, from a class it names or its own inline style. It reads markup and stylesheets together, so it finds a row that names a class nothing defines |
-| `design-system/selectedstate.test.ts` | A selected, pressed or current state (`.on`, `.active`, `.is-selected`, `[aria-pressed="true"]`, `[aria-current]`, `[aria-selected="true"]`, outside a `:not()`) whose ground, ink, edge or shadow comes from an `--accent*` token, in every sheet the app ships. It fails when a marker stops matching any rule in the tree |
+| `design-system/selectedstate.test.ts` | A selected, pressed or current state (`.on`, `.active`, `.is-selected`, a class ending in `-selected`, `[aria-pressed="true"]`, `[aria-current]`, `[aria-selected="true"]`, outside a `:not()`) whose ground, ink, edge or shadow comes from an `--accent*` token, in every sheet the app ships. It fails when a marker stops matching any rule in the tree |
 | `design-system/tokens.test.ts` | A token whose value drifted from the design canon |
 | `design-system/type-tokens.test.ts` | The type half of the same sheet. The three weight tokens and the ten size shorthands must be declared with no condition (not inside a `@media`). Each weight and control token must have its expected value, with no second control height. No `--fontBody*`/`--fontHeading*` may spell a weight by value instead of reading `--fontWeight*`. It checks the file that `type-source.test.ts` lets through; both read `tokens.css` through `tokens-testing.ts` |
 | `design-system/corners.test.ts` | A `border-radius` that names a length instead of a step (it can be waived in the line, with a reason); a `--r-full` or `50%` corner without `corner-shape: round`; a second `corner-shape: squircle` outside `tokens.css`; a step that is not a multiple of four, or has no doubled twin in the `@supports` block |

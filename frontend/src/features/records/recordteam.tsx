@@ -15,7 +15,7 @@ import {
 import { RecordTeamAssign } from "./recordteamassign";
 
 // With nobody assigned, naming someone is the panel's one job, so the verb is
-// filled; once a row stands it is one outlined verb among the rows' own.
+// filled. Once a row stands, it is one outlined verb among the rows' own.
 function assignVariant(rows: readonly RecordAssignment[]): "primary" | "ghost" {
   return rows.length === 0 ? "primary" : "ghost";
 }

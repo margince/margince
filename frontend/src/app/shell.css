@@ -790,6 +790,7 @@
 .rail .navitem.active {
   background: var(--bgInset);
   color: var(--textPrimary);
+  font-weight: var(--fontWeightMedium);
 }
 /* One icon size in both states. Animating the glyph's box relayouts the whole
    sidebar every frame, and a resizing icon is the jitter — 18px reads correctly
@@ -1122,6 +1123,7 @@
 .sectionpickgroup a[aria-current="page"] {
   background: var(--bgInset);
   color: var(--textPrimary);
+  font-weight: var(--fontWeightMedium);
 }
 
 /* ===== ⌘K palette ===== */
@@ -1537,6 +1539,7 @@
      the closed bar shows no active tab at all on those routes. */
   .rail .railmore.active {
     color: var(--textPrimary);
+    font-weight: var(--fontWeightMedium);
     background: var(--bgInset);
     border-radius: var(--r-md);
   }

@@ -133,7 +133,6 @@
 }
 .select-option-check {
   flex: none;
-  color: var(--accentText);
 }
 /* The mark before a label — a colour swatch, a provider glyph — in the list and
    on the closed face alike. It never shrinks and never grows: a swatch that

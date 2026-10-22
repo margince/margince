@@ -11,12 +11,12 @@ import {
   rulesOf,
 } from "../../scripts/lib/css-rules";
 
-// A selected, pressed or current state says where the reader is, so it takes
-// the pressed filter pill's neutral pair (filterpills.css). The accent is the
-// brand and the primary action (README), and a state drawn in it reads as the
-// one control worth pressing. A control's VALUE (`:checked`, a switch's
-// `aria-checked`) and an open disclosure are not where the reader is, and are
-// left to the accent the platform paints them in.
+// A selected, pressed or current state says where the reader is, so it is
+// neutral like a pressed filter pill (filterpills.css). The accent is the brand
+// and the primary action (README). A state drawn in it reads as the one control
+// worth pressing. A control's value (`:checked`, a switch's `aria-checked`) is
+// not where the reader is, so it keeps the accent the platform paints it in.
+// So does a progress ladder's rung, which says where a record stands.
 
 const frontendRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..");
 
@@ -24,12 +24,13 @@ const MARKERS = {
   on: /\.on(?![\w-])/,
   active: /\.active(?![\w-])/,
   "is-selected": /\.is-selected(?![\w-])/,
+  "-selected": /\.[\w-]+-selected(?![\w-])/,
   "aria-pressed": /\[aria-pressed="true"\]/,
   "aria-current": /\[aria-current(?:[\]=])/,
   "aria-selected": /\[aria-selected="true"\]/,
 } as const;
 
-// `.row:not(.on)` paints the rows that are NOT selected.
+// `.row:not(.on)` paints the rows that are not selected.
 const NEGATION = /:not\((?:[^()]|\([^()]*\))*\)/g;
 
 // Every property that puts a colour on the element: its ground, its ink, its
@@ -77,8 +78,8 @@ describe("a selected or pressed state is neutral", () => {
     expect(accentStates(rules)).toEqual([]);
   });
 
-  // A marker that matches nothing in the tree is a pattern that went blind,
-  // and the check above would then pass over every state it no longer sees.
+  // A marker that matches nothing in the tree is a pattern that went blind.
+  // The check above would then pass over every state it no longer sees.
   it("finds a rule in the tree for every state marker it reads", () => {
     const seen = new Set(
       rules.flatMap((rule) =>
