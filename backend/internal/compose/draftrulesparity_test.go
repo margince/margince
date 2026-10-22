@@ -42,6 +42,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/accountdraft"
 	"github.com/margince/margince/backend/internal/compose/contactdraft"
 	"github.com/margince/margince/backend/internal/compose/draftrules"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
@@ -81,11 +82,11 @@ func draftingSurfaces(fence promptfence.Fence) map[string][]string {
 // kept out of draftingSurfaces, each with the reason. A row is an
 // assertion rather than an absence: TestAnExemptWriterStillWritesWithoutTheSharedRules
 // fails when the file starts reading the block or stops existing.
-var exemptFromSharedRules = map[string]string{
+var exemptFromSharedRules = gatekit.Waive(map[string]string{
 	"voicebuildeval.go": "the voice evaluator scores voice only, and the shared block adds variance the judge ignores " +
 		"and names inputs the call never gets (a recipient, a conversation state); it becomes a drafting surface " +
 		"once it scores correspondence or supplies those inputs",
-}
+})
 
 // Every surface's assembled system turn carries the shared block verbatim.
 //
@@ -163,18 +164,18 @@ func TestTheParityTableCoversEveryFileThatComposesTheSharedRules(t *testing.T) {
 // one whose file is gone is a row describing nothing.
 func TestAnExemptWriterStillWritesWithoutTheSharedRules(t *testing.T) {
 	swept := filesComposingTheSharedRules(t)
-	for file, reason := range exemptFromSharedRules {
-		if reason == "" {
-			t.Errorf("the exemption for %s gives no reason", file)
-		}
+	for _, file := range exemptFromSharedRules.Subjects() {
 		if _, err := os.Stat(file); err != nil {
 			t.Errorf("exempt file %s is gone (%v): remove its row", file, err)
 		}
 		if slicesContains(swept, file) {
 			t.Errorf("%s now composes draftrules.Shared, so its exemption has lapsed: move it into "+
 				"draftingSurfaces with its assembled system turn", file)
+			continue
 		}
+		exemptFromSharedRules.Waived(t, file)
 	}
+	exemptFromSharedRules.AssertAllMatched(t)
 	if strings.Contains(voiceEvalDraftSystemFor(promptfence.New()), draftrules.Shared) {
 		t.Error("the voice evaluator's prompt carries the shared block but voicebuildeval.go is still exempt")
 	}
