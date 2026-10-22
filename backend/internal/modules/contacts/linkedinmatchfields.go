@@ -153,8 +153,12 @@ func checkLinkedInMatchFields(ctx context.Context, tx pgx.Tx, in LinkedInMatchAp
 	}
 	var position string
 	var matchedCompany *ids.UUID
+	// Locked, so an import cannot move the position or the company between this
+	// check and the write. The contact is held already, which is the order the
+	// erasure takes.
 	if err := tx.QueryRow(ctx,
-		`SELECT coalesce(position, ''), matched_company_id FROM linkedin_connection WHERE id = $1 AND tombstoned_at IS NULL`,
+		`SELECT coalesce(position, ''), matched_company_id FROM linkedin_connection
+		  WHERE id = $1 AND tombstoned_at IS NULL FOR UPDATE`,
 		in.ConnectionID).Scan(&position, &matchedCompany); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
@@ -190,7 +194,9 @@ func checkStagedTitle(ctx context.Context, tx pgx.Tx, contactID ids.UUID, staged
 
 // checkStagedEmployer holds the employer box to what the card showed, and to
 // who may write it: relationship:create and sight of the company, the same
-// two grants the card asked before it offered the box.
+// two grants the card asks before it offers the box. Promoting an employment
+// the contact already holds there takes the same grant as creating one,
+// because each makes the company the contact's primary employer.
 func checkStagedEmployer(ctx context.Context, tx pgx.Tx, contactID ids.UUID, f LinkedInMatchFields, matched *ids.UUID) error {
 	if f.EmployerCompanyID == nil || matched == nil || *matched != *f.EmployerCompanyID {
 		return fmt.Errorf("the company this connection was placed at changed after the match was proposed; "+
@@ -205,6 +211,11 @@ func checkStagedEmployer(ctx context.Context, tx pgx.Tx, contactID ids.UUID, f L
 	if err := auth.EnsureVisibleLive(ctx, tx, companyEntity, *f.EmployerCompanyID); err != nil {
 		return err
 	}
+	// The contact's employment lock, which every employment create and update
+	// takes, so the primary edge read here is the one the write replaces.
+	if err := storekit.LockWriteIdentity(ctx, tx, employmentKind, contactID.String()); err != nil {
+		return err
+	}
 	var current *ids.UUID
 	err := tx.QueryRow(ctx, `SELECT r.id FROM relationship r WHERE r.contact_id = $1 AND `+
 		employment.CurrentPrimarySlotSQL("r"), contactID).Scan(&current)
@@ -214,13 +225,6 @@ func checkStagedEmployer(ctx context.Context, tx pgx.Tx, contactID ids.UUID, f L
 	if !sameOptionalID(current, f.EmployerRelationshipID) {
 		return fmt.Errorf("the contact's current employer changed after this match was proposed; "+
 			"read the proposal again: %w", apperrors.ErrConflict)
-	}
-	live, err := liveEmploymentAt(ctx, tx, contactID, *f.EmployerCompanyID)
-	if err != nil {
-		return err
-	}
-	if live != nil {
-		return auth.Require(ctx, "relationship", principal.ActionUpdate)
 	}
 	return nil
 }
@@ -264,11 +268,14 @@ func (s *Store) writeLinkedInMatchFields(ctx context.Context, tx pgx.Tx, in Link
 	if err != nil || edge == ids.Nil {
 		return out, err
 	}
+	// The primary flag is the employer choice itself, so it is stamped on a
+	// promoted edge as well as on a created one.
+	edgeStamps := []storekit.FieldStamp{{Field: "is_current_primary", EvidenceRef: &evidence}}
 	if roleWritten {
-		stamp[0].Field = fieldRole
-		if err := storekit.StampFields(ctx, tx, "relationship", edge, provenance.LinkedInExportSource, capturedBy, stamp); err != nil {
-			return out, err
-		}
+		edgeStamps = append(edgeStamps, storekit.FieldStamp{Field: fieldRole, EvidenceRef: &evidence})
+	}
+	if err := storekit.StampFields(ctx, tx, "relationship", edge, provenance.LinkedInExportSource, capturedBy, edgeStamps); err != nil {
+		return out, err
 	}
 	out.employer = true
 	return out, nil
@@ -311,9 +318,6 @@ func (s *Store) employFromExport(
 	if live == nil {
 		created, err := s.CreateRelationshipTx(ctx, tx, employmentFromExport(contactID, companyID, position))
 		return created.ID, err == nil && position != "", err
-	}
-	if err := auth.Require(ctx, "relationship", principal.ActionUpdate); err != nil {
-		return ids.Nil, false, err
 	}
 	primary := true
 	patch := UpdateRelationshipInput{IsCurrentPrimary: &primary}

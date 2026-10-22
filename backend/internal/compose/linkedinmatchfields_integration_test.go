@@ -299,9 +299,10 @@ func TestUseAsEmployerMakesThePlacedCompanyTheCurrentPrimaryEmployer(t *testing.
 			company, role)
 	}
 	if n := c.count(t, `SELECT count(*) FROM field_provenance fp JOIN relationship r ON r.id = fp.object_id
-		 WHERE fp.object_type = 'relationship' AND fp.field_name = 'role' AND fp.source = 'linkedin_export'
-		   AND fp.captured_by = $2 AND r.contact_id = $1`, c.contact, "human:"+c.e.Rep1.String()); n != 1 {
-		t.Errorf("%d provenance rows name the export for the role, want 1", n)
+		 WHERE fp.object_type = 'relationship' AND fp.field_name IN ('role', 'is_current_primary')
+		   AND fp.source = 'linkedin_export' AND fp.captured_by = $2 AND r.contact_id = $1`,
+		c.contact, "human:"+c.e.Rep1.String()); n != 2 {
+		t.Errorf("%d provenance rows name the export for the role and the primary flag, want 2", n)
 	}
 	if n := c.count(t, `SELECT count(*) FROM audit_log a JOIN relationship r ON r.id = a.entity_id
 		 WHERE a.entity_type = 'relationship' AND a.action = 'update' AND r.contact_id = $1`, c.contact); n != 1 {
@@ -483,11 +484,10 @@ func TestALaterExportNeverWritesTheContactAgain(t *testing.T) {
 	if got := c.title(t); got != "Head of Sales" {
 		t.Errorf("a later export changed the title to %q", got)
 	}
-	if n := pendingLinkedInMatchCount(t, c.e); n > 0 {
-		c.approval = onlyPendingLinkedInMatch(t, c.e)
-		if staged := c.payload(t); staged["use_as_title"] != false {
-			t.Errorf("a second card for the confirmed contact is staged as %v, want the title box unticked", staged)
-		}
+	// The matcher proposes no second connection for a contact this member has
+	// already confirmed one onto, so nothing is left to tick.
+	if n := pendingLinkedInMatchCount(t, c.e); n != 0 {
+		t.Errorf("%d cards wait after the later exports, want none for a confirmed contact", n)
 	}
 }
 
@@ -524,5 +524,18 @@ func TestAPositionTheExportChangedSinceStagingIsNotWritten(t *testing.T) {
 	}
 	if got := c.title(t); got != "" || c.connectionStatus(t) != "suggested" {
 		t.Errorf("the refused approval left title %q and connection %s", got, c.connectionStatus(t))
+	}
+}
+
+func TestADeciderWhoMayCreateButNotUpdateEmploymentsStillPromotesOne(t *testing.T) {
+	c := stageLinkedInFieldsCase(t, "", "")
+	perms := integration.AdminPerms
+	perms.Objects = maps.Clone(perms.Objects)
+	perms.Objects["relationship"] = principal.ObjectGrant{Read: true, Create: true}
+	if _, err := c.svc.Decide(c.e.As(c.e.Rep1, []ids.UUID{c.e.Team1}, perms), c.approval, true, nil); err != nil {
+		t.Fatalf("approving with relationship:create alone: %v", err)
+	}
+	if company, _, _ := c.primaryEmployer(t); company != c.acme {
+		t.Errorf("the current primary employer is %s, want the Acme employment promoted", company)
 	}
 }

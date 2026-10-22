@@ -47,7 +47,7 @@ function linkedInMatch(change: Record<string, unknown> = {}): Approval {
 // Routes the reads the card makes and records what the accept sent.
 function stubCard(
   allow: GrantSpec,
-  company: () => Response = () =>
+  company: () => Response | Promise<Response> = () =>
     jsonResponse({ id: ACME, display_name: "Acme GmbH" }),
 ) {
   const sent: unknown[] = [];
@@ -158,6 +158,20 @@ describe("the LinkedIn match boxes", () => {
         screen.queryByRole("checkbox", { name: /as employer/ }),
       ).toBeNull(),
     );
+  });
+
+  it("keeps the staged employer box when accepted before the company has loaded", async () => {
+    const user = userEvent.setup();
+    const sent = stubCard(mayEmploy, () => new Promise<Response>(() => {}));
+    show(linkedInMatch());
+    await user.click(
+      await screen.findByRole("checkbox", { name: "Use as job title" }),
+    );
+    await user.click(screen.getByRole("button", { name: "Approve" }));
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]).toMatchObject({
+      edited_payload: { use_as_title: false, use_as_employer: true },
+    });
   });
 
   it("offers no employer when the card names no company", async () => {

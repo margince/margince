@@ -9,6 +9,7 @@ import { useT } from "../../i18n";
 import type { Approval } from "../../lib/approvals.queries";
 import { useCanWrite } from "../../lib/capability";
 import { contactQuery } from "../../lib/contact.queries";
+import { useMe } from "../../lib/session";
 
 // The two boxes on a LinkedIn match card: the export's position as the
 // contact's job title, and the company the import placed the connection at as
@@ -57,6 +58,7 @@ export function useLinkedInChoice(
     contactQuery(offered ? text(change.contact_id) : undefined),
   );
   const mayEmploy = useCanWrite("relationship", "create");
+  const grantsPending = useMe().isPending;
   // Held per approval, so a row that is handed another card starts from that
   // card's staged boxes rather than from the last reader's ticks.
   const [held, setHeld] = useState<
@@ -69,10 +71,21 @@ export function useLinkedInChoice(
   };
   const titleOffered = text(change.connection_position) !== undefined;
   const employerName = mayEmploy && companyId ? company.name : null;
+  // Until the grants and the company read have answered, the box is not shown
+  // and the staged value stands: a quick accept must not untick it. A read
+  // that failed is no answer either; only a company the reader cannot see is.
+  const employerSettled =
+    !grantsPending &&
+    (!mayEmploy ||
+      !companyId ||
+      company.name !== null ||
+      company.reading === "unnamed");
   const choice = held?.id === approval.id ? held.choice : staged;
   const sent = {
     use_as_title: titleOffered && choice.use_as_title,
-    use_as_employer: employerName !== null && choice.use_as_employer,
+    use_as_employer: employerSettled
+      ? employerName !== null && choice.use_as_employer
+      : staged.use_as_employer,
   };
   const same =
     sent.use_as_title === staged.use_as_title &&
