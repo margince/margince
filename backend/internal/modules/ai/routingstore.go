@@ -294,6 +294,7 @@ func (s *RoutingStore) write(ctx context.Context, settle func(current RoutingCon
 	if err != nil {
 		return RoutingConfig{}, err
 	}
+	LogLadderWarnings(s.logger(), written)
 	return written, nil
 }
 

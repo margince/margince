@@ -103,10 +103,9 @@ func modelPathFor(ctx context.Context, cfg ai.RoutingConfig, spec modelPathSpec,
 		// A task whose whole fallback ladder has no bound tier is not a
 		// boot error (a deployment may legitimately not run every
 		// workload), but it must be loud: log it now, not discover it
-		// from a refused call.
-		for _, w := range cfg.UnboundLadderWarnings() {
-			log.Warn(w)
-		}
+		// from a refused call. A ladder whose rungs are one upstream is
+		// named in the same place.
+		ai.LogLadderWarnings(log, cfg)
 	}
 	// The bindings this boot may run on, best first. A list rather than a switch
 	// because the second entry is a FALLBACK from the first — reached only when
