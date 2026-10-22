@@ -132,14 +132,11 @@ embeddings:    {provider: gemini}
 - **A tier may be left with no binding.** A deployment may run only some jobs. A ladder with no bound tier is
   not a start error, but it is reported. Boot warns per task, for example:
   `task cold_start: no bound tier on ladder [cheap_cloud premium]; calls will be refused`.
-- **Rungs that reach one API give no failover.** When a task's ladder has two or more bound rungs and
-  every one is the same provider, model and endpoint, a refusal there is met again on the next rung. Boot
-  and every saved routing document warn once per API, naming the tasks it covers. The test is the one the
-  router uses to stop retrying a rejected request in place; upstream pins and the thinking level are not
-  part of it, because they change how a request is served, never which API answers. The sovereign profile
-  remaps every cloud rung onto `local_small`, so those ladders have one rung by construction and draw
-  no warning. A ladder with a single bound rung draws none either. The finding is a warning because one
-  model on several tiers is legal.
+- **Rungs that reach one API give no failover.** A ladder can bind two or more rungs that use the same
+  provider, model and endpoint. A refusal at that API then comes back on every rung. Boot and every saved
+  routing document warn once per API and name its tasks. The router's own retry guard uses the same test, and
+  upstream pins and the thinking level are not part of it. The sovereign profile sends every cloud rung to
+  `local_small`, so those ladders have one rung and draw no warning.
 - `/readyz` names the AI state (`configured` | `fake` | `unconfigured`). So an operator reads the gap
   off the boot log, not off a refused call at `3am`.
 - **The models that can serve a task** are the ladder plus its closure under `degrade_to`, and readers

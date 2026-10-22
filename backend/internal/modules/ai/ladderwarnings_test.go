@@ -20,7 +20,7 @@ func collapsedOnBroker(model string) ProviderConfig {
 func servedLadders(t *testing.T, cfg RoutingConfig) []SingleRungLadder {
 	t.Helper()
 	if cfg.Profile == ProfileSovereign {
-		cfg.Embeddings = EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: "ollama", Model: "embed"}}
+		cfg.Embeddings.Provider, cfg.Embeddings.Model = "ollama", "embed"
 	} else {
 		cfg.Embeddings = EmbeddingsConfig{ProviderConfig: collapsedOnBroker("embed")}
 	}
