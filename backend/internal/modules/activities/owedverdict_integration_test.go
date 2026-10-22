@@ -134,6 +134,7 @@ func TestAJudgedMessageLeavesTheBacklogAndKeepsItsVerdict(t *testing.T) {
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	activity := e.waitingFrom(t, "Monthly reporting", "paul@customer.test", contact)
+	e.directlyTo(t, activity, e.rep)
 
 	applied, err := storeKnowing(e).SetOwedVerdict(asClassifier(e), activity, OwedVerdictInformsUs, "prompts-test", dbNow(t, e))
 	if err != nil {

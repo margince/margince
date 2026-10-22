@@ -7,6 +7,7 @@ import {
   PendingBody,
   SearchField,
 } from "../design-system/atoms";
+import { useBackdropDismiss } from "../design-system/backdrop";
 import { Callout } from "../design-system/callout";
 import { liveDialogs, useDialogFocus } from "../design-system/dialogfocus";
 import { usePresence } from "../design-system/presence";
@@ -276,10 +277,12 @@ export function CommandPalette({
     }
   };
 
+  const leaving = state === "closing";
+  const backdrop = useBackdropDismiss(onClose, leaving);
+
   if (!mounted) {
     return null;
   }
-  const leaving = state === "closing";
 
   return (
     // The two a11y suppressions this element carried are gone rather than kept:
@@ -297,14 +300,7 @@ export function CommandPalette({
       inert={leaving}
       aria-hidden={leaving || undefined}
       ref={overlay}
-      onClick={(event) => {
-        if (leaving) {
-          return;
-        }
-        if (event.target === event.currentTarget) {
-          onClose();
-        }
-      }}
+      {...backdrop}
     >
       <div
         className="palette"

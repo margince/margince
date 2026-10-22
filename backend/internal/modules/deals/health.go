@@ -396,7 +396,11 @@ func healthActivityEvidence(ctx context.Context, tx pgx.Tx, now time.Time, in *d
 
 	args := []any{in.dealID, now}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	current := storekit.CurrentCommitmentTaskClause("a", now, arg)
+	identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+	if err != nil {
+		return err
+	}
+	current := storekit.CurrentTaskClause("a", now, identities, arg)
 	overdue, err := collectIDs(tx.Query(ctx, `
   SELECT a.id FROM activity a
   JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = $1

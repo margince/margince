@@ -147,31 +147,19 @@ func (e *loadEnv) seedWait(t *testing.T, subject string, link string, target ids
 	return activity
 }
 
-// A wait is attributed to the owner of the record it is filed under.
-//
-// The whole ownership walk fails silently if it is wrong: the query still
-// returns the message, still returns one row, and simply names the wrong contact
-// — so the board blames a colleague for somebody else's customer.
-func TestAWaitIsAttributedToTheOwnerOfItsRecord(t *testing.T) {
+func TestAWaitWithoutARecipientDoesNotInheritItsRecordOwner(t *testing.T) {
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by)
 		VALUES ($1, 'Buyer Contact', $2, 'seed', 'system')`, contact, e.other)
 	activity := e.seedWait(t, "Question about pricing", "contact_id", contact)
 
-	if got := e.waitFor(t, activity); got.OwnerID != e.other {
-		t.Fatalf("the wait was attributed to %v, wanted the contact's owner %v",
-			got.OwnerID, e.other)
+	if got := e.waitFor(t, activity); !got.OwnerKnown || !got.OwnerID.IsZero() {
+		t.Fatalf("mail without recipient evidence inherited a record owner: %+v", got)
 	}
 }
 
-// A DEAL on the thread outranks the contact on it.
-//
-// The precedence is a COALESCE over four arms in one order, and getting it
-// backwards is invisible without this: both owners are real contacts, both
-// answers are one row, and the board simply credits the account owner with a
-// conversation the deal owner is answerable for.
-func TestADealOnTheThreadOutranksTheContactOnIt(t *testing.T) {
+func TestADealOnTheThreadDoesNotOverrideTheMailRecipient(t *testing.T) {
 	e := setupLoad(t)
 	contact, deal, company := ids.NewV7(), ids.NewV7(), ids.NewV7()
 	e.exec(t, `INSERT INTO company (id, display_name, owner_id, source, captured_by)
@@ -190,13 +178,12 @@ func TestADealOnTheThreadOutranksTheContactOnIt(t *testing.T) {
 		deal, e.other, company, pipeline, stage)
 
 	activity := e.seedWait(t, "Contract question", "contact_id", contact)
+	e.exec(t, `INSERT INTO activity_participant (id, activity_id, role, address) VALUES ($1,$2,'to',$3)`, ids.NewV7(), activity, "rep-"+e.rep.String()+"@load.test")
 	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, deal_id)
 		VALUES ($1, $2, 'deal', $3)`, ids.NewV7(), activity, deal)
 
-	if got := e.waitFor(t, activity); got.OwnerID != e.other {
-		t.Fatalf("the wait was attributed to %v, wanted the DEAL owner %v — the deal "+
-			"outranks the contact the thread is also filed under",
-			got.OwnerID, e.other)
+	if got := e.waitFor(t, activity); got.OwnerID != e.rep {
+		t.Fatalf("mail named owner %v, want direct recipient %v rather than deal owner %v", got.OwnerID, e.rep, e.other)
 	}
 }
 
@@ -260,20 +247,8 @@ func TestOverdueTasksAreCountedPerAssignee(t *testing.T) {
 	}
 }
 
-// The owner named is the owner OF the record named, not the smallest owner id
-// among the links.
-//
-// A message may be filed under two deals — uq_activity_link keys on (activity,
-// type, id), so a second deal link is a legal row. The record id and the owner
-// were picked by two independent orderings, so a message could report deal D1
-// and bill its wait to whoever owned D2. Both figures are real contacts and real
-// deals, the row count is unchanged, and nothing but this says which pairing is
-// right.
-//
-// The fixture pins the two orderings AGAINST each other: the deal that sorts
-// first is owned by the user that sorts second. Order by owner and the answer is
-// the other rep; order by the record and it is this one.
-func TestAWaitNamesTheOwnerOfTheRecordItNames(t *testing.T) {
+// Linked deal selection stays stable without turning either record owner into a recipient.
+func TestAWaitNamesItsRecordWithoutBorrowingEitherOwner(t *testing.T) {
 	e := setupLoad(t)
 	pipeline, stage := ids.NewV7(), ids.NewV7()
 	// Named for its own id: pipeline_name_unique is installation-wide and the
@@ -310,10 +285,8 @@ func TestAWaitNamesTheOwnerOfTheRecordItNames(t *testing.T) {
 		t.Fatalf("the row named deal %v, wanted the first by id %v — the fixture no longer "+
 			"pins the two orderings against each other", got.DealID, firstDeal)
 	}
-	if got.OwnerID != secondOwner {
-		t.Fatalf("the wait named deal %v but was billed to %v, who owns the OTHER deal on "+
-			"this thread — the owner must be the owner of the record named, which is %v",
-			got.DealID, got.OwnerID, secondOwner)
+	if !got.OwnerKnown || !got.OwnerID.IsZero() {
+		t.Fatalf("mail without recipient evidence borrowed owner %v from linked deals", got.OwnerID)
 	}
 }
 
@@ -328,7 +301,7 @@ func TestAReadableWaitingRecordCanBeExplicitlyUnassigned(t *testing.T) {
 	}
 }
 
-func TestAnUnreadableWaitingOwnerIsNotReportedAsUnassigned(t *testing.T) {
+func TestAWaitingRecipientDoesNotRevealAnUnreadableRecordOwner(t *testing.T) {
 	e := setupLoad(t)
 	contact := ids.NewV7()
 	e.exec(t, `INSERT INTO contact (id, full_name, owner_id, source, captured_by) VALUES ($1, 'Private buyer', $2, 'seed', 'system')`, contact, e.other)
@@ -343,7 +316,8 @@ func TestAnUnreadableWaitingOwnerIsNotReportedAsUnassigned(t *testing.T) {
 		t.Fatal("fixture has no reader")
 	}
 	actor.Permissions.RowScope = principal.RowScopeOwn
-	e.exec(t, `INSERT INTO activity_participant (id, activity_id, role, user_id, address) VALUES ($1, $2, 'to', $3, 'rep@example.test')`, ids.NewV7(), activity, e.rep)
+	e.exec(t, `UPDATE activity SET kind='email' WHERE id=$1`, activity)
+	e.exec(t, `INSERT INTO activity_participant (id, activity_id, role, user_id, address) VALUES ($1, $2, 'to', $3, $4)`, ids.NewV7(), activity, e.rep, "rep-"+e.rep.String()+"@load.test")
 	ctx = principal.WithActor(ctx, actor)
 	e.exec(t, `UPDATE contact SET owner_id=$2 WHERE id=$1`, visible, e.rep)
 	rows, err := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))).WaitingReplies(ctx, clocktest.Now(t))
@@ -354,10 +328,31 @@ func TestAnUnreadableWaitingOwnerIsNotReportedAsUnassigned(t *testing.T) {
 		if row.ActivityID != activity {
 			continue
 		}
-		if row.OwnerKnown || !row.OwnerID.IsZero() {
-			t.Fatal("unreadable ownership was disclosed or called unassigned")
+		if !row.OwnerKnown || row.OwnerID != e.rep || row.ContactID != visible {
+			t.Fatal("waiting mail must name its direct recipient and only its readable contact")
 		}
 		return
 	}
 	t.Fatal("the visible message disappeared with its unreadable contact")
+}
+
+func TestAChatWaitDoesNotBorrowTheLinkedContactOwner(t *testing.T) {
+	e := setupLoad(t)
+	contact := ids.NewV7()
+	e.exec(t, `INSERT INTO contact (id,full_name,owner_id,source,captured_by) VALUES ($1,'Chat buyer',$2,'seed','system')`, contact, e.rep)
+	activity := e.seedWait(t, "Chat request", "contact_id", contact)
+	e.exec(t, `UPDATE activity SET kind='message',channel_provider='telegram' WHERE id=$1`, activity)
+	row := e.waitFor(t, activity)
+	if !row.OwnerKnown || !row.OwnerID.IsZero() {
+		t.Fatal("chat borrowed linked contact owner without personal responsibility evidence")
+	}
+	rows, err := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws))).WaitingRepliesForOwnerBefore(e.as(), clocktest.Now(t), WaitingPosition{}, e.rep)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, row := range rows {
+		if row.ActivityID == activity {
+			t.Fatal("contact ownership put another seat's chat in Mine")
+		}
+	}
 }

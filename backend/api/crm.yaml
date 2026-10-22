@@ -62487,9 +62487,9 @@ components:
       properties:
         kind:
           type: string
-          enum: [user, unassigned]
-          x-enum-varnames: [WorklistOwnerUser, WorklistOwnerUnassigned]
-          description: 'Whether a contact answers for this row, or nobody does yet.'
+          enum: [user, unassigned, shared]
+          x-enum-varnames: [WorklistOwnerUser, WorklistOwnerUnassigned, WorklistOwnerShared]
+          description: 'Whether one user, several direct recipients, or nobody answers for this row.'
         id:
           type: string
           format: uuid
@@ -62503,6 +62503,23 @@ components:
             rest of this response uses for a name it cannot read. A client draws the
             row without a name rather than inventing one, and never treats an absent
             label as an absent owner: `kind` is what says whether anybody answers.
+
+        users:
+          type: array
+          description: 'Direct recipients responsible together. Present only for shared ownership; names follow the caller’s roster access.'
+          items:
+            $ref: '#/components/schemas/WorklistOwnerMember'
+
+    WorklistOwnerMember:
+      type: object
+      required: [id]
+      properties:
+        id:
+          type: string
+          format: uuid
+        label:
+          type: string
+          description: 'The user’s name when the caller may resolve it.'
 
     WorklistWalk:
       type: object

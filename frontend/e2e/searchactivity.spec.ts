@@ -21,7 +21,10 @@ test("a meeting search found opens in the activity panel", async ({ page }) => {
     name: "Quarterly review with Brandt Automotive",
   });
   await expect(panel).toBeVisible();
-  await expect(panel.getByText("agreed", { exact: true })).toBeVisible();
+  const agreed = panel.getByText("agreed", { exact: true });
+  await expect(agreed).toBeVisible();
+  // The note's `**agreed**`: the global reset takes the weight off `strong`.
+  await expect(agreed).toHaveCSS("font-weight", "700");
   await expect(panel.getByRole("link", { name: "Anna Weber" })).toBeVisible();
   await expect(page).toHaveURL(/#\/search\/brandt$/);
 });

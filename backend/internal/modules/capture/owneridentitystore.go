@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -174,7 +175,9 @@ func (s *OwnerIdentityStore) Add(ctx context.Context, kind, raw string) (OwnerId
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO capture_owner_identity (user_id, kind, value, source, created_by)
 			VALUES ($1, $2, $3, $4, $5)
-			ON CONFLICT (user_id, kind, value) DO UPDATE SET value = EXCLUDED.value
+			ON CONFLICT (user_id, kind, value) DO UPDATE SET value = EXCLUDED.value,
+				source = CASE WHEN capture_owner_identity.source = '`+IdentitySourceDeliveredTo+`' THEN EXCLUDED.source
+				ELSE capture_owner_identity.source END
 			RETURNING id, user_id, kind, value, source, created_at`,
 			actor.UserID, kind, value, IdentitySourceUser, actor.ID).
 			Scan(&out.ID, &out.UserID, &out.Kind, &out.Value, &out.Source, &out.CreatedAt); err != nil {

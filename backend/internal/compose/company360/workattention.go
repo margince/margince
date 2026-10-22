@@ -35,6 +35,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -219,6 +220,10 @@ func overdueTasksBy(
 	// withheld the kept row is a withheld one, which is why `visible` is
 	// scanned and not assumed — its subject and assignee are read but never
 	// hung on the card.
+	identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+	if err != nil {
+		return nil, false, err
+	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT DISTINCT ON (l.%[1]s)
 		       l.%[1]s, coalesce(a.subject, ''), coalesce(u.display_name, ''), a.due_at,
@@ -233,7 +238,7 @@ func overdueTasksBy(
 		   AND %[6]s AND %[7]s
 		 ORDER BY l.%[1]s, coalesce((%[5]s), false) DESC, a.due_at, a.id`,
 		linkColumn, keysPos, companyPos, nowPos, activityScope,
-		activities.CompanyLinkedActivityExists(companyPos), activities.CurrentCommitmentTaskClause("a", now, arg)), args...)
+		activities.CompanyLinkedActivityExists(companyPos), activities.CurrentTaskClause("a", now, identities, arg)), args...)
 	if err != nil {
 		return nil, false, fmt.Errorf("read the account's overdue tasks: %w", err)
 	}

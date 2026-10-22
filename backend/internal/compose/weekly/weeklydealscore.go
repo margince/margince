@@ -98,7 +98,7 @@ const dealScoreSQL = `
 		      SELECT 1 FROM activity_link tl
 		        JOIN activity task ON task.id = tl.activity_id
 		       WHERE tl.deal_id = o.id AND task.kind = 'task'
-		         AND task.archived_at IS NULL AND (%[11]s)
+		         AND task.archived_at IS NULL AND (%[11]s) AND (%[14]s)
 		         -- The task as the week CLOSED, not as it stands now. A task
 		         -- ticked off on Monday was still the deal's open next step on
 		         -- Sunday, and reading is_done today erases it from the week that

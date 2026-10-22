@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -394,6 +395,11 @@ func scoreDeals(
 	if err != nil {
 		return nil, err
 	}
+	identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+	if err != nil {
+		return nil, err
+	}
+	currentTask := storekit.CurrentTaskClause("task", end, identities, arg)
 	block := &DealBlock{}
 	var present bool
 	// Nullable on its own: a present block whose deals all stayed put has no
@@ -403,7 +409,7 @@ func scoreDeals(
 		startPos, endPos, userPos, sincePos, stakeholdersPos,
 		forecastRank("last_cat"), forecastRank("first_cat"), scope, zonePos,
 		weekEndDealsSQL(fmt.Sprintf("$%d", endPos), fmt.Sprintf("$%d", verbsPos)), taskScope, activityScope,
-		taskCompletionAtSQL("task", fmt.Sprintf("$%d", endPos), fmt.Sprintf("$%d", verbsPos))),
+		taskCompletionAtSQL("task", fmt.Sprintf("$%d", endPos), fmt.Sprintf("$%d", verbsPos)), currentTask),
 		args...).
 		Scan(&present, &block.Advances, &block.Regressions, &median,
 			&block.WithNextStep, &block.Open, &block.MultiThreaded,

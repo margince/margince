@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/assurance"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/dealrole"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -118,7 +119,11 @@ func AssuranceSubjects(ctx context.Context, tx pgx.Tx) ([]assurance.Subject, err
 	now := time.Now().UTC()
 	args := []any{now.Add(-closePushWindow), now, dealrole.EconomicBuyer}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	query := fmt.Sprintf(assuranceSubjectsSQL, activities.CurrentCommitmentTaskClause("a", now, arg))
+	identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+	if err != nil {
+		return nil, err
+	}
+	query := fmt.Sprintf(assuranceSubjectsSQL, activities.CurrentTaskClause("a", now, identities, arg))
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading the deals to check: %w", err)

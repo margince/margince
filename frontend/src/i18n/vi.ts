@@ -3749,6 +3749,7 @@ export const vi = {
   "co.evidence.previous": "Thông tin trước",
   "co.evidence.next": "Thông tin sau",
   "co.evidence.title": "Nguồn",
+  "co.evidence.record": "Bản ghi",
   "co.prep.withheld":
     "Một số phần của công ty này bị ẩn với bạn, nên bản tóm tắt này chưa đầy đủ.",
   "co.read.newActivity_one": "1 mục mới từ lần truy cập gần nhất.",
@@ -6331,6 +6332,7 @@ export const vi = {
   "unsaved.title": "Bỏ thay đổi chưa lưu?",
   "unsaved.body":
     "Rời trang này sẽ bỏ những gì đã nhập. Quay lại để lưu trước.",
+  "unsaved.dialogBody": "Đóng hộp thoại này sẽ bỏ những gì đã nhập.",
   "unsaved.discard": "Bỏ thay đổi",
   "settings.addedItem": "Đã thêm “{name}”",
   "settings.removedItem": "Đã gỡ “{name}”",
@@ -13283,6 +13285,8 @@ export const vi = {
   "contact.intro.fallbackNextRouteHelp":
     "Chuyển sang đồng nghiệp tiếp theo trong danh sách.",
   "contact.intro.decideTitle": "Giới thiệu với {name}",
+  "contact.intro.askedBy": "Được hỏi bởi",
+  "contact.intro.askedThrough": "Qua",
   "contact.intro.decideLegend": "Câu trả lời",
   "contact.intro.decideAction": "Ghi nhận câu trả lời",
   "contact.intro.decideFailed": "Không thể ghi nhận câu trả lời. Thử lại.",
@@ -14612,6 +14616,9 @@ export const vi = {
   "worklist.scope.unassigned": "Chưa giao",
   "worklist.scope.team": "Nhóm",
   "worklist.scope.all": "Tất cả",
+  "worklist.owner.shared": "Cùng phụ trách: {names}",
+  "worklist.owner.sharedCount_one": "{count} bên nhận phụ trách",
+  "worklist.owner.sharedCount_other": "{count} bên nhận phụ trách",
   "worklist.owner.visibleLabel": "Đang xem",
   "worklist.manager.cancel": "Hủy",
   "worklist.owner.wholeTeam": "Cả nhóm",

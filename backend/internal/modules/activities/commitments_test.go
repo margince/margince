@@ -27,7 +27,7 @@ func openTasksWhere(ctx context.Context, t *testing.T, in ListOpenTasksInput) (s
 	t.Helper()
 	args := []any{}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	where, err := openTasksFilter(ctx, in, arg)
+	where, err := openTasksFilter(ctx, in, "'{}'::jsonb", arg)
 	if err != nil {
 		t.Fatalf("building the open-task filter: %v", err)
 	}
@@ -106,7 +106,7 @@ func TestAnUnknownRecordTypeIsRefusedRatherThanBuiltIntoTaskSQL(t *testing.T) {
 	arg := func(any) int { return 1 }
 	_, err := openTasksFilter(unscopedCtx(), ListOpenTasksInput{
 		EntityType: &entityType, EntityID: &entity,
-	}, arg)
+	}, "'{}'::jsonb", arg)
 
 	var badType *InvalidLinkTypeError
 	if !errors.As(err, &badType) {

@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/weeklyplan"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -94,6 +95,13 @@ func (c weeklyPlanCapacity) ForWeek(
 			Scan(&start, &end); err != nil {
 			return fmt.Errorf("compose: bounding next week: %w", err)
 		}
+		args := []any{start, end, "human:" + owner.String(), owner}
+		arg := func(value any) int { args = append(args, value); return len(args) }
+		identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+		if err != nil {
+			return err
+		}
+		current := storekit.CurrentTaskClause("t", start, identities, arg)
 		return tx.QueryRow(ctx, `
 			SELECT
 			  (SELECT count(*) FROM activity m
@@ -117,9 +125,9 @@ func (c weeklyPlanCapacity) ForWeek(
 			      AND m.occurred_at >= $1 AND m.occurred_at < $2),
 			  (SELECT count(*) FROM activity t
 			    WHERE t.kind = 'task' AND t.archived_at IS NULL
-			      AND NOT t.is_done AND t.assignee_id = $4
+			      AND NOT t.is_done AND t.assignee_id = $4 AND `+current+`
 			      AND t.due_at >= $1 AND t.due_at < $2)`,
-			start, end, "human:"+owner.String(), owner).
+			args...).
 			Scan(&out.Meetings, &out.Tasks)
 	})
 	if err != nil {

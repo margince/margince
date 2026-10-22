@@ -5,6 +5,7 @@ import { useIdempotencyKey } from "../../api/idempotencykey";
 import { ActivityBodyField } from "../../components/activitybodyfield";
 import { TaskAssigneeField } from "../../components/assigneepicker";
 import { LogActivityEntries } from "../../components/extensionentries";
+import { useUnsavedGuard } from "../../components/unsaved";
 import {
   Button,
   Checkbox,
@@ -164,6 +165,9 @@ export function LogActivityForm({
       onLogged?.();
     },
   });
+
+  // The words are the work a reader would retype; the kind and day are a pick.
+  useUnsavedGuard(draft.subject.trim() !== "" || draft.body.trim() !== "");
 
   // Enter in a field submits past the Save button, so the form is latched too.
   const singlePress = useSinglePress(log.isPending);

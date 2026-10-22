@@ -9,6 +9,7 @@ import {
   providerBrandName,
 } from "../../design-system/provider-mark";
 import { useT } from "../../i18n";
+import { keepReturnRoute } from "../../lib/returnroute";
 import "./auth.css";
 
 // The federated half of the sign-in surface: the provider block, the divider
@@ -206,6 +207,7 @@ export function startFederatedSignIn(
   if (synthesized) {
     return;
   }
+  keepReturnRoute();
   globalThis.location.assign(`/v1/auth/oidc/${providerKey}/start`);
 }
 

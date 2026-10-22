@@ -296,3 +296,18 @@ it.each(["normal", "compact", "framed"] as const)(
     );
   },
 );
+
+it("shows shared reply responsibility instead of an unassigned label", () => {
+  render(
+    row({
+      owner: {
+        kind: "shared",
+        users: [
+          { id: "alice", label: "Alice" },
+          { id: "bob", label: "Bob" },
+        ],
+      },
+    }),
+  );
+  expect(screen.getByText("Shared responsibility: Alice and Bob")).toBeTruthy();
+});

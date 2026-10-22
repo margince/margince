@@ -35,6 +35,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -160,13 +161,17 @@ func hasOpenTask(
 	if activityScope == "" {
 		activityScope = scopeAll
 	}
+	identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+	if err != nil {
+		return false, err
+	}
 	var scheduled bool
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT EXISTS (
 		  SELECT 1 FROM activity a
 		  WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL AND %[1]s
 		    AND %[2]s AND %[3]s`+opts.projectScope(arg)+`)`,
-		activityScope, activities.CompanyLinkedActivityExists(companyPos), activities.CurrentCommitmentTaskClause("a", now, arg)), args...).Scan(&scheduled)
+		activityScope, activities.CompanyLinkedActivityExists(companyPos), activities.CurrentTaskClause("a", now, identities, arg)), args...).Scan(&scheduled)
 	if err != nil {
 		return false, fmt.Errorf("read whether anything is scheduled on the account: %w", err)
 	}

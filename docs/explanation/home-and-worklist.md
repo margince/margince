@@ -61,13 +61,22 @@ Stored findings follow the current audience of their cited activities on both ru
 
 The mail request writer and waiting read share the direct-recipient rule in
 `activities/mailresponsibility.go`. Owning a contact or being able to read shared mail does not assign its reply.
-A personal or chosen team member view applies that rule before the source limit, counts and Focus. Team keeps its shared view.
+A personal or chosen team member view applies that rule before the source limit, counts and Focus.
+A chosen member view uses that member’s choices, while access checks still use the viewer.
+Team keeps its shared view.
+
 The capture writer keeps the mailbox owner's parsed To and Cc roles without creating another contact.
 A delivery record alone is not a To role.
 
 Record task lists, project counts and deal next-step checks share
-`activities.CurrentCommitmentTaskClause`. Old automatic work needs current source evidence or a real human change.
-Import audits do not count as human changes. Raw history keeps the original records and their status.
+`activities.CurrentTaskClause`. Old automatic work needs current source evidence or a real human change.
+Import audits and record filing do not count as human changes.
+Raw history keeps the original records and their status.
+
+An automatic mail task also needs a current request addressed to the user who holds it.
+Editing the displayed body cannot change that evidence.
+The request writer and current task readers share the recipient rule and mail horizon.
+Reads hide old automatic work even before a background job runs.
 A later email to a contact does not show that a task or promise was done.
 
 ## Focus is a cut of the same ranking

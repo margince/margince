@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -44,8 +45,13 @@ func TestCapturedMailNeedsConfirmedResponsibilityBeforeItAsksForAReply(t *testin
 			if got := verdictOf(t, o.e, message); got == nil || *got != tc.verdict {
 				t.Fatalf("verdict=%v", got)
 			}
-			if got := o.owed(t, message); got != tc.owed {
+			if got := o.badged(t, message); got != tc.owed {
 				t.Fatalf("reply obligation=%v want=%v", got, tc.owed)
+			}
+			if tc.owed {
+				assertCapturedRequestTask(t, o, message)
+			} else if o.waiting(t, message) {
+				t.Fatal("non-request entered the waiting lane")
 			}
 			if tc.name == "conflicting noise" {
 				title := "Send the requested figures"
@@ -73,4 +79,25 @@ func (o *owedEnv) unanswered(t *testing.T, message ids.UUID) bool {
 		t.Fatal(err)
 	}
 	return len(answers) == 0
+}
+
+func assertCapturedRequestTask(t *testing.T, o *owedEnv, message ids.UUID) {
+	t.Helper()
+	var task ids.UUID
+	if err := database.WithWorkspaceTx(o.reader(), o.e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(o.reader(), `SELECT id FROM activity WHERE source_system=$1 AND source_activity_id=$2 AND archived_at IS NULL`, activities.EmailRequestTaskSource, message).Scan(&task)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	feed := newAttentionService(o.e.Pool, approvals.NewService(o.e.DB()), func() time.Time { return o.now })
+	page, err := feed.Worklist(o.reader(), "mine", "all", ids.Nil, 100, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if page.Summary.Total != 1 || len(page.Queue) != 1 || page.Queue[0].Source != "task" || page.Queue[0].Id != task.String() {
+		t.Fatalf("confirmed request must have one actionable task: %+v", page)
+	}
+	if o.waiting(t, message) {
+		t.Fatal("materialized request also remains in the waiting lane")
+	}
 }

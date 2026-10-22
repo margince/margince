@@ -3852,6 +3852,7 @@ export const en = {
   "co.evidence.previous": "Previous claim",
   "co.evidence.next": "Next claim",
   "co.evidence.title": "Source",
+  "co.evidence.record": "Record",
   "co.prep.withheld":
     "Parts of this company are hidden from you, so this summary is incomplete.",
   "co.read.newActivity_one": "1 new item since your last visit.",
@@ -6513,6 +6514,7 @@ export const en = {
   "unsaved.title": "Discard unsaved changes?",
   "unsaved.body":
     "Leaving this page discards what you entered. Go back to save it first.",
+  "unsaved.dialogBody": "Closing this dialog discards what you entered.",
   "unsaved.discard": "Discard changes",
   "settings.addedItem": "“{name}” added",
   "settings.removedItem": "“{name}” removed",
@@ -13579,6 +13581,8 @@ export const en = {
   "contact.intro.fallbackNextRouteHelp":
     "Move to the next colleague on the list.",
   "contact.intro.decideTitle": "Introduction to {name}",
+  "contact.intro.askedBy": "Asked by",
+  "contact.intro.askedThrough": "Through",
   "contact.intro.decideLegend": "Your answer",
   "contact.intro.decideAction": "Record answer",
   "contact.intro.decideFailed": "The answer was not recorded. Retry.",
@@ -14943,6 +14947,9 @@ export const en = {
   "worklist.scope.unassigned": "Unassigned",
   "worklist.scope.team": "Team",
   "worklist.scope.all": "All",
+  "worklist.owner.shared": "Shared responsibility: {names}",
+  "worklist.owner.sharedCount_one": "{count} responsible recipient",
+  "worklist.owner.sharedCount_other": "{count} responsible recipients",
   "worklist.owner.visibleLabel": "Viewing",
   "worklist.manager.cancel": "Cancel",
   "worklist.owner.wholeTeam": "The whole team",

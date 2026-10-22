@@ -37,7 +37,7 @@ const LINKED: readonly LinkedProject[] = [
     project_id: "p-1",
     name: "Warehouse rollout",
     key: "WH-14",
-    phase: <Badge tone="accent">Delivery</Badge>,
+    phase: <Badge tone="info">Delivery</Badge>,
   },
   {
     project_id: "p-2",

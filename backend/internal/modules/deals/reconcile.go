@@ -174,10 +174,14 @@ type followUpCandidate struct {
 // Extracted from reconcileWorkspace so the statement, its two bounds and the
 // reason for them sit together rather than being read past on the way to the
 // scan loop.
-func reconcileCandidatesSQL(now time.Time) (string, []any) {
+func reconcileCandidatesSQL(ctx context.Context, tx pgx.Tx, now time.Time) (string, []any, error) {
 	args := []any{now.Add(-reconcileLookback), reconcileBatch, now}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	current := storekit.CurrentCommitmentTaskClause("t", now, arg)
+	identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+	if err != nil {
+		return "", nil, err
+	}
+	current := storekit.CurrentTaskClause("t", now, identities, arg)
 	return fmt.Sprintf(`
 		SELECT d.id, d.name, ev.activity_id, ev.kind, ev.direction, ev.occurred_at, ev.subject
 		FROM deal d
@@ -207,14 +211,17 @@ func reconcileCandidatesSQL(now time.Time) (string, []any) {
 		LIMIT $2`,
 		MeetingIsOverSQL("a", "$3"),
 		OpenNextStepSQL("d.id", "$3", current),
-		relstrength.MeetingCountsSQL("a")), args
+		relstrength.MeetingCountsSQL("a")), args, nil
 }
 
 func (r *FollowUpReconciler) reconcileWorkspace(ctx context.Context) error {
 	now := r.now().UTC()
 	var candidates []followUpCandidate
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
-		query, args := reconcileCandidatesSQL(now)
+		query, args, err := reconcileCandidatesSQL(ctx, tx, now)
+		if err != nil {
+			return err
+		}
 		rows, err := tx.Query(ctx, query, args...)
 		if err != nil {
 			return err

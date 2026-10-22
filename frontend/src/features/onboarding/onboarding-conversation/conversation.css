@@ -1839,8 +1839,8 @@
    than the outstanding marks on the same row (the danger icon, the count
    pill). */
 .ob-triage-nav-link[aria-current="true"] {
-  background: var(--accentLight);
-  color: var(--accentText);
+  background: var(--bgChip);
+  color: var(--textPrimary);
 }
 
 .ob-triage-nav-link[aria-current="true"]::before {
@@ -1851,7 +1851,7 @@
   inline-size: 3px;
   border-radius: var(--r-full);
   corner-shape: round;
-  background: var(--accent);
+  background: var(--textPrimary);
 }
 
 .ob-triage-group {
