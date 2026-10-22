@@ -228,7 +228,7 @@ func (w *notificationMailWorker) deliver(ctx context.Context, attempt notices.Em
 	if !live {
 		return
 	}
-	attempt, facts, current, readErr := refreshApprovalNotice(seatCtx, w.pool, attempt, mailNow(w.now))
+	attempt, facts, current, readErr := refreshApprovalNotice(seatCtx, w.pool, attempt, mailNow(w.now), forSingleEmail)
 	if readErr != nil {
 		w.recordMailFailure(ctx, attempt.Notice.ID, "approval could not be read")
 		return

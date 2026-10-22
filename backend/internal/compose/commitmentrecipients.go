@@ -109,7 +109,11 @@ func (d *CommitmentDispatcher) reconcileTaskRecipients(ctx context.Context, tx p
 	}
 	if mutable.IsZero() {
 		proposal := CommitmentTaskProposal{SourceActivityID: c.SourceActivityID, Summary: c.Summary, Party: c.Party, Quote: c.Quote, Locator: c.Locator, SeatID: target.Assignee, PromiserSeatID: c.Seat, ClaimIDs: claims, Body: c.Body, PrivateTo: c.PrivateTo, ExistingTaskID: &target.ID}
-		return d.stageCommitmentProposal(ctx, tx, c, proposal, bundleID, derefSeat(target.Assignee), nil)
+		asked, _, err := d.pendingProposalAskedOf(ctx, tx, c, &proposal)
+		if err != nil {
+			return CommitmentRemembered, ids.Nil, err
+		}
+		return d.stageCommitmentProposal(ctx, tx, c, proposal, bundleID, asked, nil)
 	}
 	for _, claim := range claims {
 		if err := d.claims.SetClaimTaskTx(ctx, tx, claim, target.ID); err != nil {

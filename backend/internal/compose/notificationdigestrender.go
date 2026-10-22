@@ -75,7 +75,7 @@ func (w *notificationDigestWorker) readDigestLines(
 			if notice.ApprovalID == nil {
 				continue
 			}
-			attempt, _, current, err := refreshApprovalNotice(seatCtx, w.pool, notices.EmailAttempt{Notice: notice, ApprovalID: notice.ApprovalID, Recipient: seat}, mailNow(w.now))
+			attempt, _, current, err := refreshApprovalNotice(seatCtx, w.pool, notices.EmailAttempt{Notice: notice, ApprovalID: notice.ApprovalID, Recipient: seat}, mailNow(w.now), forDigestLine)
 			if err != nil {
 				return digestLines{}, err
 			}

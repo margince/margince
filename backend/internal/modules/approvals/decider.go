@@ -39,11 +39,14 @@ type deciderCandidate struct {
 // order: the payload's owner, the human the work is done for, the human staging
 // it, the owner of the record it changes. The first who is or may become active
 // wins, so an invited colleague finds the request waiting when they sign in.
-// The migration that added the column backfilled pending rows in this order.
+// A promise has only the first candidate: if they cannot be asked, nobody is.
 func resolveDecider(ctx context.Context, tx pgx.Tx, p principal.Principal, in StageInput) (deciderCandidate, error) {
 	candidates := []deciderCandidate{}
 	if approvalsubject.PayloadOwned(in.Kind) {
 		candidates = append(candidates, deciderCandidate{approvalsubject.Owner(in.Kind, in.ProposedChange), deciderPayloadOwner})
+	}
+	if in.Kind == approvalsubject.KindCommitmentTask {
+		return firstAskable(ctx, tx, candidates)
 	}
 	candidates = append(candidates, deciderCandidate{p.OnBehalfOf, deciderOnBehalfOf})
 	if p.Type == principal.PrincipalHuman {
@@ -54,6 +57,10 @@ func resolveDecider(ctx context.Context, tx pgx.Tx, p principal.Principal, in St
 		return deciderCandidate{}, err
 	}
 	candidates = append(candidates, deciderCandidate{owner, deciderRecordOwner})
+	return firstAskable(ctx, tx, candidates)
+}
+
+func firstAskable(ctx context.Context, tx pgx.Tx, candidates []deciderCandidate) (deciderCandidate, error) {
 	for _, c := range candidates {
 		askable, err := CanBeAsked(ctx, tx, c.member)
 		if err != nil {

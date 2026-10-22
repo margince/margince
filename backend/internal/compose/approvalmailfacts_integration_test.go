@@ -12,6 +12,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/notices"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -101,5 +103,25 @@ func TestACommitmentEmailLeavesOutWhatTheReaderMayNotSee(t *testing.T) {
 	}
 	if !strings.Contains(text, "Promised by:") {
 		t.Errorf("the facts lost the line the seat may see:\n%s", text)
+	}
+}
+
+// Only the single email reads a commitment's facts. The digest line reads
+// none, so no failed read of them can cost the seat the whole digest.
+func TestADigestLineReadsNoCommitmentFacts(t *testing.T) {
+	e, wire := stageMailedRequest(t)
+	id := ids.From[ids.ApprovalKind](ids.UUID(wire.Id))
+	attempt := notices.EmailAttempt{
+		ApprovalID: &id, Notice: notices.Notice{Kind: notices.KindApprovalPending}, Recipient: ids.From[ids.UserKind](e.Rep2),
+	}
+	reader := e.As(e.Rep2, []ids.UUID{e.Team1}, integration.AdminPerms)
+	for use, rich := range map[approvalNoticeUse]bool{forDigestLine: false, forSingleEmail: true} {
+		_, facts, send, err := refreshApprovalNotice(reader, e.Pool, attempt, clocktest.Now(t), use)
+		if err != nil || !send {
+			t.Fatalf("refreshing the notice for use %v: send=%v, %v", use, send, err)
+		}
+		if facts.Rich != rich {
+			t.Errorf("use %v read the commitment facts: %v, want %v", use, facts.Rich, rich)
+		}
 	}
 }

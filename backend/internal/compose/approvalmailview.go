@@ -18,10 +18,22 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// approvalNoticeUse says who reads the refreshed notice. Only the single email
+// reads a commitment's facts. The digest is claimed once and not retried, so a
+// failed read of them must not cost the seat all of it.
+type approvalNoticeUse bool
+
+const (
+	forDigestLine  approvalNoticeUse = false
+	forSingleEmail approvalNoticeUse = true
+)
+
 // refreshApprovalNotice re-reads the approval as the recipient. The notice's
 // body stays the line the digest shows; the facts are what the single email
 // adds, and only a commitment has any.
-func refreshApprovalNotice(ctx context.Context, pool *pgxpool.Pool, attempt notices.EmailAttempt, now time.Time) (notices.EmailAttempt, approvalMailFacts, bool, error) {
+func refreshApprovalNotice(
+	ctx context.Context, pool *pgxpool.Pool, attempt notices.EmailAttempt, now time.Time, use approvalNoticeUse,
+) (notices.EmailAttempt, approvalMailFacts, bool, error) {
 	var facts approvalMailFacts
 	if attempt.ApprovalID == nil {
 		if attempt.Notice.Kind == notices.KindApprovalPending {
@@ -53,13 +65,13 @@ func refreshApprovalNotice(ctx context.Context, pool *pgxpool.Pool, attempt noti
 	if approvals.PreviewRefusal(current.Preview) != nil {
 		return attempt, facts, false, nil //nolint:nilerr // A refused preview suppresses mail; delivery itself has not failed.
 	}
-	return withApprovalWords(ctx, pool, attempt, current, approval.ExpiresAt)
+	return withApprovalWords(ctx, pool, attempt, current, approval.ExpiresAt, use)
 }
 
 // withApprovalWords writes the notice's subject and digest line for the
 // recipient, and the facts a commitment's single email adds.
 func withApprovalWords(
-	ctx context.Context, pool *pgxpool.Pool, attempt notices.EmailAttempt, current crmcontracts.Approval, expires time.Time,
+	ctx context.Context, pool *pgxpool.Pool, attempt notices.EmailAttempt, current crmcontracts.Approval, expires time.Time, use approvalNoticeUse,
 ) (notices.EmailAttempt, approvalMailFacts, bool, error) {
 	var facts approvalMailFacts
 	if current.Summary != nil && *current.Summary != "" {
@@ -70,7 +82,7 @@ func withApprovalWords(
 	}
 	words := recipientMailCopy(ctx, pool)
 	local := func(at time.Time) time.Time { return recipientDeadline(ctx, pool, at) }
-	if current.Kind == CommitmentTaskKind {
+	if use == forSingleEmail && current.Kind == CommitmentTaskKind {
 		var err error
 		if facts, err = newApprovalPreviewReader(InstallationDB(pool)).commitmentMailFacts(ctx, current, words, local); err != nil {
 			return attempt, facts, false, err

@@ -30,7 +30,12 @@ export function commitmentResponsibility(
   assigneeInactive = false,
 ): readonly ResolvedDisplayField[] {
   const promiser = change.promiser_seat_id;
-  const assignee = change.seat_id;
+  // A new task with no seat of its own goes to the colleague who made the
+  // promise, as the server assigns it.
+  const assignee =
+    typeof change.seat_id === "string" && change.seat_id
+      ? change.seat_id
+      : promiser;
   const party = typeof change.party === "string" ? change.party.trim() : "";
   const madeBy =
     typeof promiser === "string" && promiser

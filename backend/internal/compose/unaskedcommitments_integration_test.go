@@ -83,7 +83,7 @@ func TestARequestSentToTheWrongColleagueIsTakenBack(t *testing.T) {
 	recipient := a.e.As(a.e.Rep1, nil, integration.AdminPerms)
 	for id, sent := range map[ids.ApprovalID]bool{kept: true, wrong: false} {
 		attempt := notices.EmailAttempt{ApprovalID: &id, Notice: notices.Notice{Kind: notices.KindApprovalPending}, Recipient: ids.From[ids.UserKind](a.e.Rep1)}
-		if _, _, send, err := refreshApprovalNotice(recipient, a.e.Pool, attempt, clocktest.Now(t)); err != nil || send != sent {
+		if _, _, send, err := refreshApprovalNotice(recipient, a.e.Pool, attempt, clocktest.Now(t), forSingleEmail); err != nil || send != sent {
 			t.Errorf("the queued email for %s: send=%v err=%v, want send=%v", id, send, err, sent)
 		}
 	}

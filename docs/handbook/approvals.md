@@ -77,11 +77,13 @@ Press **Acknowledge** to take the row off your list. If the same change fails ag
 Also called: approval failed, approved but nothing happened, retry an approval.
 
 ### Who approves agent actions?
-An agent action in Margince is approved by the colleague the agent acts for, or by a colleague who could have made the same change. You only see approvals whose target you can see and whose effect you could carry out. No agent may approve a proposal staged for somebody else, or a send it proposed itself. An administrator has no override past their own permissions.
+An agent action in Margince is approved by the colleague the agent acts for, or by a colleague who could have made the same change. You only see approvals whose target you can see and whose effect you could carry out. No agent may approve a proposal staged for somebody else, or a send it proposed itself. An administrator has no override past their own permissions. A promise read from mail or a meeting is the one exception: only the colleague who made it may answer it.
 Also called: approver, who signs off, permission to approve.
 
 ### Who is told about an approval?
 Margince tells one colleague about each approval: the one it is for. That is the colleague an agent acts for, or the colleague who asked for the change, or else the owner of the record it changes. Other colleagues who may decide it can still answer it from their approvals list, but get no notice and no email. When a deal changes owner, its waiting approvals move to the new owner. Margince proposes nothing about a record nobody owns.
+
+A promise read from mail or a meeting is the exception: only the colleague who made it is told, and only they may answer it. If they cannot be asked, nobody is.
 Also called: approval email, decision needed, who gets notified, approval notice.
 
 ### Who is asked about a promise read from mail or a meeting?

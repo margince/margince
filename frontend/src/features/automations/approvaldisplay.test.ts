@@ -261,7 +261,7 @@ describe("commitment responsibility", () => {
     [
       { promiser_seat_id: "original" },
       "Theo",
-      "Creates a task assigned to Colleague name unavailable.",
+      "Creates a task assigned to Theo.",
     ],
     [
       { seat_id: "assignee" },
