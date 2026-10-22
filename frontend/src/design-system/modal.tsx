@@ -34,7 +34,6 @@ export const MODAL_INTENTS = [
   "form",
   "drawer",
   "drawer-reading",
-  "workspace",
   "full",
 ] as const;
 export type ModalIntent = (typeof MODAL_INTENTS)[number];
@@ -268,6 +267,5 @@ function modalClass(intent: ModalIntent, span: DrawerSpan) {
       ? "modal modal-drawer modal-drawer-wide modal-drawer-window"
       : "modal modal-drawer modal-drawer-wide";
   }
-  if (intent === "workspace") return "modal modal-workspace";
   if (intent === "full") return "modal modal-full";
 }

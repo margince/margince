@@ -4,11 +4,11 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { writeMessage } from "../../design-system/richtext-testing";
-import { openChecks } from "../../testing/composedraft.testkit";
 import { ComposeModal } from "./compose";
 import {
   type Activity,
   activity202,
+  findThreadChoice,
   jsonResponse,
   pickWhy,
   render,
@@ -48,16 +48,9 @@ describe("what the composer says this message is", () => {
       />,
     );
 
-    // The sentence that replaces the question, among the checks. A reader who
-    // is shown a dropdown here is being asked to restate what the thread in
-    // front of them says.
+    // A reader who is shown a dropdown here is being asked to restate what
+    // the thread in front of them says. The warning bar stays empty.
     await screen.findByText(/Replying to “Re: Q3”/);
-    openChecks();
-    expect(
-      screen.getByText(
-        "This replies to the recipient’s own message, so no reason is needed.",
-      ),
-    ).toBeTruthy();
     expect(screen.queryByLabelText("Reason for contact")).toBeNull();
   });
 
@@ -216,11 +209,14 @@ describe("what the composer says this message is", () => {
   });
 });
 
-// The conversation a reply is answering, in the drawer beside it.
-//
-// A reply does not use the centred box, because the box covers the message it
-// answers. These pin the shape it takes and what it draws in the second column.
+// The conversation a reply is answering: the thread menu above the fields, and
+// the earlier messages quoted under the words.
 describe("the composer's conversation pane", () => {
+  const threadMenu = () => {
+    const menu = document.querySelector<HTMLElement>(".compose-threadmenu");
+    if (!menu) throw new Error("the thread menu is shut");
+    return menu;
+  };
   const threaded: Activity = {
     ...activity202,
     thread_key: "<t-1@mail>",
@@ -236,7 +232,7 @@ describe("the composer's conversation pane", () => {
     occurred_at: "2026-06-28T00:00:00Z",
   };
 
-  it("takes the workspace on an account whose mail it is answering", async () => {
+  it("marks the thread it is answering in the menu above the fields", async () => {
     stubRoutes({
       "GET /activities/act-1": () => jsonResponse(threaded),
       "GET /activities": () =>
@@ -252,14 +248,14 @@ describe("the composer's conversation pane", () => {
       />,
     );
 
-    // The thread the draft answers is marked on the rail, beside the form.
-    const rail = await screen.findByRole("region", { name: "Threads" });
+    // The thread the draft answers is marked in the menu the bar opens.
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Change$/ }),
+    );
     expect(
-      await within(rail).findByRole("button", { pressed: true }),
+      await within(threadMenu()).findByRole("button", { pressed: true }),
     ).toBeTruthy();
-    expect(
-      document.querySelector(".modal-workspace .compose-split"),
-    ).not.toBeNull();
+    expect(document.querySelector(".docked .compose-threadbar")).not.toBeNull();
   });
 
   it("draws a message it may not read as a held place, not a gap", async () => {
@@ -288,17 +284,19 @@ describe("the composer's conversation pane", () => {
       />,
     );
 
-    // The open card reads the words the draft answers, then holds the rest of
-    // the thread's places.
+    // The words the draft answers are quoted under it; the withheld one is
+    // not, since nobody here may read it.
     await userEvent.click(
-      await screen.findByRole("button", { name: "Read full email" }),
+      await screen.findByRole("button", { name: "Show 1 earlier message" }),
     );
     expect(
       await screen.findByText("The signed order is attached."),
     ).toBeTruthy();
+    // The menu still holds the withheld message's place in the thread.
+    await userEvent.click(screen.getByRole("button", { name: /Change$/ }));
     await waitFor(() =>
       expect(
-        document.querySelectorAll(".compose-rail-others > li"),
+        threadMenu().querySelectorAll(".compose-threadlist-others > li"),
       ).toHaveLength(1),
     );
   });
@@ -322,26 +320,30 @@ describe("the composer's conversation pane", () => {
       />,
     );
 
-    const choice = await screen.findByRole("button", { name: /Re: Q3/ });
+    expect(await screen.findByText("New thread")).toBeTruthy();
+    const choice = await findThreadChoice(/Re: Q3/);
     expect(choice.getAttribute("aria-pressed")).toBe("false");
-    expect(screen.getByText(/Starts a new thread/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: "New email" })).toBeNull();
 
     // Taking one marks it as the thread the draft answers, with a way back.
     await userEvent.click(choice);
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Change$/ }),
+    );
+    const menu = within(threadMenu());
     await waitFor(() =>
       expect(
-        screen
+        menu
           .getByRole("button", { name: /Re: Q3/ })
           .getAttribute("aria-pressed"),
       ).toBe("true"),
     );
-    expect(screen.getByRole("button", { name: "New email" })).toBeTruthy();
+    expect(menu.getByRole("button", { name: "New email" })).toBeTruthy();
   });
 
   it("draws no thread for a reply to a note", async () => {
     // A timeline row offers Reply on a note as readily as on a mail. A note
-    // marked on the rail would claim to be an exchange.
+    // offered as a thread would claim to be an exchange.
     const note: Activity = { ...threaded, kind: "note" };
     const sent = stubRoutes({
       "GET /activities/act-1": () => jsonResponse(note),
@@ -357,14 +359,15 @@ describe("the composer's conversation pane", () => {
     );
 
     // The composer has read the anchor and the record's threads. So the
-    // rail's absence is a decision, not a list that had not arrived yet.
+    // menu's empty list is a decision, not one that had not arrived yet.
     await waitFor(() =>
       expect(
         sent.filter((call) => call.key === "GET /activities/act-1"),
       ).not.toHaveLength(0),
     );
     await screen.findByText(/Replying to/);
-    expect(screen.queryByRole("region", { name: "Threads" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: /Change$/ }));
+    expect(threadMenu().querySelectorAll(".compose-threadrow")).toHaveLength(0);
   });
 
   it("shows a mail with no thread as the one message it is", async () => {
@@ -387,12 +390,12 @@ describe("the composer's conversation pane", () => {
     );
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Read full email" }),
+      await screen.findByRole("button", { name: "Show 1 earlier message" }),
     );
     await waitFor(() =>
-      expect(
-        document.querySelector(".compose-rail-reading")?.textContent,
-      ).toContain("The signed order is attached."),
+      expect(document.querySelector(".compose-earlier")?.textContent).toContain(
+        "The signed order is attached.",
+      ),
     );
     expect(
       sent.filter(

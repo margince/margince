@@ -217,3 +217,16 @@ export async function fillSendableForm() {
   writeMessage("Body", "Body content");
   await pickWhy(WHY_LABEL.requestedFollowup);
 }
+
+// The threads the composer offers sit in a menu behind the bar above the
+// fields. Finds one by name, opening the menu first when it is shut.
+export async function findThreadChoice(name: string | RegExp) {
+  const shown = screen.queryByRole("button", { name });
+  if (shown) {
+    return shown;
+  }
+  await userEvent.click(
+    await screen.findByRole("button", { name: /(Continue a thread|Change)$/ }),
+  );
+  return screen.findByRole("button", { name });
+}

@@ -1,13 +1,14 @@
 /** @vitest-environment happy-dom */
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ComponentProps } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
-import { ConversationRail, railCards } from "./composerail";
+import type { ComposeThread } from "./composeanchor";
 import type { Conversation } from "./composethread";
+import { ThreadBar, threadCards } from "./composethreadbar";
 
-// The rail beside the draft, in the states a read leaves it. Folded into
+// The thread bar above the draft, in the states a read leaves it. Folded into
 // "nothing here" a failure would tell the reader something settled the
 // composer does not know: a record with no history to continue.
 
@@ -25,30 +26,56 @@ const pricing: Conversation = {
   memberIds: ["a2", "a1"],
 };
 
-function rail(props: Partial<ComponentProps<typeof ConversationRail>>) {
+type Reads = Readonly<{
+  conversations?: readonly Conversation[];
+  failed?: boolean;
+  retry?: () => void;
+  anchorFailed?: boolean;
+  retryAnchor?: () => void;
+}>;
+
+// Only the reads the bar draws from; the hook behind it is not under test.
+function threadOf(reads: Reads): ComposeThread {
+  const fake = {
+    anchorRead: {
+      activity: undefined,
+      pending: false,
+      failed: reads.anchorFailed ?? false,
+      retry: reads.retryAnchor ?? (() => undefined),
+    },
+    anchorActivity: undefined,
+    conversation: {
+      messages: [],
+      pending: false,
+      failed: false,
+      retry: () => undefined,
+    },
+    anchorUnresolved: false,
+    recent: {
+      conversations: reads.conversations ?? [pricing],
+      pending: false,
+      failed: reads.failed ?? false,
+      retry: reads.retry ?? (() => undefined),
+    },
+    answeringLine: "Replying to “Pricing for Q4”",
+    splitColumns: true,
+  };
+  return fake as unknown as ComposeThread;
+}
+
+function bar(
+  reads: Reads,
+  props: Partial<ComponentProps<typeof ThreadBar>> = {},
+) {
   return (
     <LocaleProvider initial="en">
-      <ConversationRail
-        recordName="Ada Brandt"
-        conversations={[pricing]}
-        pending={false}
-        failed={false}
-        onRetry={() => undefined}
+      <ThreadBar
+        thread={threadOf(reads)}
         answering={undefined}
-        anchor={undefined}
-        anchorPending={false}
-        anchorFailed={false}
-        onRetryAnchor={() => undefined}
-        thread={{
-          messages: [],
-          pending: false,
-          failed: false,
-          retry: () => undefined,
-        }}
-        viewerUserId={undefined}
+        recordName="Ada Brandt"
+        viewerId={undefined}
         nameOf={() => undefined}
-        onChoose={() => undefined}
-        onLeave={() => undefined}
+        onSelect={() => undefined}
         disabled={false}
         {...props}
       />
@@ -56,23 +83,34 @@ function rail(props: Partial<ComponentProps<typeof ConversationRail>>) {
   );
 }
 
+async function openMenu(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(
+    screen.getByRole("button", { name: /(Continue a thread|Change)$/ }),
+  );
+  const menu = document.querySelector<HTMLElement>(".compose-threadmenu");
+  if (!menu) throw new Error("the thread menu is shut");
+  return within(menu);
+}
+
 it("keeps the threads on screen as a failure when the record's mail could not be read", async () => {
   const user = userEvent.setup();
   const retry = vi.fn();
-  render(rail({ conversations: [], failed: true, onRetry: retry }));
+  render(bar({ conversations: [], failed: true, retry }));
 
-  expect(screen.getByText("This section did not load.")).toBeTruthy();
-  await user.click(screen.getByRole("button", { name: "Retry" }));
+  const menu = await openMenu(user);
+  expect(menu.getByText("This section did not load.")).toBeTruthy();
+  await user.click(menu.getByRole("button", { name: "Retry" }));
   expect(retry).toHaveBeenCalledTimes(1);
 });
 
 it("draws a failed read of the answered message as a failure with a retry", async () => {
   const user = userEvent.setup();
   const retry = vi.fn();
-  render(rail({ answering: "a1", anchorFailed: true, onRetryAnchor: retry }));
+  render(bar({ anchorFailed: true, retryAnchor: retry }, { answering: "a1" }));
 
-  expect(screen.getByText("This section did not load.")).toBeTruthy();
-  await user.click(screen.getByRole("button", { name: "Retry" }));
+  const menu = await openMenu(user);
+  expect(menu.getByText("This section did not load.")).toBeTruthy();
+  await user.click(menu.getByRole("button", { name: "Retry" }));
   expect(retry).toHaveBeenCalledTimes(1);
 });
 
@@ -81,36 +119,36 @@ it("draws a failed read of the answered message as a failure with a retry", asyn
 // would miss the shared focus ring and the pending and refusal shapes.
 it("offers each thread and the way back as design-system buttons", async () => {
   const user = userEvent.setup();
-  const choose = vi.fn();
-  const leave = vi.fn();
-  render(rail({ onChoose: choose }));
+  const select = vi.fn();
+  render(bar({}, { onSelect: select }));
 
-  expect(
-    screen.getByRole("region", { name: "Threads with Ada Brandt" }),
-  ).toBeTruthy();
-  const card = screen.getByRole("button", { name: /Pricing for Q4/ });
+  expect(screen.getByText("New thread")).toBeTruthy();
+  let menu = await openMenu(user);
+  expect(menu.getByText("Continue a thread with Ada Brandt")).toBeTruthy();
+  const card = menu.getByRole("button", { name: /Pricing for Q4/ });
   expect(card.classList.contains("btn")).toBe(true);
   expect(card.getAttribute("aria-pressed")).toBe("false");
-  await user.click(screen.getByRole("button", { name: "Reply in thread" }));
-  expect(choose).toHaveBeenCalledWith("a2");
-  expect(screen.queryByRole("button", { name: "New email" })).toBeNull();
+  expect(menu.queryByRole("button", { name: "New email" })).toBeNull();
+  await user.click(card);
+  expect(select).toHaveBeenCalledWith("a2");
 
   cleanup();
-  render(rail({ answering: "a1", onLeave: leave }));
+  render(bar({}, { answering: "a1", onSelect: select }));
+  menu = await openMenu(user);
   // An older message of the thread marks the thread it belongs to.
   expect(
-    screen
+    menu
       .getByRole("button", { name: /Pricing for Q4/ })
       .getAttribute("aria-pressed"),
   ).toBe("true");
-  const back = screen.getByRole("button", { name: "New email" });
+  const back = menu.getByRole("button", { name: "New email" });
   expect(back.classList.contains("btn")).toBe(true);
   await user.click(back);
-  expect(leave).toHaveBeenCalledTimes(1);
+  expect(select).toHaveBeenLastCalledWith(null);
 });
 
 it("puts a reply to a thread outside the offer at the top, marked", () => {
-  const cards = railCards([pricing], "old-1", {
+  const cards = threadCards([pricing], "old-1", {
     id: "old-1",
     kind: "email",
     subject: "An older thread",
@@ -129,9 +167,10 @@ it("puts a reply to a thread outside the offer at the top, marked", () => {
 
 // A read that carries no time draws the card without one, rather than taking
 // the composer down with an invalid date.
-it("draws a thread whose time the read did not carry", () => {
+it("draws a thread whose time the read did not carry", async () => {
+  const user = userEvent.setup();
   render(
-    rail({
+    bar({
       conversations: [
         {
           ...pricing,
@@ -149,5 +188,6 @@ it("draws a thread whose time the read did not carry", () => {
       ],
     }),
   );
-  expect(screen.getByRole("button", { name: /Pricing for Q4/ })).toBeTruthy();
+  const menu = await openMenu(user);
+  expect(menu.getByRole("button", { name: /Pricing for Q4/ })).toBeTruthy();
 });

@@ -10,6 +10,7 @@ import {
   type Activity,
   activity202,
   fillSendableForm,
+  findThreadChoice,
   jsonResponse,
   NO_VOICE_PROFILE,
   PURPOSES,
@@ -502,9 +503,7 @@ describe("what the composer says it is answering", () => {
     // The conversations are offered, not chosen for the reader. A button that
     // says "write an email" must not anchor the message to whatever came last,
     // addressed to somebody they had not picked.
-    await userEvent.click(
-      await screen.findByRole("button", { name: /Rechnung GR-2026-0207/ }),
-    );
+    await userEvent.click(await findThreadChoice(/Rechnung GR-2026-0207/));
 
     await userEvent.click(draftButton());
 
@@ -566,9 +565,7 @@ describe("what the composer says it is answering", () => {
     );
 
     // The conversation is picked, then drafted against.
-    await userEvent.click(
-      await screen.findByRole("button", { name: /Rechnung GR-2026-0207/ }),
-    );
+    await userEvent.click(await findThreadChoice(/Rechnung GR-2026-0207/));
     expect(screen.queryByText(/dietmar@valantic.test/)).toBeNull();
 
     await userEvent.click(draftButton());
@@ -621,7 +618,7 @@ describe("what the composer says it is answering", () => {
       />,
     );
 
-    await screen.findByText(/Rechnung GR-2026-0207/);
+    await findThreadChoice(/Rechnung GR-2026-0207/);
     // The record still scopes the read; a project only narrows it further.
     expect(asked.params?.get("entity_type")).toBe("company");
     expect(asked.params?.get("entity_id")).toBe("company-1");
@@ -659,9 +656,7 @@ describe("what the composer says it is answering", () => {
       />,
     );
 
-    await userEvent.click(
-      await screen.findByRole("button", { name: /Rechnung GR-2026-0207/ }),
-    );
+    await userEvent.click(await findThreadChoice(/Rechnung GR-2026-0207/));
     await userEvent.click(draftButton());
     await waitFor(() =>
       expect(

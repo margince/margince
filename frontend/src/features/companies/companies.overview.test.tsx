@@ -87,7 +87,7 @@ describe("CompanyScreen — next-step suggestions", () => {
     );
     // The composer stands over the record. The details pane it covers is
     // still where the reader left it.
-    await screen.findByRole("button", { name: "Cancel" });
+    await screen.findByRole("button", { name: "Close" });
     expect(container.querySelector(".co-rail")).toBeTruthy();
   });
 
@@ -441,12 +441,12 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     );
 
     await userEvent.click(screen.getByRole("button", { name: "Email" }));
-    await screen.findByRole("button", { name: "Cancel" });
+    await screen.findByRole("button", { name: "Close" });
     expect(container.querySelector(".co-rail")).toBeTruthy();
 
-    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
     await waitFor(() =>
-      expect(screen.queryByRole("button", { name: "Cancel" })).toBeNull(),
+      expect(screen.queryByRole("button", { name: "Close" })).toBeNull(),
     );
     expect(container.querySelector(".co-rail")).toBeTruthy();
   });

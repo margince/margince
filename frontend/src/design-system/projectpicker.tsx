@@ -111,18 +111,18 @@ export function ProjectPicker({
   projectId,
   onChange,
   scope,
-  inHead = false,
+  compact = false,
 }: Readonly<{
   projects: readonly PickableProject[];
   projectId: string;
   onChange: (next: string) => void;
   scope?: ProjectScope;
   /**
-   * Drawn in a dialog's head, where the select's own value names it. The label
+   * Drawn inside a row whose value names it. The label
    * is for a screen reader alone. The scope line is left to the surface, whose
    * subject tag already says which project the message files under.
    */
-  inHead?: boolean;
+  compact?: boolean;
 }>) {
   const t = useT();
   if (projects.length === 0) {
@@ -132,7 +132,7 @@ export function ProjectPicker({
   const counted = scope?.project_id === projectId ? scope : undefined;
   return (
     <>
-      <Field label={t("compose.project")} labelHidden={inHead}>
+      <Field label={t("compose.project")} labelHidden={compact}>
         {(control) => (
           <Select
             {...control}
@@ -150,8 +150,8 @@ export function ProjectPicker({
           />
         )}
       </Field>
-      {!inHead && counted && <ScopeLine scope={counted} />}
-      {!inHead && !counted && chosen && (
+      {!compact && counted && <ScopeLine scope={counted} />}
+      {!compact && !counted && chosen && (
         <p className="t-caption">
           {t("compose.scopedTo", { key: chosen.key ?? chosen.name })}
         </p>

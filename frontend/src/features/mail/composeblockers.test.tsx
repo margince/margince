@@ -2,7 +2,6 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { openChecks } from "../../testing/composedraft.testkit";
 import {
   allowedPreview,
   isPreviewDoor,
@@ -15,7 +14,7 @@ import {
   render,
   stubRoutes,
 } from "./compose.testkit";
-import { checksVerdict, reasonTargetOf } from "./composechecks";
+import { reasonTargetOf } from "./composeblockers";
 
 afterEach(() => {
   cleanup();
@@ -29,61 +28,20 @@ const NOTHING_ON_RECORD = {
   resolved_category: "requested_followup",
 } as const;
 
+const settled = (preview: ReturnType<typeof refusedPreview>) => ({
+  preview,
+  asking: false,
+  unanswered: false,
+});
+
 const contactOf = (address: string) =>
   address === "anna@example.test" ? "c-1" : undefined;
-
-describe("the count the foot shows", () => {
-  const quiet = { preview: undefined, asking: false, unanswered: false };
-
-  it("says checking while the engine is asked", () => {
-    expect(
-      checksVerdict({
-        permission: { ...quiet, asking: true },
-        missingReason: true,
-        sharedUnsubscribe: false,
-      }),
-    ).toEqual({ state: "checking" });
-  });
-
-  it("counts a refusal, a missing reason and a shared unsubscribe", () => {
-    expect(
-      checksVerdict({
-        permission: {
-          ...quiet,
-          preview: refusedPreview("anna@example.test", NOTHING_ON_RECORD),
-        },
-        missingReason: true,
-        sharedUnsubscribe: true,
-      }),
-    ).toEqual({ state: "blocked", count: 3 });
-  });
-
-  // Ready is a claim about an answer, so a message nobody asked about is not.
-  it("says ready only on an engine answer that allows", () => {
-    const nothingToAsk = {
-      missingReason: false,
-      sharedUnsubscribe: false,
-    };
-    expect(checksVerdict({ permission: quiet, ...nothingToAsk })).toEqual({
-      state: "unasked",
-    });
-    expect(
-      checksVerdict({
-        permission: {
-          ...quiet,
-          preview: allowedPreview(["anna@example.test"]),
-        },
-        ...nothingToAsk,
-      }),
-    ).toEqual({ state: "ready" });
-  });
-});
 
 describe("who a reason to write is recorded on", () => {
   it("is the contact behind the deciding address, for its category", () => {
     expect(
       reasonTargetOf(
-        refusedPreview("anna@example.test", NOTHING_ON_RECORD),
+        settled(refusedPreview("anna@example.test", NOTHING_ON_RECORD)),
         contactOf,
       ),
     ).toEqual({
@@ -98,18 +56,32 @@ describe("who a reason to write is recorded on", () => {
   it("is nobody where the composer knows no contact or nobody may lift it", () => {
     expect(
       reasonTargetOf(
-        refusedPreview("stranger@example.test", NOTHING_ON_RECORD),
+        settled(refusedPreview("stranger@example.test", NOTHING_ON_RECORD)),
         contactOf,
       ),
     ).toBeUndefined();
     expect(
       reasonTargetOf(
-        refusedPreview("anna@example.test", {
-          reason_code: "marketing_objection",
-          decided_by: "subject",
-        }),
+        settled(
+          refusedPreview("anna@example.test", {
+            reason_code: "marketing_objection",
+            decided_by: "subject",
+          }),
+        ),
         contactOf,
       ),
+    ).toBeUndefined();
+  });
+
+  // A vouch resting on an answer the engine is replacing would be recorded
+  // for the wrong message.
+  it("is nobody while the answer is still out or failed", () => {
+    const refused = refusedPreview("anna@example.test", NOTHING_ON_RECORD);
+    expect(
+      reasonTargetOf({ ...settled(refused), asking: true }, contactOf),
+    ).toBeUndefined();
+    expect(
+      reasonTargetOf({ ...settled(refused), unanswered: true }, contactOf),
     ).toBeUndefined();
   });
 });
@@ -165,8 +137,7 @@ describe("recording a reason to write where the refusal is read", () => {
     await user.type(screen.getByLabelText("To"), "anna@example.test");
     await user.tab();
 
-    await screen.findByRole("button", { name: "1 check blocks sending" });
-    const checks = within(openChecks());
+    const checks = within(screen.getAllByRole("dialog")[0]);
     await user.click(
       await checks.findByRole("button", { name: "Record reason for contact" }),
     );
@@ -185,8 +156,11 @@ describe("recording a reason to write where the refusal is read", () => {
         reason: "She asked for the revised quote at the fair.",
       }),
     );
-    expect(
-      await screen.findByRole("button", { name: "Ready to send" }),
-    ).toBeTruthy();
+    // Asked again, the engine allows it and the warning goes.
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("button", { name: "Record reason for contact" }),
+      ).toBeNull(),
+    );
   });
 });

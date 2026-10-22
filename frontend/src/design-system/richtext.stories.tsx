@@ -4,7 +4,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { LocaleProvider } from "../i18n";
-import { Button } from "./atoms";
 import { RichText } from "./richtext";
 
 const meta: Meta<typeof RichText> = {
@@ -131,34 +130,3 @@ export const Markdown: Story = {
     />
   ),
 };
-
-const LABELS = {
-  bold: "Bold",
-  italic: "Italic",
-  bulletList: "Bulleted list",
-  numberList: "Numbered list",
-  link: "Link",
-  linkPrompt: "Web address for this link",
-};
-
-/** The marks at the head of the frame, after the host's own verb. A band sits
- * under the bar, and a line sits inside the frame under the words. */
-function HeadedDemo() {
-  const [value, setValue] = useState("");
-  return (
-    <RichText
-      value={value}
-      onChange={(next) => setValue(next.html)}
-      label="Message"
-      labels={LABELS}
-      placeholder="Write your message"
-      rows={8}
-      bar="head"
-      lead={<Button variant="aiQuiet">Draft with AI</Button>}
-      band={<p className="t-caption">A band about the words below.</p>}
-      foot={<p className="t-caption">Signs off as “Best regards, Anna”</p>}
-    />
-  );
-}
-
-export const HeadedBar: Story = { render: () => <HeadedDemo /> };

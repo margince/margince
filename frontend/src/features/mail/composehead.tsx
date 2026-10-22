@@ -8,6 +8,7 @@
 // the refusal vocabulary and the send itself. What is here is only the form.
 
 import { Mail, MessageSquare } from "lucide-react";
+import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
@@ -275,29 +276,35 @@ export function SubjectRow({
   invalid,
   need,
   disabled,
+  aside,
 }: Readonly<{
   subject: string;
   onChange: (next: string) => void;
   invalid: boolean;
   need: string;
   disabled?: boolean;
+  /** A control on the subject's own line (the project whose tag it carries). */
+  aside?: ReactNode;
 }>) {
   const t = useT();
   return (
-    <Field
-      className="compose-address-field"
-      label={t("compose.subject")}
-      error={invalid ? need : undefined}
-    >
-      {(control) => (
-        <TextInput
-          {...control}
-          placeholder={t("compose.subjectHint")}
-          value={subject}
-          disabled={disabled}
-          onChange={(event) => onChange(event.target.value)}
-        />
-      )}
-    </Field>
+    <div className="compose-subject">
+      <Field
+        className="compose-address-field"
+        label={t("compose.subject")}
+        error={invalid ? need : undefined}
+      >
+        {(control) => (
+          <TextInput
+            {...control}
+            placeholder={t("compose.subjectHint")}
+            value={subject}
+            disabled={disabled}
+            onChange={(event) => onChange(event.target.value)}
+          />
+        )}
+      </Field>
+      {aside}
+    </div>
   );
 }

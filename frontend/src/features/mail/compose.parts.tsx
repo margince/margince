@@ -1,9 +1,16 @@
+import { Ellipsis, Trash2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
+import { SendMark } from "../../components/sendpermission";
 import { Button, Field } from "../../design-system/atoms";
+import { DockedWindow, type DockState } from "../../design-system/dockedwindow";
+import { EmailText } from "../../design-system/emailtext";
 import { ErrorLine } from "../../design-system/errorline";
+import { IconAction } from "../../design-system/iconaction";
 import { RichText } from "../../design-system/richtext";
 import { Select } from "../../design-system/select";
-import { useT } from "../../i18n";
+import { formatDateTime, formatNumber } from "../../format/format";
+import { viewerZone } from "../../format/timezone";
+import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import {
   asksWhy,
@@ -13,22 +20,14 @@ import {
 import { useRichTextLabels } from "../../lib/richtextlabels";
 import type { CarriageViolation } from "./carriage";
 import type { Activity, VoiceProfile } from "./compose";
-import { AiDraftBand, AiDraftToggle } from "./composeaiband";
-import type { ComposeThread } from "./composeanchor";
-import {
-  AttachAction,
-  AttachedFiles,
-  CarriageNotice,
-} from "./composeattachments";
-import { ConversationFold } from "./composeconversation";
+import { AiDraftBand } from "./composeaiband";
+import { CarriageNotice } from "./composeattachments";
 import type { ComposeFields } from "./composefields";
 import { FieldNeed } from "./composehead";
-import { ConversationRail } from "./composerail";
-import type { RelinkKind } from "./composerelink";
 import type { useSavedDraft } from "./composesaveddraft";
+import { momentLabel, momentOf, ScheduleMenu } from "./composeschedule";
 import type { ComposeSend, MissingField } from "./composesend";
 import { SignOffPreview } from "./composesignoff";
-import type { useTargetFiles } from "./composetarget";
 import type { VoiceDraft } from "./composevoicedraft";
 import { SendRefusal } from "./sendrefusal";
 
@@ -73,35 +72,114 @@ export function MailSendNotices({
   );
 }
 
-// The footer's lead: saving the draft, then the checks a send meets.
-export function ComposeActionsLead({
+// The composer's window: docked beside the page, at its own size, grown or
+// folded. Each opening starts at its own size.
+export function ComposeFrame({
+  title,
+  onClose,
+  closeDisabled,
+  bodyId,
+  children,
+}: Readonly<{
+  title: string;
+  onClose: () => void;
+  closeDisabled: boolean;
+  /** The words' field, where focus lands as the window opens. */
+  bodyId: string;
+  children: ReactNode;
+}>) {
+  const [state, setState] = useState<DockState>("open");
+  return (
+    <DockedWindow
+      title={title}
+      state={state}
+      onStateChange={setState}
+      onClose={onClose}
+      closeDisabled={closeDisabled}
+      initialFocusTo={() => document.getElementById(bodyId)}
+    >
+      {children}
+    </DockedWindow>
+  );
+}
+
+// The footer. The send and its other moments come first, where the hand ends
+// up. Then what became of the draft, and the way to throw it away.
+export function ComposeFoot({
+  confirmLabel,
+  send,
   isChannelReply,
+  held,
+  attach,
+  onPickMoment,
+  sendAt,
   savedDraft,
-  checks,
   busy,
 }: Readonly<{
-  /** A channel reply meets no checks a list could hold. */
+  confirmLabel: string;
+  send: ComposeSend;
+  /** A channel reply goes now, and has no engine answer to mark. */
   isChannelReply: boolean;
+  /** A write about these words is in flight, so the send waits for it. */
+  held: boolean;
+  /** The way to add files, beside the send. */
+  attach: ReactNode;
+  onPickMoment: () => void;
+  sendAt: string;
   savedDraft: ReturnType<typeof useSavedDraft>;
-  checks: ReactNode;
   /** A send or a rejection is in flight. */
   busy: boolean;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
+  const scheduled = momentOf(sendAt);
+  const error = send.sendError ?? savedDraft.error;
   return (
-    <>
-      {savedDraft.enabled && (
-        <Button
-          onClick={savedDraft.save}
-          pending={savedDraft.saving}
-          disabled={busy}
-        >
-          {t("compose.saveDraft")}
-        </Button>
-      )}
-      {!isChannelReply && checks}
-    </>
+    <div className="compose-foot">
+      {error && <ErrorLine>{error}</ErrorLine>}
+      <div className="compose-foot-row">
+        <span className="actions-split">
+          <Button
+            variant="primary"
+            onClick={send.confirm}
+            pending={send.send.isPending}
+            disabled={held}
+          >
+            {confirmLabel}
+          </Button>
+          {!isChannelReply && <ScheduleMenu onOpen={onPickMoment} />}
+        </span>
+        {!isChannelReply && <SendMark {...send.permission} />}
+        {attach}
+        <span className="t-caption compose-foot-status" role="status">
+          {scheduled
+            ? t("compose.willGoOut", {
+                when: momentLabel(scheduled, locale, viewerZone()),
+              })
+            : savedDraftStatus(savedDraft, t)}
+        </span>
+        {savedDraft.enabled && (
+          <IconAction
+            label={t("compose.discardMessage")}
+            icon={<Trash2 aria-hidden="true" />}
+            onClick={savedDraft.discard}
+            disabled={busy}
+            pending={savedDraft.removing}
+          />
+        )}
+      </div>
+    </div>
   );
+}
+
+// What became of the draft as the reader writes: being kept, or kept.
+function savedDraftStatus(
+  savedDraft: ReturnType<typeof useSavedDraft>,
+  t: ReturnType<typeof useT>,
+): string {
+  if (savedDraft.saving) return t("compose.draftSaving");
+  if (savedDraft.kept) return t("compose.savedDraftSaved");
+  return "";
 }
 
 // What the send came back with, under the words it is about. That is a send
@@ -134,65 +212,14 @@ export function ComposeOutcome({
   );
 }
 
-// The column beside the form: the record's conversations, the one being
-// answered marked and open to read.
-export function ComposeConversation({
-  thread,
-  answering,
-  recordName,
-  viewerId,
-  nameOf,
-  onSelect,
-  disabled,
-}: Readonly<{
-  thread: ComposeThread;
-  answering: string | undefined;
-  recordName: string | undefined;
-  viewerId: string | undefined;
-  nameOf: (linkType: string, linkId: string) => string | undefined;
-  onSelect: (id: string | null) => void;
-  disabled: boolean;
-}>) {
-  if (!thread.splitColumns) {
-    return null;
-  }
-  const { recent, conversation, anchorRead } = thread;
-  return (
-    <ConversationFold choosing={!answering}>
-      <ConversationRail
-        recordName={recordName}
-        conversations={recent.conversations}
-        pending={recent.pending}
-        failed={recent.failed}
-        onRetry={recent.retry}
-        answering={answering}
-        anchor={thread.anchorActivity}
-        anchorPending={thread.anchorUnresolved}
-        anchorFailed={anchorRead.failed}
-        onRetryAnchor={anchorRead.retry}
-        thread={conversation}
-        viewerUserId={viewerId}
-        nameOf={nameOf}
-        onChoose={onSelect}
-        onLeave={() => onSelect(null)}
-        disabled={disabled}
-      />
-    </ConversationFold>
-  );
-}
-
-// The words the reader writes, with what travels with them: the model's
-// draft above them, the sign-off under them, and the attached files.
+// The words the reader writes: the ask for a model's draft above them, the
+// sign-off and the thread they answer under them.
 export function ComposeBody({
   bodyId,
   fields,
-  attached,
-  fileTarget,
-  entityType,
-  entityId,
   mail,
   replying,
-  aiSource,
+  earlier,
   voiceMaturity,
   channelLabel,
   carriageBlocks,
@@ -201,15 +228,11 @@ export function ComposeBody({
 }: Readonly<{
   bodyId: string;
   fields: ComposeFields;
-  attached: ReturnType<typeof useTargetFiles>;
-  fileTarget: string;
-  entityType: RelinkKind;
-  entityId: string;
   /** Mail drafts and signs; a channel message does neither. */
   mail: boolean;
   replying: boolean;
-  /** What a model's draft is written from, said under the ask. */
-  aiSource: string;
+  /** The thread's earlier messages, folded under the words of a reply. */
+  earlier?: ReactNode;
   voiceMaturity: VoiceProfile["maturity"] | undefined;
   channelLabel: string | undefined;
   carriageBlocks: readonly CarriageViolation[];
@@ -219,10 +242,16 @@ export function ComposeBody({
   const t = useT();
   const richTextLabels = useRichTextLabels();
   const frozen = voice.rejectionInFlight;
-  // A caller that knows what the draft is about opens the ask with it filled.
-  const [asking, setAsking] = useState(() => fields.intent !== "");
   return (
     <>
+      {mail && (
+        <AiDraftBand
+          replying={replying}
+          fields={fields}
+          voice={voice}
+          voiceMaturity={voiceMaturity}
+        />
+      )}
       {/* Both renderings travel. A text client, a screen reader and a spam
           filter read the plain part. */}
       <RichText
@@ -232,50 +261,13 @@ export function ComposeBody({
         label={t("compose.body")}
         placeholder={t("compose.bodyPlaceholder")}
         labels={richTextLabels}
-        bar="head"
-        lead={
-          mail && (
-            <AiDraftToggle
-              open={asking}
-              onToggle={() => setAsking((was) => !was)}
-            />
-          )
-        }
-        band={
-          mail && (
-            <AiDraftBand
-              open={asking}
-              replying={replying}
-              source={aiSource}
-              fields={fields}
-              voice={voice}
-              voiceMaturity={voiceMaturity}
-            />
-          )
-        }
-        foot={
-          mail && <SignOffPreview body={fields.body} subject={fields.subject} />
-        }
-        actions={
-          <AttachAction
-            key={fileTarget}
-            entityType={entityType}
-            entityId={entityId}
-            chosen={attached.files}
-            onChange={attached.setFiles}
-            disabled={frozen}
-          />
-        }
-        rows={10}
+        rows={8}
+        grow
         disabled={frozen}
       />
       <FieldNeed show={flagged.has("body")} need={t("compose.missingBody")} />
-      {/* Attachments sit under the words they belong to, as in a mail client. */}
-      <AttachedFiles
-        chosen={attached.files}
-        onChange={attached.setFiles}
-        disabled={frozen}
-      />
+      {mail && <SignOffPreview body={fields.body} subject={fields.subject} />}
+      {earlier}
       <CarriageNotice channel={channelLabel} blocks={carriageBlocks} />
     </>
   );
@@ -316,5 +308,58 @@ export function ComposeWhy({
         />
       )}
     </Field>
+  );
+}
+
+// The thread a reply answers, folded under its words as quoted history. One
+// small control says how much is there, and opens it.
+// It is the reader's to read; the reply carries only what they wrote.
+export function EarlierMessages({
+  messages,
+}: Readonly<{ messages: readonly Activity[] }>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const zone = viewerZone();
+  const [open, setOpen] = useState(false);
+  const readable = messages.filter(
+    (message) => message.content_state !== "withheld" && message.body,
+  );
+  if (readable.length === 0) {
+    return null;
+  }
+  return (
+    <div className="compose-earlier">
+      <IconAction
+        label={
+          open
+            ? t("compose.earlierHide")
+            : plural("compose.earlierShow", readable.length, {
+                count: formatNumber(readable.length, locale),
+              })
+        }
+        icon={<Ellipsis aria-hidden="true" />}
+        pressed={open}
+        onClick={() => setOpen((was) => !was)}
+      />
+      {open &&
+        readable.map((message) => (
+          <figure key={message.id} className="compose-quoted">
+            <figcaption className="t-caption">
+              {t("compose.quotedHeader", {
+                when: formatDateTime(message.occurred_at, locale, zone),
+                who:
+                  message.direction === "outbound"
+                    ? t("compose.quotedYou")
+                    : message.email_summary?.counterparty?.trim() ||
+                      t("email.received"),
+              })}
+            </figcaption>
+            <blockquote>
+              <EmailText body={message.body ?? ""} />
+            </blockquote>
+          </figure>
+        ))}
+    </div>
   );
 }

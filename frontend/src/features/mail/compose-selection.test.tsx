@@ -125,6 +125,40 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+type User = ReturnType<typeof userEvent.setup>;
+
+// The record's threads sit in a menu behind the bar above the fields. Opens it
+// when it is shut, and reads inside it so the bar's own line never matches.
+async function threadMenu(user: User) {
+  const shown = () =>
+    document.querySelector<HTMLElement>(".compose-threadmenu");
+  if (!shown()) {
+    await user.click(
+      await screen.findByRole("button", {
+        name: /(Continue a thread|Change)$/,
+      }),
+    );
+  }
+  const menu = shown();
+  if (!menu) throw new Error("the thread menu is shut");
+  return within(menu);
+}
+
+async function pick(user: User, name: RegExp) {
+  const menu = await threadMenu(user);
+  await user.click(menu.getByRole("button", { name }));
+}
+
+// A message of the marked thread, by its row under the thread.
+async function pickMessage(user: User, name: RegExp) {
+  const menu = await threadMenu(user);
+  await user.click(
+    within(menu.getByRole("listitem", { name })).getByRole("button", {
+      name: /Pricing/,
+    }),
+  );
+}
+
 it("requires a purpose for a new AI email, then sends that purpose to the contact writer", async () => {
   const user = userEvent.setup();
   const requests = setup();
@@ -147,13 +181,13 @@ it("selects the exact message, normalizes the reply subject, and restores each d
   const user = userEvent.setup();
   const requests = setup();
   writeMessage("Body", "My new email");
-  await user.click(await screen.findByRole("button", { name: /Pricing/ }));
+  await pick(user, /Pricing/);
   await waitFor(() => {
     expect(screen.getByDisplayValue("Re: Pricing")).toBeTruthy();
     expect(messageText("Body")).toBe("");
   });
   writeMessage("Body", "Answer to pricing");
-  await user.click(screen.getByRole("button", { name: /Re: Delivery/ }));
+  await pick(user, /Re: Delivery/);
   await waitFor(() => {
     expect(screen.getByDisplayValue("Re: Delivery")).toBeTruthy();
     expect(messageText("Body")).toBe("");
@@ -165,21 +199,17 @@ it("selects the exact message, normalizes the reply subject, and restores each d
     requests.some((request) => request.path === "/activities/a2/draft-email"),
   ).toBe(true);
   // Back to the first message, through its row under the marked thread.
-  await user.click(
-    within(screen.getByRole("listitem", { name: /^Pricing/ })).getByRole(
-      "button",
-      { name: /Pricing/ },
-    ),
-  );
+  await pickMessage(user, /^Pricing/);
   await waitFor(() => expect(messageText("Body")).toBe("Answer to pricing"));
+  const menu = await threadMenu(user);
   expect(
-    screen
-      .getByRole("button", { name: /Pricing/ })
-      .getAttribute("aria-pressed"),
+    menu.getByRole("button", { name: /Pricing/ }).getAttribute("aria-pressed"),
   ).toBe("true");
-  await user.click(screen.getByRole("button", { name: "New email" }));
+  await user.click(menu.getByRole("button", { name: "New email" }));
   await waitFor(() => expect(messageText("Body")).toBe("My new email"));
-});
+  // Three switches, each through the thread menu, wait more than the default
+  // ceiling covers.
+}, 30_000);
 
 it("ignores a delayed draft after selecting another message", async () => {
   const user = userEvent.setup();
@@ -194,7 +224,7 @@ it("ignores a delayed draft after selecting another message", async () => {
       }),
     client,
   );
-  await user.click(await screen.findByRole("button", { name: /Pricing/ }));
+  await pick(user, /Pricing/);
   await screen.findByDisplayValue("Re: Pricing");
   await user.click(draftButton());
   await waitFor(() =>
@@ -202,7 +232,7 @@ it("ignores a delayed draft after selecting another message", async () => {
       requests.some((request) => request.path === "/activities/a1/draft-email"),
     ).toBe(true),
   );
-  await user.click(screen.getByRole("button", { name: /Re: Delivery/ }));
+  await pick(user, /Re: Delivery/);
   await screen.findByDisplayValue("Re: Delivery");
   writeMessage("Body", "Keep my follow-up");
   finish?.(
@@ -220,10 +250,11 @@ it("ignores a delayed draft after selecting another message", async () => {
 it("previews full paragraphs without changing the reply target", async () => {
   const user = userEvent.setup();
   setup();
-  await user.click(await screen.findByRole("button", { name: /Pricing/ }));
+  await pick(user, /Pricing/);
   await screen.findByDisplayValue("Re: Pricing");
+  const menu = await threadMenu(user);
   fireEvent.click(
-    within(screen.getByRole("listitem", { name: /Re: Delivery/ })).getByRole(
+    within(menu.getByRole("listitem", { name: /Re: Delivery/ })).getByRole(
       "button",
       { name: "Preview" },
     ),
@@ -244,7 +275,7 @@ it("keeps edits made while the selected email's AI draft is in flight", async ()
         finish = resolve;
       }),
   );
-  await user.click(await screen.findByRole("button", { name: /Pricing/ }));
+  await pick(user, /Pricing/);
   await screen.findByDisplayValue("Re: Pricing");
   await user.click(draftButton());
   await waitFor(() => expect(finish).toBeTypeOf("function"));
@@ -257,7 +288,7 @@ it("keeps edits made while the selected email's AI draft is in flight", async ()
 it("preserves recipient choices and instructions separately for each reply", async () => {
   const user = userEvent.setup();
   setup();
-  await user.click(await screen.findByRole("button", { name: /Pricing/ }));
+  await pick(user, /Pricing/);
   await screen.findByDisplayValue("Re: Pricing");
   await user.click(screen.getByRole("button", { name: "Cc and Bcc" }));
   await user.type(
@@ -273,16 +304,11 @@ it("preserves recipient choices and instructions separately for each reply", asy
     screen.getByPlaceholderText("Purpose of the reply"),
     "Confirm the price",
   );
-  await user.click(screen.getByRole("button", { name: /Re: Delivery/ }));
+  await pick(user, /Re: Delivery/);
   await screen.findByDisplayValue("Re: Delivery");
   expect(screen.queryByText("finance@example.test")).toBeNull();
   expect(screen.queryByText("archive@example.test")).toBeNull();
-  await user.click(
-    within(screen.getByRole("listitem", { name: /^Pricing/ })).getByRole(
-      "button",
-      { name: /Pricing/ },
-    ),
-  );
+  await pickMessage(user, /^Pricing/);
   expect(screen.getByText("finance@example.test")).toBeTruthy();
   expect(screen.getByText("archive@example.test")).toBeTruthy();
   expect(screen.getByDisplayValue("Confirm the price")).toBeTruthy();
@@ -316,10 +342,11 @@ it("retries a failed selected-message read before enabling reply drafting", asyn
     }
     return original(input, init);
   });
-  await user.click(await screen.findByRole("button", { name: /Pricing/ }));
-  await screen.findByText("This section did not load.");
+  await pick(user, /Pricing/);
+  const menu = await threadMenu(user);
+  await menu.findByText("This section did not load.");
   expect(draftButton().hasAttribute("disabled")).toBe(true);
-  await user.click(screen.getByRole("button", { name: "Retry" }));
+  await user.click(menu.getByRole("button", { name: "Retry" }));
   await screen.findByDisplayValue("Re: Pricing");
   expect(draftButton().hasAttribute("disabled")).toBe(false);
 });
@@ -332,7 +359,8 @@ it("keeps withheld thread entries unreadable and unavailable as reply targets", 
     "a2",
   );
   await screen.findByDisplayValue("Re: Delivery");
-  const held = within(await screen.findByRole("listitem", { name: /Pricing/ }));
+  const menu = await threadMenu(userEvent.setup());
+  const held = within(await menu.findByRole("listitem", { name: /Pricing/ }));
   expect(held.queryByRole("button")).toBeNull();
   expect(held.queryByText(/Full text/)).toBeNull();
 });
@@ -355,7 +383,7 @@ it("files a delayed upload on the draft that started it, even after switching", 
     }
     return original(input, init);
   });
-  await user.click(await screen.findByRole("button", { name: /Pricing/ }));
+  await pick(user, /Pricing/);
   await screen.findByDisplayValue("Re: Pricing");
   await user.click(screen.getByRole("button", { name: /Attach/ }));
   await user.upload(
@@ -363,16 +391,13 @@ it("files a delayed upload on the draft that started it, even after switching", 
     new File(["Offer"], "pricing.txt", { type: "text/plain" }),
   );
   await waitFor(() => expect(finish).toBeTypeOf("function"));
-  await user.click(screen.getByRole("button", { name: /Re: Delivery/ }));
+  await pick(user, /Re: Delivery/);
   await screen.findByDisplayValue("Re: Delivery");
   finish?.(json({ id: "file-a", filename: "pricing.txt", byte_size: 5 }));
   await waitFor(() => expect(client.isMutating()).toBe(0));
   expect(screen.queryByText(/pricing.txt/)).toBeNull();
-  await user.click(
-    within(screen.getByRole("listitem", { name: /^Pricing/ })).getByRole(
-      "button",
-      { name: /Pricing/ },
-    ),
-  );
+  await pickMessage(user, /^Pricing/);
   expect(await screen.findByText(/pricing.txt/)).toBeTruthy();
-});
+  // Two switches through the thread menu and an upload wait more than the
+  // default ceiling covers.
+}, 30_000);

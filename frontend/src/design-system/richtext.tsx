@@ -2,14 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Bold, Heading2, Italic, Link2, List, ListOrdered } from "lucide-react";
-import {
-  type ClipboardEvent,
-  type ReactNode,
-  useEffect,
-  useId,
-  useRef,
-  useState,
-} from "react";
+import { type ClipboardEvent, useEffect, useId, useRef, useState } from "react";
 import { plainTextOf, safeEditorHTML } from "./richtext-html";
 import {
   editorHTMLFromMarkdown,
@@ -68,10 +61,6 @@ export function RichText({
   placeholder,
   hint,
   actions,
-  bar = "foot",
-  lead,
-  band,
-  foot,
   rows = 12,
   grow = false,
   format = "html",
@@ -119,19 +108,7 @@ export function RichText({
    * CALLER's list and grows on their side, and a primitive that enumerated it
    * would have to be edited every time it did.
    */
-  actions?: ReactNode;
-  /**
-   * Where the marks sit. `foot` (the default) keeps them quiet under the words.
-   * `head` leads the frame with them, for a host whose own verbs on the message
-   * belong before the words (the composer's Draft with AI).
-   */
-  bar?: "foot" | "head";
-  /** With `bar="head"`: the caller's verbs before the marks, set apart. */
-  lead?: ReactNode;
-  /** With `bar="head"`: a band between the bar and the words (a draft's state). */
-  band?: ReactNode;
-  /** A line inside the frame under the words (what a send appends to them). */
-  foot?: ReactNode;
+  actions?: React.ReactNode;
   rows?: number;
   /**
    * `rows` is the floor rather than the height. The surface grows with its text
@@ -259,52 +236,10 @@ export function RichText({
     report();
   };
 
-  const marks = (
-    <div className="richtext-bar" role="toolbar" aria-label={label}>
-      {markdown && labels.heading && (
-        <RichTextButton
-          onClick={toggleHeading}
-          title={labels.heading}
-          disabled={disabled}
-        >
-          <Heading2 size={14} aria-hidden="true" />
-        </RichTextButton>
-      )}
-      <RichTextButton
-        onClick={() => apply("bold")}
-        title={labels.bold}
-        disabled={disabled}
-      >
-        <Bold size={14} aria-hidden="true" />
-      </RichTextButton>
-      <RichTextButton
-        onClick={() => apply("italic")}
-        title={labels.italic}
-        disabled={disabled}
-      >
-        <Italic size={14} aria-hidden="true" />
-      </RichTextButton>
-      <RichTextButton
-        onClick={() => apply("insertUnorderedList")}
-        title={labels.bulletList}
-        disabled={disabled}
-      >
-        <List size={14} aria-hidden="true" />
-      </RichTextButton>
-      <RichTextButton
-        onClick={() => apply("insertOrderedList")}
-        title={labels.numberList}
-        disabled={disabled}
-      >
-        <ListOrdered size={14} aria-hidden="true" />
-      </RichTextButton>
-      <RichTextButton onClick={addLink} title={labels.link} disabled={disabled}>
-        <Link2 size={14} aria-hidden="true" />
-      </RichTextButton>
-    </div>
-  );
-  const surface = (
-    <>
+  return (
+    <div
+      className={`richtext${grow ? " is-growing" : ""}${disabled ? " is-disabled" : ""}`}
+    >
       {/* biome-ignore lint/a11y/useSemanticElements: a textarea cannot carry formatting; this is the editable surface the toolbar acts on */}
       <div
         ref={editor}
@@ -334,32 +269,6 @@ export function RichText({
         onBlur={report}
         onPaste={paste}
       />
-    </>
-  );
-  const hintLine = hint && (
-    <p id={hintId} className="t-caption richtext-hint">
-      {hint}
-    </p>
-  );
-  const frame = `richtext${grow ? " is-growing" : ""}${disabled ? " is-disabled" : ""}`;
-  if (bar === "head") {
-    return (
-      <div className={`${frame} is-headed`}>
-        <div className="richtext-head">
-          {lead && <span className="richtext-lead">{lead}</span>}
-          {marks}
-          {actions}
-        </div>
-        {band}
-        {surface}
-        {hintLine && <div className="richtext-foot">{hintLine}</div>}
-        {foot}
-      </div>
-    );
-  }
-  return (
-    <div className={frame}>
-      {surface}
       {/* UNDER the words, and quiet. The toolbar led the control for a while —
           a filled band above the box, before a reader had written anything to
           format — which made four glyphs the first thing on a surface whose
@@ -370,11 +279,59 @@ export function RichText({
           The buttons keep their names for a screen reader and their tooltips
           for a pointer: quieter is about ink, never about who can use it. */}
       <div className="richtext-foot">
-        {hintLine}
-        {marks}
+        {hint && (
+          <p id={hintId} className="t-caption richtext-hint">
+            {hint}
+          </p>
+        )}
+        <div className="richtext-bar" role="toolbar" aria-label={label}>
+          {markdown && labels.heading && (
+            <RichTextButton
+              onClick={toggleHeading}
+              title={labels.heading}
+              disabled={disabled}
+            >
+              <Heading2 size={14} aria-hidden="true" />
+            </RichTextButton>
+          )}
+          <RichTextButton
+            onClick={() => apply("bold")}
+            title={labels.bold}
+            disabled={disabled}
+          >
+            <Bold size={14} aria-hidden="true" />
+          </RichTextButton>
+          <RichTextButton
+            onClick={() => apply("italic")}
+            title={labels.italic}
+            disabled={disabled}
+          >
+            <Italic size={14} aria-hidden="true" />
+          </RichTextButton>
+          <RichTextButton
+            onClick={() => apply("insertUnorderedList")}
+            title={labels.bulletList}
+            disabled={disabled}
+          >
+            <List size={14} aria-hidden="true" />
+          </RichTextButton>
+          <RichTextButton
+            onClick={() => apply("insertOrderedList")}
+            title={labels.numberList}
+            disabled={disabled}
+          >
+            <ListOrdered size={14} aria-hidden="true" />
+          </RichTextButton>
+          <RichTextButton
+            onClick={addLink}
+            title={labels.link}
+            disabled={disabled}
+          >
+            <Link2 size={14} aria-hidden="true" />
+          </RichTextButton>
+        </div>
         {actions}
       </div>
-      {foot}
     </div>
   );
 }

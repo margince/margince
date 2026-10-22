@@ -1,5 +1,4 @@
-import { Reply, SquarePen } from "lucide-react";
-import { Button } from "../../design-system/atoms";
+import type { ReactNode } from "react";
 import { Callout } from "../../design-system/callout";
 import { ProjectPicker } from "../../design-system/projectpicker";
 import type { TokenSuggestion } from "../../design-system/tokeninput";
@@ -18,8 +17,8 @@ import type { MissingField } from "./composesend";
 import type { useTransportDial } from "./composetarget";
 
 /**
- * The one control that says which project a message belongs to, in the
- * composer's head. A reply and a message started from an account share it.
+ * The one control that says which project a message belongs to, beside the
+ * subject it tags. A reply and a message started from an account share it.
  *
  * It carries no explanation of its own. The tag it puts in the Subject field
  * shows there, and a rep who does not want it deletes it like any other text.
@@ -27,22 +26,14 @@ import type { useTransportDial } from "./composetarget";
  * only entry is None asks a question with one answer.
  */
 export function ProjectFiling({
-  filed,
   records,
-}: Readonly<{
-  /** Whether the message files under a project here; a channel reply does not. */
-  filed: boolean;
-  records: ComposeRecords;
-}>) {
-  if (!filed) {
-    return null;
-  }
+}: Readonly<{ records: ComposeRecords }>) {
   return (
     <ProjectPicker
       projects={records.reachableProjects}
       projectId={records.projectFiling.projectId}
       onChange={records.projectFiling.setProjectId}
-      inHead
+      compact
     />
   );
 }
@@ -103,6 +94,7 @@ function MailOnlyFields({
   rejectionInFlight,
   flagged,
   deadRecipients,
+  filing,
 }: Readonly<{
   to: string[];
   onToChange: (next: string[]) => void;
@@ -124,6 +116,8 @@ function MailOnlyFields({
   rejectionInFlight: boolean;
   /** The recipients on this draft that are known not to arrive. */
   deadRecipients: readonly string[];
+  /** Which project the message files under, beside the subject it tags. */
+  filing: ReactNode;
 }>) {
   const t = useT();
   return (
@@ -150,46 +144,9 @@ function MailOnlyFields({
         invalid={flagged.has("subject")}
         need={t("compose.missingSubject")}
         disabled={rejectionInFlight}
+        aside={filing}
       />
     </>
-  );
-}
-
-/**
- * What this message answers, above the fields, with the way to start fresh
- * instead. On a new message it says how to continue a conversation, where the
- * rail offers one.
- */
-function AnsweringLine({
-  replying,
-  answeringLine,
-  railShown,
-  onStartNew,
-  disabled,
-}: Readonly<{
-  replying: boolean;
-  answeringLine: string;
-  railShown: boolean;
-  onStartNew: () => void;
-  disabled: boolean;
-}>) {
-  const t = useT();
-  if (!replying) {
-    return (
-      <p className="t-caption compose-answering">
-        <SquarePen aria-hidden="true" />
-        {railShown ? t("compose.startsNew") : answeringLine}
-      </p>
-    );
-  }
-  return (
-    <p className="t-caption compose-answering">
-      <Reply aria-hidden="true" />
-      <span>{answeringLine}</span>
-      <Button variant="link" onClick={onStartNew} disabled={disabled}>
-        {t("compose.startNewInstead")}
-      </Button>
-    </p>
   );
 }
 
@@ -239,10 +196,6 @@ export function ComposeHead({
   activityId,
   records,
   accountCompanyId,
-  answeringLine,
-  replying,
-  railShown,
-  onStartNew,
   flagged,
   rejectionInFlight,
   onToEditing,
@@ -259,11 +212,6 @@ export function ComposeHead({
   records: ComposeRecords;
   /** The company an account-started message is grounded in, if any. */
   accountCompanyId: string | undefined;
-  answeringLine: string;
-  replying: boolean;
-  /** Whether the conversations stand beside the form to continue one. */
-  railShown: boolean;
-  onStartNew: () => void;
   flagged: ReadonlySet<MissingField>;
   rejectionInFlight: boolean;
   onToEditing: () => void;
@@ -298,34 +246,24 @@ export function ComposeHead({
         />
       )}
       {!dial.isChannelReply && (
-        <>
-          <AnsweringLine
-            // The rail answers what is being replied to; the sentence says it
-            // where the reader writes, with the way out of it.
-            replying={replying}
-            answeringLine={answeringLine}
-            railShown={railShown}
-            onStartNew={onStartNew}
-            disabled={rejectionInFlight}
-          />
-          <MailOnlyFields
-            flagged={flagged}
-            to={fields.to}
-            onToChange={fields.setTo}
-            cc={fields.cc}
-            onCcChange={fields.setCc}
-            bcc={fields.bcc}
-            onBccChange={fields.setBcc}
-            copiesOpen={fields.copiesOpen}
-            onOpenCopies={fields.openCopies}
-            recipients={records.recipients}
-            onToEditing={onToEditing}
-            subject={fields.subject}
-            onSubjectChange={fields.setSubject}
-            rejectionInFlight={rejectionInFlight}
-            deadRecipients={records.deadRecipients}
-          />
-        </>
+        <MailOnlyFields
+          flagged={flagged}
+          to={fields.to}
+          onToChange={fields.setTo}
+          cc={fields.cc}
+          onCcChange={fields.setCc}
+          bcc={fields.bcc}
+          onBccChange={fields.setBcc}
+          copiesOpen={fields.copiesOpen}
+          onOpenCopies={fields.openCopies}
+          recipients={records.recipients}
+          onToEditing={onToEditing}
+          subject={fields.subject}
+          onSubjectChange={fields.setSubject}
+          rejectionInFlight={rejectionInFlight}
+          deadRecipients={records.deadRecipients}
+          filing={<ProjectFiling records={records} />}
+        />
       )}
     </>
   );

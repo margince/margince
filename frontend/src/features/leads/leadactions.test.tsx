@@ -208,7 +208,7 @@ describe("the lead header's Email verb", () => {
     await user.click(email);
 
     const dialog = await screen.findByRole("dialog", {
-      name: /New thread/,
+      name: /New email/,
     });
     expect(
       within(dialog).getByRole("button", {

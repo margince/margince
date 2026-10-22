@@ -414,7 +414,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "captureHealth.fact.exhausted",
     "captureActivity.col.message",
     "senders.byYou",
-    "compose.derivedReply",
     "log.attendee",
     "log.otherAttendees",
     "activity.detail.attendees",

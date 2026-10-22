@@ -10,11 +10,11 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { ComposeModal } from "./compose";
-import { SendChecks } from "./composechecks";
+import { ComposeBlockers } from "./composeblockers";
 
 const meta: Meta = {
-  title: "Patterns/Compose mail/Checks before sending",
-  component: SendChecks,
+  title: "Patterns/Compose mail/What stands in the way",
+  component: ComposeBlockers,
 };
 export default meta;
 
@@ -70,8 +70,8 @@ function Composer() {
   );
 }
 
-/** One check stands in the way: nothing on record says the rep may write to
- *  this address. The list offers to record a reason under their own name. */
+/** Nothing on record says the rep may write to this address. The band above
+ *  the foot offers to record a reason under their own name. */
 export const ReasonMissing: StoryObj = {
   render: () => <Composer />,
   play: async () => {
@@ -79,10 +79,7 @@ export const ReasonMissing: StoryObj = {
     await userEvent.type(dialog.getByLabelText("To"), "anna@example.test");
     await userEvent.tab();
     await userEvent.click(
-      await dialog.findByRole("button", { name: "1 check blocks sending" }),
-    );
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Record reason for contact" }),
+      await dialog.findByRole("button", { name: "Record reason for contact" }),
     );
     await screen.findByLabelText("Why you may write to anna@example.test");
   },

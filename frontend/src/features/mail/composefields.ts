@@ -95,6 +95,11 @@ export function emptyFields(): FieldsSnapshot {
   };
 }
 
+// Whether a seed arrives holding a copy, which opens the copy rows.
+function holdsCopies(edit: EditSeed | undefined): boolean {
+  return Boolean(edit && edit.cc.length + edit.bcc.length > 0);
+}
+
 // The message being written: its fields, the draft that filled them, and
 // the epoch that retires a draft request once the words move on.
 export function useComposeFields({
@@ -111,9 +116,9 @@ export function useComposeFields({
 }>) {
   const [to, setTo] = useState<string[]>(edit?.to ?? []);
   const [cc, setCc] = useState<string[]>(edit?.cc ?? []);
-  // A Bcc row holding a value may not be hidden, so it stays open once opened.
+  // Copy rows holding a value may not be hidden, so they stay open once opened.
   const [bcc, setBcc] = useState<string[]>(edit?.bcc ?? []);
-  const [copiesOpen, setCopiesOpen] = useState((edit?.bcc.length ?? 0) > 0);
+  const [copiesOpen, setCopiesOpen] = useState(() => holdsCopies(edit));
   const [subject, setSubject] = useState(
     edit?.subject ?? initialMessage?.subject ?? "",
   );
@@ -213,7 +218,7 @@ export function useComposeFields({
     setTo([...saved.to]);
     setCc([...saved.cc]);
     setBcc([...saved.bcc]);
-    if (saved.bcc.length > 0) setCopiesOpen(true);
+    if (saved.cc.length + saved.bcc.length > 0) setCopiesOpen(true);
     setSubject(saved.subject);
     setBody(saved.body);
     setHtml(saved.html);

@@ -232,8 +232,7 @@ describe("TimelineActions", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: "Reply" }));
     // The composer mounts only once Reply opens it, headed as a reply.
-    expect(await screen.findByRole("dialog")).toBeTruthy();
-    expect(screen.getByText("Reply", { selector: ".t-eyebrow" })).toBeTruthy();
+    expect(await screen.findByRole("dialog", { name: /^Re: / })).toBeTruthy();
   });
 
   it("offers no reply when the contact is unreachable", async () => {

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { Sparkles } from "lucide-react";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
@@ -14,44 +13,19 @@ import type { VoiceDraft } from "./composevoicedraft";
 type VoiceProfile = components["schemas"]["VoiceProfile"];
 
 /**
- * The editor's own AI verb, at the head of its toolbar: it opens the ask for a
- * draft in the band under the bar. A toggle, so the band is the reader's to
- * open and to put away.
- */
-export function AiDraftToggle({
-  open,
-  onToggle,
-}: Readonly<{ open: boolean; onToggle: () => void }>) {
-  const t = useT();
-  return (
-    <Button variant="aiQuiet" aria-expanded={open} onClick={onToggle}>
-      <Sparkles aria-hidden="true" />
-      {t("compose.draftWithAi")}
-    </Button>
-  );
-}
-
-/**
- * The band between the toolbar and the words: what the reader asks the model
- * for, the draft being written, and what the model wrote.
+ * The line above the words that a model writes through: the ask for a draft,
+ * the draft being written, then what the model wrote.
  *
- * The ask and the written draft can stand together. A reader who wants the
- * draft again with another steer opens the ask over the band that discloses
- * the first. Nothing renders when there is nothing to say, so the words sit
- * right under the bar.
+ * The ask stays, so a changed steer can ask again. Once a draft stands, the
+ * band also discloses it and offers the rewrites and the discard.
  */
 export function AiDraftBand({
-  open,
   replying,
-  source,
   fields,
   voice,
   voiceMaturity,
 }: Readonly<{
-  open: boolean;
   replying: boolean;
-  /** What a draft is written from, said under the ask. */
-  source: string;
   fields: ComposeFields;
   voice: VoiceDraft;
   voiceMaturity: VoiceProfile["maturity"] | undefined;
@@ -63,25 +37,15 @@ export function AiDraftBand({
   // untouched words. A draft in flight blocks it too.
   const untouched = fields.body !== "" && fields.body === fields.servedBody;
   const discard = voice.discardControl;
-  const busy = voice.control.pending && !open;
-  if (!open && !drafted && !busy) {
-    return null;
-  }
   return (
     <div className="compose-aiband">
-      {open && (
-        <>
-          <DraftOffer
-            replying={replying}
-            intent={fields.intent}
-            onIntentChange={fields.setIntent}
-            draft={voice.control}
-            unavailable={fields.draftUnavailable}
-          />
-          <p className="t-caption">{source}</p>
-        </>
-      )}
-      {busy && <p role="status">{t("compose.drafting")}</p>}
+      <DraftOffer
+        replying={replying}
+        intent={fields.intent}
+        onIntentChange={fields.setIntent}
+        draft={voice.control}
+        unavailable={fields.draftUnavailable}
+      />
       {drafted && provenance && (
         <DraftBand
           provenance={provenance}

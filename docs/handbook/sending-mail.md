@@ -14,7 +14,7 @@ To send an email to a contact in Margince, open the contact's page and choose **
 2. Check **To** (at least one recipient). Press **Cc and Bcc** if you need copies.
 3. Fill in **Subject** and the message **Body**.
 4. Pick a **Reason for contact**.
-5. Press the checks at the foot of the composer to read **Before sending**. Then press **Send** once.
+5. Read the warning bar above **Send**, if there is one. Then press **Send** once.
 
 "No address and no thread to reply to." means the contact has no address to write to.
 Also called: write an email, email a customer, message a client.
@@ -61,7 +61,7 @@ A channel reply, such as Telegram, has no subject, so Margince checks only the b
 Also called: validation error, why is Send not working.
 
 ### Can I use an email template?
-Margince has no email templates, snippets or canned replies in the composer. To start from something ready, press **Draft with AI**, which drafts in your own writing voice. Or keep a message with **Save as draft** and come back to it. Margince adds your **Email signature** for you.
+Margince has no email templates, snippets or canned replies in the composer. To start from something ready, press **Draft email**, which drafts in your own writing voice. Margince also keeps what you type as a draft, so you can come back to it. Margince adds your **Email signature** for you.
 
 Offer templates are a different thing: they shape an offer, not an email. See [Offers and the rate card](offers-and-products.md).
 Also called: canned response, saved reply, mail template, snippet.
@@ -71,9 +71,18 @@ Also called: canned response, saved reply, mail template, snippet.
 You reach the Margince composer from a contact, a company, a deal, a lead, or
 the reply action on any message.
 
-The composer is a dialog with three parts. The **Threads** column on the left
-lists the contact's threads, the one you answer marked. The message sits on the
-right. **Before sending** at the foot lists what Margince checks.
+The composer opens as a window at the bottom of the page, so the page stays in view
+behind it. It stays open when you go to another page. Fold it to its title bar
+with **Minimize**, make it larger with **Expand**, or drag its top or left
+side. On a phone it fills the screen.
+
+The bar at the top says which thread you answer. Press **Change** or **Continue
+a thread** to pick another thread, or **New email** to start a new one. On a
+reply, **Show earlier messages** under the text shows what came before. That
+text is only for you to read; it is not sent.
+
+Anything that stops the send shows in a warning bar above **Send**, with what
+you can do about it there.
 
 To is on the form. **Cc and Bcc** is a link until you press it. Then Bcc says
 what it means: other recipients cannot see these addresses, or that anyone else
@@ -83,12 +92,12 @@ A channel reply, such as Telegram, drops the subject and Cc, because the channel
 has neither.
 
 ### How do I attach a file to an email?
-To attach a file to an email in Margince, press **Attach** in the composer. Pick a file from **On this record**, or choose **Upload file**.
-1. In the composer, press **Attach**.
-2. Pick a file under **On this record**, or use **Upload file** ("Drop a file here, or choose one").
-3. The file shows in the message; take it out with its **Remove** button.
+To attach a file to an email in Margince, press **Attach** beside **Send**. Pick a file under **Attach from this record**, or choose **Upload file**.
+1. In the composer, press **Attach** beside **Send**.
+2. Pick a file under **Attach from this record**, or use **Upload file** ("Drop a file here, or choose one"). Press a file again to take it off.
+3. The file shows above **Send**; take it out with its **Remove** button.
 
-**On this record** shows the 25 newest files filed on the record. **Upload
+**Attach from this record** shows the 25 newest files filed on the record. **Upload
 file** first files the upload on the record, then attaches it, so the history
 keeps every file you sent.
 
@@ -98,10 +107,10 @@ with the message you answer.
 Also called: add an attachment, send a document, attach a PDF.
 
 ### How do I use AI to draft an email?
-To have AI draft an email in Margince, open the composer and press **Draft with AI** above the message. Say what the email is for in **Purpose of the email**, and press **Draft email**.
+To have AI draft an email in Margince, open the composer. Say what the email is for in **Purpose of the email** above the message, and press **Draft email**.
 1. Open the composer from a contact, company or deal.
 2. On a company, choose the contact under **Draft to**, and if you like, the deal under **Related to**.
-3. Press **Draft with AI** and type the purpose, such as "follow up on last week's quote".
+3. Type the purpose, such as "follow up on last week's quote".
 4. Press **Draft email** (**Draft reply** for a reply). It shows **Drafting…** while it writes.
 5. Read and edit the draft, then send it as you always do.
 
@@ -110,7 +119,7 @@ Also called: AI writer, generate an email, write it for me.
 
 ### Drafting with AI
 
-**Draft with AI** writes an email from what the record holds, in your voice. It
+**Draft email** writes an email from what the record holds, in your voice. It
 tells you what it read ("Based on: {inputs}"), and **Why this draft?** shows
 why it wrote what it did.
 
@@ -131,8 +140,9 @@ If Margince could not load the profile, the draft says so:
 **Discard draft** marks the draft as a miss for your Voice DNA. Margince never
 keeps the text it wrote.
 
-**Save as draft** keeps a message you have not finished, so you can come back
-to it. It does not send anything.
+Margince keeps a message you have not finished as a draft while you type. The
+foot says **Draft saved**, and closing the window keeps it too. It does not send
+anything. **Delete draft** deletes the message.
 
 ### The four rewrites
 
@@ -162,13 +172,11 @@ The answers are:
 - Marketing
 
 Margince does not ask for a reason when you reply to their own message.
-**Before sending** says: "This replies to the recipient’s own message, so no
-reason is needed."
 
-The consent check reads the reason, and it runs *before* you send. The foot of
-the composer shows **Ready to send**, or how many checks stand in the way, such
-as "1 check blocks sending". **Before sending** shows the answer: **No recorded
-reason to contact this recipient**, or **Message cannot be sent**. A check with no answer never counts
+The consent check reads the reason, and it runs *before* you send. Beside
+**Send** the composer shows **Ready to send** once the check allows it. When it
+does not, the warning bar above **Send** shows the answer: **No recorded reason
+to contact this recipient**, or **Message cannot be sent**. A check with no answer never counts
 as permission: "The send check did not complete. Sending runs the check
 again."
 
@@ -177,7 +185,7 @@ here. A sender who could pick one could send marketing that looks like a
 security notice.
 
 ### Why can't I send an email to this contact?
-When Margince will not send an email to a contact, the foot of the composer counts it, and **Before sending** names the reason. Where there is a fix, it names that too.
+When Margince will not send an email to a contact, the warning bar above **Send** names the reason. Where there is a fix, it names that too.
 - **Send blocked: no consent**: there is no consent for this purpose. Use **Review consent**, or **Request review** where it is offered.
 - **No recorded reason to contact this recipient**: press **Record reason for contact**, say why you may write, and press **Record reason**. It is recorded under your name for this kind of message, and it is not consent.
 - **Message cannot be sent**: a reason nobody can lift, such as "The recipient objected to marketing."

@@ -305,10 +305,9 @@ describe("what the message carries", () => {
     expect(sentMail(sent)).not.toHaveProperty("attachment_ids");
   });
 
-  // A file already on the message is not on offer: the row refuses rather than
-  // adding a second copy of one document, which is not something a message can
-  // mean — the recipient would see the same paper twice.
-  it("refuses a file the message already carries", async () => {
+  // A file already on the message shows as held, and pressing it again takes
+  // it off. A message never carries a second copy of one document.
+  it("holds a file the message carries once, and a second press takes it off", async () => {
     const user = userEvent.setup();
     stubRoutes();
     render(drawer());
@@ -319,13 +318,13 @@ describe("what the message carries", () => {
     });
     await user.click(row);
 
-    await waitFor(() =>
-      expect(
-        screen
-          .getByRole("button", { name: /^Offer_Nordwand_v3\.pdf/ })
-          .hasAttribute("disabled"),
-      ).toBe(true),
-    );
+    const held = () =>
+      screen
+        .getByRole("button", { name: /^Offer_Nordwand_v3\.pdf/ })
+        .getAttribute("aria-pressed");
+    await waitFor(() => expect(held()).toBe("true"));
+    await user.click(row);
+    await waitFor(() => expect(held()).toBe("false"));
   });
 });
 

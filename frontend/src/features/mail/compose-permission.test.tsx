@@ -12,7 +12,6 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
-import { openChecks } from "../../testing/composedraft.testkit";
 import {
   allowedPreview,
   isPreviewDoor,
@@ -119,8 +118,6 @@ async function openReplyAndAddress(address: string) {
   const user = userEvent.setup();
   await user.type(screen.getByLabelText("To"), address);
   await user.tab();
-  // What the engine said is read among the checks before sending.
-  openChecks();
 }
 
 describe("the composer asks before anybody presses Send", () => {

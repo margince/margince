@@ -219,10 +219,6 @@ export const Drafted: Story = {
   play: async () => {
     await composerOnScreen();
     await screen.findByDisplayValue("Re: Q3 numbers");
-    // The ask sits behind the editor's own AI verb.
-    await userEvent.click(
-      screen.getByRole("button", { name: "Draft with AI" }),
-    );
     await userEvent.click(screen.getByRole("button", { name: "Draft reply" }));
     await screen.findByText(DRAFT.body);
   },

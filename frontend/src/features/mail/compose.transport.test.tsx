@@ -224,8 +224,8 @@ describe("the composer's transport dial", () => {
   // The box is what the composer opened as: the dial changes how the draft
   // travels, never the dialog around a writer mid-draft.
   it.each([
-    ["a channel reply as a form", "dispact", "Email", ".modal-form", true],
-    ["mail as a workspace", undefined, "Dispact", ".modal-workspace", false],
+    ["a channel reply", "dispact", "Email", ".docked", true],
+    ["mail", undefined, "Dispact", ".docked", false],
   ] as const)(
     "opens %s and keeps it when the dial moves",
     async (_, opened, next, box, mailAfter) => {
@@ -257,7 +257,7 @@ describe("the composer's transport dial", () => {
     view.rerender(drawer([MAIL, CHAT]));
 
     await user.type(await screen.findByLabelText("Subject"), "Hello");
-    expect(screen.getByRole("dialog").matches(".modal-workspace")).toBe(true);
+    expect(screen.getByRole("dialog").matches(".docked")).toBe(true);
     writeMessage("Body", "Body content");
     await pickOption(
       user,

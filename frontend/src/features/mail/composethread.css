@@ -1,197 +1,88 @@
-/* The reply and the conversation it answers, side by side inside the drawer.
- *
- * The split is a grid rather than two floated columns because the two halves
- * scroll independently and must not decide each other's height: a long thread
- * would otherwise stretch the form's column and push Send below the fold. */
-.compose-split {
-  display: grid;
-  /* The rail a fixed measure, the draft the rest: a card reads at this width
-     whatever the dialog's, and the message is what grows. */
-  grid-template-columns: 17.5rem minmax(0, 1fr);
-  /* The drawer is a flex column, so this has to CLAIM the height between the
-     title and the actions — without the grow it sizes to its content and the
-     drawer ends in a band of empty white with the send buttons stranded in the
-     middle of the screen. `min-block-size: 0` is what then lets each column
-     shrink below its own content and scroll instead of pushing the actions off
-     the bottom. */
-  flex: 1 1 auto;
-  min-block-size: 0;
-}
+/* Which thread the message goes into: the bar under the window's title, and
+ * the list it opens. Tokens only (ds-purity). */
 
-/* The thread and form scroll separately; neither can squeeze the editor. */
-.compose-split > .compose-fields {
-  min-block-size: 0;
-  overflow-y: auto;
-  padding: var(--space-4) var(--space-5);
-}
-
-.compose-thread {
-  display: flex;
-  flex-direction: column;
-  min-block-size: 0;
-  /* The conversations are what the reply is drawn FROM, so they sit on the
-     page ground, recessed behind the white of the form where the work happens;
-     the cards on it are white again, so nothing on the rail reads as disabled. */
-  gap: var(--space-2);
-  padding: var(--space-4);
-  border-inline-end: 1px solid var(--borderSubtle);
-  background: var(--bgPage);
-}
-
-.compose-thread-head {
+/* The bar: one press target across the window, on the page ground so it reads
+   as the window's own band rather than a field. Marked in the accent tint
+   while the draft answers a thread. */
+.compose-threadbar-wrap {
   flex: none;
-  padding-block-end: var(--space-3);
+  border-bottom: 1px solid var(--borderSubtle);
 }
-
-/* The pane scrolls, the form scrolls, the drawer does not. min-block-size: 0
-   is what lets a grid child shrink below its content and scroll at all. */
-.compose-thread-scroll {
-  flex: 1 1 auto;
-  min-block-size: 0;
-  overflow-y: auto;
+.compose-threadbar.popover-trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  inline-size: 100%;
+  padding: var(--space-2) var(--space-4);
+  background: var(--bgPage);
+  color: var(--textPrimary);
 }
-
-/* Each scroller here is the containing block for what it holds: a `.sr-only`
-   resolved against `.modal` instead escapes this clip and scrolls the drawer. */
-.compose-split > .compose-fields,
-.compose-thread-scroll {
-  position: relative;
+.compose-threadbar.popover-trigger:hover {
+  background: var(--bgHover);
 }
-
-/* The thread is one conversation rather than a record's whole chronology, so
-   the date gutter that keeps an account's timeline in a straight column buys
-   nothing here and costs a third of the measure. */
-.compose-thread-list {
-  padding-inline-start: 0;
+.compose-threadbar > svg {
+  flex: none;
+  inline-size: 14px;
+  block-size: 14px;
+  color: var(--textSecondary);
 }
-
-/* The dialog's body stack is what the two columns are decided by, and the
-   height they share out. */
-.form-stack:has(> .compose-split) {
-  container: compose / inline-size;
-  flex: 1 1 auto;
-  min-block-size: 0;
-  /* Each column pays its own inset and scrolls itself, so the body does
-     neither. */
-  padding: 0;
+.compose-threadbar-text {
+  flex: 1;
+  min-inline-size: 0;
   overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.compose-threadbar-action {
+  flex: none;
+  color: var(--accentText);
+  font-weight: var(--fontWeightBold);
 }
 
-.compose-fold {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  min-block-size: 0;
-}
-.compose-fold > .compose-fold-toggle {
-  align-self: flex-start;
-}
-.compose-fold-column {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  min-block-size: 0;
-}
-.compose-fold-column > .compose-thread {
-  flex: 1 1 auto;
-}
-
-/* Where both columns cannot be read, the conversation folds above the draft
-   behind its toggle, its scroll short enough to keep the draft in view. */
-@container compose (min-width: 46rem) {
-  .compose-fold > .compose-fold-toggle {
-    display: none;
-  }
-}
-@container compose (width < 46rem) {
-  .compose-split {
-    grid-template-columns: minmax(0, 1fr);
-    /* The fold takes what it needs and the draft the rest; stretched, the two
-       rows would split the height and leave a band of nothing under the fold. */
-    grid-template-rows: auto minmax(0, 1fr);
-  }
-  .compose-fold {
-    border-block-end: 1px solid var(--borderSubtle);
-    padding: var(--space-3) var(--space-4);
-  }
-  .compose-fold[data-open="false"] > .compose-fold-column {
-    display: none;
-  }
-  .compose-thread {
-    border-inline-end: 0;
-    border-radius: var(--r-sm);
-  }
-  .compose-thread-scroll {
-    max-block-size: 14rem;
-  }
-}
-
-/* The head: whose conversations these are, and how many. */
-.compose-thread-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-.compose-rail-count {
-  font-variant-numeric: tabular-nums;
-}
-
-/* The cards. Each is a conversation the draft can answer, the one it answers
-   in the accent tint, so the rail says at a glance where the reply goes. */
-.compose-rail {
+/* The list the bar opens: the way out to a new thread, then the threads. */
+.compose-threadmenu {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+  inline-size: min(30rem, calc(100vw - var(--space-5) * 2));
+}
+.compose-threadmenu > * {
+  margin: 0;
+}
+.compose-threadlist {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
   list-style: none;
   margin: 0;
   padding: 0;
 }
-.compose-rail-card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  padding-block-end: var(--space-2);
-  border: 1px solid var(--borderSubtle);
+.compose-threadrow[data-selected="true"] {
   border-radius: var(--r-sm);
-  background: var(--bgElevated);
+  background: var(--bgInset);
 }
-.compose-rail-card[data-selected="true"] {
-  border-color: var(--accentMed);
-  background: var(--accentLight);
-}
-.compose-rail-actions {
-  display: flex;
-  justify-content: flex-end;
-  padding-inline: var(--space-3);
-}
-
-/* The open card: the words the draft answers, then the rest of the thread. */
-.compose-rail-reading {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  padding-inline: var(--space-3);
-}
-.compose-rail-others {
+/* The marked thread's other messages, set in under it. */
+.compose-threadlist-others {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
   margin: 0;
-  padding-inline-start: 0;
+  padding-inline-start: var(--space-4);
 }
-.compose-rail-others > .compose-message {
+.compose-threadlist-others > .compose-message {
   display: block;
   padding: 0;
 }
 
-.compose-rail-leave {
-  margin-block-start: var(--space-2);
-  inline-size: 100%;
+/* A thread is one conversation rather than a record's whole chronology, so
+   the date gutter that keeps an account's timeline in a column buys nothing
+   here and costs a third of the measure. */
+.compose-thread-list {
+  padding-inline-start: 0;
 }
 
-/* A card read without its summary: the design system's button laid out as a
-   two-line row, stacked and as wide as the card. */
+/* A thread read without its summary: the design system's button laid out as
+   a two-line row, stacked and as wide as the list. */
 .compose-choice {
   display: flex;
   flex-direction: column;

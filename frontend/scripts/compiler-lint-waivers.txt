@@ -62,7 +62,7 @@
 1 react-hooks/set-state-in-effect src/features/companies/company-context.tsx
 3 react-hooks/refs src/features/companies/companyheaderactions.tsx
 1 react-hooks/set-state-in-effect src/features/companies/companyvatmark.tsx
-7 react-hooks/refs src/features/mail/compose.tsx
+6 react-hooks/refs src/features/mail/compose.tsx
 1 react-hooks/set-state-in-effect src/features/mail/composefiling.ts
 4 react-hooks/refs src/features/mail/composerecipientoffer.ts
 1 react-hooks/set-state-in-effect src/features/mail/composesaveddraft.tsx

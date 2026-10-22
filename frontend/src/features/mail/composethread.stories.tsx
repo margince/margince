@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useState } from "react";
 import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import {
@@ -12,7 +11,6 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { ComposeModal } from "./compose";
-import { ConversationRail } from "./composerail";
 
 const MESSAGES: components["schemas"]["Activity"][] = [
   "Delivery window",
@@ -45,51 +43,11 @@ const MESSAGES: components["schemas"]["Activity"][] = [
   },
 }));
 
-function Conversation() {
-  const [selected, setSelected] = useState<string | undefined>("message-0");
-  const anchor = MESSAGES.find((message) => message.id === selected);
-  return (
-    <StoryProviders>
-      <ConversationRail
-        recordName="Ada Sommer"
-        conversations={MESSAGES.map((message) => ({
-          anchorId: message.id ?? "",
-          subject: message.subject ?? "",
-          atIso: message.occurred_at ?? "",
-          count: 1,
-          partial: false,
-          summary: message.email_summary ?? undefined,
-          memberIds: [message.id ?? ""],
-        }))}
-        pending={false}
-        failed={false}
-        onRetry={() => {}}
-        answering={selected}
-        anchor={anchor}
-        anchorPending={false}
-        anchorFailed={false}
-        onRetryAnchor={() => {}}
-        thread={{
-          messages: anchor ? [anchor] : [],
-          pending: false,
-          failed: false,
-          retry: () => {},
-        }}
-        viewerUserId={undefined}
-        nameOf={() => undefined}
-        onChoose={setSelected}
-        onLeave={() => setSelected(undefined)}
-        disabled={false}
-      />
-    </StoryProviders>
-  );
-}
 const meta: Meta = {
   title: "Patterns/Compose mail/Conversation",
   excludeStories: ["selectedReplyRoutes"],
 };
 export default meta;
-export const SelectAndPreview: StoryObj = { render: () => <Conversation /> };
 export function selectedReplyRoutes() {
   return {
     "GET /me": meRoute({}),
@@ -152,9 +110,6 @@ export const DraftedBesideThread: StoryObj = {
   play: async () => {
     const dialog = within(await screen.findByRole("dialog"));
     await userEvent.click(
-      await dialog.findByRole("button", { name: "Draft with AI" }),
-    );
-    await userEvent.click(
       await dialog.findByRole("button", { name: "Draft reply" }),
     );
     await dialog.findByText("AI-assisted draft");
@@ -171,8 +126,8 @@ export const DraftedBesideThread: StoryObj = {
     const toolbar = dialog
       .getByRole("button", { name: "Bold" })
       .getBoundingClientRect();
-    await expect(toolbar.bottom).toBeLessThanOrEqual(body.top);
-    await expect(body.bottom).toBeLessThanOrEqual(send.top);
+    await expect(body.bottom).toBeLessThanOrEqual(toolbar.top);
+    await expect(toolbar.bottom).toBeLessThanOrEqual(send.top);
     await expect(send.bottom).toBeLessThanOrEqual(window.innerHeight);
     await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
       window.innerWidth,
