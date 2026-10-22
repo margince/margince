@@ -226,7 +226,7 @@ export function DraftOffer({
               busyLabel={t("compose.drafting")}
             >
               <Sparkles aria-hidden="true" />
-              {t(replying ? "compose.draftReply" : "compose.draftWithAi")}
+              {t(replying ? "compose.draftReply" : "compose.draftEmail")}
             </Button>
           </div>
         )}

@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { draftButton } from "../../testing/composedraft.testkit";
 import {
   allowedPreview,
   isPreviewDoor,
@@ -128,9 +129,7 @@ describe("drafting to a lead", () => {
       />,
     );
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
 
     expect(
       await screen.findByDisplayValue("Following up on your pricing question"),
@@ -158,13 +157,12 @@ describe("drafting to a lead", () => {
       />,
     );
 
+    draftButton();
     await userEvent.type(
       screen.getByPlaceholderText(/Purpose of the email|Purpose of the reply/),
       "shorter",
     );
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
     await screen.findByDisplayValue("Following up on your pricing question");
 
     const call = sent.find((c) => c.key === "POST /leads/l-1/draft-email");
@@ -188,9 +186,7 @@ describe("drafting to a lead", () => {
       />,
     );
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
 
     expect(
       await screen.findByRole("heading", { name: "AI-assisted draft" }),
@@ -219,9 +215,7 @@ describe("drafting to a lead", () => {
       />,
     );
 
-    await userEvent.click(
-      screen.getByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(draftButton());
 
     await waitFor(() =>
       expect(screen.getByText(/AI drafting is unavailable/i)).toBeTruthy(),

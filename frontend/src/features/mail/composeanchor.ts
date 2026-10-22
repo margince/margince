@@ -215,10 +215,12 @@ export function useComposeThread({
     Boolean(answering) && anchorActivity === undefined && !anchorRead.failed;
   // Mail is the transport that can open a conversation, so it alone offers.
   const offeringThreads = !isChannelReply;
+  // Asked on a reply too: the rail keeps the other conversations beside the
+  // one being answered, so the draft can move to one of them.
   const recent = useRecentConversations(
     entityType,
     entityId,
-    open && offeringThreads && !answering,
+    open && offeringThreads,
     { nameOf, t, locale },
   );
   useReplySubject(answering, anchorActivity, setSubject);
@@ -229,11 +231,10 @@ export function useComposeThread({
     anchorUnresolved,
     conversation,
   });
-  // The ways in, when the reader has not taken one. A pending or failed read
-  // keeps the column, so the record never looks as though it had no history.
-  const showChoices =
+  // A pending or failed read keeps the rail, so the record never looks as
+  // though it had no history.
+  const offered =
     offeringThreads &&
-    !answering &&
     (recent.pending || recent.failed || recent.conversations.length > 0);
   return {
     anchorRead,
@@ -242,9 +243,7 @@ export function useComposeThread({
     anchorUnresolved,
     recent,
     answeringLine: answeringLineOf(answering, anchorRead, t, locale),
-    showConversation,
-    showChoices,
-    splitColumns: showConversation || showChoices,
+    splitColumns: showConversation || offered,
   };
 }
 

@@ -24,7 +24,7 @@ function halves() {
   return { fold, draft };
 }
 
-/** A reading drawer wide enough for both: the thread beside the draft. */
+/** A workspace wide enough for both: the threads beside the draft. */
 export const Beside: StoryObj = {
   parameters: {
     viewport: {
@@ -40,7 +40,7 @@ export const Beside: StoryObj = {
   render: SelectedReply.render,
   play: async () => {
     const dialog = within(await screen.findByRole("dialog"));
-    await dialog.findByRole("heading", { name: "This thread" });
+    await dialog.findByRole("heading", { name: "Threads" });
     await expect(
       dialog.queryByRole("button", { name: "Show this thread" }),
     ).toBeNull();
@@ -60,7 +60,7 @@ export const Folded: StoryObj = {
     await userEvent.click(
       await dialog.findByRole("button", { name: "Show this thread" }),
     );
-    await dialog.findByRole("heading", { name: "This thread" });
+    await dialog.findByRole("heading", { name: "Threads" });
     await dialog.findByRole("button", { name: "Hide this thread" });
     const { fold, draft } = halves();
     await expect(draft.top).toBeGreaterThanOrEqual(fold.bottom);
@@ -95,7 +95,7 @@ export const FoldedChoices: StoryObj = {
     await userEvent.click(
       await dialog.findByRole("button", { name: "Show earlier threads" }),
     );
-    await dialog.findByRole("heading", { name: "Continue thread?" });
+    await dialog.findByRole("heading", { name: "Threads" });
     await dialog.findByRole("button", { name: "Hide earlier threads" });
   },
 };

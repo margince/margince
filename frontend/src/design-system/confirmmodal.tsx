@@ -3,6 +3,7 @@ import { Children, useId } from "react";
 import { useT } from "../i18n";
 import { Button, Modal } from "./atoms";
 import { ErrorLine } from "./errorline";
+import { Eyebrow } from "./eyebrow";
 import { Heading } from "./heading";
 import type { ModalIntent } from "./modal";
 import { AutonomyDot } from "./trust";
@@ -29,6 +30,8 @@ export function ConfirmModal({
   returnFocusTo,
   initialFocusTo,
   unsaved,
+  eyebrow,
+  headAside,
   children,
 }: Readonly<{
   open: boolean;
@@ -77,6 +80,10 @@ export function ConfirmModal({
   initialFocusTo?: () => HTMLElement | null;
   /** The caller holds a draft, so a close other than the confirm asks first. */
   unsaved?: boolean;
+  /** What kind of act the title names, read above it ("Reply", "New email"). */
+  eyebrow?: string;
+  /** A control about the whole dialog, beside its title (a project picker). */
+  headAside?: ReactNode;
   children: ReactNode;
 }>) {
   const t = useT();
@@ -97,14 +104,26 @@ export function ConfirmModal({
       initialFocusTo={initialFocusTo}
       unsaved={unsaved}
     >
-      <Heading size="large" id={headingId} className="t-h2 modal-title">
-        {tier && (
-          <>
-            <AutonomyDot tier={tier} />{" "}
-          </>
-        )}
-        {title}
-      </Heading>
+      {eyebrow || headAside ? (
+        <div className="modal-head">
+          <div className="modal-head-text">
+            {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
+            <Heading size="large" id={headingId} className="t-h2 modal-title">
+              {title}
+            </Heading>
+          </div>
+          {headAside}
+        </div>
+      ) : (
+        <Heading size="large" id={headingId} className="t-h2 modal-title">
+          {tier && (
+            <>
+              <AutonomyDot tier={tier} />{" "}
+            </>
+          )}
+          {title}
+        </Heading>
+      )}
       {body && (
         <div className="form-stack">
           {children}

@@ -607,6 +607,7 @@ describe("an intent decides the box on its own", () => {
       "modal modal-drawer modal-drawer-wide",
       "overlay overlay-right",
     ],
+    ["workspace", "modal modal-workspace", "overlay"],
     ["full", "modal modal-full", "overlay"],
   ])("%s draws %s", (intent, box, overlay) => {
     expect(boxOf(intent)).toEqual({ box, overlay });
@@ -646,7 +647,14 @@ describe("an intent decides the box on its own", () => {
 
   it("names every intent it takes", () => {
     expect([...MODAL_INTENTS].sort()).toEqual(
-      ["confirm", "drawer", "drawer-reading", "form", "full"].sort(),
+      [
+        "confirm",
+        "drawer",
+        "drawer-reading",
+        "form",
+        "full",
+        "workspace",
+      ].sort(),
     );
   });
 });

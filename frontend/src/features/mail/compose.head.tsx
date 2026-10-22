@@ -1,58 +1,48 @@
-import type { components } from "../../api/schema";
+import { Reply, SquarePen } from "lucide-react";
+import { Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
-import {
-  type PickableProject,
-  ProjectPicker,
-} from "../../design-system/projectpicker";
+import { ProjectPicker } from "../../design-system/projectpicker";
 import type { TokenSuggestion } from "../../design-system/tokeninput";
 import { INTL_LOCALE } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { Transport } from "../../lib/contacttransports";
 import { useProjectRecord } from "../projects/projectrecord";
-import type { VoiceProfile } from "./compose";
 import { StaleThreadNotice } from "./compose.notices";
 import { useThreadProject } from "./composeanchor";
-import { DraftBand } from "./composedraftband";
-import type { DraftProvenance, DraftUnavailable } from "./composedraftcall";
-import {
-  AccountDraftContext,
-  DraftOffer,
-  type PendingAction,
-} from "./composedraftcontext";
+import { AccountDraftContext } from "./composedraftcontext";
 import type { ComposeFields } from "./composefields";
 import type { ComposeRecords } from "./composefiling";
 import { AddressBlock, SubjectRow, TransportRow } from "./composehead";
 import { SavedDraftNotices, type useSavedDraft } from "./composesaveddraft";
 import type { MissingField } from "./composesend";
 import type { useTransportDial } from "./composetarget";
-import type { VoiceDraft } from "./composevoicedraft";
 
 /**
- * The one control that says which project a message belongs to, on a reply
- * and on a message started from an account alike.
+ * The one control that says which project a message belongs to, in the
+ * composer's head. A reply and a message started from an account share it.
  *
  * It carries no explanation of its own. The tag it puts in the Subject field
  * shows there, and a rep who does not want it deletes it like any other text.
- * A sentence saying so would restate what the field already shows.
- *
- * Choosing None takes the tag out. Choosing a project puts it in. Nothing
- * renders when the record reaches no live project, because a list whose only
- * entry is None asks a question with one answer.
+ * Nothing renders when the record reaches no live project, because a list whose
+ * only entry is None asks a question with one answer.
  */
-function ProjectFiling({
-  projects,
-  projectId,
-  onChange,
+export function ProjectFiling({
+  filed,
+  records,
 }: Readonly<{
-  projects: readonly PickableProject[];
-  projectId: string;
-  onChange: (next: string) => void;
+  /** Whether the message files under a project here; a channel reply does not. */
+  filed: boolean;
+  records: ComposeRecords;
 }>) {
+  if (!filed) {
+    return null;
+  }
   return (
     <ProjectPicker
-      projects={projects}
-      projectId={projectId}
-      onChange={onChange}
+      projects={records.reachableProjects}
+      projectId={records.projectFiling.projectId}
+      onChange={records.projectFiling.setProjectId}
+      inHead
     />
   );
 }
@@ -94,52 +84,35 @@ function ChannelReplyFiling({ activityId }: Readonly<{ activityId?: string }>) {
   );
 }
 
-// The mail-only half of the composer. AI drafting has no endpoint for a channel,
-// and a channel request has no room for recipient and subject inputs. A channel
-// reply renders none of this, so it inherits none of its branching.
+// The mail-only half of the head: who the message is to and what it is about.
+// A channel request has no room for recipient and subject inputs, so a channel
+// reply renders none of this and inherits none of its branching.
 function MailOnlyFields({
-  replying,
-  intent,
-  onIntentChange,
-  draft,
-  draftUnavailable,
-  provenance,
-  voiceMaturity,
-  reasons,
   to,
   onToChange,
   cc,
   onCcChange,
   bcc,
   onBccChange,
-  bccOpen,
-  onOpenBcc,
+  copiesOpen,
+  onOpenCopies,
   recipients,
   onToEditing,
   subject,
   onSubjectChange,
   rejectionInFlight,
-  answering,
   flagged,
   deadRecipients,
 }: Readonly<{
-  replying: boolean;
-  intent: string;
-  onIntentChange: (next: string) => void;
-  draft: PendingAction;
-  draftUnavailable: DraftUnavailable | null;
-  provenance: DraftProvenance | null;
-  voiceMaturity: VoiceProfile["maturity"] | undefined;
-  reasons: components["schemas"]["AccountDraftReason"][];
   to: string[];
   onToChange: (next: string[]) => void;
   cc: string[];
   onCcChange: (next: string[]) => void;
   bcc: string[];
   onBccChange: (next: string[]) => void;
-  /** Whether the blind-copy row is drawn. A button until it is asked for. */
-  bccOpen: boolean;
-  onOpenBcc: () => void;
+  /** Whether the copy rows are drawn. A link until they are asked for. */
+  copiesOpen: boolean;
+  onOpenCopies: () => void;
   /** The addresses this record already knows, offered as the reader types. */
   recipients: readonly TokenSuggestion[];
   /** The reader has started typing a recipient, before any is committed. */
@@ -149,35 +122,12 @@ function MailOnlyFields({
   /** The fields a pressed Send is still waiting for. Empty until it is pressed. */
   flagged: ReadonlySet<MissingField>;
   rejectionInFlight: boolean;
-  /** The reply target or the current loading/error state. */
-  answering: string;
   /** The recipients on this draft that are known not to arrive. */
   deadRecipients: readonly string[];
 }>) {
   const t = useT();
-  const offer = (
-    <DraftOffer
-      replying={replying}
-      intent={intent}
-      onIntentChange={onIntentChange}
-      draft={draft}
-      unavailable={draftUnavailable}
-    />
-  );
   return (
     <>
-      {provenance ? (
-        <DraftBand
-          provenance={provenance}
-          maturity={voiceMaturity}
-          reasons={reasons}
-        >
-          {offer}
-        </DraftBand>
-      ) : (
-        offer
-      )}
-      <p className="t-caption mw-answering">{answering}</p>
       <AddressBlock
         to={to}
         onToChange={onToChange}
@@ -185,8 +135,8 @@ function MailOnlyFields({
         onCcChange={onCcChange}
         bcc={bcc}
         onBccChange={onBccChange}
-        bccOpen={bccOpen}
-        onOpenBcc={onOpenBcc}
+        copiesOpen={copiesOpen}
+        onOpenCopies={onOpenCopies}
         suggestions={recipients}
         onToEditing={onToEditing}
         invalidTo={flagged.has("to")}
@@ -202,6 +152,44 @@ function MailOnlyFields({
         disabled={rejectionInFlight}
       />
     </>
+  );
+}
+
+/**
+ * What this message answers, above the fields, with the way to start fresh
+ * instead. On a new message it says how to continue a conversation, where the
+ * rail offers one.
+ */
+function AnsweringLine({
+  replying,
+  answeringLine,
+  railShown,
+  onStartNew,
+  disabled,
+}: Readonly<{
+  replying: boolean;
+  answeringLine: string;
+  railShown: boolean;
+  onStartNew: () => void;
+  disabled: boolean;
+}>) {
+  const t = useT();
+  if (!replying) {
+    return (
+      <p className="t-caption compose-answering">
+        <SquarePen aria-hidden="true" />
+        {railShown ? t("compose.startsNew") : answeringLine}
+      </p>
+    );
+  }
+  return (
+    <p className="t-caption compose-answering">
+      <Reply aria-hidden="true" />
+      <span>{answeringLine}</span>
+      <Button variant="link" onClick={onStartNew} disabled={disabled}>
+        {t("compose.startNewInstead")}
+      </Button>
+    </p>
   );
 }
 
@@ -253,9 +241,10 @@ export function ComposeHead({
   accountCompanyId,
   answeringLine,
   replying,
+  railShown,
+  onStartNew,
   flagged,
-  voice,
-  voiceMaturity,
+  rejectionInFlight,
   onToEditing,
 }: Readonly<{
   fields: ComposeFields;
@@ -272,9 +261,11 @@ export function ComposeHead({
   accountCompanyId: string | undefined;
   answeringLine: string;
   replying: boolean;
+  /** Whether the conversations stand beside the form to continue one. */
+  railShown: boolean;
+  onStartNew: () => void;
   flagged: ReadonlySet<MissingField>;
-  voice: VoiceDraft;
-  voiceMaturity: VoiceProfile["maturity"] | undefined;
+  rejectionInFlight: boolean;
   onToEditing: () => void;
 }>) {
   const t = useT();
@@ -292,17 +283,9 @@ export function ComposeHead({
       />
       <StaleThreadNotice stale={staleThread} />
       <ColleagueMailboxNotice seats={colleagueSeats} nameOf={nameOf} />
-      {/* Mail asks where it files, in the subject tag. A channel send carries
-          no filing field, so it is told what the conversation inherits. */}
-      {dial.isChannelReply ? (
-        <ChannelReplyFiling activityId={activityId} />
-      ) : (
-        <ProjectFiling
-          projects={records.reachableProjects}
-          projectId={records.projectFiling.projectId}
-          onChange={records.projectFiling.setProjectId}
-        />
-      )}
+      {/* Mail chooses where it files in the head. A channel send carries no
+          filing field, so it is told what the conversation inherits. */}
+      {dial.isChannelReply && <ChannelReplyFiling activityId={activityId} />}
       {/* The account path's recipient and deal sit with the rows that say
           what the message is. */}
       {accountCompanyId !== undefined && (
@@ -314,37 +297,35 @@ export function ComposeHead({
           onDealChange={account.setDealId}
         />
       )}
-      {/* Drafting and addresses are mail-only: there is no draft-message
-          endpoint, and a channel resolves its recipient on the server. */}
       {!dial.isChannelReply && (
-        <MailOnlyFields
-          // The pane answers what is being replied to; the sentence serves
-          // the composer that has no pane.
-          answering={answeringLine}
-          replying={replying}
-          flagged={flagged}
-          intent={fields.intent}
-          onIntentChange={fields.setIntent}
-          draft={voice.control}
-          draftUnavailable={fields.draftUnavailable}
-          provenance={fields.provenance}
-          voiceMaturity={voiceMaturity}
-          reasons={account.reasoning}
-          to={fields.to}
-          onToChange={fields.setTo}
-          cc={fields.cc}
-          onCcChange={fields.setCc}
-          bcc={fields.bcc}
-          onBccChange={fields.setBcc}
-          bccOpen={fields.bccOpen}
-          onOpenBcc={fields.openBcc}
-          recipients={records.recipients}
-          onToEditing={onToEditing}
-          subject={fields.subject}
-          onSubjectChange={fields.setSubject}
-          rejectionInFlight={voice.rejectionInFlight}
-          deadRecipients={records.deadRecipients}
-        />
+        <>
+          <AnsweringLine
+            // The rail answers what is being replied to; the sentence says it
+            // where the reader writes, with the way out of it.
+            replying={replying}
+            answeringLine={answeringLine}
+            railShown={railShown}
+            onStartNew={onStartNew}
+            disabled={rejectionInFlight}
+          />
+          <MailOnlyFields
+            flagged={flagged}
+            to={fields.to}
+            onToChange={fields.setTo}
+            cc={fields.cc}
+            onCcChange={fields.setCc}
+            bcc={fields.bcc}
+            onBccChange={fields.setBcc}
+            copiesOpen={fields.copiesOpen}
+            onOpenCopies={fields.openCopies}
+            recipients={records.recipients}
+            onToEditing={onToEditing}
+            subject={fields.subject}
+            onSubjectChange={fields.setSubject}
+            rejectionInFlight={rejectionInFlight}
+            deadRecipients={records.deadRecipients}
+          />
+        </>
       )}
     </>
   );

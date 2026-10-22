@@ -16,6 +16,7 @@ import {
   writeMessage,
 } from "../../design-system/richtext-testing";
 import { LocaleProvider } from "../../i18n";
+import { draftButton } from "../../testing/composedraft.testkit";
 import {
   allowedPreview,
   isPreviewDoor,
@@ -127,7 +128,7 @@ afterEach(() => {
 it("requires a purpose for a new AI email, then sends that purpose to the contact writer", async () => {
   const user = userEvent.setup();
   const requests = setup();
-  const draft = screen.getByRole("button", { name: "Draft with AI" });
+  const draft = draftButton();
   expect(draft.hasAttribute("disabled")).toBe(true);
   await user.type(
     screen.getByPlaceholderText("Purpose of the email"),
@@ -158,12 +159,18 @@ it("selects the exact message, normalizes the reply subject, and restores each d
     expect(messageText("Body")).toBe("");
   });
   expect(screen.getByText(/Following up on your email/)).toBeTruthy();
-  await user.click(screen.getByRole("button", { name: "Draft reply with AI" }));
+  await user.click(draftButton());
   await waitFor(() => expect(messageText("Body")).toBe("The generated reply."));
   expect(
     requests.some((request) => request.path === "/activities/a2/draft-email"),
   ).toBe(true);
-  await user.click(screen.getByRole("button", { name: /Pricing/ }));
+  // Back to the first message, through its row under the marked thread.
+  await user.click(
+    within(screen.getByRole("listitem", { name: /^Pricing/ })).getByRole(
+      "button",
+      { name: /Pricing/ },
+    ),
+  );
   await waitFor(() => expect(messageText("Body")).toBe("Answer to pricing"));
   expect(
     screen
@@ -189,7 +196,7 @@ it("ignores a delayed draft after selecting another message", async () => {
   );
   await user.click(await screen.findByRole("button", { name: /Pricing/ }));
   await screen.findByDisplayValue("Re: Pricing");
-  await user.click(screen.getByRole("button", { name: "Draft reply with AI" }));
+  await user.click(draftButton());
   await waitFor(() =>
     expect(
       requests.some((request) => request.path === "/activities/a1/draft-email"),
@@ -239,7 +246,7 @@ it("keeps edits made while the selected email's AI draft is in flight", async ()
   );
   await user.click(await screen.findByRole("button", { name: /Pricing/ }));
   await screen.findByDisplayValue("Re: Pricing");
-  await user.click(screen.getByRole("button", { name: "Draft reply with AI" }));
+  await user.click(draftButton());
   await waitFor(() => expect(finish).toBeTypeOf("function"));
   writeMessage("Body", "My answer written while waiting");
   finish?.(json({ subject: "Re: Pricing", body: "Late generated text" }));
@@ -252,15 +259,16 @@ it("preserves recipient choices and instructions separately for each reply", asy
   setup();
   await user.click(await screen.findByRole("button", { name: /Pricing/ }));
   await screen.findByDisplayValue("Re: Pricing");
+  await user.click(screen.getByRole("button", { name: "Cc and Bcc" }));
   await user.type(
     screen.getByRole("combobox", { name: "Cc" }),
     "finance@example.test{Enter}",
   );
-  await user.click(screen.getByRole("button", { name: "Bcc" }));
   await user.type(
     screen.getByRole("combobox", { name: "Bcc" }),
     "archive@example.test{Enter}",
   );
+  draftButton();
   await user.type(
     screen.getByPlaceholderText("Purpose of the reply"),
     "Confirm the price",
@@ -269,7 +277,12 @@ it("preserves recipient choices and instructions separately for each reply", asy
   await screen.findByDisplayValue("Re: Delivery");
   expect(screen.queryByText("finance@example.test")).toBeNull();
   expect(screen.queryByText("archive@example.test")).toBeNull();
-  await user.click(screen.getByRole("button", { name: /Pricing/ }));
+  await user.click(
+    within(screen.getByRole("listitem", { name: /^Pricing/ })).getByRole(
+      "button",
+      { name: /Pricing/ },
+    ),
+  );
   expect(screen.getByText("finance@example.test")).toBeTruthy();
   expect(screen.getByText("archive@example.test")).toBeTruthy();
   expect(screen.getByDisplayValue("Confirm the price")).toBeTruthy();
@@ -305,18 +318,10 @@ it("retries a failed selected-message read before enabling reply drafting", asyn
   });
   await user.click(await screen.findByRole("button", { name: /Pricing/ }));
   await screen.findByText("This section did not load.");
-  expect(
-    screen
-      .getByRole("button", { name: "Draft reply with AI" })
-      .hasAttribute("disabled"),
-  ).toBe(true);
+  expect(draftButton().hasAttribute("disabled")).toBe(true);
   await user.click(screen.getByRole("button", { name: "Retry" }));
   await screen.findByDisplayValue("Re: Pricing");
-  expect(
-    screen
-      .getByRole("button", { name: "Draft reply with AI" })
-      .hasAttribute("disabled"),
-  ).toBe(false);
+  expect(draftButton().hasAttribute("disabled")).toBe(false);
 });
 
 it("keeps withheld thread entries unreadable and unavailable as reply targets", async () => {
@@ -363,6 +368,11 @@ it("files a delayed upload on the draft that started it, even after switching", 
   finish?.(json({ id: "file-a", filename: "pricing.txt", byte_size: 5 }));
   await waitFor(() => expect(client.isMutating()).toBe(0));
   expect(screen.queryByText(/pricing.txt/)).toBeNull();
-  await user.click(screen.getByRole("button", { name: /Pricing/ }));
+  await user.click(
+    within(screen.getByRole("listitem", { name: /^Pricing/ })).getByRole(
+      "button",
+      { name: /Pricing/ },
+    ),
+  );
   expect(await screen.findByText(/pricing.txt/)).toBeTruthy();
 });

@@ -10,6 +10,7 @@
 import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { draftButton } from "../../testing/composedraft.testkit";
 import {
   day,
   jsonResponse,
@@ -173,9 +174,7 @@ describe("a meeting the reader has sent nothing after", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: /draft follow-up/i }),
     );
-    await userEvent.click(
-      await screen.findByRole("button", { name: /Draft (reply )?with AI/ }),
-    );
+    await userEvent.click(await draftButton());
     await screen.findByDisplayValue("Thanks for today");
     expect(drafts[0]?.url).toContain(`/contacts/${first}/draft-email`);
     expect(drafts[0]?.body).toMatchObject({

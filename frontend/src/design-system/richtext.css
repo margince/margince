@@ -217,3 +217,39 @@
   margin: 0 0 8px;
   white-space: pre-wrap;
 }
+
+/* The bar at the HEAD of the frame: the host's own verbs first, set apart by a
+   hairline, then the marks, then the caller's further verbs at the far end. A
+   tinted band, because here it leads the frame and has to read as its edge. */
+.richtext-head {
+  display: flex;
+  align-items: center;
+  gap: 2px; /* ds:ignore the marks' own tight rhythm, as in the footer */
+  padding: var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--borderSubtle);
+  background: var(--bgPage);
+}
+.richtext-lead {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-inline-end: var(--space-2);
+  margin-inline-end: var(--space-1);
+  border-inline-end: 1px solid var(--borderStrong);
+}
+.richtext-head > .richtext-bar {
+  margin-inline-start: 0;
+}
+.richtext-head > :last-child:not(.richtext-bar) {
+  margin-inline-start: auto;
+}
+
+/* A headed frame takes the height its host hands it, and the words fill it. */
+.richtext.is-headed {
+  display: flex;
+  flex-direction: column;
+}
+.richtext.is-headed > .richtext-input {
+  flex: 1 1 auto;
+  min-block-size: 0;
+}

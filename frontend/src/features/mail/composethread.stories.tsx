@@ -12,7 +12,7 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { ComposeModal } from "./compose";
-import { ThreadPane } from "./composethread";
+import { ConversationRail } from "./composerail";
 
 const MESSAGES: components["schemas"]["Activity"][] = [
   "Delivery window",
@@ -46,18 +46,40 @@ const MESSAGES: components["schemas"]["Activity"][] = [
 }));
 
 function Conversation() {
-  const [selected, setSelected] = useState("message-0");
+  const [selected, setSelected] = useState<string | undefined>("message-0");
+  const anchor = MESSAGES.find((message) => message.id === selected);
   return (
     <StoryProviders>
-      <ThreadPane
-        messages={MESSAGES}
-        selectedId={selected}
-        onSelect={setSelected}
+      <ConversationRail
+        recordName="Ada Sommer"
+        conversations={MESSAGES.map((message) => ({
+          anchorId: message.id ?? "",
+          subject: message.subject ?? "",
+          atIso: message.occurred_at ?? "",
+          count: 1,
+          partial: false,
+          summary: message.email_summary ?? undefined,
+          memberIds: [message.id ?? ""],
+        }))}
         pending={false}
         failed={false}
         onRetry={() => {}}
+        answering={selected}
+        anchor={anchor}
+        anchorPending={false}
+        anchorFailed={false}
+        onRetryAnchor={() => {}}
+        thread={{
+          messages: anchor ? [anchor] : [],
+          pending: false,
+          failed: false,
+          retry: () => {},
+        }}
+        viewerUserId={undefined}
         nameOf={() => undefined}
-        named
+        onChoose={setSelected}
+        onLeave={() => setSelected(undefined)}
+        disabled={false}
       />
     </StoryProviders>
   );
@@ -130,7 +152,10 @@ export const DraftedBesideThread: StoryObj = {
   play: async () => {
     const dialog = within(await screen.findByRole("dialog"));
     await userEvent.click(
-      await dialog.findByRole("button", { name: "Draft reply with AI" }),
+      await dialog.findByRole("button", { name: "Draft with AI" }),
+    );
+    await userEvent.click(
+      await dialog.findByRole("button", { name: "Draft reply" }),
     );
     await dialog.findByText("AI-assisted draft");
     const editor = dialog.getByRole("textbox", { name: "Body" });
@@ -146,8 +171,8 @@ export const DraftedBesideThread: StoryObj = {
     const toolbar = dialog
       .getByRole("button", { name: "Bold" })
       .getBoundingClientRect();
-    await expect(body.bottom).toBeLessThanOrEqual(toolbar.top);
-    await expect(toolbar.bottom).toBeLessThanOrEqual(send.top);
+    await expect(toolbar.bottom).toBeLessThanOrEqual(body.top);
+    await expect(body.bottom).toBeLessThanOrEqual(send.top);
     await expect(send.bottom).toBeLessThanOrEqual(window.innerHeight);
     await expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(
       window.innerWidth,

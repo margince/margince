@@ -5,8 +5,9 @@
  * would otherwise stretch the form's column and push Send below the fold. */
 .compose-split {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
-  gap: var(--space-5);
+  /* The rail a fixed measure, the draft the rest: a card reads at this width
+     whatever the dialog's, and the message is what grows. */
+  grid-template-columns: 17.5rem minmax(0, 1fr);
   /* The drawer is a flex column, so this has to CLAIM the height between the
      title and the actions — without the grow it sizes to its content and the
      drawer ends in a band of empty white with the send buttons stranded in the
@@ -21,17 +22,20 @@
 .compose-split > .compose-fields {
   min-block-size: 0;
   overflow-y: auto;
+  padding: var(--space-4) var(--space-5);
 }
 
 .compose-thread {
   display: flex;
   flex-direction: column;
   min-block-size: 0;
-  /* The conversation is what the reply is drawn FROM, so it reads as the
-     recessed half: the form is where the work happens. A rule rather than a
-     fill, because a tinted column beside a white one reads as disabled. */
+  /* The conversations are what the reply is drawn FROM, so they sit on the
+     page ground, recessed behind the white of the form where the work happens;
+     the cards on it are white again, so nothing on the rail reads as disabled. */
+  gap: var(--space-2);
+  padding: var(--space-4);
   border-inline-end: 1px solid var(--borderSubtle);
-  padding-inline-end: var(--space-5);
+  background: var(--bgPage);
 }
 
 .compose-thread-head {
@@ -67,6 +71,10 @@
   container: compose / inline-size;
   flex: 1 1 auto;
   min-block-size: 0;
+  /* Each column pays its own inset and scrolls itself, so the body does
+     neither. */
+  padding: 0;
+  overflow: hidden;
 }
 
 .compose-fold {
@@ -104,59 +112,86 @@
   }
   .compose-fold {
     border-block-end: 1px solid var(--borderSubtle);
-    padding-block-end: var(--space-3);
+    padding: var(--space-3) var(--space-4);
   }
   .compose-fold[data-open="false"] > .compose-fold-column {
     display: none;
   }
   .compose-thread {
     border-inline-end: 0;
-    padding-inline-end: 0;
+    border-radius: var(--r-sm);
   }
   .compose-thread-scroll {
     max-block-size: 14rem;
   }
 }
 
-/* The head is a row now: the heading, and the way back out of a conversation
-   the reader picked. */
+/* The head: whose conversations these are, and how many. */
 .compose-thread-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-3);
 }
-
-/* The design system's button, worn as a text link: the head's baseline row has
-   no room for a boxed control, and the way back is a small move rather than a
-   verb. Focus, refusal and pending semantics stay the shared ones. */
-.compose-thread-leave {
-  flex: none;
-  min-inline-size: 0;
-  block-size: auto;
-  padding: 0;
-  border-color: transparent;
-  background: none;
-  color: var(--accentText);
-}
-.compose-thread-leave:hover {
-  background: none;
-  text-decoration: underline;
+.compose-rail-count {
+  font-variant-numeric: tabular-nums;
 }
 
-/* The ways in. Each is one press target across its whole width — the subject
-   and what places it are one answer, not two things to aim at. */
-.compose-choices {
+/* The cards. Each is a conversation the draft can answer, the one it answers
+   in the accent tint, so the rail says at a glance where the reply goes. */
+.compose-rail {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--space-2);
   list-style: none;
   margin: 0;
   padding: 0;
 }
+.compose-rail-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-block-end: var(--space-2);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-sm);
+  background: var(--bgElevated);
+}
+.compose-rail-card[data-selected="true"] {
+  border-color: var(--accentMed);
+  background: var(--accentLight);
+}
+.compose-rail-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-inline: var(--space-3);
+}
 
-/* The design system's button, laid out as a two-line row: stacked, start-aligned
-   and as wide as the list, where the shared shape is one centred line. */
+/* The open card: the words the draft answers, then the rest of the thread. */
+.compose-rail-reading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-inline: var(--space-3);
+}
+.compose-rail-others {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding-inline-start: 0;
+}
+.compose-rail-others > .compose-message {
+  display: block;
+  padding: 0;
+}
+
+.compose-rail-leave {
+  margin-block-start: var(--space-2);
+  inline-size: 100%;
+}
+
+/* A card read without its summary: the design system's button laid out as a
+   two-line row, stacked and as wide as the card. */
 .compose-choice {
   display: flex;
   flex-direction: column;
@@ -167,14 +202,8 @@
   text-align: start;
   background: none;
   border-color: transparent;
-  border-radius: var(--r-sm);
   padding: var(--space-2) var(--space-3);
 }
-.compose-choice:hover {
-  background: var(--bgHover);
-  border-color: var(--borderSubtle);
-}
-
 .compose-choice-subject {
   color: var(--textPrimary);
 }
@@ -183,10 +212,5 @@
   display: flex;
   align-items: center;
   gap: var(--gapActions);
-  padding: 0 var(--space-3) var(--space-3);
-}
-
-.compose-thread-list > .compose-message {
-  display: block;
-  padding: 0;
+  padding: 0 var(--space-3) var(--space-2);
 }

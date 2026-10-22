@@ -354,6 +354,66 @@
 .modal-form {
   width: min(var(--dialogFormWidth), calc(100vw - 40px));
 }
+/* The WORKSPACE: a centred dialog worked in at length, with something to read
+   beside the form (the composer and its conversations). It takes the glass less
+   a gutter in both directions and pays no padding, because its three bands pay
+   their own: the head and foot stay put while the body between them scrolls. */
+.modal-workspace {
+  width: min(var(--dialogWorkspaceWidth), calc(100vw - 40px));
+  height: calc(100dvh - 72px);
+  max-height: calc(100dvh - 72px);
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+/* The head clears the corner control, as a title does in every dialog. */
+.modal-workspace > .modal-head {
+  flex: none;
+  padding: var(--space-4) var(--space-5) var(--space-3);
+  padding-inline-end: calc(
+    var(--modal-corner, var(--controlHeight)) +
+    var(--space-4) *
+    2
+  );
+  border-bottom: 1px solid var(--borderSubtle);
+}
+.modal-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+.modal-head-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px; /* ds:ignore an eyebrow sits tight on the title it names */
+  flex: 1;
+  min-inline-size: 0;
+}
+/* The head row pays the space under the title, so the title pays none. */
+.modal-head-text > .modal-title {
+  margin-bottom: 0;
+}
+.modal-head-text > :last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.modal-workspace > .form-stack {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-block-size: 0;
+  overflow-y: auto;
+  padding: var(--space-4) var(--space-5);
+}
+.modal-workspace > .actions {
+  flex: none;
+  margin: 0;
+  padding: var(--space-3) var(--space-5);
+  border-top: 1px solid var(--borderSubtle);
+}
+
 /* The LIGHTBOX: a stored file, read at the size of the screen.
  *
  * The inset is what makes it a lightbox rather than a second page — the
@@ -579,7 +639,8 @@
      this one through .modal-drawer, so without this the sticky header sits one
      --space-4 inside the sheet and the band's own edge-to-edge ground stops at
      the padding — the seam reads as a rendering fault rather than a header. */
-  .modal-drawer-wide:has(> .drawer-head) {
+  .modal-drawer-wide:has(> .drawer-head),
+  .modal-workspace {
     padding: 0;
   }
   /* The actions sit at the foot of the sheet rather than after the content,

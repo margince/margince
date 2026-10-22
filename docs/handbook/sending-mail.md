@@ -11,10 +11,10 @@ Who may then read what you sent is a separate question, answered in
 ### How do I send an email to a contact?
 To send an email to a contact in Margince, open the contact's page and choose **Email** in its header. Fill in the composer and press **Send**.
 1. Open the contact. The button may read **Write**, or **Message on {transport}** when chat is the only channel.
-2. Check **To** (at least one recipient), and add **Cc** or **Bcc** if you need them.
+2. Check **To** (at least one recipient). Press **Cc and Bcc** if you need copies.
 3. Fill in **Subject** and the message **Body**.
 4. Pick a **Reason for contact**.
-5. Check the draft in the **Send email** dialog, then press **Send** once.
+5. Press the checks at the foot of the composer to read **Before sending**. Then press **Send** once.
 
 "No address and no thread to reply to." means the contact has no address to write to.
 Also called: write an email, email a customer, message a client.
@@ -39,13 +39,13 @@ To send a follow-up email in Margince, open the contact's **History** tab and pr
 Also called: chase a customer, nudge, follow up, reply to a thread.
 
 ### How do I reply to one particular message in a thread?
-To reply to one message in Margince, open the composer from the record and pick the conversation under **Continue thread?**. Then click that message in the **This thread** column.
-The message you picked is marked. The line above the recipients reads "Replying to “{subject}” · {when}", or "Following up on your email" for one you sent.
+To reply to one message in Margince, open the composer from the record and pick the thread under **Threads**. Then click the message under the thread.
+The thread you picked is marked. The line above the recipients reads "Replying to “{subject}” · {when}", or "Following up on your email" for one you sent.
 
-Rest the mouse on **Preview** to see a message's text, and press **Read full email** to open all of it. Press **New email** to leave the thread for a new message. Each message you pick keeps its own draft while the composer is open. Also called: answer an older email, reply to a specific message.
+Rest the mouse on **Preview** to see a message's text, and press **Read full email** to read the one you answer. Press **New email** or **Start new instead** to leave the thread for a new message. Each message you pick keeps its own draft while the composer is open. Also called: answer an older email, reply to a specific message.
 
 ### How do I file an email I send under a project?
-To file an email you send under a project in Margince, choose the project under **Project** in the composer. Margince puts its key, such as `[NER-1]`, at the start of the **Subject**.
+To file an email you send under a project in Margince, choose the project in the composer's head, beside its title. Margince puts its key, such as `[NER-1]`, at the start of the **Subject**.
 Choosing **No project** takes the key out; deleting it from the text does not.
 
 The list starts on the thread's own project. If there is none, it starts on the deal's, and then on the company's only live project. Writing from a project page files under that project. With no live project to offer, the list is not shown. Also called: tag an email with a project, project key in the subject.
@@ -71,7 +71,11 @@ Also called: canned response, saved reply, mail template, snippet.
 You reach the Margince composer from a contact, a company, a deal, a lead, or
 the reply action on any message.
 
-To and Cc are on the form. **Bcc** is a button until you press it. Then it says
+The composer is a dialog with three parts. The **Threads** column on the left
+lists the contact's threads, the one you answer marked. The message sits on the
+right. **Before sending** at the foot lists what Margince checks.
+
+To is on the form. **Cc and Bcc** is a link until you press it. Then Bcc says
 what it means: other recipients cannot see these addresses, or that anyone else
 has a copy.
 
@@ -94,11 +98,11 @@ with the message you answer.
 Also called: add an attachment, send a document, attach a PDF.
 
 ### How do I use AI to draft an email?
-To have AI draft an email in Margince, open the composer. Say what the email is for in **Purpose of the email**, and press **Draft with AI**.
+To have AI draft an email in Margince, open the composer and press **Draft with AI** above the message. Say what the email is for in **Purpose of the email**, and press **Draft email**.
 1. Open the composer from a contact, company or deal.
 2. On a company, choose the contact under **Draft to**, and if you like, the deal under **Related to**.
-3. Type the purpose, such as "follow up on last week's quote".
-4. Press **Draft with AI** (**Draft reply with AI** for a reply). It shows **Drafting…** while it writes.
+3. Press **Draft with AI** and type the purpose, such as "follow up on last week's quote".
+4. Press **Draft email** (**Draft reply** for a reply). It shows **Drafting…** while it writes.
 5. Read and edit the draft, then send it as you always do.
 
 With no AI model set up, AI drafting is not available, and you write the email yourself.
@@ -132,8 +136,8 @@ to it. It does not send anything.
 
 ### The four rewrites
 
-The AI draft offers four rewrites under **Rewrite**, on text the model wrote that
-you have not edited yet. They are **Shorter**, **Warmer**, **More formal** and
+The AI draft offers four rewrites under **Rewrite**, beside the note that AI
+wrote it. They work on text the model wrote that you have not edited yet. They are **Shorter**, **Warmer**, **More formal** and
 **Add a deadline**.
 
 They are gone the moment you type, because they rewrite the model's text, not
@@ -157,13 +161,14 @@ The answers are:
 - Their customer relationship
 - Marketing
 
-Margince does not ask for a reason when you reply to their own message. The
-screen says: "This replies to the recipient’s own message, so no reason is
-needed."
+Margince does not ask for a reason when you reply to their own message.
+**Before sending** says: "This replies to the recipient’s own message, so no
+reason is needed."
 
-The consent check reads the reason, and it runs *before* you send. It shows one
-of three answers: **Ready to send**, **No recorded reason to contact this
-recipient**, or **Message cannot be sent**. A check with no answer never counts
+The consent check reads the reason, and it runs *before* you send. The foot of
+the composer shows **Ready to send**, or how many checks stand in the way, such
+as "1 check blocks sending". **Before sending** shows the answer: **No recorded
+reason to contact this recipient**, or **Message cannot be sent**. A check with no answer never counts
 as permission: "The send check did not complete. Sending runs the check
 again."
 
@@ -172,9 +177,9 @@ here. A sender who could pick one could send marketing that looks like a
 security notice.
 
 ### Why can't I send an email to this contact?
-When Margince will not send an email to a contact, the composer names the reason above the **Send** button. Where there is a fix, it names that too.
+When Margince will not send an email to a contact, the foot of the composer counts it, and **Before sending** names the reason. Where there is a fix, it names that too.
 - **Send blocked: no consent**: there is no consent for this purpose. Use **Review consent**, or **Request review** where it is offered.
-- **No recorded reason to contact this recipient**: press **Record reason for contact** and say why, under your name.
+- **No recorded reason to contact this recipient**: press **Record reason for contact**, say why you may write, and press **Record reason**. It is recorded under your name for this kind of message, and it is not consent.
 - **Message cannot be sent**: a reason nobody can lift, such as "The recipient objected to marketing."
 - A mailbox connected only to read mail: press **Reconnect your mailbox** and allow sending.
 Also called: email blocked, cannot email customer, send refused.

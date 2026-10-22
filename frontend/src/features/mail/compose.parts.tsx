@@ -1,9 +1,10 @@
-import { SendMark } from "../../components/sendpermission";
+import { type ReactNode, useState } from "react";
 import { Button, Field } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { RichText } from "../../design-system/richtext";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import {
   asksWhy,
   type CommunicationContext,
@@ -11,7 +12,8 @@ import {
 } from "../../lib/compose-context";
 import { useRichTextLabels } from "../../lib/richtextlabels";
 import type { CarriageViolation } from "./carriage";
-import type { Activity } from "./compose";
+import type { Activity, VoiceProfile } from "./compose";
+import { AiDraftBand, AiDraftToggle } from "./composeaiband";
 import type { ComposeThread } from "./composeanchor";
 import {
   AttachAction,
@@ -19,22 +21,22 @@ import {
   CarriageNotice,
 } from "./composeattachments";
 import { ConversationFold } from "./composeconversation";
-import { RewriteRow } from "./composedraftband";
 import type { ComposeFields } from "./composefields";
 import { FieldNeed } from "./composehead";
+import { ConversationRail } from "./composerail";
 import type { RelinkKind } from "./composerelink";
 import type { useSavedDraft } from "./composesaveddraft";
 import type { ComposeSend, MissingField } from "./composesend";
 import { SignOffPreview } from "./composesignoff";
 import type { useTargetFiles } from "./composetarget";
-import { ConversationChoices, ThreadPane } from "./composethread";
 import type { VoiceDraft } from "./composevoicedraft";
+import { SendRefusal } from "./sendrefusal";
 
 // sharedUnsubscribeAhead predicts the sharedUnsubscribe refusal (refusalOf).
 // A marketing send's unsubscribe link is one addressee's consent record, so a
 // second addressee is refused. The server rule stays the authority, keyed on
 // the marketing category, which a reply never carries.
-function sharedUnsubscribeAhead(
+export function sharedUnsubscribeAhead(
   to: string[],
   cc: string[],
   context: CommunicationContext | undefined,
@@ -71,43 +73,23 @@ export function MailSendNotices({
   );
 }
 
-// The footer's lead: the permission mark a rep checks before pressing
-// anything, then discarding the draft and saving it.
+// The footer's lead: saving the draft, then the checks a send meets.
 export function ComposeActionsLead({
   isChannelReply,
-  permission,
-  discardControl,
   savedDraft,
+  checks,
   busy,
 }: Readonly<{
+  /** A channel reply meets no checks a list could hold. */
   isChannelReply: boolean;
-  permission: ComposeSend["permission"];
-  discardControl: VoiceDraft["discardControl"];
   savedDraft: ReturnType<typeof useSavedDraft>;
+  checks: ReactNode;
   /** A send or a rejection is in flight. */
   busy: boolean;
 }>) {
   const t = useT();
   return (
     <>
-      {!isChannelReply && (
-        <SendMark
-          preview={permission.preview}
-          asking={permission.asking}
-          unanswered={permission.unanswered}
-        />
-      )}
-      {discardControl && (
-        <Button
-          onClick={discardControl.run}
-          disabled={discardControl.disabled}
-          // Discarding tells the voice profile this draft missed; it is not
-          // an undo for clearing the box.
-          title={t("compose.discardDraftHint")}
-        >
-          {t("compose.discardDraft")}
-        </Button>
-      )}
       {savedDraft.enabled && (
         <Button
           onClick={savedDraft.save}
@@ -117,15 +99,47 @@ export function ComposeActionsLead({
           {t("compose.saveDraft")}
         </Button>
       )}
+      {!isChannelReply && checks}
     </>
   );
 }
 
-// The column beside the form: the conversations on offer, or the thread
-// being answered.
+// What the send came back with, under the words it is about. That is a send
+// the server cannot make yet, or a refusal with what to do about it. A channel
+// reply states its one promise here too, having no checks to state it in.
+export function ComposeOutcome({
+  isChannelReply,
+  bodyKey,
+  sendUnavailable,
+  send,
+  contactId,
+}: Readonly<{
+  isChannelReply: boolean;
+  bodyKey: MessageKey;
+  sendUnavailable: boolean;
+  send: ComposeSend;
+  contactId: string | undefined;
+}>) {
+  const t = useT();
+  return (
+    <>
+      {isChannelReply && <p>{t(bodyKey)}</p>}
+      {sendUnavailable && <p>{t("compose.sendUnavailable")}</p>}
+      <SendRefusal
+        refusal={send.refusal}
+        contactId={contactId}
+        review={send.sendReview}
+      />
+    </>
+  );
+}
+
+// The column beside the form: the record's conversations, the one being
+// answered marked and open to read.
 export function ComposeConversation({
   thread,
   answering,
+  recordName,
   viewerId,
   nameOf,
   onSelect,
@@ -133,6 +147,7 @@ export function ComposeConversation({
 }: Readonly<{
   thread: ComposeThread;
   answering: string | undefined;
+  recordName: string | undefined;
   viewerId: string | undefined;
   nameOf: (linkType: string, linkId: string) => string | undefined;
   onSelect: (id: string | null) => void;
@@ -143,37 +158,31 @@ export function ComposeConversation({
   }
   const { recent, conversation, anchorRead } = thread;
   return (
-    <ConversationFold choosing={thread.showChoices}>
-      {thread.showChoices && (
-        <ConversationChoices
-          conversations={recent.conversations}
-          pending={recent.pending}
-          failed={recent.failed}
-          onRetry={recent.retry}
-          onChoose={onSelect}
-        />
-      )}
-      {thread.showConversation && (
-        <ThreadPane
-          messages={conversation.messages}
-          pending={conversation.pending || thread.anchorUnresolved}
-          failed={conversation.failed || anchorRead.failed}
-          onRetry={anchorRead.failed ? anchorRead.retry : conversation.retry}
-          viewerUserId={viewerId}
-          nameOf={nameOf}
-          named
-          onLeave={() => onSelect(null)}
-          selectedId={answering}
-          onSelect={onSelect}
-          disabled={disabled}
-        />
-      )}
+    <ConversationFold choosing={!answering}>
+      <ConversationRail
+        recordName={recordName}
+        conversations={recent.conversations}
+        pending={recent.pending}
+        failed={recent.failed}
+        onRetry={recent.retry}
+        answering={answering}
+        anchor={thread.anchorActivity}
+        anchorPending={thread.anchorUnresolved}
+        anchorFailed={anchorRead.failed}
+        onRetryAnchor={anchorRead.retry}
+        thread={conversation}
+        viewerUserId={viewerId}
+        nameOf={nameOf}
+        onChoose={onSelect}
+        onLeave={() => onSelect(null)}
+        disabled={disabled}
+      />
     </ConversationFold>
   );
 }
 
-// The words the reader writes, with what travels with them: the sign-off,
-// the attached files, and the rewrite offer over a model's untouched draft.
+// The words the reader writes, with what travels with them: the model's
+// draft above them, the sign-off under them, and the attached files.
 export function ComposeBody({
   bodyId,
   fields,
@@ -181,7 +190,10 @@ export function ComposeBody({
   fileTarget,
   entityType,
   entityId,
-  signs,
+  mail,
+  replying,
+  aiSource,
+  voiceMaturity,
   channelLabel,
   carriageBlocks,
   flagged,
@@ -193,8 +205,12 @@ export function ComposeBody({
   fileTarget: string;
   entityType: RelinkKind;
   entityId: string;
-  /** Whether the send appends a sign-off; a channel message carries none. */
-  signs: boolean;
+  /** Mail drafts and signs; a channel message does neither. */
+  mail: boolean;
+  replying: boolean;
+  /** What a model's draft is written from, said under the ask. */
+  aiSource: string;
+  voiceMaturity: VoiceProfile["maturity"] | undefined;
   channelLabel: string | undefined;
   carriageBlocks: readonly CarriageViolation[];
   flagged: ReadonlySet<MissingField>;
@@ -203,6 +219,8 @@ export function ComposeBody({
   const t = useT();
   const richTextLabels = useRichTextLabels();
   const frozen = voice.rejectionInFlight;
+  // A caller that knows what the draft is about opens the ask with it filled.
+  const [asking, setAsking] = useState(() => fields.intent !== "");
   return (
     <>
       {/* Both renderings travel. A text client, a screen reader and a spam
@@ -214,7 +232,30 @@ export function ComposeBody({
         label={t("compose.body")}
         placeholder={t("compose.bodyPlaceholder")}
         labels={richTextLabels}
-        hint={t("compose.bodyHint")}
+        bar="head"
+        lead={
+          mail && (
+            <AiDraftToggle
+              open={asking}
+              onToggle={() => setAsking((was) => !was)}
+            />
+          )
+        }
+        band={
+          mail && (
+            <AiDraftBand
+              open={asking}
+              replying={replying}
+              source={aiSource}
+              fields={fields}
+              voice={voice}
+              voiceMaturity={voiceMaturity}
+            />
+          )
+        }
+        foot={
+          mail && <SignOffPreview body={fields.body} subject={fields.subject} />
+        }
         actions={
           <AttachAction
             key={fileTarget}
@@ -229,7 +270,6 @@ export function ComposeBody({
         disabled={frozen}
       />
       <FieldNeed show={flagged.has("body")} need={t("compose.missingBody")} />
-      {signs && <SignOffPreview body={fields.body} subject={fields.subject} />}
       {/* Attachments sit under the words they belong to, as in a mail client. */}
       <AttachedFiles
         chosen={attached.files}
@@ -237,20 +277,12 @@ export function ComposeBody({
         disabled={frozen}
       />
       <CarriageNotice channel={channelLabel} blocks={carriageBlocks} />
-      {/* A rewrite replaces the body, so it is offered over the model's own
-          untouched words. A draft in flight blocks it too. */}
-      {fields.body !== "" && fields.body === fields.servedBody && (
-        <RewriteRow
-          disabled={voice.control.pending || voice.control.disabled}
-          onRewrite={voice.rewrite}
-        />
-      )}
     </>
   );
 }
 
 // Why the reader is writing, asked where the record does not answer it. A
-// reply derives its category from the thread it answers.
+// reply derives its category from the thread it answers, which the checks say.
 export function ComposeWhy({
   anchorActivity,
   flagged,
@@ -264,10 +296,11 @@ export function ComposeWhy({
 }>) {
   const t = useT();
   if (!asksWhy(anchorActivity)) {
-    return <p>{t("compose.derivedReply")}</p>;
+    return null;
   }
   return (
     <Field
+      className="compose-address-field"
       label={t("compose.why")}
       hint={t("compose.whyHint")}
       error={flagged.has("context") ? t("compose.missingWhy") : undefined}

@@ -71,3 +71,19 @@ export const LineAlone: Story = {
     />
   ),
 };
+
+function InHeadDemo() {
+  const [projectId, setProjectId] = useState("p-erp");
+  return (
+    <ProjectPicker
+      projects={projects}
+      projectId={projectId}
+      onChange={setProjectId}
+      inHead
+    />
+  );
+}
+
+// In a dialog's head the select's value names it: no visible label, and no
+// scope line under it.
+export const InHead: Story = { render: () => <InHeadDemo /> };

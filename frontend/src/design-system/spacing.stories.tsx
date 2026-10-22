@@ -315,6 +315,10 @@ const SIZING: readonly Measure[] = [
   { token: "--drawerWidth", usage: "A drawer." },
   { token: "--drawerReadingWidth", usage: "A drawer made for reading." },
   { token: "--drawerWindowWidth", usage: "A drawer grown to the window." },
+  {
+    token: "--dialogWorkspaceWidth",
+    usage: "A centred dialog worked in at length.",
+  },
   { token: "--dialogFullWidth", usage: "A full-width dialog." },
   {
     token: "--phoneAgentRise",

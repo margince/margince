@@ -124,7 +124,12 @@ export const PROVISIONAL_VOICE_PROFILE = {
 
 // Records every request so a test can assert what went to the server. The
 // request body and headers are the contract for a send or relink.
-export type Sent = { key: string; body: unknown; headers: Headers };
+export type Sent = {
+  key: string;
+  body: unknown;
+  headers: Headers;
+  query: URLSearchParams;
+};
 
 export function stubRoutes(
   overrides: Record<string, () => Response | Promise<Response>> = {},
@@ -154,7 +159,7 @@ export function stubRoutes(
       const headers = request
         ? request.headers
         : new Headers(init?.headers ?? {});
-      sent.push({ key, body, headers });
+      sent.push({ key, body, headers, query: url.searchParams });
       const override = overrides[key];
       if (override) return override();
       if (key === "GET /consent-purposes") return jsonResponse(PURPOSES);

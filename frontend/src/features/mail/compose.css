@@ -206,11 +206,30 @@
   margin: 0;
 }
 
-/* The sign-off a send appends, under the body: the server's text, kept to its
- * own line breaks and spacing, in the muted ink of something the reader does not edit. */
+/* The sign-off a send appends, inside the editor's frame under the words: the
+ * server's text, in the muted ink of something the reader does not edit. A
+ * dashed rule, because it is part of the message and not a field of its own. */
 .compose-signoff {
   display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 var(--space-4);
+  padding: var(--space-2) 0 var(--space-3);
+  border-top: 1px dashed var(--borderStrong);
+  color: var(--textSecondary);
+}
+.compose-signoff > p {
+  flex: 1;
+  margin: 0;
+}
+.compose-signoff > svg {
+  flex: none;
+  inline-size: 14px;
+  block-size: 14px;
+}
+.compose-signoff.is-signature {
   flex-direction: column;
+  align-items: stretch;
   gap: var(--space-1);
 }
 
@@ -221,6 +240,118 @@
 }
 
 /* Drawn as updating while the words have moved on and the answer has not. */
-.compose-signoff.is-stale .compose-signoff-text {
+.compose-signoff.is-stale > :not(a) {
   opacity: 0.5;
+}
+
+/* What this message answers, above the recipient it goes to, with the way to
+   start fresh at its end. */
+.compose-answering {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+}
+.compose-answering > svg {
+  flex: none;
+  inline-size: 14px;
+  block-size: 14px;
+}
+.compose-answering > .link-button {
+  margin-inline-start: auto;
+}
+
+/* The band between the editor's bar and its words, in the agent's tint: what
+   the reader asks the model for, and what the model wrote. */
+.compose-aiband {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  background: var(--aiLight);
+  border-bottom: 1px solid var(--aiMed);
+}
+.compose-aiband > p {
+  margin: 0;
+}
+.compose-band-line {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  color: var(--aiText);
+}
+.compose-band-line > svg {
+  flex: none;
+  inline-size: 16px;
+  block-size: 16px;
+  margin-block-start: 2px; /* ds:ignore the glyph sits on the first line's cap height */
+}
+.compose-band-line > p {
+  margin: 0;
+}
+.compose-aiband-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gapActions);
+}
+
+/* The checks a send meets, opened from the foot. The trigger says the count in
+   the tone of what it holds: a warning while something stands in the way. */
+.compose-checks-trigger.is-blocked {
+  border-color: var(--warningBorder);
+  background: var(--warningBg);
+  color: var(--warningText);
+}
+.compose-checks-trigger.is-ready {
+  color: var(--successText);
+}
+.compose-checks {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  inline-size: min(30rem, calc(100vw - var(--space-5) * 2));
+  padding: var(--space-4);
+}
+.compose-checks > * {
+  margin: 0;
+}
+.compose-check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.compose-check > svg {
+  flex: none;
+  inline-size: 15px;
+  block-size: 15px;
+  margin-block-start: 2px; /* ds:ignore the glyph sits on the first line's cap height */
+}
+.compose-check[data-tone="success"] > svg {
+  color: var(--successText);
+}
+.compose-check[data-tone="warning"] > svg {
+  color: var(--warningText);
+}
+.compose-checks-foot {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--borderSubtle);
+}
+
+/* A reason to write, recorded under the rep's name where the refusal is read. */
+.compose-reason {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.compose-reason > .field {
+  align-self: stretch;
+}
+
+/* The project picker in the head: as wide as a project's name and key. */
+.modal-head > .field {
+  flex: none;
+  inline-size: 15rem;
 }

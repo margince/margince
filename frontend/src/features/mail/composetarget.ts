@@ -40,16 +40,16 @@ export function useTransportDial({
   // The endpoint follows the kind: every channel message goes to send-message,
   // and the server resolves the recipient from the conversation.
   const isChannelReply = kind === "message" || channel !== undefined;
-  // The drawer's shape follows the transport this opening began on.
+  // The dialog's shape follows the transport this opening began on.
   const openedOn = useRef(transport);
   if (!open || !dial.open || !openedOn.current) openedOn.current = transport;
-  const asDrawer =
+  const asWorkspace =
     kind !== "message" && (openedOn.current?.id ?? "email") === "email";
   return {
     transport,
     channel,
     isChannelReply,
-    asDrawer,
+    asWorkspace,
     turn: (next: string) => setDial({ open, id: next }),
   };
 }

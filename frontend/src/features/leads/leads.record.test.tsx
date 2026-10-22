@@ -665,7 +665,7 @@ describe("LeadScreen — the header's Email verb", () => {
     await userEvent.click(address);
 
     const dialog = await screen.findByRole("dialog", {
-      name: /Send email/,
+      name: /New thread/,
     });
     expect(
       await within(dialog).findByRole("button", {

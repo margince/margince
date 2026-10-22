@@ -219,9 +219,11 @@ export const Drafted: Story = {
   play: async () => {
     await composerOnScreen();
     await screen.findByDisplayValue("Re: Q3 numbers");
+    // The ask sits behind the editor's own AI verb.
     await userEvent.click(
-      screen.getByRole("button", { name: "Draft reply with AI" }),
+      screen.getByRole("button", { name: "Draft with AI" }),
     );
+    await userEvent.click(screen.getByRole("button", { name: "Draft reply" }));
     await screen.findByText(DRAFT.body);
   },
 };
@@ -576,14 +578,14 @@ export const RecipientOffer: Story = {
   },
 };
 
-/** Bcc, once asked for: the row opens under Cc, with what "blind" means beside
- *  the field that does it. It never closes again — a field holding a value may
- *  not be hidden. */
+/** The copies, once asked for: Cc and Bcc open under To, with what "blind"
+ *  means beside the field that does it. They never close again — a field
+ *  holding a value may not be hidden. */
 export const BlindCopy: Story = {
   render: headStory(),
   play: async () => {
     await composerOnScreen();
-    await userEvent.click(screen.getByRole("button", { name: "Bcc" }));
+    await userEvent.click(screen.getByRole("button", { name: "Cc and Bcc" }));
   },
 };
 

@@ -61,7 +61,7 @@ export type FieldsSnapshot = Readonly<{
   to: string[];
   cc: string[];
   bcc: string[];
-  bccOpen: boolean;
+  copiesOpen: boolean;
   subject: string;
   body: string;
   html: string;
@@ -80,7 +80,7 @@ export function emptyFields(): FieldsSnapshot {
     to: [],
     cc: [],
     bcc: [],
-    bccOpen: false,
+    copiesOpen: false,
     subject: "",
     body: "",
     html: "",
@@ -113,7 +113,7 @@ export function useComposeFields({
   const [cc, setCc] = useState<string[]>(edit?.cc ?? []);
   // A Bcc row holding a value may not be hidden, so it stays open once opened.
   const [bcc, setBcc] = useState<string[]>(edit?.bcc ?? []);
-  const [bccOpen, setBccOpen] = useState((edit?.bcc.length ?? 0) > 0);
+  const [copiesOpen, setCopiesOpen] = useState((edit?.bcc.length ?? 0) > 0);
   const [subject, setSubject] = useState(
     edit?.subject ?? initialMessage?.subject ?? "",
   );
@@ -213,7 +213,7 @@ export function useComposeFields({
     setTo([...saved.to]);
     setCc([...saved.cc]);
     setBcc([...saved.bcc]);
-    if (saved.bcc.length > 0) setBccOpen(true);
+    if (saved.bcc.length > 0) setCopiesOpen(true);
     setSubject(saved.subject);
     setBody(saved.body);
     setHtml(saved.html);
@@ -225,7 +225,7 @@ export function useComposeFields({
     to,
     cc,
     bcc,
-    bccOpen,
+    copiesOpen,
     subject,
     body,
     html,
@@ -244,7 +244,7 @@ export function useComposeFields({
     setTo(next.to);
     setCc(next.cc);
     setBcc(next.bcc);
-    setBccOpen(next.bccOpen);
+    setCopiesOpen(next.copiesOpen);
     setSubject(next.subject);
     setBody(next.body);
     setHtml(next.html);
@@ -266,8 +266,8 @@ export function useComposeFields({
     setCc,
     bcc,
     setBcc,
-    bccOpen,
-    openBcc: () => setBccOpen(true),
+    copiesOpen,
+    openCopies: () => setCopiesOpen(true),
     subject,
     setSubject,
     body,

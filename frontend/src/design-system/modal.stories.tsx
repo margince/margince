@@ -9,9 +9,11 @@ import {
   Textarea,
   TextInput,
 } from "./atoms";
+import { ConfirmModal } from "./confirmmodal";
 import { DrawerBody, DrawerFoot, DrawerHead } from "./drawerbands";
 import { Heading } from "./heading";
 import type { DrawerSpan, ModalIntent } from "./modal";
+import { Select } from "./select";
 
 // fe-uat (frontend/scripts/fe-uat.mjs) maps modal.tsx → modal.stories.tsx and
 // fails a change to modal.tsx whose stories here do not render clean.
@@ -242,6 +244,51 @@ export const DrawerReadingExpanded: Story = {
       within(dialog).getByRole("button", { name: "Expand" }),
     ).toBeInTheDocument();
   },
+};
+
+function WorkspaceDemo() {
+  const [open, setOpen] = useState(true);
+  const [project, setProject] = useState("");
+  return (
+    <>
+      <Behind onOpen={() => setOpen(true)} />
+      <ConfirmModal
+        open={open}
+        onClose={() => setOpen(false)}
+        intent="workspace"
+        eyebrow="Reply"
+        title="Budget questions"
+        headAside={
+          <Field label="Project" labelHidden>
+            {(control) => (
+              <Select
+                {...control}
+                options={[
+                  { value: "", label: "No project" },
+                  { value: "gf12", label: "GF-12 · Globex rollout" },
+                ]}
+                value={project}
+                onChange={setProject}
+              />
+            )}
+          </Field>
+        }
+        confirmLabel="Send"
+        onConfirm={() => setOpen(false)}
+      >
+        <Field label="Message">
+          {(control) => <Textarea {...control} rows={16} />}
+        </Field>
+      </ConfirmModal>
+    </>
+  );
+}
+
+/** A centred dialog worked in at length. The head and foot are bands, the body
+ * scrolls between them, and the head holds a control about the whole dialog. */
+export const Workspace: Story = {
+  render: () => <WorkspaceDemo />,
+  play: opens("Budget questions"),
 };
 
 function FullDemo() {

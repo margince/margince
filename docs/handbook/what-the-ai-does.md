@@ -20,7 +20,7 @@ The one exception is an installation that set a [send floor](agents-and-passport
 Also called: auto-send, send without asking, AI emails customers.
 
 ### How do I draft an email with AI?
-To have Margince draft an email, open the composer from a contact's page and choose **Draft with AI**. The button reads **Email**, or **Write** where there are several channels. The composer is where you confirm: it says "Review and edit the draft. Sending cannot be undone."
+To have Margince draft an email, open the composer from a contact's page and choose **Draft with AI**. The button reads **Email**, or **Write** where there are several channels. The composer is where you confirm: its **Before sending** list says "Review and edit the draft. Sending cannot be undone."
 
 Check and edit the draft, fill in **Reason for contact** when it asks, then choose **Send**; nothing asks again. The AI never adds a sign-off; you set your signature in **Settings → Account**.
 Also called: AI writer, write a reply, compose with AI.
