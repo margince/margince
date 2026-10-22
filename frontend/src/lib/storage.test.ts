@@ -113,6 +113,7 @@ describe("a stored value", () => {
       "margince.first-run.platform-declined:*",
       "ob.connect.oauthAttempt",
       "ob.connect.overnightChoice",
+      "margince.signin.returnRoute",
       "margince.room.session",
     ]);
   });

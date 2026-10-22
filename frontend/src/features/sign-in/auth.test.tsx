@@ -204,6 +204,24 @@ describe("AuthScreen login", () => {
     await waitFor(() => expect(window.location.hash).toBe("#/deals/d-42"));
   });
 
+  it("keeps an emailed approval link through a password sign-in", async () => {
+    stubApi({ password: true, password_reset: false }, () =>
+      ok(200, { user: {}, roles: [], teams: [] }),
+    );
+    window.location.hash = "#/home?approval=ap-7";
+    render(<AuthScreen onAuthed={vi.fn()} />);
+
+    await userEvent.type(screen.getByLabelText("Email"), "ada@example.com");
+    await userEvent.type(
+      screen.getByLabelText("Password"),
+      "correct-horse-battery{enter}",
+    );
+
+    await waitFor(() =>
+      expect(window.location.hash).toBe("#/home?approval=ap-7"),
+    );
+  });
+
   it("renders the session notices the boundary hands it", async () => {
     stubApi({ password: true, password_reset: false }, () => ok(200));
     render(<AuthScreen onAuthed={vi.fn()} notice="session-expired" />);

@@ -11,6 +11,7 @@ import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { navigate } from "../../lib/router";
 import { enteredCode, MfaCodeField } from "./mfacode";
+import { isBareEntry } from "./returnroute";
 
 // A refused credential never says which half was wrong, and a status decides
 // the message; detail strings are never parsed.
@@ -44,8 +45,7 @@ export function loginErrorKey(
 // A deep link the user followed stays; only a bare entry lands on the Brief.
 export function landSignedIn(onPhase: (phase: AuthPhase) => void) {
   onPhase("success");
-  const hash = globalThis.location?.hash ?? "";
-  if (!hash || hash === "#" || hash === "#/") {
+  if (isBareEntry(globalThis.location?.hash ?? "")) {
     navigate({ screen: "home" });
   }
 }

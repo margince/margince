@@ -71,6 +71,12 @@ export const STORAGE_KEYS = {
     area: "session",
     lifetime: "seat",
   },
+  // The hash route a reader asked for before a provider sign-in left the page.
+  signInReturnRoute: {
+    name: "margince.signin.returnRoute",
+    area: "session",
+    lifetime: "seat",
+  },
   buyerRoomSession: {
     name: "margince.room.session",
     area: "session",

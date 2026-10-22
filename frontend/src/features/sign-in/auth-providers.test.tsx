@@ -2,6 +2,7 @@
 import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { readStored, STORAGE_KEYS } from "../../lib/storage";
 import { AuthScreen } from "./auth";
 import { ok, render, stubApi, stubLocationAssign, t } from "./auth.testkit";
 import { ProviderButtons } from "./auth-providers";
@@ -19,6 +20,7 @@ afterEach(() => {
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
   window.location.hash = "";
+  sessionStorage.clear();
 });
 
 function nameSource(button: HTMLElement): string | undefined {
@@ -230,6 +232,34 @@ describe("federated sign-in", () => {
       );
 
       expect(assign).toHaveBeenCalledWith("/v1/auth/oidc/google/start");
+    });
+  });
+
+  // The page leaves for the provider and comes back bare, so the link the
+  // reader followed is kept in this tab before it goes.
+  it("keeps the followed link in this tab before it leaves for the provider", async () => {
+    window.location.hash = "#/home?approval=ap-7";
+    await stubLocationAssign(async (assign) => {
+      stubApi(
+        {
+          password: true,
+          password_reset: true,
+          oidc_providers: [
+            { key: "microsoft", label: "Continue with Microsoft" },
+          ],
+        },
+        () => ok(200),
+      );
+      render(<AuthScreen onAuthed={vi.fn()} />);
+
+      await userEvent.click(
+        await screen.findByRole("button", { name: "Continue with Microsoft" }),
+      );
+
+      expect(assign).toHaveBeenCalledWith("/v1/auth/oidc/microsoft/start");
+      expect(readStored(STORAGE_KEYS.signInReturnRoute)).toBe(
+        "#/home?approval=ap-7",
+      );
     });
   });
 
