@@ -108,7 +108,7 @@ func TestDealHealthFlagsTheSilentParkedDealAtRisk(t *testing.T) {
 
 func TestRecencyScoreBandEdges(t *testing.T) {
 	now := healthFixedNow()
-	if got := recencyScore(nil, now); got != 0.0 {
+	if got := recencyScore(nil, false, now); got != 0.0 {
 		t.Errorf("no activity ever → %f, want 0.0", got)
 	}
 	for _, tc := range []struct {
@@ -127,9 +127,30 @@ func TestRecencyScoreBandEdges(t *testing.T) {
 		{60, 0.2},
 		{60.001, 0.0},
 	} {
-		if got := recencyScore(daysAgoPtr(tc.days), now); got != tc.want {
+		if got := recencyScore(daysAgoPtr(tc.days), false, now); got != tc.want {
 			t.Errorf("recency at %g days = %f, want %f", tc.days, got, tc.want)
 		}
+	}
+}
+
+// A booked meeting ahead is contact as current as today's, however far ahead it
+// is and however old the past clock is.
+func TestABookedMeetingAheadScoresFullRecency(t *testing.T) {
+	now := healthFixedNow()
+	if got := recencyScore(nil, true, now); got != 1.0 {
+		t.Errorf("no past activity, a meeting ahead → %f, want 1.0", got)
+	}
+	if got := recencyScore(daysAgoPtr(90), true, now); got != 1.0 {
+		t.Errorf("past activity 90 days old, a meeting ahead → %f, want 1.0", got)
+	}
+
+	in := healthyInputs()
+	in.lastActivityAt = daysAgoPtr(20)
+	in.meetingAhead = true
+	got := healthFromInputs(in, now)
+	if got.Factors.ActivityRecency != 1.0 || got.Evidence.Stalled || !got.Evidence.MeetingAhead {
+		t.Errorf("a 20-day clock with a meeting ahead → recency %f, stalled %v, evidence meeting ahead %v; "+
+			"want 1.0, false, true", got.Factors.ActivityRecency, got.Evidence.Stalled, got.Evidence.MeetingAhead)
 	}
 }
 

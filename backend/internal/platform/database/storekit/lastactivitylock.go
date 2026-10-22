@@ -46,3 +46,54 @@ func nonNil(list []ids.UUID) []ids.UUID {
 	}
 	return list
 }
+
+// ClockTable is a table that stores a last-activity clock.
+type ClockTable string
+
+// The three tables whose clock counts only the past.
+const (
+	ClockContacts  ClockTable = "contact"
+	ClockCompanies ClockTable = "company"
+	ClockDeals     ClockTable = "deal"
+)
+
+// clockQuerier is what both a transaction and a data task's estimate read with.
+type clockQuerier interface {
+	Query(context.Context, string, ...any) (pgx.Rows, error)
+	QueryRow(context.Context, string, ...any) pgx.Row
+}
+
+// FutureClocks answers the next records of table after `after`, in id order,
+// whose stored clock is later than now: values the clock rule no longer gives.
+func FutureClocks(ctx context.Context, q clockQuerier, table ClockTable, after ids.UUID, limit int) ([]ids.UUID, error) {
+	rows, err := q.Query(ctx, `SELECT id FROM `+clockTableIdent(table)+`
+		 WHERE id > $1 AND last_activity_at > now() ORDER BY id LIMIT $2`, after, limit)
+	if err != nil {
+		return nil, fmt.Errorf("reading %s clocks dated in the future: %w", table, err)
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+}
+
+// CountFutureClocks counts up to maximum+1 records of table whose stored clock
+// is later than now.
+func CountFutureClocks(ctx context.Context, q clockQuerier, table ClockTable, maximum int64) (int64, error) {
+	var count int64
+	if err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT 1 FROM `+clockTableIdent(table)+`
+		 WHERE last_activity_at > now() LIMIT $1) future`, maximum+1).Scan(&count); err != nil {
+		return 0, fmt.Errorf("counting %s clocks dated in the future: %w", table, err)
+	}
+	return count, nil
+}
+
+// clockTableIdent renders one of the three constants as its literal, so no
+// caller's string is ever formatted into a statement.
+func clockTableIdent(table ClockTable) string {
+	switch table {
+	case ClockCompanies:
+		return "company"
+	case ClockDeals:
+		return "deal"
+	default:
+		return "contact"
+	}
+}

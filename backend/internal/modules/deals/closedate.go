@@ -72,6 +72,8 @@ type CloseDateInput struct {
 	CreatedAt      time.Time
 	LastActivityAt *time.Time
 	WaitUntil      *time.Time
+	// MeetingAhead is MeetingAheadSQL for the deal, read with LastActivityAt.
+	MeetingAhead bool
 
 	// StageWinProbability drives the unrealistic_soon and late-stage
 	// judgments; RemainingOpenStages the replacement-date horizon.
@@ -114,7 +116,7 @@ func CloseDateAssessment(in CloseDateInput, now time.Time, workspaceTZ *time.Loc
 	today := dateAt(now, workspaceTZ)
 
 	findings := closeDateFindings{
-		stalled: IsStalled(in.Status, in.CreatedAt, in.LastActivityAt, in.WaitUntil, now),
+		stalled: IsStalled(in.Status, in.CreatedAt, in.LastActivityAt, in.WaitUntil, in.MeetingAhead, now),
 		paused:  in.WaitUntil != nil && now.Before(*in.WaitUntil),
 	}
 

@@ -63,6 +63,13 @@ func NotCalledOffSQL(alias string) string {
 	return "(" + alias + ".kind <> '" + kindMeeting + "' OR " + MeetingCountsSQL(alias) + ")"
 }
 
+// LastActivityCountsSQL admits an activity row to a record's last-activity
+// clock: not a called-off meeting, and already happened at now. The
+// last_activity_of_* functions carry its text rendered with now().
+func LastActivityCountsSQL(alias, now string) string {
+	return "(" + NotCalledOffSQL(alias) + " AND " + alias + ".occurred_at <= " + now + ")"
+}
+
 // InteractionCountsSQL is the whole test for an activity row that counts
 // toward contact strength: an interaction kind, and if it is a meeting, one
 // nobody called off.

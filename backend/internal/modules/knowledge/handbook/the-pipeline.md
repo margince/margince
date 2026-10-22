@@ -51,7 +51,7 @@ To reopen a won or lost deal in Margince, open it and choose **More actions** â†
 Reopening clears the close date and the exchange rate fixed at close, and the dialog does not say so. It needs permission to change the deal, and you cannot reopen an archived deal. Also called: undo a close, reopen a lost deal.
 
 ### How do I bring back a deal that went cold?
-A deal that went cold is still open unless someone closed it. Margince marks an open deal **stalled** after more than 60 days with no activity, and real activity brings it back.
+A deal that went cold is still open unless someone closed it. Margince marks an open deal **stalled** after more than 60 days with no activity, and real activity brings it back. A meeting booked for later keeps the deal off stalled until it starts or is called off.
 1. On **Deals**, turn on the **Stalled only** filter to find them.
 2. Open the deal and send a mail, or use **Log activity** for a call, meeting or note.
 3. If the buyer asked you to wait, edit the deal and set **Wait until** to a later date. The mark stays hidden until then.

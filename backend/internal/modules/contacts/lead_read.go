@@ -59,10 +59,9 @@ func leadNextTaskDueSQL(work string) string {
 	   ORDER BY a.due_at NULLS LAST, a.created_at, a.id LIMIT 1)`
 }
 
-// leadLastActivitySQL is the last-touch clock, excluding system remediation and
-// called-off meetings for the same reason last_activity_of_contact does: work
-// the product files ABOUT a lead, or a meeting that did not happen, is not the
-// lead engaging.
+// leadLastActivitySQL is the last-touch clock, excluding system remediation,
+// called-off meetings and what has not happened yet, for the same reason
+// last_activity_of_contact does: none of it is the lead engaging.
 //
 // The row that PRINTS it and the expression that ORDERS BY it read this, so a
 // reader sees the instant the list was arranged by rather than a second reading
@@ -70,7 +69,7 @@ func leadNextTaskDueSQL(work string) string {
 func leadLastActivitySQL() string {
 	return `(SELECT max(a.occurred_at) FROM activity_link l JOIN activity a ON a.id = l.activity_id
 	   WHERE l.lead_id = lead.id AND a.archived_at IS NULL AND a.restricted_at IS NULL
-	     AND ` + relstrength.NotCalledOffSQL("a") + auth.OriginIsEngagement("a") + `)`
+	     AND ` + relstrength.LastActivityCountsSQL("a", "now()") + auth.OriginIsEngagement("a") + `)`
 }
 
 func leadColumns(ctx context.Context, arg func(any) int) (string, error) {

@@ -14,7 +14,8 @@
 // worklist_pin, worklist_done, activity_review_template, activity_review_response,
 // activity_request_settlement, activity_identity, mail_draft,
 // booking_page, meeting_invitation, meeting_proposal,
-// activity_calendar_method_backfill, activity_waiting_horizon.
+// activity_calendar_method_backfill, activity_waiting_horizon,
+// activity_clock_refold_mark.
 // Also owns activity_commitment_admission.
 //
 // mail_draft is the composer's own state — a message the rep has started and
