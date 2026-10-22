@@ -84,6 +84,8 @@ Also called: approver, who signs off, permission to approve.
 Margince tells one colleague about each approval: the one it is for. That is the colleague an agent acts for, or the colleague who asked for the change, or else the owner of the record it changes. Other colleagues who may decide it can still answer it from their approvals list, but get no notice and no email. When a deal changes owner, its waiting approvals move to the new owner. Margince proposes nothing about a record nobody owns.
 
 A promise read from mail or a meeting is the exception: only the colleague who made it is told, and only they may answer it. If they cannot be asked, nobody is.
+
+The email names the record as its heading and says what is proposed. For a change to a record, it lists each field with its value now and the value after the change, up to eight fields. It also says why you are asked. It leaves out any value you may not see.
 Also called: approval email, decision needed, who gets notified, approval notice.
 
 ### Who is asked about a promise read from mail or a meeting?

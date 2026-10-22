@@ -331,8 +331,8 @@ func notificationMailSubject(notice notices.Notice, words mailcopy.Copy) string 
 // body is the sender's to keep honest, and a notice's subject and body are
 // written by producers that bound their length and not their structure.
 //
-// A commitment's facts replace the repeated subject: the record as the
-// heading, when there is one, then one line per fact and the deadline.
+// An approval's facts replace the repeated subject: the record as the heading,
+// when there is one, then one line per fact and the deadline.
 func notificationMessage(notice notices.Notice, facts approvalMailFacts, base string, words mailcopy.Copy) emailview.Message {
 	var body emailview.Content
 	body.Paragraph(words.NotificationIntro)
@@ -341,7 +341,11 @@ func notificationMessage(notice notices.Notice, facts approvalMailFacts, base st
 			body.Heading(mailcopy.OneLine(facts.Heading))
 		}
 		for _, line := range facts.Lines {
-			body.Paragraph(mailcopy.OneLine(line.Label) + ": " + mailcopy.Snippet(line.Value, 600))
+			value := mailcopy.Snippet(line.Value, 600)
+			if line.Label != "" {
+				value = mailcopy.OneLine(line.Label) + ": " + value
+			}
+			body.Paragraph(value)
 		}
 		if facts.Deadline != "" {
 			body.Paragraph(mailcopy.OneLine(facts.Deadline))

@@ -23,7 +23,8 @@ import (
 )
 
 // approvalMailFacts is the single email's view of one approval. Rich is false
-// for every kind but a commitment, and then the email reads as it always has.
+// when the approval has no facts to name, and then the email reads as it always
+// has.
 type approvalMailFacts struct {
 	Rich     bool
 	Heading  string
