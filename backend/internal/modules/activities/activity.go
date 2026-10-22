@@ -6,7 +6,6 @@ package activities
 import (
 	"context"
 	"errors"
-	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -313,10 +312,6 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 	if err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
-	occurredAt, err := occurredAtOf(ctx, tx, in)
-	if err != nil {
-		return crmcontracts.Activity{}, false, err
-	}
 	assignee, err := checkedTaskAssignee(ctx, tx, in)
 	if err != nil {
 		return crmcontracts.Activity{}, false, err
@@ -360,7 +355,7 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 	authorCols, authorHolders, args := storekit.AuthorInsertFragments(in.Author, []any{
 		// NULLIF on channel_provider: the column FKs into channel_provider, and
 		// '' names no provider, so anything without a transport stores NULL.
-		id, in.Kind, in.ChannelProvider, in.Subject, in.Body, occurredAt, in.Direction, in.MeetingStatus,
+		id, in.Kind, in.ChannelProvider, in.Subject, in.Body, in.OccurredAt, in.Direction, in.MeetingStatus,
 		in.DueAt, in.RemindAt, assignee, host, in.ClaimsHostSlot, in.SourceSystem, in.SourceID, in.Source, by,
 		in.ThreadKey, counterparty, in.CounterpartyOutboundAttested, origin,
 		in.SourceActivityID, in.Raw, in.DurationSeconds,
@@ -369,14 +364,17 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 	if err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
-	_, err = tx.Exec(ctx,
+	// An undated activity takes the transaction's now(): the last-activity clock
+	// counts only occurred_at <= now(), and a Go clock read here runs ahead of it.
+	var occurredAt time.Time
+	err = tx.QueryRow(ctx,
 		`INSERT INTO activity (id, kind, channel_provider, subject, body, occurred_at, direction, meeting_status,
 		                       due_at, remind_at, assignee_id, host_user_id, claims_host_slot, booking_interval_exact, source_system, source_id, source, captured_by,
 		                       thread_key, counterparty_email, counterparty_outbound_attested, origin,
 		                       source_activity_id, raw, duration_seconds`+authorCols+cfCols+`)
-		 VALUES ($1, $2, NULLIF($3, ''), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $13, $14, $15, $16, $17, NULLIF($18, ''),
-		         NULLIF($19, ''), $20, $21, $22, $23, $24`+authorHolders+cfHolders+`)`,
-		args...)
+		 VALUES ($1, $2, NULLIF($3, ''), $4, $5, coalesce($6, now()), $7, $8, $9, $10, $11, $12, $13, $13, $14, $15, $16, $17, NULLIF($18, ''),
+		         NULLIF($19, ''), $20, $21, $22, $23, $24`+authorHolders+cfHolders+`) RETURNING occurred_at`,
+		args...).Scan(&occurredAt)
 	if err != nil {
 		if storekit.IsUniqueViolation(err) {
 			return crmcontracts.Activity{}, false, apperrors.ErrConflict
@@ -384,7 +382,7 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 		return crmcontracts.Activity{}, false, err
 	}
 
-	if err := writeActivitySatellites(ctx, tx, id, in, occurredAt, by); err != nil {
+	if err := writeActivitySatellites(ctx, tx, id, in, occurredAt.UTC(), by); err != nil {
 		return crmcontracts.Activity{}, false, err
 	}
 	out, err := readActivity(ctx, tx, id, storekit.LiveOnly)
@@ -392,20 +390,6 @@ func logActivityInTx(ctx context.Context, tx pgx.Tx, in LogActivityInput) (crmco
 		return crmcontracts.Activity{}, false, err
 	}
 	return out, true, nil
-}
-
-// occurredAtOf defaults an undated activity to the transaction's now(). The
-// last-activity clock counts only occurred_at <= now(), so a Go clock read after
-// the transaction began would date the row ahead of the trigger that folds it.
-func occurredAtOf(ctx context.Context, tx pgx.Tx, in LogActivityInput) (time.Time, error) {
-	if in.OccurredAt != nil {
-		return in.OccurredAt.UTC(), nil
-	}
-	var now time.Time
-	if err := tx.QueryRow(ctx, `SELECT now()`).Scan(&now); err != nil {
-		return time.Time{}, fmt.Errorf("activities: reading the transaction time: %w", err)
-	}
-	return now.UTC(), nil
 }
 
 // writeActivitySatellites writes the rows that ride with a new activity and
