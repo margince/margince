@@ -3328,6 +3328,19 @@ components:
             every rejection, and false on a confirmation whose contact already
             carried one — a value on a record is somebody's statement and is
             never overwritten.
+        title_written:
+          type: boolean
+          description: >-
+            Whether the decision put the export's position on the contact as
+            its title. True only when the member ticked "Use as title" and the
+            title changed. False on every automatic confirmation.
+        employer_written:
+          type: boolean
+          description: >-
+            Whether the decision made the company the import placed the
+            connection at the contact's current employer. True only when the
+            member ticked "Use as employer". False on every automatic
+            confirmation.
       additionalProperties: false
 
     PublicEventLinkedinNetworkImported:

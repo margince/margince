@@ -95,6 +95,9 @@ export const EDITABLE_FIELDS: Readonly<
   // something the approver is agreeing TO rather than something to retype. The
   // server refuses an edited anchor outright (it is an entity reference, and
   // edit scope pins those), so offering it would only invite a refusal.
+  // A LinkedIn match is answered with its two boxes, never by retyping the
+  // export's strings: the server refuses an edit to anything else.
+  linkedin_match: [],
   held_draft: [
     { field: "subject", as: "text", label: "decision.draftSubject" },
     { field: "body", as: "textarea", label: "decision.draftBody" },

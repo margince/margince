@@ -1379,6 +1379,10 @@ export interface components {
         PublicEventLinkedinMatchDecided: {
             /** @description Whether the decision put a LinkedIn handle on the contact. False on every rejection, and false on a confirmation whose contact already carried one — a value on a record is somebody's statement and is never overwritten. */
             profile_url_written: boolean;
+            /** @description Whether the decision put the export's position on the contact as its title. True only when the member ticked "Use as title" and the title changed. False on every automatic confirmation. */
+            title_written?: boolean;
+            /** @description Whether the decision made the company the import placed the connection at the contact's current employer. True only when the member ticked "Use as employer". False on every automatic confirmation. */
+            employer_written?: boolean;
         };
         /** @description Payload for linkedin_network.imported. A member uploaded their own LinkedIn connections export. The import act emits a single event, never one per row. An export is thousands of rows, and a per-row event would bury every other event in the stream. The auditable fact is that a member imported their network at all. No connection is named in the payload. The imported rows are third parties who never consented to being in this CRM. Publishing their names would defeat the point of keeping them invisible everywhere else. */
         PublicEventLinkedinNetworkImported: {

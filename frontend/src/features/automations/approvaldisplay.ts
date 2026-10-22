@@ -115,7 +115,8 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
       { field: "email", label: "approval.field.email", as: "text" },
       { field: "domain", label: "approval.field.domain", as: "text" },
     ],
-    // Two records that look like one contact. The names are the whole comparison.
+    // Two records that look like one contact. The names are the comparison; the
+    // position and the title beside them are what "Use as job title" weighs.
     linkedin_match: [
       {
         field: "connection_name",
@@ -128,8 +129,18 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
         as: "text",
       },
       {
+        field: "connection_position",
+        label: "approval.field.connection_position",
+        as: "text",
+      },
+      {
         field: "contact_name",
         label: "approval.field.contact_name",
+        as: "text",
+      },
+      {
+        field: "contact_title",
+        label: "approval.field.contact_title",
         as: "text",
       },
     ],

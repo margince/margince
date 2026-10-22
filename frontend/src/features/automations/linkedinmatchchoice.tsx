@@ -1,0 +1,134 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useEntityName } from "../../components/entityref.queries";
+import { Checkbox } from "../../design-system/atoms";
+import { useT } from "../../i18n";
+import type { Approval } from "../../lib/approvals.queries";
+import { useCanWrite } from "../../lib/capability";
+import { contactQuery } from "../../lib/contact.queries";
+
+// The two boxes on a LinkedIn match card: the export's position as the
+// contact's job title, and the company the import placed the connection at as
+// their current employer. The server stages each box ticked only when the
+// contact has nothing there, and accepting sends the boxes as the edit.
+
+export type LinkedInChoice = Readonly<{
+  use_as_title: boolean;
+  use_as_employer: boolean;
+}>;
+
+type LinkedInOffer = Readonly<{
+  staged: LinkedInChoice;
+  // The employer box shows only for a company this reader can see, and only
+  // to a reader who may create the employment; the server refuses the rest.
+  employerName: string | null;
+  // Where the contact works today, as this reader may see it.
+  employerNow: string | null;
+  titleOffered: boolean;
+  choice: LinkedInChoice;
+  setChoice: (next: LinkedInChoice) => void;
+  // The edit to send on accept, or undefined when the boxes are as staged.
+  edited: Record<string, unknown> | undefined;
+}>;
+
+function text(value: unknown): string | undefined {
+  return typeof value === "string" && value !== "" ? value : undefined;
+}
+
+/**
+ * What a `linkedin_match` card offers, and the boxes as the reader set them.
+ * Undefined for any other kind, and for a card staged before the boxes
+ * existed, which applies only the profile link.
+ */
+export function useLinkedInChoice(
+  approval: Approval,
+): LinkedInOffer | undefined {
+  const change = approval.proposed_change ?? {};
+  const offered =
+    approval.kind === "linkedin_match" &&
+    typeof change.use_as_title === "boolean" &&
+    typeof change.use_as_employer === "boolean";
+  const companyId = offered ? text(change.employer_company_id) : undefined;
+  const company = useEntityName("company", companyId);
+  const contact = useQuery(
+    contactQuery(offered ? text(change.contact_id) : undefined),
+  );
+  const mayEmploy = useCanWrite("relationship", "create");
+  // Held per approval, so a row that is handed another card starts from that
+  // card's staged boxes rather than from the last reader's ticks.
+  const [held, setHeld] = useState<
+    { id: string; choice: LinkedInChoice } | undefined
+  >(undefined);
+  if (!offered) return undefined;
+  const staged = {
+    use_as_title: change.use_as_title === true,
+    use_as_employer: change.use_as_employer === true,
+  };
+  const titleOffered = text(change.connection_position) !== undefined;
+  const employerName = mayEmploy && companyId ? company.name : null;
+  const choice = held?.id === approval.id ? held.choice : staged;
+  const sent = {
+    use_as_title: titleOffered && choice.use_as_title,
+    use_as_employer: employerName !== null && choice.use_as_employer,
+  };
+  const same =
+    sent.use_as_title === staged.use_as_title &&
+    sent.use_as_employer === staged.use_as_employer;
+  return {
+    staged,
+    employerName,
+    employerNow: contact.data?.employer?.company_name ?? null,
+    titleOffered,
+    choice,
+    setChoice: (next) => setHeld({ id: approval.id, choice: next }),
+    edited: same ? undefined : { ...change, ...sent },
+  };
+}
+
+export function LinkedInMatchChoice({
+  offer,
+  disabled,
+}: Readonly<{ offer: LinkedInOffer; disabled?: boolean }>) {
+  const t = useT();
+  if (!offer.titleOffered && offer.employerName === null) return null;
+  return (
+    <div className="linkedin-match-choice">
+      {offer.titleOffered && (
+        <Checkbox
+          checked={offer.choice.use_as_title}
+          disabled={disabled}
+          onChange={(event) =>
+            offer.setChoice({
+              ...offer.choice,
+              use_as_title: event.currentTarget.checked,
+            })
+          }
+          label={t("approval.linkedin.useAsTitle")}
+        />
+      )}
+      {offer.employerName !== null && (
+        <Checkbox
+          checked={offer.choice.use_as_employer}
+          disabled={disabled}
+          onChange={(event) =>
+            offer.setChoice({
+              ...offer.choice,
+              use_as_employer: event.currentTarget.checked,
+            })
+          }
+          label={t("approval.linkedin.useAsEmployer", {
+            company: offer.employerName,
+          })}
+        />
+      )}
+      {offer.employerName !== null && offer.employerNow !== null && (
+        <p className="t-sub">
+          {t("approval.linkedin.employerNow", { company: offer.employerNow })}
+        </p>
+      )}
+    </div>
+  );
+}

@@ -108,6 +108,31 @@ describe("what a staged proposal shows", () => {
     ]);
   });
 
+  // The position sits beside the export's company and the title beside the
+  // contact, because "Use as job title" weighs the one against the other.
+  it("shows the export's position beside the contact's title", () => {
+    const fields = resolveDisplay(
+      "linkedin_match",
+      {
+        connection_name: "Ada B",
+        connection_company: "Helvetia",
+        connection_position: "Head of Sales",
+        contact_name: "Ada B",
+        contact_title: "Sales",
+        use_as_title: false,
+      },
+      t,
+      day,
+    );
+    expect(shown(fields).map((entry) => entry.field)).toEqual([
+      "connection_name",
+      "connection_company",
+      "connection_position",
+      "contact_name",
+      "contact_title",
+    ]);
+  });
+
   // Same shape, and the coincidence is the whole story: an agent that has used
   // exactly its limit is one that just hit the ceiling.
   it("keeps a usage figure that equals its own limit", () => {

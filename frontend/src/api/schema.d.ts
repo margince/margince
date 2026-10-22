@@ -30962,6 +30962,17 @@ export interface components {
              *     recorded no profile URL of their own, and on every rejection.
              */
             profile_url_written: boolean;
+            /**
+             * @description Whether the confirmation put the export's position on the contact as its title.
+             *     Only a member who ticked "Use as title" on the match card writes it.
+             */
+            title_written?: boolean;
+            /**
+             * @description Whether the confirmation made the company the import placed the connection at
+             *     the contact's current employer. Only a member who ticked "Use as employer" on
+             *     the match card writes it.
+             */
+            employer_written?: boolean;
         };
         /** @description One account this member's network reaches. */
         LinkedInReachAccount: {
@@ -41438,7 +41449,7 @@ export interface components {
          *     never escalate a 🟢 staged note into an external send without re-gating (ADR-0036).
          */
         ApproveRequest: {
-            /** @description Optional edits — the edited payload is re-admitted, then it executes (edit-then-send). */
+            /** @description Optional edits — the edited payload is re-admitted, then it executes (edit-then-send). It replaces the whole staged change. A `linkedin_match` card takes only one kind of edit, the two boxes a member ticks in the app: `use_as_title` and `use_as_employer`, each a boolean the staged change already carries. Every other member must stay as staged. An agent never sends an edited payload. */
             edited_payload?: {
                 [key: string]: unknown;
             };

@@ -278,57 +278,64 @@ func (s *Store) UpdateRelationship(ctx context.Context, id ids.UUID, in UpdateRe
 	}
 	var out relationshipRow
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		// The row lock makes the state read and the update below one
-		// race-free unit.
-		// The per-contact lock comes FIRST, before the row lock, and that order is
-		// the whole reason it is taken from an unlocked peek rather than from the
-		// row this patch is about. Create takes the advisory lock and then touches
-		// rows; if this path took the row lock first and the advisory second, a
-		// create holding the advisory and waiting on a row would deadlock against
-		// an update holding that row and waiting on the advisory.
-		//
-		// An unlocked read is enough to supply the KEY because a patch cannot move
-		// an edge's endpoints — contact_id is immutable here, so the value cannot
-		// change under the lock it selects. Anything else about the row is read
-		// again below, under the row lock, which is what makes that read
-		// authoritative.
-		if err := lockContactForEmployment(ctx, tx, id); err != nil {
-			return err
-		}
-		if _, err := storekit.LockRow(ctx, tx, "relationship", id, storekit.LiveOnly); err != nil {
-			return err
-		}
-		current, err := s.visibleRelationship(ctx, tx, id)
-		if err != nil {
-			return err
-		}
-		if err := refusePatch(ctx, tx, current, in); err != nil {
-			return err
-		}
-		var changed bool
-		if out, changed, err = patchRelationshipUnlessUnchanged(ctx, tx, current, id, in, capturedBy); err != nil {
-			return err
-		}
-		if !changed {
-			return nil
-		}
-		// Only when the patch ENDED the employment. A caller sending
-		// is_current_primary = false is STATING that this is not the contact's
-		// primary employer, and promoting the same row straight back would
-		// overrule a human with the answer they had just rejected — the one
-		// case where leaving the slot empty is the product doing as it was told.
-		// Whether the end date has actually arrived is the statement's own
-		// question, asked once there: an employment ending next month keeps the
-		// flag, keeps the slot, and the promotion below finds nothing to do.
-		if out.Kind == employmentKind && out.ContactID != nil && (in.EndedAt != nil || in.EmploymentStatus != nil) {
-			if err := promoteLoneSurvivingEmployment(ctx, tx, *out.ContactID); err != nil {
-				return err
-			}
-		}
-		return emitRelationshipChangeWithEvidence(ctx, tx, "update",
-			relationshipFieldImage(current), out, in.Evidence)
+		var err error
+		out, err = s.updateRelationshipInTx(ctx, tx, id, in, capturedBy)
+		return err
 	})
 	return out, err
+}
+
+// updateRelationshipInTx is UpdateRelationship on the caller's transaction,
+// with the relationship:update gate already taken.
+func (s *Store) updateRelationshipInTx(
+	ctx context.Context, tx pgx.Tx, id ids.UUID, in UpdateRelationshipInput, capturedBy string,
+) (relationshipRow, error) {
+	// The row lock makes the state read and the update below one
+	// race-free unit.
+	// The per-contact lock comes FIRST, before the row lock, and that order is
+	// the whole reason it is taken from an unlocked peek rather than from the
+	// row this patch is about. Create takes the advisory lock and then touches
+	// rows; if this path took the row lock first and the advisory second, a
+	// create holding the advisory and waiting on a row would deadlock against
+	// an update holding that row and waiting on the advisory.
+	//
+	// An unlocked read is enough to supply the KEY because a patch cannot move
+	// an edge's endpoints — contact_id is immutable here, so the value cannot
+	// change under the lock it selects. Anything else about the row is read
+	// again below, under the row lock, which is what makes that read
+	// authoritative.
+	if err := lockContactForEmployment(ctx, tx, id); err != nil {
+		return relationshipRow{}, err
+	}
+	if _, err := storekit.LockRow(ctx, tx, "relationship", id, storekit.LiveOnly); err != nil {
+		return relationshipRow{}, err
+	}
+	current, err := s.visibleRelationship(ctx, tx, id)
+	if err != nil {
+		return relationshipRow{}, err
+	}
+	if err := refusePatch(ctx, tx, current, in); err != nil {
+		return relationshipRow{}, err
+	}
+	out, changed, err := patchRelationshipUnlessUnchanged(ctx, tx, current, id, in, capturedBy)
+	if err != nil || !changed {
+		return out, err
+	}
+	// Only when the patch ENDED the employment. A caller sending
+	// is_current_primary = false is STATING that this is not the contact's
+	// primary employer, and promoting the same row straight back would
+	// overrule a human with the answer they had just rejected — the one
+	// case where leaving the slot empty is the product doing as it was told.
+	// Whether the end date has actually arrived is the statement's own
+	// question, asked once there: an employment ending next month keeps the
+	// flag, keeps the slot, and the promotion below finds nothing to do.
+	if out.Kind == employmentKind && out.ContactID != nil && (in.EndedAt != nil || in.EmploymentStatus != nil) {
+		if err := promoteLoneSurvivingEmployment(ctx, tx, *out.ContactID); err != nil {
+			return out, err
+		}
+	}
+	return out, emitRelationshipChangeWithEvidence(ctx, tx, "update",
+		relationshipFieldImage(current), out, in.Evidence)
 }
 
 // RefuseArchiveRelationship answers every authority refusal

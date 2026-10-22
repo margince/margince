@@ -26696,7 +26696,7 @@ type ApproveImportRunRequest struct {
 // scratch (re-tiered, re-RBAC-checked, new diff_hash) before a token is minted — an edit can
 // never escalate a 🟢 staged note into an external send without re-gating (ADR-0036).
 type ApproveRequest struct {
-	// EditedPayload Optional edits — the edited payload is re-admitted, then it executes (edit-then-send).
+	// EditedPayload Optional edits — the edited payload is re-admitted, then it executes (edit-then-send). It replaces the whole staged change. A `linkedin_match` card takes only one kind of edit, the two boxes a member ticks in the app: `use_as_title` and `use_as_employer`, each a boolean the staged change already carries. Every other member must stay as staged. An agent never sends an edited payload.
 	EditedPayload *map[string]interface{} `json:"edited_payload,omitempty"`
 
 	// Reason Why, in the approver's own words. Recorded with the decision, as a rejection's reason is.

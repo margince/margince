@@ -1151,7 +1151,9 @@ Payload for linkedin_match.decided. A connection was linked to a contact on file
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
+| `data.employer_written` | boolean | no | Whether the decision made the company the import placed the connection at the contact's current employer. True only when the member ticked "Use as employer". False on every automatic confirmation. |
 | `data.profile_url_written` | boolean | yes | Whether the decision put a LinkedIn handle on the contact. False on every rejection, and false on a confirmation whose contact already carried one, a value on a record is somebody's statement and is never overwritten. |
+| `data.title_written` | boolean | no | Whether the decision put the export's position on the contact as its title. True only when the member ticked "Use as title" and the title changed. False on every automatic confirmation. |
 
 ### `linkedin_network.imported`
 

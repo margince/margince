@@ -1979,8 +1979,14 @@ type PublicEventLinkedinAccountChanged struct {
 
 // PublicEventLinkedinMatchDecided Payload for linkedin_match.decided. A connection was linked to a contact on file, by an exact-name match or by a member approving the proposal. It carries no verdict. A refusal is an approval row that stays rejected and never becomes a link, so there is no "no" to publish. The payload does not name the connection, a third party who never consented to being in this CRM. The imported rows are kept invisible, and their names travelling through the outbox would defeat that. The verdict and whether a profile URL reached the contact are the auditable facts. The records themselves are reachable through the audit row this event is linked to.
 type PublicEventLinkedinMatchDecided struct {
+	// EmployerWritten Whether the decision made the company the import placed the connection at the contact's current employer. True only when the member ticked "Use as employer". False on every automatic confirmation.
+	EmployerWritten *bool `json:"employer_written,omitempty"`
+
 	// ProfileUrlWritten Whether the decision put a LinkedIn handle on the contact. False on every rejection, and false on a confirmation whose contact already carried one — a value on a record is somebody's statement and is never overwritten.
 	ProfileUrlWritten bool `json:"profile_url_written"`
+
+	// TitleWritten Whether the decision put the export's position on the contact as its title. True only when the member ticked "Use as title" and the title changed. False on every automatic confirmation.
+	TitleWritten *bool `json:"title_written,omitempty"`
 }
 
 // PublicEventLinkedinNetworkImported Payload for linkedin_network.imported. A member uploaded their own LinkedIn connections export. The import act emits a single event, never one per row. An export is thousands of rows, and a per-row event would bury every other event in the stream. The auditable fact is that a member imported their network at all. No connection is named in the payload. The imported rows are third parties who never consented to being in this CRM. Publishing their names would defeat the point of keeping them invisible everywhere else.
@@ -3464,7 +3470,7 @@ var PublicEventSamples = map[string]string{
 	"lead_disqualify_reason.changed":            "{\"change\":\"created\",\"label\":\"Sample label\",\"reason_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"lead_source.changed":                       "{\"change\":\"created\",\"key\":\"Sample key\",\"source_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"linkedin_account.changed":                  "{\"connected\":true,\"has_profile_url\":true}",
-	"linkedin_match.decided":                    "{\"profile_url_written\":true}",
+	"linkedin_match.decided":                    "{\"employer_written\":true,\"profile_url_written\":true,\"title_written\":true}",
 	"linkedin_network.imported":                 "{\"imported\":1,\"rows\":1,\"skipped\":1}",
 	"list.archived":                             "{}",
 	"list.created":                              "{\"list_type\":\"Sample list type\",\"record_type\":\"Sample record type\",\"sharing\":\"Sample sharing\"}",

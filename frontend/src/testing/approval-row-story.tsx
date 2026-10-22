@@ -4,10 +4,12 @@
 import type { components } from "../api/schema";
 import { ApprovalRow } from "../features/automations/approvalrow";
 import type { Locale } from "../i18n";
+import type { GrantSpec } from "./mefixture";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
+  type RouteMap,
   StoryProviders,
 } from "./story-utils";
 
@@ -15,19 +17,26 @@ type Approval = components["schemas"]["Approval"];
 
 // `decide` is what the approve/reject buttons hit. A story that wants the row's
 // refusal states answers that route with the problem document the server sends.
+// `allow` and `routes` serve a card that reads more than the default grants and
+// records.
 export function ApprovalRowStory({
   subject,
   locale = "en",
   decided,
   decide,
+  allow = { deal: ["read", "update"] },
+  routes = {},
 }: Readonly<{
   subject: Approval;
   locale?: Locale;
   decided?: boolean;
   decide?: () => Response;
+  allow?: GrantSpec;
+  routes?: RouteMap;
 }>) {
   installFetchStub({
-    "GET /me": meRoute({ deal: ["read", "update"] }),
+    ...routes,
+    "GET /me": meRoute(allow),
     "GET /users/names": () =>
       jsonResponse({
         data: [

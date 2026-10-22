@@ -55,6 +55,7 @@ import {
 import { approvalAcceptable, useApprovalNames } from "./approvalresponsibility";
 import { stagedSendOf } from "./approvalsend";
 import { ApprovalDecider, ApprovalTarget } from "./approvaltarget";
+import { LinkedInMatchChoice, useLinkedInChoice } from "./linkedinmatchchoice";
 import "./approvalrow.css";
 
 // One staged proposal as a decidable row, and the screen-level sink that
@@ -275,6 +276,7 @@ export function ApprovalRow({
   });
 
   const change = approval.proposed_change ?? {};
+  const linkedIn = useLinkedInChoice(approval);
   const approvalNames = useApprovalNames([approval]);
   const strings = editableStrings(approval.kind, change);
   const display = resolveDisplay(
@@ -410,7 +412,11 @@ export function ApprovalRow({
       }
       onAccept={
         approvalAcceptable(approval)
-          ? () => decide.mutate({ verdict: "approve" })
+          ? () =>
+              decide.mutate({
+                verdict: "approve",
+                editedPayload: linkedIn?.edited,
+              })
           : undefined
       }
       // Offered only where the kind has something a reader may change. Disabled
@@ -428,6 +434,9 @@ export function ApprovalRow({
           {/* Read-only: the approver may release or refuse the message, and an
               override of the engine belongs to whoever is writing to the
               contact, recorded against their own name. */}
+          {!decided && linkedIn && (
+            <LinkedInMatchChoice offer={linkedIn} disabled={decide.isPending} />
+          )}
           {!decided && staged !== undefined && (
             <SendPermission
               preview={permission.preview}
