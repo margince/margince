@@ -116,4 +116,23 @@ describe("a window docked beside the page", () => {
 
     expect(screen.getByRole("dialog").style.marginInlineEnd).toBe("");
   });
+
+  it("comes back into view when the glass narrows under a slid window", () => {
+    render(<Harness />);
+    const dialog = screen.getByRole("dialog");
+    const rect = vi
+      .spyOn(dialog, "getBoundingClientRect")
+      .mockReturnValue(DOMRect.fromRect({ x: 300, width: 400, height: 500 }));
+    const bar = titleBar();
+    fireEvent.pointerDown(bar, { clientX: 600, pointerId: 1 });
+    fireEvent.pointerMove(bar, { clientX: 400, pointerId: 1 });
+    fireEvent.pointerUp(bar, { pointerId: 1 });
+    expect(dialog.style.marginInlineEnd).toBe("200px");
+
+    // The glass narrows until the window's start edge is 50px past it.
+    rect.mockReturnValue(DOMRect.fromRect({ x: -50, width: 400, height: 500 }));
+    fireEvent(window, new Event("resize"));
+
+    expect(dialog.style.marginInlineEnd).toBe("150px");
+  });
 });

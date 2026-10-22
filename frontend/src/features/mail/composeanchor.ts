@@ -250,10 +250,13 @@ export function useComposeThread({
     conversation,
   });
   // A pending or failed read keeps the rail, so the record never looks as
-  // though it had no history.
+  // though it had no history. So does older mail not read yet.
   const offered =
     offeringThreads &&
-    (recent.pending || recent.failed || recent.conversations.length > 0);
+    (recent.pending ||
+      recent.failed ||
+      recent.more ||
+      recent.conversations.length > 0);
   return {
     anchorRead,
     anchorActivity,

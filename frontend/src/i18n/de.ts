@@ -5817,6 +5817,8 @@ export const de = {
   "compose.threadSearch": "Threads durchsuchen",
   "compose.threadSearchWith": "Threads mit {name} durchsuchen",
   "compose.threadSearchNone": "Kein Thread enthält diese Wörter.",
+  "compose.threadsMoreFailed":
+    "Ältere Threads konnten nicht geladen werden. Drücke Mehr anzeigen, um es erneut zu versuchen.",
   "compose.threadsMore": "Mehr anzeigen",
   "compose.newThread": "Neuer Thread",
   "compose.copies": "Cc und Bcc",

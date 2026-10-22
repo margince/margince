@@ -13,6 +13,7 @@ import {
 } from "../../design-system/atoms";
 import { EmailEntry } from "../../design-system/emailentry";
 import { EmailText } from "../../design-system/emailtext";
+import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import type { NameOf } from "../../design-system/participants";
 import { Popover } from "../../design-system/popover";
@@ -178,6 +179,7 @@ export function ThreadBar({
           variant="ghost"
           className="compose-threadmenu-new"
           aria-pressed={!answering}
+          disabled={disabled}
           onClick={() => (answering ? choose(null) : setOpen(false))}
         >
           <SquarePen aria-hidden="true" />
@@ -247,7 +249,13 @@ function ThreadList({
   ) : (
     <SurfaceState
       loadingLabel={t("compose.threadPending")}
-      state={listed.failed ? "failed" : cards.length === 0 ? "empty" : "ready"}
+      state={
+        listed.failed
+          ? "failed"
+          : cards.length === 0 && !listed.more
+            ? "empty"
+            : "ready"
+      }
       emptyLabel={t("compose.threadSearchNone")}
       detail={{ onRetry: listed.retry }}
     >
@@ -279,6 +287,9 @@ function ThreadList({
           />
         ))}
       </ul>
+      {listed.moreFailed && (
+        <ErrorLine>{t("compose.threadsMoreFailed")}</ErrorLine>
+      )}
       {listed.more && (
         <Button
           variant="ghost"

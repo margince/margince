@@ -412,12 +412,23 @@ describe("the composer's conversation pane", () => {
       id: "act-9",
       subject: "Invoice 1040",
     };
+    const lastYear: Activity = {
+      ...sibling,
+      id: "act-8",
+      subject: "Q2 renewal",
+      thread_key: "<t-renewal@mail>",
+    };
+    // The first read has more behind it; the next is the record's last page.
+    let reads = 0;
     const sent = stubRoutes({
-      "GET /activities": () =>
-        jsonResponse({
-          data: [threaded],
-          page: { has_more: true, next_cursor: "c-2" },
-        }),
+      "GET /activities": () => {
+        reads += 1;
+        return jsonResponse(
+          reads === 1
+            ? { data: [threaded], page: { has_more: true, next_cursor: "c-2" } }
+            : { data: [lastYear], page: { has_more: false } },
+        );
+      },
     });
     render(
       <ComposeModal
@@ -444,6 +455,12 @@ describe("the composer's conversation pane", () => {
         ),
       ).toBe(true),
     );
+    expect(
+      await within(threadMenu()).findByRole("button", { name: /Q2 renewal/ }),
+    ).toBeTruthy();
+    expect(
+      within(threadMenu()).queryByRole("button", { name: "Show more" }),
+    ).toBeNull();
 
     // Words typed are asked of the server, not filtered from one page.
     const searched = stubRoutes({

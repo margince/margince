@@ -83,10 +83,27 @@ export function DockedWindow({
     room: number;
     toward: 1 | -1;
   } | null>(null);
-  const sheet = globalThis.matchMedia?.(SHEET).matches ?? false;
+  const [sheet, setSheet] = useState(
+    () => globalThis.matchMedia?.(SHEET).matches ?? false,
+  );
   const focusFirst = useRef(initialFocusTo);
   useEffect(() => {
     (focusFirst.current?.() ?? box.current)?.focus();
+  }, []);
+  // A narrower glass pulls a slid window back into view. The breakpoint that
+  // makes it a sheet is read again too, so neither waits for another render.
+  useEffect(() => {
+    const fit = () => {
+      setSheet(globalThis.matchMedia?.(SHEET).matches ?? false);
+      const node = box.current;
+      if (!node) return;
+      const end = node.getBoundingClientRect();
+      const rtl = getComputedStyle(node).direction === "rtl";
+      const spare = rtl ? window.innerWidth - end.right : end.left;
+      setShift((was) => clamp(was, 0, was + spare));
+    };
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
   }, []);
 
   const grab =

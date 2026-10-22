@@ -117,6 +117,7 @@ export function useRecentConversations(
   more: boolean;
   loadMore: () => void;
   loadingMore: boolean;
+  moreFailed: boolean;
 } {
   const term = search.trim();
   const query = useInfiniteQuery({
@@ -180,7 +181,9 @@ export function useRecentConversations(
   return {
     conversations,
     pending: query.isPending,
-    failed: query.isError,
+    // A failed older page keeps the threads already read on screen; only a
+    // failed first read is a failed list.
+    failed: query.isLoadingError,
     retry: () => {
       void query.refetch();
     },
@@ -189,6 +192,7 @@ export function useRecentConversations(
       void query.fetchNextPage();
     },
     loadingMore: query.isFetchingNextPage,
+    moreFailed: query.isFetchNextPageError,
   };
 }
 

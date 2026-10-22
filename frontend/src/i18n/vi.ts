@@ -5682,6 +5682,8 @@ export const vi = {
   "compose.threadSearch": "Tìm chuỗi thư",
   "compose.threadSearchWith": "Tìm chuỗi thư với {name}",
   "compose.threadSearchNone": "Không có chuỗi thư nào chứa các từ này.",
+  "compose.threadsMoreFailed":
+    "Không tải được các chuỗi thư cũ hơn. Nhấn Xem thêm để thử lại.",
   "compose.threadsMore": "Xem thêm",
   "compose.newThread": "Chuỗi thư mới",
   "compose.copies": "Cc và Bcc",

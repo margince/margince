@@ -32,6 +32,8 @@ type Reads = Readonly<{
   retry?: () => void;
   anchorFailed?: boolean;
   retryAnchor?: () => void;
+  more?: boolean;
+  moreFailed?: boolean;
 }>;
 
 // Only the reads the bar draws from; the hook behind it is not under test.
@@ -41,9 +43,10 @@ function threadOf(reads: Reads): ComposeThread {
     pending: false,
     failed: reads.failed ?? false,
     retry: reads.retry ?? (() => undefined),
-    more: false,
+    more: reads.more ?? false,
     loadMore: () => undefined,
     loadingMore: false,
+    moreFailed: reads.moreFailed ?? false,
   };
   const fake = {
     anchorRead: {
@@ -205,4 +208,29 @@ it("draws a thread whose time the read did not carry", async () => {
   );
   const menu = await openMenu(user);
   expect(menu.getByRole("button", { name: /Pricing for Q4/ })).toBeTruthy();
+});
+
+it("offers older mail when the page read so far holds no thread to offer", async () => {
+  const user = userEvent.setup();
+  render(bar({ conversations: [], more: true }));
+
+  const menu = await openMenu(user);
+
+  expect(menu.queryByText("No thread matches these words.")).toBeNull();
+  expect(menu.getByRole("button", { name: "Show more" })).toBeTruthy();
+});
+
+it("keeps the threads read so far when an older page fails", async () => {
+  const user = userEvent.setup();
+  render(bar({ more: true, moreFailed: true }));
+
+  const menu = await openMenu(user);
+
+  expect(menu.getByRole("button", { name: /Pricing for Q4/ })).toBeTruthy();
+  expect(
+    menu.getByText(
+      "Older threads could not be loaded. Press Show more to try again.",
+    ),
+  ).toBeTruthy();
+  expect(menu.getByRole("button", { name: "Show more" })).toBeTruthy();
 });
