@@ -14,6 +14,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -400,6 +401,10 @@ func (s *Service) pendingDecidable(ctx context.Context, tx pgx.Tx, id ids.Approv
 }
 
 func (s *Service) pendingDecidableInScope(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, scope ListInput) (bool, error) {
+	return pendingDecidableInScopeAt(ctx, tx, id, scope, s.now())
+}
+
+func pendingDecidableInScopeAt(ctx context.Context, tx pgx.Tx, id ids.ApprovalID, scope ListInput, now time.Time) (bool, error) {
 	if err := actingForAHuman(ctx); err != nil {
 		return false, err
 	}
@@ -411,7 +416,7 @@ func (s *Service) pendingDecidableInScope(ctx context.Context, tx pgx.Tx, id ids
 	if err != nil {
 		return false, err
 	}
-	if !a.PendingAt(s.now()) || !requestedInScope(a, p.UserID, scope) {
+	if !a.PendingAt(now) || !requestedInScope(a, p.UserID, scope) {
 		return false, nil
 	}
 	return decidable(ctx, tx, p, a)

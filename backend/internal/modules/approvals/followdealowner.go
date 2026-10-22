@@ -54,26 +54,54 @@ const ownerRemoved = "the deal no longer has an owner, so nobody is responsible 
 // admits this write. It is audit-only, for the reason the writeshape gate
 // records against it.
 func FollowDealOwnerInTx(ctx context.Context, tx pgx.Tx, dealID ids.UUID, from, to *ids.UUID) error {
-	moving, err := lockProposalsFollowingDeal(ctx, tx, dealID, from, to)
+	_, err := MoveDealRequestsInTx(ctx, tx, dealID, from, to)
+	return err
+}
+
+// DealRequestsMove is what one owner change did to a deal's pending requests.
+type DealRequestsMove struct {
+	Moved     []MovedRequest
+	Withdrawn []ids.ApprovalID
+}
+
+// MovedRequest is one pending request a deal's owner change handed to the new
+// owner, with what a notice about it shows.
+type MovedRequest struct {
+	ID         ids.ApprovalID
+	Summary    string
+	TargetType string
+	TargetID   *ids.UUID
+}
+
+// MoveDealRequestsInTx is FollowDealOwnerInTx, reporting which requests it
+// moved and which it withdrew, so the caller can tell the members concerned.
+func MoveDealRequestsInTx(ctx context.Context, tx pgx.Tx, dealID ids.UUID, from, to *ids.UUID) (DealRequestsMove, error) {
+	var done DealRequestsMove
+	following, err := lockProposalsFollowingDeal(ctx, tx, dealID, from, to)
 	if err != nil {
-		return err
+		return done, err
 	}
-	for _, p := range moving {
+	for _, p := range following {
 		if p.kind == kindHeldDraft || to == nil {
 			reason := ownerMovedAway
 			if p.kind != kindHeldDraft {
 				reason = ownerRemoved
 			}
-			if _, err := withdrawInTx(ctx, tx, p.id, reason); err != nil {
-				return err
+			withdrawn, err := withdrawInTx(ctx, tx, p.id, reason)
+			if err != nil {
+				return done, err
+			}
+			if withdrawn {
+				done.Withdrawn = append(done.Withdrawn, p.id)
 			}
 			continue
 		}
 		if err := retargetInTx(ctx, tx, p, to); err != nil {
-			return err
+			return done, err
 		}
+		done.Moved = append(done.Moved, MovedRequest{ID: p.id, Summary: p.summary, TargetType: p.targetType, TargetID: p.targetID})
 	}
-	return nil
+	return done, nil
 }
 
 // followingProposal is one pending row a deal's owner change reaches.
@@ -82,6 +110,9 @@ type followingProposal struct {
 	kind       string
 	onBehalfOf *ids.UUID
 	decider    *ids.UUID
+	summary    string
+	targetType string
+	targetID   *ids.UUID
 }
 
 // lockProposalsFollowingDeal locks, in the canonical order, every pending row
@@ -93,7 +124,8 @@ func lockProposalsFollowingDeal(
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	deal, prev, next := arg(dealID), arg(from), arg(to)
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT id, kind, on_behalf_of, requested_decider_id FROM approval
+		SELECT id, kind, on_behalf_of, requested_decider_id,
+		       coalesce(summary, ''), coalesce(target_entity_type, ''), target_entity_id FROM approval
 		 WHERE status = 'pending' AND expires_at > now()
 		   AND (
 		     (kind = $%[4]d AND target_entity_type = 'deal' AND target_entity_id = $%[1]d
@@ -113,7 +145,7 @@ func lockProposalsFollowingDeal(
 	}
 	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (followingProposal, error) {
 		var p followingProposal
-		err := row.Scan(&p.id, &p.kind, &p.onBehalfOf, &p.decider)
+		err := row.Scan(&p.id, &p.kind, &p.onBehalfOf, &p.decider, &p.summary, &p.targetType, &p.targetID)
 		return p, err
 	})
 }
