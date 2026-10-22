@@ -7,6 +7,7 @@ type Preview = components["schemas"]["ApprovalPreview"];
 const previewLanding = (status: string): Preview => ({
   version: 1,
   state: "ready",
+  reviewer_reason: "record_authority",
   changes: [
     {
       field: "status",
