@@ -12532,7 +12532,7 @@ export const de = {
   "captureReview.passCap.label":
     "Geprüfte zurückgehaltene Threads pro Durchlauf",
   "captureReview.passCap.help":
-    "Wie viele zurückgehaltene Mail-Threads eine Prüfung der Vertraulichkeit entscheidet, 1 bis 200. Die übrigen warten auf den nächsten Durchlauf. Erhöhe den Wert, wenn neue Mails länger als der Rhythmus der Durchläufe für das Team unsichtbar bleiben; den Rhythmus legt der Systemzustand fest. Standard 40.",
+    "Wie viele zurückgehaltene Mail-Threads eine Prüfung der Vertraulichkeit entscheidet, 1 bis 200. Die übrigen warten auf den nächsten Durchlauf. Erhöhe den Wert, wenn neue Mails für das Team länger unsichtbar bleiben als der Rhythmus der Durchläufe. Den Rhythmus legt der Systemzustand fest. Standard 40.",
   "captureReview.passCap.refusal":
     "Gib eine ganze Zahl von Threads von 1 bis 200 ein.",
   "agentConnections.title": "Agent-Verbindungen",
