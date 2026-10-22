@@ -20,6 +20,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -76,7 +77,7 @@ func TestATaskAnAgentFilesForARepReachesThatRepsWorklist(t *testing.T) {
 
 	filed := d.tool(t, "create_task", map[string]any{
 		"subject": "Follow up with Contact A",
-		"due_at":  time.Now().Add(-2 * time.Hour).UTC().Format(time.RFC3339),
+		"due_at":  clocktest.Now(t).Add(-2 * time.Hour).UTC().Format(time.RFC3339),
 	})
 	task := anIDIn(t, filed)
 

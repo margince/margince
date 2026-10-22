@@ -53,8 +53,8 @@ func TestANamedAssigneeIsKept(t *testing.T) {
 }
 
 // A system principal owns nothing. An automation's follow-up belongs to the
-// record it was minted for, or to nobody until routing says otherwise — never
-// to the job that happened to run, even when the job runs for a requester.
+// record it was minted for, or to nobody until routing says otherwise. It never
+// goes to the job that ran, even when the job runs for a requester.
 func TestASystemWrittenTaskBelongsToNobody(t *testing.T) {
 	requester := ids.NewV7()
 	ctx := principal.WithActor(context.Background(), principal.Principal{
@@ -89,10 +89,10 @@ func actingFor(kind principal.PrincipalType, human ids.UUID) context.Context {
 	})
 }
 
-// An agent or a connector that files a task for a person, naming nobody, files
-// it for that person. Otherwise the rep's own follow-up lands in Unassigned,
-// where the rep does not look.
-func TestATaskFiledForAPersonBelongsToThatPerson(t *testing.T) {
+// An agent or a connector that files a task for a rep, naming nobody, files it
+// for that rep. Otherwise the rep's own follow-up lands in Unassigned, where
+// the rep does not look.
+func TestATaskFiledForARepBelongsToThatRep(t *testing.T) {
 	for _, kind := range []principal.PrincipalType{principal.PrincipalAgent, principal.PrincipalConnector} {
 		rep := ids.NewV7()
 
@@ -113,15 +113,15 @@ func TestATaskFiledForNobodyBelongsToNobody(t *testing.T) {
 	}
 }
 
-// The agent's default is the person it acts for, never a seat field that
-// happens to be set on its principal.
-func TestAnAgentsTaskGoesToThePersonItActsFor(t *testing.T) {
+// The agent's default is the rep it acts for, never a seat field that happens
+// to be set on its principal.
+func TestAnAgentsTaskGoesToTheRepItActsFor(t *testing.T) {
 	rep, other := ids.NewV7(), ids.NewV7()
 	ctx := principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:assistant", UserID: other, OnBehalfOf: rep,
 	})
 
 	if got := taskAssignee(ctx, LogActivityInput{Kind: "task"}); got == nil || got.UUID != rep {
-		t.Fatalf("the agent's task went to %v, wanted the person it acts for %v", got, rep)
+		t.Fatalf("the agent's task went to %v, wanted the rep it acts for %v", got, rep)
 	}
 }
