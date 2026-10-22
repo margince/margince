@@ -405,6 +405,8 @@ export const en = {
     "Archive this offer and hide it from the active offer list. Its line items remain stored.",
   "approval.preview.importScopeUnavailable":
     "This import proposal has no complete row-by-row change set. Open Data import to review the source and test run before starting the import.",
+  "approval.preview.machineAddress":
+    "The approval cannot run: the address belongs to a sending system, not a human.",
   "approval.preview.confirmationOnly":
     "Record this confirmation and complete the waiting automation run. No record update or message send is authorized.",
   "approval.preview.confirmationQuestion": "Question to confirm",
@@ -2669,7 +2671,11 @@ export const en = {
     "Mails this contact a private link to see what you hold about them, correct it, and say whether they want to hear from you. It goes to their own recorded address; you cannot send it anywhere else.",
   "consent.askQueued": "Link queued for {address}.",
   "consent.askNotDelivered":
-    "The link was created for {address}, but this installation sends no mail, so it was not sent.",
+    "The link was created for {address} but has not gone out yet. The delivery record says where it stands.",
+  "consent.askNoSystemMail":
+    "System mail is not set up, so confirmation requests cannot be sent. An admin configures it in the installation’s email settings.",
+  "consent.askSendableUnknown":
+    "Whether this can be sent is not known yet. Reload the page to check again.",
   "consent.askExpires": "The link works until",
   "consent.noRecord": "no record",
   "consent.noPurposes": "This company tracks no consent purposes yet.",
@@ -3670,6 +3676,8 @@ export const en = {
   "commitment.review.title": "Commitment review",
   "commitment.review.detail":
     "No task was created from these readings. Review the source and later replies before adding a follow-up from a linked record.",
+  "commitment.review.noPromiser":
+    "No colleague who made this commitment can be asked, so nobody was.",
   "commitment.review.historical":
     "Historical commitment without a current deadline.",
   "commitment.review.beforeBaseline":
@@ -6064,12 +6072,15 @@ export const en = {
   "directSend.reason.legal_obligation": "Legal obligation",
   "directSend.reason.other": "Other",
   "compose.reviewReference": "Review",
-  "compose.reviewRequest": "Request review",
-  "compose.reviewRequesting": "Requesting…",
-  "compose.reviewRequested":
-    "Review requested. A user allowed to send this decides, and the message waits until then.",
-  "compose.reviewRequestFailed":
-    "The review request failed. Retry, or open the review from the refusal above.",
+  "compose.overrule.open": "Overrule with a reason",
+  "compose.overrule.reasonLabel": "Why may this message go?",
+  "compose.overrule.hint":
+    "Your reason is recorded on each contact. It covers this kind of message to them until someone revokes it.",
+  "compose.overrule.confirm": "Record the overrule",
+  "compose.overrule.recording": "Recording…",
+  "compose.overrule.recorded": "Overrule recorded. Press Send again.",
+  "compose.overrule.failed":
+    "The overrule was not recorded. Retry, or open the review from the refusal above.",
   "compose.consentGoto": "Review consent",
   "compose.draftUnavailable":
     "AI drafting is unavailable because no model is configured. The email can still be written manually.",
@@ -7489,6 +7500,8 @@ export const en = {
     "This domain is already held by another company in the CRM, so the row cannot create a second company under it.",
   "import.reason.duplicate_email":
     "This email address already belongs to another contact.",
+  "import.reason.email_names_no_contact":
+    "“{value}” belongs to a sending system, not a human, so it does not become a contact.",
   "import.reason.employer_column_empty":
     "The company column is empty, so the row names no employer.",
   "import.reason.employer_column_empty_dropped":

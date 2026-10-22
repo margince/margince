@@ -27,6 +27,7 @@ const REASONS: Readonly<Record<string, MessageKey>> = {
   semantic_request: "commitment.review.request",
   semantic_unclear: "commitment.review.unclear",
   semantic_unassessed: "commitment.review.unclear",
+  promiser_not_assignable: "commitment.review.noPromiser",
 };
 
 export function CommitmentReview({

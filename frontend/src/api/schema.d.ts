@@ -14158,22 +14158,13 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Ask somebody who may override the engine to decide this refused send.
-         * @description A rep refused at the keyboard usually cannot direct the send themselves — that takes the
-         *     `communication_exception` grant, which most seats do not hold. This is how they ask somebody
-         *     who does: the review is staged as an approval card, and whoever approves it is the human
-         *     whose name goes on the instruction.
-         *
-         *     ASKING GRANTS NOTHING. The caller still cannot direct the send, and the card is answered by
-         *     somebody who can or by nobody at all. What routing changes is that the question becomes
-         *     findable instead of sitting in a review only its author reads.
-         *
-         *     SCOPED TO THE REVIEW'S OWN INITIATOR. A seat that could route anybody's review would be
-         *     raising cards about other colleagues' correspondence, so this answers 404 for a review that
-         *     belongs to somebody else — the same answer reading one does, and for the same reason.
-         *
-         *     Pressing it twice raises ONE card. The question is about one refused message however many
-         *     times it is asked.
+         * Retired. Asking a colleague to decide a refused send is no longer offered.
+         * @deprecated
+         * @description Always answers 422 `review_not_routable`. A rep overrules a machine refusal with their own
+         *     reason (`POST /contacts/{id}/consent/allow`); a refusal names what may be overruled in its
+         *     problem details (`available_actions` carries `overrule`, and `overrulable` lists each
+         *     contact and category). A seat holding `communication_exception` directs the send from the
+         *     review (`POST /communication-reviews/{id}/direct-send`).
          */
         post: operations["requestCommunicationDecision"];
         delete?: never;
@@ -20735,7 +20726,8 @@ export interface paths {
          * List current FX rates (latest per currency), or one pair's history.
          * @description Admin/ops-only view. Without `from`, returns the latest effective rate per
          *     foreign currency (to = the workspace base currency). With `from=USD`, returns
-         *     that pair's full effective-dated history, newest first.
+         *     that pair's full effective-dated history, newest first. A caller that needs
+         *     only the sheet's currency codes reads `GET /fx-rates/currencies`.
          */
         get: operations["listFxRates"];
         put?: never;
@@ -20791,6 +20783,31 @@ export interface paths {
          *     (x-agent-access: human-only). Audit-only write (no event stream, EVT-NOEVT-3).
          */
         delete: operations["deleteAiModelRate"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/fx-rates/currencies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the base currency and the currency codes on the FX rate sheet, without their rates.
+         * @description The workspace base currency, and the foreign currencies of the sheet
+         *     head (the same rows `GET /fx-rates` lists without `from`) as codes in
+         *     code order. Readable by every role that
+         *     may read deals, so a currency picker can offer the workspace's own
+         *     currencies first; the rates themselves stay on the admin/ops-only
+         *     `GET /fx-rates`. An empty sheet answers an empty list.
+         */
+        get: operations["listFxRateCurrencies"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -21219,6 +21236,11 @@ export interface components {
             /** @description The workspace's base currency — every rate in `data` converts TO this (AAD-PARAM-N-1, ADR-0085). Served from the workspace itself rather than inferred from the first rate row, so a workspace that has entered no rates can still state its own base. */
             readonly base_currency?: string;
             data: components["schemas"]["FxRate"][];
+        };
+        FxRateCurrencyListResponse: {
+            /** @description The workspace's base currency, which every code in `data` converts into. Served here as well as on the installation settings, so a role that may read deals but not those settings still learns which currency a picker leads with. */
+            base_currency: string;
+            data: string[];
         };
         SetFxRateRequest: {
             /** @description 3-letter ISO; must not equal the base currency. */
@@ -25347,7 +25369,7 @@ export interface components {
          * @description Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.
          * @enum {string}
          */
-        ImportReasonCode: "activity_empty" | "activity_held" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_not_found" | "contact_not_found_dropped" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_unreadable";
+        ImportReasonCode: "activity_empty" | "activity_held" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_not_found" | "contact_not_found_dropped" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_unreadable";
         /**
          * @description Exactly one of two shapes: `object` and `mapping` (and optionally
          *     `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
@@ -26775,7 +26797,10 @@ export interface components {
             role?: string | null;
             /** @description The public profile this was read from. Stored, never fetched. */
             profile_url?: string | null;
-            /** Format: email */
+            /**
+             * Format: email
+             * @description Refused with 422 `email_names_no_one` when the local part names a sending system, as ContactEmailInput.email is.
+             */
             email?: string | null;
             phone?: string | null;
         };
@@ -26807,7 +26832,8 @@ export interface components {
              * @description `created` — nobody matched, so the card became a contact, their company and the edge
              *     between them. `updated` — an exact match, filled only where the record was empty.
              *     `needs_review` — a resemblance, written nowhere; open the candidate and decide.
-             *     `skipped` — the card states no name, so there is no contact in it.
+             *     `skipped` — the card states no name, carries a sending system's address, or matches a
+             *     contact the caller may not write; `reason` says which.
              * @enum {string}
              */
             outcome: "created" | "updated" | "needs_review" | "skipped";
@@ -26824,7 +26850,10 @@ export interface components {
          *     so the two cannot describe an address differently.
          */
         ContactEmailInput: {
-            /** Format: email */
+            /**
+             * Format: email
+             * @description An address whose local part names a sending system (noreply@, notifications@, receipts@ and the like) is refused with 422 `email_names_no_one`: nobody answers there, so it names no contact.
+             */
             email: string;
             /**
              * @default work
@@ -37786,6 +37815,12 @@ export interface components {
             data_reset_available?: boolean;
             /** @description Whether THIS CALLER may issue member set-password links (`issueUserPasswordLink`) — true only when the caller holds `admin` AND the installation has no outbound-email channel AND a public base URL is configured. Deliberately a caller capability rather than a deployment-posture flag: `/me` answers every authenticated member, and a bare posture boolean would tell every rep whether the installation has email configured. Clients render the action on this, so an admin never sees a control that can only fail (ADR-0061 Amendment 1). */
             admin_password_link: boolean;
+            /**
+             * @description Whether THIS CALLER may ask a contact to confirm what is held about them (`requestDetailsConfirmation`, `sendPrivacyNotice`, `issueDoubleOptIn`) — true only when the caller may update a contact AND the installation has the lane those messages ride: an outbound relay, a link vault and a public base URL.
+             *     A caller capability rather than a deployment-posture flag, for the reason `admin_password_link` states: a bare posture boolean would tell every seat whether this installation has email. It folds the grant in, so it answers only the holders who could act on it.
+             *     The endpoint refuses what it cannot deliver, so a client that renders the action on this never offers one that would be. Each of those links is mailed and never returned, which is why an unsendable one is unusable rather than merely undelivered.
+             */
+            confirm_requests_sendable?: boolean;
             /** @description Effective role keys for this principal, and the one authority for them — `user.roles` is deliberately left unset here rather than repeating the same fact. */
             roles: string[];
             teams: string[];
@@ -41007,8 +41042,11 @@ export interface components {
              */
             queued: boolean;
             /**
-             * @description Whether this installation has an outbound relay and a link origin configured. False
-             *     means nothing was attempted — the link exists and must be passed on by hand.
+             * @description Whether this installation has an outbound relay and a link origin configured.
+             *
+             *     Always true on a 201: the request is refused outright without that lane, because the
+             *     plaintext link is mailed and never returned, so one that cannot be sent is one
+             *     nobody can pass on. Read `confirm_requests_sendable` on `/me` to know before asking.
              */
             sendable: boolean;
         };
@@ -58937,7 +58975,10 @@ export interface operations {
                     subject?: string;
                     booker: {
                         name: string;
-                        /** Format: email */
+                        /**
+                         * Format: email
+                         * @description Refused with 422 `email_names_no_one` on `booker.email` when the local part names a sending system (noreply@ and the like).
+                         */
                         email: string;
                     };
                     consent: components["schemas"]["CaptureConsent"];
@@ -79688,6 +79729,28 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    listFxRateCurrencies: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The sheet's currency codes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FxRateCurrencyListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
         };
     };
     proposeFxRateRefresh: {

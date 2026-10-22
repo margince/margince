@@ -67,14 +67,26 @@ func HasMachineMarker(localpart string) bool {
 		machineMarkers[strings.Join(parts[1:], "")]
 }
 
-// IsMachineAddress reports mail infrastructure and machine-only sender addresses.
-func IsMachineAddress(address string) bool {
+// HasMachineLocalpart reports whether an address's local part names a sending
+// system rather than a human. No domain allowlist overrules it: nobody answers
+// at noreply@ on any domain.
+func HasMachineLocalpart(address string) bool {
 	at := strings.LastIndex(address, "@")
 	if at <= 0 || at == len(address)-1 {
 		return false
 	}
-	if IsMachineLocalpart(address[:at]) || HasMachineMarker(address[:at]) {
+	local := address[:at]
+	return IsMachineLocalpart(local) || HasMachineMarker(local)
+}
+
+// IsMachineAddress reports mail infrastructure and machine-only sender addresses.
+func IsMachineAddress(address string) bool {
+	if HasMachineLocalpart(address) {
 		return true
+	}
+	at := strings.LastIndex(address, "@")
+	if at <= 0 || at == len(address)-1 {
+		return false
 	}
 	base := freemail.Registrable(address[at+1:])
 	if base == "" {

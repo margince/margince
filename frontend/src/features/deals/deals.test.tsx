@@ -320,6 +320,7 @@ describe("mapDealCreate", () => {
         partner_attribution: "influenced",
       },
       "p-1",
+      "EUR",
     );
     expect(body.partner_company_id).toBe("partner-1");
     expect(body.partner_attribution).toBe("influenced");
@@ -335,13 +336,14 @@ describe("mapDealCreate", () => {
     const body = mapDealCreate(
       { name: "x", stage_id: "s-1", partner_company_id: "partner-1" },
       "p-1",
+      "EUR",
     );
     expect(body.partner_company_id).toBe("partner-1");
     expect(body.partner_attribution).toBeNull();
   });
 
   it("names no partner when none was picked", () => {
-    const body = mapDealCreate({ name: "x", stage_id: "s-1" }, "p-1");
+    const body = mapDealCreate({ name: "x", stage_id: "s-1" }, "p-1", "EUR");
     expect(body.partner_company_id).toBeNull();
     expect(body.partner_attribution).toBeNull();
   });

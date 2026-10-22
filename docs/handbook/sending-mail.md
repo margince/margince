@@ -186,8 +186,9 @@ security notice.
 
 ### Why can't I send an email to this contact?
 When Margince will not send an email to a contact, the warning bar above **Send** names the reason. Where there is a fix, it names that too.
-- **Send blocked: no consent**: there is no consent for this purpose. Use **Review consent**, or **Request review** where it is offered.
-- **No recorded reason to contact this recipient**: press **Record reason for contact**, say why you may write, and press **Record reason**. It is recorded under your name for this kind of message, and it is not consent.
+- **Send blocked: no consent**: there is no consent for this purpose. Use **Review consent**, or press **Overrule with a reason** where it is offered.
+- **No recorded reason to contact this recipient**: press **Record reason for contact**, say why you may write, and press **Record reason**. It is recorded under your name for this kind of message, and it is not consent. If Margince still refuses when you press **Send**, press **Overrule with a reason**.
+- **Overrule with a reason**: write why the message may go and press **Record the overrule**, then press **Send** again. Your reason is recorded on each contact, under your name, and covers that kind of message to them until someone revokes it. It is offered only where Margince itself refused. It is not offered when the contact objected or the address does not accept mail.
 - **Message cannot be sent**: a reason nobody can lift, such as "The recipient objected to marketing."
 - A mailbox connected only to read mail: press **Reconnect your mailbox** and allow sending.
 Also called: email blocked, cannot email customer, send refused.

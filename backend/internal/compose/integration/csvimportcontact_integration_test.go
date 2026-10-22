@@ -567,3 +567,72 @@ func TestUploadRefusesAFileThatIsNotUTF8(t *testing.T) {
 		t.Fatalf("refusals = %+v, want one not_utf8 on file", refusals)
 	}
 }
+
+// A row whose address belongs to a sending system names no contact. The dry run
+// skips it with its reason, and the commit skips the same row. The report a
+// reader approves is the one the import carries out.
+func TestCSVImportSkipsARowWithASendingSystemsAddressInPreviewAndCommit(t *testing.T) {
+	e := setupImportApp(t)
+	contactsBefore := importedContactCount(t, e)
+	const file = "Email,Full Name,First Name,Last Name\n" +
+		"signing-noreply@machine-import.example,Signing-Noreply,Contact,A\n" +
+		"ada@machine-import.example,Signing-Noreply,Ada,Lovelace\n"
+
+	profile, status := uploadCSV(t, e, "contact", file)
+	if status != http.StatusOK {
+		t.Fatalf("upload → %d, want 200", status)
+	}
+	run, runStatus := createRunWithMapping(t, e, "contact", profile.SourceRef,
+		map[string]string{"Email": "email", "Full Name": "full_name", "First Name": "first_name", "Last Name": "last_name"})
+	if runStatus != http.StatusAccepted {
+		t.Fatalf("create run → %d, want 202", runStatus)
+	}
+	var report struct {
+		Disposition importDispositionDTO `json:"disposition"`
+		Issues      []struct {
+			Line       int    `json:"line"`
+			ReasonCode string `json:"reason_code"`
+		} `json:"issues"`
+	}
+	if status := e.Call(t, http.MethodGet, "/v1/imports/"+run.ID+"/report", nil, nil, &report); status != http.StatusOK {
+		t.Fatalf("report → %d, want 200", status)
+	}
+	if report.Disposition.Created != 1 || report.Disposition.Skipped != 1 {
+		t.Fatalf("preview = %+v, want 1 created and 1 skipped", report.Disposition)
+	}
+	if len(report.Issues) != 1 || report.Issues[0].ReasonCode != "email_names_no_contact" {
+		t.Fatalf("issues = %+v, want the one row skipped as email_names_no_contact", report.Issues)
+	}
+
+	var approved importRunDTO
+	if status := importCall(t, e, run.ID, "approve", nil, &approved); status != http.StatusAccepted {
+		t.Fatalf("approve → %d, want 202", status)
+	}
+	if got := importedContactCount(t, e); got != contactsBefore+1 {
+		t.Fatalf("contacts = %d, was %d; want the one human row created", got, contactsBefore)
+	}
+	var committed struct {
+		Disposition importDispositionDTO `json:"disposition"`
+	}
+	if status := e.Call(t, http.MethodGet, "/v1/imports/"+run.ID+"/report", nil, nil, &committed); status != http.StatusOK {
+		t.Fatalf("committed report → %d, want 200", status)
+	}
+	if committed.Disposition.Created != 1 || committed.Disposition.Skipped != 1 {
+		t.Fatalf("commit = %+v, want what the preview promised", committed.Disposition)
+	}
+	var listed struct {
+		Data []struct {
+			FullName string `json:"full_name"`
+		} `json:"data"`
+	}
+	if status := e.Call(t, http.MethodGet, "/v1/contacts?limit=100", nil, nil, &listed); status != http.StatusOK {
+		t.Fatalf("list → %d", status)
+	}
+	names := map[string]bool{}
+	for _, c := range listed.Data {
+		names[c.FullName] = true
+	}
+	if !names["Ada Lovelace"] || names["Signing-Noreply"] {
+		t.Errorf("imported names = %v, want Ada Lovelace named from her name parts and no Signing-Noreply", names)
+	}
+}

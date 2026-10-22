@@ -1971,6 +1971,10 @@ func (stubs) SetFxRate(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "SetFxRate")
 }
 
+func (stubs) ListFxRateCurrencies(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListFxRateCurrencies")
+}
+
 func (stubs) ProposeFxRateRefresh(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ProposeFxRateRefresh")
 }

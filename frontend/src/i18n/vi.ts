@@ -419,6 +419,8 @@ export const vi = {
     "Lưu trữ báo giá này và ẩn khỏi danh sách báo giá đang hoạt động. Các hạng mục vẫn được lưu.",
   "approval.preview.importScopeUnavailable":
     "Đề xuất nhập này không có đầy đủ thay đổi theo từng dòng. Mở Nhập dữ liệu để xem nguồn và lần chạy thử trước khi bắt đầu nhập.",
+  "approval.preview.machineAddress":
+    "Không thể chạy phê duyệt: địa chỉ thuộc về một hệ thống gửi thư, không phải của một cá nhân.",
   "approval.preview.confirmationOnly":
     "Ghi nhận xác nhận này và hoàn tất lượt tự động hóa đang chờ. Không cho phép cập nhật bản ghi hoặc gửi tin nhắn.",
   "approval.preview.confirmationQuestion": "Câu hỏi cần xác nhận",
@@ -2598,7 +2600,11 @@ export const vi = {
     "Gửi email cho người này một liên kết riêng để họ xem thông tin đang lưu về họ, chỉnh sửa nếu có sai sót và cho biết họ có muốn nhận tin từ bạn không. Email chỉ được gửi đến đúng địa chỉ đã lưu của họ, không thể gửi đến nơi khác.",
   "consent.askQueued": "Liên kết đang chờ gửi tới {address}.",
   "consent.askNotDelivered":
-    "Đã tạo liên kết cho {address}, nhưng bản cài đặt này không gửi thư nên liên kết không được gửi đi.",
+    "Đã tạo liên kết cho {address} nhưng chưa gửi đi. Bản ghi gửi cho biết tình trạng.",
+  "consent.askNoSystemMail":
+    "Thư hệ thống chưa được thiết lập nên không thể gửi yêu cầu xác nhận. Quản trị viên thiết lập thư hệ thống trong cài đặt email của bản cài đặt.",
+  "consent.askSendableUnknown":
+    "Chưa biết có gửi được hay không. Hãy tải lại trang để kiểm tra.",
   "consent.askExpires": "Liên kết có hiệu lực đến",
   "consent.noRecord": "chưa ghi nhận",
   "consent.noPurposes": "Công ty chưa theo dõi mục đích đồng ý nào.",
@@ -3567,6 +3573,8 @@ export const vi = {
   "commitment.review.title": "Xem lại cam kết",
   "commitment.review.detail":
     "Chưa tạo việc từ các kết quả này. Xem lại nguồn và phản hồi sau đó trước khi thêm việc tiếp theo từ hồ sơ liên kết.",
+  "commitment.review.noPromiser":
+    "Không thể hỏi đồng nghiệp đã đưa ra cam kết này, nên không hỏi ai.",
   "commitment.review.historical": "Cam kết cũ không có hạn chót hiện tại.",
   "commitment.review.beforeBaseline":
     "Gửi trước ngày hộp thư này bắt đầu gợi ý cam kết.",
@@ -5884,12 +5892,15 @@ export const vi = {
   "directSend.reason.legal_obligation": "Nghĩa vụ pháp lý",
   "directSend.reason.other": "Khác",
   "compose.reviewReference": "Phê duyệt",
-  "compose.reviewRequest": "Yêu cầu duyệt",
-  "compose.reviewRequesting": "Đang gửi yêu cầu…",
-  "compose.reviewRequested":
-    "Đã yêu cầu duyệt. Thành viên có quyền gửi tin nhắn này sẽ quyết định; đến lúc đó tin nhắn vẫn chờ.",
-  "compose.reviewRequestFailed":
-    "Không thể gửi yêu cầu duyệt. Thử lại, hoặc mở yêu cầu duyệt từ thông báo từ chối ở trên.",
+  "compose.overrule.open": "Cho phép kèm lý do",
+  "compose.overrule.reasonLabel": "Vì sao tin nhắn này được gửi?",
+  "compose.overrule.hint":
+    "Lý do của bạn được lưu trên từng liên hệ và áp dụng cho loại tin nhắn này cho đến khi bị thu hồi.",
+  "compose.overrule.confirm": "Lưu lý do cho phép",
+  "compose.overrule.recording": "Đang lưu…",
+  "compose.overrule.recorded": "Đã lưu. Hãy bấm Gửi lại.",
+  "compose.overrule.failed":
+    "Chưa lưu được. Hãy thử lại, hoặc mở mục duyệt từ thông báo từ chối ở trên.",
   "compose.consentGoto": "Xem lại sự đồng ý",
   "compose.draftUnavailable":
     "Không thể soạn nháp bằng AI vì chưa cấu hình mô hình. Vẫn có thể tự viết email.",
@@ -7233,6 +7244,8 @@ export const vi = {
     "Tên miền này đã thuộc về một công ty khác trong CRM nên hàng không thể tạo công ty thứ hai với nó.",
   "import.reason.duplicate_email":
     "Địa chỉ email này đã thuộc về một liên hệ khác.",
+  "import.reason.email_names_no_contact":
+    "“{value}” thuộc về một hệ thống gửi thư, không phải của một cá nhân, nên không trở thành liên hệ.",
   "import.reason.employer_column_empty":
     "Cột công ty để trống nên hàng không nêu nhà tuyển dụng nào.",
   "import.reason.employer_column_empty_dropped":

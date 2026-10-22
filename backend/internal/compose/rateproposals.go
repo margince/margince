@@ -84,6 +84,9 @@ func stageRateProposal(ctx context.Context, svc *approvals.Service, kind, target
 		TargetType: targetType, TargetID: ws, Summary: summary,
 		JoinPending: true, Identity: identity,
 	})
+	if errors.Is(err, approvals.ErrNoDecider) {
+		return nil
+	}
 	return err
 }
 

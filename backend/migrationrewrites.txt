@@ -2,3 +2,7 @@
 # migration filename | table names, separated by commas | why these rows are small and bounded
 # An anonymous DO block uses * because its procedural body executes during startup.
 1792562859_an_admin_can_describe_a_second_legal_entity.up.sql | *, audit_log, role | the procedural body is the trigger that keeps the default entity; audit_log gets one row for the one default entity, and role updates the fixed set of system roles
+1792629448_every_request_names_who_decides_it.up.sql | *, approval, audit_log | only PENDING approvals are touched, and a pending request lives at most its expiry window (72h default), so the set is the live inbox, not history
+1792641896_every_request_names_who_decides_it_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1792655143_a_rep_overrules_a_refusal_instead_of_asking.up.sql | *, approval, audit_log, communication_review | only PENDING communication_review cards and reviews awaiting one are touched; a card lives at most its expiry window, so the set is the live queue
+1792655143_a_rep_overrules_a_refusal_instead_of_asking.down.sql | * | the down migration is a single SELECT 1 that changes nothing

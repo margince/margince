@@ -3,12 +3,12 @@
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
-import { problemMessageOf, throwProblem } from "../../lib/problem";
+import { problemMessageOf } from "../../lib/problem";
+import { recordOverrule } from "./sendreviewaction";
 
 type CommunicationContext = components["schemas"]["CommunicationContext"];
 
@@ -38,18 +38,12 @@ export function ContactReasonForm({
   const queryClient = useQueryClient();
   const [reason, setReason] = useState("");
   const vouch = useMutation({
-    mutationFn: async (asked: Vouch) => {
-      const { error, response } = await api.POST(
-        "/contacts/{id}/consent/allow",
-        {
-          params: { path: { id: asked.contactId } },
-          body: { category: asked.category, reason: asked.reason },
-        },
-      );
-      if (!response.ok) {
-        throwProblem(error || { title: t("compose.actionFailed") });
-      }
-    },
+    mutationFn: (asked: Vouch) =>
+      recordOverrule({
+        overrulable: [{ contactId: asked.contactId, category: asked.category }],
+        reason: asked.reason,
+        onRecorded: () => {},
+      }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["send-permission"] });
       onRecorded();

@@ -5,6 +5,7 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // MergeContact serves POST /contacts/{id}/merge — merge this contact (A, the path id)
@@ -252,6 +254,11 @@ func (h Handlers) QuickCaptureContact(w http.ResponseWriter, r *http.Request, _ 
 	}
 
 	captured, err := h.store.QuickCapture(r.Context(), in)
+	if refused, ok := errors.AsType[*values.ParseError](err); ok && refused.Code == MachineAddressCode {
+		// This request names its one address `email`, not `emails`.
+		httperr.Write(w, r, httperr.Validation("email", refused.Code, refused.Message))
+		return
+	}
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

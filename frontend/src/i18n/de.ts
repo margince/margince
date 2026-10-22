@@ -419,6 +419,8 @@ export const de = {
     "Dieses Angebot archivieren und aus der aktiven Angebotsliste ausblenden. Seine Positionen bleiben gespeichert.",
   "approval.preview.importScopeUnavailable":
     "Dieser Importvorschlag enthält keine vollständigen Änderungen je Zeile. Öffne Datenimport und prüfe die Quelle und den Testlauf, bevor du den Import startest.",
+  "approval.preview.machineAddress":
+    "Die Freigabe kann nicht ausgeführt werden: Die Adresse gehört zu einem Versandsystem, nicht zu einem Menschen.",
   "approval.preview.confirmationOnly":
     "Diese Bestätigung erfassen und den wartenden Automatisierungslauf abschließen. Es wird keine Datensatzänderung und kein Nachrichtenversand freigegeben.",
   "approval.preview.confirmationQuestion": "Zu bestätigende Frage",
@@ -2681,7 +2683,11 @@ export const de = {
     "Sendet diesem Kontakt per E-Mail einen privaten Link. Über diesen Link sieht der Kontakt die gespeicherten Daten, kann sie korrigieren und angeben, ob Nachrichten von deinem Unternehmen erwünscht sind. Der Link wird an die hinterlegte Adresse des Kontakts gesendet. Eine andere Adresse ist nicht möglich.",
   "consent.askQueued": "Link für {address} zum Versand vorgemerkt.",
   "consent.askNotDelivered":
-    "Der Link wurde für {address} erstellt, aber nicht gesendet, da diese Installation keine E-Mails versendet.",
+    "Der Link wurde für {address} erstellt, ist aber noch nicht hinausgegangen. Der Versandeintrag sagt, wie es steht.",
+  "consent.askNoSystemMail":
+    "Der Systemversand ist nicht eingerichtet, daher sind keine Bestätigungsanfragen möglich. Ein Admin richtet ihn in den E-Mail-Einstellungen der Installation ein.",
+  "consent.askSendableUnknown":
+    "Ob sich das senden lässt, ist noch nicht bekannt. Ein Neuladen der Seite prüft es erneut.",
   "consent.askExpires": "Der Link gilt bis",
   "consent.noRecord": "kein Eintrag",
   "consent.noPurposes":
@@ -3661,6 +3667,8 @@ export const de = {
   "commitment.review.title": "Zusagen prüfen",
   "commitment.review.detail":
     "Aus diesen Auswertungen wurden keine Aufgaben erstellt. Prüfe die Quelle und spätere Antworten, bevor du im verknüpften Datensatz eine Folgeaufgabe anlegst.",
+  "commitment.review.noPromiser":
+    "Niemand aus dem Team, der diese Zusage gemacht hat, kann gefragt werden. Deshalb wurde niemand gefragt.",
   "commitment.review.historical": "Ältere Zusage ohne aktuelle Frist.",
   "commitment.review.beforeBaseline":
     "Vor dem Datum gesendet, ab dem dieses Postfach Zusagen vorschlägt.",
@@ -6029,12 +6037,16 @@ export const de = {
   "directSend.reason.legal_obligation": "Rechtliche Verpflichtung",
   "directSend.reason.other": "Sonstiges",
   "compose.reviewReference": "Prüfung",
-  "compose.reviewRequest": "Prüfung anfordern",
-  "compose.reviewRequesting": "Wird angefordert…",
-  "compose.reviewRequested":
-    "Prüfung angefordert. Jemand, der diese Nachricht senden darf, entscheidet darüber. Bis dahin wartet die Nachricht.",
-  "compose.reviewRequestFailed":
-    "Die Prüfung konnte nicht angefordert werden. Bitte versuche es erneut oder öffne die Prüfung über die Ablehnung oben.",
+  "compose.overrule.open": "Mit Begründung freigeben",
+  "compose.overrule.reasonLabel": "Warum darf diese Nachricht raus?",
+  "compose.overrule.hint":
+    "Deine Begründung wird bei jedem Kontakt gespeichert und gilt für diese Art Nachricht, bis jemand sie widerruft.",
+  "compose.overrule.confirm": "Freigabe speichern",
+  "compose.overrule.recording": "Wird gespeichert…",
+  "compose.overrule.recorded":
+    "Freigabe gespeichert. Drücke erneut auf Senden.",
+  "compose.overrule.failed":
+    "Die Freigabe wurde nicht gespeichert. Versuche es erneut oder öffne die Prüfung über die Ablehnung oben.",
   "compose.consentGoto": "Einwilligung prüfen",
   "compose.draftUnavailable":
     "KI-Entwürfe sind nicht verfügbar, da kein Modell konfiguriert ist. Die E-Mail lässt sich weiterhin selbst schreiben.",
@@ -7433,6 +7445,8 @@ export const de = {
     "Diese Domain gehört im CRM bereits einem anderen Unternehmen, daher kann die Zeile kein zweites Unternehmen damit anlegen.",
   "import.reason.duplicate_email":
     "Diese E-Mail-Adresse gehört bereits einem anderen Kontakt.",
+  "import.reason.email_names_no_contact":
+    "„{value}“ gehört zu einem Versandsystem, nicht zu einem Menschen, und wird darum kein Kontakt.",
   "import.reason.employer_column_empty":
     "Die Unternehmensspalte ist leer, daher nennt die Zeile keinen Arbeitgeber.",
   "import.reason.employer_column_empty_dropped":

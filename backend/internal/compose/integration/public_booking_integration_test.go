@@ -443,3 +443,48 @@ func TestAnAnonymousBookingNamesNoPurposeAndStillGrantsTheLane(t *testing.T) {
 		t.Fatalf("the booking granted %q=%q, want transactional=granted", key, state)
 	}
 }
+
+// A booking from a sending system's address names no contact. The form gets
+// the refusal on its own field, and nothing is written: no contact, no
+// meeting, no consent grant.
+func TestAPublicBookingFromASendingSystemsAddressIsRefusedOnTheBookerEmail(t *testing.T) {
+	e := setupBookingApp(t)
+	e.BootstrapWorkspace(t)
+	enableBookingPage(t, e)
+	base := "/v1/public/booking/" + bookingSlug(t, e)
+	monday := nextMonday()
+	before := bookingRows(t, e)
+
+	booking := AnyMap{
+		"start": monday.Add(1 * time.Hour), "end": monday.Add(90 * time.Minute),
+		"booker":  AnyMap{"name": "Calendar", "email": "calendar-notification@visitor.example"},
+		"consent": AnyMap{"policy_version": "pp-2026-01", "wording": "You agree we may contact you about this meeting."},
+	}
+	var problem struct {
+		Details struct {
+			Errors []struct {
+				Field string `json:"field"`
+				Code  string `json:"code"`
+			} `json:"errors"`
+		} `json:"details"`
+	}
+	if status := publicCall(t, e, "POST", base, booking, nil, &problem); status != http.StatusUnprocessableEntity {
+		t.Fatalf("booking → %d %+v, want 422", status, problem)
+	}
+	if faults := problem.Details.Errors; len(faults) != 1 || faults[0].Field != "booker.email" || faults[0].Code != "email_names_no_one" {
+		t.Errorf("problem = %+v, want the fault on booker.email", problem)
+	}
+	if written := bookingRows(t, e); written != before {
+		t.Errorf("contact, meeting and consent rows went from %d to %d on a refused booking", before, written)
+	}
+}
+
+func bookingRows(t *testing.T, e *apptest.AppEnv) int {
+	t.Helper()
+	var written int
+	if err := e.Owner.QueryRow(context.Background(), `
+		SELECT (SELECT count(*) FROM contact) + (SELECT count(*) FROM activity) + (SELECT count(*) FROM contact_consent)`).Scan(&written); err != nil {
+		t.Fatal(err)
+	}
+	return written
+}

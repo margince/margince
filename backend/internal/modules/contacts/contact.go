@@ -268,6 +268,11 @@ func (s *Store) EnsureContactByEmail(ctx context.Context, fullName, email, sourc
 	if err := auth.Require(ctx, "contact", principal.ActionCreate); err != nil {
 		return ids.Nil, err
 	}
+	// Before the lookup, so a machine-address contact made before the refusal
+	// existed is not handed back either.
+	if err := refuseMachineAddress(email); err != nil {
+		return ids.Nil, err
+	}
 	lookup := func() (ids.UUID, bool, error) {
 		var id ids.UUID
 		found := false

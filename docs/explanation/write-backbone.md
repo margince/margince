@@ -260,7 +260,7 @@ time reports it.
 | `cg:company-auto-enrich` | queue a company's fill pass as soon as it shows up, not on the next daily pass | **live** (worker) |
 | `cg:intro-advance` | end a request to meet a contact once the contact answers it | **live** |
 | `cg:notice-case-open` | open, and later end, the case for what the installation owes a contact it learned of without asking them | **live** |
-| `cg:approval-notify` | on `approval.requested`, put the card in the queue of every seat that could decide it | **live** (worker) |
+| `cg:approval-notify` | on `approval.requested`, put the card in the queue of the one member it names | **live** (worker) |
 | `cg:approval-notice-retract` | on a decided or timed-out card, take back the lines it put in other seats' queues | **live** |
 | `cg:overnight-agent` | on `approval.decided`, start again the waiting Surface-B run with the human's answer | **live** (worker; only when a model is set up) |
 | `cg:workflows` | start the workflow engine on matching events | **live** (worker) |

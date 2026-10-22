@@ -40,6 +40,7 @@ const SEAT_MAY_WRITE = {
     seat_type: "full",
     objects: { contact: { read: true, update: true } },
   },
+  confirm_requests_sendable: true,
 };
 
 // The row the section is asked about. `writable` is what the server answers per
@@ -615,7 +616,53 @@ describe("asking a contact to confirm their details", () => {
       seat_type: "full",
       objects: { contact: { read: true, update: true } },
     },
+    confirm_requests_sendable: true,
   };
+
+  // The same caller on an installation with no outbound relay. Nothing about
+  // their grant changes: the capability folds the installation in, so the
+  // answer differs while the seat does not.
+  const NO_SYSTEM_MAIL = { ...MAY_WRITE, confirm_requests_sendable: false };
+
+  // An installation with no outbound relay cannot carry this link anywhere, and
+  // the endpoint refuses to mint one. Offering the action anyway spent a click
+  // on a refusal and told the reader their own mailbox sends no mail.
+  it("does not offer the ask when the installation cannot send it", async () => {
+    stubRoutes({ "GET /me": () => jsonResponse(NO_SYSTEM_MAIL) });
+    render(<ConsentSection contactId="contact-1" contact={writableContact} />);
+
+    const ask = await screen.findByTestId("confirm-details-ask");
+    expect(ask).toBeDisabled();
+    // The reason travels with the control rather than sitting in a tooltip the
+    // keyboard never reaches, which is what Button.reason is for.
+    expect(
+      await screen.findByText(/confirmation requests cannot be sent/i),
+    ).toBeInTheDocument();
+  });
+
+  // A server that does not carry the capability is not an installation without
+  // mail. The field is optional, so a client ahead of its server reads nothing
+  // there. Barring the action is the safe direction either way. Naming a cause
+  // nobody has read is not: a rep would ask an admin to fix what may need no
+  // fixing.
+  it("does not blame the mail lane when the server carries no answer", async () => {
+    const { confirm_requests_sendable: _unanswered, ...noCapability } =
+      MAY_WRITE;
+    stubRoutes({ "GET /me": () => jsonResponse(noCapability) });
+    render(<ConsentSection contactId="contact-1" contact={writableContact} />);
+
+    const ask = await screen.findByTestId("confirm-details-ask");
+    expect(ask).toBeDisabled();
+    expect(await screen.findByText(/not known yet/i)).toBeInTheDocument();
+    expect(screen.queryByText(/system mail is not set up/i)).toBeNull();
+  });
+
+  it("offers it once the installation can send", async () => {
+    stubRoutes({ "GET /me": () => jsonResponse(MAY_WRITE) });
+    render(<ConsentSection contactId="contact-1" contact={writableContact} />);
+
+    expect(await screen.findByTestId("confirm-details-ask")).toBeEnabled();
+  });
 
   it("reports the address it went to, which the caller never chose", async () => {
     const sent: Sent[] = [];
@@ -675,7 +722,7 @@ describe("asking a contact to confirm their details", () => {
     expect(sent).not.toHaveTextContent(/sends no mail/i);
   });
 
-  it("says plainly when the link exists but nobody was sent it", async () => {
+  it("says the link has not gone out rather than naming a cause", async () => {
     stubRoutes({
       "GET /me": () => jsonResponse(MAY_WRITE),
       "POST /contacts/contact-1/consent/confirm-request": () =>
@@ -694,9 +741,13 @@ describe("asking a contact to confirm their details", () => {
 
     // A rep who reads "sent" here would believe a contact was asked when they
     // never were, and would stop waiting for an answer that cannot come.
-    expect(await screen.findByTestId("confirm-details-sent")).toHaveTextContent(
-      /sends no mail/i,
-    );
+    //
+    // It no longer blames the installation's mail, which is refused before a
+    // token exists. A minted and unqueued link is the delivery record's
+    // business.
+    const sent = await screen.findByTestId("confirm-details-sent");
+    expect(sent).toHaveTextContent(/has not gone out yet/i);
+    expect(sent).not.toHaveTextContent(/sends no mail/i);
   });
 
   it("shows a contact with no address as a refusal", async () => {

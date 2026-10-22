@@ -1091,7 +1091,10 @@ public.approval.approval_decided_by_fkey FOREIGN KEY (decided_by) REFERENCES app
 public.approval.approval_effect_failure_is_stated CHECK (((effect_failed_at IS NULL) = (effect_failure IS NULL)))
 public.approval.approval_on_behalf_of_fkey FOREIGN KEY (on_behalf_of) REFERENCES app_user(id) ON DELETE SET NULL (on_behalf_of)
 public.approval.approval_passport_id_fkey FOREIGN KEY (passport_id) REFERENCES passport(id) ON DELETE SET NULL (passport_id)
+public.approval.approval_pending_names_decider CHECK (((status <> 'pending'::text) OR ((requested_decider_id IS NOT NULL) AND (requested_decider_source IS NOT NULL))))
 public.approval.approval_pkey PRIMARY KEY (id)
+public.approval.approval_requested_decider_fkey FOREIGN KEY (requested_decider_id) REFERENCES app_user(id) ON DELETE SET NULL
+public.approval.approval_requested_decider_source_check CHECK ((requested_decider_source = ANY (ARRAY['payload_owner'::text, 'on_behalf_of'::text, 'stager'::text, 'record_owner'::text])))
 public.approval.approval_staged_by_connection_fkey FOREIGN KEY (staged_by_connection) REFERENCES oauth_grant(id) ON DELETE SET NULL
 public.approval.approval_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text, 'expired'::text])))
 public.approval.approval_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
@@ -1117,6 +1120,8 @@ public.approval.on_behalf_of uuid gen=- def=-
 public.approval.passport_id uuid gen=- def=-
 public.approval.proposed_by text NOT NULL gen=- def=-
 public.approval.proposed_change jsonb NOT NULL gen=- def=-
+public.approval.requested_decider_id uuid gen=- def=-
+public.approval.requested_decider_source text gen=- def=-
 public.approval.staged_by_connection uuid gen=- def=-
 public.approval.status text NOT NULL gen=- def='pending'::text
 public.approval.summary text gen=- def=-

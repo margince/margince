@@ -244,6 +244,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `consumerlanes_test.go` | H3 | Every consumer group the catalog declares is subscribed by some process role, or is a reserved placeholder that says so. |
 | `consumersubscribed_test.go` | H3 | Every event consumer is actually subscribed. |
 | `contactattachlock_test.go` | H2 | A relationship carrying a contact is written under that contact's row lock. |
+| `contactemailmachinerule_test.go` | H2 | Every product statement that inserts into contact\_email sits in a function that asks refuseMachineAddress first. |
 | `contactprofilefieldwriter_test.go` | H2 | contacts.writeContactProfileField is the one writer of contact\_profile\_field, and the one place the precedence rule lives: a machine fill claims an unanswered field, a human's acceptance replaces what is there. |
 | `contactprosecoverage_test.go` | H3 | Every table with a foreign key to contact and a column prose fits in is registered or carries a reason. |
 | `contactreaders_test.go` | H2 | `contact` is an RBAC object, and until this gate nothing held the object half of that anywhere outside the module that owns it. |

@@ -59,7 +59,7 @@ To add a new contact in Margince, open **Contacts** in the sidebar and choose **
 2. If you like, fill **First name**, **Last name**, **Title** and **LinkedIn**.
 3. Choose **Add email** for each address and set its **Type** (Work, Personal or Other); choose **Add phone** for each number.
 4. Fill any custom fields, then choose **Create**. It stays turned off until the full name is filled.
-If the contact is already in Margince, **View existing record** opens it instead.
+If the contact is already in Margince, **View existing record** opens it instead. An email that belongs to a sending system, such as `noreply@` or `receipts@`, is refused.
 Also called: create a contact, add someone to the CRM, new customer contact.
 
 ### How do I add a contact quickly, or import contacts from vCards?
