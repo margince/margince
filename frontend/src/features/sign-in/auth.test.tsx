@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resetTheme } from "../../app/theme-reset";
 import { LOCALES, localeNameKey, translate } from "../../i18n";
+import { keepReturnRoute, restoreReturnRoute } from "../../lib/returnroute";
 import { STORAGE_KEYS } from "../../lib/storage";
 import { AuthScreen, AvailabilityScreen } from "./auth";
 import { ok, render, stubApi, t } from "./auth.testkit";
@@ -29,6 +30,7 @@ afterEach(() => {
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
   window.location.hash = "";
+  sessionStorage.clear();
 });
 
 describe("AuthScreen login", () => {
@@ -347,6 +349,18 @@ describe("OIDC failure notice", () => {
 
     expect(await screen.findByText(t("auth.noticeOidcFailed"))).toBeTruthy();
     expect(window.location.hash).toBe("");
+  });
+
+  it("puts back the link a failed provider sign-in started from", async () => {
+    window.location.hash = "#/home?approval=ap-7";
+    keepReturnRoute();
+    window.location.hash = "#/login?oidc=failed";
+    restoreReturnRoute();
+    stubApi({ password: true, password_reset: true }, () => ok(200));
+    render(<AuthScreen onAuthed={vi.fn()} />);
+
+    expect(await screen.findByText(t("auth.noticeOidcFailed"))).toBeTruthy();
+    expect(window.location.hash).toBe("#/home?approval=ap-7");
   });
 
   it("stays silent for an ordinary address", async () => {

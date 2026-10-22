@@ -9,9 +9,9 @@ import { AuthCardTitle, type AuthPhase } from "../../components/auth-core";
 import { Button } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { isBareEntry } from "../../lib/returnroute";
 import { navigate } from "../../lib/router";
 import { enteredCode, MfaCodeField } from "./mfacode";
-import { isBareEntry } from "./returnroute";
 
 // A refused credential never says which half was wrong, and a status decides
 // the message; detail strings are never parsed.

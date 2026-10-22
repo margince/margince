@@ -2,7 +2,7 @@
 import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { readStored, STORAGE_KEYS } from "../../lib/storage";
+import { takeReturnRoute } from "../../lib/returnroute";
 import { AuthScreen } from "./auth";
 import { ok, render, stubApi, stubLocationAssign, t } from "./auth.testkit";
 import { ProviderButtons } from "./auth-providers";
@@ -257,9 +257,7 @@ describe("federated sign-in", () => {
       );
 
       expect(assign).toHaveBeenCalledWith("/v1/auth/oidc/microsoft/start");
-      expect(readStored(STORAGE_KEYS.signInReturnRoute)).toBe(
-        "#/home?approval=ap-7",
-      );
+      expect(takeReturnRoute()).toBe("#/home?approval=ap-7");
     });
   });
 
