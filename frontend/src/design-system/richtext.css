@@ -11,7 +11,9 @@
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
   background: var(--bgElevated);
-  overflow: hidden;
+  /* `clip`, not `hidden`: it keeps the rounded corners without making the frame
+     a scroll container, which would hold a sticky footer in place. */
+  overflow: clip;
   transition:
     border-color var(--dur-state) var(--ease-out),
     box-shadow var(--dur-state) var(--ease-out),
@@ -37,6 +39,8 @@
   justify-content: space-between;
   gap: var(--space-3);
   padding: 2px var(--space-2) var(--space-2); /* ds:ignore the footer's own tight rhythm against the surface it sits under */
+  /* Opaque, so text scrolling under a sticky footer does not show through. */
+  background: var(--bgElevated);
 }
 .richtext-hint {
   margin: 0;
@@ -99,7 +103,7 @@
  *
  * A floor rather than a height is what it used to be, and a floor is the one
  * thing this surface must not carry: the frame around it clips (`overflow:
- * hidden` above, which is what keeps the focus ring's corners), and a host with
+ * clip` above, which is what keeps the focus ring's corners), and a host with
  * a height to give it — the reply drawer's fields column, which hands the
  * surface whatever the fields above it leave — then shrank the frame while the
  * surface underneath refused to follow. What that cut off was the end of the
@@ -154,6 +158,12 @@
   margin-bottom: 0;
 }
 
+/* The global reset makes `b` and `strong` inherit their weight; here they are
+   the writer's own bold, which the toolbar's state also reads back. */
+.richtext-input :is(b, strong) {
+  font-weight: var(--fontWeightBold);
+}
+
 .richtext-input a {
   color: var(--accentText);
   text-decoration: underline;
@@ -185,6 +195,12 @@
 .richtext.is-growing > .richtext-input {
   flex: 1 0 auto;
   overflow-y: visible;
+}
+/* The host scrolls, so the toolbar sticks to the bottom of the visible part of
+   the field; a selection near the top of a long text stays in its reach. */
+.richtext.is-growing > .richtext-foot {
+  position: sticky;
+  bottom: 0;
 }
 
 /* A heading in a markdown body: one step above the text, never a page title. */
