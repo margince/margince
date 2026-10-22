@@ -25,6 +25,8 @@ type Size = Readonly<{ width: number; height: number }>;
 // longer fit; the glass bounds the other end.
 const SMALLEST: Size = { width: 380, height: 320 };
 const GUTTER = 48;
+// Where the window becomes a sheet (dockedwindow.css); a sheet does not slide.
+const SHEET = "(max-width: 720px)";
 
 function clamp(value: number, low: number, high: number) {
   return Math.min(Math.max(value, low), Math.max(low, high));
@@ -36,7 +38,8 @@ function clamp(value: number, low: number, high: number) {
  * leave, so the reader can read the record while writing.
  *
  * It folds to its title bar (Escape too), grows, or sizes by its top and
- * start edges. Folding keeps the content mounted. On a phone it is a sheet.
+ * start edges. Its title bar slides it along the bottom edge. Folding
+ * keeps the content mounted. On a phone it is a sheet.
  */
 export function DockedWindow({
   title,
@@ -70,6 +73,17 @@ export function DockedWindow({
     from: Size;
     edges: Readonly<{ start: boolean; top: boolean }>;
   } | null>(null);
+  // How far the window has been slid from its corner along the bottom edge,
+  // and where a slide started. Pointer only, like the sizing edges: where it
+  // sits is the reader's preference, and every control works in the corner.
+  const [shift, setShift] = useState(0);
+  const [slide, setSlide] = useState<{
+    x: number;
+    from: number;
+    room: number;
+    toward: 1 | -1;
+  } | null>(null);
+  const sheet = globalThis.matchMedia?.(SHEET).matches ?? false;
   const focusFirst = useRef(initialFocusTo);
   useEffect(() => {
     (focusFirst.current?.() ?? box.current)?.focus();
@@ -116,6 +130,34 @@ export function DockedWindow({
     onPointerUp: release,
     onPointerCancel: release,
   });
+  const lift = (event: PointerEvent<HTMLDivElement>) => {
+    const node = box.current;
+    // The bar's own buttons keep their press; only its open field slides.
+    if (
+      !node ||
+      sheet ||
+      (event.target instanceof Element && event.target.closest("button"))
+    ) {
+      return;
+    }
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    const end = node.getBoundingClientRect();
+    const rtl = getComputedStyle(node).direction === "rtl";
+    setSlide({
+      x: event.clientX,
+      from: shift,
+      // The room between the window and the far edge of the glass.
+      room: shift + (rtl ? window.innerWidth - end.right : end.left),
+      toward: rtl ? -1 : 1,
+    });
+  };
+  const slideTo = (event: PointerEvent<HTMLDivElement>) => {
+    if (!slide) return;
+    const moved = (slide.x - event.clientX) * slide.toward;
+    setShift(clamp(slide.from + moved, 0, slide.room));
+  };
+  const drop = () => setSlide(null);
   const fold = (event: KeyboardEvent<HTMLElement>) => {
     if (event.key !== "Escape" || event.defaultPrevented) return;
     event.preventDefault();
@@ -133,11 +175,12 @@ export function DockedWindow({
         hidden={state === "min"}
         tabIndex={-1}
         onKeyDown={fold}
-        style={
-          size && !grown
+        style={{
+          ...(size && !grown
             ? { inlineSize: `${size.width}px`, blockSize: `${size.height}px` }
-            : undefined
-        }
+            : {}),
+          ...(shift && !sheet ? { marginInlineEnd: `${shift}px` } : {}),
+        }}
       >
         {/* Pointer-only: the grow control is the keyboard's way to size it. */}
         <div
@@ -155,7 +198,13 @@ export function DockedWindow({
           aria-hidden="true"
           {...grip({ start: true, top: true })}
         />
-        <div className="docked-head">
+        <div
+          className={slide ? "docked-head is-sliding" : "docked-head"}
+          onPointerDown={lift}
+          onPointerMove={slideTo}
+          onPointerUp={drop}
+          onPointerCancel={drop}
+        >
           <Heading as="h2" size="xsmall" id={titleId} className="docked-title">
             {title}
           </Heading>

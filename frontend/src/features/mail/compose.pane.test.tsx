@@ -404,4 +404,61 @@ describe("the composer's conversation pane", () => {
       ),
     ).toHaveLength(0);
   });
+
+  it("searches a long record's threads and reads older ones a page at a time", async () => {
+    const user = userEvent.setup();
+    const older: Activity = {
+      ...sibling,
+      id: "act-9",
+      subject: "Invoice 1040",
+    };
+    const sent = stubRoutes({
+      "GET /activities": () =>
+        jsonResponse({
+          data: [threaded],
+          page: { has_more: true, next_cursor: "c-2" },
+        }),
+    });
+    render(
+      <ComposeModal
+        entityType="company"
+        entityId="o-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+    await user.click(
+      await screen.findByRole("button", { name: /Continue a thread$/ }),
+    );
+
+    // Older mail is a page away, read on asking.
+    await user.click(
+      await within(threadMenu()).findByRole("button", { name: "Show more" }),
+    );
+    await waitFor(() =>
+      expect(
+        sent.some(
+          (call) =>
+            call.key === "GET /activities" &&
+            call.query.get("cursor") === "c-2",
+        ),
+      ).toBe(true),
+    );
+
+    // Words typed are asked of the server, not filtered from one page.
+    const searched = stubRoutes({
+      "GET /activities": () =>
+        jsonResponse({ data: [older], page: { has_more: false } }),
+    });
+    await user.type(within(threadMenu()).getByRole("searchbox"), "invoice");
+    expect(
+      await within(threadMenu()).findByRole("button", { name: /Invoice 1040/ }),
+    ).toBeTruthy();
+    expect(
+      searched.some(
+        (call) =>
+          call.key === "GET /activities" && call.query.get("q") === "invoice",
+      ),
+    ).toBe(true);
+  });
 });

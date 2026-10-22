@@ -36,6 +36,15 @@ type Reads = Readonly<{
 
 // Only the reads the bar draws from; the hook behind it is not under test.
 function threadOf(reads: Reads): ComposeThread {
+  const recent = {
+    conversations: reads.conversations ?? [pricing],
+    pending: false,
+    failed: reads.failed ?? false,
+    retry: reads.retry ?? (() => undefined),
+    more: false,
+    loadMore: () => undefined,
+    loadingMore: false,
+  };
   const fake = {
     anchorRead: {
       activity: undefined,
@@ -51,12 +60,10 @@ function threadOf(reads: Reads): ComposeThread {
       retry: () => undefined,
     },
     anchorUnresolved: false,
-    recent: {
-      conversations: reads.conversations ?? [pricing],
-      pending: false,
-      failed: reads.failed ?? false,
-      retry: reads.retry ?? (() => undefined),
-    },
+    recent,
+    listed: recent,
+    search: "",
+    setSearch: () => undefined,
     answeringLine: "Replying to “Pricing for Q4”",
     splitColumns: true,
   };
@@ -124,11 +131,19 @@ it("offers each thread and the way back as design-system buttons", async () => {
 
   expect(screen.getByText("New thread")).toBeTruthy();
   let menu = await openMenu(user);
-  expect(menu.getByText("Continue a thread with Ada Brandt")).toBeTruthy();
+  expect(menu.getByText("Recent threads")).toBeTruthy();
+  expect(
+    menu.getByRole("searchbox", { name: "Search threads with Ada Brandt" }),
+  ).toBeTruthy();
   const card = menu.getByRole("button", { name: /Pricing for Q4/ });
   expect(card.classList.contains("btn")).toBe(true);
   expect(card.getAttribute("aria-pressed")).toBe("false");
-  expect(menu.queryByRole("button", { name: "New email" })).toBeNull();
+  // A new thread heads the list, marked while the draft starts one.
+  expect(
+    menu
+      .getByRole("button", { name: "New thread" })
+      .getAttribute("aria-pressed"),
+  ).toBe("true");
   await user.click(card);
   expect(select).toHaveBeenCalledWith("a2");
 
