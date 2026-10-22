@@ -31,10 +31,10 @@ const MaxApprovalBurst = 25
 func (s *Store) ClaimApprovalBurst(ctx context.Context, first EmailAttempt, window time.Duration) ([]EmailAttempt, error) {
 	var burst []EmailAttempt
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// The pick is MATERIALIZED so it runs once. An IN over a LIMITed subquery can be
+		// re-run per row, and one statement then claims more rows than its limit.
 		rows, err := tx.Query(ctx, `
-			UPDATE notice
-			   SET email_attempted_at = now()
-			 WHERE id IN (
+			WITH picked AS MATERIALIZED (
 			       SELECT id FROM notice
 			        WHERE recipient_user_id = @recipient AND kind = @kind AND id <> @first
 			          AND email_attempted_at IS NULL AND read_at IS NULL
@@ -42,6 +42,9 @@ func (s *Store) ClaimApprovalBurst(ctx context.Context, first EmailAttempt, wind
 			        ORDER BY created_at, id
 			        LIMIT @limit
 			        FOR UPDATE SKIP LOCKED)
+			UPDATE notice
+			   SET email_attempted_at = now()
+			 WHERE id IN (SELECT id FROM picked)
 			 RETURNING `+claimedNoticeColumns, pgx.StrictNamedArgs{
 			"recipient": first.Recipient, noticeKindArg: KindApprovalPending, "first": first.Notice.ID,
 			"since": first.Notice.CreatedAt.Add(-window), "until": first.Notice.CreatedAt.Add(window),

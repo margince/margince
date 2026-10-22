@@ -25,10 +25,9 @@ const (
 	MaxConfidentialityPassCap     = 200
 )
 
-// ConfidentialityPassCap is how many held threads one pass answers per
-// workspace. A thread the model fails on does not count. The rest stay
-// claimable for the next pass, so the cap sets how fast a backlog drains and
-// never whether a thread is judged.
+// ConfidentialityPassCap is how many held threads one pass asks the model about
+// per workspace, answered or not. The rest stay claimable for the next pass, so
+// the cap sets how fast a backlog drains and never whether a thread is judged.
 //
 // It is MachineryApplied because the engine runs as a system principal that
 // holds no `capture_settings` grant.

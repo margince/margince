@@ -426,40 +426,6 @@ func (s *Store) EnqueueJob(ctx context.Context, specName, triggerRef string, pas
 	})
 }
 
-// ClaimDueJobs atomically claims up to limit due jobs. FOR UPDATE SKIP LOCKED
-// keeps parallel workers from double-claiming without serializing on each
-// other.
-func (s *Store) ClaimDueJobs(ctx context.Context, limit int) ([]QueuedJob, error) {
-	var jobs []QueuedJob
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
-			UPDATE runner_job SET status = 'running', attempts = attempts + 1
-			WHERE id IN (
-			  SELECT id FROM runner_job
-			  WHERE status = 'queued' AND due_at <= now()
-			  ORDER BY due_at
-			  LIMIT $1
-			  FOR UPDATE SKIP LOCKED)
-			RETURNING id, agent_spec, trigger_ref, passport_id`, limit)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var j QueuedJob
-			if err := rows.Scan(&j.ID, &j.SpecName, &j.TriggerRef, &j.PassportID); err != nil {
-				return err
-			}
-			jobs = append(jobs, j)
-		}
-		return rows.Err()
-	})
-	if err != nil {
-		return nil, fmt.Errorf("runner: claim jobs: %w", err)
-	}
-	return jobs, nil
-}
-
 // FinishJob closes a claimed job; failures keep their reason on the row
 // so an operator can see WHY the 06:00 brief never ran.
 func (s *Store) FinishJob(ctx context.Context, jobID ids.UUID, runID *ids.UUID, failReason string) error {

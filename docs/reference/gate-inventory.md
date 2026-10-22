@@ -490,6 +490,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `calendarverbseat_test.go` | H2 | A calendar verb acting on a row it found by the provider's event id proves the acting seat holds that row. |
 | `capabilitypathlog_test.go` | H2 | A request path reaches a log line through capabilitypath.Redact, never raw. |
 | `catalogvocabulary_test.go` | H2 | The tool catalog calls the record a company, and the other word for it fails here. |
+| `claimpickonce_test.go` | H2 | A claim query picks its rows once, in a MATERIALIZED CTE, and never in an IN subquery. |
 | `commentnamedtests_test.go` | H1 | A test named in a comment exists. |
 | `companyvocabulary_test.go` | H1 | The record type is called company, and its retired name fails here. |
 | `connectoractor_test.go` | H1 | A connector's actor id is derived from the work, never written down. |
