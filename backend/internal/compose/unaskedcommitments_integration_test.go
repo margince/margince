@@ -12,7 +12,6 @@ package compose
 import (
 	"encoding/json"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -20,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/notices"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -82,8 +82,8 @@ func TestARequestSentToTheWrongColleagueIsTakenBack(t *testing.T) {
 
 	recipient := a.e.As(a.e.Rep1, nil, integration.AdminPerms)
 	for id, sent := range map[ids.ApprovalID]bool{kept: true, wrong: false} {
-		attempt := notices.EmailAttempt{ApprovalID: &id, Notice: notices.Notice{Kind: notices.KindApprovalPending}}
-		if _, send, err := refreshApprovalNotice(recipient, a.e.Pool, attempt, time.Now()); err != nil || send != sent {
+		attempt := notices.EmailAttempt{ApprovalID: &id, Notice: notices.Notice{Kind: notices.KindApprovalPending}, Recipient: ids.From[ids.UserKind](a.e.Rep1)}
+		if _, _, send, err := refreshApprovalNotice(recipient, a.e.Pool, attempt, clocktest.Now(t)); err != nil || send != sent {
 			t.Errorf("the queued email for %s: send=%v err=%v, want send=%v", id, send, err, sent)
 		}
 	}
@@ -155,7 +155,7 @@ func TestACommitmentIsStagedOnlyForItsPromiser(t *testing.T) {
 	}{
 		"for a colleague who did not make the promise": {a.e.Rep1, a.e.Rep1, a.e.Rep2},
 		"on behalf of another colleague":               {a.e.Rep2, a.e.Rep1, a.e.Rep1},
-		"for nobody":                                   {ids.Nil, ids.Nil, a.e.Rep1},
+		"for nobody":                                   {ids.Nil, ids.Nil, ids.Nil},
 	} {
 		t.Run(name, func(t *testing.T) {
 			proposal := CommitmentTaskProposal{SourceActivityID: source, Summary: "Send the pricing", PromiserSeatID: &staged.made, Locator: name}

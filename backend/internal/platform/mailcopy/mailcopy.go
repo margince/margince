@@ -125,6 +125,17 @@ type Copy struct {
 	WeeklyOverview       string
 	MailDeadline         string
 	ConsentPurposeLabel  string
+	// The facts a commitment's approval email names, and the card's three
+	// sentences for why the reader is asked.
+	MailAbout           string
+	MailReadFrom        string
+	MailPromisedBy      string
+	MailInTheirWords    string
+	MailWhyYou          string
+	MailTranscriptOf    string
+	MailReasonRequested string
+	MailReasonOnBehalf  string
+	MailReasonAuthority string
 
 	Language              Language
 	MorningPreview        string

@@ -84,6 +84,14 @@ Also called: approver, who signs off, permission to approve.
 Margince tells one colleague about each approval: the one it is for. That is the colleague an agent acts for, or the colleague who asked for the change, or else the owner of the record it changes. Other colleagues who may decide it can still answer it from their approvals list, but get no notice and no email. When a deal changes owner, its waiting approvals move to the new owner. Margince proposes nothing about a record nobody owns.
 Also called: approval email, decision needed, who gets notified, approval notice.
 
+### Who is asked about a promise read from mail or a meeting?
+A promise one of your colleagues made goes only to that colleague, as their task or as a request they confirm. Nobody else can see, answer or be told about it. A colleague who was invited and has not signed in yet counts: the task or request waits for them, and a request waits 30 days.
+
+When Margince cannot give the promise to the colleague who made it, it asks nobody. That happens when nobody is named, the colleague has left, or the promise is in mail only another colleague may read. The promise then stays on the contact's record.
+
+The email for such a request names the deal or company and the mail or meeting it came from. It also names who made the promise, quotes their words, and says why you are asked.
+Also called: commitment, promise task, promised by, who owns this promise.
+
 ### How do I stop Margince making automatic changes?
 To make Margince ask before changing close dates, company names or lifecycle stages, open **Settings → AI access**, then **For developers**, then **Agent rules**. Turn off the matching switch under **Automatic changes**. The switches apply to your work only. A kind you switch off comes back to your Worklist as an approval.
 Also called: autopilot, auto-apply, stop the AI editing my records.

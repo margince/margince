@@ -228,7 +228,7 @@ func (w *notificationMailWorker) deliver(ctx context.Context, attempt notices.Em
 	if !live {
 		return
 	}
-	attempt, current, readErr := refreshApprovalNotice(seatCtx, w.pool, attempt, mailNow(w.now))
+	attempt, facts, current, readErr := refreshApprovalNotice(seatCtx, w.pool, attempt, mailNow(w.now))
 	if readErr != nil {
 		w.recordMailFailure(ctx, attempt.Notice.ID, "approval could not be read")
 		return
@@ -243,7 +243,7 @@ func (w *notificationMailWorker) deliver(ctx context.Context, attempt notices.Em
 	// holding a River worker.
 	bounded, cancel := context.WithTimeout(ctx, notificationMailBudget)
 	defer cancel()
-	message := notificationMessage(attempt.Notice, notificationBase(attempt, w.mail.PublicBaseURL), words)
+	message := notificationMessage(attempt.Notice, facts, notificationBase(attempt, w.mail.PublicBaseURL), words)
 	if attempt.ApprovalID != nil {
 		message.AppendContent(approvalMailAction(attempt, w.mail.PublicBaseURL, words))
 	}
@@ -330,11 +330,26 @@ func notificationMailSubject(notice notices.Notice, words mailcopy.Copy) string 
 // breaks in the recipient and the subject, which are the header fields; the
 // body is the sender's to keep honest, and a notice's subject and body are
 // written by producers that bound their length and not their structure.
-func notificationMessage(notice notices.Notice, base string, words mailcopy.Copy) emailview.Message {
+//
+// A commitment's facts replace the repeated subject: the record as the
+// heading, when there is one, then one line per fact and the deadline.
+func notificationMessage(notice notices.Notice, facts approvalMailFacts, base string, words mailcopy.Copy) emailview.Message {
 	var body emailview.Content
 	body.Paragraph(words.NotificationIntro)
-	body.Heading(mailcopy.OneLine(notice.Subject))
-	body.Paragraph(mailcopy.Snippet(notice.Body, 600))
+	if facts.Rich {
+		if facts.Heading != "" {
+			body.Heading(mailcopy.OneLine(facts.Heading))
+		}
+		for _, line := range facts.Lines {
+			body.Paragraph(mailcopy.OneLine(line.Label) + ": " + mailcopy.Snippet(line.Value, 600))
+		}
+		if facts.Deadline != "" {
+			body.Paragraph(mailcopy.OneLine(facts.Deadline))
+		}
+	} else {
+		body.Heading(mailcopy.OneLine(notice.Subject))
+		body.Paragraph(mailcopy.Snippet(notice.Body, 600))
+	}
 	body.Action(words.NotificationOpen, mailcopy.Destination(base, mailcopy.WorklistFragment))
 	return body.Message(notificationMailSubject(notice, words), string(words.Language), words.NotificationPreview)
 }
