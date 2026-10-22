@@ -103,8 +103,8 @@ const notificationMailBudget = 45 * time.Second
 // add a second, weaker guard in front of the one that actually holds, in the
 // place a reader would then look for the guarantee.
 //
-// The job waits approvalMailDelay, so the approvals an agent stages in one
-// burst are all written when the first job runs and leave in its one message.
+// The job waits approvalMailDelay. An agent's burst of approvals is then all
+// written when the first job runs, and leaves in its one message.
 func notificationMailOpts() *river.InsertOpts {
 	return jobs.QueuedAs[SendNotificationEmailArgs](&river.InsertOpts{
 		MaxAttempts: notificationMailJobAttempts, ScheduledAt: time.Now().Add(approvalMailDelay),
@@ -255,7 +255,7 @@ func (w *notificationMailWorker) deliver(ctx context.Context, attempt notices.Em
 	subject, message := approvalMailMessage(sent, w.mail.PublicBaseURL, words)
 	message.AppendContent(routineFooterContent(w.mail.PublicBaseURL, words))
 	if err := mailer.SendProduct(bounded, w.mail.Mailer, address, subject, message); err != nil {
-		// LOGGED AND RECORDED, never retried. The attempts are spent; what is
+		// Logged and recorded, never retried. The attempts are spent; what is
 		// left to do is make the absence answerable on every notice it carried.
 		w.log.WarnContext(ctx, "the notice was attempted and did not go out",
 			"notice", attempt.Notice.ID, "carried", len(sent), "cause", err)

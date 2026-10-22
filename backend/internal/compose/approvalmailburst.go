@@ -5,8 +5,8 @@ package compose
 
 // One email for a burst of approvals. The sender of a decider's first waiting
 // approval also claims their others from the same few minutes
-// (notices.ClaimApprovalBurst), and one message names them all, each with its
-// own facts and its own link.
+// (notices.ClaimApprovalBurst). One message names them all, each with its own
+// facts and its own link.
 
 import (
 	"context"
@@ -33,7 +33,7 @@ type approvalMailItem struct {
 // as its own job would have dropped it. A failed claim takes nothing, so their
 // own jobs still send them.
 func (w *notificationMailWorker) approvalBurst(ctx, seatCtx context.Context, first notices.EmailAttempt) []approvalMailItem {
-	claimed, err := w.notices.ClaimApprovalBurst(ctx, first, first.Notice.CreatedAt.Add(-approvalMailDelay))
+	claimed, err := w.notices.ClaimApprovalBurst(ctx, first, approvalMailDelay)
 	if err != nil {
 		w.log.WarnContext(ctx, "the decider's other approvals were left to their own messages",
 			"notice", first.Notice.ID, "cause", err)
@@ -54,7 +54,7 @@ func (w *notificationMailWorker) approvalBurst(ctx, seatCtx context.Context, fir
 }
 
 // approvalMailMessage is the subject and message for what one send carries. A
-// single notice reads exactly as it always has.
+// single notice reads as it always has.
 func approvalMailMessage(items []approvalMailItem, base string, words mailcopy.Copy) (string, emailview.Message) {
 	if len(items) == 1 {
 		item := items[0]
