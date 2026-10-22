@@ -2667,7 +2667,11 @@ export const en = {
     "Mails this contact a private link to see what you hold about them, correct it, and say whether they want to hear from you. It goes to their own recorded address; you cannot send it anywhere else.",
   "consent.askQueued": "Link queued for {address}.",
   "consent.askNotDelivered":
-    "The link was created for {address}, but this installation sends no mail, so it was not sent.",
+    "The link was created for {address} but has not gone out yet. The delivery record says where it stands.",
+  "consent.askNoSystemMail":
+    "System mail is not set up, so confirmation requests cannot be sent. An admin configures it in the installation’s email settings.",
+  "consent.askSendableUnknown":
+    "Whether this can be sent is not known yet. Reload the page to check again.",
   "consent.askExpires": "The link works until",
   "consent.noRecord": "no record",
   "consent.noPurposes": "This company tracks no consent purposes yet.",

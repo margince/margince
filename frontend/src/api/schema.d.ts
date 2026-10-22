@@ -37786,6 +37786,12 @@ export interface components {
             data_reset_available?: boolean;
             /** @description Whether THIS CALLER may issue member set-password links (`issueUserPasswordLink`) — true only when the caller holds `admin` AND the installation has no outbound-email channel AND a public base URL is configured. Deliberately a caller capability rather than a deployment-posture flag: `/me` answers every authenticated member, and a bare posture boolean would tell every rep whether the installation has email configured. Clients render the action on this, so an admin never sees a control that can only fail (ADR-0061 Amendment 1). */
             admin_password_link: boolean;
+            /**
+             * @description Whether THIS CALLER may ask a contact to confirm what is held about them (`requestDetailsConfirmation`, `sendPrivacyNotice`, `issueDoubleOptIn`) — true only when the caller may update a contact AND the installation has the lane those messages ride: an outbound relay, a link vault and a public base URL.
+             *     A caller capability rather than a deployment-posture flag, for the reason `admin_password_link` states: a bare posture boolean would tell every seat whether this installation has email. It folds the grant in, so it answers only the holders who could act on it.
+             *     The endpoint refuses what it cannot deliver, so a client that renders the action on this never offers one that would be. Each of those links is mailed and never returned, which is why an unsendable one is unusable rather than merely undelivered.
+             */
+            confirm_requests_sendable?: boolean;
             /** @description Effective role keys for this principal, and the one authority for them — `user.roles` is deliberately left unset here rather than repeating the same fact. */
             roles: string[];
             teams: string[];
@@ -41007,8 +41013,11 @@ export interface components {
              */
             queued: boolean;
             /**
-             * @description Whether this installation has an outbound relay and a link origin configured. False
-             *     means nothing was attempted — the link exists and must be passed on by hand.
+             * @description Whether this installation has an outbound relay and a link origin configured.
+             *
+             *     Always true on a 201: the request is refused outright without that lane, because the
+             *     plaintext link is mailed and never returned, so one that cannot be sent is one
+             *     nobody can pass on. Read `confirm_requests_sendable` on `/me` to know before asking.
              */
             sendable: boolean;
         };

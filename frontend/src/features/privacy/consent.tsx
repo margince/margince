@@ -21,7 +21,13 @@ import { useCanWriteRecord } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { isUuid } from "../../lib/uuid";
 import { humanizeToken } from "../settings/audit";
+import { ConfirmDetailsAction } from "./confirmdetailsaction";
 import "./consent.css";
+
+// Carried on this feature's surface, because a caller outside it may not
+// reach a file inside.
+export { ConfirmDetailsAction };
+
 import { stable } from "../../format/collate";
 
 // The Art. 7 proof log (G-4) + the double-opt-in redeem field (G-5) for the
@@ -412,85 +418,5 @@ export function ConsentSection({
         />
       )}
     </Panel>
-  );
-}
-
-// Issuing the link queues a message; it does not prove delivery.
-function sentenceFor(
-  issued: components["schemas"]["ConfirmRequestIssued"],
-  t: ReturnType<typeof useT>,
-): string {
-  const address = issued.delivered_to;
-  return issued.queued
-    ? t("consent.askQueued", { address })
-    : t("consent.askNotDelivered", { address });
-}
-
-/**
- * ConfirmDetailsAction mails the contact a link to see what is held about them,
- * correct it, and answer on marketing.
- *
- * The address is never chosen here. The server derives it from the contact's own
- * live primary email, which is what lets a grant made through the link stand on
- * its own: the answer came from the subject's mailbox. So this surface offers
- * the act and reports where it went, and cannot aim it anywhere.
- */
-export function ConfirmDetailsAction({
-  contactId,
-  mayWrite,
-  recipient,
-  unavailableReason,
-}: Readonly<{
-  contactId: string;
-  mayWrite: boolean;
-  recipient?: string | null;
-  unavailableReason?: string;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const zone = viewerZone();
-  const ask = useMutation({
-    // Keyed on the contact, so a result belongs to the record it was asked
-    // about. React reuses this component across a navigation between two
-    // cached contacts, and without the key the previous contact's address sat
-    // under the new record's rows — naming somebody else's mailbox as the one
-    // this contact's link went to.
-    mutationKey: ["confirm-request", contactId],
-    mutationFn: async (id: string) => {
-      return unwrap(
-        await api.POST("/contacts/{id}/consent/confirm-request", {
-          params: { path: { id } },
-        }),
-      );
-    },
-  });
-
-  if (!mayWrite) {
-    return null;
-  }
-  return (
-    <PanelBody className="consent-confirm-ask">
-      <Button
-        disabled={ask.isPending}
-        reason={unavailableReason}
-        data-testid="confirm-details-ask"
-        onClick={() => ask.mutate(contactId)}
-      >
-        {t("consent.askToConfirm")}
-      </Button>
-      {recipient && (
-        <p className="t-caption">
-          {t("consent.confirmRecipient", { address: recipient })}
-        </p>
-      )}
-      <p>{t("consent.askToConfirmWhat")}</p>
-      <ErrorLine error={ask.error} />
-      {ask.data && (
-        <p className="t-caption" data-testid="confirm-details-sent">
-          {sentenceFor(ask.data, t)} {t("consent.askExpires")}:{" "}
-          {formatDateTime(ask.data.expires_at, locale, zone)}
-        </p>
-      )}
-    </PanelBody>
   );
 }

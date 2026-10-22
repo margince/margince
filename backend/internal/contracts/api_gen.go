@@ -32964,8 +32964,11 @@ type ConfirmRequestIssued struct {
 	// became of it is the delivery's own answer and changes as the dispatcher learns more.
 	Queued bool `json:"queued"`
 
-	// Sendable Whether this installation has an outbound relay and a link origin configured. False
-	// means nothing was attempted — the link exists and must be passed on by hand.
+	// Sendable Whether this installation has an outbound relay and a link origin configured.
+	//
+	// Always true on a 201: the request is refused outright without that lane, because the
+	// plaintext link is mailed and never returned, so one that cannot be sent is one
+	// nobody can pass on. Read `confirm_requests_sendable` on `/me` to know before asking.
 	Sendable bool `json:"sendable"`
 }
 
@@ -42235,6 +42238,11 @@ type MeResponse struct {
 	// Two independent axes, both of which must permit an action: the licensing seat ceiling (ADR-0047), checked BEFORE RBAC and clamped on HTTP method, and the object grants. A client that collapses them into one predicate will be wrong in both directions.
 	// This is a snapshot, not an authority. A role change does not revoke live sessions, so a client refetches on window focus and after any 403, and treats the server's answer as the only one that counts. It does not express the human-principal gate, nor the few routes that still key on the literal admin role independently of any grant — a permitted grant here is necessary, never sufficient.
 	Authorization *Authorization `json:"authorization,omitempty"`
+
+	// ConfirmRequestsSendable Whether THIS CALLER may ask a contact to confirm what is held about them (`requestDetailsConfirmation`, `sendPrivacyNotice`, `issueDoubleOptIn`) — true only when the caller may update a contact AND the installation has the lane those messages ride: an outbound relay, a link vault and a public base URL.
+	// A caller capability rather than a deployment-posture flag, for the reason `admin_password_link` states: a bare posture boolean would tell every seat whether this installation has email. It folds the grant in, so it answers only the holders who could act on it.
+	// The endpoint refuses what it cannot deliver, so a client that renders the action on this never offers one that would be. Each of those links is mailed and never returned, which is why an unsendable one is unusable rather than merely undelivered.
+	ConfirmRequestsSendable *bool `json:"confirm_requests_sendable,omitempty"`
 
 	// DataResetAvailable True when this installation armed `operations.allow_data_reset` in its deployment file. It is the SAME value `POST /admin/reset-data` gates on, so a client never renders an action for a route that would answer 404. Absent or false means the capability does not exist here — the compiled default in every posture, dev included.
 	DataResetAvailable *bool `json:"data_reset_available,omitempty"`

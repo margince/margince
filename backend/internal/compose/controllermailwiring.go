@@ -166,6 +166,11 @@ func (s *Server) rewireConfirmationLane(pool *pgxpool.Pool) {
 	}
 	queue := NewControllerMailQueue(pool, s.confirmRunner)
 	s.consentHandlers = s.WithConfirmationLane(queue, confirmLinkVault{s.vault}, s.confirmLinkBase)
+	// The session probe answers whether a caller may ask for a confirmation,
+	// and it is this branch that decides whether the lane exists at all. The
+	// early return above leaves the capability false, which is the answer an
+	// installation with no relay owes a screen.
+	s.authHandlers = s.WithContactMailLane(true)
 	s.siteLeadNotices.store.Store(consent.NewStore(InstallationDB(pool)).
 		WithMailLanguage(consent.MailLanguageFunc(identity.LanguageOf)).
 		WithConfirmationLane(queue, confirmLinkVault{s.vault}, s.confirmLinkBase))

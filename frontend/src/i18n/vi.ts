@@ -2596,7 +2596,11 @@ export const vi = {
     "Gửi email cho người này một liên kết riêng để họ xem thông tin đang lưu về họ, chỉnh sửa nếu có sai sót và cho biết họ có muốn nhận tin từ bạn không. Email chỉ được gửi đến đúng địa chỉ đã lưu của họ, không thể gửi đến nơi khác.",
   "consent.askQueued": "Liên kết đang chờ gửi tới {address}.",
   "consent.askNotDelivered":
-    "Đã tạo liên kết cho {address}, nhưng bản cài đặt này không gửi thư nên liên kết không được gửi đi.",
+    "Đã tạo liên kết cho {address} nhưng chưa gửi đi. Bản ghi gửi cho biết tình trạng.",
+  "consent.askNoSystemMail":
+    "Thư hệ thống chưa được thiết lập nên không thể gửi yêu cầu xác nhận. Quản trị viên thiết lập thư hệ thống trong cài đặt email của bản cài đặt.",
+  "consent.askSendableUnknown":
+    "Chưa biết có gửi được hay không. Hãy tải lại trang để kiểm tra.",
   "consent.askExpires": "Liên kết có hiệu lực đến",
   "consent.noRecord": "chưa ghi nhận",
   "consent.noPurposes": "Công ty chưa theo dõi mục đích đồng ý nào.",

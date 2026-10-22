@@ -2679,7 +2679,11 @@ export const de = {
     "Sendet diesem Kontakt per E-Mail einen privaten Link. Über diesen Link sieht der Kontakt die gespeicherten Daten, kann sie korrigieren und angeben, ob Nachrichten von deinem Unternehmen erwünscht sind. Der Link wird an die hinterlegte Adresse des Kontakts gesendet. Eine andere Adresse ist nicht möglich.",
   "consent.askQueued": "Link für {address} zum Versand vorgemerkt.",
   "consent.askNotDelivered":
-    "Der Link wurde für {address} erstellt, aber nicht gesendet, da diese Installation keine E-Mails versendet.",
+    "Der Link wurde für {address} erstellt, ist aber noch nicht hinausgegangen. Der Versandeintrag sagt, wie es steht.",
+  "consent.askNoSystemMail":
+    "Der Systemversand ist nicht eingerichtet, daher sind keine Bestätigungsanfragen möglich. Ein Admin richtet ihn in den E-Mail-Einstellungen der Installation ein.",
+  "consent.askSendableUnknown":
+    "Ob sich das senden lässt, ist noch nicht bekannt. Ein Neuladen der Seite prüft es erneut.",
   "consent.askExpires": "Der Link gilt bis",
   "consent.noRecord": "kein Eintrag",
   "consent.noPurposes":

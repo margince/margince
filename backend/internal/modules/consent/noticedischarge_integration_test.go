@@ -11,6 +11,7 @@ package consent
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -239,26 +240,22 @@ func TestTheConfirmMailItselfDischargesTheDuty(t *testing.T) {
 	}
 }
 
-// TestAnUnsentDisclosureDischargesNothing is the arm the first version of the
-// test above was silently standing in for.
+// TestAnInstallationWithNoRelayDischargesNothing is the arm the first version
+// of the test above was silently standing in for.
 //
-// An installation with no relay wired still MINTS the link — refusing would
-// invite a retry that supersedes the first — and reports queued=false. Nothing
-// was sent, so nothing is discharged: a case moved here would carry an audit row
-// asserting a duty was met by a message that was never staged, and its cooldown
-// would then suppress the genuine send once an operator fixed the relay.
-func TestAnUnsentDisclosureDischargesNothing(t *testing.T) {
+// Nothing sent discharges nothing. An installation with no relay mints no link
+// at all, so no duty is met by a message that was never staged. No cooldown
+// then suppresses the send an operator earns by wiring the relay.
+func TestAnInstallationWithNoRelayDischargesNothing(t *testing.T) {
 	e := setupChannelConsent(t)
 	owed := seedNoticeCase(t, e, "purchased_or_imported",
 		[]string{noticeRouteRecordConfirmation})
 
-	issued := issueLink(t, e)
-	if issued.Staged {
-		t.Fatal("the bare environment staged a mail; this test needs the no-lane case")
-	}
-	if issued.NoticeCasesDischarged != 0 {
-		t.Fatalf("a mail that was never staged discharged %d duties, want 0",
-			issued.NoticeCasesDischarged)
+	seedSubjectAddress(t, e)
+
+	_, err := e.storeNoLane.IssueConfirmToken(e.ctx, e.contact)
+	if !errors.Is(err, ErrNoMailLane) {
+		t.Fatalf("err = %v, want the refusal an installation with no relay owes", err)
 	}
 	if state, _ := noticeCaseState(t, e, owed); state != string(NoticeOpen) {
 		t.Errorf("the case moved to %q on a disclosure nobody sent", state)
