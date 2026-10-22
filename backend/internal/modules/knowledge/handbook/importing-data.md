@@ -53,7 +53,7 @@ These skip the row:
 - a contact row whose email belongs to a sending system, such as `noreply@`, `notifications@` or `receipts@`;
 - a record type you may not create, or a change to a record you may not edit.
 
-A contact row with **First name** and **Last name** filled takes its full name from those two.
+A contact row with **First name** and **Last name** filled takes its full name from those two, even when the file also has a **Full name** column. A contact you add or edit in Margince keeps the full name you type.
 
 These stop nothing. The row lands, and the problem is listed:
 - an owner email that no user has (**Unknown owner**): you become the owner, except for a lead, which stays unassigned;

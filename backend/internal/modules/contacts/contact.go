@@ -136,9 +136,6 @@ func (s *Store) CreateContactTx(ctx context.Context, tx pgx.Tx, in CreateContact
 // attribution the write shape stamps. Both entry points call it, so neither
 // can drift from the other's validation.
 func (s *Store) readyContactCreate(ctx context.Context, in *CreateContactInput) (string, error) {
-	if err := refuseDisagreeingNames(in.FullName, in.FirstName, in.LastName); err != nil {
-		return "", err
-	}
 	if err := parseContactContacts(in.Emails, in.Phones); err != nil {
 		return "", err
 	}

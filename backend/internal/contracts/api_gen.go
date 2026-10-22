@@ -34933,17 +34933,15 @@ type CreateContactEnrichmentRunRequest struct {
 // CreateContactRequest defines model for CreateContactRequest.
 type CreateContactRequest struct {
 	// Address Structured postal address.
-	Address   *Address             `json:"address,omitempty"`
-	Emails    *[]ContactEmailInput `json:"emails,omitempty"`
-	FirstName *string              `json:"first_name,omitempty"`
-
-	// FullName When first_name and last_name are both sent, full_name must be the two in either order (case and spacing aside), or the create is refused with 422 `full_name_disagrees` naming both values.
-	FullName string                  `json:"full_name"`
-	LastName *string                 `json:"last_name,omitempty"`
-	OwnerId  *openapi_types.UUID     `json:"owner_id,omitempty"`
-	Phones   *[]ContactPhoneInput    `json:"phones,omitempty"`
-	Social   *map[string]interface{} `json:"social,omitempty"`
-	Source   string                  `json:"source"`
+	Address   *Address                `json:"address,omitempty"`
+	Emails    *[]ContactEmailInput    `json:"emails,omitempty"`
+	FirstName *string                 `json:"first_name,omitempty"`
+	FullName  string                  `json:"full_name"`
+	LastName  *string                 `json:"last_name,omitempty"`
+	OwnerId   *openapi_types.UUID     `json:"owner_id,omitempty"`
+	Phones    *[]ContactPhoneInput    `json:"phones,omitempty"`
+	Social    *map[string]interface{} `json:"social,omitempty"`
+	Source    string                  `json:"source"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
 	SourceAuthorId *openapi_types.UUID `json:"source_author_id,omitempty"`
@@ -50434,11 +50432,9 @@ type UpdateContactRequest struct {
 	// contact who no longer has a working address is a fact worth recording.
 	Emails    *[]ContactEmailInput `json:"emails,omitempty"`
 	FirstName *string              `json:"first_name,omitempty"`
-
-	// FullName Sent together with first_name and last_name, it must be the two in either order (case and spacing aside), or the update is refused with 422 `full_name_disagrees`.
-	FullName *string             `json:"full_name,omitempty"`
-	LastName *string             `json:"last_name,omitempty"`
-	OwnerId  *openapi_types.UUID `json:"owner_id,omitempty"`
+	FullName  *string              `json:"full_name,omitempty"`
+	LastName  *string              `json:"last_name,omitempty"`
+	OwnerId   *openapi_types.UUID  `json:"owner_id,omitempty"`
 
 	// Phones REPLACES the contact's numbers with exactly this list, the same way `emails`
 	// replaces addresses. A number that has been reassigned is corrected by sending

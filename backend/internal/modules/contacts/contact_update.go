@@ -95,11 +95,6 @@ func (s *Store) updateContactInTx(
 	if err := refuseUnreadableResult(current, in); err != nil {
 		return out, err
 	}
-	if in.FullName != nil {
-		if err := refuseDisagreeingNames(*in.FullName, in.FirstName, in.LastName); err != nil {
-			return out, err
-		}
-	}
 	if err := auth.EnsureOwnerHandOn(ctx, tx, (*ids.UUID)(current.OwnerId), in.OwnerID); err != nil {
 		return out, err
 	}

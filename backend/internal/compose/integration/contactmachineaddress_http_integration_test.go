@@ -29,7 +29,7 @@ func (f fieldFaults) only() (string, string) {
 }
 
 // Each door names the refusal on its own field. The typed create uses emails,
-// quick capture uses email, and a disagreeing full name uses full_name.
+// and quick capture uses email.
 func TestEachContactDoorRefusesASendingSystemsAddressOnItsOwnField(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
@@ -45,10 +45,6 @@ func TestEachContactDoorRefusesASendingSystemsAddressOnItsOwnField(t *testing.T)
 		{
 			door: "quick capture", path: "/v1/contacts/quick-capture", field: "email", code: "email_names_no_one",
 			body: AnyMap{"full_name": "Receipts", "email": "receipts@doors.example"},
-		},
-		{
-			door: "names that disagree", path: "/v1/contacts", field: "full_name", code: "full_name_disagrees",
-			body: AnyMap{"full_name": "Signing-Noreply", "first_name": "Contact", "last_name": "A", "source": "manual"},
 		},
 	} {
 		var faults fieldFaults

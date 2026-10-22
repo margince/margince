@@ -6,8 +6,7 @@
 package contacts
 
 // An address whose local part names a sending system (noreply@, receipts@)
-// becomes no contact on any path. A full name that disagrees with the first
-// and last name beside it is refused rather than stored.
+// becomes no contact on any path.
 
 import (
 	"context"
@@ -208,37 +207,27 @@ func TestABoughtSendingSystemsAddressFillsNothing(t *testing.T) {
 	}
 }
 
-func TestACreateWhoseFullNameDisagreesWithItsPartsIsRefused(t *testing.T) {
+// A display name the writer chose stays, even where it is not the name parts.
+func TestACreateAndAnUpdateKeepAChosenFullNameBesideItsParts(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	first, last := "Contact", "A"
-	_, err := e.store.CreateContact(ctx, CreateContactInput{FullName: "Signing-Noreply", FirstName: &first, LastName: &last, Source: "manual"})
-	requireFault(t, err, "full_name", fullNameDisagreesCode)
-
-	made, err := e.store.CreateContact(ctx, CreateContactInput{FullName: "A Contact", FirstName: &first, LastName: &last, Source: "manual"})
-	if err != nil || made.FullName != "A Contact" {
-		t.Fatalf("create with the parts in the other order = %+v, %v; want it stored", made.FullName, err)
-	}
-}
-
-func TestAnUpdateSendingAllThreeNamesMustAgreeAndOneNameAloneLeavesTheFullName(t *testing.T) {
-	e := setupDedupe(t)
-	ctx := e.as()
-	first, last := "Anna", "Weber"
-	made, err := e.store.CreateContact(ctx, CreateContactInput{FullName: "Anna Weber", FirstName: &first, LastName: &last, Source: "manual"})
-	if err != nil {
-		t.Fatal(err)
+	first, last := "Robert", "Fischer"
+	made, err := e.store.CreateContact(ctx, CreateContactInput{FullName: "Bobby", FirstName: &first, LastName: &last, Source: "manual"})
+	if err != nil || made.FullName != "Bobby" {
+		t.Fatalf("create = %q, %v; want the chosen name Bobby stored", made.FullName, err)
 	}
 	id := ids.From[ids.ContactKind](ids.UUID(made.Id))
-	wrong, newLast := "Someone Else", "Schmidt"
-	_, err = e.store.UpdateContact(ctx, id, UpdateContactInput{FullName: &wrong, FirstName: &first, LastName: &newLast})
-	requireFault(t, err, "full_name", fullNameDisagreesCode)
+	chosen, newLast := "Bob F.", "Fischer-Lang"
+	updated, err := e.store.UpdateContact(ctx, id, UpdateContactInput{FullName: &chosen, FirstName: &first, LastName: &newLast})
+	if err != nil || updated.FullName != "Bob F." {
+		t.Fatalf("update = %q, %v; want the chosen name Bob F. stored", updated.FullName, err)
+	}
 
-	updated, err := e.store.UpdateContact(ctx, id, UpdateContactInput{LastName: &newLast})
+	updated, err = e.store.UpdateContact(ctx, id, UpdateContactInput{LastName: &last})
 	if err != nil {
 		t.Fatalf("an update of the last name alone: %v", err)
 	}
-	if updated.FullName != "Anna Weber" {
+	if updated.FullName != "Bob F." {
 		t.Errorf("full name after a last-name edit = %q, want it unchanged", updated.FullName)
 	}
 }

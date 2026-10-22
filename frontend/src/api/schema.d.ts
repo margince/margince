@@ -26753,7 +26753,6 @@ export interface components {
             logo_url?: string;
         };
         CreateContactRequest: {
-            /** @description When first_name and last_name are both sent, full_name must be the two in either order (case and spacing aside), or the create is refused with 422 `full_name_disagrees` naming both values. */
             full_name: string;
             first_name?: string | null;
             last_name?: string | null;
@@ -26884,7 +26883,6 @@ export interface components {
         };
         /** @description Partial update. Omitted fields are unchanged. */
         UpdateContactRequest: {
-            /** @description Sent together with first_name and last_name, it must be the two in either order (case and spacing aside), or the update is refused with 422 `full_name_disagrees`. */
             full_name?: string;
             first_name?: string | null;
             last_name?: string | null;

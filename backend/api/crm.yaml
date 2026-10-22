@@ -37858,7 +37858,7 @@ components:
       type: object
       required: [full_name, source]
       properties:
-        full_name: { type: string, description: 'When first_name and last_name are both sent, full_name must be the two in either order (case and spacing aside), or the create is refused with 422 `full_name_disagrees` naming both values.' }
+        full_name: { type: string }
         first_name: { type: [string, 'null'] }
         last_name: { type: [string, 'null'] }
         title: { type: [string, 'null'] }
@@ -37997,7 +37997,7 @@ components:
       type: object
       description: Partial update. Omitted fields are unchanged.
       properties:
-        full_name: { type: string, description: 'Sent together with first_name and last_name, it must be the two in either order (case and spacing aside), or the update is refused with 422 `full_name_disagrees`.' }
+        full_name: { type: string }
         first_name: { type: [string, 'null'] }
         last_name: { type: [string, 'null'] }
         title: { type: [string, 'null'] }
