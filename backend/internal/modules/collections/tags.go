@@ -110,7 +110,7 @@ func (s *Store) CreateTag(ctx context.Context, name string, color, description *
 	return out, err
 }
 
-// insertTagTx coins a validated name and audits it: the one writer of a new tag.
+// insertTagTx coins a validated name and audits it.
 func insertTagTx(ctx context.Context, tx pgx.Tx, name string, color, description *string) (tagRow, error) {
 	row := tx.QueryRow(ctx, `
 		INSERT INTO tag (name, color, description)

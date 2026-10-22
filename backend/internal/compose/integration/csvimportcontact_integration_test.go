@@ -609,7 +609,7 @@ func TestCSVImportSkipsARowWithASendingSystemsAddressInPreviewAndCommit(t *testi
 		t.Fatalf("approve → %d, want 202", status)
 	}
 	if got := importedContactCount(t, e); got != contactsBefore+1 {
-		t.Fatalf("contacts = %d, was %d; want the one person row created", got, contactsBefore)
+		t.Fatalf("contacts = %d, was %d; want the one human row created", got, contactsBefore)
 	}
 	var committed struct {
 		Disposition importDispositionDTO `json:"disposition"`

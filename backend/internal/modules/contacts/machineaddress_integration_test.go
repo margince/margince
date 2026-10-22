@@ -146,9 +146,9 @@ func TestAVCardWithASendingSystemsAddressIsSkippedAndTheRestOfTheFileLands(t *te
 	ctx := e.as()
 
 	results := importCards(ctx, t, e,
-		"BEGIN:VCARD\nFN:First Person\nEMAIL:first@vcard-machine.test\nEND:VCARD\n"+
+		"BEGIN:VCARD\nFN:First Human\nEMAIL:first@vcard-machine.test\nEND:VCARD\n"+
 			"BEGIN:VCARD\nFN:Signing Service\nEMAIL:"+sendingSystemAddress+"\nEND:VCARD\n"+
-			"BEGIN:VCARD\nFN:Third Person\nEMAIL:third@vcard-machine.test\nEND:VCARD\n")
+			"BEGIN:VCARD\nFN:Third Human\nEMAIL:third@vcard-machine.test\nEND:VCARD\n")
 
 	want := []VCardOutcome{VCardCreated, VCardSkipped, VCardCreated}
 	for i, result := range results {
@@ -247,7 +247,7 @@ func TestMachineAddressContactsPagesEveryContactAndNamesTheMachineOnes(t *testin
 	e := setupDedupe(t)
 	ctx := e.as()
 	machine := legacyMachineContact(ctx, t, e, "receipts@page.test")
-	person, err := e.store.CreateContact(ctx, CreateContactInput{
+	anna, err := e.store.CreateContact(ctx, CreateContactInput{
 		FullName: "Anna Notify Weber", Source: "manual",
 		Emails: []ContactEmailInput{{Email: "anna.notify.weber@page.test", EmailType: emailTypeWork, IsPrimary: true}},
 	})
@@ -274,7 +274,7 @@ func TestMachineAddressContactsPagesEveryContactAndNamesTheMachineOnes(t *testin
 		flagged = append(flagged, page.Machine...)
 		after = page.Scanned[len(page.Scanned)-1]
 	}
-	if !slices.Contains(scanned, ids.UUID(person.Id)) || !slices.Contains(scanned, machine) {
+	if !slices.Contains(scanned, ids.UUID(anna.Id)) || !slices.Contains(scanned, machine) {
 		t.Errorf("scanned = %v, want both contacts read one page at a time", scanned)
 	}
 	if !slices.Equal(flagged, []ids.UUID{machine}) {

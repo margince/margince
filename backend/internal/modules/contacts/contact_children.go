@@ -16,7 +16,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
@@ -202,22 +201,6 @@ func parseContactContacts(emails []ContactEmailInput, phones []ContactPhoneInput
 	return ensureOnePrimaryPerType("phone number", phones, func(p ContactPhoneInput) (string, bool) {
 		return p.PhoneType, p.IsPrimary
 	})
-}
-
-// MachineAddressCode is the field-fault code for an address whose local part
-// names a sending system. The CSV import maps it to its own skip reason.
-const MachineAddressCode = "email_names_no_one"
-
-// refuseMachineAddress refuses an address nobody answers at, by the same
-// local-part rule capture applies before it mints a contact from mail.
-func refuseMachineAddress(email string) error {
-	if !mailidentity.HasMachineLocalpart(email) {
-		return nil
-	}
-	return &values.ParseError{
-		Field: "emails", Code: MachineAddressCode,
-		Message: "this address belongs to a sending system, not a person; add the person's own address",
-	}
 }
 
 //nolint:unparam // the same shape as its siblings; see replaceContactSocial.

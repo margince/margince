@@ -26833,8 +26833,8 @@ export interface components {
              * @description `created` — nobody matched, so the card became a contact, their company and the edge
              *     between them. `updated` — an exact match, filled only where the record was empty.
              *     `needs_review` — a resemblance, written nowhere; open the candidate and decide.
-             *     `skipped` — the card states no name, carries an address of a sending system rather than
-             *     a person, or matches a contact the caller may not write; `reason` says which.
+             *     `skipped` — the card states no name, carries a sending system's address, or matches a
+             *     contact the caller may not write; `reason` says which.
              * @enum {string}
              */
             outcome: "created" | "updated" | "needs_review" | "skipped";

@@ -406,7 +406,7 @@ export const en = {
   "approval.preview.importScopeUnavailable":
     "This import proposal has no complete row-by-row change set. Open Data import to review the source and test run before starting the import.",
   "approval.preview.machineAddress":
-    "The approval cannot run: the address belongs to a sending system, not a person.",
+    "The approval cannot run: the address belongs to a sending system, not a human.",
   "approval.preview.confirmationOnly":
     "Record this confirmation and complete the waiting automation run. No record update or message send is authorized.",
   "approval.preview.confirmationQuestion": "Question to confirm",
@@ -7488,7 +7488,7 @@ export const en = {
   "import.reason.duplicate_email":
     "This email address already belongs to another contact.",
   "import.reason.email_names_no_contact":
-    "“{value}” belongs to a sending system, not a person, so it does not become a contact.",
+    "“{value}” belongs to a sending system, not a human, so it does not become a contact.",
   "import.reason.employer_column_empty":
     "The company column is empty, so the row names no employer.",
   "import.reason.employer_column_empty_dropped":

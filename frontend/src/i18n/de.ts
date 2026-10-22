@@ -420,7 +420,7 @@ export const de = {
   "approval.preview.importScopeUnavailable":
     "Dieser Importvorschlag enthält keine vollständigen Änderungen je Zeile. Öffne Datenimport und prüfe die Quelle und den Testlauf, bevor du den Import startest.",
   "approval.preview.machineAddress":
-    "Die Freigabe kann nicht ausgeführt werden: Die Adresse gehört zu einem Versandsystem, nicht zu einer Person.",
+    "Die Freigabe kann nicht ausgeführt werden: Die Adresse gehört zu einem Versandsystem, nicht zu einem Menschen.",
   "approval.preview.confirmationOnly":
     "Diese Bestätigung erfassen und den wartenden Automatisierungslauf abschließen. Es wird keine Datensatzänderung und kein Nachrichtenversand freigegeben.",
   "approval.preview.confirmationQuestion": "Zu bestätigende Frage",
@@ -7433,7 +7433,7 @@ export const de = {
   "import.reason.duplicate_email":
     "Diese E-Mail-Adresse gehört bereits einem anderen Kontakt.",
   "import.reason.email_names_no_contact":
-    "„{value}“ gehört zu einem Versandsystem, nicht zu einer Person, und wird darum kein Kontakt.",
+    "„{value}“ gehört zu einem Versandsystem, nicht zu einem Menschen, und wird darum kein Kontakt.",
   "import.reason.employer_column_empty":
     "Die Unternehmensspalte ist leer, daher nennt die Zeile keinen Arbeitgeber.",
   "import.reason.employer_column_empty_dropped":

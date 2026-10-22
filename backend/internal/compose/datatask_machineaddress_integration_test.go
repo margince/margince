@@ -15,6 +15,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -47,7 +48,8 @@ func machineTagged(t *testing.T, e *integration.Env, contact ids.UUID) int {
 
 func runMachineAddressTask(ctx context.Context, t *testing.T, e *integration.Env, task datatask.Task) {
 	t.Helper()
-	engine, err := datatask.New(e.Pool, []datatask.Task{task}, "test", time.Now, func(context.Context, pgx.Tx, datatask.Progress) error { return nil })
+	now := clocktest.Now(t)
+	engine, err := datatask.New(e.Pool, []datatask.Task{task}, "test", func() time.Time { return now }, func(context.Context, pgx.Tx, datatask.Progress) error { return nil })
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,7 +69,7 @@ func TestTheMachineAddressTaskTagsOnlyMachineContactsAndReplaysSafely(t *testing
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	receipts := machineAddressContact(t, e, conn, "Expense Receipts", "receipts@machine-task.test")
 	noreply := machineAddressContact(t, e, conn, "Signing Service", "signing-noreply@machine-task.test")
-	person := machineAddressContact(t, e, conn, "Anna Notify Weber", "anna.notify.weber@machine-task.test")
+	anna := machineAddressContact(t, e, conn, "Anna Notify Weber", "anna.notify.weber@machine-task.test")
 	// A user who already coined the word keeps it: the task files under theirs.
 	if _, err := conn.Exec(ctx, `INSERT INTO tag (name) VALUES ($1)`, machineAddressTag); err != nil {
 		t.Fatal(err)
@@ -82,8 +84,8 @@ func TestTheMachineAddressTaskTagsOnlyMachineContactsAndReplaysSafely(t *testing
 			t.Errorf("%s contact carries the tag %d times, want once", name, got)
 		}
 	}
-	if got := machineTagged(t, e, person); got != 0 {
-		t.Errorf("a person whose name holds a marker word was tagged")
+	if got := machineTagged(t, e, anna); got != 0 {
+		t.Errorf("a human whose name holds a marker word was tagged")
 	}
 	if got := e.WsCount(t, `SELECT count(*) FROM tag WHERE name = $1`, machineAddressTag); got != 1 {
 		t.Errorf("tags named %s = %d, want the user's one reused", machineAddressTag, got)

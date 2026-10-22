@@ -59,13 +59,10 @@ const (
 	// close enough to be sure. The card is not written; the candidate is
 	// named so a human can open it.
 	VCardNeedsReview VCardOutcome = "needs_review"
-	// VCardSkipped means the card could not be written: it states no name,
-	// carries a sending system's address, or matches a contact this caller may
-	// not write.
+	// VCardSkipped means the card could not be written: no name, a sending
+	// system's address, or a match this caller may not write.
 	VCardSkipped VCardOutcome = "skipped"
 )
-
-const vcardMachineAddress = "the card's address belongs to a sending system, not a person"
 
 // VCardResult is one card's outcome, in the order the file listed them.
 type VCardResult struct {
@@ -147,14 +144,9 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 		result.Reason = "the card states no name"
 		return result, nil
 	}
-	// Before the match, so a card that matches an existing contact cannot carry
-	// a sending system's address onto it through the update arm either.
-	for _, email := range entry.Emails {
-		if refuseMachineAddress(strings.TrimSpace(email.Value)) != nil {
-			result.Outcome = VCardSkipped
-			result.Reason = vcardMachineAddress
-			return result, nil
-		}
+	if cardNamesASendingSystem(entry) {
+		result.Outcome, result.Reason = VCardSkipped, vcardMachineAddress
+		return result, nil
 	}
 
 	// The ladder's report about THIS card, raised after the transaction below.

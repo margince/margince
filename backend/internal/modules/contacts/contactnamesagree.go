@@ -15,7 +15,7 @@ import (
 const fullNameDisagreesCode = "full_name_disagrees"
 
 // refuseDisagreeingNames refuses a full name that is neither order of the first
-// and last name beside it, so a record cannot show one person in its title and
+// and last name beside it, so a record cannot name one human in its title and
 // another in its fields. It asks only when all three are given.
 func refuseDisagreeingNames(full string, first, last *string) error {
 	if first == nil || last == nil {

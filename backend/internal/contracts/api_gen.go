@@ -51460,8 +51460,8 @@ type VCardImportResult struct {
 	// Outcome `created` — nobody matched, so the card became a contact, their company and the edge
 	// between them. `updated` — an exact match, filled only where the record was empty.
 	// `needs_review` — a resemblance, written nowhere; open the candidate and decide.
-	// `skipped` — the card states no name, carries an address of a sending system rather than
-	// a person, or matches a contact the caller may not write; `reason` says which.
+	// `skipped` — the card states no name, carries a sending system's address, or matches a
+	// contact the caller may not write; `reason` says which.
 	Outcome VCardImportResultOutcome `json:"outcome"`
 
 	// Reason Why a card was skipped, in words a reader can act on.
@@ -51471,8 +51471,8 @@ type VCardImportResult struct {
 // VCardImportResultOutcome `created` — nobody matched, so the card became a contact, their company and the edge
 // between them. `updated` — an exact match, filled only where the record was empty.
 // `needs_review` — a resemblance, written nowhere; open the candidate and decide.
-// `skipped` — the card states no name, carries an address of a sending system rather than
-// a person, or matches a contact the caller may not write; `reason` says which.
+// `skipped` — the card states no name, carries a sending system's address, or matches a
+// contact the caller may not write; `reason` says which.
 type VCardImportResultOutcome string
 
 // VoiceBuild defines model for VoiceBuild.

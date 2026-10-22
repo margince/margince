@@ -159,7 +159,7 @@ func TestAContactRowWithASendingSystemsAddressIsSkipped(t *testing.T) {
 	}
 	fields[fieldEmail] = "anna.notify.weber@example.com"
 	if _, problem := checkRow(migration.ObjectContact, fields, importCatalog{}); problem != nil {
-		t.Fatalf("problem = %+v, want none for a person whose name holds a marker word", problem)
+		t.Fatalf("problem = %+v, want none for a human whose name holds a marker word", problem)
 	}
 }
 

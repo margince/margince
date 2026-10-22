@@ -38,11 +38,18 @@ func TestEachContactDoorRefusesASendingSystemsAddressOnItsOwnField(t *testing.T)
 		body        AnyMap
 		field, code string
 	}{
-		{"typed create", "/v1/contacts", AnyMap{"full_name": "Signing", "source": "manual",
-			"emails": []AnyMap{{"email": "signing-noreply@doors.example", "is_primary": true}}}, "emails", "email_names_no_one"},
-		{"quick capture", "/v1/contacts/quick-capture", AnyMap{"full_name": "Receipts", "email": "receipts@doors.example"}, "email", "email_names_no_one"},
-		{"names that disagree", "/v1/contacts", AnyMap{"full_name": "Signing-Noreply", "first_name": "Contact", "last_name": "A", "source": "manual"},
-			"full_name", "full_name_disagrees"},
+		{
+			door: "typed create", path: "/v1/contacts", field: "emails", code: "email_names_no_one",
+			body: AnyMap{"full_name": "Signing", "source": "manual", "emails": []AnyMap{{"email": "signing-noreply@doors.example", "is_primary": true}}},
+		},
+		{
+			door: "quick capture", path: "/v1/contacts/quick-capture", field: "email", code: "email_names_no_one",
+			body: AnyMap{"full_name": "Receipts", "email": "receipts@doors.example"},
+		},
+		{
+			door: "names that disagree", path: "/v1/contacts", field: "full_name", code: "full_name_disagrees",
+			body: AnyMap{"full_name": "Signing-Noreply", "first_name": "Contact", "last_name": "A", "source": "manual"},
+		},
 	} {
 		var faults fieldFaults
 		if status := e.Call(t, http.MethodPost, c.path, c.body, nil, &faults); status != http.StatusUnprocessableEntity {

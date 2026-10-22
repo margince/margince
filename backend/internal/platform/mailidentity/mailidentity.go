@@ -68,7 +68,7 @@ func HasMachineMarker(localpart string) bool {
 }
 
 // HasMachineLocalpart reports whether an address's local part names a sending
-// system rather than a person. No domain allowlist overrules it: nobody answers
+// system rather than a human. No domain allowlist overrules it: nobody answers
 // at noreply@ on any domain.
 func HasMachineLocalpart(address string) bool {
 	at := strings.LastIndex(address, "@")
