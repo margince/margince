@@ -14,6 +14,7 @@ import (
 	"context"
 	"net/http"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -188,5 +189,42 @@ func TestDeleteAiModelRateOverHTTP(t *testing.T) {
 		if row.ModelID == "~typesafe/jev-latest" {
 			t.Fatalf("the removed entry is still listed: %+v", row)
 		}
+	}
+}
+
+// GET /fx-rates/currencies over the wire: an empty sheet is the array `[]`
+// and never `null`, a written rate shows as its code, and an agent bearer is
+// refused because the read feeds the web app's pickers only.
+func TestFxRateCurrenciesOverHTTP(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+
+	status, _, body := getRaw(t, e, "/v1/fx-rates/currencies", nil)
+	if status != http.StatusOK || strings.TrimSpace(string(body)) != `{"data":[]}` {
+		t.Fatalf("empty sheet GET /fx-rates/currencies → %d %s, want 200 {\"data\":[]}", status, body)
+	}
+
+	from := "USD"
+	if baseCurrency(t, e) == "USD" {
+		from = "GBP"
+	}
+	today := time.Now().UTC().Format("2006-01-02")
+	if status := e.Call(t, "POST", "/v1/fx-rates",
+		map[string]any{"from_currency": from, "rate": "0.92", "effective_date": today}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("POST /fx-rates → %d, want 201", status)
+	}
+	var codes struct {
+		Data []string `json:"data"`
+	}
+	if status := e.Call(t, "GET", "/v1/fx-rates/currencies", nil, nil, &codes); status != http.StatusOK {
+		t.Fatalf("GET /fx-rates/currencies → %d, want 200", status)
+	}
+	if len(codes.Data) != 1 || codes.Data[0] != from {
+		t.Fatalf("codes = %v, want [%s]", codes.Data, from)
+	}
+
+	bearer := apptest.PassportBearer(t, e, "currency picker probe", "read")
+	if status := e.Call(t, "GET", "/v1/fx-rates/currencies", nil, bearer, nil); status != http.StatusForbidden {
+		t.Fatalf("agent GET /fx-rates/currencies → %d, want 403 (human-only)", status)
 	}
 }

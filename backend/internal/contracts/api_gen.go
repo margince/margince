@@ -38455,6 +38455,11 @@ type FxRate struct {
 	ToCurrency string `json:"to_currency"`
 }
 
+// FxRateCurrencyListResponse defines model for FxRateCurrencyListResponse.
+type FxRateCurrencyListResponse struct {
+	Data []string `json:"data"`
+}
+
 // FxRateListResponse defines model for FxRateListResponse.
 type FxRateListResponse struct {
 	// BaseCurrency The workspace's base currency — every rate in `data` converts TO this (AAD-PARAM-N-1, ADR-0085). Served from the workspace itself rather than inferred from the first rate row, so a workspace that has entered no rates can still state its own base.
@@ -74193,6 +74198,9 @@ type ServerInterface interface {
 	// Set an FX rate effective today or later (append-forward).
 	// (POST /fx-rates)
 	SetFxRate(w http.ResponseWriter, r *http.Request)
+	// List the currency codes on the FX rate sheet, without their rates.
+	// (GET /fx-rates/currencies)
+	ListFxRateCurrencies(w http.ResponseWriter, r *http.Request)
 	// Enqueue an async FX-rate refresh (stages 🟡 proposals).
 	// (POST /fx-rates/propose-refresh)
 	ProposeFxRateRefresh(w http.ResponseWriter, r *http.Request)
@@ -78321,6 +78329,12 @@ func (_ Unimplemented) ListFxRates(w http.ResponseWriter, r *http.Request, param
 // Set an FX rate effective today or later (append-forward).
 // (POST /fx-rates)
 func (_ Unimplemented) SetFxRate(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// List the currency codes on the FX rate sheet, without their rates.
+// (GET /fx-rates/currencies)
+func (_ Unimplemented) ListFxRateCurrencies(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -101666,6 +101680,26 @@ func (siw *ServerInterfaceWrapper) SetFxRate(w http.ResponseWriter, r *http.Requ
 	handler.ServeHTTP(w, r)
 }
 
+// ListFxRateCurrencies operation middleware
+func (siw *ServerInterfaceWrapper) ListFxRateCurrencies(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListFxRateCurrencies(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ProposeFxRateRefresh operation middleware
 func (siw *ServerInterfaceWrapper) ProposeFxRateRefresh(w http.ResponseWriter, r *http.Request) {
 
@@ -119803,6 +119837,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/fx-rates", wrapper.SetFxRate)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/fx-rates/currencies", wrapper.ListFxRateCurrencies)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/fx-rates/propose-refresh", wrapper.ProposeFxRateRefresh)

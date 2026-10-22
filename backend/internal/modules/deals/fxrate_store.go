@@ -288,18 +288,51 @@ func (s *Store) ListLatestFxRates(ctx context.Context) ([]FxRateRow, error) {
 		if err != nil {
 			return err
 		}
-		r, err := tx.Query(ctx, `
-			SELECT DISTINCT ON (from_currency) from_currency, to_currency, rate::text, rate_date
-			FROM fx_rate WHERE to_currency = $1
-			ORDER BY from_currency, rate_date DESC`, base)
-		if err != nil {
-			return fmt.Errorf("list fx_rate: %w", err)
-		}
-		defer r.Close()
-		rows, err = scanFxRows(r)
+		rows, err = sheetHeadTx(ctx, tx, base)
 		return err
 	})
 	return rows, err
+}
+
+// RateSheetCurrencies returns the foreign currencies on the sheet head, in
+// code order, so a currency picker can offer them right after the base.
+// The gate is deal read, not fx_rate read: the answer holds codes and never
+// a rate, and every role that may create a deal needs it for the picker. The
+// base is read without the installation_settings gate for the same reason.
+func (s *Store) RateSheetCurrencies(ctx context.Context) ([]string, error) {
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		return nil, err
+	}
+	codes := []string{}
+	err := s.Tx(ctx, func(tx pgx.Tx) error {
+		base, err := s.installation.BaseCurrencyApplied(ctx, tx)
+		if err != nil {
+			return err
+		}
+		rows, err := sheetHeadTx(ctx, tx, base)
+		if err != nil {
+			return err
+		}
+		for _, row := range rows {
+			codes = append(codes, row.FromCurrency)
+		}
+		return nil
+	})
+	return codes, err
+}
+
+// sheetHeadTx is the one definition of the sheet head: the latest-dated row
+// per foreign currency that converts into base, ordered by currency code.
+func sheetHeadTx(ctx context.Context, tx pgx.Tx, base string) ([]FxRateRow, error) {
+	r, err := tx.Query(ctx, `
+		SELECT DISTINCT ON (from_currency) from_currency, to_currency, rate::text, rate_date
+		FROM fx_rate WHERE to_currency = $1
+		ORDER BY from_currency, rate_date DESC`, base)
+	if err != nil {
+		return nil, fmt.Errorf("list fx_rate: %w", err)
+	}
+	defer r.Close()
+	return scanFxRows(r)
 }
 
 // ListEffectiveFxRates returns the rate in force TODAY per foreign currency —

@@ -30089,7 +30089,8 @@ paths:
       description: |
         Admin/ops-only view. Without `from`, returns the latest effective rate per
         foreign currency (to = the workspace base currency). With `from=USD`, returns
-        that pair's full effective-dated history, newest first.
+        that pair's full effective-dated history, newest first. A caller that needs
+        only the sheet's currency codes reads `GET /fx-rates/currencies`.
       parameters:
         - name: from
           in: query
@@ -30223,6 +30224,27 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /fx-rates/currencies:
+    get:
+      tags: [Rates]
+      operationId: listFxRateCurrencies
+      security: [ { cookieAuth: [] } ]   # human session only — feeds the currency pickers of the web app
+      x-agent-access: human-only
+      summary: List the currency codes on the FX rate sheet, without their rates.
+      description: |
+        The foreign currencies of the sheet head (the same rows `GET /fx-rates`
+        lists without `from`), as codes in code order. Readable by every role that
+        may read deals, so a currency picker can offer the workspace's own
+        currencies first; the rates themselves stay on the admin/ops-only
+        `GET /fx-rates`. An empty sheet answers an empty list.
+      responses:
+        '200':
+          description: The sheet's currency codes.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FxRateCurrencyListResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
   /fx-rates/propose-refresh:
     post:
       tags: [Rates]
@@ -31334,6 +31356,14 @@ components:
             inferred from the first rate row, so a workspace that has entered no rates
             can still state its own base.
         data: { type: array, items: { $ref: '#/components/schemas/FxRate' } }
+    FxRateCurrencyListResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: array
+          uniqueItems: true
+          items: { type: string, pattern: '^[A-Z]{3}$' }
     SetFxRateRequest:
       type: object
       required: [from_currency, rate]
