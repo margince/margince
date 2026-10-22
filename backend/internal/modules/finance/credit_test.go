@@ -119,3 +119,18 @@ func TestACreditNoteOwesNothing(t *testing.T) {
 		t.Fatalf("status = %q, want %q", values.status, statusCredited)
 	}
 }
+
+// A credit applied to an invoice reduces what is owed, as a payment does. An
+// invoice settled by money and a credit is paid, not still partly open.
+func TestACreditAppliedReducesWhatTheInvoiceOwes(t *testing.T) {
+	settled := asOf.AddDate(0, 0, -3)
+	invoice := SourceInvoice{ExternalID: "INV-1", GrossMinor: 10000, PaidMinor: 6000, FullyPaidAt: &settled}
+	values := deriveValues(invoice, asOf, map[string]ids.UUID{}, 4000, nil)
+	if values.openMinor != 0 || values.status != statusPaid {
+		t.Fatalf("open = %d, status = %q; want 0 and %q", values.openMinor, values.status, statusPaid)
+	}
+	partial := SourceInvoice{ExternalID: "INV-2", GrossMinor: 10000, PaidMinor: 1000}
+	if got := deriveValues(partial, asOf, map[string]ids.UUID{}, 2500, nil).openMinor; got != 6500 {
+		t.Fatalf("open = %d, want 6500 once money and the credit are both taken off", got)
+	}
+}

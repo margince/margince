@@ -281,7 +281,8 @@ func deriveValues(
 	inv SourceInvoice, now time.Time, rowIDs map[string]ids.UUID,
 	creditedAgainst int64, rate *Rate,
 ) invoiceValues {
-	open := max(inv.GrossMinor-inv.PaidMinor,
+	// What is still owed: credits applied settle an invoice as money does.
+	open := max(inv.GrossMinor-inv.PaidMinor-creditedAgainst,
 		// Overpaid. Nothing owed rather than a negative balance, which would
 		// read as us owing them.
 		0)
