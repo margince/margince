@@ -14,10 +14,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// ApplySystemTagTx files each record under the live tag with this name, and
-// coins the tag when no live one holds it, so a word a user already made is
-// reused. A record already filed there counts as done, which lets a correction
-// run twice and change nothing the second time. It answers how many records it
+// ApplySystemTagTx files each record under the tag with this name, restoring
+// or coining it as tagNamedTx says, so a word a user already made is reused.
+// A record already filed there counts as done, which lets a correction run
+// twice and change nothing the second time. It answers how many records it
 // tagged. System principal only.
 func ApplySystemTagTx(ctx context.Context, tx pgx.Tx, name, entityType string, entityIDs []ids.UUID, evidence map[string]any) (int, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
@@ -29,7 +29,7 @@ func ApplySystemTagTx(ctx context.Context, tx pgx.Tx, name, entityType string, e
 	if len(entityIDs) == 0 {
 		return 0, nil
 	}
-	tagID, err := liveTagNamedTx(ctx, tx, name)
+	tagID, err := tagNamedTx(ctx, tx, name)
 	if err != nil {
 		return 0, err
 	}
@@ -47,20 +47,28 @@ func ApplySystemTagTx(ctx context.Context, tx pgx.Tx, name, entityType string, e
 	return applied, nil
 }
 
-// liveTagNamedTx is the live tag holding this name, coined when none does.
-func liveTagNamedTx(ctx context.Context, tx pgx.Tx, name string) (ids.TagID, error) {
+// tagNamedTx is the tag holding this name, live first. An archived one is
+// restored rather than coined again, so the records it already files stay
+// under one word; a name no tag ever held is coined.
+func tagNamedTx(ctx context.Context, tx pgx.Tx, name string) (ids.TagID, error) {
 	name, err := ValidateTagName(name)
 	if err != nil {
 		return ids.TagID{}, err
 	}
 	var id ids.TagID
-	err = tx.QueryRow(ctx, `SELECT id FROM tag WHERE lower(name) = lower($1) AND archived_at IS NULL`, name).Scan(&id)
-	if err == nil {
-		return id, nil
-	}
-	if !errors.Is(err, pgx.ErrNoRows) {
+	var archived bool
+	err = tx.QueryRow(ctx, `
+		SELECT id, archived_at IS NOT NULL FROM tag WHERE lower(name) = lower($1)
+		 ORDER BY archived_at IS NOT NULL, archived_at DESC LIMIT 1`, name).Scan(&id, &archived)
+	switch {
+	case errors.Is(err, pgx.ErrNoRows):
+		coined, err := insertTagTx(ctx, tx, name, nil, nil)
+		return coined.ID, err
+	case err != nil:
 		return ids.TagID{}, err
+	case archived:
+		restored, err := restoreTagTx(ctx, tx, id)
+		return restored.ID, err
 	}
-	coined, err := insertTagTx(ctx, tx, name, nil, nil)
-	return coined.ID, err
+	return id, nil
 }

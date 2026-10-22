@@ -68,9 +68,6 @@ func contactUpdateFrom(changed map[string]string, typed map[string]any) contacts
 		Address:      addressFrom(changed),
 		CustomFields: customFieldsFrom(changed, typed),
 	}
-	if joined := joinedNameParts(changed); joined != "" && in.FullName != nil {
-		in.FullName = &joined
-	}
 	in.Emails = contactEmailsFrom(changed)
 	in.Phones = contactPhonesFrom(changed, typed)
 	in.Social = contactSocialFrom(changed, typed)
@@ -92,6 +89,20 @@ func contactFullName(fields map[string]string) string {
 		return joined
 	}
 	return strings.TrimSpace(fields[fieldEmail])
+}
+
+// withNamePartsAsFullName is the row as its full name reads it: one that states
+// both name parts carries them as its full name, whether or not it maps a full
+// name column. The update comparison reads it, so a full name that disagrees
+// with the parts can never be sent on its own.
+func withNamePartsAsFullName(fields map[string]string) map[string]string {
+	joined := joinedNameParts(fields)
+	if joined == "" || fields[fieldFullName] == joined {
+		return fields
+	}
+	out := maps.Clone(fields)
+	out[fieldFullName] = joined
+	return out
 }
 
 // joinedNameParts is "first last" when the row states both parts, else "".

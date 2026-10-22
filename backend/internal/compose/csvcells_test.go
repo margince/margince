@@ -170,8 +170,15 @@ func TestAnImportRowsNamePartsSetItsFullName(t *testing.T) {
 	if got := contactCreateFrom(fields, nil, "csv", "src").FullName; got != "Contact A" {
 		t.Errorf("created full name = %q, want %q", got, "Contact A")
 	}
-	if got := contactUpdateFrom(fields, nil).FullName; got == nil || *got != "Contact A" {
-		t.Errorf("updated full name = %v, want %q", got, "Contact A")
+	// The update compares the row as its parts name it, so a full name that
+	// disagrees with unchanged parts is not sent on its own.
+	current := []byte(`{"full_name":"Contact A","first_name":"Contact","last_name":"A"}`)
+	if changed, err := changedFields(current, fields, nil); err != nil || len(changed) != 0 {
+		t.Errorf("changed = %v (err %v), want nothing: the parts still name Contact A", changed, err)
+	}
+	renamed := map[string]string{"first_name": "Ada", "last_name": "Lovelace"}
+	if changed, err := changedFields(current, renamed, nil); err != nil || changed[fieldFullName] != "Ada Lovelace" {
+		t.Errorf("changed = %v (err %v), want the full name to follow new parts", changed, err)
 	}
 	delete(fields, "last_name")
 	if got := contactCreateFrom(fields, nil, "csv", "src").FullName; got != "Signing-Noreply" {

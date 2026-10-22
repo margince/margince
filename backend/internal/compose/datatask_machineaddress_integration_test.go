@@ -113,6 +113,27 @@ func TestTheMachineAddressTaskTagsOnlyMachineContactsAndReplaysSafely(t *testing
 	}
 }
 
+// A user who archived the word gets it back with the records filed under it,
+// rather than a second tag of the same name.
+func TestTheMachineAddressTaskRestoresAnArchivedTagOfItsName(t *testing.T) {
+	e := integration.Setup(t)
+	conn := integration.OwnerConn(t)
+	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
+	receipts := machineAddressContact(t, e, conn, "Expense Receipts", "receipts@machine-task.test")
+	if _, err := conn.Exec(ctx, `INSERT INTO tag (name, archived_at) VALUES ($1, now())`, machineAddressTag); err != nil {
+		t.Fatal(err)
+	}
+
+	runMachineAddressTask(ctx, t, e, machineAddressDataTask())
+
+	if got := e.WsCount(t, `SELECT count(*) FROM tag WHERE name = $1`, machineAddressTag); got != 1 {
+		t.Errorf("tags named %s = %d, want the archived one restored", machineAddressTag, got)
+	}
+	if got := machineTagged(t, e, receipts); got != 1 {
+		t.Errorf("the receipts@ contact carries the restored tag %d times, want once", got)
+	}
+}
+
 func TestTheMachineAddressTaskRollsItsTagsBackWithItsProgress(t *testing.T) {
 	e := integration.Setup(t)
 	conn := integration.OwnerConn(t)
