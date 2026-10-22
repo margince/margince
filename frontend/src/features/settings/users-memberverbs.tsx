@@ -24,6 +24,7 @@ export function MemberVerbs({ member }: Readonly<{ member: User }>) {
   const refresh = useMemberRefresh();
   const pending = useMemberBusy(member.id);
   const [confirmOff, setConfirmOff] = useState(false);
+  const [confirmFactor, setConfirmFactor] = useState(false);
   const [linkOpen, setLinkOpen] = useState(false);
   const passwordLink = usePasswordLink();
   const openLink = () => {
@@ -72,11 +73,32 @@ export function MemberVerbs({ member }: Readonly<{ member: User }>) {
     },
   });
 
+  const removeFactor = useMutation({
+    mutationKey: memberMutationKey(member.id, "remove_mfa"),
+    mutationFn: async (id: string) => {
+      unwrap(await api.DELETE("/users/{id}/mfa", { params: { path: { id } } }));
+    },
+    onSuccess: async () => {
+      await refresh();
+      setConfirmFactor(false);
+      toast.show(t("users.mfaRemoved", { name: member.display_name }));
+    },
+  });
+
   const canMintLink = offers(member, "issue_password_link");
+  const canRemoveFactor = offers(member, "remove_mfa");
   const canDeactivate = offers(member, "deactivate");
   const canReactivate = offers(member, "reactivate");
   if (
-    !(canMintLink || canDeactivate || canReactivate || linkOpen || confirmOff)
+    !(
+      canMintLink ||
+      canRemoveFactor ||
+      canDeactivate ||
+      canReactivate ||
+      linkOpen ||
+      confirmOff ||
+      confirmFactor
+    )
   ) {
     return null;
   }
@@ -88,6 +110,11 @@ export function MemberVerbs({ member }: Readonly<{ member: User }>) {
         {canMintLink && (
           <Button disabled={pending} onClick={openLink}>
             {t("users.link.action")}
+          </Button>
+        )}
+        {canRemoveFactor && (
+          <Button disabled={pending} onClick={() => setConfirmFactor(true)}>
+            {t("users.removeMfa")}
           </Button>
         )}
         {canDeactivate && (
@@ -125,6 +152,21 @@ export function MemberVerbs({ member }: Readonly<{ member: User }>) {
               : "users.deactivateConfirmBody",
           )}
         </p>
+      </ConfirmModal>
+      <ConfirmModal
+        open={confirmFactor}
+        onClose={() => setConfirmFactor(false)}
+        title={t("users.removeMfaConfirmTitle", { name: member.display_name })}
+        confirmLabel={t("users.removeMfa")}
+        confirmVariant="danger"
+        pending={removeFactor.isPending}
+        error={
+          removeFactor.error ? problemMessageOf(removeFactor.error, t) : null
+        }
+        onConfirm={() => removeFactor.mutate(member.id)}
+        returnFocusTo={() => document.getElementById(memberAnchorId(member.id))}
+      >
+        <p>{t("users.removeMfaConfirmBody")}</p>
       </ConfirmModal>
       {linkOpen && (
         <PasswordLinkModal

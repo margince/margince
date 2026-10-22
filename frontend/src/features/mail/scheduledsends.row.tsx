@@ -10,7 +10,7 @@ import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { logUnexpectedError } from "../../lib/problem";
 import { useSendPermission } from "../../lib/usesendpermission";
-import { editSeedOf } from "./schedulededit";
+import { isEditable } from "./schedulededit";
 import type { ScheduledSend, Status } from "./scheduledqueue";
 import { type Move, RescheduleMenu } from "./scheduledsends.reschedule";
 
@@ -244,7 +244,7 @@ export function SendRow({
               pending={movePending}
               onMove={onMove}
             />
-            {editSeedOf(send) && (
+            {isEditable(send) && (
               <Button variant="ghost" onClick={() => onEdit(send)}>
                 <span aria-hidden>{t("sched.edit")}</span>
                 <span className="sr-only">

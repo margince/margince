@@ -1919,6 +1919,8 @@ export const de = {
   "history.verb.resetData": "{subject} hat den Datensatz zurückgesetzt",
   "history.verb.passwordLinkIssued":
     "{subject} hat einen Passwort-Link für den Datensatz erstellt",
+  "history.verb.mfaRemoved":
+    "{subject} hat die zweistufige Anmeldung für den Datensatz entfernt",
   "history.verb.connect": "{subject} hat den Datensatz verbunden",
   "history.verb.disconnect":
     "{subject} hat die Verbindung des Datensatzes getrennt",
@@ -7976,6 +7978,7 @@ export const de = {
   "audit.action.importUndo": "Import rückgängig gemacht",
   "audit.action.resetData": "Daten zurückgesetzt",
   "audit.action.passwordLinkIssued": "Passwort-Link erstellt",
+  "audit.action.mfaRemoved": "Zweistufige Anmeldung entfernt",
   "audit.action.connect": "Verbunden",
   "audit.action.disconnect": "Getrennt",
   "audit.action.schedule": "Geplant",
@@ -11659,6 +11662,11 @@ export const de = {
   "users.status.invited": "Eingeladen",
   "users.status.deactivated": "Deaktiviert",
   "users.status.suspended": "Gesperrt",
+  "users.removeMfa": "Zweistufige Anmeldung entfernen",
+  "users.removeMfaConfirmTitle": "Zweistufige Anmeldung für {name} entfernen?",
+  "users.removeMfaConfirmBody":
+    "Tu das nur für ein Mitglied, das seine Authenticator-App und seine Wiederherstellungscodes verloren hat. Es wird überall abgemeldet und kann sich danach allein mit seinem Passwort anmelden, bis es die zweistufige Anmeldung wieder einrichtet.",
+  "users.mfaRemoved": "Zweistufige Anmeldung für {name} entfernt",
   "users.link.action": "Passwort-Link erstellen",
   "users.link.title": "Passwort-Link für {name}",
   "users.link.pending": "Link wird erstellt…",
@@ -13329,6 +13337,9 @@ export const de = {
   "webhooks.event.user.password_link_issued.label": "Passwort-Link ausgestellt",
   "webhooks.event.user.password_link_issued.when":
     "Ein Admin erstellt einen Link zum Festlegen des Passworts, der außerhalb von Margince weitergegeben wird, wenn kein E-Mail-Versand eingerichtet ist.",
+  "webhooks.event.user.mfa_removed.label": "Zweistufige Anmeldung entfernt",
+  "webhooks.event.user.mfa_removed.when":
+    "Ein Admin entfernt die zweistufige Anmeldung eines Mitglieds und meldet es überall ab.",
   "webhooks.event.user.deactivated.label": "Mitglied deaktiviert",
   "webhooks.event.user.deactivated.when":
     "Die Sitzungen und Agent-Passports eines Mitglieds werden widerrufen.",

@@ -23238,6 +23238,41 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+  /users/{id}/mfa:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    delete:
+      tags: [Identity]
+      operationId: removeUserMfa
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: Remove a member's second factor. Admin-only, human-only.
+      description: |
+        For a member who lost both their authenticator and their recovery codes. In one
+        transaction it removes the member's confirmed factor and its recovery codes, ends every
+        session the member holds, and emits `user.mfa_removed`, which names the admin and the
+        member. The sealed secret is erased after that commit; nothing references it by then.
+        The member then signs in with their password and sets a factor up again, at once if the
+        installation requires one.
+
+        It takes the same ceiling as `issueUserPasswordLink`: a delegated admin may act only on a
+        member whose whole access they already hold, and never on a full admin (403). Your own
+        factor is refused (403): `disableMyMfa` removes it, and asks for a current code, so a
+        borrowed session cannot strip it. Idempotent: a member with no confirmed factor is a
+        no-op, and a pending enrolment is left as it is.
+      responses:
+        '204': { description: 'The member has no second factor now, or had none.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: >-
+            Refused with `code: archived_role_held`: the member holds an archived role, which
+            would hand the account its grants back the moment the role is restored. An admin
+            gives them a live role first.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /users/{id}/password-link:
     parameters:
@@ -51208,14 +51243,15 @@ components:
           type: array
           items:
             type: string
-            enum: [change_role, issue_password_link, deactivate, reactivate]
+            enum: [change_role, issue_password_link, remove_mfa, deactivate, reactivate]
           description: >
             The member verbs the CALLER would be admitted to on this user right now, computed by
             the same checks those endpoints run: the `user_admin` verb each takes, a seat that may
             write, the ceiling over the target (a non-admin never acts on an admin, and otherwise
             holds everything the verb reaches), the member's status and kind, the last-admin
-            guard, an archived role still held, the licensed seat ceiling on reactivation, and
-            whether this installation can build a set-password link. Present on `listUsers`'s
+            guard, an archived role still held, the licensed seat ceiling on reactivation,
+            whether this installation can build a set-password link, and whether the member has
+            a confirmed second factor to remove. Present on `listUsers`'s
             management view for a human caller only; absent means not computed, and a client
             offers nothing then. It is an offer, not a promise: every write re-checks under its
             lock, and `change_role` says a role change is possible at all — which roles, is
@@ -53932,7 +53968,7 @@ components:
       # `close` freezes content while access continues, and `pause`/`resume`
       # suspend reads without touching a single credential. `hold`/`release`
       # and `expire` are retention and scheduling verbs and would read as those.
-      enum: [create, update, archive, merge, promote, demote, disqualify, restore, export, erase, anonymize, assign, advance_stage, advance_phase, send_email, consent_grant, consent_withdraw, approve, reject, record_share, record_unshare, activity_relink, import, import_undo, reset_data, password_link_issued, connect, disconnect, schedule, reschedule, cancel, release, hold, expire, resolve, restrict, pin, accrue, pay, publish, pause, resume, close, invite, revoke, delete, place_legal_hold, lift_legal_hold, request_legal_review, withdraw_legal_review]
+      enum: [create, update, archive, merge, promote, demote, disqualify, restore, export, erase, anonymize, assign, advance_stage, advance_phase, send_email, consent_grant, consent_withdraw, approve, reject, record_share, record_unshare, activity_relink, import, import_undo, reset_data, password_link_issued, connect, disconnect, schedule, reschedule, cancel, release, hold, expire, resolve, restrict, pin, accrue, pay, publish, pause, resume, close, invite, revoke, delete, place_legal_hold, lift_legal_hold, request_legal_review, withdraw_legal_review, mfa_removed]
 
     AuditLogEntry:
       type: object

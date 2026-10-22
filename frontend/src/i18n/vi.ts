@@ -1862,6 +1862,7 @@ export const vi = {
   "history.verb.resetData": "{subject} đã đặt lại hồ sơ",
   "history.verb.passwordLinkIssued":
     "{subject} đã tạo liên kết đặt mật khẩu cho hồ sơ",
+  "history.verb.mfaRemoved": "{subject} đã gỡ đăng nhập hai bước của hồ sơ",
   "history.verb.connect": "{subject} đã kết nối hồ sơ",
   "history.verb.disconnect": "{subject} đã ngắt kết nối hồ sơ",
   "history.verb.schedule": "{subject} đã lên lịch hồ sơ",
@@ -7765,6 +7766,7 @@ export const vi = {
   "audit.action.importUndo": "Đã hoàn tác nhập",
   "audit.action.resetData": "Đã đặt lại dữ liệu",
   "audit.action.passwordLinkIssued": "Đã tạo liên kết mật khẩu",
+  "audit.action.mfaRemoved": "Đã gỡ đăng nhập hai bước",
   "audit.action.connect": "Đã kết nối",
   "audit.action.disconnect": "Đã ngắt kết nối",
   "audit.action.schedule": "Đã lên lịch",
@@ -11356,6 +11358,11 @@ export const vi = {
   "users.status.invited": "Đã mời",
   "users.status.deactivated": "Đã vô hiệu hóa",
   "users.status.suspended": "Đã tạm khóa",
+  "users.removeMfa": "Gỡ đăng nhập hai bước",
+  "users.removeMfaConfirmTitle": "Gỡ đăng nhập hai bước của {name}?",
+  "users.removeMfaConfirmBody":
+    "Chỉ làm việc này cho thành viên đã mất cả ứng dụng xác thực lẫn mã khôi phục. Họ sẽ bị đăng xuất ở mọi nơi và sau đó có thể đăng nhập chỉ bằng mật khẩu, cho đến khi thiết lập lại đăng nhập hai bước.",
+  "users.mfaRemoved": "Đã gỡ đăng nhập hai bước của {name}",
   "users.link.action": "Lấy liên kết đặt mật khẩu",
   "users.link.title": "Liên kết đặt mật khẩu cho {name}",
   "users.link.pending": "Đang tạo liên kết…",
@@ -12995,6 +13002,9 @@ export const vi = {
     "Đã cấp liên kết đặt mật khẩu",
   "webhooks.event.user.password_link_issued.when":
     "Quản trị viên tạo liên kết đặt mật khẩu để chuyển cho thành viên ngoài Margince, khi chưa thiết lập gửi email.",
+  "webhooks.event.user.mfa_removed.label": "Đã gỡ đăng nhập hai bước",
+  "webhooks.event.user.mfa_removed.when":
+    "Quản trị viên gỡ đăng nhập hai bước của thành viên và đăng xuất họ ở mọi nơi.",
   "webhooks.event.user.deactivated.label": "Đã vô hiệu hóa thành viên",
   "webhooks.event.user.deactivated.when":
     "Phiên đăng nhập và passport của agent thuộc thành viên bị thu hồi.",

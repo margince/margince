@@ -17,7 +17,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | backend | The Go server code under `backend/`. |
 | Beschäftigteninformation | The German notice each employee gets before their mailbox is read (Art. 13 GDPR). |
 | BUSL | The Business Source License 1.1, the license Margince uses. |
-| changelog | The list of changes in each release, kept in `CHANGELOG.md`. |
+| changelog | A file listing the changes of each release, which this repository does not keep. |
 | CI | Continuous integration: the checks GitHub runs on every pull request. |
 | CIMD | Client ID Metadata Document: an AI tool's ID that is the URL of a file describing it. |
 | Compose | Docker Compose, which starts Postgres and Redis for local work. |
@@ -57,6 +57,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | MCP | Model Context Protocol: how an AI agent connects to Margince's tools. |
 | mdy | The date order month, day, year, as a setting value. |
 | Microsoft | The company behind Microsoft 365 mail and calendars. |
+| milestone | A GitHub group of issues that one release, named like its tag, ships. |
 | Node | Node.js, the JavaScript runtime the web app's tools run on. |
 | Ollama | A tool that runs language models on your own machine. |
 | OpenDocument | The open file format for text, tables and slides. |

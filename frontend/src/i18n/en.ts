@@ -1856,6 +1856,8 @@ export const en = {
   "history.verb.resetData": "{subject} reset the record",
   "history.verb.passwordLinkIssued":
     "{subject} issued a set-password link for the record",
+  "history.verb.mfaRemoved":
+    "{subject} removed two-step sign-in for the record",
   "history.verb.connect": "{subject} connected the record",
   "history.verb.disconnect": "{subject} disconnected the record",
   "history.verb.schedule": "{subject} scheduled the record",
@@ -8030,6 +8032,7 @@ export const en = {
   "audit.action.importUndo": "Import undone",
   "audit.action.resetData": "Data reset",
   "audit.action.passwordLinkIssued": "Password link issued",
+  "audit.action.mfaRemoved": "Two-step sign-in removed",
   "audit.action.connect": "Connected",
   "audit.action.disconnect": "Disconnected",
   "audit.action.schedule": "Scheduled",
@@ -11678,6 +11681,11 @@ export const en = {
   "users.status.invited": "Invited",
   "users.status.deactivated": "Deactivated",
   "users.status.suspended": "Suspended",
+  "users.removeMfa": "Remove two-step sign-in",
+  "users.removeMfaConfirmTitle": "Remove two-step sign-in for {name}?",
+  "users.removeMfaConfirmBody":
+    "Do this only for a member who lost both their authenticator app and their recovery codes. They are signed out everywhere and can then sign in with their password alone, until they set up two-step sign-in again.",
+  "users.mfaRemoved": "Two-step sign-in removed for {name}",
   "users.link.action": "Get set-password link",
   "users.link.title": "Set-password link for {name}",
   "users.link.pending": "Creating link…",
@@ -13287,6 +13295,9 @@ export const en = {
   "webhooks.event.user.password_link_issued.label": "Password link issued",
   "webhooks.event.user.password_link_issued.when":
     "An administrator creates a set-password link to pass on outside Margince, where no outbound email is set up.",
+  "webhooks.event.user.mfa_removed.label": "Second factor removed",
+  "webhooks.event.user.mfa_removed.when":
+    "An administrator removes a member’s two-step sign-in and signs them out everywhere.",
   "webhooks.event.user.deactivated.label": "Member deactivated",
   "webhooks.event.user.deactivated.when":
     "A member’s sessions and agent passports are revoked.",

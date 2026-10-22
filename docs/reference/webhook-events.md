@@ -161,6 +161,7 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`user.activated`](#useractivated) | user | 1 |
 | [`user.deactivated`](#userdeactivated) | user | 1 |
 | [`user.invited`](#userinvited) | user | 1 |
+| [`user.mfa_removed`](#usermfa_removed) | user | 1 |
 | [`user.password_link_issued`](#userpassword_link_issued) | user | 1 |
 | [`user.reactivated`](#userreactivated) | user | 1 |
 | [`user_delivery.changed`](#user_deliverychanged) | user | 1 |
@@ -1605,6 +1606,18 @@ Payload for user.invited, an admin provisioned a new active member with a single
 | `data.role` | string | yes | The single system role key granted to the new member. |
 | `data.team_ids` | array of string | no | The teams the member joined on arrival, when the invite named any. |
 | `data.user_id` | string (uuid) | yes | The invited member. |
+
+### `user.mfa_removed`
+
+Record: `user` · version 1
+
+Payload for user.mfa_removed. An admin removed a member's confirmed second factor. Every session the member held ended with it. The password alone opens the account until the member sets a factor up again. So `by` and `user_id` are both required: this event records who weakened which sign-in.
+
+| Field | Type | Always present | What it is |
+|---|---|---|---|
+| `data.by` | string (uuid) | yes | The admin who removed it. |
+| `data.sessions_ended` | integer | yes | How many live sessions of the member the removal ended. |
+| `data.user_id` | string (uuid) | yes | The member whose second factor was removed. |
 
 ### `user.password_link_issued`
 

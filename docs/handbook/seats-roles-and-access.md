@@ -59,6 +59,14 @@ To reset a colleague's password in Margince, open **Settings → Members**. Open
 The box shows when the link ends. To change your own password, use **Settings → Account → Change password** instead.
 Also called: forgot password, password reset, locked out.
 
+### How do I let in a colleague who lost their two-step sign-in?
+To let a colleague in who lost both their phone app and their backup codes, open **Settings → Members**. Open the **Actions for {name}** menu on their row and choose **Remove two-step sign-in**.
+1. Choose **Remove two-step sign-in**.
+2. Read the box and choose **Remove two-step sign-in** again.
+
+They are signed out everywhere, and their password alone signs them in until they set up two-step sign-in again. If your installation requires it, Margince asks them to set it up again at once. The menu offers this only for a colleague who has two-step sign-in on. It never shows on your own row: you remove your own in **Settings → Account**, with a code. The audit log records who removed it.
+Also called: lost phone, lost backup codes, reset two-step sign-in, reset MFA.
+
 ### How do I create a team?
 To create a team in Margince, open **Settings → Teams** and choose **New team** at the top of the page.
 1. Open **Settings → Teams**.
@@ -290,7 +298,7 @@ To invite and remove colleagues you need the permission to manage users. Only th
 
 Inviting, deactivating and the **Members** settings list all answer to that permission. So a custom role that holds it manages colleagues without being called Admin.
 
-**Your access must cover theirs.** To act on an **Admin's** account you need the Admin role yourself. If not, deactivating or bringing them back needs their admin permissions and row scope. A set-password link, a role change or an invite needs everything the account holds or will hold, fields and teams included. Only an Admin changes their own role. A member on an archived role gets no link and cannot be brought back until an Admin gives them a live role.
+**Your access must cover theirs.** To act on an **Admin's** account you need the Admin role yourself. If not, deactivating or bringing them back needs their admin permissions and row scope. A set-password link, removing two-step sign-in, a role change or an invite needs everything the account holds or will hold, fields and teams included. Only an Admin changes their own role. A member on an archived role gets no link and cannot be brought back until an Admin gives them a live role.
 
 **Inviting.** You choose a role, and the colleague is created with no password. If your Margince sends email, they get a link. If not, the admin takes a link that works once from **Get set-password link** and gives it to them. An invite link lasts 7 days.
 

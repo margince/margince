@@ -2655,6 +2655,7 @@ const (
 	AuditActionInvite              AuditAction = "invite"
 	AuditActionLiftLegalHold       AuditAction = "lift_legal_hold"
 	AuditActionMerge               AuditAction = "merge"
+	AuditActionMfaRemoved          AuditAction = "mfa_removed"
 	AuditActionPasswordLinkIssued  AuditAction = "password_link_issued"
 	AuditActionPause               AuditAction = "pause"
 	AuditActionPay                 AuditAction = "pay"
@@ -2736,6 +2737,8 @@ func (e AuditAction) Valid() bool {
 	case AuditActionLiftLegalHold:
 		return true
 	case AuditActionMerge:
+		return true
+	case AuditActionMfaRemoved:
 		return true
 	case AuditActionPasswordLinkIssued:
 		return true
@@ -18952,6 +18955,7 @@ const (
 	UserAllowedActionsDeactivate        UserAllowedActions = "deactivate"
 	UserAllowedActionsIssuePasswordLink UserAllowedActions = "issue_password_link"
 	UserAllowedActionsReactivate        UserAllowedActions = "reactivate"
+	UserAllowedActionsRemoveMfa         UserAllowedActions = "remove_mfa"
 )
 
 // Valid indicates whether the value is a known member of the UserAllowedActions enum.
@@ -18964,6 +18968,8 @@ func (e UserAllowedActions) Valid() bool {
 	case UserAllowedActionsIssuePasswordLink:
 		return true
 	case UserAllowedActionsReactivate:
+		return true
+	case UserAllowedActionsRemoveMfa:
 		return true
 	default:
 		return false
@@ -51363,7 +51369,7 @@ type UpsertPartnerRequestRelationshipStage string
 
 // User A seat — human or first-party agent. Mirrors `app_user`.
 type User struct {
-	// AllowedActions The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, and whether this installation can build a set-password link. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
+	// AllowedActions The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
 	AllowedActions *[]UserAllowedActions `json:"allowed_actions,omitempty"`
 	ArchivedAt     *time.Time            `json:"archived_at,omitempty"`
 	CreatedAt      *time.Time            `json:"created_at,omitempty"`
@@ -75231,6 +75237,9 @@ type ServerInterface interface {
 	// Deactivate a member and revoke their live access. Admin-only, human-only.
 	// (POST /users/{id}/deactivate)
 	DeactivateUser(w http.ResponseWriter, r *http.Request, id Id)
+	// Remove a member's second factor. Admin-only, human-only.
+	// (DELETE /users/{id}/mfa)
+	RemoveUserMfa(w http.ResponseWriter, r *http.Request, id Id)
 	// Mint a single-use set-password link for a member. Admin-only, human-only.
 	// (POST /users/{id}/password-link)
 	IssueUserPasswordLink(w http.ResponseWriter, r *http.Request, id Id)
@@ -80376,6 +80385,12 @@ func (_ Unimplemented) GetUserAccess(w http.ResponseWriter, r *http.Request, id 
 // Deactivate a member and revoke their live access. Admin-only, human-only.
 // (POST /users/{id}/deactivate)
 func (_ Unimplemented) DeactivateUser(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Remove a member's second factor. Admin-only, human-only.
+// (DELETE /users/{id}/mfa)
+func (_ Unimplemented) RemoveUserMfa(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -115745,6 +115760,38 @@ func (siw *ServerInterfaceWrapper) DeactivateUser(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// RemoveUserMfa operation middleware
+func (siw *ServerInterfaceWrapper) RemoveUserMfa(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveUserMfa(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // IssueUserPasswordLink operation middleware
 func (siw *ServerInterfaceWrapper) IssueUserPasswordLink(w http.ResponseWriter, r *http.Request) {
 
@@ -120870,6 +120917,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/users/{id}/deactivate", wrapper.DeactivateUser)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/users/{id}/mfa", wrapper.RemoveUserMfa)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/users/{id}/password-link", wrapper.IssueUserPasswordLink)
