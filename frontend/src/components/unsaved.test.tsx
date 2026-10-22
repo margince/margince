@@ -10,6 +10,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { LocaleProvider } from "../i18n";
 import { navigate, useHash } from "../lib/router";
@@ -69,7 +70,9 @@ function DraftDialog() {
       labelledBy="d"
       intent="form"
     >
-      <h2 id="d">Signature</h2>
+      <Heading size="large" id="d">
+        Signature
+      </Heading>
       <DraftCard />
     </Modal>
   );
