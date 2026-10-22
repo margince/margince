@@ -3258,6 +3258,9 @@ export const de = {
   "co.next.due": "Fällig {when}",
   "co.next.undated": "Kein Fälligkeitsdatum",
   "commitment.dismiss": "Verwerfen",
+  "commitment.takeOver": "Übernehme ich",
+  "commitment.takenOver": "{name} hat das am {date} übernommen",
+  "commitment.takenOverUnnamed": "Übernommen am {date}",
   "commitment.quote": "„{quote}“",
   "deal.watch.title": "Zusagen des Kunden",
   "deal.watch.incomplete":

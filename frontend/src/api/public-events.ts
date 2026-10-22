@@ -725,7 +725,7 @@ export interface components {
             /** @description Which of the eight claim kinds this is — the ConversationClaimKind vocabulary of the CRM contract. Carried as a plain string rather than a second copy of that enum: the two documents generate into one Go package, and a duplicated enum there is two spellings of one vocabulary that can drift apart. */
             kind: string;
         };
-        /** @description Payload for conversation_claim.changed. A claim was corrected, renewed, dismissed or erased. A downstream reader holding the old claim needs to refresh it, or remove it when the status is erased. */
+        /** @description Payload for conversation_claim.changed. A claim was corrected, renewed, taken over, dismissed or erased. A downstream reader holding the old claim needs to refresh it, or remove it when the status is erased. */
         PublicEventConversationClaimChanged: {
             /** Format: uuid */
             claim_id: string;

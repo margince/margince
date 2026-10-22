@@ -2063,6 +2063,45 @@ paths:
         '409': { $ref: '#/components/responses/Conflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /claims/{id}/take-over:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Contacts]
+      operationId: takeOverConversationClaim
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Take over a promise one of us made that nobody was asked to keep.
+      description: |
+        A promise a colleague made becomes their task. When Margince cannot give it to them,
+        because nobody is named, they left, or the mail is private to somebody else, nobody
+        is asked and the claim stays open on the contact. This is the explicit act that names
+        a new owner: the caller.
+
+        It writes one task, owned by the caller and linked to the contact, and records on the
+        claim who took it over and when. A promise filed on several contacts is taken over on
+        each of them the caller may read, with that one task.
+
+        The caller must be a signed-in colleague who may read the claim's source and may hold
+        a task about it. Mail private to another colleague is theirs alone to take. A claim
+        whose source the caller may not read answers `404`, as the claim does not exist for
+        them.
+
+        Pressed twice by the same colleague, it answers the first take over again and writes
+        nothing. Any other case where the promise already has an owner is a `409` that says
+        who: another colleague took it over, it is already somebody's task, or it waits on the
+        colleague who made it.
+      responses:
+        '200':
+          description: The promise as taken over, by this request or an earlier one by the same caller.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PromiseTakeOver' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
   /contacts/{id}/research:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -40788,6 +40827,33 @@ components:
             The task an extracted `commitment_ours` created, so completing either side completes
             both. Null for every other kind — a reminder about THEIR promise is a rep action, not
             an auto-task.
+        taken_by_user_id:
+          type: [string, 'null']
+          format: uuid
+          description: >-
+            The colleague who took over this promise when nobody was asked to keep it. Null when
+            nobody took it over, and after that colleague's account was deleted.
+        taken_by_name:
+          type: [string, 'null']
+          description: The display name of `taken_by_user_id`, so the card can say who took it over.
+        taken_at:
+          type: [string, 'null']
+          format: date-time
+          description: When the promise was taken over. Kept when the colleague's account is deleted.
+
+    PromiseTakeOver:
+      type: object
+      description: A promise one colleague took over, and the task it became.
+      required: [claim_id, task_activity_id, taken_by_user_id, taken_at]
+      properties:
+        claim_id: { type: string, format: uuid }
+        task_activity_id:
+          type: string
+          format: uuid
+          description: The task the promise became, owned by `taken_by_user_id`.
+        taken_by_user_id: { type: string, format: uuid }
+        taken_by_name: { type: [string, 'null'] }
+        taken_at: { type: string, format: date-time }
 
     ConversationMemoryEntry:
       type: object

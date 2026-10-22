@@ -34816,6 +34816,15 @@ type ConversationClaim struct {
 	// Status `open`: the loop is live. `done` — kept or answered. `dismissed` — a human said it was never a claim, and it stays so the next run cannot resurrect it.
 	Status ConversationClaimStatus `json:"status"`
 
+	// TakenAt When the promise was taken over. Kept when the colleague's account is deleted.
+	TakenAt *time.Time `json:"taken_at,omitempty"`
+
+	// TakenByName The display name of `taken_by_user_id`, so the card can say who took it over.
+	TakenByName *string `json:"taken_by_name,omitempty"`
+
+	// TakenByUserId The colleague who took over this promise when nobody was asked to keep it. Null when nobody took it over, and after that colleague's account was deleted.
+	TakenByUserId *openapi_types.UUID `json:"taken_by_user_id,omitempty"`
+
 	// TaskActivityId The task an extracted `commitment_ours` created, so completing either side completes both. Null for every other kind — a reminder about THEIR promise is a rep action, not an auto-task.
 	TaskActivityId *openapi_types.UUID `json:"task_activity_id,omitempty"`
 }
@@ -45080,6 +45089,17 @@ type ProjectScope struct {
 	Name      string             `json:"name"`
 	ProjectId openapi_types.UUID `json:"project_id"`
 	Total     *int               `json:"total,omitempty"`
+}
+
+// PromiseTakeOver A promise one colleague took over, and the task it became.
+type PromiseTakeOver struct {
+	ClaimId       openapi_types.UUID `json:"claim_id"`
+	TakenAt       time.Time          `json:"taken_at"`
+	TakenByName   *string            `json:"taken_by_name,omitempty"`
+	TakenByUserId openapi_types.UUID `json:"taken_by_user_id"`
+
+	// TaskActivityId The task the promise became, owned by `taken_by_user_id`.
+	TaskActivityId openapi_types.UUID `json:"task_activity_id"`
 }
 
 // PromoteLeadPreview What POST /leads/{id}/promote would do, computed without writing (ADR-0119).
@@ -73629,6 +73649,9 @@ type ServerInterface interface {
 	// Say a promise was kept, or that it no longer stands.
 	// (POST /claims/{id}/settle)
 	SettleConversationClaim(w http.ResponseWriter, r *http.Request, id Id)
+	// Take over a promise one of us made that nobody was asked to keep.
+	// (POST /claims/{id}/take-over)
+	TakeOverConversationClaim(w http.ResponseWriter, r *http.Request, id Id)
 	// Website cold-start read-back — returns a staged proposal with evidence.
 	// (POST /coldstart)
 	ColdStartReadback(w http.ResponseWriter, r *http.Request)
@@ -76980,6 +77003,12 @@ func (_ Unimplemented) ListChannelProviders(w http.ResponseWriter, r *http.Reque
 // Say a promise was kept, or that it no longer stands.
 // (POST /claims/{id}/settle)
 func (_ Unimplemented) SettleConversationClaim(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take over a promise one of us made that nobody was asked to keep.
+// (POST /claims/{id}/take-over)
+func (_ Unimplemented) TakeOverConversationClaim(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -89839,6 +89868,38 @@ func (siw *ServerInterfaceWrapper) SettleConversationClaim(w http.ResponseWriter
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SettleConversationClaim(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// TakeOverConversationClaim operation middleware
+func (siw *ServerInterfaceWrapper) TakeOverConversationClaim(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.TakeOverConversationClaim(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -119402,6 +119463,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/claims/{id}/settle", wrapper.SettleConversationClaim)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/claims/{id}/take-over", wrapper.TakeOverConversationClaim)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/coldstart", wrapper.ColdStartReadback)

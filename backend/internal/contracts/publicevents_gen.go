@@ -1444,7 +1444,7 @@ type PublicEventConversationClaimCaptured struct {
 	Kind string `json:"kind"`
 }
 
-// PublicEventConversationClaimChanged Payload for conversation_claim.changed. A claim was corrected, renewed, dismissed or erased. A downstream reader holding the old claim needs to refresh it, or remove it when the status is erased.
+// PublicEventConversationClaimChanged Payload for conversation_claim.changed. A claim was corrected, renewed, taken over, dismissed or erased. A downstream reader holding the old claim needs to refresh it, or remove it when the status is erased.
 type PublicEventConversationClaimChanged struct {
 	ClaimId openapi_types.UUID `json:"claim_id"`
 

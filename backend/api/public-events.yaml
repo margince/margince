@@ -1588,7 +1588,7 @@ components:
       x-version: 1
       description: >-
         Payload for conversation_claim.changed. A claim was corrected, renewed,
-        dismissed or erased. A downstream reader holding the old claim needs
+        taken over, dismissed or erased. A downstream reader holding the old claim needs
         to refresh it, or remove it when the status is erased.
       required:
         - claim_id

@@ -16,6 +16,8 @@ import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { DismissClaimButton } from "../records/claimdismiss";
+import type { TakenOver } from "./claimtakeover";
+import { TakenOverLine, TakeOverPromiseButton } from "./claimtakeover";
 import { ContactClaimsReview, claimsForReview } from "./contactclaimsreview";
 
 // The overview's four cards (concept §5.6–5.9). Each one is a read of what the
@@ -247,7 +249,14 @@ function openLoops(
   includeTasks = true,
 ): readonly OpenLoop[] {
   const claims = view.claims ?? [];
-  const tasks = (includeTasks ? (view.next_steps?.data ?? []) : []).map(
+  // A promise a colleague took over is listed as its claim, which says who took
+  // it and when. Its task would say the same thing a second time.
+  const takenTasks = new Set(
+    claims.flatMap((claim) =>
+      claim.taken_at && claim.task_activity_id ? [claim.task_activity_id] : [],
+    ),
+  );
+  const allTasks = (includeTasks ? (view.next_steps?.data ?? []) : []).map(
     (task): OpenLoop => ({
       key: task.id,
       // A task can arrive without a subject — one filed without one, and one
@@ -270,6 +279,7 @@ function openLoops(
       theirs: false,
     }),
   );
+  const tasks = allTasks.filter((task) => !takenTasks.has(task.key));
   // A commitment that became a task is the task's while it is open: the page
   // lists the task, on this card or beside it, and the claim would say the
   // same thing twice. Once kept, the task leaves the open list and settled
@@ -286,6 +296,7 @@ function openLoops(
           claim.status !== "dismissed" &&
           !claim.needs_review &&
           (!claim.task_activity_id ||
+            claim.taken_at ||
             (claim.status === "done" &&
               !openTasks.has(claim.task_activity_id))),
       )
@@ -298,7 +309,15 @@ function openLoops(
           done: claim.status === "done",
           theirs: loop.kind === "commitment_theirs",
           quote: claim.source_quote,
-          dismissible: claim.status === "open",
+          dismissible: claim.status === "open" && !claim.taken_at,
+          takeable:
+            loop.kind === "commitment_ours" &&
+            claim.status === "open" &&
+            !claim.task_activity_id &&
+            !claim.taken_by_user_id,
+          takenBy: claim.taken_at
+            ? { name: claim.taken_by_name ?? null, at: claim.taken_at }
+            : undefined,
         }),
       ),
   );
@@ -321,6 +340,9 @@ type OpenLoop = {
   quote?: string;
   // Whether the reader may dismiss it as never made.
   dismissible?: boolean;
+  // A promise of ours nobody holds, which the reader may take over.
+  takeable?: boolean;
+  takenBy?: TakenOver;
 };
 
 // Personal wording needs an explicit assignee matching the signed-in reader.
@@ -370,6 +392,13 @@ export function ContactCommitmentsCard({
               <span className="pe-loop-quote t-caption">
                 {t("commitment.quote", { quote: loop.quote })}
               </span>
+            )}
+            {loop.takenBy && <TakenOverLine takenBy={loop.takenBy} />}
+            {loop.takeable && (
+              <TakeOverPromiseButton
+                id={loop.key}
+                contactId={view.contact.id}
+              />
             )}
             {loop.dismissible && <DismissClaimButton id={loop.key} />}
           </span>

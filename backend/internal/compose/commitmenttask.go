@@ -72,10 +72,14 @@ type commitmentTask struct {
 	SourceActivityID ids.UUID
 	Links            []activities.ActivityLinkInput
 	DueDate          string
-	Assignee         ids.UUID
-	ClaimID          *ids.UUID
-	ClaimIDs         []ids.UUID
-	PrivateTo        *ids.UUID
+	// DueAt is a deadline already stated as an instant; DueDate is used when nil.
+	DueAt     *time.Time
+	Assignee  ids.UUID
+	ClaimID   *ids.UUID
+	ClaimIDs  []ids.UUID
+	PrivateTo *ids.UUID
+	// Origin is activities.OriginHuman when a colleague took the promise over.
+	Origin string
 }
 
 // writeCommitmentTask writes the task for a promise, keyed on its locator, and
@@ -105,7 +109,8 @@ func writeCommitmentTask(
 		Links:            t.Links,
 		SourceActivityID: &sourceActivity,
 		AssigneeID:       &assignee,
-		Origin:           activities.OriginAgent,
+		Origin:           t.Origin,
+		DueAt:            t.DueAt,
 	}
 	// The promiser's own task waits for them as a task made by hand would,
 	// also before they first sign in.
@@ -113,7 +118,7 @@ func writeCommitmentTask(
 	if t.PrivateTo != nil {
 		in.VisibleOnlyTo(slices.Compact([]ids.UUID{t.Assignee, *t.PrivateTo})...)
 	}
-	if t.DueDate != "" {
+	if t.DueAt == nil && t.DueDate != "" {
 		due, err := commitmentDueInstant(ctx, tx, t.DueDate)
 		if err != nil {
 			return ids.UUID{}, err
@@ -204,7 +209,7 @@ func commitmentTaskEffect(
 				Summary: proposal.Summary, Body: proposal.Body,
 				SourceActivityID: proposal.SourceActivityID, Links: proposal.Links,
 				DueDate: proposal.DueDate, Assignee: assignee, ClaimID: proposal.ClaimID, ClaimIDs: proposal.ClaimIDs,
-				PrivateTo: privateTo,
+				PrivateTo: privateTo, Origin: activities.OriginAgent,
 			}
 			if heldByAnotherThanOwner(privateTo, assignee) {
 				task.Extractor = signalScanActor

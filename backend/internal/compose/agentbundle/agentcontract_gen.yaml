@@ -11215,6 +11215,18 @@ components:
           format: uuid
           description: >-
             The task an extracted `commitment_ours` created, so completing either side completes both. Null for every other kind — a reminder about THEIR promise is a rep action, not an auto-task.
+        taken_by_user_id:
+          type: [string, 'null']
+          format: uuid
+          description: >-
+            The colleague who took over this promise when nobody was asked to keep it. Null when nobody took it over, and after that colleague's account was deleted.
+        taken_by_name:
+          type: [string, 'null']
+          description: The display name of `taken_by_user_id`, so the card can say who took it over.
+        taken_at:
+          type: [string, 'null']
+          format: date-time
+          description: When the promise was taken over. Kept when the colleague's account is deleted.
     ConversationMemoryEntry:
       type: object
       description: |-

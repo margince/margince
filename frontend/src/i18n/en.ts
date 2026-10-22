@@ -3264,6 +3264,11 @@ export const en = {
   "co.next.due": "Due {when}",
   "co.next.undated": "No due date",
   "commitment.dismiss": "Dismiss",
+  // The reader's own promise, said by pressing it: only shown on a promise
+  // nobody was asked to keep.
+  "commitment.takeOver": "I’ll take this",
+  "commitment.takenOver": "{name} took this on {date}",
+  "commitment.takenOverUnnamed": "Taken on {date}",
   "commitment.quote": "“{quote}”",
   "deal.watch.title": "Customer commitments",
   "deal.watch.incomplete":
