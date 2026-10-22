@@ -46,6 +46,16 @@ const REPLY = {
   links: undefined,
 };
 
+const THREAD_EMAIL = {
+  id: REPLY.anchor_activity_id,
+  kind: "email",
+  direction: "inbound",
+  subject: "The quote",
+  content_state: "available",
+  occurred_at: "2026-08-19T09:00:00Z",
+  links: [{ entity_type: "company", entity_id: "company-1" }],
+};
+
 const MARKETING = {
   ...NEW_MESSAGE,
   id: "019f7e65-fbf7-7114-b114-40af4af63aea",
@@ -86,10 +96,10 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-it("offers Edit on a new message and not on a reply or a marketing send", async () => {
+it("offers Edit on a new message and a reply, not on a marketing send", async () => {
   mount([NEW_MESSAGE, REPLY, MARKETING]);
   await screen.findByText("The renewal quote");
-  expect(screen.getAllByRole("button", { name: /^Edit: / })).toHaveLength(1);
+  expect(screen.getAllByRole("button", { name: /^Edit: / })).toHaveLength(2);
   expect(
     screen.getByRole("button", { name: "Edit: The renewal quote" }),
   ).toBeVisible();
@@ -175,4 +185,44 @@ it("leaves the original waiting when the new send is refused", async () => {
     expect(sent.some((call) => call.key === "POST /emails")).toBe(true),
   );
   expect(sent.some((call) => call.key.endsWith("/cancel"))).toBe(false);
+});
+
+it("writes a reply again on its thread and withdraws the old one after", async () => {
+  const user = userEvent.setup();
+  const sent = stubRoutes({
+    "GET /scheduled-sends": () => jsonResponse([REPLY]),
+    [`GET /activities/${REPLY.anchor_activity_id}`]: () =>
+      jsonResponse(THREAD_EMAIL),
+    [`POST /activities/${REPLY.anchor_activity_id}/send-email`]: () =>
+      jsonResponse({ id: "act-new" }, 201),
+    [`POST /scheduled-sends/${REPLY.id}/cancel`]: () =>
+      new Response(null, { status: 204 }),
+  });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <ToastProvider>
+          <ScheduledSendsScreen />
+        </ToastProvider>
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  await user.click(
+    await screen.findByRole("button", { name: "Edit: Re: the quote" }),
+  );
+  expect(await screen.findByLabelText("Subject")).toHaveValue("Re: the quote");
+  await user.click(
+    await screen.findByRole("button", { name: "Schedule send" }),
+  );
+  await waitFor(() =>
+    expect(sent.map((call) => call.key)).toContain(
+      `POST /scheduled-sends/${REPLY.id}/cancel`,
+    ),
+  );
+  const reply = sent.find((call) => call.key.endsWith("/send-email"));
+  expect(reply?.body).toMatchObject({ to: ["ceo@acme.test"] });
+  expect(sent.some((call) => call.key === "POST /emails")).toBe(false);
 });

@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useEffect } from "react";
+import { useToast } from "../../design-system/toast";
+import { useT } from "../../i18n";
 import { ComposeModal } from "./compose";
+import { useThreadProject } from "./composeanchor";
 import { editSeedOf } from "./schedulededit";
 import type { ScheduledSend } from "./scheduledqueue";
 
@@ -12,6 +16,9 @@ import type { ScheduledSend } from "./scheduledqueue";
  * every gate from the top. The old message is withdrawn only once the new one
  * is accepted, so a refusal leaves the original waiting. Keyed on the message,
  * because the composer reads its seed once, when it mounts.
+ *
+ * A reply opens once its thread's email has been read, since the record it is
+ * filed under is that email's.
  */
 export function EditComposer({
   send,
@@ -22,7 +29,17 @@ export function EditComposer({
   onClose: () => void;
   onReplaced: (id: string) => void;
 }>) {
-  const seed = send ? editSeedOf(send) : undefined;
+  const t = useT();
+  const toast = useToast();
+  const thread = useThreadProject(send?.anchor_activity_id ?? undefined);
+  const seed = send ? editSeedOf(send, thread.activity?.links) : undefined;
+  const unreadable = Boolean(send?.anchor_activity_id) && thread.failed;
+  useEffect(() => {
+    if (unreadable) {
+      toast.show(t("compose.anchorGone"), { tone: "danger" });
+      onClose();
+    }
+  }, [unreadable, toast, t, onClose]);
   if (!send || !seed) {
     return null;
   }
@@ -31,6 +48,7 @@ export function EditComposer({
       key={send.id}
       open
       edit={seed}
+      activityId={seed.replyTo || undefined}
       entityType={seed.anchor.type}
       entityId={seed.anchor.id}
       onClose={onClose}
