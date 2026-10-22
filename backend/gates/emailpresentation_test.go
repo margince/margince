@@ -95,6 +95,9 @@ const (
 var emailRenderers = map[string]bool{
 	"design-system/emailentry.tsx":  true,
 	"design-system/emaildetail.tsx": true,
+	// The parts of one message EmailDetail and SourceEmailPanel both draw:
+	// the envelope and the files, split out so the thread view shares them.
+	"design-system/emailmessage.tsx": true,
 	// The message a task was read out of, drawn IN the task instead of behind
 	// a second drawer over the first. It is a renderer, not a passthrough: it
 	// shows the subject, the date and the body (through EmailText, the same
