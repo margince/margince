@@ -302,7 +302,7 @@ func linkedInMatchDeclineEffect(store *contacts.Store) approvals.DeclinedEffect 
 
 // linkedInMatchPrecheck refuses a ticked box that no longer fits while the card
 // is still pending. That is a title or employer set while it waited, a new
-// export, or a decider who may not create the employment. Refused after the
+// export, or a decider who may not make the employer write. Refused after the
 // decision, the card would stay approved and its apply would fail every retry.
 func linkedInMatchPrecheck(store *contacts.Store) approvals.ReleasePrecheck {
 	return func(ctx context.Context, staged, edited json.RawMessage) error {

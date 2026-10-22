@@ -24,7 +24,7 @@ export type LinkedInChoice = Readonly<{
 type LinkedInOffer = Readonly<{
   staged: LinkedInChoice;
   // The employer box shows only for a company this reader can see, to a reader
-  // who may create the employment. The server refuses the rest.
+  // who may make the employer write. The server refuses the rest.
   employerName: string | null;
   // Where the contact works today, as this reader may see it.
   employerNow: string | null;
@@ -40,8 +40,8 @@ function text(value: unknown): string | undefined {
 }
 
 /**
- * The company the employer box names, or null when the reader may not create
- * the employment or cannot see the company. Until the grants and the company
+ * The company the employer box names, or null when the reader may not make
+ * the employer write or cannot see the company. Until the grants and the company
  * read have answered, `settled` is false and the staged value stands, so a
  * quick accept does not untick the box. A read that failed is no answer
  * either; only a company the reader cannot see is.
@@ -50,7 +50,11 @@ function useEmployerOffer(
   companyId: string | undefined,
   company: ReturnType<typeof useEntityName>,
 ): { name: string | null; settled: boolean } {
-  const mayEmploy = useCanWrite("relationship", "create");
+  // The box creates an employment or promotes one the contact holds there. A
+  // held one that is not primary is on no read the card makes, so ask both.
+  const mayCreate = useCanWrite("relationship", "create");
+  const mayPromote = useCanWrite("relationship", "update");
+  const mayEmploy = mayCreate && mayPromote;
   const grantsPending = useMe().isPending;
   const known = company.name !== null || company.reading === "unnamed";
   return {

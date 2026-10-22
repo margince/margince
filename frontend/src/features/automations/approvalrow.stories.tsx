@@ -848,7 +848,7 @@ function linkedInRoutes(employer?: string) {
 }
 
 const linkedInGrants = {
-  relationship: ["create"],
+  relationship: ["create", "update"],
   company: ["read"],
   contact: ["read", "update"],
 } as const;

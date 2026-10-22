@@ -145,7 +145,7 @@ func (s *Store) CheckLinkedInMatchFields(ctx context.Context, in LinkedInMatchAp
 
 // checkLinkedInMatchFields refuses a ticked box before anything is written.
 // It refuses when the export or the contact moved since the card was staged,
-// and when the decider may not create the employment.
+// and when the decider may not make the employer write.
 func checkLinkedInMatchFields(ctx context.Context, tx pgx.Tx, in LinkedInMatchApply) error {
 	f := in.Fields
 	if !f.UseAsTitle && !f.UseAsEmployer {
@@ -196,17 +196,12 @@ func checkStagedTitle(ctx context.Context, tx pgx.Tx, contactID ids.UUID, staged
 }
 
 // checkStagedEmployer holds the employer box to what the card showed. It also
-// holds it to who may write it: relationship:create and sight of the company,
-// the grants the card asks before it offers the box. Promoting an employment
-// takes the same grant as creating one. Each makes the company the contact's
-// primary employer.
+// holds it to who may write it: sight of the company, and the grant for the
+// write the box makes (see requireEmployerWrite).
 func checkStagedEmployer(ctx context.Context, tx pgx.Tx, contactID ids.UUID, f LinkedInMatchFields, matched *ids.UUID) error {
 	if f.EmployerCompanyID == nil || matched == nil || *matched != *f.EmployerCompanyID {
 		return fmt.Errorf("the company this connection was placed at changed after the match was proposed; "+
 			"read the proposal again: %w", apperrors.ErrConflict)
-	}
-	if err := requireRelationshipCreate(ctx, anchorContact); err != nil {
-		return err
 	}
 	if err := auth.Require(ctx, companyEntity, principal.ActionRead); err != nil {
 		return err
@@ -215,12 +210,19 @@ func checkStagedEmployer(ctx context.Context, tx pgx.Tx, contactID ids.UUID, f L
 		return err
 	}
 	// The contact's employment lock, which every employment create and update
-	// takes, so the primary edge read here is the one the write replaces.
+	// takes, so the edges read here are the ones the write changes.
 	if err := storekit.LockWriteIdentity(ctx, tx, employmentKind, contactID.String()); err != nil {
 		return err
 	}
+	live, err := liveEmploymentAt(ctx, tx, contactID, *f.EmployerCompanyID)
+	if err != nil {
+		return err
+	}
+	if err := requireEmployerWrite(ctx, live); err != nil {
+		return err
+	}
 	var current *ids.UUID
-	err := tx.QueryRow(ctx, `SELECT r.id FROM relationship r WHERE r.contact_id = $1 AND `+
+	err = tx.QueryRow(ctx, `SELECT r.id FROM relationship r WHERE r.contact_id = $1 AND `+
 		employment.CurrentPrimarySlotSQL("r"), contactID).Scan(&current)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return fmt.Errorf("contacts: reading the employment an accepted match would replace: %w", err)
@@ -230,6 +232,16 @@ func checkStagedEmployer(ctx context.Context, tx pgx.Tx, contactID ids.UUID, f L
 			"read the proposal again: %w", apperrors.ErrConflict)
 	}
 	return nil
+}
+
+// requireEmployerWrite is the grant the employer box needs. A new employment
+// is a create. Promoting one the contact already holds changes that edge, so
+// it is an update: a grant to create never lets a decider edit an edge.
+func requireEmployerWrite(ctx context.Context, live *liveEmployment) error {
+	if live == nil {
+		return requireRelationshipCreate(ctx, anchorContact)
+	}
+	return auth.Require(ctx, "relationship", principal.ActionUpdate)
 }
 
 func sameOptionalID(a, b *ids.UUID) bool {
@@ -272,7 +284,7 @@ func (s *Store) writeLinkedInMatchFields(ctx context.Context, tx pgx.Tx, in Link
 	if !f.UseAsEmployer {
 		return out, nil
 	}
-	edge, roleWritten, err := s.employFromExport(ctx, tx, in.ContactID, *f.EmployerCompanyID, f.Position, capturedBy)
+	edge, roleWritten, err := s.employFromExport(ctx, tx, in.ContactID, *f.EmployerCompanyID, f.Position)
 	if err != nil || edge == ids.Nil {
 		return out, err
 	}
@@ -292,15 +304,16 @@ func (s *Store) writeLinkedInMatchFields(ctx context.Context, tx pgx.Tx, in Link
 // liveEmployment is an employment the contact holds at a company, in the
 // slot uq_rel_employment keeps to one.
 type liveEmployment struct {
-	id   ids.UUID
-	role string
+	id         ids.UUID
+	role       string
+	capturedBy string
 }
 
 func liveEmploymentAt(ctx context.Context, tx pgx.Tx, contactID, companyID ids.UUID) (*liveEmployment, error) {
 	var live liveEmployment
-	err := tx.QueryRow(ctx, `SELECT r.id, coalesce(r.role, '') FROM relationship r
+	err := tx.QueryRow(ctx, `SELECT r.id, coalesce(r.role, ''), r.captured_by FROM relationship r
 		 WHERE r.contact_id = $1 AND r.company_id = $2 AND `+employment.LiveSlotSQL("r"),
-		contactID, companyID).Scan(&live.id, &live.role)
+		contactID, companyID).Scan(&live.id, &live.role, &live.capturedBy)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil //nolint:nilnil // no employment there is an answer, not a failure
 	}
@@ -314,10 +327,10 @@ func liveEmploymentAt(ctx context.Context, tx pgx.Tx, contactID, companyID ids.U
 // employer. It returns the edge that now holds the slot, or ids.Nil when
 // nothing changed. An employment the contact already holds there is promoted.
 // It takes the position as its role only when it has none, because the card
-// never showed that role. Otherwise the edge is created. Either writer demotes
-// the primary edge it replaces.
+// never showed that role, and it keeps the edge's author. Otherwise the edge
+// is created. Either writer demotes the primary edge it replaces.
 func (s *Store) employFromExport(
-	ctx context.Context, tx pgx.Tx, contactID, companyID ids.UUID, position, capturedBy string,
+	ctx context.Context, tx pgx.Tx, contactID, companyID ids.UUID, position string,
 ) (edge ids.UUID, roleWritten bool, err error) {
 	live, err := liveEmploymentAt(ctx, tx, contactID, companyID)
 	if err != nil {
@@ -327,12 +340,16 @@ func (s *Store) employFromExport(
 		created, err := s.CreateRelationshipTx(ctx, tx, employmentFromExport(contactID, companyID, position))
 		return created.ID, err == nil && position != "", err
 	}
+	// updateRelationshipInTx expects its caller to hold relationship:update.
+	if err := auth.Require(ctx, "relationship", principal.ActionUpdate); err != nil {
+		return ids.Nil, false, err
+	}
 	primary := true
 	patch := UpdateRelationshipInput{IsCurrentPrimary: &primary}
 	if live.role == "" && position != "" {
 		patch.Role = &position
 	}
-	if _, err := s.updateRelationshipInTx(ctx, tx, live.id, patch, capturedBy); err != nil {
+	if _, err := s.updateRelationshipInTx(ctx, tx, live.id, patch, live.capturedBy); err != nil {
 		return ids.Nil, false, err
 	}
 	return live.id, patch.Role != nil, nil

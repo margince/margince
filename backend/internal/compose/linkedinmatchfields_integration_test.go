@@ -399,16 +399,20 @@ func TestAnEmployerSetWhileTheCardWaitedIsNeverReplaced(t *testing.T) {
 	}
 }
 
-func TestADeciderWhoMayNotCreateTheEmploymentIsRefusedBeforeAnyWrite(t *testing.T) {
-	c := stageLinkedInFieldsCase(t, "", "")
+// relationshipGrant is a decider with every grant but this one on employment
+// edges.
+func (c *linkedInFieldsCase) relationshipGrant(grant principal.ObjectGrant) context.Context {
 	perms := integration.AdminPerms
 	perms.Objects = maps.Clone(perms.Objects)
-	// Update without create: promoting the Acme employment would pass the
-	// writer's own gate, so only the card's create check refuses it.
-	perms.Objects["relationship"] = principal.ObjectGrant{Read: true, Update: true}
-	decider := c.e.As(c.e.Rep1, []ids.UUID{c.e.Team1}, perms)
+	perms.Objects["relationship"] = grant
+	return c.e.As(c.e.Rep1, []ids.UUID{c.e.Team1}, perms)
+}
+
+func TestADeciderWhoMayNotCreateTheEmploymentIsRefusedBeforeAnyWrite(t *testing.T) {
+	c := stageLinkedInEmailMatch(t, linkedInEmailExport)
+	decider := c.relationshipGrant(principal.ObjectGrant{Read: true, Update: true})
 	if _, err := c.svc.Decide(decider, c.approval, true, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Fatalf("approving with the employer box answered %v, want a permission refusal", err)
+		t.Fatalf("approving a new employment without relationship:create answered %v, want a permission refusal", err)
 	}
 	if got := c.title(t); got != "" || c.connectionStatus(t) != "suggested" {
 		t.Errorf("the refused approval left title %q and connection %s", got, c.connectionStatus(t))
@@ -419,6 +423,57 @@ func TestADeciderWhoMayNotCreateTheEmploymentIsRefusedBeforeAnyWrite(t *testing.
 	}
 	if got := c.title(t); got != "Head of Sales" {
 		t.Errorf("the title is %q, want the export's position", got)
+	}
+}
+
+func TestADeciderWhoMayCreateButNotUpdateEmploymentsIsRefusedThePromote(t *testing.T) {
+	c := stageLinkedInFieldsCase(t, "", "")
+	decider := c.relationshipGrant(principal.ObjectGrant{Read: true, Create: true})
+	if _, err := c.svc.Decide(decider, c.approval, true, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("promoting the Acme employment without relationship:update answered %v, want a permission refusal", err)
+	}
+	if n := c.count(t, `SELECT count(*) FROM relationship WHERE contact_id = $1 AND `+
+		employment.CurrentPrimarySlotSQL(""), c.contact); n != 0 {
+		t.Errorf("the refused promote left %d current primary employments, want none", n)
+	}
+	if got := c.title(t); got != "" || c.connectionStatus(t) != "suggested" {
+		t.Errorf("the refused approval left title %q and connection %s", got, c.connectionStatus(t))
+	}
+}
+
+func TestADeciderWhoMayUpdateButNotCreateEmploymentsPromotesOne(t *testing.T) {
+	c := stageLinkedInFieldsCase(t, "", "")
+	decider := c.relationshipGrant(principal.ObjectGrant{Read: true, Update: true})
+	if _, err := c.svc.Decide(decider, c.approval, true, nil); err != nil {
+		t.Fatalf("promoting with relationship:update alone: %v", err)
+	}
+	if company, _, _ := c.primaryEmployer(t); company != c.acme {
+		t.Errorf("the current primary employer is %s, want the Acme employment promoted", company)
+	}
+}
+
+func TestADeciderWhoMayCreateButNotUpdateEmploymentsCreatesOne(t *testing.T) {
+	c := stageLinkedInEmailMatch(t, linkedInEmailExport)
+	decider := c.relationshipGrant(principal.ObjectGrant{Read: true, Create: true})
+	if _, err := c.svc.Decide(decider, c.approval, true, nil); err != nil {
+		t.Fatalf("creating the employment with relationship:create alone: %v", err)
+	}
+	if company, _, source := c.primaryEmployer(t); company != c.acme || source != "linkedin_export" {
+		t.Errorf("the current primary employment is %s from %s, want a new Acme edge from linkedin_export", company, source)
+	}
+}
+
+func TestAPromotedEmploymentKeepsItsAuthor(t *testing.T) {
+	c := stageLinkedInFieldsCase(t, "", "")
+	colleague := c.e.As(c.e.AdminUser, nil, integration.AdminPerms)
+	if _, err := c.svc.Decide(colleague, c.approval, true, nil); err != nil {
+		t.Fatalf("a colleague approving: %v", err)
+	}
+	var author string
+	c.query(t, `SELECT captured_by FROM relationship WHERE contact_id = $1 AND company_id = $2`,
+		[]any{c.contact, c.acme}, &author)
+	if want := "human:" + c.e.Rep1.String(); author != want {
+		t.Errorf("the promoted employment belongs to %s, want its author %s kept", author, want)
 	}
 }
 
@@ -524,18 +579,5 @@ func TestAPositionTheExportChangedSinceStagingIsNotWritten(t *testing.T) {
 	}
 	if got := c.title(t); got != "" || c.connectionStatus(t) != "suggested" {
 		t.Errorf("the refused approval left title %q and connection %s", got, c.connectionStatus(t))
-	}
-}
-
-func TestADeciderWhoMayCreateButNotUpdateEmploymentsStillPromotesOne(t *testing.T) {
-	c := stageLinkedInFieldsCase(t, "", "")
-	perms := integration.AdminPerms
-	perms.Objects = maps.Clone(perms.Objects)
-	perms.Objects["relationship"] = principal.ObjectGrant{Read: true, Create: true}
-	if _, err := c.svc.Decide(c.e.As(c.e.Rep1, []ids.UUID{c.e.Team1}, perms), c.approval, true, nil); err != nil {
-		t.Fatalf("approving with relationship:create alone: %v", err)
-	}
-	if company, _, _ := c.primaryEmployer(t); company != c.acme {
-		t.Errorf("the current primary employer is %s, want the Acme employment promoted", company)
 	}
 }

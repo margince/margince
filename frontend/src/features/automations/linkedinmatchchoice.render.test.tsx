@@ -72,7 +72,10 @@ function show(approval: Approval) {
   );
 }
 
-const mayEmploy: GrantSpec = { relationship: ["create"], company: ["read"] };
+const mayEmploy: GrantSpec = {
+  relationship: ["create", "update"],
+  company: ["read"],
+};
 
 afterEach(() => {
   cleanup();
@@ -112,20 +115,35 @@ describe("the LinkedIn match boxes", () => {
     });
   });
 
-  it("hides the employer box from a reader who may not create the employment, and unticks it", async () => {
-    const user = userEvent.setup();
-    const sent = stubCard({ company: ["read"] });
-    show(linkedInMatch());
-    expect(
-      await screen.findByRole("checkbox", { name: "Use as job title" }),
-    ).toBeChecked();
-    expect(screen.queryByRole("checkbox", { name: /as employer/ })).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Approve" }));
-    await waitFor(() => expect(sent).toHaveLength(1));
-    expect(sent[0]).toMatchObject({
-      edited_payload: { use_as_title: true, use_as_employer: false },
-    });
-  });
+  it.each<[string, GrantSpec]>([
+    ["no grant on employments", { company: ["read"] }],
+    [
+      "create without update, which a promote needs",
+      { relationship: ["create"], company: ["read"] },
+    ],
+    [
+      "update without create, which a new employment needs",
+      { relationship: ["update"], company: ["read"] },
+    ],
+  ])(
+    "hides the employer box from a reader with %s, and unticks it",
+    async (_, allow) => {
+      const user = userEvent.setup();
+      const sent = stubCard(allow);
+      show(linkedInMatch());
+      expect(
+        await screen.findByRole("checkbox", { name: "Use as job title" }),
+      ).toBeChecked();
+      expect(
+        screen.queryByRole("checkbox", { name: /as employer/ }),
+      ).toBeNull();
+      await user.click(screen.getByRole("button", { name: "Approve" }));
+      await waitFor(() => expect(sent).toHaveLength(1));
+      expect(sent[0]).toMatchObject({
+        edited_payload: { use_as_title: true, use_as_employer: false },
+      });
+    },
+  );
 
   it("hides the employer box when the reader cannot see the company", async () => {
     const hidden = "66666666-6666-4666-8666-666666666666";
