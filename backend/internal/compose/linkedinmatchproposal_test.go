@@ -47,9 +47,9 @@ func TestTheProposalCarriesTheExportsSpellingAndNotTheFoldedForms(t *testing.T) 
 	if err := json.Unmarshal(payload, &fields); err != nil {
 		t.Fatalf("unreadable proposal: %v", err)
 	}
-	// owner_user_id is on the wire and is NOT a ghost's detail: it names the
-	// member whose network produced the pair, which is what the apply binds on
-	// so a payload cannot land on somebody else's connection. The position is
+	// owner_user_id is on the wire and is not a ghost's detail. It names the
+	// member whose network produced the pair, and the apply binds on it so a
+	// payload cannot land on somebody else's connection. The position is
 	// the export's own string, like the company beside it. The two ids are
 	// records the stager could read, and the card names no company itself.
 	want := []string{
@@ -74,7 +74,7 @@ func TestTheProposalCarriesTheExportsSpellingAndNotTheFoldedForms(t *testing.T) 
 }
 
 func TestANewPositionInTheExportGivesTheCardANewHash(t *testing.T) {
-	// JoinPending supersedes a pending card only when its diff moved, so a
+	// JoinPending supersedes a pending card only when its diff moved. A
 	// position left out of the hash would keep a card offering the old one.
 	m := contacts.PendingLinkedInMatch{
 		ConnectionID: ids.NewV7(), OwnerUserID: ids.NewV7(), ContactID: ids.NewV7(),

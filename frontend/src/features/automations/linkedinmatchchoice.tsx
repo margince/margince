@@ -11,10 +11,10 @@ import { useCanWrite } from "../../lib/capability";
 import { contactQuery } from "../../lib/contact.queries";
 import { useMe } from "../../lib/session";
 
-// The two boxes on a LinkedIn match card: the export's position as the
-// contact's job title, and the company the import placed the connection at as
-// their current employer. The server stages each box ticked only when the
-// contact has nothing there, and accepting sends the boxes as the edit.
+// The two boxes on a LinkedIn match card. One takes the export's position as
+// the contact's job title. The other takes the company the import placed the
+// connection at as their current employer. The server stages a box ticked only
+// when the contact has nothing there. Accepting sends the boxes as the edit.
 
 export type LinkedInChoice = Readonly<{
   use_as_title: boolean;
@@ -23,8 +23,8 @@ export type LinkedInChoice = Readonly<{
 
 type LinkedInOffer = Readonly<{
   staged: LinkedInChoice;
-  // The employer box shows only for a company this reader can see, and only
-  // to a reader who may create the employment; the server refuses the rest.
+  // The employer box shows only for a company this reader can see, to a reader
+  // who may create the employment. The server refuses the rest.
   employerName: string | null;
   // Where the contact works today, as this reader may see it.
   employerNow: string | null;

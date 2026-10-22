@@ -5,9 +5,9 @@
 
 package compose
 
-// The two boxes on a LinkedIn match card, "Use as title" and "Use as employer",
-// staged by the real import and matcher and decided through the approvals
-// engine with the edit the card sends.
+// The two boxes on a LinkedIn match card, "Use as title" and "Use as employer".
+// The real import and matcher stage the card. The approvals engine decides it
+// with the edit the card sends.
 
 import (
 	"context"
@@ -47,11 +47,10 @@ type linkedInFieldsCase struct {
 	approval ids.ApprovalID
 }
 
-// stageLinkedInFieldsCase imports one connection at Acme with a position, and
-// stages its folded-name match onto a contact who holds a non-primary
-// employment at Acme, which the name tier requires. title is the contact's
-// title, and employer names a company that is already their current primary
-// employer; empty means none.
+// stageLinkedInFieldsCase imports one connection at Acme with a position. It
+// stages its folded-name match onto a contact with a non-primary employment at
+// Acme, which the name tier requires. title is the contact's title. employer
+// names a company that is already their primary employer; empty means none.
 func stageLinkedInFieldsCase(t *testing.T, title, employer string) *linkedInFieldsCase {
 	t.Helper()
 	c := newLinkedInFieldsCase(t, title, employer)

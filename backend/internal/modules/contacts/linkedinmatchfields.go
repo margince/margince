@@ -3,10 +3,10 @@
 
 package contacts
 
-// What an accepted LinkedIn match may write besides the profile link: the
-// export's position as the contact's title, and the company the import placed
-// the connection at as the contact's current employer. Each write needs a box
-// the human ticked on the card, so a re-import never writes either.
+// What an accepted LinkedIn match may write besides the profile link. The
+// export's position can become the contact's title. The company the import
+// placed the connection at can become their current employer. Each write needs
+// a box the human ticked, so a re-import never writes either.
 
 import (
 	"context"
@@ -84,7 +84,7 @@ func stagedOffer(f LinkedInMatchFields) LinkedInMatchFields {
 // employment, which linkedInCurrentEmploymentJoin supplies.
 //
 // The employer half takes the stager's own grants. The matched company is
-// offered only when they may see it, and the current employment counts as known
+// offered only when they may see it. The current employment counts as known
 // only when they may see that edge and its company. A card never carries an id
 // its stager could not have read.
 func linkedInOfferColumns(ctx context.Context, arg func(any) int) (string, error) {
@@ -134,18 +134,18 @@ func scanLinkedInOffer(scan func(dest ...any) error, head ...any) (LinkedInMatch
 }
 
 // CheckLinkedInMatchFields asks the apply's own refusals while the card can
-// still be decided again, so a human whose box no longer fits unticks it
-// instead of approving a card whose apply then fails. The apply asks again
-// under the contact lock, which is what keeps a value from being replaced.
+// still be decided again. A human whose box no longer fits can then untick it.
+// The apply asks again under the contact lock, which is what keeps a value
+// from being replaced.
 func (s *Store) CheckLinkedInMatchFields(ctx context.Context, in LinkedInMatchApply) error {
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		return checkLinkedInMatchFields(ctx, tx, in)
 	})
 }
 
-// checkLinkedInMatchFields refuses a ticked box before anything is written:
-// when the export or the contact moved since the card was staged, or when the
-// decider may not create the employment.
+// checkLinkedInMatchFields refuses a ticked box before anything is written.
+// It refuses when the export or the contact moved since the card was staged,
+// and when the decider may not create the employment.
 func checkLinkedInMatchFields(ctx context.Context, tx pgx.Tx, in LinkedInMatchApply) error {
 	f := in.Fields
 	if !f.UseAsTitle && !f.UseAsEmployer {
@@ -195,11 +195,11 @@ func checkStagedTitle(ctx context.Context, tx pgx.Tx, contactID ids.UUID, staged
 	return nil
 }
 
-// checkStagedEmployer holds the employer box to what the card showed, and to
-// who may write it: relationship:create and sight of the company, the same
-// two grants the card asks before it offers the box. Promoting an employment
-// the contact already holds there takes the same grant as creating one,
-// because each makes the company the contact's primary employer.
+// checkStagedEmployer holds the employer box to what the card showed. It also
+// holds it to who may write it: relationship:create and sight of the company,
+// the grants the card asks before it offers the box. Promoting an employment
+// takes the same grant as creating one. Each makes the company the contact's
+// primary employer.
 func checkStagedEmployer(ctx context.Context, tx pgx.Tx, contactID ids.UUID, f LinkedInMatchFields, matched *ids.UUID) error {
 	if f.EmployerCompanyID == nil || matched == nil || *matched != *f.EmployerCompanyID {
 		return fmt.Errorf("the company this connection was placed at changed after the match was proposed; "+
@@ -240,8 +240,8 @@ func sameOptionalID(a, b *ids.UUID) bool {
 }
 
 // writeLinkedInMatchFields lands the ticked boxes through the ordinary contact
-// update and relationship create, each with its own audit row and event, and
-// stamps the field provenance under the decider who ticked them.
+// and relationship writers, each with its own audit row and event. It stamps
+// the field provenance under the decider who ticked them.
 func (s *Store) writeLinkedInMatchFields(ctx context.Context, tx pgx.Tx, in LinkedInMatchApply) (linkedInFieldsWritten, error) {
 	var out linkedInFieldsWritten
 	f := in.Fields
@@ -311,11 +311,11 @@ func liveEmploymentAt(ctx context.Context, tx pgx.Tx, contactID, companyID ids.U
 }
 
 // employFromExport makes the placed company the contact's current primary
-// employer and returns the edge that now holds the slot, or ids.Nil when
-// nothing changed. An employment the contact already holds there is promoted,
-// and takes the position as its role only when it has none: the card never
-// showed that role, so it is not the human's to replace. Otherwise the edge is
-// created. Either writer demotes the primary edge it replaces.
+// employer. It returns the edge that now holds the slot, or ids.Nil when
+// nothing changed. An employment the contact already holds there is promoted.
+// It takes the position as its role only when it has none, because the card
+// never showed that role. Otherwise the edge is created. Either writer demotes
+// the primary edge it replaces.
 func (s *Store) employFromExport(
 	ctx context.Context, tx pgx.Tx, contactID, companyID ids.UUID, position, capturedBy string,
 ) (edge ids.UUID, roleWritten bool, err error) {

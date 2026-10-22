@@ -45,12 +45,11 @@ const linkedInMatchKind = "linkedin_match"
 
 // linkedInMatchProposal is what the inbox renders and the effect executes.
 //
-// It carries the ghost's OWN strings — the name, employer and position LinkedIn
-// exported — because that is what a human judges the guess on. It does NOT
-// carry anything else about the connection: a ghost is a third party who never
-// agreed to be in this CRM, and a staged payload is read by anyone who can
-// decide it. For the same reason it names no CRM company by name: the card
-// resolves the company for the reader looking at it.
+// It carries the ghost's own strings: the name, employer and position LinkedIn
+// exported. A human judges the guess on those. It carries nothing else about
+// the connection, because a ghost is a third party who never agreed to be in
+// this CRM. Anyone who can decide a staged payload reads it. For the same
+// reason it names no CRM company: the card resolves the company for its reader.
 type linkedInMatchProposal struct {
 	ConnectionID ids.UUID `json:"connection_id"`
 	// OwnerUserID is the member whose network produced the pair, stamped at
@@ -302,9 +301,9 @@ func linkedInMatchDeclineEffect(store *contacts.Store) approvals.DeclinedEffect 
 }
 
 // linkedInMatchPrecheck refuses a ticked box that no longer fits while the card
-// is still pending: a title or employer a human set while it waited, a new
+// is still pending. That is a title or employer set while it waited, a new
 // export, or a decider who may not create the employment. Refused after the
-// decision, the card would stay approved with its apply failing every retry.
+// decision, the card would stay approved and its apply would fail every retry.
 func linkedInMatchPrecheck(store *contacts.Store) approvals.ReleasePrecheck {
 	return func(ctx context.Context, staged, edited json.RawMessage) error {
 		payload := staged
@@ -335,9 +334,8 @@ func (p linkedInMatchProposal) apply() contacts.LinkedInMatchApply {
 }
 
 // linkedInMatchAcceptEffect links the connection to the contact and puts the
-// LinkedIn address on the record — the same write the automatic exact-name
-// path performs, released by a human instead of by a string comparison — and
-// writes the title and employer the human ticked.
+// LinkedIn address on the record. That is the write the automatic exact-name
+// path performs, released by a human. It also writes the boxes they ticked.
 func linkedInMatchAcceptEffect(svc *approvals.Service, store *contacts.Store) approvals.ApprovedEffect {
 	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
 		p, err := readLinkedInMatchProposal(proposedChange)

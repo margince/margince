@@ -283,8 +283,10 @@ func (s *Store) applyLinkedInMatchInTx(ctx context.Context, tx pgx.Tx, in Linked
 // the field image: 'unmatched'/nil for an automatic confirm, the prior
 // suggestion for a human apply. The caller must already HOLD the contact — the
 // handle write takes no lock of its own, and that hold is what stops a handle
-// landing after an Art. 17 erasure cleared it. fields says what the ticked
-// boxes already wrote, so the decision event goes out after them.
+// landing after an Art. 17 erasure cleared it.
+//
+// fields says what the ticked boxes already wrote. The decision event goes out
+// after them.
 func confirmMatchWriteTail(
 	ctx context.Context, tx pgx.Tx, connectionID, ownerID, contactID ids.UUID,
 	wasStatus string, wasContact *ids.UUID, fields linkedInFieldsWritten,

@@ -26,7 +26,7 @@ var editableMembers = map[string][]string{
 
 // assertEditableMembers refuses an edit that changes a member its kind does not
 // list, or that adds or drops a listed one. A box a card was staged without is
-// one the apply was never meant to write, so a card staged before the boxes
+// one the apply was never meant to write. So a card staged before the boxes
 // existed takes no edit at all. A listed member stays a boolean.
 func assertEditableMembers(kind string, original, edited json.RawMessage) error {
 	allowed, listed := editableMembers[kind]
