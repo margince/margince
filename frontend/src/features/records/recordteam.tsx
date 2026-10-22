@@ -14,6 +14,12 @@ import {
 } from "./recordassignments.queries";
 import { RecordTeamAssign } from "./recordteamassign";
 
+// With nobody assigned, naming someone is the panel's one job, so the verb is
+// filled; once a row stands it is one outlined verb among the rows' own.
+function assignVariant(rows: readonly RecordAssignment[]): "primary" | "ghost" {
+  return rows.length === 0 ? "primary" : "ghost";
+}
+
 /**
  * Who is responsible for this record, grouped by role.
  *
@@ -63,7 +69,7 @@ export function RecordTeam({
   // that may already be there.
   const canWrite = !readOnly && !isPending && !isError;
   const assign = canWrite ? (
-    <Button variant="ghost" onClick={() => setEditing("new")}>
+    <Button variant={assignVariant(rows)} onClick={() => setEditing("new")}>
       {t("assignments.add")}
     </Button>
   ) : undefined;

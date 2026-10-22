@@ -68,8 +68,9 @@
   color: var(--textSecondary);
 }
 .pipeline-retired > li:has(> [aria-current="true"]) {
-  border-color: var(--accentMed);
-  background: var(--accentLight);
+  border-color: var(--borderStrong);
+  background: var(--bgChip);
+  color: var(--textPrimary);
 }
 
 .stage-hint {

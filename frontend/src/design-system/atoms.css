@@ -1060,10 +1060,12 @@
   white-space: normal;
   overflow-wrap: anywhere;
 }
+/* The opaque inset ground, not the chip fill: the option's detail line is in
+   the secondary ink, which does not clear AA on the chip. */
 .recordpicker-option[aria-pressed="true"] {
-  border-color: var(--accent);
-  color: var(--accentText);
-  background: var(--accentLight);
+  border-color: var(--borderStrong);
+  color: var(--textPrimary);
+  background: var(--bgInset);
 }
 .recordpicker-selected {
   display: flex;
@@ -1905,20 +1907,17 @@ span.error-line {
    arrives as `aria-expanded`, as `aria-pressed`, or as the primary variant a
    caller reaches for to draw the same thing, and stripping the fill above took
    the whole signal with it. It says so here the way the Select's chosen option
-   does (select.css, [aria-selected="true"]): accent ink, a little more weight,
-   and the accent's own quiet ground — not the filled bar, which in a list
-   claims to be the panel's one action rather than one row's state. */
+   does: the pressed filter pill's neutral ground and the primary ink, not the
+   filled bar, which in a list claims to be the panel's one action rather than
+   one row's state. */
 .overflow-menu-items .btn-primary,
 .overflow-menu-items .btn[aria-expanded="true"],
-.overflow-menu-items .btn[aria-pressed="true"] {
-  background: var(--accentLight);
-  color: var(--accentText);
-}
+.overflow-menu-items .btn[aria-pressed="true"],
 .overflow-menu-items .btn-primary:hover:not(:disabled),
 .overflow-menu-items .btn[aria-expanded="true"]:hover:not(:disabled),
 .overflow-menu-items .btn[aria-pressed="true"]:hover:not(:disabled) {
-  background: var(--accentMed);
-  color: var(--accentText);
+  background: var(--bgChip);
+  color: var(--textPrimary);
 }
 
 /* One reading at the top of a record. The tile stays neutral and only the
