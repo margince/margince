@@ -5816,8 +5816,9 @@ export const vi = {
   "compose.scheduleMonday": "Sáng thứ Hai",
   "compose.scheduleNow": "Gửi ngay",
   "compose.why": "Lý do liên hệ",
-  "compose.whyHint":
-    "Hồ sơ quy định những gì được phép gửi; lý do dùng để đối chiếu lần gửi này với quy định đó.",
+  "compose.whyMissing": "Chưa có lý do liên hệ.",
+  "compose.whyMissingText": "Không thể gửi cho đến khi ghi lý do.",
+  "compose.whyPick": "Ghi lý do…",
   "compose.why.requestedFollowup": "Liên hệ lại theo yêu cầu của họ",
   "compose.why.activeDeal": "Deal đang hoạt động",
   "compose.why.quote": "Báo giá hoặc đề xuất họ yêu cầu",

@@ -308,10 +308,8 @@
   flex: none;
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
   max-block-size: 45%;
   overflow-y: auto;
-  padding: var(--space-2) var(--space-4);
   border-top: 1px solid var(--borderSubtle);
 }
 .compose-blockers:empty {
@@ -320,6 +318,67 @@
 .compose-blockers > * {
   flex-shrink: 0;
   margin: 0;
+}
+.compose-blockers > * + * {
+  border-top: 1px solid var(--borderSubtle);
+}
+
+/* Each blocker is one strip across the window: its headline and sentence on
+   one line, and what fixes it at the end. A callout's card frame is dropped. */
+.compose-strip {
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4);
+  font: var(--fontBodySmall);
+}
+.compose-blockers .callout {
+  align-items: center;
+  gap: var(--space-2) var(--space-3); /* ds:ignore one strip in the composer's blocker band, matched to compose-strip */
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4); /* ds:ignore one strip in the composer's blocker band, matched to compose-strip */
+  border: 0;
+  border-radius: 0;
+  font: var(--fontBodySmall);
+}
+.compose-blockers .callout-warning,
+.compose-strip-warning {
+  background: var(--warningBg);
+}
+.compose-blockers .callout-danger {
+  background: var(--dangerBg);
+}
+.compose-blockers .callout-copy {
+  display: block;
+  flex-basis: 12rem;
+}
+.compose-blockers .callout-title,
+.compose-blockers .callout-text,
+.compose-blockers .callout-text > p {
+  display: inline;
+}
+.compose-blockers .callout-title {
+  margin-inline-end: var(--space-1);
+  font-weight: var(--fontWeightBold);
+}
+.compose-strip {
+  display: flex;
+}
+.compose-strip > svg {
+  flex: none;
+  inline-size: 1rem;
+  block-size: 1rem;
+  color: var(--warningText);
+}
+.compose-strip-text {
+  flex: 1;
+  min-inline-size: 0;
+  margin: 0;
+}
+.compose-strip-warning .compose-strip-text > strong {
+  color: var(--warningText);
+}
+.compose-strip-field {
+  flex: none;
+  inline-size: 11.25rem;
 }
 
 /* The foot: the send where the hand ends up, what became of the draft, and
@@ -340,7 +399,11 @@
 .compose-foot-status {
   flex: 1;
   min-inline-size: 0;
-  text-align: end;
+}
+/* The schedule caret is a narrow tab on the send, not a second button. */
+.compose-foot .compose-sendmenu {
+  min-inline-size: 0;
+  padding-inline: var(--space-1);
 }
 
 /* The thread a reply answers, folded under its words. */

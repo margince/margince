@@ -54,11 +54,17 @@
   white-space: nowrap;
   color: inherit;
 }
-.docked-head .icon-action {
+/* Bare glyphs on the dark bar: a ghost button's own fill and edge are drawn
+   for a light page and read as grey boxes here. */
+.docked-head .icon-action > .btn {
+  border-color: transparent;
+  background: transparent;
   color: inherit;
   opacity: 0.8;
 }
-.docked-head .icon-action:hover {
+.docked-head .icon-action > .btn:hover,
+.docked-head .icon-action > .btn:focus-visible {
+  background: color-mix(in srgb, currentcolor 14%, transparent);
   opacity: 1;
 }
 

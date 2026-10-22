@@ -1,4 +1,4 @@
-import { Ellipsis, Trash2 } from "lucide-react";
+import { Ellipsis, ShieldAlert, Trash2 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import { SendMark } from "../../components/sendpermission";
 import { Button, Field } from "../../design-system/atoms";
@@ -103,8 +103,8 @@ export function ComposeFrame({
   );
 }
 
-// The footer. The send and its other moments come first, where the hand ends
-// up. Then what became of the draft, and the way to throw it away.
+// The footer: files and the draft's state on the left. The send and its other
+// moments sit at the end, where the hand ends up.
 export function ComposeFoot({
   confirmLabel,
   send,
@@ -138,18 +138,6 @@ export function ComposeFoot({
     <div className="compose-foot">
       {error && <ErrorLine>{error}</ErrorLine>}
       <div className="compose-foot-row">
-        <span className="actions-split">
-          <Button
-            variant="primary"
-            onClick={send.confirm}
-            pending={send.send.isPending}
-            disabled={held}
-          >
-            {confirmLabel}
-          </Button>
-          {!isChannelReply && <ScheduleMenu onOpen={onPickMoment} />}
-        </span>
-        {!isChannelReply && <SendMark {...send.permission} />}
         {attach}
         <span className="t-caption compose-foot-status" role="status">
           {scheduled
@@ -167,6 +155,18 @@ export function ComposeFoot({
             pending={savedDraft.removing}
           />
         )}
+        {!isChannelReply && <SendMark {...send.permission} />}
+        <span className="actions-split">
+          <Button
+            variant="primary"
+            onClick={send.confirm}
+            pending={send.send.isPending}
+            disabled={held}
+          >
+            {confirmLabel}
+          </Button>
+          {!isChannelReply && <ScheduleMenu onOpen={onPickMoment} />}
+        </span>
       </div>
     </div>
   );
@@ -290,24 +290,45 @@ export function ComposeWhy({
   if (!asksWhy(anchorActivity)) {
     return null;
   }
+  const missing = context === "";
+  // One strip in the warning band: what is missing and why it matters, with
+  // the pick that fixes it at the end. Once picked it stays, without the warning.
   return (
-    <Field
-      className="compose-address-field"
-      label={t("compose.why")}
-      hint={t("compose.whyHint")}
-      error={flagged.has("context") ? t("compose.missingWhy") : undefined}
+    <div
+      className={
+        missing ? "compose-strip compose-strip-warning" : "compose-strip"
+      }
     >
-      {(control) => (
-        <Select
-          {...control}
-          options={contextOptions(t)}
-          value={context}
-          onChange={(value) =>
-            onContextChange(value as CommunicationContext | "")
-          }
-        />
-      )}
-    </Field>
+      {missing && <ShieldAlert aria-hidden="true" />}
+      <p className="compose-strip-text">
+        {missing ? (
+          <>
+            <strong>{t("compose.whyMissing")}</strong>{" "}
+            {t("compose.whyMissingText")}
+          </>
+        ) : (
+          t("compose.why")
+        )}
+      </p>
+      <Field
+        className="compose-strip-field"
+        label={t("compose.why")}
+        labelHidden
+        error={flagged.has("context") ? t("compose.missingWhy") : undefined}
+      >
+        {(control) => (
+          <Select
+            {...control}
+            options={contextOptions(t).filter((o) => o.value !== "")}
+            value={context}
+            placeholder={t("compose.whyPick")}
+            onChange={(value) =>
+              onContextChange(value as CommunicationContext | "")
+            }
+          />
+        )}
+      </Field>
+    </div>
   );
 }
 

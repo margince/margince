@@ -5988,8 +5988,9 @@ export const en = {
   "compose.scheduleMonday": "Monday morning",
   "compose.scheduleNow": "Send now",
   "compose.why": "Reason for contact",
-  "compose.whyHint":
-    "The record determines what is allowed; the reason lets the send be checked against it.",
+  "compose.whyMissing": "No contact reason.",
+  "compose.whyMissingText": "Sending is refused until one is recorded.",
+  "compose.whyPick": "Record a reason…",
   "compose.why.requestedFollowup": "Follow-up they requested",
   "compose.why.activeDeal": "Active deal",
   "compose.why.quote": "Quote or proposal they requested",

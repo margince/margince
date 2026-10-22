@@ -5955,8 +5955,9 @@ export const de = {
   "compose.scheduleMonday": "Montagmorgen",
   "compose.scheduleNow": "Jetzt senden",
   "compose.why": "Kontaktgrund",
-  "compose.whyHint":
-    "Der Datensatz legt fest, was erlaubt ist. Mit dem Grund lässt sich der Versand an dieser Vorgabe prüfen.",
+  "compose.whyMissing": "Kein Kontaktgrund.",
+  "compose.whyMissingText": "Senden ist gesperrt, bis einer erfasst ist.",
+  "compose.whyPick": "Grund erfassen…",
   "compose.why.requestedFollowup": "Angefragtes Follow-up",
   "compose.why.activeDeal": "Laufender Deal",
   "compose.why.quote": "Angefragtes Angebot",
