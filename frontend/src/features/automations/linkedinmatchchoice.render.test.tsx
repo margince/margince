@@ -128,9 +128,31 @@ describe("the LinkedIn match boxes", () => {
   });
 
   it("hides the employer box when the reader cannot see the company", async () => {
-    stubCard(mayEmploy, () => jsonResponse({ status: 404 }, 404));
-    show(linkedInMatch());
-    await screen.findByRole("checkbox", { name: "Use as job title" });
+    const hidden = "66666666-6666-4666-8666-666666666666";
+    let hiddenRead = false;
+    installFetchStub({
+      "GET /me": meRoute(mayEmploy),
+      [`GET /companies/${ACME}`]: () =>
+        jsonResponse({ id: ACME, display_name: "Acme GmbH" }),
+      [`GET /companies/${hidden}`]: () => {
+        hiddenRead = true;
+        return jsonResponse({ status: 404 }, 404);
+      },
+    });
+    const view = show(linkedInMatch());
+    // The grants have arrived once a visible company shows its box.
+    await screen.findByRole("checkbox", { name: "Use Acme GmbH as employer" });
+    view.rerender(
+      <StoryProviders>
+        <ApprovalRow
+          approval={{
+            ...linkedInMatch({ employer_company_id: hidden }),
+            id: "ap-hidden",
+          }}
+        />
+      </StoryProviders>,
+    );
+    await waitFor(() => expect(hiddenRead).toBe(true));
     await waitFor(() =>
       expect(
         screen.queryByRole("checkbox", { name: /as employer/ }),

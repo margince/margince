@@ -402,7 +402,9 @@ func TestADeciderWhoMayNotCreateTheEmploymentIsRefusedBeforeAnyWrite(t *testing.
 	c := stageLinkedInFieldsCase(t, "", "")
 	perms := integration.AdminPerms
 	perms.Objects = maps.Clone(perms.Objects)
-	perms.Objects["relationship"] = principal.ObjectGrant{Read: true}
+	// Update without create: promoting the Acme employment would pass the
+	// writer's own gate, so only the card's create check refuses it.
+	perms.Objects["relationship"] = principal.ObjectGrant{Read: true, Update: true}
 	decider := c.e.As(c.e.Rep1, []ids.UUID{c.e.Team1}, perms)
 	if _, err := c.svc.Decide(decider, c.approval, true, nil); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("approving with the employer box answered %v, want a permission refusal", err)
@@ -434,6 +436,10 @@ func TestADeciderWhoCannotSeeTheCompanyIsRefusedTheEmployer(t *testing.T) {
 	}
 	if got := c.title(t); got != "" || c.connectionStatus(t) != "suggested" {
 		t.Errorf("the refused approval left title %q and connection %s", got, c.connectionStatus(t))
+	}
+	// Refused while still pending, so the colleague can untick the box.
+	if err := c.approveWith(t, colleague, map[string]any{"use_as_employer": false}); err != nil {
+		t.Fatalf("approving without the employer box: %v", err)
 	}
 }
 
