@@ -14,8 +14,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"slices"
-	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -28,23 +26,20 @@ import (
 // system role, an action outside the four verbs, and operations that state
 // different defaults for one object.
 //
-// Operations of one unit share an object, and any of them may carry the block.
-// The blocks may not differ, or the first one read would win silently.
+// The generator already refuses these, so this is the second line of defence for
+// a composition that did not come from it. Operations of one unit share an
+// object, and any of them may carry the block, so each object is read once.
 func extensionRbacDefaults(verbs []extension.Verb) ([]identity.RbacDefault, error) {
-	declared := map[string]extension.Verb{}
+	if err := extension.CheckRbacDefaultsAgree(verbs); err != nil {
+		return nil, fmt.Errorf("compose: %w", err)
+	}
+	declared := map[string]bool{}
 	var out []identity.RbacDefault
 	for _, v := range verbs {
-		if len(v.RbacDefaults) == 0 {
+		if len(v.RbacDefaults) == 0 || declared[v.RbacObject] {
 			continue
 		}
-		if prior, ok := declared[v.RbacObject]; ok {
-			if !sameRbacDefaults(prior.RbacDefaults, v.RbacDefaults) {
-				return nil, fmt.Errorf("compose: operations %s and %s both declare default grants for %q and they differ — state them once, or state them identically",
-					prior.OperationID, v.OperationID, v.RbacObject)
-			}
-			continue
-		}
-		declared[v.RbacObject] = v
+		declared[v.RbacObject] = true
 		for _, d := range v.RbacDefaults {
 			actions := make([]string, 0, len(d.Actions))
 			for _, a := range d.Actions {
@@ -70,31 +65,6 @@ func registerRbacDefaults(defaults []identity.RbacDefault) error {
 		return fmt.Errorf("compose: %w", err)
 	}
 	return nil
-}
-
-// sameRbacDefaults compares two declarations as sets: the order a unit wrote
-// its roles or verbs in is not a posture.
-func sameRbacDefaults(a, b []extension.RbacDefault) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	key := func(d extension.RbacDefault) string {
-		actions := make([]string, 0, len(d.Actions))
-		for _, x := range d.Actions {
-			actions = append(actions, string(x))
-		}
-		slices.Sort(actions)
-		return d.Role + "=" + strings.Join(actions, ",")
-	}
-	keys := func(ds []extension.RbacDefault) []string {
-		out := make([]string, 0, len(ds))
-		for _, d := range ds {
-			out = append(out, key(d))
-		}
-		slices.Sort(out)
-		return out
-	}
-	return slices.Equal(keys(a), keys(b))
 }
 
 // FillExtensionRbacDefaults writes the registered default grants into the

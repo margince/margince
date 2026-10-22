@@ -13,19 +13,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// A default may name a seeded role and never a custom one, because the
-// vocabulary is the role set the seed lays down.
-func TestEverySeededRoleIsASystemRoleKeyAndACustomOneIsNot(t *testing.T) {
-	for _, r := range systemRoles {
-		if !IsSystemRoleKey(r.key) {
-			t.Errorf("seeded role %q is not a system role key", r.key)
-		}
-	}
-	if IsSystemRoleKey("field_partner") {
-		t.Error("a custom role key was accepted as a system role")
-	}
-}
-
 func TestADefaultTheFillCouldNotApplyIsRefusedBeforeAnythingIsRegistered(t *testing.T) {
 	const object = "ext_rbacdef_note"
 	cases := []struct {
@@ -66,7 +53,7 @@ func TestADefaultOnAnObjectNoUnitRegisteredIsRefused(t *testing.T) {
 	}
 }
 
-// The fill writes under no person's authority. A human context and a context
+// The fill writes under no user's authority. A human context and a context
 // with no actor are both refused before the database is touched.
 func TestTheFillIsRefusedToAnyCallerButTheSystem(t *testing.T) {
 	human := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalHuman, ID: "human:x"})

@@ -59,6 +59,16 @@ func (e *revocationEnv) storedObjectGrant(t *testing.T, roleKey string) (g store
 	return g, true
 }
 
+func (e *revocationEnv) reportFence(t *testing.T) int64 {
+	t.Helper()
+	var generation int64
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT generation FROM report_projection_fence`).Scan(&generation); err != nil {
+		t.Fatalf("reading the report fence: %v", err)
+	}
+	return generation
+}
+
 func (e *revocationEnv) defaultAuditRows(t *testing.T) int {
 	t.Helper()
 	var n int
@@ -106,6 +116,9 @@ func TestTheFillGivesEachSystemRoleItsDefaultOnceAndAuditsIt(t *testing.T) {
 	}
 
 	// A second boot finds every entry present: nothing written, nothing audited.
+	// A statement on role bumps the report fence, so a boot that fills nothing
+	// must send none.
+	fenceBefore := e.reportFence(t)
 	again, err := e.svc.FillRbacDefaults(e.bootCtx())
 	if err != nil {
 		t.Fatalf("second FillRbacDefaults: %v", err)
@@ -115,6 +128,9 @@ func TestTheFillGivesEachSystemRoleItsDefaultOnceAndAuditsIt(t *testing.T) {
 	}
 	if got := e.defaultAuditRows(t); got != len(rolesitDefaults) {
 		t.Errorf("a second boot left %d audit rows, want still %d", got, len(rolesitDefaults))
+	}
+	if fenceAfter := e.reportFence(t); fenceAfter != fenceBefore {
+		t.Errorf("a boot that filled nothing moved the report fence from %d to %d", fenceBefore, fenceAfter)
 	}
 }
 

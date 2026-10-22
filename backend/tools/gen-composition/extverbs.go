@@ -82,6 +82,13 @@ func extensionVerbs(units []extensionUnit, contracts map[string][]byte) ([]decla
 		out = append(out, found...)
 	}
 	sort.Slice(out, func(i, j int) bool { return verbKey(out[i].verb) < verbKey(out[j].verb) })
+	verbs := make([]extension.Verb, 0, len(out))
+	for _, d := range out {
+		verbs = append(verbs, d.verb)
+	}
+	if err := extension.CheckRbacDefaultsAgree(verbs); err != nil {
+		return nil, err
+	}
 	return out, nil
 }
 

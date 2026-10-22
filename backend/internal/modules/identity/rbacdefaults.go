@@ -36,10 +36,14 @@ type RbacDefault struct {
 	Actions []string
 }
 
-// IsSystemRoleKey reports whether key names a seeded system role. It reads
-// systemRoles, so the roles a default may name are the seeded set itself.
-func IsSystemRoleKey(key string) bool {
-	return slices.ContainsFunc(systemRoles, func(r struct{ key, name string }) bool { return r.key == key })
+// SystemRoleKeys lists the seeded role keys in seed order. The extension
+// package mirrors them, and a gate holds the two equal.
+func SystemRoleKeys() []string {
+	keys := make([]string, 0, len(systemRoles))
+	for _, r := range systemRoles {
+		keys = append(keys, r.key)
+	}
+	return keys
 }
 
 // grant spells the default as the document does. A verb outside the four is
@@ -74,7 +78,7 @@ func ValidateRbacDefaults(defaults ...RbacDefault) error {
 		if err := d.Object.Validate(); err != nil {
 			return err
 		}
-		if !IsSystemRoleKey(d.Role) {
+		if !isSystemRoleKey(d.Role) {
 			return fmt.Errorf("identity: default grant on %q names role %q, which is not a system role (a custom role starts with no grant)", d.Object, d.Role)
 		}
 		if _, err := d.grant(); err != nil {
@@ -129,8 +133,8 @@ func registeredRbacDefaults() []RbacDefault {
 // It takes the lock every authorization write takes, so it cannot interleave
 // with an admin editing the document, and two booting processes cannot both write.
 func (s *Service) FillRbacDefaults(ctx context.Context) (int, error) {
-	// Boot's alone. A person edits a grant through SetRoleObjectGrant, which is
-	// gated, and this writes under no person's authority.
+	// Boot's alone. A user edits a grant through SetRoleObjectGrant, which is
+	// gated, and this writes under no user's authority.
 	if p, ok := principal.Actor(ctx); !ok || p.Type != principal.PrincipalSystem {
 		return 0, apperrors.ErrPermissionDenied
 	}
@@ -168,10 +172,9 @@ func (s *Service) FillRbacDefaults(ctx context.Context) (int, error) {
 	return filled, err
 }
 
-// fillRoleObjectDefault writes the default into the role's document when the
-// document has no entry for the object, and says whether it wrote. It makes the
-// same targeted write as the grant editor (roleObjectGrantExpr), so every grant
-// this installation cannot name stays in the document.
+// fillRoleObjectDefault writes the default into the role's document when it has
+// no entry for the object, and says whether it wrote. It uses the grant
+// editor's targeted write (roleObjectGrantExpr), so unknown grants stay.
 //
 // The entry's presence is the whole test. A grant an admin turned off is still
 // an entry, because all four verbs are stored, so a revocation is not refilled.
@@ -184,18 +187,29 @@ func fillRoleObjectDefault(ctx context.Context, tx pgx.Tx, d RbacDefault) (roleI
 	if err != nil {
 		return ids.Nil, false, err
 	}
+	// Read first and write only what is missing. Any UPDATE on role fires a
+	// statement trigger that bumps the report fence, even when no row matches.
+	// A boot that fills nothing must therefore send none.
+	var version int64
 	err = tx.QueryRow(ctx,
-		`UPDATE role
-		    SET permissions = `+roleObjectGrantExpr+`
+		`SELECT id, version FROM role
 		  WHERE key = $1 AND is_system AND archived_at IS NULL
-		    AND NOT COALESCE(jsonb_exists(permissions->'objects', $2::text), false)
-		  RETURNING id`,
-		d.Role, string(d.Object), encoded).Scan(&roleID)
+		    AND NOT COALESCE(jsonb_exists(permissions->'objects', $2::text), false)`,
+		d.Role, string(d.Object)).Scan(&roleID, &version)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.Nil, false, nil
 	}
 	if err != nil {
 		return ids.Nil, false, err
+	}
+	tag, err := tx.Exec(ctx,
+		`UPDATE role SET permissions = `+roleObjectGrantExpr+` WHERE id = $1 AND version = $4`,
+		roleID, string(d.Object), encoded, version)
+	if err != nil {
+		return ids.Nil, false, err
+	}
+	if tag.RowsAffected() != 1 {
+		return ids.Nil, false, apperrors.ErrVersionSkew
 	}
 	return roleID, true, nil
 }

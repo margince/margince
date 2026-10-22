@@ -48,7 +48,6 @@ func TestExtensionRbacDefaultsComeFromTheDeclaredOperations(t *testing.T) {
 			t.Errorf("entry %d = %+v, want %+v", i, got[i], want[i])
 		}
 	}
-	// No unit declaring one is the live tree's state.
 	if got, err := extensionRbacDefaults(nil); err != nil || len(got) != 0 {
 		t.Fatalf("derived %v (err %v) from no operations", got, err)
 	}

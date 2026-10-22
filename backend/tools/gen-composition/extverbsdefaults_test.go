@@ -53,6 +53,10 @@ func TestDefaultGrantsTheGeneratorRefuses(t *testing.T) {
 				"      operationId: uQuote\n      x-rbac-defaults:\n        rep: [read]", 1),
 			wantErr: "no RBAC object",
 		},
+		"a role that is not a system role": {
+			pathItem: withDefaults("      x-rbac-defaults:\n        field_partner: [read]\n"),
+			wantErr:  "not a system role",
+		},
 		"a role given no action": {
 			pathItem: withDefaults("      x-rbac-defaults:\n        rep: []\n"),
 			wantErr:  "no action",
@@ -68,6 +72,32 @@ func TestDefaultGrantsTheGeneratorRefuses(t *testing.T) {
 				t.Fatalf("err = %v, want %q", err, tc.wantErr)
 			}
 		})
+	}
+}
+
+func TestOperationsOfOneUnitStatingDifferentDefaultsForOneObjectAreRefusedAtGeneration(t *testing.T) {
+	other := strings.ReplaceAll(yogiOperation, "/ext/u/quote", "/ext/u/other")
+	other = strings.ReplaceAll(other, "verb: u_quote", "verb: u_other")
+	other = strings.ReplaceAll(other, "operationId: uQuote", "operationId: uOther")
+	build := func(firstBlock, secondBlock string) error {
+		second := strings.Replace(other, "      operationId: uOther",
+			"      operationId: uOther\n      x-rbac-object: ext_u_widget\n      x-rbac-action: read\n"+secondBlock, 1)
+		contracts := map[string][]byte{
+			"crm.yaml":           contractWith(withDefaults(firstBlock) + second),
+			"jobs.yaml":          []byte("kinds: {}\n"),
+			"ai-tasks.yaml":      []byte("tasks: {}\n"),
+			"public-events.yaml": []byte("paths: {}\n"),
+		}
+		_, err := extensionVerbs(oneUnit(), contracts)
+		return err
+	}
+	same := "      x-rbac-defaults:\n        rep: [read]\n"
+	if err := build(same, same); err != nil {
+		t.Fatalf("matching blocks were refused: %v", err)
+	}
+	err := build(same, "      x-rbac-defaults:\n        rep: [read, create]\n")
+	if err == nil || !strings.Contains(err.Error(), "ext_u_widget") {
+		t.Fatalf("err = %v, want a refusal naming the object", err)
 	}
 }
 

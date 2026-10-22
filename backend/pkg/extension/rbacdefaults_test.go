@@ -36,6 +36,9 @@ func TestVerbValidateRefusesDefaultsThatCannotBeApplied(t *testing.T) {
 		{"an action outside the four verbs", func(v *Verb) {
 			v.RbacDefaults = []RbacDefault{{Role: "rep", Actions: []RbacAction{"write"}}}
 		}, `"write"`},
+		{"a role that is not a system role", func(v *Verb) {
+			v.RbacDefaults = []RbacDefault{{Role: "field_partner", Actions: []RbacAction{RbacRead}}}
+		}, "not a system role"},
 		{"a role listed twice", func(v *Verb) {
 			v.RbacDefaults = []RbacDefault{
 				{Role: "rep", Actions: []RbacAction{RbacRead}},
@@ -76,5 +79,45 @@ func TestVerbValidateRefusesDefaultsOnAHumanOnlyOperationWithNoObject(t *testing
 	v.RbacDefaults = []RbacDefault{{Role: "rep", Actions: []RbacAction{RbacRead}}}
 	if err := v.Validate(); err == nil {
 		t.Fatal("defaults with no object were accepted on a human-only operation")
+	}
+}
+
+func TestDefaultGrantsAreComparedAsSets(t *testing.T) {
+	a := []RbacDefault{
+		{Role: "admin", Actions: []RbacAction{RbacRead, RbacCreate}},
+		{Role: "rep", Actions: []RbacAction{RbacRead}},
+	}
+	reordered := []RbacDefault{
+		{Role: "rep", Actions: []RbacAction{RbacRead}},
+		{Role: "admin", Actions: []RbacAction{RbacCreate, RbacRead}},
+	}
+	if !RbacDefaultsEqual(a, reordered) {
+		t.Error("the same defaults in another order were read as different")
+	}
+	narrower := []RbacDefault{{Role: "admin", Actions: []RbacAction{RbacRead}}, {Role: "rep", Actions: []RbacAction{RbacRead}}}
+	if RbacDefaultsEqual(a, narrower) {
+		t.Error("a narrower default was read as the same")
+	}
+}
+
+func TestOperationsOnOneObjectMustAgreeOnItsDefaults(t *testing.T) {
+	first, second := wellFormed(), wellFormed()
+	second.OperationID = "crmDemoRead"
+	first.RbacDefaults = []RbacDefault{{Role: "admin", Actions: []RbacAction{RbacRead, RbacCreate}}}
+	second.RbacDefaults = []RbacDefault{{Role: "admin", Actions: []RbacAction{RbacCreate, RbacRead}}}
+	bare := wellFormed()
+	bare.OperationID = "crmDemoPeek"
+	if err := CheckRbacDefaultsAgree([]Verb{first, second, bare}); err != nil {
+		t.Fatalf("matching blocks and an operation with none were refused: %v", err)
+	}
+	second.RbacDefaults = []RbacDefault{{Role: "admin", Actions: []RbacAction{RbacRead}}}
+	err := CheckRbacDefaultsAgree([]Verb{first, second})
+	if err == nil {
+		t.Fatal("conflicting defaults for one object were accepted")
+	}
+	for _, want := range []string{first.RbacObject, first.OperationID, second.OperationID} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("the refusal does not name %q: %v", want, err)
+		}
 	}
 }

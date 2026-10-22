@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -168,6 +169,10 @@ func (v Verb) validateRbacDefaults() error {
 	for _, d := range v.RbacDefaults {
 		if d.Role == "" {
 			return fmt.Errorf("operation %s declares a default grant for no role", v.OperationID)
+		}
+		if !slices.Contains(SystemRoleKeys, d.Role) {
+			return fmt.Errorf("operation %s declares a default grant for role %q, which is not a system role (%s). A custom role starts with no grant",
+				v.OperationID, d.Role, strings.Join(SystemRoleKeys, ", "))
 		}
 		if seen[d.Role] {
 			return fmt.Errorf("operation %s lists role %q twice in its default grants", v.OperationID, d.Role)

@@ -300,9 +300,16 @@ Copy `extensions/openchannel/api/crm.yaml`. These rules fail you if you miss the
   ```
 
   The keys are system role keys, the values are the four object verbs, and a role with no entry gets
-  nothing. The start writes an entry once, for each system role whose document has none for the object,
-  and records an audit row. It never touches an entry that exists, so a right an admin turned off stays
-  off after a restart or an upgrade.
+  nothing. The role keys are `admin` (Admin), `management` (`Management`), `manager` (Team Lead), `rep`
+  (User), `read_only` (Read-only) and `ops` (Ops / Integrations).
+
+  The start writes an entry once, for each system role whose document has none for the object, and records
+  an audit row. It never touches an entry that exists, so a right an admin turned off stays off after a
+  restart or an upgrade.
+
+  A role with no entry can mean nobody has decided yet, or an admin decided to give nothing. The start
+  cannot tell them apart. So a later version of your unit that adds `x-rbac-defaults` for an object that
+  already exists grants those entries on the next start.
 
   A new installation gets the entries with its roles. Custom roles are never filled. A read seat that
   holds `create` still cannot write, because the seat's limit still applies. Operations that share an

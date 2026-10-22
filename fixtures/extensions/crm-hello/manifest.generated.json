@@ -16,8 +16,8 @@
         "read"
       ],
       "tier": "confirmation_required",
-      "fragment_hash": "sha256:5122cc951f71b7cd7d50e540471725ca3baceef0763c6e42ccfd5561579ed75d",
-      "digest": "sha256:b91973be5fb181c2d3f4a681129c93602d035cdad0f32f17feee304ac5a9c5c6"
+      "fragment_hash": "sha256:44142231aa7da20e8e56e825a9923bd4a6610ea22a7176b73a8457dcfbd21395",
+      "digest": "sha256:d980e9d6e074d64effce3a3a133adbf1c0fb7492e351a08f8ae20b0d1edf71de"
     }
   ],
   "subscriptions": [
