@@ -17,6 +17,18 @@ The pages are **Account**, **Meetings**, **Writing voice**, **AI access**, **Not
 You can also press ⌘K (Ctrl+K) and type the page name, or a word such as "password", "language", "theme" or "mailbox".
 Also called: my profile, my account, preferences, user settings.
 
+### How do I finish setting up Margince?
+To see what is left of your setup in Margince, open Settings and look at **Your setup** on **Overview**.
+It lists the steps: connect your mail, connect your calendar, add writing samples and turn on your booking link. Each step has a button, such as **Connect mail** or **Turn on**.
+While steps are open, **Finish setup** at the top of every screen shows how many are done. Choose **Hide until next sign-in** to put it away for now.
+Also called: setup list, getting started, onboarding steps.
+
+### How do I save a change on a settings page?
+To save a change on a settings page in Margince, change a field, then choose **Save** in the bar at the foot of the page.
+**Discard** in that bar puts every field back as it was. If a field has a mistake, the bar says "Fix the marked fields to save."
+Switches work at once and need no save. If you leave with changes not saved, Margince asks "Save your changes?" and offers **Save**, **Discard changes** or **Stay**.
+Also called: save settings, changes not saved, undo changes.
+
 ### How do I change my notifications?
 To change your notifications in Margince, open Settings → **Notifications**.
 1. Under **Delivery by kind**, pick how each kind reaches you: **Off**, **In the app**, **Email** or **Daily digest**. Not every kind offers every choice.

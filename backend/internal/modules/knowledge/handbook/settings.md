@@ -23,18 +23,6 @@ Margince Settings puts its pages in these groups:
 
 You see only the pages your permissions open. The Reset data page appears only where the installation turns it on.
 
-### How do I finish setting up Margince?
-To see what is left of your setup in Margince, open Settings and look at **Your setup** on **Overview**.
-It lists the steps: connect your mail, connect your calendar, add writing samples and turn on your booking link. Each step has a button, such as **Connect mail** or **Turn on**.
-While steps are open, **Finish setup** at the top of every screen shows how many are done. Choose **Hide until next sign-in** to put it away for now.
-Also called: setup list, getting started, onboarding steps.
-
-### How do I save a change on a settings page?
-To save a change on a settings page in Margince, change a field, then choose **Save** in the bar at the foot of the page.
-**Discard** in that bar puts every field back as it was. If a field has a mistake, the bar says "Fix the marked fields to save."
-Switches work at once and need no save. If you leave with changes not saved, Margince asks "Save your changes?" and offers **Save**, **Discard changes** or **Stay**.
-Also called: save settings, changes not saved, undo changes.
-
 ### Which settings page do I need for my own account?
 Your own things in Margince are under **You** in Settings.
 - Change your password, display name, email signature, language or theme (appearance): **Account**.
