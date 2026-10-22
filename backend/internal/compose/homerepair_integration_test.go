@@ -32,8 +32,14 @@ func TestReviewedRepairArchivesOnlyProvenUntouchedAutomaticWork(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			// A pin holds a task only when its assignee sets it, so the pinned case
+			// assigns the task to the colleague who then pins it.
+			var assignee *ids.UserID
+			if state == "pinned" {
+				assignee = new(ids.From[ids.UserKind](e.AdminUser))
+			}
 			task, _, err := e.Activities.LogActivity(ctx, activities.LogActivityInput{
-				Kind: "task", Subject: new("Prepare an account review"), DueAt: &at, Source: "manual",
+				Kind: "task", Subject: new("Prepare an account review"), DueAt: &at, Source: "manual", AssigneeID: assignee,
 				SourceSystem: new(activities.CommitmentTaskSource), SourceID: new(ids.NewV7().String()), SourceActivityID: new(ids.UUID(source.Id)),
 			})
 			if err != nil {

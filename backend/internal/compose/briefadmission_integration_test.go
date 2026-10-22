@@ -21,7 +21,9 @@ import (
 
 func TestStoredBriefRankingNeedsCurrentInterventionBeforeWorklistAdmission(t *testing.T) {
 	e := integration.Setup(t)
-	now := clocktest.Now(t)
+	// Postgres keeps microseconds; a Linux clock reads nanoseconds, so the
+	// instant read back would never equal one with finer precision.
+	now := clocktest.Now(t).Truncate(time.Microsecond)
 	clock := func() time.Time { return now }
 	store := e.Deals.WithClock(clock)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
