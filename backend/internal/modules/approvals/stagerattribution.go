@@ -8,7 +8,9 @@ package approvals
 import (
 	"context"
 	"errors"
+	"fmt"
 
+	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -22,12 +24,32 @@ import (
 // NULL-passport approval would be given that row without an insert happening at
 // all, and the redemption skips the passport binding for a caller presenting
 // none. Guarded at the insert alone, the second attempt walks through.
-func stagerIsAttributable(ctx context.Context) error {
+//
+// It also refuses a commitment that names nobody it may be put to. The refusal
+// comes before a join, supersession or declined-memory read can match it.
+func stagerIsAttributable(ctx context.Context, in StageInput) error {
 	p, ok := principal.Actor(ctx)
 	if !ok {
 		return errors.New("crmapprovals: no actor bound to context")
 	}
-	return attributableStager(p)
+	if err := attributableStager(p); err != nil {
+		return err
+	}
+	return commitmentNamesItsSubject(p, in)
+}
+
+// commitmentNamesItsSubject refuses a commitment proposal that is for nobody,
+// or that is staged on behalf of a member other than the one it is for. Either
+// would put one colleague's promise in front of another.
+func commitmentNamesItsSubject(p principal.Principal, in StageInput) error {
+	if in.Kind != approvalsubject.KindCommitmentTask {
+		return nil
+	}
+	asked, named := approvalsubject.CommitmentAskedOf(in.ProposedChange)
+	if !named || (!p.OnBehalfOf.IsZero() && p.OnBehalfOf != asked) {
+		return fmt.Errorf("crmapprovals: a commitment is staged only for the colleague it is for: %w", ErrNoDecider)
+	}
+	return nil
 }
 
 // attributableStager refuses an AGENT staging without its passport.

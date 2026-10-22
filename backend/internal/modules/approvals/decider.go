@@ -43,7 +43,7 @@ type deciderCandidate struct {
 func resolveDecider(ctx context.Context, tx pgx.Tx, p principal.Principal, in StageInput) (deciderCandidate, error) {
 	candidates := []deciderCandidate{}
 	if approvalsubject.PayloadOwned(in.Kind) {
-		candidates = append(candidates, deciderCandidate{approvalsubject.Owner(in.ProposedChange), deciderPayloadOwner})
+		candidates = append(candidates, deciderCandidate{approvalsubject.Owner(in.Kind, in.ProposedChange), deciderPayloadOwner})
 	}
 	candidates = append(candidates, deciderCandidate{p.OnBehalfOf, deciderOnBehalfOf})
 	if p.Type == principal.PrincipalHuman {

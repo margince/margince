@@ -79,7 +79,7 @@ const kindHeldDraft = "held_draft"
 // across them would leave the kind half-governed with nothing saying so.
 const (
 	kindDealFollowUp   = "deal_follow_up"
-	kindCommitmentTask = "commitment_task"
+	kindCommitmentTask = approvalsubject.KindCommitmentTask
 	// kindTranscriptProposal is retired: nothing stages it and no effect
 	// applies it. It stays governed so the cards already decided under it stay
 	// readable to whoever decided them.

@@ -29,40 +29,23 @@ const taskWorthyConfidence = 0.95
 
 const seatStatusPromise = "I will send the revised pricing by Friday."
 
-// A promise in mail from a colleague who cannot hold work does not fail the pass.
+// A promise in mail from a colleague who has left does not fail the pass, and
+// asks nobody.
 //
-// An automatic writer may only assign to an ACTIVE seat, and on an installation whose
-// history arrived by import most seats on mail never signed in or have left. Writing
-// the task directly met that refusal inside the conversation's own transaction, which
-// failed the conversation and the pass with it — and a failed conversation's
-// watermark does not move, so the same message was read again every hour, for ever.
-//
-// An invited colleague is asked about their own promise and finds it when they sign
-// in. A colleague who has left can be asked nothing, and a request names a member,
-// so nothing is staged for them.
-func TestAMailedPromiseByAColleagueWhoCannotHoldWorkIsProposed(t *testing.T) {
-	for status, want := range map[string]int{"invited": 1, "deactivated": 0} {
-		t.Run(status, func(t *testing.T) {
-			e, reply := seedMailedPromise(t, status)
-			if err := runSignalPass(t, e, reply); err != nil {
-				t.Fatalf("the pass failed on a promise by an %s colleague: %v\n"+
-					"every later pass reads the same conversation again, because a failed "+
-					"conversation's watermark does not move", status, err)
-			}
-			if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE kind = 'task'`); n != 0 {
-				t.Errorf("%d task(s) written to an %s seat", n, status)
-			}
-			if n := e.WsCount(t, `SELECT count(*) FROM approval
-              WHERE kind = 'commitment_task'
-                AND proposed_change->>'promiser_seat_id' = $1
-                AND NOT (proposed_change ? 'seat_id')
-                AND requested_decider_id = $1::uuid`, e.Rep2.String()); n != want {
-				t.Fatalf("%d proposals asked of the %s promiser, want %d", n, status, want)
-			}
-			if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = 'commitment_task'`); n != want {
-				t.Fatalf("%d commitment proposals staged, want %d", n, want)
-			}
-		})
+// Writing the task directly met the writer's refusal inside the conversation's
+// own transaction, which failed the conversation and the pass with it. A failed
+// conversation's watermark does not move. A request names a member, and one
+// who has left can be asked nothing, so nothing is staged for them.
+func TestAMailedPromiseByADeactivatedColleagueAsksNobody(t *testing.T) {
+	e, reply := seedMailedPromise(t, "deactivated")
+	if err := runSignalPass(t, e, reply); err != nil {
+		t.Fatalf("the pass failed on a promise by a deactivated colleague: %v", err)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE kind = 'task'`); n != 0 {
+		t.Errorf("%d task(s) written to a deactivated seat", n)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = 'commitment_task'`); n != 0 {
+		t.Errorf("%d commitment proposals staged for a deactivated promiser, want none", n)
 	}
 }
 
@@ -87,21 +70,69 @@ func TestAMailedPromiseByAnArchivedColleagueAsksNobody(t *testing.T) {
 	}
 }
 
-// An ACTIVE colleague's promise is still written straight to them.
+// An active or an invited colleague's promise is written straight to them. An
+// invited colleague is a real colleague; the task waits until they sign in, as
+// a task made for them by hand does.
 //
 // The baseline the cases above are measured against: without it, a change that stopped
-// writing commitment tasks at all would satisfy both of them.
+// writing commitment tasks at all would satisfy them.
 func TestAMailedPromiseByAnActiveColleagueIsStillWrittenDirectly(t *testing.T) {
-	e, reply := seedMailedPromise(t, "active")
-	if err := runSignalPass(t, e, reply); err != nil {
-		t.Fatalf("the pass failed on an active colleague's promise: %v", err)
+	for _, status := range []string{"active", "invited"} {
+		t.Run(status, func(t *testing.T) {
+			e, reply := seedMailedPromise(t, status)
+			if err := runSignalPass(t, e, reply); err != nil {
+				t.Fatalf("the pass failed on an %s colleague's promise: %v", status, err)
+			}
+			if got := e.WsScalar(t, `SELECT coalesce(string_agg(assignee_id::text, ','), '') FROM activity WHERE kind = 'task'`); got != e.Rep2.String() {
+				t.Errorf("the task belongs to %q, want the %s colleague who made the promise", got, status)
+			}
+			if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = 'commitment_task'`); n != 0 {
+				t.Errorf("%d proposals staged for an %s colleague, who can simply be given the task", n, status)
+			}
+		})
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE kind = 'task'`); n != 1 {
-		t.Errorf("%d task(s) written for an active colleague, want one", n)
-	}
-	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = 'commitment_task'`); n != 0 {
-		t.Errorf("%d proposals staged for an active colleague, who can simply be given the "+
-			"task", n)
+}
+
+// An unsure promise is proposed to the colleague who made it and to nobody else.
+// An invited colleague's card waits the commitment horizon for them to sign in;
+// an active colleague's keeps the usual window.
+func TestAnUnsurePromiseIsProposedToItsColleagueAlone(t *testing.T) {
+	for status, window := range map[string]time.Duration{
+		"active":  72 * time.Hour,
+		"invited": 30 * 24 * time.Hour,
+	} {
+		t.Run(status, func(t *testing.T) {
+			e, _ := seedMailedPromise(t, status)
+			message, err := ids.Parse(e.WsScalar(t, `SELECT activity_id::text FROM activity_identity WHERE identity_kind='mail' AND identity_key='thread-seat@buyer.example'`))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := runSignalPass(t, e, mailedCommitmentReply(t, message, e.Rep2, 0.75)); err != nil {
+				t.Fatalf("the pass failed on an unsure promise: %v", err)
+			}
+			id, err := ids.Parse(e.WsScalar(t, `SELECT id::text FROM approval WHERE kind = 'commitment_task'
+				 AND proposed_change->>'seat_id' = $1 AND proposed_change->>'promiser_seat_id' = $1
+				 AND on_behalf_of::text = $1 AND requested_decider_id::text = $1`, e.Rep2.String()))
+			if err != nil {
+				t.Fatalf("no proposal names the colleague who made the promise: %v", err)
+			}
+			hours := e.WsCount(t, `SELECT round(extract(epoch FROM expires_at - created_at) / 3600)::int FROM approval WHERE id = $1`, id)
+			if time.Duration(hours)*time.Hour != window {
+				t.Errorf("the %s colleague's card waits %dh, want %s", status, hours, window)
+			}
+			queue := approvalsServiceWithEffects(e.Pool)
+			for name, reader := range map[string]context.Context{
+				"the admin":         e.Admin(),
+				"a third colleague": e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms),
+			} {
+				if could, err := queue.PendingDecidableBy(reader, ids.From[ids.ApprovalKind](id)); err != nil || could {
+					t.Errorf("%s may decide a colleague's promise (could=%v, err=%v)", name, could, err)
+				}
+				if _, err := queue.Decide(reader, ids.From[ids.ApprovalKind](id), true, nil); err == nil {
+					t.Errorf("%s accepted a colleague's promise and became its owner", name)
+				}
+			}
+		})
 	}
 }
 
@@ -352,17 +383,9 @@ func TestAProviderAlreadyBlockedLeavesThePassWithNothingToReport(t *testing.T) {
 	}
 }
 
-// A promise in PRIVATE mail is proposed to the conversation's own owner, whatever
-// their status.
-//
-// Nobody else may be shown the mail, so the owner is the only reviewer there is —
-// and an owner who has not signed in yet finds the proposal waiting when they do,
-// which is what an invited colleague's queue is for. Clearing the seat here would
-// stage it for whoever reviews the queue, which means showing them a conversation
-// the product keeps to one seat.
-//
-// No TASK, though: the automatic writer still may not assign to them.
-func TestAPrivatePromiseIsProposedToItsOwnOwner(t *testing.T) {
+// A promise in PRIVATE mail made by the mailbox's own owner is their task, also
+// while they are invited. They may read the mail, so they may hold the work.
+func TestAPrivatePromiseByItsInvitedOwnerIsTheirTask(t *testing.T) {
 	e, reply := seedMailedPromise(t, "invited")
 	// Capture-private to the seat that sent it: a contact visible to its owner alone
 	// keeps every message filed against it to that owner.
@@ -373,16 +396,11 @@ func TestAPrivatePromiseIsProposedToItsOwnOwner(t *testing.T) {
 	if err := runSignalPass(t, e, reply); err != nil {
 		t.Fatalf("the pass failed on a private promise: %v", err)
 	}
-
-	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE kind = 'task'`); n != 0 {
-		t.Errorf("%d task(s) written to a seat that cannot hold work", n)
+	if got := e.WsScalar(t, `SELECT coalesce(string_agg(assignee_id::text, ','), '') FROM activity WHERE kind = 'task'`); got != e.Rep2.String() {
+		t.Errorf("the private promise's task belongs to %q, want its owner %s", got, e.Rep2)
 	}
-	// Put to the owner, who made the promise: nobody else may read the mail.
-	named := e.WsScalar(t, `
-		SELECT coalesce(requested_decider_id::text, '')
-		  FROM approval WHERE kind = 'commitment_task'`)
-	if named != e.Rep2.String() {
-		t.Errorf("the private proposal is put to %q, want the conversation's owner %s, who made it", named, e.Rep2)
+	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = 'commitment_task'`); n != 0 {
+		t.Errorf("%d proposals staged beside the owner's own task", n)
 	}
 }
 

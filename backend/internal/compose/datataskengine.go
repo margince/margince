@@ -45,5 +45,6 @@ func dataTaskFailureNotice(pool *pgxpool.Pool) func(context.Context, pgx.Tx, dat
 func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 	return []datatask.Task{
 		heldMailDataTask(now), homeRepairDataTask(pool, now), mailRecipientsDataTask(), machineAddressDataTask(), pastActivityClocksDataTask(),
+		unaskedCommitmentsDataTask(),
 	}
 }

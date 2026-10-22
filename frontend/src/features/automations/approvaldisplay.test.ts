@@ -261,7 +261,7 @@ describe("commitment responsibility", () => {
     [
       { promiser_seat_id: "original" },
       "Theo",
-      "Creates a task assigned to the person who approves.",
+      "Creates a task assigned to Colleague name unavailable.",
     ],
     [
       { seat_id: "assignee" },
@@ -271,17 +271,17 @@ describe("commitment responsibility", () => {
     [
       { promiser_seat_id: "missing-id", party: "Theo" },
       "Theo",
-      "Creates a task assigned to the person who approves.",
+      "Creates a task assigned to Colleague name unavailable.",
     ],
     [
       { party: "Mira", promiser_unresolved: true },
       "Unverified: Mira",
-      "Creates a task assigned to the person who approves.",
+      "Creates a task assigned to Colleague name unavailable.",
     ],
     [
       { promiser_seat_id: "missing-id" },
       "Colleague name unavailable",
-      "Creates a task assigned to the person who approves.",
+      "Creates a task assigned to Colleague name unavailable.",
     ],
   ])(
     "keeps original attribution separate from assignment: %j",

@@ -3437,8 +3437,6 @@ export const en = {
   "approval.commitment.unverifiedNamed": "Unverified: {name}",
   "approval.commitment.unresolved": "Promiser unresolved",
   "approval.commitment.assignNamed": "Creates a task assigned to {name}.",
-  "approval.commitment.assignDecider":
-    "Creates a task assigned to the person who approves.",
   "approval.field.owner": "Owner",
   "approval.field.sourceText": "Original text",
   "approval.field.to": "To",

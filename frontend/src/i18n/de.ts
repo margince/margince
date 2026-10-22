@@ -3432,8 +3432,6 @@ export const de = {
   "approval.commitment.unverifiedNamed": "Nicht bestätigt: {name}",
   "approval.commitment.unresolved": "Zusagende Person ungeklärt",
   "approval.commitment.assignNamed": "Erstellt eine Aufgabe für {name}.",
-  "approval.commitment.assignDecider":
-    "Erstellt eine Aufgabe für die Person, die zustimmt.",
   "approval.field.owner": "Verantwortlich",
   "approval.field.sourceText": "Originaltext",
   "approval.field.to": "An",

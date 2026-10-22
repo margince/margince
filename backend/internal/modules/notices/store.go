@@ -473,3 +473,18 @@ func (s *Store) Retract(ctx context.Context, tx pgx.Tx, dedupeKey string) (int64
 	}
 	return tag.RowsAffected(), nil
 }
+
+// RetractCopy takes back one member's copy of an announcement that was never
+// theirs to answer, leaving every other copy standing. Idempotent as Retract is.
+func (s *Store) RetractCopy(ctx context.Context, tx pgx.Tx, id ids.UUID) (int64, error) {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return 0, err
+	}
+	tag, err := tx.Exec(ctx, `
+		UPDATE notice SET retracted_at = now()
+		 WHERE id = $1 AND retracted_at IS NULL`, id)
+	if err != nil {
+		return 0, fmt.Errorf("notices: taking back one copy of an announcement: %w", err)
+	}
+	return tag.RowsAffected(), nil
+}

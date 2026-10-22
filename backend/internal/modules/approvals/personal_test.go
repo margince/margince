@@ -14,14 +14,23 @@ import (
 func TestPersonalDecisionsRequireAnExplicitRecipient(t *testing.T) {
 	reader, colleague := ids.New[ids.UserKind](), ids.New[ids.UserKind]()
 	passport := ids.New[ids.PassportKind]()
+	promise := func(seat, promiser *ids.UserID) json.RawMessage {
+		body, err := json.Marshal(map[string]*ids.UserID{"seat_id": seat, "promiser_seat_id": promiser})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return body
+	}
 	cases := []struct {
 		name     string
 		proposal row
 		own      bool
 	}{
-		{"requested promise", row{Kind: kindCommitmentTask, OnBehalfOf: &reader}, true},
-		{"colleague promise", row{Kind: kindCommitmentTask, OnBehalfOf: &colleague}, false},
-		{"unassigned promise", row{Kind: kindCommitmentTask}, false},
+		{"requested promise", row{Kind: kindCommitmentTask, ProposedChange: promise(&reader, &reader), OnBehalfOf: &reader}, true},
+		{"colleague promise", row{Kind: kindCommitmentTask, ProposedChange: promise(&colleague, &colleague), OnBehalfOf: &colleague}, false},
+		{"a promise naming nobody", row{Kind: kindCommitmentTask, ProposedChange: promise(nil, nil)}, false},
+		{"a promise staged before its promiser had a seat", row{Kind: kindCommitmentTask, ProposedChange: promise(nil, &reader)}, true},
+		{"a colleague's promise staged for the reader", row{Kind: kindCommitmentTask, ProposedChange: promise(&reader, &colleague), OnBehalfOf: &reader}, false},
 		{"agent authority is not assignment", row{Kind: "advance_deal", OnBehalfOf: &reader}, false},
 		{"delegated deal decision", row{Kind: "advance_deal", PassportID: &passport, OnBehalfOf: &reader}, true},
 		{"delegated colleague decision", row{Kind: "send_email", PassportID: &passport, OnBehalfOf: &colleague}, false},

@@ -47,6 +47,12 @@ func (in *LogActivityInput) VisibleOnlyTo(user ids.UUID) {
 	}}
 }
 
+// AdmitInvitedAssignee lets the task go to an invited colleague, as creating a
+// task by hand does. The commitment writer calls it for the promiser's own task.
+func (in *LogActivityInput) AdmitInvitedAssignee() {
+	in.invitedAssignee = true
+}
+
 // MessageParties is who wrote one message and who it went to, as capture
 // recorded them.
 type MessageParties struct {

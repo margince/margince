@@ -56528,7 +56528,7 @@ components:
           readOnly: true
           description: >-
             For a pending commitment, whether its named task assignee cannot receive the task.
-            True for invited, deactivated, archived, missing, or agent seats.
+            True for deactivated, archived, missing, or agent seats. An invited colleague can.
             Absent for an unassigned proposal.
             This is current decision context, not a change to the staged assignee.
         requested_decider_id:

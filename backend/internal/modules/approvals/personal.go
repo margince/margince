@@ -24,7 +24,7 @@ func requestedDecider(a row) ids.UUID {
 
 func legacyRequestedDecider(a row) ids.UUID {
 	if approvalsubject.PayloadOwned(a.Kind) {
-		return approvalsubject.Owner(a.ProposedChange)
+		return approvalsubject.Owner(a.Kind, a.ProposedChange)
 	}
 	if a.PassportID != nil && !a.PassportID.IsZero() && a.OnBehalfOf != nil {
 		return a.OnBehalfOf.UUID

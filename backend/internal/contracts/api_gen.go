@@ -26429,7 +26429,7 @@ type ApplyTagRequestEntityType string
 
 // Approval A staged 🟡 confirm-first action awaiting human decision.
 type Approval struct {
-	// AssigneeInactive For a pending commitment, whether its named task assignee cannot receive the task. True for invited, deactivated, archived, missing, or agent seats. Absent for an unassigned proposal. This is current decision context, not a change to the staged assignee.
+	// AssigneeInactive For a pending commitment, whether its named task assignee cannot receive the task. True for deactivated, archived, missing, or agent seats. An invited colleague can. Absent for an unassigned proposal. This is current decision context, not a change to the staged assignee.
 	AssigneeInactive *bool `json:"assignee_inactive,omitempty"`
 
 	// BundleId The act that staged this proposal together with its siblings: today, a website read's company facts and the leads it published. Null for a proposal staged on its own. It is a grouping id, not a foreign key: there is no

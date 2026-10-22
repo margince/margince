@@ -41347,7 +41347,7 @@ export interface components {
         /** @description A staged 🟡 confirm-first action awaiting human decision. */
         Approval: {
             preview?: components["schemas"]["ApprovalPreview"];
-            /** @description For a pending commitment, whether its named task assignee cannot receive the task. True for invited, deactivated, archived, missing, or agent seats. Absent for an unassigned proposal. This is current decision context, not a change to the staged assignee. */
+            /** @description For a pending commitment, whether its named task assignee cannot receive the task. True for deactivated, archived, missing, or agent seats. An invited colleague can. Absent for an unassigned proposal. This is current decision context, not a change to the staged assignee. */
             readonly assignee_inactive?: boolean;
             /**
              * Format: uuid

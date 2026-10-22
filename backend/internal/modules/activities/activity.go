@@ -48,10 +48,10 @@ type LogActivityInput struct {
 	recordedAt   *time.Time
 	// Internal creation policy; public activity input cannot set an audience.
 	audienceMembers []AudienceMember
-	// invitedAssignee admits an invited colleague as the task's assignee. Only
-	// the HTTP create handler sets it, for an assignee the caller NAMED; every
-	// automatic writer (deal check-up, lead SLA, email requests) leaves it
-	// false and keeps handing work to active seats only.
+	// invitedAssignee admits an invited colleague as the task's assignee. The
+	// HTTP create handler sets it for an assignee the caller NAMED, and
+	// AdmitInvitedAssignee for a promiser's own task. Every other automatic
+	// writer leaves it false and hands work to active seats only.
 	invitedAssignee bool
 	Kind            string
 	// LinksFromRequest says the caller typed Links, so a missing record is

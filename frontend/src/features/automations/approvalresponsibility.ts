@@ -39,15 +39,12 @@ export function commitmentResponsibility(
       : change.promiser_unresolved === true && party
         ? t("approval.commitment.unverifiedNamed", { name: party })
         : party || t("approval.commitment.unresolved");
-  const assigned = typeof assignee === "string" && assignee.length > 0;
-  const assigneeName = assigned
-    ? (names.get(assignee) ?? t("approval.commitment.unnamedColleague"))
-    : t("approval.commitment.unnamedColleague");
+  const assigneeName =
+    (typeof assignee === "string" && names.get(assignee)) ||
+    t("approval.commitment.unnamedColleague");
   const effect = assigneeInactive
     ? t("approval.commitment.inactiveAssignment", { name: assigneeName })
-    : assigned
-      ? t("approval.commitment.assignNamed", { name: assigneeName })
-      : t("approval.commitment.assignDecider");
+    : t("approval.commitment.assignNamed", { name: assigneeName });
   return [
     { field: "party", label: t("approval.commitment.promiser"), value: madeBy },
     {
@@ -56,6 +53,24 @@ export function commitmentResponsibility(
       value: effect,
     },
   ];
+}
+
+/**
+ * The "Promised by" row a commitment's preview needs beside the owner it
+ * names, because the owner row alone does not say whose word it was. A
+ * request to add recipients names no new promise, so it shows none.
+ */
+export function madeByRow(
+  kind: string,
+  change: Readonly<Record<string, unknown>>,
+  names: ReadonlyMap<string, string>,
+  t: Translator,
+): readonly ResolvedDisplayField[] {
+  if (kind !== "commitment_task" || typeof change.existing_task_id === "string")
+    return [];
+  return commitmentResponsibility(change, names, t).filter(
+    (entry) => entry.field === "party",
+  );
 }
 
 export function approvalAcceptable(

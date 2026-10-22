@@ -3341,8 +3341,6 @@ export const vi = {
   "approval.commitment.unverifiedNamed": "Chưa xác minh: {name}",
   "approval.commitment.unresolved": "Chưa xác định người cam kết",
   "approval.commitment.assignNamed": "Tạo công việc giao cho {name}.",
-  "approval.commitment.assignDecider":
-    "Tạo công việc giao cho người phê duyệt.",
   "approval.field.owner": "Người chịu trách nhiệm",
   "approval.field.sourceText": "Văn bản gốc",
   "approval.field.to": "Đến",

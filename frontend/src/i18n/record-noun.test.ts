@@ -80,9 +80,6 @@ const RETIRED_NOUN: Record<string, RegExp> = {
 // catalog is judged against the retired noun.
 const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
   en: [
-    // These name the human making a promise or decision, not a contact record.
-    "approval.commitment.assignDecider",
-
     // Names this rename leaves alone: Settings → People, which heads the SEATS
     // group beside Company and Sales, not this record type.
     "settings.group.people",
@@ -179,7 +176,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "approval.preview.intendedAttendee",
     // These name the human making a promise or decision, not a contact record.
     "approval.commitment.unresolved",
-    "approval.commitment.assignDecider",
 
     // The meeting host is a human, not the CRM contact record type.
     "scheduling.windowHorizon",
@@ -306,7 +302,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "approval.responsibility.requestedFrom",
     "approval.commitment.promiser",
     "approval.commitment.unresolved",
-    "approval.commitment.assignDecider",
 
     // The sender category names a human role, not the contact record.
     "history.field.admission_sender_kind",

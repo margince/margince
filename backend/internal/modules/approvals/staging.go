@@ -28,7 +28,7 @@ func (s *Service) Stage(ctx context.Context, in StageInput) (ids.ApprovalID, err
 	if err != nil {
 		return ids.ApprovalID{}, err
 	}
-	if err := stagerIsAttributable(ctx); err != nil {
+	if err := stagerIsAttributable(ctx, in); err != nil {
 		return ids.ApprovalID{}, err
 	}
 	var id ids.ApprovalID
@@ -53,7 +53,7 @@ func (s *Service) StageOrJoinPendingInTx(ctx context.Context, tx pgx.Tx, in Stag
 	if err != nil {
 		return ids.ApprovalID{}, err
 	}
-	if err := stagerIsAttributable(ctx); err != nil {
+	if err := stagerIsAttributable(ctx, in); err != nil {
 		return ids.ApprovalID{}, err
 	}
 	return s.stageOrJoinPendingInTx(ctx, tx, in)
@@ -355,7 +355,7 @@ func (s *Service) StageInTx(ctx context.Context, tx pgx.Tx, in StageInput) (ids.
 		return ids.ApprovalID{}, errors.New(
 			"crmapprovals: StageInTx always creates a row — use StageOrJoinPendingInTx to join or supersede")
 	}
-	if err := stagerIsAttributable(ctx); err != nil {
+	if err := stagerIsAttributable(ctx, in); err != nil {
 		return ids.ApprovalID{}, err
 	}
 	return s.insertProposalInTx(ctx, tx, in)

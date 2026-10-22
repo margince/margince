@@ -46,7 +46,7 @@ func TestADecisionWaitingReachesTheReceiptThroughTheRealApprovalsEngine(t *testi
 	deal := e.SeedDeal(t, "Weber GmbH — Phase 2", pipeline, open, &e.Rep1)
 
 	queue := approvalsServiceWithEffects(e.Pool)
-	change, hash, err := diffhash.Canonical(json.RawMessage(`{"summary":"Send revised pricing"}`))
+	change, hash, err := diffhash.Canonical(json.RawMessage(`{"summary":"Send revised pricing","seat_id":"` + e.Rep1.String() + `","promiser_seat_id":"` + e.Rep1.String() + `"}`))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -123,7 +123,7 @@ func TestPersonalDecisionScopeAgreesAcrossHomeAndWorklist(t *testing.T) {
 	actor.OnBehalfOf = e.Rep1
 	ctx = principal.WithActor(ctx, actor)
 	requested, err := queue.Stage(ctx, approvals.StageInput{
-		Kind: "commitment_task", ProposedChange: json.RawMessage(`{"summary":"Send pricing"}`),
+		Kind: "commitment_task", ProposedChange: json.RawMessage(`{"summary":"Send pricing","seat_id":"` + e.Rep1.String() + `","promiser_seat_id":"` + e.Rep1.String() + `"}`),
 		DiffHash: "personal-pricing", TargetType: "deal", TargetID: deal, Summary: "Send pricing",
 	})
 	if err != nil {
@@ -145,7 +145,7 @@ func TestPersonalDecisionScopeAgreesAcrossHomeAndWorklist(t *testing.T) {
 		t.Fatal(err)
 	}
 	private, err := queue.Stage(onBehalfOf(background, e.Rep2), approvals.StageInput{
-		Kind: "commitment_task", ProposedChange: json.RawMessage(`{"summary":"Send private pricing"}`),
+		Kind: "commitment_task", ProposedChange: json.RawMessage(`{"summary":"Send private pricing","seat_id":"` + e.Rep2.String() + `","promiser_seat_id":"` + e.Rep2.String() + `"}`),
 		DiffHash: "private-pricing", TargetType: "activity", TargetID: ids.UUID(source.Id), Summary: "Send private pricing",
 		Evidence: []approvals.Evidence{{SourceType: "activity", SourceID: ids.UUID(source.Id), Snippet: "I will send the private pricing."}},
 	})

@@ -5,10 +5,12 @@ package approvals
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -49,15 +51,13 @@ func commitmentAssignees(approvals []crmcontracts.Approval) map[ids.UUID][]int {
 		if approval.Kind != kindCommitmentTask || approval.Status != crmcontracts.ApprovalStatusPending || approval.ProposedChange == nil {
 			continue
 		}
-		value, ok := (*approval.ProposedChange)["seat_id"].(string)
-		if !ok {
+		raw, err := json.Marshal(*approval.ProposedChange)
+		if err != nil {
 			continue
 		}
-		id, err := ids.Parse(value)
-		if err != nil || id.IsZero() {
-			continue
+		if id, named := approvalsubject.CommitmentAskedOf(raw); named {
+			assignees[id] = append(assignees[id], index)
 		}
-		assignees[id] = append(assignees[id], index)
 	}
 	return assignees
 }
