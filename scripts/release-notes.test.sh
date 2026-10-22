@@ -102,11 +102,30 @@ writes 'far over the budget, features collapse too' "$(
 
 $compare
 EOF
-)" 10 <<'EOF'
+)" 248 <<'EOF'
 feat(deals): a deal shows its next step (#10)
 feat(api)!: offers drop the legacy total (#12)
 fix(sign-in): a link opened before sign-in opens after it (#11)
 EOF
+
+writes 'a shortened section keeps its own kind, and an empty kind stays out' "$(
+	cat <<EOF
+### Faster
+
+- 2 more, listed in the compare view.
+
+$compare
+EOF
+)" 150 <<'EOF'
+perf(reports): one query for the whole pipeline report, not one per stage (#13)
+perf(search): the index answers prefix search without a scan of every row (#15)
+EOF
+
+if printf 'feat(api)!: offers drop the legacy total (#12)\n' |
+	bash "$BUILD" v1.0.0 v1.1.0 margince/margince 10 >/dev/null 2>&1; then
+	echo "FAIL: notes that cannot fit the room were printed instead of refused"
+	FAILURES=$((FAILURES + 1))
+fi
 
 if bash "$BUILD" v1.0.0 v1.1.0 </dev/null >/dev/null 2>&1; then
 	echo "FAIL: a call with no repository was accepted"

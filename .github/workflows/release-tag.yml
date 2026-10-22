@@ -381,12 +381,18 @@ jobs:
           # first one, which then lists no generated changes.
           previous="$(git tag --merged "$REVISION^" --list 'v[0-9]*' --sort=-v:refname |
             awk '!/-/ && !found {print; found = 1}')"
+
+          # GitHub refuses a body over 125,000 characters. The generated half
+          # gets what the written text leaves, less room for the headings, and
+          # the whole body is measured before any asset is uploaded.
+          limit=125000
+          room=$((limit - $(wc -m < written.md) - $(wc -m < install.md) - 1000))
           {
             cat written.md
             printf '\n%s\n\n## Changes\n\n' "$marker"
             if [ -n "$previous" ]; then
               git log --first-parent --format=%s "$previous..$REVISION" |
-                bash scripts/release-notes.sh "$previous" "$VERSION" "$GH_REPO"
+                bash scripts/release-notes.sh "$previous" "$VERSION" "$GH_REPO" "$room"
             else
               echo "The first release: the notes above cover everything before it."
             fi
@@ -394,6 +400,12 @@ jobs:
             cat install.md
             printf '\nRevision: %s\n' "$REVISION"
           } > notes.md
+          size="$(wc -m < notes.md)"
+          if [ "$size" -gt "$limit" ]; then
+            echo "release-tag: the notes of $VERSION are $size characters; GitHub takes $limit." >&2
+            echo "  Shorten the draft release, then re-run ALL jobs." >&2
+            exit 1
+          fi
 
           # Re-running a failed run after the release was created must not fail:
           # the upload replaces the assets on the existing release instead.

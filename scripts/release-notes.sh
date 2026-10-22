@@ -7,9 +7,10 @@
 # dependency updates without a prefix are left to the compare view.
 #
 # A release body holds at most 125,000 characters, and two weeks of merges here
-# list about 400 subjects. Over the budget, fixes and speed-ups, then features,
-# collapse into a count. Breaking changes are never cut: an operator must read
-# them before an upgrade.
+# list about 400 subjects. The caller passes the room its own text leaves. Over
+# it, fixes and speed-ups, then features, collapse into a count. Breaking
+# changes are never cut, since an operator reads them before an upgrade, so
+# breaking changes too long for the room refuse.
 #
 # WHAT IT READS: subjects on stdin and its arguments. No git, no network, so its
 # own test can feed subjects and judge the answer.
@@ -62,14 +63,26 @@ render() {
 	printf 'Every change since %s: %s\n' "$previous" "$compare"
 }
 
+# collapsed <count> prints the line a shortened section keeps, or nothing.
+collapsed() {
+	(($1 > 0)) && printf -- '- %d more, listed in the compare view.\n' "$1"
+	return 0
+}
+
 notes="$(render)"
 if ((${#notes} > budget)); then
-	fixed="- $((n_fixed + n_faster)) more, listed in the compare view."$'\n'
-	faster=""
+	fixed="$(collapsed "$n_fixed")" faster="$(collapsed "$n_faster")"
+	fixed="${fixed:+$fixed$'\n'}" faster="${faster:+$faster$'\n'}"
 	notes="$(render)"
 fi
 if ((${#notes} > budget)); then
-	added="- $n_added more, listed in the compare view."$'\n'
+	added="$(collapsed "$n_added")"
+	added="${added:+$added$'\n'}"
 	notes="$(render)"
+fi
+if ((${#notes} > budget)); then
+	echo "release-notes: the shortest notes, every section but Breaking counted, need ${#notes} characters; the room is $budget." >&2
+	echo "  Shorten the draft's own text, or the breaking pull request titles." >&2
+	exit 1
 fi
 printf '%s\n' "$notes"

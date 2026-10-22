@@ -356,8 +356,12 @@ workflows the pull request check runs, so a release bundle cannot differ from th
 approved.
 
 The release job renames the macOS tarball after the version. It runs `zip` again on the Windows
-tree that `download-artifact` opened, and publishes the draft with both added. Under the draft's text
-it puts the pull requests merged since the last plain release, from
+tree that `download-artifact` opened. It publishes the draft with both added, or creates the release
+for a pre-release that has no draft.
+
+Under the draft's text it lists the pull requests merged since
+the last plain release. A release body holds at most 125,000 characters, and the list gets what the
+draft leaves. The list comes from
 [`scripts/release-notes.sh`](../../scripts/release-notes.sh) (`make test-release-notes`). For a plain
 tag it then closes the milestone, unless an item was added to it while the run was building.
 
