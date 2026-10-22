@@ -4524,7 +4524,7 @@ export const de = {
     "Es ist kein unterschriebener Vertrag angehängt. Erfasse, wie der Deal gewonnen wurde. Die Antwort bleibt am Deal und wird in Berichten gezählt.",
   "deals.winEvidenceChecking": "Der Vertrag des Deals wird geprüft…",
   "deals.winEvidenceRequired":
-    "Dieser Deal hat keinen unterschriebenen Vertrag. Gib an, wie er gewonnen wurde, und bestätige dann.",
+    "Zu diesem Deal gibt es keinen unterschriebenen Vertrag mit angehängter Datei. Gib an, wie er gewonnen wurde, und bestätige dann.",
   "deals.winReason": "Wie wurde der Deal gewonnen?",
   "deals.winReasonPick": "Auswählen, wie der Deal gewonnen wurde",
   "deals.winReasonImported": "Aus einem anderen System importiert",

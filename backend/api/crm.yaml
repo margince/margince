@@ -7060,8 +7060,8 @@ paths:
       description: |
         The question `POST /deals/{id}/advance` asks before it lets a deal land on a won
         stage: does the deal carry a contract that left draft, has a signing date, and has
-        a current or final contract or legal file attached. It is the same check, so the
-        answer and the refusal cannot disagree.
+        a current or final contract or legal file attached. It is the same check, run at the
+        moment of the read.
 
         A client reads this before it asks someone to confirm a win. With
         `has_signed_contract: false` the win needs `won_without_contract_reason`, and the

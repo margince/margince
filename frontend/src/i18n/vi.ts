@@ -4408,7 +4408,7 @@ export const vi = {
     "Chưa đính kèm hợp đồng đã ký. Ghi lại cách chốt được deal; câu trả lời sẽ được lưu trên deal và tính vào báo cáo.",
   "deals.winEvidenceChecking": "Đang kiểm tra hợp đồng của deal…",
   "deals.winEvidenceRequired":
-    "Deal này chưa có hợp đồng đã ký. Hãy ghi lại cách chốt được deal rồi xác nhận.",
+    "Deal này chưa có hợp đồng đã ký kèm tệp đính kèm. Hãy ghi lại cách chốt được deal rồi xác nhận.",
   "deals.winReason": "Chốt được deal bằng cách nào?",
   "deals.winReasonPick": "Chọn cách chốt được deal",
   "deals.winReasonImported": "Nhập từ hệ thống khác",

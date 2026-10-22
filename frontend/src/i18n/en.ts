@@ -4513,7 +4513,7 @@ export const en = {
     "No signed contract is attached. Record how the deal was won; the answer is kept on the deal and counted in reports.",
   "deals.winEvidenceChecking": "Checking the deal’s contract…",
   "deals.winEvidenceRequired":
-    "This deal has no signed contract. Say how it was won, then confirm.",
+    "This deal has no signed contract with its file attached. Say how it was won, then confirm.",
   "deals.winReason": "How was it won?",
   "deals.winReasonPick": "Pick how it was won",
   "deals.winReasonImported": "Imported from another system",
