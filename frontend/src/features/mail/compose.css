@@ -468,7 +468,19 @@
   gap: var(--space-3);
 }
 /* The fold is drawn as a small pill in the text's margin, as a mail client's
-   is. The button around it keeps the full target. */
+   is. The button around it keeps the full target but draws no box of its own,
+   so only the pill shows, and the pill's line takes the hover and pressed ink. */
+.compose-earlier .btn,
+.compose-earlier .btn:hover,
+.compose-earlier .btn[aria-pressed="true"] {
+  border-color: transparent;
+  background: none;
+}
+.compose-earlier .btn:hover .compose-earlier-pill,
+.compose-earlier .btn[aria-pressed="true"] .compose-earlier-pill {
+  border-color: var(--textSecondary);
+  color: var(--textPrimary);
+}
 .compose-earlier-pill {
   display: inline-flex;
   align-items: center;

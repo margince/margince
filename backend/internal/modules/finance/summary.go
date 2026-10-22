@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -222,7 +223,14 @@ func (s *Store) fillFigures(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, conn connection, lifecycle string,
 	out *crmcontracts.CompanyFinanceSummary,
 ) error {
-	invoices, err := readInvoices(ctx, tx, companyID, conn.id)
+	// The figures below are base-currency by contract: each is an `*MinorBase`,
+	// converted at the rate frozen on its invoice's issue date. So they wear
+	// the base currency's label, whatever currencies the account was billed in.
+	currency, err := s.rates.BaseCurrency(ctx, tx)
+	if err != nil {
+		return err
+	}
+	invoices, err := s.readInvoices(ctx, tx, companyID, conn.id, currency)
 	if err != nil {
 		return err
 	}
@@ -242,19 +250,6 @@ func (s *Store) fillFigures(
 	// without saying that its 365-day window ended two years ago.
 	out.CoverageStart = issueDate(invoices[0])
 	out.CoverageEnd = issueDate(invoices[len(invoices)-1])
-	// The figures below are base-currency BY CONTRACT — every one of them is an
-	// `*MinorBase`, converted per invoice at the rate frozen on that invoice's
-	// own issue date. So the label they wear is the installation's base
-	// currency, whatever mix of currencies the account was billed in.
-	//
-	// It used to be the issued currency, which existed only when the account
-	// billed in exactly one; a customer invoiced in EUR and CHF got no label,
-	// and no label meant no figure at all. The amounts had already converted —
-	// the only thing missing was the word for what they had converted to.
-	currency, err := s.baseCurrency(ctx, tx)
-	if err != nil {
-		return err
-	}
 	now := s.now()
 	if net := NetInvoicedOver(invoices, now); !net.RateUnavailable {
 		out.NetInvoiced = money(net.AmountMinorBase, currency)
@@ -411,36 +406,17 @@ func scanRecentInvoice(rows pgx.Rows, now time.Time) (crmcontracts.FinanceInvoic
 }
 
 // readInvoices loads the account's mirrored invoices in the shape the formulas
-// read.
+// read, every amount already in base.
 //
-// Every amount it returns is already base-currency: each invoice converts at
-// the rate frozen on its own issue date (DM-FX-4), and an invoice whose issue
-// date had no effective rate is MARKED rather than skipped — the formulas
-// refuse the whole figure on one of those (FIN-AC-6), which they can only do if
-// the row reaches them.
-//
-// It reports no currency of its own. The issued currency is a property of each
-// invoice, not of the account, and a caller labelling a converted total needs
-// the currency it converted TO — which is the installation's base currency.
-func readInvoices(
-	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, connectionID ids.UUID,
+// It reports no currency of its own. The issued currency belongs to each
+// invoice, and a converted total is labelled with the base currency instead.
+func (s *Store) readInvoices(
+	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, connectionID ids.UUID, base string,
 ) ([]Invoice, error) {
-	// The amounts are converted HERE, at each invoice's own frozen rate
-	// (FIN-PARAM-7/DM-FX-4), because the formulas' fields are base-currency by
-	// contract. An invoice with no rate keeps its issued amounts and is marked
-	// — the formulas refuse the whole figure on one of those (FIN-AC-6), which
-	// they can only do if the row reaches them.
-	//
-	// Rounded to the nearest minor unit rather than truncated: consistently
-	// rounding down turns a hundred invoices into a total that is quietly
-	// short.
 	rows, err := tx.Query(ctx, `
-		SELECT status, issued_at, due_at, fully_paid_at,
-		       round(net_minor * coalesce(fx_rate_to_base, 1))::bigint,
-		       round(credited_minor * coalesce(fx_rate_to_base, 1))::bigint,
-		       round(open_minor * coalesce(fx_rate_to_base, 1))::bigint,
-		       credits_invoice_id IS NOT NULL, disputed_at IS NOT NULL,
-		       fx_rate_to_base IS NULL
+		SELECT status, issued_at, due_at, fully_paid_at, currency,
+		       net_minor, credited_minor, open_minor, fx_rate_to_base,
+		       credits_invoice_id IS NOT NULL, disputed_at IS NOT NULL
 		  FROM finance_invoice
 		 WHERE company_id = $1 AND connection_id = $2 AND archived_at IS NULL
 		 ORDER BY issued_at ASC, id ASC`, companyID, connectionID)
@@ -450,16 +426,59 @@ func readInvoices(
 	defer rows.Close()
 	var out []Invoice
 	for rows.Next() {
-		var inv Invoice
+		var stored storedInvoice
+		inv := &stored.invoice
 		if err := rows.Scan(&inv.Status, &inv.IssuedOn, &inv.DueOn, &inv.FullyPaidAt,
-			&inv.NetMinorBase, &inv.CreditedMinorBase, &inv.OpenMinorBase,
-			&inv.CreditsInvoice, &inv.Disputed, &inv.RateMissing); err != nil {
+			&stored.currency, &stored.netMinor, &stored.creditedMinor, &stored.openMinor,
+			&stored.rate, &inv.CreditsInvoice, &inv.Disputed); err != nil {
 			return nil, fmt.Errorf("scan invoice: %w", err)
 		}
-		out = append(out, inv)
+		converted, err := stored.inBase(base, s.rates.ToBase)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, converted)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("read invoices: %w", err)
+	}
+	return out, nil
+}
+
+// storedInvoice is one mirrored invoice as the table holds it: amounts in the
+// issued currency and the rate frozen on its issue date.
+type storedInvoice struct {
+	invoice                            Invoice
+	currency                           string
+	netMinor, creditedMinor, openMinor int64
+	rate                               pgtype.Numeric
+}
+
+// inBase converts the stored amounts at the invoice's own frozen rate
+// (FIN-PARAM-7/DM-FX-4). An invoice with no rate keeps its issued amounts and
+// is marked. The formulas refuse the whole figure on one of those (FIN-AC-6),
+// so the row must reach them.
+func (row storedInvoice) inBase(base string, toBase ToBaseFunc) (Invoice, error) {
+	out := row.invoice
+	if !row.rate.Valid {
+		out.RateMissing = true
+		out.NetMinorBase, out.CreditedMinorBase, out.OpenMinorBase =
+			row.netMinor, row.creditedMinor, row.openMinor
+		return out, nil
+	}
+	for _, amount := range []struct {
+		issued int64
+		inBase *int64
+	}{
+		{row.netMinor, &out.NetMinorBase},
+		{row.creditedMinor, &out.CreditedMinorBase},
+		{row.openMinor, &out.OpenMinorBase},
+	} {
+		converted, err := toBase(amount.issued, row.rate, row.currency, base)
+		if err != nil {
+			return Invoice{}, fmt.Errorf("convert a %s invoice into %s: %w", row.currency, base, err)
+		}
+		*amount.inBase = converted
 	}
 	return out, nil
 }

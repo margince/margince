@@ -3293,6 +3293,9 @@ export const de = {
   "co.next.inDays_other": "In {days} Tagen",
   "co.next.proposed": "Von Margince vorgeschlagen",
   "commitment.dismiss": "Verwerfen",
+  "commitment.takeOver": "Übernehme ich",
+  "commitment.takenOver": "{name} hat das am {date} übernommen",
+  "commitment.takenOverUnnamed": "Übernommen am {date}",
   "commitment.quote": "„{quote}“",
   "co.brief.by.model": "Von Margince geschrieben",
   "co.brief.by.deterministic": "Aus CRM-Datensätzen zusammengestellt",
@@ -5806,8 +5809,14 @@ export const de = {
   "compose.earlierThreads_other": "{count} frühere Threads",
   "compose.threadChange": "Ändern",
   "compose.threadContinue": "Thread fortsetzen",
-  "compose.threads": "Thread fortsetzen",
-  "compose.threadsWith": "Thread mit {name} fortsetzen",
+  "compose.threadsRecent": "Letzte Threads",
+  "compose.threadsFound": "Passende Threads",
+  "compose.threadSearch": "Threads durchsuchen",
+  "compose.threadSearchWith": "Threads mit {name} durchsuchen",
+  "compose.threadSearchNone": "Kein Thread enthält diese Wörter.",
+  "compose.threadsMoreFailed":
+    "Ältere Threads konnten nicht geladen werden. Drücke Mehr anzeigen, um es erneut zu versuchen.",
+  "compose.threadsMore": "Mehr anzeigen",
   "compose.newThread": "Neuer Thread",
   "compose.copies": "Cc und Bcc",
   "compose.signsOffAs": "Die Nachricht endet mit „{closing}“.",
@@ -7857,6 +7866,50 @@ export const de = {
   "settings.recoveryHealth": "Wiederherstellungstests",
   "settings.recoveryHealthSub":
     "Wann die Wiederherstellung aus dem Backup zuletzt getestet wurde und wie lange sie gedauert hat.",
+  "settings.automaticWork": "Automatische Arbeit",
+  "settings.automaticWorkSub":
+    "Was Margince jedem Teammitglied von selbst gegeben hat, und wie viel davon als „Nicht meins“ zurückkam.",
+  "automaticWork.adminOnly":
+    "Automatische Arbeit wird für die ganze Installation gezählt und braucht eine Berechtigung, die deine Rolle nicht hat.",
+  "automaticWork.window": "Gezählte Tage",
+  "automaticWork.last7": "Letzte 7 Tage",
+  "automaticWork.last30": "Letzte 30 Tage",
+  "automaticWork.howCounted":
+    "Jeder Eintrag zählt einmal, an dem Tag, an dem er entstand ({range}), mit dem Ergebnis, das er jetzt hat. Liegt der Anteil „Nicht meins“ über {threshold} bei mindestens {sample} Einträgen, sollte jemand die Zuteilung für diese Art prüfen. Der Anteil selbst ändert nichts.",
+  "automaticWork.none":
+    "Margince hat in diesen Tagen keine automatische Arbeit erstellt.",
+  "automaticWork.col.colleague": "Teammitglied",
+  "automaticWork.col.kind": "Art",
+  "automaticWork.col.created": "Erstellt",
+  "automaticWork.col.notMine": "Nicht meins",
+  "automaticWork.col.rerouted": "Durch eine Regel verschoben",
+  "automaticWork.col.dismissed": "Verworfen",
+  "automaticWork.col.rejected": "Abgelehnt",
+  "automaticWork.col.completed": "Erledigt oder angenommen",
+  "automaticWork.col.expired": "Abgelaufen",
+  "automaticWork.col.open": "Offen",
+  "automaticWork.col.share": "Anteil „Nicht meins“",
+  "automaticWork.col.day": "Tag",
+  "automaticWork.col.waitingNotMine": "Als „Nicht meins“ markiert",
+  "automaticWork.kind.promise_task": "Aufgabe aus einer Zusage",
+  "automaticWork.kind.reply_reminder": "Antwort-Erinnerung",
+  "automaticWork.kind.approval_request": "Freigabeanfrage",
+  "automaticWork.noNotMine": "Keine Wahl „Nicht meins“",
+  "automaticWork.needsLook": "{share}, sollte jemand prüfen",
+  "automaticWork.fewItems": "{share}, zu wenige Einträge zum Bewerten",
+  "automaticWork.inactive": "{name} (nicht aktiv)",
+  "automaticWork.days": "Tage für {name}, {kind}",
+  "automaticWork.quiet_one":
+    "{count} Teammitglied hatte in diesen Tagen keine automatische Arbeit.",
+  "automaticWork.quiet_other":
+    "{count} Teammitglieder hatten in diesen Tagen keine automatische Arbeit.",
+  "automaticWork.unattributed_one":
+    "{count} Eintrag war für ein entferntes Teammitglied.",
+  "automaticWork.unattributed_other":
+    "{count} Einträge waren für entfernte Teammitglieder.",
+  "automaticWork.waiting": "Wartende Nachrichten, als „Nicht meins“ markiert",
+  "automaticWork.waitingSub":
+    "Margince erstellt eine wartende Nachricht für niemanden, deshalb hat sie keinen Anteil. Jede Nachricht zählt einmal.",
   "recoveryHealth.adminOnly":
     "Wiederherstellungstests betreffen die ganze Installation und brauchen eine Berechtigung, die deine Rolle nicht hat.",
   "recoveryHealth.lastDrill": "Letzter Wiederherstellungstest",

@@ -12,7 +12,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/finance"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
@@ -64,7 +63,7 @@ func (r approvalPreviewReader) communicationEvidence(ctx context.Context, field 
 		}
 		label = agreement.Title
 	case "invoice_id":
-		company, number, err := finance.NewStore(r.db, identity.BaseCurrencyOf).InvoiceReference(ctx, id)
+		company, number, err := finance.NewStore(r.db, FinanceRates()).InvoiceReference(ctx, id)
 		if err != nil {
 			return crmcontracts.ApprovalPreviewValue{}, err
 		}

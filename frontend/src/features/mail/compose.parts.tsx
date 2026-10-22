@@ -372,6 +372,7 @@ export function EarlierMessages({
             <Ellipsis aria-hidden="true" />
           </span>
         }
+        variant="ghost"
         pressed={open}
         onClick={() => setOpen((was) => !was)}
       />

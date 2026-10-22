@@ -98,10 +98,30 @@ func activityDiscoverClause(p principal.Principal, alias string, arg func(any) i
 	// host_user_id: that column labels whose calendar a row came off, which is
 	// ownership rather than membership, and a label is not evidence that anybody
 	// was present.
-	return fmt.Sprintf(`%[3]s AND (coalesce((SELECT bool_or(%[2]s)
+	return fmt.Sprintf(`%[1]s AND (%[2]s OR %[3]s)`,
+		available, activityReachArms(p, alias, arg), assignedCommitmentArm(p, alias, arg))
+}
+
+// activityReachArms is discovery through the row's own links or its attendance.
+func activityReachArms(p principal.Principal, alias string, arg func(any) int) string {
+	return fmt.Sprintf(`coalesce((SELECT bool_or(%[2]s)
 	   FROM activity_link l WHERE l.activity_id = %[1]s.id), true)
-	   OR %[4]s)`,
-		alias, linkTargetVisible(p, "l", arg), available, activityAttendanceArm(p, alias, arg))
+	   OR %[3]s`,
+		alias, linkTargetVisible(p, "l", arg), activityAttendanceArm(p, alias, arg))
+}
+
+// assignedCommitmentArm lets the holder of a promise's task find it. Every
+// record it is filed under may be private to the mailbox owner, as on a private
+// thread whose message the holder sent. The holder must still find that source
+// message, so the task tells nobody else that it exists. Its content still
+// needs the source's own content gate (activityContentAudienceArm).
+func assignedCommitmentArm(p principal.Principal, alias string, arg func(any) int) string {
+	source := "assigned_source"
+	return fmt.Sprintf(`(%[1]s.source_system = '%[2]s' AND %[1]s.assignee_id = $%[3]d AND EXISTS (
+	   SELECT 1 FROM activity %[4]s WHERE %[4]s.id = %[1]s.source_activity_id
+	      AND %[5]s AND (%[6]s)))`,
+		alias, provenance.CommitmentTaskSource, arg(p.UserID), source,
+		ActivityAvailableClause(source), activityReachArms(p, source, arg))
 }
 
 // activityAttendanceArm is the discovery half of membership: the caller was on
@@ -120,14 +140,20 @@ func activityDiscoverClause(p principal.Principal, alias string, arg func(any) i
 // chosen Kind straight through with no vocabulary check (compose/extingress.go),
 // so "meeting" is a word a caller picks.
 //
-// The two evidenced sources, both of which a caller controls neither half of:
+// The three evidenced sources, none of which a caller writes:
 //
 //   - capture_import, written only after mailboxWasARecipientTx found one of the
 //     seat's OWN exact addresses on the message — the provider delivered it;
 //   - a participant row carrying an address, which is written from a party list
 //     only when the provider itself enumerated it (capture's
 //     ParticipantListAttested). The seat-stamp above carries no address, so the
-//     `address IS NOT NULL` test is what tells the two apart.
+//     `address IS NOT NULL` test is what tells the two apart;
+//   - capture's sender stamp, sent_by_colleague: From is the seat's exact login
+//     address at a trusted own domain, and Gmail passed DMARC for that domain.
+//     DMARC proves the domain and not the mailbox, so another sender of our own
+//     domain could name the seat. That copy then shows the seat only the words
+//     its writer put in it. The arm stays shut until the data task that
+//     re-checked the older stamps has finished (SenderStampsCheckedStep).
 //
 // Content is unaffected: activityAudienceArm keeps the wider membership test, so
 // a seat that may already read a row still reads it. This arm only decides who
@@ -136,9 +162,27 @@ func activityAttendanceArm(p principal.Principal, alias string, arg func(any) in
 	me := arg(p.UserID)
 	return fmt.Sprintf(`(EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = %[1]s.id AND ci.user_id = $%[2]d)
 	   OR EXISTS (SELECT 1 FROM activity_participant ap
-	               WHERE ap.activity_id = %[1]s.id AND ap.user_id = $%[2]d AND ap.address IS NOT NULL))`,
-		alias, me)
+	               WHERE ap.activity_id = %[1]s.id AND ap.user_id = $%[2]d AND ap.address IS NOT NULL)
+	   OR (%[1]s.sent_by_colleague = $%[2]d AND EXISTS (SELECT 1 FROM data_task_run sender_check
+	        WHERE sender_check.step = '%[3]s' AND sender_check.status = 'done')
+	       AND %[4]s))`,
+		alias, me, SenderStampsCheckedStep, senderAtOwnDomain(alias))
 }
+
+// senderAtOwnDomain re-asks at read time that the stamped seat's login address
+// is at a trusted own domain. A domain that stops being ours closes the arm at
+// once. A form the SQL folds differently from capture fails closed.
+func senderAtOwnDomain(alias string) string {
+	return fmt.Sprintf(`EXISTS (SELECT 1 FROM app_user sender
+	   JOIN (%[2]s) own_domain(domain) ON substring(lower(sender.email) FROM '@([^@]+)$') = lower(own_domain.domain)
+	     OR right(substring(lower(sender.email) FROM '@([^@]+)$'), length(own_domain.domain) + 1) = '.' || lower(own_domain.domain)
+	  WHERE sender.id = %[1]s.sent_by_colleague)`, alias, TrustedOwnDomainsSQL)
+}
+
+// SenderStampsCheckedStep is the data task step that re-checks every sender
+// stamp written before capture required a trusted own domain. Its finished
+// run opens the sender arm of activityAttendanceArm.
+const SenderStampsCheckedStep = "recheck_colleague_sender_domains"
 
 // activityMembershipArm is the "I was on this" test for CONTENT: the caller's
 // own seat imported the row, or they are stamped as one of its participants.

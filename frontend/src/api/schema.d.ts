@@ -505,6 +505,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/automatic-work-health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Per colleague and day, how much work automation handed out and what became of it.
+         * @description Admin and ops only (`job_health:read`). Counts the items Margince created by itself for one colleague (a task from a promise, a reply reminder, an approval request) in the last `days` days, and what each one has become since. An item counts once, on the day it was created, in the installation's time zone, with the outcome it holds now, so an outcome that arrives on a later day still counts against its creation day. The colleague is the one the item first named. Derived from the audit log and the items themselves; no counter is kept. COUNTS ONLY: never a subject or a body. Human session only (x-agent-access: human-only).
+         */
+        get: operations["getAutomaticWorkHealth"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/passports": {
         parameters: {
             query?: never;
@@ -1172,6 +1192,46 @@ export interface paths {
          *     without somebody saying which is true.
          */
         post: operations["settleConversationClaim"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/claims/{id}/take-over": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take over a promise one of us made that nobody was asked to keep.
+         * @description A promise a colleague made becomes their task. When Margince cannot give it to them,
+         *     because nobody is named, they left, or the mail is private to somebody else, nobody
+         *     is asked and the claim stays open on the contact. This is the explicit act that names
+         *     a new owner: the caller.
+         *
+         *     It writes one task, owned by the caller and linked to the contact, and records on the
+         *     claim who took it over and when. A promise filed on several contacts is taken over on
+         *     each of them the caller may read, with that one task.
+         *
+         *     The caller must be a signed-in colleague who may read the claim's source and may hold
+         *     a task about it. Mail private to another colleague is theirs alone to take. A claim
+         *     whose source the caller may not read answers `404`, as the claim does not exist for
+         *     them.
+         *
+         *     Pressed twice by the same colleague, it answers the first take over again and writes
+         *     nothing. Any other case where the promise already has an owner is a `409` that says
+         *     who: another colleague took it over, it is already somebody's task, or it waits on the
+         *     colleague who made it.
+         */
+        post: operations["takeOverConversationClaim"];
         delete?: never;
         options?: never;
         head?: never;
@@ -20768,9 +20828,13 @@ export interface paths {
         get: operations["listFxRates"];
         put?: never;
         /**
-         * Set an FX rate effective today or later (append-forward).
+         * Set an FX rate effective today or later, or in the past before any stored rate.
          * @description Admin/ops-only. Appends one effective-dated rate; the same day in the
-         *     installation's zone corrects in place, a past date is refused (422). `to`
+         *     installation's zone corrects in place. A past date is accepted only when
+         *     `from_currency` has no rate yet, or when it is earlier than every rate
+         *     stored for it. That extends the history back without changing any day
+         *     that already had a rate;
+         *     any other past date is refused (422 `fx_rate_past`). `to`
          *     is resolved to the workspace base currency server-side; `from == base` is
          *     refused. Human session only
          *     (x-agent-access: human-only) — an agent never sets a rate directly.
@@ -21285,7 +21349,7 @@ export interface components {
             rate: string;
             /**
              * Format: date
-             * @description Defaults to today; must not be in the past (append-forward).
+             * @description Defaults to today. A past date is accepted only when the currency has no rate yet or the date is earlier than every rate stored for it.
              */
             effective_date?: string;
         };
@@ -28986,6 +29050,33 @@ export interface components {
              * @description The task an extracted `commitment_ours` created, so completing either side completes both. Null for every other kind — a reminder about THEIR promise is a rep action, not an auto-task.
              */
             task_activity_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The colleague who took over this promise when nobody was asked to keep it. Null when nobody took it over, and after that colleague's account was deleted.
+             */
+            taken_by_user_id?: string | null;
+            /** @description The display name of `taken_by_user_id`, so the card can say who took it over. */
+            taken_by_name?: string | null;
+            /**
+             * Format: date-time
+             * @description When the promise was taken over. Kept when the colleague's account is deleted.
+             */
+            taken_at?: string | null;
+        };
+        /** @description A promise one colleague took over, and the task it became. */
+        PromiseTakeOver: {
+            /** Format: uuid */
+            claim_id: string;
+            /**
+             * Format: uuid
+             * @description The task the promise became, owned by `taken_by_user_id`.
+             */
+            task_activity_id: string;
+            /** Format: uuid */
+            taken_by_user_id: string;
+            taken_by_name?: string | null;
+            /** Format: date-time */
+            taken_at: string;
         };
         /**
          * @description One thread or meeting, condensed to what it was about (ADR-0097 D3).
@@ -33713,7 +33804,7 @@ export interface components {
             readonly capture_label?: null | "commitment" | "meeting" | "noise";
             /** @description This message carried an RFC 2369 List-Unsubscribe header, so the SENDER declared it bulk. Per message, never per sender: the same address sends a newsletter and a reply, and treating the sender as bulk would bury the reply. */
             readonly bulk_mail_attested?: boolean;
-            /** @description Who may read this activity's CONTENT once the row is discoverable at all. `workspace` — everyone who can discover it (the default); `participants` — the humans on it (the capturing mailbox owner, anyone stamped as a participant by seat); `selected` — the participants plus the users and teams named through PATCH /activities/{id}/audience. Set only through that endpoint, by a human with write authority over the activity. */
+            /** @description Who may read this activity's CONTENT once the row is discoverable at all. `workspace` — everyone who can discover it (the default); `participants` — the humans on it (the capturing mailbox owner, anyone stamped as a participant by seat); `selected` — the participants plus the users and teams named through PATCH /activities/{id}/audience. Set only through that endpoint, by a human with write authority over the activity. The colleague who sent a mail that only another member's mailbox captured may read that one copy, when their login address is at one of the workspace's own domains. */
             readonly audience?: components["schemas"]["ActivityAudience"];
             /** @description Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the workspace turned mail sharing off), `no_record` (the message is filed under no record), `pending_verdict` (nothing has judged the message yet), `manual` (a human said so). Null on a row nothing derived. WITHHELD with the content — the reason describes what the message is about, so a colleague who may not read a held message does not learn why it is held either; it is absent whenever `content_state` is `withheld`. */
             readonly audience_reason?: string | null;
@@ -39206,6 +39297,98 @@ export interface components {
             data_loss_target_seconds: number;
             /** @description The most recent drill, or null when none was ever recorded. */
             last_drill: components["schemas"]["RestoreDrill"] | null;
+        };
+        /**
+         * @description What automation handed out per colleague, per day and per kind of item, and what each item
+         *     has become. An item is counted once, on its creation day, with the outcome it holds now.
+         *     `not_mine_share` is the routing number: the items a colleague said were not theirs, out of the
+         *     items created for them. It is a reading for an admin to look at, never a trigger.
+         */
+        AutomaticWorkHealth: {
+            /** Format: date-time */
+            generated_at: string;
+            /** @description How many days the window covers, today included. */
+            days: number;
+            /**
+             * Format: date
+             * @description The first day of the window, in the installation's time zone, which decides the day an item falls on.
+             */
+            first_day: string;
+            /** Format: date */
+            last_day: string;
+            /** @description The share above which a kind's routing needs a look, as a fraction (0.1 is 10%). */
+            share_threshold: number;
+            /** @description Below this many created items a share is shown but never flagged. */
+            small_sample_below: number;
+            /** @description Every kind of item, always all of them, with what its records can tell. */
+            kinds: components["schemas"]["AutomaticWorkKind"][];
+            /**
+             * @description Every active colleague, with a tally for every kind even when it is zero, and any other
+             *     seat that was named by an item in the window.
+             */
+            colleagues: components["schemas"]["AutomaticWorkColleague"][];
+            /** @description Items in the window whose first named colleague no longer exists. */
+            unattributed: number;
+        };
+        AutomaticWorkKind: {
+            kind: components["schemas"]["AutomaticWorkKindName"];
+            /**
+             * @description Whether a colleague can say an item of this kind is not theirs. An approval request has
+             *     no such choice: its decider can only accept or reject it, so its share is null.
+             */
+            records_not_mine: boolean;
+        };
+        /** @enum {string} */
+        AutomaticWorkKindName: "promise_task" | "reply_reminder" | "approval_request";
+        AutomaticWorkColleague: {
+            /** Format: uuid */
+            user_id: string;
+            display_name: string;
+            /** @enum {string} */
+            status: "invited" | "active" | "suspended" | "deactivated";
+            /** @description One per kind, in the order of `kinds`. */
+            tallies: components["schemas"]["AutomaticWorkTally"][];
+            /**
+             * @description Waiting messages this colleague marked "Not mine" on the Worklist in the window, each
+             *     message once. A waiting message is not an item automation creates, so it has no
+             *     created count and no share.
+             */
+            waiting_not_mine: number;
+        };
+        AutomaticWorkTally: {
+            kind: components["schemas"]["AutomaticWorkKindName"];
+            counts: components["schemas"]["AutomaticWorkCounts"];
+            /** @description not_mine out of created, as a fraction. Null when nothing was created or the kind has no "Not mine". */
+            not_mine_share: number | null;
+            /** @description Fewer items were created than `small_sample_below`, so the share says little. */
+            small_sample: boolean;
+            /** @description The share is above `share_threshold` on a sample large enough to judge. */
+            above_threshold: boolean;
+            /** @description The days with at least one created item, oldest first. A day absent from it created nothing. */
+            by_day: components["schemas"]["AutomaticWorkDay"][];
+        };
+        AutomaticWorkDay: {
+            /** Format: date */
+            date: string;
+            counts: components["schemas"]["AutomaticWorkCounts"];
+        };
+        /** @description Each created item holds exactly one outcome, so the outcomes add up to `created`. */
+        AutomaticWorkCounts: {
+            created: number;
+            /** @description A colleague moved the task to someone else, which says it was not theirs. It stays Not mine if the task comes back later. */
+            not_mine: number;
+            /** @description A rule moved the item to someone else, as an approval follows a deal's new owner. Every move of an approval request counts here. */
+            rerouted: number;
+            /** @description A colleague archived the task without doing it. */
+            dismissed: number;
+            /** @description The decider rejected the approval request. A rejection judges the change, not who was asked. */
+            rejected: number;
+            /** @description The task is done, or the decider accepted the approval request. */
+            completed: number;
+            /** @description The item aged out unanswered. */
+            expired: number;
+            /** @description The item is still waiting. */
+            open: number;
         };
         /** @description One rehearsal of the restore procedure, as the drill ledger holds it. */
         RestoreDrill: {
@@ -49579,6 +49762,40 @@ export interface operations {
             };
         };
     };
+    getAutomaticWorkHealth: {
+        parameters: {
+            query?: {
+                /** @description How many days back the window reaches, today included. */
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The installation's automatic-work counts. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutomaticWorkHealth"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description Refused: the caller is an agent/passport principal (this endpoint is human-only) or a seat without `job_health:read` (held by the admin and ops roles). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
     listPassports: {
         parameters: {
             query?: never;
@@ -50640,6 +50857,33 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    takeOverConversationClaim: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The promise as taken over, by this request or an earlier one by the same caller. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PromiseTakeOver"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     runContactResearch: {

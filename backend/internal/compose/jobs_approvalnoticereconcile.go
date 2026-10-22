@@ -87,8 +87,8 @@ func (w *approvalNoticeReconcileWorker) Work(ctx context.Context, job *river.Job
 	return river.JobSnooze(time.Second)
 }
 
-// reconcilePage retracts every copy of a settled decision, and a copy of a
-// still-pending commitment that went to a member it is not asked of.
+// reconcilePage retracts every copy of a settled decision. It also retracts a
+// copy of a pending payload-owned one sent to a member it is not asked of.
 func (w *approvalNoticeReconcileWorker) reconcilePage(ctx context.Context, after ids.UUID) (ids.UUID, int64, error) {
 	var page notices.OutstandingApprovalPage
 	var pending map[ids.ApprovalID]bool

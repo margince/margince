@@ -13,6 +13,7 @@ import { useLocale, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import { DismissClaimButton } from "../records/claimdismiss";
+import { TakenOverLine, TakeOverPromiseButton } from "./claimtakeover";
 import { omitted } from "./contact360";
 import { ContactClaimsReview, claimsForReview } from "./contactclaimsreview";
 import {
@@ -66,7 +67,7 @@ export function ContactCommitmentsCard({
                     />
                   }
                   title={row.title}
-                  sub={row.sub}
+                  sub={loopSub(row, view.contact.id)}
                   right={rowPill(row)}
                 />
               ))}
@@ -79,6 +80,23 @@ export function ContactCommitmentsCard({
         </>
       )}
     </OverviewCard>
+  );
+}
+
+// The line under a promise, and below it who took the promise over or the
+// verb that lets the reader take it.
+function loopSub(row: Row, contactId: string): ReactNode {
+  if (!row.takenBy && !row.takeable) {
+    return row.sub;
+  }
+  return (
+    <>
+      {row.sub}
+      {row.takenBy && <TakenOverLine takenBy={row.takenBy} />}
+      {row.takeable && (
+        <TakeOverPromiseButton id={row.key} contactId={contactId} />
+      )}
+    </>
   );
 }
 
@@ -192,7 +210,8 @@ export function ContactClaimReadings({ view }: Readonly<{ view: Contact360 }>) {
               </span>
             )}
           </span>
-          <DismissClaimButton id={claim.id} />
+          {/* A promise a colleague took over was made; it is theirs now. */}
+          {!claim.taken_at && <DismissClaimButton id={claim.id} />}
         </PanelRow>
       ))}
     </Panel>

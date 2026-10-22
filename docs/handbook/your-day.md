@@ -200,7 +200,8 @@ by who made it.
   reading, if you may change the contact.
 - A promise a named colleague made becomes their task. When Margince reads it clearly, it writes the
   task at once. If not, the colleague gets an **Add commitment task** proposal.
-- A promise nobody can be named for goes as a proposal to the user whose call or mail it was.
+- A promise nobody can be given stays on the contact with nobody asked. Press **I’ll take this** to
+  make it your task. The contact then shows who took it and when.
 - A promise in private mail stays with the owner of that mail. Its task is visible to its holder alone.
 - In an email, only the words the sender wrote count, not text quoted from earlier mail.
 - The task has a due date only when the conversation named a day. If not, it waits in today's list

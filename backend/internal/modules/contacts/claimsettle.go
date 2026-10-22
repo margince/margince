@@ -39,6 +39,9 @@ const claimStatusOpen = "open"
 // their claims moved.
 const claimIDKey = "claim_id"
 
+// claimTaskKey names the claim's task inside the same audit image.
+const claimTaskKey = "task_activity_id"
+
 // SettleConversationClaim records that a claim finished, and how.
 //
 // Gated on `contact` UPDATE and the contact's own writability, the same pair

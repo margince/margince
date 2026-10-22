@@ -48,7 +48,7 @@ Rest the mouse on **Preview** to see a message's text, and press **Read full ema
 To file an email you send under a project in Margince, choose the project in the composer's head, beside its title. Margince puts its key, such as `[NER-1]`, at the start of the **Subject**.
 Choosing **No project** takes the key out; deleting it from the text does not.
 
-The list starts on the thread's own project. If there is none, it starts on the deal's, and then on the company's only live project. Writing from a project page files under that project. With no live project to offer, the list is not shown. Also called: tag an email with a project, project key in the subject.
+The list starts on the thread's own project. If there is none, it starts on the deal's, and then on the company's only live project. Writing from a project page files under that project. With no live project to offer, the list shows **No project** and cannot be changed. Also called: tag an email with a project, project key in the subject.
 
 ### What do the composer's error messages mean?
 The composer in Margince does not send until four things are filled in, and names each one under its field.
@@ -74,10 +74,13 @@ the reply action on any message.
 The composer opens as a window at the bottom of the page, so the page stays in view
 behind it. It stays open when you go to another page. Fold it to its title bar
 with **Minimize**, make it larger with **Expand**, or drag its top or left
-side. On a phone it fills the screen.
+side. Drag its title bar to slide it left or right. On a phone it fills the
+screen.
 
 The bar at the top says which thread you answer. Press **Change** or **Continue
-a thread** to pick another thread, or **New email** to start a new one. On a
+a thread** to pick another thread, or **New email** to start a new one. Type in
+the search box to find an older thread, and press **Show more** to see more of
+them. On a
 reply, **Show earlier messages** under the text shows what came before. That
 text is only for you to read; it is not sent.
 

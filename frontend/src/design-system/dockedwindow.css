@@ -41,9 +41,16 @@
   align-items: center;
   gap: var(--space-1);
   min-block-size: var(--controlHeight);
+  padding-block: var(--space-1);
   padding-inline: var(--space-4) var(--space-1);
   background: var(--bgRail);
   color: var(--railIconActive);
+  /* The bar is the handle that slides the window along the bottom edge. */
+  cursor: grab;
+  touch-action: none;
+}
+.docked-head.is-sliding {
+  cursor: grabbing;
 }
 .docked-head .docked-title {
   flex: 1;

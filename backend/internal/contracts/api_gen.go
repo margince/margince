@@ -2884,6 +2884,51 @@ func (e AuthorizationSeatType) Valid() bool {
 	}
 }
 
+// Defines values for AutomaticWorkColleagueStatus.
+const (
+	AutomaticWorkColleagueStatusActive      AutomaticWorkColleagueStatus = "active"
+	AutomaticWorkColleagueStatusDeactivated AutomaticWorkColleagueStatus = "deactivated"
+	AutomaticWorkColleagueStatusInvited     AutomaticWorkColleagueStatus = "invited"
+	AutomaticWorkColleagueStatusSuspended   AutomaticWorkColleagueStatus = "suspended"
+)
+
+// Valid indicates whether the value is a known member of the AutomaticWorkColleagueStatus enum.
+func (e AutomaticWorkColleagueStatus) Valid() bool {
+	switch e {
+	case AutomaticWorkColleagueStatusActive:
+		return true
+	case AutomaticWorkColleagueStatusDeactivated:
+		return true
+	case AutomaticWorkColleagueStatusInvited:
+		return true
+	case AutomaticWorkColleagueStatusSuspended:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AutomaticWorkKindName.
+const (
+	AutomaticWorkKindNameApprovalRequest AutomaticWorkKindName = "approval_request"
+	AutomaticWorkKindNamePromiseTask     AutomaticWorkKindName = "promise_task"
+	AutomaticWorkKindNameReplyReminder   AutomaticWorkKindName = "reply_reminder"
+)
+
+// Valid indicates whether the value is a known member of the AutomaticWorkKindName enum.
+func (e AutomaticWorkKindName) Valid() bool {
+	switch e {
+	case AutomaticWorkKindNameApprovalRequest:
+		return true
+	case AutomaticWorkKindNamePromiseTask:
+		return true
+	case AutomaticWorkKindNameReplyReminder:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AutomationLastRunOutcome.
 const (
 	AutomationLastRunOutcomeBlocked           AutomationLastRunOutcome = "blocked"
@@ -24025,7 +24070,7 @@ type Activity struct {
 	// AssigneeId Task only.
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
 
-	// Audience Who may read this activity's CONTENT once the row is discoverable at all. `workspace` — everyone who can discover it (the default); `participants` — the humans on it (the capturing mailbox owner, anyone stamped as a participant by seat); `selected` — the participants plus the users and teams named through PATCH /activities/{id}/audience. Set only through that endpoint, by a human with write authority over the activity.
+	// Audience Who may read this activity's CONTENT once the row is discoverable at all. `workspace` — everyone who can discover it (the default); `participants` — the humans on it (the capturing mailbox owner, anyone stamped as a participant by seat); `selected` — the participants plus the users and teams named through PATCH /activities/{id}/audience. Set only through that endpoint, by a human with write authority over the activity. The colleague who sent a mail that only another member's mailbox captured may read that one copy, when their login address is at one of the workspace's own domains.
 	Audience *ActivityAudience `json:"audience,omitempty"`
 
 	// AudienceReason Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the workspace turned mail sharing off), `no_record` (the message is filed under no record), `pending_verdict` (nothing has judged the message yet), `manual` (a human said so). Null on a row nothing derived. WITHHELD with the content — the reason describes what the message is about, so a colleague who may not read a held message does not learn why it is held either; it is absent whenever `content_state` is `withheld`.
@@ -28140,6 +28185,117 @@ type AuthorizationRowScope string
 
 // AuthorizationSeatType The licensing seat. A read seat may read but never mutate over REST, whatever its role grants. A client that cannot read a recognized value MUST assume a read seat: the ceiling fails closed, so an omission never buys the ability to mutate.
 type AuthorizationSeatType string
+
+// AutomaticWorkColleague defines model for AutomaticWorkColleague.
+type AutomaticWorkColleague struct {
+	DisplayName string                       `json:"display_name"`
+	Status      AutomaticWorkColleagueStatus `json:"status"`
+
+	// Tallies One per kind, in the order of `kinds`.
+	Tallies []AutomaticWorkTally `json:"tallies"`
+	UserId  openapi_types.UUID   `json:"user_id"`
+
+	// WaitingNotMine Waiting messages this colleague marked "Not mine" on the Worklist in the window, each
+	// message once. A waiting message is not an item automation creates, so it has no
+	// created count and no share.
+	WaitingNotMine int `json:"waiting_not_mine"`
+}
+
+// AutomaticWorkColleagueStatus defines model for AutomaticWorkColleague.Status.
+type AutomaticWorkColleagueStatus string
+
+// AutomaticWorkCounts Each created item holds exactly one outcome, so the outcomes add up to `created`.
+type AutomaticWorkCounts struct {
+	// Completed The task is done, or the decider accepted the approval request.
+	Completed int `json:"completed"`
+	Created   int `json:"created"`
+
+	// Dismissed A colleague archived the task without doing it.
+	Dismissed int `json:"dismissed"`
+
+	// Expired The item aged out unanswered.
+	Expired int `json:"expired"`
+
+	// NotMine A colleague moved the task to someone else, which says it was not theirs. It stays Not mine if the task comes back later.
+	NotMine int `json:"not_mine"`
+
+	// Open The item is still waiting.
+	Open int `json:"open"`
+
+	// Rejected The decider rejected the approval request. A rejection judges the change, not who was asked.
+	Rejected int `json:"rejected"`
+
+	// Rerouted A rule moved the item to someone else, as an approval follows a deal's new owner. Every move of an approval request counts here.
+	Rerouted int `json:"rerouted"`
+}
+
+// AutomaticWorkDay defines model for AutomaticWorkDay.
+type AutomaticWorkDay struct {
+	// Counts Each created item holds exactly one outcome, so the outcomes add up to `created`.
+	Counts AutomaticWorkCounts `json:"counts"`
+	Date   openapi_types.Date  `json:"date"`
+}
+
+// AutomaticWorkHealth What automation handed out per colleague, per day and per kind of item, and what each item
+// has become. An item is counted once, on its creation day, with the outcome it holds now.
+// `not_mine_share` is the routing number: the items a colleague said were not theirs, out of the
+// items created for them. It is a reading for an admin to look at, never a trigger.
+type AutomaticWorkHealth struct {
+	// Colleagues Every active colleague, with a tally for every kind even when it is zero, and any other
+	// seat that was named by an item in the window.
+	Colleagues []AutomaticWorkColleague `json:"colleagues"`
+
+	// Days How many days the window covers, today included.
+	Days int `json:"days"`
+
+	// FirstDay The first day of the window, in the installation's time zone, which decides the day an item falls on.
+	FirstDay    openapi_types.Date `json:"first_day"`
+	GeneratedAt time.Time          `json:"generated_at"`
+
+	// Kinds Every kind of item, always all of them, with what its records can tell.
+	Kinds   []AutomaticWorkKind `json:"kinds"`
+	LastDay openapi_types.Date  `json:"last_day"`
+
+	// ShareThreshold The share above which a kind's routing needs a look, as a fraction (0.1 is 10%).
+	ShareThreshold float32 `json:"share_threshold"`
+
+	// SmallSampleBelow Below this many created items a share is shown but never flagged.
+	SmallSampleBelow int `json:"small_sample_below"`
+
+	// Unattributed Items in the window whose first named colleague no longer exists.
+	Unattributed int `json:"unattributed"`
+}
+
+// AutomaticWorkKind defines model for AutomaticWorkKind.
+type AutomaticWorkKind struct {
+	Kind AutomaticWorkKindName `json:"kind"`
+
+	// RecordsNotMine Whether a colleague can say an item of this kind is not theirs. An approval request has
+	// no such choice: its decider can only accept or reject it, so its share is null.
+	RecordsNotMine bool `json:"records_not_mine"`
+}
+
+// AutomaticWorkKindName defines model for AutomaticWorkKindName.
+type AutomaticWorkKindName string
+
+// AutomaticWorkTally defines model for AutomaticWorkTally.
+type AutomaticWorkTally struct {
+	// AboveThreshold The share is above `share_threshold` on a sample large enough to judge.
+	AboveThreshold bool `json:"above_threshold"`
+
+	// ByDay The days with at least one created item, oldest first. A day absent from it created nothing.
+	ByDay []AutomaticWorkDay `json:"by_day"`
+
+	// Counts Each created item holds exactly one outcome, so the outcomes add up to `created`.
+	Counts AutomaticWorkCounts   `json:"counts"`
+	Kind   AutomaticWorkKindName `json:"kind"`
+
+	// NotMineShare not_mine out of created, as a fraction. Null when nothing was created or the kind has no "Not mine".
+	NotMineShare *float32 `json:"not_mine_share"`
+
+	// SmallSample Fewer items were created than `small_sample_below`, so the share says little.
+	SmallSample bool `json:"small_sample"`
+}
 
 // Automation A configured automation instance (feedback/14).
 type Automation struct {
@@ -34659,6 +34815,15 @@ type ConversationClaim struct {
 
 	// Status `open`: the loop is live. `done` — kept or answered. `dismissed` — a human said it was never a claim, and it stays so the next run cannot resurrect it.
 	Status ConversationClaimStatus `json:"status"`
+
+	// TakenAt When the promise was taken over. Kept when the colleague's account is deleted.
+	TakenAt *time.Time `json:"taken_at,omitempty"`
+
+	// TakenByName The display name of `taken_by_user_id`, so the card can say who took it over.
+	TakenByName *string `json:"taken_by_name,omitempty"`
+
+	// TakenByUserId The colleague who took over this promise when nobody was asked to keep it. Null when nobody took it over, and after that colleague's account was deleted.
+	TakenByUserId *openapi_types.UUID `json:"taken_by_user_id,omitempty"`
 
 	// TaskActivityId The task an extracted `commitment_ours` created, so completing either side completes both. Null for every other kind — a reminder about THEIR promise is a rep action, not an auto-task.
 	TaskActivityId *openapi_types.UUID `json:"task_activity_id,omitempty"`
@@ -44926,6 +45091,17 @@ type ProjectScope struct {
 	Total     *int               `json:"total,omitempty"`
 }
 
+// PromiseTakeOver A promise one colleague took over, and the task it became.
+type PromiseTakeOver struct {
+	ClaimId       openapi_types.UUID `json:"claim_id"`
+	TakenAt       time.Time          `json:"taken_at"`
+	TakenByName   *string            `json:"taken_by_name,omitempty"`
+	TakenByUserId openapi_types.UUID `json:"taken_by_user_id"`
+
+	// TaskActivityId The task the promise became, owned by `taken_by_user_id`.
+	TaskActivityId openapi_types.UUID `json:"task_activity_id"`
+}
+
 // PromoteLeadPreview What POST /leads/{id}/promote would do, computed without writing (ADR-0119).
 type PromoteLeadPreview struct {
 	// Contact A contact. Mirrors the `contact` table.
@@ -48491,7 +48667,7 @@ type SetDealRoomExpiryRequest struct {
 
 // SetFxRateRequest defines model for SetFxRateRequest.
 type SetFxRateRequest struct {
-	// EffectiveDate Defaults to today; must not be in the past (append-forward).
+	// EffectiveDate Defaults to today. A past date is accepted only when the currency has no rate yet or the date is earlier than every rate stored for it.
 	EffectiveDate *openapi_types.Date `json:"effective_date,omitempty"`
 
 	// FromCurrency 3-letter ISO; must not equal the base currency.
@@ -54759,6 +54935,12 @@ type SendMessageParams struct {
 	// `403 code: approval_token_invalid`. Required when an AGENT principal repeats a 🟡 call; a
 	// human's direct call is itself the approval.
 	XApprovalToken *ApprovalToken `json:"X-Approval-Token,omitempty"`
+}
+
+// GetAutomaticWorkHealthParams defines parameters for GetAutomaticWorkHealth.
+type GetAutomaticWorkHealthParams struct {
+	// Days How many days back the window reaches, today included.
+	Days *int `form:"days,omitempty" json:"days,omitempty"`
 }
 
 // ActivateHomeRepairJSONBody defines parameters for ActivateHomeRepair.
@@ -72891,6 +73073,9 @@ type ServerInterface interface {
 	// Edit the questions for future outcome reviews.
 	// (PATCH /activity-review-templates/{id})
 	UpdateActivityReviewTemplate(w http.ResponseWriter, r *http.Request, id Id)
+	// Per colleague and day, how much work automation handed out and what became of it.
+	// (GET /admin/automatic-work-health)
+	GetAutomaticWorkHealth(w http.ResponseWriter, r *http.Request, params GetAutomaticWorkHealthParams)
 	// What capture's judgement queues are holding, and in whose mailbox.
 	// (GET /admin/capture-health)
 	GetCaptureHealth(w http.ResponseWriter, r *http.Request)
@@ -73464,6 +73649,9 @@ type ServerInterface interface {
 	// Say a promise was kept, or that it no longer stands.
 	// (POST /claims/{id}/settle)
 	SettleConversationClaim(w http.ResponseWriter, r *http.Request, id Id)
+	// Take over a promise one of us made that nobody was asked to keep.
+	// (POST /claims/{id}/take-over)
+	TakeOverConversationClaim(w http.ResponseWriter, r *http.Request, id Id)
 	// Website cold-start read-back — returns a staged proposal with evidence.
 	// (POST /coldstart)
 	ColdStartReadback(w http.ResponseWriter, r *http.Request)
@@ -74250,7 +74438,7 @@ type ServerInterface interface {
 	// List current FX rates (latest per currency), or one pair's history.
 	// (GET /fx-rates)
 	ListFxRates(w http.ResponseWriter, r *http.Request, params ListFxRatesParams)
-	// Set an FX rate effective today or later (append-forward).
+	// Set an FX rate effective today or later, or in the past before any stored rate.
 	// (POST /fx-rates)
 	SetFxRate(w http.ResponseWriter, r *http.Request)
 	// List the base currency and the currency codes on the FX rate sheet, without their rates.
@@ -75666,6 +75854,12 @@ func (_ Unimplemented) UpdateActivityReviewTemplate(w http.ResponseWriter, r *ht
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Per colleague and day, how much work automation handed out and what became of it.
+// (GET /admin/automatic-work-health)
+func (_ Unimplemented) GetAutomaticWorkHealth(w http.ResponseWriter, r *http.Request, params GetAutomaticWorkHealthParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // What capture's judgement queues are holding, and in whose mailbox.
 // (GET /admin/capture-health)
 func (_ Unimplemented) GetCaptureHealth(w http.ResponseWriter, r *http.Request) {
@@ -76809,6 +77003,12 @@ func (_ Unimplemented) ListChannelProviders(w http.ResponseWriter, r *http.Reque
 // Say a promise was kept, or that it no longer stands.
 // (POST /claims/{id}/settle)
 func (_ Unimplemented) SettleConversationClaim(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Take over a promise one of us made that nobody was asked to keep.
+// (POST /claims/{id}/take-over)
+func (_ Unimplemented) TakeOverConversationClaim(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -78384,7 +78584,7 @@ func (_ Unimplemented) ListFxRates(w http.ResponseWriter, r *http.Request, param
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Set an FX rate effective today or later (append-forward).
+// Set an FX rate effective today or later, or in the past before any stored rate.
 // (POST /fx-rates)
 func (_ Unimplemented) SetFxRate(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -82397,6 +82597,45 @@ func (siw *ServerInterfaceWrapper) UpdateActivityReviewTemplate(w http.ResponseW
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateActivityReviewTemplate(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAutomaticWorkHealth operation middleware
+func (siw *ServerInterfaceWrapper) GetAutomaticWorkHealth(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetAutomaticWorkHealthParams
+
+	// ------------- Optional query parameter "days" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "days", r.URL.Query(), &params.Days, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "days"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "days", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAutomaticWorkHealth(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -89629,6 +89868,38 @@ func (siw *ServerInterfaceWrapper) SettleConversationClaim(w http.ResponseWriter
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SettleConversationClaim(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// TakeOverConversationClaim operation middleware
+func (siw *ServerInterfaceWrapper) TakeOverConversationClaim(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.TakeOverConversationClaim(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -118618,6 +118889,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Patch(options.BaseURL+"/activity-review-templates/{id}", wrapper.UpdateActivityReviewTemplate)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/automatic-work-health", wrapper.GetAutomaticWorkHealth)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/admin/capture-health", wrapper.GetCaptureHealth)
 	})
 	r.Group(func(r chi.Router) {
@@ -119189,6 +119463,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/claims/{id}/settle", wrapper.SettleConversationClaim)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/claims/{id}/take-over", wrapper.TakeOverConversationClaim)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/coldstart", wrapper.ColdStartReadback)

@@ -121,6 +121,7 @@ type Server struct {
 	captureCounterpartyHoldHandlers
 	claimHandlers
 	dealCommitmentHandlers
+	promiseTakeOverHandlers
 	importHandlers
 	channelHandlers
 	traceHandlers
@@ -145,6 +146,7 @@ type Server struct {
 	captureHealthHandlers
 	extensionIngestHealthHandlers
 	recoveryHealthHandlers
+	automaticWorkHandlers
 	// The composed-extension inventory (handlers_extensions.go): stateless, it reads
 	// boot-written accessors, so it is embedded as the zero value.
 	extensionsHandlers

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, vi } from "vitest";
 import { restoreClipboardStubs } from "./src/design-system/clipboard-testing";
 import { disarmHoverIntent } from "./src/design-system/hoverintent-testing";
+import { forgetListAddresses } from "./src/lib/listreturn";
 import { fetchTheNetwork } from "./src/testing/no-network";
 import { takeUnroutedSessionProbes } from "./src/testing/unrouted-session";
 import { ASYNC_UTIL_TIMEOUT_MS } from "./vitest.budget";
@@ -203,6 +204,17 @@ if (typeof window !== "undefined") {
   // specific address still gets it.
   beforeEach(() => {
     window.location.hash = "";
+    // The entry's own state, where lib/historydepth.ts stamps how deep into
+    // the app the reader is. happy-dom keeps one history for the whole file.
+    // So a stamp another case left at this address is read as this case's own
+    // depth. A record opened cold then steps back rather than going to its
+    // list.
+    window.history.replaceState(null, "");
+    // The same leak, held in memory. lib/listreturn.ts remembers the address
+    // each list last stood at, for one page load. A test file is one page load
+    // for every case in it. So a case that narrows a list leaves the next one
+    // a parent it never visited.
+    forgetListAddresses();
   });
 }
 

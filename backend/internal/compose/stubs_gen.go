@@ -151,6 +151,10 @@ func (stubs) UpdateActivityReviewTemplate(w nethttp.ResponseWriter, r *nethttp.R
 	httperr.NotImplemented(w, r, "UpdateActivityReviewTemplate")
 }
 
+func (stubs) GetAutomaticWorkHealth(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetAutomaticWorkHealthParams) {
+	httperr.NotImplemented(w, r, "GetAutomaticWorkHealth")
+}
+
 func (stubs) GetCaptureHealth(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetCaptureHealth")
 }
@@ -913,6 +917,10 @@ func (stubs) ListChannelProviders(w nethttp.ResponseWriter, r *nethttp.Request) 
 
 func (stubs) SettleConversationClaim(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "SettleConversationClaim")
+}
+
+func (stubs) TakeOverConversationClaim(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "TakeOverConversationClaim")
 }
 
 func (stubs) ColdStartReadback(w nethttp.ResponseWriter, r *nethttp.Request) {

@@ -25,8 +25,8 @@ import (
 // all, and the redemption skips the passport binding for a caller presenting
 // none. Guarded at the insert alone, the second attempt walks through.
 //
-// It also refuses a commitment that names nobody it may be put to. The refusal
-// comes before a join, supersession or declined-memory read can match it.
+// It also refuses a payload-owned proposal that names nobody it may be put to.
+// The refusal comes before a join, supersession or declined-memory read can match it.
 func stagerIsAttributable(ctx context.Context, in StageInput) error {
 	p, ok := principal.Actor(ctx)
 	if !ok {
@@ -35,19 +35,19 @@ func stagerIsAttributable(ctx context.Context, in StageInput) error {
 	if err := attributableStager(p); err != nil {
 		return err
 	}
-	return commitmentNamesItsSubject(p, in)
+	return payloadNamesItsOwner(p, in)
 }
 
-// commitmentNamesItsSubject refuses a commitment proposal that is for nobody,
-// or that is staged on behalf of a member other than the one it is for. Either
-// would put one colleague's promise in front of another.
-func commitmentNamesItsSubject(p principal.Principal, in StageInput) error {
-	if in.Kind != approvalsubject.KindCommitmentTask {
+// payloadNamesItsOwner refuses a payload-owned proposal that is for nobody, or
+// that is staged on behalf of a member other than the one it is for. Either
+// would put one colleague's promise or mail in front of another.
+func payloadNamesItsOwner(p principal.Principal, in StageInput) error {
+	if !approvalsubject.PayloadOwned(in.Kind) {
 		return nil
 	}
-	asked, named := approvalsubject.CommitmentAskedOf(in.ProposedChange)
-	if !named || (!p.OnBehalfOf.IsZero() && p.OnBehalfOf != asked) {
-		return fmt.Errorf("crmapprovals: a commitment is staged only for the colleague it is for: %w", ErrNoDecider)
+	owner := approvalsubject.Owner(in.Kind, in.ProposedChange)
+	if owner.IsZero() || (!p.OnBehalfOf.IsZero() && p.OnBehalfOf != owner) {
+		return fmt.Errorf("crmapprovals: a %s proposal is staged only for the colleague it is for: %w", in.Kind, ErrNoDecider)
 	}
 	return nil
 }

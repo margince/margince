@@ -633,7 +633,7 @@ Payload for conversation_claim.captured, something promised, asked or decided in
 
 Record: `contact` · version 1
 
-Payload for conversation_claim.changed. A claim was corrected, renewed, dismissed or erased. A downstream reader holding the old claim needs to refresh it, or remove it when the status is erased.
+Payload for conversation_claim.changed. A claim was corrected, renewed, taken over, dismissed or erased. A downstream reader holding the old claim needs to refresh it, or remove it when the status is erased.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|

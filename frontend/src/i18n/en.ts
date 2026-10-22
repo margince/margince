@@ -3297,6 +3297,11 @@ export const en = {
   "co.next.inDays_other": "In {days} days",
   "co.next.proposed": "Proposed by Margince",
   "commitment.dismiss": "Dismiss",
+  // The reader's own promise, said by pressing it: only shown on a promise
+  // nobody was asked to keep.
+  "commitment.takeOver": "I’ll take this",
+  "commitment.takenOver": "{name} took this on {date}",
+  "commitment.takenOverUnnamed": "Taken on {date}",
   "commitment.quote": "“{quote}”",
   "co.brief.by.model": "Written by Margince",
   "co.brief.by.deterministic": "Compiled from CRM records",
@@ -5867,8 +5872,14 @@ export const en = {
   "compose.earlierThreads_other": "{count} earlier threads",
   "compose.threadChange": "Change",
   "compose.threadContinue": "Continue a thread",
-  "compose.threads": "Continue a thread",
-  "compose.threadsWith": "Continue a thread with {name}",
+  "compose.threadsRecent": "Recent threads",
+  "compose.threadsFound": "Matching threads",
+  "compose.threadSearch": "Search threads",
+  "compose.threadSearchWith": "Search threads with {name}",
+  "compose.threadSearchNone": "No thread matches these words.",
+  "compose.threadsMoreFailed":
+    "Older threads could not be loaded. Press Show more to try again.",
+  "compose.threadsMore": "Show more",
   "compose.newThread": "New thread",
   "compose.copies": "Cc and Bcc",
   "compose.signsOffAs": "Signs off as “{closing}”.",
@@ -7937,6 +7948,49 @@ export const en = {
   "settings.recoveryHealth": "Restore drills",
   "settings.recoveryHealthSub":
     "When the restore from backup was last rehearsed, and how long it took.",
+  "settings.automaticWork": "Automatic work",
+  "settings.automaticWorkSub":
+    "What Margince gave each colleague by itself, and how much of it they said was not theirs.",
+  "automaticWork.adminOnly":
+    "Automatic work is counted for the whole installation and needs a permission your role does not have.",
+  "automaticWork.window": "Days counted",
+  "automaticWork.last7": "Last 7 days",
+  "automaticWork.last30": "Last 30 days",
+  "automaticWork.howCounted":
+    "Each item counts once, on the day it was created ({range}), with the outcome it has now. A Not mine share above {threshold} on at least {sample} items means the routing for that kind needs a look. The share changes nothing by itself.",
+  "automaticWork.none": "Margince created no automatic work in these days.",
+  "automaticWork.col.colleague": "Colleague",
+  "automaticWork.col.kind": "Kind",
+  "automaticWork.col.created": "Created",
+  "automaticWork.col.notMine": "Not mine",
+  "automaticWork.col.rerouted": "Moved by a rule",
+  "automaticWork.col.dismissed": "Dismissed",
+  "automaticWork.col.rejected": "Rejected",
+  "automaticWork.col.completed": "Done or accepted",
+  "automaticWork.col.expired": "Aged out",
+  "automaticWork.col.open": "Open",
+  "automaticWork.col.share": "Not mine share",
+  "automaticWork.col.day": "Day",
+  "automaticWork.col.waitingNotMine": "Marked Not mine",
+  "automaticWork.kind.promise_task": "Task from a commitment",
+  "automaticWork.kind.reply_reminder": "Reply reminder",
+  "automaticWork.kind.approval_request": "Approval request",
+  "automaticWork.noNotMine": "No Not mine choice",
+  "automaticWork.needsLook": "{share}, needs a look",
+  "automaticWork.fewItems": "{share}, too few items to judge",
+  "automaticWork.inactive": "{name} (not active)",
+  "automaticWork.days": "Days for {name}, {kind}",
+  "automaticWork.quiet_one":
+    "{count} colleague had no automatic work in these days.",
+  "automaticWork.quiet_other":
+    "{count} colleagues had no automatic work in these days.",
+  "automaticWork.unattributed_one":
+    "{count} item was for a colleague who was removed.",
+  "automaticWork.unattributed_other":
+    "{count} items were for colleagues who were removed.",
+  "automaticWork.waiting": "Waiting messages marked Not mine",
+  "automaticWork.waitingSub":
+    "Margince does not create a waiting message for anybody, so it has no share. Each message counts once.",
   "recoveryHealth.adminOnly":
     "Restore drills cover the whole installation and need a permission your role does not have.",
   "recoveryHealth.lastDrill": "Last restore drill",

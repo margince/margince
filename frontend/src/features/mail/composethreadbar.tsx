@@ -5,9 +5,15 @@ import { Reply, SquarePen } from "lucide-react";
 import { useState } from "react";
 import type { components } from "../../api/schema";
 import { activityTimeline } from "../../design-system/activitytimeline";
-import { Button, PendingBody } from "../../design-system/atoms";
+import {
+  Button,
+  Field,
+  PendingBody,
+  SearchField,
+} from "../../design-system/atoms";
 import { EmailEntry } from "../../design-system/emailentry";
 import { EmailText } from "../../design-system/emailtext";
+import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import type { NameOf } from "../../design-system/participants";
 import { Popover } from "../../design-system/popover";
@@ -117,9 +123,10 @@ export function ThreadBar({
   if (!answering && !thread.splitColumns) {
     return null;
   }
-  const { recent, anchorRead } = thread;
+  const { recent, listed } = thread;
+  const searching = thread.search.trim() !== "";
   const cards = threadCards(
-    recent.conversations,
+    listed.conversations,
     answering,
     thread.anchorActivity,
   );
@@ -166,56 +173,134 @@ export function ThreadBar({
           </>
         }
       >
-        {answering && (
-          <Button variant="ghost" onClick={() => choose(null)}>
-            <SquarePen aria-hidden="true" />
-            {t("compose.threadLeave")}
-          </Button>
-        )}
-        <Heading as="h2" size="small">
-          {recordName
-            ? t("compose.threadsWith", { name: recordName })
-            : t("compose.threads")}
+        {/* The way out to a new thread heads the list, marked while the draft
+            starts one; pressed then, it only closes the list. */}
+        <Button
+          variant="ghost"
+          className="compose-threadmenu-new"
+          aria-pressed={!answering}
+          disabled={disabled}
+          onClick={() => (answering ? choose(null) : setOpen(false))}
+        >
+          <SquarePen aria-hidden="true" />
+          {t(answering ? "compose.threadLeave" : "compose.newThread")}
+        </Button>
+        <Field
+          label={
+            recordName
+              ? t("compose.threadSearchWith", { name: recordName })
+              : t("compose.threadSearch")
+          }
+          labelHidden
+        >
+          {(control) => (
+            <SearchField
+              {...control}
+              placeholder={
+                recordName
+                  ? t("compose.threadSearchWith", { name: recordName })
+                  : t("compose.threadSearch")
+              }
+              value={thread.search}
+              onChange={(event) => thread.setSearch(event.target.value)}
+            />
+          )}
+        </Field>
+        <Heading as="h2" size="small" className="compose-threadmenu-title">
+          {t(searching ? "compose.threadsFound" : "compose.threadsRecent")}
         </Heading>
-        {recent.pending ? (
-          <PendingBody label={t("compose.threadPending")} lines={3} />
-        ) : (
-          <SurfaceState
-            loadingLabel={t("compose.threadPending")}
-            state={recent.failed ? "failed" : "ready"}
-            emptyLabel={t("compose.threadPending")}
-            detail={{ onRetry: recent.retry }}
-          >
-            <ul className="compose-threadlist">
-              {answering && anchorRead.failed && (
-                <li>
-                  <SurfaceState
-                    loadingLabel={t("compose.threadPending")}
-                    state="failed"
-                    emptyLabel={t("compose.threadPending")}
-                    detail={{ onRetry: anchorRead.retry }}
-                  >
-                    {null}
-                  </SurfaceState>
-                </li>
-              )}
-              {cards.map((card) => (
-                <ThreadRow
-                  key={card.anchorId}
-                  card={card}
-                  answering={answering}
-                  thread={thread.conversation}
-                  viewerUserId={viewerId}
-                  nameOf={nameOf}
-                  onChoose={choose}
-                  disabled={disabled}
-                />
-              ))}
-            </ul>
-          </SurfaceState>
-        )}
+        <ThreadList
+          thread={thread}
+          cards={cards}
+          answering={answering}
+          viewerId={viewerId}
+          nameOf={nameOf}
+          onChoose={choose}
+          disabled={disabled}
+        />
       </Popover>
     </div>
+  );
+}
+
+// The threads on offer, or the state of their read. The list scrolls inside
+// the menu, and more of a long record's mail is read a page at a time.
+function ThreadList({
+  thread,
+  cards,
+  answering,
+  viewerId,
+  nameOf,
+  onChoose,
+  disabled,
+}: Readonly<{
+  thread: ComposeThread;
+  cards: readonly Card[];
+  answering: string | undefined;
+  viewerId: string | undefined;
+  nameOf: NameOf;
+  onChoose: (id: string | null) => void;
+  disabled: boolean;
+}>) {
+  const t = useT();
+  const { listed, anchorRead } = thread;
+  return listed.pending ? (
+    <PendingBody label={t("compose.threadPending")} lines={3} />
+  ) : (
+    <SurfaceState
+      loadingLabel={t("compose.threadPending")}
+      state={
+        listed.failed
+          ? "failed"
+          : cards.length === 0 && !listed.more
+            ? "empty"
+            : "ready"
+      }
+      emptyLabel={t("compose.threadSearchNone")}
+      detail={{ onRetry: listed.retry }}
+    >
+      {/* The list scrolls inside the menu; more of a long record's mail
+            is read a page at a time. */}
+      <ul className="compose-threadlist">
+        {answering && anchorRead.failed && (
+          <li>
+            <SurfaceState
+              loadingLabel={t("compose.threadPending")}
+              state="failed"
+              emptyLabel={t("compose.threadPending")}
+              detail={{ onRetry: anchorRead.retry }}
+            >
+              {null}
+            </SurfaceState>
+          </li>
+        )}
+        {cards.map((card) => (
+          <ThreadRow
+            key={card.anchorId}
+            card={card}
+            answering={answering}
+            thread={thread.conversation}
+            viewerUserId={viewerId}
+            nameOf={nameOf}
+            onChoose={onChoose}
+            disabled={disabled}
+          />
+        ))}
+      </ul>
+      {listed.moreFailed && (
+        <ErrorLine>{t("compose.threadsMoreFailed")}</ErrorLine>
+      )}
+      {listed.more && (
+        <Button
+          variant="ghost"
+          className="compose-threadmenu-more"
+          onClick={listed.loadMore}
+          pending={listed.loadingMore}
+        >
+          {t("compose.threadsMore")}
+        </Button>
+      )}
+    </SurfaceState>
   );
 }
 

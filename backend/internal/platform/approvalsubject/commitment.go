@@ -5,6 +5,7 @@ package approvalsubject
 
 import (
 	"encoding/json"
+	"slices"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -46,4 +47,26 @@ func named(seat *ids.UUID) (ids.UUID, bool) {
 		return ids.Nil, false
 	}
 	return *seat, true
+}
+
+// commitmentOwnerRecordKeys are the payload keys that name the records a
+// promise is filed under, the claims among them.
+var commitmentOwnerRecordKeys = []string{"links", "claim_id", "claim_ids"}
+
+// WithoutOwnersRecords removes from a commitment proposal read out of private
+// mail the ids of the mailbox owner's records, for any reader but that owner.
+// The colleague the promise is for may open the message, not those records,
+// and an id would tell them which records exist. Other kinds pass unchanged.
+func WithoutOwnersRecords(kind string, change map[string]any, reader ids.UUID) map[string]any {
+	owner, _ := change["private_to"].(string)
+	if kind != KindCommitmentTask || owner == "" || owner == reader.String() {
+		return change
+	}
+	out := make(map[string]any, len(change))
+	for key, value := range change {
+		if !slices.Contains(commitmentOwnerRecordKeys, key) {
+			out[key] = value
+		}
+	}
+	return out
 }

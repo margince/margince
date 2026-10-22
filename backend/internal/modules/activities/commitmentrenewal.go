@@ -33,14 +33,28 @@ func (s *Store) RenewCommitmentTaskTx(ctx context.Context, tx pgx.Tx, locator, s
 	return err == nil, err
 }
 
+// renewalAudienceFits admits a task from private mail only while its holder may
+// still hold that work. Nobody but the holder and the mailbox owner may read it.
+// A holder whose sent copy was turned back to received mail is refused.
 func renewalAudienceFits(ctx context.Context, tx pgx.Tx, id ids.UUID, assignee, privateTo *ids.UUID) (bool, error) {
 	if privateTo == nil {
 		return true, nil
 	}
-	if assignee == nil || *assignee != *privateTo {
+	if assignee == nil {
 		return false, nil
 	}
-	return auth.ActivityAudienceLimitedToTx(ctx, tx, id, *privateTo)
+	var source *ids.UUID
+	if err := tx.QueryRow(ctx, `SELECT source_activity_id FROM activity WHERE id = $1`, id).Scan(&source); err != nil {
+		return false, fmt.Errorf("activities: reading the source of a renewed commitment: %w", err)
+	}
+	if source == nil {
+		return false, nil
+	}
+	may, err := auth.SeatMayHoldPrivateWorkTx(ctx, tx, *source, privateTo, *assignee)
+	if err != nil || !may {
+		return false, err
+	}
+	return auth.ActivityAudienceLimitedToTx(ctx, tx, id, *assignee, *privateTo)
 }
 
 // MutableCommitmentTaskTx locks only live automatic work that no human has adopted or changed.

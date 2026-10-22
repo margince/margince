@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgtype"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -54,9 +55,10 @@ const (
 // A source restating net 1000 → 1200 as a tax correction, gross unchanged, is
 // the case that finds it.
 //
-// `fx_rate_to_base` is here although the hash does not cover it, because the
-// repair path rewrites a row on an UNCHANGED hash precisely to fill it in;
-// without it that write would record before == after.
+// `fx_rate_to_base` is here although the hash does not cover it. The repair
+// path rewrites a row on an unchanged hash to fill it in, and without it that
+// write would record before == after. It is the stored numeric, so the trail
+// carries the rate unrounded, as a JSON number.
 //
 // One shape for both sides. The before image is read off the row and the after
 // is derived for the write, and a reader diffing them has to be comparing like
@@ -67,22 +69,22 @@ const (
 // it received arrives as `open_minor`, which is gross less paid, clamped at
 // nothing-owed.
 type invoiceImage struct {
-	CompanyID     ids.CompanyID `json:"company_id"`
-	Number        *string       `json:"number"`
-	IssuedAt      time.Time     `json:"issued_at"`
-	DueAt         *time.Time    `json:"due_at"`
-	Status        string        `json:"status"`
-	Currency      string        `json:"currency"`
-	NetMinor      int64         `json:"net_minor"`
-	TaxMinor      int64         `json:"tax_minor"`
-	GrossMinor    int64         `json:"gross_minor"`
-	OpenMinor     int64         `json:"open_minor"`
-	CreditedMinor int64         `json:"credited_minor"`
-	FullyPaidAt   *time.Time    `json:"fully_paid_at"`
-	DisputedAt    *time.Time    `json:"disputed_at"`
-	VoidAt        *time.Time    `json:"void_at"`
-	FxRateToBase  *float64      `json:"fx_rate_to_base"`
-	SyncHash      string        `json:"sync_hash"`
+	CompanyID     ids.CompanyID  `json:"company_id"`
+	Number        *string        `json:"number"`
+	IssuedAt      time.Time      `json:"issued_at"`
+	DueAt         *time.Time     `json:"due_at"`
+	Status        string         `json:"status"`
+	Currency      string         `json:"currency"`
+	NetMinor      int64          `json:"net_minor"`
+	TaxMinor      int64          `json:"tax_minor"`
+	GrossMinor    int64          `json:"gross_minor"`
+	OpenMinor     int64          `json:"open_minor"`
+	CreditedMinor int64          `json:"credited_minor"`
+	FullyPaidAt   *time.Time     `json:"fully_paid_at"`
+	DisputedAt    *time.Time     `json:"disputed_at"`
+	VoidAt        *time.Time     `json:"void_at"`
+	FxRateToBase  pgtype.Numeric `json:"fx_rate_to_base"`
+	SyncHash      string         `json:"sync_hash"`
 }
 
 // paymentImage is one mirrored payment as the audit trail carries it,

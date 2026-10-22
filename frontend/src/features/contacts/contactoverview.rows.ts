@@ -8,6 +8,7 @@ import {
 import { daysPast } from "../../format/lateness";
 import { type Locale, type Translator, translatePlural } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import type { TakenOver } from "./claimtakeover";
 import { omitted } from "./contact360";
 
 type Contact360 = components["schemas"]["Contact360"];
@@ -21,6 +22,9 @@ export type OverviewRow = Readonly<{
   value?: string;
   pill?: Readonly<{ text: string; tone: ReadingTone }>;
   tick?: boolean;
+  // A promise of ours nobody holds, which the reader may take over.
+  takeable?: boolean;
+  takenBy?: TakenOver;
 }>;
 
 // --- Commitments ----------------------------------------------------------
@@ -42,6 +46,8 @@ type OpenLoop = Readonly<{
   done: boolean;
   theirs: boolean;
   quote?: string;
+  takeable: boolean;
+  takenBy?: TakenOver;
 }>;
 
 /**
@@ -63,6 +69,7 @@ function openLoops(view: Contact360): readonly OpenLoop[] {
           claim.status !== "dismissed" &&
           !claim.needs_review &&
           (!claim.task_activity_id ||
+            claim.taken_at ||
             (claim.status === "done" &&
               !openTasks.has(claim.task_activity_id))),
       )
@@ -75,6 +82,14 @@ function openLoops(view: Contact360): readonly OpenLoop[] {
           done: claim.status === "done",
           theirs: loop.kind === "commitment_theirs",
           quote: claim.source_quote,
+          takeable:
+            loop.kind === "commitment_ours" &&
+            claim.status === "open" &&
+            !claim.task_activity_id &&
+            !claim.taken_by_user_id,
+          takenBy: claim.taken_at
+            ? { name: claim.taken_by_name ?? null, at: claim.taken_at }
+            : undefined,
         }),
       ),
   );
@@ -107,6 +122,8 @@ export function commitmentRows(
         : undefined,
       pill: loopPill(loop, nowMs, t, locale),
       tick: loop.done,
+      takeable: loop.takeable,
+      takenBy: loop.takenBy,
     };
   });
 }

@@ -11,6 +11,16 @@ import { DockedWindow, type DockState } from "./dockedwindow";
 
 afterEach(cleanup);
 
+// The title bar a pointer slides the window by; happy-dom has no capture.
+function titleBar(): Element {
+  const bar = screen
+    .getByRole("heading", { name: "Re: Budget" })
+    .closest(".docked-head");
+  if (!bar) throw new Error("the window has no title bar");
+  bar.setPointerCapture ??= () => undefined;
+  return bar;
+}
+
 function Harness({ onClose = vi.fn() }: Readonly<{ onClose?: () => void }>) {
   const [state, setState] = useState<DockState>("open");
   return (
@@ -74,5 +84,55 @@ describe("a window docked beside the page", () => {
     expect(screen.getByRole("dialog").classList.contains("is-grown")).toBe(
       false,
     );
+  });
+
+  it("slides along the bottom edge by its title bar, no further than the glass", () => {
+    render(<Harness />);
+    const dialog = screen.getByRole("dialog");
+    // 300px of glass lie between the window and the far edge.
+    vi.spyOn(dialog, "getBoundingClientRect").mockReturnValue(
+      DOMRect.fromRect({ x: 300, y: 0, width: 400, height: 500 }),
+    );
+    const bar = titleBar();
+
+    fireEvent.pointerDown(bar, { clientX: 600, pointerId: 1 });
+    fireEvent.pointerMove(bar, { clientX: 480, pointerId: 1 });
+    expect(dialog.style.marginInlineEnd).toBe("120px");
+
+    fireEvent.pointerMove(bar, { clientX: 0, pointerId: 1 });
+    expect(dialog.style.marginInlineEnd).toBe("300px");
+    fireEvent.pointerUp(bar, { pointerId: 1 });
+  });
+
+  it("keeps a press on the title bar's buttons from sliding the window", () => {
+    render(<Harness />);
+    const bar = titleBar();
+
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Expand" }), {
+      clientX: 600,
+      pointerId: 1,
+    });
+    fireEvent.pointerMove(bar, { clientX: 480, pointerId: 1 });
+
+    expect(screen.getByRole("dialog").style.marginInlineEnd).toBe("");
+  });
+
+  it("comes back into view when the glass narrows under a slid window", () => {
+    render(<Harness />);
+    const dialog = screen.getByRole("dialog");
+    const rect = vi
+      .spyOn(dialog, "getBoundingClientRect")
+      .mockReturnValue(DOMRect.fromRect({ x: 300, width: 400, height: 500 }));
+    const bar = titleBar();
+    fireEvent.pointerDown(bar, { clientX: 600, pointerId: 1 });
+    fireEvent.pointerMove(bar, { clientX: 400, pointerId: 1 });
+    fireEvent.pointerUp(bar, { pointerId: 1 });
+    expect(dialog.style.marginInlineEnd).toBe("200px");
+
+    // The glass narrows until the window's start edge is 50px past it.
+    rect.mockReturnValue(DOMRect.fromRect({ x: -50, width: 400, height: 500 }));
+    fireEvent(window, new Event("resize"));
+
+    expect(dialog.style.marginInlineEnd).toBe("150px");
   });
 });

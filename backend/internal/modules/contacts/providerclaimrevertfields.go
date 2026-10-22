@@ -164,11 +164,17 @@ func archiveEmploymentEdge(ctx context.Context, tx pgx.Tx, f appliedField) (bool
 	if f.rowID == nil {
 		return false, errors.New("contacts: a bought employment was recorded without its row")
 	}
-	tag, err := tx.Exec(ctx, revertEmploymentSQL, f.ledgerID)
+	archived, err := scanRelationship(tx.QueryRow(ctx, revertEmploymentSQL+` RETURNING `+aliased(relationshipColumns, "t"), f.ledgerID))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
 	if err != nil {
 		return false, fmt.Errorf("contacts: retiring a bought employment: %w", err)
 	}
-	return tag.RowsAffected() > 0, nil
+	if err := emitRelationshipChangeWithEvidence(ctx, tx, "archive", nil, archived, map[string]any{auditKeyProvider: f.provider}); err != nil {
+		return false, fmt.Errorf("contacts: recording a retired bought employment: %w", err)
+	}
+	return true, nil
 }
 
 // touchRevertedContact bumps the aggregate after a child row went, for an

@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/notices"
+	"github.com/margince/margince/backend/internal/platform/approvalsubject"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -226,5 +227,41 @@ func TestReconciliationPreservesPrivatePendingNoticesWithoutInventingADecider(t 
 	}
 	if got := a.unreadFor(t, a.e.Rep1); got != 1 {
 		t.Fatalf("private pending notice count=%d", got)
+	}
+}
+
+// A sender question only its mailbox owner may open is taken back from anybody
+// else it was announced to. That is the shape a question staged for a fallback
+// colleague left behind: the notice went to one member, the payload names another.
+func TestNoticeReconciliationRetractsASenderQuestionAnnouncedToAnotherMember(t *testing.T) {
+	a := newApprovalNotifyEnv(t)
+	key := "senderdecider-" + a.e.Rep1.String()
+	a.e.WsExec(t, `INSERT INTO role (key, name, permissions) VALUES ($1, 'Sender decider', $2::jsonb)`, key,
+		`{"objects":{"activity":{"read":true},"contact":{"read":true,"create":true},"company":{"read":true,"create":true}},"row_scope":"all"}`)
+	a.e.WsExec(t, `INSERT INTO role_assignment (role_id, user_id) SELECT r.id, $1 FROM role r WHERE r.key = $2`, a.e.Rep1, key)
+	mail := seedCapturedMail(t, a.e, "gail@sender.example", "hello")
+	body, err := json.Marshal(approvalsubject.Counterparty{
+		DispositionID: ids.NewV7(), Email: "gail@sender.example", Domain: "sender.example", OwnerID: a.e.Rep1, ActivityID: mail,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	id, staged := a.stage(a.proposerCtx(ids.Nil), t, approvals.StageInput{
+		Kind: approvalsubject.KindCounterparty, ProposedChange: body, DiffHash: "gail",
+		TargetType: counterpartyTargetType, TargetID: mail, Summary: "Add gail@sender.example",
+	})
+	a.deliver(t, staged)
+	if got := a.unreadFor(t, a.e.Rep1); got != 1 {
+		t.Fatalf("the mailbox owner has %d notices, want 1", got)
+	}
+	a.e.WsExec(t, `UPDATE approval SET proposed_change = jsonb_set(proposed_change, '{owner_id}', to_jsonb($2::text))
+		 WHERE id = $1`, id, a.e.Rep2.String())
+
+	sweep := principal.SystemActing(a.e.Admin(), approvalNoticeReconcileActor)
+	if _, changed, err := newApprovalNoticeReconcileWorker(a.e.Pool).reconcilePage(sweep, ids.Nil); err != nil || changed != 1 {
+		t.Fatalf("the reconcile sweep took back %d notices (err %v), want the one announced to a member who cannot open it", changed, err)
+	}
+	if got := a.unreadFor(t, a.e.Rep1); got != 0 {
+		t.Fatalf("the member the question is not for still has %d notices", got)
 	}
 }
