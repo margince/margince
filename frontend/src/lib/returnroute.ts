@@ -9,14 +9,14 @@ import {
   writeStored,
 } from "./storage";
 
-// A provider sign-in is a full-page trip, and the callback lands on the bare
-// post-login URL, so the route a reader followed survives only in this tab.
+// A provider sign-in is a full-page trip that lands on the bare post-login URL.
+// The route a reader followed survives it only in this tab's storage.
 
 /** Where the callback sends a sign-in that did not complete. */
 export const OIDC_FAILURE_HASH = "#/login?oidc=failed";
 
-// Long enough for a provider's consent and second factor; a route kept for an
-// attempt the reader gave up on must not open on some later, unrelated visit.
+// Long enough for a provider's consent and second factor. A route kept for an
+// attempt the reader gave up on must not open on a later, unrelated visit.
 const KEPT_FOR_MS = 15 * 60 * 1000;
 
 // The reset screen renders ahead of the session gate, so restoring it after a
@@ -30,7 +30,7 @@ export function isBareEntry(hash: string): boolean {
   return hash === "" || hash === "#" || hash === "#/";
 }
 
-// Only this app's own hash route is kept; it is written back as a fragment of
+// Only this app's own hash route is kept. It is written back as a fragment of
 // the current page, so no stored value can move the tab to another origin.
 function isOwnRoute(hash: string): boolean {
   if (!hash.startsWith("#/") || isBareEntry(hash)) {
@@ -77,9 +77,9 @@ export function takeReturnRoute(): string | null {
 }
 
 /**
- * Put the kept route back on the bare landing. A failed sign-in keeps it for
- * the sign-in screen, which puts it back once it has read its notice; any
- * other landing names its own route and spends it.
+ * Put the kept route back on the bare landing. A failed sign-in leaves it to
+ * the sign-in screen, which puts it back after reading its notice. Any other
+ * landing names its own route and spends it.
  */
 export function restoreReturnRoute(): void {
   const { hash, pathname, search } = globalThis.location;
