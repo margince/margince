@@ -181,6 +181,9 @@ func checkLinkedInMatchFields(ctx context.Context, tx pgx.Tx, in LinkedInMatchAp
 }
 
 func checkStagedTitle(ctx context.Context, tx pgx.Tx, contactID ids.UUID, staged string) error {
+	if err := auth.Require(ctx, entityContact, principal.ActionUpdate); err != nil {
+		return err
+	}
 	var title string
 	if err := tx.QueryRow(ctx, `SELECT coalesce(title, '') FROM contact WHERE id = $1`, contactID).Scan(&title); err != nil {
 		return fmt.Errorf("contacts: reading the title an accepted match would replace: %w", err)
@@ -245,12 +248,17 @@ func (s *Store) writeLinkedInMatchFields(ctx context.Context, tx pgx.Tx, in Link
 	if !f.UseAsTitle && !f.UseAsEmployer {
 		return out, nil
 	}
+	// Held already by the apply; asked again here because these writes reach
+	// the contact's child rows, which an Art. 17 erasure clears.
+	if err := auth.HoldWritableLive(ctx, tx, entityContact, in.ContactID); err != nil {
+		return out, err
+	}
 	capturedBy, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return out, err
 	}
 	evidence := in.ConnectionID.String()
-	stamp := []storekit.FieldStamp{{Field: "title", EvidenceRef: &evidence}}
+	stamp := []storekit.FieldStamp{{Field: fieldTitle, EvidenceRef: &evidence}}
 	if f.UseAsTitle && f.Position != "" && f.Position != f.ContactTitle {
 		contact := ids.ContactID{UUID: in.ContactID}
 		if _, err := s.updateContactInTx(ctx, tx, contact, UpdateContactInput{Title: &f.Position}, in.Columns.cols); err != nil {

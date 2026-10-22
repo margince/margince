@@ -246,8 +246,8 @@ func stageOneLinkedInMatch(ctx context.Context, svc *approvals.Service, said app
 func linkedInMatchPayload(m contacts.PendingLinkedInMatch) map[string]any {
 	payload := map[string]any{
 		"connection_id": m.ConnectionID.String(), "owner_user_id": m.OwnerUserID.String(),
-		"contact_id":      m.ContactID.String(),
-		"connection_name": m.ConnectionName, "connection_company": m.ConnectionCompany,
+		companionContactField: m.ContactID.String(),
+		"connection_name":     m.ConnectionName, "connection_company": m.ConnectionCompany,
 		"contact_name": m.ContactName,
 		"use_as_title": m.Fields.UseAsTitle, "use_as_employer": m.Fields.UseAsEmployer,
 	}

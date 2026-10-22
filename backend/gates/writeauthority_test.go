@@ -100,6 +100,7 @@ const (
 // the probe is actually deciding, because that is always the answer: the probe
 // is not this mutation's own row gate.
 var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
+	"internal/modules/contacts:checkStagedEmployer":            "asks whether the decider may SEE the company a LinkedIn match card offers as employer, which is the product rule for that box. It changes no company: the write is an employment edge on the contact, whose create runs its own link-target probe on the company",
 	"internal/modules/deals:suggestionVisibleClause":           "reads the company and cited evidence before deciding a suggestion; the company itself is unchanged, and existing-deal linking separately requires update authority on its locked target",
 	"internal/modules/collections:recordArm":                   "the reader row scope over the record a tag suggestion names, which decides whether the caller may SEE the suggestion; it changes no record. Accepting or dismissing then asks auth.EnsureWritableLive on that record in the same transaction (openTagSuggestionForDecision) before anything is written",
 	"internal/modules/activities:hiddenProjects":               "decides which of the projects a filing names the caller may SEE, so a project out of their sight is shown unnamed and the undo refuses rather than leave a link it cannot remove. It changes no project; the undo's own row gate is the activity's writable probe taken under the lock",

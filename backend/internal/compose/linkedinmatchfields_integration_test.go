@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -55,7 +56,7 @@ func stageLinkedInFieldsCase(t *testing.T, title, employer string) *linkedInFiel
 	t.Helper()
 	c := newLinkedInFieldsCase(t, title, employer)
 	c.employ(t, c.acme, false)
-	c.importAndStage(t, c.ctx, linkedInFieldsExport)
+	c.importAndStage(c.ctx, t, linkedInFieldsExport)
 	return c
 }
 
@@ -67,7 +68,7 @@ func stageLinkedInEmailMatch(t *testing.T, export string) *linkedInFieldsCase {
 	perms := integration.AdminPerms
 	perms.Objects = maps.Clone(perms.Objects)
 	perms.Objects["contact"] = principal.ObjectGrant{Read: true, Create: true}
-	c.importAndStage(t, c.e.As(c.e.Rep1, []ids.UUID{c.e.Team1}, perms), export)
+	c.importAndStage(c.e.As(c.e.Rep1, []ids.UUID{c.e.Team1}, perms), t, export)
 	return c
 }
 
@@ -96,21 +97,21 @@ func newLinkedInFieldsCase(t *testing.T, title, employer string) *linkedInFields
 	return c
 }
 
-func (c *linkedInFieldsCase) importAndStage(t *testing.T, ctx context.Context, export string) {
+func (c *linkedInFieldsCase) importAndStage(ctx context.Context, t *testing.T, export string) {
 	t.Helper()
 	if _, err := c.store.ImportLinkedInConnections(ctx, strings.NewReader(export)); err != nil {
 		t.Fatalf("importing the export: %v", err)
 	}
-	c.restageAs(t, ctx)
+	c.restageAs(ctx, t)
 	c.approval = onlyPendingLinkedInMatch(t, c.e)
 }
 
 func (c *linkedInFieldsCase) restage(t *testing.T) {
 	t.Helper()
-	c.restageAs(t, c.ctx)
+	c.restageAs(c.ctx, t)
 }
 
-func (c *linkedInFieldsCase) restageAs(t *testing.T, ctx context.Context) {
+func (c *linkedInFieldsCase) restageAs(ctx context.Context, t *testing.T) {
 	t.Helper()
 	if _, err := c.store.MatchLinkedInConnections(ctx, c.e.Rep1); err != nil {
 		t.Fatalf("matching: %v", err)
@@ -161,7 +162,7 @@ func (c *linkedInFieldsCase) payload(t *testing.T) map[string]any {
 // given here replaced.
 //
 //craft:ignore naked-any the edit is the open staged object with some members replaced
-func (c *linkedInFieldsCase) approveWith(t *testing.T, ctx context.Context, changes map[string]any) error {
+func (c *linkedInFieldsCase) approveWith(ctx context.Context, t *testing.T, changes map[string]any) error {
 	t.Helper()
 	edited := c.payload(t)
 	maps.Copy(edited, changes)
@@ -195,7 +196,7 @@ func (c *linkedInFieldsCase) connectionStatus(t *testing.T) string {
 func (c *linkedInFieldsCase) primaryEmployer(t *testing.T) (company ids.UUID, role, source string) {
 	t.Helper()
 	c.query(t, `SELECT company_id, coalesce(role, ''), source FROM relationship
-		 WHERE contact_id = $1 AND kind = 'employment' AND is_current_primary AND archived_at IS NULL`,
+		 WHERE contact_id = $1 AND `+employment.CurrentPrimarySlotSQL(""),
 		[]any{c.contact}, &company, &role, &source)
 	return company, role, source
 }
@@ -272,7 +273,7 @@ func TestAContactWithATitleKeepsItUnlessTheBoxIsTicked(t *testing.T) {
 
 func TestTickingUseAsTitleReplacesATitleAndKeepsTheOldOneInTheAudit(t *testing.T) {
 	c := stageLinkedInFieldsCase(t, "Founder", "")
-	if err := c.approveWith(t, c.ctx, map[string]any{"use_as_title": true}); err != nil {
+	if err := c.approveWith(c.ctx, t, map[string]any{"use_as_title": true}); err != nil {
 		t.Fatalf("approving with the box ticked: %v", err)
 	}
 	if got := c.title(t); got != "Head of Sales" {
@@ -318,7 +319,7 @@ func TestTickingUseAsEmployerReplacesTheCurrentPrimaryEmployer(t *testing.T) {
 	if staged := c.payload(t); staged["use_as_employer"] != false || staged["employer_relationship_id"] == nil {
 		t.Fatalf("the card is staged as %v, want the current employment named beside an unticked box", staged)
 	}
-	if err := c.approveWith(t, c.ctx, map[string]any{"use_as_employer": true}); err != nil {
+	if err := c.approveWith(c.ctx, t, map[string]any{"use_as_employer": true}); err != nil {
 		t.Fatalf("approving with the box ticked: %v", err)
 	}
 	if company, _, _ := c.primaryEmployer(t); company != c.acme {
@@ -355,7 +356,7 @@ func TestAnEditToAnythingButTheBoxesIsRefusedAndWritesNothing(t *testing.T) {
 		{"employer_company_id": ids.NewV7().String()},
 	} {
 		c := stageLinkedInFieldsCase(t, "", "")
-		err := c.approveWith(t, c.ctx, edit)
+		err := c.approveWith(c.ctx, t, edit)
 		var invalid *approvals.InvalidEditError
 		var retargeted *approvals.RetargetedEditError
 		if !errors.As(err, &invalid) && !errors.As(err, &retargeted) {
@@ -414,7 +415,7 @@ func TestADeciderWhoMayNotCreateTheEmploymentIsRefusedBeforeAnyWrite(t *testing.
 		t.Errorf("the refused approval left title %q and connection %s", got, c.connectionStatus(t))
 	}
 	// The plain match stays theirs to confirm.
-	if err := c.approveWith(t, decider, map[string]any{"use_as_employer": false}); err != nil {
+	if err := c.approveWith(decider, t, map[string]any{"use_as_employer": false}); err != nil {
 		t.Fatalf("approving without the employer box: %v", err)
 	}
 	if got := c.title(t); got != "Head of Sales" {
@@ -439,7 +440,7 @@ func TestADeciderWhoCannotSeeTheCompanyIsRefusedTheEmployer(t *testing.T) {
 		t.Errorf("the refused approval left title %q and connection %s", got, c.connectionStatus(t))
 	}
 	// Refused while still pending, so the colleague can untick the box.
-	if err := c.approveWith(t, colleague, map[string]any{"use_as_employer": false}); err != nil {
+	if err := c.approveWith(colleague, t, map[string]any{"use_as_employer": false}); err != nil {
 		t.Fatalf("approving without the employer box: %v", err)
 	}
 }
@@ -502,7 +503,7 @@ func TestACardStagedBeforeTheBoxesAppliesOnlyTheLink(t *testing.T) {
 		t.Fatal(err)
 	}
 	var invalid *approvals.InvalidEditError
-	if err := c.approveWith(t, c.ctx, map[string]any{"use_as_title": true}); !errors.As(err, &invalid) {
+	if err := c.approveWith(c.ctx, t, map[string]any{"use_as_title": true}); !errors.As(err, &invalid) {
 		t.Fatalf("adding a box to an old card answered %v, want an invalid edit", err)
 	}
 	if _, err := c.svc.Decide(c.ctx, c.approval, true, nil); err != nil {
