@@ -174,26 +174,25 @@ export function clusterEvents(
   canvasPx: number,
 ): { lead: number; members: number[] }[] {
   const reach = (CLUSTER_PX / canvasPx) * 100;
-  const groups: number[][] = [];
+  const groups: [number, ...number[]][] = [];
   items.forEach((item, index) => {
     const open = groups.at(-1);
-    const first = open?.[0];
-    if (
-      open &&
-      first !== undefined &&
-      item.pct - (items[first]?.pct ?? 0) <= reach
-    ) {
+    if (open && item.pct - (items[open[0]]?.pct ?? 0) <= reach) {
       open.push(index);
     } else {
       groups.push([index]);
     }
   });
-  return groups.map((members) => ({
-    members,
-    lead: members.reduce((best, index) =>
-      outranks(items, index, best) ? index : best,
-    ),
-  }));
+  return groups.map((members) => {
+    const [first, ...rest] = members;
+    return {
+      members,
+      lead: rest.reduce(
+        (best, index) => (outranks(items, index, best) ? index : best),
+        first,
+      ),
+    };
+  });
 }
 
 function outranks(

@@ -249,7 +249,7 @@ function RingFrame({
       {...named}
       style={vars}
       ref={tooltip?.ref}
-      tabIndex={tooltip ? 0 : undefined}
+      tabIndex={tooltip ? 0 : undefined} // NOSONAR: the tab stop is how a keyboard reaches the explanation (WCAG 1.4.13)
       {...tooltip?.trigger}
     >
       {children}
