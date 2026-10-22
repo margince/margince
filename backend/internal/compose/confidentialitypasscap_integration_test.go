@@ -55,6 +55,22 @@ func seedHeldThreads(t *testing.T, e *integration.Env, n int) {
 		key := fmt.Sprintf("thread-cap-%d", i)
 		seedThreadQuestion(t, e, key, seedHeldThreadMail(t, e, key, "kunde@example.test", "Anfrage"))
 	}
+	dueByTheDatabaseClock(t, e)
+}
+
+// dueByTheDatabaseClock makes every seeded thread due by the database's clock.
+// seedThreadQuestion stamps the due time from this process's clock and the claim
+// compares it with the database's, so a database clock a minute behind this
+// host's would make every thread not yet due, and a pass would judge none.
+func dueByTheDatabaseClock(t *testing.T, e *integration.Env) {
+	t.Helper()
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(),
+			`UPDATE capture_thread_verdict SET next_attempt_at = now() - interval '1 minute'`)
+		return err
+	}); err != nil {
+		t.Fatalf("making the seeded threads due by the database clock: %v", err)
+	}
 }
 
 // setPassCap saves the cap the way an admin does, through the settings store.
@@ -132,6 +148,7 @@ func TestTheBacklogCountsWhatThePassStillOwesAndAgesTheOldest(t *testing.T) {
 	oldest := seedHeldThreadMail(t, e, "thread-backlog-old", "kunde@example.test", "Alt")
 	seedThreadQuestion(t, e, "thread-backlog-old", oldest)
 	seedThreadQuestion(t, e, "thread-backlog-new", seedHeldThreadMail(t, e, "thread-backlog-new", "kunde@example.test", "Neu"))
+	dueByTheDatabaseClock(t, e)
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE activity SET created_at = now() - interval '30 minutes' WHERE id = $1`, oldest)
