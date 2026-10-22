@@ -5873,12 +5873,15 @@ export const vi = {
   "directSend.reason.legal_obligation": "Nghĩa vụ pháp lý",
   "directSend.reason.other": "Khác",
   "compose.reviewReference": "Phê duyệt",
-  "compose.reviewRequest": "Yêu cầu duyệt",
-  "compose.reviewRequesting": "Đang gửi yêu cầu…",
-  "compose.reviewRequested":
-    "Đã yêu cầu duyệt. Thành viên có quyền gửi tin nhắn này sẽ quyết định; đến lúc đó tin nhắn vẫn chờ.",
-  "compose.reviewRequestFailed":
-    "Không thể gửi yêu cầu duyệt. Thử lại, hoặc mở yêu cầu duyệt từ thông báo từ chối ở trên.",
+  "compose.overrule.open": "Cho phép kèm lý do",
+  "compose.overrule.reasonLabel": "Vì sao tin nhắn này được gửi?",
+  "compose.overrule.hint":
+    "Lý do của bạn được lưu trên từng liên hệ và áp dụng cho loại tin nhắn này cho đến khi bị thu hồi.",
+  "compose.overrule.confirm": "Lưu lý do cho phép",
+  "compose.overrule.recording": "Đang lưu…",
+  "compose.overrule.recorded": "Đã lưu. Hãy bấm Gửi lại.",
+  "compose.overrule.failed":
+    "Chưa lưu được. Hãy thử lại, hoặc mở mục duyệt từ thông báo từ chối ở trên.",
   "compose.consentGoto": "Xem lại sự đồng ý",
   "compose.draftUnavailable":
     "Không thể soạn nháp bằng AI vì chưa cấu hình mô hình. Vẫn có thể tự viết email.",

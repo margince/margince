@@ -14158,22 +14158,13 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Ask somebody who may override the engine to decide this refused send.
-         * @description A rep refused at the keyboard usually cannot direct the send themselves — that takes the
-         *     `communication_exception` grant, which most seats do not hold. This is how they ask somebody
-         *     who does: the review is staged as an approval card, and whoever approves it is the human
-         *     whose name goes on the instruction.
-         *
-         *     ASKING GRANTS NOTHING. The caller still cannot direct the send, and the card is answered by
-         *     somebody who can or by nobody at all. What routing changes is that the question becomes
-         *     findable instead of sitting in a review only its author reads.
-         *
-         *     SCOPED TO THE REVIEW'S OWN INITIATOR. A seat that could route anybody's review would be
-         *     raising cards about other colleagues' correspondence, so this answers 404 for a review that
-         *     belongs to somebody else — the same answer reading one does, and for the same reason.
-         *
-         *     Pressing it twice raises ONE card. The question is about one refused message however many
-         *     times it is asked.
+         * Retired. Asking a colleague to decide a refused send is no longer offered.
+         * @deprecated
+         * @description Always answers 422 `review_not_routable`. A rep overrules a machine refusal with their own
+         *     reason (`POST /contacts/{id}/consent/allow`); a refusal names what may be overruled in its
+         *     problem details (`available_actions` carries `overrule`, and `overrulable` lists each
+         *     contact and category). A seat holding `communication_exception` directs the send from the
+         *     review (`POST /communication-reviews/{id}/direct-send`).
          */
         post: operations["requestCommunicationDecision"];
         delete?: never;

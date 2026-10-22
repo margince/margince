@@ -6053,12 +6053,15 @@ export const en = {
   "directSend.reason.legal_obligation": "Legal obligation",
   "directSend.reason.other": "Other",
   "compose.reviewReference": "Review",
-  "compose.reviewRequest": "Request review",
-  "compose.reviewRequesting": "Requesting…",
-  "compose.reviewRequested":
-    "Review requested. A user allowed to send this decides, and the message waits until then.",
-  "compose.reviewRequestFailed":
-    "The review request failed. Retry, or open the review from the refusal above.",
+  "compose.overrule.open": "Overrule with a reason",
+  "compose.overrule.reasonLabel": "Why may this message go?",
+  "compose.overrule.hint":
+    "Your reason is recorded on each contact. It covers this kind of message to them until someone revokes it.",
+  "compose.overrule.confirm": "Record the overrule",
+  "compose.overrule.recording": "Recording…",
+  "compose.overrule.recorded": "Overrule recorded. Press Send again.",
+  "compose.overrule.failed":
+    "The overrule was not recorded. Retry, or open the review from the refusal above.",
   "compose.consentGoto": "Review consent",
   "compose.draftUnavailable":
     "AI drafting is unavailable because no model is configured. The email can still be written manually.",

@@ -73441,7 +73441,7 @@ type ServerInterface interface {
 	// Send a refused message anyway, on a named human's recorded decision.
 	// (POST /communication-reviews/{id}/direct-send)
 	DirectCommunicationSend(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
-	// Ask somebody who may override the engine to decide this refused send.
+	// Retired. Asking a colleague to decide a refused send is no longer offered.
 	// (POST /communication-reviews/{id}/request-decision)
 	RequestCommunicationDecision(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// List companies (live by default; cursor-paginated).
@@ -76816,7 +76816,7 @@ func (_ Unimplemented) DirectCommunicationSend(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Ask somebody who may override the engine to decide this refused send.
+// Retired. Asking a colleague to decide a refused send is no longer offered.
 // (POST /communication-reviews/{id}/request-decision)
 func (_ Unimplemented) RequestCommunicationDecision(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)

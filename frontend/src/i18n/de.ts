@@ -6018,12 +6018,16 @@ export const de = {
   "directSend.reason.legal_obligation": "Rechtliche Verpflichtung",
   "directSend.reason.other": "Sonstiges",
   "compose.reviewReference": "Prüfung",
-  "compose.reviewRequest": "Prüfung anfordern",
-  "compose.reviewRequesting": "Wird angefordert…",
-  "compose.reviewRequested":
-    "Prüfung angefordert. Jemand, der diese Nachricht senden darf, entscheidet darüber. Bis dahin wartet die Nachricht.",
-  "compose.reviewRequestFailed":
-    "Die Prüfung konnte nicht angefordert werden. Bitte versuche es erneut oder öffne die Prüfung über die Ablehnung oben.",
+  "compose.overrule.open": "Mit Begründung freigeben",
+  "compose.overrule.reasonLabel": "Warum darf diese Nachricht raus?",
+  "compose.overrule.hint":
+    "Deine Begründung wird bei jedem Kontakt gespeichert und gilt für diese Art Nachricht, bis jemand sie widerruft.",
+  "compose.overrule.confirm": "Freigabe speichern",
+  "compose.overrule.recording": "Wird gespeichert…",
+  "compose.overrule.recorded":
+    "Freigabe gespeichert. Drücke erneut auf Senden.",
+  "compose.overrule.failed":
+    "Die Freigabe wurde nicht gespeichert. Versuche es erneut oder öffne die Prüfung über die Ablehnung oben.",
   "compose.consentGoto": "Einwilligung prüfen",
   "compose.draftUnavailable":
     "KI-Entwürfe sind nicht verfügbar, da kein Modell konfiguriert ist. Die E-Mail lässt sich weiterhin selbst schreiben.",

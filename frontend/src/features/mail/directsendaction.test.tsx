@@ -13,6 +13,7 @@ import type { SendReview } from "./sendreview";
 const review = (actions: SendReview["actions"]): SendReview => ({
   reviewId: "review-1",
   actions,
+  overrulable: [],
 });
 
 function draw(actions: SendReview["actions"]) {
@@ -35,11 +36,11 @@ describe("DirectSendAction", () => {
     ).toBeTruthy();
   });
 
-  // A rep who cannot overrule the engine sees the ask instead, which is a
+  // A rep who cannot direct a send sees the overrule instead, which is a
   // different component. Drawing a button here that fails when pressed would
   // be worse than drawing none.
-  it("offers nothing when the server offered the ask instead", () => {
-    draw(["request_decision"]);
+  it("offers nothing when the server offered the overrule instead", () => {
+    draw(["overrule"]);
     expect(screen.queryByRole("button")).toBeNull();
   });
 
