@@ -3319,6 +3319,14 @@ func (stubs) DeactivateUser(w nethttp.ResponseWriter, r *nethttp.Request, id crm
 	httperr.NotImplemented(w, r, "DeactivateUser")
 }
 
+func (stubs) GetUserHandover(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetUserHandover")
+}
+
+func (stubs) HandOverUserWork(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.HandOverUserWorkParams) {
+	httperr.NotImplemented(w, r, "HandOverUserWork")
+}
+
 func (stubs) RemoveUserMfa(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "RemoveUserMfa")
 }

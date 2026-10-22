@@ -23145,6 +23145,62 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /users/{id}/handover:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Identity]
+      operationId: getUserHandover
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: Count the live records a member still owns. Member administration, human-only.
+      description: |
+        How many live leads, contacts, companies, deals and projects the member owns that the
+        caller can see. Deactivating a member moves none of them, so the deactivate dialog reads
+        this to say what would be left behind. Works for any non-archived member, deactivated or
+        not, because work is best handed over before the account is closed.
+      x-agent-access: human-only
+      responses:
+        '200':
+          description: What the member still owns.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserHandover' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Identity]
+      operationId: handOverUserWork
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: Move every live record a member owns to a colleague. Member administration, human-only.
+      description: |
+        Hands each live lead, contact, company, deal and project the member owns to `to_user_id`.
+        Every record moves through its own owner-change write, so each gets the audit row and
+        event a single reassignment writes, and a deal's pending proposals follow it to the new
+        owner. A record the caller may not change stays with the member and is counted in
+        `left`; nothing else is said about it. `to_user_id` must be a seat the caller may make an
+        owner (an active human seat that can write, inside the caller's write scope), else `422`
+        with `code: owner_not_assignable` and nothing moves. Tasks, automations and deal-room
+        stewardships are not moved.
+      x-agent-access: human-only
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/HandOverUserWorkRequest' }
+      responses:
+        '200':
+          description: What moved, and what the member still owns.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/UserHandoverResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /users/{id}/sessions:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -45046,6 +45102,36 @@ components:
         from_owner_id: { type: string, format: uuid }
         to_owner_id: { type: string, format: uuid, description: 'An active user of the workspace (422 otherwise).' }
 
+    HandoverCounts:
+      type: object
+      description: Live records per kind.
+      required: [lead, contact, company, deal, project]
+      properties:
+        lead: { type: integer, minimum: 0 }
+        contact: { type: integer, minimum: 0 }
+        company: { type: integer, minimum: 0 }
+        deal: { type: integer, minimum: 0 }
+        project: { type: integer, minimum: 0 }
+
+    UserHandover:
+      type: object
+      required: [owned]
+      properties:
+        owned: { $ref: '#/components/schemas/HandoverCounts' }
+
+    HandOverUserWorkRequest:
+      type: object
+      required: [to_user_id]
+      properties:
+        to_user_id: { type: string, format: uuid, description: 'The colleague who takes the work over.' }
+
+    UserHandoverResult:
+      type: object
+      required: [moved, left]
+      properties:
+        moved: { $ref: '#/components/schemas/HandoverCounts' }
+        left: { $ref: '#/components/schemas/HandoverCounts' }
+
     BulkRecordType:
       type: string
       description: |
@@ -51210,6 +51296,15 @@ components:
             An invited member counts against the licensed seat count, so an invitation that
             was sent to the wrong address is released by deactivating it.
         is_agent: { type: boolean, default: false, description: First-party Agent Runner identity vs a human seat. }
+        assignable:
+          type: boolean
+          description: >
+            Whether the CALLER may make this member the owner of a record right now: the same
+            check an owner change runs (an active human seat that can write, inside the caller's
+            own write scope), so a picker built on it offers only owners the write will accept.
+            Present on `listUsers`; absent means not computed, and a client then offers the
+            member and lets the write decide. A deactivated member is listed with `false` on the
+            management view, so a list can still be filtered by the work they left behind.
         roles:
           type: array
           items: { type: string }

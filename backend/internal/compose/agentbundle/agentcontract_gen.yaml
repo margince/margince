@@ -17757,6 +17757,10 @@ components:
           description: >-
             `invited` is a seat that exists and has never been entered: the member holds a licensed seat and appears in the roster, but has set no password and can sign in by no method until they redeem their invitation link. Redeeming it makes them `active`, which is the only status that may sign in.
         is_agent: {type: boolean, default: false, description: First-party Agent Runner identity vs a human seat.}
+        assignable:
+          type: boolean
+          description: >-
+            Whether the CALLER may make this member the owner of a record right now: the same check an owner change runs (an active human seat that can write, inside the caller's own write scope), so a picker built on it offers only owners the write will accept. Present on `listUsers`; absent means not computed, and a client then offers the member and lets the write decide. A deactivated member is listed with `false` on the management view, so a list can still be filtered by the work they left behind.
         roles:
           type: array
           items: {type: string}

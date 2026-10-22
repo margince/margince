@@ -15731,6 +15731,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/users/{id}/handover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Count the live records a member still owns. Member administration, human-only.
+         * @description How many live leads, contacts, companies, deals and projects the member owns that the
+         *     caller can see. Deactivating a member moves none of them, so the deactivate dialog reads
+         *     this to say what would be left behind. Works for any non-archived member, deactivated or
+         *     not, because work is best handed over before the account is closed.
+         */
+        get: operations["getUserHandover"];
+        put?: never;
+        /**
+         * Move every live record a member owns to a colleague. Member administration, human-only.
+         * @description Hands each live lead, contact, company, deal and project the member owns to `to_user_id`.
+         *     Every record moves through its own owner-change write, so each gets the audit row and
+         *     event a single reassignment writes, and a deal's pending proposals follow it to the new
+         *     owner. A record the caller may not change stays with the member and is counted in
+         *     `left`; nothing else is said about it. `to_user_id` must be a seat the caller may make an
+         *     owner (an active human seat that can write, inside the caller's write scope), else `422`
+         *     with `code: owner_not_assignable` and nothing moves. Tasks, automations and deal-room
+         *     stewardships are not moved.
+         */
+        post: operations["handOverUserWork"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/{id}/sessions": {
         parameters: {
             query?: never;
@@ -32479,6 +32516,28 @@ export interface components {
              */
             to_owner_id: string;
         };
+        /** @description Live records per kind. */
+        HandoverCounts: {
+            lead: number;
+            contact: number;
+            company: number;
+            deal: number;
+            project: number;
+        };
+        UserHandover: {
+            owned: components["schemas"]["HandoverCounts"];
+        };
+        HandOverUserWorkRequest: {
+            /**
+             * Format: uuid
+             * @description The colleague who takes the work over.
+             */
+            to_user_id: string;
+        };
+        UserHandoverResult: {
+            moved: components["schemas"]["HandoverCounts"];
+            left: components["schemas"]["HandoverCounts"];
+        };
         /**
          * @description The kind of record a bulk change acts on. One change acts on one kind. A lead takes every
          *     verb but `archive` and `complete`: a lead leaves the queue by being disqualified, which has
@@ -37633,6 +37692,8 @@ export interface components {
              * @default false
              */
             is_agent: boolean;
+            /** @description Whether the CALLER may make this member the owner of a record right now: the same check an owner change runs (an active human seat that can write, inside the caller's own write scope), so a picker built on it offers only owners the write will accept. Present on `listUsers`; absent means not computed, and a client then offers the member and lets the write decide. A deactivated member is listed with `false` on the management view, so a list can still be filtered by the work they left behind. */
+            assignable?: boolean;
             /** @description This member's assigned system role keys. Present ONLY for an admin caller — the roster is readable by every authenticated member (it feeds the share/assignee pickers), and a rep has no business enumerating who holds `admin`. Normally exactly one key: `inviteUser` assigns one and `changeUserRole` replaces the whole set with one. Clients that render a single current role must still handle the empty and multi-key cases. Deliberately absent on `MeResponse.user`, whose sibling `MeResponse.roles` is the one authority for the caller's own roles — the same fact spelled twice could disagree. */
             roles?: string[];
             /** @description The live teams this user belongs to, ordered by team name. Present ONLY for an admin caller, on the same terms as `roles`: the roster answers every authenticated user because the share and assignee pickers read it, and who is in which team is not theirs to enumerate. An ARCHIVED team is absent — its memberships resolve no scope and no share, so listing one would describe access the user does not have. */
@@ -72480,6 +72541,86 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    getUserHandover: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What the member still owns. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserHandover"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    handOverUserWork: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+                 *     means the first request under the key is still running and carries `Retry-After`;
+                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+                 *     request under the key failed after it had started, so check whether it took effect before
+                 *     retrying under a new key.
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HandOverUserWorkRequest"];
+            };
+        };
+        responses: {
+            /** @description What moved, and what the member still owns. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserHandoverResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listUserSessions: {

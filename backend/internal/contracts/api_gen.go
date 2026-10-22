@@ -38508,6 +38508,12 @@ type GrowthFitSubScore struct {
 // GrowthFitSubScoreDimension The four the assessment decomposes into. A closed enum rather than free text, so a surface can label and order them and a model cannot invent a fifth.
 type GrowthFitSubScoreDimension string
 
+// HandOverUserWorkRequest defines model for HandOverUserWorkRequest.
+type HandOverUserWorkRequest struct {
+	// ToUserId The colleague who takes the work over.
+	ToUserId openapi_types.UUID `json:"to_user_id"`
+}
+
 // HandledForYou What the product did on this reader's behalf, reported rather than asked about.
 //
 // The queue is a list of obligations; this is the opposite surface — work that is
@@ -38530,6 +38536,15 @@ type HandledForYou struct {
 
 	// Truncated True when more was done than was read. The list is a floor, not a total.
 	Truncated bool `json:"truncated"`
+}
+
+// HandoverCounts Live records per kind.
+type HandoverCounts struct {
+	Company int `json:"company"`
+	Contact int `json:"contact"`
+	Deal    int `json:"deal"`
+	Lead    int `json:"lead"`
+	Project int `json:"project"`
 }
 
 // HealthDimension One named part of the relationship's health, with the reason for its rating.
@@ -51360,9 +51375,12 @@ type User struct {
 	// AllowedActions The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
 	AllowedActions *[]UserAllowedActions `json:"allowed_actions,omitempty"`
 	ArchivedAt     *time.Time            `json:"archived_at,omitempty"`
-	CreatedAt      *time.Time            `json:"created_at,omitempty"`
-	DisplayName    string                `json:"display_name"`
-	Email          openapi_types.Email   `json:"email"`
+
+	// Assignable Whether the CALLER may make this member the owner of a record right now: the same check an owner change runs (an active human seat that can write, inside the caller's own write scope), so a picker built on it offers only owners the write will accept. Present on `listUsers`; absent means not computed, and a client then offers the member and lets the write decide. A deactivated member is listed with `false` on the management view, so a list can still be filtered by the work they left behind.
+	Assignable  *bool               `json:"assignable,omitempty"`
+	CreatedAt   *time.Time          `json:"created_at,omitempty"`
+	DisplayName string              `json:"display_name"`
+	Email       openapi_types.Email `json:"email"`
 
 	// GreetingName The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said. Read through one rule on both sides: this when set, else the first word of `display_name`. Present on the caller's own seat; absent on the roster.
 	GreetingName *string            `json:"greeting_name,omitempty"`
@@ -51404,6 +51422,21 @@ type UserLocale string
 // UserStatus `invited` is a seat that exists and has never been entered: the member holds a licensed seat and appears in the roster, but has set no password and can sign in by no method until they redeem their invitation link. Redeeming it makes them `active`, which is the only status that may sign in.
 // An invited member counts against the licensed seat count, so an invitation that was sent to the wrong address is released by deactivating it.
 type UserStatus string
+
+// UserHandover defines model for UserHandover.
+type UserHandover struct {
+	// Owned Live records per kind.
+	Owned HandoverCounts `json:"owned"`
+}
+
+// UserHandoverResult defines model for UserHandoverResult.
+type UserHandoverResult struct {
+	// Left Live records per kind.
+	Left HandoverCounts `json:"left"`
+
+	// Moved Live records per kind.
+	Moved HandoverCounts `json:"moved"`
+}
 
 // UserListResponse defines model for UserListResponse.
 type UserListResponse struct {
@@ -60661,6 +60694,30 @@ type NameSeatsParams struct {
 	Id []openapi_types.UUID `form:"id" json:"id"`
 }
 
+// HandOverUserWorkParams defines parameters for HandOverUserWork.
+type HandOverUserWorkParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
+	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
+	// means the first request under the key is still running and carries `Retry-After`;
+	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
+	// request under the key failed after it had started, so check whether it took effect before
+	// retrying under a new key.
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // ListSavedViewsParams defines parameters for ListSavedViews.
 type ListSavedViewsParams struct {
 	Resource *SavedViewResource `form:"resource,omitempty" json:"resource,omitempty"`
@@ -62194,6 +62251,9 @@ type CreateFormerMemberJSONRequestBody = FormerMemberRequest
 
 // DeactivateUserJSONRequestBody defines body for DeactivateUser for application/json ContentType.
 type DeactivateUserJSONRequestBody = DeactivateUserRequest
+
+// HandOverUserWorkJSONRequestBody defines body for HandOverUserWork for application/json ContentType.
+type HandOverUserWorkJSONRequestBody = HandOverUserWorkRequest
 
 // ChangeUserRoleJSONRequestBody defines body for ChangeUserRole for application/json ContentType.
 type ChangeUserRoleJSONRequestBody = ChangeUserRoleRequest
@@ -75204,6 +75264,12 @@ type ServerInterface interface {
 	// Deactivate a member and revoke their live access. Admin-only, human-only.
 	// (POST /users/{id}/deactivate)
 	DeactivateUser(w http.ResponseWriter, r *http.Request, id Id)
+	// Count the live records a member still owns. Member administration, human-only.
+	// (GET /users/{id}/handover)
+	GetUserHandover(w http.ResponseWriter, r *http.Request, id Id)
+	// Move every live record a member owns to a colleague. Member administration, human-only.
+	// (POST /users/{id}/handover)
+	HandOverUserWork(w http.ResponseWriter, r *http.Request, id Id, params HandOverUserWorkParams)
 	// Remove a member's second factor. Admin-only, human-only.
 	// (DELETE /users/{id}/mfa)
 	RemoveUserMfa(w http.ResponseWriter, r *http.Request, id Id)
@@ -80346,6 +80412,18 @@ func (_ Unimplemented) GetUserAccess(w http.ResponseWriter, r *http.Request, id 
 // Deactivate a member and revoke their live access. Admin-only, human-only.
 // (POST /users/{id}/deactivate)
 func (_ Unimplemented) DeactivateUser(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Count the live records a member still owns. Member administration, human-only.
+// (GET /users/{id}/handover)
+func (_ Unimplemented) GetUserHandover(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Move every live record a member owns to a colleague. Member administration, human-only.
+// (POST /users/{id}/handover)
+func (_ Unimplemented) HandOverUserWork(w http.ResponseWriter, r *http.Request, id Id, params HandOverUserWorkParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -115669,6 +115747,94 @@ func (siw *ServerInterfaceWrapper) DeactivateUser(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// GetUserHandover operation middleware
+func (siw *ServerInterfaceWrapper) GetUserHandover(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetUserHandover(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// HandOverUserWork operation middleware
+func (siw *ServerInterfaceWrapper) HandOverUserWork(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params HandOverUserWorkParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.HandOverUserWork(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // RemoveUserMfa operation middleware
 func (siw *ServerInterfaceWrapper) RemoveUserMfa(w http.ResponseWriter, r *http.Request) {
 
@@ -120823,6 +120989,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/users/{id}/deactivate", wrapper.DeactivateUser)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/users/{id}/handover", wrapper.GetUserHandover)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/users/{id}/handover", wrapper.HandOverUserWork)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/users/{id}/mfa", wrapper.RemoveUserMfa)

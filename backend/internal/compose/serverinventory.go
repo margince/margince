@@ -59,6 +59,7 @@ type Server struct {
 	activitiesHandlers
 	approvalsHandlers
 	bulkHandlers
+	handoverHandlers
 	searchHandlers
 	consentHandlers
 	directedSendHandlers

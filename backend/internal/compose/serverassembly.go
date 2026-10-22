@@ -211,6 +211,7 @@ func (s *Server) wireSurfaces(pool *pgxpool.Pool, log *slog.Logger) {
 	s.wireOnboardingSurface(pool)
 	s.wireSystemOfRecordReads(pool)
 	s.wireBulkSurface(pool)
+	s.wireHandoverSurface(pool)
 }
 
 // wireStagedSurfaces binds the two surfaces that read the staged queue. They
