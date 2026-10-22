@@ -7964,6 +7964,10 @@ export const en = {
   "captureHealth.col.runsEvery": "Runs every",
   "captureHealth.col.processed": "Processed",
   "captureHealth.col.state": "State",
+  "captureHealth.col.unread": "Not read",
+  "captureHealth.unreadPeriod": "{from} to {to}",
+  "captureHealth.unreadPeriodFolded":
+    "Mail from {from} to {to} was never read. Start an import with a window that reaches back to {from}.",
   "captureHealth.col.owner": "Mailbox owner",
   "captureHealth.col.contacts": "Contacts waiting",
   "captureHealth.col.threads": "Threads waiting",

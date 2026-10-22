@@ -29488,6 +29488,10 @@ type CaptureMailboxHealth struct {
 	// ThreadsAwaitingVerdict Threads whose confidentiality question is still open, so their messages stay held.
 	ThreadsAwaitingVerdict int `json:"threads_awaiting_verdict"`
 
+	// UnreadPeriod A period no sync read, when a first sync failed for longer than the point it had held. Absent when there is none, which is the ordinary case.
+	// It is reported because the alternative is a mailbox that looks synced and is missing a week. The backfill reaches this period, so the owner can ask for it back, and the dates are what they point it at.
+	UnreadPeriod *CaptureUnreadPeriod `json:"unread_period,omitempty"`
+
 	// UserId The mailbox owner.
 	UserId openapi_types.UUID `json:"user_id"`
 }
@@ -29834,6 +29838,15 @@ type CaptureTraceResolution struct {
 
 // CaptureTraceResolutionStatus defines model for CaptureTraceResolution.Status.
 type CaptureTraceResolutionStatus string
+
+// CaptureUnreadPeriod The span between where a held first-sync anchor pointed and where the sync had to start instead. Both ends or neither: a start with no end is a period nobody can ask for again.
+type CaptureUnreadPeriod struct {
+	// From The first moment nobody read.
+	From time.Time `json:"from"`
+
+	// To The moment reading resumed.
+	To time.Time `json:"to"`
+}
 
 // CaptureVerdictClock When one verdict pass runs. Derived from the cadence the job declares and from the queue itself, never from a number written down beside the screen: a second copy of the schedule drifts from the one the worker actually keeps, and the reader would be told a time nothing fires at.
 type CaptureVerdictClock struct {

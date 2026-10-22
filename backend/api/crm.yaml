@@ -53641,6 +53641,18 @@ components:
             vocabulary, `panicked` when the pass panicked, or `unclassified`. Never the
             error's text, which stays in the log.
 
+    CaptureUnreadPeriod:
+      type: object
+      additionalProperties: false
+      required: [from, to]
+      description: >-
+        The span between where a held first-sync anchor pointed and where the sync had to
+        start instead. Both ends or neither: a start with no end is a period nobody can ask
+        for again.
+      properties:
+        from: { type: string, format: date-time, description: The first moment nobody read. }
+        to: { type: string, format: date-time, description: The moment reading resumed. }
+
     CaptureMailboxHealth:
       type: object
       additionalProperties: false
@@ -53661,6 +53673,16 @@ components:
         threads_awaiting_verdict:
           type: integer
           description: Threads whose confidentiality question is still open, so their messages stay held.
+        unread_period:
+          allOf: [{ $ref: '#/components/schemas/CaptureUnreadPeriod' }]
+          nullable: true
+          description: >-
+            A period no sync read, when a first sync failed for longer than the point it had
+            held. Absent when there is none, which is the ordinary case.
+
+            It is reported because the alternative is a mailbox that looks synced and is
+            missing a week. The backfill reaches this period, so the owner can ask for it
+            back, and the dates are what they point it at.
         oldest_thread_age_seconds: { type: [integer, 'null'] }
 
     CaptureClassifierHealth:

@@ -135,6 +135,7 @@ var livenessUnstated = gatekit.Waive(map[string]string{
 	"internal/modules/deals:RestoreDealTx":              "the deal un-archive, which brings back exactly the relationships the deal's archive retired, matched on that archive's own stamp",
 	"internal/modules/identity:countFailure":            "every caller first reads the member through LiveMemberSQL under FOR UPDATE in the same transaction (recordFailedLogin, recordFailedChange, lockSecondFactorStreak), so the row it folds is live",
 	"internal/modules/identity:resetLockoutStreak":      "its callers read the member through LiveMemberSQL in the same transaction (checkCredentials, and lockSecondFactorStreak on second-factor completion), so the row it clears is live",
+	"internal/modules/capture:releaseSyncAnchor":        "the second half of the watermark write beside it in one transaction, which matches on id and generation alone so a round that already ran keeps its cursor. A release that refused an archived connection would leave the anchor held behind a stored cursor, and the next attempt would read that stale point as one somebody chose",
 	// ERASURE AND RETENTION MUST WRITE ARCHIVED ROWS. This is the family that
 	// makes a row-level trigger impossible, and the reason each entry gives is
 	// the specific destruction it performs rather than a restatement of that

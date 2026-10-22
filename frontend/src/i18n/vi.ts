@@ -7698,6 +7698,10 @@ export const vi = {
   "captureHealth.col.runsEvery": "Chu kỳ chạy",
   "captureHealth.col.processed": "Đã xử lý",
   "captureHealth.col.state": "Trạng thái",
+  "captureHealth.col.unread": "Chưa đọc",
+  "captureHealth.unreadPeriod": "{from} đến {to}",
+  "captureHealth.unreadPeriodFolded":
+    "Thư từ {from} đến {to} chưa được đọc. Hãy bắt đầu nhập với khoảng thời gian lấy lại được tới {from}.",
   "captureHealth.col.owner": "Chủ hộp thư",
   "captureHealth.col.contacts": "Liên hệ đang chờ",
   "captureHealth.col.threads": "Chuỗi thư đang chờ",

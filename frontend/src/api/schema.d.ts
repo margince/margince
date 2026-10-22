@@ -39116,6 +39116,19 @@ export interface components {
              */
             error_class?: string;
         };
+        /** @description The span between where a held first-sync anchor pointed and where the sync had to start instead. Both ends or neither: a start with no end is a period nobody can ask for again. */
+        CaptureUnreadPeriod: {
+            /**
+             * Format: date-time
+             * @description The first moment nobody read.
+             */
+            from: string;
+            /**
+             * Format: date-time
+             * @description The moment reading resumed.
+             */
+            to: string;
+        };
         CaptureMailboxHealth: {
             /**
              * Format: uuid
@@ -39135,6 +39148,11 @@ export interface components {
             oldest_contact_age_seconds?: number | null;
             /** @description Threads whose confidentiality question is still open, so their messages stay held. */
             threads_awaiting_verdict: number;
+            /**
+             * @description A period no sync read, when a first sync failed for longer than the point it had held. Absent when there is none, which is the ordinary case.
+             *     It is reported because the alternative is a mailbox that looks synced and is missing a week. The backfill reaches this period, so the owner can ask for it back, and the dates are what they point it at.
+             */
+            unread_period?: components["schemas"]["CaptureUnreadPeriod"] | null;
             oldest_thread_age_seconds?: number | null;
         };
         /** @description The sender queue as a whole, across every mailbox. */

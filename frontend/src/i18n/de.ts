@@ -7910,6 +7910,10 @@ export const de = {
   "captureHealth.col.runsEvery": "Intervall",
   "captureHealth.col.processed": "Verarbeitet",
   "captureHealth.col.state": "Status",
+  "captureHealth.col.unread": "Nicht gelesen",
+  "captureHealth.unreadPeriod": "{from} bis {to}",
+  "captureHealth.unreadPeriodFolded":
+    "E-Mails von {from} bis {to} wurden nicht gelesen. Starte den Import mit einem Zeitraum, der bis {from} zurückreicht.",
   "captureHealth.col.owner": "Postfach",
   "captureHealth.col.contacts": "Wartende Kontakte",
   "captureHealth.col.threads": "Wartende Threads",
