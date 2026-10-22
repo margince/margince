@@ -15,8 +15,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config/configtest"
 )
 
-// A saved routing document is warned about as a boot would warn about it, read
-// from the document the process will serve rather than the one stored.
+// A saved routing document is warned about as a boot would warn about it.
+// The warning reads the document the process will serve, not the stored one.
 func TestASavedRoutingWhoseLaddersReachOneAPIIsWarnedAbout(t *testing.T) {
 	e := setupRateStore(t)
 	_, wsCtx := e.seedWorkspace(context.Background(), t)

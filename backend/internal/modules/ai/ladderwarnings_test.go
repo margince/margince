@@ -76,9 +76,8 @@ func TestOneAPIAcrossManyTasksIsOneFinding(t *testing.T) {
 	}
 }
 
-// The sovereign presets bind one local model too, but that profile remaps every
-// cloud rung onto local_small, so their ladders are one rung by construction and
-// are not a finding.
+// The sovereign presets bind one local model too. That profile remaps every
+// cloud rung onto local_small, so their ladders have one rung and draw no finding.
 func TestTheShippedPresetsThatBindOneModelOnSeveralTiersAreNamed(t *testing.T) {
 	collapses := map[string]bool{
 		"consumer_class_brokered.yaml": true,
