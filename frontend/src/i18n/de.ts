@@ -11674,16 +11674,20 @@ export const de = {
   "users.status.suspended": "Gesperrt",
   "users.handover.action": "Arbeit übergeben",
   "users.handover.title": "Arbeit von {name} übergeben",
-  "users.handover.body": "Alle Leads, Kontakte, Unternehmen, Deals und Projekte, für die {name} verantwortlich ist, gehen an das Teammitglied, das du wählst. Aufgaben, Automationen und Deal Rooms bleiben, wo sie sind.",
+  "users.handover.body":
+    "Alle Leads, Kontakte, Unternehmen, Deals und Projekte, für die {name} verantwortlich ist, gehen an das Teammitglied, das du wählst. Aufgaben, Automationen und Deal Rooms bleiben, wo sie sind.",
   "users.handover.receiver": "Übergeben an",
   "users.handover.choose": "Teammitglied wählen",
   "users.handover.confirm": "Übergeben",
   "users.handover.owns": "{name} ist noch verantwortlich für {records}.",
-  "users.handover.ownsNothing": "{name} ist für keine Datensätze verantwortlich, die du sehen kannst.",
-  "users.handover.deactivateNote": "Beim Deaktivieren wird nichts davon verschoben. Übergib es vorher oder später über dieses Menü.",
+  "users.handover.ownsNothing":
+    "{name} ist für keine Datensätze verantwortlich, die du sehen kannst.",
+  "users.handover.deactivateNote":
+    "Beim Deaktivieren wird nichts davon verschoben. Übergib es vorher oder später über dieses Menü.",
   "users.handover.done": "{records} an {name} übergeben.",
   "users.handover.nothingMoved": "Es war nichts mehr zu übergeben.",
-  "users.handover.left": "Noch bei {name}: {records}. Diese darfst du nicht ändern.",
+  "users.handover.left":
+    "Noch bei {name}: {records}. Diese darfst du nicht ändern.",
   "users.handover.leads_one": "{count} Lead",
   "users.handover.leads_other": "{count} Leads",
   "users.handover.contacts_one": "{count} Kontakt",

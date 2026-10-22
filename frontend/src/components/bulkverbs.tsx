@@ -9,6 +9,7 @@ import { Select } from "../design-system/select";
 import { stable } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
+import { mayOwnRecords } from "./assigneepicker";
 import {
   BulkChangeDialog,
   type BulkChangeRequest,
@@ -17,7 +18,6 @@ import {
 } from "./bulkchange";
 import { ShortlistVerb } from "./bulkshortlist";
 import { TagVerbs } from "./bulktag";
-import { mayOwnRecords } from "./assigneepicker";
 import { TaskVerb } from "./bulktask";
 import { RosterPartialNote, useRoster, useRosterPartial } from "./entityref";
 

@@ -11369,16 +11369,20 @@ export const vi = {
   "users.status.suspended": "Đã tạm khóa",
   "users.handover.action": "Bàn giao công việc",
   "users.handover.title": "Bàn giao công việc của {name}",
-  "users.handover.body": "Mọi lead, liên hệ, công ty, deal và dự án mà {name} chịu trách nhiệm sẽ chuyển cho đồng nghiệp bạn chọn. Việc cần làm, tự động hóa và Deal Room của họ vẫn giữ nguyên.",
+  "users.handover.body":
+    "Mọi lead, liên hệ, công ty, deal và dự án mà {name} chịu trách nhiệm sẽ chuyển cho đồng nghiệp bạn chọn. Việc cần làm, tự động hóa và Deal Room của họ vẫn giữ nguyên.",
   "users.handover.receiver": "Giao cho",
   "users.handover.choose": "Chọn đồng nghiệp",
   "users.handover.confirm": "Bàn giao",
   "users.handover.owns": "{name} vẫn chịu trách nhiệm {records}.",
-  "users.handover.ownsNothing": "{name} không chịu trách nhiệm hồ sơ nào mà bạn xem được.",
-  "users.handover.deactivateNote": "Vô hiệu hóa không chuyển hồ sơ nào. Hãy bàn giao trước, hoặc sau đó từ menu này.",
+  "users.handover.ownsNothing":
+    "{name} không chịu trách nhiệm hồ sơ nào mà bạn xem được.",
+  "users.handover.deactivateNote":
+    "Vô hiệu hóa không chuyển hồ sơ nào. Hãy bàn giao trước, hoặc sau đó từ menu này.",
   "users.handover.done": "Đã bàn giao {records} cho {name}.",
   "users.handover.nothingMoved": "Không còn gì để bàn giao.",
-  "users.handover.left": "Vẫn ở chỗ {name}: {records}. Bạn không được thay đổi những hồ sơ này.",
+  "users.handover.left":
+    "Vẫn ở chỗ {name}: {records}. Bạn không được thay đổi những hồ sơ này.",
   "users.handover.leads_one": "{count} lead",
   "users.handover.leads_other": "{count} lead",
   "users.handover.contacts_one": "{count} liên hệ",

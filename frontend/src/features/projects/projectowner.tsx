@@ -4,8 +4,8 @@
 import { useRef, useState } from "react";
 import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
-import { useUpdateRecord } from "../../components/edit";
 import { mayOwnRecords } from "../../components/assigneepicker";
+import { useUpdateRecord } from "../../components/edit";
 import {
   RosterPartialNote,
   useRoster,

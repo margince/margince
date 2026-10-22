@@ -135,7 +135,9 @@ describe("the Owner dial for a member administrator", () => {
   // A colleague who left still owns their records until somebody takes them
   // over, so the dial offers them, named as gone, to find that work.
   it("offers a deactivated colleague, marked deactivated", async () => {
-    stub(0, [{ id: "u-shay", display_name: "Shay Left", status: "deactivated" }]);
+    stub(0, [
+      { id: "u-shay", display_name: "Shay Left", status: "deactivated" },
+    ]);
     const { result } = renderHook(() => useOwnerChips(), { wrapper });
 
     await waitFor(() =>

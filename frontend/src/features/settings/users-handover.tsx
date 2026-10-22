@@ -135,7 +135,10 @@ export function HandoverModal({
       const left = phrase(result.left);
       if (left) {
         toast.show(
-          t("users.handover.left", { name: member.display_name, records: left }),
+          t("users.handover.left", {
+            name: member.display_name,
+            records: left,
+          }),
           { tone: "danger", sticky: true },
         );
         return;

@@ -84,10 +84,7 @@ async function readRosterPage(
   return { entries: data.data, next: data.page.next_cursor ?? null };
 }
 
-async function walkRoster(
-  kind: RosterKind,
-  everyone = false,
-): Promise<Roster> {
+async function walkRoster(kind: RosterKind, everyone = false): Promise<Roster> {
   const entries: RosterEntry[] = [];
   let cursor = FIRST_PAGE;
   for (let page = 0; page < ROSTER_WALK_PAGES; page += 1) {

@@ -43,7 +43,10 @@ export function useRecordOwnerOptions(enabled = true): UserOption[] {
 }
 
 const STATUS_SUFFIX: Partial<
-  Record<MemberStatus, "list.ownerDeactivated" | "list.ownerSuspended" | "list.ownerInvited">
+  Record<
+    MemberStatus,
+    "list.ownerDeactivated" | "list.ownerSuspended" | "list.ownerInvited"
+  >
 > = {
   deactivated: "list.ownerDeactivated",
   suspended: "list.ownerSuspended",
@@ -65,7 +68,9 @@ export function useMemberFilterOptions(enabled: boolean) {
     return [
       {
         value: entry.id,
-        label: suffix ? t(suffix, { name: entry.display_name }) : entry.display_name,
+        label: suffix
+          ? t(suffix, { name: entry.display_name })
+          : entry.display_name,
       },
     ];
   });

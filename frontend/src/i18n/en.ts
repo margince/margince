@@ -11692,16 +11692,19 @@ export const en = {
   "users.status.suspended": "Suspended",
   "users.handover.action": "Hand over work",
   "users.handover.title": "Hand over the work of {name}",
-  "users.handover.body": "Every lead, contact, company, deal and project {name} owns moves to the colleague you choose. Their tasks, automations and Deal Rooms stay where they are.",
+  "users.handover.body":
+    "Every lead, contact, company, deal and project {name} owns moves to the colleague you choose. Their tasks, automations and Deal Rooms stay where they are.",
   "users.handover.receiver": "Give it to",
   "users.handover.choose": "Choose a colleague",
   "users.handover.confirm": "Hand over",
   "users.handover.owns": "{name} still owns {records}.",
   "users.handover.ownsNothing": "{name} owns no records you can see.",
-  "users.handover.deactivateNote": "Deactivating moves none of them. Hand them over first, or later from this menu.",
+  "users.handover.deactivateNote":
+    "Deactivating moves none of them. Hand them over first, or later from this menu.",
   "users.handover.done": "{records} handed over to {name}.",
   "users.handover.nothingMoved": "Nothing was left to hand over.",
-  "users.handover.left": "Still with {name}: {records}. You may not change these.",
+  "users.handover.left":
+    "Still with {name}: {records}. You may not change these.",
   "users.handover.leads_one": "{count} lead",
   "users.handover.leads_other": "{count} leads",
   "users.handover.contacts_one": "{count} contact",

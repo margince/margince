@@ -21,7 +21,9 @@ describe("handing over a member's work", () => {
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Otto Off")).toBeTruthy());
 
-    await user.click((await rowMenu(user, "Otto Off")).getByText("Hand over work"));
+    await user.click(
+      (await rowMenu(user, "Otto Off")).getByText("Hand over work"),
+    );
     const dialog = await screen.findByRole("dialog");
     await waitFor(() =>
       expect(
@@ -31,12 +33,20 @@ describe("handing over a member's work", () => {
 
     // Only colleagues the server marked assignable are offered: not the
     // member who left, not an invitation nobody redeemed.
-    const receiver = within(dialog).getByRole("combobox", { name: /give it to/i });
+    const receiver = within(dialog).getByRole("combobox", {
+      name: /give it to/i,
+    });
     await user.click(receiver);
     const listbox = await screen.findByRole("listbox");
-    expect(within(listbox).queryByRole("option", { name: "Ivy Invited" })).toBeNull();
-    expect(within(listbox).queryByRole("option", { name: "Otto Off" })).toBeNull();
-    await user.click(within(listbox).getByRole("option", { name: "Ada Active" }));
+    expect(
+      within(listbox).queryByRole("option", { name: "Ivy Invited" }),
+    ).toBeNull();
+    expect(
+      within(listbox).queryByRole("option", { name: "Otto Off" }),
+    ).toBeNull();
+    await user.click(
+      within(listbox).getByRole("option", { name: "Ada Active" }),
+    );
     await user.click(within(dialog).getByRole("button", { name: "Hand over" }));
 
     await waitFor(() =>
@@ -54,11 +64,15 @@ describe("handing over a member's work", () => {
     render(<UsersAdminCard />);
     await waitFor(() => expect(screen.getByText("Ada Active")).toBeTruthy());
 
-    await user.click((await rowMenu(user, "Ada Active")).getByText("Deactivate"));
+    await user.click(
+      (await rowMenu(user, "Ada Active")).getByText("Deactivate"),
+    );
     const dialog = await screen.findByRole("dialog");
     await waitFor(() =>
       expect(
-        within(dialog).getByText(/Ada Active still owns 16 deals and 4 leads\./),
+        within(dialog).getByText(
+          /Ada Active still owns 16 deals and 4 leads\./,
+        ),
       ).toBeTruthy(),
     );
     expect(
