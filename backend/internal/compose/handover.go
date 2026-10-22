@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -27,11 +28,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
-
-// handoverObject is the grant a handover is admitted on: it acts for a member,
-// which is member administration, and every record it moves is then gated by
-// that record's own write check.
-const handoverObject = "user_admin"
 
 // handoverRecordKinds are the record types the bulk reassignment moves, in the
 // order a handover takes them.
@@ -70,33 +66,21 @@ type handoverSeam struct {
 	db       *database.DB
 	targets  map[crmcontracts.BulkRecordType]bulkTarget
 	projects *projects.Store
+	members  *identity.Service
 }
 
-func newHandoverSeam(engine *bulkEngine, projectsStore *projects.Store) handoverSeam {
-	return handoverSeam{db: engine.db, targets: engine.targets, projects: projectsStore}
+func newHandoverSeam(engine *bulkEngine, projectsStore *projects.Store, members *identity.Service) handoverSeam {
+	return handoverSeam{db: engine.db, targets: engine.targets, projects: projectsStore, members: members}
 }
 
-// admit is the gate both reads and writes pass: a human holding member
-// administration, about a member who is not archived.
+// admit is the gate both reads and writes pass: a human whom the member
+// administration verbs would admit to act on this member. Every record moved
+// after it is still gated by that record's own write check.
 func (s handoverSeam) admit(ctx context.Context, member ids.UUID, action principal.Action) error {
 	if err := auth.RequireHuman(ctx); err != nil {
 		return err
 	}
-	if err := auth.Require(ctx, handoverObject, action); err != nil {
-		return err
-	}
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		var exists bool
-		if err := tx.QueryRow(ctx,
-			`SELECT EXISTS (SELECT 1 FROM app_user WHERE id = $1 AND archived_at IS NULL)`,
-			member).Scan(&exists); err != nil {
-			return fmt.Errorf("look up member %s: %w", member, err)
-		}
-		if !exists {
-			return apperrors.ErrNotFound
-		}
-		return nil
-	})
+	return s.members.AdmitMemberAdministration(ctx, ids.From[ids.UserKind](member), action)
 }
 
 // Owned counts the live records member owns that the caller can see.
@@ -111,7 +95,7 @@ func (s handoverSeam) owned(ctx context.Context, member ids.UUID) (crmcontracts.
 	var counts crmcontracts.HandoverCounts
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		for table, count := range handoverTally(&counts) {
-			owned, err := auth.VisibleOwnedIDs(ctx, tx, table, member)
+			owned, err := visibleOwnedIDs(ctx, tx, table, member)
 			if err != nil {
 				return err
 			}
@@ -120,6 +104,16 @@ func (s handoverSeam) owned(ctx context.Context, member ids.UUID) (crmcontracts.
 		return nil
 	})
 	return counts, err
+}
+
+// visibleOwnedIDs is auth.VisibleOwnedIDs where a record type the caller may
+// not read at all owns nothing they can count or move.
+func visibleOwnedIDs(ctx context.Context, tx pgx.Tx, table string, member ids.UUID) ([]ids.UUID, error) {
+	owned, err := auth.VisibleOwnedIDs(ctx, tx, table, member)
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		return nil, nil
+	}
+	return owned, err
 }
 
 // handoverTally names each counted table and the field its count lands in.
@@ -157,7 +151,7 @@ func (s handoverSeam) HandOver(ctx context.Context, member, receiver ids.UUID) (
 	projectsMoved, err := s.projects.TransferProjectOwnership(ctx, projects.TransferProjectOwnershipInput{
 		FromOwnerID: ids.From[ids.UserKind](member), ToOwnerID: ids.From[ids.UserKind](receiver),
 	})
-	if err != nil {
+	if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
 		return crmcontracts.UserHandoverResult{}, err
 	}
 	moved.Project = projectsMoved
@@ -178,7 +172,7 @@ func (s handoverSeam) handOverKind(
 	}
 	moved := 0
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		owned, err := auth.VisibleOwnedIDs(ctx, tx, string(kind), member)
+		owned, err := visibleOwnedIDs(ctx, tx, string(kind), member)
 		if err != nil {
 			return err
 		}
@@ -232,7 +226,7 @@ type handoverHandlers struct {
 
 func (s *Server) wireHandoverSurface(pool *pgxpool.Pool) {
 	s.handoverHandlers = handoverHandlers{
-		seam: newHandoverSeam(s.bulkHandlers.engine, ProjectsStoreOver(InstallationDB(pool))),
+		seam: newHandoverSeam(s.bulkHandlers.engine, ProjectsStoreOver(InstallationDB(pool)), identity.NewService(pool)),
 	}
 }
 

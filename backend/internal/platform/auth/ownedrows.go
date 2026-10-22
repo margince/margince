@@ -10,13 +10,18 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // VisibleOwnedIDs lists the live rows of table that owner owns and the caller
 // can see, in id order so two handovers over the same owner lock rows in the
 // same sequence. Visibility is ScopeClauseFor's, the predicate the record list
-// renders, so a row the caller could not find in a list is not counted here.
+// renders, behind the same read grant on the record type, so a row the caller
+// could not find in a list is not counted here.
 func VisibleOwnedIDs(ctx context.Context, tx pgx.Tx, table string, owner ids.UUID) ([]ids.UUID, error) {
+	if err := Require(ctx, table, principal.ActionRead); err != nil {
+		return nil, err
+	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	ownerPos := arg(owner)

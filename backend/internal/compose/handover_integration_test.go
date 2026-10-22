@@ -11,13 +11,15 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func handoverSeamFor(e *integration.Env) handoverSeam {
-	return newHandoverSeam(bulkEngineFor(e), ProjectsStoreOver(e.DB()))
+	return newHandoverSeam(bulkEngineFor(e), ProjectsStoreOver(e.DB()), identity.NewService(e.Pool))
 }
 
 func ownerOf(t *testing.T, e *integration.Env, table string, id ids.UUID) ids.UUID {
@@ -137,5 +139,28 @@ func TestAHandoverRefusesWhatASingleReassignmentWouldRefuse(t *testing.T) {
 	}
 	if got := ownerOf(t, e, "deal", deal); got != e.Rep1 {
 		t.Errorf("a refused handover moved the deal to %s", got)
+	}
+}
+
+// A delegated member administrator may hand on a rep's work and may not touch
+// an admin's: the ceiling every member verb carries holds here too.
+func TestAHandoverKeepsTheCeilingOverAnAdmin(t *testing.T) {
+	e := integration.Setup(t)
+	e.GrantRole(t, e.Rep3, "admin")
+	delegated := e.As(e.Rep2, nil, principal.Permissions{
+		RoleKeys: []string{"manager"},
+		Objects: map[string]principal.ObjectGrant{
+			"user_admin": {Read: true, Update: true},
+			"deal":       {Read: true, Update: true},
+		},
+		RowScope: principal.RowScopeAll,
+	})
+	seam := handoverSeamFor(e)
+
+	if _, err := seam.Owned(delegated, e.Rep3); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a delegated administrator reading an admin's work → %v, want permission denied", err)
+	}
+	if _, err := seam.Owned(delegated, e.Rep1); err != nil {
+		t.Errorf("a delegated administrator reading a rep's work → %v, want it admitted", err)
 	}
 }
