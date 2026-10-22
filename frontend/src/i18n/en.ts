@@ -5846,10 +5846,6 @@ export const en = {
   "compose.copies": "Cc and Bcc",
   "compose.signsOffAs": "Signs off as “{closing}”.",
   "compose.reasonLabel": "Why you may write to {address}",
-  "compose.reasonHint":
-    "Recorded under your name for this kind of message. It is not consent.",
-  "compose.reasonRecord": "Record reason",
-  "compose.reasonRecording": "Recording…",
   "compose.replyIntent": "Purpose of the reply",
   "compose.newIntent": "Purpose of the email",
   "compose.draftReply": "Draft reply",

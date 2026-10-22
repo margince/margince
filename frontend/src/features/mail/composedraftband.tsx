@@ -2,7 +2,6 @@ import { Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { Badge, Button } from "../../design-system/atoms";
-import { Eyebrow } from "../../design-system/eyebrow";
 import { Heading } from "../../design-system/heading";
 import { identifierNumber } from "../../format/format";
 import { useT } from "../../i18n";
@@ -56,14 +55,28 @@ export function DraftBand({
     <div className="compose-band-body">
       <div className="compose-band-line">
         <Sparkles aria-hidden="true" />
-        <p>
+        <p className="compose-band-text">
           <Heading as="span" size="xsmall" role="heading" aria-level={3}>
             {t("compose.aiDisclosureTitle")}
           </Heading>{" "}
-          {provenance.ai_disclosure || t("compose.aiDisclosureFallback")}
+          <span className="t-caption">
+            {provenance.ai_disclosure || t("compose.aiDisclosureFallback")}
+            {provenance.voice_profile_version != null && (
+              <>
+                {" · "}
+                {/* A profile VERSION, never grouped: version 1234 is one
+                    identifier, and "1.234" reads as a different one. */}
+                <span>
+                  {t("compose.voiceVersion", {
+                    n: identifierNumber(provenance.voice_profile_version),
+                  })}
+                </span>
+              </>
+            )}
+          </span>
         </p>
+        {actions}
       </div>
-      {actions}
       <DraftReasons
         reasons={reasons}
         onOpenRecord={openCitation}
@@ -75,23 +88,13 @@ export function DraftBand({
         onClose={() => setOpenEmail(null)}
       />
       <VoiceDegradedNotice degraded={provenance.voice_degraded} />
-      {provenance.voice_profile_version != null && (
-        <>
+      {provenance.voice_profile_version != null &&
+        maturity === "provisional" && (
           <p className="t-caption">
-            {/* A profile VERSION, never grouped: version 1234 is one
-                  identifier, and "1.234" reads as a different one. */}
-            {t("compose.voiceVersion", {
-              n: identifierNumber(provenance.voice_profile_version),
-            })}
+            <Badge>{t("compose.provisional")}</Badge>{" "}
+            {t("compose.provisionalHint")}
           </p>
-          {maturity === "provisional" && (
-            <p>
-              <Badge>{t("compose.provisional")}</Badge>{" "}
-              {t("compose.provisionalHint")}
-            </p>
-          )}
-        </>
-      )}
+        )}
     </div>
   );
 }
@@ -147,8 +150,8 @@ export function RewriteRow({
 }>) {
   const t = useT();
   return (
-    <div className="compose-rewrite">
-      <Eyebrow>{t("compose.rewrite")}</Eyebrow>
+    <fieldset className="compose-rewrite">
+      <legend className="sr-only">{t("compose.rewrite")}</legend>
       {REWRITES.map((rewrite) => (
         <Button
           key={rewrite.key}
@@ -156,10 +159,9 @@ export function RewriteRow({
           disabled={disabled}
           onClick={() => onRewrite(t(rewrite.instruction))}
         >
-          <Sparkles aria-hidden="true" />
           {t(rewrite.label)}
         </Button>
       ))}
-    </div>
+    </fieldset>
   );
 }

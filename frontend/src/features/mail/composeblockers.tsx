@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useState } from "react";
+import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { decidingRecipient } from "../../components/sendpermission";
 import type { MessageKey } from "../../i18n/en";
 import type { Activity } from "./compose";
 import { ComposeOutcome, ComposeWhy, MailSendNotices } from "./compose.parts";
 import type { ComposeFields } from "./composefields";
-import { ContactReasonForm, type ReasonTarget } from "./composereason";
+import { ContactReasonPick, type ReasonTarget } from "./composereason";
 import type { ComposeSend } from "./composesend";
 
 type Preview = components["schemas"]["SendAuthorizationPreview"];
@@ -70,11 +70,9 @@ export function ComposeBlockers({
   contactId: string | undefined;
   bodyKey: MessageKey;
   /** The engine's answer, drawn by the surface that asks for it, with the
-   *  override this band offers where a reason may be recorded. */
-  permission: (onOverride: (() => void) | undefined) => ReactNode;
+   *  reason pick this band offers where a reason may be recorded. */
+  permission: (override: ReactNode) => ReactNode;
 }>) {
-  // Whether the reader asked to record a reason, which the refusal offers.
-  const [vouching, setVouching] = useState(false);
   const target = isChannelReply
     ? undefined
     : reasonTargetOf(send.permission, contactOf);
@@ -93,13 +91,13 @@ export function ComposeBlockers({
             cc={fields.cc}
             context={send.claimedContext}
           />
-          {drawPermission(target ? () => setVouching(true) : undefined)}
-          {target && vouching && (
-            <ContactReasonForm
-              key={`${target.contactId}:${target.category}`}
-              target={target}
-              onRecorded={() => setVouching(false)}
-            />
+          {drawPermission(
+            target && (
+              <ContactReasonPick
+                key={`${target.contactId}:${target.category}`}
+                target={target}
+              />
+            ),
           )}
         </>
       )}

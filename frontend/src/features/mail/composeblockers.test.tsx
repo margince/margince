@@ -2,6 +2,7 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { pickOption } from "../../design-system/select-testing";
 import {
   allowedPreview,
   isPreviewDoor,
@@ -137,15 +138,15 @@ describe("recording a reason to write where the refusal is read", () => {
     await user.type(screen.getByLabelText("To"), "anna@example.test");
     await user.tab();
 
+    // The refusal carries the pick itself: choosing a reason records it.
     const checks = within(screen.getAllByRole("dialog")[0]);
-    await user.click(
-      await checks.findByRole("button", { name: "Record reason for contact" }),
+    await pickOption(
+      user,
+      await checks.findByRole("combobox", {
+        name: "Why you may write to anna@example.test",
+      }),
+      "Follow-up they requested",
     );
-    await user.type(
-      checks.getByLabelText("Why you may write to anna@example.test"),
-      "She asked for the revised quote at the fair.",
-    );
-    await user.click(checks.getByRole("button", { name: "Record reason" }));
 
     await waitFor(() =>
       expect(
@@ -153,13 +154,15 @@ describe("recording a reason to write where the refusal is read", () => {
           ?.body,
       ).toEqual({
         category: "requested_followup",
-        reason: "She asked for the revised quote at the fair.",
+        reason: "Follow-up they requested",
       }),
     );
     // Asked again, the engine allows it and the warning goes.
     await waitFor(() =>
       expect(
-        screen.queryByRole("button", { name: "Record reason for contact" }),
+        screen.queryByRole("combobox", {
+          name: "Why you may write to anna@example.test",
+        }),
       ).toBeNull(),
     );
   });

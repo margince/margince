@@ -5676,10 +5676,6 @@ export const vi = {
   "compose.copies": "Cc và Bcc",
   "compose.signsOffAs": "Kết thư bằng “{closing}”.",
   "compose.reasonLabel": "Vì sao bạn có thể viết cho {address}",
-  "compose.reasonHint":
-    "Được ghi dưới tên bạn cho loại thư này. Đây không phải là sự đồng ý.",
-  "compose.reasonRecord": "Ghi lý do",
-  "compose.reasonRecording": "Đang ghi…",
   "compose.replyIntent": "Mục đích trả lời",
   "compose.newIntent": "Mục đích email",
   "compose.draftReply": "Soạn trả lời",

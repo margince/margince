@@ -437,6 +437,16 @@ export function ComposeWindow({
                 carriageBlocks={carriageBlocks}
                 flagged={send.flagged}
                 voice={voice}
+                attach={
+                  <AttachAction
+                    key={fileTarget}
+                    entityType={entityType}
+                    entityId={entityId}
+                    chosen={attached.files}
+                    onChange={attached.setFiles}
+                    disabled={voice.rejectionInFlight}
+                  />
+                }
               />
             </div>
             <AttachedFiles
@@ -452,8 +462,8 @@ export function ComposeWindow({
               contactOf={records.contactOf}
               contactId={contactId}
               bodyKey={wording.body}
-              permission={(onOverride) => (
-                <SendPermission {...send.permission} onOverride={onOverride} />
+              permission={(override) => (
+                <SendPermission {...send.permission} override={override} />
               )}
             />
           </div>
@@ -464,16 +474,6 @@ export function ComposeWindow({
             // The button stays live with fields outstanding, so a press can
             // name them. A rejection or a draft save in flight holds it.
             held={voice.rejectionInFlight || savedDraft.saving}
-            attach={
-              <AttachAction
-                key={fileTarget}
-                entityType={entityType}
-                entityId={entityId}
-                chosen={attached.files}
-                onChange={attached.setFiles}
-                disabled={voice.rejectionInFlight}
-              />
-            }
             onPickMoment={() => setPickingMoment(true)}
             sendAt={fields.sendAt}
             savedDraft={savedDraft}

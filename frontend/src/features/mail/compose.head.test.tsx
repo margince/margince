@@ -386,12 +386,12 @@ describe("the project a message files under", () => {
 
   // Nothing connected is nothing to ask about. The fixture at the top of this
   // file carries no projects, which is the ordinary contact.
-  it("draws no picker when no project is connected", async () => {
+  it("keeps the picker shut on No project when no project is connected", async () => {
     stubRoutes();
     render(drawer());
 
     await screen.findByLabelText("To");
-    expect(screen.queryByLabelText("Project")).toBeNull();
+    expectNoProjectToOffer();
   });
 
   // A message written FROM a project is about that project. There is no other
@@ -462,7 +462,7 @@ describe("the project a message files under", () => {
 
   // A closed project is history, and a message written today is not about
   // history — so the picker stands down exactly as it does with none connected.
-  it("draws no picker for a closed project", async () => {
+  it("offers no closed project", async () => {
     fileStubs({
       "GET /projects/proj-1": () =>
         jsonResponse({ ...PROJECT, phase: "closed" }),
@@ -477,6 +477,13 @@ describe("the project a message files under", () => {
     );
 
     await screen.findByLabelText("To");
-    expect(screen.queryByLabelText("Project")).toBeNull();
+    expectNoProjectToOffer();
   });
 });
+
+// The picker stays in its row, so the head keeps its shape, but it offers nothing.
+function expectNoProjectToOffer() {
+  const picker = screen.getByLabelText("Project");
+  expect(picker.textContent).toContain("No project");
+  expect(picker.hasAttribute("disabled")).toBe(true);
+}

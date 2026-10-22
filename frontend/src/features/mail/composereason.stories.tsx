@@ -4,32 +4,33 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen } from "storybook/test";
 import { StoryProviders } from "../../testing/story-utils";
-import { ContactReasonForm } from "./composereason";
+import { ContactReasonPick } from "./composereason";
 
-const meta: Meta<typeof ContactReasonForm> = {
+const meta: Meta<typeof ContactReasonPick> = {
   title: "Patterns/Compose mail/Contact reason",
-  component: ContactReasonForm,
+  component: ContactReasonPick,
 };
 export default meta;
 
-/** A reason to write, recorded under the rep's name where a send is refused
- *  for lack of one. Nothing typed yet, so the verb waits. */
+/** A reason to write, picked where a send is refused for lack of one. The
+ *  pick records it under the rep's name. Nothing picked yet. */
 export const Empty: StoryObj = {
   render: () => (
     <StoryProviders>
-      <ContactReasonForm
+      <ContactReasonPick
         target={{
           contactId: "c-1",
           address: "anna@example.test",
           category: "requested_followup",
         }}
-        onRecorded={() => {}}
       />
     </StoryProviders>
   ),
   play: async () => {
     await expect(
-      await screen.findByLabelText("Why you may write to anna@example.test"),
+      await screen.findByRole("combobox", {
+        name: "Why you may write to anna@example.test",
+      }),
     ).toBeInTheDocument();
   },
 };

@@ -4,9 +4,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import type { components } from "../../api/schema";
-import { Button, Field, TextInput } from "../../design-system/atoms";
+import { Field } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
+import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
+import { contextOptions } from "../../lib/compose-context";
 import { problemMessageOf } from "../../lib/problem";
 import { recordOverrule } from "./sendreviewaction";
 
@@ -22,21 +24,18 @@ export type ReasonTarget = Readonly<{
 type Vouch = ReasonTarget & Readonly<{ reason: string }>;
 
 /**
- * A rep's own reason to write to a contact the engine found nothing for. It is
- * recorded where the refusal is read, rather than on the contact page.
- *
- * It is the standing vouch `allowContact` writes: not consent and not a lawful
- * basis, and only for the one category the engine resolved this message to.
- * The engine's answer is then asked again, so the composer reads the server's
- * verdict on the vouch rather than assuming it.
+ * A rep's own reason to write to a contact the engine found nothing for,
+ * picked where the refusal is read. The pick is the record: the vouch is
+ * written at once, under the rep's name, with the picked label as its reason.
+ * It is the standing vouch `allowContact` writes, not consent, and covers only
+ * the category the engine resolved. The engine is then asked again.
  */
-export function ContactReasonForm({
+export function ContactReasonPick({
   target,
-  onRecorded,
-}: Readonly<{ target: ReasonTarget; onRecorded: () => void }>) {
+}: Readonly<{ target: ReasonTarget }>) {
   const t = useT();
   const queryClient = useQueryClient();
-  const [reason, setReason] = useState("");
+  const [picked, setPicked] = useState("");
   const vouch = useMutation({
     mutationFn: (asked: Vouch) =>
       recordOverrule({
@@ -46,42 +45,34 @@ export function ContactReasonForm({
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["send-permission"] });
-      onRecorded();
     },
   });
-  const written = reason.trim();
+  const options = contextOptions(t).filter((option) => option.value !== "");
   return (
-    <form
-      className="compose-reason"
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (written) vouch.mutate({ ...target, reason: written });
-      }}
-    >
+    <div className="compose-reason">
       <Field
         label={t("compose.reasonLabel", { address: target.address })}
-        hint={t("compose.reasonHint")}
+        labelHidden
       >
         {(control) => (
-          <TextInput
+          <Select
             {...control}
-            value={reason}
-            maxLength={500}
-            onChange={(event) => setReason(event.target.value)}
+            options={options}
+            value={picked}
+            placeholder={t("compose.whyPick")}
+            disabled={vouch.isPending}
+            onChange={(value) => {
+              const label = options.find((o) => o.value === value)?.label;
+              if (!label) return;
+              setPicked(value);
+              vouch.mutate({ ...target, reason: label });
+            }}
           />
         )}
       </Field>
-      <Button
-        type="submit"
-        pending={vouch.isPending}
-        disabled={!written}
-        busyLabel={t("compose.reasonRecording")}
-      >
-        {t("compose.reasonRecord")}
-      </Button>
       {vouch.isError && (
         <ErrorLine>{problemMessageOf(vouch.error, t)}</ErrorLine>
       )}
-    </form>
+    </div>
   );
 }

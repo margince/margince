@@ -110,7 +110,6 @@ export function ComposeFoot({
   send,
   isChannelReply,
   held,
-  attach,
   onPickMoment,
   sendAt,
   savedDraft,
@@ -122,8 +121,6 @@ export function ComposeFoot({
   isChannelReply: boolean;
   /** A write about these words is in flight, so the send waits for it. */
   held: boolean;
-  /** The way to add files, beside the send. */
-  attach: ReactNode;
   onPickMoment: () => void;
   sendAt: string;
   savedDraft: ReturnType<typeof useSavedDraft>;
@@ -138,7 +135,6 @@ export function ComposeFoot({
     <div className="compose-foot">
       {error && <ErrorLine>{error}</ErrorLine>}
       <div className="compose-foot-row">
-        {attach}
         <span className="t-caption compose-foot-status" role="status">
           {scheduled
             ? t("compose.willGoOut", {
@@ -225,6 +221,7 @@ export function ComposeBody({
   carriageBlocks,
   flagged,
   voice,
+  attach,
 }: Readonly<{
   bodyId: string;
   fields: ComposeFields;
@@ -238,6 +235,8 @@ export function ComposeBody({
   carriageBlocks: readonly CarriageViolation[];
   flagged: ReadonlySet<MissingField>;
   voice: VoiceDraft;
+  /** The paperclip, among the editor's own marks. */
+  attach: ReactNode;
 }>) {
   const t = useT();
   const richTextLabels = useRichTextLabels();
@@ -264,6 +263,7 @@ export function ComposeBody({
         rows={8}
         grow
         disabled={frozen}
+        actions={attach}
       />
       <FieldNeed show={flagged.has("body")} need={t("compose.missingBody")} />
       {mail && <SignOffPreview body={fields.body} subject={fields.subject} />}
@@ -359,7 +359,11 @@ export function EarlierMessages({
                 count: formatNumber(readable.length, locale),
               })
         }
-        icon={<Ellipsis aria-hidden="true" />}
+        icon={
+          <span className="compose-earlier-pill">
+            <Ellipsis aria-hidden="true" />
+          </span>
+        }
         pressed={open}
         onClick={() => setOpen((was) => !was)}
       />
