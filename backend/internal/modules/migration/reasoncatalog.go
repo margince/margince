@@ -328,7 +328,7 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 	ReasonEmailNamesNoContact: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "“{value}” belongs to a sending system, not a human, so it does not become a contact.",
 		textlang.German:     "{value:q} gehört zu einem Versandsystem, nicht zu einem Menschen, und wird darum kein Kontakt.",
-		textlang.Vietnamese: "{value:q} thuộc về một hệ thống gửi thư, không phải một người, nên không trở thành liên hệ.",
+		textlang.Vietnamese: "{value:q} thuộc về một hệ thống gửi thư, không phải của một cá nhân, nên không trở thành liên hệ.",
 	}},
 	ReasonNotADomain: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "“{value}” is not a domain that can be written.",

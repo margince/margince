@@ -420,7 +420,7 @@ export const vi = {
   "approval.preview.importScopeUnavailable":
     "Đề xuất nhập này không có đầy đủ thay đổi theo từng dòng. Mở Nhập dữ liệu để xem nguồn và lần chạy thử trước khi bắt đầu nhập.",
   "approval.preview.machineAddress":
-    "Không thể chạy phê duyệt: địa chỉ thuộc về một hệ thống gửi thư, không phải một người.",
+    "Không thể chạy phê duyệt: địa chỉ thuộc về một hệ thống gửi thư, không phải của một cá nhân.",
   "approval.preview.confirmationOnly":
     "Ghi nhận xác nhận này và hoàn tất lượt tự động hóa đang chờ. Không cho phép cập nhật bản ghi hoặc gửi tin nhắn.",
   "approval.preview.confirmationQuestion": "Câu hỏi cần xác nhận",
@@ -7232,7 +7232,7 @@ export const vi = {
   "import.reason.duplicate_email":
     "Địa chỉ email này đã thuộc về một liên hệ khác.",
   "import.reason.email_names_no_contact":
-    "“{value}” thuộc về một hệ thống gửi thư, không phải một người, nên không trở thành liên hệ.",
+    "“{value}” thuộc về một hệ thống gửi thư, không phải của một cá nhân, nên không trở thành liên hệ.",
   "import.reason.employer_column_empty":
     "Cột công ty để trống nên hàng không nêu nhà tuyển dụng nào.",
   "import.reason.employer_column_empty_dropped":
