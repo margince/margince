@@ -519,7 +519,7 @@
           "default": 500
         },
         "confidentiality_pass_cap": {
-          "description": "Held mail threads one confidentiality pass may judge; the rest wait for the next pass.",
+          "description": "Held mail threads one review pass may judge; the rest wait for the next pass.",
           "type": [
             "integer",
             "null"

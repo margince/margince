@@ -38,7 +38,7 @@ var ConfidentialityPassCap = config.DefineStored(config.Spec[int]{
 	Default: config.Some(DefaultConfidentialityPassCap),
 	Min:     config.Some(1),
 	Max:     config.Some(MaxConfidentialityPassCap),
-	Doc:     "Held mail threads one confidentiality pass may judge; the rest wait for the next pass.",
+	Doc:     "Held mail threads one review pass may judge; the rest wait for the next pass.",
 }, config.Store{
 	RBACObject: captureSettingsObject, AuditVerb: captureAuditVerb,
 	MachineryApplied: true, // the engine reads it at the start of every pass
