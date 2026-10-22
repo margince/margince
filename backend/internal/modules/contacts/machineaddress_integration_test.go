@@ -23,11 +23,11 @@ import (
 
 const sendingSystemAddress = "signing-noreply@machine.test"
 
-func requireFault(t *testing.T, err error, field, code string) {
+func requireMachineAddressFault(t *testing.T, err error) {
 	t.Helper()
 	var fault *values.ParseError
-	if !errors.As(err, &fault) || fault.Field != field || fault.Code != code {
-		t.Fatalf("err = %v, want a %s fault %q", err, field, code)
+	if !errors.As(err, &fault) || fault.Field != "emails" || fault.Code != MachineAddressCode {
+		t.Fatalf("err = %v, want an emails fault %q", err, MachineAddressCode)
 	}
 }
 
@@ -86,7 +86,7 @@ func TestACreateWithASendingSystemsAddressIsRefusedAndWritesNothing(t *testing.T
 		FullName: "Signing-Noreply", Source: "manual",
 		Emails: []ContactEmailInput{{Email: sendingSystemAddress, EmailType: emailTypeWork, IsPrimary: true}},
 	})
-	requireFault(t, err, "emails", MachineAddressCode)
+	requireMachineAddressFault(t, err)
 	if after := writeShapeRows(ctx, t, e); after != before {
 		t.Errorf("contact, audit_log, event_outbox rows went from %v to %v on a refused create", before, after)
 	}
@@ -105,7 +105,7 @@ func TestAnUpdateCannotReplaceAnAddressWithASendingSystemsAddress(t *testing.T) 
 	_, err = e.store.UpdateContact(ctx, ids.From[ids.ContactKind](ids.UUID(made.Id)), UpdateContactInput{
 		Emails: []ContactEmailInput{{Email: "receipts@machine.test", EmailType: emailTypeWork, IsPrimary: true}},
 	})
-	requireFault(t, err, "emails", MachineAddressCode)
+	requireMachineAddressFault(t, err)
 	if held := liveAddressesOf(ctx, t, e, ids.UUID(made.Id)); !slices.Equal(held, []string{"anna@machine.test"}) {
 		t.Errorf("addresses after the refused update = %v, want the old one kept", held)
 	}
@@ -120,7 +120,7 @@ func TestEnsureContactByEmailRefusesASendingSystemsAddressEvenWhenAContactHoldsI
 	legacyMachineContact(ctx, t, e, sendingSystemAddress)
 
 	_, err := e.store.EnsureContactByEmail(ctx, "Signing", sendingSystemAddress, "public_booking")
-	requireFault(t, err, "emails", MachineAddressCode)
+	requireMachineAddressFault(t, err)
 	if _, err := e.store.EnsureContactByEmail(ctx, "Notifications", "notifications@machine.test", "public_booking"); err == nil {
 		t.Error("a booking from notifications@ minted a contact")
 	}
@@ -134,7 +134,7 @@ func TestTheCounterpartyPathRefusesASendingSystemsAddress(t *testing.T) {
 	before := writeShapeRows(ctx, t, e)
 
 	_, err := e.store.EnsureCounterparty(ctx, e.ensureInput(ctx, t, "mailer-daemon@counterparty.test", "Mail Delivery", "counterparty.test"))
-	requireFault(t, err, "emails", MachineAddressCode)
+	requireMachineAddressFault(t, err)
 	if after := writeShapeRows(ctx, t, e); after[0] != before[0] {
 		t.Errorf("contacts went from %d to %d on a refused counterparty", before[0], after[0])
 	}
