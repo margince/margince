@@ -40,6 +40,26 @@ function text(value: unknown): string | undefined {
 }
 
 /**
+ * The company the employer box names, or null when the reader may not create
+ * the employment or cannot see the company. Until the grants and the company
+ * read have answered, `settled` is false and the staged value stands, so a
+ * quick accept does not untick the box. A read that failed is no answer
+ * either; only a company the reader cannot see is.
+ */
+function useEmployerOffer(
+  companyId: string | undefined,
+  company: ReturnType<typeof useEntityName>,
+): { name: string | null; settled: boolean } {
+  const mayEmploy = useCanWrite("relationship", "create");
+  const grantsPending = useMe().isPending;
+  const known = company.name !== null || company.reading === "unnamed";
+  return {
+    name: mayEmploy && companyId ? company.name : null,
+    settled: !grantsPending && (!mayEmploy || !companyId || known),
+  };
+}
+
+/**
  * What a `linkedin_match` card offers, and the boxes as the reader set them.
  * Undefined for any other kind, and for a card staged before the boxes
  * existed, which applies only the profile link.
@@ -54,11 +74,10 @@ export function useLinkedInChoice(
     typeof change.use_as_employer === "boolean";
   const companyId = offered ? text(change.employer_company_id) : undefined;
   const company = useEntityName("company", companyId);
+  const employer = useEmployerOffer(companyId, company);
   const contact = useQuery(
     contactQuery(offered ? text(change.contact_id) : undefined),
   );
-  const mayEmploy = useCanWrite("relationship", "create");
-  const grantsPending = useMe().isPending;
   // Held per approval, so a row that is handed another card starts from that
   // card's staged boxes rather than from the last reader's ticks.
   const [held, setHeld] = useState<
@@ -70,21 +89,11 @@ export function useLinkedInChoice(
     use_as_employer: change.use_as_employer === true,
   };
   const titleOffered = text(change.connection_position) !== undefined;
-  const employerName = mayEmploy && companyId ? company.name : null;
-  // Until the grants and the company read have answered, the box is not shown
-  // and the staged value stands: a quick accept must not untick it. A read
-  // that failed is no answer either; only a company the reader cannot see is.
-  const employerSettled =
-    !grantsPending &&
-    (!mayEmploy ||
-      !companyId ||
-      company.name !== null ||
-      company.reading === "unnamed");
   const choice = held?.id === approval.id ? held.choice : staged;
   const sent = {
     use_as_title: titleOffered && choice.use_as_title,
-    use_as_employer: employerSettled
-      ? employerName !== null && choice.use_as_employer
+    use_as_employer: employer.settled
+      ? employer.name !== null && choice.use_as_employer
       : staged.use_as_employer,
   };
   const same =
@@ -92,7 +101,7 @@ export function useLinkedInChoice(
     sent.use_as_employer === staged.use_as_employer;
   return {
     staged,
-    employerName,
+    employerName: employer.name,
     employerNow: contact.data?.employer?.company_name ?? null,
     titleOffered,
     choice,
@@ -103,9 +112,15 @@ export function useLinkedInChoice(
 
 export function LinkedInMatchChoice({
   offer,
+  decided,
   disabled,
-}: Readonly<{ offer: LinkedInOffer; disabled?: boolean }>) {
+}: Readonly<{
+  offer: LinkedInOffer | undefined;
+  decided?: boolean;
+  disabled?: boolean;
+}>) {
   const t = useT();
+  if (decided || !offer) return null;
   if (!offer.titleOffered && offer.employerName === null) return null;
   return (
     <div className="linkedin-match-choice">

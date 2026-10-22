@@ -434,9 +434,11 @@ export function ApprovalRow({
           {/* Read-only: the approver may release or refuse the message, and an
               override of the engine belongs to whoever is writing to the
               contact, recorded against their own name. */}
-          {!decided && linkedIn && (
-            <LinkedInMatchChoice offer={linkedIn} disabled={decide.isPending} />
-          )}
+          <LinkedInMatchChoice
+            offer={linkedIn}
+            decided={decided}
+            disabled={decide.isPending}
+          />
           {!decided && staged !== undefined && (
             <SendPermission
               preview={permission.preview}
