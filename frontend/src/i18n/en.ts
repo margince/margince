@@ -5851,6 +5851,8 @@ export const en = {
   "compose.newThread": "New thread",
   "compose.copies": "Cc and Bcc",
   "compose.signsOffAs": "Signs off as “{closing}”.",
+  "compose.reasonRecord": "Record this reason",
+  "compose.reasonRecordFor": "Record this reason: {reason}, for {address}",
   "compose.reasonLabel": "Why you may write to {address}",
   "compose.replyIntent": "Purpose of the reply",
   "compose.newIntent": "Purpose of the email",

@@ -15,8 +15,8 @@
   flex-direction: column;
   inline-size: min(var(--dockWidth), calc(100vw - var(--space-5) * 2));
   block-size: min(var(--dockHeight), calc(100dvh - var(--space-6)));
-  border-start-start-radius: var(--r-xs);
-  border-start-end-radius: var(--r-xs);
+  border-start-start-radius: var(--r-sm);
+  border-start-end-radius: var(--r-sm);
   background: var(--bgElevated);
   box-shadow: var(--shadow-pop);
   overflow: clip;
@@ -120,8 +120,8 @@
   min-block-size: var(--controlHeight);
   padding-inline: var(--space-4) var(--space-3);
   border: 0;
-  border-start-start-radius: var(--r-xs);
-  border-start-end-radius: var(--r-xs);
+  border-start-start-radius: var(--r-sm);
+  border-start-end-radius: var(--r-sm);
   background: var(--bgRail);
   color: var(--railIconActive);
   box-shadow: var(--shadow-pop);

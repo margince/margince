@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { decidingRecipient } from "../../components/sendpermission";
 import type { MessageKey } from "../../i18n/en";
+import { asksWhy } from "../../lib/compose-context";
 import type { Activity } from "./compose";
 import { ComposeOutcome, ComposeWhy, MailSendNotices } from "./compose.parts";
 import type { ComposeFields } from "./composefields";
@@ -76,6 +77,11 @@ export function ComposeBlockers({
   const target = isChannelReply
     ? undefined
     : reasonTargetOf(send.permission, contactOf);
+  // Until the message says why it is written, the engine has judged no reason.
+  // Its missing-reason refusal would then ask the same question twice.
+  const whyMissing = asksWhy(anchorActivity) && fields.context === "";
+  const unproven =
+    decidingRecipient(send.permission.preview).state === "unproven";
   return (
     <div className="compose-blockers">
       <ComposeWhy
@@ -91,14 +97,16 @@ export function ComposeBlockers({
             cc={fields.cc}
             context={send.claimedContext}
           />
-          {drawPermission(
-            target && (
-              <ContactReasonPick
-                key={`${target.contactId}:${target.category}`}
-                target={target}
-              />
-            ),
-          )}
+          {!(whyMissing && unproven) &&
+            drawPermission(
+              target && (
+                <ContactReasonPick
+                  key={`${target.contactId}:${target.category}`}
+                  target={target}
+                  chosen={send.claimedContext}
+                />
+              ),
+            )}
         </>
       )}
       <ComposeOutcome

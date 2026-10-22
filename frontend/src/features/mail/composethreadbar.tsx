@@ -8,7 +8,7 @@ import { activityTimeline } from "../../design-system/activitytimeline";
 import { Button, PendingBody } from "../../design-system/atoms";
 import { EmailEntry } from "../../design-system/emailentry";
 import { EmailText } from "../../design-system/emailtext";
-import { Eyebrow } from "../../design-system/eyebrow";
+import { Heading } from "../../design-system/heading";
 import type { NameOf } from "../../design-system/participants";
 import { Popover } from "../../design-system/popover";
 import { SurfaceState } from "../../design-system/surfacestate";
@@ -169,11 +169,11 @@ export function ThreadBar({
             {t("compose.threadLeave")}
           </Button>
         )}
-        <Eyebrow as="h2">
+        <Heading as="h2" size="small">
           {recordName
             ? t("compose.threadsWith", { name: recordName })
             : t("compose.threads")}
-        </Eyebrow>
+        </Heading>
         {recent.pending ? (
           <PendingBody label={t("compose.threadPending")} lines={3} />
         ) : (

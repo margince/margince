@@ -85,6 +85,14 @@
   margin-inline-start: 2px;
 }
 
+/* A glyph handed in from outside, such as the attach trigger, at the size the
+   format marks draw theirs. */
+.richtext-btn > svg {
+  flex: none;
+  inline-size: 14px;
+  block-size: 14px;
+}
+
 .richtext-btn:hover {
   background: var(--bgHover);
   color: var(--textPrimary);

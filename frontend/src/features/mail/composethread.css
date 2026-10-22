@@ -40,11 +40,14 @@
 }
 
 /* The list the bar opens: the way out to a new thread, then the threads. */
-.compose-threadmenu {
+/* Wide enough for a subject to read whole: the panel's own 20rem cap is for
+   asides, and this is a list to choose from. */
+.popover-panel.compose-threadmenu {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  inline-size: min(30rem, calc(100vw - var(--space-5) * 2));
+  inline-size: min(32rem, calc(100vw - var(--space-5) * 2));
+  max-inline-size: none;
 }
 .compose-threadmenu > * {
   margin: 0;

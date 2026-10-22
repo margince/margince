@@ -87,43 +87,49 @@ describe("who a reason to write is recorded on", () => {
   });
 });
 
+// The backend a vouch is recorded against: the preview door answers from the
+// vouch, as the engine would.
+function vouchBackend() {
+  let vouched = false;
+  const sent = stubRoutes({
+    "GET /activities/act-1": () =>
+      jsonResponse({ ...activity202, direction: "inbound" }),
+    "GET /contacts/c-1/360": () =>
+      jsonResponse({
+        as_of: "2026-08-01T09:00:00Z",
+        sections_omitted: [],
+        contact: {
+          id: "c-1",
+          full_name: "Anna Brandt",
+          emails: [{ email: "anna@example.test" }],
+        },
+      }),
+    "POST /contacts/c-1/consent/allow": () => {
+      vouched = true;
+      return jsonResponse({ override_id: "o-1" }, 201);
+    },
+  });
+  const fetcher = vi.mocked(fetch);
+  const stubbed = fetcher.getMockImplementation();
+  if (!stubbed) throw new Error("Missing test transport");
+  fetcher.mockImplementation(async (input, init) => {
+    const url = input instanceof Request ? input.url : String(input);
+    if (isPreviewDoor(new URL(url, "https://test.local").pathname)) {
+      return jsonResponse(
+        vouched
+          ? allowedPreview(["anna@example.test"])
+          : refusedPreview("anna@example.test", NOTHING_ON_RECORD),
+      );
+    }
+    return stubbed(input, init);
+  });
+  return sent;
+}
+
 describe("recording a reason to write where the refusal is read", () => {
   it("records it on the contact for the category the engine resolved, then asks again", async () => {
     const user = userEvent.setup();
-    let vouched = false;
-    const sent = stubRoutes({
-      "GET /activities/act-1": () =>
-        jsonResponse({ ...activity202, direction: "inbound" }),
-      "GET /contacts/c-1/360": () =>
-        jsonResponse({
-          as_of: "2026-08-01T09:00:00Z",
-          sections_omitted: [],
-          contact: {
-            id: "c-1",
-            full_name: "Anna Brandt",
-            emails: [{ email: "anna@example.test" }],
-          },
-        }),
-      "POST /contacts/c-1/consent/allow": () => {
-        vouched = true;
-        return jsonResponse({ override_id: "o-1" }, 201);
-      },
-    });
-    // The preview door answers from the vouch, as the engine would.
-    const fetcher = vi.mocked(fetch);
-    const stubbed = fetcher.getMockImplementation();
-    if (!stubbed) throw new Error("Missing test transport");
-    fetcher.mockImplementation(async (input, init) => {
-      const url = input instanceof Request ? input.url : String(input);
-      if (isPreviewDoor(new URL(url, "https://test.local").pathname)) {
-        return jsonResponse(
-          vouched
-            ? allowedPreview(["anna@example.test"])
-            : refusedPreview("anna@example.test", NOTHING_ON_RECORD),
-        );
-      }
-      return stubbed(input, init);
-    });
+    const sent = vouchBackend();
     render(
       <ComposeModal
         activityId="act-1"
@@ -164,6 +170,50 @@ describe("recording a reason to write where the refusal is read", () => {
           name: "Why you may write to anna@example.test",
         }),
       ).toBeNull(),
+    );
+  });
+
+  it("asks once on a new message, then records the reason it names", async () => {
+    const user = userEvent.setup();
+    const sent = vouchBackend();
+    render(
+      <ComposeModal
+        entityType="contact"
+        entityId="c-1"
+        contactId="c-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+    await user.type(await screen.findByLabelText("To"), "anna@example.test");
+    await user.tab();
+
+    // Until the message says why, the engine's refusal does not ask again.
+    const checks = within(screen.getAllByRole("dialog")[0]);
+    const why = await checks.findByRole("combobox", {
+      name: "Reason for contact",
+    });
+    expect(
+      checks.queryByRole("combobox", {
+        name: "Why you may write to anna@example.test",
+      }),
+    ).toBeNull();
+
+    await pickOption(user, why, "Follow-up they requested");
+    await user.click(
+      await checks.findByRole("button", {
+        name: "Record this reason: Follow-up they requested, for anna@example.test",
+      }),
+    );
+
+    await waitFor(() =>
+      expect(
+        sent.find((call) => call.key === "POST /contacts/c-1/consent/allow")
+          ?.body,
+      ).toEqual({
+        category: "requested_followup",
+        reason: "Follow-up they requested",
+      }),
     );
   });
 });

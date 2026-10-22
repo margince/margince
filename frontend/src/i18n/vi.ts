@@ -5681,6 +5681,8 @@ export const vi = {
   "compose.newThread": "Chuỗi thư mới",
   "compose.copies": "Cc và Bcc",
   "compose.signsOffAs": "Kết thư bằng “{closing}”.",
+  "compose.reasonRecord": "Ghi lý do này",
+  "compose.reasonRecordFor": "Ghi lý do này: {reason}, cho {address}",
   "compose.reasonLabel": "Vì sao bạn có thể viết cho {address}",
   "compose.replyIntent": "Mục đích trả lời",
   "compose.newIntent": "Mục đích email",

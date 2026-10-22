@@ -5816,6 +5816,8 @@ export const de = {
   "compose.newThread": "Neuer Thread",
   "compose.copies": "Cc und Bcc",
   "compose.signsOffAs": "Die Nachricht endet mit „{closing}“.",
+  "compose.reasonRecord": "Diesen Grund erfassen",
+  "compose.reasonRecordFor": "Diesen Grund erfassen: {reason}, für {address}",
   "compose.reasonLabel": "Warum du an {address} schreiben darfst",
   "compose.replyIntent": "Zweck der Antwort",
   "compose.newIntent": "Zweck der E-Mail",
