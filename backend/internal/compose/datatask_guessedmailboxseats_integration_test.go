@@ -79,7 +79,7 @@ func guessedMailboxPreview(ctx context.Context, t *testing.T, e *integration.Env
 	return count
 }
 
-// limitToParticipants narrows one message to the people on it.
+// limitToParticipants narrows one message to its participants.
 func limitToParticipants(t *testing.T, conn *pgx.Conn, id ids.UUID) {
 	t.Helper()
 	if _, err := conn.Exec(context.Background(), `UPDATE activity SET audience = 'participants' WHERE id = $1`, id); err != nil {

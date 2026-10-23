@@ -79,6 +79,9 @@ func sqlOf(t *testing.T, file, fn string) string {
 				sql.WriteString(lit.Value)
 				sql.WriteString("\n")
 			}
+			if call, ok := n.(*ast.CallExpr); ok {
+				sql.WriteString(composedFragment(call))
+			}
 			return true
 		})
 	}
@@ -86,6 +89,16 @@ func sqlOf(t *testing.T, file, fn string) string {
 		t.Fatalf("found no query in %s:%s — the extraction is broken, so every comparison is vacuous", file, fn)
 	}
 	return sql.String()
+}
+
+// composedFragment renders a shared SQL fragment the function splices in, so
+// the relations it reads count as the function's own.
+func composedFragment(call *ast.CallExpr) string {
+	name, ok := call.Fun.(*ast.Ident)
+	if !ok || name.Name != "ParticipantStandsSQL" {
+		return ""
+	}
+	return ParticipantStandsSQL("ap", "a") + "\n"
 }
 
 // relationsIn collects the relations a SQL text reads, from its own FROM and
