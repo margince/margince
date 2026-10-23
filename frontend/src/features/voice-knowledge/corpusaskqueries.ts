@@ -119,6 +119,11 @@ export function useHandbookAsk(wanted: boolean) {
         try {
           answer = await askCorpus(id, question);
         } catch (error) {
+          // After a not_covered handbook, showing it alone would claim the
+          // company's documents were searched too.
+          if (answer !== undefined) {
+            throw error;
+          }
           failure ??= error;
           continue;
         }

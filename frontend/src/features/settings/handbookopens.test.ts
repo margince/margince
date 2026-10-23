@@ -5,7 +5,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { SETTINGS_PAGES } from "./settingscatalog";
+import { SETTINGS_PAGES } from "../../lib/settingscatalog";
 
 // A handbook section names its settings page with an
 // `<!-- opens: settings/<id> -->` marker, and the search box turns that id into

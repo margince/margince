@@ -61,7 +61,7 @@ last word, and each item names where the rule is.
   task page.
 - **Name the settings page a task is on.** Under a `###` heading whose answer is a
   settings page, put `<!-- opens: settings/<page-id> -->` on the next line. The
-  id is one in `frontend/src/features/settings/settingscatalog*.ts`. The answer
+  id is one in `frontend/src/lib/settingscatalog*.ts`. The answer
   then carries a button to that page for a reader who may open it. The Markdown
   reader hides the line. `backend/internal/modules/knowledge/handbook/section_test.go`
   fails a marker that is not directly under a heading, and

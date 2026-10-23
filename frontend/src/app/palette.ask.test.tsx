@@ -323,6 +323,25 @@ describe("asking the handbook from the search box", () => {
     ).toBeNull();
   });
 
+  it("says the question was not answered when the handbook does not cover it and the default set fails", async () => {
+    const user = steppedClock();
+    backend({
+      replies: {
+        [HANDBOOK_ID]: notCovered(HANDBOOK, "Your handbook does not say."),
+        [DEFAULT_ID]: { status: 500 },
+      },
+    });
+    renderPalette();
+    await user.type(screen.getByRole("searchbox"), QUESTION);
+    await user.keyboard("{Enter}");
+    expect(await screen.findByText("Question not answered")).toBeVisible();
+    expect(
+      screen.queryByText(
+        "Margince answers from its handbook and your documents. Ask an administrator or a colleague.",
+      ),
+    ).toBeNull();
+  });
+
   it("says who to ask when neither set covers the question", async () => {
     const user = steppedClock();
     backend({

@@ -7,9 +7,9 @@ import { EmptyState, PendingBody } from "../design-system/atoms";
 import { Button } from "../design-system/button";
 import { Callout } from "../design-system/callout";
 import { Eyebrow } from "../design-system/eyebrow";
-import type { SettingsPageId } from "../features/settings/settingscatalog";
+import type { SettingsPageId } from "../lib/settingscatalog";
 import { useVisibleSettingsPages } from "../features/settings/settingsnav";
-import { settingsHref } from "../features/settings/settingsrouting";
+import { settingsHref } from "../lib/settingsrouting";
 import { CitedDocument } from "../features/voice-knowledge/citeddocument";
 import { AnswerView } from "../features/voice-knowledge/corpusanswer";
 import {

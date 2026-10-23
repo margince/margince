@@ -51,6 +51,16 @@ func TestASpanRunningIntoALaterHeadingIsAboutThatSection(t *testing.T) {
 	}
 }
 
+func TestASpanOpeningOnAHeadingIsAboutThatSectionThoughItRunsIntoTheNext(t *testing.T) {
+	const page = "your-own-settings.md"
+	heading := lineOf(t, page, "### How do I change my time zone?")
+	next := lineOf(t, page, "### How do I share a booking link?")
+	got, ok := SectionFor(page, heading, next+2)
+	if !ok || got.Line != heading {
+		t.Fatalf("a span from the time zone heading into the next section = %+v, %v; want the time zone section", got, ok)
+	}
+}
+
 func TestAHeadingLosesItsClosingMarks(t *testing.T) {
 	got := sections("## Account ##\n### Use `x`?\n### C# notes")
 	want := []string{"Account", "Use `x`?", "C# notes"}

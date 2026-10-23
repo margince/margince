@@ -3,8 +3,8 @@
 
 import { foldForSearch, searchWords } from "../format/collate";
 
-// The words a question opens with in English, German and Vietnamese, folded the
-// way `searchWords` folds a query. All three lists hold whatever the screen's
+// The words an English or German question opens with, folded the way
+// `searchWords` folds a query. Every list below is read whatever the screen's
 // language, because a reader asks in the language they think in.
 const QUESTION_WORDS = new Set([
   // en
