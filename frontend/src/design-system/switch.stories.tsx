@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
 import { SettingList, SettingRow } from "./settingrow";
 import { Switch } from "./switch";
@@ -156,8 +156,10 @@ export const WritesOnFlipWithToast: Story = {
       canvas.getByRole("switch", { name: "Weekly digest" }),
     );
     // The region sits at the viewport foot, outside the story's canvas.
-    await expect(
-      await within(document.body).findByText("Weekly digest turned on."),
-    ).toBeVisible();
+    const said = await within(document.body).findByText(
+      "Weekly digest turned on.",
+    );
+    // The toast fades in, so it is visible only once it has.
+    await waitFor(() => expect(said).toBeVisible());
   },
 };
