@@ -15178,7 +15178,7 @@ export const en = {
     "{count} attached files can no longer be sent. Withdraw the message and schedule a new one.",
   "sched.editStale.title": "Message changed",
   "sched.editStale.body":
-    "It changed after the list was loaded. Check its status in the list.",
+    "It was sent, withdrawn, changed or removed after the list was loaded.",
   "sched.editLoading": "Loading message…",
   "outbox.name": "Scheduled messages",
   "outbox.nameWaiting_one": "Scheduled messages, {count} waiting",

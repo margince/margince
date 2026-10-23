@@ -15199,7 +15199,7 @@ export const de = {
     "{count} angehängte Dateien können nicht mehr gesendet werden. Ziehe die Nachricht zurück und plane eine neue.",
   "sched.editStale.title": "Nachricht geändert",
   "sched.editStale.body":
-    "Die Nachricht wurde nach dem Laden der Liste geändert. Prüfe ihren Status in der Liste.",
+    "Die Nachricht wurde nach dem Laden der Liste gesendet, zurückgezogen, geändert oder entfernt.",
   "sched.editLoading": "Nachricht wird geladen…",
   "outbox.name": "Geplante Nachrichten",
   "outbox.nameWaiting_one": "Geplante Nachrichten, {count} offen",

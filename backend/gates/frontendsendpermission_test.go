@@ -75,7 +75,7 @@ var contractPathLine = regexp.MustCompile(`^  (/[^\s:]+):\s*$`)
 // contractSchemaLine matches a schema entry under `components: schemas:`.
 var contractSchemaLine = regexp.MustCompile(`^    ([A-Za-z][A-Za-z0-9]*):\s*$`)
 
-var contractSchemaRef = regexp.MustCompile(`\$ref: '#/components/schemas/([A-Za-z][A-Za-z0-9]*)'`)
+var contractSchemaRef = regexp.MustCompile(`\$ref:\s*["']?#/components/schemas/([A-Za-z][A-Za-z0-9]*)["']?`)
 
 // operationKeyLine matches a key at an operation's own depth; requestBody is one,
 // and the next one ends it. Only a body counts: a scheduled message echoes the
@@ -439,6 +439,19 @@ func TestTheSendDoorScanFindsEveryBodyShapeOrRefusesIt(t *testing.T) {
 			name: "a body composed from a part carrying the reason is a door",
 			contract: probeBody + "            schema: { $ref: '#/components/schemas/ProbeBody' }\n" + answered +
 				"    ProbeBody:\n      allOf:\n        - $ref: '#/components/schemas/SenderPart'\n" +
+				"    SenderPart:\n      type: object\n      properties:\n        operator_reason: { type: string }\n",
+			doors: []string{"/probe"},
+		},
+		{
+			name: "a double-quoted body reference is followed",
+			contract: probeBody + "            schema: { $ref: \"#/components/schemas/SendBody\" }\n" + answered +
+				"    SendBody:\n      type: object\n      properties:\n        operator_reason: { type: string }\n",
+			doors: []string{"/probe"},
+		},
+		{
+			name: "a double-quoted part of a composed body is followed",
+			contract: probeBody + "            schema: { $ref: '#/components/schemas/ProbeBody' }\n" + answered +
+				"    ProbeBody:\n      allOf:\n        - $ref: \"#/components/schemas/SenderPart\"\n" +
 				"    SenderPart:\n      type: object\n      properties:\n        operator_reason: { type: string }\n",
 			doors: []string{"/probe"},
 		},

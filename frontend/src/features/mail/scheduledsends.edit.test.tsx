@@ -552,3 +552,110 @@ it("reads a message whose own read answers 404 as changed, not as a failed load"
     ).toHaveLength(2),
   );
 });
+
+it.each([
+  [
+    "fails",
+    () =>
+      new Response(
+        JSON.stringify({ type: "about:blank", title: "Down", status: 500 }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/problem+json" },
+        },
+      ),
+  ],
+  [
+    "reads the message as sent",
+    () => jsonResponse({ ...NEW_MESSAGE, status: "sent" }),
+  ],
+])(
+  "keeps the open composer and the reader's words when a later read %s",
+  async (_, later) => {
+    const user = userEvent.setup();
+    let reads = 0;
+    const sent = mount([NEW_MESSAGE], [], {
+      [`GET /scheduled-sends/${NEW_MESSAGE.id}`]: () => {
+        reads += 1;
+        return reads === 1 ? jsonResponse(NEW_MESSAGE) : later();
+      },
+    });
+    await user.click(
+      await screen.findByRole("button", { name: "Edit: The renewal quote" }),
+    );
+    const subject = await screen.findByLabelText("Subject");
+    await user.type(subject, ", revised");
+    await act(() =>
+      client.invalidateQueries({ queryKey: ["scheduled-sends"] }),
+    );
+    await waitFor(() => expect(reads).toBe(2));
+    await waitFor(() =>
+      expect(
+        client.getQueryState(["scheduled-sends", NEW_MESSAGE.id])?.fetchStatus,
+      ).toBe("idle"),
+    );
+    await act(async () => {});
+    expect(screen.getByLabelText("Subject")).toHaveValue(
+      "The renewal quote, revised",
+    );
+    expect(screen.queryByText("Message changed")).toBeNull();
+    expect(
+      sent.filter((call) => call.key === "GET /scheduled-sends"),
+    ).toHaveLength(2);
+  },
+);
+
+it("holds the loading state for a reply whose own read lands before its thread", async () => {
+  const user = userEvent.setup();
+  let answer: (response: Response) => void = () => {};
+  mount([REPLY], [REPLY], {
+    [`GET /activities/${REPLY.anchor_activity_id}`]: () =>
+      new Promise<Response>((resolve) => {
+        answer = resolve;
+      }),
+  });
+  await user.click(
+    await screen.findByRole("button", { name: "Edit: Re: the quote" }),
+  );
+  await waitFor(() =>
+    expect(client.getQueryState(["scheduled-sends", REPLY.id])?.status).toBe(
+      "success",
+    ),
+  );
+  await act(async () => {});
+  expect(
+    within(screen.getByRole("dialog")).getByText("Loading message…"),
+  ).toBeInTheDocument();
+  answer(jsonResponse(THREAD_EMAIL));
+  expect(await screen.findByLabelText("Subject")).toHaveValue("Re: the quote");
+});
+
+it("opens a closed and reopened edit from a fresh read of the message", async () => {
+  const user = userEvent.setup();
+  let reads = 0;
+  mount([NEW_MESSAGE], [], {
+    [`GET /scheduled-sends/${NEW_MESSAGE.id}`]: () => {
+      reads += 1;
+      return jsonResponse(
+        reads === 1
+          ? NEW_MESSAGE
+          : { ...NEW_MESSAGE, subject: "The renewal quote, moved" },
+      );
+    },
+  });
+  const edit = await screen.findByRole("button", {
+    name: "Edit: The renewal quote",
+  });
+  await user.click(edit);
+  expect(await screen.findByLabelText("Subject")).toHaveValue(
+    "The renewal quote",
+  );
+  await user.click(
+    within(screen.getByRole("dialog")).getByRole("button", { name: "Close" }),
+  );
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  await user.click(edit);
+  expect(await screen.findByLabelText("Subject")).toHaveValue(
+    "The renewal quote, moved",
+  );
+});

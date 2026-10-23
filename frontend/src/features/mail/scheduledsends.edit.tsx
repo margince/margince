@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQueryClient } from "@tanstack/react-query";
-import { type ReactNode, useEffect, useId } from "react";
+import { type ReactNode, useEffect, useId, useState } from "react";
 import { Modal } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { Heading } from "../../design-system/heading";
@@ -13,31 +13,52 @@ import { useLocale, usePlural, useT } from "../../i18n";
 import { problemStatus } from "../../lib/problem";
 import { ComposeModal } from "./compose";
 import { useThreadProject } from "./composeanchor";
-import { editSeedOf, isEditable, unavailableFilesOf } from "./schedulededit";
+import {
+  type EditSeed,
+  editSeedOf,
+  isEditable,
+  unavailableFilesOf,
+} from "./schedulededit";
 import { type ScheduledSend, useScheduledSend } from "./scheduledqueue";
 
-// What the message's own read and its thread say about opening the composer.
-function useEditRead(send: ScheduledSend | null) {
-  const detail = useScheduledSend(send?.id);
-  const current = detail.data;
-  // The row was read earlier; the message may have gone or changed since.
-  const stale =
+type EditRead = ReturnType<typeof useEditRead>;
+
+// The row was read earlier; the message may have gone or changed since.
+function changedSinceListed(
+  current: ScheduledSend | undefined,
+  failed: boolean,
+  error: unknown,
+): boolean {
+  return (
     (current !== undefined && !isEditable(current)) ||
-    (detail.isError && problemStatus(detail.error) === 404);
+    (failed && problemStatus(error) === 404)
+  );
+}
+
+// What the message's own read and its thread say about opening the composer.
+// Decided only before it opens: a later read must not take the reader's words.
+function useEditRead(send: ScheduledSend | null, opened: boolean) {
+  const detail = useScheduledSend(send?.id);
+  const current = opened ? undefined : detail.data;
   const thread = useThreadProject(send?.anchor_activity_id ?? undefined);
+  const answers = Boolean(send?.anchor_activity_id);
+  const failed = detail.isLoadingError;
+  const stale = changedSinceListed(current, failed, detail.error);
   const unavailable = current ? unavailableFilesOf(current) : 0;
   const seed = current
     ? editSeedOf(current, thread.activity?.links)
     : undefined;
-  const answers = Boolean(send?.anchor_activity_id);
-  const refused = detail.isError || stale || unavailable > 0;
+  const waiting =
+    detail.isPending || (answers && !thread.settled && !thread.failed);
+  const refused = stale || unavailable > 0;
   // A thread that read fine but carries no record to file under cannot open.
   const cannotOpen =
     answers &&
     current !== undefined &&
     !refused &&
     (thread.failed || (thread.settled && !seed));
-  return { detail, stale, unavailable, seed, cannotOpen };
+  const ready = refused || waiting ? undefined : seed;
+  return { detail, failed, stale, unavailable, waiting, ready, cannotOpen };
 }
 
 /**
@@ -56,7 +77,16 @@ export function EditComposer({
   const t = useT();
   const toast = useToast();
   const queryClient = useQueryClient();
-  const { detail, stale, unavailable, seed, cannotOpen } = useEditRead(send);
+  const [opened, setOpened] = useState<Readonly<{
+    id: string;
+    seed: EditSeed;
+  }> | null>(null);
+  if (!send && opened) {
+    setOpened(null);
+  }
+  const latched = send && opened?.id === send.id ? opened.seed : undefined;
+  const read = useEditRead(send, latched !== undefined);
+  const { cannotOpen, stale } = read;
   useEffect(() => {
     if (cannotOpen) {
       toast.show(t("compose.anchorGone"), { tone: "danger" });
@@ -74,37 +104,12 @@ export function EditComposer({
   if (!send) {
     return null;
   }
-  if (stale) {
-    return (
-      <EditBlocked subject={send.subject} onClose={onClose}>
-        <Callout tone="info" kind="standing" title={t("sched.editStale.title")}>
-          <p>{t("sched.editStale.body")}</p>
-        </Callout>
-      </EditBlocked>
-    );
-  }
-  if (detail.isPending || detail.isError) {
-    return (
-      <EditBlocked subject={send.subject} onClose={onClose}>
-        <QueryStates
-          query={detail}
-          pendingLabel={t("sched.editLoading")}
-          pendingLines={2}
-        >
-          {null}
-        </QueryStates>
-      </EditBlocked>
-    );
-  }
-  if (unavailable > 0) {
-    return (
-      <EditBlocked subject={send.subject} onClose={onClose}>
-        <FilesRefusal count={unavailable} />
-      </EditBlocked>
-    );
-  }
+  const seed = latched ?? read.ready;
   if (!seed) {
-    return null;
+    return <EditWaiting subject={send.subject} read={read} onClose={onClose} />;
+  }
+  if (!latched) {
+    setOpened({ id: send.id, seed });
   }
   return (
     <ComposeModal
@@ -118,6 +123,51 @@ export function EditComposer({
       onSent={() => onReplaced(send.id)}
     />
   );
+}
+
+// What stands in the composer's place until it can open, or instead of it.
+function EditWaiting({
+  subject,
+  read,
+  onClose,
+}: Readonly<{ subject: string; read: EditRead; onClose: () => void }>) {
+  const t = useT();
+  const { detail } = read;
+  if (read.stale) {
+    return (
+      <EditBlocked subject={subject} onClose={onClose}>
+        <Callout tone="info" kind="standing" title={t("sched.editStale.title")}>
+          <p>{t("sched.editStale.body")}</p>
+        </Callout>
+      </EditBlocked>
+    );
+  }
+  if (read.waiting || read.failed) {
+    return (
+      <EditBlocked subject={subject} onClose={onClose}>
+        <QueryStates
+          query={{
+            isPending: !read.failed,
+            isError: read.failed,
+            error: detail.error,
+            refetch: detail.refetch,
+          }}
+          pendingLabel={t("sched.editLoading")}
+          pendingLines={2}
+        >
+          {null}
+        </QueryStates>
+      </EditBlocked>
+    );
+  }
+  if (read.unavailable > 0) {
+    return (
+      <EditBlocked subject={subject} onClose={onClose}>
+        <FilesRefusal count={read.unavailable} />
+      </EditBlocked>
+    );
+  }
+  return null;
 }
 
 // In place of the composer when the message cannot be opened in it.
