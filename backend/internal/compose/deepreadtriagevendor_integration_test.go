@@ -11,6 +11,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -24,6 +25,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -355,16 +358,17 @@ func TestNewMailOnAnOpenVendorQuestionReadsNoSiteAgain(t *testing.T) {
 		t.Fatal("precondition: the sole direct recipient is asked")
 	}
 
-	// New staff mail to a second seat: the site is not read again, and two
-	// named seats leave the question with no decider.
+	// Newer staff mail to a second seat. The site is not read again. The newer
+	// mail controls, so the second seat decides and the first no longer does.
 	captureStaffMail(t, e, staffMail{sourceID: "vendor-new-2", from: "contact-b@" + hostingDomain, mailbox: e.Rep2, to: []string{seatEmail(t, e.Rep2)}, occurred: now})
 	if row := vendorRowOf(t, e, hostingDomain); row.reason != contacts.PendingVendorVerdict || !row.cursorCleared {
 		t.Fatalf("new mail re-armed the vendor question: %+v", row)
 	}
-	for _, seat := range []ids.UUID{e.Rep1, e.Rep2} {
-		if asksAbout(e.As(seat, nil, integration.AdminPerms), t, e, hostingDomain) {
-			t.Errorf("seat %s is still asked once a second seat is named", seat)
-		}
+	if asksAbout(e.As(e.Rep1, nil, integration.AdminPerms), t, e, hostingDomain) {
+		t.Error("the seat an older mail named is still asked")
+	}
+	if !asksAbout(e.As(e.Rep2, nil, integration.AdminPerms), t, e, hostingDomain) {
+		t.Error("the sole direct recipient of the newest mail is not asked")
 	}
 }
 
@@ -511,5 +515,111 @@ func TestAMailTheDeciderMayNotOpenMakesNoQuestion(t *testing.T) {
 	}
 	if code := answerDomain(ownScope, e, "keep-vendor", hostingDomain); code != http.StatusNotFound {
 		t.Fatalf("keep as vendor on withheld evidence = %d, want 404", code)
+	}
+}
+
+// vendorFactUnchanged asserts a refused answer wrote nothing.
+func vendorFactUnchanged(t *testing.T, e *integration.Env, domain string, audits int) {
+	t.Helper()
+	if row := vendorRowOf(t, e, domain); row.status != contacts.DomainPending || row.reason != contacts.PendingVendorVerdict {
+		t.Errorf("the vendor fact changed: %+v", row)
+	}
+	if _, _, companies := triageState(t, e, domain); companies != 0 {
+		t.Errorf("%d companies, want 0", companies)
+	}
+	if got := domainAudits(t, e, domain); got != audits {
+		t.Errorf("audit rows %d → %d, want none written", audits, got)
+	}
+}
+
+func domainAudits(t *testing.T, e *integration.Env, domain string) int {
+	t.Helper()
+	return e.WsCount(t, `SELECT count(*) FROM audit_log a JOIN company_domain_disposition d ON d.id = a.entity_id WHERE d.domain = $1`, domain)
+}
+
+func TestASeatWithoutActivityReadGetsNoVendorQuestion(t *testing.T) {
+	e := integration.Setup(t)
+	now := pinClock(t, e)
+	captureStaffMail(t, e, staffMail{sourceID: "no-activity-read", from: hostingStaff, mailbox: e.Rep1, to: []string{seatEmail(t, e.Rep1)}, occurred: now.Add(-time.Hour)})
+	runVendorTriage(t, e, hostingDomain)
+	grants := map[string]principal.ObjectGrant{
+		"contact": {Read: true}, "company": {Create: true, Read: true, Update: true},
+	}
+	noActivity := e.As(e.Rep1, nil, principal.Permissions{Objects: grants, RowScope: principal.RowScopeAll})
+	var mail ids.UUID
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `SELECT id FROM activity WHERE source_id = 'no-activity-read'`).Scan(&mail)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.Activities.GetActivity(noActivity, ids.From[ids.ActivityKind](mail), storekit.LiveOnly); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("GetActivity without activity read = %v, want permission denied", err)
+	}
+	audits := domainAudits(t, e, hostingDomain)
+	if asksAbout(noActivity, t, e, hostingDomain) {
+		t.Fatal("a seat that may not open the mail was asked about it")
+	}
+	for _, verb := range []string{"keep", "keep-vendor"} {
+		if code := answerDomain(noActivity, e, verb, hostingDomain); code != http.StatusNotFound {
+			t.Errorf("%s without activity read = %d, want 404", verb, code)
+		}
+	}
+	vendorFactUnchanged(t, e, hostingDomain, audits)
+
+	grants["activity"] = principal.ObjectGrant{Read: true}
+	if !asksAbout(e.As(e.Rep1, nil, principal.Permissions{Objects: grants, RowScope: principal.RowScopeAll}), t, e, hostingDomain) {
+		t.Fatal("with activity read restored the sole direct recipient is not asked")
+	}
+}
+
+// The newest staff mail controls for every reader. When it names no single
+// seat, or the reader may not open it, an older mail to one seat does not
+// take its place.
+func TestANewerUnclearMailIsNotOverruledByAnOlderOne(t *testing.T) {
+	e := integration.Setup(t)
+	now := pinClock(t, e)
+	rep1, rep2 := seatEmail(t, e.Rep1), seatEmail(t, e.Rep2)
+	for _, tc := range []struct {
+		name, domain string
+		to           []string
+		hold         bool
+	}{
+		{"newer mail to two seats", "newer-two.example", []string{rep1, rep2}, false},
+		{"newer mail to no seat", "newer-none.example", []string{"buyer@outside.example"}, false},
+		{"newer mail withheld", "newer-held.example", []string{rep1}, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			captureStaffMail(t, e, staffMail{sourceID: tc.domain + "-old", from: "old@" + tc.domain, mailbox: e.Rep1, to: []string{rep1}, occurred: now.Add(-48 * time.Hour)})
+			runVendorTriage(t, e, tc.domain)
+			asker := e.As(e.Rep1, nil, integration.AdminPerms)
+			if !asksAbout(asker, t, e, tc.domain) {
+				t.Fatal("precondition: the older mail's sole recipient is asked")
+			}
+			captureStaffMail(t, e, staffMail{sourceID: tc.domain + "-new", from: "new@" + tc.domain, mailbox: e.Rep1, to: tc.to, occurred: now.Add(-time.Hour)})
+			if tc.hold {
+				var mail ids.UUID
+				if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+					return tx.QueryRow(context.Background(), `SELECT id FROM activity WHERE source_id = $1`, tc.domain+"-new").Scan(&mail)
+				}); err != nil {
+					t.Fatal(err)
+				}
+				integration.HoldUnderStatutoryFloor(t, e, mail)
+			}
+			audits := domainAudits(t, e, tc.domain)
+			for _, seat := range []ids.UUID{e.Rep1, e.Rep2} {
+				if asksAbout(e.As(seat, nil, integration.AdminPerms), t, e, tc.domain) {
+					t.Errorf("seat %s is asked although the newest mail names no single readable seat", seat)
+				}
+			}
+			for _, verb := range []string{"keep", "keep-vendor"} {
+				if code := answerDomain(asker, e, verb, tc.domain); code != http.StatusNotFound {
+					t.Errorf("%s by the older mail's recipient = %d, want 404", verb, code)
+				}
+			}
+			vendorFactUnchanged(t, e, tc.domain, audits)
+			if !onRefusedList(t, e, tc.domain) {
+				t.Error("the vendor fact is not reachable on the refused domains list")
+			}
+		})
 	}
 }

@@ -93,36 +93,46 @@ func (s *Store) KeepDomainAsVendor(ctx context.Context, domain string) error {
 	})
 }
 
-// vendorMailSQL selects the current inbound mail a contact at the domain sent
-// (storekit.CurrentSourceMailClause). The From participant names the sender,
-// never the page's contact.
+// vendorMailSQL selects the inbound mail a contact at the domain sent inside
+// the shared waiting horizon (storekit.WaitingHorizonSQL), archived or not.
+// The From participant names the sender, never the page's contact.
 func vendorMailSQL(mail, domain string, asOf time.Time, arg func(any) int) string {
 	host := `split_part(lower(vendor_sender.address), '@', 2)`
+	instant := fmt.Sprintf("$%d::timestamptz", arg(asOf))
 	return mail + `.kind = 'email' AND ` + mail + `.direction = 'inbound'
  AND EXISTS (SELECT 1 FROM activity_participant vendor_sender
   WHERE vendor_sender.activity_id = ` + mail + `.id AND vendor_sender.role = 'from'
   AND (` + host + ` = ` + domain + ` OR ` + host + ` LIKE '%.' || ` + domain + `)
   AND EXISTS (SELECT 1 FROM contact_email vendor_contact WHERE vendor_contact.email = lower(vendor_sender.address) AND vendor_contact.archived_at IS NULL))
- AND ` + storekit.CurrentSourceMailClause(mail+".id", asOf, arg)
+ AND ` + mail + `.occurred_at <= ` + instant + `
+ AND ` + mail + `.occurred_at >= ` + instant + ` - make_interval(days => ` + storekit.WaitingHorizonSQL(asOf, arg) + `)`
 }
 
-// vendorDeciderSQL decides who answers a vendor question. The
-// decider is the single seat that current staff mail names as its sole direct
-// To recipient (storekit.SoleDirectMailSeatSQL). Two such seats, or none, make
-// no decider. The reader must also be able to open one of that seat's mails
-// (auth.ActivityContentClause). Mailbox delivery, a copy and an old reader row
-// are no such evidence, and without a decider the fact stays on the record.
+// vendorDeciderSQL decides who answers a vendor question. The newest staff
+// mail controls, for every reader alike, and its sole direct To seat decides.
+// Same-instant mail naming another seat or none leaves no decider; an older
+// mail never takes over. The decider needs activity read, and that same mail
+// must be current and inside their scope (auth.ActivityContentClause).
 func vendorDeciderSQL(ctx context.Context, domain, reader, identities string, asOf time.Time, arg func(any) int) (string, error) {
+	if err := auth.Require(ctx, "activity", principal.ActionRead); errors.Is(err, apperrors.ErrPermissionDenied) {
+		// Still names the bound identities, so their placeholder keeps its type.
+		return "(" + identities + " IS NULL AND false)", nil
+	} else if err != nil {
+		return "", err
+	}
 	sole := storekit.SoleDirectMailSeatSQL("vendor_mail", identities)
 	readable, err := auth.ActivityContentClause(ctx, "vendor_mail", arg)
 	if err != nil {
 		return "", err
 	}
-	decider := `(SELECT CASE WHEN count(DISTINCT vendor_seat.seat) = 1 THEN (array_agg(DISTINCT vendor_seat.seat))[1] END
- FROM (SELECT ` + sole + ` AS seat FROM activity vendor_mail WHERE ` + vendorMailSQL("vendor_mail", domain, asOf, arg) + `) vendor_seat
- WHERE vendor_seat.seat IS NOT NULL)`
+	controlling := `vendor_mail.occurred_at = (SELECT max(vendor_latest.occurred_at) FROM activity vendor_latest WHERE ` +
+		vendorMailSQL("vendor_latest", domain, asOf, arg) + `)`
+	decider := `(SELECT CASE WHEN bool_and(vendor_seat.seat IS NOT NULL) AND count(DISTINCT vendor_seat.seat) = 1
+   THEN (array_agg(vendor_seat.seat))[1] END
+ FROM (SELECT ` + sole + ` AS seat FROM activity vendor_mail WHERE ` + vendorMailSQL("vendor_mail", domain, asOf, arg) + ` AND ` + controlling + `) vendor_seat)`
 	return `(` + decider + ` = ` + reader + ` AND EXISTS (SELECT 1 FROM activity vendor_mail WHERE ` + vendorMailSQL("vendor_mail", domain, asOf, arg) + `
- AND ` + sole + ` = ` + reader + ` AND ` + readable + `))`, nil
+ AND ` + controlling + ` AND ` + sole + ` = ` + reader + `
+ AND ` + storekit.CurrentSourceMailClause("vendor_mail.id", asOf, arg) + ` AND ` + readable + `))`, nil
 }
 
 // openQuestionForReaderSQL is the shared test of whether a reader holds an
