@@ -1648,6 +1648,7 @@ export const vi = {
   "systemJob.capture_credential_backfill": "Cập nhật kết nối hộp thư",
   "systemJob.capture_part_slim_worker": "Dọn dẹp dữ liệu thư đã lưu",
   "systemJob.capture_trace_sweep": "Dọn dẹp dấu vết thư",
+  "systemJob.capture_which_deal": "Câu hỏi thương vụ từ thư",
   "systemJob.close_date": "Kiểm tra ngày chốt",
   "systemJob.commission_accrual": "Ghi nhận hoa hồng",
   "systemJob.commitment_settle": "Chốt kết quả cam kết",

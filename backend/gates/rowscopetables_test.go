@@ -549,5 +549,11 @@ const (
 	// two ends of every open pair, and a contact's current employer, under the
 	// system principal. It walks the whole queue by design, and the ids decide
 	// only whether a pair stays open; none leaves the server.
-	modulesTierUnscopedCeiling = 131
+	//
+	// 132-133: capture.mailContacts and capture.threadDeals read the contacts
+	// on a mail and the company of a deal its thread is filed under, for the
+	// deal rule. A seat that sees only part of them would file on a guess. So
+	// they are read whole; the ids stay in the rule, and its link passes
+	// EnsureLinkTarget.
+	modulesTierUnscopedCeiling = 133
 )

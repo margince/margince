@@ -1694,6 +1694,7 @@ export const de = {
     "Aktualisierung der E-Mail-Verbindung",
   "systemJob.capture_part_slim_worker": "Bereinigung des E-Mail-Speichers",
   "systemJob.capture_trace_sweep": "Bereinigung der E-Mail-Spuren",
+  "systemJob.capture_which_deal": "Deal-Frage aus E-Mail",
   "systemJob.close_date": "Prüfung der Abschlussdaten",
   "systemJob.commission_accrual": "Provisionsabgrenzung",
   "systemJob.commitment_settle": "Abschluss von Zusagen",

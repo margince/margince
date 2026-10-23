@@ -1644,6 +1644,7 @@ export const en = {
   "systemJob.capture_credential_backfill": "Mail connection update",
   "systemJob.capture_part_slim_worker": "Mail storage cleanup",
   "systemJob.capture_trace_sweep": "Mail trace cleanup",
+  "systemJob.capture_which_deal": "Deal question from mail",
   "systemJob.close_date": "Close date check",
   "systemJob.commission_accrual": "Commission accrual",
   "systemJob.commitment_settle": "Commitment settlement",

@@ -23,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/telegram"
 	"github.com/margince/margince/backend/internal/modules/capture/testmailbox"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
@@ -292,6 +293,12 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		WithProjectAttribution(capture.ProjectAttribution{
 			Keys:  ProjectsStore(pool),
 			Stamp: activities.StampCorrespondenceForProject,
+		}).
+		// The deal rule reads its candidates from the module that owns `deal`,
+		// and asks its one question through the store that owns tasks.
+		WithDealAttribution(capture.DealAttribution{
+			Candidates: deals.NewStore(InstallationDB(pool), DealsInstallation()),
+			Ask:        whichDealAsker{tasks: activities.NewStore(InstallationDB(pool))}.Ask,
 		}).
 		// The audience derivation, from the module that owns `activity`. It
 		// runs INSIDE the capture transaction because the audience it derives
