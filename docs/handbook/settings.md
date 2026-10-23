@@ -180,7 +180,7 @@ The Capture rules page in Settings (group **Data**) decides what comes into the 
 
 **Enrichment.** Whether Margince fills in facts on captured companies by itself.
 
-**Mail privacy review.** A mailbox set to *Held until classified* holds its mail until Margince has judged the thread ([Who can see an email](who-can-see-an-email.md)). This setting says how many held threads one review run decides, from 1 to 200. The default is 40, and the rest wait for the next run. Raise it when new mail stays hidden from colleagues for longer than the review schedule.
+**Mail privacy review.** A mailbox set to *Held until classified* holds its mail until Margince has judged the thread ([Who can see an email](who-can-see-an-email.md)). This setting says how many held threads one review run looks at, from 1 to 200. The default is 40, and the rest wait for the next run. Raise it when new mail stays hidden from colleagues for longer than the review schedule.
 
 **Consumer mail domains.** Which domains count as private mailboxes. Mail from one of them makes the contact, but never a company. Margince comes with the list; you can add a missing domain or change a wrong entry.
 

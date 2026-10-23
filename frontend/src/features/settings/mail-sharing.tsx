@@ -82,7 +82,7 @@ function CommitBand({
 
 /**
  * The two numbers that pace mail: how often a mailbox is read, and how many held
- * threads one privacy review decides. Each commits on its own, like every
+ * threads one privacy review looks at. Each commits on its own, like every
  * number row, because pacing withholds nothing from anybody.
  */
 function PacingRows({

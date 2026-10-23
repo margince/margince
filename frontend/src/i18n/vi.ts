@@ -12297,7 +12297,7 @@ export const vi = {
   "captureReading.wall.refusal": "Nhập số giây là số nguyên từ 30 đến 600.",
   "captureReview.passCap.label": "Số chuỗi thư đang giữ được rà soát mỗi lượt",
   "captureReview.passCap.help":
-    "Số chuỗi thư đang bị giữ mà một lượt rà soát quyết định, từ 1 đến 200. Các chuỗi còn lại chờ lượt sau. Hãy tăng khi thư mới bị ẩn với đồng nghiệp lâu hơn lịch chạy, do Tình trạng hệ thống đặt. Mặc định 40.",
+    "Số chuỗi thư đang bị giữ mà một lượt rà soát xem xét, từ 1 đến 200. Các chuỗi còn lại chờ lượt sau. Hãy tăng khi thư mới bị ẩn với đồng nghiệp lâu hơn lịch chạy, do Tình trạng hệ thống đặt. Mặc định 40.",
   "captureReview.passCap.refusal":
     "Nhập số chuỗi thư là số nguyên từ 1 đến 200.",
   "agentConnections.title": "Kết nối agent",

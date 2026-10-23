@@ -29829,8 +29829,8 @@ type CaptureSettings struct {
 	// without a restart. Default 500.
 	AutoEnrichDailyCap int `json:"auto_enrich_daily_cap"`
 
-	// ConfidentialityPassCap How many held mail threads one confidentiality pass answers, per run. A thread the
-	// model fails on does not count. The threads beyond the cap wait for the next run, so
+	// ConfidentialityPassCap How many held mail threads one confidentiality pass asks the model about, per run,
+	// answered or not. The threads beyond the cap wait for the next run, so
 	// the cap sets how fast a backlog drains and never whether a thread is judged. Raise it
 	// when `margince_capture_confidentiality_oldest_wait_seconds` stays above how often the
 	// pass runs. Read at the start of every pass, so a change applies without a restart.
