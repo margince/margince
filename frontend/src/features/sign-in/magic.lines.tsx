@@ -21,6 +21,7 @@ import {
 import { axisLabel, markKind } from "./magic.marks";
 import type { MagicLane, MagicLine } from "./magic.queries";
 import { LineRecordsOpener } from "./magic.records";
+import { LineReview, useLineReceipt } from "./magic.review";
 import { MagicUndoButton, undoPress } from "./magic.undo";
 
 /**
@@ -91,6 +92,7 @@ function MagicLineRow({
   const sentence = magicSentenceKey(line.summary.key);
   const { locale } = useLocale();
   const detail = lineDetail(line, t, locale);
+  const review = useLineReceipt(line);
   return (
     <li className="magic-line">
       {/* A watching line is off the clock, so its mark is its lane's. */}
@@ -130,7 +132,14 @@ function MagicLineRow({
           )}
         </p>
       )}
-      <LineUndo line={line} />
+      {review.receipt ? (
+        <LineReview receipt={review.receipt} />
+      ) : (
+        <LineUndo line={line} />
+      )}
+      {review.failed && (
+        <p className="t-caption">{t("magic.review.unavailable")}</p>
+      )}
       <LineWhen line={line} zone={zone} byDay={byDay} />
     </li>
   );

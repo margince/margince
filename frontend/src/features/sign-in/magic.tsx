@@ -55,14 +55,16 @@ const NOT_SHOWN_REASON: Readonly<Record<MagicNotShown["reason"], MessageKey>> =
 
 export function MagicPanel({
   visibleApprovalIds = [],
-  visibleReceiptIds = [],
   only,
+  emptyLabel,
 }: Readonly<{
   visibleApprovalIds?: readonly string[];
-  visibleReceiptIds?: readonly string[];
   // One lane, drawn inside a host panel that carries its own heading: the
   // worklist shows the same Done for you lines Home shows.
   only?: MagicLane;
+  // Said over a complete read with nothing in it. Without one, the section
+  // stays away instead.
+  emptyLabel?: string;
 }> = {}) {
   const t = useT();
   const { locale } = useLocale();
@@ -74,17 +76,12 @@ export function MagicPanel({
   const titleId = useId();
   const receipt = magic.data;
   const withheld = receipt?.sources_unavailable ?? [];
-  const state = magic.isPending
-    ? "loading"
-    : magic.isError
-      ? "failed"
-      : "ready";
+  const state = queryState(magic);
   // Lines only off a read that answered: a refresh that failed keeps the last
   // answer cached, and drawing it would offer undos under "did not load".
   const shown = distinctReceipt(
     state === "ready" ? receipt : undefined,
     visibleApprovalIds,
-    visibleReceiptIds,
   );
   const drawn = drawnLanes(shown, only);
   const done = rowsOf(shown?.done);
@@ -105,14 +102,8 @@ export function MagicPanel({
     },
   );
   const byDay = shown ? spansDays(shown.since, shown.as_of) : false;
-  // A quiet window and an unread one are different answers. Nothing drawn
-  // over a read that answered is the quiet one, so the section stays away.
-  if (
-    state === "ready" &&
-    drawn.length === 0 &&
-    withheld.length === 0 &&
-    !coverageIncomplete
-  ) {
+  const read = sectionRead(state, shown, only, drawn, coverageIncomplete);
+  if (read === "empty" && emptyLabel === undefined) {
     return null;
   }
   return (
@@ -122,8 +113,13 @@ export function MagicPanel({
       </Eyebrow>
       <PanelBody>
         <SurfaceState
-          state={state}
-          emptyLabel=""
+          state={read}
+          emptyLabel={emptyLabel ?? ""}
+          emptyDetail={
+            shown?.not_shown_count_withheld
+              ? t("magic.visibleScope")
+              : undefined
+          }
           loadingLabel={t("magic.loading")}
           detail={{ onRetry: () => void magic.refetch() }}
         >
@@ -155,6 +151,32 @@ export function MagicPanel({
       )}
     </section>
   );
+}
+
+function queryState(
+  query: Readonly<{ isPending: boolean; isError: boolean }>,
+): "loading" | "failed" | "ready" {
+  if (query.isPending) return "loading";
+  return query.isError ? "failed" : "ready";
+}
+
+// A quiet window and an unread one are different answers. Only a read that
+// answered completely, with nothing drawn, is empty. A hosted lane the
+// response did not carry is unread, not empty.
+function sectionRead(
+  state: "loading" | "failed" | "ready",
+  shown: MagicReceipt | undefined,
+  only: MagicLane | undefined,
+  drawn: readonly MagicLane[],
+  coverageIncomplete: boolean,
+): "loading" | "failed" | "ready" | "empty" | "unavailable" {
+  if (state !== "ready") return state;
+  if (only !== undefined && !Array.isArray(shown?.[only])) return "unavailable";
+  const complete =
+    rowsOf(shown?.sources_unavailable).length === 0 &&
+    rowsOf(shown?.not_shown).length === 0 &&
+    !coverageIncomplete;
+  return drawn.length === 0 && complete ? "empty" : "ready";
 }
 
 // Hosted inside a panel that names it, the section's own heading is kept for
@@ -245,22 +267,17 @@ function NotShown({
   );
 }
 
+// The approvals Focus already offers to decide leave the needs-you lane.
+// Done lines are never hidden: their review controls ride on the line.
 function distinctReceipt(
   receipt: MagicReceipt | undefined,
   approvalIds: readonly string[],
-  receiptIds: readonly string[],
 ): MagicReceipt | undefined {
   if (!receipt) return undefined;
   return {
     ...receipt,
     needs_you: receipt.needs_you?.filter(
       (line) => !approvalIds.includes(line.id),
-    ),
-    done: receipt.done?.filter(
-      (line) =>
-        (line.count ?? 1) > 1 ||
-        !line.receipt_ids?.length ||
-        !line.receipt_ids.every((id) => receiptIds.includes(id)),
     ),
   };
 }

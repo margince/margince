@@ -1421,7 +1421,6 @@ export const en = {
   "home.receipt.basis_other":
     "Estimate from {count} won deals · Median days per stage: {days} · Stages remaining: {stages}. No buyer-confirmed date.",
   "brief.changes.keepDate": "Keep date",
-  "worklist.handled.showHistory": "Show recent changes",
   "home.receipt.date": "Close date: {before} → {after}",
   "home.receipt.dateUnconfirmed":
     "Estimated close date: {before} → {after} (needs confirmation)",
@@ -1543,7 +1542,6 @@ export const en = {
   "brief.reply.owed": "Customer awaiting your reply",
   "brief.changes.superseded":
     "This deal changed again. Open the deal to review its current state.",
-  "brief.changes.title": "Check applied changes",
   "brief.changes.accept": "Accept",
   "brief.changes.accepted": "Accepted",
   "brief.changes.undone": "Undone",
@@ -15578,7 +15576,6 @@ export const en = {
   "worklist.manager.kind.general": "Other",
   "worklist.board.title": "Team work needing attention",
   "worklist.exceptions.title": "Team exceptions",
-  "worklist.handled.title": "Change history",
   "worklist.walk.arrived":
     "{arrived} new since you opened the list. Refresh to add them.",
   "worklist.walk.gone":
@@ -15588,16 +15585,7 @@ export const en = {
   "worklist.walk.title": "List changed",
   "worklist.walk.refresh": "Refresh",
   "worklist.handled.empty": "No actions taken on your behalf today.",
-  "worklist.handled.loading": "Loading actions…",
-  "worklist.handled.count": "Recent changes: {count}",
-  "worklist.handled.what": "Action",
-  "worklist.handled.about": "Record",
-  "worklist.handled.when": "When",
-  "worklist.handled.noRecord": "No record",
-  "worklist.handled.hiddenRecord": "Record not available",
-  "worklist.handled.wayBack": "Status",
   "worklist.handled.putBackDone": "Already undone",
-  "worklist.handled.truncated": "List truncated. More items exist.",
   "worklist.exceptions.empty": "No team exceptions.",
   "worklist.exceptions.loading": "Loading team…",
   "worklist.exceptions.count": "{count} need attention",
@@ -16421,6 +16409,7 @@ export const en = {
   "magic.heading.brief": "Since your last brief",
   "magic.loading": "Reading what the machinery did",
   "magic.lane.done": "Done for you",
+  "magic.review.unavailable": "The review of this change did not load.",
   "magic.lane.needsYou": "Waiting on you",
   "magic.lane.couldNotComplete": "Could not be finished",
   "magic.lane.watching": "Needs restoring",

@@ -6,12 +6,17 @@
 package compose
 
 import (
+	"context"
 	"log/slog"
 	"slices"
 	"testing"
 	"time"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/magic"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -20,10 +25,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func TestNativeStageReceiptHasTheSameIdentityOnBothHomeReaders(t *testing.T) {
-	e := integration.Setup(t)
+// appliedStageReceipt stages a stage move through the real proposer and
+// applies it under policy. The system decided it, so an audit row and an
+// approval both stand for it.
+func appliedStageReceipt(t *testing.T, e *integration.Env, now time.Time) (*approvals.Service, ids.ApprovalID) {
+	t.Helper()
 	ctx := e.Admin()
-	now := clocktest.Now(t)
 	clock := func() time.Time { return now }
 	pipeline, open, _ := integration.DealFixture(t, e)
 	owner := ids.From[ids.UserKind](e.AdminUser)
@@ -64,6 +71,15 @@ func TestNativeStageReceiptHasTheSameIdentityOnBothHomeReaders(t *testing.T) {
 	if _, err := svc.ApplyUnderPolicy(agent, approvalID); err != nil {
 		t.Fatal(err)
 	}
+	return svc, approvalID
+}
+
+func TestNativeStageReceiptHasTheSameIdentityOnBothHomeReaders(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	now := clocktest.Now(t)
+	clock := func() time.Time { return now }
+	svc, approvalID := appliedStageReceipt(t, e, now)
 	handled, err := newAttentionService(e.Pool, svc, clock).HandledForYou(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -101,5 +117,62 @@ func TestNativeStageReceiptHasTheSameIdentityOnBothHomeReaders(t *testing.T) {
 		if standing != 1 {
 			t.Errorf("receipt %s (%s) stands behind %d done lines, want exactly 1", r.Id, r.Kind, standing)
 		}
+	}
+}
+
+// fixedBrief is a last brief at one instant: the reader's own state, which
+// is what the window depends on.
+type fixedBrief struct{ at time.Time }
+
+func (b fixedBrief) CutoffFor(context.Context) (time.Time, bool, error) { return b.at, true, nil }
+
+// Both surfaces read one window. With the last brief after the decision,
+// neither shows it; with the brief two days back, both show it once.
+func TestDoneForYouHasOneWindowOnBothSurfaces(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	decidedAt := clocktest.Now(t)
+	svc, approvalID := appliedStageReceipt(t, e, decidedAt)
+	readAt := decidedAt.Add(3 * time.Hour)
+	clock := func() time.Time { return readAt }
+	for _, c := range []struct {
+		name  string
+		brief time.Duration
+		shown bool
+	}{{"last brief 2h ago", 2 * time.Hour, false}, {"last brief 48h ago", 48 * time.Hour, true}} {
+		t.Run(c.name, func(t *testing.T) {
+			brief := fixedBrief{at: readAt.Add(-c.brief)}
+			handled, err := newAttentionService(e.Pool, svc, clock).
+				WithHandledWindow(func(ctx context.Context, asOf time.Time) (time.Time, error) {
+					return magic.ResolveWindow(ctx, brief, nil, asOf)
+				}).HandledForYou(ctx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			lane, err := magic.NewService(e.Pool, brief, clock).
+				WithDecidedReceipts(magicDecidedReceipts{
+					receipts: attentionReceipts{svc: svc, deals: deals.NewStore(e.DB(), DealsInstallation())},
+				}).Read(ctx, nil, 100)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if handled.Since == nil || !handled.Since.Equal(lane.Since) || !lane.Since.Equal(brief.at) {
+				t.Fatalf("the worklist starts at %v and the lane at %v, want both at the last brief %v", handled.Since, lane.Since, brief.at)
+			}
+			inHandled := slices.ContainsFunc(handled.Receipts, func(r crmcontracts.Receipt) bool { return ids.UUID(r.Id) == approvalID.UUID })
+			standing := 0
+			for _, line := range lane.Done {
+				if line.ReceiptIds != nil && slices.Contains(*line.ReceiptIds, openapi_types.UUID(approvalID.UUID)) {
+					standing++
+				}
+			}
+			want := 0
+			if c.shown {
+				want = 1
+			}
+			if inHandled != c.shown || standing != want {
+				t.Fatalf("the decision is on the worklist=%t and behind %d lane lines, want shown=%t once on both", inHandled, standing, c.shown)
+			}
+		})
 	}
 }

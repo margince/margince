@@ -38946,6 +38946,9 @@ type HandledForYou struct {
 	// Receipts What was done, newest first. Empty is the honest common case.
 	Receipts []Receipt `json:"receipts"`
 
+	// Since Where the window starts: the same instant the Done for you lane on `/magic` starts at, so both surfaces read one window. Absent on older responses.
+	Since *time.Time `json:"since,omitempty"`
+
 	// Truncated True when more was done than was read. The list is a floor, not a total.
 	Truncated bool `json:"truncated"`
 }

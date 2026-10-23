@@ -46971,6 +46971,11 @@ export interface components {
              * @description The instant these were read at.
              */
             as_of: string;
+            /**
+             * Format: date-time
+             * @description Where the window starts: the same instant the Done for you lane on `/magic` starts at, so both surfaces read one window. Absent on older responses.
+             */
+            since?: string;
             /** @description What was done, newest first. Empty is the honest common case. */
             receipts: components["schemas"]["Receipt"][];
             /** @description True when more was done than was read. The list is a floor, not a total. */

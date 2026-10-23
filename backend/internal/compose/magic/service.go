@@ -246,6 +246,14 @@ func (s *Service) gatherSeamLanes(
 func (s *Service) windowStart(
 	ctx context.Context, since *time.Time, asOf time.Time,
 ) (time.Time, error) {
+	return ResolveWindow(ctx, s.brief, since, asOf)
+}
+
+// ResolveWindow is the one answer to where Done for you starts. Home's lane
+// and the worklist's receipts both ask it, so the two never show two windows.
+func ResolveWindow(
+	ctx context.Context, brief LastBrief, since *time.Time, asOf time.Time,
+) (time.Time, error) {
 	// The floor holds whatever the caller asked for. maxLookback states why.
 	floor := asOf.Add(-maxLookback)
 	if since != nil {
@@ -255,10 +263,10 @@ func (s *Service) windowStart(
 		}
 		return asked, nil
 	}
-	if s.brief == nil {
+	if brief == nil {
 		return asOf.Add(-defaultWindow), nil
 	}
-	cutoff, ran, err := s.brief.CutoffFor(ctx)
+	cutoff, ran, err := brief.CutoffFor(ctx)
 	if err != nil {
 		// A brief this reader may not see, or none at all, is not a failure of
 		// this read: it falls back to the day. Any OTHER error is real and

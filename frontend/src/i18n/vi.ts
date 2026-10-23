@@ -1433,7 +1433,6 @@ export const vi = {
   "home.receipt.basis_other":
     "Ước tính từ {count} deal thắng · Số ngày trung vị mỗi giai đoạn: {days} · Số giai đoạn còn lại: {stages}. Chưa được bên mua xác nhận.",
   "brief.changes.keepDate": "Giữ ngày",
-  "worklist.handled.showHistory": "Xem thay đổi gần đây",
   "home.receipt.date": "Ngày chốt: {before} → {after}",
   "home.receipt.dateUnconfirmed":
     "Ngày chốt ước tính: {before} → {after} (cần xác nhận)",
@@ -1555,7 +1554,6 @@ export const vi = {
   "brief.reply.owed": "Khách hàng đang chờ bạn trả lời",
   "brief.changes.superseded":
     "Deal này lại vừa thay đổi. Mở deal để xem lại trạng thái hiện tại.",
-  "brief.changes.title": "Kiểm tra thay đổi đã áp dụng",
   "brief.changes.accept": "Chấp nhận",
   "brief.changes.accepted": "Đã chấp nhận",
   "brief.changes.undone": "Đã hoàn tác",
@@ -15251,7 +15249,6 @@ export const vi = {
   "worklist.manager.kind.general": "Khác",
   "worklist.board.title": "Việc của nhóm cần chú ý",
   "worklist.exceptions.title": "Ngoại lệ của nhóm",
-  "worklist.handled.title": "Lịch sử thay đổi",
   "worklist.walk.arrived":
     "Có {arrived} việc mới từ khi mở danh sách. Làm mới để thêm vào.",
   "worklist.walk.gone":
@@ -15261,16 +15258,7 @@ export const vi = {
   "worklist.walk.title": "Danh sách đã thay đổi",
   "worklist.walk.refresh": "Làm mới",
   "worklist.handled.empty": "Hôm nay chưa có việc nào được xử lý thay bạn.",
-  "worklist.handled.loading": "Đang tải thao tác…",
-  "worklist.handled.count": "Thay đổi gần đây: {count}",
-  "worklist.handled.what": "Thao tác",
-  "worklist.handled.about": "Hồ sơ",
-  "worklist.handled.when": "Thời điểm",
-  "worklist.handled.noRecord": "Không có hồ sơ",
-  "worklist.handled.hiddenRecord": "Hồ sơ không khả dụng",
-  "worklist.handled.wayBack": "Trạng thái",
   "worklist.handled.putBackDone": "Đã hoàn tác",
-  "worklist.handled.truncated": "Danh sách đã bị cắt bớt. Vẫn còn việc khác.",
   "worklist.exceptions.empty": "Nhóm không có ngoại lệ nào.",
   "worklist.exceptions.loading": "Đang tải nhóm…",
   "worklist.exceptions.count": "{count} cần chú ý",
@@ -16061,6 +16049,7 @@ export const vi = {
   "magic.heading.brief": "Kể từ bản tin sáng gần nhất",
   "magic.loading": "Đang đọc những gì hệ thống đã làm",
   "magic.lane.done": "Đã làm giúp bạn",
+  "magic.review.unavailable": "Không tải được phần xem xét thay đổi này.",
   "magic.lane.needsYou": "Đang chờ bạn",
   "magic.lane.couldNotComplete": "Không thể hoàn tất",
   "magic.lane.watching": "Cần khôi phục",

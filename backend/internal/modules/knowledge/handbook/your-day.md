@@ -185,9 +185,9 @@ The work counts come from the current Worklist read. The greeting's email count 
 **Since your last brief** says when some activity could not be counted. Its count then says how much it could count, and an empty list does not mean nothing happened.
 
 ### Check applied changes
-**Check applied changes**, on **Morning**, lists deal changes you can still keep or undo. Each names the deal, what changed and when. Date estimates show their sales history when available. An undone or accepted change leaves this list.
+A deal change you can still keep or undo shows its buttons on its own line in **Done for you**. Date estimates show their sales history when available.
 
-**Keep date** keeps a date estimate; **Accept** keeps a stage change. Neither runs the change again or makes an estimate a customer promise. **Undo** puts the deal back. Past changes remain under **Done for you** on the Worklist.
+**Keep date** keeps a date estimate; **Accept** keeps a stage change. Neither runs the change again or makes an estimate a customer promise. **Undo** puts the deal back.
 
 A deal that changed again reads "This deal changed again. Open the deal to review its current state."
 Neither an undone change nor a replaced one can be accepted. To make Margince ask first, see [Approvals](approvals.md). Also called: automatic changes, review changes, accept a change.
@@ -349,12 +349,12 @@ The Worklist footer and **To review** panel count items, not cards: 8 possible d
 
 ### Done for you
 
-**Done for you**, on Home and on the Worklist, is one list of what Margince changed or decided for
-you since your last brief (else the last 24 hours). A lookup that found nothing new is not on it.
-Changes you can still accept or undo come first; press **Show recent changes** to read them.
-With nothing to show it says "No actions taken on your behalf today."
+**Done for you** is one list, the same on Home and on the Worklist. It shows what Margince changed
+or decided for you since your last brief. With no brief, it shows the last 24 hours.
+A lookup that found nothing new is not on it. With nothing to show it says "No actions taken on your behalf today."
+If part of the list did not load, it says so instead.
 
-**Undo** puts the record back. It refuses, and says why, when it would overwrite later work: for a
+**Undo** puts the record back. It refuses, and says why, when later work would be lost: for a
 company lookup, any later edit to its company or facts. An undone change keeps its row and status.
 
 ## For a team lead
