@@ -16122,6 +16122,7 @@ export const vi = {
   "magic.records.empty": "Không hồ sơ nào trong số này còn hiển thị.",
   "magic.records.more": "Hiển thị thêm",
   "magic.records.fromTo": "từ {from} thành {to}",
+  "magic.records.fullValues": "Hiện đầy đủ giá trị",
   "magic.records.empty_value": "trống",
   "magic.records.count_one": "{count} hồ sơ",
   "magic.records.count_other": "{count} hồ sơ",

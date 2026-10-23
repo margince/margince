@@ -87,8 +87,11 @@ export function MagicPanel({
   const done = rowsOf(shown?.done);
   const doneRecords = recordsOf(done);
   const coverageIncomplete = doneCoverageIncomplete(shown);
+  // The decision source read to its bound and still had more.
   const doneFloor =
-    sumIsFloor("done", rowsOf(receipt?.done)) || coverageIncomplete;
+    sumIsFloor("done", rowsOf(receipt?.done)) ||
+    coverageIncomplete ||
+    receipt?.done_is_floor === true;
   // "All" would claim the whole of a count that is only a floor.
   const doneFold = plural(
     doneFloor ? "magic.done.atLeast" : "magic.done.all",
@@ -115,16 +118,11 @@ export function MagicPanel({
         <SurfaceState
           state={read}
           emptyLabel={emptyLabel ?? ""}
-          emptyDetail={
-            shown?.not_shown_count_withheld
-              ? t("magic.visibleScope")
-              : undefined
-          }
           loadingLabel={t("magic.loading")}
           detail={{ onRetry: () => void magic.refetch() }}
         >
           <WithheldSources withheld={withheld} />
-          {shown?.not_shown_count_withheld && drawn.length > 0 && (
+          {shown?.not_shown_count_withheld && (
             <p className="t-caption">{t("magic.visibleScope")}</p>
           )}
           {coverageIncomplete && (
@@ -161,7 +159,7 @@ function queryState(
 }
 
 // A quiet window and an unread one are different answers. Only a read that
-// answered completely, with nothing drawn, is empty. A hosted lane the
+// answered completely, with nothing drawn, is empty. A requested lane the
 // response did not carry is unread, not empty.
 function sectionRead(
   state: "loading" | "failed" | "ready",
@@ -171,10 +169,17 @@ function sectionRead(
   coverageIncomplete: boolean,
 ): "loading" | "failed" | "ready" | "empty" | "unavailable" {
   if (state !== "ready") return state;
-  if (only !== undefined && !Array.isArray(shown?.[only])) return "unavailable";
+  const requested = only === undefined ? LANES : [only];
+  if (requested.some((lane) => !Array.isArray(shown?.[lane]))) {
+    return "unavailable";
+  }
+  // A count this reader may not be given is unmeasured, so it never reads as
+  // a complete empty lane either.
   const complete =
     rowsOf(shown?.sources_unavailable).length === 0 &&
     rowsOf(shown?.not_shown).length === 0 &&
+    shown?.not_shown_count_withheld !== true &&
+    shown?.done_is_floor !== true &&
     !coverageIncomplete;
   return drawn.length === 0 && complete ? "empty" : "ready";
 }

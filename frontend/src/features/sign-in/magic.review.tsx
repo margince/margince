@@ -15,35 +15,49 @@ type Receipt = NonNullable<
   ReturnType<typeof useHandledForYou>["data"]
 >["receipts"][number];
 
-/** What the worklist's receipt read says about this one-record line. */
+/** What the worklist's receipt read says about one change. */
 export type LineReceipt = Readonly<{
   receipt?: Receipt;
-  // The detail read did not answer this time. A cached answer is not shown
-  // as current: its actions may no longer be allowed.
-  failed: boolean;
+  // The read did not answer this time, or stopped before this change. A
+  // cached or missing answer is not shown as current: its actions may no
+  // longer be allowed.
+  unavailable: boolean;
 }>;
 
+/** The receipt a one-record done line stands for. */
 export function useLineReceipt(line: MagicLine): LineReceipt {
+  const oneRecord = line.lane === "done" && (line.count ?? 1) === 1;
+  return useReceiptFor(
+    oneRecord ? line.receipt_ids : undefined,
+    line.entity?.type,
+  );
+}
+
+/**
+ * The receipt with its own way back among these canonical ids, from the
+ * worklist's receipt read. Only a deal change carries a review, so only a
+ * deal can have lost one.
+ */
+export function useReceiptFor(
+  receiptIds: readonly string[] | undefined,
+  entityType: string | undefined,
+): LineReceipt {
   const handled = useHandledForYou();
-  if (
-    line.lane !== "done" ||
-    (line.count ?? 1) > 1 ||
-    !line.receipt_ids?.length
-  ) {
-    return { failed: false };
+  if (!receiptIds?.length) {
+    return { unavailable: false };
   }
-  // Only a deal change carries a receipt review, so only its line can have
-  // lost one.
+  const reviewable = entityType === "deal";
   if (handled.isError) {
-    return { failed: line.entity?.type === "deal" };
+    return { unavailable: reviewable };
   }
+  const receipt = handled.data?.receipts?.find(
+    (candidate) =>
+      receiptIds.includes(candidate.id) &&
+      Boolean(candidate.review || candidate.undo),
+  );
   return {
-    failed: false,
-    receipt: handled.data?.receipts?.find(
-      (receipt) =>
-        line.receipt_ids?.includes(receipt.id) &&
-        Boolean(receipt.review || receipt.undo),
-    ),
+    receipt,
+    unavailable: !receipt && reviewable && handled.data?.truncated === true,
   };
 }
 

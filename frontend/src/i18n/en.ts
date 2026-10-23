@@ -16481,6 +16481,7 @@ export const en = {
   "magic.records.empty": "None of these records is in view any more.",
   "magic.records.more": "Show more",
   "magic.records.fromTo": "{from} → {to}",
+  "magic.records.fullValues": "Show full values",
   "magic.records.empty_value": "empty",
   "magic.records.count_one": "{count} record",
   "magic.records.count_other": "{count} records",

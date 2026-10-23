@@ -13,7 +13,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { Button } from "../../design-system/atoms";
+import { Button, Disclosure } from "../../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
@@ -25,6 +25,7 @@ import { historyFieldLabel } from "../../lib/historyfieldlabels";
 import { unwrap } from "../../lib/problem";
 import { routeHash } from "../../lib/router";
 import { type MagicLine, magicKey } from "./magic.queries";
+import { LineReview, useReceiptFor } from "./magic.review";
 import { MagicUndoButton } from "./magic.undo";
 import "../brief/brief.css";
 
@@ -144,6 +145,11 @@ function RecordRow({ record }: Readonly<{ record: MagicLineRecord }>) {
   const t = useT();
   const entity = record.entity;
   const label = entity.label ?? t("magic.noRecord");
+  // Each grouped change keeps its own native review, joined by its receipt.
+  const review = useReceiptFor(
+    record.receipt_id ? [record.receipt_id] : undefined,
+    entity.type,
+  );
   const href = isEntityKind(entity.type)
     ? routeHash(ENTITY[entity.type].route(entity.id))
     : undefined;
@@ -151,12 +157,19 @@ function RecordRow({ record }: Readonly<{ record: MagicLineRecord }>) {
     <li className="magic-record">
       <div className="magic-record-head">
         {href ? <a href={href}>{label}</a> : <span>{label}</span>}
-        <MagicUndoButton
-          undo={record.undo}
-          entityType={entity.type}
-          entityId={entity.id}
-        />
+        {review.receipt ? (
+          <LineReview receipt={review.receipt} />
+        ) : (
+          <MagicUndoButton
+            undo={record.undo}
+            entityType={entity.type}
+            entityId={entity.id}
+          />
+        )}
       </div>
+      {review.unavailable && (
+        <p className="t-caption">{t("magic.review.unavailable")}</p>
+      )}
       <ChangeList changes={record.changes} />
     </li>
   );
@@ -172,23 +185,34 @@ export function ChangeList({
   }
   return (
     <dl className="magic-changes">
-      {changes.map((change) => (
-        <div key={change.field}>
-          <dt className="t-caption">{historyFieldLabel(change.field, t)}</dt>
-          <dd>
-            {t("magic.records.fromTo", {
-              from: valueText(change.before, t),
-              to: valueText(change.after, t),
-            })}
-          </dd>
-        </div>
-      ))}
+      {changes.map((change) => {
+        const from = valueText(change.before, t);
+        const to = valueText(change.after, t);
+        return (
+          <div key={change.field}>
+            <dt className="t-caption">{historyFieldLabel(change.field, t)}</dt>
+            <dd>
+              {t("magic.records.fromTo", {
+                from: compact(from),
+                to: compact(to),
+              })}
+              {/* Two values may differ only past the cut; the reader can
+                  still read both in full before pressing Undo. */}
+              {(from.length > VALUE_CHARS || to.length > VALUE_CHARS) && (
+                <Disclosure summary={t("magic.records.fullValues")}>
+                  <p>{t("magic.records.fromTo", { from, to })}</p>
+                </Disclosure>
+              )}
+            </dd>
+          </div>
+        );
+      })}
     </dl>
   );
 }
 
 // A stored value as text a reader recognises. Absent and empty read as "empty",
-// a list as its items, anything structured as its JSON, all cut to a length.
+// a list as its items, anything structured as its JSON.
 function valueText(value: unknown, t: ReturnType<typeof useT>): string {
   if (value === null || value === undefined || value === "") {
     return t("magic.records.empty_value");
@@ -198,5 +222,10 @@ function valueText(value: unknown, t: ReturnType<typeof useT>): string {
     : typeof value === "object"
       ? JSON.stringify(value)
       : String(value);
+  return text;
+}
+
+// A value cut to the row's length; the full one sits behind the row.
+function compact(text: string): string {
   return text.length > VALUE_CHARS ? `${text.slice(0, VALUE_CHARS)}…` : text;
 }

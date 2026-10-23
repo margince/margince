@@ -137,7 +137,7 @@ function MagicLineRow({
       ) : (
         <LineUndo line={line} />
       )}
-      {review.failed && (
+      {review.unavailable && (
         <p className="t-caption">{t("magic.review.unavailable")}</p>
       )}
       <LineWhen line={line} zone={zone} byDay={byDay} />

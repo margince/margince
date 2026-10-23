@@ -3,7 +3,7 @@
 
 /** @vitest-environment happy-dom */
 
-import { cleanup, screen, within } from "@testing-library/react";
+import { act, cleanup, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
 import { jsonResponse, render, stubApi } from "../../testing/brief.testkit";
@@ -203,29 +203,68 @@ describe("Done for you is one list on Home and on the Worklist", () => {
     expect(screen.queryByText(en["worklist.handled.empty"])).toBeNull();
   });
 
-  it("says an empty read covers only what the reader may see", async () => {
-    stubBoth(
-      "2026-09-13T07:00:00Z",
-      [],
-      {},
+  // Home and the Worklist read one incomplete answer the same way.
+  it.each([
+    [
+      "no Done lane in the answer",
+      { done: undefined },
+      en["state.unavailable"],
+    ],
+    [
+      "a withheld count",
       { not_shown_count_withheld: true },
-    );
-    render(<HandledForYouPanel />);
-    expect(await screen.findByText(en["worklist.handled.empty"])).toBeTruthy();
-    expect(screen.getByText(en["magic.visibleScope"])).toBeTruthy();
+      en["magic.visibleScope"],
+    ],
+  ])("neither surface calls %s a quiet day", async (_, magic, explanation) => {
+    for (const ui of [
+      <MagicPanel key="home" />,
+      <HandledForYouPanel key="worklist" />,
+    ]) {
+      stubBoth("2026-09-13T07:00:00Z", [], {}, magic);
+      const { unmount } = render(ui);
+      expect(await screen.findByText(explanation)).toBeTruthy();
+      expect(screen.queryByText(en["worklist.handled.empty"])).toBeNull();
+      unmount();
+      vi.unstubAllGlobals();
+    }
   });
 
-  it("offers no cached review as current when the receipt read failed", async () => {
+  it("calls a complete empty read a quiet day", async () => {
+    stubBoth("2026-09-13T07:00:00Z", []);
+    render(<HandledForYouPanel />);
+    expect(await screen.findByText(en["worklist.handled.empty"])).toBeTruthy();
+    expect(screen.queryByText(en["magic.visibleScope"])).toBeNull();
+  });
+
+  it("withdraws a cached review once its read fails on refetch", async () => {
+    stubBoth("2026-09-13T07:00:00Z", doneLines());
+    const { client } = render(<HandledForYouPanel />);
+    expect(
+      await screen.findByRole("button", { name: en["brief.changes.accept"] }),
+    ).toBeTruthy();
     stubBoth("2026-09-13T07:00:00Z", doneLines(), {
       "GET /worklist/handled": failure,
     });
-    render(<HandledForYouPanel />);
+    await act(async () => {
+      await client.refetchQueries({ queryKey: ["worklist", "handled"] });
+    });
     expect(
       await screen.findByText(en["magic.review.unavailable"]),
     ).toBeTruthy();
     expect(
       screen.queryByRole("button", { name: en["brief.changes.accept"] }),
     ).toBeNull();
+  });
+
+  it("says a review past the receipt read's bound did not load", async () => {
+    stubBoth("2026-09-13T07:00:00Z", doneLines(), {
+      "GET /worklist/handled": () =>
+        jsonResponse({ as_of: AS_OF, truncated: true, receipts: [] }),
+    });
+    render(<HandledForYouPanel />);
+    expect(
+      await screen.findByText(en["magic.review.unavailable"]),
+    ).toBeTruthy();
   });
 
   it("offers no review a revoked grant no longer allows", async () => {

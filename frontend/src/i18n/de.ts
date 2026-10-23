@@ -16536,6 +16536,7 @@ export const de = {
   "magic.records.empty": "Keiner dieser Datensätze ist noch sichtbar.",
   "magic.records.more": "Mehr anzeigen",
   "magic.records.fromTo": "{from} → {to}",
+  "magic.records.fullValues": "Vollständige Werte zeigen",
   "magic.records.empty_value": "leer",
   "magic.records.count_one": "{count} Datensatz",
   "magic.records.count_other": "{count} Datensätze",
