@@ -825,6 +825,40 @@ paths:
         '409': {$ref: '#/components/responses/Conflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
 
+  /admin/mail-deal-repair/preview:
+    post:
+      tags: [Identity]
+      operationId: previewMailDealRepair
+      security: [{cookieAuth: []}]
+      x-agent-access: human-only
+      summary: Preview what the captured-mail deal repair does and leaves unresolved.
+      description: |
+        Requires data_task:read. This operation changes no record: each mail is decided and the
+        result rolled back. It reads at most `limit` captured mails in id order, after `after` when
+        given, and counts what the repair does with each: links it, re-checks a link the rule wrote,
+        or leaves it. `unknown_provenance_link`, `unknown_provenance`, `human_kept` and `ambiguous`
+        are left unresolved by design. `complete` is false when more captured mail follows the page.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [limit]
+              properties:
+                limit: {type: integer, minimum: 1, maximum: 1000}
+                after: {type: string, format: uuid}
+      responses:
+        '200':
+          description: Outcome counts for the page, and where the next page starts.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/MailDealRepairPreview'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+
   /admin/job-health:
     get:
       tags: [Identity]
@@ -54229,6 +54263,26 @@ components:
         refused: { type: integer, description: Records this check refused in the window. }
         last_refused_at: { type: string, format: date-time }
 
+    MailDealRepairOutcomeCount:
+      type: object
+      additionalProperties: false
+      required: [outcome, count]
+      properties:
+        outcome:
+          type: string
+          enum: [linked, already_filed, not_writable, none, ambiguous, conflicting_companies, not_mail, unknown_provenance, human_kept, unknown_provenance_link, machine_confirmed, machine_moved, machine_retracted, machine_retracted_target_refused]
+        count: {type: integer, minimum: 0}
+    MailDealRepairPreview:
+      type: object
+      additionalProperties: false
+      required: [outcomes, inspected, complete]
+      properties:
+        outcomes:
+          type: array
+          items: {$ref: '#/components/schemas/MailDealRepairOutcomeCount'}
+        inspected: {type: integer, minimum: 0}
+        complete: {type: boolean, description: False when more captured mail follows this page.}
+        next_after: {type: string, format: uuid, description: The last mail inspected; send it as `after` for the next page.}
     HomeRepairReview:
       type: object
       additionalProperties: false

@@ -11,7 +11,10 @@ package capture
 
 import (
 	"context"
+	"encoding/json"
 	"maps"
+	"net/http"
+	"net/http/httptest"
 	"runtime"
 	"strings"
 	"testing"
@@ -21,6 +24,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	capturemod "github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -452,7 +456,7 @@ func TestCaptureFollowsOurThreadOnlyForTheSameCompany(t *testing.T) {
 	}
 
 	env.sync(t,
-		mailFrom("alice@acme.example", "thr2@acme.example", "thr1@myco.example", "Re: project"),
+		authenticated(mailFrom("alice@acme.example", "thr2@acme.example", "thr1@myco.example", "Re: project"), "acme.example"),
 		mailFrom("mallory@evil.example", "thr3@evil.example", "thr1@myco.example", "Re: project"),
 		mailFrom("stranger@nowhere.example", "thr4@nowhere.example", "thr1@myco.example", "Re: project"),
 	)
@@ -516,7 +520,7 @@ func TestCaptureCountsOnlyAttestedMailAsOurs(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("filing the mail on a deal as a human: %v", err)
 	}
-	env.sync(t, mailFrom("alice@acme.example", "una2@acme.example", "una1@myco.example", "Re: project"))
+	env.sync(t, authenticated(mailFrom("alice@acme.example", "una2@acme.example", "una1@myco.example", "Re: project"), "acme.example"))
 	wantDeals(t, e, "una2@acme.example")
 }
 
@@ -553,23 +557,51 @@ type repairer struct {
 func newRepairer(e *integration.SearchEnv, w dealWorld) repairer {
 	return repairer{
 		e:      e,
-		repair: capturemod.DealRepair{Candidates: w.store, Authority: identity.NewService(e.Pool)},
+		repair: capturemod.DealRepair{Candidates: w.store, Authority: identity.NewService(e.Pool), Filer: compose.ActivityDealFiler()},
 		system: principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS),
 			principal.Principal{Type: principal.PrincipalSystem, ID: "system:data-task"}),
 	}
 }
 
+// preview reads the repair's outcomes through the operator preview the API
+// serves, as an operator with the data task read grant.
 func (r repairer) preview(t *testing.T) map[capturemod.DealOutcome]int {
 	t.Helper()
-	var counts map[capturemod.DealOutcome]int
-	if err := database.WithWorkspaceTx(r.system, r.e.Pool, func(tx pgx.Tx) error {
-		var err error
-		counts, err = r.repair.PreviewTx(r.system, tx, 1000)
-		return err
-	}); err != nil {
-		t.Fatalf("previewing the repair: %v", err)
+	operator := principal.WithActor(principal.WithWorkspaceID(context.Background(), r.e.WS), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + r.e.Rep1.String(), UserID: r.e.Rep1, SeatType: principal.SeatFull,
+		Permissions: principal.Permissions{
+			Objects: map[string]principal.ObjectGrant{"data_task": {Read: true}}, RowScope: principal.RowScopeAll,
+		},
+	})
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/v1/admin/mail-deal-repair/preview", strings.NewReader(`{"limit":1000}`))
+	compose.MailDealRepairPreviewHandler(r.e.Pool)(rec, req.WithContext(operator))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("the operator preview answered %d: %s", rec.Code, rec.Body.String())
+	}
+	var page crmcontracts.MailDealRepairPreview
+	if err := json.Unmarshal(rec.Body.Bytes(), &page); err != nil {
+		t.Fatalf("reading the operator preview: %v", err)
+	}
+	if !page.Complete {
+		t.Fatalf("the operator preview says more mail follows a page of 1000: %+v", page)
+	}
+	counts := map[capturemod.DealOutcome]int{}
+	for _, row := range page.Outcomes {
+		counts[capturemod.DealOutcome(row.Outcome)] = row.Count
 	}
 	return counts
+}
+
+// runErr is run for a goroutine, which may not fail the test itself.
+func (r repairer) runErr() (int, error) {
+	var out datatask.BatchOut
+	err := database.WithWorkspaceTx(r.system, r.e.Pool, func(tx pgx.Tx) error {
+		var err error
+		out, err = r.repair.BatchTx(r.system, tx, datatask.BatchIn{Limit: 50, RunID: ids.NewV7()})
+		return err
+	})
+	return out.Changed, err
 }
 
 func (r repairer) run(t *testing.T) int {
@@ -648,7 +680,7 @@ func TestTheDealRepairSeesOnlyWhatTheCapturingMailboxSaw(t *testing.T) {
 
 	colleague(t, map[string]bool{"priv1@myco.example": true}, map[string][]ids.UUID{"priv1@myco.example": {reporting}},
 		email(secondSeatAddress, "", "alice@acme.example", "priv1@myco.example", ""))
-	env.sync(t, mailFrom("alice@acme.example", "priv2@acme.example", "priv1@myco.example", "Re: project"))
+	env.sync(t, authenticated(mailFrom("alice@acme.example", "priv2@acme.example", "priv1@myco.example", "Re: project"), "acme.example"))
 	wantDeals(t, e, "priv2@acme.example")
 
 	// Our own thread at a second customer, captured before its deals existed,
@@ -657,7 +689,7 @@ func TestTheDealRepairSeesOnlyWhatTheCapturingMailboxSaw(t *testing.T) {
 	beta.employee(t, "bob@beta.example", beta.customer)
 	env.syncSent(t, map[string]bool{"own1@myco.example": true},
 		email(captureOwner, "", "bob@beta.example", "own1@myco.example", ""))
-	env.sync(t, mailFrom("bob@beta.example", "own2@beta.example", "own1@myco.example", "Re: project"))
+	env.sync(t, authenticated(mailFrom("bob@beta.example", "own2@beta.example", "own1@myco.example", "Re: project"), "beta.example"))
 	beta.deal(t, "Beta one")
 	betaTwo := beta.deal(t, "Beta two")
 	ours := ids.From[ids.ActivityKind](activityOf(t, e, "own1@myco.example"))
@@ -677,8 +709,8 @@ func TestTheDealRepairSeesOnlyWhatTheCapturingMailboxSaw(t *testing.T) {
 
 	// Live capture decides the same way for the same mail.
 	env.sync(t,
-		mailFrom("alice@acme.example", "priv2@acme.example", "priv1@myco.example", "Re: project"),
-		mailFrom("bob@beta.example", "own3@beta.example", "own1@myco.example", "Re: project"))
+		authenticated(mailFrom("alice@acme.example", "priv2@acme.example", "priv1@myco.example", "Re: project"), "acme.example"),
+		authenticated(mailFrom("bob@beta.example", "own3@beta.example", "own1@myco.example", "Re: project"), "beta.example"))
 	wantDeals(t, e, "priv2@acme.example")
 	wantDeals(t, e, "own3@beta.example", betaTwo)
 }
@@ -965,7 +997,9 @@ func TestARelinkAndTheDealRuleRacingLeaveOneDeal(t *testing.T) {
 			},
 		})
 		ruled <- database.WithWorkspaceTx(connectorCtx, e.Pool, func(tx pgx.Tx) error {
-			_, err := capturemod.AttributeDealTx(connectorCtx, tx, mail, w.store, nil)
+			_, err := capturemod.AttributeDealTx(connectorCtx, tx, mail, capturemod.DealAttribution{
+				Candidates: w.store, Filer: compose.ActivityDealFiler(),
+			})
 			return err
 		})
 	}()

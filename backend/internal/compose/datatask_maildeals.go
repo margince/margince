@@ -17,11 +17,12 @@ import (
 )
 
 // mailDealsDataTask files mail captured before the deal rule under the one
-// deal the rule finds for it, deciding as the mailbox that captured it. It
-// only adds links and asks nobody; mail already on a deal is never touched.
+// deal the rule finds for it, and re-checks the links the rule itself wrote,
+// deciding as the mailbox that captured it. It asks nobody and never touches
+// a colleague's filing; what it cannot resolve the operator preview reports.
 func mailDealsDataTask(pool *pgxpool.Pool) datatask.Task {
 	db := InstallationDB(pool)
-	repair := capture.DealRepair{Candidates: deals.NewStore(db, DealsInstallation()), Authority: identity.NewService(pool)}
+	repair := mailDealRepair(pool)
 	return datatask.Task{
 		ID: "core/1792680000_captured_mail_filed_on_its_deal", Version: 1,
 		Title: "Filing captured mail on the one deal it is about", Requires: []string{"core/1792679518"},
@@ -42,5 +43,13 @@ func mailDealsDataTask(pool *pgxpool.Pool) datatask.Task {
 				return repair.BatchTx(ctx, tx, in)
 			},
 		}},
+	}
+}
+
+// mailDealRepair is the repair the data task runs and the operator previews.
+func mailDealRepair(pool *pgxpool.Pool) capture.DealRepair {
+	return capture.DealRepair{
+		Candidates: deals.NewStore(InstallationDB(pool), DealsInstallation()),
+		Authority:  identity.NewService(pool), Filer: ActivityDealFiler(),
 	}
 }

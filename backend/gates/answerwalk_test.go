@@ -17,6 +17,7 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
+	"maps"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -130,37 +131,85 @@ func answerWalkStatements(decl ast.Decl, fragments map[string]fragment) []string
 		}
 		parts := gatekit.SQLStatementsOf(joined)
 		seen := map[string]bool{}
-		var include func(ast.Node)
-		include = func(root ast.Node) {
+		var include func(ast.Node, string)
+		include = func(root ast.Node, pkg string) {
 			ast.Inspect(root, func(n ast.Node) bool {
 				call, ok := n.(*ast.CallExpr)
 				if !ok {
 					return true
 				}
-				name, ok := call.Fun.(*ast.Ident)
-				if !ok || seen[name.Name] {
+				key, callee := fragmentKey(call, pkg)
+				if key == "" || seen[key] {
 					return true
 				}
-				helper, known := fragments[name.Name]
+				helper, known := fragments[key]
 				if !known {
 					return true
 				}
-				seen[name.Name] = true
+				seen[key] = true
 				body := helper.body
 				bodySQL := gatekit.SQLStatementsOf(body)
 				if helper.path == answerWalkOwnerFile {
 					return true
 				}
 				parts = append(parts, bodySQL...)
-				include(body)
+				include(body, callee)
 				return true
 			})
 		}
-		include(joined)
+		include(joined, "")
 		statements = append(statements, strings.Join(parts, " "))
 		return true
 	})
 	return statements
+}
+
+// fragmentKey names the helper a call reaches: a bare name inside pkg, or a
+// shared kernel package's function as "pkg.Name". It answers the package the
+// helper's own bare calls resolve in.
+func fragmentKey(call *ast.CallExpr, pkg string) (key, callee string) {
+	switch fun := call.Fun.(type) {
+	case *ast.Ident:
+		if pkg != "" {
+			return pkg + "." + fun.Name, pkg
+		}
+		return fun.Name, ""
+	case *ast.SelectorExpr:
+		if x, ok := fun.X.(*ast.Ident); ok {
+			return x.Name + "." + fun.Sel.Name, x.Name
+		}
+	}
+	return "", ""
+}
+
+// kernelFragments are the shared kernel's SQL helpers, keyed "pkg.Name". A
+// module composes a walk from them as it does from its own helpers, so the
+// census expands them too.
+func kernelFragments(t *testing.T) map[string]fragment {
+	t.Helper()
+	out := map[string]fragment{}
+	err := filepath.WalkDir(filepath.Join("internal", "shared", "kernel"), func(path string, entry fs.DirEntry, err error) error {
+		if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return err
+		}
+		file, err := gatekit.ParseFile(path, 0)
+		if err != nil {
+			return err
+		}
+		for _, candidate := range file.Decls {
+			if fn, ok := candidate.(*ast.FuncDecl); ok && fn.Recv == nil {
+				out[file.Name.Name+"."+fn.Name.Name] = fragment{body: fn.Body, path: filepath.ToSlash(path)}
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("reading the shared kernel's helpers: %v", err)
+	}
+	if len(out) == 0 {
+		t.Fatal("no shared kernel helper was read, so a walk composed from one would go unseen")
+	}
+	return out
 }
 
 // answerWalkOwnerFile is the file whose helpers are the one answer.
@@ -179,6 +228,7 @@ func TestOnlyTheAnswerPredicateWalksAThreadForOurReply(t *testing.T) {
 	t.Parallel()
 	defer answerWalksAdmitted.AssertAllMatched(t)
 	var found []string
+	kernel := kernelFragments(t)
 	for _, root := range []string{"internal", "extensions", "cmd"} {
 		walkRoot := root
 		if root == "extensions" {
@@ -203,6 +253,7 @@ func TestOnlyTheAnswerPredicateWalksAThreadForOurReply(t *testing.T) {
 		})
 		for _, files := range packages {
 			fragments := packageFragments(files)
+			maps.Copy(fragments, kernel)
 			for path, file := range files {
 				found = append(found, answerWalkSitesIn(path, file, fragments)...)
 			}
@@ -293,6 +344,17 @@ func TestTheAnswerWalkCensusFindsAPlantedBypass(t *testing.T) {
 		if len(answerWalkSitesIn(caller, files[caller], packageFragments(files))) == 0 {
 			t.Errorf("the census missed a planted %s walk", name)
 		}
+	}
+	// A walk composed from the shared kernel's conversation helpers is a walk.
+	kernelComposed := "package p\nfunc f() string { return correspondence.ConversationSQL(\"r\", \"a\") + ` AND ` + correspondence.OurOutboundSQL(\"r\") }\n"
+	composedFile, err := parser.ParseFile(gatekit.SourceFileSet(), "kernel.go", kernelComposed, 0)
+	if err != nil {
+		t.Fatalf("parsing the planted kernel walk: %v", err)
+	}
+	fragments := packageFragments(map[string]*ast.File{"kernel.go": composedFile})
+	maps.Copy(fragments, kernelFragments(t))
+	if len(answerWalkSitesIn("kernel.go", composedFile, fragments)) == 0 {
+		t.Error("the census missed a walk composed from the shared kernel's helpers")
 	}
 	inboundOnly := "package p\nconst q = `SELECT 1 FROM activity n WHERE n.thread_key = a.thread_key " +
 		"AND n.direction = 'inbound'`\n"

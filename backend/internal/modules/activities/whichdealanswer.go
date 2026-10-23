@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
@@ -32,8 +33,7 @@ func (s *Store) answerWhichDealTx(ctx context.Context, tx pgx.Tx, mail ids.Activ
 	// rows whose place in it cannot be forged count: our own attested mail, or
 	// mail whose sender the receiving server authenticated. The key is the
 	// sender's References root, so anything else may be a spoof.
-	proven := `(` + ourOutboundInThisThread("mail", "anchor") + `
-		 OR (` + correspondentInThisThread("mail", "anchor") + ` AND ` + CapturedInboundSQL("mail") + `))`
+	proven := `(` + correspondence.ConversationSQL("mail", "anchor") + ` AND ` + correspondence.ProvenSQL("mail") + `)`
 	conversation := `FROM activity anchor JOIN activity mail ON ` + proven + `
 		 WHERE anchor.id = $1 AND mail.restricted_at IS NULL`
 	questions, err := threadIDs(ctx, tx, `SELECT q.id FROM activity anchor
@@ -57,7 +57,9 @@ func (s *Store) answerWhichDealTx(ctx context.Context, tx pgx.Tx, mail ids.Activ
 		return err
 	}
 	for _, sibling := range siblings {
-		in := RelinkActivityInput{EntityType: linkEntityDeal, EntityID: deal}
+		// The sibling is re-checked for a deal under its own lock: one a
+		// colleague filed while this waited keeps its deal alone.
+		in := RelinkActivityInput{EntityType: linkEntityDeal, EntityID: deal, unfiledOnly: true}
 		if _, _, err := relinkActivityRow(ctx, tx, ids.From[ids.ActivityKind](sibling), in, linkColumn(linkEntityDeal)); err != nil && !notTheirsToFile(err) {
 			return err
 		}

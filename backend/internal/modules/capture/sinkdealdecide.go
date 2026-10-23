@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -28,14 +29,7 @@ type dealFacts struct {
 	project   ids.UUID
 	contacts  []ids.UUID
 	companies []ids.UUID
-	thread    []threadDeal
-}
-
-// threadDeal is an open deal a sibling in the mail's thread is filed under,
-// with the company it belongs to.
-type threadDeal struct {
-	deal    ids.UUID
-	company *ids.UUID
+	thread    []ids.UUID
 }
 
 // readDealFacts reads the facts. refiling reads past the mail's own deal
@@ -71,7 +65,9 @@ func readDealFacts(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, re
 	if facts.companies, err = mailCompanies(ctx, tx, activityID, facts.contacts); err != nil {
 		return facts, err
 	}
-	facts.thread, err = threadDeals(ctx, tx, activityID)
+	if len(facts.companies) == 1 {
+		facts.thread, err = threadDeals(ctx, tx, activityID, facts.companies[0])
+	}
 	return facts, err
 }
 
@@ -103,9 +99,10 @@ func decideDeal(ctx context.Context, tx pgx.Tx, facts dealFacts, candidates Deal
 	// The thread a mail claims is typed by its sender, so a sibling's deal
 	// counts only when the mail's own company corroborates it. A deal at
 	// another company is no clue about this one.
-	if thread := threadDealsAt(facts.thread, company); len(thread) == 1 {
-		return DealVerdict{Outcome: DealLinked, Deal: thread[0]}, nil
-	} else if len(thread) > 1 {
+	switch len(facts.thread) {
+	case 1:
+		return DealVerdict{Outcome: DealLinked, Deal: facts.thread[0]}, nil
+	case 2:
 		return DealVerdict{Outcome: DealAmbiguous, Question: question}, nil
 	}
 	deals, err := candidates.OpenDealsOfCompany(ctx, tx, company)
@@ -117,17 +114,6 @@ func decideDeal(ctx context.Context, tx pgx.Tx, facts dealFacts, candidates Deal
 		return oneDeal(staked, question), err
 	}
 	return DealVerdict{Outcome: DealAmbiguous, Question: question}, nil
-}
-
-// threadDealsAt keeps the thread's deals that belong to company.
-func threadDealsAt(thread []threadDeal, company ids.UUID) []ids.UUID {
-	var deals []ids.UUID
-	for _, sibling := range thread {
-		if sibling.company != nil && *sibling.company == company {
-			deals = append(deals, sibling.deal)
-		}
-	}
-	return deals
 }
 
 // oneDeal turns a candidate read into a verdict: one is the deal, none is no
@@ -210,16 +196,17 @@ func mailCompanies(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, co
 	return companies, nil
 }
 
-// threadDeals is the open deals our own sent mail in the mail's thread is
-// filed under, at most two, with each deal's company. The thread key is the
-// sender's References root, so only a sibling proven ours counts. The proof is
-// spelled as in activities.ourOutboundInThisThread, which capture cannot
-// import. Only siblings and deals the capturing seat may read count.
-func threadDeals(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) ([]threadDeal, error) {
+// threadDeals is the open deals of company that proven mail of this mail's
+// conversation is filed under, at most two once the whole population is
+// filtered. The conversation and the proof are correspondence's, as the deal
+// answer and the request settlement read them. The mail itself must be proven
+// too: a reply anyone could have typed follows no deal. Only siblings and
+// deals the capturing seat may read count.
+func threadDeals(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, company ids.UUID) ([]ids.UUID, error) {
 	if !auth.ReadGranted(ctx, "deal") {
 		return nil, nil
 	}
-	args := []any{activityID}
+	args := []any{activityID, company}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	siblingScope, err := auth.ActivityContentClause(ctx, "a", arg)
 	if err != nil {
@@ -235,24 +222,23 @@ func threadDeals(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) ([]t
 		}
 	}
 	rows, err := tx.Query(ctx, `
-		SELECT DISTINCT d.id, d.company_id
+		SELECT DISTINCT d.id
 		  FROM activity self
-		  JOIN activity a ON a.thread_key = self.thread_key AND a.id <> self.id
-		   AND a.kind = self.kind AND a.channel_provider IS NOT DISTINCT FROM self.channel_provider
+		  JOIN activity a ON a.id <> self.id AND `+correspondence.ConversationSQL("a", "self")+`
 		  JOIN activity_link l ON l.activity_id = a.id AND l.entity_type = 'deal'
 		  JOIN deal d ON d.id = l.deal_id
-		 WHERE self.id = $1 AND self.thread_key IS NOT NULL AND self.thread_key <> ''
-		   AND a.direction = 'outbound'
-		   AND (a.counterparty_outbound_attested OR a.sent_by_colleague IS NOT NULL)
-		   AND a.restricted_at IS NULL AND a.archived_at IS NULL AND (`+siblingScope+`)
-		   AND d.status = 'open' AND d.archived_at IS NULL AND (`+dealScope+`)
+		 WHERE self.id = $1 AND `+correspondence.ProvenSQL("self")+`
+		   AND `+correspondence.ProvenSQL("a")+`
+		   AND a.restricted_at IS NULL AND (`+siblingScope+`)
+		   AND d.company_id = $2 AND d.status = 'open' AND d.archived_at IS NULL AND (`+dealScope+`)
 		 ORDER BY d.id
 		 LIMIT 2`, args...)
 	if err != nil {
-		return nil, fmt.Errorf("capture: reading the thread's deals: %w", err)
+		return nil, fmt.Errorf("capture: reading the conversation's deals: %w", err)
 	}
-	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (threadDeal, error) {
-		var sibling threadDeal
-		return sibling, row.Scan(&sibling.deal, &sibling.company)
-	})
+	deals, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return nil, fmt.Errorf("capture: reading the conversation's deals: %w", err)
+	}
+	return deals, nil
 }

@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
 )
 
@@ -35,6 +36,10 @@ const (
 	DealMachineMoved DealOutcome = "machine_moved"
 	// DealMachineRetracted is a link the rule wrote and no longer finds.
 	DealMachineRetracted DealOutcome = "machine_retracted"
+	// DealMachineRetractedRefused is a link the rule wrote that now belongs
+	// on a deal the capturing seat may not file on. The old link is taken
+	// back and nothing is written instead.
+	DealMachineRetractedRefused DealOutcome = "machine_retracted_target_refused"
 )
 
 // dealRepairReason is the evidence every repair write records.
@@ -51,11 +56,9 @@ const capturedMailSQL = `
 // dealProvenanceSQL classifies a mail's deal links by their audit rows. It
 // answers how many there are and one of them. It answers whether a colleague
 // ever filed the mail on a deal, and whether the rule wrote that one link.
-const dealProvenanceSQL = `
+var dealProvenanceSQL = `
 	SELECT count(l.deal_id), min(l.deal_id::text),
-	       EXISTS (SELECT 1 FROM audit_log h
-	                WHERE h.entity_type = 'activity' AND h.entity_id = $1 AND h.action = 'activity_relink'
-	                  AND h.after->>'entity_type' = 'deal' AND h.actor_type IN ('human', 'agent')),
+	       ` + provenance.HumanDealFilingSQL("$1") + `,
 	       EXISTS (SELECT 1 FROM audit_log m
 	                WHERE m.entity_type = 'activity' AND m.entity_id = $1 AND m.action = 'activity_relink'
 	                  AND m.after->>'entity_type' = 'deal' AND m.actor_type IN ('connector', 'system')
@@ -70,6 +73,7 @@ const dealProvenanceSQL = `
 type DealRepair struct {
 	Candidates DealCandidates
 	Authority  authz.Resolver
+	Filer      DealFiler
 }
 
 // BatchTx repairs one page of mail. A second run changes nothing, because
@@ -99,42 +103,66 @@ func (r DealRepair) BatchTx(ctx context.Context, tx pgx.Tx, in datatask.BatchIn)
 	return datatask.AdvanceUUID(in, scanned, changed)
 }
 
-// PreviewTx is what BatchTx would do to the first limit mails, by outcome,
+// DealRepairPreview is what BatchTx would do to one page of captured mail.
+type DealRepairPreview struct {
+	Outcomes map[DealOutcome]int
+	// Last is the last mail inspected; zero for an empty page.
+	Last ids.UUID
+	// Complete is false when more captured mail follows the page.
+	Complete bool
+	// Inspected counts the mails the page read.
+	Inspected int
+}
+
+// PreviewTx is what BatchTx would do to limit mails after after, by outcome,
 // decided the same way and rolled back.
-func (r DealRepair) PreviewTx(ctx context.Context, tx pgx.Tx, limit int) (map[DealOutcome]int, error) {
+func (r DealRepair) PreviewTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) (DealRepairPreview, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
-		return nil, err
+		return DealRepairPreview{}, err
 	}
-	scanned, err := capturedMail(ctx, tx, ids.Nil, limit)
+	scanned, err := capturedMail(ctx, tx, after, limit+1)
 	if err != nil {
-		return nil, err
+		return DealRepairPreview{}, err
 	}
-	counts := map[DealOutcome]int{}
+	out := DealRepairPreview{Outcomes: map[DealOutcome]int{}, Complete: len(scanned) <= limit}
+	scanned = scanned[:min(len(scanned), limit)]
+	if len(scanned) > 0 {
+		out.Last = scanned[len(scanned)-1]
+	}
+	out.Inspected = len(scanned)
+	counts := out.Outcomes
 	for _, id := range scanned {
 		trial, err := tx.Begin(ctx)
 		if err != nil {
-			return nil, fmt.Errorf("capture: opening a deal repair preview: %w", err)
+			return DealRepairPreview{}, fmt.Errorf("capture: opening a deal repair preview: %w", err)
 		}
 		outcome, err := r.repair(ctx, trial, ids.From[ids.ActivityKind](id))
 		if rollback := trial.Rollback(ctx); err == nil && rollback != nil {
 			err = rollback
 		}
 		if err != nil {
-			return nil, err
+			return DealRepairPreview{}, err
 		}
 		counts[outcome]++
 	}
-	return counts, nil
+	return out, nil
 }
 
 // Changed reports whether the repair wrote for this outcome.
 func (o DealOutcome) Changed() bool {
-	return o == DealLinked || o == DealMachineMoved || o == DealMachineRetracted
+	return o == DealLinked || o == DealMachineMoved || o == DealMachineRetracted || o == DealMachineRetractedRefused
 }
 
 // repair classifies one mail by its deal links' provenance and acts on the
 // classes the record supports.
+//
+// The activity row is locked first and held to the end, so a colleague's
+// relink cannot land between the classification and the write. A colleague
+// who filed the mail and filed it back is still a colleague's choice.
 func (r DealRepair) repair(ctx context.Context, tx pgx.Tx, mail ids.ActivityID) (DealOutcome, error) {
+	if live, err := lockForDeal(ctx, tx, mail); err != nil || !live {
+		return DealNone, err
+	}
 	var links int
 	var linked *string
 	var human, machine bool
@@ -192,7 +220,7 @@ func (r DealRepair) asMailbox(
 		if err != nil {
 			return "", err
 		}
-		f := dealFiling{decider: acting, writer: ctx, evidence: map[string]any{"reason": dealRepairReason, "decided_as": seat}}
+		f := dealFiling{decider: acting, writer: ctx, filer: r.Filer, evidence: map[string]any{"reason": dealRepairReason, "decided_as": seat}}
 		decided, err := decide(f)
 		if err != nil || decided.Changed() || decided == DealMachineConfirmed {
 			return decided, err
@@ -220,15 +248,30 @@ func recheckMachineDeal(f dealFiling, tx pgx.Tx, mail ids.ActivityID, current id
 	if verdict.Outcome == DealLinked && verdict.Deal == current {
 		return DealMachineConfirmed, nil
 	}
+	// The new deal's admission is asked before anything is taken back, so a
+	// refusal is known and reported, never a move that wrote nothing.
+	target := false
+	if verdict.Outcome == DealLinked {
+		if target, err = mayFileOnDeal(f, tx, verdict.Deal); err != nil {
+			return "", err
+		}
+	}
 	retracted, err := retractMachineDealLink(f, tx, mail, current)
 	if err != nil || !retracted {
 		return DealNotWritable, err
 	}
-	if verdict.Outcome != DealLinked {
+	switch {
+	case verdict.Outcome != DealLinked:
 		return DealMachineRetracted, nil
+	case !target:
+		return DealMachineRetractedRefused, nil
 	}
-	if _, err := linkActivityToDeal(f, tx, mail, verdict.Deal); err != nil {
+	written, err := linkActivityToDeal(f, tx, mail, verdict.Deal)
+	if err != nil {
 		return "", err
+	}
+	if written != DealLinked {
+		return DealMachineRetractedRefused, nil
 	}
 	return DealMachineMoved, nil
 }

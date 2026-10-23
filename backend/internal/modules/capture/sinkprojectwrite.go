@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -28,11 +29,14 @@ import (
 
 // linkActivityToProject writes the one link the ladder concluded.
 //
-// It requires activity.update, not only the activity.create the capture
-// checked. Filing an activity under a project changes who can reach it. It
-// also bumps activity.version, the pin a staged approval re-checks. So it is
-// an update, and recordLinkChange audits it as one. A principal that may
-// create captured mail but not change it attributes nothing.
+// It REQUIRES activity.update, and that is not belt-and-braces over the
+// activity.create the capture already checked. Filing an activity under a
+// project changes who can reach it and bumps activity.version, which is the pin
+// a staged approval re-checks before it redeems — so this is an update of the
+// activity by every test that matters, and the audit row says so
+// (auditProjectAttribution). A principal that may create captured mail but not
+// change it attributes nothing, which is the honest outcome rather than a
+// silent widening of what create means.
 //
 // Denial is not a fault: a connector role without activity.update is an
 // ordinary configuration, so its mail lands filed under nothing.
@@ -77,16 +81,48 @@ func linkActivityToProject(ctx context.Context, tx pgx.Tx, activityID ids.Activi
 	if !inserted {
 		return stampTheProjectOnTheRow(ctx, tx, activityID, stamp)
 	}
+	// Touch the activity ROW, not just its link table, for the reason the
+	// human relink path does it (activities/lifecycle.go): a staged approval
+	// pins activity.version, and that pin is what stands between an approved
+	// "send this on this conversation" and the conversation being repointed
+	// before the approval redeems. Filing changes who the activity reaches, so
+	// it must move the version the pin re-checks. The trigger
+	// (set_updated_at_bump_version) does the bump; this only has to be a
+	// genuine UPDATE of the row.
+	if _, err := tx.Exec(ctx, `UPDATE activity SET updated_at = now() WHERE id = $1`, activityID); err != nil {
+		return fmt.Errorf("capture: bumping the filed activity's version: %w", err)
+	}
 	// The link is what qualifies the correspondence, so the stamp commits with
 	// it (D5).
 	if err := stamp(ctx, tx, activityID, projectID); err != nil {
 		return fmt.Errorf("capture: classifying the filed activity's correspondence: %w", err)
 	}
-	// Filing changes who the activity reaches, so it moves the version a
-	// staged approval pinned, as the human relink path does
-	// (activities/lifecycle.go).
-	return recordLinkChange(ctx, tx, activityID, nil,
-		linkImage(datasource.EntityProject, projectID), nil)
+	return auditProjectAttribution(ctx, tx, activityID, projectID)
+}
+
+// auditProjectAttribution records the link the ladder just wrote, under the
+// same action the human-driven relink uses: a reader asking "how did this
+// message end up on this project?" must find one answer whether a contact or the
+// ladder filed it, and the audit row's principal already says which.
+//
+// activity_relink maps to activity.update in auditActionGrant, and the caller
+// really does require that grant (linkActivityToProject) — so the
+// authorization_rule this row renders names the rule that actually admitted the
+// write. audit_log is append-only, so a verb whose write path never checked the
+// grant it claims would be an uncorrectable lie about who was allowed to do
+// what.
+//
+// No public event rides with it, and that is deliberate rather than an
+// omission. This link is part of landing ONE captured message, which
+// activity.captured already announced in the transaction just before; a second
+// event saying the same message changed would have subscribers reacting twice
+// to one arrival. activity.updated is the activities module's type to mean
+// what it means, and capture does not get to redefine it as "a message
+// arrived, again".
+func auditProjectAttribution(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, projectID ids.UUID) error {
+	_, err := storekit.Audit(ctx, tx, "activity_relink", "activity", activityID.UUID, nil,
+		map[string]any{"entity_type": string(datasource.EntityProject), "entity_id": projectID})
+	return err
 }
 
 // stampTheProjectOnTheRow stamps whatever project the activity is ACTUALLY

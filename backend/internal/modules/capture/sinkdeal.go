@@ -61,11 +61,12 @@ type WhichDeal struct {
 // evidenced.
 type AskWhichDeal func(ctx context.Context, tx pgx.Tx, q WhichDeal) error
 
-// DealAttribution is the rule's two seams. A nil Candidates turns the rule
-// off; a nil Ask places mail and asks nobody.
+// DealAttribution is the rule's seams. A nil Candidates or Filer turns the
+// rule off; a nil Ask places mail and asks nobody.
 type DealAttribution struct {
 	Candidates DealCandidates
 	Ask        AskWhichDeal
+	Filer      DealFiler
 }
 
 // WithDealAttribution returns a copy that files captured mail under its deal.
@@ -100,10 +101,8 @@ type DealVerdict struct {
 // AttributeDealTx applies the rule to one activity and writes the link it
 // concludes. With ask nil it raises no question, which is what a repair of old
 // mail wants.
-func AttributeDealTx(
-	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, candidates DealCandidates, ask AskWhichDeal,
-) (DealVerdict, error) {
-	return fileOnDeal(dealFiling{decider: ctx, writer: ctx}, tx, activityID, candidates, ask)
+func AttributeDealTx(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, rule DealAttribution) (DealVerdict, error) {
+	return fileOnDeal(dealFiling{decider: ctx, writer: ctx, filer: rule.Filer}, tx, activityID, rule.Candidates, rule.Ask)
 }
 
 // dealFiling is who decides and who writes. Live capture is both. The repair
@@ -112,6 +111,7 @@ func AttributeDealTx(
 type dealFiling struct {
 	decider, writer context.Context
 	evidence        map[string]any
+	filer           DealFiler
 }
 
 // fileOnDeal locks the activity row first, as the human relink locks it
@@ -131,9 +131,9 @@ func fileOnDeal(f dealFiling, tx pgx.Tx, activityID ids.ActivityID, candidates D
 	}
 	switch verdict.Outcome {
 	case DealLinked:
-		landed, err := linkActivityToDeal(f, tx, activityID, verdict.Deal)
-		if err != nil || !landed {
-			return DealVerdict{Outcome: DealNotWritable}, err
+		written, err := linkActivityToDeal(f, tx, activityID, verdict.Deal)
+		if err != nil || written != DealLinked {
+			return DealVerdict{Outcome: written}, err
 		}
 	case DealAmbiguous:
 		verdict.Question.ActivityID = activityID
@@ -160,14 +160,14 @@ func lockForDeal(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) (boo
 // terms: its own transaction, on every capture so the next one retries a
 // fault. A fault is logged and never returned.
 func (s *Sink) attributeDeal(ctx context.Context, rec connector.NormalizedRecord, ref datasource.EntityRef) {
-	if s.deals.Candidates == nil || ref.Type != datasource.EntityActivity {
+	if s.deals.Candidates == nil || s.deals.Filer == nil || ref.Type != datasource.EntityActivity {
 		return
 	}
 	if fields, ok := rec.Fields.(ActivityFields); !ok || fields.Kind != kindEmail {
 		return
 	}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		_, err := AttributeDealTx(ctx, tx, ids.From[ids.ActivityKind](ref.ID), s.deals.Candidates, s.deals.Ask)
+		_, err := AttributeDealTx(ctx, tx, ids.From[ids.ActivityKind](ref.ID), s.deals)
 		return err
 	})
 	if err != nil {
