@@ -29,7 +29,7 @@ type PrivateCounts struct {
 }
 
 // privateHandoverTables are the tables whose rows a capture keeps owner-private.
-var privateHandoverTables = []string{"contact", "company"}
+var privateHandoverTables = []string{contactEntity, companyEntity}
 
 // OwnerPrivateCountsTx counts the live owner-private contacts and companies a
 // member who left still holds; zero for a member who has not left. Behind the
@@ -100,7 +100,7 @@ func departed(ctx context.Context, tx pgx.Tx, member ids.UserID) (bool, error) {
 }
 
 func (c *PrivateCounts) set(table string, n int) {
-	if table == "contact" {
+	if table == contactEntity {
 		c.Contacts = n
 		return
 	}
@@ -126,8 +126,16 @@ func ownerPrivateIDs(ctx context.Context, tx pgx.Tx, table string, owner ids.Use
 	return ownedIDs, nil
 }
 
+// handOverPrivateRow names its table as a constant in each arm, so the
+// table-ownership gate can attribute the write to this module.
 func handOverPrivateRow(ctx context.Context, tx pgx.Tx, table string, id ids.UUID, from, to ids.UserID) error {
-	lock, err := storekit.LockRow(ctx, tx, table, id, storekit.LiveOnly)
+	var lock storekit.RowLock
+	var err error
+	if table == contactEntity {
+		lock, err = storekit.LockRow(ctx, tx, contactEntity, id, storekit.LiveOnly)
+	} else {
+		lock, err = storekit.LockRow(ctx, tx, companyEntity, id, storekit.LiveOnly)
+	}
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return nil
 	}
@@ -143,7 +151,7 @@ func handOverPrivateRow(ctx context.Context, tx pgx.Tx, table string, id ids.UUI
 	if err != nil {
 		return fmt.Errorf("audit %s handover: %w", table, err)
 	}
-	if table == "contact" {
+	if table == contactEntity {
 		return storekit.EmitEvent(ctx, tx, auditID, id, crmcontracts.PublicEventContactUpdated{ChangedFields: p.After()})
 	}
 	return storekit.EmitEvent(ctx, tx, auditID, id, crmcontracts.PublicEventCompanyUpdated{ChangedFields: p.After()})

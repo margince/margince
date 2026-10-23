@@ -51,7 +51,7 @@ When a colleague leaves and you deactivate them in Margince, they stay the owner
 
 Every lead, contact, company, deal and project you may change moves to that colleague. Their tasks, automations and Deal Rooms stay where they are. The **Deactivate {name}?** box also says what they still own and offers **Hand over work**.
 
-Some contacts and companies only the person who left could see. They move too, and stay visible to the new owner alone.
+Some contacts and companies only the colleague who left could see. They move too, and stay visible to the new owner alone.
 
 Until you hand it over, their open work still counts in their team's Worklist and numbers. Their name shows as "(left)", and their Worklist rows say the work needs a new owner.
 
