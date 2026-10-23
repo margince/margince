@@ -29,9 +29,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// seedGuessedSeat gives a bare-stamped legacy mail the two rows the participant
-// backfill wrote when it read the provider's only connection as the owner: the
-// seat, and the counterparty's address. No writer produces that shape any more.
+// seedGuessedSeat gives bare-stamped legacy mail the two rows the participant
+// backfill wrote from the provider's only connection: the seat and the
+// counterparty's address. No writer produces that shape any more.
 func seedGuessedSeat(t *testing.T, e *integration.Env, conn *pgx.Conn, sourceID string, seat ids.UUID) ids.UUID {
 	t.Helper()
 	id := seedLegacyActivity(t, e, sourceID, "connector:gmail", "inbound", "pat@counterparty.test")

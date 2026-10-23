@@ -20,11 +20,10 @@ import (
 // mailbox owner, in the audit images.
 const auditFieldMailboxSeats = "mailbox_seats"
 
-// guessedMailboxSeatSQL holds for participant p of activity a when p is a seat
-// row that grants nothing (auth.ParticipantStandsSQL) and has nothing else to
-// stand on: the seat's own mailbox did not deliver the message. That is the row
-// the participant backfill once wrote for the provider's only connection. A row
-// under a hold is never touched.
+// guessedMailboxSeatSQL holds for participant p of activity a when p grants
+// nothing (auth.ParticipantStandsSQL) and the seat's own mailbox did not
+// deliver the message. The participant backfill once wrote that row for the
+// provider's only connection. A row under a hold is never touched.
 func guessedMailboxSeatSQL() string {
 	return `a.restricted_at IS NULL AND p.user_id IS NOT NULL AND NOT (` + auth.ParticipantStandsSQL("p", "a") + `)
 	   AND NOT EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id AND ci.user_id = p.user_id)`

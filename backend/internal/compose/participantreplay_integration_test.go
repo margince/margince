@@ -111,8 +111,8 @@ func TestReplayRecordsNoOwnerWhenTheMailboxIsUnknown(t *testing.T) {
 }
 
 // A bare `connector:gmail` stamp names no mailbox. The provider's only
-// connection is not read as its owner, so the pass records no owner and parses
-// nothing against a mailbox that may not be the one the mail came from.
+// connection is not read as its owner. The pass records no owner and parses
+// nothing.
 func TestReplayRecordsNoOwnerForABareStampDespiteOneConnection(t *testing.T) {
 	e := integration.Setup(t)
 	bare := seedReplayableMailStamped(t, "connector:gmail", "msg-bare", ccMessage)

@@ -77,12 +77,12 @@ func (f *connectorTagFiler) fileUnderConnectorTag(
 // connectorContextTag answers the LIVE word the connector that captured this
 // activity files under, and the zero id for none.
 //
-// The connection is found from the activity's own provenance rather than from a
-// column on the ledger: `captured_by` carries `connector:<name>:<seat>`, and a
-// connection is one seat's mailbox for one provider, so the pair names exactly
-// one row. A bare `connector:<name>` names no mailbox and files nothing. Resolving it here rather than
-// freezing it at capture time is what lets an operator's choice reach the
-// records a still-open question is about to create.
+// The connection is found from the activity's own provenance, not from a ledger
+// column. `captured_by` carries `connector:<name>:<seat>`, and a connection is
+// one seat's mailbox for one provider, so the pair names one row. A bare
+// `connector:<name>` names no mailbox and files nothing. Resolving it here, not
+// at capture time, lets an operator's choice reach the records a still-open
+// question is about to create.
 //
 // The join to `tag` is what makes an ARCHIVED word file nothing: a retired word
 // is one the workspace took out of its vocabulary, and applying it anyway would

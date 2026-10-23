@@ -153,15 +153,11 @@ func replayParticipantsBatch(ctx context.Context, pool *pgxpool.Pool, limit int,
 // selectReplayCandidates finds interaction activities whose original is still
 // stored and which have not been re-read yet.
 //
-// Both the mailbox owner and the format are resolved from captured_by, which
-// the sink stamps from the AUTHENTICATED principal as `connector:<name>:<user>`
-// — never from anything a record claimed. capture_connection is unique on
-// (user_id, provider), so the pair identifies one mailbox or none.
-//
-// A row whose provenance names no seat — a human-logged activity, a bare
-// `connector:gmail` stamp — yields no owner and is recorded as such rather than
-// guessed at. Parsing against the wrong address would file the mailbox owner as
-// a participant of their own conversation.
+// The mailbox owner and the format come from captured_by. The sink stamps it
+// from the authenticated principal as `connector:<name>:<user>`, never from a
+// record's claim. capture_connection is unique on (user_id, provider), so the
+// pair names one mailbox or none. A stamp naming no seat (a human-logged row, a
+// bare `connector:gmail`) yields no owner, recorded rather than guessed.
 func selectReplayCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]replayCandidate, error) {
 	// The stored LINK first, the key join only for a row carrying none: a
 	// mailbox that could prove nothing about a colliding Message-ID files its

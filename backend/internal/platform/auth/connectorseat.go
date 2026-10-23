@@ -20,11 +20,11 @@ func ConnectorSeatSQL(alias string) string {
 	return fmt.Sprintf(`(CASE WHEN split_part(%[1]s, ':', 1) = 'connector' THEN nullif(split_part(%[1]s, ':', 3), '') END)`, column)
 }
 
-// ParticipantStandsSQL holds when seat participant row participant of activity
-// act may stand for its seat being on the message. Every row stands except one
-// that names a seat and nothing else on mail whose bare connector stamp names no
-// mailbox, unless the connector that created the message acted for that seat.
-// Such a row records a mailbox owner somebody inferred, so it grants nothing.
+// ParticipantStandsSQL holds when participant row participant of activity act
+// may stand for its seat being on the message. One row does not stand: it names
+// only a seat, on mail whose bare connector stamp names no mailbox. The
+// exception is a connector that created the message acting for that seat.
+// Otherwise the row records an inferred mailbox owner and grants nothing.
 // The SQL carries no '%' because callers splice it into format strings.
 func ParticipantStandsSQL(participant, act string) string {
 	p := pgx.Identifier{participant}.Sanitize()

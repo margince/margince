@@ -186,9 +186,9 @@ func senderAtOwnDomain(alias string) string {
 // run opens the sender arm of activityAttendanceArm.
 const SenderStampsCheckedStep = "recheck_colleague_sender_domains"
 
-// activityMembershipArm is the "I was on this" test for CONTENT: the caller's
-// own seat imported the row, or they are stamped as one of its participants by
-// a row that stands (ParticipantStandsSQL).
+// activityMembershipArm is the "I was on this" test for CONTENT. The caller's
+// own seat imported the row, or a participant row that stands
+// (ParticipantStandsSQL) names them.
 //
 // Its discovery counterpart is activityAttendanceArm above, which is narrower by
 // one column and says why. The two are allowed to differ in exactly that

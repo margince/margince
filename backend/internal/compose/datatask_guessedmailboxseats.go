@@ -15,9 +15,9 @@ import (
 )
 
 // guessedMailboxSeatsDataTask takes off the mailbox owners the participant
-// backfill once guessed for mail stamped with a bare `connector:<provider>`:
-// the provider's only connection was read as the owner. Such a participant row
-// let that seat read the message. Nothing else on the message changes.
+// backfill once guessed for mail stamped with a bare `connector:<provider>`.
+// It read the provider's only connection as the owner. Nothing else on the
+// message changes.
 func guessedMailboxSeatsDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792788759_guessed_mailbox_owners", Version: 1,
