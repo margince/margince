@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, screen, within } from "storybook/test";
+import { expect, screen, waitFor, within } from "storybook/test";
 import { viewerZone } from "../../format/timezone";
 import {
   installFetchStub,
@@ -57,7 +57,8 @@ export const FilesRefused: Story = {
   },
   play: async () => {
     const dialog = within(await screen.findByRole("dialog"));
-    await expect(await dialog.findByText("Message not editable")).toBeVisible();
+    const title = await dialog.findByText("Message not editable");
+    await waitFor(() => expect(title).toBeVisible());
   },
 };
 
@@ -81,9 +82,8 @@ export const LoadFailed: Story = {
   },
   play: async () => {
     const dialog = within(await screen.findByRole("dialog"));
-    await expect(
-      await dialog.findByRole("button", { name: "Retry" }),
-    ).toBeVisible();
+    const retry = await dialog.findByRole("button", { name: "Retry" });
+    await waitFor(() => expect(retry).toBeVisible());
   },
 };
 
@@ -97,7 +97,8 @@ export const Stale: Story = {
   },
   play: async () => {
     const dialog = within(await screen.findByRole("dialog"));
-    await expect(await dialog.findByText("Message changed")).toBeVisible();
+    const title = await dialog.findByText("Message changed");
+    await waitFor(() => expect(title).toBeVisible());
   },
 };
 
