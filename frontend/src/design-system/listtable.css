@@ -855,7 +855,7 @@
 
 /* The value beside such a chip ends in an ellipsis, as a bare value does: the
  * cell's own `text-overflow` never reaches the text of a flex item. */
-.lt-table td:not(.lt-identity) .avatar-row > :not(.avatar) {
+.lt-table td .avatar-row > :not(.avatar) {
   min-inline-size: 0;
   overflow: hidden;
   text-overflow: ellipsis;

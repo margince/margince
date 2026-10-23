@@ -151,7 +151,9 @@ export function CompaniesScreen() {
                   name={company.display_name}
                   src={company.logo_url}
                 />
-                <strong>{company.display_name}</strong>
+                <strong title={company.display_name}>
+                  {company.display_name}
+                </strong>
                 {company.archived_at && (
                   <Badge tone="warning">{t("record.archived")}</Badge>
                 )}

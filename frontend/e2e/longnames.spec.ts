@@ -1,5 +1,6 @@
 import { expect, type Page, test } from "@playwright/test";
 import { brandt } from "./mockapi/fixtures";
+import { page as listPage } from "./mockapi/server";
 import { mockApi } from "./seed";
 import { pageOverflow } from "./waits";
 
@@ -72,5 +73,52 @@ for (const width of [1280, 390]) {
         ).toBeLessThanOrEqual(0.5);
       }
     });
+  });
+}
+
+const NAMES = [
+  "Brandt Automotive Fleet Services Alpha",
+  "Brandt Automotive Fleet Services Bravo",
+];
+
+for (const width of [1440, 390]) {
+  test(`the companies list ends a long name in an ellipsis at ${width}px`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width, height: 800 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await mockApi(page);
+    await page.route(/\/v1\/companies(\?.*)?$/, async (route) => {
+      await route.fulfill({
+        json: listPage(
+          NAMES.map((display_name, i) => ({
+            ...brandt,
+            id: `o-long-${i}`,
+            display_name,
+          })),
+        ),
+      });
+    });
+    await page.goto("/#/companies");
+    for (const name of NAMES) {
+      const cell = page.locator("td strong", { hasText: name });
+      await expect(cell).toBeVisible();
+      await expect(cell).toHaveAttribute("title", name);
+      const verdict = await cell.evaluate((node) => {
+        const td = node.closest("td");
+        return {
+          textOverflow: getComputedStyle(node).textOverflow,
+          truncated: node.scrollWidth > node.clientWidth,
+          past: td
+            ? node.getBoundingClientRect().right -
+              td.getBoundingClientRect().right
+            : null,
+        };
+      });
+      expect(verdict.textOverflow, name).toBe("ellipsis");
+      expect(verdict.truncated, `${name} is truncated`).toBe(true);
+      expect(verdict.past, `${name} inside its cell`).toBeLessThanOrEqual(0.5);
+    }
+    expect(await pageOverflow(page)).toEqual([]);
   });
 }

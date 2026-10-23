@@ -49,3 +49,37 @@ export const CompaniesList: Story = {
     );
   },
 };
+
+const longNames = [
+  "Brandt Automotive Fleet Services Alpha",
+  "Brandt Automotive Fleet Services Bravo",
+].map((display_name, i) => ({ ...company, id: `o-long-${i}`, display_name }));
+
+function renderLongNames() {
+  globalThis.location.hash = "#/companies";
+  installFetchStub({
+    "GET /me": meRoute({ company: ["read", "update"] }),
+    "GET /companies": () =>
+      jsonResponse({
+        data: longNames,
+        page: { next_cursor: null, has_more: false },
+      }),
+  });
+  return (
+    <StoryProviders>
+      <CompaniesScreen />
+    </StoryProviders>
+  );
+}
+
+export const LongNames: Story = {
+  name: "long names end in an ellipsis",
+  render: renderLongNames,
+};
+
+export const LongNamesPhone: Story = {
+  name: "long names end in an ellipsis — on a phone",
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: renderLongNames,
+};
