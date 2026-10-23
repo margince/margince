@@ -378,12 +378,10 @@ func TestOneToolCallSpendsOneOfTheCallCeiling(t *testing.T) {
 		wantCalls int
 		wantErr   error
 	}{
-		"auto-execute, nothing presented":               {tier: mcp.TierAutoExecute, wantCalls: 1},
-		"auto-execute, redeeming a presented approval":  {tier: mcp.TierAutoExecute, presented: true, wantCalls: 1},
-		"confirm-first, redeeming a presented approval": {tier: mcp.TierConfirmationRequired, presented: true, wantCalls: 1},
-		"confirm-first, staged and never run": {
-			tier: mcp.TierConfirmationRequired, wantCalls: 0, wantErr: apperrors.ErrRequiresApproval,
-		},
+		"auto-execute, nothing presented":                          {tier: mcp.TierAutoExecute, wantCalls: 1},
+		"auto-execute, redeeming a presented approval":             {tier: mcp.TierAutoExecute, presented: true, wantCalls: 1},
+		"confirm-first, redeeming a presented approval":            {tier: mcp.TierConfirmationRequired, presented: true, wantCalls: 1},
+		"confirm-first on a person's passport, run as that person": {tier: mcp.TierConfirmationRequired, wantCalls: 1},
 	} {
 		t.Run(name, func(t *testing.T) {
 			spec := readToolSpec("update_record")

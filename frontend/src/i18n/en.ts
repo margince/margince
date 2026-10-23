@@ -7227,9 +7227,9 @@ export const en = {
     "Read, summarize, draft: runs immediately and is fully logged.",
   "settings.tierSend":
     "Send email, book meetings, update a contact or deal: runs immediately if the agent has that permission. Granting the permission is the approval.",
-  "settings.tierWait": "Enrichment and tag merges: wait in Approvals.",
+  "settings.tierWait": "Enrichment from the web: waits in Approvals.",
   "settings.tierAdvance":
-    "Advance a deal stage: waits only when the move closes the deal as won or lost.",
+    "Advance or close a deal, or file activities under a project: runs immediately if the agent has that permission.",
   "settings.locked": "Locked",
   "settings.purposes": "Consent purposes",
   "settings.purposesSub":

@@ -187,13 +187,23 @@ func patchBytes(t *testing.T, patch any) json.RawMessage {
 	return raw
 }
 
+// agentCtx is automatic work: an agent with no passport, which a confirm-first
+// call and a human-owned field still stage for.
 func agentCtx() context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:t", OnBehalfOf: ids.NewV7(),
-		PassportID: ids.NewV7(),
-		Scopes:     principal.NewScopeSet(principal.ScopeWrite),
+		Scopes: principal.NewScopeSet(principal.ScopeWrite),
 	})
+}
+
+// passportCtx is an agent working on a person's passport, which acts as that
+// person (principal.ActsAsItsUser).
+func passportCtx() context.Context {
+	ctx := agentCtx()
+	p, _ := principal.Actor(ctx)
+	p.PassportID = ids.NewV7()
+	return principal.WithActor(ctx, p)
 }
 
 // splitRegistry wires update_record over fakes: a contact whose full_name
@@ -366,5 +376,29 @@ func TestAutoExecuteCallWithApprovalIDValidatesInsteadOfIgnoring(t *testing.T) {
 	}
 	if len(provider.updates) != 0 {
 		t.Fatal("a failed redemption must have zero side effects")
+	}
+}
+
+// An agent on a person's passport may overwrite a colleague's typed value, as
+// that person could themselves: the whole patch applies and nothing stages.
+func TestAnAgentOnAPersonsPassportOverwritesAHumanOwnedField(t *testing.T) {
+	target := ids.NewV7()
+	provider := &fixedProvider{record: nativeRecord(datasource.Record{
+		Ref:     datasource.EntityRef{Type: datasource.EntityContact, ID: target},
+		Fields:  json.RawMessage(`{"full_name":"Greta Human"}`),
+		Version: 3,
+	})}
+	approvals := &recordingApprovals{}
+	r := splitRegistry([]string{"full_name"}, approvals, provider)
+
+	call := fmt.Sprintf(`{"record_type":"contact","id":%q,"fields":{"full_name":"Greta Machine"}}`, target)
+	if _, err := r.Invoke(passportCtx(), "update_record", json.RawMessage(call)); err != nil {
+		t.Fatalf("an overwrite on a person's passport → %v, want it applied", err)
+	}
+	if len(approvals.staged) != 0 {
+		t.Errorf("staged %d approvals, want none", len(approvals.staged))
+	}
+	if len(provider.updates) != 1 {
+		t.Fatalf("updates = %d, want the whole patch applied once", len(provider.updates))
 	}
 }

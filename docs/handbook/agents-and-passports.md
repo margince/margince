@@ -93,6 +93,11 @@ archiving a record, and sending an email or a message.
 **confirm-first.** A confirm-first action does not happen. What the agent means
 to do is written down as an approval, and a human decides.
 
+An agent working on your passport does whatever you could do yourself in the
+app, without an approval. So for it, the only confirm-first action is enriching
+from the web (below). The other waits in this section apply to automatic work
+that no colleague's passport stands behind.
+
 ### Why sending is not confirm-first by default
 A passport carries the seat, permissions and record visibility of the colleague who
 created it. So a send an agent can make is one that colleague could already make
@@ -107,6 +112,8 @@ holder did not choose where they go.
 AI names the address Margince reads. Someone who talks the AI round could make
 it reach an address nobody holding the passport ever picked. That is a question
 about where your data goes, so it waits.
+
+The waits below apply only to automatic work with no passport behind it.
 
 **Folding one tag into another.** A merge renames a word on every record
 carrying it, and renaming it back does not undo it.
@@ -136,7 +143,7 @@ confirmed, ask them whether that floor is set. Ask; do not guess.
 The **Autonomy tiers** card in **Settings → AI access**, on the **Agent rules** tab under **For developers**, states the same rule.
 It reads "Send email, book meetings, update a contact or deal: runs immediately if the
 agent has that permission. Granting the permission is the approval." and
-"Enrichment and tag merges: wait in Approvals."
+"Enrichment from the web: waits in Approvals."
 
 See [Approvals](approvals.md) for what happens to a card once it is staged.
 
@@ -251,9 +258,11 @@ the window ends.
 
 ## Human edits win, field by field
 
-This rule stops an agent from writing over what you typed.
+This rule stops automatic work from writing over what you typed. An agent on a
+colleague's passport writes over it as that colleague could, without an
+approval.
 
-When an agent updates a record, Margince looks at each field it is trying to
+When automatic work updates a record, Margince looks at each field it is trying to
 change and asks: did a human last type this value?
 
 - Fields whose current value a human last wrote are taken out and staged for

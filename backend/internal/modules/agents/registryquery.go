@@ -19,6 +19,8 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
@@ -159,7 +161,7 @@ func (r *Registry) Offered(ctx context.Context) []mcp.ToolSpec {
 	words := r.lister()
 	for _, spec := range all {
 		if !spec.Unlisted && invocableByCaller(ctx, spec) {
-			out = append(out, words.listed(spec))
+			out = append(out, words.listed(asSeenBy(ctx, spec)))
 		}
 	}
 	return out
@@ -173,10 +175,23 @@ func (r *Registry) Runnable(ctx context.Context) []mcp.ToolSpec {
 	out := make([]mcp.ToolSpec, 0, len(all))
 	for _, spec := range all {
 		if invocableByCaller(ctx, spec) {
-			out = append(out, spec)
+			out = append(out, asSeenBy(ctx, spec))
 		}
 	}
 	return out
+}
+
+// asSeenBy is spec with the tier the gate admits this caller on (auth.TierFor).
+// A tool lifted to auto-execute no longer decides per call, so its resolver goes.
+func asSeenBy(ctx context.Context, spec mcp.ToolSpec) mcp.ToolSpec {
+	p, ok := principal.Actor(ctx)
+	if !ok {
+		return spec
+	}
+	if tier := auth.TierFor(p, spec); tier != spec.Tier {
+		spec.Tier, spec.TierResolver = tier, nil
+	}
+	return spec
 }
 
 // dynamicTool is implemented by TierDynamic tools that need more than the

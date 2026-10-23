@@ -176,7 +176,14 @@ func (g *Gate) Admit(ctx context.Context, spec mcp.ToolSpec, resolve func() (mcp
 	// restored by omission rather than by decision. Raising is the shape the
 	// resolver contract already takes (it may only ever raise), and a human is
 	// the safe answer to "this server could not establish the record's state".
-	if tier == mcp.TierAutoExecute && spec.Tier == mcp.TierDynamic && observed == nil {
+	// An agent acting as its user (principal.ActsAsItsUser) runs whatever the
+	// tier says: what the person may do unaided, their agent may do too. The
+	// tier then decides nothing, so a version it could not name raises nothing,
+	// and one it did name is still bound below. Automatic work with nobody
+	// behind it keeps both rules.
+	if TierFor(p, spec) == mcp.TierAutoExecute {
+		tier = mcp.TierAutoExecute
+	} else if tier == mcp.TierAutoExecute && spec.Tier == mcp.TierDynamic && observed == nil {
 		return ctx, fmt.Errorf(
 			"gate: %s resolved to auto-execute without naming the record version it was resolved from: %w",
 			spec.Name, apperrors.ErrRequiresApproval)
@@ -291,4 +298,16 @@ func (g *Gate) AdmitRead(ctx context.Context) error {
 		return &VolumeExceededError{Reading: reading}
 	}
 	return nil
+}
+
+// TierFor is the tier spec carries for p before any argument is read. An agent
+// acting as its user (principal.ActsAsItsUser) runs every tool as the person
+// could, so it sees auto-execute, except where spec.WaitsEvenForItsUser. The
+// gate admits on it, and the tool listing advertises it, so what a caller is
+// told is what it is admitted on.
+func TierFor(p principal.Principal, spec mcp.ToolSpec) mcp.RiskTier {
+	if p.ActsAsItsUser() && !spec.WaitsEvenForItsUser {
+		return mcp.TierAutoExecute
+	}
+	return spec.Tier
 }
