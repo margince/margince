@@ -319,8 +319,8 @@ func TestTheRepairReportsARefusedTargetAndAnnouncesItsChange(t *testing.T) {
 	}
 	if n := countRows(t, e, `SELECT count(*) FROM event_outbox o
 		 WHERE o.envelope->>'type' = 'activity.updated'
-		   AND o.envelope->'payload'->'changed_fields'->'relinked'->>'entity_id' = '`+first.String()+`'`); n != 1 {
-		t.Fatalf("the repair's change wrote %d relink events, want the one its consumers read", n)
+		   AND o.envelope->'payload'->'changed_fields'->'relinked'->>'entity_id' = '`+first.String()+`'`); n != 2 {
+		t.Fatalf("%d relink events name the old deal, want capture's filing and the repair's retraction", n)
 	}
 }
 
