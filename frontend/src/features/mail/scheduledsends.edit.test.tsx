@@ -84,9 +84,29 @@ const FORMATTED = {
   draft_ref: "draft-ref-1",
 };
 
-function mount(rows: unknown[]) {
-  const sent = stubRoutes({
+type Row = Readonly<Record<string, unknown> & { id: string }>;
+
+// The list, and each message's own read, which an edit opens from.
+function queueRoutes(rows: readonly Row[], details: readonly Row[] = rows) {
+  return {
     "GET /scheduled-sends": () => jsonResponse(rows),
+    ...Object.fromEntries(
+      details.map((row) => [
+        `GET /scheduled-sends/${row.id}`,
+        () => jsonResponse(row),
+      ]),
+    ),
+  };
+}
+
+function mount(
+  rows: readonly Row[],
+  details: readonly Row[] = rows,
+  extra: Parameters<typeof stubRoutes>[0] = {},
+) {
+  const sent = stubRoutes({
+    ...queueRoutes(rows, details),
+    ...extra,
     "POST /emails": () => jsonResponse({ id: "act-new" }, 201),
     [`POST /scheduled-sends/${NEW_MESSAGE.id}/cancel`]: () =>
       new Response(null, { status: 204 }),
@@ -174,7 +194,7 @@ it("schedules the edited message first and withdraws the old one after", async (
 it("leaves the original waiting when the new send is refused", async () => {
   const user = userEvent.setup();
   const sent = stubRoutes({
-    "GET /scheduled-sends": () => jsonResponse([NEW_MESSAGE]),
+    ...queueRoutes([NEW_MESSAGE]),
     "POST /emails": () =>
       new Response(
         JSON.stringify({ type: "about:blank", title: "No", status: 422 }),
@@ -211,7 +231,7 @@ it("leaves the original waiting when the new send is refused", async () => {
 it("writes a reply again on its thread and withdraws the old one after", async () => {
   const user = userEvent.setup();
   const sent = stubRoutes({
-    "GET /scheduled-sends": () => jsonResponse([REPLY]),
+    ...queueRoutes([REPLY]),
     [`GET /activities/${REPLY.anchor_activity_id}`]: () =>
       jsonResponse(THREAD_EMAIL),
     [`POST /activities/${REPLY.anchor_activity_id}/send-email`]: () =>
@@ -251,7 +271,7 @@ it("writes a reply again on its thread and withdraws the old one after", async (
 it("says so and opens nothing when the reply's thread has no record to file under", async () => {
   const user = userEvent.setup();
   stubRoutes({
-    "GET /scheduled-sends": () => jsonResponse([REPLY]),
+    ...queueRoutes([REPLY]),
     [`GET /activities/${REPLY.anchor_activity_id}`]: () =>
       jsonResponse({ ...THREAD_EMAIL, links: [] }),
   });
@@ -277,9 +297,9 @@ it("says so and opens nothing when the reply's thread has no record to file unde
   expect(screen.queryByRole("dialog")).toBeNull();
 });
 
-it("keeps the markup, the files and the draft of a message saved without a change", async () => {
+it("opens on the message's own read and keeps its markup, files and draft when saved unchanged", async () => {
   const user = userEvent.setup();
-  const sent = mount([FORMATTED]);
+  const sent = mount([NEW_MESSAGE], [FORMATTED]);
   await user.click(
     await screen.findByRole("button", { name: "Edit: The renewal quote" }),
   );
@@ -306,7 +326,7 @@ it("keeps the markup, the files and the draft of a message saved without a chang
 
 it("sends without a seeded file the reader removed", async () => {
   const user = userEvent.setup();
-  const sent = mount([FORMATTED]);
+  const sent = mount([NEW_MESSAGE], [FORMATTED]);
   await user.click(
     await screen.findByRole("button", { name: "Edit: The renewal quote" }),
   );
@@ -325,39 +345,106 @@ it("sends without a seeded file the reader removed", async () => {
   });
 });
 
+it("refuses Edit for an operator reason, says why and still withdraws the message", async () => {
+  const user = userEvent.setup();
+  const reason = { operator_reason: "Asked for it at the fair" };
+  const sent = mount([
+    { ...NEW_MESSAGE, ...reason },
+    { ...MARKETING, ...reason },
+  ]);
+  const edit = await screen.findByRole("button", {
+    name: "Edit: The renewal quote",
+  });
+  expect(edit).toBeDisabled();
+  expect(edit).toHaveAccessibleDescription(
+    "Not editable: an edit would drop the reason you gave when scheduling it. Withdraw it and schedule a new message.",
+  );
+  expect(screen.getAllByRole("button", { name: /^Edit: / })).toHaveLength(1);
+  await user.click(
+    screen.getByRole("button", { name: "Withdraw: The renewal quote" }),
+  );
+  await user.click(
+    within(await screen.findByRole("dialog")).getByRole("button", {
+      name: "Withdraw message",
+    }),
+  );
+  await waitFor(() =>
+    expect(sent.map((call) => call.key)).toContain(
+      `POST /scheduled-sends/${NEW_MESSAGE.id}/cancel`,
+    ),
+  );
+});
+
+it("says why in place of the composer when the read names a file the send would refuse", async () => {
+  const user = userEvent.setup();
+  mount([NEW_MESSAGE], [{ ...NEW_MESSAGE, attachments_unavailable: 1 }]);
+  await user.click(
+    await screen.findByRole("button", { name: "Edit: The renewal quote" }),
+  );
+  const refusal = within(await screen.findByRole("dialog"));
+  expect(
+    refusal.getByText(
+      "1 attached file can no longer be sent. Withdraw the message and schedule a new one.",
+    ),
+  ).toBeVisible();
+  expect(refusal.queryByLabelText("Subject")).toBeNull();
+  await user.click(refusal.getByRole("button", { name: "Close" }));
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(
+    screen.getByRole("button", { name: "Withdraw: The renewal quote" }),
+  ).toBeEnabled();
+});
+
+it("offers a retry when the message's own read fails, and opens once it lands", async () => {
+  const user = userEvent.setup();
+  let reads = 0;
+  mount([NEW_MESSAGE], [], {
+    [`GET /scheduled-sends/${NEW_MESSAGE.id}`]: () => {
+      reads += 1;
+      return reads === 1
+        ? new Response(
+            JSON.stringify({ type: "about:blank", title: "Down", status: 503 }),
+            {
+              status: 503,
+              headers: { "Content-Type": "application/problem+json" },
+            },
+          )
+        : jsonResponse(NEW_MESSAGE);
+    },
+  });
+  await user.click(
+    await screen.findByRole("button", { name: "Edit: The renewal quote" }),
+  );
+  const failed = within(await screen.findByRole("dialog"));
+  expect(failed.getByText("Message not loaded")).toBeVisible();
+  await user.click(failed.getByRole("button", { name: "Retry" }));
+  expect(await screen.findByLabelText("Subject")).toHaveValue(
+    "The renewal quote",
+  );
+});
+
 it.each([
-  [
-    "an operator reason",
-    { operator_reason: "Asked for it at the fair" },
-    "Not editable: an edit would drop the reason you gave when scheduling it.",
-  ],
-  [
-    "a file the send would refuse",
-    { attachments_unavailable: 1 },
-    "Not editable: 1 attached file can no longer be sent.",
-  ],
+  ["has gone since the list was read", { status: "sent" }],
+  ["now carries an operator reason", { operator_reason: "Asked at the fair" }],
 ])(
-  "refuses Edit on a message with %s, says why and still withdraws it",
-  async (_, change, why) => {
+  "says so in place of the composer when the message %s, and rereads the list",
+  async (_, change) => {
     const user = userEvent.setup();
-    const sent = mount([{ ...NEW_MESSAGE, ...change }]);
-    const edit = await screen.findByRole("button", {
-      name: "Edit: The renewal quote",
-    });
-    expect(edit).toBeDisabled();
-    expect(edit).toHaveAccessibleDescription(why);
+    const sent = mount([NEW_MESSAGE], [{ ...NEW_MESSAGE, ...change }]);
     await user.click(
-      screen.getByRole("button", { name: "Withdraw: The renewal quote" }),
+      await screen.findByRole("button", { name: "Edit: The renewal quote" }),
     );
-    await user.click(
-      within(await screen.findByRole("dialog")).getByRole("button", {
-        name: "Withdraw message",
-      }),
-    );
-    await waitFor(() =>
-      expect(sent.map((call) => call.key)).toContain(
-        `POST /scheduled-sends/${NEW_MESSAGE.id}/cancel`,
+    const refusal = within(await screen.findByRole("dialog"));
+    expect(
+      refusal.getByText(
+        "This message changed after the list was loaded and can no longer be edited.",
       ),
+    ).toBeVisible();
+    expect(refusal.queryByLabelText("Subject")).toBeNull();
+    await waitFor(() =>
+      expect(
+        sent.filter((call) => call.key === "GET /scheduled-sends"),
+      ).toHaveLength(2),
     );
   },
 );

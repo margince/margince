@@ -32,37 +32,37 @@ export type EditSeed = Readonly<{
 const isRelinkKind = (type: string): type is RelinkKind =>
   (RELINK_KINDS as readonly string[]).includes(type);
 
-/** What stands between a waiting message and the composer, for the row to say. */
-export type EditRefusal = Readonly<
-  { kind: "operatorReason" } | { kind: "filesUnavailable"; count: number }
->;
-
-export function editRefusalOf(send: ScheduledSend): EditRefusal | undefined {
-  if (send.operator_reason) {
-    return { kind: "operatorReason" };
-  }
-  const count = send.attachments_unavailable ?? 0;
-  return count > 0 ? { kind: "filesUnavailable", count } : undefined;
-}
-
-/**
- * Whether the composer can write this message again faithfully.
- *
- * The approval is bound to the content, so an edit is a new send. The composer
- * has no field for a marketing purpose, evidence, a legacy consent key or an
- * operator reason. A file the send would refuse cannot be carried or dropped
- * silently. A message that has gone or been withdrawn has nothing left to edit.
- */
-export function isEditable(send: ScheduledSend): boolean {
+// The composer has no field for a marketing purpose, evidence or a legacy
+// consent key. A message that has gone or been withdrawn has nothing left.
+function composerCanCarry(send: ScheduledSend): boolean {
   return (
     (send.status === "scheduled" || send.status === "held") &&
-    editRefusalOf(send) === undefined &&
     !send.marketing_purpose &&
     !send.consent_purpose &&
     !send.evidence &&
     (send.anchor_activity_id !== undefined ||
       isRelinkKind(send.links?.[0]?.entity_type ?? ""))
   );
+}
+
+/**
+ * Whether the composer can write this message again faithfully.
+ *
+ * The approval is bound to the content, so an edit is a new send, and an
+ * operator reason has no field to travel in.
+ */
+export function isEditable(send: ScheduledSend): boolean {
+  return composerCanCarry(send) && !send.operator_reason;
+}
+
+/** An otherwise editable message whose operator reason an edit would drop. */
+export function dropsOperatorReason(send: ScheduledSend): boolean {
+  return composerCanCarry(send) && Boolean(send.operator_reason);
+}
+
+/** How many frozen files the send would refuse; only the detail read says. */
+export function unavailableFilesOf(send: ScheduledSend): number {
+  return send.attachments_unavailable ?? 0;
 }
 
 /**
@@ -78,7 +78,12 @@ export function editSeedOf(
 ): EditSeed | undefined {
   const [anchor, ...rest] =
     (send.anchor_activity_id ? threadLinks : send.links) ?? [];
-  if (!isEditable(send) || !anchor || !isRelinkKind(anchor.entity_type)) {
+  if (
+    !isEditable(send) ||
+    unavailableFilesOf(send) > 0 ||
+    !anchor ||
+    !isRelinkKind(anchor.entity_type)
+  ) {
     return undefined;
   }
   const idOf = (kind: RelinkKind) =>

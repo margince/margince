@@ -319,7 +319,7 @@ func (h Handlers) SendCompanyEmail(w http.ResponseWriter, r *http.Request, _ crm
 		writeStoreErr(w, r, err)
 		return
 	}
-	h.writeSendOutcome(w, r, out)
+	writeSendOutcome(w, out)
 }
 
 // writeSendOutcome answers a send with what actually happened: the activity
@@ -328,11 +328,11 @@ func (h Handlers) SendCompanyEmail(w http.ResponseWriter, r *http.Request, _ crm
 // Spelled once so both surfaces answer a deferred send identically — a 201
 // on one and a 202 on the other would make "did it send?" depend on which
 // button the rep pressed.
-func (h Handlers) writeSendOutcome(w http.ResponseWriter, r *http.Request, out SendOutcome) {
+func writeSendOutcome(w http.ResponseWriter, out SendOutcome) {
 	if out.Scheduled != nil {
 		// 201: a new scheduled-send resource exists. Nothing is on the
 		// timeline and nothing has reached a provider.
-		h.writeScheduledSend(w, r, http.StatusCreated, *out.Scheduled)
+		httperr.WriteJSON(w, http.StatusCreated, scheduledSendResponse(*out.Scheduled))
 		return
 	}
 	// 202: accepted for delivery, the activity is the durable fact.
@@ -416,7 +416,7 @@ func (h Handlers) SendEmail(w http.ResponseWriter, r *http.Request, id crmcontra
 		writeStoreErr(w, r, err)
 		return
 	}
-	h.writeSendOutcome(w, r, out)
+	writeSendOutcome(w, out)
 }
 
 // addressesOf flattens an optional address list, which both cc and bcc are.

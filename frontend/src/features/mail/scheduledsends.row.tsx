@@ -7,17 +7,11 @@ import {
   formatTimeOfDay,
   isRenderableZone,
 } from "../../format/format";
-import {
-  type Locale,
-  type Translator,
-  useLocale,
-  usePlural,
-  useT,
-} from "../../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { logUnexpectedError } from "../../lib/problem";
 import { useSendPermission } from "../../lib/usesendpermission";
-import { editRefusalOf, isEditable } from "./schedulededit";
+import { dropsOperatorReason, isEditable } from "./schedulededit";
 import type { ScheduledSend, Status } from "./scheduledqueue";
 import { type Move, RescheduleMenu } from "./scheduledsends.reschedule";
 
@@ -152,19 +146,12 @@ function EditRefusalLine({
   id,
 }: Readonly<{ send: ScheduledSend; id: string }>) {
   const t = useT();
-  const plural = usePlural();
-  const { locale } = useLocale();
-  const refusal = editRefusalOf(send);
-  if (!refusal) {
+  if (!dropsOperatorReason(send)) {
     return null;
   }
   return (
     <span id={id} className="t-caption">
-      {refusal.kind === "operatorReason"
-        ? t("sched.editRefused.operatorReason")
-        : plural("sched.editRefused.files", refusal.count, {
-            count: formatNumber(refusal.count, locale),
-          })}
+      {t("sched.editRefused.operatorReason")}
     </span>
   );
 }
@@ -179,7 +166,7 @@ function EditVerb({
   onEdit: (send: ScheduledSend) => void;
 }>) {
   const t = useT();
-  const refused = editRefusalOf(send) !== undefined;
+  const refused = dropsOperatorReason(send);
   if (!refused && !isEditable(send)) {
     return null;
   }

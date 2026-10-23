@@ -3,7 +3,12 @@
 
 import { expect, it } from "vitest";
 import { viewerZone } from "../../format/timezone";
-import { editRefusalOf, editSeedOf, isEditable } from "./schedulededit";
+import {
+  dropsOperatorReason,
+  editSeedOf,
+  isEditable,
+  unavailableFilesOf,
+} from "./schedulededit";
 import type { ScheduledSend } from "./scheduledqueue";
 
 const SEND: ScheduledSend = {
@@ -97,13 +102,18 @@ it("seeds a reply from the thread's links and names the email it answers", () =>
   });
 });
 
-it("names why a waiting message cannot be edited, when the row owes a reason", () => {
-  expect(editRefusalOf(SEND)).toBeUndefined();
+it("refuses the edit for an operator reason only where nothing else stops it", () => {
+  const reasoned = { ...SEND, operator_reason: "Asked at the fair" };
+  expect(isEditable(reasoned)).toBe(false);
+  expect(dropsOperatorReason(reasoned)).toBe(true);
+  expect(dropsOperatorReason(SEND)).toBe(false);
   expect(
-    editRefusalOf({ ...SEND, operator_reason: "Asked at the fair" }),
-  ).toEqual({ kind: "operatorReason" });
-  expect(editRefusalOf({ ...SEND, attachments_unavailable: 2 })).toEqual({
-    kind: "filesUnavailable",
-    count: 2,
-  });
+    dropsOperatorReason({ ...reasoned, marketing_purpose: "marketing_email" }),
+  ).toBe(false);
+  expect(dropsOperatorReason({ ...reasoned, status: "sent" })).toBe(false);
+});
+
+it("counts the files the send would refuse, none when the read names none", () => {
+  expect(unavailableFilesOf(SEND)).toBe(0);
+  expect(unavailableFilesOf({ ...SEND, attachments_unavailable: 2 })).toBe(2);
 });

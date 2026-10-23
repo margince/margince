@@ -1,22 +1,23 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { type ReactNode, useEffect, useId } from "react";
+import { Button, Modal } from "../../design-system/atoms";
+import { Callout } from "../../design-system/callout";
+import { Heading } from "../../design-system/heading";
 import { useToast } from "../../design-system/toast";
-import { useT } from "../../i18n";
+import { formatNumber } from "../../format/format";
+import { useLocale, usePlural, useT } from "../../i18n";
+import { problemMessageOf } from "../../lib/problem";
 import { ComposeModal } from "./compose";
 import { useThreadProject } from "./composeanchor";
-import { editSeedOf } from "./schedulededit";
-import type { ScheduledSend } from "./scheduledqueue";
+import { editSeedOf, isEditable, unavailableFilesOf } from "./schedulededit";
+import { type ScheduledSend, useScheduledSend } from "./scheduledqueue";
 
 /**
- * The composer over a scheduled message, to write it again.
- *
- * The approval is bound to the content, so an edit is a new send that passes
- * every gate from the top. The old message is withdrawn only once the new one
- * is accepted, so a refusal leaves the original waiting. Keyed on the message,
- * because the composer reads its seed once, when it mounts. A reply opens once
- * its thread's email is read, since it files under that email's record.
+ * The composer over a scheduled message, opened from its own read. The old
+ * message is withdrawn only once the new one is accepted.
  */
 export function EditComposer({
   send,
@@ -29,18 +30,73 @@ export function EditComposer({
 }>) {
   const t = useT();
   const toast = useToast();
+  const queryClient = useQueryClient();
+  const detail = useScheduledSend(send?.id);
+  const current = detail.data;
+  // The row was read earlier; the message may have gone or changed since.
+  const stale = current !== undefined && !isEditable(current);
   const thread = useThreadProject(send?.anchor_activity_id ?? undefined);
-  const seed = send ? editSeedOf(send, thread.activity?.links) : undefined;
+  const unavailable = current ? unavailableFilesOf(current) : 0;
+  const seed = current
+    ? editSeedOf(current, thread.activity?.links)
+    : undefined;
   const answers = Boolean(send?.anchor_activity_id);
   // A thread that read fine but carries no record to file under cannot open.
-  const cannotOpen = answers && (thread.failed || (thread.settled && !seed));
+  const cannotOpen =
+    answers &&
+    !stale &&
+    unavailable === 0 &&
+    (thread.failed || (thread.settled && current !== undefined && !seed));
   useEffect(() => {
     if (cannotOpen) {
       toast.show(t("compose.anchorGone"), { tone: "danger" });
       onClose();
     }
   }, [cannotOpen, toast, t, onClose]);
-  if (!send || !seed) {
+  useEffect(() => {
+    if (stale) {
+      void queryClient.invalidateQueries({
+        queryKey: ["scheduled-sends"],
+        exact: true,
+      });
+    }
+  }, [stale, queryClient]);
+  if (!send) {
+    return null;
+  }
+  if (detail.isError) {
+    return (
+      <EditBlocked subject={send.subject} onClose={onClose}>
+        <Callout
+          tone="danger"
+          kind="outcome"
+          title={t("sched.editLoadFailed")}
+          actions={
+            <Button variant="primary" onClick={() => void detail.refetch()}>
+              {t("state.retry")}
+            </Button>
+          }
+        >
+          <p>{problemMessageOf(detail.error, t)}</p>
+        </Callout>
+      </EditBlocked>
+    );
+  }
+  if (stale) {
+    return (
+      <EditBlocked subject={send.subject} onClose={onClose}>
+        <Callout tone="info" kind="standing" title={t("sched.editStale")} />
+      </EditBlocked>
+    );
+  }
+  if (unavailable > 0) {
+    return (
+      <EditBlocked subject={send.subject} onClose={onClose}>
+        <FilesRefusal count={unavailable} />
+      </EditBlocked>
+    );
+  }
+  if (!seed) {
     return null;
   }
   return (
@@ -54,5 +110,42 @@ export function EditComposer({
       onClose={onClose}
       onSent={() => onReplaced(send.id)}
     />
+  );
+}
+
+// In place of the composer when the message cannot be opened in it.
+function EditBlocked({
+  subject,
+  onClose,
+  children,
+}: Readonly<{ subject: string; onClose: () => void; children: ReactNode }>) {
+  const t = useT();
+  const headingId = useId();
+  return (
+    <Modal open onClose={onClose} labelledBy={headingId} intent="confirm">
+      <Heading size="large" id={headingId} className="t-h3 modal-title">
+        {t("sched.editFor", { subject })}
+      </Heading>
+      {children}
+    </Modal>
+  );
+}
+
+function FilesRefusal({ count }: Readonly<{ count: number }>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  return (
+    <Callout
+      tone="warning"
+      kind="standing"
+      title={t("sched.editRefused.title")}
+    >
+      <p>
+        {plural("sched.editRefused.files", count, {
+          count: formatNumber(count, locale),
+        })}
+      </p>
+    </Callout>
   );
 }

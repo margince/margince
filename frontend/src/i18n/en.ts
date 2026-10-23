@@ -15170,11 +15170,15 @@ export const en = {
   "sched.editFor": "Edit: {subject}",
   "sched.withdrawFor": "Withdraw: {subject}",
   "sched.editRefused.operatorReason":
-    "Not editable: an edit would drop the reason you gave when scheduling it.",
+    "Not editable: an edit would drop the reason you gave when scheduling it. Withdraw it and schedule a new message.",
+  "sched.editRefused.title": "Message not editable",
   "sched.editRefused.files_one":
-    "Not editable: {count} attached file can no longer be sent.",
+    "{count} attached file can no longer be sent. Withdraw the message and schedule a new one.",
   "sched.editRefused.files_other":
-    "Not editable: {count} attached files can no longer be sent.",
+    "{count} attached files can no longer be sent. Withdraw the message and schedule a new one.",
+  "sched.editStale":
+    "This message changed after the list was loaded and can no longer be edited.",
+  "sched.editLoadFailed": "Message not loaded",
   "outbox.name": "Scheduled messages",
   "outbox.nameWaiting_one": "Scheduled messages, {count} waiting",
   "outbox.nameWaiting_other": "Scheduled messages, {count} waiting",

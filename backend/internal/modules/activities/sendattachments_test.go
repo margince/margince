@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
@@ -115,8 +116,7 @@ func TestOnlyARefusedFileCountsAsUnavailable(t *testing.T) {
 	}
 }
 
-// A message past waiting resolves none of its files: no edit reaches it, so
-// the outbox's history does not cost a lookup per file.
+// A message past waiting resolves none of its files: no edit reaches it.
 func TestAMessagePastWaitingResolvesNoFiles(t *testing.T) {
 	t.Parallel()
 	for _, status := range []string{ScheduledStatusReleased, ScheduledStatusSent, ScheduledStatusCancelled} {
@@ -125,5 +125,63 @@ func TestAMessagePastWaitingResolvesNoFiles(t *testing.T) {
 		if err != nil || len(files.attachable) != 0 || files.unavailable != 0 {
 			t.Errorf("%s message resolved its files: %+v, %v", status, files, err)
 		}
+	}
+}
+
+// An id the send could not carry is counted, never refused: a read answering
+// with the send's own refusal would hide the message it reads.
+func TestAFrozenIDTheSendCouldNotCarryIsCountedNotRefused(t *testing.T) {
+	t.Parallel()
+	named := make([]ids.UUID, maxAttachmentsPerSend+1)
+	for i := range named {
+		named[i] = ids.NewV7()
+	}
+	gone := named[3]
+	frozen := []string{"not-an-id", named[0].String()}
+	for _, id := range named {
+		frozen = append(frozen, id.String())
+	}
+	asked := 0
+	sendable := func(_ context.Context, id ids.UUID) (OutboundFile, error) {
+		asked++
+		if id == gone {
+			return OutboundFile{}, fmt.Errorf("resolving an attached file: %w", apperrors.ErrNotFound)
+		}
+		return OutboundFile{AttachmentID: id, Filename: "quote.pdf"}, nil
+	}
+
+	files, err := sortFrozenFiles(context.Background(), frozen, sendable)
+	if err != nil {
+		t.Fatalf("a read with uncarriable ids refused: %v", err)
+	}
+	if asked != maxAttachmentsPerSend {
+		t.Errorf("looked up %d files, want the cap of %d", asked, maxAttachmentsPerSend)
+	}
+	// One unparseable, one past the cap, one archived.
+	if files.unavailable != 3 {
+		t.Errorf("unavailable = %d, want 3", files.unavailable)
+	}
+	var want []ids.UUID
+	for _, id := range named[:maxAttachmentsPerSend] {
+		if id != gone {
+			want = append(want, id)
+		}
+	}
+	var got []ids.UUID
+	for _, file := range files.attachable {
+		got = append(got, file.AttachmentID)
+	}
+	if !slices.Equal(got, want) {
+		t.Errorf("attachable = %v, want %v in frozen order", got, want)
+	}
+}
+
+func TestALookupThatFailsStopsTheDetailRead(t *testing.T) {
+	t.Parallel()
+	sendable := func(context.Context, ids.UUID) (OutboundFile, error) {
+		return OutboundFile{}, fmt.Errorf("resolving an attached file: %w", context.DeadlineExceeded)
+	}
+	if _, err := sortFrozenFiles(context.Background(), []string{ids.NewV7().String()}, sendable); !errors.Is(err, context.DeadlineExceeded) {
+		t.Errorf("a failed lookup read as %v, want it to stop the read", err)
 	}
 }

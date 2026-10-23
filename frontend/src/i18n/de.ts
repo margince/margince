@@ -15191,11 +15191,15 @@ export const de = {
   "sched.editFor": "Bearbeiten: {subject}",
   "sched.withdrawFor": "Zurückziehen: {subject}",
   "sched.editRefused.operatorReason":
-    "Nicht bearbeitbar: Beim Bearbeiten ginge die Begründung verloren, die du beim Planen angegeben hast.",
+    "Nicht bearbeitbar: Beim Bearbeiten ginge die Begründung verloren, die du beim Planen angegeben hast. Ziehe die Nachricht zurück und plane eine neue.",
+  "sched.editRefused.title": "Nachricht nicht bearbeitbar",
   "sched.editRefused.files_one":
-    "Nicht bearbeitbar: {count} angehängte Datei kann nicht mehr gesendet werden.",
+    "{count} angehängte Datei kann nicht mehr gesendet werden. Ziehe die Nachricht zurück und plane eine neue.",
   "sched.editRefused.files_other":
-    "Nicht bearbeitbar: {count} angehängte Dateien können nicht mehr gesendet werden.",
+    "{count} angehängte Dateien können nicht mehr gesendet werden. Ziehe die Nachricht zurück und plane eine neue.",
+  "sched.editStale":
+    "Diese Nachricht hat sich nach dem Laden der Liste geändert und kann nicht mehr bearbeitet werden.",
+  "sched.editLoadFailed": "Nachricht nicht geladen",
   "outbox.name": "Geplante Nachrichten",
   "outbox.nameWaiting_one": "Geplante Nachrichten, {count} offen",
   "outbox.nameWaiting_other": "Geplante Nachrichten, {count} offen",

@@ -41,7 +41,7 @@ func TestTheWireCarriesEveryInputThePreviewAsksWith(t *testing.T) {
 	row.ConsentPurpose = "marketing_email"
 	row.Evidence = commsauthz.Evidence{DealID: deal}
 
-	out := scheduledSendResponse(row, scheduledFiles{})
+	out := scheduledSendResponse(row)
 
 	wantLinks := []crmcontracts.ActivityLinkInput{{
 		EntityType: crmcontracts.ActivityLinkInputEntityType("company"),
@@ -71,7 +71,7 @@ func TestTheWireCarriesEveryInputThePreviewAsksWith(t *testing.T) {
 // strings and a block of six nulls a client would have to read as "none".
 func TestAMessageThatClaimedNothingSaysNothing(t *testing.T) {
 	t.Parallel()
-	out := scheduledSendResponse(scheduledRow(), scheduledFiles{})
+	out := scheduledSendResponse(scheduledRow())
 	if out.Links != nil || out.CommunicationContext != nil || out.MarketingPurpose != nil ||
 		out.ConsentPurpose != nil || out.Evidence != nil {
 		t.Errorf("a row with no claim rendered one: %+v", out)
@@ -86,7 +86,8 @@ func TestTheWireCarriesWhatAnEditRebuildsTheMessageFrom(t *testing.T) {
 	row.frozen = scheduledPayload{HTMLBody: "<p>Your <b>quote</b></p>", DraftRef: "draft-7", OperatorReason: "they asked at the fair"}
 	file := OutboundFile{AttachmentID: ids.NewV7(), Filename: "quote.pdf", ContentType: "application/pdf", ByteSize: 2048, Checksum: "sha256:ab"}
 
-	out := scheduledSendResponse(row, scheduledFiles{attachable: []OutboundFile{file}, unavailable: 2})
+	out := scheduledSendResponse(row)
+	withScheduledFiles(&out, scheduledFiles{attachable: []OutboundFile{file}, unavailable: 2})
 
 	if out.HtmlBody == nil || *out.HtmlBody != "<p>Your <b>quote</b></p>" {
 		t.Errorf("markup on the wire = %v, want the frozen markup", out.HtmlBody)
@@ -112,7 +113,7 @@ func TestTheWireCarriesWhatAnEditRebuildsTheMessageFrom(t *testing.T) {
 // empty string as markup or a zero as a count.
 func TestAPlainMessageWithoutFilesOmitsWhatItDoesNotHave(t *testing.T) {
 	t.Parallel()
-	out := scheduledSendResponse(scheduledRow(), scheduledFiles{})
+	out := scheduledSendResponse(scheduledRow())
 	if out.HtmlBody != nil || out.DraftRef != nil || out.OperatorReason != nil ||
 		out.Attachments != nil || out.AttachmentsUnavailable != nil {
 		t.Errorf("a plain message without files rendered one of them: %+v", out)
@@ -126,11 +127,11 @@ func TestAControllerOnlyCategoryNeverReachesTheWire(t *testing.T) {
 	t.Parallel()
 	row := scheduledRow()
 	row.Context = commsauthz.CategorySecurityNotice
-	if out := scheduledSendResponse(row, scheduledFiles{}); out.CommunicationContext != nil {
+	if out := scheduledSendResponse(row); out.CommunicationContext != nil {
 		t.Errorf("a controller-only category reached the wire as %q", *out.CommunicationContext)
 	}
 	row.Context = commsauthz.Category("a_category_this_build_does_not_know")
-	if out := scheduledSendResponse(row, scheduledFiles{}); out.CommunicationContext != nil {
+	if out := scheduledSendResponse(row); out.CommunicationContext != nil {
 		t.Errorf("an unknown category reached the wire as %q", *out.CommunicationContext)
 	}
 }

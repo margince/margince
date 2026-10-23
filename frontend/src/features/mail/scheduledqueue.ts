@@ -38,6 +38,28 @@ export function useScheduledSends() {
 }
 
 /**
+ * One message as it stands now, files resolved, for an edit to start from.
+ *
+ * Dropped from the cache once nobody reads it, so each opening asks again.
+ */
+export function useScheduledSend(id: string | undefined) {
+  const t = useT();
+  return useQuery({
+    queryKey: ["scheduled-sends", id],
+    queryFn: async () => {
+      return unwrap(
+        await api.GET("/scheduled-sends/{id}", {
+          params: { path: { id: id ?? "" } },
+        }),
+        t,
+      );
+    },
+    enabled: id !== undefined,
+    gcTime: 0,
+  });
+}
+
+/**
  * What is still going to happen to a message. `waiting` is the queue proper and
  * `held` is the only status that waits on the sender; every other status has
  * already settled.

@@ -57,6 +57,8 @@ const (
 	composerSurface = "features/mail/composesend.ts"
 )
 
+var pinnedSendDoors = []string{"/activities/{id}/send-email", "/activities/{id}/send-message", "/emails"}
+
 // silentSendSurfaces ratifies each surface that posts to a send door without
 // asking the engine first, with what the omission costs.
 //
@@ -72,7 +74,6 @@ var contractPathLine = regexp.MustCompile(`^  (/[^\s:]+):\s*$`)
 // contractSchemaLine matches a schema entry under `components: schemas:`.
 var contractSchemaLine = regexp.MustCompile(`^    ([A-Za-z][A-Za-z0-9]*):\s*$`)
 
-// contractSchemaRef matches a reference to a named schema.
 var contractSchemaRef = regexp.MustCompile(`\$ref: '#/components/schemas/([A-Za-z][A-Za-z0-9]*)'`)
 
 // operationKeyLine matches a key at an operation's own depth; requestBody is one,
@@ -80,7 +81,9 @@ var contractSchemaRef = regexp.MustCompile(`\$ref: '#/components/schemas/([A-Za-
 // reason back to its sender, and that response is the outbox, not a send.
 var operationKeyLine = regexp.MustCompile(`^ {0,6}[a-zA-Z/]`)
 
-const requestBodyLine = "      requestBody:"
+// requestBodyLine is a prefix, so a body written in flow style on its own line,
+// or followed by a comment, still counts.
+var requestBodyLine = regexp.MustCompile(`^ {6}requestBody:`)
 
 // senderReasonProperty is the field that marks a schema as a send request body:
 // the sender's own word about why they are writing, recorded and granting
@@ -103,7 +106,7 @@ func sendDoors(t *testing.T) []string {
 	inSchemas, inBody := false, false
 	for line := range strings.SplitSeq(string(contract), "\n") {
 		if operationKeyLine.MatchString(line) {
-			inBody = line == requestBodyLine
+			inBody = requestBodyLine.MatchString(line)
 		}
 		switch {
 		case line == "components:":
@@ -112,7 +115,7 @@ func sendDoors(t *testing.T) []string {
 		case !inSchemas && contractPathLine.MatchString(line):
 			path = contractPathLine.FindStringSubmatch(line)[1]
 		case !inSchemas && path != "" && inBody:
-			if m := contractSchemaRef.FindStringSubmatch(line); m != nil {
+			for _, m := range contractSchemaRef.FindAllStringSubmatch(line, -1) {
 				refsByPath[path] = append(refsByPath[path], m[1])
 			}
 		case inSchemas && contractSchemaLine.MatchString(line):
@@ -275,11 +278,13 @@ func TestEverySurfaceThatSendsAsksTheEngineFirst(t *testing.T) {
 
 	doors := sendDoors(t)
 	// Under-recognition is the failure that reports PASS. The mail reply, the
-	// channel reply and the account-started mail all carry the field; fewer
-	// means the scanner has stopped seeing its subject.
-	if len(doors) < 3 {
-		t.Fatalf("derived %d send door(s) from the contract, want at least the three that carry "+
-			"operator_reason: the census has stopped seeing its subject (%v)", len(doors), doors)
+	// channel reply and the account-started mail all carry the field, and each
+	// is named so a lost door fails saying which.
+	for _, door := range pinnedSendDoors {
+		if !slices.Contains(doors, door) {
+			t.Fatalf("the contract scan no longer derives the send door %s: the census has stopped "+
+				"seeing its subject (derived %v)", door, doors)
+		}
 	}
 
 	// Deferred here, once the subject is fixed, so a fatal on the walk cannot

@@ -231,23 +231,36 @@ type scheduledFiles struct {
 }
 
 // scheduledFilesOf sorts a waiting message's frozen files by what its send would
-// do with each today. A message past waiting resolves nothing: no edit reaches
-// it, and the list holds every message the sender ever scheduled.
+// do with each today. A message past waiting resolves nothing: no edit reaches it.
 func (s *Store) scheduledFilesOf(ctx context.Context, row ScheduledSend) (scheduledFiles, error) {
 	if row.Status != ScheduledStatusScheduled && row.Status != ScheduledStatusHeld {
 		return scheduledFiles{}, nil
 	}
-	frozen, err := row.frozen.attachmentIDs()
-	if err != nil {
-		return scheduledFiles{}, err
-	}
-	unique, err := boundAttachmentIDs(frozen)
-	if err != nil {
-		return scheduledFiles{}, err
-	}
+	return sortFrozenFiles(ctx, row.frozen.AttachmentIDs, s.sendableFile)
+}
+
+// sortFrozenFiles counts an id the send could not carry instead of refusing it.
+// A read that answered with the send's own 4xx would hide the message it reads.
+func sortFrozenFiles(
+	ctx context.Context, frozen []string, sendable func(context.Context, ids.UUID) (OutboundFile, error),
+) (scheduledFiles, error) {
 	var files scheduledFiles
-	for _, id := range unique {
-		file, err := s.sendableFile(ctx, id)
+	seen := make(map[ids.UUID]bool, len(frozen))
+	for _, raw := range frozen {
+		id, err := ids.Parse(raw)
+		if err != nil {
+			files.unavailable++
+			continue
+		}
+		if seen[id] {
+			continue
+		}
+		seen[id] = true
+		if len(seen) > maxAttachmentsPerSend {
+			files.unavailable++
+			continue
+		}
+		file, err := sendable(ctx, id)
 		switch {
 		case err == nil:
 			files.attachable = append(files.attachable, file)

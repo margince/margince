@@ -34855,13 +34855,16 @@ export interface components {
             html_body?: string;
             /**
              * @description The frozen files the sender can still attach, in frozen order, so an edit carries them.
-             *     Resolved only while the message is `scheduled` or `held`; absent when none resolve.
+             *     Resolved only by the detail read of a `scheduled` or `held` message. Absent from the
+             *     list, the scheduling answer and the reschedule answer, so its absence there does not
+             *     mean the message has no files.
              */
             attachments?: components["schemas"]["ApprovalPreviewFile"][];
             /**
              * @description How many frozen files the send would now refuse: removed, out of the sender's sight,
              *     kept without bytes, or empty. Not named: a file the sender cannot see answers 404
-             *     everywhere else. Absent when every file resolves, and on a message past waiting.
+             *     everywhere else. Like `attachments`, resolved only by the detail read of a waiting
+             *     message; absent there when every file resolves.
              */
             attachments_unavailable?: number;
             /** @description The voice-draft reference the send carries, frozen with it. Absent when none was given. */
