@@ -98,8 +98,11 @@ function Page({
   );
 }
 
+// Awaited, because a card registers its draft in an effect and the bar is
+// drawn only once that has run. A synchronous read asks for the button in the
+// paint before registration and finds a page with no bar on it.
 const saveButton = (canvas: HTMLElement) =>
-  within(canvas).getByRole("button", { name: "Save" });
+  within(canvas).findByRole("button", { name: "Save" });
 
 /** Nothing is unsaved, so there is no bar at all. */
 export const Clean: Story = {
@@ -123,7 +126,7 @@ export const TwoCardsDirty: Story = {
 export const Saving: Story = {
   render: () => <Page typed="Jane Smith" outcome="hangs" />,
   play: async ({ canvasElement }) => {
-    await userEvent.click(saveButton(canvasElement));
+    await userEvent.click(await saveButton(canvasElement));
     await expect(
       within(canvasElement).getByRole("button", { name: "Discard" }),
     ).toBeDisabled();
@@ -134,7 +137,7 @@ export const Saving: Story = {
 export const Failed: Story = {
   render: () => <Page typed="Jane Smith" outcome="refuses" />,
   play: async ({ canvasElement }) => {
-    await userEvent.click(saveButton(canvasElement));
+    await userEvent.click(await saveButton(canvasElement));
     await expect(await within(canvasElement).findByRole("alert")).toBeVisible();
   },
 };
