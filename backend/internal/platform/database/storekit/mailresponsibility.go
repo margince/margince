@@ -69,35 +69,6 @@ func UnambiguousMailSeatIdentities(ctx context.Context, tx pgx.Tx) (map[string][
 	if err != nil {
 		return nil, err
 	}
-	return unambiguousIdentities(records, mailIdentityStrength), nil
-}
-
-// mailIdentityStrength ranks the sources mail recipient matching trusts: a
-// login or proved mailbox outranks an alias the seat declared itself.
-var mailIdentityStrength = map[string]int{"login": 2, provedMailboxSource: 2, "user": 1}
-
-// provenIdentityStrength keeps only identities the system proved: the login,
-// a proved mailbox, and an address a receiving server delivered to. A seat's
-// own declared alias is left out, so it cannot claim somebody else's event.
-var provenIdentityStrength = map[string]int{"login": 2, provedMailboxSource: 2, "delivered_to": 2}
-
-// ProvenMailSeatIdentitiesSQL binds each seat's proven, unambiguous addresses,
-// for evidence that names a seat as taking part, such as a calendar attendee.
-func ProvenMailSeatIdentitiesSQL(ctx context.Context, tx pgx.Tx, bind func(any) int) (string, error) {
-	records, err := readMailSeatIdentities(ctx, tx)
-	if err != nil {
-		return "", err
-	}
-	encoded, err := json.Marshal(unambiguousIdentities(records, provenIdentityStrength))
-	if err != nil {
-		return "", err
-	}
-	return fmt.Sprintf("$%d::jsonb", bind(encoded)), nil
-}
-
-// unambiguousIdentities gives each address to the one seat holding it at the
-// highest strength; a tie between seats gives it to nobody.
-func unambiguousIdentities(records []mailSeatIdentity, strength map[string]int) map[string][]string {
 	owners, strengths := map[string]string{}, map[string]int{}
 	claim := func(seat, label string, strength int) {
 		address := mailidentity.ReaderAddress(label, "")
@@ -111,8 +82,11 @@ func unambiguousIdentities(records []mailSeatIdentity, strength map[string]int) 
 		}
 	}
 	for _, record := range records {
-		if level, trusted := strength[record.source]; trusted {
-			claim(record.seat, record.label, level)
+		switch record.source {
+		case "login", provedMailboxSource:
+			claim(record.seat, record.label, 2)
+		case "user":
+			claim(record.seat, record.label, 1)
 		}
 	}
 	out := map[string][]string{}
@@ -121,7 +95,7 @@ func unambiguousIdentities(records []mailSeatIdentity, strength map[string]int) 
 			out[seat] = append(out[seat], address)
 		}
 	}
-	return out
+	return out, nil
 }
 
 // MailSeatIdentities reads live mailbox identities for restoring factual recipient evidence.

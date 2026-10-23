@@ -15,6 +15,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/attention"
 	"github.com/margince/margince/backend/internal/compose/company360"
 	"github.com/margince/margince/backend/internal/compose/contact360"
@@ -26,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/meetingmap"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -269,18 +272,24 @@ func TestALegacyCalendarRowIsNobodysUntilItsOriginalIsReplayed(t *testing.T) {
 	}
 }
 
-// An alias a seat declared itself proves nothing about another seat's event,
-// while an address the product proved by delivery binds its seat.
+// Only a provider-attested mailbox binds a seat to a calendar event beyond its
+// login address. A declared alias and a delivered-to sighting do not, and the
+// set matches what capture.SeatProvedAddressTx accepts for the same seats.
 func TestOnlyAProvenIdentityBindsASeatToACalendarEvent(t *testing.T) {
 	e := integration.Setup(t)
-	declared := "deals-desk@ourco.test"
+	declared, delivered, proved := "deals-desk@ourco.test", "rep3-forward@ourco.test", "rep3-calendar@ourco.test"
 	if _, err := capture.NewOwnerIdentityStore(e.DB()).Add(e.As(e.Rep2, nil, integration.AdminPerms), "address", declared); err != nil {
 		t.Fatal(err)
 	}
-	delivered := "rep3-forward@ourco.test"
-	if _, err := integration.OwnerConn(t).Exec(context.Background(), `
+	owner := integration.OwnerConn(t)
+	if _, err := owner.Exec(context.Background(), `
 		INSERT INTO capture_owner_identity (user_id, kind, value, source, created_by)
 		VALUES ($1, 'address', $2, 'delivered_to', 'system:alias-discovery')`, e.Rep3, delivered); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := owner.Exec(context.Background(), `
+		INSERT INTO capture_connection (provider, user_id, status, account_label)
+		VALUES ('gcal', $1, 'connected', $2)`, e.Rep3, proved); err != nil {
 		t.Fatal(err)
 	}
 	guest := meetingmap.Actor{Email: "buyer@customer.test"}
@@ -288,15 +297,36 @@ func TestOnlyAProvenIdentityBindsASeatToACalendarEvent(t *testing.T) {
 		ID: "evt-declared", Subject: "Desk review", StartsAt: laneDay.Add(2 * time.Hour), EndsAt: laneDay.Add(3 * time.Hour),
 		Organizer: guest, Attendees: []meetingmap.Actor{{Email: declared}},
 	})
-	captureCalendarEvent(t, e, e.Rep3, meetingmap.Event{
+	captureCalendarEvent(t, e, e.Rep1, meetingmap.Event{
 		ID: "evt-delivered", Subject: "Forwarded invite", StartsAt: laneDay.Add(4 * time.Hour), EndsAt: laneDay.Add(5 * time.Hour),
 		Organizer: guest, Attendees: []meetingmap.Actor{{Email: delivered}},
+	})
+	captureCalendarEvent(t, e, e.Rep1, meetingmap.Event{
+		ID: "evt-proved", Subject: "Proved invite", StartsAt: laneDay.Add(6 * time.Hour), EndsAt: laneDay.Add(7 * time.Hour),
+		Organizer: guest, Attendees: []meetingmap.Actor{{Email: proved}},
 	})
 
 	if got := myMeetingsToday(t, e, e.Rep2); len(got) != 0 {
 		t.Errorf("a seat that only declared the alias got %v, want none", got)
 	}
-	if got := myMeetingsToday(t, e, e.Rep3); fmt.Sprint(got) != "[Forwarded invite]" {
-		t.Errorf("the seat with the delivered identity got %v, want its own event", got)
+	if got := myMeetingsToday(t, e, e.Rep3); fmt.Sprint(got) != "[Proved invite]" {
+		t.Errorf("the seat got %v, want only the event naming its provider-attested mailbox", got)
+	}
+	for _, tc := range []struct {
+		seat    ids.UUID
+		address string
+		want    bool
+	}{{e.Rep2, declared, false}, {e.Rep3, delivered, false}, {e.Rep3, proved, true}} {
+		var got bool
+		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			var err error
+			got, err = capture.SeatProvedAddressTx(e.Admin(), tx, tc.seat, tc.address)
+			return err
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if got != tc.want {
+			t.Errorf("SeatProvedAddressTx(%s) = %v, but calendar attendance treats it as %v", tc.address, got, tc.want)
+		}
 	}
 }
