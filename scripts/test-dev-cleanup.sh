@@ -106,6 +106,9 @@ repo_root="$root"
 # that names them. A lifted still_ours refuses outright without it rather than
 # quietly reading half of itself.
 db="margince_dev_probe"
+# kill_pids waits this long before the SIGKILL. dev.sh gives a worker time to
+# drain its jobs; a fixture that ignores the TERM only needs the wait to end.
+STOP_GRACE_SECONDS=2
 lift kill_pids
 lift still_ours
 lift stack_already_up
@@ -174,8 +177,8 @@ gone_probe
 
 # A PID THAT CHANGED HANDS DURING THE WAIT IS NOT KILLED.
 #
-# There are five seconds between the TERM and the SIGKILL, and a process that
-# honours the TERM frees its pid inside them. The kernel reissues numbers, so a
+# There are STOP_GRACE_SECONDS between the TERM and the SIGKILL, and a process
+# that honours the TERM frees its pid inside them. The kernel reissues numbers, so a
 # SIGKILL sent on the strength of the number alone lands on whatever took it —
 # somebody's editor, their own shell.
 #
