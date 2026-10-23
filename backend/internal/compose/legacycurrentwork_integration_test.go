@@ -117,6 +117,10 @@ func TestCurrentWorkFromAMailNotReadInFullIsWithheld(t *testing.T) {
 	request := o.askedOfUs(t, "current-request", readInFull(ask))
 	control := o.askedOfUs(t, "current-control", readInFull(ask))
 	o.captureRequests(t)
+	// A request with an open request task is shown as that task, not as a
+	// waiting row; these two have none, so they are read on the waiting lane.
+	waitingRequest := o.askedOfUs(t, "waiting-request", readInFull(ask))
+	waitingControl := o.askedOfUs(t, "waiting-control", readInFull(ask))
 	promise := "I will send the pricing by Friday."
 	source := o.weWrite(t, owedMail{
 		to: "pat@customer.example", subject: "Pricing", body: readInFull(promise),
@@ -180,20 +184,21 @@ func TestCurrentWorkFromAMailNotReadInFullIsWithheld(t *testing.T) {
 			t.Fatalf("the %s task is not current work before the upgrade; the fixture proves nothing", name)
 		}
 	}
-	if !waitingBefore[request.String()] || !waitingBefore[control.String()] {
+	if !waitingBefore[waitingRequest.String()] || !waitingBefore[waitingControl.String()] {
 		t.Fatal("the requests are not waiting before the upgrade; the fixture proves nothing")
 	}
 
 	o.asLegacy(t, request, "")
+	o.asLegacy(t, waitingRequest, "")
 	o.asLegacy(t, source, "")
 	after, waitingAfter := openTasks(), waiting()
 	if after[requestTask] || after[promiseTask] {
 		t.Errorf("automatic work from unassessed mail is still current: request %v, promise %v", after[requestTask], after[promiseTask])
 	}
-	if waitingAfter[request.String()] {
+	if waitingAfter[waitingRequest.String()] {
 		t.Error("a request from unassessed mail still waits on a reply")
 	}
-	if !after[controlTask] || !waitingAfter[control.String()] {
+	if !after[controlTask] || !waitingAfter[waitingControl.String()] {
 		t.Error("work from mail read in full stopped being current")
 	}
 	if !after[ids.UUID(own.Id)] {
