@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/programsettings"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // shutdownSlack is what the configuration reference asks for beyond the drain
@@ -28,6 +29,9 @@ var (
 // stays running.
 func TestTheDevStackWaitsOutTheWorkersShutdownBeforeItKills(t *testing.T) {
 	t.Parallel()
+	if err := gatekit.DeclareInputs(os.Getenv, "../../../scripts"); err != nil {
+		t.Fatalf("declaring the scripts tree this test reads: %v", err)
+	}
 	raw, err := os.ReadFile("../../../scripts/dev.sh")
 	if err != nil {
 		t.Fatalf("reading scripts/dev.sh: %v", err)
