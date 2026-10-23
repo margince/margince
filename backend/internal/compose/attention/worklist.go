@@ -13,6 +13,7 @@ package attention
 
 import (
 	"context"
+	"slices"
 	"sort"
 	"time"
 
@@ -221,12 +222,10 @@ func (s *Service) worklistFrom(
 	if limit > worklistMaxPage {
 		limit = worklistMaxPage
 	}
-	rows := classifyDay(day, day.AsOf, s.money)
-	rows = append(append(rows, s.planRows...), s.followUps.rows...)
 	waits, waitNote := s.rankedWaits(ctx, waiting, day.AsOf, scope)
-	rows = append(rows, waits...)
 	// One admission rule for every row the page, Focus and counts will read.
-	rows, refused := admitBySource(ctx, rows)
+	rows, refused := admitBySource(ctx, slices.Concat(
+		classifyDay(day, day.AsOf, s.money), s.planRows, s.followUps.rows, waits))
 	// What the night thought of each deal, onto whichever row is about it — the
 	// brief's own row, and the at-risk row the fold below keeps. Stamped BEFORE
 	// the fold so the surviving row can inherit a score even where the night's

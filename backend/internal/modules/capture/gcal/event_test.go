@@ -327,8 +327,8 @@ func TestABookedRoomIsNeitherAnAddressNorAParticipant(t *testing.T) {
 			t.Errorf("participants list the room %q", p.Email)
 		}
 	}
-	if len(rec.Participants) != 1 || rec.Participants[0].Email != "client@acme.com" {
-		t.Errorf("Participants = %+v, want the one guest", rec.Participants)
+	if len(rec.Participants) != 2 || rec.Participants[1].Email != "client@acme.com" {
+		t.Errorf("Participants = %+v, want the organizing owner and the one guest", rec.Participants)
 	}
 }
 

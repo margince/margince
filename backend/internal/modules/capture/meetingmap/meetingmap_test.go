@@ -143,10 +143,9 @@ func TestACancellationOutranksThePartyRules(t *testing.T) {
 	}
 }
 
-// The owner is excluded from the participant rows because capture stamps them
-// from the CONNECTION, which carries their user_id — the column the interaction
-// graph joins on. A row built from this header would carry only an address.
-func TestTheOwnerIsNotAParticipantAndOrganizerOutranksAttending(t *testing.T) {
+// The owner keeps the provider's role for them, which is the evidence they take
+// part; a calendar holding a copy of somebody else's meeting lists no owner.
+func TestTheOwnerKeepsTheProvidersRoleAndOrganizerOutranksAttending(t *testing.T) {
 	m := Classify(Event{
 		ID: "evt-2", Subject: "Review",
 		Organizer: Actor{Email: "host@acme.test"},
@@ -158,8 +157,14 @@ func TestTheOwnerIsNotAParticipantAndOrganizerOutranksAttending(t *testing.T) {
 	for _, p := range m.Participants().Participants {
 		roles[p.Email] = p.Role
 	}
-	if _, ok := roles[owner]; ok {
-		t.Error("the owner appears among the participant rows")
+	if roles[owner] != connector.ParticipantRoleAttendee {
+		t.Errorf("owner role = %q, want the provider's attendee role", roles[owner])
+	}
+	copied := Classify(Event{ID: "evt-3", Organizer: Actor{Email: "host@acme.test"}}, owner)
+	for _, p := range copied.Participants().Participants {
+		if p.Email == owner {
+			t.Error("a calendar copy the owner is not invited to lists the owner as a party")
+		}
 	}
 	if roles["host@acme.test"] != connector.ParticipantRoleOrganizer {
 		t.Errorf("host role = %q, want organizer to outrank attending", roles["host@acme.test"])

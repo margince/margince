@@ -11,6 +11,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"testing"
 	"time"
 
@@ -21,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/capture/meetingmap"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -138,5 +140,132 @@ func TestTheCompanyAndContactPagesNameTheSameRoom(t *testing.T) {
 	}
 	if fmt.Sprint(onCompany) != fmt.Sprint(onContact) || len(onCompany) == 0 {
 		t.Errorf("the company page names %v and the contact page %v for one meeting", onCompany, onContact)
+	}
+}
+
+// meetingRowsOf counts the reader's Worklist rows about one meeting, by source.
+func meetingRowsOf(t *testing.T, e *integration.Env, reader ids.UUID, now time.Time, meeting ids.UUID) map[string]int {
+	t.Helper()
+	feed := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return now })
+	page, err := feed.Worklist(e.As(reader, nil, integration.AdminPerms), "mine", "all", ids.Nil, 100, "")
+	if err != nil {
+		t.Fatalf("reading the worklist: %v", err)
+	}
+	out := map[string]int{}
+	for _, row := range page.Queue {
+		if row.Id == meeting.String() || (row.SourceRecord != nil && ids.UUID(row.SourceRecord.Id) == meeting) {
+			out[string(row.Source)]++
+		}
+	}
+	return out
+}
+
+// A meeting is held only once somebody says so. Booked and ahead, it is a
+// meeting to prepare. Past with no outcome, it is one question about its
+// outcome. Saved as held, it is a follow-up.
+func TestAMeetingIsHeldOnlyOnceItsOutcomeSaysSo(t *testing.T) {
+	e := integration.Setup(t)
+	now := laneDay.Add(3 * time.Hour)
+	customer := e.SeedContact(t, "Meeting Customer", &e.Rep1)
+	book := func(subject string, at time.Time, status string) ids.UUID {
+		rep := ids.From[ids.UserKind](e.Rep1)
+		row, _, err := e.Activities.LogActivity(e.As(e.Rep1, nil, integration.AdminPerms), activities.LogActivityInput{
+			Kind: "meeting", Subject: &subject, OccurredAt: &at, Source: "manual", MeetingStatus: &status, HostUserID: &rep,
+			Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: customer}},
+		})
+		if err != nil {
+			t.Fatalf("booking %q: %v", subject, err)
+		}
+		return ids.UUID(row.Id)
+	}
+	ahead := book("Booked ahead", now.Add(2*time.Hour), "booked")
+	unreported := book("Past, no outcome", now.AddDate(0, 0, -3), "booked")
+	held := book("Past, held", now.AddDate(0, 0, -4), "held")
+
+	if got := meetingRowsOf(t, e, e.Rep1, now, ahead); got["meeting_follow_up"] != 0 || got["meeting_outcome"] != 0 || got["meeting"] != 1 {
+		t.Errorf("a booked meeting ahead reads %v, want only the meeting to prepare", got)
+	}
+	if got := meetingRowsOf(t, e, e.Rep1, now, unreported); got["meeting_outcome"] != 1 || got["meeting_follow_up"] != 0 {
+		t.Errorf("a past meeting with no outcome reads %v, want exactly one outcome question", got)
+	}
+	if got := meetingRowsOf(t, e, e.Rep1, now, held); got["meeting_follow_up"] != 1 || got["meeting_outcome"] != 0 {
+		t.Errorf("a held meeting reads %v, want the follow-up path only", got)
+	}
+}
+
+func seatEmail(t *testing.T, e *integration.Env, seat ids.UUID) string {
+	t.Helper()
+	var email string
+	if err := integration.OwnerConn(t).QueryRow(context.Background(), `SELECT email FROM app_user WHERE id = $1`, seat).Scan(&email); err != nil {
+		t.Fatal(err)
+	}
+	return email
+}
+
+// captureCalendarEvent runs one provider event through the calendar mapper and
+// the real sink, under the connector of the seat whose calendar holds it.
+func captureCalendarEvent(t *testing.T, e *integration.Env, calendarOf ids.UUID, ev meetingmap.Event) ids.UUID {
+	t.Helper()
+	raw := []byte(`{"id":"` + ev.ID + `"}`)
+	record := meetingmap.Classify(ev, seatEmail(t, e, calendarOf)).ToRecord(integration.CalendarSystem, raw)
+	ref, err := calendarSink(e).Upsert(calendarOwnerCtx(e, calendarOf), record)
+	if err != nil {
+		t.Fatalf("capturing %s: %v", ev.ID, err)
+	}
+	return ref.ID
+}
+
+// A calendar that holds a copy of a meeting makes nobody's work. The seat the
+// provider lists as organizer or attendee takes part; the seat whose
+// connector only imported it does not.
+func TestACalendarCopyIsNotTheImportersMeetingButItsAttendeesAre(t *testing.T) {
+	e := integration.Setup(t)
+	organizer := seatEmail(t, e, e.Rep2)
+	guest := meetingmap.Actor{Email: "buyer@customer.test"}
+	captureCalendarEvent(t, e, e.Rep1, meetingmap.Event{
+		ID: "evt-copied", Subject: "Colleague's review", StartsAt: laneDay.Add(2 * time.Hour), EndsAt: laneDay.Add(3 * time.Hour),
+		Organizer: meetingmap.Actor{Email: organizer}, Attendees: []meetingmap.Actor{guest},
+	})
+	captureCalendarEvent(t, e, e.Rep3, meetingmap.Event{
+		ID: "evt-invited", Subject: "Invited review", StartsAt: laneDay.Add(4 * time.Hour), EndsAt: laneDay.Add(5 * time.Hour),
+		Organizer: guest, Attendees: []meetingmap.Actor{{Email: seatEmail(t, e, e.Rep3)}},
+	})
+
+	if got := myMeetingsToday(t, e, e.Rep1); len(got) != 0 {
+		t.Errorf("the importing seat got %v, want none: its calendar only held a copy", got)
+	}
+	if got := myMeetingsToday(t, e, e.Rep2); fmt.Sprint(got) != "[Colleague's review]" {
+		t.Errorf("the organizer got %v, want the meeting they organize", got)
+	}
+	if got := myMeetingsToday(t, e, e.Rep3); fmt.Sprint(got) != "[Invited review]" {
+		t.Errorf("the invited seat got %v, want the meeting it attends", got)
+	}
+}
+
+// A captured meeting stored before the owner's role was recorded fails closed:
+// it is nobody's work until the replay of its stored original restores the
+// owner's provider role.
+func TestALegacyCalendarRowIsNobodysUntilItsOriginalIsReplayed(t *testing.T) {
+	e := integration.Setup(t)
+	seedCalendarConnection(t, e)
+	starts := laneDay.Add(36 * time.Hour)
+	seedCapturedMeeting(t, e, "evt-legacy", starts, attendee{email: backfillOwner, response: "accepted", self: true})
+	until := starts.Add(24 * time.Hour)
+	lane := attentionMeetings{store: activities.NewStore(InstallationDB(e.Pool))}
+	read := func() int {
+		rows, err := lane.Today(e.As(e.AdminUser, nil, integration.AdminPerms), starts.Add(-time.Hour), until, 12, attention.TasksMine, ids.UUID{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return len(rows)
+	}
+	if got := read(); got != 0 {
+		t.Fatalf("a legacy row with only an importer host reads %d meetings, want none", got)
+	}
+	if _, err := repairMeetingAttendeesBatch(e.Admin(), e.Pool, meetingAttendeeRepairPerTick, slog.Default()); err != nil {
+		t.Fatal(err)
+	}
+	if got := read(); got != 1 {
+		t.Fatalf("after the replay the owner reads %d meetings, want the one they accepted", got)
 	}
 }

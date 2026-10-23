@@ -93,7 +93,7 @@ func (s *Store) queryMeetingFollowUps(
 		instant, g.content, g.links, arg(windowDays), AwaitingReplyLookbackDays,
 		g.later, relstrength.InteractionCountsSQL("later"), arg(readerOrNobody(ctx)),
 		messageSnoozeLiftedSQL(at, g.back), g.customer, AwaitingReplyScanCap,
-		relstrength.MeetingTookPlaceSQL("a", at), addressable, maxActivityLinks, narrowed,
+		meetingHeldSQL("a", at), addressable, maxActivityLinks, narrowed,
 	), args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading meetings the reader owes a follow-up: %w", err)
@@ -205,3 +205,10 @@ var meetingFollowUpsSQL = `
 	 GROUP BY a.id, a.subject, a.occurred_at, attendees.recipients
 	 ORDER BY a.occurred_at DESC, a.id DESC
 	 LIMIT %[11]d`
+
+// meetingHeldSQL is a meeting somebody said took place: its outcome was saved
+// as held, and its start has passed. A booked or unmarked past meeting owes
+// an outcome, which the outcome lane asks for once; it owes no follow-up yet.
+func meetingHeldSQL(alias, now string) string {
+	return "(" + alias + ".meeting_status = 'held' AND " + alias + ".occurred_at <= " + now + ")"
+}
