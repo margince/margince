@@ -11105,7 +11105,7 @@ export const de = {
     "Volle Plätze, die nicht deaktiviert oder gesperrt sind, Agenten eingeschlossen. Leseplätze sind unbegrenzt und zählen nicht mit.",
   "settings.rates.fxTitle": "Wechselkurse",
   "settings.rates.fxIntro":
-    "Wechselkurse, die Beträge in Fremdwährung in die Basiswährung umrechnen. Neue Kurse gelten ab heute oder später. Frühere Kurse ändern sich nie.",
+    "Wechselkurse, die Beträge in Fremdwährung in die Basiswährung umrechnen. Neue Kurse gelten ab heute oder später. Ein früheres Datum geht nur vor dem ersten Kurs der Währung. Ein Kurs, der schon gilt, ändert sich nie.",
   "settings.rates.fxWithheld":
     "Nur Admins und Operations sehen Wechselkurse. Jede Gesamtsumme in der Installation wird damit umgerechnet.",
   "settings.rates.readOnly":

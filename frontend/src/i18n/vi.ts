@@ -10812,7 +10812,7 @@ export const vi = {
     "Tài khoản đầy đủ quyền không bị vô hiệu hóa hay tạm khóa, kể cả trợ lý AI. Tài khoản chỉ xem không giới hạn và không được tính.",
   "settings.rates.fxTitle": "Tỷ giá",
   "settings.rates.fxIntro":
-    "Tỷ giá quy đổi số tiền ngoại tệ sang loại tiền cơ sở. Tỷ giá mới có hiệu lực từ hôm nay trở đi; tỷ giá đã áp dụng trước đây không bao giờ thay đổi.",
+    "Tỷ giá quy đổi số tiền ngoại tệ sang loại tiền cơ sở. Tỷ giá mới có hiệu lực từ hôm nay trở đi. Chỉ được chọn ngày trong quá khứ nếu ngày đó trước tỷ giá đầu tiên của loại tiền. Tỷ giá đã có hiệu lực không bao giờ thay đổi.",
   "settings.rates.fxWithheld":
     "Chỉ quản trị viên hoặc thành viên Vận hành mới xem được tỷ giá. Mọi số liệu tổng hợp trong bản cài đặt đều quy đổi theo tỷ giá này.",
   "settings.rates.readOnly":
