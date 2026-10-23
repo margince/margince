@@ -567,15 +567,7 @@ func newRepairer(e *integration.SearchEnv, w dealWorld) repairer {
 // serves, as an operator with the data task read grant.
 func (r repairer) preview(t *testing.T) map[capturemod.DealOutcome]int {
 	t.Helper()
-	operator := principal.WithActor(principal.WithWorkspaceID(context.Background(), r.e.WS), principal.Principal{
-		Type: principal.PrincipalHuman, ID: "human:" + r.e.Rep1.String(), UserID: r.e.Rep1, SeatType: principal.SeatFull,
-		Permissions: principal.Permissions{
-			Objects: map[string]principal.ObjectGrant{"data_task": {Read: true}}, RowScope: principal.RowScopeAll,
-		},
-	})
-	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/v1/admin/mail-deal-repair/preview", strings.NewReader(`{"limit":1000}`))
-	compose.MailDealRepairPreviewHandler(r.e.Pool)(rec, req.WithContext(operator))
+	rec := r.operatorPreview(`{"limit":1000}`)
 	if rec.Code != http.StatusOK {
 		t.Fatalf("the operator preview answered %d: %s", rec.Code, rec.Body.String())
 	}
@@ -591,6 +583,21 @@ func (r repairer) preview(t *testing.T) map[capturemod.DealOutcome]int {
 		counts[capturemod.DealOutcome(row.Outcome)] = row.Count
 	}
 	return counts
+}
+
+// operatorPreview posts body to the operator preview as the API serves it,
+// as an operator holding the data task read grant.
+func (r repairer) operatorPreview(body string) *httptest.ResponseRecorder {
+	operator := principal.WithActor(principal.WithWorkspaceID(context.Background(), r.e.WS), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + r.e.Rep1.String(), UserID: r.e.Rep1, SeatType: principal.SeatFull,
+		Permissions: principal.Permissions{
+			Objects: map[string]principal.ObjectGrant{"data_task": {Read: true}}, RowScope: principal.RowScopeAll,
+		},
+	})
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/v1/admin/mail-deal-repair/preview", strings.NewReader(body))
+	compose.MailDealRepairPreviewHandler(r.e.Pool)(rec, req.WithContext(operator))
+	return rec
 }
 
 // runErr is run for a goroutine, which may not fail the test itself.

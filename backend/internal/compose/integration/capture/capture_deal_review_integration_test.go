@@ -12,6 +12,8 @@ package capture
 
 import (
 	"context"
+	"errors"
+	"net/http"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -21,6 +23,7 @@ import (
 	capturemod "github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -273,5 +276,57 @@ func TestTheOperatorPreviewStillShowsWhatTheRepairLeft(t *testing.T) {
 	preview := r.preview(t)
 	if preview[capturemod.DealUnknownLink] != 1 || preview[capturemod.DealMachineConfirmed] != 1 {
 		t.Fatalf("after the repair the operator preview reads %v, want the unknown link and the confirmed one", preview)
+	}
+}
+
+// Two unrelated mails whose thread key is empty are no conversation: our
+// filed mail is no clue for the other, and the company's two deals leave it
+// on none.
+func TestMailWithAnEmptyThreadKeyFollowsNoConversation(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	w := newDealWorld(t, e)
+	w.employee(t, "alice@acme.example", w.customer)
+	env.syncSent(t, map[string]bool{"empty1@myco.example": true},
+		email(captureOwner, "", "alice@acme.example", "empty1@myco.example", ""))
+	env.sync(t, authenticated(mailFrom("alice@acme.example", "empty2@acme.example", "", "other"), "acme.example"))
+	first := w.deal(t, "Acme operations")
+	w.deal(t, "Acme reporting")
+	ours := ids.From[ids.ActivityKind](activityOf(t, e, "empty1@myco.example"))
+	if err := database.WithWorkspaceTx(w.ctx, e.Pool, func(tx pgx.Tx) error { return relinkInTx(w, tx, ours, first, false) }); err != nil {
+		t.Fatal(err)
+	}
+	// A row stored with an empty key, as an import or an older writer may
+	// leave one; no live writer is asked to produce it.
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `UPDATE activity SET thread_key = '' WHERE source_id IN ('empty1@myco.example', 'empty2@acme.example')`)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	newRepairer(e, w).run(t)
+	wantDeals(t, e, "empty2@acme.example")
+}
+
+// The operator preview reads a bounded page: a limit outside 1..1000 is
+// refused, and the repair's own preview refuses one below 1.
+func TestTheOperatorPreviewRefusesALimitOutOfBounds(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	w := newDealWorld(t, e)
+	r := newRepairer(e, w)
+	for _, body := range []string{`{"limit":0}`, `{"limit":1001}`} {
+		if rec := r.operatorPreview(body); rec.Code != http.StatusUnprocessableEntity {
+			t.Errorf("a preview of %s answered %d, want 422", body, rec.Code)
+		}
+	}
+	if rec := r.operatorPreview(`{"limit":1}`); rec.Code != http.StatusOK {
+		t.Errorf("a preview of one mail answered %d, want 200", rec.Code)
+	}
+	if err := database.WithWorkspaceTx(r.system, e.Pool, func(tx pgx.Tx) error {
+		_, err := r.repair.PreviewTx(r.system, tx, ids.Nil, 0)
+		return err
+	}); !errors.Is(err, apperrors.ErrInvalidArgument) {
+		t.Errorf("a repair preview of no mails answered %v, want invalid argument", err)
 	}
 }

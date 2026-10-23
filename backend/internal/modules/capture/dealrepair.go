@@ -42,6 +42,9 @@ const (
 	DealMachineRetractedRefused DealOutcome = "machine_retracted_target_refused"
 )
 
+// MaxDealRepairPreview bounds one preview page, as the contract states.
+const MaxDealRepairPreview = 1000
+
 // dealRepairReason is the evidence every repair write records.
 const dealRepairReason = "captured_mail_deal_repair"
 
@@ -119,6 +122,9 @@ type DealRepairPreview struct {
 func (r DealRepair) PreviewTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) (DealRepairPreview, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return DealRepairPreview{}, err
+	}
+	if limit < 1 || limit > MaxDealRepairPreview {
+		return DealRepairPreview{}, apperrors.ErrInvalidArgument
 	}
 	scanned, err := capturedMail(ctx, tx, after, limit+1)
 	if err != nil {

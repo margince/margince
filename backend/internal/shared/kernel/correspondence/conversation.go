@@ -12,10 +12,10 @@ import "fmt"
 // Aliases are compile-time SQL aliases, never request input.
 
 // ConversationSQL is the test that row is in anchor's conversation: the same
-// thread, medium and correspondent, and row is live. A null thread key joins
-// nothing.
+// thread, medium and correspondent, and row is live. A null or empty thread
+// key joins nothing, so two unthreaded mails are never one conversation.
 func ConversationSQL(row, anchor string) string {
-	return fmt.Sprintf(`%[1]s.thread_key = %[2]s.thread_key
+	return fmt.Sprintf(`%[2]s.thread_key <> '' AND %[1]s.thread_key = %[2]s.thread_key
      AND %[1]s.kind = %[2]s.kind
      AND %[1]s.channel_provider IS NOT DISTINCT FROM %[2]s.channel_provider
      AND %[1]s.counterparty_email = %[2]s.counterparty_email

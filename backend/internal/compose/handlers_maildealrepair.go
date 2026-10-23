@@ -5,6 +5,7 @@ package compose
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"slices"
 	"strings"
@@ -16,14 +17,11 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
-
-// mailDealRepairActor is the identity the preview decides under, as the data
-// task's executor does.
-const mailDealRepairActor = "system:datatask:core/1792680000_captured_mail_filed_on_its_deal"
 
 // PreviewMailDealRepair implements POST /admin/mail-deal-repair/preview: the
 // registered repair, run on one page and rolled back, so an operator sees what
@@ -36,13 +34,19 @@ func (h dataTaskHandlers) PreviewMailDealRepair(w http.ResponseWriter, r *http.R
 	if !httperr.Decode(w, r, &in) {
 		return
 	}
+	if in.Limit < 1 || in.Limit > capture.MaxDealRepairPreview {
+		httperr.Write(w, r, httperr.Validation("limit", "out_of_range",
+			fmt.Sprintf("limit is between 1 and %d mails; this request asks for %d", capture.MaxDealRepairPreview, in.Limit)))
+		return
+	}
 	after := ids.Nil
 	if in.After != nil {
 		after = ids.UUID(*in.After)
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), healthReadTimeout)
 	defer cancel()
-	system := principal.SystemActing(ctx, mailDealRepairActor)
+	// The preview decides under the data task's own identity, as its executor does.
+	system := datatask.Acting(ctx, mailDealsDataTask(h.pool).ID)
 	var preview capture.DealRepairPreview
 	err := database.WithWorkspaceTx(system, h.pool, func(tx pgx.Tx) error {
 		var err error
