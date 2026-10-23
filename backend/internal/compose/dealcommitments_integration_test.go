@@ -241,7 +241,7 @@ func TestADealWatchNeedsNoCompanyGrant(t *testing.T) {
 	}
 }
 
-// The same reader may not open the message a promise was read from: the
+// The same reader may not open the message a promise was read from. The
 // promise is withheld with its quote, and the list says it is incomplete.
 func TestADealWatchWithholdsAPromiseWhoseMessageIsHidden(t *testing.T) {
 	w := seedDealWatch(t)
