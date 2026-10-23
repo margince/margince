@@ -659,3 +659,51 @@ it("opens a closed and reopened edit from a fresh read of the message", async ()
     "The renewal quote, moved",
   );
 });
+
+it("keeps a reply waiting on its thread when a later read of the message fails", async () => {
+  const user = userEvent.setup();
+  let answer: (response: Response) => void = () => {};
+  let reads = 0;
+  mount([REPLY], [], {
+    [`GET /scheduled-sends/${REPLY.id}`]: () => {
+      reads += 1;
+      return reads === 1
+        ? jsonResponse(REPLY)
+        : new Response(
+            JSON.stringify({ type: "about:blank", title: "Down", status: 500 }),
+            {
+              status: 500,
+              headers: { "Content-Type": "application/problem+json" },
+            },
+          );
+    },
+    [`GET /activities/${REPLY.anchor_activity_id}`]: () =>
+      new Promise<Response>((resolve) => {
+        answer = resolve;
+      }),
+  });
+  await user.click(
+    await screen.findByRole("button", { name: "Edit: Re: the quote" }),
+  );
+  await waitFor(() =>
+    expect(client.getQueryState(["scheduled-sends", REPLY.id])?.status).toBe(
+      "success",
+    ),
+  );
+  await act(() =>
+    client.refetchQueries({ queryKey: ["scheduled-sends", REPLY.id] }),
+  );
+  await waitFor(() =>
+    expect(client.getQueryState(["scheduled-sends", REPLY.id])?.status).toBe(
+      "error",
+    ),
+  );
+  await act(async () => {});
+  const waiting = within(screen.getByRole("dialog"));
+  expect(waiting.getByText("Loading message…")).toBeInTheDocument();
+  expect(
+    screen.queryByText("Could not load this view. Reload the page."),
+  ).toBeNull();
+  answer(jsonResponse(THREAD_EMAIL));
+  expect(await screen.findByLabelText("Subject")).toHaveValue("Re: the quote");
+});
