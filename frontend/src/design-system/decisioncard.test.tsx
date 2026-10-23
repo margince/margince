@@ -3,7 +3,7 @@
 
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -533,6 +533,18 @@ describe("DecisionCard — a rejection held for its undo", () => {
     await user.click(screen.getByRole("button", { name: "Undo" }));
 
     expect(screen.getByText(LABELS.expired)).toHaveFocus();
+  });
+
+  it("hands focus from a sent bar to the card once it is decided", () => {
+    const sent = { label: "Rejected", undo: "Undo" };
+    const { rerender } = render(card({ heldRejection: sent }));
+    act(() => screen.getByText("Rejected").focus());
+
+    rerender(card({ heldRejection: sent, decided: true }));
+
+    const article = screen.getByRole("article");
+    expect(article).toHaveFocus();
+    expect(article).toHaveAttribute("tabindex", "-1");
   });
 
   it("draws neither the bar nor the verbs once the decision is history", () => {

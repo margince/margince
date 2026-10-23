@@ -3,6 +3,7 @@
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   render as rtlRender,
   screen,
@@ -10,6 +11,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type ReactNode, useState } from "react";
+import { flushSync } from "react-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "../../api/client";
 import {
@@ -54,16 +56,18 @@ function render(
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   }),
 ) {
-  return rtlRender(
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">
-        <ToastProvider>
-          {ui}
-          <ToastRegion />
-        </ToastProvider>
-      </LocaleProvider>
-    </QueryClientProvider>,
-  );
+  return rtlRender(ui, {
+    wrapper: ({ children }) => (
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">
+          <ToastProvider>
+            {children}
+            <ToastRegion />
+          </ToastProvider>
+        </LocaleProvider>
+      </QueryClientProvider>
+    ),
+  });
 }
 
 // How many times the row posted a decision, by verb. The negative tests wait
@@ -127,6 +131,7 @@ function stubDecisions(answer = () => jsonResponse({ status: "rejected" })) {
 }
 
 const REJECTED = en["decision.status.rejected"];
+const DETAIL = "This proposal can no longer be rejected.";
 const UNDO = en["common.undo"];
 
 function refused(detail: string) {
@@ -368,7 +373,7 @@ describe("a rejection held for its undo", () => {
 
   it("brings the verbs back with the refusal, focus on Reject", async () => {
     const user = steppedClock({ toFake: [...HOLD_TIMERS] });
-    stubDecisions(() => refused("This proposal can no longer be rejected."));
+    stubDecisions(() => refused(DETAIL));
     render(<ApprovalRow approval={closeDateApproval()} />);
 
     await user.click(screen.getByRole("button", { name: "Reject" }));
@@ -380,29 +385,83 @@ describe("a rejection held for its undo", () => {
     expect(screen.queryByText(REJECTED)).toBeNull();
   });
 
-  it("says a refusal in a toast when the card has already gone", async () => {
+  it.each([
+    [
+      "a refusal as a danger toast that stays",
+      refused(DETAIL),
+      DETAIL,
+      "danger",
+    ],
+    [
+      "an answer someone else gave as a quiet toast that goes",
+      jsonResponse(
+        { title: "Conflict", status: 409, code: "already_decided" },
+        409,
+      ),
+      en["decision.alreadyDecided"],
+      "info",
+    ],
+  ])("says %s once the card has gone", async (_what, answer, said, tone) => {
     const user = steppedClock({ toFake: [...HOLD_TIMERS] });
-    const detail = "This proposal can no longer be rejected.";
-    stubDecisions(() => refused(detail));
-    function Leaving() {
-      const [shown, setShown] = useState(true);
-      return (
-        <>
-          {shown && <ApprovalRow approval={closeDateApproval()} />}
-          <button type="button" onClick={() => setShown(false)}>
-            Leave
-          </button>
-        </>
-      );
-    }
-    render(<Leaving />);
+    stubDecisions(() => answer.clone());
+    const { rerender } = render(<ApprovalRow approval={closeDateApproval()} />);
 
     await user.click(screen.getByRole("button", { name: "Reject" }));
-    await user.click(screen.getByRole("button", { name: "Leave" }));
+    rerender(<p>Elsewhere</p>);
 
-    await vi.waitFor(() =>
-      expect(screen.getByText(detail)).toBeInTheDocument(),
+    const toast = (await vi.waitFor(() => screen.getByText(said))).closest(
+      "output",
     );
+    expect(toast?.querySelector(`.toast-dot-${tone}`)).not.toBeNull();
+    const sticky = toast?.querySelector(".toast-dismiss") !== null;
+    expect(sticky).toBe(tone === "danger");
+  });
+
+  it("sends nothing when the row turns decided and leaves in one go", async () => {
+    const user = steppedClock({ toFake: [...HOLD_TIMERS] });
+    const fetched = stubDecisions();
+    const view = render(<ApprovalRow approval={closeDateApproval()} />);
+    await user.click(screen.getByRole("button", { name: "Reject" }));
+
+    act(() => {
+      flushSync(() =>
+        view.rerender(<ApprovalRow approval={closeDateApproval()} decided />),
+      );
+      view.unmount();
+    });
+    await vi.advanceTimersByTimeAsync(ACTION_TOAST_MS * 2);
+
+    expect(rejectCalls(fetched)).toBe(0);
+  });
+
+  it("holds a second Reject for its whole window after an Undo by keyboard", async () => {
+    const user = steppedClock({ toFake: [...HOLD_TIMERS] });
+    const fetched = stubDecisions();
+    render(<ApprovalRow approval={closeDateApproval()} />);
+
+    await user.click(screen.getByRole("button", { name: "Reject" }));
+    await user.tab();
+    await user.keyboard("{Enter}");
+    await user.click(screen.getByRole("button", { name: "Reject" }));
+    await vi.advanceTimersByTimeAsync(ACTION_TOAST_MS);
+
+    await vi.waitFor(() => expect(rejectCalls(fetched)).toBe(1));
+  });
+
+  it("stays paused while focus is on Undo even after the pointer leaves", async () => {
+    const user = steppedClock({ toFake: [...HOLD_TIMERS] });
+    const fetched = stubDecisions();
+    render(<ApprovalRow approval={closeDateApproval()} />);
+
+    await user.click(screen.getByRole("button", { name: "Reject" }));
+    const undo = screen.getByRole("button", { name: UNDO });
+    await user.hover(undo);
+    await user.tab();
+    await user.unhover(undo);
+    await vi.advanceTimersByTimeAsync(ACTION_TOAST_MS * 2);
+
+    expect(undo).toHaveFocus();
+    expect(rejectCalls(fetched)).toBe(0);
   });
 });
 

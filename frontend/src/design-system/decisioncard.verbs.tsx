@@ -157,8 +157,8 @@ function DecisionVerbs({
   );
 }
 
-// Focus inside the bar when it leaves goes back to Reject, or to the card's
-// lapse notice when Reject is not drawn.
+// Focus inside the bar when it leaves goes back to Reject; a card that lapsed
+// or was decided takes it on its lapse notice or on itself.
 function HeldRejectionBar({
   held,
   focusNextRef,

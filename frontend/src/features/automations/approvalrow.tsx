@@ -32,7 +32,6 @@ import {
   isAlreadyDecided,
   isVersionSkew,
   ProblemError,
-  problemMessageOf,
   unwrap,
 } from "../../lib/problem";
 import { navigate } from "../../lib/router";
@@ -56,7 +55,11 @@ import {
 import { approvalAcceptable, useApprovalNames } from "./approvalresponsibility";
 import { stagedSendOf } from "./approvalsend";
 import { ApprovalDecider, ApprovalTarget } from "./approvaltarget";
-import { heldRejectionBar, useHeldRejection } from "./heldrejection";
+import {
+  heldRejectionBar,
+  refusalToast,
+  useHeldRejection,
+} from "./heldrejection";
 import { LinkedInMatchChoice, useLinkedInChoice } from "./linkedinmatchchoice";
 import "./approvalrow.css";
 
@@ -284,8 +287,7 @@ export function ApprovalRow({
   const held = useHeldRejection({
     send: () => decide.mutateAsync({ verdict: "reject" }),
     decided: !!decided,
-    onRefusedAfterLeaving: (error) =>
-      toast.show(problemMessageOf(error, t), { tone: "danger", sticky: true }),
+    onRefusedAfterLeaving: refusalToast(toast, t),
   });
 
   const change = approval.proposed_change ?? {};

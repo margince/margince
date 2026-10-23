@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { createRef } from "react";
 import { expect, within } from "storybook/test";
 import type { DecisionCardLabels } from "./decisioncard";
 import { DecisionAnswers } from "./decisioncard.verbs";
@@ -40,6 +41,7 @@ export const Full: Story = {
   args: {
     decided: false,
     answering: true,
+    focusNextRef: createRef(),
     labels: LABELS,
     onAccept: () => undefined,
     onEdit: () => undefined,

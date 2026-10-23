@@ -36,8 +36,7 @@ import { vi } from "vitest";
  * Call it ONCE per test and reuse the instance: a second one starts a second
  * view of the document's input state — what is focused, which buttons are held —
  * and the two then disagree, which shows up as an interaction that silently does
- * nothing. Pair it with `vi.useRealTimers()` in `afterEach`. `toFake` narrows
- * the faked timers; absent fakes vitest's default set.
+ * nothing. Pair it with `vi.useRealTimers()` in `afterEach`.
  */
 export function steppedClock(
   options: Readonly<{

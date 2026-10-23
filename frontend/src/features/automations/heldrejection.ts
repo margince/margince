@@ -3,8 +3,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { DecisionHeldRejection } from "../../design-system/decisioncard";
-import { ACTION_TOAST_MS } from "../../design-system/toast";
+import { ACTION_TOAST_MS, type Toast } from "../../design-system/toast";
 import type { Translator } from "../../i18n";
+import {
+  isAlreadyDecided,
+  ProblemError,
+  problemMessageOf,
+} from "../../lib/problem";
 
 const VERDICT_EVENT = "margince:approval-verdict";
 
@@ -35,16 +40,17 @@ export function useHeldRejection({
   const owed = useRef(false);
   const left = useRef(false);
   const remaining = useRef(ACTION_TOAST_MS);
-  const latest = useRef({ send, onRefusedAfterLeaving });
+  const latest = useRef({ send, decided, onRefusedAfterLeaving });
   useEffect(() => {
-    latest.current = { send, onRefusedAfterLeaving };
+    latest.current = { send, decided, onRefusedAfterLeaving };
   });
 
   const release = useCallback(() => {
-    if (!owed.current) {
+    const due = owed.current && !latest.current.decided;
+    owed.current = false;
+    if (!due) {
       return;
     }
-    owed.current = false;
     setPhase("sent");
     latest.current.send().catch((error: unknown) => {
       if (left.current) {
@@ -54,12 +60,6 @@ export function useHeldRejection({
       }
     });
   }, []);
-
-  useEffect(() => {
-    if (decided) {
-      owed.current = false;
-    }
-  }, [decided]);
 
   const holding = phase === "held" && !decided;
   useEffect(() => {
@@ -134,5 +134,15 @@ export function heldRejectionBar(
     undo: t("common.undo"),
     onUndo: held.phase === "held" ? held.undo : undefined,
     onPause: held.pause,
+  };
+}
+
+export function refusalToast(toast: Toast, t: Translator) {
+  return (error: unknown) => {
+    if (error instanceof ProblemError && isAlreadyDecided(error.problem)) {
+      toast.show(t("decision.alreadyDecided"), { tone: "info" });
+    } else {
+      toast.show(problemMessageOf(error, t), { tone: "danger", sticky: true });
+    }
   };
 }

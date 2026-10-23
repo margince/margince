@@ -169,6 +169,12 @@ function urgencyOf(
   return decisionUrgency(expiresAtMs - now);
 }
 
+// A decided card draws no verbs, so the card itself takes focus back from
+// a held rejection's bar.
+function heldFocusTarget(decided: boolean): -1 | undefined {
+  return decided ? -1 : undefined;
+}
+
 export function DecisionCard({
   approval,
   layout = "deck",
@@ -296,6 +302,8 @@ export function DecisionCard({
       data-testid={testId}
       data-density={dense ? "compact" : undefined}
       aria-labelledby={named ? headingId : undefined}
+      tabIndex={heldFocusTarget(decided)}
+      ref={takesFocus(focusNextRef, "reject")}
     >
       {dense ? (
         <>
