@@ -38,10 +38,10 @@ func CurrentTaskClause(alias string, asOf time.Time, identities string, arg func
 		arg(provenance.WhichDealSource))
 }
 
-// CurrentSourceMailClause is the test that the mail a piece of automatic work
-// is about is still current: live, not in the future, and inside the waiting
-// horizon. An old mail captured today is not current, because its own time
-// decides, never the capture's. source is a compile-time column reference.
+// CurrentSourceMailClause is the test that the mail some automatic work is
+// about is current. It is live, not in the future, and inside the waiting
+// horizon. The mail's own time decides, never the capture's. source is a
+// compile-time column reference.
 func CurrentSourceMailClause(source string, asOf time.Time, arg func(any) int) string {
 	instant := fmt.Sprintf("$%d::timestamptz", arg(asOf))
 	return `EXISTS (SELECT 1 FROM activity current_source WHERE current_source.id = ` + source + `

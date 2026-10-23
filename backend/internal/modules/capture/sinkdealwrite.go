@@ -40,7 +40,7 @@ func linkActivityToDeal(f dealFiling, tx pgx.Tx, activityID ids.ActivityID, deal
 		return false, nil
 	}
 	return true, recordLinkChange(f.writer, tx, activityID, nil,
-		map[string]any{"entity_type": string(datasource.EntityDeal), "entity_id": dealID}, f.evidence)
+		linkImage(datasource.EntityDeal, dealID), f.evidence)
 }
 
 // retractMachineDealLink takes a deal link the rule wrote off the activity,
@@ -59,7 +59,7 @@ func retractMachineDealLink(f dealFiling, tx pgx.Tx, activityID ids.ActivityID, 
 		return false, nil
 	}
 	return true, recordLinkChange(f.writer, tx, activityID,
-		map[string]any{"entity_type": string(datasource.EntityDeal), "entity_id": dealID}, nil, f.evidence)
+		linkImage(datasource.EntityDeal, dealID), nil, f.evidence)
 }
 
 // mayFileOnDeal is the decider's authority over the activity and the deal,
@@ -88,7 +88,7 @@ func mayFileOnDeal(f dealFiling, tx pgx.Tx, dealID ids.UUID) (bool, error) {
 // activity_relink audit row a human relink also writes, with the reason in
 // evidence. The audit row's principal tells an automatic link from a human
 // one. No event rides with it: activity.captured already announced the message.
-func recordLinkChange(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, before, after any, evidence map[string]any) error {
+func recordLinkChange(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, before, after map[string]any, evidence map[string]any) error {
 	// The trigger set_updated_at_bump_version does the bump; this only has to
 	// be an UPDATE of the row.
 	if _, err := tx.Exec(ctx, `UPDATE activity SET updated_at = now() WHERE id = $1 AND archived_at IS NULL`, activityID); err != nil {
@@ -96,4 +96,9 @@ func recordLinkChange(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
 	}
 	_, err := storekit.AuditWithEvidence(ctx, tx, "activity_relink", "activity", activityID.UUID, before, after, evidence)
 	return err
+}
+
+// linkImage is the audit image of one link, as the human relink writes it.
+func linkImage(entity datasource.EntityType, id ids.UUID) map[string]any {
+	return map[string]any{"entity_type": string(entity), "entity_id": id}
 }

@@ -86,7 +86,7 @@ func linkActivityToProject(ctx context.Context, tx pgx.Tx, activityID ids.Activi
 	// staged approval pinned, as the human relink path does
 	// (activities/lifecycle.go).
 	return recordLinkChange(ctx, tx, activityID, nil,
-		map[string]any{"entity_type": string(datasource.EntityProject), "entity_id": projectID}, nil)
+		linkImage(datasource.EntityProject, projectID), nil)
 }
 
 // stampTheProjectOnTheRow stamps whatever project the activity is ACTUALLY

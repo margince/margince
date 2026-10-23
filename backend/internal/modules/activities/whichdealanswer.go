@@ -28,12 +28,16 @@ func (s *Store) answerWhichDealTx(ctx context.Context, tx pgx.Tx, mail ids.Activ
 	if !ok || actor.Type != principal.PrincipalHuman || !auth.ReadGranted(ctx, linkEntityDeal) {
 		return nil
 	}
-	// The conversation is the thread with one correspondent in one medium. The
-	// key is the sender's References root, so a stranger reusing it is not in it.
-	conversation := `FROM activity anchor JOIN activity mail ON ` + correspondentInThisThread("mail", "anchor") + `
+	// The conversation is the thread with one correspondent in one medium. Only
+	// rows whose place in it cannot be forged count: our own attested mail, or
+	// mail whose sender the receiving server authenticated. The key is the
+	// sender's References root, so anything else may be a spoof.
+	proven := `(` + ourOutboundInThisThread("mail", "anchor") + `
+		 OR (` + correspondentInThisThread("mail", "anchor") + ` AND ` + CapturedInboundSQL("mail") + `))`
+	conversation := `FROM activity anchor JOIN activity mail ON ` + proven + `
 		 WHERE anchor.id = $1 AND mail.restricted_at IS NULL`
 	questions, err := threadIDs(ctx, tx, `SELECT q.id FROM activity anchor
-		  JOIN activity mail ON (mail.id = anchor.id OR (`+correspondentInThisThread("mail", "anchor")+`))
+		  JOIN activity mail ON (mail.id = anchor.id OR `+proven+`)
 		  JOIN activity q ON q.source_activity_id = mail.id AND q.kind = 'task' AND q.source_system = $2
 		   AND q.archived_at IS NULL AND NOT q.is_done
 		 WHERE anchor.id = $1 AND mail.restricted_at IS NULL

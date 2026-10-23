@@ -167,6 +167,12 @@ func emailAbout2(from, to, msgID, refs, subject string) []byte {
 	return []byte(strings.Replace(raw, "To: "+captureOwner, "To: "+to, 1))
 }
 
+// authenticated adds the receiving server's verdict that the From domain
+// passed DMARC, as Gmail stamps it.
+func authenticated(raw []byte, domain string) []byte {
+	return append([]byte("Authentication-Results: mx.google.com; dmarc=pass header.from="+domain+"\r\n"), raw...)
+}
+
 // mailFrom is one inbound mail from a customer address to the mailbox owner.
 func mailFrom(from, msgID, refs, subject string, cc ...string) []byte {
 	lines := []string{"From: " + from, "To: " + captureOwner}
@@ -646,7 +652,7 @@ func TestTheDealRepairSeesOnlyWhatTheCapturingMailboxSaw(t *testing.T) {
 	wantDeals(t, e, "priv2@acme.example")
 
 	// Our own thread at a second customer, captured before its deals existed,
-	// so no question was asked; then a colleague files our mail on one deal.
+	// so no question was asked. Then a colleague files our mail on one deal.
 	beta := w.at(t, "Beta")
 	beta.employee(t, "bob@beta.example", beta.customer)
 	env.syncSent(t, map[string]bool{"own1@myco.example": true},
@@ -697,7 +703,10 @@ func TestFilingOneMailAnswersTheDealQuestionForItsConversation(t *testing.T) {
 
 	env.syncSent(t, map[string]bool{"ans1@myco.example": true},
 		email(captureOwner, "", "alice@acme.example", "ans1@myco.example", ""))
-	env.sync(t, mailFrom("alice@acme.example", "ans2@acme.example", "ans1@myco.example", "Re: project"))
+	env.sync(t,
+		mailFrom("alice@acme.example", "ans2@acme.example", "ans1@myco.example", "Re: project"),
+		authenticated(mailFrom("alice@acme.example", "ans4@acme.example", "ans1@myco.example", "Re: project"), "acme.example"),
+		mailFrom("alice@acme.example", "ans5@acme.example", "ans1@myco.example", "Re: spoofed"))
 	// One reply arrives already on a deal, as a connector files it.
 	env.syncFiledUnderDeal(t, map[string][]ids.UUID{"ans3@acme.example": {operations}},
 		mailFrom("alice@acme.example", "ans3@acme.example", "ans1@myco.example", "Re: project"))
@@ -725,7 +734,10 @@ func TestFilingOneMailAnswersTheDealQuestionForItsConversation(t *testing.T) {
 
 	wantDeals(t, e, "ans1@myco.example", reporting)
 	wantDeals(t, e, "ans2@acme.example", reporting)
+	wantDeals(t, e, "ans4@acme.example", reporting)
 	wantDeals(t, e, "ans3@acme.example", operations)
+	// A reply whose sender nobody authenticated may be a spoof of the thread.
+	wantDeals(t, e, "ans5@acme.example")
 	if n := openQuestions(t, e); n != 0 {
 		t.Fatalf("%d deal questions still open after the answer, want 0", n)
 	}
@@ -739,8 +751,8 @@ func TestFilingOneMailAnswersTheDealQuestionForItsConversation(t *testing.T) {
 		}
 		return len(rows)
 	}
-	if got := timeline(reporting); got != 2 {
-		t.Fatalf("the answered deal's timeline shows %d mails, want the 2 of the conversation", got)
+	if got := timeline(reporting); got != 3 {
+		t.Fatalf("the answered deal's timeline shows %d mails, want the 3 proven mails of the conversation", got)
 	}
 	if got := timeline(operations); got != 1 {
 		t.Fatalf("the other deal's timeline shows %d mails, want only the one already filed there", got)
@@ -750,8 +762,8 @@ func TestFilingOneMailAnswersTheDealQuestionForItsConversation(t *testing.T) {
 	onCompany, _, err := store.ListActivities(w.ctx, activities.ListActivitiesInput{
 		EntityType: new("company"), EntityID: &account, Kind: new("email"),
 	})
-	if err != nil || len(onCompany) != 3 {
-		t.Fatalf("the company timeline shows %d mails (err %v), want the 3 of the conversation", len(onCompany), err)
+	if err != nil || len(onCompany) != 5 {
+		t.Fatalf("the company timeline shows %d mails (err %v), want the 5 of the conversation", len(onCompany), err)
 	}
 	// The promise watches the answered deal and not the other one.
 	for deal, want := range map[ids.UUID]int{reporting: 1, operations: 0} {
@@ -888,8 +900,8 @@ func TestTheDealQuestionIsAskedOnlyAboutCurrentMail(t *testing.T) {
 	})
 }
 
-// waitForLockWaiters returns once n other sessions wait on a row lock, so a
-// race is set up by what the database reports rather than by sleeping.
+// waitForLockWaiters returns once n other sessions wait on a row lock. The race
+// is set up by what the database reports, not by sleeping.
 func waitForLockWaiters(t *testing.T, e *integration.SearchEnv, holder uint32, n int) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -908,8 +920,8 @@ func waitForLockWaiters(t *testing.T, e *integration.SearchEnv, holder uint32, n
 }
 
 // A colleague's relink and the deal rule reach one mail at once. The rule takes
-// the activity row lock the relink takes, so whichever order the database
-// grants, the mail ends on the one deal the colleague chose.
+// the activity row lock the relink takes. In either order the database grants,
+// the mail ends on the one deal the colleague chose.
 func TestARelinkAndTheDealRuleRacingLeaveOneDeal(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e

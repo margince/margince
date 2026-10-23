@@ -107,8 +107,8 @@ func AttributeDealTx(
 }
 
 // dealFiling is who decides and who writes. Live capture is both. The repair
-// decides with the capturing mailbox's scope and writes as its own actor, with
-// the reason in evidence, so the audit row names who really wrote.
+// decides with the capturing mailbox's scope and writes as its own actor. The
+// reason goes in evidence, so the audit row names who really wrote.
 type dealFiling struct {
 	decider, writer context.Context
 	evidence        map[string]any

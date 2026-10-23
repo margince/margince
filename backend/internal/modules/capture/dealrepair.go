@@ -48,9 +48,9 @@ const capturedMailSQL = `
 	   AND a.captured_by LIKE 'connector:%'
 	   AND a.archived_at IS NULL AND a.restricted_at IS NULL`
 
-// dealProvenanceSQL classifies a mail's deal links by their audit rows: how
-// many there are, one of them, whether a colleague ever filed the mail on a deal,
-// and whether the rule's own write is recorded for that one link.
+// dealProvenanceSQL classifies a mail's deal links by their audit rows. It
+// answers how many there are and one of them. It answers whether a colleague
+// ever filed the mail on a deal, and whether the rule wrote that one link.
 const dealProvenanceSQL = `
 	SELECT count(l.deal_id), min(l.deal_id::text),
 	       EXISTS (SELECT 1 FROM audit_log h
@@ -163,8 +163,7 @@ func (r DealRepair) repair(ctx context.Context, tx pgx.Tx, mail ids.ActivityID) 
 }
 
 // asMailbox runs decide as each mailbox that imported the mail, as live
-// capture runs once per capture, and stops at the first outcome that is not
-// a refusal of that seat.
+// capture runs once per capture. It stops at the first change or confirmation.
 func (r DealRepair) asMailbox(
 	ctx context.Context, tx pgx.Tx, mail ids.ActivityID, decide func(dealFiling) (DealOutcome, error),
 ) (DealOutcome, error) {
@@ -203,9 +202,9 @@ func (r DealRepair) asMailbox(
 	return outcome, nil
 }
 
-// recheckMachineDeal decides a mail the rule already filed on current as if
-// it were unfiled. A link the rule still finds stays; one it no longer finds
-// is taken back, and the deal it finds now, if any, is written instead.
+// recheckMachineDeal decides a mail the rule filed on current as if it were
+// unfiled. A link the rule still finds stays. One it no longer finds is taken
+// back, and the deal it finds now, if any, is written instead.
 func recheckMachineDeal(f dealFiling, tx pgx.Tx, mail ids.ActivityID, current ids.UUID, candidates DealCandidates) (DealOutcome, error) {
 	if live, err := lockForDeal(f.writer, tx, mail); err != nil || !live {
 		return DealNone, err
