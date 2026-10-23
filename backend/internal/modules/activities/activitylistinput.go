@@ -123,23 +123,10 @@ type ListActivitiesInput struct {
 	// [day 00:00, next day 00:00) with no double-counting at midnight.
 	OccurredAfter  *time.Time
 	OccurredBefore *time.Time
-	// AwaitingOutcome narrows to meetings nobody has said the result of.
-	//
-	// A DIAL RATHER THAN A GO-SIDE FILTER, unlike the forward meetings lane
-	// which removes non-booked rows after reading. That lane's window is the
-	// rest of today, so what it discards is bounded by a set the database
-	// already made small. This question looks BACKWARD, where almost every
-	// meeting is settled: a newest-first page of the past is dominated by rows
-	// the filter throws away, and the unreported meeting from three days ago
-	// falls off the end. The lane then draws "nothing to report" over real
-	// work — lossy in the one direction that hides itself.
-	//
-	// It admits a NULL status as well as `booked`. Capture writes calendar
-	// events with no status at all, so a synced meeting that happened
-	// yesterday carries NULL and is exactly the row this asks for; matching
-	// only `booked` would empty the lane on every installation whose calendar
-	// is connected. Same rule as meetingStillWorthPreparing, which is the
-	// forward lane's spelling of the same fact.
+	// AwaitingOutcome narrows to meetings whose status is still open: booked,
+	// or NULL because capture writes calendar events with no status. Both
+	// meeting lanes set it so the status filter runs before the limit; a page
+	// cut first fills with held or canceled rows and hides the next real one.
 	AwaitingOutcome bool
 	// CustomerMeetingsOnly keeps meetings linked to a customer record, by the
 	// rule reporting counts customer meetings with (CustomerMeetingSQL). An
