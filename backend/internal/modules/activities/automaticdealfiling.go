@@ -79,7 +79,7 @@ func RetractMachineDealTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, dea
 		return false, err
 	}
 	auditID, err := storekit.AuditWithEvidence(ctx, tx, "activity_relink", "activity", id.UUID,
-		map[string]any{"entity_type": linkEntityDeal, "entity_id": deal}, nil, evidence)
+		map[string]any{fieldEntityType: linkEntityDeal, fieldEntityID: deal}, nil, evidence)
 	if err != nil {
 		return false, err
 	}

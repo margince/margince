@@ -556,7 +556,7 @@ type repairer struct {
 func newRepairer(e *integration.SearchEnv, w dealWorld) repairer {
 	return repairer{
 		e:      e,
-		repair: capturemod.DealRepair{Candidates: w.store, Authority: identity.NewService(e.Pool), Filer: compose.ActivityDealFiler()},
+		repair: capturemod.DealRepair{Candidates: w.store, Authority: identity.NewService(e.Pool), Filer: compose.ActivityDealFiler{}},
 		system: principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:data-task"),
 	}
 }

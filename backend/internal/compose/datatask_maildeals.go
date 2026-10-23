@@ -50,6 +50,6 @@ func mailDealsDataTask(pool *pgxpool.Pool) datatask.Task {
 func mailDealRepair(pool *pgxpool.Pool) capture.DealRepair {
 	return capture.DealRepair{
 		Candidates: deals.NewStore(InstallationDB(pool), DealsInstallation()),
-		Authority:  identity.NewService(pool), Filer: ActivityDealFiler(),
+		Authority:  identity.NewService(pool), Filer: ActivityDealFiler{},
 	}
 }

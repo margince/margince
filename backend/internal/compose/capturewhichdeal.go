@@ -164,21 +164,21 @@ func seatLanguage(ctx context.Context, tx pgx.Tx, seat ids.UUID) (textlang.Lang,
 	return textlang.Lang(base), nil
 }
 
-// activityDealFiler is capture.DealFiler over the activities module, which
-// owns activity_link and the relink event.
-type activityDealFiler struct{}
+// ActivityDealFiler is capture.DealFiler over the activities module, which
+// owns activity_link and the relink event. Capture and its repair write
+// through it.
+type ActivityDealFiler struct{}
 
-// ActivityDealFiler is the deal filing capture and its repair write through.
-func ActivityDealFiler() capture.DealFiler { return activityDealFiler{} }
-
-func (activityDealFiler) FileOnDealIfUnfiled(
+// FileOnDealIfUnfiled is activities.FileOnDealIfUnfiledTx.
+func (ActivityDealFiler) FileOnDealIfUnfiled(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, deal ids.UUID, evidence map[string]any,
 ) (landed, filed bool, err error) {
 	outcome, err := activities.FileOnDealIfUnfiledTx(ctx, tx, id, deal, evidence)
 	return outcome == activities.DealFilingLanded, outcome == activities.DealFilingAlreadyFiled, err
 }
 
-func (activityDealFiler) RetractMachineDeal(
+// RetractMachineDeal is activities.RetractMachineDealTx.
+func (ActivityDealFiler) RetractMachineDeal(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, deal ids.UUID, evidence map[string]any,
 ) (bool, error) {
 	return activities.RetractMachineDealTx(ctx, tx, id, deal, evidence)

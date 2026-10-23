@@ -563,7 +563,7 @@ func TestARelinkAndTheDealRuleRacingLeaveOneDeal(t *testing.T) {
 		})
 		ruled <- database.WithWorkspaceTx(connectorCtx, e.Pool, func(tx pgx.Tx) error {
 			_, err := capturemod.AttributeDealTx(connectorCtx, tx, mail, capturemod.DealAttribution{
-				Candidates: w.store, Filer: compose.ActivityDealFiler(),
+				Candidates: w.store, Filer: compose.ActivityDealFiler{},
 			})
 			return err
 		})

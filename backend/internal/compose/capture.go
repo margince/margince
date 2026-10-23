@@ -303,7 +303,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		WithDealAttribution(capture.DealAttribution{
 			Candidates: deals.NewStore(InstallationDB(pool), DealsInstallation()),
 			Ask:        whichDealAsker{tasks: activities.NewStore(InstallationDB(pool)), now: cfg.clock()}.Ask,
-			Filer:      ActivityDealFiler(),
+			Filer:      ActivityDealFiler{},
 		}).
 		// The audience derivation, from the module that owns `activity`. It
 		// runs INSIDE the capture transaction because the audience it derives

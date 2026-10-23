@@ -254,10 +254,16 @@ func recheckMachineDeal(f dealFiling, tx pgx.Tx, mail ids.ActivityID, current id
 	if verdict.Outcome == DealLinked && verdict.Deal == current {
 		return DealMachineConfirmed, nil
 	}
-	// The new deal's admission is asked before anything is taken back, so a
-	// refusal is known and reported, never a move that wrote nothing.
+	return replaceMachineDeal(f, tx, mail, current, verdict)
+}
+
+// replaceMachineDeal takes the rule's old link back and writes the deal the
+// rule finds now. The new deal's admission is asked before anything is taken
+// back, so a refusal is known and reported, never a move that wrote nothing.
+func replaceMachineDeal(f dealFiling, tx pgx.Tx, mail ids.ActivityID, current ids.UUID, verdict DealVerdict) (DealOutcome, error) {
 	target := false
 	if verdict.Outcome == DealLinked {
+		var err error
 		if target, err = mayFileOnDeal(f, tx, verdict.Deal); err != nil {
 			return "", err
 		}
