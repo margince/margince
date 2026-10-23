@@ -717,7 +717,7 @@ func TestFilingOneMailAnswersTheDealQuestionForItsConversation(t *testing.T) {
 	// answer, as the extractor files one.
 	promise, err := w.contacts.RecordConversationClaim(w.ctx, contacts.ClaimInput{
 		ContactID: ids.From[ids.ContactKind](alice), Kind: "commitment_theirs", Body: "Send the figures",
-		ActivityID: activityOf(t, e, "ans1@myco.example"), Quote: "We will send the figures.", Source: "extraction",
+		ActivityID: activityOf(t, e, "ans1@myco.example"), Quote: "hello", Source: "extraction",
 	})
 	if err != nil {
 		t.Fatalf("filing the promise: %v", err)
