@@ -456,12 +456,23 @@ func TestCaptureFollowsOurThreadOnlyForTheSameCompany(t *testing.T) {
 func TestCaptureAsksNoColleagueTheSenderNamed(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
+	// Workspace mail, so every colleague may open it and only the evidence
+	// rule stands between the named address and the question.
+	shareMailbox(t, env)
+	// The named colleague is a working seat who could hold the task.
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `INSERT INTO role_assignment (role_id, user_id)
+			SELECT id, $1 FROM role WHERE key = 'capture_rep'`, e.Rep3)
+		return err
+	}); err != nil {
+		t.Fatalf("giving the named colleague a role: %v", err)
+	}
 	w := newDealWorld(t, e)
 	w.person(t, "alice@acme.example", w.customer)
 	w.deal(t, "Acme operations")
 	w.deal(t, "Acme reporting")
 
-	env.sync(t, emailAbout2("alice@acme.example", captureOwner+", rep2@search.test", "named1@acme.example", "", "next steps"))
+	env.sync(t, emailAbout2("alice@acme.example", captureOwner+", rep1@search.test", "named1@acme.example", "", "next steps"))
 
 	wantDeals(t, e, "named1@acme.example")
 	if n, holders := whichDealQuestions(t, e); n != 0 {
