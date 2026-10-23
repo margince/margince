@@ -81,9 +81,13 @@ func (s *Store) holdsOpenQuestionTx(ctx context.Context, tx pgx.Tx, domain strin
 		return false, err
 	}
 	domainArg, readerArg := fmt.Sprintf("$%d", bind(domain)), fmt.Sprintf("$%d::uuid", bind(reader))
+	open, err := openQuestionForReaderSQL(ctx, "d.domain", readerArg, identities, s.clock(), bind)
+	if err != nil {
+		return false, err
+	}
 	var holds bool
 	err = tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM company_domain_disposition d
- WHERE d.domain = `+domainArg+` AND `+openQuestionForReaderSQL("d.domain", readerArg, identities, s.clock(), bind)+`
+ WHERE d.domain = `+domainArg+` AND `+open+`
  AND NOT EXISTS (SELECT 1 FROM capture_exclusion e WHERE e.kind = 'domain' AND e.value = d.domain
  AND (e.scope = 'workspace' OR e.user_id = `+readerArg+`)))`, args...).Scan(&holds)
 	if err != nil {

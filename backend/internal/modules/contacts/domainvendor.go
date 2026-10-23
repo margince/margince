@@ -93,26 +93,46 @@ func (s *Store) KeepDomainAsVendor(ctx context.Context, domain string) error {
 	})
 }
 
-// vendorDeciderSQL holds a vendor question to the one seat that owes it now.
-// That is the sole direct To seat (storekit.SoleDirectMailSeatSQL) of a current
-// inbound mail from a contact at the domain (storekit.CurrentSourceMailClause).
-// Mailbox delivery, a copy, or an old reader row is no such evidence. A
-// question with no such seat stays on the record only.
-func vendorDeciderSQL(domain, reader, identities string, asOf time.Time, arg func(any) int) string {
+// vendorMailSQL selects the current inbound mail a contact at the domain sent
+// (storekit.CurrentSourceMailClause). The From participant names the sender,
+// never the page's contact.
+func vendorMailSQL(mail, domain string, asOf time.Time, arg func(any) int) string {
 	host := `split_part(lower(vendor_sender.address), '@', 2)`
-	return `EXISTS (SELECT 1 FROM activity vendor_mail JOIN activity_participant vendor_sender
- ON vendor_sender.activity_id = vendor_mail.id AND vendor_sender.role = 'from'
- WHERE vendor_mail.kind = 'email' AND vendor_mail.direction = 'inbound'
- AND (` + host + ` = ` + domain + ` OR ` + host + ` LIKE '%.' || ` + domain + `)
- AND EXISTS (SELECT 1 FROM contact_email vendor_contact WHERE vendor_contact.email = lower(vendor_sender.address) AND vendor_contact.archived_at IS NULL)
- AND ` + storekit.CurrentSourceMailClause("vendor_mail.id", asOf, arg) + `
- AND ` + storekit.SoleDirectMailSeatSQL("vendor_mail", identities) + ` = ` + reader + `)`
+	return mail + `.kind = 'email' AND ` + mail + `.direction = 'inbound'
+ AND EXISTS (SELECT 1 FROM activity_participant vendor_sender
+  WHERE vendor_sender.activity_id = ` + mail + `.id AND vendor_sender.role = 'from'
+  AND (` + host + ` = ` + domain + ` OR ` + host + ` LIKE '%.' || ` + domain + `)
+  AND EXISTS (SELECT 1 FROM contact_email vendor_contact WHERE vendor_contact.email = lower(vendor_sender.address) AND vendor_contact.archived_at IS NULL))
+ AND ` + storekit.CurrentSourceMailClause(mail+".id", asOf, arg)
+}
+
+// vendorDeciderSQL decides who answers a vendor question. The
+// decider is the single seat that current staff mail names as its sole direct
+// To recipient (storekit.SoleDirectMailSeatSQL). Two such seats, or none, make
+// no decider. The reader must also be able to open one of that seat's mails
+// (auth.ActivityContentClause). Mailbox delivery, a copy and an old reader row
+// are no such evidence, and without a decider the fact stays on the record.
+func vendorDeciderSQL(ctx context.Context, domain, reader, identities string, asOf time.Time, arg func(any) int) (string, error) {
+	sole := storekit.SoleDirectMailSeatSQL("vendor_mail", identities)
+	readable, err := auth.ActivityContentClause(ctx, "vendor_mail", arg)
+	if err != nil {
+		return "", err
+	}
+	decider := `(SELECT CASE WHEN count(DISTINCT vendor_seat.seat) = 1 THEN (array_agg(DISTINCT vendor_seat.seat))[1] END
+ FROM (SELECT ` + sole + ` AS seat FROM activity vendor_mail WHERE ` + vendorMailSQL("vendor_mail", domain, asOf, arg) + `) vendor_seat
+ WHERE vendor_seat.seat IS NOT NULL)`
+	return `(` + decider + ` = ` + reader + ` AND EXISTS (SELECT 1 FROM activity vendor_mail WHERE ` + vendorMailSQL("vendor_mail", domain, asOf, arg) + `
+ AND ` + sole + ` = ` + reader + ` AND ` + readable + `))`, nil
 }
 
 // openQuestionForReaderSQL is the shared test of whether a reader holds an
-// open domain question. Every reason needs a reader row; a vendor question
-// also needs its decider.
-func openQuestionForReaderSQL(domain, reader, identities string, asOf time.Time, arg func(any) int) string {
-	return `d.pending_reason IS NOT NULL AND EXISTS (SELECT 1 FROM company_domain_question_reader r WHERE r.domain = ` + domain + ` AND r.reader_id = ` + reader + `)
- AND (d.pending_reason <> '` + PendingVendorVerdict + `' OR ` + vendorDeciderSQL(domain, reader, identities, asOf, arg) + `)`
+// open domain question. A vendor question belongs to its decider alone; every
+// other reason to the readers its mail raised it for.
+func openQuestionForReaderSQL(ctx context.Context, domain, reader, identities string, asOf time.Time, arg func(any) int) (string, error) {
+	decider, err := vendorDeciderSQL(ctx, domain, reader, identities, asOf, arg)
+	if err != nil {
+		return "", err
+	}
+	return `d.pending_reason IS NOT NULL AND CASE WHEN d.pending_reason = '` + PendingVendorVerdict + `' THEN ` + decider + `
+ ELSE EXISTS (SELECT 1 FROM company_domain_question_reader r WHERE r.domain = ` + domain + ` AND r.reader_id = ` + reader + `) END`, nil
 }

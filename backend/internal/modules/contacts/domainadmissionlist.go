@@ -178,7 +178,7 @@ const domainPendingReason = `
 // decisions whoever owns it.
 //
 // A vendor question always lands here too. Its personal card goes only to the
-// seat a current mail names (vendorDeciderSQL), so this list keeps the fact
+// decider vendorDeciderSQL names, so this list keeps the fact
 // reachable when no seat owes it.
 var domainStandingWhere = `d.admission IS NOT NULL OR d.pending_reason IN ('` + PendingReservedDomain + `', '` + PendingVendorVerdict + `')
 	OR (d.pending_reason IS NOT NULL AND NOT EXISTS (

@@ -351,13 +351,20 @@ func TestNewMailOnAnOpenVendorQuestionReadsNoSiteAgain(t *testing.T) {
 	now := pinClock(t, e)
 	captureStaffMail(t, e, staffMail{sourceID: "vendor-new-1", from: hostingStaff, mailbox: e.Rep1, to: []string{seatEmail(t, e.Rep1)}, occurred: now.Add(-time.Hour)})
 	runVendorTriage(t, e, hostingDomain)
+	if !asksAbout(e.As(e.Rep1, nil, integration.AdminPerms), t, e, hostingDomain) {
+		t.Fatal("precondition: the sole direct recipient is asked")
+	}
 
+	// New staff mail to a second seat: the site is not read again, and two
+	// named seats leave the question with no decider.
 	captureStaffMail(t, e, staffMail{sourceID: "vendor-new-2", from: "contact-b@" + hostingDomain, mailbox: e.Rep2, to: []string{seatEmail(t, e.Rep2)}, occurred: now})
 	if row := vendorRowOf(t, e, hostingDomain); row.reason != contacts.PendingVendorVerdict || !row.cursorCleared {
 		t.Fatalf("new mail re-armed the vendor question: %+v", row)
 	}
-	if !asksAbout(e.As(e.Rep2, nil, integration.AdminPerms), t, e, hostingDomain) {
-		t.Fatal("the sole direct recipient of the new mail was not asked")
+	for _, seat := range []ids.UUID{e.Rep1, e.Rep2} {
+		if asksAbout(e.As(seat, nil, integration.AdminPerms), t, e, hostingDomain) {
+			t.Errorf("seat %s is still asked once a second seat is named", seat)
+		}
 	}
 }
 
@@ -437,5 +444,72 @@ func TestANotificationOrAConsumerMailboxRaisesNoVendorQuestion(t *testing.T) {
 	}
 	if _, found := contactVisibility(t, e, "someone@live.fr"); !found {
 		t.Error("the consumer mailbox's sender got no contact; only the company is withheld")
+	}
+}
+
+func TestStaffMailToTwoDifferentSeatsMakesNoDecider(t *testing.T) {
+	e := integration.Setup(t)
+	now := pinClock(t, e)
+	const domain = "split-seats.example"
+	captureStaffMail(t, e, staffMail{sourceID: "split-1", from: "a@" + domain, mailbox: e.Rep1, to: []string{seatEmail(t, e.Rep1)}, occurred: now.Add(-time.Hour)})
+	captureStaffMail(t, e, staffMail{sourceID: "split-2", from: "b@" + domain, mailbox: e.Rep2, to: []string{seatEmail(t, e.Rep2)}, occurred: now.Add(-time.Hour)})
+	runVendorTriage(t, e, domain)
+	for _, seat := range []ids.UUID{e.Rep1, e.Rep2} {
+		if asksAbout(e.As(seat, nil, integration.AdminPerms), t, e, domain) {
+			t.Errorf("seat %s was asked although two seats are named", seat)
+		}
+	}
+	if !onRefusedList(t, e, domain) {
+		t.Error("the vendor fact is not reachable on the refused domains list")
+	}
+}
+
+func TestTheProvenRecipientIsAskedWhenOnlyAColleaguesMailboxHoldsTheMail(t *testing.T) {
+	e := integration.Setup(t)
+	now := pinClock(t, e)
+	captureStaffMail(t, e, staffMail{sourceID: "copy-only", from: hostingStaff, mailbox: e.Rep2, to: []string{seatEmail(t, e.Rep1)}, occurred: now.Add(-time.Hour)})
+	runVendorTriage(t, e, hostingDomain)
+	rep1 := e.As(e.Rep1, nil, integration.AdminPerms)
+	if !asksAbout(rep1, t, e, hostingDomain) {
+		t.Fatal("the sole direct recipient was not asked because another mailbox held the copy")
+	}
+	if asksAbout(e.As(e.Rep2, nil, integration.AdminPerms), t, e, hostingDomain) {
+		t.Fatal("the mailbox that only held the copy was asked")
+	}
+	if code := answerDomain(rep1, e, "keep-vendor", hostingDomain); code != http.StatusNoContent {
+		t.Fatalf("keep as vendor = %d, want 204", code)
+	}
+}
+
+// The decider must be able to open the mail. A sole direct recipient always
+// can, at any row scope, until a statutory hold withholds the mail.
+func TestAMailTheDeciderMayNotOpenMakesNoQuestion(t *testing.T) {
+	e := integration.Setup(t)
+	now := pinClock(t, e)
+	// Rep2's mailbox holds the mail, so capture files it under Rep2's private
+	// contact. Rep1 is the sole direct recipient.
+	captureStaffMail(t, e, staffMail{sourceID: "withheld", from: hostingStaff, mailbox: e.Rep2, to: []string{seatEmail(t, e.Rep1)}, occurred: now.Add(-time.Hour)})
+	runVendorTriage(t, e, hostingDomain)
+	ownScope := e.As(e.Rep1, nil, principal.Permissions{
+		Objects: map[string]principal.ObjectGrant{
+			"contact": {Read: true}, "company": {Read: true, Update: true}, "activity": {Read: true},
+		},
+		RowScope: principal.RowScopeOwn,
+	})
+	if !asksAbout(ownScope, t, e, hostingDomain) {
+		t.Fatal("the sole direct recipient at own row scope was not asked about mail addressed to them")
+	}
+	var mail ids.UUID
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `SELECT id FROM activity WHERE source_id = 'withheld'`).Scan(&mail)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	integration.HoldUnderStatutoryFloor(t, e, mail)
+	if asksAbout(ownScope, t, e, hostingDomain) {
+		t.Fatal("a mail the reader may not open still made them the decider")
+	}
+	if code := answerDomain(ownScope, e, "keep-vendor", hostingDomain); code != http.StatusNotFound {
+		t.Fatalf("keep as vendor on withheld evidence = %d, want 404", code)
 	}
 }

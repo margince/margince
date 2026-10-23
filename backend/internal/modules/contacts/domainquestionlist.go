@@ -65,8 +65,12 @@ func (s *Store) listReaderDomainQuestions(ctx context.Context, cursor string, li
 		if err != nil {
 			return err
 		}
-		deferred := `EXISTS (SELECT 1 FROM worklist_done wd JOIN company_domain_question_reader r ON r.domain = d.domain AND r.reader_id = wd.reader_id WHERE wd.reader_id = ` + ownerArg + ` AND wd.source = 'domain_question' AND wd.row_id = d.domain AND (r.evidence_at IS NULL OR r.evidence_at <= wd.done_at))`
-		where := `d.pending_reason <> ` + arg(PendingReservedDomain) + ` AND ` + openQuestionForReaderSQL("d.domain", ownerArg, identities, s.clock(), bind) + `
+		open, err := openQuestionForReaderSQL(ctx, "d.domain", ownerArg, identities, s.clock(), bind)
+		if err != nil {
+			return err
+		}
+		deferred := `EXISTS (SELECT 1 FROM worklist_done wd LEFT JOIN company_domain_question_reader r ON r.domain = d.domain AND r.reader_id = wd.reader_id WHERE wd.reader_id = ` + ownerArg + ` AND wd.source = 'domain_question' AND wd.row_id = d.domain AND (r.evidence_at IS NULL OR r.evidence_at <= wd.done_at))`
+		where := `d.pending_reason <> ` + arg(PendingReservedDomain) + ` AND ` + open + `
 	  AND NOT EXISTS (SELECT 1 FROM capture_exclusion e WHERE e.kind = 'domain' AND e.value = d.domain
 	   AND (e.scope = 'workspace' OR e.user_id = ` + ownerArg + `))`
 		if !includeDeferred {
