@@ -12,10 +12,12 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -165,25 +167,33 @@ func TestFilingAClosedPairAgainReopensTheSameRow(t *testing.T) {
 	}
 }
 
+func (e *dedupeEnv) plainLead(ctx context.Context, t *testing.T, name, email string) ids.UUID {
+	t.Helper()
+	created, _, err := e.store.CreateLead(ctx, CreateLeadInput{FullName: &name, Email: &email, Source: "manual"})
+	if err != nil {
+		t.Fatalf("create lead %s: %v", name, err)
+	}
+	return ids.UUID(created.Id)
+}
+
+func (e *dedupeEnv) plainCompany(ctx context.Context, t *testing.T, name string) ids.UUID {
+	t.Helper()
+	created, err := e.store.CreateCompany(ctx, CreateCompanyInput{DisplayName: name, Source: "manual"})
+	if err != nil {
+		t.Fatalf("create company %s: %v", name, err)
+	}
+	return ids.UUID(created.Id)
+}
+
 func TestTheRecheckClosesLeadAndCompanyPairsTheRuleNoLongerFiles(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	lead := func(name, email string) ids.UUID {
-		created, _, err := e.store.CreateLead(ctx, CreateLeadInput{FullName: &name, Email: &email, Source: "manual"})
-		if err != nil {
-			t.Fatalf("create lead %s: %v", name, err)
-		}
-		return ids.UUID(created.Id)
-	}
-	company := func(name string) ids.UUID {
-		created, err := e.store.CreateCompany(ctx, CreateCompanyInput{DisplayName: name, Source: "manual"})
-		if err != nil {
-			t.Fatalf("create company %s: %v", name, err)
-		}
-		return ids.UUID(created.Id)
-	}
+	lead := func(name, email string) ids.UUID { return e.plainLead(ctx, t, name, email) }
+	company := func(name string) ids.UUID { return e.plainCompany(ctx, t, name) }
 	staleLead := e.fileOldRulePair(ctx, t, entityLead,
 		lead("Alex Johnson", "alex.johnson@leads.test"), lead("Alex Meyer", "alex.meyer@leads.test"), 0.88)
+	consumerMailLead := e.fileOldRulePair(ctx, t, entityLead,
+		lead("Alex Johnson", "alex.johnson@gmail.com"), lead("Alex Meyer", "alex.meyer@gmail.com"), 0.88)
 	staleCompany := e.fileOldRulePair(ctx, t, entityCompany, company("Northwind Traders"), company("Contoso Pharma"), 0.8)
 	keptCompany := e.fileOldRulePair(ctx, t, entityCompany, company("Fabrikam GmbH"), company("Fabrikam AG"), 0.9)
 
@@ -193,11 +203,63 @@ func TestTheRecheckClosesLeadAndCompanyPairsTheRuleNoLongerFiles(t *testing.T) {
 		closed bool
 	}{
 		"lead pair with different family names": {staleLead, true},
+		"lead pair sharing only a mail host":    {consumerMailLead, true},
 		"company pair sharing no word":          {staleCompany, true},
 		"company pair with one brand":           {keptCompany, false},
 	} {
 		if archived, _ := e.candidateState(ctx, t, tc.id); archived != tc.closed {
 			t.Errorf("%s: archived=%v, want %v", name, archived, tc.closed)
 		}
+	}
+}
+
+// An end archived after filing cannot be scored, so the pass leaves the pair for
+// a reviewer instead of guessing.
+func TestTheRecheckKeepsAPairWithAnArchivedEnd(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := asArchiver(e)
+	// v7 ids sort by creation, so the first record created is the pair's left end.
+	leftGoneA := e.plainContact(ctx, t, "Alex Johnson", "alex.johnson@gone.test")
+	leftGone := e.fileOldRulePair(ctx, t, entityContact,
+		leftGoneA, e.plainContact(ctx, t, "Alex Meyer", "alex.meyer@gone.test"), 0.88)
+	rightGoneA := e.plainContact(ctx, t, "Sam Johnson", "sam.johnson@gone.test")
+	rightGoneB := e.plainContact(ctx, t, "Sam Meyer", "sam.meyer@gone.test")
+	rightGone := e.fileOldRulePair(ctx, t, entityContact, rightGoneA, rightGoneB, 0.88)
+	leadA := e.plainLead(ctx, t, "Alex Johnson", "alex.johnson@gone-leads.test")
+	leadPair := e.fileOldRulePair(ctx, t, entityLead,
+		leadA, e.plainLead(ctx, t, "Alex Meyer", "alex.meyer@gone-leads.test"), 0.88)
+	companyA := e.plainCompany(ctx, t, "Northwind Traders")
+	companyPair := e.fileOldRulePair(ctx, t, entityCompany, companyA, e.plainCompany(ctx, t, "Contoso Pharma"), 0.8)
+
+	if _, err := e.store.ArchiveContact(ctx, ids.From[ids.ContactKind](leftGoneA), nil); err != nil {
+		t.Fatalf("archive contact: %v", err)
+	}
+	if _, err := e.store.ArchiveContact(ctx, ids.From[ids.ContactKind](rightGoneB), nil); err != nil {
+		t.Fatalf("archive contact: %v", err)
+	}
+	if _, err := e.store.DisqualifyLead(ctx, ids.From[ids.LeadKind](leadA), DisqualifyLeadInput{}); err != nil {
+		t.Fatalf("disqualify lead: %v", err)
+	}
+	if _, err := e.store.ArchiveCompany(ctx, ids.From[ids.CompanyKind](companyA), nil); err != nil {
+		t.Fatalf("archive company: %v", err)
+	}
+
+	if got := e.recheck(t); got.Closed != 0 {
+		t.Errorf("the pass closed %d pairs whose ends it cannot read, want 0", got.Closed)
+	}
+	for name, id := range map[string]ids.UUID{
+		"contact, left end archived": leftGone, "contact, right end archived": rightGone,
+		"lead": leadPair, "company": companyPair,
+	} {
+		if archived, _ := e.candidateState(ctx, t, id); archived {
+			t.Errorf("the %s pair was closed; the pass cannot score it", name)
+		}
+	}
+}
+
+func TestOnlyTheSystemRunsTheRecheck(t *testing.T) {
+	e := setupDedupe(t)
+	if _, err := e.store.RecheckOpenDedupeCandidates(e.as()); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a member ran the re-check: err = %v, want ErrPermissionDenied", err)
 	}
 }

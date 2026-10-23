@@ -20,6 +20,7 @@ import (
 // pairs the filing rule no longer files.
 type DedupeRecheckArgs struct{}
 
+// Kind is the stable job identifier River persists in river_job.
 func (DedupeRecheckArgs) Kind() string { return "dedupe_recheck" }
 
 // FleetWide makes workspace fan-out explicit to the job binder.
