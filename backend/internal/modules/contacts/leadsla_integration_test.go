@@ -788,3 +788,53 @@ func TestAnIntakeSeatMustBeAbleToReadTheLeadsItAnswersFor(t *testing.T) {
 		t.Errorf("the refused nomination was stored anyway")
 	}
 }
+
+// The application and database clocks can disagree by seconds. A human's
+// first response is stamped with the module clock, floored at created_at.
+// A clock that already reads later is kept as it is.
+func TestAFirstResponseIsNeverStampedBeforeTheLeadExisted(t *testing.T) {
+	created := time.Date(2099, time.January, 1, 9, 0, 0, 0, time.UTC)
+	for _, tc := range []struct {
+		name  string
+		clock time.Time
+		want  time.Time
+	}{
+		{"a clock behind creation is raised to it", created.Add(-3 * time.Second), created},
+		{"a clock after creation is kept", created.Add(5 * time.Minute), created.Add(5 * time.Minute)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			e := setupPromoteConsent(t)
+			previousClock := leadSLAClock
+			leadSLAClock = func() time.Time { return tc.clock }
+			t.Cleanup(func() { leadSLAClock = previousClock })
+			lead := e.seedLeadCreatedAt(t, "ahead@example.test", created)
+			status := "contacted"
+			after, err := e.store.UpdateLead(e.ctx, lead, UpdateLeadInput{Status: &status})
+			if err != nil {
+				t.Fatalf("a human moving the lead off new: %v", err)
+			}
+			if after.FirstResponseAt == nil || !after.FirstResponseAt.Equal(tc.want) {
+				t.Fatalf("first_response_at = %v, want %v", after.FirstResponseAt, tc.want)
+			}
+		})
+	}
+}
+
+// An activity's occurred_at is caller-supplied and may predate the lead it
+// answers; the recorded first response is floored at created_at too.
+func TestABackdatedResponseIsRecordedAtTheLeadsCreation(t *testing.T) {
+	e := setupPromoteConsent(t)
+	created := time.Date(2099, time.January, 1, 9, 0, 0, 0, time.UTC)
+	lead := e.seedLeadCreatedAt(t, "backdated@example.test", created)
+	set, err := e.store.RecordLeadFirstResponse(e.ctx, lead, created.Add(-time.Hour))
+	if err != nil || !set {
+		t.Fatalf("recording a backdated response: set=%v err=%v", set, err)
+	}
+	after, err := e.store.GetLead(e.ctx, lead, storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.FirstResponseAt == nil || !after.FirstResponseAt.Equal(created) {
+		t.Fatalf("first_response_at = %v, want the lead's creation %v", after.FirstResponseAt, created)
+	}
+}
