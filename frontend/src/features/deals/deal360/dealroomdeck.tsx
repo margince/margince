@@ -155,8 +155,31 @@ export function RoomSetup({
   room,
   onEditText,
 }: Readonly<{ room: DealRoom; onEditText: () => void }>) {
-  const t = useT();
   const [inviting, setInviting] = useState(false);
+  // The invite dialog keeps one place in the tree whatever the list draws.
+  // Inviting can finish the list, and the dialog still shows the link then.
+  return (
+    <>
+      <SetupChecklist
+        room={room}
+        onEditText={onEditText}
+        onInvite={() => setInviting(true)}
+      />
+      <InviteDialog
+        room={room}
+        open={inviting}
+        onClose={() => setInviting(false)}
+      />
+    </>
+  );
+}
+
+function SetupChecklist({
+  room,
+  onEditText,
+  onInvite,
+}: Readonly<{ room: DealRoom; onEditText: () => void; onInvite: () => void }>) {
+  const t = useT();
   const participants = useParticipants(room.id);
   const documents = useRoomDocuments(room.id);
   const threads = useRoomThreads(room.id);
@@ -170,17 +193,8 @@ export function RoomSetup({
     threads.data.data.length > 0,
   ];
   const doneCount = done.filter(Boolean).length;
-  // The invite dialog stays mounted once the last step is done. Inviting can
-  // be that step, and the dialog is still showing the one-time link then.
-  const invite = (
-    <InviteDialog
-      room={room}
-      open={inviting}
-      onClose={() => setInviting(false)}
-    />
-  );
   if (doneCount === done.length) {
-    return invite;
+    return null;
   }
   const current = done.indexOf(false);
   const stateOf = (i: number) =>
@@ -205,7 +219,7 @@ export function RoomSetup({
             state={stateOf(1)}
             title={t("roomtab.setup.invite")}
             caption={t("roomtab.setup.inviteHint")}
-            action={verb(1, t("access.invite"), () => setInviting(true))}
+            action={verb(1, t("access.invite"), onInvite)}
           />
           <ChecklistStep
             state={stateOf(2)}
@@ -219,7 +233,6 @@ export function RoomSetup({
           />
         </Checklist>
       </PanelBody>
-      {invite}
     </Panel>
   );
 }
