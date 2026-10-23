@@ -341,7 +341,7 @@ read is refused in seconds, before either bundle compiles PostgreSQL from source
 More checks share that first job. The tag points at a commit on `main`. `LICENSE` carries the
 release's Change Date and version, checked by
 [`scripts/release-license-stamped.sh`](../../scripts/release-license-stamped.sh)
-(`make test-release-license-stamped`). The milestone named like a plain tag has no open item. And
+(`make test-release-license-stamped`). No open issue carries `release: blocker`. And
 the commit carries no failing `verdict` from `merge-attest`.
 
 The `draft` job then checks that a plain tag has a draft release with notes. It holds
@@ -362,8 +362,7 @@ for a pre-release that has no draft.
 Under the draft's text it lists the pull requests merged since
 the last plain release. A release body holds at most 125,000 characters, and the list gets what the
 draft leaves. The list comes from
-[`scripts/release-notes.sh`](../../scripts/release-notes.sh) (`make test-release-notes`). For a plain
-tag it then closes the milestone, unless an item was added to it while the run was building.
+[`scripts/release-notes.sh`](../../scripts/release-notes.sh) (`make test-release-notes`).
 
 The release job queues and does not cancel. By that job the lane is making a release and uploading files, and a stopped run would
 leave that half done. How to drive it is in [cut-a-release.md](../how-to/cut-a-release.md).
