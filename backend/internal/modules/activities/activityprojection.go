@@ -317,9 +317,13 @@ func (s *activityScan) record() crmcontracts.Activity {
 	}
 	bulk := s.bulkMailAttested
 	a.BulkMailAttested = &bulk
-	a.AutomaticKind = automaticKindToWire(relstrength.Evidence{
-		Kind: s.kind, Origin: s.origin, CalendarMethod: deref(s.calendarMethod), SenderIsMachine: s.senderIsMachine,
-	})
+	// The calendar method and the sender stamp describe what a message is, so
+	// they travel with its content. The origin is the product's own fact.
+	evidence := relstrength.Evidence{Kind: s.kind, Origin: s.origin}
+	if s.contentAvailable {
+		evidence.CalendarMethod, evidence.SenderIsMachine = deref(s.calendarMethod), s.senderIsMachine
+	}
+	a.AutomaticKind = automaticKindToWire(evidence)
 	version := s.version
 	a.Version = &version
 	// What a canonical email row draws, composed here so every reader of an

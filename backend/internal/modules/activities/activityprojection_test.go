@@ -525,3 +525,37 @@ func TestBodyCompletenessIsServedOnlyWithAMailBody(t *testing.T) {
 		})
 	}
 }
+
+// What a message is (an invitation, a sending system's notice) is content: a
+// reader who may not open the message is not told it. The product's own mail
+// is the origin, not content, and stays marked.
+func TestAutomaticKindFollowsTheContentAudience(t *testing.T) {
+	t.Parallel()
+	invite := "REQUEST"
+	for _, tc := range []struct {
+		name      string
+		scan      activityScan
+		available bool
+		want      crmcontracts.ActivityAutomaticKind
+	}{
+		{"an invitation the reader may open", activityScan{kind: "email", origin: "human", calendarMethod: &invite}, true, crmcontracts.ActivityAutomaticKindCalendar},
+		{"an invitation the reader may not open", activityScan{kind: "email", origin: "human", calendarMethod: &invite}, false, ""},
+		{"a notice the reader may open", activityScan{kind: "email", origin: "human", senderIsMachine: true}, true, crmcontracts.ActivityAutomaticKindSendingSystem},
+		{"a notice the reader may not open", activityScan{kind: "email", origin: "human", senderIsMachine: true}, false, ""},
+		{"the product's own mail, withheld", activityScan{kind: "email", origin: OriginSystemNotice}, false, crmcontracts.ActivityAutomaticKindProduct},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			tc.scan.contentAvailable = tc.available
+			got := tc.scan.record().AutomaticKind
+			if tc.want == "" {
+				if got != nil {
+					t.Fatalf("automatic_kind = %s on a row the reader may not open", *got)
+				}
+				return
+			}
+			if got == nil || *got != tc.want {
+				t.Fatalf("automatic_kind = %v, want %s", got, tc.want)
+			}
+		})
+	}
+}
