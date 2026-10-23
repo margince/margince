@@ -37868,7 +37868,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             display_name: string;
-            /** @description True when the colleague left (deactivated). A record they still own counts in their team's views and needs a new owner, so every screen that names them says they left. Any member could already tell, because the roster leaves a departed colleague out. */
+            /** @description True when the colleague left (deactivated). A record they still own counts in their team's views and needs a new owner, so a screen that names them through this read can say they left. Any member could already tell, because the roster leaves a departed colleague out. */
             departed: boolean;
         };
         SeatNameListResponse: {

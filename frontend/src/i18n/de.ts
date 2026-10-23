@@ -15528,7 +15528,7 @@ export const de = {
   "worklist.scope.all": "Alle",
   "worklist.owner.shared": "Gemeinsam zuständig: {names}",
   "worklist.owner.left":
-    "{name} ist ausgeschieden. Das braucht eine neue Zuständigkeit.",
+    "{name} ist ausgeschieden. Dieser Eintrag braucht ein neues verantwortliches Teammitglied.",
   "worklist.owner.sharedCount_one": "{count} zuständige Empfangende",
   "worklist.owner.sharedCount_other": "{count} zuständige Empfangende",
   "worklist.owner.visibleLabel": "Ansicht",
