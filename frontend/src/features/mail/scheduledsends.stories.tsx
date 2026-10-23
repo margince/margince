@@ -254,3 +254,29 @@ export const Editable: Story = {
     </StoryProviders>
   ),
 };
+
+/** Edit refused, pointing at the line that says why: the composer has no field
+ *  for the reason given when scheduling. Withdraw stays. */
+export const EditRefused: Story = {
+  render: () => (
+    <StoryProviders>
+      <ol className="scheduledsends-list">
+        <SendRow
+          {...rowProps}
+          send={{
+            ...waiting,
+            status: "scheduled",
+            subject: "The fair follow-up",
+            links: [{ entity_type: "company", entity_id: "company-1" }],
+            operator_reason: "Asked for the brochure at the fair",
+          }}
+        />
+      </ol>
+    </StoryProviders>
+  ),
+};
+export const EditRefusedPhone: Story = {
+  ...EditRefused,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};

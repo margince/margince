@@ -14854,6 +14854,17 @@ export const vi = {
   "sched.edit": "Chỉnh sửa",
   "sched.editFor": "Chỉnh sửa: {subject}",
   "sched.withdrawFor": "Thu hồi: {subject}",
+  "sched.editRefused.operatorReason":
+    "Không thể chỉnh sửa: thao tác này sẽ làm mất lý do bạn đã nêu khi hẹn giờ. Thu hồi tin nhắn rồi hẹn giờ tin nhắn mới.",
+  "sched.editRefused.title": "Không thể chỉnh sửa tin nhắn",
+  "sched.editRefused.files_one":
+    "{count} tệp đính kèm không còn gửi được. Thu hồi tin nhắn rồi hẹn giờ tin nhắn mới.",
+  "sched.editRefused.files_other":
+    "{count} tệp đính kèm không còn gửi được. Thu hồi tin nhắn rồi hẹn giờ tin nhắn mới.",
+  "sched.editStale.title": "Tin nhắn đã thay đổi",
+  "sched.editStale.body":
+    "Tin nhắn đã được gửi, thu hồi, thay đổi hoặc bị xóa sau khi tải danh sách.",
+  "sched.editLoading": "Đang tải tin nhắn…",
   "outbox.name": "Tin nhắn đã hẹn giờ",
   "outbox.nameWaiting_one": "Tin nhắn đã hẹn giờ, {count} đang chờ",
   "outbox.nameWaiting_other": "Tin nhắn đã hẹn giờ, {count} đang chờ",

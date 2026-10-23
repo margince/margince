@@ -122,6 +122,15 @@
   description: "A session is fixing this red on main - check before you start, do not open a second"
 
 # ---------------------------------------------------------------------------
+# Release — what the next tag waits for. Milestones are months and say when;
+# this says what a release cannot ship without, and release-tag.yml refuses a
+# plain tag while an open issue wears it.
+# ---------------------------------------------------------------------------
+- name: "release: blocker"
+  color: "C2185B"
+  description: "The next release cannot be tagged until this closes"
+
+# ---------------------------------------------------------------------------
 # Provenance — why the issue exists, which is the one thing nobody can
 # reconstruct later. Additive and independent of the three axes above.
 # ---------------------------------------------------------------------------

@@ -34884,6 +34884,29 @@ export interface components {
              */
             bcc?: string[];
             body?: string;
+            /** @description The frozen markup beside `body`, so an edit keeps the formatting. Absent on a plain message. */
+            html_body?: string;
+            /**
+             * @description The frozen files the sender can still attach, in frozen order, so an edit carries them.
+             *     Resolved only by the detail read of a `scheduled` or `held` message. Absent from the
+             *     list, the scheduling answer and the reschedule answer, so its absence there does not
+             *     mean the message has no files.
+             */
+            attachments?: components["schemas"]["ApprovalPreviewFile"][];
+            /**
+             * @description How many frozen files the send would now refuse: removed, out of the sender's sight,
+             *     kept without bytes, or empty. Not named: a file the sender cannot see answers 404
+             *     everywhere else. Like `attachments`, resolved only by the detail read of a waiting
+             *     message; absent there when every file resolves.
+             */
+            attachments_unavailable?: number;
+            /** @description The voice-draft reference the send carries, frozen with it. Absent when none was given. */
+            draft_ref?: string;
+            /**
+             * @description What the sender typed when a first message was ambiguous, frozen with it. Only its
+             *     sender reads this row.
+             */
+            operator_reason?: string;
             /**
              * Format: uuid
              * @description The conversation this reply will join; null for an account-started message.

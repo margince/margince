@@ -21,9 +21,9 @@ next reader something false about your finding.
 ## Priority
 
 **Priority** says how serious the problem is; the milestone holds the schedule. Do not lower a real
-bug because it is not work for this week. Use the milestone, named like the release tag
-([cut-a-release.md](../how-to/cut-a-release.md#plan-it-with-a-milestone)), or `status: deferred` when
-no milestone fits it yet:
+bug because it is not work for this week. Use the milestone of the month the work is planned
+for ([cut-a-release.md](../how-to/cut-a-release.md#plan-the-work-by-month)), or `status: deferred`
+when no month fits it yet:
 
 | Label | It fits when |
 |---|---|
@@ -89,6 +89,15 @@ issue to label.
 
   It is a `claim:` label because a status sits on an issue. The thing claimed here is a break on
   `main` that no issue names.
+
+## Release
+
+This label says what the next release waits for. A milestone is a month, and says when the work is
+planned. It does not say what a release needs.
+
+- `release: blocker`: the next plain tag waits until this issue is closed. `release-tag.yml` refuses
+  the tag while an open issue carries it. The label names no version: an issue still open when a
+  release ships blocks the one after it. The maintainer who plans the release sets it.
 
 ## Provenance
 

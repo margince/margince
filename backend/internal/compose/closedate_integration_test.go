@@ -145,6 +145,42 @@ func (e *closeDateEnv) readSwept(t *testing.T, id ids.UUID) sweptDeal {
 	return d
 }
 
+// sweptTier reports what the sweep DECIDED about one deal, as the run member's
+// outcome and the kinds it staged.
+//
+// The resulting column says what a tier wrote, never which tier wrote it. A
+// downgrade notch and an untouched override are reached from different
+// findings. A failure that reads only the column leaves the next reader to
+// reconstruct the path.
+func (e *closeDateEnv) sweptTier(t *testing.T, dealID ids.UUID) string {
+	t.Helper()
+	var outcome *string
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT outcome FROM close_date_run_member WHERE deal_id = $1
+		  ORDER BY deal_created_at DESC LIMIT 1`, dealID).Scan(&outcome); err != nil &&
+		!errors.Is(err, pgx.ErrNoRows) {
+		t.Fatal(err)
+	}
+	var kinds []string
+	rows, err := e.owner.Query(context.Background(),
+		`SELECT kind FROM approval WHERE target_entity_id = $1 ORDER BY kind`, dealID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var kind string
+		if err := rows.Scan(&kind); err != nil {
+			t.Fatal(err)
+		}
+		kinds = append(kinds, kind)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
+	}
+	return fmt.Sprintf("member outcome %s, staged %v", shownString(outcome), kinds)
+}
+
 func (e *closeDateEnv) pendingCorrections(t *testing.T, dealID ids.UUID) int {
 	t.Helper()
 	var n int

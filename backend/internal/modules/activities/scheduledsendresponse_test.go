@@ -78,6 +78,48 @@ func TestAMessageThatClaimedNothingSaysNothing(t *testing.T) {
 	}
 }
 
+// An edit rebuilds the message from this row. The markup, the files, the draft
+// reference and the operator's reason all have to come back with it.
+func TestTheWireCarriesWhatAnEditRebuildsTheMessageFrom(t *testing.T) {
+	t.Parallel()
+	row := scheduledRow()
+	row.frozen = scheduledPayload{HTMLBody: "<p>Your <b>quote</b></p>", DraftRef: "draft-7", OperatorReason: "they asked at the fair"}
+	file := OutboundFile{AttachmentID: ids.NewV7(), Filename: "quote.pdf", ContentType: "application/pdf", ByteSize: 2048, Checksum: "sha256:ab"}
+
+	out := scheduledSendResponse(row)
+	withScheduledFiles(&out, scheduledFiles{attachable: []OutboundFile{file}, unavailable: 2})
+
+	if out.HtmlBody == nil || *out.HtmlBody != "<p>Your <b>quote</b></p>" {
+		t.Errorf("markup on the wire = %v, want the frozen markup", out.HtmlBody)
+	}
+	if out.DraftRef == nil || *out.DraftRef != "draft-7" {
+		t.Errorf("draft reference on the wire = %v, want draft-7", out.DraftRef)
+	}
+	if out.OperatorReason == nil || *out.OperatorReason != "they asked at the fair" {
+		t.Errorf("operator reason on the wire = %v, want the frozen reason", out.OperatorReason)
+	}
+	wantFiles := []crmcontracts.ApprovalPreviewFile{{
+		Id: openapi_types.UUID(file.AttachmentID), Filename: "quote.pdf", ContentType: "application/pdf", ByteSize: 2048,
+	}}
+	if out.Attachments == nil || !reflect.DeepEqual(*out.Attachments, wantFiles) {
+		t.Errorf("files on the wire = %v, want %v", out.Attachments, wantFiles)
+	}
+	if out.AttachmentsUnavailable == nil || *out.AttachmentsUnavailable != 2 {
+		t.Errorf("unavailable files on the wire = %v, want 2", out.AttachmentsUnavailable)
+	}
+}
+
+// A plain message without files omits each field. A client must never read an
+// empty string as markup or a zero as a count.
+func TestAPlainMessageWithoutFilesOmitsWhatItDoesNotHave(t *testing.T) {
+	t.Parallel()
+	out := scheduledSendResponse(scheduledRow())
+	if out.HtmlBody != nil || out.DraftRef != nil || out.OperatorReason != nil ||
+		out.Attachments != nil || out.AttachmentsUnavailable != nil {
+		t.Errorf("a plain message without files rendered one of them: %+v", out)
+	}
+}
+
 // The store type names the five controller-only categories; the wire's enum
 // does not. A row carrying one — a legacy row, or a writer the fire's own guard
 // exists to catch — must not reach a client as a value outside its contract.

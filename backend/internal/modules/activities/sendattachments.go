@@ -16,10 +16,12 @@ package activities
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -177,31 +179,98 @@ func (s *Store) PreviewSendAttachments(ctx context.Context, attachmentIDs []ids.
 	}
 	out := make([]OutboundFile, 0, len(unique))
 	for _, id := range unique {
-		meta, err := s.GetAttachmentMeta(ctx, id)
+		file, err := s.sendableFile(ctx, id)
 		if err != nil {
-			// The sentinel travels: a file the sender cannot see is the same
-			// 404 the attachment read itself gives, and the transport maps it
-			// without this layer inventing a second vocabulary for it.
-			return nil, fmt.Errorf("resolving an attached file: %w", err)
+			return nil, err
 		}
-		// Refused here, where the sender can act on it: a file named on a private
-		// message has a size and no bytes, and would fail only at delivery. Asked
-		// first, so an empty withheld file is not told to be attached again.
-		if meta.BytesWithheld != nil && *meta.BytesWithheld {
-			return nil, &WithheldAttachmentError{Filename: meta.Filename}
-		}
-		if meta.ByteSize == nil || *meta.ByteSize <= 0 {
-			return nil, &EmptyAttachmentError{Filename: meta.Filename}
-		}
-		out = append(out, OutboundFile{
-			AttachmentID: id,
-			Filename:     meta.Filename,
-			ContentType:  orEmpty(meta.ContentType),
-			ByteSize:     *meta.ByteSize,
-			Checksum:     orEmpty(meta.Checksum),
-		})
+		out = append(out, file)
 	}
 	return out, nil
+}
+
+// sendableFile is what a send would carry for this id, or its refusal. The
+// scheduled read asks it too, so an edit offers only what the fire would take.
+func (s *Store) sendableFile(ctx context.Context, id ids.UUID) (OutboundFile, error) {
+	meta, err := s.GetAttachmentMeta(ctx, id)
+	if err != nil {
+		// The sentinel travels: an unseen file is the 404 the attachment read
+		// gives. The transport maps it, so this layer needs no words of its own.
+		return OutboundFile{}, fmt.Errorf("resolving an attached file: %w", err)
+	}
+	// Refused here, where the sender can act: a private message's file has a size
+	// and no bytes, so it would fail only at delivery. Asked first, so an empty
+	// withheld file is not told to be attached again.
+	if meta.BytesWithheld != nil && *meta.BytesWithheld {
+		return OutboundFile{}, &WithheldAttachmentError{Filename: meta.Filename}
+	}
+	if meta.ByteSize == nil || *meta.ByteSize <= 0 {
+		return OutboundFile{}, &EmptyAttachmentError{Filename: meta.Filename}
+	}
+	return OutboundFile{
+		AttachmentID: id,
+		Filename:     meta.Filename,
+		ContentType:  orEmpty(meta.ContentType),
+		ByteSize:     *meta.ByteSize,
+		Checksum:     orEmpty(meta.Checksum),
+	}, nil
+}
+
+// fileRefusedAtSend tells a file the send would refuse apart from a failure to
+// ask about it, which must not read as the file being gone.
+func fileRefusedAtSend(err error) bool {
+	var withheld *WithheldAttachmentError
+	var empty *EmptyAttachmentError
+	return errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) ||
+		errors.As(err, &withheld) || errors.As(err, &empty)
+}
+
+// scheduledFiles is what a waiting message's frozen files are to its sender now.
+type scheduledFiles struct {
+	attachable  []OutboundFile
+	unavailable int
+}
+
+// scheduledFilesOf sorts a waiting message's frozen files by what its send would
+// do with each today. A message past waiting resolves nothing: no edit reaches it.
+func (s *Store) scheduledFilesOf(ctx context.Context, row ScheduledSend) (scheduledFiles, error) {
+	if row.Status != ScheduledStatusScheduled && row.Status != ScheduledStatusHeld {
+		return scheduledFiles{}, nil
+	}
+	return sortFrozenFiles(ctx, row.frozen.AttachmentIDs, s.sendableFile)
+}
+
+// sortFrozenFiles counts an id the send could not carry instead of refusing it.
+// A read that answered with the send's own 4xx would hide the message it reads.
+func sortFrozenFiles(
+	ctx context.Context, frozen []string, sendable func(context.Context, ids.UUID) (OutboundFile, error),
+) (scheduledFiles, error) {
+	var files scheduledFiles
+	seen := make(map[ids.UUID]bool, len(frozen))
+	for _, raw := range frozen {
+		id, err := ids.Parse(raw)
+		if err != nil {
+			files.unavailable++
+			continue
+		}
+		if seen[id] {
+			continue
+		}
+		seen[id] = true
+		if len(seen) > maxAttachmentsPerSend {
+			files.unavailable++
+			continue
+		}
+		file, err := sendable(ctx, id)
+		switch {
+		case err == nil:
+			files.attachable = append(files.attachable, file)
+		case fileRefusedAtSend(err):
+			files.unavailable++
+		default:
+			return scheduledFiles{}, err
+		}
+	}
+	return files, nil
 }
 
 func orEmpty(value *string) string {

@@ -35,7 +35,7 @@ package gates
 // anything, and does not try. What it proves is that the two copies IN THE TREE
 // agree; the workflow is what makes the tree's copy true.
 //
-// The four taxonomy sections are judged and GitHub's own defaults are not.
+// The taxonomy sections are judged and GitHub's own defaults are not.
 // `documentation`, `good first issue`, `help wanted` and `dependencies` are what
 // a drive-by contributor and Dependabot reach for; they are labels this
 // repository has rather than a taxonomy it teaches, and requiring the reference
@@ -74,7 +74,7 @@ var githubDefaults = []string{"documentation", "good first issue", "help wanted"
 // derives its subjects: a provenance label added to the source and to that
 // paragraph agrees, and one added to only one of them does not, without this
 // file learning its name.
-var labelSections = []struct {
+type labelSection struct {
 	heading string
 	// prefix the source spells these labels with; "" for the unprefixed axis.
 	prefix string
@@ -82,11 +82,14 @@ var labelSections = []struct {
 	// the Area run and the Provenance sentence do — fifteen names read as a set
 	// where fifteen `area: x` would read as fifteen rows.
 	bare bool
-}{
+}
+
+var labelSections = []labelSection{
 	{heading: "## Priority", prefix: "priority: "},
 	{heading: "## Area", prefix: "area: ", bare: true},
 	{heading: "## Status", prefix: "status: "},
 	{heading: "## Claim", prefix: "claim: "},
+	{heading: "## Release", prefix: "release: "},
 	{heading: "## Provenance", prefix: "", bare: true},
 }
 
@@ -94,7 +97,37 @@ var labelSections = []struct {
 // only the name. A space is allowed only behind an axis prefix, which is what
 // separates the two-word `status: in progress` from `gh issue create` and from
 // the `gh issue list --label "area: <x>"` this page teaches the flag with.
-var labelSpan = regexp.MustCompile("`((?:priority: |area: |status: |claim: )[a-z][a-z-]*(?: [a-z][a-z-]*)*|[a-z][a-z-]*)`")
+var labelSpan = regexp.MustCompile("`((?:" + axisPrefixes() + ")[a-z][a-z-]*(?: [a-z][a-z-]*)*|[a-z][a-z-]*)`")
+
+// axisPrefixes is the alternation of every section's prefix, so a new axis is
+// one row in labelSections and not a second edit here.
+func axisPrefixes() string {
+	var prefixes []string
+	for _, section := range labelSections {
+		if section.prefix != "" {
+			prefixes = append(prefixes, regexp.QuoteMeta(section.prefix))
+		}
+	}
+	return strings.Join(prefixes, "|")
+}
+
+// A prefixed label no section claims is read by no case above: provenance
+// skips every name with an axis prefix. So the census starts from the source.
+func TestEveryLabelAxisHasASection(t *testing.T) {
+	t.Parallel()
+
+	for _, label := range declaredLabels(t) {
+		axis, _, prefixed := strings.Cut(label, ": ")
+		if !prefixed || slices.ContainsFunc(labelSections, func(section labelSection) bool {
+			return section.prefix == axis+": "
+		}) {
+			continue
+		}
+		t.Errorf("%s declares %q, and no section in labelSections reads the %q axis. "+
+			"Add the section to %s and a row here, or no check sees the label.",
+			labelSourcePath, label, axis, labelDocPath)
+	}
+}
 
 func TestEachSectionOfTheReferencePageListsExactlyItsLabels(t *testing.T) {
 	t.Parallel()

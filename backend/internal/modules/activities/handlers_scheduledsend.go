@@ -64,14 +64,22 @@ func (h Handlers) ListScheduledSends(w http.ResponseWriter, r *http.Request, par
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
-// GetScheduledSend answers with one of the caller's waiting messages.
+// GetScheduledSend answers with one of the caller's waiting messages. Its files
+// resolve here and not on the list, which every page polls.
 func (h Handlers) GetScheduledSend(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	row, err := h.store.GetScheduledSend(r.Context(), ids.UUID(id))
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, scheduledSendResponse(row))
+	files, err := h.store.scheduledFilesOf(r.Context(), row)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	out := scheduledSendResponse(row)
+	withScheduledFiles(&out, files)
+	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
 // RescheduleScheduledSend moves a waiting message to a different moment.
@@ -144,6 +152,9 @@ func scheduledSendResponse(row ScheduledSend) crmcontracts.ScheduledSend {
 		body := row.Body
 		out.Body = &body
 	}
+	out.HtmlBody = ptrOrNil(row.frozen.HTMLBody)
+	out.DraftRef = ptrOrNil(row.frozen.DraftRef)
+	out.OperatorReason = ptrOrNil(row.frozen.OperatorReason)
 	if row.Anchor.UUID != (ids.UUID{}) {
 		anchor := openapi_types.UUID(row.Anchor.UUID)
 		out.AnchorActivityId = &anchor
@@ -184,6 +195,32 @@ func scheduledSendResponse(row ScheduledSend) crmcontracts.ScheduledSend {
 	if row.HeldReason != "" {
 		reason := crmcontracts.ScheduledSendHeldReason(row.HeldReason)
 		out.HeldReason = &reason
+	}
+	return out
+}
+
+func withScheduledFiles(out *crmcontracts.ScheduledSend, files scheduledFiles) {
+	if len(files.attachable) > 0 {
+		attachments := ApprovalPreviewFiles(files.attachable)
+		out.Attachments = &attachments
+	}
+	if files.unavailable > 0 {
+		unavailable := files.unavailable
+		out.AttachmentsUnavailable = &unavailable
+	}
+}
+
+// ApprovalPreviewFiles renders files a send would carry as a reader sees them,
+// without the checksum the delivery keeps.
+func ApprovalPreviewFiles(files []OutboundFile) []crmcontracts.ApprovalPreviewFile {
+	out := make([]crmcontracts.ApprovalPreviewFile, 0, len(files))
+	for _, file := range files {
+		out = append(out, crmcontracts.ApprovalPreviewFile{
+			Id:          openapi_types.UUID(file.AttachmentID),
+			Filename:    file.Filename,
+			ContentType: file.ContentType,
+			ByteSize:    file.ByteSize,
+		})
 	}
 	return out
 }
