@@ -205,6 +205,11 @@ So `timeout` has no default, and a missing value is not one of its forms. It tak
 `declaredTimeoutSeconds` never reports zero on `/metrics`, because zero would look like the 60-second
 default in River, and the declaration exists to tell the two apart. A kind declared as none reports `-1`.
 
+The timeout also decides how long a job stays `running` after its worker is killed. `JobRescuer` takes
+the job back as soon as its own timeout has passed. A job declared as `15m` is back in the queue 15
+minutes after the kill, plus up to 30 seconds. Until then, a new insert of the same work is refused,
+because the insert treats a `running` row as work in flight.
+
 Two more gates hold the same line at boot. Neither the closed union nor `Govern` can see a generated
 file edited by hand, or a test that registers into a test-only `*river.Workers`:
 

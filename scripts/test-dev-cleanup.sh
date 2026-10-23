@@ -106,6 +106,9 @@ repo_root="$root"
 # that names them. A lifted still_ours refuses outright without it rather than
 # quietly reading half of itself.
 db="margince_dev_probe"
+# kill_pids waits this long before the SIGKILL. dev.sh gives a worker time to
+# drain its jobs; a fixture that ignores the TERM only needs the wait to end.
+STOP_GRACE_SECONDS=2
 lift kill_pids
 lift still_ours
 lift stack_already_up
