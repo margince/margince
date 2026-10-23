@@ -71,11 +71,12 @@ runs:
       working-directory: ${{ inputs.working-directory }}
       shell: bash
       # The exit code is recorded because the retries below are conditional on it.
-      # A healthy install takes under 20 seconds and the slowest seen took under
-      # two minutes, so three minutes holds every real install and ends a hang early.
+      # A healthy install takes under 20 seconds, but a slow mirror moves 26 MB in
+      # minutes. Downloaded packages stay cached, so a retry resumes where this stopped.
+      # Both attempts are five minutes, which keeps the whole job under its ceiling.
       run: |
         set +e
-        timeout --kill-after=30s 3m pnpm exec playwright install-deps chromium
+        timeout --kill-after=30s 5m pnpm exec playwright install-deps chromium
         code=$?
         echo "code=$code" >> "$GITHUB_OUTPUT"
         exit $code
@@ -88,7 +89,7 @@ runs:
       if: steps.deps.outcome == 'failure' && steps.deps.outputs.code != '124' && steps.deps.outputs.code != '137'
       working-directory: ${{ inputs.working-directory }}
       shell: bash
-      run: timeout --kill-after=30s 3m pnpm exec playwright install-deps chromium
+      run: timeout --kill-after=30s 5m pnpm exec playwright install-deps chromium
 
     # A killed install is retried only once its leftovers are gone: no apt or dpkg
     # process alive and the half-done package state finished. Lock files are never
@@ -118,7 +119,7 @@ runs:
       shell: bash
       run: |
         set +e
-        timeout --kill-after=30s 3m pnpm exec playwright install-deps chromium
+        timeout --kill-after=30s 5m pnpm exec playwright install-deps chromium
         code=$?
         if [ "$code" = 124 ] || [ "$code" = 137 ]; then
           echo "::error::the system libraries did not install inside their bound, even after the first hang was cleared" >&2
