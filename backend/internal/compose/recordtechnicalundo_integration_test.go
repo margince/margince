@@ -6,6 +6,7 @@
 package compose
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"sync"
@@ -342,5 +343,66 @@ func TestALegacyLookupReceiptSaysItHasNoSnapshot(t *testing.T) {
 	}
 	if answer.Undoable || answer.Reason != ReasonNoRestoreSnapshot {
 		t.Fatalf("a legacy lookup answered %+v, want %s", answer, ReasonNoRestoreSnapshot)
+	}
+}
+
+// A write whose transaction began before the lookup and landed after it is a
+// later change. Its audit row carries the older transaction start, so the
+// guard cannot lean on that time.
+func TestTechnicalUndoRefusesALaterWriteThatBeganBeforeTheLookup(t *testing.T) {
+	cases := map[string]func(ctx context.Context, e *integration.Env, company ids.CompanyID) error{
+		"a company edit": func(ctx context.Context, e *integration.Env, company ids.CompanyID) error {
+			_, err := e.Contacts.UpdateCompany(ctx, company, contacts.UpdateCompanyInput{Description: new("Began early")})
+			return err
+		},
+		"a fact added and removed": func(ctx context.Context, e *integration.Env, company ids.CompanyID) error {
+			fact, err := e.Contacts.CreateCompanyFact(ctx, company, contacts.FactCreateInput{Category: "signal", Field: "hosting_provider", Value: "Early host"})
+			if err != nil {
+				return err
+			}
+			return e.Contacts.DeleteCompanyFact(ctx, company, "hosting_provider:"+fact.ValueKey, contacts.FactWriteInput{})
+		},
+	}
+	for name, write := range cases {
+		t.Run(name, func(t *testing.T) {
+			e := integration.Setup(t)
+			company := technicalUndoCompany(t, e, "Early Writer GmbH")
+			applyUndoLookup(t, e, company, undoObservation("mail_provider", "old", "Old mail"))
+			began, release, done := make(chan struct{}), make(chan struct{}), make(chan error, 1)
+			go func() {
+				done <- database.WithWorkspaceSnapshot(e.Admin(), e.Pool, func(ctx context.Context) error {
+					// The first statement fixes the transaction's start time.
+					if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+						_, err := tx.Exec(ctx, `SELECT 1`)
+						return err
+					}); err != nil {
+						return err
+					}
+					close(began)
+					<-release
+					return write(ctx, e, company)
+				})
+			}()
+			<-began
+			receipt := applyUndoLookup(t, e, company, undoObservation("mail_provider", "new", "New mail"))
+			close(release)
+			if err := <-done; err != nil {
+				t.Fatalf("the early write failed: %v", err)
+			}
+			held := technicalUndoFacts(t, e, company)
+			if answer := advisoryAnswer(e.Admin(), t, e, "company", company.UUID, receipt); answer.Undoable ||
+				answer.Reason != string(ReasonLaterCompanyChange) {
+				t.Fatalf("the preview answered %+v, want a refusal naming the later change", answer)
+			}
+			if reason := refusedFor(t, undoEntry(t, e, "company", company.UUID, receipt)); reason != ReasonLaterCompanyChange {
+				t.Fatalf("the Undo answered %s, want %s", reason, ReasonLaterCompanyChange)
+			}
+			if !sameFacts(t, held, technicalUndoFacts(t, e, company)) {
+				t.Fatal("a refused Undo changed the facts")
+			}
+			if reversals, events := reversalWriteShape(t, e, receipt); reversals != 0 || events != 0 {
+				t.Fatalf("a refused Undo committed %d reversal rows and %d events", reversals, events)
+			}
+		})
 	}
 }

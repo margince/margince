@@ -63969,6 +63969,11 @@ components:
             this build cannot place. Infrastructure and configuration audits do not contribute
             to this count. It is reported only to a seat holding `ai_diagnostics` read. Its
             absence for any other seat is not a zero.
+        done_is_floor:
+          type: boolean
+          description: >-
+            The done lane's second source, the system's decisions, was read to its bound
+            and still had more, so the lane's total is a floor. Absent on older responses.
         not_shown_count_withheld:
           type: boolean
           description: >-
@@ -64143,6 +64148,13 @@ components:
       required: [audit_id, occurred_at, entity, changes, undo]
       properties:
         audit_id: { type: string, format: uuid }
+        receipt_id:
+          type: string
+          format: uuid
+          description: >-
+            The canonical Receipt.id this record's change stands for, the same id a done line
+            lists in `receipt_ids`. A client joins a receipt's review actions by it. Absent on
+            older responses.
         occurred_at: { type: string, format: date-time }
         entity: { $ref: '#/components/schemas/MagicEntityRef' }
         changes:

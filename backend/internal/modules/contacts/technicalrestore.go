@@ -70,10 +70,13 @@ type technicalFactRow struct {
 }
 
 type technicalRestore struct {
-	Format int                `json:"format"`
-	Fields []string           `json:"fields"`
-	Before []technicalFactRow `json:"before"`
-	After  []technicalFactRow `json:"after"`
+	Format int `json:"format"`
+	// CompanyVersion is the company's version under the lookup's hold. Any
+	// later company write moves it, whenever its transaction began.
+	CompanyVersion int64              `json:"company_version"`
+	Fields         []string           `json:"fields"`
+	Before         []technicalFactRow `json:"before"`
+	After          []technicalFactRow `json:"after"`
 }
 
 // IsTechnicalReceipt reports whether an audit row's evidence is a technical
@@ -92,7 +95,8 @@ func technicalRestoreOf(evidence json.RawMessage) (technicalRestore, error) {
 		} `json:"technical"`
 	}
 	if json.Unmarshal(evidence, &receipt) != nil || receipt.Technical.Restore == nil ||
-		receipt.Technical.Restore.Format != technicalRestoreFormat || len(receipt.Technical.Restore.Fields) == 0 {
+		receipt.Technical.Restore.Format != technicalRestoreFormat || len(receipt.Technical.Restore.Fields) == 0 ||
+		receipt.Technical.Restore.CompanyVersion <= 0 {
 		return technicalRestore{}, ErrTechnicalReceiptLegacy
 	}
 	for _, field := range receipt.Technical.Restore.Fields {
@@ -138,17 +142,29 @@ func readTechnicalFactRows(ctx context.Context, tx pgx.Tx, companyID ids.Company
 func JudgeTechnicalRestoreTx(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, auditID ids.UUID, at time.Time, evidence json.RawMessage,
 ) error {
+	if err := auth.Require(ctx, entityCompany, principal.ActionRead); err != nil {
+		return err
+	}
 	restore, err := technicalRestoreOf(evidence)
 	if err != nil {
 		return err
 	}
+	var version int64
+	if err := tx.QueryRow(ctx, `SELECT version FROM company WHERE id = $1`, companyID).Scan(&version); err != nil {
+		return fmt.Errorf("read the company version: %w", err)
+	}
+	if version != restore.CompanyVersion {
+		return ErrTechnicalLaterChange
+	}
 	var later bool
 	// The company's own rows, and every fact row of it: a live fact by its id,
-	// a removed one by the company its before-image names.
+	// a removed one by the company its before-image names. occurred_at is a
+	// transaction's start, so a write that began before the lookup and landed
+	// after it is found by its id, minted when the row was written.
 	err = tx.QueryRow(ctx, `
 		SELECT EXISTS (
 		  SELECT 1 FROM audit_log a
-		   WHERE (a.occurred_at > $2 OR (a.occurred_at = $2 AND a.id > $3))
+		   WHERE (a.occurred_at > $2 OR a.id > $3)
 		     AND ((a.entity_type = 'company' AND a.entity_id = $1)
 		       OR (a.entity_type = 'company_fact'
 		           AND (a.entity_id IN (SELECT id FROM company_fact WHERE company_id = $1)
@@ -271,10 +287,10 @@ func replaceTechnicalRows(ctx context.Context, tx pgx.Tx, companyID ids.CompanyI
 }
 
 // technicalRestoreSnapshot is what a lookup records so it can be taken back.
-func technicalRestoreSnapshot(fields []string, before, after []technicalFactRow) map[string]any {
+func technicalRestoreSnapshot(companyVersion int64, fields []string, before, after []technicalFactRow) map[string]any {
 	return map[string]any{
 		technicalRestoreKey: technicalRestore{
-			Format: technicalRestoreFormat, Fields: fields,
+			Format: technicalRestoreFormat, CompanyVersion: companyVersion, Fields: fields,
 			Before: nonNilRows(before), After: nonNilRows(after),
 		},
 	}

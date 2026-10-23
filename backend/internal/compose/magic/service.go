@@ -178,11 +178,12 @@ func (s *Service) Read(
 	if err := s.gatherSeamLanes(ctx, &receipt, from, limit); err != nil {
 		return crmcontracts.MagicReceipt{}, fmt.Errorf("read the machinery's receipt: %w", err)
 	}
-	decided, err := s.decidedDone(ctx, receipt.Done, from, limit)
+	decided, floor, err := s.decidedDone(ctx, receipt.Done, from, limit)
 	if err != nil {
 		return crmcontracts.MagicReceipt{}, fmt.Errorf("read the machinery's receipt: %w", err)
 	}
 	receipt.Done = mergeNewestFirst(receipt.Done, decided, limit)
+	receipt.DoneIsFloor = &floor
 	// THE TOTALS COUNT WHAT IS DRAWN, and say so by being derived from the
 	// drawn lines rather than from the fetch behind them. The fetch is neither
 	// the page nor the window: each of the six arms applies the same LIMIT

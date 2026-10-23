@@ -38,6 +38,12 @@ type DecidedReceipt struct {
 	// TargetType is empty when the decision named no record.
 	TargetType string
 	TargetID   ids.UUID
+	// TargetLabel is the name the decision was taken against, frozen when it
+	// was staged: the name the needs-you lane showed the same reader.
+	TargetLabel *string
+	// Approval says the receipt is an approval, whose own page is where the
+	// decision is revisited.
+	Approval bool
 }
 
 // WithDecidedReceipts binds the second source. Unbound, the lane holds the
@@ -52,18 +58,28 @@ func (s *Service) WithDecidedReceipts(d DecidedReceipts) *Service {
 // lane already reports that source as withheld.
 func (s *Service) decidedDone(
 	ctx context.Context, drawn []crmcontracts.MagicLine, from time.Time, limit int,
-) ([]crmcontracts.MagicLine, error) {
+) (lines []crmcontracts.MagicLine, floor bool, err error) {
 	if s.decided == nil {
-		return []crmcontracts.MagicLine{}, nil
+		return []crmcontracts.MagicLine{}, false, nil
 	}
-	decided, err := s.decided.DecidedSince(ctx, from, limit)
-	if errors.Is(err, apperrors.ErrPermissionDenied) {
-		return []crmcontracts.MagicLine{}, nil
+	// Refilled while overlap with the drawn lines leaves the page short and
+	// the source has more. Stopped at readCap, the lane's total is a floor.
+	for scan := limit; ; scan = min(scan*4, readCap) {
+		decided, err := s.decided.DecidedSince(ctx, from, scan)
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			return []crmcontracts.MagicLine{}, false, nil
+		}
+		if err != nil {
+			return nil, false, err
+		}
+		lines := decidedLines(drawn, decided)
+		if len(decided) < scan || len(lines) >= limit {
+			return lines, false, nil
+		}
+		if scan >= readCap {
+			return lines, true, nil
+		}
 	}
-	if err != nil {
-		return nil, err
-	}
-	return decidedLines(drawn, decided), nil
 }
 
 func decidedLines(drawn []crmcontracts.MagicLine, decided []DecidedReceipt) []crmcontracts.MagicLine {
@@ -110,7 +126,12 @@ func decidedLine(receipt DecidedReceipt) crmcontracts.MagicLine {
 		},
 	}
 	if receipt.TargetType != "" && !receipt.TargetID.IsZero() {
-		line.Entity = &crmcontracts.MagicEntityRef{Type: receipt.TargetType, Id: openapi_types.UUID(receipt.TargetID)}
+		line.Entity = &crmcontracts.MagicEntityRef{
+			Type: receipt.TargetType, Id: openapi_types.UUID(receipt.TargetID), Label: receipt.TargetLabel,
+		}
+	}
+	if receipt.Approval {
+		line.ApprovalKind = &receipt.Kind
 	}
 	return line
 }

@@ -42510,6 +42510,9 @@ type MagicLineRecord struct {
 	Entity     MagicEntityRef `json:"entity"`
 	OccurredAt time.Time      `json:"occurred_at"`
 
+	// ReceiptId The canonical Receipt.id this record's change stands for, the same id a done line lists in `receipt_ids`. A client joins a receipt's review actions by it. Absent on older responses.
+	ReceiptId *openapi_types.UUID `json:"receipt_id,omitempty"`
+
 	// Undo Whether this change can be taken back, and why not when it cannot.
 	//
 	// A greyed control with no reason is the shape this replaces. The reasons are
@@ -42564,7 +42567,10 @@ type MagicReceipt struct {
 	AsOf             time.Time   `json:"as_of"`
 	CouldNotComplete []MagicLine `json:"could_not_complete"`
 	Done             []MagicLine `json:"done"`
-	NeedsYou         []MagicLine `json:"needs_you"`
+
+	// DoneIsFloor The done lane's second source, the system's decisions, was read to its bound and still had more, so the lane's total is a floor. Absent on older responses.
+	DoneIsFloor *bool       `json:"done_is_floor,omitempty"`
+	NeedsYou    []MagicLine `json:"needs_you"`
 
 	// NotShown What this read left out, by kind and count.
 	//

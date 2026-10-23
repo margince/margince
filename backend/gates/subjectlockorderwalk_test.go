@@ -58,6 +58,12 @@ func TestTheLockOrderWalkJudgesWhenCodeRunsNotWhereItIsWritten(t *testing.T) {
 				work()
 			}
 			work()`, true},
+		{"a callback kept in a struct for the holding callee to run", `
+			w := writer{locate: func() { tx.Exec(ctx, "UPDATE company_fact SET value = $1") }}
+			auth.HoldWritableLive(ctx, tx, "company", id)
+			tx.Exec(ctx, "UPDATE company_fact SET value = $1")
+			w.canonical = func() { tx.Exec(ctx, "UPDATE company SET name = $1") }
+			write(w)`, false},
 		{"a transaction callback that holds before it writes", `
 			s.tx(ctx, func(tx pgx.Tx) error {
 				auth.HoldWritableLive(ctx, tx, "company", id)

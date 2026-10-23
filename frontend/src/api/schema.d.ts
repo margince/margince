@@ -48087,6 +48087,8 @@ export interface components {
              *     absence for any other seat is not a zero.
              */
             not_shown: components["schemas"]["MagicNotShown"][];
+            /** @description The done lane's second source, the system's decisions, was read to its bound and still had more, so the lane's total is a floor. Absent on older responses. */
+            done_is_floor?: boolean;
             /** @description True when the reader cannot inspect workspace-wide unsupported record counts. Those counts are withheld; absence of described actions does not establish a complete receipt. */
             not_shown_count_withheld?: boolean;
             /** @description Lanes that could not be read. "All clear" is forbidden while one is here: a lane the reader may not see and a lane with nothing in it are different answers. */
@@ -48197,6 +48199,11 @@ export interface components {
         MagicLineRecord: {
             /** Format: uuid */
             audit_id: string;
+            /**
+             * Format: uuid
+             * @description The canonical Receipt.id this record's change stands for, the same id a done line lists in `receipt_ids`. A client joins a receipt's review actions by it. Absent on older responses.
+             */
+            receipt_id?: string;
             /** Format: date-time */
             occurred_at: string;
             entity: components["schemas"]["MagicEntityRef"];

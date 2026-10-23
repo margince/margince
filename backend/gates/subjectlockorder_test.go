@@ -221,7 +221,9 @@ func (w lockWalk) effects(body ast.Node) []lockEffect {
 	ast.Inspect(body, func(node ast.Node) bool {
 		switch n := node.(type) {
 		case *ast.FuncLit:
-			// A bound closure runs where it is called, below.
+			// A bound closure runs where it is called, below. A callback kept
+			// in a struct runs inside whichever callee is handed the struct,
+			// and that callee is judged on its own.
 			return !w.bound[n]
 		case *ast.DeferStmt:
 			deferred = append(w.effects(n.Call), deferred...)
@@ -311,17 +313,16 @@ func (w lockWalk) closureNamed(id *ast.Ident) *ast.FuncLit {
 	return nil
 }
 
-// boundLiterals are the closures a body binds to a name.
+// boundLiterals are the closures that do not run where they are written:
+// those assigned to a name or a field, and those kept in a composite value.
 func boundLiterals(body *ast.BlockStmt) map[*ast.FuncLit]bool {
 	bound := map[*ast.FuncLit]bool{}
 	ast.Inspect(body, func(node ast.Node) bool {
 		switch n := node.(type) {
 		case *ast.AssignStmt:
-			for i, rhs := range n.Rhs {
-				if lit, isLit := rhs.(*ast.FuncLit); isLit && i < len(n.Lhs) {
-					if _, named := n.Lhs[i].(*ast.Ident); named {
-						bound[lit] = true
-					}
+			for _, rhs := range n.Rhs {
+				if lit, isLit := rhs.(*ast.FuncLit); isLit {
+					bound[lit] = true
 				}
 			}
 		case *ast.ValueSpec:
@@ -329,6 +330,10 @@ func boundLiterals(body *ast.BlockStmt) map[*ast.FuncLit]bool {
 				if lit, isLit := value.(*ast.FuncLit); isLit {
 					bound[lit] = true
 				}
+			}
+		case *ast.KeyValueExpr:
+			if lit, isLit := n.Value.(*ast.FuncLit); isLit {
+				bound[lit] = true
 			}
 		}
 		return true

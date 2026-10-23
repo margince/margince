@@ -7,6 +7,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"slices"
 	"testing"
@@ -21,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -39,7 +41,9 @@ func appliedStageReceipt(t *testing.T, e *integration.Env, now time.Time) (*appr
 		t.Fatal(err)
 	}
 	dealID := ids.From[ids.DealKind](ids.UUID(deal.Id))
-	if _, err := e.Deals.CreateStageExitCriterion(ctx, deals.CreateCriterionInput{StageID: open, Key: "signed", Label: "Agreement signed", Kind: string(deals.CriterionDocumentSigned)}); err != nil {
+	// A second receipt in one test reuses the stage's criterion.
+	if _, err := e.Deals.CreateStageExitCriterion(ctx, deals.CreateCriterionInput{StageID: open, Key: "signed", Label: "Agreement signed", Kind: string(deals.CriterionDocumentSigned)}); err != nil &&
+		!errors.Is(err, apperrors.ErrConflict) {
 		t.Fatal(err)
 	}
 	company := e.SeedCompany(t, "Agreement buyer", &e.AdminUser)
@@ -174,5 +178,44 @@ func TestDoneForYouHasOneWindowOnBothSurfaces(t *testing.T) {
 				t.Fatalf("the decision is on the worklist=%t and behind %d lane lines, want shown=%t once on both", inHandled, standing, c.shown)
 			}
 		})
+	}
+}
+
+// Two decisions the system applied fold into one grouped line. Opened, each
+// record names its own canonical receipt, so each keeps its own review.
+func TestEachGroupedRecordNamesItsOwnReceipt(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	now := clocktest.Now(t)
+	clock := func() time.Time { return now }
+	svc, first := appliedStageReceipt(t, e, now)
+	_, second := appliedStageReceipt(t, e, now)
+	lane := newMagicService(e.Pool, svc, clock)
+	lane.WithUndoJudge(magicUndoJudge{seam: restoreSeamFor(e)})
+	receipt, err := lane.Read(ctx, nil, 100)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var grouped *crmcontracts.MagicLine
+	for i, line := range receipt.Done {
+		if line.ReceiptIds != nil && slices.Contains(*line.ReceiptIds, openapi_types.UUID(first.UUID)) {
+			grouped = &receipt.Done[i]
+		}
+	}
+	if grouped == nil || grouped.Count == nil || *grouped.Count != 2 {
+		t.Fatalf("the two applied stage moves drew %+v, want one line counting 2", grouped)
+	}
+	records, err := lane.LineRecords(ctx, ids.UUID(grouped.Id), receipt.Since, nil, 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+	named := map[openapi_types.UUID]bool{}
+	for _, record := range records.Data {
+		if record.ReceiptId != nil {
+			named[*record.ReceiptId] = true
+		}
+	}
+	if len(records.Data) != 2 || !named[openapi_types.UUID(first.UUID)] || !named[openapi_types.UUID(second.UUID)] {
+		t.Fatalf("the opened line names receipts %v, want both approvals", named)
 	}
 }

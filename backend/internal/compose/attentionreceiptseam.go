@@ -174,6 +174,7 @@ func receiptsWithin(rows []crmcontracts.Approval, since time.Time) []attention.R
 		if row.TargetEntityType != nil && row.TargetEntityId != nil {
 			receipt.TargetType = *row.TargetEntityType
 			receipt.TargetID = ids.UUID(*row.TargetEntityId)
+			receipt.TargetLabel = row.TargetLabel
 		}
 		out = append(out, receipt)
 	}

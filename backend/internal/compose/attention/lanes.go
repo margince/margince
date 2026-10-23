@@ -219,6 +219,8 @@ type Receipt struct {
 	// state: not every approval is about one.
 	TargetType string
 	TargetID   ids.UUID
+	// TargetLabel is the target's name as the decision was staged.
+	TargetLabel *string
 	// Undo names the audit row the record-history restore route puts back, on
 	// a receipt for work that was APPLIED rather than approved.
 	//
