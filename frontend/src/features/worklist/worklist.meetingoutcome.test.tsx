@@ -33,6 +33,7 @@ import {
 } from "../../design-system/richtext-testing";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { RecordZoneProvider } from "../../lib/recordzone";
 import { day, row, stub } from "../../testing/worklist.testkit";
 import { WorklistScreen } from "./worklist";
 
@@ -41,6 +42,7 @@ const MEETING_ID = "01a05500-0000-7000-8000-0000000000b1";
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
 });
 
 function aMeetingOwedAnAnswer(over = {}) {
@@ -72,7 +74,9 @@ const CAPTURED_MEETING = {
   kind: "meeting",
   subject: "Discovery call with Turbinenbau",
   body: "Organizer: greta@turbinenbau.example\nAttendees: lars@gradion.com",
-  occurred_at: "2026-08-31T08:00:00Z",
+  // 21:00 in Bangkok and 09:00 in New York: noon in neither zone, so a save
+  // that wrote the zone's noon cannot pass for one that kept the start.
+  occurred_at: "2026-01-15T14:00:00Z",
   meeting_status: "booked",
   version: 3,
   source: "gcal",
@@ -87,6 +91,7 @@ function stubWithMeetingRead(
   sent: unknown[],
   patchStatus = 200,
   meeting: Record<string, unknown> = CAPTURED_MEETING,
+  preconditions: (string | null)[] = [],
 ) {
   stub(aDayWithOne());
   const passthrough = globalThis.fetch;
@@ -106,6 +111,21 @@ function stubWithMeetingRead(
             : String(init?.body ?? "");
           if (body !== "") {
             sent.push(JSON.parse(body));
+          }
+          const precondition = request?.headers.get("If-Match") ?? null;
+          preconditions.push(precondition);
+          if (precondition !== String(meeting.version)) {
+            return new Response(
+              JSON.stringify({
+                title: "Conflict",
+                status: 409,
+                code: "version_skew",
+              }),
+              {
+                status: 409,
+                headers: { "content-type": "application/problem+json" },
+              },
+            );
           }
           if (patchStatus !== 200) {
             return new Response(JSON.stringify({ title: "no" }), {
@@ -257,18 +277,132 @@ describe("a meeting that owes an answer", () => {
 // mounts no region — the testkit is production-shaped for the conformance gate,
 // which allows one ToastProvider and one ToastRegion and names main.tsx as
 // their home. Mounted here, in a file the gate does not scan.
-function renderUnderAToastRegion() {
-  const client = new QueryClient({
+function renderUnderAToastRegion(
+  zone = "Asia/Bangkok",
+  client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
-  });
+  }),
+) {
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <ToastProvider>
-          <WorklistScreen />
-          <ToastRegion />
-        </ToastProvider>
+        <RecordZoneProvider zone={zone}>
+          <ToastProvider>
+            <WorklistScreen />
+            <ToastRegion />
+          </ToastProvider>
+        </RecordZoneProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );
 }
+
+// Marking a meeting held must not move its start. The dialog sends a start
+// only when the reader moved the day, and then keeps the time of day the
+// meeting had in the record zone.
+describe("the start a meeting outcome saves", () => {
+  async function openAndSave(
+    zone: string,
+    day?: string,
+    client?: QueryClient,
+  ): Promise<void> {
+    const user = userEvent.setup();
+    renderUnderAToastRegion(zone, client);
+    await user.click(await screen.findByRole("button", { name: /update/i }));
+    await screen.findByDisplayValue("Discovery call with Turbinenbau");
+    if (day !== undefined) {
+      fireEvent.change(screen.getByLabelText("Date"), {
+        target: { value: day },
+      });
+    }
+    await user.click(screen.getByRole("button", { name: /^log$/i }));
+  }
+
+  it.each(["Asia/Bangkok", "America/New_York"])(
+    "sends no start when the day stayed, in %s",
+    async (zone) => {
+      const sent: Record<string, unknown>[] = [];
+      stubWithMeetingRead(sent);
+      await openAndSave(zone);
+
+      expect(
+        await screen.findByText(/Meeting outcome recorded/i),
+      ).not.toBeNull();
+      expect(sent).toHaveLength(1);
+      expect(sent[0]).not.toHaveProperty("occurred_at");
+    },
+  );
+
+  it.each([
+    ["Asia/Bangkok", "2026-01-16"],
+    ["America/New_York", "2026-01-16"],
+  ])("keeps the time of day on the next day, in %s", async (zone, nextDay) => {
+    const sent: Record<string, unknown>[] = [];
+    stubWithMeetingRead(sent);
+    await openAndSave(zone, nextDay);
+
+    expect(await screen.findByText(/Meeting outcome recorded/i)).not.toBeNull();
+    expect(sent[0]).toMatchObject({
+      occurred_at: "2026-01-16T14:00:00.000Z",
+    });
+  });
+
+  it("files a meeting moved onto today at now while its hour is still to come", async () => {
+    // 17:00 in Bangkok; the meeting's 21:00 has not come yet.
+    vi.useFakeTimers({ toFake: ["Date"], shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-01-20T10:00:00Z"));
+    const sent: Record<string, unknown>[] = [];
+    stubWithMeetingRead(sent);
+    await openAndSave("Asia/Bangkok", "2026-01-20");
+
+    expect(await screen.findByText(/Meeting outcome recorded/i)).not.toBeNull();
+    const filed = Date.parse(String(sent[0]?.occurred_at));
+    expect(filed).toBeGreaterThanOrEqual(Date.parse("2026-01-20T10:00:00Z"));
+    expect(filed).toBeLessThan(Date.parse("2026-01-20T14:00:00Z"));
+  });
+
+  it("files a meeting moved onto today at its own time once that hour passed", async () => {
+    // 22:00 in Bangkok; the meeting's 21:00 is an hour ago.
+    vi.useFakeTimers({ toFake: ["Date"], shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-01-20T15:00:00Z"));
+    const sent: Record<string, unknown>[] = [];
+    stubWithMeetingRead(sent);
+    await openAndSave("Asia/Bangkok", "2026-01-20");
+
+    expect(await screen.findByText(/Meeting outcome recorded/i)).not.toBeNull();
+    expect(sent[0]).toMatchObject({
+      occurred_at: "2026-01-20T14:00:00.000Z",
+    });
+  });
+
+  it("checks the save against the version the form was seeded from", async () => {
+    const sent: Record<string, unknown>[] = [];
+    const preconditions: (string | null)[] = [];
+    // The server already holds version 5: a calendar replay moved the
+    // meeting while the dialog was open.
+    stubWithMeetingRead(
+      sent,
+      200,
+      { ...CAPTURED_MEETING, version: 5 },
+      preconditions,
+    );
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+    });
+    client.setQueryData(["activity", MEETING_ID], CAPTURED_MEETING);
+    const user = userEvent.setup();
+    renderUnderAToastRegion("Asia/Bangkok", client);
+    await user.click(await screen.findByRole("button", { name: /update/i }));
+    await screen.findByDisplayValue("Discovery call with Turbinenbau");
+    client.setQueryData(["activity", MEETING_ID], {
+      ...CAPTURED_MEETING,
+      version: 5,
+      occurred_at: "2026-01-15T15:00:00Z",
+    });
+    await user.click(screen.getByRole("button", { name: /^log$/i }));
+
+    expect(await screen.findByRole("alert")).not.toBeNull();
+    expect(preconditions).toEqual(["3"]);
+    expect(screen.queryByText(/Meeting outcome recorded/i)).toBeNull();
+  });
+});

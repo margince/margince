@@ -190,6 +190,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The next meeting's end comes from its calendar invitation, and the test names the record zone it renders that span in, so the expected span is stated rather than inherited.",
   },
   {
+    file: "features/worklist/worklist.meetingoutcome.test.tsx",
+    why: "A meeting moved to another day keeps its time of day in the record zone, so the test names two zones whose noon is not the meeting's start, east and west of UTC.",
+  },
+  {
     file: "features/booking/book.test.tsx",
     why: "The guest deliberately selects Bangkok and the test verifies that its slot labels follow that chosen zone rather than the browser default.",
   },

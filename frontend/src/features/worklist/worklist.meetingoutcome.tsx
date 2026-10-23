@@ -43,7 +43,8 @@ import { Heading } from "../../design-system/heading";
 import { Select } from "../../design-system/select";
 import { useToast } from "../../design-system/toast";
 import { isTranscriptActivity } from "../../design-system/transcriptread";
-import { calendarDay, middayInstant } from "../../format/calendarday";
+import { calendarDay } from "../../format/calendarday";
+import { sameWallClockOnDay } from "../../format/timezone";
 import { useT } from "../../i18n";
 import { outgoingBody } from "../../lib/activitybody";
 import { useActivity } from "../../lib/activityread";
@@ -63,6 +64,35 @@ type OutcomeDraft = {
   body: string;
   day: string;
 };
+
+/**
+ * The one read the draft was seeded from. The save is checked against its
+ * version, so a meeting that changed while the dialog was open is refused
+ * instead of taking words written against the older copy.
+ */
+type OutcomeSeed = {
+  occurredAt: string;
+  day: string;
+  version: number | undefined;
+};
+
+/**
+ * The start the save sends: none when the day stayed, so the meeting keeps
+ * its real start. A moved meeting keeps its time of day in the record zone,
+ * capped at now, because a meeting cannot be filed in the future.
+ */
+function movedStart(
+  seed: OutcomeSeed,
+  day: string,
+  zone: string,
+  now: Date,
+): string | undefined {
+  if (day === seed.day) {
+    return undefined;
+  }
+  const moved = sameWallClockOnDay(seed.occurredAt, day, zone);
+  return Date.parse(moved) > now.getTime() ? now.toISOString() : moved;
+}
 
 /**
  * MeetingOutcome is the row's answer: cancel it, or say what came of it.
@@ -144,6 +174,7 @@ function MeetingOutcomeDialog({
   const recordZone = useRecordZone();
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<OutcomeDraft | null>(null);
+  const [seed, setSeed] = useState<OutcomeSeed | null>(null);
   // The SAME read the task detail makes, and keyed the same way, so a write
   // that invalidates ["activity", id] refreshes whichever of the two is open.
   const meeting = useActivity(id);
@@ -152,11 +183,17 @@ function MeetingOutcomeDialog({
   // effect paints the empty form first, and a reader who types into that frame
   // has their words replaced when the seed lands.
   if (draft === null && meeting.data) {
+    const day = calendarDay(new Date(meeting.data.occurred_at), recordZone);
     setDraft({
       status: "held",
       subject: meeting.data.subject ?? "",
       body: meeting.data.body ?? "",
-      day: calendarDay(new Date(meeting.data.occurred_at), recordZone),
+      day,
+    });
+    setSeed({
+      occurredAt: meeting.data.occurred_at,
+      day,
+      version: meeting.data.version,
     });
   }
   const save = useMutation({
@@ -165,15 +202,21 @@ function MeetingOutcomeDialog({
     // gets stored on a customer's meeting.
     mutationFn: async (input: {
       draft: OutcomeDraft;
-      version: number | undefined;
+      seed: OutcomeSeed;
       zone: string;
       transcript: boolean;
     }) => {
+      const occurredAt = movedStart(
+        input.seed,
+        input.draft.day,
+        input.zone,
+        new Date(),
+      );
       unwrap(
         await api.PATCH("/activities/{id}", {
           params: {
             path: { id },
-            ...ifMatch(requireVersion(input.version)),
+            ...ifMatch(requireVersion(input.seed.version)),
           },
           body: {
             meeting_status: input.draft.status,
@@ -181,10 +224,7 @@ function MeetingOutcomeDialog({
             // An emptied box clears the note rather than storing "": null is what
             // the column holds for a meeting nobody has written about.
             body: outgoingBody(input.draft.body, input.transcript),
-            // Noon on the picked day, in the record's zone: the instant activitybody
-            // mints for a backdated entry. So a meeting moved by a day here and one
-            // logged by hand land on the same timeline heading.
-            occurred_at: middayInstant(input.draft.day, input.zone),
+            ...(occurredAt === undefined ? {} : { occurred_at: occurredAt }),
           },
         }),
         t,
@@ -208,7 +248,7 @@ function MeetingOutcomeDialog({
       <ErrorLine error={meeting.error} />
       {/* Only while the read holds the meeting: a refused re-read withdraws
           what the draft was seeded from, and the version a save needs. */}
-      {draft && meeting.data && (
+      {draft && seed && meeting.data && (
         <>
           <form
             id={formId}
@@ -220,7 +260,7 @@ function MeetingOutcomeDialog({
               }
               save.mutate({
                 draft,
-                version: meeting.data?.version,
+                seed,
                 zone: recordZone,
                 transcript,
               });
