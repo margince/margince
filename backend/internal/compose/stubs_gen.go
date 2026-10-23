@@ -823,6 +823,10 @@ func (stubs) KeepDomainQuestion(w nethttp.ResponseWriter, r *nethttp.Request, do
 	httperr.NotImplemented(w, r, "KeepDomainQuestion")
 }
 
+func (stubs) KeepDomainAsVendor(w nethttp.ResponseWriter, r *nethttp.Request, domain string) {
+	httperr.NotImplemented(w, r, "KeepDomainAsVendor")
+}
+
 func (stubs) ListWorkspaceEmailDomains(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListWorkspaceEmailDomains")
 }

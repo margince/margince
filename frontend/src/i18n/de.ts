@@ -9299,12 +9299,17 @@ export const de = {
     "Erneut lesen lässt die Identität offen. Ausschließen stoppt die Erfassung für deine Postfächer.",
   "worklist.domainReview.effects":
     "Erstellen legt ein Unternehmen an. Erneut lesen lässt die Identität offen. Ausschließen stoppt die Erfassung für deine Postfächer.",
+  "worklist.domainReview.keepVendor": "Als Anbieter behalten",
+  "worklist.domainReview.vendorEffects":
+    "Erstellen legt ein Unternehmen an und verknüpft seine Kontakte. Als Anbieter behalten legt nichts an und fragt nicht erneut. Ausschließen stoppt die Erfassung für deine Postfächer.",
   "worklist.batch.domain_questions_one": "{count} Domain prüfen",
   "worklist.batch.domain_questions_other": "{count} Domains prüfen",
   "blockedDomains.source.unevidenced":
     "Kein Unternehmen auf der Website genannt",
   "blockedDomains.source.staleEvidence": "Belegende E-Mails zu alt",
   "blockedDomains.source.nearDuplicate": "Unternehmensname existiert bereits",
+  "blockedDomains.source.vendorVerdict":
+    "Wirkt wie ein Mail- oder Hosting-Anbieter",
   "blockedDomains.rowAdmit": "Zulassen",
   "blockedDomains.rowRefuse": "Ablehnen",
   "blockedDomains.rowReopen": "Erneut prüfen",
@@ -15963,6 +15968,11 @@ export const de = {
   "worklist.verb.domainKept": "Unternehmen aus Domain erstellt",
   "worklist.verb.domainKeepFailed":
     "Das Unternehmen konnte nicht erstellt werden. Bitte versuche es erneut.",
+  "worklist.verb.keepAsVendor": "Als Anbieter behalten",
+  "worklist.verb.domainKeptAsVendor":
+    "Als Anbieter behalten. Kein Unternehmen angelegt",
+  "worklist.verb.domainKeepAsVendorFailed":
+    "Die Antwort wurde nicht gespeichert. Erneut versuchen.",
   "worklist.verb.domainDiscarded":
     "Deine E-Mails von dieser Domain werden nicht mehr erfasst.",
   "worklist.verb.domainDiscardFailed":

@@ -29,6 +29,9 @@ func (h domainQuestionHandlers) ListDomainQuestions(w http.ResponseWriter, r *ht
 	data := make([]crmcontracts.DomainQuestion, 0, len(rows))
 	for _, q := range rows {
 		item := crmcontracts.DomainQuestion{Domain: q.Domain, ReasonCode: q.ReasonCode, AskedAt: q.AskedAt, EvidenceAt: q.EvidenceAt, Deferred: q.Deferred}
+		if q.Note != "" {
+			item.Note = &q.Note
+		}
 		if q.Forward != nil {
 			item.EffectiveUrl = &q.Forward.EffectiveURL
 			item.RedirectChain = &q.Forward.RedirectChain

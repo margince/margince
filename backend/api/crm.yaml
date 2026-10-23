@@ -19043,6 +19043,37 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /capture/domain-questions/{domain}/keep-vendor:
+    post:
+      tags: [Capture]
+      operationId: keepDomainAsVendor
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport
+      x-agent-access: human-only
+      summary: Answer an open vendor question by keeping the vendor verdict.
+      description: |
+        The site triage read this domain as a mail or hosting vendor and left the question to a
+        colleague. This answer agrees: the domain is settled as `provider` by a human, no company is
+        created, and later mail from the domain raises no new question.
+
+        Only a colleague who was asked may answer. A caller with no open question about the
+        domain gets `404`, and a domain whose open question is not a vendor question gets `409`.
+
+        Demands `company:update`, the gate every domain decision takes.
+      parameters:
+        - name: domain
+          in: path
+          required: true
+          schema: { type: string }
+          description: 'The domain to keep as a vendor; normalized to its registrable form.'
+      responses:
+        '204':
+          description: The domain is settled as a vendor.
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /capture/consumer-mail-baseline:
     get:
       tags: [Capture]
@@ -33879,6 +33910,9 @@ components:
         redirect_chain:
           type: array
           items: { type: string }
+        note:
+          type: string
+          description: The site triage's own sentence on a `vendor_verdict` question, in the workspace language.
 
     BlockedDomain:
       type: object
@@ -33916,7 +33950,7 @@ components:
             words and shows `note` for a decision somebody explained.
         reason_code:
           type: string
-          enum: [stated, company_created, kept_as_company, bulk_sender, unevidenced, stale_evidence, near_duplicate, forwarded_identity, reserved_domain, unknown]
+          enum: [stated, company_created, kept_as_company, bulk_sender, unevidenced, stale_evidence, near_duplicate, forwarded_identity, vendor_verdict, reserved_domain, unknown]
           description: |
             Why, as a code the client words in the reader's language.
 
@@ -33926,8 +33960,8 @@ components:
               as a company.
             - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
               company this business works with. `sender_kind` says which, when it is known.
-            - `unevidenced`, `stale_evidence`, `near_duplicate`: the undecided domain's open
-              question, as `source` describes each one.
+            - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`: the undecided
+              domain's open question, as `source` describes each one.
             - `unknown`: the row records a reason this server has no word for. `reason` still
               carries its stored sentence.
         note:
@@ -33944,14 +33978,15 @@ components:
             a company the reader may not see stays withheld by both.
         source:
           type: string
-          enum: [verdict, heuristic, human, unevidenced, stale_evidence, near_duplicate, forwarded_identity, reserved_domain]
+          enum: [verdict, heuristic, human, unevidenced, stale_evidence, near_duplicate, forwarded_identity, vendor_verdict, reserved_domain]
           description: |
             What decided it, or — for an `undecided` domain — what stopped the machine deciding.
             `human` decisions outrank every machine one. `unevidenced` means nothing the crawl
             found named a company; `stale_evidence` means the newest mail from the domain is too
             old to mint one from today's site; `near_duplicate` means more than one company
             here already carries the name it resolved to, and which of them this domain belongs
-            to is a human's call rather than the machine's.
+            to is a human's call rather than the machine's; `vendor_verdict` means the site reads
+            as a mail or hosting vendor, and a colleague decides whether its staff get a company.
         decided_at: { type: string, format: date-time, description: 'When the decision was recorded. For an `undecided` domain, when the row last moved.' }
         company_id:
           type: string
@@ -62172,6 +62207,9 @@ components:
         domain_reason_code:
           type: string
           description: The domain question's reason code, rendered in the reader's language.
+        domain_note:
+          type: string
+          description: The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language.
         notice_origin: { $ref: '#/components/schemas/NoticeOrigin' }
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
@@ -62351,7 +62389,7 @@ components:
             telling and so has to carry the way back with it.
         actions:
           type: array
-          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply, undo, keep, discard, reopen] }
+          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply, undo, keep, keep_as_vendor, discard, reopen] }
           description: |
             What this item offers. `decide` and `merge` mean the verb is irreversible and a
             contact must choose; `complete` and `snooze` are a task's own verbs; `open` is
@@ -62359,7 +62397,8 @@ components:
 
             Domain questions offer `keep`, `discard`, and `reopen` where allowed. Keeping creates a
             company or matches the supplied `company_id`; forwarded identity requires an
-            explicit match. Discarding stops the caller's own mailboxes capturing that
+            explicit match. A vendor question offers `keep_as_vendor` instead of `reopen`, which
+            settles the domain as a vendor and creates nothing. Discarding stops the caller's own mailboxes capturing that
             domain. Reopening retries identification without settling identity. These verbs route
             to `/capture/domain-questions/{domain}/…`.
 
@@ -63764,6 +63803,9 @@ components:
         domain_reason_code:
           type: string
           description: The domain question's reason code, rendered in the reader's language.
+        domain_note:
+          type: string
+          description: The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language.
         notice_origin: { $ref: '#/components/schemas/NoticeOrigin' }
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
@@ -63962,7 +64004,7 @@ components:
             telling and so has to carry the way back with it.
         actions:
           type: array
-          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply, undo, keep, discard, reopen] }
+          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply, undo, keep, keep_as_vendor, discard, reopen] }
           description: 'What this item offers, routed to the endpoint that owns the verb.'
         band:
           type: string

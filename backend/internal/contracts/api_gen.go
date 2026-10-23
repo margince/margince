@@ -2355,21 +2355,22 @@ func (e AttentionConnectionFactsMedium) Valid() bool {
 
 // Defines values for AttentionItemActions.
 const (
-	AttentionItemActionsAcknowledge AttentionItemActions = "acknowledge"
-	AttentionItemActionsAct         AttentionItemActions = "act"
-	AttentionItemActionsComplete    AttentionItemActions = "complete"
-	AttentionItemActionsDecide      AttentionItemActions = "decide"
-	AttentionItemActionsDiscard     AttentionItemActions = "discard"
-	AttentionItemActionsDismiss     AttentionItemActions = "dismiss"
-	AttentionItemActionsKeep        AttentionItemActions = "keep"
-	AttentionItemActionsMerge       AttentionItemActions = "merge"
-	AttentionItemActionsOpen        AttentionItemActions = "open"
-	AttentionItemActionsReopen      AttentionItemActions = "reopen"
-	AttentionItemActionsReply       AttentionItemActions = "reply"
-	AttentionItemActionsRetry       AttentionItemActions = "retry"
-	AttentionItemActionsSetAside    AttentionItemActions = "set_aside"
-	AttentionItemActionsSnooze      AttentionItemActions = "snooze"
-	AttentionItemActionsUndo        AttentionItemActions = "undo"
+	AttentionItemActionsAcknowledge  AttentionItemActions = "acknowledge"
+	AttentionItemActionsAct          AttentionItemActions = "act"
+	AttentionItemActionsComplete     AttentionItemActions = "complete"
+	AttentionItemActionsDecide       AttentionItemActions = "decide"
+	AttentionItemActionsDiscard      AttentionItemActions = "discard"
+	AttentionItemActionsDismiss      AttentionItemActions = "dismiss"
+	AttentionItemActionsKeep         AttentionItemActions = "keep"
+	AttentionItemActionsKeepAsVendor AttentionItemActions = "keep_as_vendor"
+	AttentionItemActionsMerge        AttentionItemActions = "merge"
+	AttentionItemActionsOpen         AttentionItemActions = "open"
+	AttentionItemActionsReopen       AttentionItemActions = "reopen"
+	AttentionItemActionsReply        AttentionItemActions = "reply"
+	AttentionItemActionsRetry        AttentionItemActions = "retry"
+	AttentionItemActionsSetAside     AttentionItemActions = "set_aside"
+	AttentionItemActionsSnooze       AttentionItemActions = "snooze"
+	AttentionItemActionsUndo         AttentionItemActions = "undo"
 )
 
 // Valid indicates whether the value is a known member of the AttentionItemActions enum.
@@ -2388,6 +2389,8 @@ func (e AttentionItemActions) Valid() bool {
 	case AttentionItemActionsDismiss:
 		return true
 	case AttentionItemActionsKeep:
+		return true
+	case AttentionItemActionsKeepAsVendor:
 		return true
 	case AttentionItemActionsMerge:
 		return true
@@ -3421,6 +3424,7 @@ const (
 	BlockedDomainReasonCodeStated            BlockedDomainReasonCode = "stated"
 	BlockedDomainReasonCodeUnevidenced       BlockedDomainReasonCode = "unevidenced"
 	BlockedDomainReasonCodeUnknown           BlockedDomainReasonCode = "unknown"
+	BlockedDomainReasonCodeVendorVerdict     BlockedDomainReasonCode = "vendor_verdict"
 )
 
 // Valid indicates whether the value is a known member of the BlockedDomainReasonCode enum.
@@ -3445,6 +3449,8 @@ func (e BlockedDomainReasonCode) Valid() bool {
 	case BlockedDomainReasonCodeUnevidenced:
 		return true
 	case BlockedDomainReasonCodeUnknown:
+		return true
+	case BlockedDomainReasonCodeVendorVerdict:
 		return true
 	default:
 		return false
@@ -3481,6 +3487,7 @@ const (
 	BlockedDomainSourceReservedDomain    BlockedDomainSource = "reserved_domain"
 	BlockedDomainSourceStaleEvidence     BlockedDomainSource = "stale_evidence"
 	BlockedDomainSourceUnevidenced       BlockedDomainSource = "unevidenced"
+	BlockedDomainSourceVendorVerdict     BlockedDomainSource = "vendor_verdict"
 	BlockedDomainSourceVerdict           BlockedDomainSource = "verdict"
 )
 
@@ -3500,6 +3507,8 @@ func (e BlockedDomainSource) Valid() bool {
 	case BlockedDomainSourceStaleEvidence:
 		return true
 	case BlockedDomainSourceUnevidenced:
+		return true
+	case BlockedDomainSourceVendorVerdict:
 		return true
 	case BlockedDomainSourceVerdict:
 		return true
@@ -20457,21 +20466,22 @@ func (e WorklistDealVerdictStanding) Valid() bool {
 
 // Defines values for WorklistItemActions.
 const (
-	WorklistItemActionsAcknowledge WorklistItemActions = "acknowledge"
-	WorklistItemActionsAct         WorklistItemActions = "act"
-	WorklistItemActionsComplete    WorklistItemActions = "complete"
-	WorklistItemActionsDecide      WorklistItemActions = "decide"
-	WorklistItemActionsDiscard     WorklistItemActions = "discard"
-	WorklistItemActionsDismiss     WorklistItemActions = "dismiss"
-	WorklistItemActionsKeep        WorklistItemActions = "keep"
-	WorklistItemActionsMerge       WorklistItemActions = "merge"
-	WorklistItemActionsOpen        WorklistItemActions = "open"
-	WorklistItemActionsReopen      WorklistItemActions = "reopen"
-	WorklistItemActionsReply       WorklistItemActions = "reply"
-	WorklistItemActionsRetry       WorklistItemActions = "retry"
-	WorklistItemActionsSetAside    WorklistItemActions = "set_aside"
-	WorklistItemActionsSnooze      WorklistItemActions = "snooze"
-	WorklistItemActionsUndo        WorklistItemActions = "undo"
+	WorklistItemActionsAcknowledge  WorklistItemActions = "acknowledge"
+	WorklistItemActionsAct          WorklistItemActions = "act"
+	WorklistItemActionsComplete     WorklistItemActions = "complete"
+	WorklistItemActionsDecide       WorklistItemActions = "decide"
+	WorklistItemActionsDiscard      WorklistItemActions = "discard"
+	WorklistItemActionsDismiss      WorklistItemActions = "dismiss"
+	WorklistItemActionsKeep         WorklistItemActions = "keep"
+	WorklistItemActionsKeepAsVendor WorklistItemActions = "keep_as_vendor"
+	WorklistItemActionsMerge        WorklistItemActions = "merge"
+	WorklistItemActionsOpen         WorklistItemActions = "open"
+	WorklistItemActionsReopen       WorklistItemActions = "reopen"
+	WorklistItemActionsReply        WorklistItemActions = "reply"
+	WorklistItemActionsRetry        WorklistItemActions = "retry"
+	WorklistItemActionsSetAside     WorklistItemActions = "set_aside"
+	WorklistItemActionsSnooze       WorklistItemActions = "snooze"
+	WorklistItemActionsUndo         WorklistItemActions = "undo"
 )
 
 // Valid indicates whether the value is a known member of the WorklistItemActions enum.
@@ -20490,6 +20500,8 @@ func (e WorklistItemActions) Valid() bool {
 	case WorklistItemActionsDismiss:
 		return true
 	case WorklistItemActionsKeep:
+		return true
+	case WorklistItemActionsKeepAsVendor:
 		return true
 	case WorklistItemActionsMerge:
 		return true
@@ -27815,7 +27827,8 @@ type AttentionItem struct {
 	//
 	// Domain questions offer `keep`, `discard`, and `reopen` where allowed. Keeping creates a
 	// company or matches the supplied `company_id`; forwarded identity requires an
-	// explicit match. Discarding stops the caller's own mailboxes capturing that
+	// explicit match. A vendor question offers `keep_as_vendor` instead of `reopen`, which
+	// settles the domain as a vendor and creates nothing. Discarding stops the caller's own mailboxes capturing that
 	// domain. Reopening retries identification without settling identity. These verbs route
 	// to `/capture/domain-questions/{domain}/…`.
 	//
@@ -27899,6 +27912,9 @@ type AttentionItem struct {
 	// Both now travel typed — `quiet_days` and `staged` below — and the client writes
 	// the sentence in the reader's own language.
 	Detail *string `json:"detail,omitempty"`
+
+	// DomainNote The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language.
+	DomainNote *string `json:"domain_note,omitempty"`
 
 	// DomainReasonCode The domain question's reason code, rendered in the reader's language.
 	DomainReasonCode *string `json:"domain_reason_code,omitempty"`
@@ -28980,8 +28996,8 @@ type BlockedDomain struct {
 	//   as a company.
 	// - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
 	//   company this business works with. `sender_kind` says which, when it is known.
-	// - `unevidenced`, `stale_evidence`, `near_duplicate`: the undecided domain's open
-	//   question, as `source` describes each one.
+	// - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`: the undecided
+	//   domain's open question, as `source` describes each one.
 	// - `unknown`: the row records a reason this server has no word for. `reason` still
 	//   carries its stored sentence.
 	ReasonCode BlockedDomainReasonCode `json:"reason_code"`
@@ -28994,7 +29010,8 @@ type BlockedDomain struct {
 	// found named a company; `stale_evidence` means the newest mail from the domain is too
 	// old to mint one from today's site; `near_duplicate` means more than one company
 	// here already carries the name it resolved to, and which of them this domain belongs
-	// to is a human's call rather than the machine's.
+	// to is a human's call rather than the machine's; `vendor_verdict` means the site reads
+	// as a mail or hosting vendor, and a colleague decides whether its staff get a company.
 	Source BlockedDomainSource `json:"source"`
 }
 
@@ -29011,8 +29028,8 @@ type BlockedDomainAdmission string
 //     as a company.
 //   - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
 //     company this business works with. `sender_kind` says which, when it is known.
-//   - `unevidenced`, `stale_evidence`, `near_duplicate`: the undecided domain's open
-//     question, as `source` describes each one.
+//   - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`: the undecided
+//     domain's open question, as `source` describes each one.
 //   - `unknown`: the row records a reason this server has no word for. `reason` still
 //     carries its stored sentence.
 type BlockedDomainReasonCode string
@@ -29025,7 +29042,8 @@ type BlockedDomainSenderKind string
 // found named a company; `stale_evidence` means the newest mail from the domain is too
 // old to mint one from today's site; `near_duplicate` means more than one company
 // here already carries the name it resolved to, and which of them this domain belongs
-// to is a human's call rather than the machine's.
+// to is a human's call rather than the machine's; `vendor_verdict` means the site reads
+// as a mail or hosting vendor, and a colleague decides whether its staff get a company.
 type BlockedDomainSource string
 
 // BlockedDomainListResponse defines model for BlockedDomainListResponse.
@@ -37590,13 +37608,16 @@ type DisqualifyLeadRequest struct {
 
 // DomainQuestion defines model for DomainQuestion.
 type DomainQuestion struct {
-	AskedAt       time.Time  `json:"asked_at"`
-	Deferred      bool       `json:"deferred"`
-	Domain        string     `json:"domain"`
-	EffectiveUrl  *string    `json:"effective_url,omitempty"`
-	EvidenceAt    *time.Time `json:"evidence_at,omitempty"`
-	ReasonCode    string     `json:"reason_code"`
-	RedirectChain *[]string  `json:"redirect_chain,omitempty"`
+	AskedAt      time.Time  `json:"asked_at"`
+	Deferred     bool       `json:"deferred"`
+	Domain       string     `json:"domain"`
+	EffectiveUrl *string    `json:"effective_url,omitempty"`
+	EvidenceAt   *time.Time `json:"evidence_at,omitempty"`
+
+	// Note The site triage's own sentence on a `vendor_verdict` question, in the workspace language.
+	Note          *string   `json:"note,omitempty"`
+	ReasonCode    string    `json:"reason_code"`
+	RedirectChain *[]string `json:"redirect_chain,omitempty"`
 }
 
 // DomainQuestionPage defines model for DomainQuestionPage.
@@ -54065,6 +54086,9 @@ type WorklistItem struct {
 	// Absent or empty means the row leaves through its own verb in `actions`, or,
 	// where it has none, a reason in `because` says why.
 	Dispositions *[]WorklistItemDispositions `json:"dispositions,omitempty"`
+
+	// DomainNote The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language.
+	DomainNote *string `json:"domain_note,omitempty"`
 
 	// DomainReasonCode The domain question's reason code, rendered in the reader's language.
 	DomainReasonCode *string `json:"domain_reason_code,omitempty"`
@@ -74102,6 +74126,9 @@ type ServerInterface interface {
 	// Answer an open domain question by keeping the company.
 	// (POST /capture/domain-questions/{domain}/keep)
 	KeepDomainQuestion(w http.ResponseWriter, r *http.Request, domain string)
+	// Answer an open vendor question by keeping the vendor verdict.
+	// (POST /capture/domain-questions/{domain}/keep-vendor)
+	KeepDomainAsVendor(w http.ResponseWriter, r *http.Request, domain string)
 	// The workspace's own email domains.
 	// (GET /capture/email-domains)
 	ListWorkspaceEmailDomains(w http.ResponseWriter, r *http.Request)
@@ -77396,6 +77423,12 @@ func (_ Unimplemented) DiscardDomainQuestion(w http.ResponseWriter, r *http.Requ
 // Answer an open domain question by keeping the company.
 // (POST /capture/domain-questions/{domain}/keep)
 func (_ Unimplemented) KeepDomainQuestion(w http.ResponseWriter, r *http.Request, domain string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Answer an open vendor question by keeping the vendor verdict.
+// (POST /capture/domain-questions/{domain}/keep-vendor)
+func (_ Unimplemented) KeepDomainAsVendor(w http.ResponseWriter, r *http.Request, domain string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -89778,6 +89811,38 @@ func (siw *ServerInterfaceWrapper) KeepDomainQuestion(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.KeepDomainQuestion(w, r, domain)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// KeepDomainAsVendor operation middleware
+func (siw *ServerInterfaceWrapper) KeepDomainAsVendor(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "domain" -------------
+	var domain string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "domain", chi.URLParam(r, "domain"), &domain, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "domain", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.KeepDomainAsVendor(w, r, domain)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -120108,6 +120173,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/capture/domain-questions/{domain}/keep", wrapper.KeepDomainQuestion)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/capture/domain-questions/{domain}/keep-vendor", wrapper.KeepDomainAsVendor)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/capture/email-domains", wrapper.ListWorkspaceEmailDomains)

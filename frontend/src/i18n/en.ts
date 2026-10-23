@@ -9357,11 +9357,15 @@ export const en = {
     "Retry keeps identity undecided. Exclude stops capture for your mailboxes.",
   "worklist.domainReview.effects":
     "Create adds a company. Retry keeps identity undecided. Exclude stops capture for your mailboxes.",
+  "worklist.domainReview.keepVendor": "Keep as vendor",
+  "worklist.domainReview.vendorEffects":
+    "Create adds a company and links its contacts. Keep as vendor creates nothing and does not ask again. Exclude stops capture for your mailboxes.",
   "worklist.batch.domain_questions_one": "Review {count} domain",
   "worklist.batch.domain_questions_other": "Review {count} domains",
   "blockedDomains.source.unevidenced": "No company named on the site",
   "blockedDomains.source.staleEvidence": "Supporting mail too old",
   "blockedDomains.source.nearDuplicate": "Company name already exists",
+  "blockedDomains.source.vendorVerdict": "Reads as a mail or hosting vendor",
   "blockedDomains.rowAdmit": "Allow",
   "blockedDomains.rowRefuse": "Refuse",
   "blockedDomains.rowReopen": "Ask again",
@@ -15903,6 +15907,10 @@ export const en = {
   "worklist.verb.discard": "Exclude domain",
   "worklist.verb.domainKept": "Company created from domain",
   "worklist.verb.domainKeepFailed": "Company was not created. Retry.",
+  "worklist.verb.keepAsVendor": "Keep as vendor",
+  "worklist.verb.domainKeptAsVendor": "Kept as a vendor. No company created",
+  "worklist.verb.domainKeepAsVendorFailed":
+    "The vendor answer was not saved. Retry.",
   // The discard wording says WHOSE mail stops being captured, because the
   // colleague reading it shares this installation with people whose answer may
   // differ — and a sentence that said "excluded" flatly would read as a

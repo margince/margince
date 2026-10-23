@@ -351,3 +351,102 @@ it("keeps ordinary row decisions separate from forwarded review", async () => {
     writes[1].endsWith(`/capture/domain-questions/${undecided.domain}/discard`),
   ).toBe(true);
 });
+
+const vendor: Question = {
+  domain: "company-a.example",
+  deferred: false,
+  reason_code: "vendor_verdict",
+  asked_at: "2026-10-01T10:00:00Z",
+  note: "Classified as a mail or hosting vendor: sells managed hosting.",
+};
+
+it("answers a vendor question from the row with create company or keep as vendor", async () => {
+  const user = userEvent.setup();
+  const writes: string[] = [];
+  transport((request, url) => {
+    expect(request.method).toBe("POST");
+    writes.push(url.pathname);
+    return url.pathname.endsWith("/keep-vendor")
+      ? new Response(null, { status: 204 })
+      : response(null, 202);
+  });
+  const item: WorklistItem = {
+    id: vendor.domain,
+    source: "domain_question",
+    category: "decisions",
+    level: 6,
+    consequence: "data_drifts",
+    title: vendor.domain,
+    detail: "Review identity",
+    because: [],
+    actions: ["keep", "keep_as_vendor", "discard"],
+    domain_reason_code: "vendor_verdict",
+  };
+  mount(<DomainQuestionAnswer item={item} />);
+  expect(screen.queryByRole("button", { name: "Domain review" })).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Keep as vendor" }));
+  await waitFor(() => expect(writes).toHaveLength(1));
+  const create = screen.getByRole("button", { name: "Create company" });
+  await waitFor(() => expect(create.hasAttribute("disabled")).toBe(false));
+  await user.click(create);
+  await waitFor(() => expect(writes).toHaveLength(2));
+  expect(
+    writes[0].endsWith(
+      `/capture/domain-questions/${vendor.domain}/keep-vendor`,
+    ),
+  ).toBe(true);
+  expect(
+    writes[1].endsWith(`/capture/domain-questions/${vendor.domain}/keep`),
+  ).toBe(true);
+});
+
+it("offers no keep as vendor on a question that is not a vendor question", () => {
+  transport(() => response(null, 202));
+  const item: WorklistItem = {
+    id: undecided.domain,
+    source: "domain_question",
+    category: "decisions",
+    level: 6,
+    consequence: "data_drifts",
+    title: undecided.domain,
+    detail: "Review identity",
+    because: [],
+    actions: ["keep", "discard", "reopen"],
+    domain_reason_code: "unevidenced",
+  };
+  mount(<DomainQuestionAnswer item={item} />);
+  expect(screen.queryByRole("button", { name: "Keep as vendor" })).toBeNull();
+});
+
+it.each([
+  ["Create company", "/capture/domain-questions/company-a.example/keep"],
+  ["Keep as vendor", "/capture/domain-questions/company-a.example/keep-vendor"],
+])(
+  "review answers a vendor question with %s and shows the triage's sentence",
+  async (label, path) => {
+    const user = userEvent.setup();
+    const writes: string[] = [];
+    let rows = [vendor];
+    transport((request, url) => {
+      if (request.method === "POST") {
+        writes.push(url.pathname);
+        rows = [];
+        return new Response(null, { status: 204 });
+      }
+      return response({ data: rows, page: { has_more: false } });
+    });
+    mount();
+    await user.click(screen.getByRole("button", { name: "Domain review" }));
+    expect(await screen.findByText(vendor.note ?? "")).toBeTruthy();
+    expect(screen.getByText("Reads as a mail or hosting vendor")).toBeTruthy();
+    expect(
+      screen.queryByRole("button", { name: "Retry site read" }),
+    ).toBeNull();
+    const button = screen.getByRole("button", { name: label });
+    await waitFor(() => expect(button.hasAttribute("disabled")).toBe(false));
+    await user.click(button);
+    expect(await screen.findByText("No domains need review.")).toBeTruthy();
+    expect(writes).toHaveLength(1);
+    expect(writes[0].endsWith(path)).toBe(true);
+  },
+);

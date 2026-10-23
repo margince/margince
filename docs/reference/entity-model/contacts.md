@@ -170,7 +170,7 @@ The 43 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `last_evidence_at` | `timestamp with time zone` |  |  |
 | `next_attempt_at` | `timestamp with time zone`, default `now()` |  |  |
 | `owner_id` | `uuid` |  | Points at `app_user.id`. |
-| `pending_reason` | `text` |  | One of `unevidenced`, `stale_evidence`, `near_duplicate`, `forwarded_identity`, `reserved_domain`. |
+| `pending_reason` | `text` |  | One of `unevidenced`, `stale_evidence`, `near_duplicate`, `forwarded_identity`, `vendor_verdict`, `reserved_domain`. |
 | `site_read_id` | `uuid` |  | Points at `site_read.id`. |
 | `status` | `text`, default `'pending'::text` | yes | One of `pending`, `company`, `personal`, `provider`, `no_site`. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
@@ -191,7 +191,7 @@ The 43 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `company_domain_disposition_admission_shape`: `CHECK ((((admission IS NULL) AND (admission_reason IS NULL) AND (admission_source IS NULL) AND (admission_at IS NULL)) OR ((admission IS NOT NULL) AND (admission_reason IS NOT NULL) AND (admission_source IS NOT NULL) AND (admission_at IS NOT NULL))))`
 - `company_domain_disposition_admission_source_check`: `CHECK (((admission_source IS NULL) OR (admission_source = ANY (ARRAY['verdict', 'heuristic', 'human']))))`
 - `company_domain_disposition_domain_check`: `CHECK (((domain = lower(domain)) AND (domain <> '')))`
-- `company_domain_disposition_pending_reason_check`: `CHECK (((pending_reason IS NULL) OR (pending_reason = ANY (ARRAY['unevidenced', 'stale_evidence', 'near_duplicate', 'forwarded_identity', 'reserved_domain']))))`
+- `company_domain_disposition_pending_reason_check`: `CHECK (((pending_reason IS NULL) OR (pending_reason = ANY (ARRAY['unevidenced', 'stale_evidence', 'near_duplicate', 'forwarded_identity', 'vendor_verdict', 'reserved_domain']))))`
 - `company_domain_disposition_pending_reason_shape`: `CHECK (((pending_reason IS NULL) OR ((status = 'pending') AND (admission IS DISTINCT FROM 'suppressed'))))`
 - `company_domain_disposition_settled_shape`: `CHECK ((((status = 'pending') AND (source IS NULL)) OR ((status = 'company') AND (source IS NOT NULL) AND (company_id IS NOT NULL)) OR ((status = ANY (ARRAY['personal', 'provider', 'no_site'])) AND (source IS NOT NULL))))`
 - `company_domain_disposition_source_check`: `CHECK (((source IS NULL) OR (source = ANY (ARRAY['site_read', 'heuristic', 'human']))))`

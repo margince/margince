@@ -9056,11 +9056,15 @@ export const vi = {
     "Đọc lại giữ danh tính chưa xác định. Loại sẽ ngừng ghi nhận cho hộp thư của bạn.",
   "worklist.domainReview.effects":
     "Tạo sẽ thêm công ty. Đọc lại giữ danh tính chưa xác định. Loại sẽ ngừng ghi nhận cho hộp thư của bạn.",
+  "worklist.domainReview.keepVendor": "Giữ là nhà cung cấp",
+  "worklist.domainReview.vendorEffects":
+    "Tạo sẽ thêm công ty và liên kết các liên hệ của nó. Giữ là nhà cung cấp không tạo gì và không hỏi lại. Loại trừ dừng thu thập cho hộp thư của bạn.",
   "worklist.batch.domain_questions_one": "Xem xét {count} tên miền",
   "worklist.batch.domain_questions_other": "Xem xét {count} tên miền",
   "blockedDomains.source.unevidenced": "Trang web không nêu tên công ty nào",
   "blockedDomains.source.staleEvidence": "Email làm căn cứ đã quá cũ",
   "blockedDomains.source.nearDuplicate": "Tên công ty đã tồn tại",
+  "blockedDomains.source.vendorVerdict": "Có vẻ là nhà cung cấp email hoặc hosting",
   "blockedDomains.rowAdmit": "Cho phép",
   "blockedDomains.rowRefuse": "Từ chối",
   "blockedDomains.rowReopen": "Hỏi lại",
@@ -15562,6 +15566,9 @@ export const vi = {
   "worklist.verb.discard": "Loại trừ tên miền",
   "worklist.verb.domainKept": "Đã tạo công ty từ tên miền",
   "worklist.verb.domainKeepFailed": "Không thể tạo công ty. Thử lại.",
+  "worklist.verb.keepAsVendor": "Giữ là nhà cung cấp",
+  "worklist.verb.domainKeptAsVendor": "Đã giữ là nhà cung cấp. Không tạo công ty",
+  "worklist.verb.domainKeepAsVendorFailed": "Chưa lưu được câu trả lời. Thử lại.",
   "worklist.verb.domainDiscarded":
     "Đã ngừng thu thập thư từ tên miền này trong hộp thư của bạn.",
   "worklist.verb.domainDiscardFailed": "Không thể loại trừ tên miền. Thử lại.",

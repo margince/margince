@@ -372,6 +372,7 @@ func (a attentionDomainQuestions) OpenDomainQuestions(ctx context.Context) ([]at
 			ReasonCode: row.ReasonCode,
 			AskedAt:    row.AskedAt,
 			EvidenceAt: row.EvidenceAt,
+			Note:       row.Note,
 		})
 	}
 	return out, nil

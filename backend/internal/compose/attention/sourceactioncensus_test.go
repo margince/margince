@@ -28,6 +28,7 @@ import (
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -100,7 +101,9 @@ var performedBySource = map[string][]crmcontracts.AttentionItemActions{
 	// exclusion. Neither needs anything typed, which is what lets a domain
 	// question settle from a queue row — and there is no `open`, because the
 	// subject is a domain rather than a record with a page.
-	"domain_question": {"keep", "discard", "reopen"},
+	//
+	// `keep_as_vendor` answers a vendor question with the triage's verdict.
+	"domain_question": {"keep", "keep_as_vendor", "discard", "reopen"},
 	// The privacy queue's own row. It is read here and answered there.
 	"dsr": {"open"},
 	// The disclosure duty, read here and discharged on the contact's own screen
@@ -343,6 +346,9 @@ func aDayWithEveryLaneCarryingARow(t *testing.T) crmcontracts.Attention {
 		WithDomainQuestions(&stubDomainQuestions{rows: []DomainQuestion{{
 			Domain: "mckinsey.com", Reason: "Nothing on the site named a company.",
 			AskedAt: readInstant,
+		}, {
+			Domain: "hosting.example", Reason: "The site reads as a mail or hosting vendor.",
+			ReasonCode: contacts.PendingVendorVerdict, AskedAt: readInstant,
 		}}}).
 		WithDealSuggestions(&stubSuggestions{rows: []crmcontracts.DealSuggestion{suggestionRow("proposal_sent")}}).
 		WithTagSuggestions(&stubTagSuggestions{rows: []crmcontracts.TagSuggestion{

@@ -12884,6 +12884,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/capture/domain-questions/{domain}/keep-vendor": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Answer an open vendor question by keeping the vendor verdict.
+         * @description The site triage read this domain as a mail or hosting vendor and left the question to a
+         *     colleague. This answer agrees: the domain is settled as `provider` by a human, no company is
+         *     created, and later mail from the domain raises no new question.
+         *
+         *     Only a colleague who was asked may answer. A caller with no open question about the
+         *     domain gets `404`, and a domain whose open question is not a vendor question gets `409`.
+         *
+         *     Demands `company:update`, the gate every domain decision takes.
+         */
+        post: operations["keepDomainAsVendor"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/capture/consumer-mail-baseline": {
         parameters: {
             query?: never;
@@ -23133,6 +23160,8 @@ export interface components {
             evidence_at?: string;
             effective_url?: string;
             redirect_chain?: string[];
+            /** @description The site triage's own sentence on a `vendor_verdict` question, in the workspace language. */
+            note?: string;
         };
         /**
          * @description One domain and where its company question stands. `suppressed` refuses it a company —
@@ -23176,13 +23205,13 @@ export interface components {
              *       as a company.
              *     - `bulk_sender`: mail from the domain was judged bulk or automated, so it is not a
              *       company this business works with. `sender_kind` says which, when it is known.
-             *     - `unevidenced`, `stale_evidence`, `near_duplicate`: the undecided domain's open
-             *       question, as `source` describes each one.
+             *     - `unevidenced`, `stale_evidence`, `near_duplicate`, `vendor_verdict`: the undecided
+             *       domain's open question, as `source` describes each one.
              *     - `unknown`: the row records a reason this server has no word for. `reason` still
              *       carries its stored sentence.
              * @enum {string}
              */
-            reason_code: "stated" | "company_created" | "kept_as_company" | "bulk_sender" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "reserved_domain" | "unknown";
+            reason_code: "stated" | "company_created" | "kept_as_company" | "bulk_sender" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "vendor_verdict" | "reserved_domain" | "unknown";
             /** @description The reason as its author wrote it, in their words. Sent only with `reason_code` `stated`. */
             note?: string;
             /**
@@ -23201,10 +23230,11 @@ export interface components {
              *     found named a company; `stale_evidence` means the newest mail from the domain is too
              *     old to mint one from today's site; `near_duplicate` means more than one company
              *     here already carries the name it resolved to, and which of them this domain belongs
-             *     to is a human's call rather than the machine's.
+             *     to is a human's call rather than the machine's; `vendor_verdict` means the site reads
+             *     as a mail or hosting vendor, and a colleague decides whether its staff get a company.
              * @enum {string}
              */
-            source: "verdict" | "heuristic" | "human" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "reserved_domain";
+            source: "verdict" | "heuristic" | "human" | "unevidenced" | "stale_evidence" | "near_duplicate" | "forwarded_identity" | "vendor_verdict" | "reserved_domain";
             /**
              * Format: date-time
              * @description When the decision was recorded. For an `undecided` domain, when the row last moved.
@@ -46376,6 +46406,8 @@ export interface components {
             readonly requested_decider_id?: string;
             /** @description The domain question's reason code, rendered in the reader's language. */
             domain_reason_code?: string;
+            /** @description The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language. */
+            domain_note?: string;
             notice_origin?: components["schemas"]["NoticeOrigin"];
             /** @description The owning record's id, as its own endpoint spells it. */
             id: string;
@@ -46553,7 +46585,8 @@ export interface components {
              *
              *     Domain questions offer `keep`, `discard`, and `reopen` where allowed. Keeping creates a
              *     company or matches the supplied `company_id`; forwarded identity requires an
-             *     explicit match. Discarding stops the caller's own mailboxes capturing that
+             *     explicit match. A vendor question offers `keep_as_vendor` instead of `reopen`, which
+             *     settles the domain as a vendor and creates nothing. Discarding stops the caller's own mailboxes capturing that
              *     domain. Reopening retries identification without settling identity. These verbs route
              *     to `/capture/domain-questions/{domain}/…`.
              *
@@ -46564,7 +46597,7 @@ export interface components {
              *     suggestion until later in the day. One word for both would make a client that
              *     handles `snooze` generically write the wrong endpoint.
              */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "discard" | "reopen")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "keep_as_vendor" | "discard" | "reopen")[];
         };
         /**
          * @description The two records a duplicate item proposes to merge, with the detection-time
@@ -47882,6 +47915,8 @@ export interface components {
             source_record?: components["schemas"]["AttentionSubject"];
             /** @description The domain question's reason code, rendered in the reader's language. */
             domain_reason_code?: string;
+            /** @description The site triage's own sentence on a `vendor_verdict` domain question, in the workspace language. */
+            domain_note?: string;
             notice_origin?: components["schemas"]["NoticeOrigin"];
             /** @description The owning record's id, as its own endpoint spells it. */
             id: string;
@@ -48059,7 +48094,7 @@ export interface components {
              */
             undo?: components["schemas"]["AppliedUndo"];
             /** @description What this item offers, routed to the endpoint that owns the verb. */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "discard" | "reopen")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "keep_as_vendor" | "discard" | "reopen")[];
             /**
              * @description The heading this row sits under, as an OUTCOME rather than a priority number.
              *
@@ -69234,6 +69269,32 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    keepDomainAsVendor: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The domain to keep as a vendor; normalized to its registrable form. */
+                domain: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The domain is settled as a vendor. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };

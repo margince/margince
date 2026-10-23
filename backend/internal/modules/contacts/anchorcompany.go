@@ -73,6 +73,7 @@ const (
 	actionUpdate       = "update"
 	auditKeyFields     = "fields"
 	auditKeySource     = "source"
+	auditKeyStatus     = "status"
 	auditKeyCapturedBy = "captured_by"
 	auditKeySourceURL  = "source_url"
 	// auditKeySourceRef names WHICH source: the activity a signature came

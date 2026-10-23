@@ -82,6 +82,9 @@ func (w *siteDeepReadWorker) runTriage(ctx context.Context, args SiteDeepReadArg
 			"read", args.SiteReadID.String(), "domain", domain, "err", err)
 		verdict = siteTriageVerdict{Kind: siteKindUnclear}
 	}
+	if verdict.Aborts() && verdict.Kind == siteKindProvider {
+		return w.withholdVendorTriage(ctx, said, args, claim, domain, verdict)
+	}
 	if verdict.Aborts() {
 		// The whole point of classifying first: one page read, no crawl, no
 		// extraction, no company invented.
@@ -90,6 +93,20 @@ func (w *siteDeepReadWorker) runTriage(ctx context.Context, args SiteDeepReadArg
 	}
 
 	return w.readAndResolveTriage(ctx, said, args, claim, domain)
+}
+
+// withholdVendorTriage puts a vendor verdict in front of a colleague. A vendor's
+// site reads the same to its customers and to its own staff, so the machine
+// does not settle it. A domain a colleague already admitted reads on.
+func (w *siteDeepReadWorker) withholdVendorTriage(ctx context.Context, said domainEvidenceCopy, args SiteDeepReadArgs, claim contacts.SiteReadClaim, domain string, verdict siteTriageVerdict) error {
+	held, err := w.contacts.WithholdVendorDomain(ctx, domain, said.triageEvidence(verdict), args.SiteReadID)
+	if err != nil {
+		return w.fail(ctx, args.SiteReadID, err)
+	}
+	if !held {
+		return w.readAndResolveTriage(ctx, said, args, claim, domain)
+	}
+	return w.finishTriageRead(ctx, said, args, claim, siteReadWireStatusCancelled, said.Say(domainEvidence.VendorQuestion), nil)
 }
 
 // triageWithoutLooking answers a domain when this worker may not read its site
