@@ -9,7 +9,7 @@
 \set ON_ERROR_STOP on
 \if :{?horizon_days}
 \else
-\set horizon_days 90
+\set horizon_days 30
 \endif
 
 -- The machine-sender markers of transactional.go, separators allowed where a
