@@ -14,9 +14,11 @@ func TestADealWhoseOwnerHasLeftStagesNoFollowUpCard(t *testing.T) {
 	cases := []struct {
 		name, kind, update string
 	}{
-		{"deactivated task proposal", "call", `status = 'deactivated'`},
-		{"archived task proposal", "call", `archived_at = now()`},
-		{"deactivated drafted reply", "email", `status = 'deactivated'`},
+		{"deactivated owner, call evidence", "call", `status = 'deactivated'`},
+		{"archived owner, call evidence", "call", `archived_at = now()`},
+		// An answerable thread would be drafted for a live owner. For one who left
+		// the pass falls back to the task proposal, and that is staged for nobody.
+		{"deactivated owner, answerable email thread", "email", `status = 'deactivated'`},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

@@ -861,7 +861,7 @@ export interface components {
             deadline: string;
             /**
              * Format: uuid
-             * @description The user the escalation task is assigned to (absent when nobody owns the lead).
+             * @description The user the escalation task is assigned to. It is the lead's owner while that owner is an active colleague, else the intake seat. Absent when no such seat exists, so it can differ from `owner_id`.
              */
             escalation_target?: string;
         };

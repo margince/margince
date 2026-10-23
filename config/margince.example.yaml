@@ -330,8 +330,9 @@ bootstrap_admin:
 #   # The email signature of the workspace, used in place of the own signature of each sender; empty
 #   # means none.
 #   signature_template:
-#   # The user id of the colleague who answers for a lead nobody owns once it misses its target; empty
-#   # means nobody, and a boot value that names no active colleague reaches nobody and logs a warning.
+#   # The user id of the colleague who answers for a lead nobody owns, or whose owner has left, once
+#   # it misses its target; empty means nobody, and a boot value that names no active colleague
+#   # reaches nobody and logs a warning.
 #   unassigned_escalation_user_id:
 
 # ---- data_tasks ----

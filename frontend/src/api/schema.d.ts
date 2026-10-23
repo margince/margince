@@ -35999,10 +35999,11 @@ export interface components {
             first_response_target_minutes: number;
             /**
              * Format: uuid
-             * @description Who answers when a lead nobody owns misses its target. Null means nobody is
-             *     configured, and an unowned breach is recorded without being addressed. Also reads
-             *     null once the named seat can no longer work the queue — suspended, archived, an
-             *     agent, a read seat — because a desk nobody reads is the same silence as none.
+             * @description Who answers when a lead nobody can answer for misses its target: one nobody owns,
+             *     or one whose owner has left. Null means nobody is configured, and such a breach is
+             *     recorded without being addressed. Also reads null once the named seat can no longer
+             *     work the queue — suspended, archived, an agent, a read seat — because a desk nobody
+             *     reads is the same silence as none.
              */
             unassigned_escalation_user_id?: string | null;
         };
@@ -36011,9 +36012,10 @@ export interface components {
             first_response_target_minutes?: number;
             /**
              * Format: uuid
-             * @description Who answers when a lead NOBODY owns misses its first-response target. An owned
-             *     lead's breach escalates to its owner; without this, an unowned one escalated to
-             *     nobody at all.
+             * @description Who answers when a lead nobody can answer for misses its first-response target:
+             *     one nobody owns, or one whose owner has left. An owned lead's breach escalates to
+             *     its owner while that owner is an active colleague; without this seat, the others
+             *     escalated to nobody at all.
              *
              *     Must name a seat that can be handed work AND may read leads, else `422` — an
              *     escalation carries the lead it is about, so a desk that cannot open the record is

@@ -23,7 +23,6 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -201,7 +200,7 @@ func markBreach(ctx context.Context, tx pgx.Tx, b SLABreach, now time.Time) erro
 		// Unset means nobody has said who runs the queue, so the breach stays
 		// unaddressed rather than going to someone who never agreed to it.
 		// The unassigned view surfaces those.
-		target, configured, err := unassignedEscalationTarget(ctx, tx, config.Bound())
+		target, configured, err := IntakeSeat(ctx, tx)
 		if err != nil {
 			return err
 		}

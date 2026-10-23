@@ -53,9 +53,9 @@ const activityKindTask = "task"
 const noticeLegWrap = "recording the notice"
 
 // leadSLAEscalation is the §18.2 escalation: on lead.sla_breached, one
-// kind=task activity linked to the lead, due now, assigned to the
-// escalation target the event names (the owner today), titled after the
-// breach.
+// kind=task activity linked to the lead, due now, titled after the breach.
+// It goes to the event's escalation target: the owner, or the intake seat when
+// the owner has left.
 type leadSLAEscalation struct {
 	db         *database.DB
 	activities *activities.Store
@@ -145,29 +145,25 @@ func (w leadSLAEscalation) Apply(ctx context.Context, ev workflow.Event, eff wor
 		words := mailcopy.For(string(identity.BaseLanguageForRecord(ctx, tx)))
 		subject := words.NoticeSLASubject
 		in.Subject = &subject
-		task := in
-		var target *ids.UserID
-		if in.AssigneeID != nil {
-			holds, err := seatCanHold(ctx, tx, *in.AssigneeID)
-			if err != nil {
-				return err
-			}
-			if holds {
-				target = in.AssigneeID
-				task.AdmitInvitedAssignee()
-			}
+		seat, addressed, err := deliverableSeat(ctx, tx, in.AssigneeID)
+		if err != nil {
+			return err
 		}
-		task.AssigneeID = target
+		task := in
+		task.AssigneeID = nil
+		if addressed {
+			task.AssigneeID = &seat
+		}
 		if _, _, err := w.activities.LogActivityTx(ctx, tx, task); err != nil {
 			return fmt.Errorf("logging the task: %w", err)
 		}
 		// A breach with no seat to address still writes its task; there is
 		// nobody to address the notice to, and inventing one would misdeliver it.
-		if target == nil {
+		if !addressed {
 			return nil
 		}
 		if _, err := w.notices.CreateTx(ctx, tx, notices.NewNotice{
-			Recipient: *target,
+			Recipient: seat,
 			Kind:      noticeKindLeadSLA,
 			Subject:   subject,
 			Body:      words.NoticeSLABody,
@@ -182,14 +178,26 @@ func (w leadSLAEscalation) Apply(ctx context.Context, ev workflow.Event, eff wor
 	return workflow.RunResult{Applied: eff.Actions}, nil
 }
 
-// seatCanHold says whether the task writer will accept the seat as an assignee.
+// deliverableSeat is the seat the task and notice go to: the event's target
+// while it is an active colleague, else the intake seat, else nobody.
 //
-// The bus can redeliver the event after its target has left. A refused task
-// write aborts the transaction and loses the breach, so the writer's own rule
-// (activities.NewTaskSeatState) is asked first.
-func seatCanHold(ctx context.Context, tx pgx.Tx, seat ids.UserID) (bool, error) {
-	state, err := activities.NewTaskSeatState(ctx, tx, seat)
-	return state != activities.SeatCannotHoldWork, err
+// The target was chosen when the scan ran, and the run is delivered later, so
+// the colleague may have left in between. A refused task write aborts the
+// transaction and loses the breach, so the writer's own rule is asked first.
+// An invited seat is not accepted, as the scan does not accept it either.
+func deliverableSeat(ctx context.Context, tx pgx.Tx, named *ids.UserID) (ids.UserID, bool, error) {
+	if named == nil {
+		return ids.UserID{}, false, nil
+	}
+	state, err := activities.NewTaskSeatState(ctx, tx, *named)
+	if err != nil || state == activities.SeatActive {
+		return *named, err == nil, err
+	}
+	intake, configured, err := contacts.IntakeSeat(ctx, tx)
+	if err != nil || !configured {
+		return ids.UserID{}, false, err
+	}
+	return ids.From[ids.UserKind](intake), true, nil
 }
 
 func (leadSLAEscalation) IdempotencyKey(ev workflow.Event) string {

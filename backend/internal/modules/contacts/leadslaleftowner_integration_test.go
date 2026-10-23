@@ -23,6 +23,8 @@ func TestABreachOnALeadItsOwnerLeftReachesTheIntakeSeat(t *testing.T) {
 		{"deactivated owner", `status = 'deactivated'`},
 		{"archived owner", `archived_at = now()`},
 		{"agent owner", `is_agent = true`},
+		{"invited owner", `status = 'invited'`},
+		{"read-seat owner", `seat_type = 'read'`},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

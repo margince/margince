@@ -1946,7 +1946,7 @@ type PublicEventLeadSlaBreached struct {
 	// Deadline The first-response deadline that passed.
 	Deadline time.Time `json:"deadline"`
 
-	// EscalationTarget The user the escalation task is assigned to (absent when nobody owns the lead).
+	// EscalationTarget The user the escalation task is assigned to. It is the lead's owner while that owner is an active colleague, else the intake seat. Absent when no such seat exists, so it can differ from `owner_id`.
 	EscalationTarget *openapi_types.UUID `json:"escalation_target,omitempty"`
 
 	// OwnerId The lead's owner at breach time (absent when unrouted).
