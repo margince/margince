@@ -93,10 +93,8 @@ archiving a record, and sending an email or a message.
 **confirm-first.** A confirm-first action does not happen. What the agent means
 to do is written down as an approval, and a human decides.
 
-An agent working on your passport does whatever you could do yourself in the
-app, without an approval. So for it, the only confirm-first action is enriching
-from the web (below). The other waits in this section apply to automatic work
-that no colleague's passport stands behind.
+An agent on your passport does what you could do yourself in the app, without
+an approval. For it, only enriching from the web is confirm-first.
 
 ### Why sending is not confirm-first by default
 A passport carries the seat, permissions and record visibility of the colleague who
@@ -114,7 +112,6 @@ it reach an address nobody holding the passport ever picked. That is a question
 about where your data goes, so it waits.
 
 The waits below apply only to automatic work with no passport behind it.
-
 **Folding one tag into another.** A merge renames a word on every record
 carrying it, and renaming it back does not undo it.
 
@@ -132,13 +129,6 @@ relinking it away does not remove that. A member can take the filing back with
 
 **Any field a human last wrote.** See the section below. This holds back more
 than all the others together.
-
-### Your installation can be stricter
-
-An installation that needs every agent send confirmed can set a floor on
-sending. A send then waits in Approvals like anything else. Whoever runs your
-installation sets this; there is no switch for it in Settings. If you need sends
-confirmed, ask them whether that floor is set. Ask; do not guess.
 
 The **Autonomy tiers** card in **Settings → AI access**, on the **Agent rules** tab under **For developers**, states the same rule.
 It reads "Send email, book meetings, update a contact or deal: runs immediately if the

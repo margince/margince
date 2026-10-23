@@ -5,7 +5,7 @@ package agents
 
 // The per-field human-edit-precedence split (interfaces.md §2.1):
 // update_record is 🟢, but automatic work never silently undoes a contact. An
-// agent acting as its user skips the split, as that person could overwrite.
+// agent acting as its user skips the split, as that colleague could overwrite.
 // When an auto-execute patch touches fields whose CURRENT value a human last
 // wrote, exactly those fields are split off into a 🟡 staged approval
 // while the remainder of the patch proceeds at the auto-execute tier in the same call.
@@ -40,7 +40,7 @@ type PatchSplit struct {
 // the precedence question cannot be answered, and "cannot check" must
 // never degrade into "agent overwrites the human".
 func SplitHumanOwned(ctx context.Context, ownership FieldOwnership, entityType string, id ids.UUID, patch json.RawMessage) (PatchSplit, error) {
-	// The person behind a passport may overwrite a colleague's typed value
+	// The colleague behind a passport may overwrite another's typed value
 	// themselves, so their agent may too.
 	if p, ok := principal.Actor(ctx); ok && p.ActsAsItsUser() {
 		return PatchSplit{AutoExecute: patch}, nil

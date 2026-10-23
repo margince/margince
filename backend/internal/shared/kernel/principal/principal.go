@@ -121,10 +121,10 @@ type Principal struct {
 	Permissions Permissions
 }
 
-// ActsAsItsUser reports whether p is an agent working on a person's passport.
-// Such an agent may do without a human's approval whatever that person could
+// ActsAsItsUser reports whether p is an agent working on a colleague's passport.
+// Such an agent may do without a human's approval whatever that colleague could
 // do unaided in the product: their live grants bound it at the store, as they
-// bound the person. A passportless agent is automatic work with nobody behind
+// bound the colleague. A passportless agent is automatic work with nobody behind
 // it, and keeps the confirm-first tier and the human-edit precedence split.
 func (p Principal) ActsAsItsUser() bool {
 	return p.Type == PrincipalAgent && !p.PassportID.IsZero() && !p.OnBehalfOf.IsZero()

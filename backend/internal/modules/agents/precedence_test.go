@@ -197,8 +197,8 @@ func agentCtx() context.Context {
 	})
 }
 
-// passportCtx is an agent working on a person's passport, which acts as that
-// person (principal.ActsAsItsUser).
+// passportCtx is an agent working on a colleague's passport, which acts as that
+// colleague (principal.ActsAsItsUser).
 func passportCtx() context.Context {
 	ctx := agentCtx()
 	p, _ := principal.Actor(ctx)
@@ -379,9 +379,9 @@ func TestAutoExecuteCallWithApprovalIDValidatesInsteadOfIgnoring(t *testing.T) {
 	}
 }
 
-// An agent on a person's passport may overwrite a colleague's typed value, as
-// that person could themselves: the whole patch applies and nothing stages.
-func TestAnAgentOnAPersonsPassportOverwritesAHumanOwnedField(t *testing.T) {
+// An agent on a colleague's passport may overwrite a colleague's typed value, as
+// that colleague could themselves: the whole patch applies and nothing stages.
+func TestAnAgentOnAColleaguesPassportOverwritesAHumanOwnedField(t *testing.T) {
 	target := ids.NewV7()
 	provider := &fixedProvider{record: nativeRecord(datasource.Record{
 		Ref:     datasource.EntityRef{Type: datasource.EntityContact, ID: target},
@@ -393,7 +393,7 @@ func TestAnAgentOnAPersonsPassportOverwritesAHumanOwnedField(t *testing.T) {
 
 	call := fmt.Sprintf(`{"record_type":"contact","id":%q,"fields":{"full_name":"Greta Machine"}}`, target)
 	if _, err := r.Invoke(passportCtx(), "update_record", json.RawMessage(call)); err != nil {
-		t.Fatalf("an overwrite on a person's passport → %v, want it applied", err)
+		t.Fatalf("an overwrite on a colleague's passport → %v, want it applied", err)
 	}
 	if len(approvals.staged) != 0 {
 		t.Errorf("staged %d approvals, want none", len(approvals.staged))

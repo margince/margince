@@ -125,13 +125,13 @@ func TestDynamicTierIsResolvedPerCall(t *testing.T) {
 	}
 }
 
-// An agent on a person's passport does what the person could do unaided: a
+// An agent on a colleague's passport does what the colleague could do unaided: a
 // confirm-first call runs, with or without a version to bind.
-func TestAnAgentOnAPersonsPassportRunsAConfirmFirstCall(t *testing.T) {
+func TestAnAgentOnAColleaguesPassportRunsAConfirmFirstCall(t *testing.T) {
 	onPassport := agentCtxWithPassport(ids.NewV7(), principal.ScopeWrite)
 	static := mcp.ToolSpec{Name: "merge_tags", RequiredScope: principal.ScopeWrite, Tier: mcp.TierConfirmationRequired}
 	if _, err := fullSeatGate().Admit(onPassport, static, noResolve); err != nil {
-		t.Errorf("a confirm-first call on a person's passport → %v, want it admitted", err)
+		t.Errorf("a confirm-first call on a colleague's passport → %v, want it admitted", err)
 	}
 	dynamic := mcp.ToolSpec{
 		Name: "advance_deal", RequiredScope: principal.ScopeWrite, Tier: mcp.TierDynamic,
@@ -141,7 +141,7 @@ func TestAnAgentOnAPersonsPassportRunsAConfirmFirstCall(t *testing.T) {
 		return mcp.TierResolverInput{TargetStageSemantic: "won", ObservedVersion: new(int64(4))}, nil
 	}
 	if _, err := fullSeatGate().Admit(onPassport, dynamic, pinned); err != nil {
-		t.Errorf("a move to won on a person's passport → %v, want it admitted", err)
+		t.Errorf("a move to won on a colleague's passport → %v, want it admitted", err)
 	}
 	webRead := mcp.ToolSpec{
 		Name: "enrich", RequiredScope: principal.ScopeWrite, Tier: mcp.TierConfirmationRequired, WaitsEvenForItsUser: true,
@@ -153,7 +153,7 @@ func TestAnAgentOnAPersonsPassportRunsAConfirmFirstCall(t *testing.T) {
 		return mcp.TierResolverInput{TargetStageSemantic: "won"}, nil
 	}
 	if _, err := fullSeatGate().Admit(onPassport, dynamic, unpinned); err != nil {
-		t.Errorf("a batch move naming no version on a person's passport → %v, want it admitted", err)
+		t.Errorf("a batch move naming no version on a colleague's passport → %v, want it admitted", err)
 	}
 }
 

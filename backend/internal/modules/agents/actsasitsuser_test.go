@@ -14,7 +14,7 @@ import (
 )
 
 // The listing tells a caller the tier the gate admits it on: an agent on a
-// person's passport is offered a confirm-first tool as one that runs, unless the
+// colleague's passport is offered a confirm-first tool as one that runs, unless the
 // tool waits even for its user. Automatic work is offered the declared tier.
 func TestTheListingOffersAPassportAgentTheTierItIsAdmittedOn(t *testing.T) {
 	r := NewRegistry(&recordingApprovals{}, auth.NewGate(fullSeatAuthority{}))
@@ -32,7 +32,7 @@ func TestTheListingOffersAPassportAgentTheTierItIsAdmittedOn(t *testing.T) {
 		ctx  context.Context
 		want map[string]mcp.RiskTier
 	}{
-		{"a person's agent", passportCtx(), map[string]mcp.RiskTier{
+		{"a colleague's agent", passportCtx(), map[string]mcp.RiskTier{
 			"merge_tags": mcp.TierAutoExecute, "enrich": mcp.TierConfirmationRequired}},
 		{"automatic work", agentCtx(), map[string]mcp.RiskTier{
 			"merge_tags": mcp.TierConfirmationRequired, "enrich": mcp.TierConfirmationRequired}},
