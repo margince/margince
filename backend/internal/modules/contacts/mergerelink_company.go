@@ -266,13 +266,14 @@ func moveCompanyAssignments(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 func settleFactRevisions(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID) error {
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO company_fact_revision AS r (company_id, revision)
-		SELECT $2, 1
+		SELECT @target, 1
 		ON CONFLICT (company_id) DO UPDATE SET revision = r.revision + 1`,
-		sourceID, targetID); err != nil {
+		pgx.NamedArgs{"target": targetID}); err != nil {
 		return fmt.Errorf("move the survivor's fact revision: %w", err)
 	}
 	if _, err := tx.Exec(ctx,
-		`DELETE FROM company_fact_revision WHERE company_id = $1`, sourceID); err != nil {
+		`DELETE FROM company_fact_revision WHERE company_id = @source`,
+		pgx.NamedArgs{"source": sourceID}); err != nil {
 		return fmt.Errorf("retire the merged-away company's fact revision: %w", err)
 	}
 	return nil
