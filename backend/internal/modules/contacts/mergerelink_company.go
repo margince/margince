@@ -265,15 +265,15 @@ func moveCompanyAssignments(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 // company keeps no counter: it has no facts left to count.
 func settleFactRevisions(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID) error {
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO company_fact_revision AS r (company_id, revision)
+		INSERT INTO company_fact_revision (company_id, revision)
 		SELECT @target, 1
-		ON CONFLICT (company_id) DO UPDATE SET revision = r.revision + 1`,
-		pgx.NamedArgs{"target": targetID}); err != nil {
+		ON CONFLICT (company_id) DO UPDATE SET revision = company_fact_revision.revision + 1`,
+		pgx.NamedArgs{mergeTargetKey: targetID}); err != nil {
 		return fmt.Errorf("move the survivor's fact revision: %w", err)
 	}
 	if _, err := tx.Exec(ctx,
 		`DELETE FROM company_fact_revision WHERE company_id = @source`,
-		pgx.NamedArgs{"source": sourceID}); err != nil {
+		pgx.NamedArgs{mergeSourceKey: sourceID}); err != nil {
 		return fmt.Errorf("retire the merged-away company's fact revision: %w", err)
 	}
 	return nil
