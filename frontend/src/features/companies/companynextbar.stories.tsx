@@ -11,7 +11,7 @@ import {
 import { CompanyNextBar } from "./companynextbar";
 
 // The account's next bar when its moment is a promise we made. A later mail
-// of ours to the same person on the same thread turns the verb into the
+// of ours to the same contact on the same thread turns the verb into the
 // "Done?" question; without that mail the bar keeps the moment's own verb.
 
 type Company360 = components["schemas"]["Company360"];
