@@ -47,24 +47,15 @@ func (e Evaluator) evaluateTechnical(ctx context.Context, tx pgx.Tx, row AuditRo
 }
 
 func technicalAnswer(err error) (Undoability, error) {
-	if err == nil {
+	switch {
+	case err == nil:
 		return undoable(), nil
-	}
-	if reason, refused := technicalReason(err); refused {
-		return refuse(reason, ""), nil
+	case errors.Is(err, contacts.ErrTechnicalReceiptLegacy):
+		return refuse(ReasonNoRestoreSnapshot, ""), nil
+	case errors.Is(err, contacts.ErrTechnicalLaterChange):
+		return refuse(ReasonLaterCompanyChange, ""), nil
 	}
 	return Undoability{}, err
-}
-
-// technicalReason names the module's refusal, or reports that err is none.
-func technicalReason(err error) (Reason, bool) {
-	switch {
-	case errors.Is(err, contacts.ErrTechnicalReceiptLegacy):
-		return ReasonNoRestoreSnapshot, true
-	case errors.Is(err, contacts.ErrTechnicalLaterChange):
-		return ReasonLaterCompanyChange, true
-	}
-	return "", false
 }
 
 // reverseTechnical holds the company, asks the evaluator under the hold, and
@@ -79,8 +70,7 @@ func (s RestoreSeam) reverseTechnical(
 	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		if err := s.inverses.contacts.LockTechnicalRestoreTx(ctx, tx, company, ifVersion); err != nil {
 			// An archived company refuses the hold; the evaluator names why.
-			var refusal RefusedRestore
-			if errors.As(s.bindingRefusal(ctx, tx, row), &refusal) {
+			if refusal, refused := errors.AsType[RefusedRestore](s.bindingRefusal(ctx, tx, row)); refused {
 				return refusal
 			}
 			return err
@@ -90,8 +80,8 @@ func (s RestoreSeam) reverseTechnical(
 		}
 		err := s.inverses.contacts.RestoreTechnicalFactsTx(ctx, tx, company, row.ID, row.OccurredAt, row.Evidence,
 			map[string]any{undidAuditLogID: row.ID.String()})
-		if reason, refused := technicalReason(err); refused {
-			return RefusedRestore{Reason: reason}
+		if answer, judged := technicalAnswer(err); judged == nil && !answer.Undoable {
+			return RefusedRestore{Reason: answer.Reason}
 		}
 		return err
 	})

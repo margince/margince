@@ -193,8 +193,10 @@ func holdAndFirstLock(
 	fn *ast.FuncDecl, recvType, recvVar string,
 	reachesHold func(string) bool, reachesLock func(string) bool,
 ) (hold, lock token.Pos) {
-	w := lockWalk{recvType: recvType, recvVar: recvVar, reachesHold: reachesHold, reachesLock: reachesLock,
-		bound: boundClosures(fn.Body), end: fn.Body.End()}
+	w := lockWalk{
+		recvType: recvType, recvVar: recvVar, reachesHold: reachesHold, reachesLock: reachesLock,
+		bound: boundClosures(fn.Body), end: fn.Body.End(),
+	}
 	return w.scan(fn.Body)
 }
 

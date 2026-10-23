@@ -17,6 +17,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"slices"
 	"time"
 
@@ -210,6 +211,9 @@ func (s *Store) RestoreTechnicalFactsTx(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, auditID ids.UUID, at time.Time,
 	evidence json.RawMessage, trail map[string]any,
 ) error {
+	if err := auth.Require(ctx, entityCompany, principal.ActionUpdate); err != nil {
+		return err
+	}
 	if err := JudgeTechnicalRestoreTx(ctx, tx, companyID, auditID, at, evidence); err != nil {
 		return err
 	}
@@ -221,9 +225,7 @@ func (s *Store) RestoreTechnicalFactsTx(
 		return err
 	}
 	auditEvidence := map[string]any{auditKeySource: technicalRestoreSource, auditKeyFields: restore.Fields}
-	for k, v := range trail {
-		auditEvidence[k] = v
-	}
+	maps.Copy(auditEvidence, trail)
 	auditID, err = storekit.AuditWithEvidence(ctx, tx, "restore", entityCompany, companyID.UUID,
 		map[string]any{auditKeyFacts: restore.After}, map[string]any{auditKeyFacts: restore.Before}, auditEvidence)
 	if err != nil {

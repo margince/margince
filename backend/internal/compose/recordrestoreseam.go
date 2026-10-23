@@ -121,7 +121,7 @@ func recordVersion(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUI
 // no record of this type, and the reason it would then be refused with tells
 // it the change exists.
 func recordIsVisibleToCaller(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID) error {
-	if err := auth.Require(ctx, entityType, principal.ActionRead); err != nil {
+	if err := requireReadGrant(ctx, entityType); err != nil {
 		return err
 	}
 	if entityType == entityTypeActivity {
@@ -318,9 +318,9 @@ func (s *Server) wireReversal(pool *pgxpool.Pool) {
 	})
 }
 
-// requireUpdateGrant asks the object grant the record's own update asks. One
-// literal per type, because the grant census resolves only literals and
-// constants.
+// requireUpdateGrant and requireReadGrant ask one object grant on one of the
+// six record types. One literal per type and verb, because the grant census
+// resolves only literals and constants.
 func requireUpdateGrant(ctx context.Context, entityType string) error {
 	switch entityType {
 	case entityTypeContact:
@@ -337,4 +337,22 @@ func requireUpdateGrant(ctx context.Context, entityType string) error {
 		return auth.Require(ctx, entityTypeProject, principal.ActionUpdate)
 	}
 	return fmt.Errorf("compose: %q is not a record type this path writes", entityType)
+}
+
+func requireReadGrant(ctx context.Context, entityType string) error {
+	switch entityType {
+	case entityTypeContact:
+		return auth.Require(ctx, entityTypeContact, principal.ActionRead)
+	case entityTypeCompany:
+		return auth.Require(ctx, entityTypeCompany, principal.ActionRead)
+	case entityTypeDeal:
+		return auth.Require(ctx, entityTypeDeal, principal.ActionRead)
+	case entityTypeActivity:
+		return auth.Require(ctx, entityTypeActivity, principal.ActionRead)
+	case entityTypeLead:
+		return auth.Require(ctx, entityTypeLead, principal.ActionRead)
+	case entityTypeProject:
+		return auth.Require(ctx, entityTypeProject, principal.ActionRead)
+	}
+	return fmt.Errorf("compose: %q is not a record type this path reads", entityType)
 }

@@ -54,7 +54,7 @@ func undoObservation(field, key, value string) contacts.TechnicalObservation {
 	return contacts.TechnicalObservation{Field: field, ValueKey: key, Value: value, Evidence: "Synthetic DNS record", SourceURL: "dns:technical.example"}
 }
 
-// technicalUndoFacts is every fact row of the company, as stored.
+// technicalUndoFacts reads the company's fact rows, as stored.
 func technicalUndoFacts(t *testing.T, e *integration.Env, company ids.CompanyID) []map[string]any {
 	t.Helper()
 	var facts []map[string]any
@@ -314,8 +314,7 @@ func TestTechnicalUndoOfAHiddenCompanyIsNotFound(t *testing.T) {
 	if !errors.Is(err, apperrors.ErrNotFound) && !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("a reader without the company answered %v, want not-found or permission denied", err)
 	}
-	var refusal RefusedRestore
-	if errors.As(err, &refusal) {
+	if refusal, refused := errors.AsType[RefusedRestore](err); refused {
 		t.Fatalf("the hidden company's Undo gave a reason (%s), which tells the reader the change exists", refusal.Reason)
 	}
 	if !sameJSON(t, held, technicalUndoFacts(t, e, company)) {
