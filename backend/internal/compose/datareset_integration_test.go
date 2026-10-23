@@ -279,7 +279,11 @@ func TestDropResetCustomFieldColumns(t *testing.T) {
 // was written for AND every DELETE trigger added to that table afterwards,
 // including one that really does block. Each trigger earns its own line.
 var deleteGuardedSweepTargets = gatekit.Waive(map[string]string{
-	"field_mask report_authority_field_mask": "Advances the preserved projection fence once per statement and refuses no delete; reset must invalidate publications that began under the old field masks.",
+	// Not a guard: the trigger counts fact writes and refuses no delete. Its
+	// counter rows go with their company by FK cascade, so a reset that clears
+	// the companies leaves no counter behind. TestAResetLeavesNoFactRevision holds it.
+	"company_fact trg_company_fact_count_revision": "counts a company's fact writes and refuses no delete; the counter rows cascade with their company, so a reset leaves none",
+	"field_mask report_authority_field_mask":       "Advances the preserved projection fence once per statement and refuses no delete; reset must invalidate publications that began under the old field masks.",
 	// Not a protected table: the guard refuses a DELETE only while a row carries
 	// `restricted_at`, which is a statutory hold on that one record. Preserving
 	// `activity` would leave every conversation behind on a reset whose whole
@@ -593,5 +597,31 @@ func TestResetKeepsTheSealedSettingsItsRowsStillName(t *testing.T) {
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM vault_secret`); n != 2 {
 		t.Errorf("%d sealed blobs after the reset, want the 2 the rows still name", n)
+	}
+}
+
+// A reset clears a company's fact counter with the company. A trigger writes
+// the counter on every fact delete the sweep makes. A counter left behind
+// would point at nothing and outlive the reset.
+func TestAResetLeavesNoFactRevision(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	company := technicalUndoCompany(t, e, "Reset Lookup GmbH")
+	applyUndoLookup(t, e, company, undoObservation("mail_provider", "mail", "Mail"))
+	if got := e.WsCount(t, "SELECT count(*) FROM company_fact_revision"); got == 0 {
+		t.Fatal("the lookup left no fact revision to clear; the fixture proves nothing")
+	}
+	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		tables, err := resetTargetTables(ctx, tx)
+		if err != nil {
+			return err
+		}
+		return sweepWorkspaceData(ctx, tx, tables)
+	})
+	if err != nil {
+		t.Fatalf("sweep: %v", err)
+	}
+	if got := e.WsCount(t, "SELECT count(*) FROM company_fact_revision"); got != 0 {
+		t.Fatalf("a reset left %d fact revision rows behind", got)
 	}
 }

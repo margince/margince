@@ -139,8 +139,8 @@ func TestTheSubjectLockIsTheFirstRowATransactionTakes(t *testing.T) {
 					continue
 				}
 				judged++
-				hold, lock := holdAndFirstLock(fn, recv, receiverVarName(fn), reachesHold, reachesLock)
-				if hold == token.NoPos || lock == token.NoPos || lock >= hold {
+				hold, lock, lockFirst := holdAndFirstLock(fn, recv, receiverVarName(fn), reachesHold, reachesLock)
+				if hold == token.NoPos || lock == token.NoPos || !lockFirst {
 					continue
 				}
 				key := dir + ":" + scrubKey(recv, fn.Name.Name)
@@ -175,74 +175,179 @@ func TestTheSubjectLockIsTheFirstRowATransactionTakes(t *testing.T) {
 	}
 }
 
-// holdAndFirstLock returns the position where this function holds its subject
-// and the position of the first row it locks, either of which may be NoPos.
-//
-// A CALL to a function that reaches the hold counts as the hold, at the call's
-// own position: that is the LinkedIn shape, where the write sat in the caller
-// and the lock two frames down. A call to a function that merely writes is not
-// counted as a lock, which is the direction that under-reports — stated rather
-// than hidden, because resolving it needs the callee's statements at the
-// caller's position and this walk has one file at a time.
+// holdAndFirstLock returns where this function holds its subject, where it
+// first locks a row, and whether the lock runs first. A call reaching the hold
+// counts at the call; a call that merely writes does not, which under-reports.
+// Effects are judged in run order: a bound closure's own effects run, in
+// their order, where it is called, and deferred calls run last.
 func holdAndFirstLock(
 	fn *ast.FuncDecl, recvType, recvVar string,
 	reachesHold func(string) bool, reachesLock func(string) bool,
-) (hold, lock token.Pos) {
+) (hold, lock token.Pos, lockFirst bool) {
+	w := lockWalk{
+		recvType: recvType, recvVar: recvVar, reachesHold: reachesHold, reachesLock: reachesLock,
+		bound: boundLiterals(fn.Body), entered: map[*ast.FuncLit]bool{},
+	}
 	hold, lock = token.NoPos, token.NoPos
-	mark := func(at *token.Pos, pos token.Pos) {
-		if *at == token.NoPos || pos < *at {
-			*at = pos
+	for _, e := range w.effects(fn.Body) {
+		switch {
+		case e.hold && hold == token.NoPos:
+			hold = e.at
+			lockFirst = lock != token.NoPos
+		case !e.hold && lock == token.NoPos:
+			lock = e.at
 		}
 	}
-	ast.Inspect(fn.Body, func(node ast.Node) bool {
+	return hold, lock, lockFirst
+}
+
+// lockEffect is one hold or row lock, reported at the position it runs from.
+type lockEffect struct {
+	hold bool
+	at   token.Pos
+}
+
+// lockWalk lists the holds and row locks of one body in run order.
+type lockWalk struct {
+	recvType, recvVar string
+	reachesHold       func(string) bool
+	reachesLock       func(string) bool
+	bound             map[*ast.FuncLit]bool
+	entered           map[*ast.FuncLit]bool
+}
+
+func (w lockWalk) effects(body ast.Node) []lockEffect {
+	var ordered, deferred []lockEffect
+	ast.Inspect(body, func(node ast.Node) bool {
 		switch n := node.(type) {
+		case *ast.FuncLit:
+			// A bound closure runs where it is called, below. A callback kept
+			// in a struct runs inside whichever callee is handed the struct,
+			// and that callee is judged on its own.
+			return !w.bound[n]
+		case *ast.DeferStmt:
+			deferred = append(w.effects(n.Call), deferred...)
+			return false
 		case *ast.CallExpr:
-			switch fun := n.Fun.(type) {
-			case *ast.SelectorExpr:
-				if subjectHolds[fun.Sel.Name] {
-					mark(&hold, n.Pos())
-					break
-				}
-				// A method on this function's own receiver, keyed as the graph
-				// keys it: s.applySignatureField reaching the hold discharges
-				// it here, at the call.
-				if base, isIdent := fun.X.(*ast.Ident); isIdent && recvVar != "" &&
-					base.Name == recvVar {
-					if reachesHold(scrubKey(recvType, fun.Sel.Name)) {
-						mark(&hold, n.Pos())
-					}
-					// And a helper that takes a row LOCKS at its call site.
-					// Without this the walk reads only the SQL a function
-					// spells itself, so moving one statement into a helper
-					// hides the ordering it decides — which is exactly how a
-					// token-then-subject inversion reached this tree.
-					if reachesLock(scrubKey(recvType, fun.Sel.Name)) {
-						mark(&lock, n.Pos())
-					}
-				}
-			case *ast.Ident:
-				if subjectHolds[fun.Name] || reachesHold(fun.Name) {
-					mark(&hold, n.Pos())
-				}
-				if reachesLock(fun.Name) {
-					mark(&lock, n.Pos())
-				}
-			}
+			ordered = append(ordered, w.call(n)...)
 		case *ast.BasicLit:
-			if n.Kind != token.STRING {
-				return true
-			}
-			text, err := strconv.Unquote(n.Value)
-			if err != nil {
-				return true
-			}
-			if mutatingStatement.MatchString(text) {
-				mark(&lock, n.Pos())
+			if spellsLock(n) {
+				ordered = append(ordered, lockEffect{at: n.Pos()})
 			}
 		}
 		return true
 	})
-	return hold, lock
+	// Source order is run order outside closures and defers; a closure call's
+	// effects share its position and keep their own order.
+	sort.SliceStable(ordered, func(i, j int) bool { return ordered[i].at < ordered[j].at })
+	return append(ordered, deferred...)
+}
+
+func (w lockWalk) call(n *ast.CallExpr) []lockEffect {
+	var out []lockEffect
+	mark := func(hold bool) { out = append(out, lockEffect{hold: hold, at: n.Pos()}) }
+	switch fun := n.Fun.(type) {
+	case *ast.SelectorExpr:
+		if subjectHolds[fun.Sel.Name] {
+			mark(true)
+			return out
+		}
+		// A method on this function's own receiver counts at its call, so
+		// moving one statement into a helper cannot hide the order it decides.
+		if base, isIdent := fun.X.(*ast.Ident); isIdent && w.recvVar != "" && base.Name == w.recvVar {
+			if w.reachesHold(scrubKey(w.recvType, fun.Sel.Name)) {
+				mark(true)
+			}
+			if w.reachesLock(scrubKey(w.recvType, fun.Sel.Name)) {
+				mark(false)
+			}
+		}
+	case *ast.Ident:
+		if lit := w.closureNamed(fun); lit != nil {
+			if w.entered[lit] {
+				return nil
+			}
+			w.entered[lit] = true
+			for _, e := range w.effects(lit.Body) {
+				out = append(out, lockEffect{hold: e.hold, at: n.Pos()})
+			}
+			delete(w.entered, lit)
+			return out
+		}
+		if subjectHolds[fun.Name] || w.reachesHold(fun.Name) {
+			mark(true)
+		}
+		if w.reachesLock(fun.Name) {
+			mark(false)
+		}
+	}
+	return out
+}
+
+// closureNamed resolves a called name to the closure its declaration bound.
+// Resolution is lexical, so a shadowing name in an inner block is its own.
+func (w lockWalk) closureNamed(id *ast.Ident) *ast.FuncLit {
+	if id.Obj == nil {
+		return nil
+	}
+	switch decl := id.Obj.Decl.(type) {
+	case *ast.AssignStmt:
+		for i, lhs := range decl.Lhs {
+			if name, isIdent := lhs.(*ast.Ident); isIdent && name.Obj == id.Obj && i < len(decl.Rhs) {
+				if lit, isLit := decl.Rhs[i].(*ast.FuncLit); isLit {
+					return lit
+				}
+				return nil
+			}
+		}
+	case *ast.ValueSpec:
+		for i, name := range decl.Names {
+			if name.Obj == id.Obj && i < len(decl.Values) {
+				if lit, isLit := decl.Values[i].(*ast.FuncLit); isLit {
+					return lit
+				}
+				return nil
+			}
+		}
+	}
+	return nil
+}
+
+// boundLiterals are the closures that do not run where they are written.
+// They are assigned to a name or a field, or kept in a composite value.
+func boundLiterals(body *ast.BlockStmt) map[*ast.FuncLit]bool {
+	bound := map[*ast.FuncLit]bool{}
+	ast.Inspect(body, func(node ast.Node) bool {
+		switch n := node.(type) {
+		case *ast.AssignStmt:
+			for _, rhs := range n.Rhs {
+				if lit, isLit := rhs.(*ast.FuncLit); isLit {
+					bound[lit] = true
+				}
+			}
+		case *ast.ValueSpec:
+			for _, value := range n.Values {
+				if lit, isLit := value.(*ast.FuncLit); isLit {
+					bound[lit] = true
+				}
+			}
+		case *ast.KeyValueExpr:
+			if lit, isLit := n.Value.(*ast.FuncLit); isLit {
+				bound[lit] = true
+			}
+		}
+		return true
+	})
+	return bound
+}
+
+// spellsLock reports a string literal holding SQL that takes a row lock.
+func spellsLock(lit *ast.BasicLit) bool {
+	if lit.Kind != token.STRING {
+		return false
+	}
+	text, err := strconv.Unquote(lit.Value)
+	return err == nil && mutatingStatement.MatchString(text)
 }
 
 // spellsAMutatingStatement reports whether a function contains SQL that takes a

@@ -18240,7 +18240,9 @@ const (
 	UndoabilityReasonAlreadyUndone           UndoabilityReason = "already_undone"
 	UndoabilityReasonBehindErasureBoundary   UndoabilityReason = "behind_erasure_boundary"
 	UndoabilityReasonEdgeRelinkUnsupported   UndoabilityReason = "edge_relink_unsupported"
+	UndoabilityReasonLaterCompanyChange      UndoabilityReason = "later_company_change"
 	UndoabilityReasonNoBeforeImage           UndoabilityReason = "no_before_image"
+	UndoabilityReasonNoRestoreSnapshot       UndoabilityReason = "no_restore_snapshot"
 	UndoabilityReasonNotAReplayableVerb      UndoabilityReason = "not_a_replayable_verb"
 	UndoabilityReasonNotRestorableByThisPath UndoabilityReason = "not_restorable_by_this_path"
 	UndoabilityReasonNotWritableByCaller     UndoabilityReason = "not_writable_by_caller"
@@ -18259,7 +18261,11 @@ func (e UndoabilityReason) Valid() bool {
 		return true
 	case UndoabilityReasonEdgeRelinkUnsupported:
 		return true
+	case UndoabilityReasonLaterCompanyChange:
+		return true
 	case UndoabilityReasonNoBeforeImage:
+		return true
+	case UndoabilityReasonNoRestoreSnapshot:
 		return true
 	case UndoabilityReasonNotAReplayableVerb:
 		return true
@@ -39048,6 +39054,9 @@ type HandledForYou struct {
 	// Receipts What was done, newest first. Empty is the honest common case.
 	Receipts []Receipt `json:"receipts"`
 
+	// Since Where the window starts: the same instant the Done for you lane on `/magic` starts at, so both surfaces read one window. Absent on older responses.
+	Since *time.Time `json:"since,omitempty"`
+
 	// Truncated True when more was done than was read. The list is a floor, not a total.
 	Truncated bool `json:"truncated"`
 }
@@ -42609,6 +42618,9 @@ type MagicLineRecord struct {
 	Entity     MagicEntityRef `json:"entity"`
 	OccurredAt time.Time      `json:"occurred_at"`
 
+	// ReceiptId The canonical Receipt.id this record's change stands for, the same id a done line lists in `receipt_ids`. A client joins a receipt's review actions by it. Absent on older responses.
+	ReceiptId *openapi_types.UUID `json:"receipt_id,omitempty"`
+
 	// Undo Whether this change can be taken back, and why not when it cannot.
 	//
 	// A greyed control with no reason is the shape this replaces. The reasons are
@@ -42663,7 +42675,10 @@ type MagicReceipt struct {
 	AsOf             time.Time   `json:"as_of"`
 	CouldNotComplete []MagicLine `json:"could_not_complete"`
 	Done             []MagicLine `json:"done"`
-	NeedsYou         []MagicLine `json:"needs_you"`
+
+	// DoneIsFloor The done lane's second source, the system's decisions, was read to its bound and still had more, so the lane's total is a floor. Absent on older responses.
+	DoneIsFloor *bool       `json:"done_is_floor,omitempty"`
+	NeedsYou    []MagicLine `json:"needs_you"`
 
 	// NotShown What this read left out, by kind and count.
 	//
@@ -50795,12 +50810,12 @@ type Undoability struct {
 	// Detail The fields a refusal names, where naming them is the better explanation — which field was superseded, which one cannot be written back. Never the only thing a reader renders; `reason` is what the product says.
 	Detail *string `json:"detail,omitempty"`
 
-	// Reason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind.
+	// Reason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind. `later_company_change` refuses a technical lookup after any later write to the company or its facts, a refresh to the same value included. `no_restore_snapshot` refuses a lookup recorded before receipts kept the facts it replaced.
 	Reason   *UndoabilityReason `json:"reason,omitempty"`
 	Undoable bool               `json:"undoable"`
 }
 
-// UndoabilityReason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind.
+// UndoabilityReason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind. `later_company_change` refuses a technical lookup after any later write to the company or its facts, a refresh to the same value included. `no_restore_snapshot` refuses a lookup recorded before receipts kept the facts it replaced.
 type UndoabilityReason string
 
 // UpdateAcquisitionSourceRequest Every field optional; an omitted one is left alone.

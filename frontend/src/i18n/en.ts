@@ -1812,6 +1812,10 @@ export const en = {
     "You do not have permission to write these fields.",
   "history.undo.edgeRelinkUnsupported":
     "A removed link cannot be restored by undo. Add the link again on this record.",
+  "history.undo.laterCompanyChange":
+    "The company or its facts changed after this lookup, so undoing it would overwrite that later change.",
+  "history.undo.noRestoreSnapshot":
+    "This lookup was recorded before the earlier facts were kept, so it cannot be undone.",
   "history.reversal.collapsed": "{actor}’s change, undone by {undoer}",
   "history.reversal.collapsedSelf": "{actor} undid their own change",
   "history.reversal.partly": "{actor}’s change, partly undone by {undoer}",
@@ -16544,6 +16548,8 @@ export const en = {
     "{target} wrote to you. Keep them as a contact?",
   "magic.action.approval_summary": "Proposed: {summary}",
   "magic.action.approval_pending": "{kind}",
+  "magic.action.decided_summary": "{summary}",
+  "magic.action.decided_kind": "Decided without asking: {kind}",
   "magic.action.capture_reauth_required":
     "{provider} needs to be connected again",
   "magic.action.capture_connection_error": "{provider} could not be reached",

@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { formatDateTime } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
+import { en } from "../../i18n/en";
 import {
   line,
   receipt,
@@ -195,16 +196,12 @@ describe("the receipt draws every lane it promises", () => {
     expect(screen.queryByText("Nothing done for you")).toBeNull();
   });
 
-  it("keeps an ordinary seat's quiet window quiet without claiming global coverage", async () => {
+  it("says an ordinary seat's empty window covers only what it may see", async () => {
     stub(receipt({ not_shown_count_withheld: true }));
-    const { container } = renderMagic();
-    await waitFor(() =>
-      expect(vi.mocked(fetch).mock.calls.length).toBeGreaterThan(0),
-    );
-    await waitFor(() =>
-      expect(container.querySelector("[aria-busy='true']")).toBeNull(),
-    );
-    expect(container.querySelector(".brief-section")).toBeNull();
+    renderMagic();
+    expect(
+      await screen.findByText("Only changes visible to you are shown."),
+    ).toBeTruthy();
     expect(screen.queryByText("Nothing done for you")).toBeNull();
   });
 
@@ -615,16 +612,17 @@ describe("the receipt draws every lane it promises", () => {
   // The section sits on Home beside every other section. A field read off a
   // shape the server did not send throws inside the shell's render, and costs
   // a reader the whole screen. Version skew is the ordinary way that happens.
-  it("draws nothing rather than throwing on a receipt it cannot read", async () => {
+  it("calls a lane whose decision source ran past its bound a floor", async () => {
+    stub(receipt({ done: [line()], done_is_floor: true }));
+    renderMagic();
+    expect(await screen.findByText("1+ change, one by one")).toBeTruthy();
+    expect(screen.queryByText("1 change, in full")).toBeNull();
+  });
+
+  it("says a receipt it cannot read did not load, rather than throwing", async () => {
     stub({ data: [] } as unknown as ReturnType<typeof receipt>);
-    const { container } = renderMagic();
-    await waitFor(() =>
-      expect(vi.mocked(fetch).mock.calls.length).toBeGreaterThan(0),
-    );
-    await waitFor(() =>
-      expect(container.querySelector("[aria-busy='true']")).toBeNull(),
-    );
-    expect(container.querySelector(".brief-section")).toBeNull();
+    renderMagic();
+    expect(await screen.findByText(en["state.unavailable"])).toBeTruthy();
   });
 });
 

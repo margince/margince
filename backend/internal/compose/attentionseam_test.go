@@ -5,6 +5,7 @@ package compose
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -13,6 +14,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -80,7 +82,7 @@ func TestTheReceiptsReadAsksForTheLaneItFills(t *testing.T) {
 	}
 
 	engine := &stubApprovalPage{rows: page}
-	receipts, err := recentReceipts(decidedAt.Add(-time.Hour), doneLaneWidth, engine.list)
+	receipts, _, err := recentReceipts(decidedAt.Add(-time.Hour), doneLaneWidth, engine.list)
 	if err != nil {
 		t.Fatalf("reading the receipts: %v", err)
 	}
@@ -102,12 +104,12 @@ type stubApprovalPage struct {
 	asked int
 }
 
-func (s *stubApprovalPage) list(limit int) ([]crmcontracts.Approval, error) {
+func (s *stubApprovalPage) list(_ string, limit int) ([]crmcontracts.Approval, storekit.Page, error) {
 	s.asked = limit
 	if limit > len(s.rows) {
 		limit = len(s.rows)
 	}
-	return s.rows[:limit], nil
+	return s.rows[:limit], storekit.Page{}, nil
 }
 
 // The decay lane's CANDIDATES come from the projection's own threshold, and its
@@ -317,5 +319,44 @@ func TestTheReconnectLaneKeepsTheFiveWorthWriting(t *testing.T) {
 	unfunded := quietRelationships(asQuiet(edges...), changed, nil, spoke.AddDate(0, 0, 60))
 	if len(unfunded) != decayLaneCap {
 		t.Errorf("an unfunded set hands over %d rows, want %d", len(unfunded), decayLaneCap)
+	}
+}
+
+// clampingInbox answers as the approvals inbox does: a page wider than it
+// serves comes back at its default width, with a cursor to the rest.
+type clampingInbox struct{ rows []crmcontracts.Approval }
+
+func (c clampingInbox) list(cursor string, width int) ([]crmcontracts.Approval, storekit.Page, error) {
+	if width > approvalPageWidth {
+		width = 50
+	}
+	start := 0
+	if cursor != "" {
+		start = len(cursor)
+	}
+	end := min(start+width, len(c.rows))
+	page := storekit.Page{HasMore: end < len(c.rows)}
+	if page.HasMore {
+		page.NextCursor = strings.Repeat("x", end)
+	}
+	return c.rows[start:end], page, nil
+}
+
+func TestTheReceiptsReadPagesPastTheInboxPageWidth(t *testing.T) {
+	decidedAt := time.Date(2026, 8, 25, 8, 0, 0, 0, time.UTC)
+	rows := make([]crmcontracts.Approval, 0, 450)
+	for range 450 {
+		rows = append(rows, approvalRow("Moved a deal", decidedAt))
+	}
+	receipts, more, err := recentReceipts(decidedAt.Add(-time.Hour), 400, clampingInbox{rows: rows}.list)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(receipts) != 400 || !more {
+		t.Fatalf("read %d receipts (more=%t), want 400 and more", len(receipts), more)
+	}
+	receipts, more, err = recentReceipts(decidedAt.Add(-time.Hour), 1000, clampingInbox{rows: rows}.list)
+	if err != nil || len(receipts) != 450 || more {
+		t.Fatalf("read %d receipts (more=%t, err=%v), want all 450 and no more", len(receipts), more, err)
 	}
 }

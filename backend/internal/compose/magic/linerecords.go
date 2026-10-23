@@ -141,6 +141,7 @@ func (s *Service) recordsOf(ctx context.Context, tx pgx.Tx, members []entry) ([]
 		}
 		out = append(out, crmcontracts.MagicLineRecord{
 			AuditId:    openapi_types.UUID(e.ID),
+			ReceiptId:  new(receiptIdentity(e)),
 			OccurredAt: e.OccurredAt,
 			Entity: crmcontracts.MagicEntityRef{
 				Type: e.EntityType, Id: openapi_types.UUID(e.EntityID), Label: e.Label,
@@ -175,6 +176,9 @@ func (s *Service) recordsOf(ctx context.Context, tx pgx.Tx, members []entry) ([]
 func changesOf(e entry) []crmcontracts.MagicFieldChange {
 	if bulkActions[e.Action] {
 		return []crmcontracts.MagicFieldChange{}
+	}
+	if changes := technicalFieldChanges(e); len(changes) > 0 {
+		return changes
 	}
 	return fieldChanges(e.Before, e.After)
 }

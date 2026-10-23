@@ -2558,6 +2558,7 @@ public.company_fact.retrieved_at timestamp with time zone gen=- def=-
 public.company_fact.site_read_id uuid gen=- def=-
 public.company_fact.source text NOT NULL gen=- def='site_read'::text
 public.company_fact.source_url text gen=- def=-
+public.company_fact.trg_company_fact_count_revision CREATE TRIGGER trg_company_fact_count_revision AFTER INSERT OR DELETE OR UPDATE ON public.company_fact FOR EACH ROW EXECUTE FUNCTION company_fact_count_revision()
 public.company_fact.trg_company_fact_updated CREATE TRIGGER trg_company_fact_updated BEFORE UPDATE ON public.company_fact FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.company_fact.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.company_fact.uq_company_fact UNIQUE (company_id, category, field, value_key)
@@ -2566,7 +2567,33 @@ public.company_fact.value_key text NOT NULL gen=- def=''::text
 public.company_fact.verified_at timestamp with time zone gen=- def=-
 public.company_fact.verified_by uuid gen=- def=-
 public.company_fact.version bigint NOT NULL gen=- def=1
+public.company_fact_count_revision() secdef=false cfg=- acl=- 
+DECLARE
+  touched uuid[];
+BEGIN
+  IF TG_OP = 'INSERT' THEN
+    touched := ARRAY[NEW.company_id];
+  ELSIF TG_OP = 'DELETE' THEN
+    touched := ARRAY[OLD.company_id];
+  ELSE
+    touched := ARRAY[OLD.company_id, NEW.company_id];
+  END IF;
+  -- A company being deleted takes its facts with it; it has no counter left
+  -- to move.
+  INSERT INTO company_fact_revision AS r (company_id, revision)
+  SELECT c.id, 1 FROM company c WHERE c.id = ANY(touched)
+  ON CONFLICT (company_id) DO UPDATE SET revision = r.revision + 1;
+  RETURN NULL;
+END;
+
 public.company_fact_pkey CREATE UNIQUE INDEX company_fact_pkey ON public.company_fact USING btree (id)
+public.company_fact_revision acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.company_fact_revision.company_fact_revision_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
+public.company_fact_revision.company_fact_revision_js_safe CHECK (((revision >= 0) AND (revision <= '9007199254740991'::bigint)))
+public.company_fact_revision.company_fact_revision_pkey PRIMARY KEY (company_id)
+public.company_fact_revision.company_id uuid NOT NULL gen=- def=-
+public.company_fact_revision.revision bigint NOT NULL gen=- def=0
+public.company_fact_revision_pkey CREATE UNIQUE INDEX company_fact_revision_pkey ON public.company_fact_revision USING btree (company_id)
 public.company_geocode_goes_stale() secdef=false cfg=- acl=- 
 BEGIN
   -- Only when the coordinates exist and the writer did not speak for them:

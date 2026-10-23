@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/privacy"
@@ -48,7 +49,7 @@ func NewRestoreSeam(pool *pgxpool.Pool, provider *Provider, corrections *deals.S
 		visible:     recordIsVisibleToCaller,
 		edges:       edges,
 		corrections: corrections,
-		inverses:    recordInverses{provider: provider, contacts: edges, deals: dealStore},
+		inverses:    recordInverses{provider: provider, contacts: edges, deals: dealStore, activities: activities.NewStore(InstallationDB(pool))},
 		evaluator: Evaluator{
 			Archived:      recordIsArchived,
 			Writable:      recordIsWritableByCaller,
@@ -115,7 +116,13 @@ func recordVersion(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUI
 // reversal path takes it before it reads the audit row at all: anything that
 // returns a record is a read, and a refusal that distinguishes a hidden record
 // from an absent one has disclosed the record.
+//
+// The object grant comes first. Row scope alone admits a seat that may read
+// no record of this type, and a refusal reason tells it the change exists.
 func recordIsVisibleToCaller(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID) error {
+	if err := requireReadGrant(ctx, entityType); err != nil {
+		return err
+	}
 	if entityType == entityTypeActivity {
 		return auth.EnsureActivityContentVisible(ctx, tx, id)
 	}
@@ -133,7 +140,10 @@ func recordIsVisibleToCaller(ctx context.Context, tx pgx.Tx, entityType string, 
 // which is a button that says the caller may not edit a record they can.
 func recordIsWritableByCaller(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID) error {
 	if entityType == entityTypeActivity {
-		return auth.EnsureActivityWritable(ctx, tx, id)
+		if err := auth.EnsureActivityContentVisible(ctx, tx, id); err != nil {
+			return err
+		}
+		return auth.EnsureActivityWritableIn(ctx, tx, id, false)
 	}
 	return auth.EnsureWritable(ctx, tx, entityType, id)
 }
@@ -307,9 +317,9 @@ func (s *Server) wireReversal(pool *pgxpool.Pool) {
 	})
 }
 
-// requireUpdateGrant asks the object grant the record's own update asks. One
-// literal per type, because the grant census resolves only literals and
-// constants.
+// requireUpdateGrant and requireReadGrant ask one object grant on one of the
+// six record types. One literal per type and verb, because the grant census
+// resolves only literals and constants.
 func requireUpdateGrant(ctx context.Context, entityType string) error {
 	switch entityType {
 	case entityTypeContact:
@@ -326,4 +336,22 @@ func requireUpdateGrant(ctx context.Context, entityType string) error {
 		return auth.Require(ctx, entityTypeProject, principal.ActionUpdate)
 	}
 	return fmt.Errorf("compose: %q is not a record type this path writes", entityType)
+}
+
+func requireReadGrant(ctx context.Context, entityType string) error {
+	switch entityType {
+	case entityTypeContact:
+		return auth.Require(ctx, entityTypeContact, principal.ActionRead)
+	case entityTypeCompany:
+		return auth.Require(ctx, entityTypeCompany, principal.ActionRead)
+	case entityTypeDeal:
+		return auth.Require(ctx, entityTypeDeal, principal.ActionRead)
+	case entityTypeActivity:
+		return auth.Require(ctx, entityTypeActivity, principal.ActionRead)
+	case entityTypeLead:
+		return auth.Require(ctx, entityTypeLead, principal.ActionRead)
+	case entityTypeProject:
+		return auth.Require(ctx, entityTypeProject, principal.ActionRead)
+	}
+	return fmt.Errorf("compose: %q is not a record type this path reads", entityType)
 }

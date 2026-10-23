@@ -55013,11 +55013,14 @@ components:
             `not_restorable_by_this_path` covers EVERY change to a project's company link
             whatever the verb — that kind takes write authority over the project row and a
             project must keep at least one company, so a generic reverse would be a side door
-            around both rules. `detail` names the kind.
+            around both rules. `detail` names the kind. `later_company_change` refuses a
+            technical lookup after any later write to the company or its facts, a refresh to
+            the same value included. `no_restore_snapshot` refuses a lookup recorded before
+            receipts kept the facts it replaced.
           enum: [no_before_image, not_a_replayable_verb, unsupported_record_type, superseded,
                  behind_erasure_boundary, already_undone, not_restorable_by_this_path,
                  record_archived, null_unwritable_by_module, not_writable_by_caller,
-                 edge_relink_unsupported, null]
+                 edge_relink_unsupported, later_company_change, no_restore_snapshot, null]
         detail:
           type: [string, 'null']
           description: >-
@@ -62886,6 +62889,12 @@ components:
       required: [as_of, receipts, truncated]
       properties:
         as_of: { type: string, format: date-time, description: 'The instant these were read at.' }
+        since:
+          type: string
+          format: date-time
+          description: >-
+            Where the window starts: the same instant the Done for you lane on `/magic`
+            starts at, so both surfaces read one window. Absent on older responses.
         receipts:
           type: array
           items: { $ref: '#/components/schemas/Receipt' }
@@ -64101,6 +64110,11 @@ components:
             this build cannot place. Infrastructure and configuration audits do not contribute
             to this count. It is reported only to a seat holding `ai_diagnostics` read. Its
             absence for any other seat is not a zero.
+        done_is_floor:
+          type: boolean
+          description: >-
+            The done lane's second source, the system's decisions, was read to its bound
+            and still had more, so the lane's total is a floor. Absent on older responses.
         not_shown_count_withheld:
           type: boolean
           description: >-
@@ -64275,6 +64289,13 @@ components:
       required: [audit_id, occurred_at, entity, changes, undo]
       properties:
         audit_id: { type: string, format: uuid }
+        receipt_id:
+          type: string
+          format: uuid
+          description: >-
+            The canonical Receipt.id this record's change stands for, the same id a done line
+            lists in `receipt_ids`. A client joins a receipt's review actions by it. Absent on
+            older responses.
         occurred_at: { type: string, format: date-time }
         entity: { $ref: '#/components/schemas/MagicEntityRef' }
         changes:

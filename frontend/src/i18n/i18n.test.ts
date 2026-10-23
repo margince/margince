@@ -168,6 +168,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // These slots receive category counts and action names already translated by their owners.
   "brief.agenda.summary",
   "magic.action.approval_pending",
+  "magic.action.decided_summary",
   // Pure punctuation layouts: every word in them is a placeholder, so there is
   // nothing to translate and a "translation" could only reorder the slots.
   "dealSuggestion.name",
