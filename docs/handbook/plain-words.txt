@@ -1159,7 +1159,6 @@ storage
 store
 straight
 strength
-stricter
 strictest
 stuck
 style

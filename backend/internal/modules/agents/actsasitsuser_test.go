@@ -19,11 +19,15 @@ import (
 func TestTheListingOffersAPassportAgentTheTierItIsAdmittedOn(t *testing.T) {
 	r := NewRegistry(&recordingApprovals{}, auth.NewGate(fullSeatAuthority{}))
 	for _, spec := range []mcp.ToolSpec{
-		{Name: "merge_tags", Title: "Merge tags", Version: "1", Description: "merges",
-			RequiredScope: principal.ScopeWrite, Tier: mcp.TierConfirmationRequired, InputSchema: json.RawMessage(`{"type":"object"}`)},
-		{Name: "enrich", Title: "Enrich", Version: "1", Description: "reads the web",
+		{
+			Name: "merge_tags", Title: "Merge tags", Version: "1", Description: "merges",
+			RequiredScope: principal.ScopeWrite, Tier: mcp.TierConfirmationRequired, InputSchema: json.RawMessage(`{"type":"object"}`),
+		},
+		{
+			Name: "enrich", Title: "Enrich", Version: "1", Description: "reads the web",
 			RequiredScope: principal.ScopeWrite, Tier: mcp.TierConfirmationRequired, WaitsEvenForItsUser: true,
-			InputSchema: json.RawMessage(`{"type":"object"}`)},
+			InputSchema: json.RawMessage(`{"type":"object"}`),
+		},
 	} {
 		r.Register(&servingTool{spec: spec})
 	}
@@ -33,9 +37,11 @@ func TestTheListingOffersAPassportAgentTheTierItIsAdmittedOn(t *testing.T) {
 		want map[string]mcp.RiskTier
 	}{
 		{"a colleague's agent", passportCtx(), map[string]mcp.RiskTier{
-			"merge_tags": mcp.TierAutoExecute, "enrich": mcp.TierConfirmationRequired}},
+			"merge_tags": mcp.TierAutoExecute, "enrich": mcp.TierConfirmationRequired,
+		}},
 		{"automatic work", agentCtx(), map[string]mcp.RiskTier{
-			"merge_tags": mcp.TierConfirmationRequired, "enrich": mcp.TierConfirmationRequired}},
+			"merge_tags": mcp.TierConfirmationRequired, "enrich": mcp.TierConfirmationRequired,
+		}},
 	} {
 		offered := map[string]mcp.RiskTier{}
 		for _, spec := range r.Offered(tc.ctx) {

@@ -23,6 +23,9 @@ import (
 // liftedAgentCallReason is the audit reason on a withdrawn agent call.
 const liftedAgentCallReason = "an agent on its colleague's passport now runs this without an approval"
 
+// cursorArg names the id a withdrawal batch resumes after.
+const cursorArg = "after"
+
 // liftedAgentCallScope selects the live approvals a passport staged for a tool
 // kind that no longer waits.
 const liftedAgentCallScope = `FROM approval WHERE status = 'pending' AND expires_at > now()
@@ -54,7 +57,7 @@ func WithdrawLiftedAgentCallsTx(kinds []string) func(context.Context, pgx.Tx, da
 			return datatask.BatchOut{}, err
 		}
 		rows, err := tx.Query(ctx, `SELECT id `+liftedAgentCallScope+` AND id > @after ORDER BY id LIMIT @batch_limit`,
-			pgx.NamedArgs{"kinds": kinds, "after": after, "batch_limit": in.Limit})
+			pgx.NamedArgs{"kinds": kinds, cursorArg: after, "batch_limit": in.Limit})
 		if err != nil {
 			return datatask.BatchOut{}, fmt.Errorf("approvals: reading pending agent calls: %w", err)
 		}
