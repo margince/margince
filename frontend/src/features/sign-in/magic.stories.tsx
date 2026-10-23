@@ -8,6 +8,7 @@ import {
   stubWithSession,
 } from "../../testing/story-utils";
 import { automaticStageReceipt } from "../../testing/worklist.receiptreview.fixtures";
+import { BriefChanges } from "../brief/brief.changes";
 import { MagicPanel } from "./magic";
 import { BUSY_NIGHT } from "./magic.fixtures";
 import type { MagicReceipt } from "./magic.queries";
@@ -140,6 +141,7 @@ export const OnHome: Story = {
     return (
       <StoryProviders>
         <MagicPanel />
+        <BriefChanges />
       </StoryProviders>
     );
   },

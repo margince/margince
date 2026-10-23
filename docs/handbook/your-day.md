@@ -185,9 +185,9 @@ The work counts come from the current Worklist read. The greeting's email count 
 **Since your last brief** says when some activity could not be counted. Its count then says how much it could count, and an empty list does not mean nothing happened.
 
 ### Check applied changes
-A deal change you can still keep or undo shows its buttons on its own line in **Done for you**. Date estimates show their sales history when available.
+**Check applied changes**, on **Morning**, lists deal changes you can still keep or undo. Each names the deal, what changed and when. Date estimates show their sales history when available. An undone or accepted change leaves this list.
 
-**Keep date** keeps a date estimate; **Accept** keeps a stage change. Neither runs the change again or makes an estimate a customer promise. **Undo** puts the deal back.
+**Keep date** keeps a date estimate; **Accept** keeps a stage change. Neither runs the change again or makes an estimate a customer promise. **Undo** puts the deal back. Past changes remain under **Change history** on the Worklist.
 
 A deal that changed again reads "This deal changed again. Open the deal to review its current state."
 Neither an undone change nor a replaced one can be accepted. To make Margince ask first, see [Approvals](approvals.md). Also called: automatic changes, review changes, accept a change.
@@ -347,15 +347,15 @@ The Worklist footer and **To review** panel count items, not cards: 8 possible d
 
 **Worklist incomplete** names sources that did not load; an empty list says **"No items in the sources that loaded."**
 
-### Done for you
+### Change history
 
-**Done for you** is one list, the same on Home and on the Worklist. It shows what Margince changed
-or decided for you since your last brief. With no brief, it shows the last 24 hours.
-A lookup that found nothing new is not on it. With nothing to show it says "No actions taken on your behalf today."
-If part of the list did not load, it says so instead.
+**Change history**, on the Worklist, keeps the changes from the last 24 hours. Press
+**Show recent changes** to read the action, record, time and status.
 
-**Undo** puts the record back. It refuses, and says why, when later work would be lost: for a
-company lookup, any later edit to its company or facts. An undone change keeps its row and status.
+When there is nothing: "No actions taken on your behalf today."
+
+**Undo** puts the record back the way it was before a deal change. A change already undone
+stays in history with its status and has no action to take.
 
 ## For a team lead
 

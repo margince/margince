@@ -3,6 +3,7 @@ import { cleanup, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { wonProposal } from "../../testing/magic.approval.fixtures";
 import { receipt, renderMagic, stub } from "../../testing/magic.testkit";
+import { MAGIC_PAGE_LINES } from "./magic.queries";
 
 afterEach(() => {
   cleanup();
@@ -132,6 +133,76 @@ it("keeps an unknown legacy decision reachable without generic waiting prose", a
   ).toBeNull();
 });
 
+it("shows each active receipt once without suppressing other changes to the same deal", async () => {
+  stub(
+    receipt({
+      done: [
+        {
+          ...wonProposal,
+          id: "shown-audit",
+          receipt_ids: ["shown-change"],
+          lane: "done",
+          approval_preview: undefined,
+          summary: { key: "magic.action.advance_stage" },
+        },
+        {
+          ...wonProposal,
+          id: "other-change",
+          lane: "done",
+          approval_preview: undefined,
+          summary: { key: "magic.action.advance_stage" },
+          consequence: "magic.consequence.stage_moved",
+        },
+      ],
+    }),
+  );
+  renderMagic("en", undefined, { visibleReceiptIds: ["shown-change"] });
+  await screen.findByText("A deal moved to its next stage");
+  expect(screen.getAllByText("A deal moved to its next stage")).toHaveLength(1);
+  expect(screen.queryByText(/deal sits in a later stage/i)).toBeNull();
+});
+
+it("retains a bounded lane's floor after hiding a duplicate receipt", async () => {
+  const rows = Array.from({ length: MAGIC_PAGE_LINES }, (_, index) => ({
+    ...wonProposal,
+    id: `audit-${index}`,
+    receipt_ids: [String(index)],
+    lane: "done" as const,
+    approval_preview: undefined,
+    summary: { key: "magic.action.advance_stage" },
+  }));
+  stub(receipt({ done: rows }));
+  renderMagic("en", undefined, { visibleReceiptIds: ["0"] });
+  expect(await screen.findByText("99+ changes, one by one")).toBeTruthy();
+  expect(screen.queryByText(/All 99/)).toBeNull();
+});
+
+it("keeps a hidden receipt's floor while other changes remain", async () => {
+  stub(
+    receipt({
+      done: [
+        {
+          ...wonProposal,
+          id: "floor-audit",
+          receipt_ids: ["floor"],
+          lane: "done",
+          count_is_floor: true,
+          count: 1,
+          summary: { key: "magic.action.advance_stage" },
+        },
+        {
+          ...wonProposal,
+          id: "other",
+          lane: "done",
+          summary: { key: "magic.action.advance_stage" },
+        },
+      ],
+    }),
+  );
+  renderMagic("en", undefined, { visibleReceiptIds: ["floor"] });
+  expect(await screen.findByText("1+ change, one by one")).toBeTruthy();
+});
+
 it.each([
   ["magic.consequence.capture_not_collecting", "Capture stopped."],
   [
@@ -162,7 +233,7 @@ it.each([
   expect(await screen.findByText(status)).toBeTruthy();
 });
 
-it("draws legacy and grouped changes, hiding none of them", async () => {
+it("retains legacy and grouped changes without guessing a shared receipt identity", async () => {
   stub(
     receipt({
       done: [
@@ -183,7 +254,9 @@ it("draws legacy and grouped changes, hiding none of them", async () => {
       ],
     }),
   );
-  renderMagic();
+  renderMagic("en", undefined, {
+    visibleReceiptIds: ["same-looking-id", "known"],
+  });
   await screen.findByText("All 3 changes, one by one");
   expect(screen.getAllByText("A deal moved to its next stage")).toHaveLength(2);
 });

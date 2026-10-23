@@ -55,16 +55,10 @@ const NOT_SHOWN_REASON: Readonly<Record<MagicNotShown["reason"], MessageKey>> =
 
 export function MagicPanel({
   visibleApprovalIds = [],
-  only,
-  emptyLabel,
+  visibleReceiptIds = [],
 }: Readonly<{
   visibleApprovalIds?: readonly string[];
-  // One lane, drawn inside a host panel that carries its own heading: the
-  // worklist shows the same Done for you lines Home shows.
-  only?: MagicLane;
-  // Said over a complete read with nothing in it. Without one, the section
-  // stays away instead.
-  emptyLabel?: string;
+  visibleReceiptIds?: readonly string[];
 }> = {}) {
   const t = useT();
   const { locale } = useLocale();
@@ -82,8 +76,9 @@ export function MagicPanel({
   const shown = distinctReceipt(
     state === "ready" ? receipt : undefined,
     visibleApprovalIds,
+    visibleReceiptIds,
   );
-  const drawn = drawnLanes(shown, only);
+  const drawn = LANES.filter((lane) => hasLines(shown?.[lane]));
   const done = rowsOf(shown?.done);
   const doneRecords = recordsOf(done);
   const coverageIncomplete = doneCoverageIncomplete(shown);
@@ -105,19 +100,19 @@ export function MagicPanel({
     },
   );
   const byDay = shown ? spansDays(shown.since, shown.as_of) : false;
-  const read = sectionRead(state, shown, only, drawn, coverageIncomplete);
-  if (read === "empty" && emptyLabel === undefined) {
+  const read = sectionRead(state, shown, drawn, coverageIncomplete);
+  if (read === "empty") {
     return null;
   }
   return (
     <section className="brief-section" aria-labelledby={titleId}>
-      <Eyebrow as="h2" id={titleId} className={eyebrowClass(only)}>
+      <Eyebrow as="h2" id={titleId} className="brief-section-label">
         {t("magic.heading.brief")}
       </Eyebrow>
       <PanelBody>
         <SurfaceState
           state={read}
-          emptyLabel={emptyLabel ?? ""}
+          emptyLabel=""
           loadingLabel={t("magic.loading")}
           detail={{ onRetry: () => void magic.refetch() }}
         >
@@ -159,22 +154,19 @@ function queryState(
 }
 
 // A quiet window and an unread one are different answers. Only a read that
-// answered completely, with nothing drawn, is empty. A requested lane the
-// response did not carry is unread, not empty.
+// answered completely, with nothing drawn, is empty and stays away. A lane
+// the response did not carry is unread, not empty, and a count this reader
+// may not be given is unmeasured.
 function sectionRead(
   state: "loading" | "failed" | "ready",
   shown: MagicReceipt | undefined,
-  only: MagicLane | undefined,
   drawn: readonly MagicLane[],
   coverageIncomplete: boolean,
 ): "loading" | "failed" | "ready" | "empty" | "unavailable" {
   if (state !== "ready") return state;
-  const requested = only === undefined ? LANES : [only];
-  if (requested.some((lane) => !Array.isArray(shown?.[lane]))) {
+  if (LANES.some((lane) => !Array.isArray(shown?.[lane]))) {
     return "unavailable";
   }
-  // A count this reader may not be given is unmeasured, so it never reads as
-  // a complete empty lane either.
   const complete =
     rowsOf(shown?.sources_unavailable).length === 0 &&
     rowsOf(shown?.not_shown).length === 0 &&
@@ -182,22 +174,6 @@ function sectionRead(
     shown?.done_is_floor !== true &&
     !coverageIncomplete;
   return drawn.length === 0 && complete ? "empty" : "ready";
-}
-
-// Hosted inside a panel that names it, the section's own heading is kept for
-// the screen reader and not drawn twice.
-function eyebrowClass(only: MagicLane | undefined): string {
-  return only === undefined ? "brief-section-label" : "sr-only";
-}
-
-// The lanes with lines to draw, or only the one a host panel asked for.
-function drawnLanes(
-  shown: MagicReceipt | undefined,
-  only: MagicLane | undefined,
-): MagicLane[] {
-  return LANES.filter(
-    (lane) => (only === undefined || lane === only) && hasLines(shown?.[lane]),
-  );
 }
 
 function doneCoverageIncomplete(receipt: MagicReceipt | undefined): boolean {
@@ -272,17 +248,22 @@ function NotShown({
   );
 }
 
-// The approvals Focus already offers to decide leave the needs-you lane.
-// Done lines are never hidden: their review controls ride on the line.
 function distinctReceipt(
   receipt: MagicReceipt | undefined,
   approvalIds: readonly string[],
+  receiptIds: readonly string[],
 ): MagicReceipt | undefined {
   if (!receipt) return undefined;
   return {
     ...receipt,
     needs_you: receipt.needs_you?.filter(
       (line) => !approvalIds.includes(line.id),
+    ),
+    done: receipt.done?.filter(
+      (line) =>
+        (line.count ?? 1) > 1 ||
+        !line.receipt_ids?.length ||
+        !line.receipt_ids.every((id) => receiptIds.includes(id)),
     ),
   };
 }

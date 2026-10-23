@@ -2,6 +2,8 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { formatDayMonth, formatTimeOfDay } from "../../format/format";
+import { viewerZone } from "../../format/timezone";
 import { en } from "../../i18n/en";
 import {
   jsonResponse,
@@ -14,8 +16,7 @@ import {
   automaticDateReceipt,
   automaticStageReceipt,
 } from "../../testing/worklist.receiptreview.fixtures";
-import { LineReview } from "../sign-in/magic.review";
-import { useHandledForYou } from "./worklist.queries";
+import { BriefChanges } from "../brief/brief.changes";
 import { ReceiptReview } from "./worklist.receiptreview";
 
 afterEach(() => {
@@ -44,13 +45,72 @@ it("accepts the exact recorded stage change and shows its persisted answer", asy
     },
   });
   const user = userEvent.setup();
-  const { client } = render(<FirstHandledReview />);
+  const { client } = render(<BriefChanges />);
   client.setQueryData(["magic"], { needs_you: [] });
   await user.click(await screen.findByRole("button", { name: "Accept" }));
-  expect(await screen.findByText(en["brief.changes.accepted"])).toBeTruthy();
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("heading", { name: en["brief.changes.title"] }),
+    ).toBeNull(),
+  );
   expect(client.getQueryState(["magic"])?.isInvalidated).toBe(true);
   expect(writes(calls).map((call) => call.path)).toEqual([path]);
   expect(screen.queryByRole("button", { name: "Accept" })).toBeNull();
+});
+
+it("draws no group at all when no change waits for a word", async () => {
+  stubApi({
+    "GET /worklist/handled": () =>
+      jsonResponse({
+        as_of: "2026-09-13T08:00:00Z",
+        truncated: false,
+        receipts: [],
+      }),
+  });
+  const { container, client } = render(<BriefChanges />);
+  // It draws nothing while loading too, so the empty answer has to have come
+  // back before "nothing" says anything about it.
+  await waitFor(() =>
+    expect(
+      client
+        .getQueryCache()
+        .getAll()
+        .map((query) => query.state.status),
+    ).toEqual(["success"]),
+  );
+  // An empty section would be a heading over nothing.
+  expect(container.innerHTML).toBe("");
+  expect(
+    screen.queryByRole("heading", { name: en["brief.changes.title"] }),
+  ).toBeNull();
+});
+
+it("dates a change from today by its hour and an older one by its day", async () => {
+  const today = automaticStageReceipt;
+  const older = {
+    ...automaticStageReceipt,
+    id: "01a00000-0000-7000-8000-000000000013",
+    occurred_at: "2026-09-09T14:00:00Z",
+  };
+  stubApi({
+    "GET /worklist/handled": () =>
+      jsonResponse({
+        as_of: today.occurred_at,
+        truncated: false,
+        receipts: [today, older],
+      }),
+    [`GET /deals/${today.subject?.id}`]: () =>
+      jsonResponse({ name: "PIM Rollout" }),
+  });
+  const { container } = render(<BriefChanges />);
+  await screen.findByRole("list", { name: en["brief.changes.title"] });
+  const zone = viewerZone();
+  expect(
+    [...container.querySelectorAll("time")].map((time) => time.textContent),
+  ).toEqual([
+    formatTimeOfDay(today.occurred_at, "en", zone),
+    formatDayMonth(older.occurred_at, "en", zone),
+  ]);
 });
 
 it("uses the stage reversal route rather than restoring a stage field", async () => {
@@ -104,14 +164,7 @@ it("keeps an undo-only applied change visible until it is reversed", async () =>
     [`GET /deals/${change.subject?.id}`]: () =>
       jsonResponse({ name: "PIM Rollout" }),
   });
-  render(<FirstHandledReview />);
+  render(<BriefChanges />);
   expect(await screen.findByRole("button", { name: "Undo" })).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Keep date" })).toBeNull();
 });
-
-// The review controls as a Done for you line draws them, over the receipt the
-// worklist read returned.
-function FirstHandledReview() {
-  const receipt = useHandledForYou().data?.receipts?.[0];
-  return receipt ? <LineReview receipt={receipt} /> : null;
-}

@@ -77,6 +77,7 @@ const STANDALONE: readonly string[] = [
   "voice.insights.statWords",
   "webhooks.deliveries.deadLetterGroup",
   "worklist.exceptions.count",
+  "worklist.handled.count",
   "worklist.hidden.count",
   "worklist.hidden.shown",
   "worklist.pair.related",

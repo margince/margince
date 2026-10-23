@@ -1470,6 +1470,7 @@ export const de = {
   "home.receipt.basis_other":
     "Schätzung aus {count} gewonnenen Deals · Median der Tage je Phase: {days} · Verbleibende Phasen: {stages}. Kein von der Käuferseite bestätigtes Datum.",
   "brief.changes.keepDate": "Datum behalten",
+  "worklist.handled.showHistory": "Letzte Änderungen anzeigen",
   "home.receipt.date": "Abschlussdatum: {before} → {after}",
   "home.receipt.dateUnconfirmed":
     "Geschätztes Abschlussdatum: {before} → {after} (Bestätigung nötig)",
@@ -1597,6 +1598,7 @@ export const de = {
   "brief.reply.owed": "Kontakt wartet auf deine Antwort",
   "brief.changes.superseded":
     "Dieser Deal wurde erneut geändert. Öffne den Deal, um seinen aktuellen Stand zu prüfen.",
+  "brief.changes.title": "Angewandte Änderungen prüfen",
   "brief.changes.accept": "Annehmen",
   "brief.changes.accepted": "Angenommen",
   "brief.changes.undone": "Rückgängig gemacht",
@@ -1864,9 +1866,9 @@ export const de = {
   "history.undo.edgeRelinkUnsupported":
     "Eine entfernte Verknüpfung lässt sich nicht rückgängig machen. Füge die Verknüpfung auf diesem Datensatz erneut hinzu.",
   "history.undo.laterCompanyChange":
-    "Die Firma oder ihre Angaben haben sich nach dieser Abfrage geändert. Ein Rückgängigmachen würde diese spätere Änderung überschreiben.",
+    "Das Unternehmen oder seine Angaben haben sich nach dieser Abfrage geändert. Ein Rückgängigmachen würde diese spätere Änderung überschreiben.",
   "history.undo.noRestoreSnapshot":
-    "Diese Abfrage wurde gespeichert, bevor die früheren Angaben aufbewahrt wurden. Sie lässt sich nicht rückgängig machen.",
+    "Diese Abfrage wurde gespeichert, bevor die früheren Angaben aufbewahrt wurden. Darum lässt sie sich nicht rückgängig machen.",
   "history.reversal.collapsed":
     "Änderung von {actor}, rückgängig gemacht von {undoer}",
   "history.reversal.collapsedSelf":
@@ -15634,6 +15636,7 @@ export const de = {
   "worklist.manager.kind.general": "Sonstiges",
   "worklist.board.title": "Teamarbeit mit Handlungsbedarf",
   "worklist.exceptions.title": "Team-Ausnahmen",
+  "worklist.handled.title": "Änderungsverlauf",
   "worklist.walk.arrived":
     "Neu seit dem Öffnen der Liste: {arrived}. Aktualisiere die Liste, um die neuen Einträge hinzuzufügen.",
   "worklist.walk.gone": "Davon seit dem Öffnen der Liste erledigt: {gone}.",
@@ -15643,7 +15646,16 @@ export const de = {
   "worklist.walk.refresh": "Aktualisieren",
   "worklist.handled.empty":
     "Heute wurden keine Aktionen in deinem Auftrag ausgeführt.",
+  "worklist.handled.loading": "Aktionen werden geladen…",
+  "worklist.handled.count": "Letzte Änderungen: {count}",
+  "worklist.handled.what": "Aktion",
+  "worklist.handled.about": "Datensatz",
+  "worklist.handled.when": "Zeitpunkt",
+  "worklist.handled.noRecord": "Kein Datensatz",
+  "worklist.handled.hiddenRecord": "Datensatz nicht verfügbar",
+  "worklist.handled.wayBack": "Status",
   "worklist.handled.putBackDone": "Bereits rückgängig gemacht",
+  "worklist.handled.truncated": "Liste gekürzt. Es gibt weitere Einträge.",
   "worklist.exceptions.empty": "Keine Team-Ausnahmen.",
   "worklist.exceptions.loading": "Team wird geladen…",
   "worklist.exceptions.count": "{count} mit Handlungsbedarf",
@@ -16461,8 +16473,6 @@ export const de = {
   "magic.heading.brief": "Seit deinem letzten Morgenbericht",
   "magic.loading": "Blick in den Maschinenraum",
   "magic.lane.done": "Für dich erledigt",
-  "magic.review.unavailable":
-    "Die Prüfung dieser Änderung wurde nicht geladen.",
   "magic.lane.needsYou": "Wartet auf dich",
   "magic.lane.couldNotComplete": "Konnte nicht abgeschlossen werden",
   "magic.lane.watching": "Muss wiederhergestellt werden",
@@ -16536,7 +16546,6 @@ export const de = {
   "magic.records.empty": "Keiner dieser Datensätze ist noch sichtbar.",
   "magic.records.more": "Mehr anzeigen",
   "magic.records.fromTo": "{from} → {to}",
-  "magic.records.fullValues": "Vollständige Werte zeigen",
   "magic.records.empty_value": "leer",
   "magic.records.count_one": "{count} Datensatz",
   "magic.records.count_other": "{count} Datensätze",
