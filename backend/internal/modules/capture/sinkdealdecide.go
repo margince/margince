@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -210,8 +211,8 @@ func mailCompanies(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, co
 }
 
 // threadDeals is the open deals our own sent mail in the mail's thread is
-// filed under, at most two, with each deal's company. Only a sibling we sent
-// counts: the thread key is the sender's References root, and an inbound
+// filed under, at most two, with each deal's company. Only a sibling proven
+// ours counts: the thread key is the sender's References root, and any other
 // sibling may be the sender's own earlier forgery. Siblings and deals are the
 // ones the capturing seat may read; held or archived siblings settle nothing,
 // for the reasons threadProject gives.
@@ -242,7 +243,7 @@ func threadDeals(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) ([]t
 		  JOIN activity_link l ON l.activity_id = a.id AND l.entity_type = 'deal'
 		  JOIN deal d ON d.id = l.deal_id
 		 WHERE self.id = $1 AND self.thread_key IS NOT NULL AND self.thread_key <> ''
-		   AND a.direction = 'outbound'
+		   AND `+correspondence.OurOutboundSQL("a")+`
 		   AND a.restricted_at IS NULL AND a.archived_at IS NULL AND (`+siblingScope+`)
 		   AND d.status = 'open' AND d.archived_at IS NULL AND (`+dealScope+`)
 		 ORDER BY d.id

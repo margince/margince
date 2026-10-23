@@ -468,3 +468,33 @@ func TestCaptureAsksNoColleagueTheSenderNamed(t *testing.T) {
 		t.Fatalf("a To header the sender typed handed the deal question to %v", holders)
 	}
 }
+
+// Mail that reads as ours without the provider attesting it is not proof we
+// wrote it: its deal is no clue for a reply, and it names nobody to ask.
+func TestCaptureCountsOnlyAttestedMailAsOurs(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	w := newDealWorld(t, e)
+	w.person(t, "alice@acme.example", w.customer)
+	w.deal(t, "Acme operations")
+	reporting := w.deal(t, "Acme reporting")
+
+	env.sync(t, email(captureOwner, "", "alice@acme.example", "una1@myco.example", ""))
+	if n := countRows(t, e, `SELECT count(*) FROM activity
+		 WHERE source_id = 'una1@myco.example' AND direction = 'outbound' AND NOT counterparty_outbound_attested
+		   AND sent_by_colleague IS NULL`); n != 1 {
+		t.Fatal("the fixture is not unattested outbound mail, so this case proves nothing")
+	}
+	wantDeals(t, e, "una1@myco.example")
+	if n, holders := whichDealQuestions(t, e); n != 0 {
+		t.Fatalf("unattested outbound mail handed the deal question to %v", holders)
+	}
+	ours := ids.From[ids.ActivityKind](activityOf(t, e, "una1@myco.example"))
+	if _, err := activities.NewStore(e.DB()).RelinkActivity(w.ctx, ours, activities.RelinkActivityInput{
+		EntityType: "deal", EntityID: reporting,
+	}); err != nil {
+		t.Fatalf("filing the mail on a deal as a human: %v", err)
+	}
+	env.sync(t, mailFrom("alice@acme.example", "una2@acme.example", "una1@myco.example", "Re: project"))
+	wantDeals(t, e, "una2@acme.example")
+}

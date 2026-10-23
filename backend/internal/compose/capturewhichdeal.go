@@ -109,9 +109,9 @@ func (a whichDealAsker) Ask(ctx context.Context, tx pgx.Tx, q capture.WhichDeal)
 //
 // Only rows the mailbox confirms count, never an address the sender typed:
 // a sender could otherwise name any colleague and hand them the question. The
-// seat must have imported the mail into their own mailbox, and either be its
-// sender (their own sent mail) or hold a To row capture bound to their seat
-// from an address. A seat row without an address only says whose mailbox the
+// seat must have imported the mail into their own mailbox, and either be the
+// sender of mail the provider attests as their sent mail, or hold a To row
+// capture bound to their seat from an address. A seat row without an address only says whose mailbox the
 // copy is in, which cannot tell To from Cc, so on its own it asks nobody.
 func (a whichDealAsker) respondent(ctx context.Context, tx pgx.Tx, mail ids.UUID) (ids.UUID, error) {
 	rows, err := tx.Query(ctx, `
@@ -120,7 +120,7 @@ func (a whichDealAsker) respondent(ctx context.Context, tx pgx.Tx, mail ids.UUID
 		  JOIN activity_participant p ON p.activity_id = a.id AND p.user_id IS NOT NULL
 		  JOIN capture_import ci ON ci.activity_id = a.id AND ci.user_id = p.user_id
 		 WHERE a.id = $1 AND a.restricted_at IS NULL AND a.archived_at IS NULL
-		   AND CASE WHEN a.direction = 'outbound' THEN p.role = 'from'
+		   AND CASE WHEN a.direction = 'outbound' THEN a.counterparty_outbound_attested AND p.role = 'from'
 		            ELSE p.role = 'to' AND p.address IS NOT NULL END
 		 ORDER BY p.user_id
 		 LIMIT 2`, mail)
