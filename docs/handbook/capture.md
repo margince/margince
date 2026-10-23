@@ -144,7 +144,23 @@ records *which* one. So you can tell "the queue is full" from "one domain is
 filling it".
 
 ### Why was my email not linked to a deal?
-Margince does not link captured email to a deal on its own. Capture files a message under the contacts on it, their company and, where a rule matches, a project. To put an email on a deal, use **Relink** on the message.
+Margince puts a captured email on a deal by itself only when one deal, and no other, fits it:
+
+1. **The project.** An email filed under a project goes on that project's one open deal. If the project has no open deal, or several, the email goes on no deal. The company's deals are not asked.
+2. **Your thread.** A reply in a thread where your own sent email is on a deal goes on that deal, if the deal belongs to the reply's company.
+3. **The company.** Otherwise the email goes on the one open deal of the one company its contacts work at. With several open deals, a contact who is a stakeholder on only one of them picks it.
+
+An email stays on no deal when:
+
+- the company has several open deals and nothing picks one;
+- its contacts work at two companies;
+- it is already on a deal. A deal you chose by hand is never changed.
+
+When several deals fit, the colleague who sent the email, or the one colleague it was addressed to, gets one task per thread: "Which deal is this about?". Nobody else is asked. If no colleague is named that way, nobody is asked.
+
+An email only its participants can read still appears on the deal's timeline. It does not change the deal's last activity date.
+
+To put an email on a deal yourself, use **Relink** on the message.
 1. Open the contact or company timeline and find the email.
 2. Press **Relink**.
 3. Search for the deal under "Search contacts, companies, deals, leads or projects" and pick it.
