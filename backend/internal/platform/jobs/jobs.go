@@ -115,10 +115,7 @@ func riverConfig(cfg Config, log *slog.Logger) *river.Config {
 		SoftStopTimeout:   cfg.SoftStopTimeout,
 		Logger:            log,
 		ReindexerSchedule: river.NeverSchedule(),
-		// The least River accepts. The rescuer also waits out each job's own
-		// timeout, so a longer value only keeps a killed worker's row alive.
-		RescueStuckJobsAfter: river.JobTimeoutDefault,
-		TestOnly:             cfg.TestOnly,
+		TestOnly:          cfg.TestOnly,
 	}
 }
 

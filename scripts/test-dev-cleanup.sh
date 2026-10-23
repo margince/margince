@@ -177,8 +177,8 @@ gone_probe
 
 # A PID THAT CHANGED HANDS DURING THE WAIT IS NOT KILLED.
 #
-# There are five seconds between the TERM and the SIGKILL, and a process that
-# honours the TERM frees its pid inside them. The kernel reissues numbers, so a
+# There are STOP_GRACE_SECONDS between the TERM and the SIGKILL, and a process
+# that honours the TERM frees its pid inside them. The kernel reissues numbers, so a
 # SIGKILL sent on the strength of the number alone lands on whatever took it —
 # somebody's editor, their own shell.
 #

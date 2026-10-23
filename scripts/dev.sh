@@ -164,8 +164,8 @@ resolve_stack_environment "$MINIO_PORT"
 # running jobs finish for its drain window (20s), cancelling the rest and waiting
 # for them to return, so a shorter wait kills a job mid-write and leaves its
 # River row `running`. The window, five seconds to cancel and the teardown fit in
-# thirty; backend/gates/devstopgrace_test.go fails if the drain window outgrows
-# this number.
+# thirty; backend/cmd/worker/devstopgrace_test.go fails if the drain window
+# outgrows this number, or if the wait below stops reading it.
 STOP_GRACE_SECONDS=30
 
 kill_pids() { # pid… — TERM, then KILL whatever is still standing
