@@ -172,15 +172,27 @@ func TestAMeetingIsHeldOnlyOnceItsOutcomeSaysSo(t *testing.T) {
 	e := integration.Setup(t)
 	now := laneDay.Add(3 * time.Hour)
 	ownerID := ids.From[ids.UserKind](e.Rep1)
-	created, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
-		FullName: "Meeting Customer", OwnerID: &ownerID, Source: "manual",
-		Emails: []contacts.ContactEmailInput{{Email: "meeting.customer@customer.test", IsPrimary: true}},
-	})
-	if err != nil {
-		t.Fatal(err)
+	conn := integration.OwnerConn(t)
+	newCustomer := func(name, email string) ids.UUID {
+		created, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
+			FullName: name, OwnerID: &ownerID, Source: "manual",
+			Emails: []contacts.ContactEmailInput{{Email: email, EmailType: "work", IsPrimary: true}},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		account := ids.NewV7()
+		if _, err := conn.Exec(context.Background(), `INSERT INTO company (id, display_name, owner_id, lifecycle, source, captured_by)
+			VALUES ($1, $2, $3, 'customer', 'seed', 'system')`, account, name+" Account", e.Rep1); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := conn.Exec(context.Background(), `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
+			VALUES ('employment', $1, $2, 'seed', 'system')`, created.Id, account); err != nil {
+			t.Fatal(err)
+		}
+		return ids.UUID(created.Id)
 	}
-	customer := ids.UUID(created.Id)
-	book := func(subject string, at time.Time, status string) ids.UUID {
+	book := func(subject string, at time.Time, status string, customer ids.UUID) ids.UUID {
 		rep := ids.From[ids.UserKind](e.Rep1)
 		row, _, err := e.Activities.LogActivity(e.As(e.Rep1, nil, integration.AdminPerms), activities.LogActivityInput{
 			Kind: "meeting", Subject: &subject, OccurredAt: &at, Source: "manual", MeetingStatus: &status, HostUserID: &rep,
@@ -191,9 +203,9 @@ func TestAMeetingIsHeldOnlyOnceItsOutcomeSaysSo(t *testing.T) {
 		}
 		return ids.UUID(row.Id)
 	}
-	ahead := book("Booked ahead", now.Add(2*time.Hour), "booked")
-	unreported := book("Past, no outcome", now.AddDate(0, 0, -3), "booked")
-	held := book("Past, held", now.AddDate(0, 0, -4), "held")
+	ahead := book("Booked ahead", now.Add(2*time.Hour), "booked", newCustomer("Ahead Customer", "ahead@customer.test"))
+	unreported := book("Past, no outcome", now.AddDate(0, 0, -3), "booked", newCustomer("Unreported Customer", "unreported@customer.test"))
+	held := book("Past, held", now.AddDate(0, 0, -3), "held", newCustomer("Held Customer", "held@customer.test"))
 
 	if got := meetingRowsOf(t, e, e.Rep1, now, ahead); got["meeting_follow_up"] != 0 || got["meeting_outcome"] != 0 || got["meeting"] != 1 {
 		t.Errorf("a booked meeting ahead reads %v, want only the meeting to prepare", got)
