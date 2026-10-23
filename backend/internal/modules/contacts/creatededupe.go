@@ -63,7 +63,7 @@ func manualDedupeContact(ctx context.Context, tx pgx.Tx, in CreateContactInput) 
 	if err := lockPhoneLane(ctx, tx, phones); err != nil {
 		return ContactResolution{}, err
 	}
-	if err := lockNameLane(ctx, tx, in.FullName); err != nil {
+	if err := lockContactLanes(ctx, tx, emails, in.FullName); err != nil {
 		return ContactResolution{}, err
 	}
 	// QueueNameCollisions, because this caller creates rather than routes. A
@@ -94,16 +94,26 @@ func manualDedupeContact(ctx context.Context, tx pgx.Tx, in CreateContactInput) 
 // "LUCY VO" take different locks and race each other, which is the pair most
 // likely to be typed twice.
 //
-// Taken AFTER the phone lane and never interleaved with it: two lanes locked in
-// one fixed global order cannot deadlock, and phone-then-name is that order.
+// Taken after the phone and address-base lanes and never interleaved with them:
+// lanes locked in one fixed global order cannot deadlock.
 // An empty name takes no lock — it can match nobody, since fuzzyContact refuses a
 // nameless candidate before it scores.
+//
+// The digraph key is locked too, in sorted order. A "Björn" create holds
+// "bjoern" through it, the plain key a "Bjoern" create takes, so the two
+// serialize.
 func lockNameLane(ctx context.Context, tx pgx.Tx, fullName string) error {
-	key := NormalizeContactName(fullName)
-	if key == "" {
-		return nil
+	keys := []string{NormalizeContactName(fullName), digraphNameKey(fullName)}
+	slices.Sort(keys)
+	for _, key := range slices.Compact(keys) {
+		if key == "" {
+			continue
+		}
+		if err := storekit.LockWriteIdentity(ctx, tx, "contact_full_name", key); err != nil {
+			return err
+		}
 	}
-	return storekit.LockWriteIdentity(ctx, tx, "contact_full_name", key)
+	return nil
 }
 
 // phoneLaneKeys is the request's numbers in the form the phone lane
@@ -176,44 +186,54 @@ func manualDedupeCompany(ctx context.Context, tx pgx.Tx, in CreateCompanyInput) 
 	})
 }
 
-// recordIfReview leaves the review trail a manual contact create owes —
-// the fuzzy pair, and the shared phone the exact tier routed on. A
-// no-match writes nothing, because there is no second record to compare.
+// recordIfReview leaves the review trail a manual contact create owes: every
+// pair the review lanes named, and the shared phone the exact tier routed on.
+// A no-match writes nothing, because there is no second record to compare.
 func (m ContactResolution) recordIfReview(ctx context.Context, tx pgx.Tx, createdID ids.ContactID, createdName, source, by string) error {
-	switch m.Decision {
+	if m.Decision == DecisionExactCollision {
+		return m.recordSharedPhone(ctx, tx, createdID, source, by)
+	}
+	for _, review := range m.Reviews {
+		if err := review.record(ctx, tx, createdID, createdName, source, by); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// record files one review pair with the evidence its lane met on.
+func (r ReviewMatch) record(ctx context.Context, tx pgx.Tx, createdID ids.ContactID, createdName, source, by string) error {
+	switch r.Decision {
 	case DecisionFuzzyReview:
 		var incumbent string
-		if err := tx.QueryRow(ctx, `SELECT full_name FROM contact WHERE id = $1`, m.ContactID).Scan(&incumbent); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT full_name FROM contact WHERE id = $1`, r.ContactID).Scan(&incumbent); err != nil {
 			return fmt.Errorf("reading contact near-match incumbent: %w", err)
 		}
-		return recordNearMatch(ctx, tx, entityContact, createdID.UUID, m.ContactID.UUID, m.Confidence,
-			nearMatchEvidence(fieldFullName, createdName, incumbent, m.Confidence), source, by)
+		return recordNearMatch(ctx, tx, entityContact, createdID.UUID, r.ContactID.UUID, r.Confidence,
+			nearMatchEvidence(fieldFullName, createdName, incumbent, r.Confidence), source, by)
 	case DecisionNameCollisionReview:
-		// One contact, a second business card, a different address: the case a
-		// rep actually hits, and the one the fuzzy tier cannot reach because a
-		// create carries no employer for its company term to agree with.
-		//
 		// The incumbent's name is read back rather than reused from the request
 		// so the evidence shows the two SPELLINGS a human will compare. They are
-		// equal after folding — that is what the lane matched on — but not
-		// necessarily equal on screen, and "Lucy Vo" beside "LUCY VO" is a
-		// reviewer's first clue about where the second record came from.
+		// equal after folding, but "Lucy Vo" beside "LUCY VO" is a reviewer's
+		// first clue about where the second record came from.
 		var incumbent string
-		if err := tx.QueryRow(ctx, `SELECT full_name FROM contact WHERE id = $1`, m.ContactID).Scan(&incumbent); err != nil {
+		if err := tx.QueryRow(ctx, `SELECT full_name FROM contact WHERE id = $1`, r.ContactID).Scan(&incumbent); err != nil {
 			return fmt.Errorf("reading the contact this name collides with: %w", err)
 		}
 		// The queue row only. No dedupe_near_match ledger line, because that
 		// ledger records the fuzzy tier's own scoring and this lane did not
-		// score: it compared two normalized strings. A line carrying a
-		// confidence would invite a reader to tune a threshold that had no part
-		// in the decision.
-		if _, err := recordDedupeCandidate(ctx, tx, entityContact, createdID.UUID, m.ContactID.UUID,
-			m.Confidence, nameCollisionEvidence(createdName, incumbent, m.Confidence), source, by); err != nil {
+		// score: it compared two normalized strings.
+		if _, err := recordDedupeCandidate(ctx, tx, entityContact, createdID.UUID, r.ContactID.UUID,
+			r.Confidence, nameCollisionEvidence(createdName, incumbent, r.Confidence), source, by); err != nil {
 			return fmt.Errorf("record contact name-collision candidate: %w", err)
 		}
 		return nil
-	case DecisionExactCollision:
-		return m.recordSharedPhone(ctx, tx, createdID, source, by)
+	case DecisionAddressVariantReview:
+		if _, err := recordDedupeCandidate(ctx, tx, entityContact, createdID.UUID, r.ContactID.UUID,
+			0, addressVariantEvidence(r.CandidateEmail, r.IncumbentEmail), source, by); err != nil {
+			return fmt.Errorf("record contact address-variant candidate: %w", err)
+		}
+		return nil
 	default:
 		return nil
 	}
@@ -294,6 +314,13 @@ func (m CompanyMatch) recordIfReview(ctx context.Context, tx pgx.Tx, createdID i
 	// fuzzyCompany only returns this decision with a non-empty Ranked, so
 	// the winner is always there to read.
 	best := m.Ranked[0]
+	if best.Confidence == 0 {
+		// A lane that compared keys and scored nothing, such as the subdomain
+		// lane, files the queue row and no score line.
+		_, err := recordDedupeCandidate(ctx, tx, entityCompany, createdID.UUID, m.CompanyID.UUID, 0,
+			nearMatchEvidence(best.MatchedField, best.CandidateValue, best.IncumbentValue, 0), source, by)
+		return err
+	}
 	return recordNearMatch(ctx, tx, entityCompany, createdID.UUID, m.CompanyID.UUID, m.Confidence,
 		nearMatchEvidence(best.MatchedField, best.CandidateValue, best.IncumbentValue, m.Confidence), source, by)
 }

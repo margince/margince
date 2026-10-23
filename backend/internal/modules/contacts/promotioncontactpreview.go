@@ -174,16 +174,15 @@ func promotionCandidateVisible(ctx context.Context, tx pgx.Tx, candidate ids.Con
 }
 
 func previewPromotionReview(ctx context.Context, tx pgx.Tx, match ContactResolution, out *LeadContactChange) error {
-	if match.Decision != DecisionFuzzyReview && match.Decision != DecisionNameCollisionReview {
+	if !match.Decision.queuesReview() {
 		return nil
 	}
-	if err := auth.Require(ctx, contactEntity, principal.ActionRead); err != nil {
+	// A hidden match changes nothing the promoter sees.
+	shown, err := firstVisibleReview(ctx, tx, match)
+	if err != nil || shown == nil {
 		return err
 	}
-	if err := auth.EnsureVisible(ctx, tx, contactEntity, match.ContactID.UUID); err != nil {
-		return err
-	}
-	out.ReviewContact = &match.ContactID
+	out.ReviewContact = &shown.ContactID
 	return nil
 }
 
@@ -195,7 +194,7 @@ func (s *Store) previewLeadContactChangeTx(ctx context.Context, tx pgx.Tx, id id
 	if err := promotionCandidateVisible(ctx, tx, candidate); err != nil {
 		return LeadContactChange{}, err
 	}
-	if err := lockContactThenLead(ctx, tx, candidate, storekit.IncludeArchived, id); err != nil {
+	if err := lockContactThenLead(ctx, tx, candidate, storekit.IncludeArchived, id, nil); err != nil {
 		return LeadContactChange{}, err
 	}
 	lead, err := promotableLead(ctx, tx, id, in)

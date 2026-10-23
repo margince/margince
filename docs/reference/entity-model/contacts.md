@@ -541,6 +541,7 @@ The 43 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `contact_pkey`: `unique, btree (id)`
 - `idx_contact_created_keyset`: `btree (created_at DESC, id DESC) WHERE (archived_at IS NULL)`
+- `idx_contact_exact_digraph_name_key`: `btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(replace(replace(replace(NORMALIZE(lower(full_name), NFC), 'ä', 'ae'), 'ö', 'oe'), 'ü', 'ue'))), 'ς', 'σ'), '\s+', ' ', 'g'))) WHERE (archived_at IS NULL)`
 - `idx_contact_exact_name_key`: `btree (btrim(regexp_replace(replace(f_fold_apostrophes(lower(full_name)), 'ς', 'σ'), '\s+', ' ', 'g'))) WHERE (archived_at IS NULL)`
 - `idx_contact_from_lead`: `btree (converted_from_lead_id) WHERE (converted_from_lead_id IS NOT NULL)`
 - `idx_contact_last_activity_keyset`: `btree (last_activity_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)`
@@ -666,6 +667,7 @@ The 43 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Indexes**
 
 - `contact_email_pkey`: `unique, btree (id)`
+- `idx_contact_email_base`: `btree (regexp_replace(lower(email), '^([^+@]+)\+[^@]*@', '\1@')) WHERE (archived_at IS NULL)`
 - `idx_contact_email_contact`: `btree (contact_id)`
 - `idx_contact_email_correspondence`: `btree (email) WHERE (from_correspondence AND (archived_at IS NULL))`
 - `uq_contact_email_dedupe`: `unique, btree (email) WHERE (archived_at IS NULL)`

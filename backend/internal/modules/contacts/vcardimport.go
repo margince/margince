@@ -31,7 +31,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/captureorigin"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -164,8 +163,17 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 		// records this card holds no subject lock on, and taking one here
 		// would order this writer against the eraser the wrong way round.
 		split = decision.Conflict
-		switch decision.Decision {
-		case DecisionExactCollision:
+		// The review match this caller may be shown, or none. A hidden match
+		// leaves the card's outcome as it would be without that record. The
+		// create below still files the pair, through the create's own writer.
+		var shown *ReviewMatch
+		if decision.Decision.queuesReview() {
+			if shown, err = firstVisibleReview(ctx, tx, decision); err != nil {
+				return err
+			}
+		}
+		switch {
+		case decision.Decision == DecisionExactCollision:
 			// The card names somebody who exists, so the caller's authority
 			// over THAT ROW decides whether this card may touch it — the
 			// contact:create grant that let them start the import says nothing
@@ -175,7 +183,7 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 			// quietly leaves one card out is an import nobody can audit, and
 			// the reader can act on "you may not write this one".
 			return s.updateMatchedByCard(ctx, tx, decision.ContactID, entry, source, &result)
-		case DecisionFuzzyReview, DecisionNameCollisionReview:
+		case shown != nil:
 			// Named, not merged, and not created either: creating beside a
 			// near-match is how a file of forty cards quietly doubles a
 			// contact list.
@@ -200,14 +208,7 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 				return nil
 			}
 			result.Outcome = VCardNeedsReview
-			if err := auth.EnsureVisible(ctx, tx, entityContact, decision.ContactID.UUID); err != nil {
-				if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
-					result.Reason = "this card resembles an existing contact"
-					return nil
-				}
-				return fmt.Errorf("probing visibility of the candidate: %w", err)
-			}
-			result.ContactID = &decision.ContactID
+			result.ContactID = &shown.ContactID
 			return nil
 		default:
 			return s.createFromCard(ctx, tx, entry, source, &result)

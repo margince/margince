@@ -256,12 +256,22 @@ func (s *Store) ensureContact(ctx context.Context, tx pgx.Tx, in EnsureCounterpa
 	// one the workspace already has — a decade of mail puts two contacts both
 	// called "Michael Schmidt" in one workspace, and nothing was asking anybody
 	// about it.
-	match, err := DedupeContact(ctx, tx, ContactCandidate{
+	candidate := ContactCandidate{
 		FullName: name, Emails: []string{in.Email}, ConsumerMail: consumerMail,
 		QueueNameCollisions: true,
-	})
+	}
+	match, err := DedupeContact(ctx, tx, candidate)
 	if err != nil {
 		return err
+	}
+	if match.Decision != DecisionExactCollision {
+		// The lane locks come only now, on the path that creates. The exact path
+		// goes on to lock the incumbent's row, and a writer holding a lane lock
+		// never waits on an existing contact (lockorder.go). The review lanes are
+		// read again under the lock, so a concurrent create is seen.
+		if match, err = lockLanesAndReview(ctx, tx, candidate); err != nil {
+			return err
+		}
 	}
 	if match.Decision == DecisionExactCollision {
 		res.ContactID = match.ContactID

@@ -21,6 +21,8 @@ import (
 	"strings"
 
 	"github.com/emersion/go-message/mail"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 )
 
 // SkipReason names why a message is intentionally dropped, or reports that
@@ -78,7 +80,7 @@ func isDeliverySystemSender(addr string) bool {
 	// (`bounces-12345@`, `bounce+tag@`), so the trailing tag is dropped before
 	// matching. `_` is stripped for parity with the T2 registry's own reading
 	// of these localparts (CAP-PARAM-6) — one spelling, two rules.
-	local, _, _ = strings.Cut(local, "+")
+	local = correspondence.LocalPartBase(local)
 	local = strings.NewReplacer(".", "", "-", "", "_", "").Replace(local)
 	local = strings.TrimRight(local, "0123456789")
 	switch local {
