@@ -57,8 +57,8 @@ type QuietContact struct {
 var recentMemberJoin = `JOIN app_user ru ON ru.id = recent.user_id AND ` + workforce.LiveMemberSQL("ru")
 
 // QuietContacts answers "which relationships have gone silent", most exchanged
-// first. It is the CANDIDATE half of the decay lane; whether a silence is worth
-// reporting stays with the §4 derivation in contacts.
+// first. It is the candidate half of the decay lane. Whether a silence is
+// worth reporting stays with the relationship-change derivation in contacts.
 //
 // A relationship is silent when no live colleague's edge is newer than
 // QuietBefore, and still current when some live colleague's edge is newer than
@@ -96,13 +96,7 @@ func QuietContacts(ctx context.Context, tx pgx.Tx, read QuietRead) ([]QuietConta
 			excluded = got
 		}
 	}
-	owned := "TRUE"
-	switch {
-	case !read.Owner.IsZero():
-		owned = fmt.Sprintf("o.id = $%d", arg(read.Owner))
-	case read.Unowned:
-		owned = "o.id IS NULL"
-	}
+	owned := quietOwnerClause(read, arg)
 	exchangedPos := arg(2)
 	limitPos := arg(read.Limit)
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
@@ -137,6 +131,23 @@ func QuietContacts(ctx context.Context, tx pgx.Tx, read QuietRead) ([]QuietConta
 		return nil, fmt.Errorf("search: reading quiet relationships: %w", err)
 	}
 	defer rows.Close()
+	return scanQuietContacts(rows)
+}
+
+// quietOwnerClause narrows the candidates to one live owner, to contacts with
+// none, or to neither; `o` is the contact's live owner join.
+func quietOwnerClause(read QuietRead, arg func(any) int) string {
+	switch {
+	case !read.Owner.IsZero():
+		return fmt.Sprintf("o.id = $%d", arg(read.Owner))
+	case read.Unowned:
+		return "o.id IS NULL"
+	default:
+		return "TRUE"
+	}
+}
+
+func scanQuietContacts(rows pgx.Rows) ([]QuietContact, error) {
 	var out []QuietContact
 	for rows.Next() {
 		var c QuietContact

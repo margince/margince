@@ -189,10 +189,10 @@ func meetingIDs[M any](meetings []M, id func(M) ids.UUID) []ids.UUID {
 // attentionMeetingsAwaitingOutcome reads the meetings that already started and
 // whose result nobody has recorded, through the same gated list.
 //
-// Oldest first in SQL, at exactly the lane's limit: the meeting waiting
-// longest is the one whose record has been wrong longest, and an ascending
-// read keeps it on the page however deep the backlog is. A full page is the
-// lane's cap, which boundedSources reports as more to come.
+// Oldest first in SQL, at the lane's limit. The meeting waiting longest has
+// had a wrong record longest, and an ascending read keeps it on the page
+// however deep the backlog is. A full page is the lane's cap, which
+// boundedSources reports as more to come.
 type attentionMeetingsAwaitingOutcome struct{ store *activities.Store }
 
 func (m attentionMeetingsAwaitingOutcome) Since(

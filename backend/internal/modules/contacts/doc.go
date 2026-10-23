@@ -33,11 +33,10 @@
 // lead_source and lead_disqualify_reason are the two administered lead
 // vocabularies: the pick lists behind "where did this come from" and "why
 // was it dropped", and the weighting the scorer reads.
-// relationship_nudge_dismissal is a lapsed contact ONE reader has set aside,
-// and it is its own table rather than a disposition because a nudge is not an
-// activity: the decay lane's row carries the contact's id, so there is no
-// activity to hang the judgement on. A NULL moment is a permanent stop, which
-// the reader resumes by deleting the row.
+// relationship_nudge_dismissal is a lapsed contact one reader has set aside.
+// It is its own table, not a disposition, because the decay lane's row
+// carries a contact's id and no activity. A NULL moment is a permanent stop,
+// which the reader resumes by deleting the row.
 // lead_score_history is the retained series behind "Explain This Score"
 // (ADR-0105): the breakdown is written with the score and read back
 // verbatim, because a decomposition recomputed at read time explains a

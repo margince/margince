@@ -44,10 +44,10 @@ import (
 // happens. Ordering by anything else would put a long-booked meeting behind one
 // entered this morning for next month.
 //
-// ONE query, not two. The 360 is a composite with a fixed query budget
-// (TestCompany360CostDoesNotGrowWithTheAccount), and a section that reads
-// the row and then reads its children is how a composite starts costing more
-// per account than per page. The deal and the attendees come back as columns
+// One query, not two. The 360 has a fixed query budget
+// (TestCompany360CostDoesNotGrowWithTheAccount). A section that reads the row
+// and then its children costs more per account than per page. The deal and
+// the attendees come back as columns
 // from activities.MeetingRoomColumns, carrying their own grants and row scope.
 func nextMeetingSection(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, opts AssembleOptions,

@@ -149,9 +149,9 @@ func TestCapacityCountsAMeetingHostedByTheRepWhoeverFiledIt(t *testing.T) {
 	}
 }
 
-// Only a meeting the rep takes part in is their time. An imported meeting whose
-// source author holds no seat here, and a host-less row the rep merely filed,
-// count for nobody; the meeting the rep hosts counts.
+// Only a meeting the rep takes part in is their time. An imported meeting with
+// no seat here counts for nobody, and so does a host-less row the rep filed.
+// The meeting the rep hosts counts.
 func TestCapacityCountsOnlyAMeetingTheRepTakesPartIn(t *testing.T) {
 	e := integration.Setup(t)
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)

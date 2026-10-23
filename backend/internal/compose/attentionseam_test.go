@@ -236,10 +236,14 @@ func TestAQuietRelationshipPastTheCeilingLeavesTheLane(t *testing.T) {
 			{Edge: search.InteractionEdge{ContactID: past, LastAt: ceiling}, OwnerID: owner},
 		},
 		[]contacts.ContactChanges{
-			{ContactID: ids.From[ids.ContactKind](inside), DisplayName: "Inside",
-				Changes: []relstrength.Change{{Kind: relstrength.ChangeWentQuiet, At: ceiling.AddDate(0, 0, 1), Days: quietSuggestionCeilingDays - 1}}},
-			{ContactID: ids.From[ids.ContactKind](past), DisplayName: "Past",
-				Changes: []relstrength.Change{{Kind: relstrength.ChangeWentQuiet, At: ceiling, Days: quietSuggestionCeilingDays}}},
+			{
+				ContactID: ids.From[ids.ContactKind](inside), DisplayName: "Inside",
+				Changes: []relstrength.Change{{Kind: relstrength.ChangeWentQuiet, At: ceiling.AddDate(0, 0, 1), Days: quietSuggestionCeilingDays - 1}},
+			},
+			{
+				ContactID: ids.From[ids.ContactKind](past), DisplayName: "Past",
+				Changes: []relstrength.Change{{Kind: relstrength.ChangeWentQuiet, At: ceiling, Days: quietSuggestionCeilingDays}},
+			},
 		},
 		nil, readInstantForDecay,
 	)

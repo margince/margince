@@ -10,9 +10,9 @@ import (
 
 func days(n int) time.Duration { return time.Duration(n) * 24 * time.Hour }
 
-// A fast installation gets a shorter horizon than the default, and a slow one
-// never gets more than the 30-day ceiling: an automatic wait older than that
-// is record information, however slowly the installation answers.
+// A fast installation gets a shorter horizon than the default. A slow one
+// never gets more than the 30-day ceiling, because an older automatic wait is
+// record information.
 func TestTheHorizonFollowsWhatTheInstallationActuallyDoes(t *testing.T) {
 	fast := derivedWaitingHorizonDays(waitingHorizonSpread{Slow: days(2), Answered: 500})
 	slow := derivedWaitingHorizonDays(waitingHorizonSpread{Slow: days(40), Answered: 500})

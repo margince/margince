@@ -14,7 +14,7 @@ package contacts
 // that to a colleague would take a contact off a queue whose owner never made
 // the call.
 //
-// TEMPORARY OR PERMANENT. A dated row sets the contact aside until a moment; a
+// Temporary or permanent. A dated row sets the contact aside until a moment. A
 // NULL `dismissed_until` is a stop with no end date, for a reader who has
 // decided the relationship is over. Both stay reversible through
 // RestoreRelationshipNudge, and neither hides the contact's own page.
@@ -80,7 +80,7 @@ func (span NudgeSpan) until(now time.Time) (*time.Time, error) {
 		if span.Days != 0 {
 			return nil, &NudgeDaysError{Days: span.Days}
 		}
-		return nil, nil
+		return nil, nil //nolint:nilnil // a permanent stop stores no end moment, and NULL is that stop
 	}
 	if span.Days < 1 || span.Days > nudgeDismissalMaxDays {
 		return nil, &NudgeDaysError{Days: span.Days}

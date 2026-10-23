@@ -32,12 +32,9 @@ import (
 // it contains an `IN` over a nullable column, so an unmarked meeting made it
 // NULL, `NOT NULL` is NULL, and every such row silently failed the filter.
 //
-// A meeting on the calendar IS a next step, but only one somebody here takes
-// part in (storekit.MeetingResponsibilitySQL): a colleague's genuine meeting
-// counts for the account, while an imported row no seat hosts or attends is
-// history, not a plan.
-//
-// It was the half that was missing.
+// A meeting on the calendar is a next step when somebody here takes part in
+// it (storekit.MeetingResponsibilitySQL). A colleague's meeting counts for the
+// account. An imported row no seat hosts or attends is history, not a plan.
 // A deal whose only forward commitment is Thursday's review reads as planned to
 // the rep looking at it, and a sweep that asked only about tasks proposed a
 // follow-up for exactly that deal.

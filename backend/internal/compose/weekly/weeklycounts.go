@@ -206,9 +206,9 @@ func countWeekLeads(
 // Filing a meeting, or importing a copy, credits nobody; a meeting two reps
 // attended is in both their weeks, because both spent the time.
 //
-// THREE readers ask it, the headline count here, the funnel in
-// weeklyscorecard.go and the coverage in weeklycoverage.go, and plan capacity
-// asks the same owner directly, so no panel credits a meeting another denies.
+// Three readers ask it: the headline count here, the funnel in
+// weeklyscorecard.go and the coverage in weeklycoverage.go. Plan capacity asks
+// the same owner directly, so no panel credits a meeting another denies.
 //
 // Held by: TestTheMeetingAttributionHasOneSpelling (meetingattribution_test.go)
 func meetingIsTheirsSQL(seat string) string {

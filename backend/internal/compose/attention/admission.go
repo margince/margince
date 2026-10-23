@@ -14,55 +14,55 @@ import (
 // rows can become.
 //
 // Personal automatic work needs an evidenced responsible seat. Each source
-// declares where that evidence comes from: an assignee or owner column, a read
-// bound to the acting human, the deal's owner, the direct recipients of a
-// mail, or a meeting's recorded host. A row whose source has no entry has no
-// declared evidence, so it never reaches a page; a row claiming an answer its
-// source may not give is demoted to unassigned, which is nobody's Mine. Both
-// are logged, because either is a producer this table was not told about.
+// declares where that evidence comes from. It may be an assignee or owner
+// column, a read bound to the acting human, or the deal's owner. It may also be
+// the direct recipients of a mail, or a meeting's recorded host.
 //
-// EVERY contract source is listed; the test beside this requires the key set
-// to equal the contract's enum, so a new producer fails there before it can
-// enter anybody's day.
+// A row whose source has no entry never reaches a page. A row claiming an
+// answer its source may not give becomes unassigned, which is nobody's Mine.
+// Both are logged, because either is a producer this table does not know.
+//
+// Every contract source is listed. The test beside this requires the key set
+// to equal the contract's enum, so a new producer fails there first.
 var sourceOwnerAnswers = map[crmcontracts.WorklistItemSource]ownerAnswers{
 	// An assignee or owner column: named, or nobody when the column is empty.
-	sourceTask:             answers(ownerNamed, ownerNobody),
-	sourceLeadResponse:     answers(ownerNamed, ownerNobody),
-	sourceNoticeCase:       answers(ownerNamed, ownerNobody),
-	"dsr":                  answers(ownerNamed, ownerNobody),
-	sourceWeeklyCommitment: answers(ownerNamed),
+	crmcontracts.WorklistItemSourceTask:             answers(ownerNamed, ownerNobody),
+	crmcontracts.WorklistItemSourceLeadResponse:     answers(ownerNamed, ownerNobody),
+	crmcontracts.WorklistItemSourceNoticeCase:       answers(ownerNamed, ownerNobody),
+	crmcontracts.WorklistItemSourceDsr:              answers(ownerNamed, ownerNobody),
+	crmcontracts.WorklistItemSourceWeeklyCommitment: answers(ownerNamed),
 	// The contact's live owner; never the reader who was copied or wrote.
-	"relationship_decay": answers(ownerNamed, ownerNobody),
+	crmcontracts.WorklistItemSourceRelationshipDecay: answers(ownerNamed, ownerNobody),
 	// A meeting's recorded host or attendee seat.
-	sourceMeeting:        answers(ownerNamed, ownerNobody),
-	sourceMeetingOutcome: answers(ownerNamed, ownerNobody),
+	crmcontracts.WorklistItemSourceMeeting:        answers(ownerNamed, ownerNobody),
+	crmcontracts.WorklistItemSourceMeetingOutcome: answers(ownerNamed, ownerNobody),
 	// The requested decider, or nobody when no one was asked.
-	"approval":           answers(ownerNamed, ownerNobody),
-	sourceDuplicate:      answers(ownerNamed, ownerNobody),
-	sourceDealSuggestion: answers(ownerNamed, ownerNobody),
-	sourceTagSuggestion:  answers(ownerNamed, ownerNobody),
+	crmcontracts.WorklistItemSourceApproval:        answers(ownerNamed, ownerNobody),
+	crmcontracts.WorklistItemSourceDedupeCandidate: answers(ownerNamed, ownerNobody),
+	crmcontracts.WorklistItemSourceDealSuggestion:  answers(ownerNamed, ownerNobody),
+	crmcontracts.WorklistItemSourceTagSuggestion:   answers(ownerNamed, ownerNobody),
 	// The deal's owner, attached after classification.
-	sourceBriefItem: answers(ownerFromTheDeal),
-	sourceAtRisk:    answers(ownerFromTheDeal),
+	crmcontracts.WorklistItemSourceBriefItem:  answers(ownerFromTheDeal),
+	crmcontracts.WorklistItemSourceDealAtRisk: answers(ownerFromTheDeal),
 	// The owning record, the direct recipients, or withheld.
-	sourceWaiting: answers(ownerNamed, ownerShared, ownerNobody, ownerUnreadable),
+	crmcontracts.WorklistItemSourceCustomerWaiting: answers(ownerNamed, ownerShared, ownerNobody, ownerUnreadable),
 	// A promise read for its promiser; keepUnowned places it.
-	sourceClaim: answers(ownerNobody),
+	crmcontracts.WorklistItemSourceConversationClaim: answers(ownerNobody),
 	// Reads bound to the acting human inside the owning module.
-	"failed_approval":      answers(ownerTheReader),
-	"introduction_request": answers(ownerTheReader),
-	"bounce":               answers(ownerTheReader),
-	"undelivered":          answers(ownerTheReader),
-	crmcontracts.WorklistItemSource(sourceNotice):         answers(ownerTheReader),
-	crmcontracts.WorklistItemSource(sourceCaptureHealth):  answers(ownerTheReader),
-	crmcontracts.WorklistItemSource(sourceDomainQuestion): answers(ownerTheReader),
-	sourceAwaitingReply:   answers(ownerTheReader),
-	sourceMeetingFollowUp: answers(ownerTheReader),
+	crmcontracts.WorklistItemSourceFailedApproval:      answers(ownerTheReader),
+	crmcontracts.WorklistItemSourceIntroductionRequest: answers(ownerTheReader),
+	crmcontracts.WorklistItemSourceBounce:              answers(ownerTheReader),
+	crmcontracts.WorklistItemSourceUndelivered:         answers(ownerTheReader),
+	crmcontracts.WorklistItemSourceNotice:              answers(ownerTheReader),
+	crmcontracts.WorklistItemSourceCaptureHealth:       answers(ownerTheReader),
+	crmcontracts.WorklistItemSourceDomainQuestion:      answers(ownerTheReader),
+	crmcontracts.WorklistItemSourceAwaitingReply:       answers(ownerTheReader),
+	crmcontracts.WorklistItemSourceMeetingFollowUp:     answers(ownerTheReader),
 	// Product health nobody personally owes.
-	"ai_work_health": answers(ownerNobody),
-	"automation_run": answers(ownerNobody),
+	crmcontracts.WorklistItemSourceAiWorkHealth:  answers(ownerNobody),
+	crmcontracts.WorklistItemSourceAutomationRun: answers(ownerNobody),
 	// A fold carries its members' common answer, or none when they differ.
-	"batch": answers(ownerUnstated, ownerNamed, ownerShared, ownerNobody, ownerTheReader, ownerFromTheDeal, ownerUnreadable),
+	crmcontracts.WorklistItemSourceBatch: answers(ownerUnstated, ownerNamed, ownerShared, ownerNobody, ownerTheReader, ownerFromTheDeal, ownerUnreadable),
 }
 
 // ownerAnswers is the set of owner kinds one source may state.

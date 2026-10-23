@@ -6,9 +6,9 @@
 package compose
 
 // Who a quiet-relationship suggestion is for, against the real projection,
-// derivation and dismissal store. The contact's owner gets it; a colleague
-// who wrote the mail or was copied on it does not; a contact without a live
-// owner is nobody's personal work.
+// derivation and dismissal store. The contact's owner gets it. A colleague who
+// wrote the mail or was copied on it does not. A contact without a live owner
+// is nobody's personal work.
 
 import (
 	"context"

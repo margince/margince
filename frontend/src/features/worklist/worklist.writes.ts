@@ -205,10 +205,10 @@ export function useApproval(id: string, enabled: boolean) {
 /**
  * Set a lapsed contact aside, stop following them for good, or put them back.
  *
- * Thirty days for "not now", and the number lives here rather than being asked
- * of the reader: a duration picker would ask a rep to predict when a quiet
- * relationship becomes worth chasing again. "Stop following" is the reader
- * saying the relationship is over; restore resumes either.
+ * Thirty days for "not now", and the number lives here. A duration picker
+ * would ask a rep to predict when a quiet relationship is worth chasing again.
+ * "Stop following" is the reader saying the relationship is over. Restore
+ * resumes either.
  */
 export function useNudgeDismissal() {
   const queryClient = useQueryClient();

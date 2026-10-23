@@ -165,8 +165,8 @@ func (e *reconcileEnv) seedInteraction(t *testing.T, dealID ids.UUID, kind, subj
 // calendar entry nobody has marked actually carries, and the case a NOT IN
 // predicate silently drops.
 //
-// The meeting is a colleague's (Rep2 hosts it, the deals are Rep1's): a
-// genuine meeting by anyone here is the account's next step.
+// The meeting is a colleague's (Rep2 hosts it, the deals are Rep1's). A
+// meeting anyone here hosts is the account's next step.
 func (e *reconcileEnv) seedMeeting(
 	t *testing.T, dealID ids.UUID, subject string, occurredHoursAgo, durationSeconds int, status string,
 ) {

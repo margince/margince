@@ -121,15 +121,13 @@ const decayLaneCap = 5
 
 // attentionDecay reads the lapsed relationships, routed to each contact's owner.
 //
-// TWO steps, and the order is the design. The projection narrows to contacts
-// whose every live edge has been silent past the §4 threshold. Only then does
-// the contacts module derive what actually changed about those few, through
-// the SAME engine the contact's own page reads, so the lane and that page
-// cannot come to disagree about when somebody went quiet.
+// Two steps. The projection narrows to contacts whose every live edge has been
+// silent past relstrength.QuietDays. Then the contacts module derives what
+// changed about those few. It uses the engine the contact's own page reads, so
+// the lane and that page agree about when somebody went quiet.
 //
-// A principal with no human behind it holds no relationships of its own, which
-// is a refusal rather than an empty lane: the feed omits and NAMES it instead
-// of reporting a clear day. Same rule the commitments lane keeps.
+// A principal with no human behind it is refused, not given an empty lane. The
+// feed then names the lane as omitted instead of reporting a clear day.
 type attentionDecay struct {
 	pool  *pgxpool.Pool
 	store *contacts.Store
@@ -138,8 +136,8 @@ type attentionDecay struct {
 
 // quietSuggestionCeilingDays is how long after the last qualifying touch a
 // quiet relationship stays a suggestion. Past it the contact leaves the
-// Worklist and keeps its silence on its own page; a first mailbox import must
-// not turn years of history into a morning of follow-ups.
+// Worklist and its own page still shows the silence. A first mailbox import
+// must not turn years of history into a morning of follow-ups.
 const quietSuggestionCeilingDays = 180
 
 func (d attentionDecay) Lapsed(
@@ -155,9 +153,9 @@ func (d attentionDecay) Lapsed(
 		TouchedAfter: now.AddDate(0, 0, -quietSuggestionCeilingDays),
 		Limit:        decayCandidateCap,
 		// Contacts this reader set aside, and senders capture judged
-		// personal, an advisor or noise, removed BEFORE the cap. Each module
-		// renders the rule over the table it owns; search never imports a
-		// sibling, so the projection takes it as a hole.
+		// personal, an advisor or noise, are removed before the cap. Each
+		// module renders the rule over its own table, and search takes it as
+		// a hole because it never imports a sibling.
 		Exclude: func(arg func(any) int) (string, error) {
 			dismissed, err := contacts.NotDismissedClause(ctx, "e", now, arg)
 			if err != nil {
@@ -193,10 +191,9 @@ func (d attentionDecay) Lapsed(
 		if err != nil {
 			return err
 		}
-		// Which of them still carries money, read once for the whole candidate
-		// set in the SAME transaction. A reader without the edge grant
-		// NARROWS rather than fails: the deal behind a silence is one fact on
-		// the row, not the row.
+		// Which of them still carries money, read once in the same
+		// transaction. A reader without the deal grant loses this one fact
+		// and keeps the row.
 		funded, err := deals.OpenDealContacts(ctx, tx, candidates)
 		if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
 			return err
@@ -210,14 +207,12 @@ func (d attentionDecay) Lapsed(
 	return lapsed, nil
 }
 
-// quietRelationships keeps only the contacts the DERIVATION calls quiet, and
+// quietRelationships keeps only the contacts the derivation calls quiet, and
 // only while their last qualifying touch is inside the suggestion ceiling.
 //
-// The projection's threshold admitted the candidates; this is the verdict. The
-// walk follows the EDGES, not the derivations, so the projection's order holds.
-// BOTH halves of the row's sentence come from the derivation: `change.At` is
-// the touch `change.Days` counts from, so the number and the date agree, and
-// the ceiling is measured from that same touch.
+// The walk follows the edges, so the projection's order holds. The number and
+// the date both come from the derivation: `change.Days` counts from
+// `change.At`. The ceiling is measured from that same touch.
 func quietRelationships(
 	quiet []search.QuietContact,
 	changed []contacts.ContactChanges,

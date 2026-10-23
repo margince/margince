@@ -172,8 +172,8 @@ func TestContactEvidenceFallbackCaptionsFollowLanguage(t *testing.T) {
 	}
 }
 
-// The gone-quiet copy is read by every colleague who opens the contact, most
-// of whom sent nothing, so it never says the reader wrote the last message.
+// Every colleague who opens the contact reads the gone-quiet copy. Most of
+// them sent nothing, so it never says the reader wrote the last message.
 func TestTheGoneQuietCopyNeverClaimsTheReaderSentTheLastMessage(t *testing.T) {
 	for _, language := range []string{"en", "de", "vi"} {
 		said := momentCopyFor(language)

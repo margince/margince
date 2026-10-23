@@ -80,15 +80,15 @@ type ListActivitiesInput struct {
 	// capture provenance, imports and participants — never host_user_id. These
 	// only choose which of the rows a reader already passes the lane is about.
 	//
-	// OnMeetingOf is "mine" and MeetingHost is one named seat's day; both ask
+	// OnMeetingOf is "mine" and MeetingHost is one named seat's day. Both ask
 	// storekit.MeetingResponsibilitySQL, so a rep's own day and a manager's
 	// view of it hold the same meetings. A seat that only imported a copy, or
 	// was copied on mail about it, does not answer for the meeting.
 	OnMeetingOf *ids.UserID
 	MeetingHost *ids.UserID
-	// UnhostedMeetings is the meetings no seat answers for by that rule. Its
-	// own scope for the reason UnassignedQueue is one: unowned work is picked
-	// up deliberately rather than arriving unbidden in everybody's day.
+	// UnhostedMeetings is the meetings no seat answers for by that rule. It is
+	// its own scope, like UnassignedQueue: somebody picks unowned work up by
+	// choice, and it does not arrive in everybody's day.
 	UnhostedMeetings bool
 
 	// ReadableOnly drops the rows this caller may discover but not read, in SQL,
@@ -120,7 +120,7 @@ type ListActivitiesInput struct {
 	OccurredBefore *time.Time
 	// AwaitingOutcome narrows to meetings whose status is still open: booked,
 	// or NULL because capture writes calendar events with no status. Both
-	// meeting lanes set it so the status filter runs before the limit; a page
+	// meeting lanes set it so the status filter runs before the limit. A page
 	// cut first fills with held or canceled rows and hides the next real one.
 	AwaitingOutcome bool
 	// CustomerMeetingsOnly keeps meetings linked to a customer record, by the

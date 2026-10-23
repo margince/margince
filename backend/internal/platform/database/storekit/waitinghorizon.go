@@ -9,7 +9,7 @@ import (
 )
 
 // DefaultWaitingHorizonDays applies until response history supports a current
-// measurement, and is also the ceiling no measurement may exceed: an automatic
+// measurement. It is also the ceiling no measurement may exceed. An automatic
 // wait older than 30 days is record information, not current work.
 const DefaultWaitingHorizonDays = 30
 
@@ -17,8 +17,8 @@ const DefaultWaitingHorizonDays = 30
 const WaitingHorizonStaleAfter = 24 * time.Hour
 
 // WaitingHorizonSQL reads the stored measurement without recomputing it for each
-// task, clamped to the ceiling so a horizon stored under an older, longer rule
-// cannot keep old waits current.
+// task. It clamps to the ceiling, so a horizon stored under an older, longer
+// rule cannot keep old waits current.
 func WaitingHorizonSQL(asOf time.Time, arg func(any) int) string {
 	ceiling := arg(DefaultWaitingHorizonDays)
 	return fmt.Sprintf(`least(coalesce((SELECT horizon_days FROM activity_waiting_horizon WHERE measured_at > $%d), $%d), $%d)`, arg(asOf.Add(-WaitingHorizonStaleAfter)), ceiling, ceiling)

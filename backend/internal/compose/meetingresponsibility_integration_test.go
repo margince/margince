@@ -5,8 +5,7 @@
 
 package compose
 
-// Whose meeting it is, by the one rule every meeting reader asks
-// (storekit.MeetingResponsibilitySQL), and who is in it, by the one room owner
+// Whose meeting it is (storekit.MeetingResponsibilitySQL) and who is in it
 // (activities.MeetingRoomColumns), against rows the real writers produced.
 
 import (
@@ -29,7 +28,7 @@ import (
 
 // bookHostedMeeting logs one meeting hosted by a named seat and adds the
 // extra participant rows a capture or a copy would have written.
-func bookHostedMeeting(t *testing.T, e *integration.Env, subject string, at time.Time, host ids.UUID, extra map[ids.UUID]string) ids.UUID {
+func bookHostedMeeting(t *testing.T, e *integration.Env, subject string, at time.Time, host ids.UUID, extra map[ids.UUID]string) {
 	t.Helper()
 	hostID := ids.From[ids.UserKind](host)
 	row, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
@@ -50,7 +49,6 @@ func bookHostedMeeting(t *testing.T, e *integration.Env, subject string, at time
 			t.Fatalf("stamping %s on %q: %v", role, subject, err)
 		}
 	}
-	return ids.UUID(row.Id)
 }
 
 func myMeetingsToday(t *testing.T, e *integration.Env, reader ids.UUID) []string {

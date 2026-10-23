@@ -9,11 +9,11 @@ import "fmt"
 // the activity row `meeting` and the seat expression `seat`. The Worklist
 // lanes, the follow-up reminder, the weekly figures and plan capacity read it.
 //
-// Three kinds of evidence, each a record of taking part: the host the meeting
-// names (whose calendar it is on, or who logged it), a provider-recorded
-// organizer or attendee row, and an invitation this seat sent through the
-// booking doors. Importing a copy of it, being copied on mail about it, or
-// filing it is none of these, so none of them makes the meeting anybody's work.
+// Three kinds of evidence each record taking part. The first is the host the
+// meeting names: whose calendar it is on, or who logged it. The second is a
+// provider-recorded organizer or attendee row. The third is an invitation this
+// seat sent through the booking doors. Importing a copy, being copied on mail
+// about it, or filing it is none of these.
 //
 // Both arguments are SQL the caller renders: a table alias and a placeholder
 // or column. Neither is ever request text.

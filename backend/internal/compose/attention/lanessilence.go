@@ -71,7 +71,7 @@ type RiskyDeal struct {
 }
 
 // Decay is the relationships that have gone silent, routed to each contact's
-// owner. It derives the silence through the same §4 change engine the
+// owner. It derives the silence through the relationship-change engine the
 // contact's own page reads, so there is one quiet rule in the product. The
 // scope picks whose contacts: the reader's own, a named owner's, or those
 // with no live owner.
