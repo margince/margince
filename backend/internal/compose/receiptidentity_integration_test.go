@@ -7,6 +7,7 @@ package compose
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"slices"
 	"testing"
@@ -230,5 +231,36 @@ func TestEachGroupedRecordNamesItsOwnReceipt(t *testing.T) {
 	}
 	if len(records.Data) != 2 || !named[openapi_types.UUID(first.UUID)] || !named[openapi_types.UUID(second.UUID)] {
 		t.Fatalf("the opened line names receipts %v, want both approvals", named)
+	}
+}
+
+// The production decision source reads through the approvals inbox, which
+// serves at most a few hundred rows a page. A wider ask must page, and a
+// narrower one must say it left decisions behind.
+func TestTheDecisionSourcePagesTheRealInbox(t *testing.T) {
+	e := integration.Setup(t)
+	now := clocktest.Now(t)
+	pipeline, open := signedStage(t, e)
+	var svc *approvals.Service
+	for i := range 70 {
+		svc, _ = appliedStageReceiptIn(t, e, now, fmt.Sprintf("Paged project %02d", i), pipeline, open)
+	}
+	source := magicDecidedReceipts{
+		receipts: attentionReceipts{svc: svc, deals: deals.NewStore(e.DB(), DealsInstallation())},
+	}
+	since := now.Add(-time.Hour)
+	all, more, err := source.DecidedSince(e.Admin(), since, 256)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(all) != 70 || more {
+		t.Fatalf("a read wider than the inbox page returned %d decisions (more=%t), want all 70", len(all), more)
+	}
+	some, more, err := source.DecidedSince(e.Admin(), since, 60)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(some) != 60 || !more {
+		t.Fatalf("a narrow read returned %d decisions (more=%t), want 60 and more", len(some), more)
 	}
 }

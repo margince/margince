@@ -57,10 +57,10 @@ func newMagicService(
 // by their canonical ids. The two surfaces then show one population.
 type magicDecidedReceipts struct{ receipts attentionReceipts }
 
-func (m magicDecidedReceipts) DecidedSince(ctx context.Context, since time.Time, limit int) ([]magic.DecidedReceipt, error) {
-	recent, err := m.receipts.Recent(ctx, since, limit)
+func (m magicDecidedReceipts) DecidedSince(ctx context.Context, since time.Time, limit int) ([]magic.DecidedReceipt, bool, error) {
+	recent, more, err := m.receipts.RecentWithMore(ctx, since, limit)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	out := make([]magic.DecidedReceipt, 0, len(recent))
 	for _, receipt := range recent {
@@ -70,7 +70,7 @@ func (m magicDecidedReceipts) DecidedSince(ctx context.Context, since time.Time,
 			Approval: receipt.Kind != deals.CloseDateCorrectionKind,
 		})
 	}
-	return out, nil
+	return out, more, nil
 }
 
 // Home uses the owning inbox policy for both authority and explicit responsibility.

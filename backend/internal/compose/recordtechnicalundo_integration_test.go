@@ -346,21 +346,15 @@ func TestALegacyLookupReceiptSaysItHasNoSnapshot(t *testing.T) {
 	}
 }
 
-// A write whose transaction began before the lookup and landed after it is a
-// later change. Its audit row carries the older transaction start, so the
-// guard cannot lean on that time.
+// A company write whose transaction began before the lookup and landed after
+// it is a later change. Its audit row carries the older transaction start, so
+// the guard cannot lean on that time. Facts are held by their own counter, so
+// the added-and-removed case above needs no clock either.
 func TestTechnicalUndoRefusesALaterWriteThatBeganBeforeTheLookup(t *testing.T) {
 	cases := map[string]func(ctx context.Context, e *integration.Env, company ids.CompanyID) error{
 		"a company edit": func(ctx context.Context, e *integration.Env, company ids.CompanyID) error {
 			_, err := e.Contacts.UpdateCompany(ctx, company, contacts.UpdateCompanyInput{Description: new("Began early")})
 			return err
-		},
-		"a fact added and removed": func(ctx context.Context, e *integration.Env, company ids.CompanyID) error {
-			fact, err := e.Contacts.CreateCompanyFact(ctx, company, contacts.FactCreateInput{Category: "signal", Field: "hosting_provider", Value: "Early host"})
-			if err != nil {
-				return err
-			}
-			return e.Contacts.DeleteCompanyFact(ctx, company, "hosting_provider:"+fact.ValueKey, contacts.FactWriteInput{})
 		},
 	}
 	for name, write := range cases {

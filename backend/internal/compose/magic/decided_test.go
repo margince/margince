@@ -64,9 +64,9 @@ type decisionSource struct {
 	widest   int
 }
 
-func (d *decisionSource) DecidedSince(_ context.Context, _ time.Time, scan int) ([]DecidedReceipt, error) {
+func (d *decisionSource) DecidedSince(_ context.Context, _ time.Time, scan int) ([]DecidedReceipt, bool, error) {
 	d.widest = max(d.widest, scan)
-	return d.receipts[:min(scan, len(d.receipts))], nil
+	return d.receipts[:min(scan, len(d.receipts))], scan < len(d.receipts), nil
 }
 
 func decisions(n int) []DecidedReceipt {

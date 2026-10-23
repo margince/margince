@@ -26,7 +26,9 @@ import (
 // DecidedReceipts reads what the system decided or applied in the window,
 // under the approvals' own reader rule.
 type DecidedReceipts interface {
-	DecidedSince(ctx context.Context, since time.Time, limit int) ([]DecidedReceipt, error)
+	// DecidedSince answers at most limit receipts, newest first, and whether
+	// the source holds more than it answered.
+	DecidedSince(ctx context.Context, since time.Time, limit int) ([]DecidedReceipt, bool, error)
 }
 
 // DecidedReceipt is one system decision, by its canonical receipt id.
@@ -65,7 +67,7 @@ func (s *Service) decidedDone(
 	// Refilled while overlap with the drawn lines leaves the page short and
 	// the source has more. Stopped at readCap, the lane's total is a floor.
 	for scan := limit; ; scan = min(scan*4, readCap) {
-		decided, err := s.decided.DecidedSince(ctx, from, scan)
+		decided, more, err := s.decided.DecidedSince(ctx, from, scan)
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			return []crmcontracts.MagicLine{}, false, nil
 		}
@@ -73,7 +75,7 @@ func (s *Service) decidedDone(
 			return nil, false, err
 		}
 		lines := decidedLines(drawn, decided)
-		if len(decided) < scan || len(lines) >= limit {
+		if !more || len(lines) >= limit {
 			return lines, false, nil
 		}
 		if scan >= readCap {

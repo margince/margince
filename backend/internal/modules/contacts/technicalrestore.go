@@ -14,6 +14,7 @@ package contacts
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"maps"
 	"slices"
@@ -32,7 +33,7 @@ import (
 // technicalRestoreFormat is the one snapshot layout this build can put back.
 // A receipt with any other number, or none, is refused rather than replayed
 // against a table that may have changed shape since it was written.
-const technicalRestoreFormat = 1
+const technicalRestoreFormat = 2
 
 // technicalRestoreKey is where the snapshot sits inside the receipt's
 // "technical" evidence.
@@ -73,10 +74,13 @@ type technicalRestore struct {
 	Format int `json:"format"`
 	// CompanyVersion is the company's version under the lookup's hold. Any
 	// later company write moves it, whenever its transaction began.
-	CompanyVersion int64              `json:"company_version"`
-	Fields         []string           `json:"fields"`
-	Before         []technicalFactRow `json:"before"`
-	After          []technicalFactRow `json:"after"`
+	CompanyVersion int64 `json:"company_version"`
+	// FactRevision is company_fact_revision after the lookup's own writes.
+	// Every later fact insert, update or delete moves it, on any clock.
+	FactRevision int64              `json:"fact_revision"`
+	Fields       []string           `json:"fields"`
+	Before       []technicalFactRow `json:"before"`
+	After        []technicalFactRow `json:"after"`
 }
 
 // IsTechnicalReceipt reports whether an audit row's evidence is a technical
@@ -156,20 +160,21 @@ func JudgeTechnicalRestoreTx(
 	if version != restore.CompanyVersion {
 		return ErrTechnicalLaterChange
 	}
+	revision, err := factRevision(ctx, tx, companyID)
+	if err != nil {
+		return err
+	}
+	if revision != restore.FactRevision {
+		return ErrTechnicalLaterChange
+	}
 	var later bool
-	// The company's own rows, and every fact row of it: a live fact by its id,
-	// a removed one by the company its before-image names. occurred_at is a
-	// transaction's start. A write that began before the lookup and landed
-	// after it is found by its id, minted when the row was written.
+	// The company's own audit rows: a later lookup that wrote no fact still
+	// records one. The fact revision above covers every fact write.
 	err = tx.QueryRow(ctx, `
 		SELECT EXISTS (
 		  SELECT 1 FROM audit_log a
 		   WHERE (a.occurred_at > $2 OR a.id > $3)
-		     AND ((a.entity_type = 'company' AND a.entity_id = $1)
-		       OR (a.entity_type = 'company_fact'
-		           AND (a.entity_id IN (SELECT id FROM company_fact WHERE company_id = $1)
-		             OR a.before ->> 'company_id' = $1::text
-		             OR a.after ->> 'company_id' = $1::text))))`,
+		     AND a.entity_type = 'company' AND a.entity_id = $1)`,
 		companyID, at, auditID).Scan(&later)
 	if err != nil {
 		return fmt.Errorf("read later company changes: %w", err)
@@ -287,10 +292,26 @@ func replaceTechnicalRows(ctx context.Context, tx pgx.Tx, companyID ids.CompanyI
 }
 
 // technicalRestoreSnapshot is what a lookup records so it can be taken back.
-func technicalRestoreSnapshot(companyVersion int64, fields []string, before, after []technicalFactRow) map[string]any {
+// factRevision reads the company's fact counter; a company with no fact
+// write yet has none.
+func factRevision(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (int64, error) {
+	var revision int64
+	err := tx.QueryRow(ctx, `SELECT revision FROM company_fact_revision WHERE company_id = $1`, companyID).Scan(&revision)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, fmt.Errorf("read the company's fact revision: %w", err)
+	}
+	return revision, nil
+}
+
+func technicalRestoreSnapshot(
+	companyVersion, factRevision int64, fields []string, before, after []technicalFactRow,
+) map[string]any {
 	return map[string]any{
 		technicalRestoreKey: technicalRestore{
-			Format: technicalRestoreFormat, CompanyVersion: companyVersion, Fields: fields,
+			Format: technicalRestoreFormat, CompanyVersion: companyVersion, FactRevision: factRevision, Fields: fields,
 			Before: nonNilRows(before), After: nonNilRows(after),
 		},
 	}

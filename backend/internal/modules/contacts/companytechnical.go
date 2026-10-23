@@ -248,7 +248,11 @@ func (s *Store) ApplyTechnicalEnrichmentTx(
 		if err := tx.QueryRow(ctx, `SELECT version FROM company WHERE id = $1`, in.CompanyID).Scan(&version); err != nil {
 			return fmt.Errorf("read the company version: %w", err)
 		}
-		restore = technicalRestoreSnapshot(version, fields, before, after)
+		revision, err := factRevision(ctx, tx, in.CompanyID)
+		if err != nil {
+			return err
+		}
+		restore = technicalRestoreSnapshot(version, revision, fields, before, after)
 	}
 	return s.auditTechnicalEnrichment(ctx, tx, in, written, removed, changes, restore)
 }
