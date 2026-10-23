@@ -33,6 +33,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // followUpStager adapts the approvals service onto the deals module's
@@ -392,7 +393,7 @@ func followUpConfirmEffect(svc *approvals.Service, store *activities.Store) appr
 		})
 		subject := proposal.Subject
 		body := proposal.Body
-		sourceSystem := "overnight-reconcile"
+		sourceSystem := provenance.OvernightReconcileSource
 		sourceID := approvalID.String()
 		// Redemption and the write in ONE transaction. Consuming the approval
 		// first and writing after leaves the two able to disagree: the approval

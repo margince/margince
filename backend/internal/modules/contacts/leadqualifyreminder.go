@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // QualifyReminderSource is the source_system the qualify reminder task is
@@ -21,7 +22,7 @@ import (
 // again, whether or not its task is still open. A lead merge carries the
 // loser's task onto the survivor under the loser's id, so the scan also
 // counts a reminder linked to the lead.
-const QualifyReminderSource = "lead_qualify"
+const QualifyReminderSource = provenance.LeadQualifyTaskSource
 
 // qualifyReminderBatch bounds one scan, so a backlog drains over a few passes
 // rather than in one long transaction.

@@ -5,6 +5,7 @@ package storekit
 
 import (
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -29,8 +30,62 @@ func CurrentTaskClause(alias string, asOf time.Time, identities string, arg func
  AND ` + HeldTaskClause("successor") + `)
  AND request_source.occurred_at <= ` + instant + `
  AND request_source.occurred_at >= ` + instant + ` - make_interval(days => ` + horizon + `) AND ` + DirectMailRecipientSQL("request_source", MailSeatAddressesSQL(identities, pinner)) + `)`
-	return fmt.Sprintf(`(coalesce(%[1]s.source_system, '') NOT IN ($%[2]d, $%[3]d) OR `+HumanWroteActivityClause(alias)+`
+	return fmt.Sprintf(`(NOT (coalesce(%[1]s.source_system, '') = ANY($%[4]d)) OR `+HumanWroteActivityClause(alias)+`
  OR (`+pinner+`, %[1]s.id::text) IN (SELECT reader_id, row_id FROM `+auth.EffectiveWorklistPinsSQL(arg)+` adopted WHERE adopted.source='task')
+ OR %[1]s.source_system = ANY($%[5]d)
  OR (%[1]s.source_system = $%[2]d AND `+source+`)
- OR (%[1]s.source_system = $%[3]d AND `+request+`))`, alias, arg(provenance.CommitmentTaskSource), arg(provenance.EmailRequestSource))
+ OR (%[1]s.source_system = $%[3]d AND `+request+`))`, alias, arg(provenance.CommitmentTaskSource), arg(provenance.EmailRequestSource),
+		arg(automaticTaskSources()), arg(taskSourcesOf(currentByItsWriter)))
+}
+
+// taskCurrency is how an automatic task stays current work.
+type taskCurrency int
+
+const (
+	// currentByCommitment: its promise's admission is current (CurrentCommitmentClause).
+	currentByCommitment taskCurrency = iota + 1
+	// currentByRequest: its request is recent, unanswered and addressed to the assignee.
+	currentByRequest
+	// currentByItsWriter: the writer assigned it by its own rule and it lives
+	// by the task's lifecycle.
+	currentByItsWriter
+)
+
+// taskSourceFamilies is every source_system a native writer stamps on a task
+// it creates with no human behind it. A task from any other source_system is a
+// human's or an import's, and stays current by its own lifecycle.
+//
+// Held by: TestEveryAutomaticTaskWriterAndOpenTaskReaderIsDeclared (backend/gates/automatictaskwriters_test.go)
+var taskSourceFamilies = map[string]taskCurrency{
+	provenance.CommitmentTaskSource:     currentByCommitment,
+	provenance.EmailRequestSource:       currentByRequest,
+	provenance.NoActivityReminderSource: currentByItsWriter,
+	provenance.CheckInCadenceSource:     currentByItsWriter,
+	provenance.LeadSLATaskSource:        currentByItsWriter,
+	provenance.LeadQualifyTaskSource:    currentByItsWriter,
+	provenance.AssuranceTaskSource:      currentByItsWriter,
+	provenance.OvernightReconcileSource: currentByItsWriter,
+}
+
+// TaskSourceFamilies lists the automatic task sources, for the census gate.
+func TaskSourceFamilies() []string { return automaticTaskSources() }
+
+func automaticTaskSources() []string {
+	out := make([]string, 0, len(taskSourceFamilies))
+	for source := range taskSourceFamilies {
+		out = append(out, source)
+	}
+	slices.Sort(out)
+	return out
+}
+
+func taskSourcesOf(currency taskCurrency) []string {
+	var out []string
+	for source, how := range taskSourceFamilies {
+		if how == currency {
+			out = append(out, source)
+		}
+	}
+	slices.Sort(out)
+	return out
 }

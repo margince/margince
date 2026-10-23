@@ -49,6 +49,16 @@ const (
 // written anew.
 const CommitmentTaskSource = "commitment"
 
+// The other native writers that create a task with no human behind it. Each
+// stamps one of these, and storekit.TaskSourceFamilies says how its task stays
+// current.
+const (
+	LeadSLATaskSource        = "lead_sla"
+	LeadQualifyTaskSource    = "lead_qualify"
+	AssuranceTaskSource      = "assurance"
+	OvernightReconcileSource = "overnight-reconcile"
+)
+
 // WebsiteLeadSource names a lead read off a company's website and accepted by
 // a human. Only that accept writes it. A lead under it is sent an Art. 14
 // notice, held until the notice is through, and deleted when it fails.
