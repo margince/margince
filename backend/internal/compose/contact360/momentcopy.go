@@ -44,7 +44,7 @@ var momentWords = struct {
 	ThinWhy           langcopy.Phrase
 	Book              langcopy.Phrase
 	TheirMessage      langcopy.Phrase
-	YourMessage       langcopy.Phrase
+	LastSentMessage   langcopy.Phrase
 	Stakeholder       langcopy.Phrase
 	RecordedRole      langcopy.Phrase
 	OpenTask          langcopy.Phrase
@@ -67,7 +67,7 @@ var momentWords = struct {
 	RepliedWhy:        langcopy.Phrase{En: "They're waiting on a reply, and your last message to them is older than the re-engagement rule allows.", De: "Eine Antwort steht aus. Ihre letzte Nachricht liegt länger zurück, als die Regel zur erneuten Kontaktaufnahme vorsieht.", Vi: "Họ đang chờ phản hồi, và tin nhắn gần nhất của bạn đã quá thời hạn theo quy tắc liên hệ lại."},
 	Reply:             langcopy.Phrase{En: "Draft a reply", De: "Antwort entwerfen", Vi: "Soạn phản hồi"},
 	Quiet:             langcopy.Phrase{En: "No reply for %d days", De: "Seit %d Tagen keine Antwort", Vi: "Chưa có phản hồi trong %d ngày"},
-	QuietWhy:          langcopy.Phrase{En: "Your last message went out %d days ago. The rule flags no reply after %d days.", De: "Ihre letzte Nachricht wurde vor %d Tagen gesendet. Die Regel meldet eine ausstehende Antwort nach %d Tagen.", Vi: "Tin nhắn gần nhất của bạn được gửi cách đây %d ngày. Quy tắc đánh dấu khi chưa có phản hồi sau %d ngày."},
+	QuietWhy:          langcopy.Phrase{En: "The last message to them went out %d days ago. The rule flags no reply after %d days.", De: "Die letzte Nachricht an diesen Kontakt wurde vor %d Tagen gesendet. Die Regel meldet eine ausstehende Antwort nach %d Tagen.", Vi: "Tin nhắn gần nhất gửi cho liên hệ này đã đi cách đây %d ngày. Quy tắc đánh dấu khi chưa có phản hồi sau %d ngày."},
 	FollowUp:          langcopy.Phrase{En: "Draft a follow-up", De: "Nachfassnachricht entwerfen", Vi: "Soạn tin nhắn theo dõi"},
 	AskUnavailable:    langcopy.Phrase{En: "Asking a colleague for context isn't available yet", De: "Das Einholen von Kontext bei Kollegen ist noch nicht verfügbar", Vi: "Chức năng hỏi đồng nghiệp về bối cảnh chưa khả dụng"},
 	Ask:               langcopy.Phrase{En: "Ask for context", De: "Nach Kontext fragen", Vi: "Hỏi thêm bối cảnh"},
@@ -83,7 +83,7 @@ var momentWords = struct {
 	ThinWhy:           langcopy.Phrase{En: "No interactions or colleagues found in the records you can see.", De: "In den sichtbaren Daten wurden keine Interaktionen oder Kollegen gefunden.", Vi: "Không tìm thấy tương tác hay đồng nghiệp trong các hồ sơ bạn được xem."}, //nolint:misspell // German translation uses German spelling.
 	Book:              langcopy.Phrase{En: "Book a meeting", De: "Besprechung buchen", Vi: "Đặt lịch họp"},
 	TheirMessage:      langcopy.Phrase{En: "Their last message", De: "Letzte Nachricht des Kontakts", Vi: "Tin nhắn gần nhất của họ"},
-	YourMessage:       langcopy.Phrase{En: "Your last message", De: "Ihre letzte Nachricht", Vi: "Tin nhắn gần nhất của bạn"},
+	LastSentMessage:   langcopy.Phrase{En: "Last message to them", De: "Letzte Nachricht an den Kontakt", Vi: "Tin nhắn gần nhất gửi cho họ"},
 	Stakeholder:       langcopy.Phrase{En: "a stakeholder", De: "ein beteiligter Kontakt", Vi: "người liên quan"},
 	RecordedRole:      langcopy.Phrase{En: "the recorded %s", De: "erfasste Rolle %s", Vi: "được ghi nhận là %s"},
 	OpenTask:          langcopy.Phrase{En: "an open task", De: "eine offene Aufgabe", Vi: "một nhiệm vụ đang mở"},
