@@ -23,10 +23,12 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	capturemod "github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // mailDay is the Date every fixture mail carries, so last_activity_at has one
@@ -511,10 +513,75 @@ func TestCaptureCountsOnlyAttestedMailAsOurs(t *testing.T) {
 	wantDeals(t, e, "una2@acme.example")
 }
 
+// secondSentMailbox connects user's own mailbox, whose syncs may carry the
+// provider's sent attestation and a connector's deal refs.
+func secondSentMailbox(t *testing.T, e *integration.SearchEnv, user ids.UUID) func(*testing.T, map[string]bool, map[string][]ids.UUID, ...[]byte) {
+	t.Helper()
+	seedCaptureRoleFor(t, e, user)
+	conn := &mailBatchConnector{accountLabel: secondSeatAddress}
+	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{})
+	registry.Register(conn)
+	connID, err := registry.Connect(humanWithScopes(e, user, []principal.Scope{principal.ScopeRead}), "gmail", connector.Auth("refresh"))
+	if err != nil {
+		t.Fatalf("connecting the second mailbox: %v", err)
+	}
+	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
+	return func(t *testing.T, sent map[string]bool, filed map[string][]ids.UUID, raws ...[]byte) {
+		t.Helper()
+		conn.raws, conn.sent, conn.deals, conn.kinds = raws, sent, filed, nil
+		if err := registry.SyncOnce(wsCtx, connID); err != nil {
+			t.Fatalf("second mailbox SyncOnce: %v", err)
+		}
+	}
+}
+
+// repairer is the deal repair as the data task runs it: system principal,
+// deciding each mail as the mailbox that captured it.
+type repairer struct {
+	e      *integration.SearchEnv
+	repair capturemod.DealRepair
+	system context.Context
+}
+
+func newRepairer(e *integration.SearchEnv, w dealWorld) repairer {
+	return repairer{
+		e:      e,
+		repair: capturemod.DealRepair{Candidates: w.store, Authority: identity.NewService(e.Pool)},
+		system: principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS),
+			principal.Principal{Type: principal.PrincipalSystem, ID: "system:data-task"}),
+	}
+}
+
+func (r repairer) preview(t *testing.T) map[capturemod.DealOutcome]int {
+	t.Helper()
+	var counts map[capturemod.DealOutcome]int
+	if err := database.WithWorkspaceTx(r.system, r.e.Pool, func(tx pgx.Tx) error {
+		var err error
+		counts, err = r.repair.PreviewTx(r.system, tx, 1000)
+		return err
+	}); err != nil {
+		t.Fatalf("previewing the repair: %v", err)
+	}
+	return counts
+}
+
+func (r repairer) run(t *testing.T) int {
+	t.Helper()
+	var out datatask.BatchOut
+	if err := database.WithWorkspaceTx(r.system, r.e.Pool, func(tx pgx.Tx) error {
+		var err error
+		out, err = r.repair.BatchTx(r.system, tx, datatask.BatchIn{Limit: 50, RunID: ids.NewV7()})
+		return err
+	}); err != nil {
+		t.Fatalf("running the repair: %v", err)
+	}
+	return out.Changed
+}
+
 // Mail captured before its deal existed is filed by the repair exactly where
-// capture would file it today. The preview counts what the repair inspects,
-// the run links only where one deal fits, a human's link is untouched, nobody
-// is asked, and a second run changes nothing.
+// capture would file it today. The preview says what the run will do, the run
+// links only where one deal fits, a human's link is untouched, nobody is
+// asked, and a second run changes nothing.
 func TestTheDealRepairFilesOldMailOnceAndLeavesHumansAlone(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
@@ -537,34 +604,15 @@ func TestTheDealRepairFilesOldMailOnceAndLeavesHumansAlone(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("filing a mail as a human: %v", err)
 	}
+	r := newRepairer(e, w)
 
-	system := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS),
-		principal.Principal{Type: principal.PrincipalSystem, ID: "system:data-task"})
-	var preview int64
-	if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
-		var err error
-		preview, _, err = capturemod.EstimateDealRepair(system, tx, 1000)
-		return err
-	}); err != nil {
-		t.Fatalf("previewing the repair: %v", err)
+	preview := r.preview(t)
+	if preview[capturemod.DealLinked] != 1 || preview[capturemod.DealAmbiguous] != 1 || len(preview) != 2 {
+		t.Fatalf("the preview reads %v, want one mail linked and one left for several deals", preview)
 	}
-	if preview != 2 {
-		t.Fatalf("the preview counts %d mails to inspect, want the 2 captured mails on no deal", preview)
-	}
-	repair := func() int {
-		t.Helper()
-		var out datatask.BatchOut
-		if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
-			var err error
-			out, err = capturemod.RepairDealLinksTx(system, tx, datatask.BatchIn{Limit: 50, RunID: ids.NewV7()}, w.store)
-			return err
-		}); err != nil {
-			t.Fatalf("running the repair: %v", err)
-		}
-		return out.Changed
-	}
-	if applied := repair(); applied != 1 {
-		t.Fatalf("the repair linked %d mails, want 1 of the %d previewed", applied, preview)
+	wantDeals(t, e, "old1@acme.example")
+	if applied := r.run(t); applied != preview[capturemod.DealLinked] {
+		t.Fatalf("the repair linked %d mails, the preview said %d", applied, preview[capturemod.DealLinked])
 	}
 	wantDeals(t, e, "old1@acme.example", only)
 	wantDeals(t, e, "old2@beta.example")
@@ -572,7 +620,51 @@ func TestTheDealRepairFilesOldMailOnceAndLeavesHumansAlone(t *testing.T) {
 	if n, _ := whichDealQuestions(t, e); n != 0 {
 		t.Fatalf("the repair raised %d deal questions, want none", n)
 	}
-	if again := repair(); again != 0 {
+	if again := r.run(t); again != 0 {
 		t.Fatalf("a second repair linked %d more mails, want none", again)
 	}
+}
+
+// The repair decides as the mailbox that captured the mail, never with the
+// system's reach. A reply whose only filed sibling is a colleague's private
+// sent mail stays on no deal, live and in the repair alike; the same reply
+// next to our own filed mail goes on its deal, live and in the repair alike.
+func TestTheDealRepairSeesOnlyWhatTheCapturingMailboxSaw(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	w := newDealWorld(t, e)
+	w.employee(t, "alice@acme.example", w.customer)
+	w.deal(t, "Acme operations")
+	reporting := w.deal(t, "Acme reporting")
+	colleague := secondSentMailbox(t, e, e.Rep3)
+
+	colleague(t, map[string]bool{"priv1@myco.example": true}, map[string][]ids.UUID{"priv1@myco.example": {reporting}},
+		email(secondSeatAddress, "", "alice@acme.example", "priv1@myco.example", ""))
+	env.sync(t, mailFrom("alice@acme.example", "priv2@acme.example", "priv1@myco.example", "Re: project"))
+	wantDeals(t, e, "priv2@acme.example")
+
+	env.syncSent(t, map[string]bool{"own1@myco.example": true},
+		email(captureOwner, "", "alice@acme.example", "own1@myco.example", ""))
+	env.sync(t, mailFrom("alice@acme.example", "own2@acme.example", "own1@myco.example", "Re: project"))
+	ours := ids.From[ids.ActivityKind](activityOf(t, e, "own1@myco.example"))
+	if _, err := activities.NewStore(e.DB()).RelinkActivity(w.ctx, ours, activities.RelinkActivityInput{
+		EntityType: "deal", EntityID: reporting,
+	}); err != nil {
+		t.Fatalf("filing our mail on a deal as a human: %v", err)
+	}
+	wantDeals(t, e, "own2@acme.example")
+
+	r := newRepairer(e, w)
+	if applied := r.run(t); applied != 1 {
+		t.Fatalf("the repair linked %d mails, want only the reply beside our own filed mail", applied)
+	}
+	wantDeals(t, e, "priv2@acme.example")
+	wantDeals(t, e, "own2@acme.example", reporting)
+
+	// Live capture decides the same way for the same mail.
+	env.sync(t,
+		mailFrom("alice@acme.example", "priv2@acme.example", "priv1@myco.example", "Re: project"),
+		mailFrom("alice@acme.example", "own3@acme.example", "own1@myco.example", "Re: project"))
+	wantDeals(t, e, "priv2@acme.example")
+	wantDeals(t, e, "own3@acme.example", reporting)
 }
