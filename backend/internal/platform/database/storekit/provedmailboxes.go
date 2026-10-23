@@ -14,8 +14,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// MailboxReader is the read a proved-mailbox lookup needs: a transaction, or a
+// data task's estimate, which reads outside one.
+type MailboxReader interface {
+	Query(ctx context.Context, sql string, args ...any) (pgx.Rows, error)
+}
+
 // ProvedMailboxLabels reads labels attested by a connected OAuth provider, never typed IMAP labels.
-func ProvedMailboxLabels(ctx context.Context, tx pgx.Tx) (map[ids.UUID][]string, error) {
+func ProvedMailboxLabels(ctx context.Context, tx MailboxReader) (map[ids.UUID][]string, error) {
 	rows, err := tx.Query(ctx, `SELECT c.user_id, c.account_label FROM capture_connection c WHERE `+provedMailboxClause("c"))
 	if err != nil {
 		return nil, fmt.Errorf("reading proved mailbox labels: %w", err)
@@ -47,7 +53,7 @@ func provedMailboxClause(alias string) string {
 // ProvedMailboxLabels, the one set SeatProvedAddressTx trusts, so a declared
 // alias or a delivered-to sighting proves nothing here either. An address two
 // seats proved belongs to neither.
-func ProvedMailSeatIdentitiesSQL(ctx context.Context, tx pgx.Tx, bind func(any) int) (string, error) {
+func ProvedMailSeatIdentitiesSQL(ctx context.Context, tx MailboxReader, bind func(any) int) (string, error) {
 	labels, err := ProvedMailboxLabels(ctx, tx)
 	if err != nil {
 		return "", err

@@ -37,6 +37,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/graphcal"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -76,6 +77,15 @@ const (
 	sourceGCal     = "gcal"
 	sourceGraphCal = "graphcal"
 )
+
+// stampedMailboxLabelSQL is the account label of the mailbox that activity a's
+// connector stamp names, and empty when the stamp names no seat.
+var stampedMailboxLabelSQL = `coalesce((
+		         SELECT c.account_label
+		           FROM capture_connection c
+		          WHERE c.provider = split_part(a.captured_by, ':', 2)
+		            AND c.user_id::text = ` + storekit.ConnectorSeatSQL("a") + `
+		          LIMIT 1), '')`
 
 // replayCandidate is one activity whose original is still on file.
 type replayCandidate struct {
@@ -145,29 +155,14 @@ func replayParticipantsBatch(ctx context.Context, pool *pgxpool.Pool, limit int,
 //
 // Both the mailbox owner and the format are resolved from captured_by, which
 // the sink stamps from the AUTHENTICATED principal as `connector:<name>:<user>`
-// — never from anything a record claimed. That is a stricter answer than the
-// one it replaces: the old query matched capture_connection.provider against
-// the activity's source_system and accepted it only when the provider had
-// exactly ONE connection, so a workspace with two Gmail mailboxes replayed
-// nothing at all. Naming the user directly resolves those, and
-// capture_connection is unique on (user_id, provider), so the pair identifies
-// one mailbox or none.
+// — never from anything a record claimed. capture_connection is unique on
+// (user_id, provider), so the pair identifies one mailbox or none.
 //
-// A row whose provenance does not parse — a human-logged activity, an older
-// stamp carrying no user — yields no owner and is recorded as such rather than
+// A row whose provenance names no seat — a human-logged activity, a bare
+// `connector:gmail` stamp — yields no owner and is recorded as such rather than
 // guessed at. Parsing against the wrong address would file the mailbox owner as
 // a participant of their own conversation.
 func selectReplayCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]replayCandidate, error) {
-	// split_part on a `connector:<name>:<user>` stamp: field 2 is the connector,
-	// field 3 the seat.
-	//
-	// The seat is missing on rows captured before provenance carried one, whose
-	// stamp is the bare `connector:gmail`. Those fall back to the rule this
-	// query used to apply to every row -- the provider's connection, when it has
-	// exactly one -- so an old row still replays, and still declines rather than
-	// guessing when two mailboxes share a provider. A stamp naming a seat never
-	// reaches the fallback, so a workspace with two Gmail mailboxes resolves both
-	// of its NEW rows, which the single-connection rule alone could not do.
 	// The stored LINK first, the key join only for a row carrying none: a
 	// mailbox that could prove nothing about a colliding Message-ID files its
 	// activity under a key scoped to its own seat, and a key join alone would
@@ -175,16 +170,7 @@ func selectReplayCandidates(ctx context.Context, tx pgx.Tx, limit int) ([]replay
 	rows, err := tx.Query(ctx, `
 		SELECT a.id, a.kind, split_part(a.captured_by, ':', 2), rc.id,
 		       coalesce(a.counterparty_outbound_attested, false),
-		       coalesce((
-		         SELECT c.account_label
-		           FROM capture_connection c
-		          WHERE c.provider = split_part(a.captured_by, ':', 2)
-		            AND (
-		              c.user_id::text = split_part(a.captured_by, ':', 3)
-		              OR (split_part(a.captured_by, ':', 3) = '' AND NOT EXISTS (
-		                  SELECT 1 FROM capture_connection other
-		                   WHERE other.provider = c.provider AND other.id <> c.id)))
-		          LIMIT 1), '')
+		       `+stampedMailboxLabelSQL+`
 		  FROM activity a
 		  JOIN raw_capture rc
 		    ON rc.id = a.raw_capture_id
