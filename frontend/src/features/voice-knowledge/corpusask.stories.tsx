@@ -78,6 +78,7 @@ const ANSWERED: Answer = {
     id: SET_ID,
     name: SET.name,
     topic_statement: SET.topic_statement,
+    shipped: false,
   },
   coverage: SET.coverage,
   claims: [

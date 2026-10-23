@@ -166,7 +166,6 @@ export function dealProjectFields(
       ? projectOwnerField(t, owner, {
           key: NEW_PROJECT_OWNER,
           label: "deal.newProjectOwner",
-          currentOwner: null,
           mode: "create",
         }).map((field) => ({ ...field, showWhen: startsProject }))
       : []),

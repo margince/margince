@@ -35,7 +35,6 @@ export function projectFields(
   t: (key: MessageKey) => string,
   opts: Readonly<{
     owner: ProjectOwnerPicker;
-    currentOwner: string | null;
     mode: "create" | "edit";
   }>,
 ): CreateField[] {
@@ -55,7 +54,6 @@ export function projectFields(
       : []),
     ...projectOwnerField(t, opts.owner, {
       key: "owner_id",
-      currentOwner: opts.currentOwner,
       mode: opts.mode,
     }),
     { key: "description", label: "project.description", type: "textarea" },

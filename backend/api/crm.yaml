@@ -64684,7 +64684,7 @@ components:
 
     KnowledgeAnswerCorpus:
       type: object
-      required: [id, name, topic_statement]
+      required: [id, name, topic_statement, shipped]
       description: >-
         The corpus as an ANSWER needs it: enough to name what was searched and to
         quote the topic statement back in a refusal, and nothing else. It is not
@@ -64697,6 +64697,11 @@ components:
         id: { type: string, format: uuid }
         name: { type: string }
         topic_statement: { type: string }
+        shipped:
+          type: boolean
+          description: >-
+            True when the answer came from the handbook set that ships with Margince.
+            Only then do claims carry `section` and `opens`.
 
     KnowledgeClaim:
       type: object
@@ -64758,6 +64763,36 @@ components:
           description: >-
             A verbatim span from the retrieved passages, whitespace-collapsed and
             matched before this claim was allowed to exist.
+        section:
+          $ref: '#/components/schemas/KnowledgeClaimSection'
+        opens:
+          $ref: '#/components/schemas/KnowledgeClaimOpens'
+
+    KnowledgeClaimSection:
+      type: object
+      required: [title, line]
+      description: >-
+        The handbook section the quote sits in. Present only on a claim from a page
+        that ships with Margince, and only when the claim carries a `line`; an
+        uploaded document has no section the server can name.
+      properties:
+        title:
+          type: string
+          description: The section's heading, without its `#` marks.
+        line: { type: integer, minimum: 1, description: The 1-based line of the heading. }
+
+    KnowledgeClaimOpens:
+      type: object
+      required: [settings_page]
+      description: >-
+        The settings page the claim's handbook section is about, from the page's
+        `opens:` marker. The client shows a button to it only when the reader may
+        open that page.
+      properties:
+        settings_page:
+          type: string
+          pattern: '^[a-z][a-z-]*$'
+          description: A settings page id, as the settings address takes it.
 
     KnowledgeAnswer:
       type: object

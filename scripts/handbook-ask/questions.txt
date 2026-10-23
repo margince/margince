@@ -92,6 +92,8 @@ who in my company knows this person
 where are the settings
 how do I change my password
 how do I change the language
+how do I change my time zone
+where do I set the reporting timezone
 how do I set up my writing voice
 how do I import contacts from a spreadsheet
 
@@ -216,3 +218,4 @@ my webhook failed, how do I resend it
 how do I verify a webhook signature
 how do I customise the webhook body
 can I only get a message when a deal is won
+how do I change the company reporting time zone

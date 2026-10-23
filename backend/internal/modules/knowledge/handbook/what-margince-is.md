@@ -151,21 +151,22 @@ Press ⌘K again, or Esc, to close it.
 Also called: quick search, command menu, Cmd K, Ctrl K, keyboard shortcut.
 
 ### Where is the handbook, and how do I ask it a question?
-The Margince handbook is inside the app. To ask it a question, open the command palette with ⌘K (Ctrl+K) and choose **Ask your documents**, the first row.
-1. The **Ask your documents** dialog opens over the page, with whatever you typed so far.
-2. **Document set** starts on your company's default set. That is the **Margince handbook** unless an administrator picked another. Change it to ask a different set.
-3. Type in **Your question**, in your own words, and choose **Ask**.
-
-The answer quotes the handbook and says where each part comes from. A question it does not cover gets **Not covered by this set** instead of a guess.
+To ask the Margince handbook a question, type it into **Search or ask Margince** in the top bar and press Enter. You can also open it with ⌘K (Ctrl+K).
+1. A question such as "How do I change my time zone?" gets the row **Ask Margince: "…"** at the top. Enter asks it.
+2. The answer shows above the records that match. It names the set it came from, and its numbers open the handbook page at the quoted line.
+3. When the answer is a settings page you may open, **Open Settings → …** takes you there.
+The handbook is in English, so questions in English work best.
 Also called: help, FAQ, knowledge base, ask Margince.
+
+When the handbook does not cover a question, Margince asks your company's default document set next and says so. When neither covers it, you get **Not covered by this set** instead of a guess. To ask one set of your choice, choose **Ask your documents** under the search field. Pick a **Document set**, type in **Your question** and choose **Ask**.
 
 ### How do I ask Margince a question about a company?
 To ask about one company, open the company and use its **Ask about this company** panel. **Ask Margince** offers fixed questions (**What is open here?**, **Prepare for a meeting** and **What changed recently?**), answered from the records you can open. It takes no text of your own. For a question in your own words about how Margince works, use **Ask your documents** (⌘K).
 Also called: company summary, meeting prep, what's going on with this account.
 
 ### Where is the Ask box?
-The Margince Ask box is called **Ask your documents**, and it is the first row of the command palette. Press ⌘K (Ctrl+K), or click **Search or ask Margince** in the top bar.
-It answers only from one document set: the **Margince handbook** that comes with every installation, or a set your company filed under Settings → **Knowledge**.
+The Margince Ask box is the search field **Search or ask Margince** in the top bar: type a question and press Enter. **Ask your documents**, the first row of the command palette (⌘K), opens a dialog where you pick the document set yourself.
+That dialog answers from the one set you pick. It is the **Margince handbook** that comes with every installation, or a set filed under Settings → **Knowledge**.
 On a company page there is a second, separate panel, **Ask about this company**, with its own **Ask Margince** questions about that one company.
 If the dialog says **No document sets**, there is nothing filed to search yet.
 
@@ -222,7 +223,7 @@ A teammate or a colleague who signs in is called a **user** in Margince. You loo
 
 A knowledge base is called a **document set** in Margince. Document sets are filed in Settings → **Knowledge**.
 
-The FAQ, the help or the handbook search is called **Ask your documents** in Margince. Open it from the command palette with ⌘K (Ctrl+K).
+The FAQ, the help or the handbook search is the search field **Search or ask Margince**: type a question and press Enter. **Ask your documents** in the command palette (⌘K) asks one set you choose.
 
 A to-do list or a task inbox is called the **Worklist** in Margince. It is on **Home**.
 

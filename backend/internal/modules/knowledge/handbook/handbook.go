@@ -21,6 +21,7 @@ package handbook
 import (
 	"embed"
 	"io/fs"
+	"iter"
 	"sort"
 	"strings"
 )
@@ -97,30 +98,42 @@ func Title(filename string) string {
 	return firstHeading(string(content))
 }
 
-// firstHeading skips fences and comments, where a `# ` line is code or a note.
+// firstHeading is the page's first `# ` line outside fences and comments.
 func firstHeading(markdown string) string {
-	var fence string
-	var commented bool
-	for line := range strings.SplitSeq(markdown, "\n") {
-		trimmed := strings.TrimSpace(line)
-		switch {
-		case commented:
-			commented = !strings.Contains(trimmed, "-->")
-		case fence != "":
-			if closesFence(trimmed, fence) {
-				fence = ""
-			}
-		case fenceOpening(trimmed) != "":
-			fence = fenceOpening(trimmed)
-		case strings.HasPrefix(trimmed, "<!--"):
-			commented = !strings.Contains(trimmed, "-->")
-		default:
-			if heading, found := strings.CutPrefix(line, "# "); found {
-				return strings.TrimSpace(heading)
-			}
+	for _, line := range proseLines(markdown) {
+		if heading, found := strings.CutPrefix(line, "# "); found {
+			return strings.TrimSpace(heading)
 		}
 	}
 	return ""
+}
+
+// proseLines yields each line outside a code fence or an HTML comment, with its
+// 0-based index. A heading there is the page's; one inside is code or a note.
+func proseLines(markdown string) iter.Seq2[int, string] {
+	return func(yield func(int, string) bool) {
+		var fence string
+		var commented bool
+		for i, line := range strings.Split(markdown, "\n") {
+			trimmed := strings.TrimSpace(line)
+			switch {
+			case commented:
+				commented = !strings.Contains(trimmed, "-->")
+			case fence != "":
+				if closesFence(trimmed, fence) {
+					fence = ""
+				}
+			case fenceOpening(trimmed) != "":
+				fence = fenceOpening(trimmed)
+			case strings.HasPrefix(trimmed, "<!--"):
+				commented = !strings.Contains(trimmed, "-->")
+			default:
+				if !yield(i, line) {
+					return
+				}
+			}
+		}
+	}
 }
 
 // fenceOpening is the run of three or more backticks or tildes that opens a

@@ -420,7 +420,6 @@ function ProjectActions({
         fields={[
           ...projectFields(t, {
             owner,
-            currentOwner: project.owner_id ?? null,
             mode: "edit",
           }),
           ...cf.formFields,
