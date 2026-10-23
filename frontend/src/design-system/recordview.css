@@ -67,7 +67,6 @@
 }
 .record-split-details::-webkit-scrollbar-thumb {
   background: transparent;
-  border-radius: var(--r-full);
 }
 .record-split-details:hover::-webkit-scrollbar-thumb {
   background: var(--borderControl);
