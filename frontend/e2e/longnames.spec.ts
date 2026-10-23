@@ -77,11 +77,11 @@ for (const width of [1280, 390]) {
 }
 
 const NAMES = [
-  "Brandt Automotive Fleet Services International Holdings Alpha",
-  "Brandt Automotive Fleet Services International Holdings Bravo",
+  "Brandt Automotive Fleet Services International Holdings and Logistics Alpha",
+  "Brandt Automotive Fleet Services International Holdings and Logistics Bravo",
 ];
 const ARCHIVED_NAME =
-  "Brandt Automotive Fleet Services International Holdings Charlie";
+  "Brandt Automotive Fleet Services International Holdings and Logistics Charlie";
 
 async function openCompaniesWithLongNames(page: Page, width: number) {
   await page.setViewportSize({ width, height: 800 });
@@ -119,26 +119,41 @@ async function nameCell(page: Page, name: string) {
   });
 }
 
-test("the companies list ends a long name in an ellipsis at 1440px", async ({
-  page,
-}) => {
-  await openCompaniesWithLongNames(page, 1440);
-  for (const name of [...NAMES, ARCHIVED_NAME]) {
-    const verdict = await nameCell(page, name);
-    expect(verdict.textOverflow, name).toBe("ellipsis");
-    expect(verdict.truncated, `${name} is truncated`).toBe(true);
-    expect(verdict.past, `${name} inside its cell`).toBeLessThanOrEqual(0.5);
-  }
-  const badge = page
+/** How far the archived badge's words run past the box that shows them. */
+async function archivedBadgeCut(page: Page) {
+  const label = page
     .locator("tr", { hasText: ARCHIVED_NAME })
     .locator(".avatar-row .badge .badge-label");
-  await expect(badge).toBeVisible();
-  expect(
-    await badge.evaluate((node) => node.scrollWidth <= node.clientWidth),
-    "the archived badge keeps its whole label",
-  ).toBe(true);
-  expect(await pageOverflow(page)).toEqual([]);
-});
+  await expect(label).toBeVisible();
+  // Not scrollWidth: it rounds to whole pixels, and a label short by a
+  // fraction of one already ends in "…".
+  return label.evaluate((node) => {
+    const words = document.createRange();
+    words.selectNodeContents(node);
+    return (
+      words.getBoundingClientRect().width - node.getBoundingClientRect().width
+    );
+  });
+}
+
+for (const width of [768, 1024, 1440]) {
+  test(`the companies list ends a long name in an ellipsis at ${width}px`, async ({
+    page,
+  }) => {
+    await openCompaniesWithLongNames(page, width);
+    for (const name of [...NAMES, ARCHIVED_NAME]) {
+      const verdict = await nameCell(page, name);
+      expect(verdict.textOverflow, name).toBe("ellipsis");
+      expect(verdict.truncated, `${name} is truncated`).toBe(true);
+      expect(verdict.past, `${name} inside its cell`).toBeLessThanOrEqual(0.5);
+    }
+    expect(
+      await archivedBadgeCut(page),
+      "the archived badge keeps its whole label",
+    ).toBeLessThanOrEqual(0.01);
+    expect(await pageOverflow(page)).toEqual([]);
+  });
+}
 
 test("the companies list wraps a long name in its card at 390px", async ({
   page,
@@ -148,6 +163,25 @@ test("the companies list wraps a long name in its card at 390px", async ({
     const verdict = await nameCell(page, name);
     expect(verdict.truncated, `${name} shows whole`).toBe(false);
     expect(verdict.past, `${name} inside its cell`).toBeLessThanOrEqual(0.5);
+    const overlap = await page
+      .locator("tr", { hasText: name })
+      .evaluate((row) => {
+        const heading = row.querySelector("td.lt-identity .lt-identity-row");
+        const field = [
+          ...row.querySelectorAll("td.lt-identity ~ td:not(.lt-rowmenu)"),
+        ].find((td) => td.getClientRects().length > 0);
+        return heading && field
+          ? heading.getBoundingClientRect().bottom -
+              field.getBoundingClientRect().top
+          : null;
+      });
+    expect(overlap, `${name} clear of the field below`).toBeLessThanOrEqual(
+      0.5,
+    );
   }
+  expect(
+    await archivedBadgeCut(page),
+    "the archived badge keeps its whole label",
+  ).toBeLessThanOrEqual(0.01);
   expect(await pageOverflow(page)).toEqual([]);
 });

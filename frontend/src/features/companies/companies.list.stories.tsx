@@ -84,7 +84,7 @@ export const LongNames: Story = {
 };
 
 export const LongNamesPhone: Story = {
-  name: "long names end in an ellipsis — on a phone",
+  name: "long names wrap in the card — on a phone",
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: renderLongNames,

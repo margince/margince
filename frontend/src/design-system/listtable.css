@@ -855,16 +855,17 @@
 
 /* The value beside a chip ends in an ellipsis, as a bare value does: the cell's
  * own `text-overflow` never reaches the text of a flex item. */
-.lt-table td .avatar-row > :not(.avatar) {
+.lt-table td .avatar-row > :not(.avatar, .badge) {
   min-inline-size: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* The text gives way before a badge beside it, as in `.lt-strip`. */
-.lt-table td .avatar-row > :not(.avatar, .badge) {
-  flex-shrink: 1000;
+/* Text gives way first; the badge shrinks only once it fills the row.
+ * Not a lopsided `flex-shrink`: the badge keeps a sub-pixel share and ends in "…". */
+.lt-table td .avatar-row > .badge {
+  flex-shrink: 0;
 }
 
 /* Compact: the rows tighten, the type does not. Shrinking the text too would
@@ -1136,6 +1137,12 @@
     text-align: left;
     white-space: normal;
     overflow: visible;
+  }
+  /* A block takes `block-size` as a height, not as a table cell's floor, and a
+   * value that wraps past it runs over the field below. */
+  .lt-table:not(.dense) td {
+    block-size: auto;
+    min-block-size: 44px;
   }
 
   /* A field with no value has nothing to label: on a desktop row the empty cell
