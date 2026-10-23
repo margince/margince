@@ -49,7 +49,7 @@ func TestAQuietRelationshipHasItsOwnCategory(t *testing.T) {
 }
 
 // A quiet scan that spent its budget says so even when no row survived the
-// derivation: an empty lane is then a lower bound, not a clear one.
+// derivation. An empty lane is then a lower bound, not a clear one.
 func TestAnExhaustedQuietScanWithNoSurvivorsIsNotComplete(t *testing.T) {
 	t.Parallel()
 	more := true

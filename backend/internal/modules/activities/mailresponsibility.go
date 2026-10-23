@@ -27,8 +27,8 @@ func personalMailResponsibilitySQL(owner *ids.UUID, identities string, arg func(
 	return fmt.Sprintf("(a.kind = 'email' AND %s = $%d::uuid)", soleDirectSeatSQL(identities), arg(*owner))
 }
 
-// soleDirectSeatSQL is the one decision of who answers an inbound mail `a`:
-// the seat in its To line when exactly one seat is there, else nobody. Two
+// soleDirectSeatSQL decides who answers an inbound mail `a`. It is the seat in
+// its To line when it is the only seat there, else nobody. Two
 // addressed seats make no automatic duty for either, and no shared one. The
 // waiting queue and the reminder writer both read it.
 func soleDirectSeatSQL(identities string) string {

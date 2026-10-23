@@ -372,7 +372,12 @@ func StampFurtherParticipants(
 	// carrying both would file under whoever holds the ADDRESS while the row
 	// kept somebody else's account — one row naming two contacts, and an erasure
 	// keyed on either of them reaching a record about the other.
-	args := []any{activityID, addresses, roles, partyListIsAttested, names, accounts, channelProvider}
+	return insertFurtherParticipants(ctx, tx, kind, partyListIsAttested, []any{activityID, addresses, roles, partyListIsAttested, names, accounts, channelProvider})
+}
+
+// insertFurtherParticipants writes the parties StampFurtherParticipants
+// collected, with args holding the statement's first seven arguments.
+func insertFurtherParticipants(ctx context.Context, tx pgx.Tx, kind string, partyListIsAttested bool, args []any) error {
 	seatMatch, err := calendarSeatMatch(ctx, tx, kind, partyListIsAttested, &args)
 	if err != nil {
 		return err

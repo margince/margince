@@ -18,8 +18,8 @@ import (
 
 // rowProducers is each function in this package that builds a Worklist row,
 // with the sources its rows carry. The census derives the producers from the
-// code and compares both ways, so a new producer fails here until it states
-// its sources, even when it reuses a source that already has a policy.
+// code and compares both ways. A new producer fails here until it states its
+// sources, even when it reuses a source that already has a policy.
 var rowProducers = map[string][]crmcontracts.WorklistItemSource{
 	"classifyAwaiting":          {crmcontracts.WorklistItemSourceAwaitingReply},
 	"classifyMeetingFollowUp":   {crmcontracts.WorklistItemSourceMeetingFollowUp},
@@ -172,7 +172,7 @@ func TestEveryRowProducerAndDayReaderIsAccountedFor(t *testing.T) {
 }
 
 // The census must fail on a producer it was not told about, even one reusing
-// a source that already has a policy, and on a reader that skips admission.
+// a source with a policy. It must also fail on a reader that skips admission.
 func TestTheCensusCatchesAnUnregisteredProducerAndConsumer(t *testing.T) {
 	t.Parallel()
 	producer := `package attention

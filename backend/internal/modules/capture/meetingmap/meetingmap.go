@@ -161,10 +161,10 @@ func (m Meeting) Participants() connector.Parties { return m.participants }
 // meetingParties returns the organizer and attendees as participant rows,
 // the account owner included when the provider lists them.
 //
-// The owner's own role is the evidence that they take part: capture binds the
-// row to their seat, and a calendar that merely holds a copy of somebody
-// else's meeting names them nowhere here. The sink's directional row for the
-// owner records only whose calendar the event came from.
+// The owner's own role is the evidence that they take part, and capture binds
+// that row to their seat. A calendar that only holds a copy of somebody else's
+// meeting names them nowhere here. The sink's directional row for the owner
+// records only whose calendar the event came from.
 //
 // Organizer wins over attendee when the same address holds both, which is the
 // common case for a meeting somebody scheduled and then attended: organizing is

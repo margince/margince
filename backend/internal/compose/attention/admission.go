@@ -18,8 +18,9 @@ import (
 // column, a read bound to the acting human, or the deal's owner. It may also be
 // the direct recipients of a mail, or a meeting's recorded host.
 //
-// A row whose source has no entry, or that claims an answer its source may
-// not give, never reaches a page: not Mine, not Unassigned, not a team view.
+// Some rows never reach a page: one whose source has no entry, and one that
+// claims an answer its source may not give. Neither reaches Mine, Unassigned
+// or a team view.
 // The lane it came from is reported failed, so the page does not claim to be
 // complete, and the fault is logged.
 //
@@ -101,8 +102,8 @@ func admitBySource(ctx context.Context, rows []ranked) ([]ranked, []crmcontracts
 	return kept, refused
 }
 
-// reportedLane names the lane a refused row is reported under: the lane that
-// read it, or its own source for a row read outside the day's lanes.
+// reportedLane names the lane a refused row is reported under. That is the
+// lane that read it, or its own source for a row read outside the day's lanes.
 func reportedLane(row ranked) crmcontracts.WorklistItemSource {
 	if row.lane != "" {
 		return row.lane

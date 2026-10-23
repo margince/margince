@@ -349,18 +349,8 @@ func (s *Store) scanWaitingReplies(ctx context.Context, asOf time.Time, before W
 			return err
 		}
 		defer rows.Close()
-		waiting = []WaitingReply{}
-		for rows.Next() {
-			row, err := scanWaitingRecipients(rows)
-			if err != nil {
-				return err
-			}
-			if ambiguouslyAddressed(row) {
-				continue
-			}
-			waiting = append(waiting, waitingReplyForOwner(row, owner))
-		}
-		return rows.Err()
+		waiting, err = collectWaiting(rows, owner)
+		return err
 	})
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading who is waiting for a reply: %w", err)
@@ -488,4 +478,21 @@ func scanWaitingReply(record pgx.Row) (WaitingReply, error) {
 		row.OwnerID = ids.Nil
 	}
 	return row, err
+}
+
+// collectWaiting reads the scanned waits for this owner, leaving out a mail
+// addressed to more than one seat, which is nobody's automatic duty.
+func collectWaiting(rows pgx.Rows, owner *ids.UUID) ([]WaitingReply, error) {
+	waiting := []WaitingReply{}
+	for rows.Next() {
+		row, err := scanWaitingRecipients(rows)
+		if err != nil {
+			return nil, err
+		}
+		if ambiguouslyAddressed(row) {
+			continue
+		}
+		waiting = append(waiting, waitingReplyForOwner(row, owner))
+	}
+	return waiting, rows.Err()
 }

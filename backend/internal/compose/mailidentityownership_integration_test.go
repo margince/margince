@@ -102,7 +102,7 @@ func TestSharedMailIdentityMustResolveBeforeItAssignsPersonalWork(t *testing.T) 
 	check(second, "mine", ids.Nil, 0)
 	check(second, "all", e.Rep1, 1)
 	// Two seats in the To line make no automatic duty for either, and no
-	// shared one: the mail stays on its record until somebody adopts it.
+	// shared one. The mail stays on its record until somebody adopts it.
 	var secondAddress string
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), "SELECT email FROM app_user WHERE id=$1", e.Rep2).Scan(&secondAddress)

@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/meetingmap"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -170,7 +171,15 @@ func meetingRowsOf(t *testing.T, e *integration.Env, reader ids.UUID, now time.T
 func TestAMeetingIsHeldOnlyOnceItsOutcomeSaysSo(t *testing.T) {
 	e := integration.Setup(t)
 	now := laneDay.Add(3 * time.Hour)
-	customer := e.SeedContact(t, "Meeting Customer", &e.Rep1)
+	ownerID := ids.From[ids.UserKind](e.Rep1)
+	created, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
+		FullName: "Meeting Customer", OwnerID: &ownerID, Source: "manual",
+		Emails: []contacts.ContactEmailInput{{Email: "meeting.customer@customer.test", IsPrimary: true}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	customer := ids.UUID(created.Id)
 	book := func(subject string, at time.Time, status string) ids.UUID {
 		rep := ids.From[ids.UserKind](e.Rep1)
 		row, _, err := e.Activities.LogActivity(e.As(e.Rep1, nil, integration.AdminPerms), activities.LogActivityInput{
@@ -244,8 +253,8 @@ func TestACalendarCopyIsNotTheImportersMeetingButItsAttendeesAre(t *testing.T) {
 	}
 }
 
-// A captured meeting stored before the owner's role was recorded fails closed:
-// it is nobody's work until the replay of its stored original restores the
+// A captured meeting stored before the owner's role was recorded fails closed.
+// It is nobody's work until the replay of its stored original restores the
 // owner's provider role.
 func TestALegacyCalendarRowIsNobodysUntilItsOriginalIsReplayed(t *testing.T) {
 	e := integration.Setup(t)

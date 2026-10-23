@@ -143,8 +143,8 @@ func TestACancellationOutranksThePartyRules(t *testing.T) {
 	}
 }
 
-// The owner keeps the provider's role for them, which is the evidence they take
-// part; a calendar holding a copy of somebody else's meeting lists no owner.
+// The owner keeps the provider's role for them, the evidence that they take
+// part. A calendar holding a copy of somebody else's meeting lists no owner.
 func TestTheOwnerKeepsTheProvidersRoleAndOrganizerOutranksAttending(t *testing.T) {
 	m := Classify(Event{
 		ID: "evt-2", Subject: "Review",
