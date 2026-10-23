@@ -77,48 +77,77 @@ for (const width of [1280, 390]) {
 }
 
 const NAMES = [
-  "Brandt Automotive Fleet Services Alpha",
-  "Brandt Automotive Fleet Services Bravo",
+  "Brandt Automotive Fleet Services International Holdings Alpha",
+  "Brandt Automotive Fleet Services International Holdings Bravo",
 ];
+const ARCHIVED_NAME =
+  "Brandt Automotive Fleet Services International Holdings Charlie";
 
-for (const width of [1440, 390]) {
-  test(`the companies list ends a long name in an ellipsis at ${width}px`, async ({
-    page,
-  }) => {
-    await page.setViewportSize({ width, height: 800 });
-    await page.emulateMedia({ reducedMotion: "reduce" });
-    await mockApi(page);
-    await page.route(/\/v1\/companies(\?.*)?$/, async (route) => {
-      await route.fulfill({
-        json: listPage(
-          NAMES.map((display_name, i) => ({
-            ...brandt,
-            id: `o-long-${i}`,
-            display_name,
-          })),
-        ),
-      });
+async function openCompaniesWithLongNames(page: Page, width: number) {
+  await page.setViewportSize({ width, height: 800 });
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await mockApi(page);
+  await page.route(/\/v1\/companies(\?.*)?$/, async (route) => {
+    await route.fulfill({
+      json: listPage(
+        [...NAMES, ARCHIVED_NAME].map((display_name, i) => ({
+          ...brandt,
+          id: `o-long-${i}`,
+          display_name,
+          archived_at:
+            display_name === ARCHIVED_NAME ? "2026-06-20T09:00:00Z" : null,
+        })),
+      ),
     });
-    await page.goto("/#/companies");
-    for (const name of NAMES) {
-      const cell = page.locator("td strong", { hasText: name });
-      await expect(cell).toBeVisible();
-      await expect(cell).toHaveAttribute("title", name);
-      const verdict = await cell.evaluate((node) => {
-        const td = node.closest("td");
-        return {
-          textOverflow: getComputedStyle(node).textOverflow,
-          truncated: node.scrollWidth > node.clientWidth,
-          past: td
-            ? node.getBoundingClientRect().right -
-              td.getBoundingClientRect().right
-            : null,
-        };
-      });
-      expect(verdict.textOverflow, name).toBe("ellipsis");
-      expect(verdict.truncated, `${name} is truncated`).toBe(true);
-      expect(verdict.past, `${name} inside its cell`).toBeLessThanOrEqual(0.5);
-    }
-    expect(await pageOverflow(page)).toEqual([]);
+  });
+  await page.goto("/#/companies");
+}
+
+async function nameCell(page: Page, name: string) {
+  const cell = page.locator("td strong", { hasText: name });
+  await expect(cell).toBeVisible();
+  await expect(cell).toHaveAttribute("title", name);
+  return cell.evaluate((node) => {
+    const td = node.closest("td");
+    return {
+      textOverflow: getComputedStyle(node).textOverflow,
+      truncated: node.scrollWidth > node.clientWidth,
+      past: td
+        ? node.getBoundingClientRect().right - td.getBoundingClientRect().right
+        : null,
+    };
   });
 }
+
+test("the companies list ends a long name in an ellipsis at 1440px", async ({
+  page,
+}) => {
+  await openCompaniesWithLongNames(page, 1440);
+  for (const name of [...NAMES, ARCHIVED_NAME]) {
+    const verdict = await nameCell(page, name);
+    expect(verdict.textOverflow, name).toBe("ellipsis");
+    expect(verdict.truncated, `${name} is truncated`).toBe(true);
+    expect(verdict.past, `${name} inside its cell`).toBeLessThanOrEqual(0.5);
+  }
+  const badge = page
+    .locator("tr", { hasText: ARCHIVED_NAME })
+    .locator(".avatar-row .badge .badge-label");
+  await expect(badge).toBeVisible();
+  expect(
+    await badge.evaluate((node) => node.scrollWidth <= node.clientWidth),
+    "the archived badge keeps its whole label",
+  ).toBe(true);
+  expect(await pageOverflow(page)).toEqual([]);
+});
+
+test("the companies list wraps a long name in its card at 390px", async ({
+  page,
+}) => {
+  await openCompaniesWithLongNames(page, 390);
+  for (const name of [...NAMES, ARCHIVED_NAME]) {
+    const verdict = await nameCell(page, name);
+    expect(verdict.truncated, `${name} shows whole`).toBe(false);
+    expect(verdict.past, `${name} inside its cell`).toBeLessThanOrEqual(0.5);
+  }
+  expect(await pageOverflow(page)).toEqual([]);
+});

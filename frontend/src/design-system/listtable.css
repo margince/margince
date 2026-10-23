@@ -853,13 +853,18 @@
   height: 20px;
 }
 
-/* The value beside such a chip ends in an ellipsis, as a bare value does: the
- * cell's own `text-overflow` never reaches the text of a flex item. */
+/* The value beside a chip ends in an ellipsis, as a bare value does: the cell's
+ * own `text-overflow` never reaches the text of a flex item. */
 .lt-table td .avatar-row > :not(.avatar) {
   min-inline-size: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* The text gives way before a badge beside it, as in `.lt-strip`. */
+.lt-table td .avatar-row > :not(.avatar, .badge) {
+  flex-shrink: 1000;
 }
 
 /* Compact: the rows tighten, the type does not. Shrinking the text too would
@@ -1162,6 +1167,14 @@
   }
   .lt-table td.lt-identity::before {
     content: none;
+  }
+
+  /* The heading wraps like the card's other values; a run with no break stays
+   * inside the card. */
+  .lt-table td.lt-identity .avatar-row > :not(.avatar, .badge) {
+    white-space: normal;
+    overflow: visible;
+    overflow-wrap: anywhere;
   }
 
   /* A number in a stack belongs beside its label, not against the far edge. */

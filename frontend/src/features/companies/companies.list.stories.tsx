@@ -51,9 +51,15 @@ export const CompaniesList: Story = {
 };
 
 const longNames = [
-  "Brandt Automotive Fleet Services Alpha",
-  "Brandt Automotive Fleet Services Bravo",
-].map((display_name, i) => ({ ...company, id: `o-long-${i}`, display_name }));
+  "Brandt Automotive Fleet Services International Holdings Alpha",
+  "Brandt Automotive Fleet Services International Holdings Bravo",
+  "Brandt Automotive Fleet Services International Holdings Charlie",
+].map((display_name, i) => ({
+  ...company,
+  id: `o-long-${i}`,
+  display_name,
+  archived_at: i === 2 ? "2026-06-20T09:00:00Z" : undefined,
+}));
 
 function renderLongNames() {
   globalThis.location.hash = "#/companies";
