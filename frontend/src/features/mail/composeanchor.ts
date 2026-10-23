@@ -67,8 +67,8 @@ export function useThreadProject(
     projectId: (query.data?.links ?? []).find(
       (link) => link.entity_type === "project",
     )?.entity_id,
-    // An unanswered or failed read is not "no project". Falling through to
-    // the deal's project would contradict the server, which re-reads the anchor.
+    // An unanswered or failed read is not "no project", so the composer waits
+    // for it rather than suggesting a filing it may have to take back.
     settled: !activityId || (!query.isPending && !query.isError),
   };
 }
