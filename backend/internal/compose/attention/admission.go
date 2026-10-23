@@ -18,9 +18,10 @@ import (
 // column, a read bound to the acting human, or the deal's owner. It may also be
 // the direct recipients of a mail, or a meeting's recorded host.
 //
-// A row whose source has no entry never reaches a page. A row claiming an
-// answer its source may not give becomes unassigned, which is nobody's Mine.
-// Both are logged, because either is a producer this table does not know.
+// A row whose source has no entry, or that claims an answer its source may
+// not give, never reaches a page: not Mine, not Unassigned, not a team view.
+// The lane it came from is reported failed, so the page does not claim to be
+// complete, and the fault is logged.
 //
 // Every contract source is listed. The test beside this requires the key set
 // to equal the contract's enum, so a new producer fails there first.
@@ -77,22 +78,34 @@ func answers(kinds ...ownerKind) ownerAnswers {
 }
 
 // admitBySource applies sourceOwnerAnswers to every classified row, before
-// scope, counts, Focus and paging read them, so all of them see one answer.
-func admitBySource(ctx context.Context, rows []ranked) []ranked {
+// scope, counts, Focus and paging read them, so all of them see one answer. It
+// returns the kept rows and one failed-source entry per lane that lost a row.
+func admitBySource(ctx context.Context, rows []ranked) ([]ranked, []crmcontracts.WorklistSourceUnavailable) {
 	kept := rows[:0:0]
+	var refused []crmcontracts.WorklistSourceUnavailable
+	failed := map[crmcontracts.WorklistItemSource]bool{}
 	for _, row := range rows {
 		allowed, known := sourceOwnerAnswers[row.item.Source]
-		if !known {
-			slog.ErrorContext(ctx, "a worklist source has no admission policy; its rows create no work",
-				"source", row.item.Source)
+		if known && allowed[row.ownerRef.kind] {
+			kept = append(kept, row)
 			continue
 		}
-		if !allowed[row.ownerRef.kind] {
-			slog.ErrorContext(ctx, "a worklist row claimed an owner its source may not give; it is unassigned",
-				"source", row.item.Source, "owner_kind", int(row.ownerRef.kind))
-			row.ownerRef = unassigned()
+		slog.ErrorContext(ctx, "a worklist row has no admission for its owner; it creates no work",
+			"source", row.item.Source, "lane", row.lane, "owner_kind", int(row.ownerRef.kind), "policy_known", known)
+		lane := reportedLane(row)
+		if !failed[lane] {
+			failed[lane] = true
+			refused = append(refused, crmcontracts.WorklistSourceUnavailable{Source: string(lane), Reason: "failed"})
 		}
-		kept = append(kept, row)
 	}
-	return kept
+	return kept, refused
+}
+
+// reportedLane names the lane a refused row is reported under: the lane that
+// read it, or its own source for a row read outside the day's lanes.
+func reportedLane(row ranked) crmcontracts.WorklistItemSource {
+	if row.lane != "" {
+		return row.lane
+	}
+	return row.item.Source
 }

@@ -226,7 +226,7 @@ func (s *Service) worklistFrom(
 	waits, waitNote := s.rankedWaits(ctx, waiting, day.AsOf, scope)
 	rows = append(rows, waits...)
 	// One admission rule for every row the page, Focus and counts will read.
-	rows = admitBySource(ctx, rows)
+	rows, refused := admitBySource(ctx, rows)
 	// What the night thought of each deal, onto whichever row is about it — the
 	// brief's own row, and the at-risk row the fold below keeps. Stamped BEFORE
 	// the fold so the surviving row can inherit a score even where the night's
@@ -350,7 +350,7 @@ func (s *Service) worklistFrom(
 	// `buyer_replies` and `prospecting` count, so leaving them out let a refused
 	// lane print a confident zero — the one direction these figures must never
 	// fail in.
-	missing := unavailable(ctx, day)
+	missing := append(unavailable(ctx, day), refused...)
 	for _, refusal := range besideTheDay {
 		if refusal != nil {
 			missing = append(missing, *refusal)

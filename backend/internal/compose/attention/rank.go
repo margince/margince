@@ -70,6 +70,9 @@ const meetingHorizon = 2 * time.Hour
 // produced it is the server's business.
 type ranked struct {
 	item crmcontracts.WorklistItem
+	// lane is the source of the lane that produced the row; empty for a row
+	// read outside the day's lanes, whose own source names it.
+	lane crmcontracts.WorklistItemSource
 	// deadlineAt is the moment this item's clock runs out, zero when it has
 	// none. Overdue items carry a past instant and sort first by that fact.
 	deadlineAt time.Time
