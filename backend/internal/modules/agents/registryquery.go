@@ -182,7 +182,7 @@ func (r *Registry) Runnable(ctx context.Context) []mcp.ToolSpec {
 }
 
 // asSeenBy is spec with the tier the gate admits this caller on (auth.TierFor).
-// A router's action is admitted on its own verb's spec once routed, so each
+// A router's action is admitted on its own verb's spec once routed. So each
 // action is lifted by that spec, and the router by whether its actions agree.
 func (r *Registry) asSeenBy(ctx context.Context, spec mcp.ToolSpec) mcp.ToolSpec {
 	p, ok := principal.Actor(ctx)

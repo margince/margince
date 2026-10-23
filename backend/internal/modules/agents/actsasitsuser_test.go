@@ -13,9 +13,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
-// The listing tells a caller the tier the gate admits it on: an agent on a
-// colleague's passport is offered a confirm-first tool as one that runs, unless the
-// tool waits even for its user. Automatic work is offered the declared tier.
+// The listing tells a caller the tier the gate admits it on. An agent on a
+// colleague's passport is offered a confirm-first tool as one that runs. A tool
+// that waits even for its user stays waiting, and automatic work sees the
+// declared tier.
 func TestTheListingOffersAPassportAgentTheTierItIsAdmittedOn(t *testing.T) {
 	r := NewRegistry(&recordingApprovals{}, auth.NewGate(fullSeatAuthority{}))
 	for _, spec := range []mcp.ToolSpec{

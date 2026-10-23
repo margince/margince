@@ -527,8 +527,8 @@ func TestARoutedArgumentNamesTheActionsThatTakeIt(t *testing.T) {
 	}
 }
 
-// A colleague's agent is offered a router's waiting action as one that runs, and
-// the router as running at once when all its actions now agree.
+// A colleague's agent is offered a router's waiting action as one that runs. The
+// router itself runs at once when all its actions now agree.
 func TestARoutersActionsAreOfferedAtTheTierAColleaguesAgentIsAdmittedOn(t *testing.T) {
 	r := NewRegistry(&recordingStageApprovals{}, auth.NewGate(fullSeatAuthority{}))
 	r.Register(&argsTool{spec: targetSpec("fake_a", principal.ScopeWrite, mcp.TierAutoExecute)})
