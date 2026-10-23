@@ -35,6 +35,11 @@ var quietLaneNow = time.Date(2026, time.March, 10, 9, 0, 0, 0, time.UTC)
 func seedQuietExchange(t *testing.T, e *integration.Env, sender, copied, contact ids.UUID, daysAgo int) {
 	t.Helper()
 	owner := integration.OwnerConn(t)
+	defer func() {
+		if err := owner.Close(context.Background()); err != nil {
+			t.Errorf("closing fixture connection: %v", err)
+		}
+	}()
 	ctx := context.Background()
 	last := quietLaneNow.AddDate(0, 0, -daysAgo)
 	var folded []ids.UUID
@@ -202,6 +207,11 @@ func seedRejectedCandidate(t *testing.T, e *integration.Env, owner ids.UUID, nam
 	seedQuietExchange(t, e, owner, ids.UUID{}, contact, 70)
 	call := ids.NewV7()
 	conn := integration.OwnerConn(t)
+	defer func() {
+		if err := conn.Close(context.Background()); err != nil {
+			t.Errorf("closing fixture connection: %v", err)
+		}
+	}()
 	if _, err := conn.Exec(context.Background(), `
 		INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 		VALUES ($1, 'call', 'catch-up', $2, 'manual', 'human:x')`, call, quietLaneNow.AddDate(0, 0, -5)); err != nil {

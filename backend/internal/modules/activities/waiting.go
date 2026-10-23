@@ -116,20 +116,11 @@ type WaitingReply struct {
 	// unresolved. REPORTED, never used to exclude, for Engaged's reason — the
 	// caller demotes what it cannot prove.
 	AddressedElsewhere bool
-	// OwnerID is who owes this reply, resolved from the record the thread is
-	// filed under. Zero when no record on it names an owner.
-	//
-	// PRECEDENCE, first owner found: deal, lead, contact, company — the order of
-	// how specific the claim is. A contact outranks their company because the
-	// company owner answers for the account, not for every conversation in it.
-	//
-	// A separate question from the record ids above, which answer "what is this
-	// about" while this answers "who owes the reply"; the two may differ.
-	//
-	// Resolved through the SAME visibility-gated links, so an owner appears only
-	// where the reader may see the record naming them.
+	// OwnerID is the sole verified direct recipient for email. A linked
+	// record's owner does not establish responsibility for a reply. Zero means
+	// non-email or no sole direct recipient.
 	OwnerID ids.UUID
-	// OwnerKnown distinguishes a readable unassigned record from a withheld owner.
+	// OwnerKnown is true after recipient resolution, including no duty.
 	OwnerKnown bool
 	// SenderWasStranger, BccOnly and ForeignLink are what capture judged about
 	// the mail (strangerMailSQL); false where it judged nothing. BccOnly is

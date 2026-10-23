@@ -67738,13 +67738,12 @@ export interface operations {
                  *     longer folded into every reader's own queue, so it needs a queue of its own or
                  *     the product would have stopped mentioning it.
                  *
-                 *     It carries unanswered mail too, and that is the case it matters most for. A
-                 *     message has no assignee, so its owner is the owner of the record it is filed
-                 *     under — deal, then lead, then contact, then company, first owner found. A
-                 *     thread no owned record attributes to anybody is the customer nobody is looking
-                 *     at, which is exactly what this queue is opened to find. Unassigned work stays
-                 *     in this queue until somebody takes responsibility for it. `mine` requires
-                 *     a verified personal assignment or an explicitly requested decision.
+                 *     An email creates personal reply work only for its sole verified directly
+                 *     addressed member. Mailbox delivery and linked-record ownership do not assign
+                 *     that duty. Mail with unclear responsibility stays on its record and does not
+                 *     become shared unassigned work. Explicitly created unassigned tasks remain
+                 *     available here until someone takes responsibility. `mine` requires a verified
+                 *     personal assignment or an explicitly requested decision.
                  *
                  *     WHAT A WIDER SCOPE REACHES. The record-bearing sources widen: tasks, deals
                  *     going quiet, meetings and duplicate pairs are read under the caller's row
