@@ -14,9 +14,9 @@ import (
 )
 
 // A vendor verdict the site read settled with nobody asked becomes an open
-// question for the seat whose mail raised it. A human answer, an admission
-// and a suppression stay as they were, and the down migration settles the
-// question back.
+// question. It enrols no reader: only current mail names who decides it. A
+// human answer, an admission and a suppression stay as they were, and the
+// down migration settles the question back.
 func TestAMachineVendorVerdictBecomesAnOpenQuestionForItsOwner(t *testing.T) {
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
@@ -91,8 +91,8 @@ func TestAMachineVendorVerdictBecomesAnOpenQuestionForItsOwner(t *testing.T) {
 		readers[domain] = count
 	}
 	rows.Close()
-	if readers["machine-vendor.test"] != 1 || len(readers) != 1 {
-		t.Errorf("reader rows = %v, want one for the owned vendor question only", readers)
+	if len(readers) != 0 {
+		t.Errorf("reader rows = %v, want none: an old owner is no evidence of who decides now", readers)
 	}
 
 	if _, err := dbmigrate.Down(ctx, conn, namespaceThroughVersion(t, core, "1792779055"), 2); err != nil {
