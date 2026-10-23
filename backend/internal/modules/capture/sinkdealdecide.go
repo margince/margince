@@ -92,17 +92,16 @@ func decideDeal(ctx context.Context, tx pgx.Tx, facts dealFacts, candidates Deal
 		company = facts.companies[0]
 	}
 	question := WhichDeal{CompanyID: company}
-	switch {
-	case len(facts.thread) > 1:
-		return DealVerdict{Outcome: DealAmbiguous, Question: question}, nil
-	case len(facts.thread) == 1:
-		sibling := facts.thread[0]
-		if company.IsZero() || (sibling.company != nil && *sibling.company == company) {
-			return DealVerdict{Outcome: DealLinked, Deal: sibling.deal}, nil
-		}
-		return DealVerdict{Outcome: DealAmbiguous, Question: question}, nil
-	case company.IsZero():
+	if company.IsZero() {
 		return DealVerdict{Outcome: DealNone}, nil
+	}
+	// The thread a mail claims is typed by its sender, so a sibling's deal
+	// counts only when the mail's own company corroborates it. A deal at
+	// another company is no clue about this one.
+	if thread := threadDealsAt(facts.thread, company); len(thread) == 1 {
+		return DealVerdict{Outcome: DealLinked, Deal: thread[0]}, nil
+	} else if len(thread) > 1 {
+		return DealVerdict{Outcome: DealAmbiguous, Question: question}, nil
 	}
 	deals, err := candidates.OpenDealsOfCompany(ctx, tx, company)
 	if err != nil || len(deals) < 2 || len(facts.contacts) == 0 {
@@ -113,6 +112,17 @@ func decideDeal(ctx context.Context, tx pgx.Tx, facts dealFacts, candidates Deal
 		return oneDeal(staked, question), err
 	}
 	return DealVerdict{Outcome: DealAmbiguous, Question: question}, nil
+}
+
+// threadDealsAt keeps the thread's deals that belong to company.
+func threadDealsAt(thread []threadDeal, company ids.UUID) []ids.UUID {
+	var deals []ids.UUID
+	for _, sibling := range thread {
+		if sibling.company != nil && *sibling.company == company {
+			deals = append(deals, sibling.deal)
+		}
+	}
+	return deals
 }
 
 // oneDeal turns a candidate read into a verdict: one is the deal, none is no
@@ -199,12 +209,30 @@ func mailCompanies(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, co
 	return companies, nil
 }
 
-// threadDeals is the open deals siblings in the mail's thread are filed under,
-// at most two. Matched within one medium and skipping held or archived
-// siblings, for the reasons threadProject gives.
+// threadDeals is the open deals our own sent mail in the mail's thread is
+// filed under, at most two, with each deal's company. Only a sibling we sent
+// counts: the thread key is the sender's References root, and an inbound
+// sibling may be the sender's own earlier forgery. Siblings and deals are the
+// ones the capturing seat may read; held or archived siblings settle nothing,
+// for the reasons threadProject gives.
 func threadDeals(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) ([]threadDeal, error) {
 	if !auth.ReadGranted(ctx, "deal") {
 		return nil, nil
+	}
+	args := []any{activityID}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	siblingScope, err := auth.ActivityContentClause(ctx, "a", arg)
+	if err != nil {
+		return nil, err
+	}
+	dealScope, err := auth.ScopeClauseFor(ctx, "deal", "d", arg)
+	if err != nil {
+		return nil, err
+	}
+	for _, clause := range []*string{&siblingScope, &dealScope} {
+		if *clause == "" {
+			*clause = "true"
+		}
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT DISTINCT d.id, d.company_id
@@ -214,10 +242,11 @@ func threadDeals(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) ([]t
 		  JOIN activity_link l ON l.activity_id = a.id AND l.entity_type = 'deal'
 		  JOIN deal d ON d.id = l.deal_id
 		 WHERE self.id = $1 AND self.thread_key IS NOT NULL AND self.thread_key <> ''
-		   AND a.restricted_at IS NULL AND a.archived_at IS NULL
-		   AND d.status = 'open' AND d.archived_at IS NULL
+		   AND a.direction = 'outbound'
+		   AND a.restricted_at IS NULL AND a.archived_at IS NULL AND (`+siblingScope+`)
+		   AND d.status = 'open' AND d.archived_at IS NULL AND (`+dealScope+`)
 		 ORDER BY d.id
-		 LIMIT 2`, activityID)
+		 LIMIT 2`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("capture: reading the thread's deals: %w", err)
 	}

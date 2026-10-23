@@ -6,10 +6,11 @@ package compose
 // The one "Which deal is this about?" question the capture deal rule raises
 // when several open deals fit a mail (capture.AskWhichDeal).
 //
-// It goes only to the colleague the mail itself names as responsible: the seat
-// that wrote it, or the one seat it was addressed to. Copied seats, several
-// seats, a mailbox owner or a record owner are no evidence, so with none the
-// mail stays on its company and contacts and nobody is asked.
+// It goes only to the colleague the mailbox confirms is responsible: the seat
+// that sent it, or the one seat capture bound to its To. Copied seats, several
+// seats, an address the sender typed, a mailbox owner or a record owner are no
+// evidence, so with none the mail stays on its company and contacts and
+// nobody is asked.
 
 import (
 	"context"
@@ -76,7 +77,10 @@ func (a whichDealAsker) Ask(ctx context.Context, tx pgx.Tx, q capture.WhichDeal)
 	if err != nil {
 		return err
 	}
-	sum := sha256.Sum256([]byte(thread))
+	// One question per thread for the asked seat. The thread key is the
+	// sender's References root, so it is keyed on the seat as well: a sender
+	// reusing another mailbox's root cannot use up this seat's question.
+	sum := sha256.Sum256([]byte(seat.String() + "\x00" + thread))
 	key, subject, body := hex.EncodeToString(sum[:]), whichDealSubject.In(lang), whichDealBody.In(lang)
 	source, mail, assignee := provenance.WhichDealSource, q.ActivityID.UUID, ids.From[ids.UserKind](seat)
 	in := activities.LogActivityInput{
@@ -103,22 +107,22 @@ func (a whichDealAsker) Ask(ctx context.Context, tx pgx.Tx, q capture.WhichDeal)
 
 // respondent is the one colleague the mail names as responsible, or zero.
 //
-// Who wrote a sent mail is its author: the seat on its From. For a received
-// mail it is the one seat its To header names, by a resolved seat or by the
-// seat's own login address. A seat row without a header address only says
-// whose mailbox the copy is in, and a Cc is no evidence. Several seats are
-// none. That seat must still be able to open the mail and hold a
-// task.
+// Only rows the mailbox confirms count, never an address the sender typed:
+// a sender could otherwise name any colleague and hand them the question. The
+// seat must have imported the mail into their own mailbox, and either be its
+// sender (their own sent mail) or hold a To row capture bound to their seat
+// from an address. A seat row without an address only says whose mailbox the
+// copy is in, which cannot tell To from Cc, so on its own it asks nobody.
 func (a whichDealAsker) respondent(ctx context.Context, tx pgx.Tx, mail ids.UUID) (ids.UUID, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT DISTINCT u.id
+		SELECT DISTINCT p.user_id
 		  FROM activity a
-		  JOIN activity_participant p ON p.activity_id = a.id
-		  JOIN app_user u ON u.id = p.user_id OR (p.user_id IS NULL AND lower(p.address) = lower(u.email))
+		  JOIN activity_participant p ON p.activity_id = a.id AND p.user_id IS NOT NULL
+		  JOIN capture_import ci ON ci.activity_id = a.id AND ci.user_id = p.user_id
 		 WHERE a.id = $1 AND a.restricted_at IS NULL AND a.archived_at IS NULL
 		   AND CASE WHEN a.direction = 'outbound' THEN p.role = 'from'
 		            ELSE p.role = 'to' AND p.address IS NOT NULL END
-		 ORDER BY u.id
+		 ORDER BY p.user_id
 		 LIMIT 2`, mail)
 	if err != nil {
 		return ids.Nil, fmt.Errorf("compose: reading who a deal question is for: %w", err)

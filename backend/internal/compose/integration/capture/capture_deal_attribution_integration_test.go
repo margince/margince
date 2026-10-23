@@ -156,6 +156,12 @@ func lastActivity(t *testing.T, e *integration.SearchEnv, deal ids.UUID) *time.T
 	return last
 }
 
+// emailAbout2 is one mail with the sender, recipient and subject a case needs.
+func emailAbout2(from, to, msgID, refs, subject string) []byte {
+	raw := string(mailFrom(from, msgID, refs, subject))
+	return []byte(strings.Replace(raw, "To: "+captureOwner, "To: "+to, 1))
+}
+
 // mailFrom is one inbound mail from a customer address to the mailbox owner.
 func mailFrom(from, msgID, refs, subject string, cc ...string) []byte {
 	lines := []string{"From: " + from, "To: " + captureOwner}
@@ -363,12 +369,9 @@ func TestCaptureFilesMailOnItsProjectsDealFirst(t *testing.T) {
 	twin := w.project(t, "Twin")
 	w.dealOnProject(t, "Twin phase one", twin.ID)
 	w.dealOnProject(t, "Twin phase two", twin.ID)
-	// Addressed to the seat's own login address, which is what names it as the
-	// colleague the mail is for.
-	toSeat := strings.Replace(string(mailFrom("alice@acme.example", "pj3@acme.example", "", "["+twin.Key+"] which phase")),
-		"To: "+captureOwner, "To: "+captureOwner+", rep0@search.test", 1)
-	env.sync(t, []byte(toSeat))
-	wantDeals(t, e, "pj3@acme.example")
+	env.syncSent(t, map[string]bool{"pj3@myco.example": true},
+		emailAbout2(captureOwner, "alice@acme.example", "pj3@myco.example", "", "["+twin.Key+"] which phase"))
+	wantDeals(t, e, "pj3@myco.example")
 	if n, _ := whichDealQuestions(t, e); n != 1 {
 		t.Fatalf("%d deal questions, want exactly 1 for the project with two deals", n)
 	}
@@ -412,5 +415,56 @@ func TestCaptureFilesNothingWhenTheMailNamesTwoCompanies(t *testing.T) {
 	wantDeals(t, e, "two1@acme.example")
 	if n, _ := whichDealQuestions(t, e); n != 0 {
 		t.Fatalf("%d deal questions for conflicting companies, want none", n)
+	}
+}
+
+// A sender types the thread they claim to reply to. A reply from our customer
+// in a thread we sent and a colleague filed on one deal goes on that deal; the
+// same claim from someone at another company, or from nobody we know, does not.
+func TestCaptureFollowsOurThreadOnlyForTheSameCompany(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	w := newDealWorld(t, e)
+	w.person(t, "alice@acme.example", w.customer)
+	w.deal(t, "Acme operations")
+	reporting := w.deal(t, "Acme reporting")
+	evil := w.company(t, "Evil")
+	w.person(t, "mallory@evil.example", evil)
+
+	env.syncSent(t, map[string]bool{"thr1@myco.example": true},
+		email(captureOwner, "", "alice@acme.example", "thr1@myco.example", ""))
+	wantDeals(t, e, "thr1@myco.example")
+	ours := ids.From[ids.ActivityKind](activityOf(t, e, "thr1@myco.example"))
+	if _, err := activities.NewStore(e.DB()).RelinkActivity(w.ctx, ours, activities.RelinkActivityInput{
+		EntityType: "deal", EntityID: reporting,
+	}); err != nil {
+		t.Fatalf("filing our mail on a deal as a human: %v", err)
+	}
+
+	env.sync(t,
+		mailFrom("alice@acme.example", "thr2@acme.example", "thr1@myco.example", "Re: project"),
+		mailFrom("mallory@evil.example", "thr3@evil.example", "thr1@myco.example", "Re: project"),
+		mailFrom("stranger@nowhere.example", "thr4@nowhere.example", "thr1@myco.example", "Re: project"),
+	)
+	wantDeals(t, e, "thr2@acme.example", reporting)
+	wantDeals(t, e, "thr3@evil.example")
+	wantDeals(t, e, "thr4@nowhere.example")
+}
+
+// The colleague asked is one the mailbox confirms. A To header naming another
+// colleague's address is typed by the sender and hands that colleague nothing.
+func TestCaptureAsksNoColleagueTheSenderNamed(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	w := newDealWorld(t, e)
+	w.person(t, "alice@acme.example", w.customer)
+	w.deal(t, "Acme operations")
+	w.deal(t, "Acme reporting")
+
+	env.sync(t, emailAbout2("alice@acme.example", captureOwner+", rep2@search.test", "named1@acme.example", "", "next steps"))
+
+	wantDeals(t, e, "named1@acme.example")
+	if n, holders := whichDealQuestions(t, e); n != 0 {
+		t.Fatalf("a To header the sender typed handed the deal question to %v", holders)
 	}
 }
