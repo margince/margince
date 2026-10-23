@@ -48,6 +48,29 @@
     var(--space-6)
   );
   overflow-y: auto;
+  /* The card scrolls only to stay in view, so its bar is no part of the
+     picture until the pointer is on the card. */
+  scrollbar-color: transparent transparent;
+}
+/* Under :where() so the shell's accent still lights the bar itself
+   (app.css). */
+.record-split-details:where(:hover) {
+  scrollbar-color: var(--borderControl) transparent;
+}
+/* Safari reads neither property above and draws its own wide bar. The track
+   stops short of the card's rounded corners. */
+.record-split-details::-webkit-scrollbar {
+  width: 6px;
+}
+.record-split-details::-webkit-scrollbar-track {
+  margin: var(--r-lg) 0;
+}
+.record-split-details::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: var(--r-full);
+}
+.record-split-details:hover::-webkit-scrollbar-thumb {
+  background: var(--borderControl);
 }
 .record-split-sheet {
   flex: 1 1 0;
