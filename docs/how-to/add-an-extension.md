@@ -723,6 +723,9 @@ Then hand one record at a time to the core's own capture pipeline:
 res, err := rt.Ingest(ctx, member, rec) // res.Disposition is Accepted or Skipped
 ```
 
+A source may also list `KindCompany` and `KindDeal`; see
+[land-companies-and-deals-from-an-extension.md](land-companies-and-deals-from-an-extension.md).
+
 You build no timeline entry. You hand over a record, and the core decides what to do with it. These rules fail
 you if you miss them:
 

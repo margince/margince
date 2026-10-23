@@ -54,17 +54,14 @@ const ingressPrincipalPrefix = "connector:ext:"
 // is, then the record's own shape, and only then the two that cost a query —
 // the member's consent and their live authority.
 func (r *callRuntime) Ingest(ctx context.Context, on extension.UserID, rec extension.Record) (extension.Result, error) {
-	// The declared source decides what this record may contribute to identity.
-	//
-	// Lands is still not gated here, and that is a fact about the vocabulary
-	// rather than an oversight: exactly one kind is landable
-	// (extension.KindActivity), the declaration grammar already enforces it at
-	// generation and at boot, and a Record carries one Activity with no field a
-	// second kind could arrive in. When a second kind is published, that gate
-	// belongs here too.
+	// The declared source decides what this record may contribute to identity
+	// and which kinds it may land.
 	declared, err := r.declaredIngress(rec.System)
 	if err != nil {
 		return extension.Result{}, err
+	}
+	if !slices.Contains(declared.Lands, rec.Kind()) {
+		return extension.Result{}, fmt.Errorf("%w: %q does not land %q records", extension.ErrIngressNotDeclared, rec.System, string(rec.Kind()))
 	}
 	if err := refuseUndeclaredMergeKey(declared, rec.Counterparty); err != nil {
 		return extension.Result{}, err
@@ -100,6 +97,9 @@ func (r *callRuntime) Ingest(ctx context.Context, on extension.UserID, rec exten
 			Refusal:     extension.RefusalOf(err),
 			Reason:      err.Error(),
 		}, nil
+	}
+	if rec.Kind() != extension.KindActivity {
+		return r.ingestOtherKind(ctx, on, rec)
 	}
 	if err := refuseUndeclaredTransport(r.unit, rec.Activity.Kind, rec.Activity.ChannelProvider); err != nil {
 		return extension.Result{}, err

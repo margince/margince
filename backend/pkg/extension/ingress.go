@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 )
@@ -23,12 +24,10 @@ type RecordKind string
 
 // KindActivity is a captured interaction bound for the shared timeline.
 //
-// It is the only kind today, and the absence of a lead kind is deliberate
-// rather than pending: the sink's lead arm returns before the row is written
-// when a captured lead collides with an existing one, so the natural key never
-// enters the table and the collision restages on every poll. Publishing a kind
-// whose idempotency does not hold would be offering a unit a guarantee this
-// side cannot keep.
+// There is no lead kind. The sink's lead arm returns before the row is written
+// when a captured lead collides with an existing one. The natural key never
+// enters the table, so the collision restages on every poll. A kind whose
+// idempotency does not hold would offer a unit a guarantee this side cannot keep.
 const KindActivity RecordKind = "activity"
 
 // ActivityKindMessage is the timeline kind a message on a messaging channel
@@ -60,11 +59,7 @@ type IngressSource struct {
 	// Lands are the record kinds this source produces. Empty is invalid rather
 	// than meaning "all": a declaration an operator reads must say what it does.
 	//
-	// One kind is landable today (KindActivity) and a Record carries exactly
-	// one payload, so this list currently states what the call could not
-	// contradict anyway. It is the growth point: the second kind arrives as a
-	// second Record field, and the gate that a unit may land only what it
-	// declared arrives with it, in the core.
+	// The core refuses, at the call, a record whose kind this list leaves out.
 	Lands []RecordKind
 
 	// Merges are the identity keys this source's provider VOUCHES for, and the
@@ -103,9 +98,9 @@ func (s IngressSource) Validate() error {
 		return fmt.Errorf("extension: ingress source %q declares no record kinds — a declaration an operator reads must say what it lands", s.System)
 	}
 	for _, kind := range s.Lands {
-		if kind != KindActivity {
-			return fmt.Errorf("extension: ingress source %q declares record kind %q — the only kind an ingress may land is %q",
-				s.System, string(kind), string(KindActivity))
+		if !slices.Contains(landableKinds, kind) {
+			return fmt.Errorf("extension: ingress source %q declares record kind %q — an ingress may land %q, %q or %q",
+				s.System, string(kind), string(KindActivity), string(KindCompany), string(KindDeal))
 		}
 	}
 	for _, key := range s.Merges {
@@ -273,11 +268,16 @@ type Record struct {
 	// answerable, and ADR-0082 §1 permits it for exactly that reason.
 	KeyNamesAContact bool
 
-	// Activity is the record itself. One field rather than a kind-tagged union
-	// because one kind is landable today (see KindActivity); a second kind
-	// arrives as a second field plus a rule that exactly one is set, which
-	// leaves every unit written against this compiling.
+	// Activity is the record itself when it is an activity. A company or a deal
+	// arrives in its own field instead, and at most one of the three is set:
+	// Kind reads which.
 	Activity ActivityFields
+
+	// Company and Deal carry the other two kinds. They are matched by the
+	// outside id this record's System and Key name, and they take no
+	// Counterparty, Addresses, Participants or ThreadKey.
+	Company *CompanyFields
+	Deal    *DealFields
 
 	// ThreadKey is the conversation this belongs to, and it MUST be namespaced
 	// by the provider — a bare provider id shares one column with every other

@@ -2,3 +2,5 @@
 # migration filename | table names, separated by commas | why these rows are small and bounded
 # An anonymous DO block uses * because its procedural body executes during startup.
 1792562859_an_admin_can_describe_a_second_legal_entity.up.sql | *, audit_log, role | the procedural body is the trigger that keeps the default entity; audit_log gets one row for the one default entity, and role updates the fixed set of system roles
+1792721001_a_service_member_may_land_deals.up.sql | role | one UPDATE of the single service_ingest system role, which exists only once a service member was declared
+1792721001_a_service_member_may_land_deals.down.sql | role | one UPDATE of the single service_ingest system role, which exists only once a service member was declared

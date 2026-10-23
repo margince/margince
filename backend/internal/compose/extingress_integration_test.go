@@ -112,6 +112,13 @@ const capturePolicy = `{"objects":{
 // be testing a principal the port does not construct.
 func grantCapture(t *testing.T, e *extRuntimeEnv, member ids.UUID) {
 	t.Helper()
+	grantPolicy(t, member, "ingress-probe", capturePolicy)
+}
+
+// grantPolicy gives the member a role of the given key and permissions, seeding
+// the role on first use.
+func grantPolicy(t *testing.T, member ids.UUID, roleKey, policy string) {
+	t.Helper()
 	owner := integration.OwnerConn(t)
 	// The role is seeded once per test database and reused; the grant is
 	// per-member. Neither statement assumes the other has not run, because
@@ -119,15 +126,15 @@ func grantCapture(t *testing.T, e *extRuntimeEnv, member ids.UUID) {
 	var roleID ids.UUID
 	if err := owner.QueryRow(context.Background(),
 		`WITH existing AS (
-		     SELECT id FROM role WHERE key = 'ingress-probe'
+		     SELECT id FROM role WHERE key = $2
 		 ), created AS (
 		     INSERT INTO role (key, name, permissions)
-		     SELECT 'ingress-probe', 'Ingress Probe', $1::jsonb
+		     SELECT $2, 'Ingress Probe', $1::jsonb
 		     WHERE NOT EXISTS (SELECT 1 FROM existing)
 		     RETURNING id
 		 )
 		 SELECT id FROM created UNION ALL SELECT id FROM existing`,
-		capturePolicy).Scan(&roleID); err != nil {
+		policy, roleKey).Scan(&roleID); err != nil {
 		t.Fatalf("seeding the capture role: %v", err)
 	}
 	if _, err := owner.Exec(context.Background(),

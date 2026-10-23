@@ -138,6 +138,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
 - [add-an-extension.md](how-to/add-an-extension.md): add an extension under `extensions/`.
 - [declare-a-service-member.md](how-to/declare-a-service-member.md): make the account that a timed job
   of an extension runs as.
+- [land-companies-and-deals-from-an-extension.md](how-to/land-companies-and-deals-from-an-extension.md): hand the
+  core a company or a deal with the id it has in its own system.
 - [debug-an-ai-task.md](how-to/debug-an-ai-task.md): run one AI task on your own input
   (`make ai-probe`).
 - [build-the-desktop-app.md](how-to/build-the-desktop-app.md): build the desktop app for macOS or

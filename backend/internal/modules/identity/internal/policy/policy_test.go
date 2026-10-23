@@ -266,9 +266,9 @@ func TestExactlyFiveSeededRolesAreUnbounded(t *testing.T) {
 }
 
 // A service member lands records and does nothing else. It never deletes, and
-// it holds nothing outside the activity, contact and company of a landing.
+// it holds nothing outside the activity, contact, company and deal of a landing.
 func TestTheServiceIngestRoleGrantsOnlyTheLandingWrites(t *testing.T) {
-	landing := map[string]bool{"activity": true, "contact": true, "company": true}
+	landing := map[string]bool{"activity": true, "contact": true, "company": true, "deal": true}
 	for _, object := range coreObjects {
 		g := defaults["service_ingest"].Objects[object]
 		if landing[object] {
