@@ -30,6 +30,7 @@ import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
 import { listReadState } from "../../lib/worklist.listread";
+import { MagicPanel } from "../sign-in/magic";
 import { subjectHref } from "./worklist.copy";
 import { AFTER_THE_DAY } from "./worklist.layout";
 import { type Receipt, useHandledForYou } from "./worklist.queries";
@@ -54,7 +55,7 @@ export function HandledForYouPanel() {
   return (
     <Panel
       className={AFTER_THE_DAY}
-      title={t("worklist.handled.title")}
+      title={t("magic.lane.done")}
       // HOW MUCH was done, in the band that belongs to the whole panel.
       //
       // Only over a read that ANSWERED, and only over one that reached its own
@@ -98,7 +99,7 @@ export function HandledForYouPanel() {
             <>
               <Disclosure summary={t("worklist.handled.showHistory")}>
                 <DataTable
-                  label={t("worklist.handled.title")}
+                  label={t("magic.lane.done")}
                   rows={receipts}
                   rowKey={(row: Receipt) => row.id}
                   columns={[
@@ -150,6 +151,17 @@ export function HandledForYouPanel() {
           )}
         </SurfaceState>
       </PanelBody>
+      {/* The rest of the one Done for you population, in the window the lane
+          states: the receipts above are left out by their canonical ids, so
+          nothing is listed twice and nothing Home shows is missing here. */}
+      <MagicPanel
+        only="done"
+        visibleReceiptIds={
+          handled.isSuccess && !handled.isRefetchError
+            ? (receipts ?? []).map((receipt) => receipt.id)
+            : []
+        }
+      />
     </Panel>
   );
 }

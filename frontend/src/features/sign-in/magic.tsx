@@ -56,9 +56,13 @@ const NOT_SHOWN_REASON: Readonly<Record<MagicNotShown["reason"], MessageKey>> =
 export function MagicPanel({
   visibleApprovalIds = [],
   visibleReceiptIds = [],
+  only,
 }: Readonly<{
   visibleApprovalIds?: readonly string[];
   visibleReceiptIds?: readonly string[];
+  // One lane, drawn inside a host panel that carries its own heading: the
+  // worklist shows the same Done for you lines Home shows.
+  only?: MagicLane;
 }> = {}) {
   const t = useT();
   const { locale } = useLocale();
@@ -82,7 +86,7 @@ export function MagicPanel({
     visibleApprovalIds,
     visibleReceiptIds,
   );
-  const drawn = LANES.filter((lane) => hasLines(shown?.[lane]));
+  const drawn = drawnLanes(shown, only);
   const done = rowsOf(shown?.done);
   const doneRecords = recordsOf(done);
   const coverageIncomplete = doneCoverageIncomplete(shown);
@@ -113,7 +117,7 @@ export function MagicPanel({
   }
   return (
     <section className="brief-section" aria-labelledby={titleId}>
-      <Eyebrow as="h2" id={titleId} className="brief-section-label">
+      <Eyebrow as="h2" id={titleId} className={eyebrowClass(only)}>
         {t("magic.heading.brief")}
       </Eyebrow>
       <PanelBody>
@@ -150,6 +154,22 @@ export function MagicPanel({
         </PanelBody>
       )}
     </section>
+  );
+}
+
+// Hosted inside a panel that names it, the section's own heading is kept for
+// the screen reader and not drawn twice.
+function eyebrowClass(only: MagicLane | undefined): string {
+  return only === undefined ? "brief-section-label" : "sr-only";
+}
+
+// The lanes with lines to draw, or only the one a host panel asked for.
+function drawnLanes(
+  shown: MagicReceipt | undefined,
+  only: MagicLane | undefined,
+): MagicLane[] {
+  return LANES.filter(
+    (lane) => (only === undefined || lane === only) && hasLines(shown?.[lane]),
   );
 }
 

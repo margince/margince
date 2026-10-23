@@ -13,47 +13,16 @@
 // disappearing. A row that vanished on success would leave the reader unsure
 // whether their press landed or the list simply moved.
 
-import { useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
 import { Button } from "../../design-system/atoms";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
-import { VERSION_SKEW_CODE } from "../../lib/historyundo";
-import { problemCodeOf, problemMessageOf } from "../../lib/problem";
-import { useRecordRestore } from "../../lib/recordrestore";
-import { invalidateHandledChange } from "../../lib/workkeys";
-import { type Receipt, worklistKey } from "./worklist.queries";
+import { useReceiptUndo } from "../../lib/receiptundo";
+import type { Receipt } from "./worklist.queries";
 
 export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {
   const t = useT();
   const writable = useCanWrite("deal", "update");
-  const client = useQueryClient();
-  // What the server said when it refused the press. A greyed control with no
-  // sentence tells the reader nothing about why their undo did not happen.
-  const [refused, setRefused] = useState<string | null>(null);
-
-  const putBack = useRecordRestore({
-    onSuccess: () => {
-      setRefused(null);
-      // The whole worklist, not the receipt alone: putting a close date back
-      // changes the deal, and the lanes above this panel are read off the same
-      // deals. Refetching only the receipt would leave the page agreeing with
-      // itself about a date that had just moved.
-      void invalidateHandledChange(client);
-    },
-    onError: (error) => {
-      const code = problemCodeOf(error);
-      if (code === VERSION_SKEW_CODE) {
-        // The deal moved under the receipt rather than the change being
-        // unrestorable. Re-read, so the reader decides against what the record
-        // says now.
-        client.invalidateQueries({ queryKey: worklistKey });
-        setRefused(t("history.undo.versionSkew"));
-        return;
-      }
-      setRefused(problemMessageOf(error, t));
-    },
-  });
+  const receiptUndo = useReceiptUndo();
 
   const undo = receipt.undo;
   // No undo on the receipt means there is nothing to offer: an approval the
@@ -61,7 +30,7 @@ export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {
   if (!undo) {
     return null;
   }
-  if (undo.reversed) {
+  if (undo.reversed || receiptUndo.undone) {
     return <span>{t("worklist.handled.putBackDone")}</span>;
   }
   // This receipt restores a deal correction; other subject kinds have no
@@ -76,10 +45,10 @@ export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {
     <>
       <Button
         variant="ghost"
-        pending={putBack.isPending}
+        pending={receiptUndo.pending}
         busyLabel={t("history.undo.busy")}
         onClick={() =>
-          putBack.mutate({
+          receiptUndo.press({
             kind,
             id: subject.id,
             auditId: undo.audit_log_id,
@@ -89,7 +58,7 @@ export function ReceiptUndo({ receipt }: Readonly<{ receipt: Receipt }>) {
       >
         {t("common.undo")}
       </Button>
-      {refused && <p>{refused}</p>}
+      {receiptUndo.refused && <p>{receiptUndo.refused}</p>}
     </>
   );
 }

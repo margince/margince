@@ -16600,6 +16600,8 @@ export const de = {
     "{target} hat dir geschrieben. Als Kontakt behalten?",
   "magic.action.approval_summary": "Vorschlag: {summary}",
   "magic.action.approval_pending": "{kind}",
+  "magic.action.decided_summary": "{summary}",
+  "magic.action.decided_kind": "Ohne Rückfrage entschieden: {kind}",
   "magic.action.capture_reauth_required":
     "{provider} muss neu verbunden werden",
   "magic.action.capture_connection_error": "{provider} war nicht erreichbar",

@@ -19,6 +19,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -32,9 +33,10 @@ import (
 
 // recordInverses holds the module entry points an inverse runs through.
 type recordInverses struct {
-	provider *Provider
-	contacts *contacts.Store
-	deals    *deals.Store
+	provider   *Provider
+	contacts   *contacts.Store
+	deals      *deals.Store
+	activities *activities.Store
 }
 
 var recordInverseWords = struct{ Demoted langcopy.Phrase }{
@@ -176,6 +178,8 @@ func refuseColleagueWork(ctx context.Context, tx pgx.Tx, row AuditRow) error {
 func (r recordInverses) unarchive(ctx context.Context, tx pgx.Tx, row AuditRow, ifVersion int64) (storekit.RestoreReport, error) {
 	with := unarchiveWith(nil)
 	switch row.EntityType {
+	case entityTypeActivity:
+		return r.activities.RestoreActivityTx(ctx, tx, ids.From[ids.ActivityKind](row.EntityID), &ifVersion, with)
 	case entityTypeContact:
 		return r.contacts.RestoreContactTx(ctx, tx, ids.From[ids.ContactKind](row.EntityID), &ifVersion, with)
 	case entityTypeCompany:

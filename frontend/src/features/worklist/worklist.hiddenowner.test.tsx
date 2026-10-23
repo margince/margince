@@ -54,7 +54,7 @@ describe("the hidden-backlog panel is about the reader", () => {
     await screen.findByRole("button", { name: "Add note" });
     // The receipt is the LAST panel on the page, below the one under test, so
     // the wait covers that panel's own position rather than only a neighbour's.
-    await screen.findByRole("heading", { name: "Change history" });
+    await screen.findByRole("heading", { name: "Done for you" });
 
     // The panel is absent, and — the half that actually holds — it never ASKS.
     // The endpoint answers about the authenticated principal, so a request made

@@ -260,8 +260,8 @@ func replaceTechnicalRows(ctx context.Context, tx pgx.Tx, companyID ids.CompanyI
 			row.ID, companyID, row.Category, row.Field, row.Value, row.ValueKey, row.EvidenceSnippet, row.SourceURL,
 			row.Confidence, row.Source, row.CapturedBy, row.SiteReadID, row.CapturedAt, version,
 			row.RetrievedAt, row.VerifiedAt, row.VerifiedBy)
-		if constraint, dup := storekit.UniqueViolation(err); dup {
-			return fmt.Errorf("a fact now occupies %s (%s): %w", row.Field, constraint, ErrTechnicalLaterChange)
+		if _, dup := storekit.UniqueViolation(err); dup {
+			return fmt.Errorf("a fact now occupies %s: %w", row.Field, ErrTechnicalLaterChange)
 		}
 		if err != nil {
 			return fmt.Errorf("put back fact %s: %w", row.Field, err)

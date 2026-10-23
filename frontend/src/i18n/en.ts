@@ -16543,6 +16543,8 @@ export const en = {
     "{target} wrote to you. Keep them as a contact?",
   "magic.action.approval_summary": "Proposed: {summary}",
   "magic.action.approval_pending": "{kind}",
+  "magic.action.decided_summary": "{summary}",
+  "magic.action.decided_kind": "Decided without asking: {kind}",
   "magic.action.capture_reauth_required":
     "{provider} needs to be connected again",
   "magic.action.capture_connection_error": "{provider} could not be reached",

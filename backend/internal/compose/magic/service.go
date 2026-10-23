@@ -49,6 +49,9 @@ type Service struct {
 	// pending is OPTIONAL for the same reason: unbound, the needs-you lane is
 	// empty rather than the page refusing.
 	pending PendingDecisions
+	// decided is OPTIONAL for the same reason: unbound, the done lane holds
+	// the audit rows alone.
+	decided DecidedReceipts
 	now     func() time.Time
 }
 
@@ -175,6 +178,11 @@ func (s *Service) Read(
 	if err := s.gatherSeamLanes(ctx, &receipt, from, limit); err != nil {
 		return crmcontracts.MagicReceipt{}, fmt.Errorf("read the machinery's receipt: %w", err)
 	}
+	decided, err := s.decidedDone(ctx, receipt.Done, from, limit)
+	if err != nil {
+		return crmcontracts.MagicReceipt{}, fmt.Errorf("read the machinery's receipt: %w", err)
+	}
+	receipt.Done = mergeNewestFirst(receipt.Done, decided, limit)
 	// THE TOTALS COUNT WHAT IS DRAWN, and say so by being derived from the
 	// drawn lines rather than from the fetch behind them. The fetch is neither
 	// the page nor the window: each of the six arms applies the same LIMIT

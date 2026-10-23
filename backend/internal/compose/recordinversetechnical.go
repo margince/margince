@@ -91,7 +91,7 @@ func (s RestoreSeam) reverseTechnical(
 		err := s.inverses.contacts.RestoreTechnicalFactsTx(ctx, tx, company, row.ID, row.OccurredAt, row.Evidence,
 			map[string]any{undidAuditLogID: row.ID.String()})
 		if reason, refused := technicalReason(err); refused {
-			return RefusedRestore{Reason: reason, Detail: err.Error()}
+			return RefusedRestore{Reason: reason}
 		}
 		return err
 	})

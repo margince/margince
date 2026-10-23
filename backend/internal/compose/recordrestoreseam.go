@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/privacy"
@@ -48,7 +49,7 @@ func NewRestoreSeam(pool *pgxpool.Pool, provider *Provider, corrections *deals.S
 		visible:     recordIsVisibleToCaller,
 		edges:       edges,
 		corrections: corrections,
-		inverses:    recordInverses{provider: provider, contacts: edges, deals: dealStore},
+		inverses:    recordInverses{provider: provider, contacts: edges, deals: dealStore, activities: activities.NewStore(InstallationDB(pool))},
 		evaluator: Evaluator{
 			Archived:      recordIsArchived,
 			Writable:      recordIsWritableByCaller,
@@ -140,7 +141,10 @@ func recordIsVisibleToCaller(ctx context.Context, tx pgx.Tx, entityType string, 
 // which is a button that says the caller may not edit a record they can.
 func recordIsWritableByCaller(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID) error {
 	if entityType == entityTypeActivity {
-		return auth.EnsureActivityWritable(ctx, tx, id)
+		if err := auth.EnsureActivityContentVisible(ctx, tx, id); err != nil {
+			return err
+		}
+		return auth.EnsureActivityWritableIn(ctx, tx, id, false)
 	}
 	return auth.EnsureWritable(ctx, tx, entityType, id)
 }

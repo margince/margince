@@ -16184,6 +16184,8 @@ export const vi = {
     "{target} đã viết cho bạn. Lưu thành liên hệ?",
   "magic.action.approval_summary": "Đề xuất: {summary}",
   "magic.action.approval_pending": "{kind}",
+  "magic.action.decided_summary": "{summary}",
+  "magic.action.decided_kind": "Đã quyết định mà không hỏi: {kind}",
   "magic.action.capture_reauth_required": "Cần kết nối lại {provider}",
   "magic.action.capture_connection_error": "Không thể kết nối tới {provider}",
   "magic.action.capture_sync_failing": "{provider} đang đồng bộ không kịp",

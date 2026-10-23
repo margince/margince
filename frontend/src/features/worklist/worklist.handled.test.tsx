@@ -304,7 +304,10 @@ describe("what was handled for the reader", () => {
       await client.refetchQueries();
     });
 
-    expect(await screen.findByText(en["state.failed"])).toBeTruthy();
+    // Both reads behind the panel failed, and each says so.
+    expect(
+      (await screen.findAllByText(en["state.failed"])).length,
+    ).toBeGreaterThan(0);
     expect(screen.queryByText(/^Recent changes: \d+$/)).toBeNull();
   });
 });
