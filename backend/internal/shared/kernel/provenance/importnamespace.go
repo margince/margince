@@ -49,6 +49,11 @@ const (
 // written anew.
 const CommitmentTaskSource = "commitment"
 
+// WhichDealSource names the one "Which deal is this about?" task capture raises
+// for a mail several open deals fit. Its source_id is the mail's thread, so a
+// thread is asked about once.
+const WhichDealSource = "which_deal"
+
 // WebsiteLeadSource names a lead read off a company's website and accepted by
 // a human. Only that accept writes it. A lead under it is sent an Art. 14
 // notice, held until the notice is through, and deleted when it fails.
@@ -64,6 +69,7 @@ var internalSourceSystems = map[string]bool{
 	CheckInCadenceSource:     true,
 	CommitmentTaskSource:     true,
 	WebsiteLeadSource:        true,
+	WhichDealSource:          true,
 }
 
 // ReservedSourceSystem reports whether a client-supplied source system

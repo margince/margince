@@ -12982,6 +12982,60 @@ func (e MagicNotShownReason) Valid() bool {
 	}
 }
 
+// Defines values for MailDealRepairOutcomeCountOutcome.
+const (
+	MailDealRepairOutcomeCountOutcomeAlreadyFiled                  MailDealRepairOutcomeCountOutcome = "already_filed"
+	MailDealRepairOutcomeCountOutcomeAmbiguous                     MailDealRepairOutcomeCountOutcome = "ambiguous"
+	MailDealRepairOutcomeCountOutcomeConflictingCompanies          MailDealRepairOutcomeCountOutcome = "conflicting_companies"
+	MailDealRepairOutcomeCountOutcomeHumanKept                     MailDealRepairOutcomeCountOutcome = "human_kept"
+	MailDealRepairOutcomeCountOutcomeLinked                        MailDealRepairOutcomeCountOutcome = "linked"
+	MailDealRepairOutcomeCountOutcomeMachineConfirmed              MailDealRepairOutcomeCountOutcome = "machine_confirmed"
+	MailDealRepairOutcomeCountOutcomeMachineMoved                  MailDealRepairOutcomeCountOutcome = "machine_moved"
+	MailDealRepairOutcomeCountOutcomeMachineRetracted              MailDealRepairOutcomeCountOutcome = "machine_retracted"
+	MailDealRepairOutcomeCountOutcomeMachineRetractedTargetRefused MailDealRepairOutcomeCountOutcome = "machine_retracted_target_refused"
+	MailDealRepairOutcomeCountOutcomeNone                          MailDealRepairOutcomeCountOutcome = "none"
+	MailDealRepairOutcomeCountOutcomeNotMail                       MailDealRepairOutcomeCountOutcome = "not_mail"
+	MailDealRepairOutcomeCountOutcomeNotWritable                   MailDealRepairOutcomeCountOutcome = "not_writable"
+	MailDealRepairOutcomeCountOutcomeUnknownProvenance             MailDealRepairOutcomeCountOutcome = "unknown_provenance"
+	MailDealRepairOutcomeCountOutcomeUnknownProvenanceLink         MailDealRepairOutcomeCountOutcome = "unknown_provenance_link"
+)
+
+// Valid indicates whether the value is a known member of the MailDealRepairOutcomeCountOutcome enum.
+func (e MailDealRepairOutcomeCountOutcome) Valid() bool {
+	switch e {
+	case MailDealRepairOutcomeCountOutcomeAlreadyFiled:
+		return true
+	case MailDealRepairOutcomeCountOutcomeAmbiguous:
+		return true
+	case MailDealRepairOutcomeCountOutcomeConflictingCompanies:
+		return true
+	case MailDealRepairOutcomeCountOutcomeHumanKept:
+		return true
+	case MailDealRepairOutcomeCountOutcomeLinked:
+		return true
+	case MailDealRepairOutcomeCountOutcomeMachineConfirmed:
+		return true
+	case MailDealRepairOutcomeCountOutcomeMachineMoved:
+		return true
+	case MailDealRepairOutcomeCountOutcomeMachineRetracted:
+		return true
+	case MailDealRepairOutcomeCountOutcomeMachineRetractedTargetRefused:
+		return true
+	case MailDealRepairOutcomeCountOutcomeNone:
+		return true
+	case MailDealRepairOutcomeCountOutcomeNotMail:
+		return true
+	case MailDealRepairOutcomeCountOutcomeNotWritable:
+		return true
+	case MailDealRepairOutcomeCountOutcomeUnknownProvenance:
+		return true
+	case MailDealRepairOutcomeCountOutcomeUnknownProvenanceLink:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MailDraftAnchorType.
 const (
 	MailDraftAnchorTypeActivity MailDraftAnchorType = "activity"
@@ -42649,6 +42703,26 @@ type MagicUndo struct {
 	Version *int64 `json:"version,omitempty"`
 }
 
+// MailDealRepairOutcomeCount defines model for MailDealRepairOutcomeCount.
+type MailDealRepairOutcomeCount struct {
+	Count   int                               `json:"count"`
+	Outcome MailDealRepairOutcomeCountOutcome `json:"outcome"`
+}
+
+// MailDealRepairOutcomeCountOutcome defines model for MailDealRepairOutcomeCount.Outcome.
+type MailDealRepairOutcomeCountOutcome string
+
+// MailDealRepairPreview defines model for MailDealRepairPreview.
+type MailDealRepairPreview struct {
+	// Complete False when more captured mail follows this page.
+	Complete  bool `json:"complete"`
+	Inspected int  `json:"inspected"`
+
+	// NextAfter The last mail inspected; send it as `after` for the next page.
+	NextAfter *openapi_types.UUID          `json:"next_after,omitempty"`
+	Outcomes  []MailDealRepairOutcomeCount `json:"outcomes"`
+}
+
 // MailDraft One rep's unsent message, readable by its author and nobody else. Not an activity.
 type MailDraft struct {
 	// AgentDrafted An agent wrote these words for the author through `draft_email`, and the author has not saved over them yet. The screen says so before the message is sent. A save from the composer clears it.
@@ -55263,6 +55337,12 @@ type PreviewHomeRepairJSONBody struct {
 // PreviewHomeRepairJSONBodySource defines parameters for PreviewHomeRepair.
 type PreviewHomeRepairJSONBodySource string
 
+// PreviewMailDealRepairJSONBody defines parameters for PreviewMailDealRepair.
+type PreviewMailDealRepairJSONBody struct {
+	After *openapi_types.UUID `json:"after,omitempty"`
+	Limit int                 `json:"limit"`
+}
+
 // ResetDataJSONBody defines parameters for ResetData.
 type ResetDataJSONBody struct {
 	// Confirmation Must equal the company name exactly.
@@ -61843,6 +61923,9 @@ type ActivateHomeRepairJSONRequestBody ActivateHomeRepairJSONBody
 
 // PreviewHomeRepairJSONRequestBody defines body for PreviewHomeRepair for application/json ContentType.
 type PreviewHomeRepairJSONRequestBody PreviewHomeRepairJSONBody
+
+// PreviewMailDealRepairJSONRequestBody defines body for PreviewMailDealRepair for application/json ContentType.
+type PreviewMailDealRepairJSONRequestBody PreviewMailDealRepairJSONBody
 
 // ResetDataJSONRequestBody defines body for ResetData for application/json ContentType.
 type ResetDataJSONRequestBody ResetDataJSONBody
@@ -73413,6 +73496,9 @@ type ServerInterface interface {
 	// What the background system is holding, and whose work failed.
 	// (GET /admin/job-health)
 	GetJobHealth(w http.ResponseWriter, r *http.Request)
+	// Preview what the captured-mail deal repair does and leaves unresolved.
+	// (POST /admin/mail-deal-repair/preview)
+	PreviewMailDealRepair(w http.ResponseWriter, r *http.Request)
 	// When the restore procedure was last rehearsed, and what it measured.
 	// (GET /admin/recovery-health)
 	GetRecoveryHealth(w http.ResponseWriter, r *http.Request)
@@ -76218,6 +76304,12 @@ func (_ Unimplemented) PreviewHomeRepair(w http.ResponseWriter, r *http.Request)
 // What the background system is holding, and whose work failed.
 // (GET /admin/job-health)
 func (_ Unimplemented) GetJobHealth(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Preview what the captured-mail deal repair does and leaves unresolved.
+// (POST /admin/mail-deal-repair/preview)
+func (_ Unimplemented) PreviewMailDealRepair(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -83101,6 +83193,26 @@ func (siw *ServerInterfaceWrapper) GetJobHealth(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetJobHealth(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewMailDealRepair operation middleware
+func (siw *ServerInterfaceWrapper) PreviewMailDealRepair(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewMailDealRepair(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -119320,6 +119432,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/admin/job-health", wrapper.GetJobHealth)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/mail-deal-repair/preview", wrapper.PreviewMailDealRepair)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/admin/recovery-health", wrapper.GetRecoveryHealth)

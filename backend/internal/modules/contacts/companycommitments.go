@@ -129,30 +129,56 @@ func openCompanyClaims(
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, false, err
 	}
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	companyPos := arg(companyID)
-	activityScope, err := claimContentClause(ctx, arg)
+	// The employment edge decides which promises are this account's. It names
+	// an endpoint pair (this contact works here), which relationship.read
+	// governs; the contact and activity grants above do not cover it.
+	employed := func(arg func(any) int) (string, error) {
+		return employedAtAccount(ctx, fmt.Sprintf("$%d", arg(companyID)), arg)
+	}
+	out, admitted, err := rankedClaims(ctx, tx, employed, limit, asOf, side)
 	if err != nil {
 		return nil, false, err
+	}
+	// Completeness is a second count, not a flag on a row: a promise this
+	// caller may not see never becomes a row. Fewer admitted than exist means
+	// something was withheld, so the card can say it speaks about less than
+	// the account.
+	total, err := countCompanyCommitments(ctx, tx, companyID, asOf, side)
+	if err != nil {
+		return nil, false, err
+	}
+	return out, admitted >= total, nil
+}
+
+// rankedClaims reads the open claims `belongs` admits, as the caller may see
+// them, and how many it admitted. `belongs` is a compile-time clause over the
+// claim `c` and its contact `pr`.
+func rankedClaims(
+	ctx context.Context, tx pgx.Tx, belongs func(arg func(any) int) (string, error),
+	limit int, asOf time.Time, side func(time.Time, func(any) int) string,
+) ([]CompanyCommitment, int, error) {
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+		return nil, 0, err
+	}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	owned, err := belongs(arg)
+	if err != nil {
+		return nil, 0, err
+	}
+	activityScope, err := claimContentClause(ctx, arg)
+	if err != nil {
+		return nil, 0, err
 	}
 	if activityScope == "" {
 		activityScope = sqlAlwaysVisible
 	}
 	contactScope, err := auth.ScopeClauseFor(ctx, "contact", "pr", arg)
 	if err != nil {
-		return nil, false, err
+		return nil, 0, err
 	}
 	if contactScope == "" {
 		contactScope = sqlAlwaysVisible
-	}
-	// The employment edge decides which promises are this account's, and the
-	// row it yields NAMES the contact it was promised to. That is an endpoint
-	// pair — this contact works here — which relationship.read governs on its
-	// own; the contact and activity grants above do not cover it.
-	employed, err := employedAtAccount(ctx, fmt.Sprintf("$%d", companyPos), arg)
-	if err != nil {
-		return nil, false, err
 	}
 	// Contact scope FILTERS here rather than being projected beside each row.
 	// The edge gate above already excludes a promise whose contact this caller
@@ -188,15 +214,15 @@ func openCompanyClaims(
 		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
 		 WHERE `+side(asOf, arg)+`
 		   AND c.archived_at IS NULL
-		   AND (%[4]s)
-		   AND (%[3]s) AND (%[2]s)
+		   AND (%[3]s)
+		   AND (%[2]s) AND (%[1]s)
 		 ORDER BY (c.due_at IS NOT NULL AND c.due_at < now()) DESC,
 		          CASE WHEN c.due_at < now() THEN c.due_at END DESC,
 		          c.due_at ASC NULLS LAST, a.occurred_at ASC, c.id
-		 LIMIT %[5]d`,
-		companyPos, contactScope, activityScope, employed, companyCommitmentsLimit(limit)), args...)
+		 LIMIT %[4]d`,
+		contactScope, activityScope, owned, companyCommitmentsLimit(limit)), args...)
 	if err != nil {
-		return nil, false, fmt.Errorf("read the account's open commitments: %w", err)
+		return nil, 0, fmt.Errorf("read the open commitments: %w", err)
 	}
 	defer rows.Close()
 
@@ -206,29 +232,14 @@ func openCompanyClaims(
 		var row CompanyCommitment
 		if err := rows.Scan(&row.ID, &row.ContactID, &row.ContactName, &row.Body, &row.SourceQuote,
 			&row.ActivityID, &row.SourceKind, &row.DueAt, &row.OccurredAt, &admitted); err != nil {
-			return nil, false, fmt.Errorf("scan an account commitment: %w", err)
+			return nil, 0, fmt.Errorf("scan an open commitment: %w", err)
 		}
 		out = append(out, row)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, false, fmt.Errorf("read the account's open commitments: %w", err)
+		return nil, 0, fmt.Errorf("read the open commitments: %w", err)
 	}
-	// COMPLETENESS IS A SECOND COUNT, not a flag on a row. The scope clauses
-	// above sit inside the query's own EXISTS and WHERE, so a promise this
-	// caller may not see never becomes a row here — there is nothing to mark.
-	// Projecting a "visible" column beside each row would compile, return true
-	// on every row it ever saw, and read like a safety net that has never once
-	// fired.
-	//
-	// So the read asks the database a second question instead: how many of this
-	// account's open promises exist at all. Fewer admitted than exist means
-	// something was withheld, and the card can say it is speaking about less
-	// than the account rather than reporting silence as "nothing outstanding".
-	total, err := countCompanyCommitments(ctx, tx, companyID, asOf, side)
-	if err != nil {
-		return nil, false, err
-	}
-	return out, admitted >= total, nil
+	return out, admitted, nil
 }
 
 // countCompanyCommitments is how many open promises this account carries, asked

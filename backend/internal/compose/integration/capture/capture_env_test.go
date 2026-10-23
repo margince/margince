@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -315,11 +316,21 @@ type captureEnv struct {
 	conn *mailBatchConnector
 }
 
+// captureNow is the fixed clock the capture harness runs on: the day after the
+// Date every fixture mail carries, so that mail is current.
+var captureNow = time.Date(2026, 6, 5, 8, 0, 0, 0, time.UTC)
+
 func newCaptureEnv(t *testing.T) captureEnv {
+	t.Helper()
+	return newCaptureEnvAt(t, captureNow)
+}
+
+// newCaptureEnvAt is the harness on another fixed clock.
+func newCaptureEnvAt(t *testing.T, now time.Time) captureEnv {
 	t.Helper()
 	e := integration.SetupSearch(t)
 	conn := &mailBatchConnector{}
-	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{})
+	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{Now: func() time.Time { return now }})
 	registry.Register(conn)
 
 	seedCaptureRole(t, e)

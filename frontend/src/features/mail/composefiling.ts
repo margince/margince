@@ -81,15 +81,19 @@ function useAnchorProject(
 /**
  * Which project this message files under, and the subject tag that follows it.
  *
- * The rep chooses and the composer suggests: the thread's project when the
- * conversation is filed, otherwise the anchor's. A suggestion is adopted once,
- * so a rep who picks None is not overruled later.
+ * The rep chooses and the composer suggests. A thread filed on the deal the
+ * rep writes from keeps its own project. A thread filed elsewhere can belong
+ * to another deal of the same customer, so the deal's own project wins over
+ * it. A suggestion is adopted once, so a rep who picks None is not overruled
+ * later.
  *
  * The tag stays in the subject while a project is chosen, and returns whenever
  * a draft or a retype replaces the subject. The picker removes it.
  */
 function useProjectFiling(input: {
   activityId?: string;
+  /** The deal the message is written from, when it is one. */
+  anchorDealId?: string;
   anchorProjectId?: string | null;
   anchorSettled: boolean;
   projects: readonly PickableProject[];
@@ -110,8 +114,14 @@ function useProjectFiling(input: {
     [filingKey],
   );
   const settled = thread.settled && input.anchorSettled;
+  const threadOnAnchor = (thread.activity?.links ?? []).some(
+    (link) =>
+      link.entity_type === "deal" && link.entity_id === input.anchorDealId,
+  );
   const suggested = settled
-    ? (thread.projectId ?? input.anchorProjectId ?? "")
+    ? threadOnAnchor
+      ? (thread.projectId ?? input.anchorProjectId ?? "")
+      : (input.anchorProjectId ?? thread.projectId ?? "")
     : "";
   // Each message owns its filing choice, including an explicit No project.
   useEffect(() => {
@@ -247,6 +257,7 @@ export function useComposeRecords({
   });
   const projectFiling = useProjectFiling({
     activityId: answering,
+    anchorDealId: entityType === "deal" ? entityId : undefined,
     anchorProjectId: anchorProject.projectId,
     anchorSettled: anchorProject.settled,
     projects: reachableProjects,
