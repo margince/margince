@@ -11,7 +11,7 @@ import {
   render,
   screen,
 } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, type MockInstance, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { MagicUndoButton } from "./magic.undo";
@@ -54,10 +54,10 @@ function pressUndo(client: QueryClient) {
   );
 }
 
-function invalidatedKeys(spy: ReturnType<typeof vi.spyOn>): string[] {
-  return spy.mock.calls.map((call) =>
-    JSON.stringify((call[0] as { queryKey?: unknown }).queryKey),
-  );
+function invalidatedKeys(
+  spy: MockInstance<QueryClient["invalidateQueries"]>,
+): string[] {
+  return spy.mock.calls.map((call) => JSON.stringify(call[0]?.queryKey));
 }
 
 describe("one refresh after an Undo from a receipt", () => {
