@@ -74,6 +74,12 @@ func (t teammatesSeam) LiveTeammatesOfCaller(ctx context.Context) ([]attention.T
 	return out, cut, nil
 }
 
+// FormerTeammatesOfCaller passes identity's answer through: colleagues who left
+// and still sit on a live team with the caller.
+func (t teammatesSeam) FormerTeammatesOfCaller(ctx context.Context) ([]ids.UUID, error) {
+	return t.svc.FormerTeammatesOfCaller(ctx)
+}
+
 // MembersOfTeam names a team rather than reading the caller's own, and drops the
 // address for the reason LiveTeammatesOfCaller does.
 func (t teammatesSeam) MembersOfTeam(ctx context.Context, team ids.UUID) ([]attention.TeamMember, bool, error) {

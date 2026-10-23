@@ -17802,11 +17802,15 @@ components:
     SeatName:
       type: object
       description: >-
-        A colleague's id and the name a human would recognise them by. Deliberately nothing else: this answers what an id is CALLED, for a caller that already holds the id off a record they can read. Email, status and seat type are the roster's answers, and a naming read has no business disclosing them.
-      required: [id, display_name]
+        A colleague's id, the name a human would recognise them by, and whether they left. This answers what an id is CALLED, for a caller that already holds the id off a record they can read. Email and seat type are the roster's answers, and a naming read has no business disclosing them.
+      required: [id, display_name, departed]
       properties:
         id: {type: string, format: uuid}
         display_name: {type: string}
+        departed:
+          type: boolean
+          description: >-
+            True when the colleague left (deactivated). A record they still own counts in their team's views and needs a new owner, so every screen that names them says they left. Any member could already tell, because the roster leaves a departed colleague out.
     SeatNameListResponse:
       type: object
       required: [data]

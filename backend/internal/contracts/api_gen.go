@@ -48160,8 +48160,10 @@ type SearchResultTrustTier string
 // SearchResultType defines model for SearchResult.Type.
 type SearchResultType string
 
-// SeatName A colleague's id and the name a human would recognise them by. Deliberately nothing else: this answers what an id is CALLED, for a caller that already holds the id off a record they can read. Email, status and seat type are the roster's answers, and a naming read has no business disclosing them.
+// SeatName A colleague's id, the name a human would recognise them by, and whether they left. This answers what an id is CALLED, for a caller that already holds the id off a record they can read. Email and seat type are the roster's answers, and a naming read has no business disclosing them.
 type SeatName struct {
+	// Departed True when the colleague left (deactivated). A record they still own counts in their team's views and needs a new owner, so every screen that names them says they left. Any member could already tell, because the roster leaves a departed colleague out.
+	Departed    bool               `json:"departed"`
 	DisplayName string             `json:"display_name"`
 	Id          openapi_types.UUID `json:"id"`
 }

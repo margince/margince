@@ -21,7 +21,9 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/forecasting"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -637,5 +639,46 @@ func TestASavedRunIsReAskedUnderTheReadersOwnLens(t *testing.T) {
 		t.Fatalf("a rep opening a workspace-scoped run answered %v, want the refusal "+
 			"they would get asking it themselves — a saved link that answers wider "+
 			"than its reader is a way to read somebody else's numbers", readErr)
+	}
+}
+
+// A team's numbers keep counting the open deals of a member who left, until
+// somebody takes them over, so the total does not drop the day they leave.
+func TestATeamsNumbersKeepCountingADepartedMembersDeals(t *testing.T) {
+	e := setupForecast(t)
+	amount := int64(100_000)
+	for range 5 {
+		e.seedOpenDeal(t, "Rep1's own", 20, &e.Rep1, &amount, nil)
+	}
+	e.deactivate(t, e.Rep1)
+
+	answer, err := e.askAnalytics(e.wideLensCtx(e.Rep3), t, analyticsquery.Query{
+		Entity:    "open-deals-per-company",
+		ScopeKind: ScopeKindTeam,
+		ScopeID:   e.Team1.String(),
+		Measures:  []analyticsquery.Measure{{Fn: analyticsquery.CountAll, As: "deals"}},
+	})
+	if err != nil {
+		t.Fatalf("naming the team was refused: %v", err)
+	}
+	if len(answer.Rows) != 1 {
+		t.Fatalf("an ungrouped query answered %d rows: %+v", len(answer.Rows), answer.Rows)
+	}
+	if got := answer.Rows[0]["deals"]; got != float64(5) && got != int64(5) {
+		t.Errorf("Team1 counts %v deals, want the 5 its departed member still owns", got)
+	}
+}
+
+// deactivate closes a seat through the identity service, as an admin would.
+func (e *forecastEnv) deactivate(t *testing.T, user ids.UUID) {
+	t.Helper()
+	admin := identity.Identity{
+		UserID: ids.From[ids.UserKind](e.Rep3), WorkspaceID: ids.From[ids.WorkspaceKind](e.WS),
+		SeatType: "full", Roles: []string{"admin"}, Permissions: integration.AdminPerms,
+	}
+	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.WS), ids.NewV7())
+	if err := identity.NewService(e.Pool).DeactivateUser(ctx, admin,
+		identity.DeactivateUserInput{UserID: ids.From[ids.UserKind](user)}); err != nil {
+		t.Fatalf("deactivate %s: %v", user, err)
 	}
 }

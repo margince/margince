@@ -1,0 +1,131 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package contacts
+
+import (
+	"context"
+	"errors"
+	"fmt"
+
+	"github.com/jackc/pgx/v5"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+)
+
+// handoverObject is the grant a member handover is admitted on.
+const handoverObject = "user_admin"
+
+// PrivateCounts are a member's live owner-private contacts and companies.
+type PrivateCounts struct {
+	Contacts  int
+	Companies int
+}
+
+// privateHandoverTables are the tables whose rows a capture keeps owner-private.
+var privateHandoverTables = []string{"contact", "company"}
+
+// OwnerPrivateCountsTx counts the live owner-private contacts and companies
+// owner holds. Behind the member handover grant: the numbers are all a member
+// administrator learns about rows only their owner can read.
+func OwnerPrivateCountsTx(ctx context.Context, tx pgx.Tx, owner ids.UserID) (PrivateCounts, error) {
+	if err := auth.Require(ctx, handoverObject, principal.ActionUpdate); err != nil {
+		return PrivateCounts{}, err
+	}
+	var counts PrivateCounts
+	for _, table := range privateHandoverTables {
+		ownedIDs, err := ownerPrivateIDs(ctx, tx, table, owner, false)
+		if err != nil {
+			return PrivateCounts{}, err
+		}
+		counts.set(table, len(ownedIDs))
+	}
+	return counts, nil
+}
+
+// HandOverOwnerPrivateTx moves the live owner-private contacts and companies
+// from owns to to. They stay owner-private, now to the new owner, so nothing
+// becomes more visible than it was.
+//
+// Not through updateContactInTx: that edit is admitted by row visibility, and
+// an owner-private row is visible to its owner alone, so a departed owner's
+// rows are visible to nobody. The member handover grant admits this write
+// instead. It changes the owner column alone, which is all an owner-only edit
+// writes: the row, its audit row and its updated event.
+func HandOverOwnerPrivateTx(ctx context.Context, tx pgx.Tx, from, to ids.UserID) (PrivateCounts, error) {
+	if err := auth.Require(ctx, handoverObject, principal.ActionUpdate); err != nil {
+		return PrivateCounts{}, err
+	}
+	if err := auth.EnsureAssignee(ctx, tx, to.UUID); err != nil {
+		return PrivateCounts{}, err
+	}
+	var moved PrivateCounts
+	for _, table := range privateHandoverTables {
+		ownedIDs, err := ownerPrivateIDs(ctx, tx, table, from, true)
+		if err != nil {
+			return PrivateCounts{}, err
+		}
+		for _, id := range ownedIDs {
+			if err := handOverPrivateRow(ctx, tx, table, id, from, to); err != nil {
+				return PrivateCounts{}, err
+			}
+		}
+		moved.set(table, len(ownedIDs))
+	}
+	return moved, nil
+}
+
+func (c *PrivateCounts) set(table string, n int) {
+	if table == "contact" {
+		c.Contacts = n
+		return
+	}
+	c.Companies = n
+}
+
+// ownerPrivateIDs lists owner's live owner-private rows of table in id order,
+// locked when lock is set so two handovers queue rather than deadlock.
+func ownerPrivateIDs(ctx context.Context, tx pgx.Tx, table string, owner ids.UserID, lock bool) ([]ids.UUID, error) {
+	query := `SELECT id FROM ` + pgx.Identifier{table}.Sanitize() +
+		` WHERE owner_id = $1 AND visibility = 'owner' AND archived_at IS NULL ORDER BY id`
+	if lock {
+		query += ` FOR UPDATE`
+	}
+	rows, err := tx.Query(ctx, query, owner)
+	if err != nil {
+		return nil, fmt.Errorf("list owner-private %s rows: %w", table, err)
+	}
+	ownedIDs, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return nil, fmt.Errorf("list owner-private %s rows: %w", table, err)
+	}
+	return ownedIDs, nil
+}
+
+func handOverPrivateRow(ctx context.Context, tx pgx.Tx, table string, id ids.UUID, from, to ids.UserID) error {
+	lock, err := storekit.LockRow(ctx, tx, table, id, storekit.LiveOnly)
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("lock %s %s for a handover: %w", table, id, err)
+	}
+	p := storekit.NewPatch()
+	p.Set(ownerIDColumn, from, to)
+	if err := p.ApplyLocked(ctx, tx, lock); err != nil {
+		return fmt.Errorf("hand over %s %s: %w", table, id, err)
+	}
+	auditID, err := storekit.Audit(ctx, tx, "update", table, id, p.Before(), p.After())
+	if err != nil {
+		return fmt.Errorf("audit %s handover: %w", table, err)
+	}
+	if table == "contact" {
+		return storekit.EmitEvent(ctx, tx, auditID, id, crmcontracts.PublicEventContactUpdated{ChangedFields: p.After()})
+	}
+	return storekit.EmitEvent(ctx, tx, auditID, id, crmcontracts.PublicEventCompanyUpdated{ChangedFields: p.After()})
+}

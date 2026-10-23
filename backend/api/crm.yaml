@@ -23238,7 +23238,8 @@ paths:
       summary: Count the live records a member still owns. Member administration, human-only.
       description: |
         How many live leads, contacts, companies, deals and projects the member owns that the
-        caller can see. Deactivating a member moves none of them, so the deactivate dialog reads
+        caller can see, plus the contacts and companies only the member can see (captured and
+        never made shared), which the handover also moves. Deactivating a member moves none of them, so the deactivate dialog reads
         this to say what would be left behind. Works for any non-archived member, deactivated or
         not, because work is best handed over before the account is closed.
       x-agent-access: human-only
@@ -23260,8 +23261,9 @@ paths:
         Hands each live lead, contact, company, deal and project the member owns to `to_user_id`.
         Every record moves through its own owner-change write, so each gets the audit row and
         event a single reassignment writes, and a deal's pending proposals follow it to the new
-        owner. A record the caller may not change stays with the member and is counted in
-        `left`; nothing else is said about it. `to_user_id` must be a seat the caller may make an
+        owner. Contacts and companies only the member can see move too and stay private, now to
+        the new owner. A record the caller may not change stays with the member and is counted
+        in `left`; nothing else is said about it. `to_user_id` must be a seat the caller may make an
         owner (an active human seat that can write, inside the caller's write scope), else `422`
         with `code: owner_not_assignable` and nothing moves. Tasks, automations and deal-room
         stewardships are not moved.
@@ -51542,14 +51544,20 @@ components:
     SeatName:
       type: object
       description: >
-        A colleague's id and the name a human would recognise them by. Deliberately nothing
-        else: this answers what an id is CALLED, for a caller that already holds the id off a
-        record they can read. Email, status and seat type are the roster's answers, and a
-        naming read has no business disclosing them.
-      required: [id, display_name]
+        A colleague's id, the name a human would recognise them by, and whether they left.
+        This answers what an id is CALLED, for a caller that already holds the id off a record
+        they can read. Email and seat type are the roster's answers, and a naming read has no
+        business disclosing them.
+      required: [id, display_name, departed]
       properties:
         id: { type: string, format: uuid }
         display_name: { type: string }
+        departed:
+          type: boolean
+          description: >
+            True when the colleague left (deactivated). A record they still own counts in their
+            team's views and needs a new owner, so every screen that names them says they left.
+            Any member could already tell, because the roster leaves a departed colleague out.
     SeatNameListResponse:
       type: object
       required: [data]

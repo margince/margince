@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -24,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // handoverRecordKinds are the record types the bulk reassignment moves, in the
@@ -101,7 +103,20 @@ func countOwned(ctx context.Context, tx pgx.Tx, member ids.UUID) (crmcontracts.H
 		}
 		*count = len(owned)
 	}
-	return counts, nil
+	if !privateUnseen(ctx, member) {
+		return counts, nil
+	}
+	private, err := contacts.OwnerPrivateCountsTx(ctx, tx, ids.From[ids.UserKind](member))
+	counts.Contact += private.Contacts
+	counts.Company += private.Companies
+	return counts, err
+}
+
+// privateUnseen reports whether member's owner-private rows are hidden from the
+// caller: from everyone but the member, whose visible count already holds them.
+func privateUnseen(ctx context.Context, member ids.UUID) bool {
+	caller, ok := principal.Actor(ctx)
+	return !ok || caller.UserID != member
 }
 
 // visibleOwnedIDs is auth.VisibleOwnedIDs where a record type the caller may
@@ -158,6 +173,14 @@ func (s handoverSeam) handOverInTx(
 			return crmcontracts.UserHandoverResult{}, err
 		}
 		*tally[string(kind)] = n
+	}
+	if privateUnseen(ctx, member) {
+		private, err := contacts.HandOverOwnerPrivateTx(ctx, tx, ids.From[ids.UserKind](member), receiver)
+		if err != nil {
+			return crmcontracts.UserHandoverResult{}, err
+		}
+		moved.Contact += private.Contacts
+		moved.Company += private.Companies
 	}
 	projectsMoved, err := projects.TransferProjectOwnershipTx(ctx, tx, projects.TransferProjectOwnershipInput{
 		FromOwnerID: ids.From[ids.UserKind](member), ToOwnerID: receiver,

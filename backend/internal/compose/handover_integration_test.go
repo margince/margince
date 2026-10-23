@@ -97,23 +97,41 @@ func TestAHandoverMovesEverythingADepartedColleagueOwned(t *testing.T) {
 	}
 }
 
-// A capture-private contact answers to its owner alone, so the admin neither
-// counts nor moves it.
-func TestAHandoverLeavesWhatTheCallerCannotSee(t *testing.T) {
+// A capture-private contact and company of a departed rep move with the
+// handover and stay owner-private, now to the colleague who took them over.
+func TestAHandoverMovesPrivateRecordsAndKeepsThemPrivate(t *testing.T) {
 	e := integration.Setup(t)
-	private := seedBulkContacts(t, e, e.Rep1, 1)
-	e.MakeCapturePrivate(t, "contact", ids.UUID(private[0].Id), e.Rep1)
+	private := ids.UUID(seedBulkContacts(t, e, e.Rep1, 1)[0].Id)
+	e.MakeCapturePrivate(t, "contact", private, e.Rep1)
+	privateCompany := e.SeedCompany(t, "Quiet GmbH", &e.Rep1)
+	e.MakeCapturePrivate(t, "company", privateCompany, e.Rep1)
+	deactivate(t, e, e.Rep1)
 	seam := handoverSeamFor(e)
 
+	owned, err := seam.Owned(e.Admin(), e.Rep1)
+	if err != nil || owned.Contact != 1 || owned.Company != 1 {
+		t.Fatalf("owned = %+v, %v; want the private contact and company counted", owned, err)
+	}
 	out, err := seam.HandOver(e.Admin(), e.Rep1, e.Rep2)
 	if err != nil {
 		t.Fatalf("hand over: %v", err)
 	}
-	if out.Moved.Contact != 0 || out.Left.Contact != 0 {
-		t.Errorf("handover = %+v, want the private contact neither moved nor counted", out)
+	if out.Moved.Contact != 1 || out.Moved.Company != 1 || out.Left != (crmcontracts.HandoverCounts{}) {
+		t.Fatalf("handover = %+v, want both private records moved and nothing left", out)
 	}
-	if got := ownerOf(t, e, "contact", ids.UUID(private[0].Id)); got != e.Rep1 {
-		t.Errorf("the private contact moved to %s", got)
+	for table, id := range map[string]ids.UUID{"contact": private, "company": privateCompany} {
+		if got := ownerOf(t, e, table, id); got != e.Rep2 {
+			t.Errorf("the private %s is owned by %s, want the colleague it was handed to", table, got)
+		}
+		if v := e.WsScalar(t, `SELECT visibility FROM `+table+` WHERE id = $1`, id); v != "owner" {
+			t.Errorf("the private %s became %q, want it still owner-private", table, v)
+		}
+		if n := e.WsCount(t,
+			`SELECT count(*) FROM audit_log WHERE entity_type = $1 AND entity_id = $2
+			    AND before->>'owner_id' = $3 AND after->>'owner_id' = $4`,
+			table, id, e.Rep1.String(), e.Rep2.String()); n != 1 {
+			t.Errorf("audit rows for the private %s's owner change = %d, want 1", table, n)
+		}
 	}
 }
 
