@@ -87,6 +87,12 @@ func TestTheGuessedMailboxRepairRemovesOnlyUnprovenOwners(t *testing.T) {
 		t.Fatal(err)
 	}
 	guessed := seedGuessedSeat(t, e, conn, "gm-guessed", e.Rep1)
+	// A colleague bound from the message's own To line is header evidence, not
+	// the guessed owner, and stays.
+	if _, err := conn.Exec(ctx, `INSERT INTO activity_participant (activity_id, user_id, address, role)
+		VALUES ($1, $2, 'rep2@myco.example', 'to')`, guessed, e.Rep2); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := conn.Exec(ctx, `INSERT INTO raw_capture (source_system, source_id, payload)
 		VALUES ('gmail', 'gm-guessed', '{"headers":"…"}'::jsonb)`); err != nil {
 		t.Fatal(err)
@@ -137,8 +143,8 @@ func TestTheGuessedMailboxRepairRemovesOnlyUnprovenOwners(t *testing.T) {
 			t.Errorf("the %s-proven owner was removed: %d rows, want 1", name, got)
 		}
 	}
-	if got := e.WsCount(t, `SELECT count(*) FROM activity_participant WHERE activity_id = $1 AND address = 'pat@counterparty.test'`, guessed); got != 1 {
-		t.Errorf("the counterparty row went with the guessed owner: %d rows, want 1", got)
+	if got := e.WsCount(t, `SELECT count(*) FROM activity_participant WHERE activity_id = $1 AND address IS NOT NULL`, guessed); got != 2 {
+		t.Errorf("the message's header rows went with the guessed owner: %d rows, want the counterparty and the colleague", got)
 	}
 	if got := e.WsCount(t, `SELECT count(*) FROM activity a JOIN raw_capture rc ON rc.source_id = a.source_id WHERE a.id = $1 AND a.archived_at IS NULL`, guessed); got != 1 {
 		t.Errorf("the repaired message or its stored original is gone")
