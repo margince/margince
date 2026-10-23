@@ -284,8 +284,8 @@ func (w lockWalk) call(n *ast.CallExpr) []lockEffect {
 	return out
 }
 
-// closureNamed resolves a called name to the closure its own declaration
-// bound, by lexical scope, so a shadowing name in an inner block is its own.
+// closureNamed resolves a called name to the closure its declaration bound.
+// Resolution is lexical, so a shadowing name in an inner block is its own.
 func (w lockWalk) closureNamed(id *ast.Ident) *ast.FuncLit {
 	if id.Obj == nil {
 		return nil
@@ -313,8 +313,8 @@ func (w lockWalk) closureNamed(id *ast.Ident) *ast.FuncLit {
 	return nil
 }
 
-// boundLiterals are the closures that do not run where they are written:
-// those assigned to a name or a field, and those kept in a composite value.
+// boundLiterals are the closures that do not run where they are written.
+// They are assigned to a name or a field, or kept in a composite value.
 func boundLiterals(body *ast.BlockStmt) map[*ast.FuncLit]bool {
 	bound := map[*ast.FuncLit]bool{}
 	ast.Inspect(body, func(node ast.Node) bool {

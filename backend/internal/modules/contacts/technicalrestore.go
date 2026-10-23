@@ -159,7 +159,7 @@ func JudgeTechnicalRestoreTx(
 	var later bool
 	// The company's own rows, and every fact row of it: a live fact by its id,
 	// a removed one by the company its before-image names. occurred_at is a
-	// transaction's start, so a write that began before the lookup and landed
+	// transaction's start. A write that began before the lookup and landed
 	// after it is found by its id, minted when the row was written.
 	err = tx.QueryRow(ctx, `
 		SELECT EXISTS (

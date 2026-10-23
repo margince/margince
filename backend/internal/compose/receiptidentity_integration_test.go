@@ -7,7 +7,6 @@ package compose
 
 import (
 	"context"
-	"errors"
 	"log/slog"
 	"slices"
 	"testing"
@@ -22,7 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -30,26 +28,40 @@ import (
 // appliedStageReceipt stages a stage move through the real proposer and
 // applies it under policy. The system decided it, so an audit row and an
 // approval both stand for it.
-func appliedStageReceipt(t *testing.T, e *integration.Env, now time.Time) (*approvals.Service, ids.ApprovalID) {
+func appliedStageReceipt(t *testing.T, e *integration.Env, now time.Time, name string) (*approvals.Service, ids.ApprovalID) {
+	t.Helper()
+	pipeline, open := signedStage(t, e)
+	return appliedStageReceiptIn(t, e, now, name, pipeline, open)
+}
+
+// signedStage seeds the pipeline and asks its open stage for a signed
+// agreement, the evidence the proposer moves a deal on.
+func signedStage(t *testing.T, e *integration.Env) (ids.PipelineID, ids.StageID) {
+	t.Helper()
+	pipeline, open, _ := integration.DealFixture(t, e)
+	if _, err := e.Deals.CreateStageExitCriterion(e.Admin(), deals.CreateCriterionInput{StageID: open, Key: "signed", Label: "Agreement signed", Kind: string(deals.CriterionDocumentSigned)}); err != nil {
+		t.Fatal(err)
+	}
+	return pipeline, open
+}
+
+// appliedStageReceiptIn is appliedStageReceipt on a pipeline already seeded.
+func appliedStageReceiptIn(
+	t *testing.T, e *integration.Env, now time.Time, name string, pipeline ids.PipelineID, open ids.StageID,
+) (*approvals.Service, ids.ApprovalID) {
 	t.Helper()
 	ctx := e.Admin()
 	clock := func() time.Time { return now }
-	pipeline, open, _ := integration.DealFixture(t, e)
 	owner := ids.From[ids.UserKind](e.AdminUser)
-	deal, err := e.Deals.CreateDeal(ctx, deals.CreateDealInput{Name: "Agreed project", PipelineID: pipeline, StageID: open, OwnerID: &owner, Source: "manual"})
+	deal, err := e.Deals.CreateDeal(ctx, deals.CreateDealInput{Name: name, PipelineID: pipeline, StageID: open, OwnerID: &owner, Source: "manual"})
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("staging step 1: %v", err)
 	}
 	dealID := ids.From[ids.DealKind](ids.UUID(deal.Id))
-	// A second receipt in one test reuses the stage's criterion.
-	if _, err := e.Deals.CreateStageExitCriterion(ctx, deals.CreateCriterionInput{StageID: open, Key: "signed", Label: "Agreement signed", Kind: string(deals.CriterionDocumentSigned)}); err != nil &&
-		!errors.Is(err, apperrors.ErrConflict) {
-		t.Fatal(err)
-	}
-	company := e.SeedCompany(t, "Agreement buyer", &e.AdminUser)
-	contract, err := e.Contracts.CreateContract(ctx, contracts.CreateContractInput{CompanyID: ids.From[ids.CompanyKind](company), Title: "Agreed project", ValueBasis: contracts.BasisTotal, Source: "manual"})
+	company := e.SeedCompany(t, name+" buyer", &e.AdminUser)
+	contract, err := e.Contracts.CreateContract(ctx, contracts.CreateContractInput{CompanyID: ids.From[ids.CompanyKind](company), Title: name, ValueBasis: contracts.BasisTotal, Source: "manual"})
 	if err != nil {
-		t.Fatal(err)
+		t.Fatalf("staging step 3: %v", err)
 	}
 	if count, err := e.Deals.RecordDeterministicEvidence(ctx, deals.DeterministicClaim{DealID: dealID, Kind: deals.CriterionDocumentSigned, SourceType: "contract", SourceID: ids.UUID(contract.Id), AuthorSide: deals.AuthorBuyer, ObservedAt: now.Add(-time.Hour)}); err != nil || count == 0 {
 		t.Fatalf("evidence: count=%d err=%v", count, err)
@@ -73,7 +85,7 @@ func appliedStageReceipt(t *testing.T, e *integration.Env, now time.Time) (*appr
 	actor.Scopes = principal.NewScopeSet(principal.ScopeRead, principal.ScopeWrite)
 	agent := principal.WithActor(ctx, actor)
 	if _, err := svc.ApplyUnderPolicy(agent, approvalID); err != nil {
-		t.Fatal(err)
+		t.Fatalf("staging step 4: %v", err)
 	}
 	return svc, approvalID
 }
@@ -83,7 +95,7 @@ func TestNativeStageReceiptHasTheSameIdentityOnBothHomeReaders(t *testing.T) {
 	ctx := e.Admin()
 	now := clocktest.Now(t)
 	clock := func() time.Time { return now }
-	svc, approvalID := appliedStageReceipt(t, e, now)
+	svc, approvalID := appliedStageReceipt(t, e, now, "Agreed project")
 	handled, err := newAttentionService(e.Pool, svc, clock).HandledForYou(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -136,7 +148,7 @@ func TestDoneForYouHasOneWindowOnBothSurfaces(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	decidedAt := clocktest.Now(t)
-	svc, approvalID := appliedStageReceipt(t, e, decidedAt)
+	svc, approvalID := appliedStageReceipt(t, e, decidedAt, "Agreed project")
 	readAt := decidedAt.Add(3 * time.Hour)
 	clock := func() time.Time { return readAt }
 	for _, c := range []struct {
@@ -188,8 +200,9 @@ func TestEachGroupedRecordNamesItsOwnReceipt(t *testing.T) {
 	ctx := e.Admin()
 	now := clocktest.Now(t)
 	clock := func() time.Time { return now }
-	svc, first := appliedStageReceipt(t, e, now)
-	_, second := appliedStageReceipt(t, e, now)
+	pipeline, open := signedStage(t, e)
+	svc, first := appliedStageReceiptIn(t, e, now, "Agreed project", pipeline, open)
+	_, second := appliedStageReceiptIn(t, e, now, "Second project", pipeline, open)
 	lane := newMagicService(e.Pool, svc, clock)
 	lane.WithUndoJudge(magicUndoJudge{seam: restoreSeamFor(e)})
 	receipt, err := lane.Read(ctx, nil, 100)
