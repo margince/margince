@@ -103,6 +103,9 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 		bounded[sourceAtRisk] = bounded[sourceAtRisk] || *day.AtRiskMoreAvailable
 	}
 	atCap("relationship_decay", day.RelationshipDecay, decayBound)
+	if day.RelationshipDecay != nil && day.RelationshipDecayMoreAvailable != nil {
+		bounded[sourceDecay] = bounded[sourceDecay] || *day.RelationshipDecayMoreAvailable
+	}
 	atCap("conversation_claim", day.Commitments, doneCap)
 	// The decision lane is read deeper than the rest, because a batch row
 	// counts a pile and a count taken from a page of ten would report ten over

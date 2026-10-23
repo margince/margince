@@ -1738,6 +1738,25 @@ paths:
   /contacts/{id}/nudge-dismissal:
     parameters:
       - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Contacts]
+      operationId: getRelationshipNudge
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Whether THIS reader has set a quiet contact aside or stopped following it.
+      description: |
+        The calling reader's own choice only, never a colleague's. The contact page reads it
+        to offer Resume after the Worklist's Undo is gone. An id the caller cannot read
+        answers 404.
+      responses:
+        '200':
+          description: The reader's standing choice for this contact.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RelationshipNudgeState' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
     put:
       tags: [Contacts]
       operationId: dismissRelationshipNudge
@@ -47064,6 +47083,20 @@ components:
           description: The rows, each named by its lane and its id, as a pin names one.
           items: { $ref: '#/components/schemas/WorklistPinRequest' }
 
+    RelationshipNudgeState:
+      type: object
+      additionalProperties: false
+      required: [state]
+      properties:
+        state:
+          type: string
+          enum: [following, set_aside, stopped]
+          description: '`set_aside` until `dismissed_until`; `stopped` has no end; `following` is neither.'
+        dismissed_until:
+          type: string
+          format: date-time
+          description: 'When a `set_aside` contact comes back. Absent for the other states.'
+
     DismissRelationshipNudgesRequest:
       type: object
       additionalProperties: false
@@ -61822,6 +61855,9 @@ components:
         at_risk_more_available:
           type: boolean
           description: The deal risk scan was cut before its final scope and state checks. True means the returned rows are a lower bound, even when fewer than the scan limit remain. Absent when this source could not be read.
+        relationship_decay_more_available:
+          type: boolean
+          description: The quiet-relationship scan used its whole candidate budget and may have stopped before more eligible contacts. True means the returned rows are a lower bound, even when none came back. Absent when this source could not be read.
         notices_more_available:
           type: boolean
           description: |

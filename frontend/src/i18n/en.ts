@@ -15928,6 +15928,9 @@ export const en = {
   "worklist.verb.dismissFailed": "Contact was not set aside. Retry.",
   "worklist.verb.dismissUndoFailed": "Contact was not restored. Retry.",
   "worklist.verb.stopFollowing": "Stop following",
+  "contact.follow.stopped": "You stopped following this contact.",
+  "contact.follow.setAside": "You set this contact aside until {date}.",
+  "contact.follow.resume": "Resume following",
   "worklist.verb.stopped": "No longer following this contact",
   "worklist.verb.dismissAll": "Dismiss all shown",
   "worklist.verb.dismissedAll": "Set aside for a month",
@@ -15973,7 +15976,7 @@ export const en = {
   // composer and so never needs the reply/write "now" split above.
   "worklist.verb.open_meeting_brief": "Prepare for meeting",
   "worklist.deal.closes": "closes {date}",
-  "worklist.when.held": "held {when}",
+  "worklist.when.scheduled": "scheduled {when}",
   "worklist.meeting.hostedBy": "hosted by {name}",
   "worklist.meeting.hostedByYou": "hosted by you",
   "worklist.when.starts": "starts {when}",

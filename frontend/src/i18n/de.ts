@@ -15972,6 +15972,9 @@ export const de = {
   "worklist.verb.dismissUndoFailed":
     "Der Kontakt konnte nicht wiederhergestellt werden. Bitte versuche es erneut.",
   "worklist.verb.stopFollowing": "Nicht mehr verfolgen",
+  "contact.follow.stopped": "Sie folgen diesem Kontakt nicht mehr.",
+  "contact.follow.setAside": "Sie haben diesen Kontakt bis {date} zurückgestellt.",
+  "contact.follow.resume": "Wieder folgen",
   "worklist.verb.stopped": "Diesem Kontakt wird nicht mehr gefolgt",
   "worklist.verb.dismissAll": "Alle angezeigten zurückstellen",
   "worklist.verb.dismissedAll": "Für einen Monat zurückgestellt",
@@ -16013,7 +16016,7 @@ export const de = {
   // nicht braucht.
   "worklist.verb.open_meeting_brief": "Termin vorbereiten",
   "worklist.deal.closes": "Abschluss {date}",
-  "worklist.when.held": "Fand statt: {when}",
+  "worklist.when.scheduled": "Geplant: {when}",
   "worklist.meeting.hostedBy": "Organisiert von {name}",
   "worklist.meeting.hostedByYou": "Von dir organisiert",
   "worklist.when.starts": "Beginn: {when}",

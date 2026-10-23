@@ -142,10 +142,10 @@ const quietSuggestionCeilingDays = 180
 
 func (d attentionDecay) Lapsed(
 	ctx context.Context, scope attention.TaskScope, owner ids.UUID,
-) ([]attention.QuietRelationship, error) {
+) ([]attention.QuietRelationship, bool, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.UserID.IsZero() {
-		return nil, apperrors.ErrPermissionDenied
+		return nil, false, apperrors.ErrPermissionDenied
 	}
 	now := d.now()
 	read := search.QuietRead{
@@ -170,7 +170,7 @@ func (d attentionDecay) Lapsed(
 		read.Owner = actor.UserID
 	case attention.TasksOwnedBy:
 		if owner.IsZero() {
-			return nil, nil
+			return nil, false, nil
 		}
 		read.Owner = owner
 	case attention.TasksUnassigned:
@@ -178,33 +178,63 @@ func (d attentionDecay) Lapsed(
 	case attention.TasksVisible:
 	}
 	var lapsed []attention.QuietRelationship
+	exhausted := false
 	err := database.WithWorkspaceTx(ctx, d.pool, func(tx pgx.Tx) error {
-		quiet, err := search.QuietContacts(ctx, tx, read)
-		if err != nil {
-			return err
+		for page := 0; page < decayCandidatePages && len(lapsed) < decayLaneCap; page++ {
+			read.Offset = page * decayCandidateCap
+			found, err := d.quietPage(ctx, tx, read, now)
+			if err != nil {
+				return err
+			}
+			lapsed = append(lapsed, found.lapsed...)
+			if found.read < decayCandidateCap {
+				exhausted = true
+				break
+			}
 		}
-		candidates := make([]ids.ContactID, 0, len(quiet))
-		for _, found := range quiet {
-			candidates = append(candidates, ids.From[ids.ContactKind](found.Edge.ContactID))
-		}
-		changed, err := d.store.RelationshipChangesForContacts(ctx, tx, candidates, now)
-		if err != nil {
-			return err
-		}
-		// Which of them still carries money, read once in the same
-		// transaction. A reader without the deal grant loses this one fact
-		// and keeps the row.
-		funded, err := deals.OpenDealContacts(ctx, tx, candidates)
-		if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
-			return err
-		}
-		lapsed = quietRelationships(quiet, changed, funded, now)
 		return nil
 	})
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return lapsed, nil
+	return rankReconnects(lapsed), !exhausted, nil
+}
+
+// decayCandidatePages is how many candidate pages one read may derive before
+// it stops and reports the lane as possibly incomplete. Candidates the
+// derivation rejects would otherwise hide a valid contact behind them.
+const decayCandidatePages = 3
+
+// quietPageResult is one candidate page: how many candidates it read, and the
+// ones the derivation calls quiet.
+type quietPageResult struct {
+	read   int
+	lapsed []attention.QuietRelationship
+}
+
+// quietPage reads one page of candidates and keeps the derived silences.
+func (d attentionDecay) quietPage(
+	ctx context.Context, tx pgx.Tx, read search.QuietRead, now time.Time,
+) (quietPageResult, error) {
+	quiet, err := search.QuietContacts(ctx, tx, read)
+	if err != nil {
+		return quietPageResult{}, err
+	}
+	candidates := make([]ids.ContactID, 0, len(quiet))
+	for _, found := range quiet {
+		candidates = append(candidates, ids.From[ids.ContactKind](found.Edge.ContactID))
+	}
+	changed, err := d.store.RelationshipChangesForContacts(ctx, tx, candidates, now)
+	if err != nil {
+		return quietPageResult{}, err
+	}
+	// Which of them still carries money, read in the same transaction. A
+	// reader without the deal grant loses this one fact and keeps the row.
+	funded, err := deals.OpenDealContacts(ctx, tx, candidates)
+	if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
+		return quietPageResult{}, err
+	}
+	return quietPageResult{read: len(quiet), lapsed: quietSurvivors(quiet, changed, funded, now)}, nil
 }
 
 // quietRelationships keeps only the contacts the derivation calls quiet, and
@@ -214,6 +244,16 @@ func (d attentionDecay) Lapsed(
 // the date both come from the derivation: `change.Days` counts from
 // `change.At`. The ceiling is measured from that same touch.
 func quietRelationships(
+	quiet []search.QuietContact,
+	changed []contacts.ContactChanges,
+	funded map[ids.UUID]bool,
+	now time.Time,
+) []attention.QuietRelationship {
+	return rankReconnects(quietSurvivors(quiet, changed, funded, now))
+}
+
+// quietSurvivors is quietRelationships before the ranking and the lane cap.
+func quietSurvivors(
 	quiet []search.QuietContact,
 	changed []contacts.ContactChanges,
 	funded map[ids.UUID]bool,
@@ -250,7 +290,7 @@ func quietRelationships(
 			break
 		}
 	}
-	return rankReconnects(lapsed)
+	return lapsed
 }
 
 // rankReconnects puts the relationships worth reviving first and cuts to what a

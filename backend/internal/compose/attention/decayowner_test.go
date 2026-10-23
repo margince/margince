@@ -47,3 +47,18 @@ func TestAQuietRelationshipHasItsOwnCategory(t *testing.T) {
 		t.Errorf("the source's category = %q, want %q so counts and filter agree", got, categoryRelationships)
 	}
 }
+
+// A quiet scan that spent its budget says so even when no row survived the
+// derivation: an empty lane is then a lower bound, not a clear one.
+func TestAnExhaustedQuietScanWithNoSurvivorsIsNotComplete(t *testing.T) {
+	t.Parallel()
+	more := true
+	day := crmcontracts.Attention{AsOf: rankInstant, RelationshipDecay: &[]crmcontracts.AttentionItem{}, RelationshipDecayMoreAvailable: &more}
+	out := (&Service{}).worklistFrom(t.Context(), day, scopeAll, "", 25, waitingRead{}, worklistCursor{}, nil)
+	for _, count := range out.Counts {
+		if string(count.Category) == string(categoryRelationships) && count.MoreAvailable {
+			return
+		}
+	}
+	t.Fatalf("counts = %+v, want relationships marked as possibly more", out.Counts)
+}

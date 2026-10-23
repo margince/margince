@@ -157,6 +157,51 @@ func setNudgeAside(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, read
 	return recordNudgeDismissal(ctx, tx, contactID, actionDismissed, until, found, replaced)
 }
 
+// NudgeState is one reader's standing choice about a quiet contact.
+type NudgeState struct {
+	// Stopped is a permanent stop; Until is set for a dated dismissal still in
+	// force. Neither means the reader follows the contact.
+	Stopped bool
+	Until   *time.Time
+}
+
+// RelationshipNudgeState reads this reader's own choice for the contact, under
+// the same visibility check a dismissal makes. A colleague's choice is never
+// read.
+func (s *Store) RelationshipNudgeState(ctx context.Context, contactID ids.ContactID) (NudgeState, error) {
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+		return NudgeState{}, err
+	}
+	reader, err := humanReader(ctx)
+	if err != nil {
+		return NudgeState{}, err
+	}
+	var state NudgeState
+	err = s.tx(ctx, func(tx pgx.Tx) error {
+		if err := auth.EnsureVisible(ctx, tx, "contact", contactID.UUID); err != nil {
+			return err
+		}
+		var until *time.Time
+		err := tx.QueryRow(ctx, `
+			SELECT dismissed_until FROM relationship_nudge_dismissal
+			 WHERE contact_id = $1 AND reader_id = $2`, contactID, reader).Scan(&until)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
+		if err != nil {
+			return fmt.Errorf("contacts: reading the reader's nudge choice: %w", err)
+		}
+		switch {
+		case until == nil:
+			state.Stopped = true
+		case until.After(s.clock()):
+			state.Until = until
+		}
+		return nil
+	})
+	return state, err
+}
+
 // RestoreRelationshipNudge puts a set-aside contact back on this reader's lane.
 //
 // Idempotent: restoring a contact nobody dismissed is the same success, because

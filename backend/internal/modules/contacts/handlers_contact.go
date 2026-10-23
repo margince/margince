@@ -398,6 +398,24 @@ func nudgeSpanOf(days *int, permanent *bool) NudgeSpan {
 	return span
 }
 
+// GetRelationshipNudge answers the calling reader's own choice for the contact.
+func (h Handlers) GetRelationshipNudge(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	state, err := h.store.RelationshipNudgeState(r.Context(), pathID[ids.ContactKind](id))
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	out := crmcontracts.RelationshipNudgeState{State: crmcontracts.RelationshipNudgeStateStateFollowing}
+	switch {
+	case state.Stopped:
+		out.State = crmcontracts.RelationshipNudgeStateStateStopped
+	case state.Until != nil:
+		out.State = crmcontracts.RelationshipNudgeStateStateSetAside
+		out.DismissedUntil = state.Until
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
 // RestoreRelationshipNudge puts a set-aside contact back on the reader's lane.
 func (h Handlers) RestoreRelationshipNudge(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	if err := h.store.RestoreRelationshipNudge(

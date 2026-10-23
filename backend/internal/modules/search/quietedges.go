@@ -43,7 +43,9 @@ type QuietRead struct {
 	// TouchedAfter is the silence ceiling: the newest live touch must be later.
 	TouchedAfter time.Time
 	Limit        int
-	Exclude      ExcludeEdges
+	// Offset skips candidates an earlier page of the same read already gave.
+	Offset  int
+	Exclude ExcludeEdges
 }
 
 // QuietContact is one candidate: the live colleague's edge that carries the
@@ -99,6 +101,7 @@ func QuietContacts(ctx context.Context, tx pgx.Tx, read QuietRead) ([]QuietConta
 	owned := quietOwnerClause(read, arg)
 	exchangedPos := arg(2)
 	limitPos := arg(read.Limit)
+	offsetPos := arg(read.Offset)
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT q.user_id, q.contact_id, q.last_at, q.last_inbound_at, q.last_outbound_at,
 		       q.count_90d, q.in_count_90d, q.out_count_90d, q.count_total, q.live_owner
@@ -124,9 +127,9 @@ func QuietContacts(ctx context.Context, tx pgx.Tx, read QuietRead) ([]QuietConta
 		     ORDER BY e.contact_id, e.count_total DESC, e.last_at DESC, e.user_id
 		  ) q
 		 ORDER BY q.count_total DESC, q.last_at ASC, q.contact_id
-		 LIMIT $%d`, liveMemberJoin, workforce.LiveMemberSQL("o"), beforePos,
+		 LIMIT $%d OFFSET $%d`, liveMemberJoin, workforce.LiveMemberSQL("o"), beforePos,
 		exchangedPos, laterMemberJoin, beforePos, recentMemberJoin, afterPos,
-		owned, scope, excluded, limitPos), args...)
+		owned, scope, excluded, limitPos, offsetPos), args...)
 	if err != nil {
 		return nil, fmt.Errorf("search: reading quiet relationships: %w", err)
 	}

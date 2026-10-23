@@ -76,7 +76,9 @@ type RiskyDeal struct {
 // scope picks whose contacts: the reader's own, a named owner's, or those
 // with no live owner.
 type Decay interface {
-	Lapsed(ctx context.Context, scope TaskScope, owner ids.UUID) ([]QuietRelationship, error)
+	// The bool is true when the scan stopped at its budget, so more eligible
+	// contacts may exist even when no row came back.
+	Lapsed(ctx context.Context, scope TaskScope, owner ids.UUID) ([]QuietRelationship, bool, error)
 }
 
 // QuietRelationship is one contact this reader has stopped talking to.

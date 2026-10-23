@@ -344,6 +344,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/contacts/{id}/graph":                                           {Op: "getContactGraph", Access: "tool", Tool: "read_view", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/contacts/{id}/intro-requests":                                  {Op: "listIntroRequests", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/contacts/{id}/network":                                         {Op: "getContactNetwork", Access: "tool", Tool: "who_knows", RecordType: "contact", Tier: "auto_execute", Scope: "read"},
+	"GET /v1/contacts/{id}/nudge-dismissal":                                 {Op: "getRelationshipNudge", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/contacts/{id}/profile-fields":                                  {Op: "getContactProfileFields", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/contacts/{id}/strength":                                        {Op: "getContactStrength", Access: "tool", Tool: "read_view", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/context-search":                                                {Op: "searchContext", Access: "tool", Tool: "search_context", RecordType: "", Tier: "auto_execute", Scope: "read", ServedBy: "registry"},

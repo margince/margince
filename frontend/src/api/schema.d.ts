@@ -976,7 +976,13 @@ export interface paths {
             };
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Whether THIS reader has set a quiet contact aside or stopped following it.
+         * @description The calling reader's own choice only, never a colleague's. The contact page reads it
+         *     to offer Resume after the Worklist's Undo is gone. An id the caller cannot read
+         *     answers 404.
+         */
+        get: operations["getRelationshipNudge"];
         /**
          * Set a lapsed contact aside, so the Worklist stops raising them for a while.
          * @description The decay lane names contacts who have gone quiet. Nobody is waiting on the reader
@@ -34241,6 +34247,18 @@ export interface components {
             /** @description The rows, each named by its lane and its id, as a pin names one. */
             rows: components["schemas"]["WorklistPinRequest"][];
         };
+        RelationshipNudgeState: {
+            /**
+             * @description `set_aside` until `dismissed_until`; `stopped` has no end; `following` is neither.
+             * @enum {string}
+             */
+            state: "following" | "set_aside" | "stopped";
+            /**
+             * Format: date-time
+             * @description When a `set_aside` contact comes back. Absent for the other states.
+             */
+            dismissed_until?: string;
+        };
         DismissRelationshipNudgesRequest: {
             /** @description The contacts to set aside, as the Worklist listed them. */
             contact_ids: string[];
@@ -46160,6 +46178,8 @@ export interface components {
             notices?: components["schemas"]["AttentionItem"][];
             /** @description The deal risk scan was cut before its final scope and state checks. True means the returned rows are a lower bound, even when fewer than the scan limit remain. Absent when this source could not be read. */
             at_risk_more_available?: boolean;
+            /** @description The quiet-relationship scan used its whole candidate budget and may have stopped before more eligible contacts. True means the returned rows are a lower bound, even when none came back. Absent when this source could not be read. */
+            relationship_decay_more_available?: boolean;
             /**
              * @description The unread notice scan reached its limit before equivalent decision
              *     announcements were folded. When true, an empty notices array does
@@ -50842,6 +50862,32 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    getRelationshipNudge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The reader's standing choice for this contact. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RelationshipNudgeState"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     dismissRelationshipNudge: {

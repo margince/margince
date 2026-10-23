@@ -1455,6 +1455,10 @@ func (stubs) RestoreRelationshipNudge(w nethttp.ResponseWriter, r *nethttp.Reque
 	httperr.NotImplemented(w, r, "RestoreRelationshipNudge")
 }
 
+func (stubs) GetRelationshipNudge(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetRelationshipNudge")
+}
+
 func (stubs) DismissRelationshipNudge(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DismissRelationshipNudge")
 }

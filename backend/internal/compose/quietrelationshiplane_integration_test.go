@@ -12,6 +12,7 @@ package compose
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -75,12 +76,18 @@ func quietLaneFor(t *testing.T, e *integration.Env, reader ids.UUID, scope atten
 
 func quietLaneAt(t *testing.T, e *integration.Env, now time.Time, reader ids.UUID, scope attention.TaskScope, owner ids.UUID) []attention.QuietRelationship {
 	t.Helper()
+	rows, _ := quietLaneWithBound(t, e, now, reader, scope, owner)
+	return rows
+}
+
+func quietLaneWithBound(t *testing.T, e *integration.Env, now time.Time, reader ids.UUID, scope attention.TaskScope, owner ids.UUID) ([]attention.QuietRelationship, bool) {
+	t.Helper()
 	lane := attentionDecay{pool: e.Pool, store: contacts.NewStore(e.DB()), now: func() time.Time { return now }}
-	rows, err := lane.Lapsed(e.As(reader, nil, integration.AdminPerms), scope, owner)
+	rows, more, err := lane.Lapsed(e.As(reader, nil, integration.AdminPerms), scope, owner)
 	if err != nil {
 		t.Fatalf("reading the quiet lane: %v", err)
 	}
-	return rows
+	return rows, more
 }
 
 func TestTheQuietSuggestionGoesToTheContactOwnerNotToWhoWroteOrWasCopied(t *testing.T) {
@@ -181,5 +188,77 @@ func TestDismissAllSetsEveryListedContactAsideOrNone(t *testing.T) {
 	}
 	if got := quietLaneFor(t, e, e.Rep1, attention.TasksMine, ids.UUID{}); len(got) != 0 {
 		t.Fatalf("after dismiss all the lane = %+v, want nothing", got)
+	}
+}
+
+// seedRejectedCandidate gives a contact three old exchanges, which rank it
+// ahead of a two-exchange contact, and a recent linked call nobody took part
+// in. The edges stay old, so the scan offers it; the contact-wide derivation
+// sees the call and rejects the silence.
+func seedRejectedCandidate(t *testing.T, e *integration.Env, owner ids.UUID, name string) {
+	t.Helper()
+	contact := e.SeedContact(t, name, &owner)
+	seedQuietExchange(t, e, owner, ids.UUID{}, contact, 60)
+	seedQuietExchange(t, e, owner, ids.UUID{}, contact, 70)
+	call := ids.NewV7()
+	conn := integration.OwnerConn(t)
+	if _, err := conn.Exec(context.Background(), `
+		INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+		VALUES ($1, 'call', 'catch-up', $2, 'manual', 'human:x')`, call, quietLaneNow.AddDate(0, 0, -5)); err != nil {
+		t.Fatal(err)
+	}
+	integration.LinkActivity(t, conn, call, "contact", contact)
+}
+
+func TestAValidQuietContactBehindAFullPageOfRejectedCandidatesIsReached(t *testing.T) {
+	e := integration.Setup(t)
+	for i := range 40 {
+		seedRejectedCandidate(t, e, e.Rep1, fmt.Sprintf("Recently called %02d", i))
+	}
+	valid := e.SeedContact(t, "Truly quiet", &e.Rep1)
+	seedQuietExchange(t, e, e.Rep1, ids.UUID{}, valid, 60)
+
+	rows, more := quietLaneWithBound(t, e, quietLaneNow, e.Rep1, attention.TasksMine, ids.UUID{})
+	if len(rows) != 1 || rows[0].ContactID != valid {
+		t.Fatalf("the lane = %+v, want the 41st candidate that is really quiet", rows)
+	}
+	if more {
+		t.Error("the scan read to the end of the candidates and still said more may exist")
+	}
+}
+
+func TestAQuietScanThatSpendsItsBudgetSaysSoWithNoSurvivors(t *testing.T) {
+	e := integration.Setup(t)
+	for i := range decayCandidateCap * decayCandidatePages {
+		seedRejectedCandidate(t, e, e.Rep1, fmt.Sprintf("Recently called %03d", i))
+	}
+	rows, more := quietLaneWithBound(t, e, quietLaneNow, e.Rep1, attention.TasksMine, ids.UUID{})
+	if len(rows) != 0 || !more {
+		t.Fatalf("the lane = %d rows, more = %v; want none and a lane marked as possibly more", len(rows), more)
+	}
+}
+
+// A stop is one reader's choice: it reads back as stopped for them, as
+// following for a colleague, and as following again once resumed.
+func TestAStopReadsBackPerReaderAndClearsOnResume(t *testing.T) {
+	e := integration.Setup(t)
+	contact := ids.From[ids.ContactKind](e.SeedContact(t, "Per Reader", &e.Rep1))
+	store := contacts.NewStore(e.DB()).WithClock(func() time.Time { return quietLaneNow })
+	reader := e.As(e.Rep1, nil, integration.AdminPerms)
+	colleague := e.As(e.Rep2, nil, integration.AdminPerms)
+	if err := store.DismissRelationshipNudges(reader, []ids.ContactID{contact}, contacts.NudgeSpan{Permanent: true}); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := store.RelationshipNudgeState(reader, contact); err != nil || !got.Stopped {
+		t.Fatalf("the reader's state = %+v, %v, want stopped", got, err)
+	}
+	if got, err := store.RelationshipNudgeState(colleague, contact); err != nil || got.Stopped || got.Until != nil {
+		t.Fatalf("a colleague's state = %+v, %v, want following", got, err)
+	}
+	if err := store.RestoreRelationshipNudge(reader, contact); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := store.RelationshipNudgeState(reader, contact); err != nil || got.Stopped || got.Until != nil {
+		t.Fatalf("after resume the reader's state = %+v, %v, want following", got, err)
 	}
 }

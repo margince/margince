@@ -15575,6 +15575,9 @@ export const vi = {
   "worklist.verb.dismissFailed": "Không thể gác lại liên hệ. Thử lại.",
   "worklist.verb.dismissUndoFailed": "Không thể khôi phục liên hệ. Thử lại.",
   "worklist.verb.stopFollowing": "Ngừng theo dõi",
+  "contact.follow.stopped": "Bạn đã ngừng theo dõi liên hệ này.",
+  "contact.follow.setAside": "Bạn đã gác lại liên hệ này đến {date}.",
+  "contact.follow.resume": "Theo dõi lại",
   "worklist.verb.stopped": "Đã ngừng theo dõi liên hệ này",
   "worklist.verb.dismissAll": "Gác lại tất cả đang hiển thị",
   "worklist.verb.dismissedAll": "Đã gác lại một tháng",
@@ -15612,7 +15615,7 @@ export const vi = {
   // giờ mở trình soạn thảo nên không cần tách "ngay bây giờ" như trên.
   "worklist.verb.open_meeting_brief": "Chuẩn bị cuộc họp",
   "worklist.deal.closes": "ngày chốt {date}",
-  "worklist.when.held": "đã diễn ra {when}",
+  "worklist.when.scheduled": "dự kiến {when}",
   "worklist.meeting.hostedBy": "do {name} chủ trì",
   "worklist.meeting.hostedByYou": "do bạn chủ trì",
   "worklist.when.starts": "bắt đầu {when}",

@@ -15283,6 +15283,27 @@ func (e RelationshipStartedPrecision) Valid() bool {
 	}
 }
 
+// Defines values for RelationshipNudgeStateState.
+const (
+	RelationshipNudgeStateStateFollowing RelationshipNudgeStateState = "following"
+	RelationshipNudgeStateStateSetAside  RelationshipNudgeStateState = "set_aside"
+	RelationshipNudgeStateStateStopped   RelationshipNudgeStateState = "stopped"
+)
+
+// Valid indicates whether the value is a known member of the RelationshipNudgeStateState enum.
+func (e RelationshipNudgeStateState) Valid() bool {
+	switch e {
+	case RelationshipNudgeStateStateFollowing:
+		return true
+	case RelationshipNudgeStateStateSetAside:
+		return true
+	case RelationshipNudgeStateStateStopped:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for RelationshipStrengthBucket.
 const (
 	RelationshipStrengthBucketModerate RelationshipStrengthBucket = "moderate"
@@ -27477,6 +27498,9 @@ type Attention struct {
 	// Absent — not empty — on an installation whose feed does not derive relationship
 	// changes.
 	RelationshipDecay *[]AttentionItem `json:"relationship_decay,omitempty"`
+
+	// RelationshipDecayMoreAvailable The quiet-relationship scan used its whole candidate budget and may have stopped before more eligible contacts. True means the returned rows are a lower bound, even when none came back. Absent when this source could not be read.
+	RelationshipDecayMoreAvailable *bool `json:"relationship_decay_more_available,omitempty"`
 
 	// ThisMorning The overnight brief's queue, best-ranked first — what the night found worth
 	// the rep's first hour.
@@ -46603,6 +46627,18 @@ type RelationshipListResponse struct {
 	Data []Relationship `json:"data"`
 	Page PageInfo       `json:"page"`
 }
+
+// RelationshipNudgeState defines model for RelationshipNudgeState.
+type RelationshipNudgeState struct {
+	// DismissedUntil When a `set_aside` contact comes back. Absent for the other states.
+	DismissedUntil *time.Time `json:"dismissed_until,omitempty"`
+
+	// State `set_aside` until `dismissed_until`; `stopped` has no end; `following` is neither.
+	State RelationshipNudgeStateState `json:"state"`
+}
+
+// RelationshipNudgeStateState `set_aside` until `dismissed_until`; `stopped` has no end; `following` is neither.
+type RelationshipNudgeStateState string
 
 // RelationshipStrength Deterministic relationship-strength (features/07 §4) — a transparent function over captured
 // interaction features (recency, frequency, direction, reciprocity), NOT a trained model. A fixed
@@ -74385,6 +74421,9 @@ type ServerInterface interface {
 	// Put a set-aside contact back on the lane — the undo behind the dismiss verb.
 	// (DELETE /contacts/{id}/nudge-dismissal)
 	RestoreRelationshipNudge(w http.ResponseWriter, r *http.Request, id Id)
+	// Whether THIS reader has set a quiet contact aside or stopped following it.
+	// (GET /contacts/{id}/nudge-dismissal)
+	GetRelationshipNudge(w http.ResponseWriter, r *http.Request, id Id)
 	// Set a lapsed contact aside, so the Worklist stops raising them for a while.
 	// (PUT /contacts/{id}/nudge-dismissal)
 	DismissRelationshipNudge(w http.ResponseWriter, r *http.Request, id Id)
@@ -78147,6 +78186,12 @@ func (_ Unimplemented) GetContactNetwork(w http.ResponseWriter, r *http.Request,
 // Put a set-aside contact back on the lane — the undo behind the dismiss verb.
 // (DELETE /contacts/{id}/nudge-dismissal)
 func (_ Unimplemented) RestoreRelationshipNudge(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Whether THIS reader has set a quiet contact aside or stopped following it.
+// (GET /contacts/{id}/nudge-dismissal)
+func (_ Unimplemented) GetRelationshipNudge(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -96384,6 +96429,38 @@ func (siw *ServerInterfaceWrapper) RestoreRelationshipNudge(w http.ResponseWrite
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.RestoreRelationshipNudge(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetRelationshipNudge operation middleware
+func (siw *ServerInterfaceWrapper) GetRelationshipNudge(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetRelationshipNudge(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -120321,6 +120398,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/contacts/{id}/nudge-dismissal", wrapper.RestoreRelationshipNudge)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/contacts/{id}/nudge-dismissal", wrapper.GetRelationshipNudge)
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/contacts/{id}/nudge-dismissal", wrapper.DismissRelationshipNudge)
