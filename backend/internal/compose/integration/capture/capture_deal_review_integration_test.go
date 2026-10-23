@@ -395,33 +395,25 @@ func TestTheOperatorPreviewRefusesALimitOutOfBounds(t *testing.T) {
 }
 
 // readingQueue is the stage-evidence reading queue at its true boundary: it
-// records each reading the trigger asks for.
+// records each reading the trigger asks for and the insert options it asks
+// with. The queue's own uniqueness is what keeps a redelivery to one job.
 type readingQueue struct {
 	asked []compose.StageEvidenceReadArgs
+	opts  []*river.InsertOpts
 }
 
-func (q *readingQueue) EnqueueTx(_ context.Context, _ pgx.Tx, args river.JobArgs, _ *river.InsertOpts) error {
+func (q *readingQueue) EnqueueTx(_ context.Context, _ pgx.Tx, args river.JobArgs, opts *river.InsertOpts) error {
 	if reading, ok := args.(compose.StageEvidenceReadArgs); ok {
 		q.asked = append(q.asked, reading)
+		q.opts = append(q.opts, opts)
 	}
 	return nil
 }
 
-// The repair's link reaches the stage-evidence trigger as the relink event
-// it reads: a current event queues one reading of the mail against its deal,
-// a redelivery is the same reading, and the same event replayed past the
-// trigger's backlog window queues nothing.
-func TestTheRepairsLinkIsReadByTheStageEvidenceTrigger(t *testing.T) {
-	env := newCaptureEnv(t)
-	e := env.e
-	w := newDealWorld(t, e)
-	w.employee(t, "alice@acme.example", w.customer)
-	env.sync(t, mailFrom("alice@acme.example", "ev1@acme.example", "", "status"))
-	deal := w.deal(t, "Acme rollout")
-	if changed := newRepairer(e, w).run(t); changed != 1 {
-		t.Fatalf("the repair changed %d mails, want 1", changed)
-	}
-	mail := activityOf(t, e, "ev1@acme.example")
+// repairRelinkEnvelope is the relink event the repair wrote for mail, read
+// off the outbox as the relay sends it.
+func repairRelinkEnvelope(t *testing.T, e *integration.SearchEnv, mail, deal ids.UUID) kevents.Envelope {
+	t.Helper()
 	var raw []byte
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT envelope FROM event_outbox
@@ -434,27 +426,72 @@ func TestTheRepairsLinkIsReadByTheStageEvidenceTrigger(t *testing.T) {
 	if err := json.Unmarshal(raw, &envelope); err != nil {
 		t.Fatalf("decoding the repair's relink event: %v", err)
 	}
+	return envelope
+}
+
+// The repair's link reaches the stage-evidence trigger as the relink event it
+// reads, on a fixed clock. A current mail queues one reading against its deal,
+// asked unique by its arguments so a redelivery is one job. The same event
+// replayed past the backlog window queues nothing, and neither does the
+// event for a mail whose own time is past it.
+func TestTheRepairsLinkIsReadByTheStageEvidenceTrigger(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	w := newDealWorld(t, e)
+	w.employee(t, "alice@acme.example", w.customer)
+	env.sync(t, mailFrom("alice@acme.example", "ev1@acme.example", "", "status"))
+	deal := w.deal(t, "Acme rollout")
+	if changed := newRepairer(e, w).run(t); changed != 1 {
+		t.Fatalf("the repair changed %d mails, want 1", changed)
+	}
+	mail := activityOf(t, e, "ev1@acme.example")
+	envelope := repairRelinkEnvelope(t, e, mail, deal)
+	envelope.OccurredAt = captureNow
 	queue := &readingQueue{}
 	trigger := compose.NewStageEvidenceTrigger(e.Pool, compose.StageEvidenceDeals(e.Pool), compose.StageEvidenceDomains(e.Pool),
-		queue, nil, slog.Default())
+		queue, nil, slog.Default()).WithClock(func() time.Time { return captureNow })
 	for range 2 {
 		if err := trigger.HandleEvent(context.Background(), envelope); err != nil {
 			t.Fatalf("delivering the relink event: %v", err)
 		}
 	}
-	if len(queue.asked) == 0 || queue.asked[0].DealID != deal || queue.asked[0].ActivityID != mail {
-		t.Fatalf("the trigger asked for %+v, want a reading of the mail against its deal", queue.asked)
+	want := compose.StageEvidenceReadArgs{Workspace: queue.first(t).Workspace, DealID: deal, ActivityID: mail}
+	if len(queue.asked) != 2 || queue.asked[0] != want || queue.asked[1] != want {
+		t.Fatalf("the trigger asked for %+v, want the same reading of the mail against its deal twice", queue.asked)
 	}
-	if len(queue.asked) == 2 && queue.asked[0] != queue.asked[1] {
-		t.Fatalf("a redelivery asked for a different reading: %+v", queue.asked)
+	for _, opts := range queue.opts {
+		if opts == nil || !opts.UniqueOpts.ByArgs {
+			t.Fatalf("a reading was asked without unique-by-arguments options: %+v", opts)
+		}
 	}
-	old := envelope
-	old.OccurredAt = time.Now().Add(-365 * 24 * time.Hour)
+
+	stale := envelope
+	stale.OccurredAt = captureNow.Add(-8 * 24 * time.Hour)
 	queue.asked = nil
-	if err := trigger.HandleEvent(context.Background(), old); err != nil {
+	if err := trigger.HandleEvent(context.Background(), stale); err != nil {
 		t.Fatalf("delivering the replayed event: %v", err)
 	}
 	if len(queue.asked) != 0 {
-		t.Fatalf("a replayed old event queued %d readings, want none", len(queue.asked))
+		t.Fatalf("an event past the backlog window queued %d readings, want none", len(queue.asked))
 	}
+
+	// The mail's own time decides too: on a clock a month later, the fresh
+	// event for this June mail reads nothing.
+	later := captureNow.AddDate(0, 1, 0)
+	fresh := envelope
+	fresh.OccurredAt = later
+	if err := trigger.WithClock(func() time.Time { return later }).HandleEvent(context.Background(), fresh); err != nil {
+		t.Fatalf("delivering the event for old mail: %v", err)
+	}
+	if len(queue.asked) != 0 {
+		t.Fatalf("the event for mail past the backlog window queued %d readings, want none", len(queue.asked))
+	}
+}
+
+func (q *readingQueue) first(t *testing.T) compose.StageEvidenceReadArgs {
+	t.Helper()
+	if len(q.asked) == 0 {
+		t.Fatal("the trigger queued no reading of the repaired mail")
+	}
+	return q.asked[0]
 }
