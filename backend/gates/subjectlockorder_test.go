@@ -184,65 +184,141 @@ func TestTheSubjectLockIsTheFirstRowATransactionTakes(t *testing.T) {
 // counted as a lock, which is the direction that under-reports — stated rather
 // than hidden, because resolving it needs the callee's statements at the
 // caller's position and this walk has one file at a time.
+//
+// Source position is run order except in two places, and both are resolved to
+// when the code RUNS. A closure bound to a name runs where the name is called,
+// not where it is written. A deferred call runs at return, after everything
+// else in the body.
 func holdAndFirstLock(
 	fn *ast.FuncDecl, recvType, recvVar string,
 	reachesHold func(string) bool, reachesLock func(string) bool,
 ) (hold, lock token.Pos) {
-	hold, lock = token.NoPos, token.NoPos
-	mark := func(at *token.Pos, pos token.Pos) {
-		if *at == token.NoPos || pos < *at {
-			*at = pos
-		}
+	w := lockWalk{recvType: recvType, recvVar: recvVar, reachesHold: reachesHold, reachesLock: reachesLock,
+		bound: boundClosures(fn.Body), end: fn.Body.End()}
+	return w.scan(fn.Body)
+}
+
+// lockWalk finds the hold and the first lock in one body.
+type lockWalk struct {
+	recvType, recvVar string
+	reachesHold       func(string) bool
+	reachesLock       func(string) bool
+	bound             map[string]*ast.FuncLit
+	end               token.Pos
+}
+
+func earliest(at *token.Pos, pos token.Pos) {
+	if pos != token.NoPos && (*at == token.NoPos || pos < *at) {
+		*at = pos
 	}
-	ast.Inspect(fn.Body, func(node ast.Node) bool {
+}
+
+func (w lockWalk) scan(body ast.Node) (hold, lock token.Pos) {
+	hold, lock = token.NoPos, token.NoPos
+	ast.Inspect(body, func(node ast.Node) bool {
 		switch n := node.(type) {
+		case *ast.FuncLit:
+			// A bound closure is judged where it is called, below.
+			for _, lit := range w.bound {
+				if lit == n {
+					return false
+				}
+			}
+		case *ast.DeferStmt:
+			h, l := w.scan(n.Call)
+			if h != token.NoPos {
+				earliest(&hold, w.end)
+			}
+			if l != token.NoPos {
+				earliest(&lock, w.end)
+			}
+			return false
 		case *ast.CallExpr:
-			switch fun := n.Fun.(type) {
-			case *ast.SelectorExpr:
-				if subjectHolds[fun.Sel.Name] {
-					mark(&hold, n.Pos())
-					break
-				}
-				// A method on this function's own receiver, keyed as the graph
-				// keys it: s.applySignatureField reaching the hold discharges
-				// it here, at the call.
-				if base, isIdent := fun.X.(*ast.Ident); isIdent && recvVar != "" &&
-					base.Name == recvVar {
-					if reachesHold(scrubKey(recvType, fun.Sel.Name)) {
-						mark(&hold, n.Pos())
-					}
-					// And a helper that takes a row LOCKS at its call site.
-					// Without this the walk reads only the SQL a function
-					// spells itself, so moving one statement into a helper
-					// hides the ordering it decides — which is exactly how a
-					// token-then-subject inversion reached this tree.
-					if reachesLock(scrubKey(recvType, fun.Sel.Name)) {
-						mark(&lock, n.Pos())
-					}
-				}
-			case *ast.Ident:
-				if subjectHolds[fun.Name] || reachesHold(fun.Name) {
-					mark(&hold, n.Pos())
-				}
-				if reachesLock(fun.Name) {
-					mark(&lock, n.Pos())
-				}
-			}
+			w.call(n, &hold, &lock)
 		case *ast.BasicLit:
-			if n.Kind != token.STRING {
-				return true
-			}
-			text, err := strconv.Unquote(n.Value)
-			if err != nil {
-				return true
-			}
-			if mutatingStatement.MatchString(text) {
-				mark(&lock, n.Pos())
+			if spellsLock(n) {
+				earliest(&lock, n.Pos())
 			}
 		}
 		return true
 	})
 	return hold, lock
+}
+
+func (w lockWalk) call(n *ast.CallExpr, hold, lock *token.Pos) {
+	switch fun := n.Fun.(type) {
+	case *ast.SelectorExpr:
+		if subjectHolds[fun.Sel.Name] {
+			earliest(hold, n.Pos())
+			return
+		}
+		// A method on this function's own receiver, keyed as the graph keys
+		// it: s.applySignatureField reaching the hold discharges it here, at
+		// the call. And a helper that takes a row LOCKS at its call site, so
+		// moving one statement into a helper cannot hide the order it decides.
+		if base, isIdent := fun.X.(*ast.Ident); isIdent && w.recvVar != "" && base.Name == w.recvVar {
+			if w.reachesHold(scrubKey(w.recvType, fun.Sel.Name)) {
+				earliest(hold, n.Pos())
+			}
+			if w.reachesLock(scrubKey(w.recvType, fun.Sel.Name)) {
+				earliest(lock, n.Pos())
+			}
+		}
+	case *ast.Ident:
+		if lit, isBound := w.bound[fun.Name]; isBound {
+			h, l := w.scan(lit.Body)
+			if h != token.NoPos {
+				earliest(hold, n.Pos())
+			}
+			if l != token.NoPos {
+				earliest(lock, n.Pos())
+			}
+			return
+		}
+		if subjectHolds[fun.Name] || w.reachesHold(fun.Name) {
+			earliest(hold, n.Pos())
+		}
+		if w.reachesLock(fun.Name) {
+			earliest(lock, n.Pos())
+		}
+	}
+}
+
+// boundClosures are the closures a body names, `x := func…` or
+// `var x = func…`, by that name.
+func boundClosures(body *ast.BlockStmt) map[string]*ast.FuncLit {
+	bound := map[string]*ast.FuncLit{}
+	ast.Inspect(body, func(node ast.Node) bool {
+		switch n := node.(type) {
+		case *ast.AssignStmt:
+			for i, rhs := range n.Rhs {
+				lit, isLit := rhs.(*ast.FuncLit)
+				if !isLit || i >= len(n.Lhs) {
+					continue
+				}
+				if id, isIdent := n.Lhs[i].(*ast.Ident); isIdent {
+					bound[id.Name] = lit
+				}
+			}
+		case *ast.ValueSpec:
+			for i, value := range n.Values {
+				if lit, isLit := value.(*ast.FuncLit); isLit && i < len(n.Names) {
+					bound[n.Names[i].Name] = lit
+				}
+			}
+		}
+		return true
+	})
+	return bound
+}
+
+// spellsLock reports a string literal holding SQL that takes a row lock.
+func spellsLock(lit *ast.BasicLit) bool {
+	if lit.Kind != token.STRING {
+		return false
+	}
+	text, err := strconv.Unquote(lit.Value)
+	return err == nil && mutatingStatement.MatchString(text)
 }
 
 // spellsAMutatingStatement reports whether a function contains SQL that takes a
