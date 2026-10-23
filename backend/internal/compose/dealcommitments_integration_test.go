@@ -34,6 +34,8 @@ var dealWatchPerms = principal.Permissions{
 type dealWatch struct {
 	*integration.Env
 	deal, contact, claim ids.UUID
+	pipeline             ids.PipelineID
+	stage                ids.StageID
 }
 
 func seedDealWatch(t *testing.T) dealWatch {
@@ -43,26 +45,53 @@ func seedDealWatch(t *testing.T) dealWatch {
 	contact := e.SeedContact(t, "Ines Huber", &e.Rep1)
 	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
 		VALUES ('employment', $1, $2, 'manual', 'human:x')`, contact, company)
-	subject, body := "Purchase order", "We will send the purchase order by Friday."
-	message, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
+	pipeline, stage, _ := integration.DealFixture(t, e)
+	deal := e.SeedDeal(t, "Rollout", pipeline, stage, &e.Rep1)
+	e.WsExec(t, `UPDATE deal SET company_id = $2 WHERE id = $1`, deal, company)
+	w := dealWatch{Env: e, deal: deal, contact: contact, pipeline: pipeline, stage: stage}
+	w.claim = w.promiseOn(t, deal, "Purchase order", "We will send the purchase order by Friday.")
+	return w
+}
+
+// promiseOn files a message on deal and the customer's commitment read out of
+// it.
+func (w dealWatch) promiseOn(t *testing.T, deal ids.UUID, subject, body string) ids.UUID {
+	t.Helper()
+	message, _, err := w.Activities.LogActivity(w.Admin(), activities.LogActivityInput{
 		Kind: "note", Subject: &subject, Body: &body, Source: "manual",
-		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: w.contact}, {EntityType: "deal", EntityID: deal}},
 	})
 	if err != nil {
 		t.Fatalf("logging the message: %v", err)
 	}
-	claim, err := e.Contacts.RecordConversationClaim(e.Admin(), contacts.ClaimInput{
-		ContactID: ids.From[ids.ContactKind](contact), Kind: claimKindTheirs,
-		Body: "Send the purchase order", ActivityID: ids.UUID(message.Id),
-		Quote: "We will send the purchase order by Friday.", Source: "extraction",
+	claim, err := w.Contacts.RecordConversationClaim(w.Admin(), contacts.ClaimInput{
+		ContactID: ids.From[ids.ContactKind](w.contact), Kind: claimKindTheirs,
+		Body: subject, ActivityID: ids.UUID(message.Id), Quote: body, Source: "extraction",
 	})
 	if err != nil {
 		t.Fatalf("filing the commitment: %v", err)
 	}
-	pipeline, stage, _ := integration.DealFixture(t, e)
-	deal := e.SeedDeal(t, "Rollout", pipeline, stage, &e.Rep1)
-	e.WsExec(t, `UPDATE deal SET company_id = $2 WHERE id = $1`, deal, company)
-	return dealWatch{Env: e, deal: deal, contact: contact, claim: ids.UUID(claim.Id)}
+	return ids.UUID(claim.Id)
+}
+
+// A customer with two open deals: a promise read out of a message filed on one
+// deal shows on that deal only. Working at the company is no proof of which
+// deal a promise is about.
+func TestADealWatchesOnlyThePromisesFiledOnIt(t *testing.T) {
+	w := seedDealWatch(t)
+	other := w.SeedDeal(t, "CRM project", w.pipeline, w.stage, &w.Rep1)
+	w.WsExec(t, `UPDATE deal SET company_id = (SELECT company_id FROM deal WHERE id = $2) WHERE id = $1`, other, w.deal)
+	kickoff := w.promiseOn(t, other, "Kick-off", "We will attend the CRM kick-off.")
+	reader := w.As(w.Rep1, []ids.UUID{w.Team1}, dealWatchPerms)
+	for deal, want := range map[ids.UUID]ids.UUID{w.deal: w.claim, other: kickoff} {
+		got, err := newDealCommitmentHandlers(w.Pool).read(reader, ids.From[ids.DealKind](deal))
+		if err != nil {
+			t.Fatalf("reading the deal's commitments: %v", err)
+		}
+		if len(got.Data) != 1 || ids.UUID(got.Data[0].Id) != want || !got.Complete {
+			t.Errorf("deal %s watches %+v (complete=%v), want only promise %s", deal, got.Data, got.Complete, want)
+		}
+	}
 }
 
 // The deal page watches what the account's contacts committed to, with the

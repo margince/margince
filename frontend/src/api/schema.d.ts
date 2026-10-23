@@ -19426,19 +19426,17 @@ export interface paths {
         };
         /**
          * What the customer committed to that this deal waits on.
-         * @description The open commitments the contacts employed at the deal's company made to us, read
-         *     out of captured activities: overdue first, then by nearest due date, at most 25.
-         *     Each carries the quoted words and the activity they came from, so a reader can check
-         *     it, and its claim id, so a reader with `contact:update` can dismiss it
-         *     (`POST /claims/{id}/settle`).
+         * @description The open commitments the customer made to us in activities filed under this deal:
+         *     overdue first, then by nearest due date, at most 25. A promise from an activity filed
+         *     under another deal of the same company is not this deal's. Each carries the quoted
+         *     words and the activity they came from, so a reader can check it, and its claim id, so
+         *     a reader with `contact:update` can dismiss it (`POST /claims/{id}/settle`).
          *
-         *     Needs `contact:read`, `activity:read` and `relationship:read` on top of the deal
-         *     grant: each row names a contact, quotes a captured activity, and belongs to this
-         *     account through the contact's employment edge. A commitment whose contact or activity the
+         *     Needs `contact:read` and `activity:read` on top of the deal grant: each row names a
+         *     contact and quotes a captured activity. A commitment whose contact or activity the
          *     caller may not see is left out, and `complete` is then false, so the card can say it
-         *     speaks about less than the account rather than that nothing is owed. `has_more`
-         *     says more commitments exist past the 25 returned. A deal with no company has
-         *     nothing to read and answers an empty, complete list.
+         *     speaks about less than the deal rather than that nothing is owed. `has_more` says
+         *     more commitments exist past the 25 returned.
          */
         get: operations["getDealCommitments"];
         put?: never;
@@ -78564,7 +78562,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The customer's open commitments on this deal's account. */
+            /** @description The customer's open commitments filed under this deal. */
             200: {
                 headers: {
                     [name: string]: unknown;

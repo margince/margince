@@ -7533,16 +7533,16 @@ paths:
       security: [{bearerAuth: []}]
       summary: What the customer committed to that this deal waits on.
       description: |-
-        The open commitments the contacts employed at the deal's company made to us, read
-        out of captured activities: overdue first, then by nearest due date, at most 25.
-        Each carries the quoted words and the activity they came from, so a reader can check
-        it, and its claim id, so a reader with `contact:update` can dismiss it
-        (`POST /claims/{id}/settle`).
+        The open commitments the customer made to us in activities filed under this deal:
+        overdue first, then by nearest due date, at most 25. A promise from an activity filed
+        under another deal of the same company is not this deal's. Each carries the quoted
+        words and the activity they came from, so a reader can check it, and its claim id, so
+        a reader with `contact:update` can dismiss it (`POST /claims/{id}/settle`).
       parameters:
         - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
       responses:
         '200':
-          description: The customer's open commitments on this deal's account.
+          description: The customer's open commitments filed under this deal.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/DealCommitments'}
