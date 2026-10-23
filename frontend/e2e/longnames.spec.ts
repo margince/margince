@@ -185,3 +185,44 @@ test("the companies list wraps a long name in its card at 390px", async ({
   ).toBeLessThanOrEqual(0.01);
   expect(await pageOverflow(page)).toEqual([]);
 });
+
+// At the 72px floor the chip, two gaps and the pill's own inset already fill the cell.
+const NARROW_COLUMN = 100;
+
+test(`the companies list ends the archived badge in an ellipsis in a ${NARROW_COLUMN}px column`, async ({
+  page,
+}) => {
+  await page.addInitScript((width) => {
+    localStorage.setItem(
+      "margince.table.widths.v2.unit.companies",
+      JSON.stringify({ name: width }),
+    );
+  }, NARROW_COLUMN);
+  await openCompaniesWithLongNames(page, 1440);
+  const badge = page
+    .locator("tr", { hasText: ARCHIVED_NAME })
+    .locator(".avatar-row .badge");
+  await expect(badge).toBeVisible();
+  const verdict = await badge.evaluate((node) => {
+    const td = node.closest("td");
+    const label = node.querySelector(".badge-label");
+    if (!td || !label) {
+      return null;
+    }
+    const box = td.getBoundingClientRect();
+    const inset = Number.parseFloat(getComputedStyle(td).paddingRight);
+    return {
+      column: box.width,
+      past: node.getBoundingClientRect().right - (box.right - inset),
+      textOverflow: getComputedStyle(label).textOverflow,
+      cut: label.scrollWidth > label.clientWidth,
+    };
+  });
+  expect(verdict?.column, "the stored width holds").toBeCloseTo(
+    NARROW_COLUMN,
+    0,
+  );
+  expect(verdict?.past, "the badge inside its cell").toBeLessThanOrEqual(0.5);
+  expect(verdict?.textOverflow).toBe("ellipsis");
+  expect(verdict?.cut, "the badge label ends in an ellipsis").toBe(true);
+});
