@@ -226,10 +226,9 @@ func TestEveryTimestampArgumentDocumentsItsOffset(t *testing.T) {
 	}
 }
 
-// The rendered input schema of every core tool, generated members included:
-// the source census above reads only hand-written schema(…) literals, and a
-// struct-derived argument such as log_activity's follow_up_task.due_at is
-// invisible to it.
+// The rendered input schema of every core tool, generated members included.
+// The source census above reads only hand-written schema(…) literals. A
+// struct-derived argument such as follow_up_task.due_at is invisible to it.
 func TestEveryRenderedTimestampArgumentCarriesTheRule(t *testing.T) {
 	checked := 0
 	for name, tool := range idProbeDispatcher(t).registry.tools {
@@ -277,6 +276,7 @@ func TestActivityWritersSayWhatAMissingTimeDoes(t *testing.T) {
 	}
 }
 
+//craft:ignore naked-any a decoded JSON Schema document is any-shaped; a typed decode would drop the members this walk must see
 func dateTimeMembersWithout(node any, rule, path string) []string {
 	var missing []string
 	switch value := node.(type) {
@@ -295,6 +295,7 @@ func dateTimeMembersWithout(node any, rule, path string) []string {
 	return missing
 }
 
+//craft:ignore naked-any a decoded JSON Schema document is any-shaped; a typed decode would drop the members this walk must see
 func countDateTimes(node any) int {
 	count := 0
 	switch value := node.(type) {

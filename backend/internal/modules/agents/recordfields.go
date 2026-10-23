@@ -217,27 +217,26 @@ func rejectUnknownFields(shapes writeShapes, recordType string, fields json.RawM
 	}
 }
 
+// The example is UTC: a model copies an example's offset, and a fixed one
+// filed day-only entries at noon in a zone nobody named. The rule also sits
+// on required arguments, so it never says to leave a value out.
+const timestampRule = "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset."
+
 // timestampNote is appended to every date-time argument the tool surface
 // takes. "format": "date-time" is RFC 3339, which REQUIRES a zone offset — but
 // a model reading the bare format keyword writes a local wall-clock time, and
 // the decoder then refuses a value that looks correct. Two failed calls were
 // spent on exactly that before the reason was visible, so the requirement is
 // stated where it is read rather than left implied by a keyword.
-//
-// The example is UTC: a model copies an example's offset, and a fixed one
-// filed day-only entries at noon in a zone nobody named. The note also sits
-// on required arguments, so it never says to leave a value out.
-const timestampRule = "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset."
-
 const timestampNote = `,"description":"` + timestampRule + `"`
 
 // pastDayNeedsATime is the activity-write sentence for a day named without
 // an hour: the server stores the call's own moment for an omitted occurred_at.
 const pastDayNeedsATime = " Omitted, occurred_at means now; ask the time of a past day named without one."
 
-// argumentSchemaFor is schemaFor for a tool ARGUMENT: every date-time member
-// it derives carries timestampRule too, so a generated nested timestamp is
-// documented like a hand-written one. A result schema has no use for it.
+// argumentSchemaFor is schemaFor for a tool ARGUMENT. Every date-time member
+// it derives carries timestampRule, like a hand-written one. A result schema
+// has no use for it.
 func argumentSchemaFor[T any]() json.RawMessage {
 	return describedSchema[T]("")
 }

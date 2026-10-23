@@ -67,8 +67,8 @@ type OutcomeDraft = {
 
 /**
  * The one read the draft was seeded from. The save is checked against its
- * version, so a meeting that changed while the dialog was open is refused
- * instead of taking words written against the older copy.
+ * version. A meeting that changed while the dialog was open is refused, so
+ * words written against the older copy are not stored on the newer one.
  */
 type OutcomeSeed = {
   occurredAt: string;

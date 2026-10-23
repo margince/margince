@@ -137,10 +137,8 @@ function wallClockMs(utcMs: number, zone: string): number {
 }
 
 // The offset (ms) `zone` sits at relative to UTC at the instant `utcMs`
-// names — positive east of UTC, negative west. Derived by re-reading the
-// instant's wall clock through the zone and comparing it back against UTC,
-// the standard technique for converting a zoned wall clock to an instant
-// without a timezone-database library.
+// names: positive east of UTC, negative west. It is the zone's wall clock
+// read back against UTC, which needs no timezone-database library.
 export function zoneOffsetMs(utcMs: number, zone: string): number {
   // The wall clock is read to the second, so the instant is too: compared
   // with its milliseconds, an instant 1ms past a second read 1ms off UTC.
@@ -258,14 +256,12 @@ function wallClockOfDay(dateOnly: string, timeOfDayMs: number): number {
  * `instant`: a meeting moved to another day keeps its time of day there.
  *
  * On a DST switch day a wall time can be missing or happen twice:
+ * - missing (02:30 in Berlin on 29 March 2026): the first instant after the
+ *   gap, so the meeting lands at 03:00;
+ * - twice (02:30 in Berlin on 25 October 2026): the earlier one, on summer time.
  *
- * - missing (spring forward, 02:30 in Berlin on 29 March 2026): the first
- *   instant after the gap, so the meeting lands at 03:00;
- * - twice (fall back, 02:30 in Berlin on 25 October 2026): the earlier of the
- *   two, the one still on summer time.
- *
- * The source's milliseconds are kept: the wall clock is read to the second,
- * and a stored start must not lose its fraction.
+ * The source's milliseconds are kept, because the wall clock is read to the
+ * second and a stored start must not lose its fraction.
  */
 export function sameWallClockOnDay(
   instant: string,
@@ -279,8 +275,8 @@ export function sameWallClockOnDay(
   const fraction = sourceMs - Math.floor(sourceMs / 1000) * 1000;
   const sourceWall = wallClockMs(sourceMs, zone);
   const wanted = wallClockOfDay(day, ((sourceWall % DAY_MS) + DAY_MS) % DAY_MS);
-  // The offsets a day either side of the wanted time: on a switch day these
-  // are the two in force, and on any other day they agree.
+  // The offsets a day either side of the wanted time. On a switch day they
+  // are the two in force; on any other day they agree.
   const offsets = [
     zoneOffsetMs(wanted - DAY_MS, zone),
     zoneOffsetMs(wanted + DAY_MS, zone),

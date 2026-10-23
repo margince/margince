@@ -74,8 +74,8 @@ const CAPTURED_MEETING = {
   kind: "meeting",
   subject: "Discovery call with Turbinenbau",
   body: "Organizer: greta@turbinenbau.example\nAttendees: lars@gradion.com",
-  // 21:00 in Bangkok and 09:00 in New York: noon in neither zone, so a save
-  // that wrote the zone's noon cannot pass for one that kept the start.
+  // 21:00 in Bangkok and 09:00 in New York, noon in neither zone. A save that
+  // wrote the zone's noon cannot pass for one that kept the start.
   occurred_at: "2026-01-15T14:00:00Z",
   meeting_status: "booked",
   version: 3,
@@ -298,8 +298,8 @@ function renderUnderAToastRegion(
 }
 
 // Marking a meeting held must not move its start. The dialog sends a start
-// only when the reader moved the day, and then keeps the time of day the
-// meeting had in the record zone.
+// only when the reader moved the day. It then keeps the meeting's time of day
+// in the record zone.
 describe("the start a meeting outcome saves", () => {
   async function openAndSave(
     zone: string,
