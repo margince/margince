@@ -5131,6 +5131,8 @@ export const vi = {
   "brief.agenda.tasks_other": "{count} công việc",
   "brief.agenda.decisions_one": "{count} quyết định",
   "brief.agenda.decisions_other": "{count} quyết định",
+  "brief.agenda.relationships_one": "{count} liên hệ đã im lặng",
+  "brief.agenda.relationships_other": "{count} liên hệ đã im lặng",
   "brief.agenda.system_one": "{count} sự cố hệ thống",
   "brief.agenda.system_other": "{count} sự cố hệ thống",
   "worklist.source.failed_approval": "Đã duyệt nhưng chưa thực hiện",

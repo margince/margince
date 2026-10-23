@@ -5250,6 +5250,8 @@ export const de = {
   "brief.agenda.tasks_other": "{count} Aufgaben",
   "brief.agenda.decisions_one": "{count} Entscheidung",
   "brief.agenda.decisions_other": "{count} Entscheidungen",
+  "brief.agenda.relationships_one": "{count} ruhende Beziehung",
+  "brief.agenda.relationships_other": "{count} ruhende Beziehungen",
   "brief.agenda.system_one": "{count} Systemproblem",
   "brief.agenda.system_other": "{count} Systemprobleme",
   "worklist.source.failed_approval": "Freigegeben, aber nicht ausgeführt",
