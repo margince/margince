@@ -194,6 +194,9 @@ func TestTheRecheckClosesLeadAndCompanyPairsTheRuleNoLongerFiles(t *testing.T) {
 		lead("Alex Johnson", "alex.johnson@leads.test"), lead("Alex Meyer", "alex.meyer@leads.test"), 0.88)
 	consumerMailLead := e.fileOldRulePair(ctx, t, entityLead,
 		lead("Alex Johnson", "alex.johnson@gmail.com"), lead("Alex Meyer", "alex.meyer@gmail.com"), 0.88)
+	// Filed at 1.0 when both leads named one company; now they share only a name.
+	sameNameLead := e.fileOldRulePair(ctx, t, entityLead,
+		lead("Mia Schulz", "mia@first.example"), lead("Mia Schulz", "mia@second.example"), 1)
 	staleCompany := e.fileOldRulePair(ctx, t, entityCompany, company("Northwind Traders"), company("Contoso Pharma"), 0.8)
 	keptCompany := e.fileOldRulePair(ctx, t, entityCompany, company("Fabrikam GmbH"), company("Fabrikam AG"), 0.9)
 
@@ -204,6 +207,7 @@ func TestTheRecheckClosesLeadAndCompanyPairsTheRuleNoLongerFiles(t *testing.T) {
 	}{
 		"lead pair with different family names": {staleLead, true},
 		"lead pair sharing only a mail host":    {consumerMailLead, true},
+		"lead pair sharing only a name":         {sameNameLead, true},
 		"company pair sharing no word":          {staleCompany, true},
 		"company pair with one brand":           {keptCompany, false},
 	} {

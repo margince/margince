@@ -156,9 +156,10 @@ func lockOpenPairs(ctx context.Context, tx pgx.Tx, after ids.UUID) ([]openPair, 
 // stillFiled answers whether today's rule would file this pair, and its score
 // now. An identity conflict (a shared phone, a domain two companies claim) is a
 // fact rather than a score and always stands. So does a pair with an end this
-// pass cannot read.
+// pass cannot read. Leads have no identity-conflict lane, so a lead pair at 1.0
+// is a fuzzy score like any other and is scored again.
 func stillFiled(ctx context.Context, tx pgx.Tx, consumerMail *freemail.Matcher, pair openPair) (bool, float64, error) {
-	if pair.confidence >= identityConflictConfidence {
+	if pair.confidence >= identityConflictConfidence && pair.entityType != entityLead {
 		return true, pair.confidence, nil
 	}
 	switch pair.entityType {
@@ -297,8 +298,9 @@ func leadPairStillFiled(ctx context.Context, tx pgx.Tx, consumerMail *freemail.M
 	if err != nil || !found {
 		return true, pair.confidence, err
 	}
+	// fuzzyLead is the only lead filer, and it has no same-name lane.
 	score := max(leadScore(left, right, consumerMail), leadScore(right, left, consumerMail))
-	return score >= dedupeReviewThreshold || bothNamesFold(left.name, right.name), score, nil
+	return score >= dedupeReviewThreshold, score, nil
 }
 
 // leadScore is leadConfidence with one side as the lead being written and the
