@@ -15,6 +15,9 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -173,6 +176,64 @@ func TestAGuessedParticipantGrantsNothing(t *testing.T) {
 	check("before the repair")
 	runGuessedMailboxTask(ctx, t, e, guessedMailboxSeatsDataTask())
 	check("after the repair")
+}
+
+// legacyPair is legacy mail between seat and contact under one stamp, with the
+// two participant rows the participant backfill wrote.
+func legacyPair(t *testing.T, e *integration.Env, conn *pgx.Conn, sourceID, stamp string, seat, contact ids.UUID) ids.UUID {
+	t.Helper()
+	id := seedLegacyActivity(t, e, sourceID, stamp, "inbound", "pat@counterparty.test")
+	if _, err := conn.Exec(context.Background(), `INSERT INTO activity_participant (activity_id, user_id, role) VALUES ($1, $2, 'to')`, id, seat); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := conn.Exec(context.Background(), `INSERT INTO activity_participant (activity_id, contact_id, role) VALUES ($1, $2, 'from')`, id, contact); err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
+// The readers that ask whether a seat was on a message agree with the content
+// gate: a participant nothing proves is not presence.
+func TestAGuessedParticipantIsNoEvidenceOfPresence(t *testing.T) {
+	e := integration.Setup(t)
+	conn := integration.OwnerConn(t)
+	contact := e.SeedContact(t, "Pat Counterparty", &e.Rep1)
+	if _, err := conn.Exec(context.Background(), `UPDATE contact SET visibility = 'owner' WHERE id = $1`, contact); err != nil {
+		t.Fatal(err)
+	}
+	guessed := legacyPair(t, e, conn, "gm-presence-guessed", "connector:gmail", e.Rep1, contact)
+	stamped := legacyPair(t, e, conn, "gm-presence-stamped", "connector:gmail:"+e.Rep1.String(), e.Rep1, contact)
+	seat := mailboxOwnerCtx(e, e.Rep1)
+
+	for name, c := range map[string]struct {
+		activity ids.UUID
+		want     bool
+	}{"guessed": {guessed, false}, "stamped": {stamped, true}} {
+		limitToParticipants(t, conn, c.activity)
+		var holds, minable bool
+		if err := database.WithWorkspaceTx(seat, e.Pool, func(tx pgx.Tx) error {
+			var err error
+			if holds, err = capture.SeatHoldsActivityTx(seat, tx, ids.From[ids.ActivityKind](c.activity)); err != nil {
+				return err
+			}
+			return tx.QueryRow(context.Background(), `SELECT `+contacts.SignatureSourceEligible("p", "a")+`
+				FROM contact p, activity a WHERE p.id = $1 AND a.id = $2`, contact, c.activity).Scan(&minable)
+		}); err != nil {
+			t.Fatal(err)
+		}
+		if holds != c.want || minable != c.want {
+			t.Errorf("%s mail: seat holds it = %v, signature may be read = %v, want %v", name, holds, minable, c.want)
+		}
+		if _, err := conn.Exec(context.Background(), `UPDATE activity SET audience = 'workspace' WHERE id = $1`, c.activity); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error { return search.RebuildEdges(e.Admin(), tx) }); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.WsCount(t, `SELECT count_total FROM graph_interaction_edge WHERE user_id = $1 AND contact_id = $2`, e.Rep1, contact); got != 1 {
+		t.Errorf("the interaction edge counts %d messages, want only the stamped one", got)
+	}
 }
 
 // The repair takes off only the owner nothing proves. A seat whose mailbox the
