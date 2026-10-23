@@ -143,7 +143,7 @@ func classifyWaiting(waiting WaitingCustomer, asOf time.Time) ranked {
 		// thread and a threadless row can perform neither.
 		threaded: waiting.Threaded,
 		// An unreadable owner must not be described as unassigned.
-		ownerRef: waitingOwner(waiting.OwnerID, waiting.OwnerKnown, waiting.DirectRecipients),
+		ownerRef: waitingOwner(waiting.OwnerID, waiting.OwnerKnown),
 		// And WHO it is about, which the subject above may have given to a deal.
 		// The decay suppressor reads this rather than the subject, so a contact
 		// whose wait is filed under a deal is still recognised as answered.

@@ -101,7 +101,8 @@ func TestSharedMailIdentityMustResolveBeforeItAssignsPersonalWork(t *testing.T) 
 	check(first, "mine", ids.Nil, 1)
 	check(second, "mine", ids.Nil, 0)
 	check(second, "all", e.Rep1, 1)
-	// Two independent To addresses still name two seats, unlike one shared address.
+	// Two seats in the To line make no automatic duty for either, and no
+	// shared one: the mail stays on its record until somebody adopts it.
 	var secondAddress string
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), "SELECT email FROM app_user WHERE id=$1", e.Rep2).Scan(&secondAddress)
@@ -115,26 +116,29 @@ func TestSharedMailIdentityMustResolveBeforeItAssignsPersonalWork(t *testing.T) 
 	if _, err := e.Activities.SetOwedVerdict(first, ids.UUID(other.Id), activities.OwedVerdictAsksUs, "fixture", at); err != nil {
 		t.Fatal(err)
 	}
-	check(first, "mine", ids.Nil, 2)
-	check(second, "mine", ids.Nil, 1)
-	check(first, "all", e.Rep2, 1)
+	check(first, "mine", ids.Nil, 1)
+	check(second, "mine", ids.Nil, 0)
+	check(first, "all", e.Rep2, 0)
 	page, err := feed.Worklist(first, "all", "all", ids.Nil, 100, "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	found := false
 	for _, row := range page.Queue {
-		if row.Id != other.Id.String() {
-			continue
-		}
-		found = true
-		if row.Owner == nil || row.Owner.Kind != "shared" || row.Owner.Users == nil || len(*row.Owner.Users) != 2 {
-			t.Fatalf("multiple direct recipients lost shared ownership: %+v", row.Owner)
+		if row.Id == other.Id.String() {
+			t.Fatalf("a mail addressed to two seats became team work: %+v", row.Owner)
 		}
 	}
-	if !found {
-		t.Fatal("shared request disappeared from Team monitoring")
+	// One explicit adoption makes one owner.
+	adopted := ids.From[ids.UserKind](e.Rep2)
+	sourceMail := ids.UUID(other.Id)
+	taskSubject := "Send the plan"
+	if _, _, err := e.Activities.LogActivity(second, activities.LogActivityInput{
+		Kind: "task", Subject: &taskSubject, Source: "manual", AssigneeID: &adopted, SourceActivityID: &sourceMail, DueAt: &at,
+		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: contact}},
+	}); err != nil {
+		t.Fatal(err)
 	}
+	check(second, "mine", ids.Nil, 1)
 	check(first, "unassigned", ids.Nil, 0)
 }
 

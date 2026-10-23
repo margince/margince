@@ -355,6 +355,9 @@ func (s *Store) scanWaitingReplies(ctx context.Context, asOf time.Time, before W
 			if err != nil {
 				return err
 			}
+			if ambiguouslyAddressed(row) {
+				continue
+			}
 			waiting = append(waiting, waitingReplyForOwner(row, owner))
 		}
 		return rows.Err()

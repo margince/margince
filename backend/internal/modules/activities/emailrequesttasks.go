@@ -24,13 +24,14 @@ const EmailRequestTaskSource = provenance.EmailRequestSource
 
 const automaticRequestHorizonDays = 14
 
-// capture_import proves mailbox delivery, not who was addressed. Only parsed
-// recipient addresses establish a direct recipient before the waiting scan's bound.
+// emailRequestAssigneeSQL is the reminder's assignee: the mail's sole
+// directly addressed seat (soleDirectSeatSQL), the decision the waiting queue
+// reads, when that seat's own mailbox delivered it. capture_import proves
+// delivery, not who was addressed, so it only confirms the seat.
 func emailRequestAssigneeSQL(identities string) string {
-	return `SELECT min(u.id::text)::uuid AS user_id FROM capture_import ci
+	return `SELECT DISTINCT u.id AS user_id FROM capture_import ci
       JOIN (SELECT id AS owner_id, app_user.* FROM app_user) u ON u.id = ci.user_id AND %s
-      WHERE ci.activity_id = a.id AND ` + strings.ReplaceAll(directMailRecipientSQL("a", mailSeatAddressesSQL(identities, "u.id")), "%", "%%") + `
-      HAVING count(DISTINCT u.id) = 1`
+      WHERE ci.activity_id = a.id AND u.id = ` + strings.ReplaceAll(soleDirectSeatSQL(identities), "%", "%%")
 }
 
 // CaptureEmailRequests reconciles recent confirmed requests into undated tasks

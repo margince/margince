@@ -45,8 +45,8 @@ var sourceOwnerAnswers = map[crmcontracts.WorklistItemSource]ownerAnswers{
 	// The deal's owner, attached after classification.
 	crmcontracts.WorklistItemSourceBriefItem:  answers(ownerFromTheDeal),
 	crmcontracts.WorklistItemSourceDealAtRisk: answers(ownerFromTheDeal),
-	// The owning record, the direct recipients, or withheld.
-	crmcontracts.WorklistItemSourceCustomerWaiting: answers(ownerNamed, ownerShared, ownerNobody, ownerUnreadable),
+	// The sole addressed seat or the owning record, nobody, or withheld.
+	crmcontracts.WorklistItemSourceCustomerWaiting: answers(ownerNamed, ownerNobody, ownerUnreadable),
 	// A promise read for its promiser; keepUnowned places it.
 	crmcontracts.WorklistItemSourceConversationClaim: answers(ownerNobody),
 	// Reads bound to the acting human inside the owning module.
@@ -63,7 +63,7 @@ var sourceOwnerAnswers = map[crmcontracts.WorklistItemSource]ownerAnswers{
 	crmcontracts.WorklistItemSourceAiWorkHealth:  answers(ownerNobody),
 	crmcontracts.WorklistItemSourceAutomationRun: answers(ownerNobody),
 	// A fold carries its members' common answer, or none when they differ.
-	crmcontracts.WorklistItemSourceBatch: answers(ownerUnstated, ownerNamed, ownerShared, ownerNobody, ownerTheReader, ownerFromTheDeal, ownerUnreadable),
+	crmcontracts.WorklistItemSourceBatch: answers(ownerUnstated, ownerNamed, ownerNobody, ownerTheReader, ownerFromTheDeal, ownerUnreadable),
 }
 
 // ownerAnswers is the set of owner kinds one source may state.
