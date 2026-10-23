@@ -100,11 +100,11 @@ const (
 	// change the record, so the button is honest rather than a 403 waiting to
 	// happen.
 	ReasonNotWritableByCaller Reason = "not_writable_by_caller"
-	// ReasonLaterCompanyChange: a technical lookup's company or facts were
+	// ReasonLaterCompanyChange means a technical lookup's company or facts were
 	// written after it, a same-value refresh included. Its snapshot no longer
 	// describes the rows, so putting it back would overwrite that later work.
 	ReasonLaterCompanyChange Reason = "later_company_change"
-	// ReasonNoRestoreSnapshot: a technical lookup recorded before receipts
+	// ReasonNoRestoreSnapshot means a technical lookup recorded before receipts
 	// kept the rows it replaced. No earlier value is invented for it.
 	ReasonNoRestoreSnapshot Reason = "no_restore_snapshot"
 )
