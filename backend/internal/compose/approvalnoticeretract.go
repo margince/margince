@@ -99,18 +99,3 @@ func (r *ApprovalNoticeRetract) retract(ctx context.Context, id ids.UUID) (int64
 	}
 	return taken, err
 }
-
-// retractCopy takes back one member's copy of a decision still pending for
-// somebody else.
-func (r *ApprovalNoticeRetract) retractCopy(ctx context.Context, id ids.UUID) (int64, error) {
-	var taken int64
-	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
-		var err error
-		taken, err = r.notices.RetractCopy(ctx, tx, id)
-		if err != nil {
-			return fmt.Errorf("approval notice retract: %w", err)
-		}
-		return nil
-	})
-	return taken, err
-}

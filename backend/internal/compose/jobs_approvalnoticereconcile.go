@@ -6,6 +6,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -123,13 +124,33 @@ func (w *approvalNoticeReconcileWorker) reconcilePage(ctx context.Context, after
 		if !pending[held.Approval] || asked[approvals.AskedPair{Approval: held.Approval, Recipient: held.Recipient}] {
 			continue
 		}
-		count, err := w.retract.retractCopy(ctx, held.ID)
+		count, err := w.retractUnasked(ctx, held)
 		if err != nil {
 			return ids.Nil, retracted, err
 		}
 		retracted += count
 	}
 	return page.AfterID, retracted, nil
+}
+
+// retractUnasked takes a pending approval's copy back from its recipient, asked
+// again under the approval's lock in the same transaction. A request handed back
+// to this recipient since the page was read keeps its copy.
+func (w *approvalNoticeReconcileWorker) retractUnasked(ctx context.Context, held notices.OutstandingApprovalNotice) (int64, error) {
+	pair := approvals.AskedPair{Approval: held.Approval, Recipient: held.Recipient}
+	var taken int64
+	err := w.db.Tx(ctx, func(tx pgx.Tx) error {
+		asked, err := w.approvals.StillAskedOf(ctx, tx, []approvals.AskedPair{pair})
+		if err != nil || asked[pair] {
+			return err
+		}
+		taken, err = w.notices.RetractCopy(ctx, tx, held.ID)
+		return err
+	})
+	if err != nil {
+		return 0, fmt.Errorf("approval notice reconcile: %w", err)
+	}
+	return taken, nil
 }
 
 func askedPairs(copies []notices.OutstandingApprovalNotice) []approvals.AskedPair {
