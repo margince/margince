@@ -18,7 +18,6 @@ import {
   reviewWork,
   sellerWork,
 } from "./worklist.destinations";
-import { QuietDismissAll } from "./worklist.dismissall";
 import { TeamExceptionsPanel } from "./worklist.exceptions";
 import { HandledForYouPanel } from "./worklist.handled";
 import { WorklistHeader } from "./worklist.header";
@@ -198,7 +197,6 @@ export function WorklistBody({
           was never read. */}
           <DayUnread day={day} />
           <WorklistBulkBar selection={selection} />
-          {filter === "relationships" && <QuietDismissAll queue={queue} />}
           {queue.length === 0 ? (
             // One line, not a panel. No card is drawn to report a zero.
             //

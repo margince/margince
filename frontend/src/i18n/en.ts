@@ -15695,7 +15695,6 @@ export const en = {
   "worklist.filter.meetings": "Meetings",
   "worklist.filter.tasks": "Tasks",
   "worklist.filter.decisions": "Approvals",
-  "worklist.filter.relationships": "Quiet relationships",
   "worklist.filter.system": "System",
   "worklist.filter.linked.urgent":
     "Showing only urgent items: someone waiting, or a commitment about to break.",
@@ -15927,14 +15926,6 @@ export const en = {
   "worklist.verb.dismissUndo": "Undo",
   "worklist.verb.dismissFailed": "Contact was not set aside. Retry.",
   "worklist.verb.dismissUndoFailed": "Contact was not restored. Retry.",
-  "worklist.verb.stopFollowing": "Stop following",
-  "contact.follow.stopped": "You stopped following this contact.",
-  "contact.follow.setAside": "You set this contact aside until {date}.",
-  "contact.follow.resume": "Resume following",
-  "worklist.verb.stopped": "No longer following this contact",
-  "worklist.verb.dismissAll": "Dismiss all shown",
-  "worklist.verb.dismissedAll": "Set aside for a month",
-  "worklist.verb.dismissAllFailed": "The contacts were not set aside. Retry.",
   "worklist.verb.completeUndo": "Undo",
   "worklist.verb.completeUndoFailed": "Task was not reopened. Retry.",
   // The frame states the fact and the source follows it, rather than the

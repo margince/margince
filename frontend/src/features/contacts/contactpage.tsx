@@ -21,7 +21,6 @@ import { ContactActions, useActivityGate } from "./contactactions";
 import { ArchivedContactPage } from "./contactarchived";
 import { useConsentGuard } from "./contactconsentpanel";
 import { ContactResearchDrawer } from "./contactdrawers";
-import { ContactFollowState } from "./contactfollowstate";
 import { ContactOpening } from "./contactopening";
 import { ContactOverview } from "./contactoverview";
 import { ContactRail } from "./contactrail";
@@ -254,7 +253,6 @@ export function ContactPageV2({
             />
           }
         >
-          {tab === "overview" && <ContactFollowState contactId={id} />}
           {tab === "overview" && (
             <ContactOverview
               view={view.data}
