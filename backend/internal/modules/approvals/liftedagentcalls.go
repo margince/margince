@@ -4,9 +4,9 @@
 package approvals
 
 // An agent on a colleague's passport now runs what used to wait for a human. The
-// approvals such an agent staged before that rule still wait, and the agent's
-// retry has already run the call, so approving one later would run it again.
-// These close them.
+// approvals such an agent staged before that rule still wait. The agent's retry
+// has already run the call, so approving one later would run it again. These
+// close them.
 
 import (
 	"context"
