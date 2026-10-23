@@ -1865,6 +1865,10 @@ export const de = {
     "Du hast keine Berechtigung, diese Felder zu ändern.",
   "history.undo.edgeRelinkUnsupported":
     "Eine entfernte Verknüpfung lässt sich nicht rückgängig machen. Füge die Verknüpfung auf diesem Datensatz erneut hinzu.",
+  "history.undo.laterCompanyChange":
+    "Die Firma oder ihre Angaben haben sich nach dieser Abfrage geändert. Ein Rückgängigmachen würde diese spätere Änderung überschreiben.",
+  "history.undo.noRestoreSnapshot":
+    "Diese Abfrage wurde gespeichert, bevor die früheren Angaben aufbewahrt wurden. Sie lässt sich nicht rückgängig machen.",
   "history.reversal.collapsed":
     "Änderung von {actor}, rückgängig gemacht von {undoer}",
   "history.reversal.collapsedSelf":

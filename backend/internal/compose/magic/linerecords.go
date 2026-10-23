@@ -176,6 +176,9 @@ func changesOf(e entry) []crmcontracts.MagicFieldChange {
 	if bulkActions[e.Action] {
 		return []crmcontracts.MagicFieldChange{}
 	}
+	if changes := technicalFieldChanges(e); len(changes) > 0 {
+		return changes
+	}
 	return fieldChanges(e.Before, e.After)
 }
 

@@ -115,7 +115,14 @@ func recordVersion(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUI
 // reversal path takes it before it reads the audit row at all: anything that
 // returns a record is a read, and a refusal that distinguishes a hidden record
 // from an absent one has disclosed the record.
+//
+// The object grant comes first: row scope alone admits a seat that may read
+// no record of this type, and the reason it would then be refused with tells
+// it the change exists.
 func recordIsVisibleToCaller(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID) error {
+	if err := auth.Require(ctx, entityType, principal.ActionRead); err != nil {
+		return err
+	}
 	if entityType == entityTypeActivity {
 		return auth.EnsureActivityContentVisible(ctx, tx, id)
 	}

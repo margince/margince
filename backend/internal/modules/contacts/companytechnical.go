@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"time"
 
@@ -191,7 +192,11 @@ func (s *Store) ApplyTechnicalEnrichmentTx(
 	// The target is a KNOWN row; row-scope is re-checked here so a leaked company
 	// id buys nothing (existence-hiding 404). LIVE, because a scheduled run
 	// reaches this with no human in the loop to notice an archived company.
-	if err := auth.EnsureWritableLive(ctx, tx, "company", in.CompanyID.UUID); err != nil {
+	//
+	// HELD, not only probed: an undo of an earlier lookup holds the company
+	// while it compares and rewrites these facts, and a lookup landing in
+	// between would be overwritten by it.
+	if err := auth.HoldWritableLive(ctx, tx, "company", in.CompanyID.UUID); err != nil {
 		return err
 	}
 	fields := reconciledFields(in.Completed)
@@ -199,6 +204,10 @@ func (s *Store) ApplyTechnicalEnrichmentTx(
 		// Every lane failed. Nothing is authoritative, so nothing changes —
 		// and this is not an error: the next pass asks again.
 		return nil
+	}
+	before, err := readTechnicalFactRows(ctx, tx, in.CompanyID, fields)
+	if err != nil {
+		return err
 	}
 	held, err := readTechnicalFacts(ctx, tx, in.CompanyID, fields)
 	if err != nil {
@@ -229,7 +238,15 @@ func (s *Store) ApplyTechnicalEnrichmentTx(
 			}
 		}
 	}
-	return s.auditTechnicalEnrichment(ctx, tx, in, written, removed, changes)
+	var restore map[string]any
+	if len(changes) > 0 {
+		after, err := readTechnicalFactRows(ctx, tx, in.CompanyID, fields)
+		if err != nil {
+			return err
+		}
+		restore = technicalRestoreSnapshot(fields, before, after)
+	}
+	return s.auditTechnicalEnrichment(ctx, tx, in, written, removed, changes, restore)
 }
 
 // auditTechnicalEnrichment commits the audit row and the paired outbox event.
@@ -243,7 +260,7 @@ func (s *Store) ApplyTechnicalEnrichmentTx(
 // moving to Microsoft 365 readable as a move rather than as an arrival.
 func (s *Store) auditTechnicalEnrichment(
 	ctx context.Context, tx pgx.Tx, in TechnicalEnrichment,
-	written, removed []map[string]any, changes []TechnicalChange,
+	written, removed []map[string]any, changes []TechnicalChange, restore map[string]any,
 ) error {
 	lanes := make([]string, 0, len(in.Completed))
 	for _, lane := range in.Completed {
@@ -251,8 +268,11 @@ func (s *Store) auditTechnicalEnrichment(
 	}
 	delta := map[string]any{
 		"written": written, "removed": removed,
-		"lanes": lanes, "changes": len(changes),
+		"lanes": lanes, "changes": len(changes), "field_changes": technicalReceiptChanges(changes),
 	}
+	// Only a lookup that changed something can be taken back, so only it
+	// carries the rows to take it back with.
+	maps.Copy(delta, restore)
 	auditID, err := storekit.AuditEventWithEvidence(ctx, tx, "update", "company", in.CompanyID.UUID,
 		nil, map[string]any{
 			auditKeySource: companySourceTechnical,

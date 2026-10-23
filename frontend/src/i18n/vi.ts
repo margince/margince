@@ -1814,6 +1814,10 @@ export const vi = {
   "history.undo.notWritableByCaller": "Bạn không có quyền ghi các trường này.",
   "history.undo.edgeRelinkUnsupported":
     "Không thể khôi phục liên kết đã gỡ bằng hoàn tác. Thêm lại liên kết trên hồ sơ này.",
+  "history.undo.laterCompanyChange":
+    "Công ty hoặc dữ kiện của công ty đã thay đổi sau lần tra cứu này, nên hoàn tác sẽ ghi đè thay đổi sau đó.",
+  "history.undo.noRestoreSnapshot":
+    "Lần tra cứu này được ghi lại trước khi các dữ kiện cũ được lưu giữ, nên không thể hoàn tác.",
   "history.reversal.collapsed": "Thay đổi của {actor}, {undoer} đã hoàn tác",
   "history.reversal.collapsedSelf":
     "{actor} đã hoàn tác thay đổi của chính mình",
