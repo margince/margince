@@ -25,8 +25,8 @@ import (
 // `IN (SELECT id FROM picked)` from reaching the next claim's lock clause in the same file.
 const claimSubqueryBody = `(?:[^()]|\((?:[^()]|\([^()]*\))*\))*?`
 
-// claimedByInSubquery matches an IN or = ANY subquery that locks the rows it picks, in any
-// spelling of the lock clause.
+// claimedByInSubquery matches an `IN` or `= ANY` subquery that locks the rows it picks, in
+// any spelling of the lock clause.
 var claimedByInSubquery = regexp.MustCompile(`(?is)(?:\bIN|=\s*ANY)\s*\(\s*SELECT` + claimSubqueryBody +
 	`FOR\s+(?:NO\s+KEY\s+)?UPDATE(?:\s+OF\s+[\w\s,.]+?)?\s+SKIP\s+LOCKED\s*\)`)
 

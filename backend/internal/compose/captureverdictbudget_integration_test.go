@@ -129,8 +129,8 @@ func (b *unreadableVerdictBrain) Complete(context.Context, model.Request) (model
 }
 
 // A model that never produces a usable answer still spends the cap. Counting
-// only the answered senders would let a failing model run the pass over every
-// sender that is due, and a claim of eight would run past a cap of three.
+// only answered senders would let a failing model run the pass over every
+// sender that is due. A claim of eight would also run past a cap of three.
 func TestAFailingModelStillSpendsTheVerdictPassCap(t *testing.T) {
 	e := integration.Setup(t)
 	const passCap = 3
