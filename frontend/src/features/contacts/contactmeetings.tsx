@@ -1,7 +1,6 @@
 import { Link } from "lucide-react";
 import { type Ref, useRef, useState } from "react";
 import type { components } from "../../api/schema";
-import { ActionRow } from "../../design-system/actionrow";
 import { Badge, Button, type ButtonVariant } from "../../design-system/atoms";
 import { useClipboardCopy } from "../../design-system/clipboardcopy";
 import {
@@ -27,6 +26,7 @@ import { useCanWrite } from "../../lib/capability";
 import { navigate } from "../../lib/router";
 import { useSchedulingProfile } from "../../lib/scheduling-profile-query";
 import { useMe } from "../../lib/session";
+import { HeldMeetingsTable } from "./contactmeetings.held";
 import { MeetingRow, NextMeetingCard } from "./contactmeetings.rows";
 import {
   type CopiedLink,
@@ -293,13 +293,7 @@ export function ContactMeetingsTab({
         detail={{ onRetry: () => void listed.refetch() }}
         footer={listed.hasNextPage ? <LoadMoreButton query={listed} /> : null}
       >
-        {held.map((activity) => (
-          <MeetingRow
-            key={activity.id}
-            activity={activity}
-            verbs={briefOf(activity)}
-          />
-        ))}
+        {held.length > 0 && <HeldMeetingsTable held={held} verbs={briefOf} />}
       </RailPanel>
     </div>
   );
@@ -386,16 +380,13 @@ function MeetingsToolbar({
   const bookingLink = useBookingLink(copied);
   return (
     <PanelBody className="pe-meetings-toolbar">
-      <ActionRow
-        primary={
-          <BookMeeting
-            view={view}
-            loading={loading}
-            canBook={canBook}
-            ref={bookButton}
-          />
-        }
-      >
+      <div className="pe-meetings-verbs">
+        <BookMeeting
+          view={view}
+          loading={loading}
+          canBook={canBook}
+          ref={bookButton}
+        />
         {bookingLink.url && (
           <Button onClick={bookingLink.copy.copy}>
             <Link aria-hidden="true" />
@@ -406,7 +397,7 @@ function MeetingsToolbar({
             )}
           </Button>
         )}
-      </ActionRow>
+      </div>
       {bookingLink.copy.notice && (
         <div className="pe-copy-notice">
           {bookingLink.copy.notice}

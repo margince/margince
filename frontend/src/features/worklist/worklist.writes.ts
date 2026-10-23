@@ -2,10 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
+import { refetchAfterAssignment } from "../../components/taskwritefollowup";
 import { isEntityKind } from "../../lib/entity";
 import { problemCodeOf, throwProblem, unwrap } from "../../lib/problem";
 import { invalidateRecord } from "../../lib/recordwritekeys";
-import { refetchAfterAssignment } from "./taskwritefollowup";
 import type {
   ReopenCondition,
   TeamException,

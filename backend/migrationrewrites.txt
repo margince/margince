@@ -9,3 +9,4 @@
 1792670893_a_review_is_never_waiting_on_a_card.up.sql | *, audit_log, communication_review | only reviews still reading awaiting_decision are touched, and the migration that retired the ask already moved every live one, so the set is empty or a handful
 1792670894_a_review_is_never_waiting_on_a_card_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1792672839_the_unread_period_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1792679518_a_colleague_can_take_over_a_promise_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

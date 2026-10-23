@@ -185,7 +185,6 @@ export function ContactNetworkTab({
         >
           <RelayPanel ask={read.open} />
           <IntroAsksPanel contactId={contactId} contactName={read.targetName} />
-          {view && <MomentsPanel view={view} />}
         </aside>
       </div>
 
@@ -224,6 +223,9 @@ export function ContactNetworkTab({
           ) : null
         }
       />
+
+      {/* What moved lately closes the tab, under the picture it changed. */}
+      {view && <MomentsPanel view={view} />}
 
       {asking ? (
         <IntroDrawer

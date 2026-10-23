@@ -1,16 +1,32 @@
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { Badge } from "../../design-system/atoms";
-import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
+import { DataTable, type DataTableColumn } from "../../design-system/datatable";
+import { Panel, PanelBody } from "../../design-system/panel";
 import { SurfaceState, sectionState } from "../../design-system/surfacestate";
-import { formatMoneyOrAbsent, formatNumber } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import {
+  formatDayMonth,
+  formatMoneyOrAbsent,
+  formatNumber,
+} from "../../format/format";
+import { type Locale, useLocale, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import { dealsFilteredBy } from "../../lib/dealsaddress";
+import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
 import type { Company360 } from "./company360";
 import "./company360.css";
 
 type Deal360 = components["schemas"]["Company360Deal"];
+
+const STATUS_LABEL: Record<Deal360["status"], MessageKey> = {
+  open: "co.deals.status.open",
+  won: "co.deals.status.won",
+  lost: "co.deals.status.lost",
+};
+
+const STATUS_TONE: Record<Deal360["status"], "success" | "danger" | undefined> =
+  { open: undefined, won: "success", lost: "danger" };
 
 /** DealsCard lists the open deals plus the two lifetime figures. */
 export function DealsCard({
@@ -34,6 +50,7 @@ export function DealsCard({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const zone = useRecordZone();
   const deals = view?.deals;
   const won = deals?.won_lifetime;
   const state = sectionState(
@@ -73,19 +90,23 @@ export function DealsCard({
         )
       }
     >
-      {present ? (
-        <>
-          {(deals?.data ?? []).map((deal) => (
-            <DealRow key={deal.deal_id} deal={deal} />
-          ))}
-          {state === "empty" && (
-            <PanelBody>
-              <p className="surfacestate-empty">{t("co.deals.empty")}</p>
-            </PanelBody>
-          )}
-          {extra}
-        </>
-      ) : (
+      {state === "ready" && (
+        <DataTable
+          bleed
+          fold
+          label={t("co.deals.title")}
+          columns={dealColumns(t, locale, zone)}
+          rows={deals?.data ?? []}
+          rowKey={(deal) => deal.deal_id}
+        />
+      )}
+      {state === "empty" && (
+        <PanelBody>
+          <p className="surfacestate-empty">{t("co.deals.empty")}</p>
+        </PanelBody>
+      )}
+      {present && extra}
+      {!present && (
         <PanelBody>
           <SurfaceState
             state={state}
@@ -100,31 +121,69 @@ export function DealsCard({
   );
 }
 
-function DealRow({ deal }: Readonly<{ deal: Deal360 }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  return (
-    <PanelRow className="co-row">
-      <button
-        type="button"
-        className="co-rowlink"
-        onClick={() => navigate({ screen: "deals", id: deal.deal_id })}
-      >
-        {deal.name}
-      </button>
-      <span className="co-row-meta t-caption">
-        <span>{deal.stage_name ?? t("co.deals.noStage")}</span>
-        {deal.amount?.amount_minor != null && (
-          <span className="t-num">
-            {formatMoneyOrAbsent(
+// The design's five columns, each from a field the 360 row carries. A deal
+// with no amount or no close date leaves its cell empty rather than inventing
+// a zero or a date.
+function dealColumns(
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+  zone: string,
+): DataTableColumn<Deal360>[] {
+  return [
+    {
+      key: "name",
+      header: t("co.deals.col.deal"),
+      grow: true,
+      render: (deal) => (
+        <button
+          type="button"
+          className="co-rowlink"
+          onClick={() => navigate({ screen: "deals", id: deal.deal_id })}
+        >
+          {deal.name}
+        </button>
+      ),
+    },
+    {
+      key: "stage",
+      header: t("co.deals.col.stage"),
+      render: (deal) => deal.stage_name ?? t("co.deals.noStage"),
+    },
+    {
+      key: "value",
+      header: t("co.deals.col.value"),
+      align: "end",
+      render: (deal) =>
+        deal.amount?.amount_minor == null
+          ? ""
+          : formatMoneyOrAbsent(
               deal.amount.amount_minor,
               deal.amount.currency,
               locale,
-            )}
-          </span>
-        )}
-        {deal.stalled && <Badge tone="warning">{t("deal.stalledBadge")}</Badge>}
-      </span>
-    </PanelRow>
-  );
+            ),
+    },
+    {
+      key: "close",
+      header: t("co.deals.col.close"),
+      render: (deal) =>
+        deal.expected_close_date
+          ? formatDayMonth(deal.expected_close_date, locale, zone)
+          : "",
+    },
+    {
+      key: "status",
+      header: t("co.deals.col.status"),
+      fold: "end",
+      render: (deal) => (
+        <span className="co-row-meta">
+          <Badge tone={STATUS_TONE[deal.status]}>
+            {t(STATUS_LABEL[deal.status])}
+          </Badge>
+          {deal.stalled && (
+            <Badge tone="warning">{t("deal.stalledBadge")}</Badge>
+          )}
+        </span>
+      ),
+    },
+  ];
 }

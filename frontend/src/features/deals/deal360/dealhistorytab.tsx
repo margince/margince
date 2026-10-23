@@ -31,6 +31,8 @@ import {
   useRecordChronology,
 } from "../../records/recordchronology";
 import { TimelineActions } from "../../records/timelineactions";
+import { StartDeliveryPrompt } from "../dealproject";
+import { OutcomeReviewPanel } from "./outcomereview";
 
 type Deal = components["schemas"]["Deal"];
 
@@ -72,60 +74,73 @@ export function DealHistoryTab({
   });
 
   return (
-    <Panel
-      title={t("tab.history")}
-      actions={
-        hasChronologyFooter(filter, chronology) ? (
-          <ChronologyFooter filter={filter} chronology={chronology} />
-        ) : undefined
-      }
-    >
-      <PanelBody>
-        {/* Both sets of dials in one block: the cuts through the chronology,
+    <>
+      {/* A closed deal's own record sits above its chronology: the delivery
+          project a won deal is offered once, and the review of how it closed.
+          The Overview holds neither. */}
+      <StartDeliveryPrompt deal={deal} />
+      <OutcomeReviewPanel
+        dealId={deal.id}
+        status={deal.status}
+        closingOccurrenceId={deal.closing_occurrence_id}
+        archived={Boolean(deal.archived_at)}
+      />
+      <Panel
+        title={t("tab.history")}
+        actions={
+          hasChronologyFooter(filter, chronology) ? (
+            <ChronologyFooter filter={filter} chronology={chronology} />
+          ) : undefined
+        }
+      >
+        <PanelBody>
+          {/* Both sets of dials in one block: the cuts through the chronology,
             then the narrowing of whichever cut is open — the same block the
             contact, the account and the lead draw them in. */}
-        <div className="timeline-header">
-          <ChronologyFilter filter={filter} onFilter={setFilter} />
-          {filter !== "changes" && (
-            <TimelineFilterBar value={filters} onChange={setFilters} />
-          )}
-        </div>
-        {/* The Changes view IS the record's history: one reading of what
-            changed on this deal, and the one that can put a change back. */}
-        {filter === "changes" ? (
-          <RecordHistoryTab
-            kind="deal"
-            id={deal.id}
-            currency={deal.currency}
-            restore={{
-              version: deal.version,
-              onRestored: () => invalidateRecord(queryClient, "deal", deal.id),
-            }}
-          />
-        ) : (
-          <div className="timeline-card">
-            {chronologyNotice(
-              "deal.timeline.empty",
-              filter,
-              chronology,
-              {
-                loading: timeline.isPending,
-                failed: timeline.isError,
-                assembled: timeline.isSuccess,
-              },
-              t,
-            ) ?? (
-              <GroupedTimelineList
-                groups={groupChronology(
-                  chronology.entries,
-                  timeline.hasNextPage,
-                )}
-                zone={recordZone}
-              />
+          <div className="timeline-header">
+            <ChronologyFilter filter={filter} onFilter={setFilter} />
+            {filter !== "changes" && (
+              <TimelineFilterBar value={filters} onChange={setFilters} />
             )}
           </div>
-        )}
-      </PanelBody>
-    </Panel>
+          {/* The Changes view is the record's history: one reading of what
+            changed on this deal, and the one that can put a change back. */}
+          {filter === "changes" ? (
+            <RecordHistoryTab
+              kind="deal"
+              id={deal.id}
+              currency={deal.currency}
+              restore={{
+                version: deal.version,
+                onRestored: () =>
+                  invalidateRecord(queryClient, "deal", deal.id),
+              }}
+            />
+          ) : (
+            <div className="timeline-card">
+              {chronologyNotice(
+                "deal.timeline.empty",
+                filter,
+                chronology,
+                {
+                  loading: timeline.isPending,
+                  failed: timeline.isError,
+                  assembled: timeline.isSuccess,
+                },
+                t,
+              ) ?? (
+                <GroupedTimelineList
+                  groups={groupChronology(
+                    chronology.entries,
+                    timeline.hasNextPage,
+                  )}
+                  zone={recordZone}
+                />
+              )}
+            </div>
+          )}
+        </PanelBody>
+      </Panel>
+    </>
   );
 }

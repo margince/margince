@@ -1,7 +1,6 @@
-/* The company view's cards. The rails' own rhythm is the SHELL's — every
-   record page draws those two columns, so `.record-rail` / `.record-aside`
-   live with `RecordView` in design-system/composed.css. What is here is what
-   the account's cards need on top of it. */
+/* The company view's cards. The details column's own rhythm is the SHELL's:
+   `.record-aside` lives with `RecordView` in design-system/composed.css. What
+   is here is what the account's cards need on top of it. */
 
 /* A pane in the margin pays the card's inset, not the work column's. The
    panel's own --space-5 is sized for a body a reader reads across; in a
@@ -12,14 +11,14 @@
   padding: var(--padCard);
 }
 
-/* The left rail: the account's context beside the work (mockup State A).
-   One column of stacked cards — it never becomes a grid, because a rail that
-   re-columns is a second body rather than a margin. */
-.co-rail {
+/* The lists the account is on, as a wrapping row of chips. */
+.co-aside-chips {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  align-items: stretch;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 /* A tab's main column: one vertical stack of same-shaped panels, the gap owned
@@ -41,35 +40,21 @@
   margin-bottom: var(--space-6);
 }
 
-/* ONE READING, IN PARTS. The same reading in the same order as the single
-   card it replaces, arranged: the call with its thread and the day's work keep
-   the full measure, and the reference sections pair beside each other because
-   they are consulted rather than read.
-
-   No box around the group. A bordered container holding bordered cards is a
-   card inside a card; what binds these is the header that names them and the
-   interval, which is deliberately tighter than the gap between the stack's own
-   panels. A reader reads the spacing before they read a border. */
-.co-reading {
+/* The Overview's cards under How it stands: as many columns of at least
+   300px as the feed holds, so two cards pair on a wide feed and stack on a
+   narrow one. */
+.co-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: var(--gapCards);
+  align-items: start;
+}
+.co-overview-column {
   display: flex;
   flex-direction: column;
-  /* The page's own rhythm, not a tighter one of this group's. Two panels 8px
-     apart here and 16px apart everywhere else on the same page is the reader
-     being told these two are a closer pair than they are — the group's heading
-     already says they belong together. */
-  gap: var(--space-4);
+  gap: var(--gapCards);
+  min-inline-size: 0;
 }
-
-/* The header of the group, unboxed and outside the first card. It names the
-   whole reading, and a card's own title band can only name that card. */
-.co-reading-head {
-  padding: var(--space-1) var(--space-1) 0;
-}
-
-/* THE CALL. That a machine reached it is `Panel`'s own tone="ai" — the indigo
-   edge and the banded head it draws for every panel a machine wrote, this one
-   included. A second wash spelled here painted the same claim twice, and the
-   head override under it then had to undo half of what the tone had drawn. */
 
 /* The reference sections, side by side. Half the measure each, because a
    reader consults them rather than reads them through; one column as soon as
@@ -100,17 +85,6 @@
    which is the third spelling that rule was written to end. The parts that
    still need a name of their own take `.co-worth-split` or `.co-worth-row`
    below, for their LAYOUT rather than for their seam. */
-
-/* The account's own web address, in the identity line: a link, and it reads as
-   one. The line around it is the design system's `IdentityLine`; only the link
-   ink is the company's. */
-.co-meta-link {
-  color: var(--accentText);
-  text-decoration: none;
-}
-.co-meta-link:hover {
-  text-decoration: underline;
-}
 
 .co-row {
   display: flex;
@@ -511,33 +485,6 @@
    already pays part of that. */
 .co-move-body > .co-move-do {
   margin-top: calc(var(--space-4) - var(--space-1));
-}
-
-/* An open task: the tick at the row's own weight (it IS the primary verb,
-   not a badge on the row), title and due date next, everything else — snooze
-   — behind a reveal so the list reads by title and date first. */
-.co-task-row {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-}
-.co-task-body {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  min-width: 0;
-  flex: 1 1 auto;
-}
-.co-task-verbs {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-left: auto;
-  opacity: 0;
-}
-.co-task-row:hover .co-task-verbs,
-.co-task-row:focus-within .co-task-verbs {
-  opacity: 1;
 }
 
 /* Ask Margince: the questions sit on one wrapping row above the answer, and
@@ -969,42 +916,6 @@
   flex-direction: column;
   gap: var(--space-1);
 }
-/* The invoice table. Its first and last cells align with the panel body's own
-   padding, so the table reads as part of the panel rather than as a block
-   inset inside it. */
-.fin-table th:first-child,
-.fin-table td:first-child {
-  padding-left: var(--space-5);
-}
-.fin-table th:last-child,
-.fin-table td:last-child {
-  padding-right: var(--space-5);
-}
-.fin-col-amount {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-.fin-col-status {
-  text-align: right;
-  white-space: nowrap;
-}
-.fin-cell-id {
-  white-space: nowrap;
-}
-/* The dates are context for the row, not its subject, so they read quieter
-   than the invoice number and the amount beside them. Tabular figures keep the
-   day and month columns aligned down the table without a second typeface
-   doing the work. */
-.fin-cell-dates {
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-/* Still owed, still past due: the rows that need chasing, findable without
-   reading every status. */
-.fin-row-late td {
-  background: var(--dangerBg);
-}
 .fin-provenance {
   display: inline-flex;
   align-items: center;
@@ -1121,33 +1032,6 @@
   padding: var(--padPanel);
 }
 
-/* The rail's own anatomy: one continuous panel, its groups told apart by a
-   hairline rather than by a gap between cards (a disclosure's default inset
-   border in atoms.css would leave a margin either side of that line, which
-   reads as a card floating inside the panel rather than a division of it). */
-.co-rail .co-sect {
-  border-top: 1px solid var(--borderSubtle);
-  padding-top: 0;
-  margin-bottom: 0;
-}
-/* The SECTION's own body, by child combinator rather than by descent: a
-   disclosure nested inside a slice — the Details grid's postal address is one —
-   took this inset a second time as a descendant, so its labels and values
-   started a pane's padding right of the rows above them and the value column
-   lost that width twice over, breaking a street name mid-syllable. A nested
-   disclosure keeps the atom's own body, which is what puts both grids on one
-   left edge. */
-.co-rail .co-sect > .disclosure-body {
-  margin-top: 0;
-  padding: 0 var(--padPanel) var(--padPanel);
-}
-/* That body already stands on the pane's gutter, so a PanelBody inside it adds
-   none: a second inset set its rows a card's padding right of the card lists
-   and verbs the other slices draw straight into their body. */
-.co-rail .co-sect > .disclosure-body > .panel-body {
-  padding: 0;
-}
-
 /* The summary's own row: the section name, then whatever it carries (a count,
    Health's rating) pushed to the far end. */
 /* The slice's name inside the summary: a heading for the outline, set as the
@@ -1163,18 +1047,6 @@
   align-items: center;
   gap: var(--space-2);
   width: 100%;
-}
-
-.co-contact-routes-list {
-  list-style: none;
-  margin: var(--space-1) 0 0;
-  padding: 0;
-}
-/* The stack reads as information, not as a verb: the aside still opens on
-   hover, click and focus, but a pointer cursor would promise a navigation
-   the trigger does not make. */
-.co-contact-routes .popover-trigger {
-  cursor: default;
 }
 
 /* A signal row: a coloured dot the row's severity comes from, the finding,
@@ -1215,30 +1087,6 @@
 }
 .co-signal-link {
   display: inline-block;
-}
-/* The brief's context is a STANDFIRST: one line under the panel's title that
-   says why the moves below it are being asked, and then gets out of the way.
-   It sat as a grid of label-over-value tiles, directly beneath a state strip
-   that is already a grid of label-over-value tiles — one table split in half,
-   with nothing telling a reader why a reading belonged to the upper block
-   rather than the lower one. Two jobs, two shapes: the strip states what the
-   account IS, in a grid; this says what is true TODAY, in a sentence. */
-/* The context sits on its own plate, inset from the panel's edges, while the
-   moves below run full-bleed on the panel's own ground — PanelPlate
-   (design-system/panel.tsx) is that plate, and it is the whole device: a
-   reader can tell which part of the panel is what IS from which part is what
-   to DO before reading a word of either. */
-/* How long it has stood that way — quieter than the state, and never so long
-   that it becomes the sentence.
-
-   Its OWN line under the call rather than the tail of it. Inline, it butted
-   straight against the headline's last letter at a third of its size, which
-   read as one broken word rather than as a state and its duration: the two are
-   different claims, and the call is a display-size sentence that ends. */
-.today-lead-note {
-  display: block;
-  margin-block-start: var(--space-2);
-  font-family: var(--fontFamilyBody);
 }
 /* What the day's work could NOT be read from, under whatever rows there are.
    On the panel's own inset and at meta size: it qualifies the answer above it
@@ -1480,183 +1328,6 @@
   display: block;
 }
 
-/* The three rated dimensions under the verdict, as a row of readings the
-   card's own body separates from the word above it. */
-.co-360-dims {
-  padding-top: var(--space-3);
-}
-/* And no seam over them, which is the other half of the same point: the
-   panel's rule between two bodies divides one section of a card from the next,
-   and these are not a section — they qualify the call above them. Drawn, the
-   rule landed on the chips' own top edge (the row pays no padding above a
-   line it should not have had) and read as three readings crushed against a
-   divider. */
-.panel-body + .panel-body.co-360-dims::before {
-  content: none;
-}
-.co-dim {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-/* A chip is the trigger for its own aside, so it restates the face that
-   `.popover-trigger` strips — that reset exists so a trigger inherits the line
-   it is seated in, and this one is seated in a row of its own. Specific enough
-   to out-weigh the reset wherever the two sheets land in the bundle. */
-.co-360-dims .popover-trigger.co-dim {
-  gap: var(--space-2);
-  border-radius: var(--r-sm);
-}
-/* Pressable, and said so before it is pressed: a chip that answers a resting
-   pointer has to look like something worth resting on. The underline is the
-   product's one mark for "there is more behind this" (design-system §4's
-   evidence mark), dotted for the same reason — it offers rather than links. */
-.co-360-dims .popover-trigger.co-dim {
-  text-decoration: underline dotted var(--borderStrong);
-  text-underline-offset: 4px;
-}
-.co-360-dims .popover-trigger.co-dim:hover,
-.co-360-dims .popover-trigger.co-dim[aria-expanded="true"] {
-  color: var(--textPrimary);
-  text-decoration-color: currentColor;
-}
-
-/* The aside behind a chip: what the dimension weighs, then the reading its
-   rating was made from. Two blocks and not one paragraph — the definition is
-   the product's and the quote is this account's, and a reader has to be able
-   to tell which is which. */
-.co-dim-means {
-  margin: 0;
-}
-/* Spacing only: the label's own face is `Eyebrow`'s, which is the product's
-   one spelling of uppercase micro-type (design-system/eyebrow.tsx). */
-.co-dim-restson {
-  display: block;
-  margin: var(--space-3) 0 var(--space-1);
-}
-.co-dim-quote {
-  margin: 0;
-  color: var(--textPrimary);
-}
-.co-dim::before {
-  content: "";
-  inline-size: 7px;
-  block-size: 7px;
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--borderStrong);
-}
-.co-dim-calm::before {
-  background: var(--success);
-}
-.co-dim-warning::before {
-  background: var(--warning);
-}
-.co-dim-danger::before {
-  background: var(--danger);
-}
-
-/* The three dimensions as term-over-value cells, on the contact brief's own
-   readings ladder: a caption names what was rated, the value under it is the
-   rating and the trigger for its own working. Content is unchanged from the
-   chip row above — only the shape moved, from an inline run to a grid a
-   reader can scan column by column. */
-.co-360-readings {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-3) var(--space-4);
-  margin: 0;
-}
-.co-360-reading {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  min-width: 0;
-}
-.co-360-reading dd {
-  margin: 0;
-  font-weight: var(--fontWeightMedium);
-  color: var(--textPrimary);
-}
-/* The same dotted-underline mark the contact brief's own readings wear for
-   "there is more behind this value", scoped here so the reset it works
-   against is the popover's own and not `.co-dim`'s chip face. */
-.co-360-reading .popover-trigger {
-  text-decoration: underline dotted;
-  text-decoration-color: var(--borderStrong);
-  text-underline-offset: 0.2em;
-  font: inherit;
-  color: inherit;
-}
-.co-360-reading dd.co-360-reading-warning {
-  color: var(--warningText);
-}
-.co-360-reading dd.co-360-reading-danger {
-  color: var(--dangerText);
-}
-@media (max-width: 720px) {
-  .co-360-readings {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-/* THE CARD'S CLAIM OF AUTHORSHIP, and what it is a claim about: the mark on
-   its own indigo tile, then the record's name at reading size. The tile is the
-   whole claim — a sentence beside it saying the same thing in an eyebrow's
-   shout read as a caption typed onto the record's name.
-
-   The tile keeps its size and the NAME gives way, wrapping beside it: a
-   shrunken mark would read as a smaller claim. */
-.co-360-title {
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: var(--space-3);
-  min-inline-size: 0;
-}
-
-/* tone="ai" makes `.panel-title` a flex container, so the name is a flex item
-   and needs its own floor of zero to wrap rather than overrun the band. */
-.co-360-subject {
-  min-inline-size: 0;
-}
-
-/* The mark, on a tile of its own, leading the line. It never gives way: 2rem
-   in a 56px band is the claim the card is built on. */
-.co-360-title .co-360-mark {
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  inline-size: 2rem;
-  block-size: 2rem;
-  border-radius: var(--r-md);
-  color: var(--aiText);
-  background: var(--aiChip);
-  border: 1px solid var(--aiMed);
-}
-.co-360-title .co-360-mark svg {
-  inline-size: 1rem;
-  block-size: 1rem;
-}
-
-/* The record's own name, and it is the words OF this panel's title: the size
-   comes from `.panel-head .panel-title`, and only face and weight are stated
-   here. A size of its own would be a second answer to the question every panel
-   head answers once. */
-.co-360-title .co-360-subject {
-  font-family: var(--fontFamilyHeading);
-  color: var(--textPrimary);
-}
-
-/* The authorship mark on the card's own band. Sized to the eyebrow rather than
-   to the icon set's default: it reads as part of the word, not as a control
-   sitting next to one. */
-.co-360-spark {
-  width: 0.75rem;
-  height: 0.75rem;
-  flex: none;
-}
-
 /* The stages of a site read in flight. A ladder rather than a bar: a bar
    claims a fraction nobody measured, and these two stages are the only
    positions the engine actually reports. */
@@ -1796,70 +1467,6 @@
     line-clamp: 2;
     overflow: hidden;
   }
-}
-
-/* What happened lately, as a list to scan. One row per exchange: the mark, the
-   kind and direction over the subject, and the date at the far end where a
-   reader's eye already goes for it. */
-.co-recent {
-  padding-top: 0;
-}
-
-.co-recent-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.co-recent-row {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-  padding: var(--space-3) 0;
-}
-
-/* Between rows only. The last row's rule would double the section's own
-   boundary, and the first row's would sit against the label above it. */
-.co-recent-row + .co-recent-row {
-  border-top: 1px solid var(--borderSubtle);
-}
-
-.co-recent-body {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-  min-width: 0;
-  flex: 1 1 auto;
-}
-
-.co-recent-head {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-}
-.co-recent-title {
-  color: var(--textPrimary);
-  overflow-wrap: anywhere;
-}
-
-.co-recent-meta {
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-}
-
-/* The date at the row's far end, in tabular figures so digits share a width —
-   a column of dates lines up instead of shifting row to row. */
-.co-recent-when {
-  flex: none;
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-.co-recent-empty {
-  margin: 0;
 }
 
 /* The read's own line under the needs list: who wrote the findings, what was

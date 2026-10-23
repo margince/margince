@@ -4,8 +4,9 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
+import { DataTable } from "../../design-system/datatable";
 import { useFocusHandoff } from "../../design-system/focushandoff";
-import { Panel, PanelRow } from "../../design-system/panel";
+import { Panel, PanelBody } from "../../design-system/panel";
 import {
   type SectionState,
   SurfaceState,
@@ -51,6 +52,24 @@ export function dealDocumentsKey(dealId: string, includeHidden: boolean) {
   return ["deal-documents", dealId, includeHidden] as const;
 }
 
+// The deal's files, one read for the tab and for the count on its label, so
+// the two never disagree about how many there are.
+export function useDealDocuments(dealId: string, includeHidden = false) {
+  return useQuery({
+    queryKey: dealDocumentsKey(dealId, includeHidden),
+    queryFn: async () => {
+      return unwrap(
+        await api.GET("/deals/{id}/documents", {
+          params: {
+            path: { id: dealId },
+            query: { limit: PAGE_LIMIT, include_hidden: includeHidden },
+          },
+        }),
+      );
+    },
+  });
+}
+
 export function DealFiles({ deal }: Readonly<{ deal: Deal }>) {
   const t = useT();
   const dealId = deal.id;
@@ -63,19 +82,7 @@ export function DealFiles({ deal }: Readonly<{ deal: Deal }>) {
   const [showHidden, setShowHidden] = useState(false);
   const listRegion = useRef<HTMLDivElement | null>(null);
   const focusLanding = useCallback(() => listRegion.current, []);
-  const query = useQuery({
-    queryKey: dealDocumentsKey(dealId, showHidden),
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/deals/{id}/documents", {
-          params: {
-            path: { id: dealId },
-            query: { limit: PAGE_LIMIT, include_hidden: showHidden },
-          },
-        }),
-      );
-    },
-  });
+  const query = useDealDocuments(dealId, showHidden);
   const files = query.data?.data ?? [];
 
   let state: SectionState;
@@ -108,97 +115,158 @@ export function DealFiles({ deal }: Readonly<{ deal: Deal }>) {
         open={adding}
         onClose={() => setAdding(false)}
       />
-      <div ref={listRegion} tabIndex={-1}>
-        <SurfaceState
-          loadingLabel={t("files.title")}
-          state={state}
-          emptyLabel={t("files.empty")}
-          detail={
-            state === "failed"
-              ? { onRetry: () => void query.refetch() }
-              : undefined
-          }
-        >
-          {files.map((doc) => (
-            <FileRow
-              key={doc.attachment.id}
+      <PanelBody>
+        <div ref={listRegion} tabIndex={-1}>
+          <SurfaceState
+            loadingLabel={t("files.title")}
+            state={state}
+            emptyLabel={t("files.empty")}
+            detail={
+              state === "failed"
+                ? { onRetry: () => void query.refetch() }
+                : undefined
+            }
+          >
+            <FilesTable
               dealId={dealId}
-              doc={doc}
+              files={files}
               mayWrite={mayWrite}
               focusLanding={focusLanding}
             />
-          ))}
-        </SurfaceState>
-      </div>
+          </SurfaceState>
+        </div>
+      </PanelBody>
     </Panel>
   );
 }
 
-function FileRow({
+function FilesTable({
   dealId,
-  doc,
+  files,
   mayWrite,
   focusLanding,
 }: Readonly<{
   dealId: string;
-  doc: DealDocument;
+  files: readonly DealDocument[];
   mayWrite: boolean;
   focusLanding: () => HTMLElement | null;
 }>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
+  return (
+    <DataTable
+      label={t("files.title")}
+      fold
+      rows={[...files]}
+      rowKey={(doc) => doc.attachment.id}
+      columns={[
+        {
+          key: "file",
+          header: t("dealfiles.col.file"),
+          fold: "title",
+          render: (doc) => <FileName doc={doc} />,
+        },
+        {
+          key: "category",
+          header: t("dealfiles.col.category"),
+          render: (doc) =>
+            doc.attachment.category
+              ? t(CATEGORY_LABELS[doc.attachment.category])
+              : null,
+        },
+        {
+          key: "origin",
+          header: t("dealfiles.col.origin"),
+          // A captured file names the party whose message carried it; an
+          // upload has no sender, only the deal it was put on.
+          render: (doc) =>
+            doc.origin
+              ? t("dealfiles.origin.from", {
+                  who:
+                    doc.origin.counterparty_email ?? t("files.originUnknown"),
+                })
+              : t("dealfiles.origin.upload"),
+        },
+        {
+          key: "added",
+          header: t("dealfiles.col.added"),
+          render: (doc) =>
+            formatDateAbbrev(
+              doc.origin?.occurred_at ?? doc.attachment.created_at,
+              locale,
+              recordZone,
+            ),
+        },
+        ...(mayWrite
+          ? [
+              {
+                key: "actions",
+                header: t("table.actions"),
+                headerHidden: true,
+                fold: "end" as const,
+                render: (doc: DealDocument) => (
+                  <FileVerbs
+                    dealId={dealId}
+                    doc={doc}
+                    focusLanding={focusLanding}
+                  />
+                ),
+              },
+            ]
+          : []),
+      ]}
+    />
+  );
+}
+
+function FileName({ doc }: Readonly<{ doc: DealDocument }>) {
+  const t = useT();
+  const file = doc.attachment;
+  return (
+    <span className={doc.hidden ? "deal-file deal-file-hidden" : "deal-file"}>
+      <a
+        className="cell-link"
+        href={`/v1/attachments/${file.id}`}
+        download={file.filename}
+      >
+        {file.title || file.filename}
+      </a>
+      {doc.hidden ? <Badge>{t("files.hiddenBadge")}</Badge> : null}
+    </span>
+  );
+}
+
+// A row's menu and the delete it asks about first. The landing takes focus
+// when the row the menu stood in goes away.
+function FileVerbs({
+  dealId,
+  doc,
+  focusLanding,
+}: Readonly<{
+  dealId: string;
+  doc: DealDocument;
+  focusLanding: () => HTMLElement | null;
+}>) {
+  const t = useT();
   const file = doc.attachment;
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const verbs = useFileVerbs(dealId, file.id);
-  const side = useRef<HTMLDivElement | null>(null);
+  const side = useRef<HTMLSpanElement | null>(null);
   // A ref, not state: the dialog reads it as it closes, before a re-render.
   const deleted = useRef(false);
   useFocusHandoff(side, focusLanding);
   return (
-    <PanelRow
-      className={doc.hidden ? "deal-file deal-file-hidden" : "deal-file"}
-    >
-      <div className="deal-file-main">
-        <a
-          className="link-button"
-          href={`/v1/attachments/${file.id}`}
-          download={file.filename}
-        >
-          {file.title || file.filename}
-        </a>
-        <p className="t-caption">
-          {doc.origin
-            ? t("files.origin", {
-                who: doc.origin.counterparty_email ?? t("files.originUnknown"),
-                when: formatDateAbbrev(
-                  doc.origin.occurred_at,
-                  locale,
-                  recordZone,
-                ),
-              })
-            : t("files.uploaded", {
-                when: formatDateAbbrev(file.created_at, locale, recordZone),
-              })}
-        </p>
-      </div>
-      <div className="deal-file-side" ref={side}>
-        {file.category ? (
-          <Badge>{t(CATEGORY_LABELS[file.category])}</Badge>
-        ) : null}
-        {doc.hidden ? <Badge>{t("files.hiddenBadge")}</Badge> : null}
-        {mayWrite ? (
-          <FileMenu
-            doc={doc}
-            hide={verbs.hide}
-            unhide={verbs.unhide}
-            onDelete={() => {
-              deleted.current = false;
-              setConfirmingDelete(true);
-            }}
-          />
-        ) : null}
-      </div>
+    <span className="cell-actions" ref={side}>
+      <FileMenu
+        doc={doc}
+        hide={verbs.hide}
+        unhide={verbs.unhide}
+        onDelete={() => {
+          deleted.current = false;
+          setConfirmingDelete(true);
+        }}
+      />
       <ConfirmModal
         open={confirmingDelete}
         onClose={() => setConfirmingDelete(false)}
@@ -221,7 +289,7 @@ function FileRow({
       >
         <p>{t("files.deleteBody")}</p>
       </ConfirmModal>
-    </PanelRow>
+    </span>
   );
 }
 

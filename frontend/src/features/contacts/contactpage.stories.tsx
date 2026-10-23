@@ -400,9 +400,9 @@ function Page({
 export const PageStory: Story = { name: "Page", render: () => <Page /> };
 
 // A provider is connected and nobody has looked this contact up, so the tab
-// strip carries a dot on "Data and tools". The dot is decorative — the panel
-// behind it says the same thing in words — so this story is about whether the
-// invitation is VISIBLE from a page the reader is already on.
+// strip carries a dot on "Research". The dot is decorative, since the panel
+// behind it says the same thing in words. This story checks whether the
+// invitation is visible from a page the reader is already on.
 const neverBought: View = {
   ...populated,
   provider_profiles: [

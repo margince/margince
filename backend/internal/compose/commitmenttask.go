@@ -24,6 +24,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -56,8 +58,8 @@ type CommitmentTaskProposal struct {
 	ClaimID  *ids.UUID                      `json:"claim_id,omitempty"`
 	ClaimIDs []ids.UUID                     `json:"claim_ids,omitempty"`
 	Body     string                         `json:"body"`
-	// PrivateTo is the one member the source mail answers to, whose alone the
-	// task is to read. Nil for a shared conversation.
+	// PrivateTo is the one member the source mail answers to. The task is read
+	// by them and its holder alone. Nil for a shared conversation.
 	PrivateTo *ids.UUID `json:"private_to,omitempty"`
 }
 
@@ -70,10 +72,14 @@ type commitmentTask struct {
 	SourceActivityID ids.UUID
 	Links            []activities.ActivityLinkInput
 	DueDate          string
-	Assignee         ids.UUID
-	ClaimID          *ids.UUID
-	ClaimIDs         []ids.UUID
-	PrivateTo        *ids.UUID
+	// DueAt is a deadline already stated as an instant; DueDate is used when nil.
+	DueAt     *time.Time
+	Assignee  ids.UUID
+	ClaimID   *ids.UUID
+	ClaimIDs  []ids.UUID
+	PrivateTo *ids.UUID
+	// Origin is activities.OriginHuman when a colleague took the promise over.
+	Origin string
 }
 
 // writeCommitmentTask writes the task for a promise, keyed on its locator, and
@@ -103,15 +109,16 @@ func writeCommitmentTask(
 		Links:            t.Links,
 		SourceActivityID: &sourceActivity,
 		AssigneeID:       &assignee,
-		Origin:           activities.OriginAgent,
+		Origin:           t.Origin,
+		DueAt:            t.DueAt,
 	}
 	// The promiser's own task waits for them as a task made by hand would,
 	// also before they first sign in.
 	in.AdmitInvitedAssignee()
 	if t.PrivateTo != nil {
-		in.VisibleOnlyTo(*t.PrivateTo)
+		in.VisibleOnlyTo(slices.Compact([]ids.UUID{t.Assignee, *t.PrivateTo})...)
 	}
-	if t.DueDate != "" {
+	if t.DueAt == nil && t.DueDate != "" {
 		due, err := commitmentDueInstant(ctx, tx, t.DueDate)
 		if err != nil {
 			return ids.UUID{}, err
@@ -179,35 +186,64 @@ func commitmentTaskEffect(
 		if err != nil {
 			return err
 		}
-		if !mayHoldPrivateTask(proposal.PrivateTo, assignee) {
-			return fmt.Errorf("compose: a commitment read out of private mail is its owner's to accept: %w",
-				apperrors.ErrPermissionDenied)
-		}
 		// The write runs as the deciding human, so each staged link meets the
 		// visibility check a link they typed would. One they cannot see refuses
 		// the whole acceptance, and the approval stays unspent.
 		return svc.RedeemAndApply(ctx, approvalID, CommitmentTaskKind, diffHash, func(tx pgx.Tx) error {
-			privateTo, err := sourcePrivateToNow(ctx, tx, proposal.SourceActivityID, proposal.PrivateTo)
+			privateTo, err := privateWorkHeldNow(ctx, tx, proposal, assignee)
 			if err != nil {
 				return err
 			}
-			if !mayHoldPrivateTask(privateTo, assignee) {
-				return fmt.Errorf("compose: a commitment read out of private mail is its owner's to accept: %w",
-					apperrors.ErrPermissionDenied)
+			writer := ctx
+			if heldByAnotherThanOwner(privateTo, assignee) {
+				// Every record a private thread is filed under is its owner's, so
+				// the holder could attach none of them. The links and claims are
+				// the extractor's and cannot be edited, so the reader files them.
+				writer = principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalSystem, ID: signalScanActor})
 			}
 			if proposal.ExistingTaskID != nil {
-				return attachCommitmentRecipients(ctx, tx, tasks, claims, proposal)
+				return attachCommitmentRecipients(writer, tx, tasks, claims, proposal)
 			}
-			_, err = writeCommitmentTask(ctx, tx, tasks, claims, commitmentTask{
+			task := commitmentTask{
 				Locator: proposal.Locator,
 				Summary: proposal.Summary, Body: proposal.Body,
 				SourceActivityID: proposal.SourceActivityID, Links: proposal.Links,
 				DueDate: proposal.DueDate, Assignee: assignee, ClaimID: proposal.ClaimID, ClaimIDs: proposal.ClaimIDs,
-				PrivateTo: privateTo,
-			})
+				PrivateTo: privateTo, Origin: activities.OriginAgent,
+			}
+			if heldByAnotherThanOwner(privateTo, assignee) {
+				task.Extractor = signalScanActor
+			}
+			_, err = writeCommitmentTask(writer, tx, tasks, claims, task)
 			return err
 		})
 	}
+}
+
+// privateWorkHeldNow is who the source mail is private to now, once it is
+// known that the holder may still hold work from it. A sent copy turned back to
+// received mail since staging refuses the acceptance. Read from the rows as
+// they stand, never from the staged payload.
+func privateWorkHeldNow(ctx context.Context, tx pgx.Tx, proposal CommitmentTaskProposal, holder ids.UUID) (*ids.UUID, error) {
+	privateTo, err := sourcePrivateToNow(ctx, tx, proposal.SourceActivityID, proposal.PrivateTo)
+	if err != nil {
+		return nil, err
+	}
+	may, err := auth.SeatMayHoldPrivateWorkTx(ctx, tx, proposal.SourceActivityID, privateTo, holder)
+	if err != nil {
+		return nil, err
+	}
+	if !may {
+		return nil, fmt.Errorf("compose: a commitment read out of private mail is for a colleague who may open that mail: %w",
+			apperrors.ErrPermissionDenied)
+	}
+	return privateTo, nil
+}
+
+// heldByAnotherThanOwner reports a task from private mail held by somebody
+// other than the mailbox owner, such as the colleague who sent the message.
+func heldByAnotherThanOwner(privateTo *ids.UUID, holder ids.UUID) bool {
+	return privateTo != nil && *privateTo != holder
 }
 
 // sourcePrivateToNow is the member the proposal's source mail is private to as
@@ -264,20 +300,32 @@ func commitmentDecider(ctx context.Context, proposal json.RawMessage) (ids.UUID,
 	return asked, nil
 }
 
-// commitmentTaskPrecheck refuses a proposal that is not the decider's, or one
-// filed under a record the decider cannot see. It runs before the decision, so the card stays pending. The
-// effect asks again as it writes.
-func commitmentTaskPrecheck(tasks *activities.Store) approvals.ReleasePrecheck {
+// commitmentTaskPrecheck refuses a proposal that is not the decider's. It also
+// refuses one from private mail the decider may no longer hold work from, and
+// one filed under a record the decider cannot see. It runs before the decision,
+// so the card stays pending. The effect asks again as it writes.
+func commitmentTaskPrecheck(db *database.DB, tasks *activities.Store) approvals.ReleasePrecheck {
 	return func(ctx context.Context, staged, edited json.RawMessage) error {
 		var proposal CommitmentTaskProposal
 		if err := json.Unmarshal(staged, &proposal); err != nil {
 			return fmt.Errorf("compose: unmarshal staged commitment proposal: %w", err)
 		}
-		if _, err := commitmentDecider(ctx, staged); err != nil {
+		holder, err := commitmentDecider(ctx, staged)
+		if err != nil {
 			return err
 		}
-		if err := tasks.ProbeLinkWrites(ctx, proposal.Links); err != nil {
+		var privateTo *ids.UUID
+		if err := db.Tx(ctx, func(tx pgx.Tx) error {
+			var heldErr error
+			privateTo, heldErr = privateWorkHeldNow(ctx, tx, proposal, holder)
+			return heldErr
+		}); err != nil {
 			return err
+		}
+		if !heldByAnotherThanOwner(privateTo, holder) {
+			if err := tasks.ProbeLinkWrites(ctx, proposal.Links); err != nil {
+				return err
+			}
 		}
 		return refuseCommitmentEdit(staged, edited)
 	}

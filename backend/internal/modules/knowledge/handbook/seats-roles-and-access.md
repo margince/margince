@@ -138,6 +138,8 @@ If you hold more than one role, you get the most that any of them allows.
 
 You can copy and change roles in **Settings → Roles and permissions**. A new role starts as a copy of another (**New role**, then **Copy rights from**). Only an Admin copies, restores or widens a role; other users who may edit roles rename, narrow or archive one. An archived role gives nothing. The table above shows the six roles as they come. A changed or custom role reaches what its permissions allow.
 
+An extension added to your installation can bring its own rights, listed in the same screen. If the extension names a starting grant for a role, Margince fills it in once, at the first start that includes that grant. It fills only a role that has no entry for that right. After that, your changes stand. Turn a right off and it stays off, even after an upgrade. Your own roles never get a starting grant, so tick what they need.
+
 ## Row scope: which records, not which kinds
 
 Row scope has three levels: **own**, **team**, **all**.

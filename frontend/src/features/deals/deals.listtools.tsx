@@ -16,15 +16,15 @@ import type { ListChip } from "../../design-system/listsurface";
 import type { ListSelection } from "../../design-system/listtable";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
-import { currentParams, replaceDial, useUrlParams } from "../../lib/urlstate";
-import { DealBulkBar } from "./dealbulk";
-import type { Deal, Pipeline, Stage } from "./deals";
 import {
   DEAL_SCREEN_DIALS,
   type DealFilters,
   PIPELINE_PARAM,
   VIEW_PARAM,
-} from "./deals.queries";
+} from "../../lib/deals.queries";
+import { currentParams, replaceDial, useUrlParams } from "../../lib/urlstate";
+import { DealBulkBar } from "./dealbulk";
+import type { Deal, Pipeline, Stage } from "./deals";
 
 // Bespoke selects for the filters whose option labels are runtime strings
 // (pipeline/stage/company names). A chip's option label is a MessageKey, so

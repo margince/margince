@@ -46,9 +46,15 @@ export function IconAction({
   inline,
   onClick,
   testId,
+  word,
 }: Readonly<{
   /** The verb, translated. Spoken as the name and shown as the tip. */
   label: string;
+  /**
+   * One short word drawn under the glyph in a record's verb bar, where the
+   * tile has no room for `label`; `label` stays the name. Hidden elsewhere.
+   */
+  word?: string;
   /**
    * What the verb DOES, where the word alone cannot say it.
    *
@@ -137,6 +143,11 @@ export function IconAction({
         onClick={onClick}
       >
         {icon}
+        {word && (
+          <span className="verb-word" aria-hidden="true">
+            {word}
+          </span>
+        )}
       </Button>
       {tip}
       {/* The description a screen reader reads AFTER the name, and the one a
@@ -148,5 +159,24 @@ export function IconAction({
         </span>
       )}
     </span>
+  );
+}
+
+/**
+ * A verb's short tile word with its full name for a screen reader. It serves a
+ * verb drawn as a plain `Button` or a popover face in the record verb bar.
+ * The word shows only inside that bar.
+ */
+export function VerbWord({
+  word,
+  label,
+}: Readonly<{ word: string; label: string }>) {
+  return (
+    <>
+      <span className="verb-word" aria-hidden="true">
+        {word}
+      </span>
+      <span className="sr-only">{label}</span>
+    </>
   );
 }

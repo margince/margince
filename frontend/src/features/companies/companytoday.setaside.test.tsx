@@ -12,10 +12,10 @@ import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import { useCompany360 } from "./company360";
-import { TodayOnThisAccount } from "./companytoday";
+import { CompanyNextBar } from "./companynextbar";
 
-// The account's moment can be set aside in place, by the same fingerprint
-// store as the advice rows beside it. The Undo brings it back.
+// The account's moment can be snoozed from the Next bar, by the same
+// fingerprint store as the advice rows. The Undo brings it back.
 
 afterEach(() => {
   cleanup();
@@ -75,14 +75,9 @@ function view(moment: Moment): Company360 {
 
 function Page() {
   const read = useCompany360("o-1");
-  return (
-    <TodayOnThisAccount
-      companyId="o-1"
-      view={read.data}
-      loading={read.isPending}
-      failed={read.isError}
-    />
-  );
+  return read.data ? (
+    <CompanyNextBar view={read.data} onOpenTasks={() => {}} />
+  ) : null;
 }
 
 it("sets the account's moment aside, and the Undo puts it back", async () => {
@@ -119,7 +114,7 @@ it("sets the account's moment aside, and the Undo puts it back", async () => {
 
   await screen.findByText(PROMISE.headline);
   await user.click(
-    screen.getByRole("button", { name: en["co.suggest.dismiss"] }),
+    screen.getByRole("button", { name: en["standing.next.snooze"] }),
   );
 
   await waitFor(() => expect(screen.queryByText(PROMISE.headline)).toBeNull());

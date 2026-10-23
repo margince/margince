@@ -1,4 +1,3 @@
-export { searchCompanyTargets as searchCompanyReferences } from "../companies/companyform";
 export { searchProjects as searchProjectReferences } from "../companies/companyprojects";
 
 import { useRecordOwnerOptions } from "../../components/assigneepicker";

@@ -14,9 +14,9 @@ import { meFixture } from "../../testing/mefixture";
 import { RecordShell } from "../../testing/recordshell.testkit";
 import { LeadScreen } from "./leads";
 
-// The lead page's head, read the way contactpage.test.tsx reads the contact's:
-// the inline subtitle, the pills, and the facts strip a reader glances before
-// anything else. Kept out of leads.test.tsx, already at its own line ceiling.
+// The lead page's head, read the way contactpage.test.tsx reads the contact's.
+// One fact per line sits under the name and the pills, then who holds the lead in
+// the details card. Kept out of leads.test.tsx, already at its own line ceiling.
 
 beforeEach(() => {
   globalThis.localStorage.setItem("margince.workspaceSlug", "acme");
@@ -75,10 +75,13 @@ function render(ui: ReactNode) {
   );
 }
 
-function stubLead(overrides: Partial<Lead> = {}) {
+function stubLead(overrides: Partial<Lead> = {}, grants: unknown[] = []) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (request: Request) => {
+      if (request.url.includes("/v1/record-grants")) {
+        return jsonResponse({ data: grants, page: { next_cursor: null } });
+      }
       if (request.url.endsWith("/v1/me")) {
         return jsonResponse({
           user: { id: "u-9", display_name: "Me" },
@@ -96,49 +99,53 @@ function stubLead(overrides: Partial<Lead> = {}) {
 }
 
 describe("the lead page's head", () => {
-  it("reads the title and company on the name's own line", async () => {
+  it("reads the title and the company each on a line of its own", async () => {
     stubLead();
     render(<LeadScreen id="l-1" />);
 
     await screen.findByRole("heading", { level: 1, name: "Jonas Petersen" });
-    expect(document.querySelector(".record-sub-inline")?.textContent).toBe(
-      "VP Sales · Nordwind Logistik",
-    );
+    const lines = document.querySelector(".record-split-lines");
+    expect(
+      [...(lines?.children ?? [])].map((line) => line.textContent),
+    ).toEqual(["VP Sales", "Nordwind Logistik"]);
   });
 
-  it("shows the lead marker and the ladder status as pills, and nothing else there", async () => {
+  it("shows the lead marker, the ladder status and who may open it as pills, and nothing else there", async () => {
+    stubLead();
+    render(<LeadScreen id="l-1" />);
+
+    await screen.findByRole("button", { name: "Not shared" });
+    const row = document.querySelector(".record-split-pills");
+    expect(row?.textContent).toBe("LeadContactedNot shared");
+    // That this is a lead is a kind, so its pill takes no state colour.
+    expect(row?.querySelector(".badge")?.className).not.toMatch(/badge-accent/);
+  });
+
+  it("reads Shared once the lead carries a grant, and opens the share screen", async () => {
+    stubLead({}, [{ id: "g-1", subject_type: "user", subject_id: "u-2" }]);
+    render(<LeadScreen id="l-1" />);
+
+    const pill = await screen.findByRole("button", { name: "Shared" });
+    pill.click();
+    expect(window.location.hash).toBe("#/share/lead/l-1");
+  });
+
+  it("keeps the owner and its Assign control in the details card, once", async () => {
     stubLead();
     render(<LeadScreen id="l-1" />);
 
     await screen.findByRole("heading", { level: 1, name: "Jonas Petersen" });
-    // The status also reads as a StatCard on the overview and as a read-only
-    // field in the rail, so the pulse row is queried by its own container
-    // rather than by the word alone.
-    const row = document.querySelector(".record-pulse");
-    expect(row?.textContent).toBe("LeadContacted");
+    const details = document.querySelector(".record-aside") as HTMLElement;
+    expect(
+      within(details).getAllByRole("button", { name: "Assign" }),
+    ).toHaveLength(1);
+    // No facts strip is left in the head to hold a second copy.
+    expect(
+      document.querySelector(".record-split-head .record-facts"),
+    ).toBeNull();
   });
 
-  it("carries the facts strip: email, company, owner, score, created and source", async () => {
-    stubLead();
-    render(<LeadScreen id="l-1" />);
-
-    await screen.findByRole("heading", { level: 1, name: "Jonas Petersen" });
-    const strip = document.querySelector(".record-facts") as HTMLElement;
-    expect(strip).toBeTruthy();
-
-    // Scoped to the strip: the email and the company both repeat in the
-    // details pane's own fields, open by default beside it.
-    expect(within(strip).getByText("jonas@nordwind.example")).toBeTruthy();
-    expect(within(strip).getByText("Nordwind Logistik")).toBeTruthy();
-    // The score fact: the number and its reason word, without a repeated
-    // "Score:" label, since the strip's own Eyebrow already says what this is.
-    expect(within(strip).getByText(/72 · Decision-maker title/)).toBeTruthy();
-    expect(within(strip).getByText("Webinar signup")).toBeTruthy();
-    // The owner's Assign control stays reachable from the strip.
-    expect(within(strip).getByRole("button", { name: "Assign" })).toBeTruthy();
-  });
-
-  it("names an imported lead's upload as its source, never the stamp", async () => {
+  it("names an imported lead's upload as where it came from, never the stamp", async () => {
     stubLead({
       source: "mirror:csv:pipedrive-export:lead:l-7",
       source_label: null,
@@ -146,11 +153,12 @@ describe("the lead page's head", () => {
     render(<LeadScreen id="l-1" />);
 
     await screen.findByRole("heading", { level: 1, name: "Jonas Petersen" });
-    const strip = document.querySelector(".record-facts") as HTMLElement;
-    expect(
-      within(strip).getByText("Imported from pipedrive-export"),
-    ).toBeTruthy();
-    expect(strip.textContent).not.toMatch(/mirror/i);
+    // The timeline's first event is the lead's arrival, named by its source.
+    const timeline = (await screen.findAllByRole("list")).find((list) =>
+      list.textContent?.includes("Imported from pipedrive-export"),
+    );
+    expect(timeline).toBeTruthy();
+    expect(timeline?.textContent).not.toMatch(/mirror/i);
   });
 
   it("puts a terminal status in its own tone", async () => {
@@ -162,7 +170,7 @@ describe("the lead page's head", () => {
 
     const row = await screen.findByText("Lead");
     const pill = row
-      .closest(".record-pulse")
+      .closest(".record-split-pills")
       ?.querySelector(".badge:last-child");
     expect(pill?.textContent).toBe("Disqualified");
     expect(pill?.classList.contains("badge-warning")).toBe(true);

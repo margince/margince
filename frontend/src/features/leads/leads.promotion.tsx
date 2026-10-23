@@ -1,18 +1,13 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
-import { EntityRef } from "../../components/entityref";
 import { Button, Field, Textarea } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
-import { Panel, PanelBody } from "../../design-system/panel";
-import { formatDateAbbrev } from "../../format/format";
 import { promotionTriggerLabel } from "../../format/promotion";
-import { viewerZone } from "../../format/timezone";
-import { useLocale, useT } from "../../i18n";
+import { useT } from "../../i18n";
 import { leadWriteKeys } from "../../lib/leadkeys";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useRecordHistory } from "../records/history";
-import type { Lead } from "./leads";
 
 /**
  * What the promotion did, read from the promote audit row it wrote.
@@ -80,7 +75,7 @@ export function usePromotionRecord(
  * reversible. It lives on the one page that is a fact about the promotion. A
  * reason is required and recorded: an unexplained undo looks like a mistake.
  */
-function DemoteAction({ id }: Readonly<{ id: string }>) {
+export function DemoteAction({ id }: Readonly<{ id: string }>) {
   const t = useT();
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
@@ -138,23 +133,19 @@ function DemoteAction({ id }: Readonly<{ id: string }>) {
 }
 
 /**
- * PromotedLeadPanel is what a promoted lead's page is for (ADR-0119): a
- * promoted lead keeps its page rather than redirecting to the contact.
+ * What the qualification did, in one line for the "Qualified as" card. It says
+ * whether it merged into a contact we already knew or created one, then the
+ * trigger and evidence it recorded.
  *
- * A redirect would say the lead no longer exists, which is false of a record
- * the product keeps, audits and can reverse. The panel starts the reversal, and
- * says whether promotion merged into a known contact or created a new one.
+ * Four outcome states, not two. The contact link is a fact the lead row
+ * carries, so it renders either way; only the outcome waits on the audit read.
  */
-export function PromotedLeadPanel({
-  lead,
-  promotion,
-}: Readonly<{ lead: Lead; promotion: PromotionRecord }>) {
-  const t = useT();
-  const { locale } = useLocale();
+export function promotionSummary(
+  promotion: PromotionRecord,
+  t: ReturnType<typeof useT>,
+): string {
   const triggerLabel = promotionTriggerLabel(promotion.trigger);
-  // Four states, not two. The contact link below is a fact the lead row
-  // carries, so it renders either way; only the outcome waits on the audit read.
-  const outcomeLine = () => {
+  const outcome = () => {
     if (promotion.pending) {
       return t("lead.promotedOutcomePending");
     }
@@ -173,42 +164,12 @@ export function PromotedLeadPanel({
         return t("lead.promotedOutcomeUnavailable");
     }
   };
-  return (
-    <Panel title={t("lead.promotedTitle")}>
-      <PanelBody>
-        <div className="lead-stack">
-          <p className="t-body">{outcomeLine()}</p>
-          <p className="t-body">
-            <EntityRef kind="contact" id={lead.promoted_contact_id} />
-          </p>
-          {lead.promoted_at && (
-            <p className="t-caption">
-              {t("lead.promotedAt")}{" "}
-              {formatDateAbbrev(
-                lead.promoted_at,
-                locale,
-                // The reader's own zone, the same one the shell stamps this
-                // page's timeline rows in. A lead carries no location of its
-                // own to prefer over where the reader is.
-                viewerZone(),
-              )}
-            </p>
-          )}
-          {triggerLabel && (
-            <p className="t-caption">
-              {t("lead.promotedTrigger")} {t(triggerLabel)}
-            </p>
-          )}
-          {promotion.evidenceNote && (
-            <p className="t-caption">
-              {t("lead.promotedEvidence")} {promotion.evidenceNote}
-            </p>
-          )}
-          {/* The reversal lives here and nowhere else: this is the record the
-              promotion is a fact about. */}
-          <DemoteAction id={lead.id} />
-        </div>
-      </PanelBody>
-    </Panel>
-  );
+  return [
+    outcome(),
+    triggerLabel && `${t("lead.promotedTrigger")} ${t(triggerLabel)}`,
+    promotion.evidenceNote &&
+      `${t("lead.promotedEvidence")} ${promotion.evidenceNote}`,
+  ]
+    .filter(Boolean)
+    .join(" ");
 }

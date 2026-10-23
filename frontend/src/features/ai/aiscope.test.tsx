@@ -403,9 +403,12 @@ describe("Prepare meeting on the company page", () => {
         }),
     });
     render(<CompanyScreen id="o-1" />);
-    await userEvent
-      .setup()
-      .click(await screen.findByRole("button", { name: "Prepare meeting" }));
+    const user = userEvent.setup();
+    // The meeting is a find on the Tasks tab; the overview has no such verb.
+    await user.click(await screen.findByRole("button", { name: /^Tasks/ }));
+    await user.click(
+      await screen.findByRole("button", { name: "Prepare meeting" }),
+    );
 
     expect(
       await screen.findByRole("heading", { name: "Meeting brief" }),

@@ -36,24 +36,29 @@ function lead(overrides: Partial<Lead> = {}): Lead {
 function ladder(props: {
   lead?: Partial<Lead>;
   pending?: boolean;
-  readOnlyReason?: string;
+  closed?: boolean;
+  bars?: Partial<Record<"new" | "contacted" | "engaged", string>>;
 }) {
   return () => {
     installFetchStub({});
     return (
       <StoryProviders>
+        {/* The page's one sentence, named by every refused rung. */}
+        {props.closed && (
+          <p id="lead-closed">
+            This lead is closed. It takes no further changes.
+          </p>
+        )}
         <LeadStepper
           lead={lead(props.lead)}
           pending={props.pending ?? false}
-          refusedReasonId={props.readOnlyReason ? "lead-refused" : undefined}
+          reasonId={props.closed ? "lead-closed" : undefined}
+          variant={props.bars ? "bars" : undefined}
+          dates={props.bars}
           onStep={() => undefined}
           onQualify={() => undefined}
           onDisqualify={() => undefined}
         />
-        {/* The page draws this sentence once; the ladder only points at it. */}
-        {props.readOnlyReason && (
-          <p id="lead-refused">{props.readOnlyReason}</p>
-        )}
       </StoryProviders>
     );
   };
@@ -70,12 +75,11 @@ type Story = StoryObj<typeof LeadStepper>;
 /** A lead somebody has reached out to: two rungs filled, three moves open. */
 export const Contacted: Story = { render: ladder({}) };
 
-/** The first rung, which is where most leads sit: nothing has happened yet
- *  and the line under the ladder says so rather than leaving it blank. */
+/** The first rung, which is where most leads sit: nothing has happened yet. */
 export const New: Story = { render: ladder({ lead: { status: "new" } }) };
 
-/** The system moved this one, reading a captured reply — the line names what
- *  it read and when, so a rep is not left asking who decided. */
+/** The system moved this one on a booked meeting. Who moved it reads in
+ *  the details' Status row, not under the ladder. */
 export const MovedByTheSystem: Story = {
   render: ladder({
     lead: {
@@ -89,12 +93,12 @@ export const MovedByTheSystem: Story = {
   }),
 };
 
-/** Qualified: the ladder is finished, every step is a fact, and the reason
- *  the moves are refused is stated once under the ladder, not on each step. */
+/** Qualified: the ladder is finished, every step is a fact, and the one
+ *  sentence on why the moves are refused is named by each, never repeated. */
 export const Qualified: Story = {
   render: ladder({
     lead: { status: "promoted", archived_at: "2026-08-25T10:00:00Z" },
-    readOnlyReason: "This lead is closed. It takes no further changes.",
+    closed: true,
   }),
 };
 
@@ -103,7 +107,7 @@ export const Qualified: Story = {
 export const Disqualified: Story = {
   render: ladder({
     lead: { status: "disqualified", archived_at: "2026-08-25T10:00:00Z" },
-    readOnlyReason: "This lead is closed. It takes no further changes.",
+    closed: true,
   }),
 };
 
@@ -116,4 +120,18 @@ export const Saving: Story = { render: ladder({ pending: true }) };
 export const Phone: Story = {
   tags: ["uat-phone"],
   render: ladder({ lead: { status: "engaged" } }),
+};
+
+/** The bars shape How it stands draws: the day the lead entered each rung,
+ *  the current one marked as now, and the two ways out as chips. */
+export const BarsWithDates: Story = {
+  render: ladder({
+    lead: { status: "engaged", status_set_by: "system" },
+    bars: { new: "2 Aug", contacted: "4 Aug", engaged: "9 Aug · now" },
+  }),
+};
+
+/** A rung with no recorded move draws no date rather than a guess. */
+export const BarsUndated: Story = {
+  render: ladder({ lead: { status: "contacted" }, bars: { new: "20 Aug" } }),
 };

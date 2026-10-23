@@ -1588,7 +1588,7 @@ components:
       x-version: 1
       description: >-
         Payload for conversation_claim.changed. A claim was corrected, renewed,
-        dismissed or erased. A downstream reader holding the old claim needs
+        taken over, dismissed or erased. A downstream reader holding the old claim needs
         to refresh it, or remove it when the status is erased.
       required:
         - claim_id
@@ -2200,13 +2200,17 @@ components:
           $ref: '#/components/schemas/PublicEventActivityRelinkedRef'
         direction:
           type: string
-          enum: [outbound]
+          enum: [outbound, inbound]
           x-enum-varnames:
             - DirectionBecameOutbound
+            - DirectionBecameInbound
           description: >-
-            Set when capture learned that a message stored as received was the
-            seat's own sent mail (absent otherwise). The counterparty changes
-            with it; a subscriber that must know re-reads the row.
+            `outbound` when capture learned that a message stored as received
+            was the seat's own sent mail. `inbound` when a copy read as a
+            colleague's sent mail is received mail again, because that
+            colleague's address is not at an own domain. Absent otherwise. The
+            counterparty changes with it; a subscriber that must know re-reads
+            the row.
         project_filing_undone:
           type: boolean
           description: >-

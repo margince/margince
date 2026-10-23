@@ -165,9 +165,11 @@ type verdictPayload struct {
 	Results []verdictResult `json:"results"`
 }
 
-// RunWorkspace drains up to maxVerdicts deferred dispositions in the workspace
-// already bound in ctx. A budget stop ends the pass cleanly: what was decided
-// is committed, and the rest stays claimable for the next cycle.
+// RunWorkspace judges up to maxVerdicts deferred dispositions in the workspace
+// already bound in ctx. Every sender the pass reaches counts, answered or not,
+// so a failing model cannot make the cap a suggestion. A budget stop ends the
+// pass cleanly: what was decided is committed, and the rest stays claimable for
+// the next cycle.
 //
 // The cap is per workspace, not per pass: a shared counter lets one large
 // backlog consume the whole budget and starve every workspace after it.
@@ -177,22 +179,24 @@ func (e *CounterpartyVerdictEngine) RunWorkspace(ctx context.Context, maxVerdict
 	}
 	budget := reAskBudgetFor(maxVerdicts)
 	return e.inWorkspace(ctx, func(wsCtx context.Context, _ ids.UUID) error {
-		resolved := 0
-		for resolved < maxVerdicts {
-			batch, err := e.pending.ClaimDue(wsCtx, verdictClaimSize)
+		judged := 0
+		for judged < maxVerdicts {
+			// A claim never takes more than the pass has left, or a batch
+			// judged past the cap would make the cap a suggestion.
+			batch, err := e.pending.ClaimDue(wsCtx, min(verdictClaimSize, maxVerdicts-judged))
 			if err != nil {
 				return fmt.Errorf("verdict: claiming the disposition backlog: %w", err)
 			}
 			if len(batch) == 0 {
 				return nil
 			}
-			n, err := e.judgeClaimed(wsCtx, batch, budget)
-			resolved += n
+			reached, err := e.judgeClaimed(wsCtx, batch, budget)
+			judged += reached
 			if ai.IsDeferral(err) {
 				// The refund is judgeClaimed's, because it is what knows where
 				// it stopped. Releasing from here would hand back the whole
 				// batch, including the sender already deferred inside it.
-				e.log.InfoContext(wsCtx, "counterparty verdict: work deferred, stopping the pass", "resolved", resolved)
+				e.log.InfoContext(wsCtx, "counterparty verdict: work deferred, stopping the pass", "judged", judged)
 				return nil
 			}
 			if err != nil {
@@ -219,6 +223,7 @@ func (e *CounterpartyVerdictEngine) RunWorkspace(ctx context.Context, maxVerdict
 // stopped on attempts a refund that matches nothing and is lost in silence.
 // Released here rather than by the caller because this is what knows where it
 // stopped — a caller handed the remainder could still pass the whole batch.
+// It returns how many rows it reached, which is what the pass cap counts.
 func (e *CounterpartyVerdictEngine) judgeClaimed(
 	ctx context.Context, claimed []capture.PendingCounterparty, budget *reAskBudget,
 ) (int, error) {
@@ -240,9 +245,10 @@ func (e *CounterpartyVerdictEngine) judgeClaimed(
 			}
 		}
 	}
-	applied := 0
+	reached := 0
 	for i, row := range claimed {
-		n, err := e.judgeOne(ctx, row, budget)
+		reached++
+		_, err := e.judgeOne(ctx, row, budget)
 		if err != nil {
 			// WHY it failed decides whether the row pays for it, and the cause
 			// has to be read BEFORE the deferral — a Defer clears claimed_by, so
@@ -261,19 +267,18 @@ func (e *CounterpartyVerdictEngine) judgeClaimed(
 			if deferErr := e.pending.Defer(ctx, row, backoff,
 				"the verdict could not be completed", deferred); deferErr != nil {
 				releaseUnreached(claimed[i+1:], backoff)
-				return applied, deferErr
+				return reached, deferErr
 			}
 			if deferred {
 				releaseUnreached(claimed[i+1:], backoff)
-				return applied, err
+				return reached, err
 			}
 			e.log.WarnContext(ctx, "counterparty verdict: judging a sender failed",
 				"disposition", row.ID.String(), "err", err)
 			continue
 		}
-		applied += n
 	}
-	return applied, nil
+	return reached, nil
 }
 
 // judgeOne asks about ONE sender and applies what comes back, if it clears the

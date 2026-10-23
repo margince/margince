@@ -18,9 +18,9 @@ import type { MessageKey } from "../../i18n/en";
 import { factFieldLabelKey } from "../../lib/factview";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
-import { EvidenceVerdict, factClaim } from "../records/evidenceverdict";
 import { settleFacts } from "./companyfactspanel";
 import { derivedSource } from "./evidencesource";
+import { EvidenceVerdict, factClaim } from "./evidenceverdict";
 import "./company360.css";
 
 type CompanyFact = components["schemas"]["CompanyFact"];

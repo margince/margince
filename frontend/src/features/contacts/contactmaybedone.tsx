@@ -2,13 +2,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { CheckSquare } from "lucide-react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { useClaimSettle, useTaskUpdate } from "../../components/taskactions";
+import { useCompleteTask } from "../../components/taskcomplete";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { useSetAside } from "../records/record360";
-import { useClaimSettle, useTaskUpdate } from "../worklist/taskactions";
-import { useCompleteTask } from "../worklist/taskcomplete";
 
 // The verbs of a promise card that asks whether our last email kept it. The
 // server never closes the promise itself: Done is the reader's word for it,

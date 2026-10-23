@@ -725,7 +725,7 @@ export interface components {
             /** @description Which of the eight claim kinds this is — the ConversationClaimKind vocabulary of the CRM contract. Carried as a plain string rather than a second copy of that enum: the two documents generate into one Go package, and a duplicated enum there is two spellings of one vocabulary that can drift apart. */
             kind: string;
         };
-        /** @description Payload for conversation_claim.changed. A claim was corrected, renewed, dismissed or erased. A downstream reader holding the old claim needs to refresh it, or remove it when the status is erased. */
+        /** @description Payload for conversation_claim.changed. A claim was corrected, renewed, taken over, dismissed or erased. A downstream reader holding the old claim needs to refresh it, or remove it when the status is erased. */
         PublicEventConversationClaimChanged: {
             /** Format: uuid */
             claim_id: string;
@@ -1009,10 +1009,10 @@ export interface components {
             meeting_status?: "booked" | "held" | "no_show" | "canceled";
             relinked?: components["schemas"]["PublicEventActivityRelinkedRef"];
             /**
-             * @description Set when capture learned that a message stored as received was the seat's own sent mail (absent otherwise). The counterparty changes with it; a subscriber that must know re-reads the row.
+             * @description `outbound` when capture learned that a message stored as received was the seat's own sent mail. `inbound` when a copy read as a colleague's sent mail is received mail again, because that colleague's address is not at an own domain. Absent otherwise. The counterparty changes with it; a subscriber that must know re-reads the row.
              * @enum {string}
              */
-            direction?: "outbound";
+            direction?: "outbound" | "inbound";
             /** @description True when a member undid the activity's filing under a project: the project link and the retention class that filing gave it are gone (absent otherwise). Who decided and why is audit-log material, not published. */
             project_filing_undone?: boolean;
             /** @description True when the sender's own provider filing attested the message as their outbound mail, whether it was stored as received or as unattested outbound (absent otherwise). */
@@ -1893,7 +1893,7 @@ export const subscribableEventTypeValues: ReadonlyArray<FlattenedDeepRequired<co
 export const publicEventLeadSourceChangedChangeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventLeadSourceChanged"]["change"]> = ["created", "updated", "deleted"];
 export const publicEventLeadDisqualifyReasonChangedChangeValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventLeadDisqualifyReasonChanged"]["change"]> = ["created", "updated", "deleted"];
 export const publicEventActivityChangedFieldsMeeting_statusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventActivityChangedFields"]["meeting_status"]> = ["booked", "held", "no_show", "canceled"];
-export const publicEventActivityChangedFieldsDirectionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventActivityChangedFields"]["direction"]> = ["outbound"];
+export const publicEventActivityChangedFieldsDirectionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventActivityChangedFields"]["direction"]> = ["outbound", "inbound"];
 export const publicEventActivityChangedFieldsAudienceValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventActivityChangedFields"]["audience"]> = ["workspace", "participants", "selected"];
 export const publicEventActivityChangedFieldsCalendar_methodValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventActivityChangedFields"]["calendar_method"]> = ["PUBLISH", "REQUEST", "REPLY", "ADD", "CANCEL", "REFRESH", "COUNTER", "DECLINECOUNTER"];
 export const publicEventForecastAssuranceCreatedStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventForecastAssuranceCreated"]["status"]> = ["complete", "incomplete"];

@@ -28,6 +28,8 @@
 
 import { type ReactNode, useLayoutEffect, useRef } from "react";
 import { Button, useScrollRegion } from "./atoms";
+import type { ReadingTone } from "./readingtone";
+import { LadderBars } from "./stageladder.bars";
 import "./stageladder.css";
 
 export type StageStep = {
@@ -57,6 +59,9 @@ export type StageStep = {
   reason?: string;
   reasonId?: string;
   testId?: string;
+  // One line under the step in the `bars` shape: how long the record spent
+  // there ("12 d", "6 d · now"). Absent draws no line, never a dash.
+  sub?: ReactNode;
 };
 
 /**
@@ -81,6 +86,8 @@ export function StageLadder({
   steps,
   hint,
   wrap,
+  variant = "chevrons",
+  tone = "success",
 }: Readonly<{
   label: string;
   steps: readonly StageStep[];
@@ -90,6 +97,32 @@ export function StageLadder({
    * reader has to see whole (a wizard's six steps). Without it a run past its
    * row scrolls, which is right for a pipeline the workspace may lengthen.
    */
+  wrap?: boolean;
+  /**
+   * `bars` is the record page's ladder inside How it stands. It shows "Stage N
+   * of M" and the move to the next stage over one bar per stage with its `sub`
+   * line. The ways out are chips. `chevrons` is every other ladder.
+   */
+  variant?: "chevrons" | "bars";
+  // The current bar's colour in the `bars` shape: the verdict the card beside
+  // it reads, so a drifting deal does not stand on a green rung.
+  tone?: ReadingTone;
+}>) {
+  if (variant === "bars") {
+    return <LadderBars label={label} steps={steps} hint={hint} tone={tone} />;
+  }
+  return <ChevronLadder label={label} steps={steps} hint={hint} wrap={wrap} />;
+}
+
+function ChevronLadder({
+  label,
+  steps,
+  hint,
+  wrap,
+}: Readonly<{
+  label: string;
+  steps: readonly StageStep[];
+  hint?: ReactNode;
   wrap?: boolean;
 }>) {
   const run = steps.filter((step) => !step.terminal);

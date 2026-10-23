@@ -68,12 +68,15 @@ func (e PublicEventActivityChangedFieldsCalendarMethod) Valid() bool {
 
 // Defines values for PublicEventActivityChangedFieldsDirection.
 const (
+	DirectionBecameInbound  PublicEventActivityChangedFieldsDirection = "inbound"
 	DirectionBecameOutbound PublicEventActivityChangedFieldsDirection = "outbound"
 )
 
 // Valid indicates whether the value is a known member of the PublicEventActivityChangedFieldsDirection enum.
 func (e PublicEventActivityChangedFieldsDirection) Valid() bool {
 	switch e {
+	case DirectionBecameInbound:
+		return true
 	case DirectionBecameOutbound:
 		return true
 	default:
@@ -962,7 +965,7 @@ type PublicEventActivityChangedFields struct {
 	// CommitmentAdmissionsChanged The source's recorded commitment decisions changed; fetch the source through its normal content access gate.
 	CommitmentAdmissionsChanged *bool `json:"commitment_admissions_changed,omitempty"`
 
-	// Direction Set when capture learned that a message stored as received was the seat's own sent mail (absent otherwise). The counterparty changes with it; a subscriber that must know re-reads the row.
+	// Direction `outbound` when capture learned that a message stored as received was the seat's own sent mail. `inbound` when a copy read as a colleague's sent mail is received mail again, because that colleague's address is not at an own domain. Absent otherwise. The counterparty changes with it; a subscriber that must know re-reads the row.
 	Direction *PublicEventActivityChangedFieldsDirection `json:"direction,omitempty"`
 
 	// DueAt The activity's new due_at (absent when this update did not touch it).
@@ -1002,7 +1005,7 @@ type PublicEventActivityChangedFieldsAudience string
 // PublicEventActivityChangedFieldsCalendarMethod The RFC 5546 method of the message's calendar part. Set when it was read back from the message's stored original (absent otherwise).
 type PublicEventActivityChangedFieldsCalendarMethod string
 
-// PublicEventActivityChangedFieldsDirection Set when capture learned that a message stored as received was the seat's own sent mail (absent otherwise). The counterparty changes with it; a subscriber that must know re-reads the row.
+// PublicEventActivityChangedFieldsDirection `outbound` when capture learned that a message stored as received was the seat's own sent mail. `inbound` when a copy read as a colleague's sent mail is received mail again, because that colleague's address is not at an own domain. Absent otherwise. The counterparty changes with it; a subscriber that must know re-reads the row.
 type PublicEventActivityChangedFieldsDirection string
 
 // PublicEventActivityChangedFieldsMeetingStatus How the meeting went, once somebody recorded it (absent when this update did not touch it). Meeting rows only; the update refuses the field on any other kind.
@@ -1441,7 +1444,7 @@ type PublicEventConversationClaimCaptured struct {
 	Kind string `json:"kind"`
 }
 
-// PublicEventConversationClaimChanged Payload for conversation_claim.changed. A claim was corrected, renewed, dismissed or erased. A downstream reader holding the old claim needs to refresh it, or remove it when the status is erased.
+// PublicEventConversationClaimChanged Payload for conversation_claim.changed. A claim was corrected, renewed, taken over, dismissed or erased. A downstream reader holding the old claim needs to refresh it, or remove it when the status is erased.
 type PublicEventConversationClaimChanged struct {
 	ClaimId openapi_types.UUID `json:"claim_id"`
 

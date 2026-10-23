@@ -79,6 +79,18 @@ The most likely reasons: the thread is **Held until classified** and nothing has
 Only the mailbox owner can open it up, by choosing **Share with the company** on the message. Ask them; an administrator cannot open it for you.
 Also called: email not visible, cannot read email, content for participants only.
 
+### Can I read a mail I sent when only a colleague's mailbox captured it?
+Yes, that one mail. You wrote to a customer and copied a colleague, and Margince
+has only your colleague's copy. You can open that copy because you sent it. You
+cannot open the other mail on that thread, or the customer's record, unless your
+colleague shares them. A promise you made in that mail comes to you as your own
+task or request, and your colleague can read that task too.
+
+This works only when your sign-in address is at one of your company's own
+domains. The mail server that received the mail must also have confirmed that it
+came from that domain.
+Also called: my own sent mail, mail I sent to a customer, copied colleague.
+
 ## Why this one is held
 
 A held Margince message carries a reason, so you can see why it is held:

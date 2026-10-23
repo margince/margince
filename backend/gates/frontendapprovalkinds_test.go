@@ -34,7 +34,7 @@ import (
 // The map lives in its own file: approvalkind.ts is frozen by the frontend
 // length waiver and a new kind's label would grow it, so the vocabulary this
 // gate reads was split out where it can grow.
-const frontendApprovalKinds = "../frontend/src/features/automations/approvalkindlabel.ts"
+const frontendApprovalKinds = "../frontend/src/lib/approvalkindlabel.ts"
 
 // kindLabelEntry reads one `kind: "approval.kind.x"` pair out of the map.
 // Quoted keys are matched too: an entry written `"send_email":` would

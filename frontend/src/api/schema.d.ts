@@ -1198,6 +1198,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/claims/{id}/take-over": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take over a promise one of us made that nobody was asked to keep.
+         * @description A promise a colleague made becomes their task. When Margince cannot give it to them,
+         *     because nobody is named, they left, or the mail is private to somebody else, nobody
+         *     is asked and the claim stays open on the contact. This is the explicit act that names
+         *     a new owner: the caller.
+         *
+         *     It writes one task, owned by the caller and linked to the contact, and records on the
+         *     claim who took it over and when. A promise filed on several contacts is taken over on
+         *     each of them the caller may read, with that one task.
+         *
+         *     The caller must be a signed-in colleague who may read the claim's source and may hold
+         *     a task about it. Mail private to another colleague is theirs alone to take. A claim
+         *     whose source the caller may not read answers `404`, as the claim does not exist for
+         *     them.
+         *
+         *     Pressed twice by the same colleague, it answers the first take over again and writes
+         *     nothing. Any other case where the promise already has an owner is a `409` that says
+         *     who: another colleague took it over, it is already somebody's task, or it waits on the
+         *     colleague who made it.
+         */
+        post: operations["takeOverConversationClaim"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/contacts/{id}/research": {
         parameters: {
             query?: never;
@@ -22151,8 +22191,8 @@ export interface components {
         CaptureSettings: {
             locks?: components["schemas"]["SettingLocks"];
             /**
-             * @description How many held mail threads one confidentiality pass answers, per run. A thread the
-             *     model fails on does not count. The threads beyond the cap wait for the next run, so
+             * @description How many held mail threads one confidentiality pass asks the model about, per run,
+             *     answered or not. The threads beyond the cap wait for the next run, so
              *     the cap sets how fast a backlog drains and never whether a thread is judged. Raise it
              *     when `margince_capture_confidentiality_oldest_wait_seconds` stays above how often the
              *     pass runs. Read at the start of every pass, so a change applies without a restart.
@@ -29064,6 +29104,33 @@ export interface components {
              * @description The task an extracted `commitment_ours` created, so completing either side completes both. Null for every other kind — a reminder about THEIR promise is a rep action, not an auto-task.
              */
             task_activity_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The colleague who took over this promise when nobody was asked to keep it. Null when nobody took it over, and after that colleague's account was deleted.
+             */
+            taken_by_user_id?: string | null;
+            /** @description The display name of `taken_by_user_id`, so the card can say who took it over. */
+            taken_by_name?: string | null;
+            /**
+             * Format: date-time
+             * @description When the promise was taken over. Kept when the colleague's account is deleted.
+             */
+            taken_at?: string | null;
+        };
+        /** @description A promise one colleague took over, and the task it became. */
+        PromiseTakeOver: {
+            /** Format: uuid */
+            claim_id: string;
+            /**
+             * Format: uuid
+             * @description The task the promise became, owned by `taken_by_user_id`.
+             */
+            task_activity_id: string;
+            /** Format: uuid */
+            taken_by_user_id: string;
+            taken_by_name?: string | null;
+            /** Format: date-time */
+            taken_at: string;
         };
         /**
          * @description One thread or meeting, condensed to what it was about (ADR-0097 D3).
@@ -33791,7 +33858,7 @@ export interface components {
             readonly capture_label?: null | "commitment" | "meeting" | "noise";
             /** @description This message carried an RFC 2369 List-Unsubscribe header, so the SENDER declared it bulk. Per message, never per sender: the same address sends a newsletter and a reply, and treating the sender as bulk would bury the reply. */
             readonly bulk_mail_attested?: boolean;
-            /** @description Who may read this activity's CONTENT once the row is discoverable at all. `workspace` — everyone who can discover it (the default); `participants` — the humans on it (the capturing mailbox owner, anyone stamped as a participant by seat); `selected` — the participants plus the users and teams named through PATCH /activities/{id}/audience. Set only through that endpoint, by a human with write authority over the activity. */
+            /** @description Who may read this activity's CONTENT once the row is discoverable at all. `workspace` — everyone who can discover it (the default); `participants` — the humans on it (the capturing mailbox owner, anyone stamped as a participant by seat); `selected` — the participants plus the users and teams named through PATCH /activities/{id}/audience. Set only through that endpoint, by a human with write authority over the activity. The colleague who sent a mail that only another member's mailbox captured may read that one copy, when their login address is at one of the workspace's own domains. */
             readonly audience?: components["schemas"]["ActivityAudience"];
             /** @description Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the workspace turned mail sharing off), `no_record` (the message is filed under no record), `pending_verdict` (nothing has judged the message yet), `manual` (a human said so). Null on a row nothing derived. WITHHELD with the content — the reason describes what the message is about, so a colleague who may not read a held message does not learn why it is held either; it is absent whenever `content_state` is `withheld`. */
             readonly audience_reason?: string | null;
@@ -50844,6 +50911,33 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    takeOverConversationClaim: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The promise as taken over, by this request or an earlier one by the same caller. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PromiseTakeOver"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
         };
     };
     runContactResearch: {

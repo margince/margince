@@ -97,8 +97,10 @@ A promise one of your colleagues made goes only to that colleague, as their task
 
 When Margince cannot give the promise to the colleague who made it, it asks nobody. That happens when nobody is named, the colleague has left, or the promise is in mail only another colleague may read. The promise then stays on the contact's record.
 
+To keep such a promise yourself, press **I’ll take this** beside it on the contact's record. It becomes your task, and the record shows that you took it and when. Only one colleague can take a promise. If someone was first, Margince names them. Opening or reading a promise never takes it. Mail private to another colleague is theirs alone to take.
+
 The email for such a request names the deal or company and the mail or meeting it came from. It also names who made the promise, quotes their words, and says why you are asked.
-Also called: commitment, promise task, promised by, who owns this promise.
+Also called: commitment, promise task, promised by, who owns this promise, take over a promise.
 
 ### How do I stop Margince making automatic changes?
 To make Margince ask before changing close dates, company names or lifecycle stages, open **Settings → AI access**, then **For developers**, then **Agent rules**. Turn off the matching switch under **Automatic changes**. The switches apply to your work only. A kind you switch off comes back to your Worklist as an approval.

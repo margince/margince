@@ -3,6 +3,7 @@
 import { basename, dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import ts from "typescript";
 import { afterEach, describe, expect, it } from "vitest";
 import {
@@ -59,6 +60,72 @@ function drawReading() {
     </LocaleProvider>,
   );
 }
+
+describe("a reading that names what it counts", () => {
+  const peek = {
+    head: "Open deals on this account",
+    items: [
+      { key: "a", title: "Expansion Phase 2", sub: "Proposal", right: "€95k" },
+    ],
+  };
+
+  it("opens its card when keyboard focus lands on the door, and the door keeps its press", async () => {
+    let opened = 0;
+    const user = userEvent.setup();
+    render(
+      <LocaleProvider initial="en">
+        <StatCard
+          label="Open deals"
+          value="€244k"
+          detail="4 open"
+          peek={peek}
+          onOpen={() => (opened += 1)}
+        />
+      </LocaleProvider>,
+    );
+
+    await user.tab();
+    expect(
+      screen.getByRole("region", { name: "Open deals on this account" }),
+    ).toBeTruthy();
+    await user.keyboard("{Enter}");
+
+    expect(opened).toBe(1);
+  });
+
+  it("opens the card on a press where the tile has no door of its own", async () => {
+    const user = userEvent.setup();
+    render(
+      <LocaleProvider initial="en">
+        <StatCard label="Unanswered" value="2 emails" peek={peek} />
+      </LocaleProvider>,
+    );
+
+    await user.click(screen.getByText("2 emails"));
+
+    expect(
+      screen.getByRole("region", { name: "Open deals on this account" }),
+    ).toBeTruthy();
+  });
+
+  it("draws no card for a figure with nothing behind it", async () => {
+    const user = userEvent.setup();
+    render(
+      <LocaleProvider initial="en">
+        <StatCard
+          label="Unanswered"
+          value="None"
+          peek={{ head: "Emails", items: [] }}
+          onOpen={() => {}}
+        />
+      </LocaleProvider>,
+    );
+
+    await user.tab();
+
+    expect(screen.queryByRole("region")).toBeNull();
+  });
+});
 
 describe("the door always says Open", () => {
   it("letters the foot's button with the stat.open message and no other word", () => {

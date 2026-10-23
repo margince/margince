@@ -3,19 +3,11 @@
 
 /** @vitest-environment happy-dom */
 import { QueryClientProvider } from "@tanstack/react-query";
-import {
-  act,
-  cleanup,
-  render,
-  renderHook,
-  screen,
-  waitFor,
-} from "@testing-library/react";
+import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { createQueryClient } from "../app/queryclient";
 import { useContact360 } from "../features/contacts/contact360";
-import { ContactCommitmentsCard } from "../features/contacts/contactcards";
 import {
   useReassignTask,
   useTakeOwnership,
@@ -31,13 +23,6 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
-
-function ContactWork() {
-  const read = useContact360("p-1");
-  return read.data ? (
-    <ContactCommitmentsCard view={read.data} firstName="Dana" />
-  ) : null;
-}
 
 it.each(["reassign", "take", "conflict", "take-conflict"] as const)(
   "%s refreshes personal attribution and every affected cached view",
@@ -121,13 +106,15 @@ it.each(["reassign", "take", "conflict", "take-conflict"] as const)(
         </QueryClientProvider>
       );
     }
-    render(<ContactWork />, { wrapper: Wrapper });
+    const view = renderHook(() => useContact360("p-1"), { wrapper: Wrapper });
+    const assigneeShown = () =>
+      view.result.current.data?.next_steps?.data[0]?.assignee_id;
     const mutation = renderHook(
       () => ({ reassign: useReassignTask(), take: useTakeOwnership() }),
       { wrapper: Wrapper },
     );
-    await screen.findAllByText(
-      action === "take" ? "Send the pilot quote" : "You: Send the pilot quote",
+    await waitFor(() =>
+      expect(assigneeShown()).toBe(action === "take" ? "u-colleague" : "u-me"),
     );
     await act(async () => {
       if (action === "take-conflict") {
@@ -159,9 +146,7 @@ it.each(["reassign", "take", "conflict", "take-conflict"] as const)(
       }
     });
     await waitFor(() =>
-      expect(screen.queryAllByText("You: Send the pilot quote")).toHaveLength(
-        action === "take" ? 2 : 0,
-      ),
+      expect(assigneeShown()).toBe(action === "take" ? "u-me" : "u-colleague"),
     );
     for (const key of affected)
       expect(client.getQueryState(key)?.isInvalidated).toBe(true);

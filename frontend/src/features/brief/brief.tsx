@@ -3,6 +3,7 @@
 
 import { type ReactNode, useId, useState } from "react";
 import { PageAsideToggle } from "../../components/pageaside";
+import { useTaskUpdate } from "../../components/taskactions";
 import { Modal } from "../../design-system/atoms";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { Eyebrow } from "../../design-system/eyebrow";
@@ -18,7 +19,6 @@ import { useUrlParams } from "../../lib/urlstate";
 import { pillCount } from "../../lib/worklistcounts";
 import { LinkedApprovalDrawer } from "../automations/approvaldrawer";
 import { MagicPanel } from "../sign-in/magic";
-import { useTaskUpdate } from "../worklist/taskactions";
 import { TaskDetailModal } from "../worklist/taskdetailmodal";
 import { drawerScope } from "../worklist/worklist.address";
 import { WorklistPane } from "../worklist/worklist.pane";

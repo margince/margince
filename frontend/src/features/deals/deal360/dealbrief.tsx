@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { useShowDetails } from "../../../components/pageaside";
 import { Button } from "../../../design-system/atoms";
-import { Panel, PanelBody } from "../../../design-system/panel";
-import { SurfaceState } from "../../../design-system/surfacestate";
+import {
+  OverviewCard,
+  OverviewText,
+} from "../../../design-system/overviewcard";
 import { useT } from "../../../i18n";
 import "./deal360.css";
 
@@ -10,98 +11,64 @@ import "./deal360.css";
 const COLLAPSED_LINES = 6;
 
 /**
- * The deal's human-authored brief, on the record page.
- *
- * Kept visually distinct from the generated status card above it: that one is
- * written by an assembler and can be regenerated, this one is what a colleague
- * typed and nothing overwrites it. A reader who cannot tell them apart cannot
- * tell which parts of the page they may correct.
- *
- * An UNBRIEFED deal shows the panel and says the field is empty, rather than
- * rendering nothing. It used to vanish, on the reasoning that the record's
- * edit form already offers the field — but a reader looking at the page cannot
- * see a form they have not opened, and every deal without a brief therefore
- * looked like a product with no such field at all. A panel that names what it
- * holds is how somebody learns the brief exists.
+ * What this deal is, in the words a colleague typed. Nothing generated
+ * overwrites it, which is why it stands apart from How it stands above it.
+ * An unbriefed deal keeps the card and says the brief is empty: a card that
+ * vanished would read as a product with no such field.
  */
 export function DealBrief({
   brief,
-  readOnly = false,
+  onEdit,
 }: Readonly<{
   brief?: string | null;
-  // The page's own answer to whether this deal takes writes. The panel does
-  // not re-derive it: the server refuses an unauthorized write whatever this
-  // says, and a second implementation of the gate here is the defect rather
-  // than the protection.
-  readOnly?: boolean;
+  // Opens the deal's fields where the brief is written; absent while the
+  // deal takes no writes from this reader.
+  onEdit?: () => void;
 }>) {
   const t = useT();
   const [expanded, setExpanded] = useState(false);
-  const showDetails = useShowDetails("description");
   const text = brief?.trim();
-  const canWrite = !readOnly && Boolean(showDetails);
-  if (!text) {
-    return (
-      <Panel
-        title={t("deal.brief")}
-        actions={
-          canWrite ? (
-            <Button variant="ghost" onClick={showDetails}>
-              {t("deal.briefAdd")}
-            </Button>
-          ) : undefined
-        }
-      >
-        <PanelBody>
-          <SurfaceState
-            state="empty"
-            emptyLabel={t("deal.briefEmpty")}
-            emptyDetail={t("deal.briefEmptyDetail")}
-            loadingLabel={t("deal.brief")}
-          >
-            {null}
-          </SurfaceState>
-        </PanelBody>
-      </Panel>
-    );
-  }
-  // The line count decides whether there is anything to expand. Counting lines
-  // rather than characters because the clamp is a line clamp: a long single
-  // paragraph wraps and is clamped, and asking about its length would offer
-  // "Read more" on text already fully shown.
-  const clampable = text.split("\n").length > COLLAPSED_LINES;
+  // A line clamp, so the count is of lines. A long single paragraph wraps
+  // and is clamped, and its length alone would offer "Read more" on text
+  // already fully shown.
+  const clampable =
+    Boolean(text) && (text ?? "").split("\n").length > COLLAPSED_LINES;
   const clamped = clampable && !expanded;
   return (
-    <Panel
-      title={t("deal.brief")}
-      actions={
-        canWrite ? (
-          <Button variant="ghost" onClick={showDetails}>
-            {t("deal.briefEdit")}
+    <OverviewCard
+      title={t("deal.brief.title")}
+      action={
+        onEdit ? (
+          <Button variant="link" onClick={onEdit}>
+            {text ? t("deal.briefEdit") : t("deal.briefAdd")}
           </Button>
         ) : undefined
       }
+      empty={text ? undefined : t("deal.briefEmpty")}
     >
-      <PanelBody>
-        <p
-          className={clamped ? "t-body d360-brief-clamped" : "t-body"}
-          style={{
-            whiteSpace: "pre-wrap",
-            ...(clamped ? { WebkitLineClamp: COLLAPSED_LINES } : {}),
-          }}
-        >
-          {text}
-        </p>
-        {clampable && (
-          <Button
-            variant="ghost"
-            onClick={() => setExpanded((open) => !open)}
-            aria-expanded={expanded}
-          >
-            {expanded ? t("deal.briefLess") : t("deal.briefMore")}
-          </Button>
-        )}
-      </PanelBody>
-    </Panel>
+      {text ? (
+        <>
+          <OverviewText>
+            <span
+              className={
+                clamped ? "d360-brief d360-brief-clamped" : "d360-brief"
+              }
+              style={clamped ? { WebkitLineClamp: COLLAPSED_LINES } : undefined}
+            >
+              {text}
+            </span>
+          </OverviewText>
+          {clampable && (
+            <Button
+              variant="link"
+              onClick={() => setExpanded((open) => !open)}
+              aria-expanded={expanded}
+            >
+              {expanded ? t("deal.briefLess") : t("deal.briefMore")}
+            </Button>
+          )}
+        </>
+      ) : undefined}
+    </OverviewCard>
   );
 }

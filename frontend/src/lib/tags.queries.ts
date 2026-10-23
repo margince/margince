@@ -46,8 +46,13 @@ function invalidateTagged(
  * the words are hidden, because "no tags" is a claim about the record that
  * nobody established.
  */
-export function useRecordTags(entityType: TaggableType, entityID: string) {
+export function useRecordTags(
+  entityType: TaggableType,
+  entityID: string,
+  enabled = true,
+) {
   return useQuery({
+    enabled,
     queryKey: ["record-tags", entityType, entityID],
     queryFn: async () => {
       return unwrap(

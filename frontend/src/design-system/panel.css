@@ -42,6 +42,15 @@
     padding-block: var(--space-3);
   }
 }
+/* The flat head: the title and its action on one baseline, set on the card's
+ * own inset instead of a band. After the two overrides above so it wins at
+ * every width. */
+.panel-head-flat {
+  align-items: baseline;
+  min-height: 0;
+  padding: var(--space-5) var(--space-5) var(--space-2);
+  border-bottom: none;
+}
 /* The zone's title in the display face: the one word a reader finds a zone
  * by, so it is set as a heading rather than as a label on a card.
  *

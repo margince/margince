@@ -231,17 +231,9 @@ func applyRoleObjectGrant(ctx context.Context, tx pgx.Tx, actor Identity, roleKe
 	if err != nil {
 		return roleRow{}, err
 	}
-	// A TARGETED write, not a parse-and-rewrite of the document. Re-serializing
-	// a parsed document would silently erase every grant this installation
-	// cannot name (a removed unit's objects) and every field the parse does not
-	// model — data the operator never asked to touch. The inner jsonb_set
-	// materializes `objects` when the document has none, because jsonb_set on a
-	// two-step path whose parent is missing is a no-op that reports success.
 	row := tx.QueryRow(ctx,
 		`UPDATE role
-		    SET permissions = jsonb_set(
-		          jsonb_set(permissions, '{objects}', COALESCE(permissions->'objects', '{}'::jsonb), true),
-		          ARRAY['objects', $2::text], $3::jsonb, true)
+		    SET permissions = `+roleObjectGrantExpr+`
 		  WHERE id = $1
 		  RETURNING `+roleColumns,
 		roleID, object, encoded)
@@ -255,13 +247,23 @@ func applyRoleObjectGrant(ctx context.Context, tx pgx.Tx, actor Identity, roleKe
 	// in the images, which name only the edited key — a full-document image
 	// would bury a one-verb change under thirty unchanged ones.
 	_, err = storekit.Audit(ctx, tx, "update", roleEntity, roleID,
-		map[string]any{"objects": map[string]storedGrant{object: before[object]}},
-		map[string]any{"objects": map[string]storedGrant{object: grant}})
+		roleObjectsImage(map[string]storedGrant{object: before[object]}),
+		roleObjectsImage(map[string]storedGrant{object: grant}))
 	if err != nil {
 		return roleRow{}, err
 	}
 	return updated, nil
 }
+
+// roleObjectGrantExpr is the document after one object's grant is set: $2 is
+// the object and $3 the grant as jsonb. The editor and the default fill share it.
+//
+// The write is targeted, not a parse and rewrite, which would erase every grant
+// this installation cannot name. The inner jsonb_set creates `objects` when the
+// document has none, because jsonb_set under a missing parent reports success.
+const roleObjectGrantExpr = `jsonb_set(
+		          jsonb_set(permissions, '{objects}', COALESCE(permissions->'objects', '{}'::jsonb), true),
+		          ARRAY['objects', $2::text], $3::jsonb, true)`
 
 // roleColumns are the columns scanRoleRow reads, in its order, for every query
 // and RETURNING that feeds it.

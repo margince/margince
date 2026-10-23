@@ -6,24 +6,19 @@ import type { components } from "../../api/schema";
 import { company360 } from "../../testing/company.fixtures";
 import { StoryProviders } from "../../testing/story-utils";
 import type { AccountScan } from "./accountscan";
-import {
-  Company360Call,
-  TodayOnThisAccount,
-  useTodayReading,
-} from "./companytoday";
+import { NeedsList, useTodayReading } from "./companytoday";
 
-// The daily brief, above the tab bar: a context band read off the account's
-// dated readings, then the moves — a booked meeting, a manual draft, and
-// whatever the account's own suggestions advise.
+// What needs a contact on the account, under the Overview's cards: a booked
+// meeting, a manual draft, and whatever the account's own suggestions advise.
 //
-// The withheld story is the one no seeded demo account can reach: every one
-// grants the viewer full RBAC, so `state_strip` (whose move, the open risk)
-// and `contacts` (the best route in) are never omitted on a live session. A
-// role scoped away from either still reads the rest of the brief; it just
-// says so for the two it cannot answer, rather than silently dropping them.
+// No seeded demo account can reach the withheld story. Every one grants the
+// viewer full RBAC, so `state_strip` and `contacts` (the best route in) are
+// never omitted on a live session. A role scoped away from either still reads
+// the rest of the list. It says so for the two it cannot answer instead of
+// dropping them silently.
 
 const meta: Meta = {
-  title: "Records/Company 360/Today on this account",
+  title: "Records/Company 360/Needs list",
   parameters: { layout: "padded" },
 };
 export default meta;
@@ -139,23 +134,6 @@ const populated: View = {
   },
 };
 
-// Two of the three dimensions rated, each with the reading its rating was made
-// from: what the chips' asides carry.
-const rated: View = {
-  ...company360,
-  ...populated,
-  health: {
-    relationship: {
-      rating: "strong",
-      reason: "They last wrote 2 days ago, and started the thread.",
-    },
-    commercial: {
-      rating: "at_risk",
-      reason: "The depot pilot has not moved in 18 days.",
-    },
-  },
-};
-
 // state_strip and contacts withheld — the two readings no seeded demo account
 // ever omits, so this is the only place the brief's own withheld path for
 // either one renders.
@@ -182,103 +160,36 @@ function Brief({
   return (
     <StoryProviders>
       <div style={{ maxWidth: 720 }}>
-        <TodayOnThisAccount
-          companyId="o-1"
-          view={view}
-          loading={loading}
-          failed={failed}
-          scan={scan}
-        />
+        <Needs view={view} loading={loading} failed={failed} scan={scan} />
       </div>
     </StoryProviders>
   );
 }
 
+// Inside the providers, which the hook reads: `Brief` renders them, so it
+// cannot call the hook itself.
+function Needs({
+  view,
+  loading,
+  failed,
+  scan,
+}: Readonly<{
+  view?: View;
+  loading: boolean;
+  failed: boolean;
+  scan?: AccountScan;
+}>) {
+  const reading = useTodayReading({
+    companyId: "o-1",
+    view,
+    loading,
+    failed,
+    scan,
+  });
+  return <NeedsList reading={reading} />;
+}
+
 export const Populated: Story = { render: () => <Brief view={populated} /> };
-
-// The account card fires on owed promises and nothing else. Here nothing is
-// owed while the rules still have something to say, so the quiet card is NOT
-// drawn: "nothing needs you today" over a row asking for an answer is the
-// panel disagreeing with itself, and the row is the half a reader can check.
-const nothingOwed: View = {
-  ...company360,
-  ...populated,
-  moment: {
-    claim_key: "moment:nothing_needed",
-    evidence_fingerprint: "quiet",
-    rule: "nothing_needed",
-    headline: "Nothing is owed to this account",
-    why_now: "No promise to this account is open or coming due.",
-    confidence: "observed_fact",
-    evidence: [],
-    recommended_action: {
-      kind: "log_activity",
-      label: "Log something",
-      state: "will_confirm",
-    },
-  },
-};
-
-export const NothingOwedButAdviceStands: Story = {
-  render: () => <Brief view={nothingOwed} />,
-};
-
-// The same card when it IS the whole answer: with no advice and nothing
-// scheduled it leads the list, keeping the reason and the verb that the
-// panel's own bare sentence has nowhere to put.
-export const NothingOwedAndNothingAdvised: Story = {
-  render: () => (
-    <Brief
-      view={{
-        ...company360,
-        ...nothingOwed,
-        suggestions: [],
-        next_meeting: undefined,
-        next_steps: { data: [], page },
-      }}
-    />
-  ),
-};
-
-// The account's moment as an ASK rather than an all-clear: the rung it fired
-// on beside the byline, the server's own sentence as the move, and the verb
-// the server named a destination for. It is the same row the contact page
-// leads with — one gallery entry each, so the two can be compared.
-const owedPromise: View = {
-  ...company360,
-  ...populated,
-  moment: {
-    claim_key: "moment:open_promise",
-    evidence_fingerprint: "fp-owed",
-    rule: "open_promise",
-    headline: "You owe Brandt the retrofit quote",
-    why_now: "Promised on Monday, and nothing has gone out since.",
-    confidence: "observed_fact",
-    evidence: [
-      {
-        type: "activity",
-        id: "a-1",
-        label: "Re: retrofit timeline",
-        snippet: "We'll get the quote over to you by Friday.",
-        observed_at: "2026-08-01T10:15:00Z",
-      },
-    ],
-    recommended_action: {
-      kind: "open_record",
-      label: "Open the thread",
-      state: "available",
-      destination: {
-        surface: "record",
-        entity_type: "activity",
-        entity_id: "a-1",
-      },
-    },
-  },
-};
-
-export const OwedPromise: Story = {
-  render: () => <Brief view={owedPromise} />,
-};
 
 // Advice resting on a message rather than on a quoted receipt: the rule's
 // evidence carries the server's own row model, so the basis is drawn as an
@@ -381,30 +292,6 @@ export const Scanned: Story = {
   ),
 };
 
-// The call, with the three rated dimensions under it. Payment is unrated here
-// on purpose: the finance read the rating comes from is not stubbed, which is
-// the state a fresh account is actually in — and it is the chip whose aside
-// has a definition and no working to show.
-function Call({ view }: Readonly<{ view: View }>) {
-  const reading = useTodayReading({
-    companyId: "o-1",
-    view,
-    loading: false,
-    failed: false,
-  });
-  return <Company360Call reading={reading} name={company.display_name} />;
-}
-
-export const Reading: Story = {
-  render: () => (
-    <StoryProviders>
-      <div style={{ maxWidth: 720 }}>
-        <Call view={rated} />
-      </div>
-    </StoryProviders>
-  ),
-};
-
 export const SectionWithheld: Story = {
   render: () => <Brief view={withheld} />,
 };
@@ -418,53 +305,6 @@ export const AdviceWithheldNothingListed: Story = {
         ...company360,
         suggestions: undefined,
         sections_omitted: ["suggestions"],
-      }}
-    />
-  ),
-};
-
-// waiting_on_them is one of only two engagement states ENGAGEMENT_TONE
-// (company360.tsx) colours "warning" — the ball is in their court, not ours —
-// and the one state that also draws a silence note (companytoday.tsx's own
-// `silenceNote`, gated on this exact state plus a `last_outbound_at` to
-// count from). populated above never reaches either: its engagement is
-// waiting_on_us, the one state that carries no tone at all.
-export const WaitingOnThem: Story = {
-  render: () => (
-    <Brief
-      view={{
-        ...company360,
-        ...populated,
-        state_strip: {
-          ...strip,
-          engagement: {
-            state: "waiting_on_them",
-            last_inbound_at: null,
-            last_outbound_at: "2026-06-25T09:00:00Z",
-          },
-        },
-      }}
-    />
-  ),
-};
-
-// dormant: the other warning-toned engagement state, but the one that carries no
-// silence note of its own — silenceNote only ever fires for waiting_on_them,
-// so a dormant account's warning is the strip's tone and nothing else.
-export const Dormant: Story = {
-  render: () => (
-    <Brief
-      view={{
-        ...company360,
-        ...populated,
-        state_strip: {
-          ...strip,
-          engagement: {
-            state: "dormant",
-            last_inbound_at: "2026-04-02T09:00:00Z",
-            last_outbound_at: "2026-04-10T09:00:00Z",
-          },
-        },
       }}
     />
   ),

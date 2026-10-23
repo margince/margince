@@ -3,6 +3,7 @@
 
 import { type ReactNode, useId } from "react";
 import { useT } from "../i18n";
+import { type PeekContent, usePeek } from "./peek";
 import { Popover } from "./popover";
 import "./atoms.css";
 import "./evidencemark.css";
@@ -118,6 +119,7 @@ export function StatCard({
   href,
   meter,
   narrow,
+  peek,
 }: Readonly<{
   label: string;
   value: string;
@@ -166,9 +168,23 @@ export function StatCard({
   // card. A closed word, not a boolean: `narrow={true}` is a place for a
   // second SIZE to arrive unnoticed, and a size here is the removed `hero`.
   narrow?: "row";
+  // Who or which the figure counts, as a card over the tile on hover and on
+  // keyboard focus. A tile with a door keeps its press for the door (the tab it
+  // opens holds the same rows). A tile without one opens the card on a press.
+  peek?: PeekContent;
 }>) {
   const t = useT();
   const labelId = useId();
+  const doorless = !href && !onOpen;
+  const {
+    ref: peekRef,
+    props: peekProps,
+    panel: peekPanel,
+  } = usePeek<HTMLElement>({
+    content: peek,
+    focusable: doorless,
+    pressOpens: doorless,
+  });
   // No `t-h3`: the card owns the figure's face and size (atoms.css), because
   // a reading is compared across a row and the row is the thing that has to
   // agree. Sharing the page's heading class made the figure change size with a
@@ -186,7 +202,12 @@ export function StatCard({
   return (
     // The full figure on hover, on the CARD: the door's overlay covers the value,
     // and a tooltip shows the nearest title above the pointer.
-    <section className={cardClass} title={value}>
+    <section
+      ref={peekRef}
+      className={cardClass}
+      title={peek ? undefined : value}
+      {...peekProps}
+    >
       <span className="stat-card-label">
         {/* Its own box, so the name wraps and the badge and trigger keep their place. */}
         <span className="stat-card-label-text" id={labelId}>
@@ -238,13 +259,14 @@ export function StatCard({
               door's DESCRIPTION — folded into the NAME it read "Open Open
               pipeline", so it is `aria-describedby` and never the word. */}
           <Door href={href} onOpen={onOpen} describedBy={labelId}>
-            {t("stat.open")}
+            <span className="stat-card-open-word">{t("stat.open")}</span>
             <span className="stat-card-arrow" aria-hidden="true">
               {"\u2192"}
             </span>
           </Door>
         </span>
       )}
+      {peekPanel}
     </section>
   );
 }

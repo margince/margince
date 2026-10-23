@@ -286,6 +286,7 @@ var ungatedEntryPoints = gatekit.Waive(map[string]string{
 	"internal/modules/identity:AuthenticateAgentByID":     "pre-principal: the by-id half of passport verification, same admission seam",
 	"internal/modules/identity:InstallationWorkspace":     "singleton-company resolution (ADR-0061), bound by the middleware before any principal exists",
 	"internal/modules/identity:BootstrapInstallation":     "boot-time provisioning under the system principal (ADR-0061); no human principal can exist before it",
+	"internal/modules/identity:FillRbacDefaults":          "boot-time fill of a unit's declared starting grants, admitted to a system principal only: the function refuses any other, so no human reaches it. An admin changes a grant through SetRoleObjectGrant, which is gated, and the fill writes only an entry the document does not have, so it never overrides one",
 	"internal/modules/identity:CreatePasswordReset":       "pre-principal by design (A74): the caller is locked out; enumeration-resistant token mint, authority is control of the mailbox",
 	"internal/modules/identity:RedeemPasswordReset":       "pre-principal by design (A74): possession of the single-use emailed token IS the authority being verified",
 	"internal/modules/identity:EffectiveRBAC":             "this LOADS the merged role policy the auth gate enforces — gating it on itself would recurse",

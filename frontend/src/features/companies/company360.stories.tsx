@@ -10,12 +10,8 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import {
-  DealsCard,
-  NextSteps,
-  ProposedNextSteps,
-  StateStrip,
-} from "./company360";
+import { DealsCard, ProposedNextSteps } from "./company360";
+import { CompanyTaskTable } from "./companytaskstable";
 
 // The company view's Panel-shaped cards, rendered straight from a payload
 // rather than through the screen — so the three answers a card can give are
@@ -36,7 +32,6 @@ export default meta;
 
 type Story = StoryObj;
 type View = components["schemas"]["Company360"];
-type FinanceSummary = components["schemas"]["CompanyFinanceSummary"];
 
 const page = { has_more: false, next_cursor: null };
 
@@ -255,10 +250,7 @@ const populated: View = {
   // over relationship, commercial and payment, and a fixture that only ever
   // rated one dimension could never show the "N of 3 rated" count meaning
   // anything. Days-since-inbound matches the engagement block's own
-  // last_inbound_at (as_of minus two days), and reply_balance sits inside the
-  // 0.34-0.66 band on purpose: that is the branch HealthStat calls "Balanced"
-  // rather than one-sided, so the fixture exercises the reading the state
-  // strip most often shows for a healthy account.
+  // last_inbound_at (as_of minus two days).
   health: {
     relationship: {
       rating: "strong",
@@ -351,7 +343,7 @@ function Cards({ view }: Readonly<{ view: View }>) {
     <StoryProviders>
       <div style={{ display: "grid", gap: "var(--space-3)", maxWidth: 420 }}>
         <DealsCard view={view} />
-        <NextSteps view={view} />
+        <CompanyTaskTable view={view} />
       </div>
     </StoryProviders>
   );
@@ -406,15 +398,11 @@ function RecommendedStep() {
   return (
     <StoryProviders>
       <div style={{ display: "grid", gap: "var(--space-3)", maxWidth: 420 }}>
-        <NextSteps
+        <CompanyTaskTable view={recommending} />
+        <ProposedNextSteps
+          companyId="o-1"
           view={recommending}
-          proposed={
-            <ProposedNextSteps
-              companyId="o-1"
-              view={recommending}
-              onOpenReceipt={() => undefined}
-            />
-          }
+          onOpenReceipt={() => undefined}
         />
       </div>
     </StoryProviders>
@@ -423,233 +411,4 @@ function RecommendedStep() {
 
 export const NextStepRecommended: Story = {
   render: () => <RecommendedStep />,
-};
-
-// A connected finance source, shaped exactly like companyfinance.stories.tsx's
-// own `connected` fixture: two stories reading the same wire shape must not
-// drift into two different ideas of what "connected" looks like. It carries the
-// windows the strip does NOT draw as well as the one it does, because the strip's
-// money slot is a glance at the trailing year and the wire it reads from is the
-// Finance tab's whole summary — a fixture holding only `net_invoiced` could not
-// show that the other figures stay off the row.
-// The lifetime total is larger than the trailing-year one on purpose: lifetime
-// is everything this account has ever been billed, so it can never read smaller
-// than one year's worth of it, and a slot that reached for the wrong window
-// would be visibly wrong rather than plausibly wrong.
-const connectedFinance: FinanceSummary = {
-  company_id: "o-1",
-  state: "connected",
-  provider: "offline_demo",
-  last_synced_at: "2026-08-10T06:00:00Z",
-  net_invoiced_lifetime: { amount_minor: 9_400_000, currency: "EUR" },
-  net_invoiced: { amount_minor: 1_864_200, currency: "EUR" },
-  open_balance: { amount_minor: 240_000, currency: "EUR" },
-  overdue: { amount_minor: 89_000, currency: "EUR" },
-  median_days_after_due: 4,
-};
-
-// The two lookups below are keyed on the real wire enums (Lifecycle,
-// RelationshipType), but StateStrip's own label props take a bare `string` —
-// StateStrip: the record's own readings row, above the tabs — FIVE slots on
-// every account, drawn by the shared StatStrip the contact record uses.
-//
-// Three of the four stories are states nothing seeded reaches. Withheld is the
-// whole-strip permission boundary, which no demo account carries. Connected is
-// the money figure and the provider name on its detail line, which the demo
-// stack's finance stub — always `no_connection` — never produces. And Unanswered
-// is the row where four of the five readings are absent: it is the state that
-// proves a slot with nothing to report still draws and still says which reading
-// it is missing, which is precisely what no populated fixture can show.
-//
-// `Strip` itself returns `<StoryProviders>`, so it sits outside the
-// LocaleProvider it renders and cannot call `useT` directly. `StripBody` is the
-// inner component that mounts inside that context. It mirrors the real caller's
-// label wiring (companyreading.tsx), so the story draws copy, not the wire enum.
-function StripBody({ view }: Readonly<{ view?: View }>) {
-  return <StateStrip companyId="o-1" view={view} />;
-}
-
-function Strip({
-  view,
-  finance = { company_id: "o-1", state: "no_connection" },
-}: Readonly<{ view?: View; finance?: FinanceSummary }>) {
-  installFetchStub({
-    "GET /me": meRoute({ company: ["read", "update"] }), // The customer branch's money slot reads this directly (MoneyStat) —
-    // the same query the finance card and the payment health dimension run —
-    // so a customer story with nothing stubbed here fires a real request the
-    // static build has nowhere to send.
-    "GET /companies/o-1/finance-summary": () => jsonResponse(finance),
-  });
-  return (
-    <StoryProviders>
-      {/* Room for the row to use, not a promise about its shape: the strip's
-          column count answers to the VIEWPORT, not to this box.
-          design-system/statstrip.css folds it to three columns at max-width
-          68rem (1088px), and the render gate shoots at 1024px wide
-          (frontend/scripts/fe-uat.mjs), so the captured screenshot is always
-          the three-column fold — five slots as three then two, which is the
-          fold this row is sized for. The single row is what opening Storybook
-          in a wide window shows. */}
-      <div style={{ maxWidth: 1200 }}>
-        <StripBody view={view} />
-      </div>
-    </StoryProviders>
-  );
-}
-
-export const StateStripPopulated: Story = {
-  render: () => <Strip view={populated} />,
-};
-
-// The customer row with a real accounting connection behind it: the money
-// figure and its provider name (MoneyStat's detail line) instead of the
-// "connect your accounting" fallback every other story here shows. The
-// overdue figure is also what pushes HealthSummaryStat's payment dimension
-// to "at_risk" (usePaymentHealth reads the same query), so this is the only
-// story where that slot carries a verdict rather than its denominator.
-export const StateStripConnected: Story = {
-  render: () => <Strip view={populated} finance={connectedFinance} />,
-};
-
-// The row with almost nothing to report, and still five slots: no open deals, no
-// expected close, no health section at all, and no finance connection. This is
-// the state where the rule the row is built on is visible — every slot says WHICH
-// reading it has none of, because a slot that vanished would leave the reader
-// unable to tell which one went missing.
-export const StateStripUnanswered: Story = {
-  render: () => (
-    <Strip
-      view={{
-        ...company360,
-        ...populated,
-        health: undefined,
-        state_strip: {
-          account: { lifecycle: "prospect", relationship_types: [] },
-          commercial: {
-            open_count: 0,
-            stalled_count: 0,
-            priced_count: 0,
-            converted_count: 0,
-          },
-        },
-      }}
-    />
-  ),
-};
-
-// Silence with nothing sent, and silence after we wrote. The reading carries
-// only the inbound side, so the two used to collapse into one sentence — and
-// the second of them, the account that is being ignored, is the one a rep acts
-// on. The outbound date is what tells them apart and what dates the reading.
-// The two silences, drawn one after the other: the first carries NO tone,
-// because an account nobody has approached is a fact about how far it has been
-// worked rather than bad news, and the second does.
-export const StateStripNoExchange: Story = {
-  render: () => (
-    <Strip
-      view={{
-        ...company360,
-        ...populated,
-        last_inbound_at: undefined,
-        last_outbound_at: undefined,
-        health: { days_since_last_inbound: null },
-      }}
-    />
-  ),
-};
-
-export const StateStripUnansweredExchange: Story = {
-  render: () => (
-    <Strip
-      view={{
-        ...company360,
-        ...populated,
-        last_inbound_at: undefined,
-        last_outbound_at: "2026-08-08T09:00:00Z",
-        health: { days_since_last_inbound: null },
-      }}
-    />
-  ),
-};
-
-// A quiet account. The slot says how long nothing has come back, in the same
-// words the unanswered slot uses — a share of the exchange would describe a
-// conversation that has stopped, so the reading carries one and does not say
-// it. The live rows below are where the share belongs.
-export const StateStripQuiet: Story = {
-  render: () => (
-    <Strip
-      view={{
-        ...company360,
-        ...populated,
-        health: { days_since_last_inbound: 62, reply_balance: 0.18 },
-      }}
-    />
-  ),
-};
-
-// The same balance on a relationship that is still running, which is the row
-// the share is a reading of: below a third coming from them is us talking to
-// ourselves, whatever the dates say.
-export const StateStripOneSided: Story = {
-  render: () => (
-    <Strip
-      view={{
-        ...company360,
-        ...populated,
-        health: { days_since_last_inbound: 3, reply_balance: 0.18 },
-      }}
-    />
-  ),
-};
-
-// The row at phone width, where every slot is one full-width ROW: label and
-// basis leading, figure on the trailing edge, one hairline between and no
-// boxes at all. Two-up here, a ten-character value ellipsized in the middle of
-// itself — "No exch…" — and the money made it worse, which is where decision
-// 13 came from. The figure is compact everywhere now and the fold does the
-// rest.
-export const StateStripPhone: Story = {
-  tags: ["uat-phone"],
-  render: () => <Strip view={populated} finance={connectedFinance} />,
-};
-
-// A former customer whose accounting IS connected and has billed nothing in
-// the window. The stage under the word is read rather than assumed — this slot
-// used to say "Customer" on an account that had stopped buying.
-export const StateStripFormerCustomerNothingBilled: Story = {
-  render: () => (
-    <Strip
-      view={{
-        ...company360,
-        ...populated,
-        state_strip: {
-          account: {
-            lifecycle: "former_customer",
-            relationship_types: ["customer"],
-          },
-          commercial: {
-            open_count: 0,
-            stalled_count: 0,
-            priced_count: 0,
-            converted_count: 0,
-          },
-        },
-      }}
-      finance={{ company_id: "o-1", state: "connected" }}
-    />
-  ),
-};
-
-export const StateStripWithheld: Story = {
-  render: () => (
-    <Strip
-      view={{
-        ...company360,
-        ...populated,
-        state_strip: undefined,
-        sections_omitted: ["state_strip"],
-      }}
-    />
-  ),
 };

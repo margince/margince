@@ -28,8 +28,8 @@ later page copies what it decides. Files: `companies.tsx` (over the limit: new z
 
 | Zone (mock) | Built from | Data | States it must keep |
 |---|---|---|---|
-| Readings row (5) | `StateStrip` → `StatStrip` of `PipelineCard`, `MoneyStat`, chat state (from `pulse`), last touch, next (`view.next`). **Each card carries an evidence chip**: `EvidenceMark` with the hover popover, which opens `EvidenceModal` on click. The modal shows the rows added up, the read date and the connection. **Each card also links to its tab** (`companyTabRoute`); the chip stops the click | `state_strip`, `useFinanceSummary`, each citation already on the strip | `co.strip.notAssessed`; finance `notACustomer / noConnection / unmapped / syncing / withheld / staleFigure / errorFigure / nothingBilled / error / loading`; `co.strip.unpriced`, `pricedPartly`, `convertedAsOf`; `co.section.restricted`. A slot that cannot be read is absent or says so, never €0 or "—" without a reason |
-| The 360 | `TodayOnThisAccount` + `VerdictHead` (`HealthStat`/`AccountHealthStat` as the word and the measures) + `RecordSpine` + the thread from `useChronologySlots`, folded behind `"Read the thread · N"` | 360 sections, chronology | `today.quiet` (with nothing to say, it draws a 360 with nothing to report, not an empty pane); `today.failed`; `co.section.unavailable`. Withheld sections drop their row and say so once. `since_last_visit` with a withheld baseline never becomes a claim. `"Write it again"` shows only when the reader may use it |
+| Numbers (4) | `StandingFigures`, the `figures` slot of `HowItStands`: a `StatStrip density="plate"` of the next meeting, the last contact, `MoneyStat` and `PipelineCard`. **Each number is a door** to the tab that holds its rows (`companyTabRoute`). The open-deals number hangs a card of the deals it counts | `state_strip`, `useFinanceSummary` | `co.strip.notAssessed`; finance `notACustomer / noConnection / unmapped / syncing / withheld / staleFigure / errorFigure / nothingBilled / error / loading`; `co.strip.unpriced`, `pricedPartly`, `convertedAsOf`; `co.section.restricted`. A slot that cannot be read is absent or says so, never €0 or "—" without a reason |
+| How it stands | `CompanyNextBar` (the one move) over `CompanyHowItStands` on `HowItStands`: the verdict word and the sentence that says why, `HealthRing` beside `StandingDims` (**Relationship**, **Commercial**, **Payment**), `StandingTimeline` with the account's logged items as marks, then the numbers. Relationship and Commercial each hang a card of the contacts in touch and of the open deals. The thread lives on the History tab (`useChronologySlots`) | 360 sections, chronology, `payment` health | The card holds its place without a word while the 360 loads, and says `co.section.unavailable` when the read fails. A withheld health section is named once, never guessed. `co.strip.notAssessed` when nobody rated a dimension |
 | Deep-read offer | `DeepReadPanel` **leads the column** in place of the 360 when `nothingOnFile(view)` | | the two scan phases; `SiteReadPanel` pages read or skipped, and why; 422 no site; 501 seam not wired; `SiteReadDeferral` |
 | What needs you | one list. The moment is the lead row. Then the `co.suggest.*` rows (`draftReply / openDeal / addTask` verbs; `add_task` has no surface, so it can only be dismissed). Then tasks from the source of `CompanyTasksTab`, and the next meeting (`onPrepareMeeting`) | 360 suggestions, tasks, meetings | `co.next.empty`; `co.suggest.more` on the limit. A withheld suggestion removes the row, not the verb. The `DecisionsChip` count stays in the menu |
 | Commercial (the money) | One pane, the `DESIGN.md` zone. First `CompanyContractState` and won or lost on one line. Then the open deals of `CompanyWorkCard`, with their status line (`workVerbs`). Then the project. `CompanyLastOffer` and the full table live on the Deals tab; the details panel shows the contract line too | `view.deals`, `view.projects` | `contracts.state.none`; `co.work.statusesWithheld`; `co.work.countAtLeast`; `leadingDeal` refuses to pick on a page with more rows than it shows, or with more than one currency |
@@ -85,12 +85,13 @@ Files: `contactpage.tsx`, `contact360.ts`, `contactrail.tsx`, `contacttoday.tsx`
 
   **Add to `more` what is missing today**: Archive, Share, Research, Full history. Facts: title · employer ·
   email · phone · the way in (from the lead route of the network).
-- **Readings.** `ContactStrip`: whose move, open promises (`contact.loops`), the deal they decide on, the next
-  meeting, answers in. `record.notShown` with no tone on a withheld slot. `noOpenDeal` and `noMeeting` are
-  answers, not withheld values.
-- **The 360.** `ContactToday` is the word and the sentence: the moment, with `readiness()` reasons and how
-  new it is. `RecordSpine` comes from the activities of the 360, and the thread is folded from the chronology
-  of the timeline tab. A moment with nothing to say draws through the same pane (`isQuiet`).
+- **Numbers.** `ContactHowItStands` ends in a `StatStrip density="plate"` of four numbers: last reply, **Unanswered**, the open deal
+  and the next meeting (`contactFigures`). Each opens the tab or the deal that holds its rows. `record.notShown`
+  with no tone on a withheld slot. `noOpenDeal` and `noMeeting` are answers, not withheld values.
+- **How it stands.** `ContactHowItStands` on `HowItStands`: the verdict word and sentence over `StrengthRing`
+  beside `StandingDims` (promises, `exchange`, reach). Then comes `StandingTimeline` with the logged items as marks, then
+  the numbers. Each reading hangs a card of the rows it counts. `ContactToday` is the Next bar above it: the
+  moment, with `readiness()` reasons and how new it is. The thread stays on the History tab.
 - **What needs you.** The moment's actions (`readiness()` on the button, and the reason when it is blocked), the
   `ContactCommitmentsCard` rows, open loops, the next task. `runContactMomentAction` still opens nothing for an
   action with no route.
@@ -122,7 +123,7 @@ Files: `deals.tsx` (over the limit: the page moves to `features/deals/`), `deal3
 - **Readings.** `DealStrip`, plus the stage with its days here. The strip holds money with the newest offer,
   close with provisional or waiting, contacts with the withheld mark, and momentum.
 - **The 360.** `DealStatusCardPanel` (Deal360) is the word, the sentence and each citation. The stepper
-  (`fieldset.stepper`, a group, not a `<nav>`) sits inside the pane above the spine, and the ledger is folded.
+  (`fieldset.stepper`, a group, not a `<nav>`) sits inside the pane above the timeline, and the ledger is folded.
   `deal360.unreadable` shows when the story is not in the promised shape.
 - **What needs you.** The next move of Deal360 as the lead row, `DealApprovals` as staged rows (dashed), and the
   reply still to send, from `useWaitingReply`.
@@ -156,7 +157,7 @@ Files: `leads.tsx` (over the limit: the record moves to `features/leads/`), `lea
   lead's 360 carries them (section 11). Every slot states in words when it is absent.
 - **The 360.** Put together, not written. The standing word comes from `statusReading`, and a sentence from the
   ladder explanation (`ladderExplanation`: who moved it, and what it read). Then the ladder (`LeadStepper`), the
-  spine from the timeline, and the folded thread. The last line says
+  `StandingTimeline` from the timeline, and the folded thread. The last line says
   `"Assembled from your records · a lead carries no suggestions"`.
 - **What needs you.** `"Ready to qualify"` when `promoteEligible` (the `PreviewSentence` as its reason,
   `previewMergeWithheld` included). Then the reply still to send (`RecordEmailAside detectWaitingReply`), and tasks.
@@ -182,8 +183,8 @@ Files: `project360.tsx`, `projectsections.tsx`, `projectreadings.tsx`, `projectp
   phase · client · owner · key · go-live.
 - **Readings.** `RollupsStrip` as five cards under `SurfaceState`: open, won, `commitments`, last activity (with
   `rollups.never`), and the activity count.
-- **The 360.** Put together. The phase word, the read-only sentence when it applies, `PhaseStepper`, the spine
-  from the chronology, and the folded thread. No verdict word is written for a project today; the pane says
+- **The 360.** Put together. The phase word, the read-only sentence when it applies, `PhaseStepper`, the
+  `StandingTimeline` from the chronology, and the folded thread. No verdict word is written for a project today; the pane says
   `"Assembled from your records"`.
 - **What needs you.** `CommitmentsCard` with the `overdue` badge, and a block row when a contract or document is
   missing.

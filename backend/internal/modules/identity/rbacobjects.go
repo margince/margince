@@ -31,4 +31,7 @@ func RegisterRbacObjects(objects ...RbacObject) error {
 // RegisterRbacObjects and must not leak them into the next test.
 func ResetRbacObjectsForTest() {
 	policy.ResetRegisteredForTest()
+	registeredDefaults.mu.Lock()
+	defer registeredDefaults.mu.Unlock()
+	registeredDefaults.list = nil
 }

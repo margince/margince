@@ -9,7 +9,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../../api/schema";
-import { LocaleProvider } from "../../../i18n";
+import { LocaleProvider, translate } from "../../../i18n";
 import { jsonResponse, stubWithSession } from "../../../testing/story-utils";
 import { DealRoomTab } from "./dealroomtab";
 
@@ -111,7 +111,9 @@ describe("the tab carries the room's own access list", () => {
     );
     withProviders(<DealRoomTab dealId="deal-1" dealName="BaymeOps" />);
 
-    expect(await screen.findByText("Access")).toBeInTheDocument();
+    expect(
+      await screen.findByText(translate("en", "access.title")),
+    ).toBeInTheDocument();
   });
 });
 

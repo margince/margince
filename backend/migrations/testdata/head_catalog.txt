@@ -3321,6 +3321,7 @@ public.conversation_claim.conversation_claim_corrector_fkey FOREIGN KEY (correct
 public.conversation_claim.conversation_claim_kind_check CHECK ((kind = ANY (ARRAY['commitment_ours'::text, 'commitment_theirs'::text, 'open_question'::text, 'decision'::text, 'priority'::text, 'objection'::text, 'success_criterion'::text, 'decision_process'::text])))
 public.conversation_claim.conversation_claim_pkey PRIMARY KEY (id)
 public.conversation_claim.conversation_claim_status_check CHECK ((status = ANY (ARRAY['open'::text, 'done'::text, 'dismissed'::text])))
+public.conversation_claim.conversation_claim_taker_fkey FOREIGN KEY (taken_by_user_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.conversation_claim.conversation_claim_task_fkey FOREIGN KEY (task_activity_id) REFERENCES activity(id) ON DELETE SET NULL
 public.conversation_claim.conversation_claim_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.conversation_claim.corrected_at timestamp with time zone gen=- def=-
@@ -3335,6 +3336,8 @@ public.conversation_claim.source text NOT NULL gen=- def=-
 public.conversation_claim.source_activity_id uuid NOT NULL gen=- def=-
 public.conversation_claim.source_quote text NOT NULL gen=- def=-
 public.conversation_claim.status text NOT NULL gen=- def='open'::text
+public.conversation_claim.taken_at timestamp with time zone gen=- def=-
+public.conversation_claim.taken_by_user_id uuid gen=- def=-
 public.conversation_claim.task_activity_id uuid gen=- def=-
 public.conversation_claim.trg_conversation_claim_updated CREATE TRIGGER trg_conversation_claim_updated BEFORE UPDATE ON public.conversation_claim FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.conversation_claim.updated_at timestamp with time zone NOT NULL gen=- def=now()

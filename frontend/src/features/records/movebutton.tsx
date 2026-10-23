@@ -13,6 +13,7 @@ import { ListChecks, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { useTaskUpdate } from "../../components/taskactions";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { useT } from "../../i18n";
@@ -23,7 +24,6 @@ import { useRecordZone } from "../../lib/recordzone";
 import { ContactMeetingBrief } from "../brief/meetingbrief";
 import { ComposeModal } from "../mail/compose";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
-import { useTaskUpdate } from "../worklist/taskactions";
 import { TaskDetailModal } from "../worklist/taskdetailmodal";
 
 // What a move must carry to be performed. Both producers' shapes satisfy it.

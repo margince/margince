@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { components } from "../../../api/schema";
-import { basisAddsARecord, momentIsARow, momentKicker } from "./moment";
+import { basisAddsARecord } from "./moment";
 
 // WHAT THE CARD MAY DROP. Both judgements here decide whether the reader is
 // shown something — a row, a chip, a word — so each case names the shape of
@@ -67,37 +67,5 @@ describe("what the moment rests on", () => {
 
   it("draws nothing where the moment rests on nothing it can open", () => {
     expect(basisAddsARecord(MOMENT)).toBe(false);
-  });
-});
-
-describe("the word for the rule", () => {
-  it("names the rung a move fired on", () => {
-    expect(momentKicker(MOMENT, (key) => key)).toBe(
-      "contact.moment.rule.open_promise",
-    );
-  });
-
-  it("says nothing beside an all-clear, which is a reading and not a find", () => {
-    expect(
-      momentKicker({ ...MOMENT, rule: "nothing_needed" }, (key) => key),
-    ).toBeUndefined();
-  });
-});
-
-describe("whether the moment is a row at all", () => {
-  it("drops the all-clear where the list still asks for something", () => {
-    expect(momentIsARow({ ...MOMENT, rule: "nothing_needed" }, true)).toBe(
-      false,
-    );
-  });
-
-  it("keeps it where it is the whole answer", () => {
-    expect(momentIsARow({ ...MOMENT, rule: "nothing_needed" }, false)).toBe(
-      true,
-    );
-  });
-
-  it("keeps every rung that asks for something, whatever else is listed", () => {
-    expect(momentIsARow(MOMENT, true)).toBe(true);
   });
 });

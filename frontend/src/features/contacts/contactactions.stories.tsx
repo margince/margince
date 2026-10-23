@@ -85,18 +85,20 @@ function Header({
   refusedReasonId,
 }: Readonly<{ view?: Contact360; refusedReasonId?: string }>) {
   return (
-    // The header's own row class, borrowed so the verbs stand at the interval
-    // the record page gives them rather than at whatever a bare story would.
-    <div className="record-actions record-actions-inline">
-      <ContactActions
-        view={view}
-        contactId={view.contact.id}
-        onWrite={() => undefined}
-        onResearch={() => undefined}
-        onLogActivity={() => undefined}
-        onAddTask={() => undefined}
-        refusedReasonId={refusedReasonId}
-      />
+    // The head's own bar class, so the verbs share the width as tiles the way
+    // they do on the record page.
+    <div style={{ maxWidth: "18.75rem" }}>
+      <div className="record-split-verbs">
+        <ContactActions
+          view={view}
+          contactId={view.contact.id}
+          onWrite={() => undefined}
+          onResearch={() => undefined}
+          onLogActivity={() => undefined}
+          onAddTask={() => undefined}
+          refusedReasonId={refusedReasonId}
+        />
+      </div>
     </div>
   );
 }

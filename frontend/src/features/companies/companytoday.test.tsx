@@ -1,18 +1,12 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  within,
-} from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import type { AccountScan } from "./accountscan";
-import { TodayOnThisAccount } from "./companytoday";
+import { NeedsList, useTodayReading } from "./companytoday";
 
 // The section earns its place by carrying what nothing else on the page says,
 // and by never stating a claim it cannot support. Both are testable.
@@ -37,33 +31,39 @@ const BASE: Company360 = {
   sections_omitted: [],
 };
 
-function show(
-  view?: Company360,
-  opts: {
-    loading?: boolean;
-    failed?: boolean;
-    onDraftTo?: (contactId: string) => void;
-    onOpenRecord?: (entityType: string, entityId: string) => void;
-    onPrepareMeeting?: (activityId: string) => void;
-    scan?: AccountScan;
-  } = {},
-) {
+type ShowOptions = {
+  loading?: boolean;
+  failed?: boolean;
+  onDraftTo?: (contactId: string) => void;
+  onOpenRecord?: (entityType: string, entityId: string) => void;
+  onPrepareMeeting?: (activityId: string) => void;
+  scan?: AccountScan;
+};
+
+// The hook and the list the Overview composes, without the Overview's own
+// fetch of the scan. These cases hand the scan in, in every state it has.
+function Needs({ view, opts }: { view?: Company360; opts: ShowOptions }) {
+  const reading = useTodayReading({
+    companyId: "o-1",
+    view,
+    loading: opts.loading ?? false,
+    failed: opts.failed ?? false,
+    onDraftTo: opts.onDraftTo,
+    onOpenRecord: opts.onOpenRecord,
+    onPrepareMeeting: opts.onPrepareMeeting,
+    scan: opts.scan,
+  });
+  return <NeedsList reading={reading} />;
+}
+
+function show(view?: Company360, opts: ShowOptions = {}) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <TodayOnThisAccount
-          companyId="o-1"
-          view={view}
-          loading={opts.loading ?? false}
-          failed={opts.failed ?? false}
-          onDraftTo={opts.onDraftTo}
-          onOpenRecord={opts.onOpenRecord}
-          onPrepareMeeting={opts.onPrepareMeeting}
-          scan={opts.scan}
-        />
+        <Needs view={view} opts={opts} />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -184,11 +184,9 @@ describe("what needs a contact on this account today", () => {
   });
 });
 
-// The six tiles State D draws, and the rules that pick what each one names.
-// The rules are choices rather than derivations, so each is pinned here: a
-// selection nobody wrote down is one the next reader has to reverse-engineer
-// from the sort call.
-describe("the day's call, and which record it is read from", () => {
+// The list's own moves and the foot under them. The rules are choices rather
+// than derivations, so each is pinned here.
+describe("the moves on the list, and the foot under them", () => {
   // The contract requires the full factor breakdown on every strength; the
   // tiles read only the score, but a fixture that omits them is not the shape
   // the wire sends.
@@ -242,48 +240,6 @@ describe("the day's call, and which record it is read from", () => {
   // The largest-open-deal reading belongs to the Commercial panel
   // (companies.tabs.tsx), beside the full open-deals list, so this file picks
   // and ranks no deal of its own.
-
-  // Whose move it is used to be the strip's own tile ("Whose move"); it moved
-  // here because it is a DATED reading, and the strip now carries only the
-  // account's standing state. Lifted rather than reimplemented — the words
-  // and the tone are `co.strip.engagement.*`, unchanged.
-  it("names whose move it is, from the same engagement field the strip used to draw", () => {
-    show({
-      ...BASE,
-      state_strip: {
-        account: { lifecycle: "customer", relationship_types: [] },
-        engagement: {
-          state: "waiting_on_them",
-          last_inbound_at: null,
-          last_outbound_at: "2026-07-20T09:00:00Z",
-        },
-      },
-    });
-    expect(screen.getByText("Waiting on them")).toBeTruthy();
-    // How long it has stood that way, counted from the last thing WE sent and
-    // measured against the same `as_of` the rest of the page is read at: a
-    // state with no duration is a status, and a rep cannot act on a status.
-    expect(screen.getByText("no answer in 18 days")).toBeTruthy();
-  });
-
-  it("counts no silence when the answer has already come", () => {
-    show({
-      ...BASE,
-      state_strip: {
-        account: { lifecycle: "customer", relationship_types: [] },
-        engagement: {
-          state: "waiting_on_us",
-          last_inbound_at: "2026-08-05T09:00:00Z",
-          last_outbound_at: "2026-07-20T09:00:00Z",
-        },
-      },
-    });
-    expect(screen.getByText("Waiting on your team")).toBeTruthy();
-    // Days since our own last message say nothing once they have replied, and
-    // "no answer in 18 days" over a thread that ended with their answer is
-    // what costs a reader trust in every other reading beside it.
-    expect(screen.queryByText(/no answer in/)).toBeNull();
-  });
 
   // The button names the recipient it will write to, and hands that contact to
   // the composer: an account-started message has no thread to anchor on, so
@@ -345,180 +301,6 @@ describe("the day's call, and which record it is read from", () => {
     expect(prepared).toHaveBeenCalledWith("a-1");
   });
 
-  // "Worth doing next"'s own rows are the OTHER half of the moves section —
-  // merged into this one panel rather than a second card repeating the
-  // account's own advice.
-  it("quotes the words the moment rests on, never the kind of record twice", () => {
-    show({
-      ...BASE,
-      moment: {
-        claim_key: "moment:open_promise",
-        evidence_fingerprint: "fp-1",
-        rule: "open_promise",
-        headline: "You owe Dana the contract",
-        why_now: "Promised on Monday, and nothing has gone out.",
-        confidence: "observed_fact",
-        evidence: [
-          {
-            type: "activity",
-            id: "a-1",
-            label: "They will send the contract",
-            snippet: "We'll get the contract over to you by Friday.",
-            observed_at: "2026-08-03T09:00:00Z",
-          },
-        ],
-        recommended_action: {
-          kind: "complete_task",
-          label: "Open it from the task list",
-          state: "blocked",
-        },
-      },
-    });
-    // The evidence chip and its verbatim words sit under the reason,
-    // captioned rather than hidden behind a disclosure.
-    expect(screen.getByText(en["co.suggest.basedOn"])).toBeTruthy();
-    expect(
-      screen.getByText("We'll get the contract over to you by Friday."),
-    ).toBeTruthy();
-    expect(screen.getByText("They will send the contract")).toBeTruthy();
-  });
-
-  // A task's evidence is its own subject: a disclosure that opens on the
-  // headline restated answers nothing, so the card draws none.
-  it("draws no rests-on box for a promise whose only evidence restates it", () => {
-    show({
-      ...BASE,
-      moment: {
-        claim_key: "moment:open_promise",
-        evidence_fingerprint: "fp-2",
-        rule: "open_promise",
-        headline: "You owe them: Send the signed contract",
-        why_now: "Due in 2 days.",
-        confidence: "observed_fact",
-        evidence: [
-          { type: "task", id: "a-2", label: "Send the signed contract" },
-        ],
-        recommended_action: {
-          kind: "complete_task",
-          label: "Open it from the task list",
-          state: "blocked",
-        },
-      },
-    });
-    expect(
-      screen.getByText("You owe them: Send the signed contract"),
-    ).toBeTruthy();
-    expect(screen.queryByText(en["co.suggest.basedOn"])).toBeNull();
-  });
-
-  // One row shape for the moment on every record page. What the account was
-  // read against is the byline's second clause, and the verb is the server's
-  // own wherever it named a record the page can open.
-  const goneQuiet = (
-    destination: NonNullable<
-      Company360["moment"]
-    >["recommended_action"]["destination"],
-  ): NonNullable<Company360["moment"]> => ({
-    claim_key: "moment:gone_quiet",
-    evidence_fingerprint: "fp-3",
-    rule: "gone_quiet",
-    headline: "Acme has not written back for 18 days",
-    why_now: "Two messages went out and nothing came back.",
-    confidence: "observed_fact",
-    evidence: [],
-    recommended_action: {
-      kind: "open_record",
-      label: "Open the record",
-      state: "available",
-      destination,
-    },
-  });
-
-  it("draws the moment as a find of the agent's, read against a named rule", () => {
-    const opened = vi.fn();
-    show(
-      {
-        ...BASE,
-        moment: goneQuiet({
-          surface: "record",
-          entity_type: "deal",
-          entity_id: "d-1",
-        }),
-      },
-      { onOpenRecord: opened },
-    );
-
-    expect(screen.getByText(en["co.suggest.byline"])).toBeTruthy();
-    expect(screen.getByText(en["contact.moment.rule.gone_quiet"])).toBeTruthy();
-    expect(
-      screen.getByText("Acme has not written back for 18 days"),
-    ).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "Open the record" }));
-    expect(opened).toHaveBeenCalledWith("deal", "d-1");
-  });
-
-  it.each([
-    ["company", "o-1"],
-    ["activity", "a-1"],
-  ] as const)(
-    "offers the account's own verb when the moment names a %s, which the page cannot open",
-    (kind, id) => {
-      const opened = vi.fn();
-      const drafted = vi.fn();
-      show(
-        {
-          ...BASE,
-          moment: goneQuiet({
-            surface: "record",
-            entity_type: kind,
-            entity_id: id,
-          }),
-          state_strip: {
-            account: { lifecycle: "customer", relationship_types: [] },
-            engagement: { state: "waiting_on_us" },
-          },
-          contacts: {
-            data: [
-              {
-                contact_id: "p-1",
-                full_name: "Dana Buyer",
-                strength: {
-                  score: 71,
-                  bucket: "strong",
-                  factors: {
-                    recency: 0.9,
-                    frequency: 0.6,
-                    reciprocity: 0.8,
-                    direction: 0.8,
-                  },
-                },
-                deal_roles: [],
-                consent: {},
-              },
-            ],
-            page: { has_more: false, next_cursor: null },
-          },
-        },
-        { onOpenRecord: opened, onDraftTo: drafted },
-      );
-
-      const card = screen
-        .getByText("Acme has not written back for 18 days")
-        .closest<HTMLElement>(".co-move");
-      if (!card) {
-        throw new Error("the moment's card did not render");
-      }
-      expect(
-        within(card).queryByRole("button", { name: "Open the record" }),
-      ).toBeNull();
-      fireEvent.click(
-        within(card).getByRole("button", { name: en["today.draft.act"] }),
-      );
-      expect(drafted).toHaveBeenCalledWith("p-1");
-      expect(opened).not.toHaveBeenCalled();
-    },
-  );
-
   it("carries the account's suggestions as moves alongside the context band", () => {
     show({
       ...BASE,
@@ -534,62 +316,7 @@ describe("the day's call, and which record it is read from", () => {
     expect(screen.getByText(/nobody has come back/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "Not now" })).toBeTruthy();
   });
-
-  // The account card fires on owed promises alone, and the suggestions beside
-  // it fire on everything else. A quiet card over a row that asks for
-  // something is the panel disagreeing with itself, and the row is the half a
-  // reader can check.
-  it("drops the quiet card when the list still asks for something", () => {
-    show({
-      ...BASE,
-      moment: QUIET_MOMENT,
-      suggestions: [
-        {
-          kind: "no_reply",
-          fingerprint: "f-1",
-          reason: "You reached out 15 days ago and nobody has come back.",
-          evidence: [],
-        },
-      ],
-    });
-    expect(screen.getByText(/nobody has come back/)).toBeTruthy();
-    expect(screen.queryByText("Nothing is owed to this account")).toBeNull();
-    expect(screen.queryByText(en["today.quiet"])).toBeNull();
-  });
-
-  // Dropped only where it would contradict. On an account with nothing else in
-  // the list the quiet card IS the answer, and it keeps the reason and the
-  // verb the panel's bare sentence cannot carry.
-  it("keeps the quiet card when it is the whole answer", () => {
-    show({ ...BASE, moment: QUIET_MOMENT });
-    expect(screen.getByText("Nothing is owed to this account")).toBeTruthy();
-    expect(
-      screen.getByText("No promise to this account is open or coming due."),
-    ).toBeTruthy();
-    // Nobody SUGGESTED that nothing is owed. The byline and the rule beside
-    // it are an authorship claim over a find, and an all-clear is a reading.
-    expect(screen.queryByText(en["co.suggest.byline"])).toBeNull();
-    expect(
-      screen.queryByText(en["contact.moment.rule.nothing_needed"]),
-    ).toBeNull();
-  });
 });
-
-// The card the server sends for an account owing nothing.
-const QUIET_MOMENT: NonNullable<Company360["moment"]> = {
-  claim_key: "moment:nothing_needed",
-  evidence_fingerprint: "quiet",
-  rule: "nothing_needed",
-  headline: "Nothing is owed to this account",
-  why_now: "No promise to this account is open or coming due.",
-  confidence: "observed_fact",
-  evidence: [],
-  recommended_action: {
-    kind: "log_activity",
-    label: "Log something",
-    state: "will_confirm",
-  },
-};
 
 // Every 360 collection is a page of 25 with `has_more` beside it. A reading
 // that counts off that page states a fact about the PAGE, and the reader has

@@ -134,7 +134,11 @@ function card(activities: readonly Activity[]) {
   return () => (
     <StoryProviders>
       <div style={{ maxWidth: 560 }}>
-        <ContactMemory view={view(activities)} onOpenEmail={() => {}} />
+        <ContactMemory
+          view={view(activities)}
+          onOpenEmail={() => {}}
+          onFullHistory={() => {}}
+        />
       </div>
     </StoryProviders>
   );

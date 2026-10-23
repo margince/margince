@@ -87,6 +87,7 @@ export function AddRelationshipAction({
   scope,
   refusedReasonId,
   only,
+  variant,
 }: Readonly<{
   scope: RelationshipScope;
   // The id of the anchor page's sentence about why its record takes no
@@ -99,6 +100,8 @@ export function AddRelationshipAction({
   // beside it would ask them to answer a question the tab already answered.
   // The scope, picker, write and invalidation stay those of the relationships tab.
   only?: { kind: CreatableRelationshipKind; label: MessageKey };
+  // "link" when the verb is a card's one link rather than a button.
+  variant?: "link";
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
@@ -220,6 +223,7 @@ export function AddRelationshipAction({
   return (
     <>
       <Button
+        variant={variant}
         reasonId={refusedReasonId}
         onClick={() => setOpen(true)}
         data-testid="add-relationship"

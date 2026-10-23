@@ -3,6 +3,7 @@ import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { EntityRef } from "../../components/entityref";
+import { LogActivityForm } from "../../components/logactivity";
 import { Badge, Button } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { Row, Stack } from "../../design-system/stack";
@@ -16,7 +17,6 @@ import { activityFollowUpsKey } from "../../lib/activitykeys";
 import { useCanWrite } from "../../lib/capability";
 import { problemCodeOf, unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
-import { LogActivityForm } from "./logactivity";
 
 export function ActivityFollowUps({
   sourceId,

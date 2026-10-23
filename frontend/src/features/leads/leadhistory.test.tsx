@@ -72,7 +72,7 @@ const CHANGE_LINE = translate("en", "history.verb.update", {
 // what was changed, in one order, under a filter row that starts on All.
 
 describe("LeadHistoryTab", () => {
-  it("opens on the whole chronology, with the kind filter bar over it", async () => {
+  it("opens on the whole chronology, with the cuts in the card's head", async () => {
     stubWithSession(
       {
         "GET /activities": () =>
@@ -83,10 +83,69 @@ describe("LeadHistoryTab", () => {
     withProviders(<LeadHistoryTab lead={LEAD} onOpenEmail={() => {}} />);
 
     expect(await screen.findByText("Fleet renewal")).toBeTruthy();
-    expect(screen.getByLabelText("Activity kind")).toBeTruthy();
     expect(
       screen.getByRole("button", { name: "All" }).getAttribute("aria-pressed"),
     ).toBe("true");
+    for (const cut of ["Email", "Meetings", "Calls", "Notes", "Changes"]) {
+      expect(screen.getByRole("button", { name: cut })).toBeTruthy();
+    }
+    // The search and date row waits behind its toggle.
+    expect(screen.queryByLabelText("Activity kind")).toBeNull();
+  });
+
+  // A kind cut is a server parameter: the list is read again for that kind,
+  // never narrowed from the page already held.
+  it("reads the activities again for the kind a cut names", async () => {
+    stubWithSession(
+      {
+        "GET /activities": () =>
+          jsonResponse({ data: [EMAIL_ACTIVITY], page: { has_more: false } }),
+      },
+      {},
+    );
+    const stub = globalThis.fetch;
+    const kinds: (string | null)[] = [];
+    vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = new URL(
+        input instanceof Request ? input.url : String(input),
+        "https://test.local",
+      );
+      if (url.pathname.endsWith("/activities")) {
+        kinds.push(url.searchParams.get("kind"));
+      }
+      return stub(input, init);
+    });
+    withProviders(<LeadHistoryTab lead={LEAD} onOpenEmail={() => {}} />);
+
+    await screen.findByText("Fleet renewal");
+    await userEvent.click(screen.getByRole("button", { name: "Calls" }));
+
+    await waitFor(() => expect(kinds).toContain("call"));
+    expect(
+      screen
+        .getByRole("button", { name: "Calls" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+  });
+
+  it("opens the search and date row from its toggle", async () => {
+    stubWithSession(
+      {
+        "GET /activities": () =>
+          jsonResponse({ data: [EMAIL_ACTIVITY], page: { has_more: false } }),
+      },
+      {},
+    );
+    withProviders(<LeadHistoryTab lead={LEAD} onOpenEmail={() => {}} />);
+
+    await screen.findByText("Fleet renewal");
+    const toggle = screen.getByRole("button", {
+      name: translate("en", "timeline.filters.search"),
+    });
+    await userEvent.click(toggle);
+
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getByLabelText("Activity kind")).toBeTruthy();
   });
 
   // Changes is the one cut with no exchanges to narrow, and it swaps the rows

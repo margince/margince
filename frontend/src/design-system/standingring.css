@@ -1,0 +1,68 @@
+/* The reading ring (HealthRing, StrengthRing, ScoreRing): a 120px dial whose
+   arcs come from readingtone.ts, with the reading in its centre. */
+
+.standing-ring {
+  position: relative;
+  inline-size: 120px;
+  block-size: 120px;
+  flex: none;
+}
+/* Drawn from twelve o'clock, clockwise. */
+.standing-ring > svg {
+  display: block;
+  inline-size: 100%;
+  block-size: 100%;
+  transform: rotate(-90deg);
+}
+.standing-ring-track {
+  stroke: var(--borderSubtle);
+}
+.standing-ring-fill {
+  stroke-linecap: round;
+}
+/* Butt ends, so the gap between two arcs is the gap ringarc.ts measured. */
+.standing-ring-segment {
+  stroke-linecap: butt;
+}
+.standing-ring-centre {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  padding-inline: var(--space-6);
+  text-align: center;
+  color: var(--standing-ring-ink);
+}
+.standing-ring-word {
+  font: var(--fontHeadingXSmall);
+}
+.standing-ring-score {
+  font: var(--fontHeadingLarge);
+  font-variant-numeric: tabular-nums;
+}
+.standing-ring-caption {
+  font: var(--fontBodySmall);
+}
+/* The word that opens the score's points wears the dotted underline every
+   "where does this come from" figure does (standingdims.css). */
+.standing-ring-peek {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-decoration: underline dotted var(--borderStrong);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.standing-ring-peek:hover,
+.standing-ring-peek[aria-expanded="true"] {
+  text-decoration-color: currentColor;
+}
+.standing-ring-peek:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}

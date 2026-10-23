@@ -113,15 +113,9 @@ function RoomPage({
         </div>
       </header>
       <StateBanner room={room} />
-      <div className="roompage-grid">
-        <div className="roompage-main">
-          <RoomText room={room} refusal={refusal} />
-          <DealRoomConversation room={room} refusal={refusal} />
-        </div>
-        <div className="roompage-side">
-          <DealRoomAccess room={room} mayManage={mayWrite} />
-        </div>
-      </div>
+      <RoomText room={room} refusal={refusal} />
+      <DealRoomConversation room={room} refusal={refusal} />
+      <DealRoomAccess room={room} mayManage={mayWrite} />
     </div>
   );
 }

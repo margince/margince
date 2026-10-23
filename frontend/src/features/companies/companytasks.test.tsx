@@ -134,6 +134,9 @@ const STRADDLING_DUE_AT = "2026-08-21T21:59:59.000Z";
 const WRITERS_ZONE = "America/Los_Angeles";
 const PICKED_DAY = "Due 21/08/2026";
 const DAY_AFTER = "Due 22/08/2026";
+// The table's Due column names the day and month the detail dates in full.
+const PICKED_ROW_DAY = "21 Aug";
+const ROW_DAY_AFTER = "22 Aug";
 
 const company360WithStraddlingTask = {
   ...company360,
@@ -209,7 +212,8 @@ describe("CompanyScreen — the Tasks tab", () => {
     render(<CompanyScreen id="o-1" />);
     await openTasksTab(user);
 
-    expect(await screen.findByText(PICKED_DAY)).toBeTruthy();
+    expect(await screen.findByText(PICKED_ROW_DAY)).toBeTruthy();
+    expect(screen.queryByText(ROW_DAY_AFTER)).toBeNull();
     await user.click(screen.getByText(openTask.subject));
     await waitFor(() =>
       expect(
@@ -217,7 +221,8 @@ describe("CompanyScreen — the Tasks tab", () => {
       ).toBeTruthy(),
     );
     // Row and detail, both open: one deadline, one day.
-    expect(await screen.findAllByText(PICKED_DAY)).toHaveLength(2);
+    expect(await screen.findByText(PICKED_DAY)).toBeTruthy();
+    expect(screen.getByText(PICKED_ROW_DAY)).toBeTruthy();
     expect(screen.queryByText(DAY_AFTER)).toBeNull();
   });
 

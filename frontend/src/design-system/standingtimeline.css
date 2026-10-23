@@ -1,0 +1,267 @@
+/* StandingTimeline: a dated canvas. Month lines run down the top 120px, the
+   spine sits at 120px, and event labels hang on up to three rows under it
+   (standingtimeline.layout.ts picks the row). Every x is a percentage of the
+   axis, set inline by the component. */
+
+.standing-timeline {
+  min-inline-size: 0;
+}
+.standing-timeline-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin-inline: calc(-1 * var(--space-2));
+}
+.standing-timeline-stage {
+  --standing-timeline-spine-y: 120px;
+  position: relative;
+  min-inline-size: 480px;
+  block-size: calc(144px + var(--standing-timeline-rows, 3) * 52px);
+  margin-inline: var(--space-4);
+}
+/* The drawn axis, hidden from assistive technology; the stage's other child is
+   the mark lane, which is not. */
+.standing-timeline-canvas {
+  position: absolute;
+  inset: 0;
+}
+.standing-timeline-empty {
+  margin: 0;
+}
+
+.standing-timeline-tick {
+  position: absolute;
+  inset-block-start: 0;
+  block-size: var(--standing-timeline-spine-y);
+  border-inline-start: 1px solid var(--borderSubtle);
+}
+.standing-timeline-tick-label {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: var(--space-2);
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+  white-space: nowrap;
+}
+/* A line at the axis's end names itself on its left, inside the canvas. */
+.standing-timeline-tick.hangs-left .standing-timeline-tick-label {
+  inset-inline-start: auto;
+  inset-inline-end: var(--space-2);
+}
+
+/* The silence: a small band just left of today, its length in words inside
+   it, ending above the mark lane; the dashed spine under it spans the gap.
+   It is as wide as its words, up to 128px. */
+.standing-timeline-gap {
+  position: absolute;
+  inset-block-start: 24px;
+  block-size: 56px;
+  inline-size: max-content;
+  max-inline-size: min(128px, var(--standing-timeline-room, 128px));
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-2);
+  border-radius: var(--r-control) var(--r-control) 0 0;
+  background: var(--warningBg);
+  color: var(--warningText);
+  white-space: nowrap;
+  box-sizing: border-box;
+}
+.standing-timeline-gap-title,
+.standing-timeline-gap-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.standing-timeline-gap-title {
+  font: var(--fontHeadingSmall);
+}
+.standing-timeline-gap-sub {
+  font: var(--fontBodySmall);
+}
+
+.standing-timeline-spine {
+  position: absolute;
+  inset-block-start: calc(var(--standing-timeline-spine-y) - 1px);
+}
+.standing-timeline-spine.is-past {
+  inset-inline-start: 0;
+  block-size: 3px;
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--accent);
+}
+.standing-timeline-spine.is-waiting {
+  border-block-start: 3px dashed var(--warning);
+}
+.standing-timeline-spine.is-ahead {
+  inset-inline-end: 0;
+  border-block-start: 3px dotted var(--borderStrong);
+}
+.standing-timeline-now {
+  position: absolute;
+  inset-block-start: 48px;
+  block-size: 72px;
+  border-inline-start: 2px solid var(--textPrimary);
+}
+
+.standing-timeline-dot {
+  position: absolute;
+  inset-block-start: var(--standing-timeline-spine-y);
+  inline-size: 12px;
+  block-size: 12px;
+  border-radius: var(--r-full);
+  corner-shape: round;
+  transform: translate(-50%, -50%);
+  background: var(--accent);
+}
+.standing-timeline-dot.is-late {
+  background: var(--warning);
+}
+.standing-timeline-dot.is-last {
+  inline-size: 18px;
+  block-size: 18px;
+  background: var(--bgElevated);
+  box-shadow: inset 0 0 0 3px var(--accent);
+}
+.standing-timeline-dot.is-ahead,
+.standing-timeline-dot.is-end {
+  inline-size: 16px;
+  block-size: 16px;
+  background: var(--bgElevated);
+  box-shadow: inset 0 0 0 2.5px var(--textSecondary);
+}
+.standing-timeline-dot.is-end {
+  box-shadow: inset 0 0 0 2.5px var(--textPrimary);
+}
+
+/* A label on row 2 or 3 hangs from its dot on a thin lead line. */
+.standing-timeline-lead {
+  position: absolute;
+  inset-block-start: calc(var(--standing-timeline-spine-y) + 8px);
+  block-size: calc(16px + var(--standing-timeline-row) * 52px);
+  border-inline-start: 1px solid var(--borderSubtle);
+}
+.standing-timeline-label {
+  position: absolute;
+  inset-block-start: calc(144px + var(--standing-timeline-row) * 52px);
+  display: flex;
+  flex-direction: column;
+  white-space: nowrap;
+}
+.standing-timeline-label.hangs-left {
+  text-align: end;
+}
+.standing-timeline-title,
+.standing-timeline-sub {
+  max-inline-size: var(--standing-timeline-label-max);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.standing-timeline-title {
+  font: var(--fontBody);
+  font-weight: var(--fontWeightMedium);
+  color: var(--textPrimary);
+}
+.standing-timeline-sub {
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
+.standing-timeline-label.is-late .standing-timeline-title,
+.standing-timeline-label.is-late .standing-timeline-sub {
+  color: var(--warningText);
+}
+
+/* Today, drawn last so it sits over the spine and any dot under it. */
+.standing-timeline-today {
+  position: absolute;
+  inset-block-start: var(--standing-timeline-spine-y);
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  block-size: var(--space-6);
+  padding-inline: var(--space-3);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--textPrimary);
+  color: var(--bgElevated);
+  font: var(--fontHeadingXXSmall);
+  white-space: nowrap;
+}
+
+/* The mark lane: logged items and messages as chips just above the spine, each
+   on a short stem to it. The layer takes no pointer of its own, so the axis
+   under it keeps its hover; a chip takes its own. */
+.standing-timeline-marks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.standing-timeline-mark {
+  position: absolute;
+  inset-block-start: calc(var(--standing-timeline-spine-y) - 36px);
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: var(--space-6);
+  block-size: var(--space-6);
+  padding: 0;
+  border: 1px solid var(--borderStrong);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--bgElevated);
+  color: var(--textSecondary);
+  cursor: pointer;
+  pointer-events: auto;
+}
+/* The stem to the spine. */
+.standing-timeline-mark::after {
+  content: "";
+  position: absolute;
+  inset-block: 100% -11px;
+  inset-inline-start: 50%;
+  border-inline-start: 1px solid var(--borderStrong);
+}
+.standing-timeline-mark:hover,
+.standing-timeline-mark[aria-expanded="true"] {
+  border-color: var(--accent);
+  color: var(--accentText);
+}
+.standing-timeline-mark:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+.standing-timeline-mark > svg {
+  inline-size: var(--controlIcon);
+  block-size: var(--controlIcon);
+}
+/* Which way it went: a small arrow on the chip's upper corner. */
+.standing-timeline-mark-way {
+  position: absolute;
+  inset-block-start: -5px;
+  inset-inline-end: -5px;
+  display: inline-flex;
+  inline-size: 12px;
+  block-size: 12px;
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--accent);
+  color: var(--textOnAccent);
+}
+.standing-timeline-mark-way > svg {
+  inline-size: 10px;
+  block-size: 10px;
+  margin: auto;
+}
+.standing-timeline-mark-count {
+  position: absolute;
+  inset-block-start: -6px;
+  inset-inline-end: -6px;
+  min-inline-size: 14px;
+  padding-inline: 3px;
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--textPrimary);
+  color: var(--bgElevated);
+  font: var(--fontBodySmall);
+  text-align: center;
+}

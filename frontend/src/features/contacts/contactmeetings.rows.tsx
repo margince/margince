@@ -95,8 +95,18 @@ function DaysAway({
   return <Badge tone={lead ? "accent" : "default"}>{label}</Badge>;
 }
 
+// The subject a row shows, redacted the same way the timeline's own row is.
+export function meetingSubject(
+  activity: Pick<Activity, "content_state" | "subject">,
+  t: ReturnType<typeof useT>,
+): string {
+  return activity.content_state === "withheld"
+    ? t("timeline.withheld")
+    : (activity.subject ?? t("contact.meetings.untitled"));
+}
+
 // The subject, and the way into the meeting's own page where it has one.
-function MeetingTitle({
+export function MeetingTitle({
   activityId,
   opens,
   lead,
@@ -125,7 +135,7 @@ function MeetingTitle({
 // calendar still working or refusing, a contact who did not come, a meeting
 // called off. A confirmed invitation and a meeting held are what the list
 // already implies.
-function MeetingStatus({
+export function MeetingStatus({
   outcome,
   invitation,
 }: Readonly<{
@@ -159,10 +169,7 @@ export function MeetingRow({
 }>) {
   const t = useT();
   const span = useMeetingSpan(activity.occurred_at, endOf(activity));
-  const title =
-    activity.content_state === "withheld"
-      ? t("timeline.withheld")
-      : (activity.subject ?? t("contact.meetings.untitled"));
+  const title = meetingSubject(activity, t);
   return (
     <PanelRow>
       <article className="pe-meeting">
@@ -290,8 +297,8 @@ export function NextMeetingCard({
               {note.whyNow}
             </p>
           )}
-          <div className="pe-meeting-actions">{verbs}</div>
         </div>
+        <div className="pe-meeting-actions">{verbs}</div>
       </article>
     </PanelBody>
   );

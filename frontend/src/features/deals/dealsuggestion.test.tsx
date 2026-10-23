@@ -11,18 +11,18 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import {
+  acceptBody,
+  CompanySuggestions,
+  DealSuggestionCard,
+} from "../../components/dealsuggestion";
+import type { DealSuggestion } from "../../components/dealsuggestions.queries";
 import { pickOption } from "../../design-system/select-testing";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
 import { RecordShell } from "../../testing/recordshell.testkit";
 import { DealsScreen } from "./deals";
-import {
-  acceptBody,
-  CompanySuggestions,
-  DealSuggestionCard,
-} from "./dealsuggestion";
-import type { DealSuggestion } from "./dealsuggestions.queries";
 
 // A Deal Scout suggestion on the three surfaces that draw one, and the two
 // answers a rep gives it. The board case is the one the feature must never

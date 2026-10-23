@@ -13,19 +13,18 @@ import {
 } from "../../testing/story-utils";
 import { ContactToday } from "./contacttoday";
 
-// THE DAY'S WORK GIVES ONE ANSWER, AND GIVES IT ONCE. The panel answers "what
-// needs me" on every contact, so the quiet rung and the thin relationship are
-// answers inside it rather than a reason to draw nothing; and the one thing
-// the move is about is named once, rather than as the ask, the record it
-// rests on and a chore underneath it.
+// The Next bar gives one answer, and gives it once. It answers "what is next"
+// on every contact. So the quiet rung and the thin relationship are answers
+// inside it, not a reason to draw nothing. The one thing the move is about is
+// named once, not again in the "+N tasks" count.
 //
 // Assertions read the catalog rather than quoting English: the sentences here
 // are product copy and a test pinning them fails on a rewrite that changed
 // nothing about the behaviour.
 //
-// Mounted on the card rather than through the whole page: the page's own suite
-// is at its length ceiling, and what is under test here is the panel's
-// composition, which needs neither the header nor the rail.
+// Mounted on the card rather than through the whole page. The page's own suite
+// is at its length ceiling, and the bar's composition under test here needs
+// neither the header nor the rail.
 
 beforeEach(() =>
   installFetchStub({
@@ -123,7 +122,12 @@ function show(view: Contact360, moment?: ContactMoment) {
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <ContactToday view={view} moment={moment} onAction={() => {}} />
+        <ContactToday
+          view={view}
+          moment={moment}
+          onAction={() => {}}
+          onOpenTasks={() => {}}
+        />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -137,11 +141,21 @@ describe("the move the panel leads with", () => {
     // The server's reason and no other: the facts in it are what a rep
     // judges, and the account brief reads the same moment the same way.
     expect(screen.getByText(PROMISE.why_now)).toBeTruthy();
-    // The rule qualifies the byline: what the record was read against, beside
-    // whose reading it is.
-    expect(
-      screen.getByText(en["contact.moment.rule.open_promise"]),
-    ).toBeTruthy();
+  });
+
+  it("says how late the promise it is about is, against the read's own date", () => {
+    show(
+      {
+        ...VIEW,
+        next_steps: {
+          data: [{ ...OPEN_TASK, due_at: "2026-08-03T09:00:00Z" }],
+          page: { has_more: false },
+        },
+      },
+      PROMISE,
+    );
+
+    expect(screen.getByText("10 days late")).toBeTruthy();
   });
 
   it("names the task it is about once, not as a chore under itself too", () => {
@@ -157,11 +171,12 @@ describe("the move the panel leads with", () => {
     );
 
     expect(screen.getByText(PROMISE.headline)).toBeTruthy();
-    // The subject is in the ask and nowhere else: no row of its own under the
-    // move that already asks for it.
-    expect(screen.queryByText(OPEN_TASK.subject)).toBeNull();
-    // Every other commitment the record carries still stands.
-    expect(screen.getByText(OTHER_TASK.subject)).toBeTruthy();
+    // The named task is the ask; only the other one is counted behind it.
+    expect(
+      screen.getByRole("button", {
+        name: en["standing.next.more_one"].replace("{count}", "1"),
+      }),
+    ).toBeTruthy();
   });
 
   it("shows what it rests on only where that is a record the ask does not name", () => {
@@ -198,16 +213,13 @@ describe("the day's work on a contact", () => {
     expect(screen.queryByText(QUIET.headline)).toBeNull();
   });
 
-  // The quiet rung IS the answer to the panel's question, so it is answered
+  // The quiet rung is the answer to the bar's question, so it is answered
   // where the question is asked. Rendering nothing at all left a reader
   // unable to tell a quiet day from a pane that failed to load.
-  it("answers a quiet record inside the panel", () => {
+  it("answers a quiet record inside the bar", () => {
     show(VIEW, QUIET);
 
-    expect(
-      screen.getByRole("heading", { name: en["today.title"] }),
-    ).toBeTruthy();
-    expect(screen.getByText(en["today.quiet"])).toBeTruthy();
+    expect(screen.getByText(en["standing.next.none"])).toBeTruthy();
     // Nobody suggested that nothing needs doing, and there is nothing to press
     // about it.
     expect(screen.queryByText(en["co.suggest.byline"])).toBeNull();
@@ -226,9 +238,9 @@ describe("the day's work on a contact", () => {
     expect(screen.queryByText(en["co.suggest.byline"])).toBeNull();
   });
 
-  // A truncated list with no count reads as "that is everything", which is
-  // the one thing a list of commitments may not say.
-  it("says how many open tasks the cut left out", () => {
+  // A bar that names one task with no count reads as "that is everything".
+  // A list of commitments may not say that.
+  it("leads with one open task and counts the rest behind it", () => {
     const many = [1, 2, 3, 4, 5].map((n) => ({
       ...OPEN_TASK,
       id: `a-${n}`,
@@ -239,15 +251,18 @@ describe("the day's work on a contact", () => {
       QUIET,
     );
 
+    expect(screen.getByText("Task 1")).toBeTruthy();
     expect(
       screen.getAllByRole("button", { name: en["deal360.openTask"] }),
-    ).toHaveLength(3);
+    ).toHaveLength(1);
     expect(
-      screen.getByText(en["co.suggest.more"].replace("{count}", "2")),
+      screen.getByRole("button", {
+        name: en["standing.next.more_other"].replace("{count}", "4"),
+      }),
     ).toBeTruthy();
   });
 
-  // No moment read is not a quiet record: the panel keeps its place and says
+  // No moment read is not a quiet record. The bar keeps its place and says
   // the reading is not shown rather than claiming nothing needs the reader.
   it("keeps an unread moment inside the panel as a reading it does not have", () => {
     show(VIEW);

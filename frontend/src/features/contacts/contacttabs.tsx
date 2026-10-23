@@ -91,12 +91,11 @@ export function ContactTimelineTab({
     activities: timeline.activities,
     activitiesHaveMore: timeline.hasNextPage,
     loadMore: timeline,
-    // No name resolver yet: a uuid in a change row still renders untouched
-    // rather than guessed at, which is the correct fallback while nothing
-    // here resolves contacts/company ids to names.
-    // What a stored value needs to be read as what it MEANS: this record holds
+    // What a stored value needs to be read as what it means. This record holds
     // no money of its own, so the currency is absent and a minor-unit column
-    // says so rather than printing a bare integer.
+    // says so instead of printing an integer. No name resolver: a mail filed
+    // here may have been sent by somebody else. A resolved link name would
+    // hide that sender behind this contact's own.
     values: { currency: null, locale, zone: recordZone },
     renderActions: (activity) => (
       <TimelineActions

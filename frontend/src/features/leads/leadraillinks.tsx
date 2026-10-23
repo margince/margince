@@ -1,109 +1,33 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { components } from "../../api/schema";
-import { Button, Disclosure } from "../../design-system/atoms";
+import { Button } from "../../design-system/atoms";
 import { ListPopover } from "../../design-system/listpopover";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
-import { useCanWriteRecord } from "../../lib/capability";
 import { routeHash } from "../../lib/router";
-// The row and section shapes this file draws (record-card, co-deal-card,
-// co-project-card, co-sect) are the account rail's own, defined in
+// The card shapes this file draws (record-card, co-deal-card,
+// co-project-card) are the account rail's own, defined in
 // company360.css and companyrailprojects.css. Imported HERE rather than
 // relied on from a sibling, for the same reason companyraildeals.tsx gives:
 // this file renders wherever it is mounted.
 import "../../design-system/recordcard.css";
 import "../companies/company360.css";
 import "../companies/companyrailprojects.css";
-import { SectionSummary } from "../../components/companyrailshared";
 import { useEntityName } from "../../components/entityref";
 import { problemMessageOf } from "../../lib/problem";
-import { TagsPanel } from "../lists/tagspanel";
 import { useProjectRecord } from "../projects/projectrecord";
 import { PhaseBadge } from "../projects/projects";
 import type { Project } from "../projects/projects.form";
 import { searchProjectReferences } from "../records/recordreferences";
-import { LeadFillFromContact } from "./leadfillfromcontact";
 import type { LeadWriter } from "./leads";
 
-// The lead's own two doors out: the deal it opened once qualified, and the
-// project its Details name. Split out of leads.tsx so that file's own length
-// holds: the rail slices, the tab they open onto, and the rail's own mount
-// all live here, and leads.tsx only wires them to the record it reads.
+// The lead's Deals tab: the deal it opened once qualified, and the project
+// its details name.
 
 type Lead = components["schemas"]["Lead"];
-
-/**
- * LeadRail: the lead's own words, plus what it links to.
- *
- * What a rep CONSULTS while doing the work in the column beside it. Two
- * things have left this column for the same reason: the score, which is a
- * reading with an edit behind it and belongs beside the inputs that feed it,
- * and the owner, which is a thing a reader ACTS on and belongs in the header.
- *
- * `details` is LeadIdentityFields, kept private to leads.tsx: this file only
- * reserves it a slot, so the record's editable fields stay beside the patch
- * that saves them.
- */
-export function LeadRail({
-  lead,
-  writer,
-  onQualify,
-  reasonId,
-  details,
-}: Readonly<{
-  lead: Lead;
-  writer: LeadWriter;
-  // Opens QualifyDialog, the SAME dialog the header's own Qualify verb
-  // opens: a lead earns a deal by being qualified, never by a second door
-  // here.
-  onQualify: () => void;
-  // The one sentence this page prints about why the lead takes no changes,
-  // when it is closed or not this caller's to change; undefined otherwise.
-  reasonId?: string;
-  details: ReactNode;
-}>) {
-  return (
-    // The account rail's own shape: the record's fields lead the column, and
-    // what it links to stands under them as ONE pane of named slices rather
-    // than as two cards a reader has to assemble. `.co-rail` is what gives a
-    // slice its eyebrow and its hairline, so the two records read here the
-    // way the same two read on an account.
-    <div className="co-rail">
-      {details}
-      <LeadFillFromContact writer={writer} reasonId={reasonId} />
-      <Panel>
-        <LeadDealSection
-          lead={lead}
-          onQualify={onQualify}
-          reasonId={reasonId}
-        />
-        <LeadProjectSection lead={lead} writer={writer} reasonId={reasonId} />
-      </Panel>
-      <LeadTagsSection lead={lead} writer={writer} />
-    </div>
-  );
-}
-
-// Applying a tag writes to the lead, so the panel takes the same two answers
-// every other write here does: the seat may write this row, and the page has
-// not closed it to changes.
-function LeadTagsSection({
-  lead,
-  writer,
-}: Readonly<{ lead: Lead; writer: LeadWriter }>) {
-  const canUpdate = useCanWriteRecord("lead", lead);
-  return (
-    <TagsPanel
-      entityType="lead"
-      entityID={lead.id}
-      archived={Boolean(lead.archived_at)}
-      canEdit={canUpdate && !writer.readOnly}
-    />
-  );
-}
 
 // The deal named by `lead.qualified_deal_id`, read the way every reference to
 // a record this page does not own is read: by name only (entityref.tsx), off
@@ -136,10 +60,7 @@ function DealRecordCard({
   );
 }
 
-// The card, or the one sentence an unqualified lead gets instead. Shared by
-// the rail slice and the tab's own panel, which read it identically: the
-// deal is never edited from either surface, so there is nothing for the two
-// to disagree about.
+// The card, or the one sentence an unqualified lead gets instead.
 function LeadDealBody({ lead }: Readonly<{ lead: Lead }>) {
   const t = useT();
   const { dealId, name, isEmpty } = useLeadDealLink(lead.qualified_deal_id);
@@ -149,10 +70,9 @@ function LeadDealBody({ lead }: Readonly<{ lead: Lead }>) {
   return isEmpty ? <p>{t("lead.rail.deal.empty")}</p> : null;
 }
 
-// The verb this lead's deal slice offers, when there is still a deal to
-// earn, shared by the rail slice and the tab's own panel, which draw it
-// identically. `lead.promote`, the header's own key: qualifying is one
-// action wherever it is reached from, so it carries one word everywhere.
+// The verb the deal panel offers while there is still a deal to earn.
+// `lead.promote`, the header's own key: qualifying is one action wherever it
+// is reached from, so it carries one word everywhere.
 function LeadQualifyButton({
   onQualify,
   reasonId,
@@ -164,42 +84,6 @@ function LeadQualifyButton({
         {t("lead.promote")}
       </Button>
     </div>
-  );
-}
-
-/**
- * LeadDealSection is the deal this lead became, when it became one. A lead
- * earns a deal by being qualified, never by a second create here, so the
- * verb this slice offers IS Qualify, the same door the header's own Qualify
- * action opens, and drawn on the same terms the header draws it on: gone
- * once `qualified_deal_id` is set (the card above names the deal) or once
- * the lead is closed, since a closed lead is not a qualifiable one either:
- * the reason band is for a verb that STAYS, not for one that no longer
- * applies.
- */
-export function LeadDealSection({
-  lead,
-  onQualify,
-  reasonId,
-}: Readonly<{
-  lead: Lead;
-  onQualify: () => void;
-  reasonId?: string;
-}>) {
-  const t = useT();
-  return (
-    <Disclosure
-      className="co-sect"
-      open
-      summary={<SectionSummary title={t("lead.rail.deal.title")} />}
-    >
-      <PanelBody>
-        <LeadDealBody lead={lead} />
-        {!lead.qualified_deal_id && !lead.archived_at && (
-          <LeadQualifyButton onQualify={onQualify} reasonId={reasonId} />
-        )}
-      </PanelBody>
-    </Disclosure>
   );
 }
 
@@ -232,9 +116,7 @@ function ProjectRecordCard({ project }: Readonly<{ project: Project }>) {
   );
 }
 
-// The card, or the sentence a lead with no project gets instead, shared by
-// the rail slice and the tab's own panel, the same split `LeadDealBody`
-// draws.
+// The card, or the sentence a lead with no project gets instead.
 function LeadProjectBody({ lead }: Readonly<{ lead: Lead }>) {
   const t = useT();
   const { project, isEmpty } = useLeadProjectLink(lead.project_id);
@@ -249,7 +131,7 @@ function LeadProjectBody({ lead }: Readonly<{ lead: Lead }>) {
 // path, so one inline edit and this verb cannot invalidate different caches
 // or send a different If-Match. Picking IS the act, so the list closes once
 // the write lands and stays open over a refusal.
-function LeadProjectAttachButton({
+export function LeadProjectAttachButton({
   lead,
   writer,
   reasonId,
@@ -303,43 +185,12 @@ function LeadProjectAttachButton({
 }
 
 /**
- * LeadProjectSection is the project this lead names, the one field of
- * `project_id` this rail draws as more than a select row. It carries the
- * verb that writes that field: Attach while the lead names none, Change once
- * it does, the same picker either way, and the Details row keeps its own
- * editor beside it rather than losing one.
+ * LeadDealsTab: the deal this lead opened, or the way to open one, then the
+ * project it names, with Attach/Change. A lead earns a deal by being
+ * qualified, never by a second create here, so the deal panel's verb is
+ * Qualify. It is gone once a deal is named or the lead is closed.
  */
-export function LeadProjectSection({
-  lead,
-  writer,
-  reasonId,
-}: Readonly<{ lead: Lead; writer: LeadWriter; reasonId?: string }>) {
-  const t = useT();
-  return (
-    <Disclosure
-      className="co-sect"
-      open
-      summary={<SectionSummary title={t("lead.rail.project.title")} />}
-    >
-      <PanelBody>
-        <LeadProjectBody lead={lead} />
-        <LeadProjectAttachButton
-          lead={lead}
-          writer={writer}
-          reasonId={reasonId}
-        />
-      </PanelBody>
-    </Disclosure>
-  );
-}
-
-/**
- * LeadDealsProjectsTab: the lead's Deals & projects tab, the same label the
- * account's own tab carries. Both panels carry the same verb the rail's own
- * slices do, Qualify and Attach/Change, so a rep reaching either surface
- * finds the same door.
- */
-export function LeadDealsProjectsTab({
+export function LeadDealsTab({
   lead,
   writer,
   onQualify,
@@ -353,7 +204,7 @@ export function LeadDealsProjectsTab({
   const t = useT();
   return (
     <div className="record-stack">
-      <Panel title={t("lead.rail.deal.title")}>
+      <Panel title={t("tab.deals")}>
         <PanelBody>
           <LeadDealBody lead={lead} />
           {!lead.qualified_deal_id && !lead.archived_at && (

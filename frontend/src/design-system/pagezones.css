@@ -1,7 +1,6 @@
 /* PageZones — the page's columns: the work column, and the rails of context
-   beside it. Extracted verbatim from the record page's zones grid, which was
-   the only page that had one, so that a second page needing the same shape
-   reuses it rather than re-deriving the ratios and the folds.
+   beside it. A page needing the same shape reuses it rather than re-deriving
+   the ratios and the folds.
 
    The work column is the one that grows, so the rails keep a fixed share and
    the layout folds to one column before either becomes unreadably narrow. */
@@ -77,7 +76,7 @@
 /* Arriving is nothing this file spells. The pane is a fresh element every time
    it opens, so it is an arriving BLOCK, and the page it opens on already says
    what one of those does — the 8px rise and the fade of `.arrive-stack`
-   (design-system/enter.css), which the record page marks its zones grid with.
+   (design-system/enter.css), which a page marks its zones grid with.
    A second arrival here would play over the top of that one.
 
    Leaving has no such owner: the pane drifts toward the edge it is folding

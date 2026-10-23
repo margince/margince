@@ -1,57 +1,60 @@
 /** @vitest-environment happy-dom */
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, expect, it } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import "@testing-library/jest-dom/vitest";
-import { PageAsideProvider, usePageAside } from "../../../components/pageaside";
-import { RecordFields } from "../../../components/recordfields";
+import { translate } from "../../../i18n";
 import { StoryProviders } from "../../../testing/story-utils";
 import { DealBrief } from "./dealbrief";
 
 afterEach(cleanup);
-function DetailsState() {
-  const { open } = usePageAside();
-  return open ? (
-    <RecordFields
-      title="Details"
-      kind="deal"
-      fields={[{ key: "description", labelText: "Brief", type: "textarea" }]}
-      record={{ id: "d1" }}
-      canEdit
-      save={async () => undefined}
-    />
-  ) : null;
-}
-it.each([false, true])(
-  "focuses the canonical brief editor when Details initially open is %s",
-  async (open) => {
+
+it.each([
+  [null, "deal.briefAdd"],
+  ["They close the month by hand.", "deal.briefEdit"],
+] as const)(
+  "opens the deal's fields from the card's one link (brief %s)",
+  async (brief, verb) => {
     const user = userEvent.setup();
+    const onEdit = vi.fn();
     render(
       <StoryProviders>
-        <PageAsideProvider open={open}>
-          <DealBrief brief={null} />
-          <DetailsState />
-        </PageAsideProvider>
+        <DealBrief brief={brief} onEdit={onEdit} />
       </StoryProviders>,
     );
     await user.click(
-      await screen.findByRole("button", { name: "Write brief" }),
+      screen.getByRole("button", { name: translate("en", verb) }),
     );
-    expect(
-      await screen.findByRole("button", { name: "Change Brief" }),
-    ).toHaveFocus();
-    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(onEdit).toHaveBeenCalledOnce();
   },
 );
-it.each([true, false])(
-  "does not offer an inert write action without Details (readOnly=%s)",
-  (readOnly) => {
-    render(
-      <StoryProviders>
-        <DealBrief brief={null} readOnly={readOnly} />
-      </StoryProviders>,
-    );
-    expect(screen.getByText(/No brief written yet/)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Write brief" })).toBeNull();
-  },
-);
+
+it("says the brief is empty and offers no link to a reader who may not write", () => {
+  render(
+    <StoryProviders>
+      <DealBrief brief="   " />
+    </StoryProviders>,
+  );
+  expect(screen.getByText(translate("en", "deal.briefEmpty"))).toBeTruthy();
+  expect(
+    screen.queryByRole("button", { name: translate("en", "deal.briefAdd") }),
+  ).toBeNull();
+});
+
+it("clamps a brief longer than six lines and opens it on request", async () => {
+  const user = userEvent.setup();
+  const brief = ["one", "two", "three", "four", "five", "six", "seven"].join(
+    "\n",
+  );
+  render(
+    <StoryProviders>
+      <DealBrief brief={brief} />
+    </StoryProviders>,
+  );
+  const more = screen.getByRole("button", {
+    name: translate("en", "deal.briefMore"),
+  });
+  expect(document.querySelector(".d360-brief-clamped")).toBeTruthy();
+  await user.click(more);
+  expect(document.querySelector(".d360-brief-clamped")).toBeNull();
+});

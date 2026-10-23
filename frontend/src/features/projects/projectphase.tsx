@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
 import { Field, Textarea } from "../../design-system/atoms";
@@ -26,18 +26,18 @@ import {
 // from the refusal.
 
 /**
- * PhaseStepper draws the four phases in order. The current one is a fact and
- * stays a marker; every other one is the move to it. It is the design
- * system's `StageLadder`, the same one the deal's stages and the lead's
- * ladder draw, because a reader who has moved a deal has already learned what
- * this row does — and until that component existed, "the same chrome" was a
- * claim this comment made and nothing held.
+ * PhaseStepper draws the four phases in order on the design system's
+ * `StageLadder`. The current one is a fact and stays a marker; every other one
+ * is the move to it. Closed is a way out rather than one more rung. `bars` is
+ * the shape inside How it stands, where each phase carries its time.
  */
 export function PhaseStepper({
   phase,
   refusedReasonId,
   pending,
   onMove,
+  variant,
+  subs,
 }: Readonly<{
   phase: ProjectPhase;
   // The id of the page's sentence saying why no move is offered — an
@@ -45,20 +45,25 @@ export function PhaseStepper({
   refusedReasonId?: string;
   pending: boolean;
   onMove: (to: ProjectPhase) => void;
+  variant?: "chevrons" | "bars";
+  subs?: Readonly<Partial<Record<ProjectPhase, ReactNode>>>;
 }>) {
   const t = useT();
   const here = PROJECT_PHASES.indexOf(phase);
   return (
     <StageLadder
       label={t("project.phaseLabel")}
+      variant={variant}
       steps={PROJECT_PHASES.map((step, rung) => ({
         key: step,
         label: t(PHASE_LABEL[step]),
         done: rung < here,
         current: step === phase,
+        terminal: step === "closed",
         disabled: pending,
         reasonId: refusedReasonId,
         testId: `project-step-${step}`,
+        sub: subs?.[step],
         onPick: () => onMove(step),
       }))}
     />

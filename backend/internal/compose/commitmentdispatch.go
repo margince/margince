@@ -92,8 +92,8 @@ type Commitment struct {
 	NeedsConfirmation bool
 	Links             []activities.ActivityLinkInput
 	// PrivateTo is the one member the conversation answers to, when it is
-	// private mail. The task is theirs alone to read and hold, so a promise
-	// another colleague made there gives nobody a task.
+	// private mail. A promise another colleague made there is theirs only when
+	// they may open its message, and its task is read by the two of them.
 	PrivateTo *ids.UUID
 	// Locator identifies the promise across readings; see commitmentLocator.
 	Locator string
@@ -165,6 +165,11 @@ func (d *CommitmentDispatcher) DispatchTx(
 	}
 	evidence := make([]openapi_types.UUID, 0, len(c.ReadMessages))
 	for _, message := range c.ReadMessages {
+		// The recorded decision is shown with the message, and the colleague
+		// who sent it must not learn which other mail on the thread exists.
+		if promisedOnAnothersPrivateThread(c) && message != c.SourceActivityID {
+			continue
+		}
 		evidence = append(evidence, openapi_types.UUID(message))
 	}
 	decision := crmcontracts.CommitmentAdmission{Locator: c.Locator, Summary: c.Summary, SourceQuote: c.Quote, Outcome: string(outcome), CurrentWork: !outcome.withheld(), RuleVersion: activities.CommitmentAdmissionVersion, EvidenceIds: evidence, EvaluatedAt: c.AsOf}
@@ -268,6 +273,7 @@ func (d *CommitmentDispatcher) createOurCommitment(ctx context.Context, tx pgx.T
 			Extractor: c.Extractor, Locator: c.Locator, Summary: c.Summary, Body: c.Body,
 			SourceActivityID: c.SourceActivityID, Links: c.Links, DueDate: c.DueDate,
 			Assignee: asked, ClaimID: claimID, ClaimIDs: claimIDs, PrivateTo: c.PrivateTo,
+			Origin: activities.OriginAgent,
 		})
 		return CommitmentTaskWritten, task, err
 	}
@@ -438,12 +444,6 @@ func (d *CommitmentDispatcher) stageCommitmentProposal(
 		return CommitmentRemembered, ids.UUID{}, err
 	}
 	return CommitmentProposed, approvalID.UUID, nil
-}
-
-// mayHoldPrivateTask reports whether a member may hold a task about this
-// conversation: any member when it is shared, only its owner when it is private.
-func mayHoldPrivateTask(privateTo *ids.UUID, seat ids.UUID) bool {
-	return privateTo == nil || *privateTo == seat
 }
 
 // derefSeat is the seat or the zero id, which no private conversation names.

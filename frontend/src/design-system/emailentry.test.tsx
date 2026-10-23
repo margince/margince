@@ -13,7 +13,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { EmailDetail } from "./emaildetail";
-import { EmailEntry, EmailWords } from "./emailentry";
+import { EmailEntry, EmailFiles, EmailWords } from "./emailentry";
 import { EmailReference } from "./emailreference";
 
 // The row, the citation and the drawer, held to the promises the arrangement
@@ -146,6 +146,54 @@ describe("EmailWords", () => {
   });
 });
 
+describe("EmailFiles", () => {
+  it("sums what several messages carried, in words", () => {
+    wrap(
+      <EmailFiles
+        summaries={[
+          READABLE,
+          { ...READABLE, attachment_count: 1 },
+          { ...READABLE, attachment_count: 0 },
+        ]}
+      />,
+    );
+    expect(screen.getByText("3 attachments")).toBeVisible();
+  });
+
+  // The reason the count is read through the row's own rule: WITHHELD still
+  // carries attachment_count on the wire. A thread card that summed the field
+  // would print files for a message the reader is not told exists.
+  it("counts nothing for a message the reader may not open", () => {
+    expect(WITHHELD.attachment_count).toBeGreaterThan(0);
+    const { container } = wrap(<EmailFiles summaries={[WITHHELD]} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("names the files only when every one of them has a name", () => {
+    const staged = (filenames: string[]): EmailSummary => ({
+      ...READABLE,
+      attachment_count: 0,
+      delivery: {
+        state: "sent",
+        files: filenames.map((filename) => ({ filename })),
+      },
+    });
+    wrap(
+      <EmailFiles
+        summaries={[
+          staged(["contract.pdf"]),
+          { ...READABLE, attachment_count: 1 },
+        ]}
+      />,
+    );
+    // One file is only counted, so a partial list never reads as the whole.
+    expect(screen.getByText("2 attachments")).not.toHaveAttribute("title");
+    cleanup();
+    wrap(<EmailFiles summaries={[staged(["contract.pdf", "annex.pdf"])]} />);
+    expect(screen.getByTitle("contract.pdf, annex.pdf")).toBeVisible();
+  });
+});
+
 describe("EmailEntry", () => {
   it("says who wrote, what about, and whose move it is", () => {
     wrap(
@@ -162,7 +210,7 @@ describe("EmailEntry", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Needs reply")).toBeInTheDocument();
     // The count is the file's own, not a guess from the body.
-    expect(screen.getByText("2")).toBeInTheDocument();
+    expect(screen.getByText("2 attachments")).toBeInTheDocument();
   });
 
   it("keeps a withheld row visible and says nothing in it", () => {
@@ -396,7 +444,7 @@ describe("EmailEntry", () => {
         whyNotOpenable="noDetail"
       />,
     );
-    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.getByText("3 attachments")).toBeInTheDocument();
     expect(
       screen.getByTitle("contract.pdf, annex.pdf, terms.pdf"),
     ).toBeVisible();

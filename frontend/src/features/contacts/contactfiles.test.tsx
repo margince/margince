@@ -1,6 +1,12 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -216,7 +222,59 @@ describe("the contact's files tab", () => {
     show(<ContactFilesTab contactId="p-1" />);
 
     await screen.findByRole("link", { name: "contract.pdf" });
-    expect(screen.getByText("SOW/Contract")).toBeTruthy();
+    expect(
+      within(screen.getByRole("table")).getByText("SOW/Contract"),
+    ).toBeTruthy();
+  });
+
+  it("cuts the files by category, with counts once every page is read", async () => {
+    stub({
+      data: [
+        attachment({
+          id: "f-1",
+          entity_id: "p-1",
+          filename: "offer.pdf",
+          category: "offer",
+          doc_state: "current",
+        }),
+        attachment({
+          id: "f-2",
+          entity_id: "p-1",
+          filename: "nda.pdf",
+          category: "legal",
+        }),
+      ],
+      page: { has_more: false },
+    });
+    const user = userEvent.setup();
+    show(<ContactFilesTab contactId="p-1" />);
+
+    await screen.findByRole("link", { name: "offer.pdf" });
+    expect(screen.getByText("Current")).toBeTruthy();
+    await user.click(
+      screen.getByRole("button", { name: /Proposal\/Offer\s*1/ }),
+    );
+    expect(screen.getByRole("link", { name: "offer.pdf" })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "nda.pdf" })).toBeNull();
+  });
+
+  it("prints no count on a cut while pages remain unread", async () => {
+    stub({
+      data: [
+        attachment({
+          id: "f-1",
+          entity_id: "p-1",
+          filename: "offer.pdf",
+          category: "offer",
+        }),
+      ],
+      page: { has_more: true, next_cursor: "cur-2" },
+    });
+    show(<ContactFilesTab contactId="p-1" />);
+
+    await screen.findByRole("link", { name: "offer.pdf" });
+    const offer = screen.getByRole("button", { name: /Proposal\/Offer/ });
+    expect(offer.textContent).not.toMatch(/\d/);
   });
 
   it("names a channel file as a message attachment, not an email one", async () => {
@@ -240,11 +298,12 @@ describe("the contact's files tab", () => {
     show(<ContactFilesTab contactId="p-1" />);
 
     await screen.findByRole("link", { name: "deck.png" });
-    expect(screen.getByText("Message attachment")).toBeTruthy();
+    const table = within(screen.getByRole("table"));
+    expect(table.getByText("Message attachment")).toBeTruthy();
     // The negative is the point. A missing label falls back to the raw key or
     // the neighbouring one, and a photo from a chat reported as mail is the
     // wrong record this category exists to stop.
-    expect(screen.queryByText("Email attachment")).toBeNull();
+    expect(table.queryByText("Email attachment")).toBeNull();
   });
 
   it("says nothing about a category the file was never filed under", async () => {
@@ -255,10 +314,11 @@ describe("the contact's files tab", () => {
     show(<ContactFilesTab contactId="p-1" />);
 
     await screen.findByRole("link", { name: "scan.pdf" });
-    // No category was set: the row omits the badge rather than printing an
-    // "uncategorised" placeholder for a fact the record never asserted.
-    expect(screen.queryByText("SOW/Contract")).toBeNull();
-    expect(screen.queryByText("Other")).toBeNull();
+    // No category was set: the row leaves the cell empty rather than printing
+    // an "uncategorised" placeholder for a fact the record never asserted.
+    const table = within(screen.getByRole("table"));
+    expect(table.queryByText("SOW/Contract")).toBeNull();
+    expect(table.queryByText("Other")).toBeNull();
   });
 
   it("says the contact has no files rather than leaving the tab blank", async () => {

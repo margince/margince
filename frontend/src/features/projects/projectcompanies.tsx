@@ -28,6 +28,7 @@ import type { RecordPickerCandidate } from "../../design-system/recordpicker";
 import { useLocale, useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { COMPANY_ROLES, roleKey } from "../companies/companyprojects";
+import { project360Key } from "./project360.key";
 
 type ProjectCompany = components["schemas"]["ProjectCompany"];
 
@@ -46,7 +47,7 @@ export function ProjectCompanies({
   const settled = () => {
     // The key the project page actually reads under (project360.tsx), not a
     // guess: a mismatch leaves the section showing the state before the write.
-    queryClient.invalidateQueries({ queryKey: ["project", projectId, "360"] });
+    queryClient.invalidateQueries({ queryKey: project360Key(projectId) });
     queryClient.invalidateQueries({ queryKey: ["company360"] });
   };
 

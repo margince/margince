@@ -68,11 +68,14 @@ describe("logging an activity", () => {
       name: /Log activity/,
     });
     expect(button).toHaveProperty("disabled", true);
-    expect(
-      within(header).getByText(
-        "You do not have permission to log activities on this record.",
-      ),
-    ).toBeTruthy();
+    // The sentence is the left card's footnote, and the verb points at it.
+    const reason = document.getElementById(
+      button.getAttribute("aria-describedby") ?? "",
+    );
+    expect(reason?.textContent).toBe(
+      "You do not have permission to log activities on this record.",
+    );
+    expect(reason?.closest(".record-aside")).not.toBeNull();
   });
 
   // "Add task" issues the same POST /activities as "Log activity", so the
@@ -88,7 +91,7 @@ describe("logging an activity", () => {
     });
     expect(addTask).toHaveProperty("disabled", true);
     expect(
-      within(header).getAllByText(
+      screen.getAllByText(
         "You do not have permission to log activities on this record.",
       ),
     ).toHaveLength(1);
@@ -150,8 +153,8 @@ describe("logging an activity", () => {
     });
   });
 
-  // A quiet rung already says so in the brief, so the moment's own sentence
-  // under it would be the same news twice. Neither an agent byline nor a
+  // A quiet rung already says so in How it stands, so the moment's own
+  // sentence under it would be the same news twice. Neither an agent byline nor a
   // verb a reader can press belongs on a record where nothing is asked.
   it("prints no suggestion card, byline, readiness word, or coverage sentence for a quiet record", async () => {
     mount("overview", { ...view, moment: quietDayMoment });
@@ -165,19 +168,22 @@ describe("logging an activity", () => {
     ).toBeNull();
   });
 
-  // The contrast that makes the rule above a rule, not a blanket deletion:
-  // a rung that asks for something still says whose ask it is.
-  it("keeps the byline on a rung that does ask for something", async () => {
+  // This contrast shows the rule above is not a blanket deletion: a rung
+  // that asks for something draws its verb in the Next bar. The
+  // ladder is a rule, so the bar wears no agent byline.
+  it("puts the verb of a rung that does ask for something in the Next bar", async () => {
     mount("overview", { ...view, moment: quietMoment });
 
     const move = (await screen.findByText("Dana has gone quiet")).closest(
-      ".co-move",
+      ".next-bar-row",
     );
     if (!(move instanceof HTMLElement)) {
-      throw new Error("the moment is not drawn as a move");
+      throw new Error("the moment is not drawn as the Next bar");
     }
-    expect(within(move).getByText("Margince suggests")).toBeTruthy();
-    expect(within(move).queryByText("Ready")).toBeNull();
+    expect(
+      within(move).getByRole("button", { name: /Draft a follow-up/ }),
+    ).toBeTruthy();
+    expect(within(move).queryByText("Margince suggests")).toBeNull();
   });
 
   it("logs a meeting on a quiet contact from the header", async () => {

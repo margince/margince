@@ -118,3 +118,33 @@ export const InACard: Story = {
     ],
   },
 };
+
+/** The list inside a record's details card: a fixed term column, no rules
+ *  between rows, and a card-valued fact with its term above it. */
+export const Flat: Story = {
+  decorators: [
+    (Story) => (
+      <div style={{ maxWidth: "18.25rem" }}>
+        <Story />
+      </div>
+    ),
+  ],
+  args: {
+    flat: true,
+    facts: [
+      { key: "domain", term: "Domain", value: "brandt.example" },
+      { key: "industry", term: "Industry", value: "Automotive" },
+      {
+        key: "way-in",
+        term: "Way in",
+        value: <Badge tone="success">Economic buyer</Badge>,
+        block: true,
+      },
+      {
+        key: "address",
+        term: "Address",
+        value: "Leopoldstraße 148, 80804 München, Germany",
+      },
+    ],
+  },
+};

@@ -3,16 +3,13 @@
 
 // Who was on an exchange, named.
 //
-// Its own module because two surfaces answer the same question and neither
-// owns it. One is the thread across the top of a record
-// (features/records/record360/spine.exchanges.tsx). The other is every row of its
-// chronology (activitytimeline.tsx). Spelled twice, one copy would come to
-// name three contacts where the other named two. A reader comparing the thread
-// with the list underneath it would have to decide which of the two was lying.
+// Its own module because more than one surface names who was on an exchange.
+// Those are every row of a record's chronology (activitytimeline.tsx), the mail thread,
+// the contact's memory. Spelled twice, one copy would come to name three
+// contacts where the other named two.
 //
-// An activity carries ids, not names — resolving them is the CALLER's job,
-// because the names live in the sections around the row and this module holds
-// no read of its own.
+// An activity carries ids, not names. Resolving them is the caller's job: the
+// names live in the sections around the row and this module reads nothing.
 
 import { formatNumber } from "../format/format";
 import type { Locale, useT } from "../i18n";
@@ -70,25 +67,6 @@ export function namesOf(contacts: readonly ContactOn[]): string[] {
 
 /** A contact record as a page holds it: enough to know it by name. */
 export type RecordContact = Readonly<{ id: string; full_name: string }>;
-
-/**
- * Two lists of contacts as one, first-seen order kept.
- *
- * A conversation is folded newest message first, so the contacts on its latest
- * exchange lead — those are the ones a reader is going back to.
- */
-export function mergeContacts(
-  held: readonly string[],
-  arriving: readonly string[],
-): readonly string[] {
-  const out = [...held];
-  for (const name of arriving) {
-    if (!out.includes(name)) {
-      out.push(name);
-    }
-  }
-  return out;
-}
 
 // How many contacts one line names before it counts the rest. Two is what fits
 // beside a subject at this size; a third name pushes the line onto a wrap that

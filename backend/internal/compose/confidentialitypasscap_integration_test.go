@@ -119,6 +119,31 @@ func TestThePassJudgesNoMoreThanTheSavedCapAndReadsItEveryRun(t *testing.T) {
 	}
 }
 
+// unusableAnswerBrain replies with text no verdict can be read from, so every
+// judgment fails and nothing is ever answered.
+type unusableAnswerBrain struct{ calls atomic.Int64 }
+
+func (b *unusableAnswerBrain) Complete(context.Context, model.Request) (model.Response, error) {
+	b.calls.Add(1)
+	return model.Response{Text: "not a verdict"}, nil
+}
+
+// A model that never produces a usable answer still spends the cap. Counting
+// only the answered threads would let a failing model run the pass over every
+// thread that is due.
+func TestAFailingModelStillSpendsThePassCap(t *testing.T) {
+	e := integration.Setup(t)
+	seedHeldThreads(t, e, 12)
+	brain := &unusableAnswerBrain{}
+	setPassCap(t, e, 3)
+
+	runPassOn(t, e, NewConfidentialityVerdictEngine(e.Pool, brain, slog.Default()))
+
+	if got := brain.calls.Load(); got != 3 {
+		t.Fatalf("a pass under a cap of 3 asked the model about %d threads while none could be answered, want 3", got)
+	}
+}
+
 // An installation nobody tuned runs the declared default.
 func TestAnUntunedInstallationRunsTheDeclaredPassCap(t *testing.T) {
 	e := integration.Setup(t)

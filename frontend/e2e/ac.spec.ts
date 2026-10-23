@@ -344,7 +344,7 @@ test("AC-shell-1k: one h1 per railed page, and on a record it is the record's ow
   const heading = page.getByRole("heading", { level: 1 });
   await expect(heading).toHaveCount(1);
   await expect(heading).toHaveText("Anna Weber");
-  await expect(page.locator(".record-head h1")).toHaveText("Anna Weber");
+  await expect(page.locator(".record-split-head h1")).toHaveText("Anna Weber");
   // The trail that leads back to the list stands in the top bar, where it is
   // true of the page rather than part of the document the reader is reading.
   await expect(page.locator(".topbar .crumbs a").last()).toHaveText("Kontakte");

@@ -1,16 +1,10 @@
 /** @vitest-environment happy-dom */
-import { cleanup, render as rtlRender, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
-import { LocaleProvider } from "../../i18n";
-import { hasWorkInFlight, sinceLastVisitFooter } from "./companywork";
+import { hasWorkInFlight } from "./companywork";
 
-// What this file is FOR, as assertions: whether the account's own reading
-// still has anything to say since the reader's last visit, and whether the
-// account has any work in flight at all, the question that decides between
-// the account's own reading and the growth-fit panel in the same slot. The
-// account's open deals themselves are drawn on the Deals tab and the rail's
-// own DealsSection now, not by a card in this file.
+// Whether the account has any work in flight at all. That question decides
+// between the account's own reading and the growth-fit panel in the same slot.
 
 type Company360 = components["schemas"]["Company360"];
 
@@ -50,84 +44,6 @@ const project = {
   phase: "delivering",
   quiet: false,
 } as const;
-
-afterEach(cleanup);
-
-describe("what moved since the reader was last here", () => {
-  // What a footer slot consumes: Panel draws its band on truthiness, so the
-  // ONLY safe answer for "nothing to report" is undefined. An element that
-  // renders null is still truthy and costs the record a blank row.
-  it("hands a footer slot nothing at all when nothing moved", () => {
-    const quiet = view({
-      since_last_visit: {
-        baseline_at: "2026-07-01T09:00:00Z",
-        new_activities: 0,
-        deal_stage_moves: 0,
-        pending_proposals: 0,
-      },
-    });
-    expect(sinceLastVisitFooter(quiet)).toBeUndefined();
-  });
-
-  it("greets a first visit", () => {
-    const first = view({
-      since_last_visit: {
-        baseline_at: null,
-        new_activities: 0,
-        deal_stage_moves: 0,
-        pending_proposals: 0,
-      },
-    });
-    expect(sinceLastVisitFooter(first)).toBeDefined();
-    rtlRender(
-      <LocaleProvider initial="en">
-        {sinceLastVisitFooter(first)}
-      </LocaleProvider>,
-    );
-    expect(
-      screen.getByText("You have not opened this company before."),
-    ).toBeTruthy();
-  });
-
-  it("counts what landed", () => {
-    const moved = view({
-      since_last_visit: {
-        baseline_at: "2026-07-01T09:00:00Z",
-        new_activities: 3,
-        deal_stage_moves: 0,
-        pending_proposals: 0,
-      },
-    });
-    rtlRender(
-      <LocaleProvider initial="en">
-        {sinceLastVisitFooter(moved)}
-      </LocaleProvider>,
-    );
-    expect(screen.getByText("3 new items since your last visit.")).toBeTruthy();
-  });
-
-  it("speaks for a withheld section even when nothing moved", () => {
-    expect(
-      sinceLastVisitFooter(view({ sections_omitted: ["deals"] })),
-    ).toBeDefined();
-  });
-
-  // A composite that answered WITHOUT the omission list at all. The field is
-  // required on the wire, so every fixture in this file supplies one and none
-  // of them covered this: a payload missing it once threw, and the whole
-  // company record rendered as "this view no longer works". An older server,
-  // a trimmed mock and a partial cache entry all produce this payload.
-  it("says nothing is withheld when the payload carries no omission list", () => {
-    const noList = view();
-    // Deleted rather than set to undefined: absent and explicitly-undefined are
-    // the same bytes over the wire, and `delete` is the one that reproduces a
-    // response that never named the field.
-    delete (noList as { sections_omitted?: unknown }).sections_omitted;
-
-    expect(() => sinceLastVisitFooter(noList)).not.toThrow();
-    expect(sinceLastVisitFooter(noList)).toBeUndefined();
-  });
-});
 
 describe("whether the account holds the work slot at all", () => {
   it("yields it when both halves are readable and empty", () => {

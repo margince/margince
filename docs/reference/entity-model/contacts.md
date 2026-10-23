@@ -837,7 +837,7 @@ The 42 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## conversation_claim
 
-19 columns · primary key `(id)` · referenced by 0 foreign keys
+21 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -853,6 +853,8 @@ The 42 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `source_activity_id` | `uuid` | yes | Points at `activity.id`. |
 | `source_quote` | `text` | yes | The verbatim excerpt this was read from, never a summary of it, so the reader can check the claim against what was written. |
 | `status` | `text`, default `'open'::text` | yes | `open`: the loop is live. |
+| `taken_at` | `timestamp with time zone` |  | When the promise was taken over. |
+| `taken_by_user_id` | `uuid` |  | The colleague who took over this promise when nobody was asked to keep it. |
 | `task_activity_id` | `uuid` |  | The task an extracted `commitment_ours` created, so completing either side completes both. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
@@ -868,6 +870,7 @@ The 42 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `source_activity_id` | `activity` | deleting the parent deletes this row |
 | `contact_id` | `contact` | deleting the parent deletes this row |
 | `corrected_by_user_id` | `app_user` | deleting the parent keeps this row and clears the link |
+| `taken_by_user_id` | `app_user` | deleting the parent keeps this row and clears the link |
 | `task_activity_id` | `activity` | deleting the parent keeps this row and clears the link |
 
 **Rules**

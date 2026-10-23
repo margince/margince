@@ -3,7 +3,9 @@ import { useState } from "react";
 import { api, FIRST_PAGE } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Badge, Button } from "../../design-system/atoms";
-import { Panel, PanelRow } from "../../design-system/panel";
+import { DataTable, type DataTableColumn } from "../../design-system/datatable";
+import { FilterPills } from "../../design-system/filterpills";
+import { Panel, PanelBody } from "../../design-system/panel";
 import { LoadMoreButton } from "../../design-system/querystates";
 import {
   type SectionState,
@@ -30,6 +32,7 @@ import "./contact360.css";
 
 type Attachment = components["schemas"]["Attachment"];
 type Category = NonNullable<Attachment["category"]>;
+type DocState = NonNullable<Attachment["doc_state"]>;
 
 // The most a reader is asked to scan at once on a record page: enough to
 // recognise a contact that has been busy, and the rest is one button away.
@@ -44,22 +47,30 @@ const CATEGORY_LABELS: Record<Category, MessageKey> = {
   other: "docs.category.other",
 };
 
-export function ContactFilesTab({
-  contactId,
-  refusedReasonId,
-}: Readonly<{
-  contactId: string;
-  // The id of the page's sentence about why this contact takes no changes,
-  // while it does not. The upload hangs a file on the contact through the
-  // contact's own write gate, so it is refused by the same fact as every
-  // other write on the page.
-  refusedReasonId?: string;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const [adding, setAdding] = useState(false);
+// The cuts always offered, and the two a contact's files seldom carry, which
+// join the row only when a file does.
+const STEADY_CUTS: readonly Category[] = [
+  "offer",
+  "legal",
+  "email_attachment",
+  "other",
+];
+const RARE_CUTS: readonly Category[] = ["message_attachment", "contract"];
 
+const STATE_LABELS: Record<DocState, MessageKey> = {
+  draft: "docs.state.draft",
+  current: "docs.state.current",
+  final: "docs.state.final",
+  superseded: "docs.state.superseded",
+};
+
+/**
+ * The contact's files as the walk has read them so far. The tab and the tab
+ * strip's count share it, so the count costs no second request. `hasMore` is
+ * the server's statement, read off the newest page the walk has reached, not
+ * `hasNextPage`. A page that reports more rows without a cursor is still cut.
+ */
+export function useContactFiles(contactId: string) {
   const query = useInfiniteQuery({
     queryKey: ["attachments", "contact", contactId],
     initialPageParam: FIRST_PAGE,
@@ -79,56 +90,58 @@ export function ContactFilesTab({
     },
     getNextPageParam: (last) => last.page.next_cursor ?? null,
   });
-
   const files = query.data?.pages.flatMap((page) => page.data) ?? [];
-  // The truncation is the SERVER's statement, read off the newest page the
-  // walk has reached — not `hasNextPage`, which answers the narrower question
-  // of whether a cursor came back to walk with. A page that reports more rows
-  // without handing over a cursor is still a cut list, and saying so with no
-  // button beats claiming completeness this tab cannot verify.
   const hasMore = query.data?.pages.at(-1)?.page.has_more ?? false;
+  return { query, files, hasMore };
+}
 
-  // Its own endpoint, so its own state — a failed read (`failed`) and an
-  // empty library (`empty`) are different sentences and only one is about
-  // this contact. `partial` is what the reader is owed while rows remain
-  // unread: the ones fetched so far, the sentence that says so, and the
-  // button that fetches the rest. Once the walk reaches the end the state is
-  // `ready` and the footer goes silent, so silence means "all of them" and
-  // never "the first twenty".
-  //
-  // A page that fails PART-WAY through the walk keeps the rows already read:
-  // the error belongs to one page, not to the library, and replacing twenty
-  // files a reader is looking at with "this section did not load" loses more
-  // than it explains. The button stays, so a retry is the same click again.
-  let state: SectionState;
-  if (query.isPending) {
-    state = "loading";
-  } else if (files.length === 0) {
-    state = query.isError ? "failed" : "empty";
-  } else {
-    state = hasMore ? "partial" : "ready";
-  }
+// Its own endpoint, so its own state: a failed read and an empty library are
+// different sentences. `partial` keeps the rows read so far beside the
+// sentence that says more remain. A page that fails part-way through the walk
+// keeps the rows already read, and the Load more button is the retry.
+function filesState(
+  query: ReturnType<typeof useContactFiles>["query"],
+  shown: number,
+  hasMore: boolean,
+): SectionState {
+  if (query.isPending) return "loading";
+  if (shown === 0) return query.isError ? "failed" : "empty";
+  return hasMore ? "partial" : "ready";
+}
+
+export function ContactFilesTab({
+  contactId,
+  refusedReasonId,
+}: Readonly<{
+  contactId: string;
+  // The id of the page's sentence about why this contact takes no changes,
+  // while it does not. The upload hangs a file on the contact through the
+  // contact's own write gate. The same fact refuses it as every other write
+  // on the page.
+  refusedReasonId?: string;
+}>) {
+  const t = useT();
+  const [adding, setAdding] = useState(false);
+  const [category, setCategory] = useState<Category | "">("");
+  const { query, files, hasMore } = useContactFiles(contactId);
+  const state = filesState(query, files.length, hasMore);
+  const shown = category
+    ? files.filter((file) => file.category === category)
+    : files;
 
   return (
     <Panel
       title={t("tab.documents")}
-      // The verb sits in the header band, where the ACCOUNT's document panel
-      // keeps the same one, and it is offered in every state for the reason
-      // recorded there: an empty library is what the upload exists to leave, so
-      // withholding it on an empty or failed read hides the control exactly
-      // when it is wanted. That is also why it is not `Panel`'s `actions` band,
-      // which the primitive documents as a place for verbs a caller renders
-      // only once the panel's content is real.
+      // Offered in every state. An empty library is what the upload exists to
+      // leave. Withholding it on an empty or failed read would hide the
+      // control when it is wanted.
       titleAction={
         <Button reasonId={refusedReasonId} onClick={() => setAdding(true)}>
           {t("docs.add.action")}
         </Button>
       }
-      // The walk's control belongs to the SECTION, not to any file in it, so it
-      // takes the panel's own foot band rather than trailing the rows as one
-      // more of them. Passed only where another page exists: the band draws
-      // itself whenever it is given anything, and an empty one is a strip of
-      // chrome a reader can see and cannot use.
+      // Passed only where another page exists: the band draws itself whenever
+      // it is given anything.
       footer={query.hasNextPage ? <LoadMoreButton query={query} /> : undefined}
     >
       <AddDocumentDialog
@@ -136,40 +149,134 @@ export function ContactFilesTab({
         open={adding}
         onClose={() => setAdding(false)}
       />
-      <SurfaceState
-        loadingLabel={t("tab.documents")}
-        state={state}
-        emptyLabel={t("contact.documents.empty")}
-        detail={
-          state === "failed"
-            ? { onRetry: () => void query.refetch() }
-            : undefined
-        }
-      >
-        {files.map((file) => (
-          <PanelRow className="pe-row" key={file.id}>
-            {/* The NAME is the download, as it is on the account's own
-              document list: a separate action word at the far end of the row
-              is a second thing to find for the only thing this row does. The
-              title if somebody gave it one, else the filename — a display
-              name is what a reader looks for, and the filename is what the
-              saved file is called. */}
-            <span>{formatDateAbbrev(file.created_at, locale, recordZone)}</span>
-            <span className="pe-row-value">
-              <a
-                className="link-button"
-                href={`/v1/attachments/${file.id}`}
-                download={file.filename}
-              >
-                {file.title || file.filename}
-              </a>
-            </span>
-            {file.category && (
-              <Badge>{t(CATEGORY_LABELS[file.category])}</Badge>
+      {files.length > 0 && (
+        <PanelBody>
+          <FileCuts
+            files={files}
+            complete={!hasMore}
+            value={category}
+            onChange={setCategory}
+          />
+        </PanelBody>
+      )}
+      {shown.length > 0 && <FilesTable files={shown} />}
+      {state !== "ready" || shown.length === 0 ? (
+        <PanelBody>
+          <SurfaceState
+            loadingLabel={t("tab.documents")}
+            state={state === "ready" ? "empty" : state}
+            emptyLabel={t(
+              category ? "docs.noneInCategory" : "contact.documents.empty",
             )}
-          </PanelRow>
-        ))}
-      </SurfaceState>
+            detail={
+              state === "failed"
+                ? { onRetry: () => void query.refetch() }
+                : undefined
+            }
+          >
+            {null}
+          </SurfaceState>
+        </PanelBody>
+      ) : null}
     </Panel>
+  );
+}
+
+// The cuts through the files by category. A count only once the walk has
+// read every page: before that it would be a floor printed as a count.
+function FileCuts({
+  files,
+  complete,
+  value,
+  onChange,
+}: Readonly<{
+  files: readonly Attachment[];
+  complete: boolean;
+  value: Category | "";
+  onChange: (next: Category | "") => void;
+}>) {
+  const t = useT();
+  const countOf = (key: Category) =>
+    files.filter((file) => file.category === key).length;
+  const cuts = [...STEADY_CUTS, ...RARE_CUTS.filter((key) => countOf(key) > 0)];
+  return (
+    <FilterPills
+      label={t("docs.filterLabel")}
+      value={value}
+      onChange={onChange}
+      pills={[
+        {
+          value: "",
+          label: t("docs.category.all"),
+          count: complete ? files.length : undefined,
+        },
+        ...cuts.map((key) => ({
+          value: key,
+          label: t(CATEGORY_LABELS[key]),
+          count: complete ? countOf(key) : undefined,
+        })),
+      ]}
+    />
+  );
+}
+
+// One row per file. The NAME is the download, as it is on the account's own
+// list: the title if somebody gave it one, else the filename. The state shows
+// only where a human or the source asserted one; nothing here infers it.
+function FilesTable({ files }: Readonly<{ files: readonly Attachment[] }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
+  const columns: DataTableColumn<Attachment>[] = [
+    {
+      key: "document",
+      header: t("contact.documents.col.document"),
+      grow: true,
+      fold: "title",
+      render: (file) => (
+        <a
+          className="link-button"
+          href={`/v1/attachments/${file.id}`}
+          download={file.filename}
+        >
+          {file.title || file.filename}
+        </a>
+      ),
+    },
+    {
+      key: "category",
+      header: t("contact.documents.col.category"),
+      render: (file) =>
+        file.category ? t(CATEGORY_LABELS[file.category]) : null,
+    },
+    {
+      key: "state",
+      header: t("contact.documents.col.state"),
+      render: (file) =>
+        file.doc_state ? (
+          <Badge tone={file.doc_state === "superseded" ? "warning" : "default"}>
+            {t(STATE_LABELS[file.doc_state])}
+          </Badge>
+        ) : null,
+    },
+    {
+      key: "added",
+      header: t("contact.documents.col.added"),
+      render: (file) => (
+        <span className="t-num">
+          {formatDateAbbrev(file.created_at, locale, recordZone)}
+        </span>
+      ),
+    },
+  ];
+  return (
+    <DataTable
+      bleed
+      fold
+      label={t("tab.documents")}
+      columns={columns}
+      rows={[...files]}
+      rowKey={(file) => file.id}
+    />
   );
 }

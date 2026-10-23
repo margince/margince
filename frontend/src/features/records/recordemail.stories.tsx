@@ -59,24 +59,26 @@ export const AnswerIsOwed: Story = {
     ),
 };
 
-// The header verb, in the row it lives in. Square because an envelope is a verb
-// a reader already knows from the glyph, and named on hover and to a screen
+// The header verb, in the bar it lives in. Square because an envelope is a verb
+// a reader already knows from the glyph. It is named on hover and to a screen
 // reader by the one `label` prop.
 export const WriteVerb: Story = {
   render: () =>
     withClient(
-      <div className="record-actions">
-        <EmailVerb onClick={() => {}} />
-        <IconAction
-          label="Call"
-          icon={<Phone aria-hidden="true" />}
-          onClick={() => {}}
-        />
-        <IconAction
-          label="Meetings"
-          icon={<CalendarDays aria-hidden="true" />}
-          onClick={() => {}}
-        />
+      <div style={{ maxWidth: "18.75rem" }}>
+        <div className="record-split-verbs">
+          <EmailVerb onClick={() => {}} />
+          <IconAction
+            label="Call"
+            icon={<Phone aria-hidden="true" />}
+            onClick={() => {}}
+          />
+          <IconAction
+            label="Meetings"
+            icon={<CalendarDays aria-hidden="true" />}
+            onClick={() => {}}
+          />
+        </div>
       </div>,
     ),
 };

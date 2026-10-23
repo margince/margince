@@ -919,6 +919,10 @@ func (stubs) SettleConversationClaim(w nethttp.ResponseWriter, r *nethttp.Reques
 	httperr.NotImplemented(w, r, "SettleConversationClaim")
 }
 
+func (stubs) TakeOverConversationClaim(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "TakeOverConversationClaim")
+}
+
 func (stubs) ColdStartReadback(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ColdStartReadback")
 }

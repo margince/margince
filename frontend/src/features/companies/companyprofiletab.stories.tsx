@@ -131,7 +131,6 @@ export const CompleteProfileContext: Story = {
         <CompanyProfileTab
           active
           company={company}
-          offerOnOverview
           onOpenHistory={() => undefined}
           onOpenReceipt={() => undefined}
         />

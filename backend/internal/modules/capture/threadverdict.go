@@ -143,13 +143,10 @@ func (s *ThreadVerdictStore) ClaimDue(ctx context.Context, limit int) ([]Pending
 	claim := ids.NewV7()
 	var out []PendingThread
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// The pick is MATERIALIZED so it runs once. An IN over a LIMITed subquery can be
+		// re-run per row, and one statement then claims more rows than its limit.
 		rows, err := tx.Query(ctx, `
-			UPDATE capture_thread_verdict v
-			   SET attempts = v.attempts + 1,
-			       claimed_until = now() + make_interval(secs => $2),
-			       claimed_by = $3,
-			       updated_at = now()
-			 WHERE v.id IN (
+			WITH picked AS MATERIALIZED (
 			   SELECT id FROM capture_thread_verdict
 			    WHERE `+threadOwedAnswerSQL+`
 			      AND next_attempt_at <= now()
@@ -157,6 +154,12 @@ func (s *ThreadVerdictStore) ClaimDue(ctx context.Context, limit int) ([]Pending
 			    ORDER BY next_attempt_at
 			    LIMIT $1
 			    FOR UPDATE SKIP LOCKED)
+			UPDATE capture_thread_verdict v
+			   SET attempts = v.attempts + 1,
+			       claimed_until = now() + make_interval(secs => $2),
+			       claimed_by = $3,
+			       updated_at = now()
+			 WHERE v.id IN (SELECT id FROM picked)
 			RETURNING v.id, v.thread_key, v.user_id, v.first_activity_id,
 			          coalesce(left((SELECT a.subject FROM activity a
 			                          WHERE a.id = v.first_activity_id AND a.restricted_at IS NULL), $4), ''),

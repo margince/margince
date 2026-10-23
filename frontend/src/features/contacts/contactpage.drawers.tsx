@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useRef } from "react";
+import { LogActivityAction } from "../../components/logactivity";
 import type { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { intentAbout } from "../../lib/compose.intent";
@@ -12,7 +13,6 @@ import { navigate } from "../../lib/router";
 import { useUrlParams } from "../../lib/urlstate";
 import { useWriteTo, type WriteTo, WriteToProvider } from "../../lib/writeto";
 import { ComposeModal } from "../mail/compose";
-import { LogActivityAction } from "../records/logactivity";
 import { useMailboxConnected } from "../settings/writetohost";
 import { navigateKeepingReturn } from "../worklist/worklist.return";
 import type { Contact360, ContactMomentAction } from "./contactpage";

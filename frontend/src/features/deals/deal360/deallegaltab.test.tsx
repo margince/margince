@@ -4,7 +4,7 @@
 
 import "@testing-library/jest-dom/vitest";
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../../i18n/en";
@@ -63,9 +63,7 @@ describe("a deal's legal review tab", () => {
     mount(<DealLegalTab deal={legalDeal} />);
 
     expect(
-      await screen.findByText(
-        "Legal: Cap the liability at the contract value.",
-      ),
+      await screen.findByText("Cap the liability at the contract value."),
     ).toBeInTheDocument();
     await user.click(
       await screen.findByRole("button", {
@@ -105,6 +103,39 @@ describe("a deal's legal review tab", () => {
     expect(
       await screen.findByRole("button", { name: en["legalReview.withdraw"] }),
     ).toBeInTheDocument();
+  });
+
+  it("says there is no review yet, and still offers the first request", async () => {
+    stubWithSession(
+      {
+        "GET /legal-reviews/settings": legalOn,
+        [`GET /deals/${DEAL_ID}/legal-reviews`]: () =>
+          jsonResponse({ data: [] }),
+      },
+      DEAL_WRITER,
+    );
+    mount(<DealLegalTab deal={legalDeal} />);
+    expect(
+      await screen.findByText(en["legalReview.empty"]),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: en["legalReview.request"] }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the requester's note in the comments of a review legal has not answered", async () => {
+    stubWithSession(
+      {
+        "GET /legal-reviews/settings": legalOn,
+        [`GET /deals/${DEAL_ID}/legal-reviews`]: () =>
+          jsonResponse({ data: [summary({ note: "Check the cap" })] }),
+      },
+      DEAL_WRITER,
+    );
+    mount(<DealLegalTab deal={legalDeal} />);
+    const table = await screen.findByRole("table", { name: "Reviews" });
+    expect(within(table).getByText("Note: Check the cap")).toBeInTheDocument();
+    expect(within(table).queryByText("Former colleague")).toBeNull();
   });
 });
 

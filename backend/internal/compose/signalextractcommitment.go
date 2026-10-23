@@ -217,7 +217,19 @@ func (x *SignalExtractor) emailCommitment(
 	c.Body = fmt.Sprintf("Promiser: %s. Commitment in the email %q, sent %s.", c.Party, message.Subject, message.At.Format(time.DateOnly))
 	c.Span = span
 	c.Locator = commitmentLocator(cited, kind, party, span)
+	if promisedOnAnothersPrivateThread(c) {
+		// The model sums up a window of messages, and the promiser may open only
+		// the one they wrote. Their own sentence is all the task may say.
+		c.Summary = span
+	}
 	return x.withRestatedCommitment(ctx, tx, thread, event, c)
+}
+
+// promisedOnAnothersPrivateThread is a colleague's promise on a thread private
+// to another member, such as mail they sent that only that member's mailbox
+// captured.
+func promisedOnAnothersPrivateThread(c Commitment) bool {
+	return c.Theirs == nil && c.Seat != nil && heldByAnotherThanOwner(c.PrivateTo, *c.Seat)
 }
 
 // citedMessage is the message of the conversation an event cites.

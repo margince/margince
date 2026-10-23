@@ -1,15 +1,8 @@
 /** @vitest-environment happy-dom */
-import {
-  cleanup,
-  fireEvent,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
-import { UnsavedGuard } from "../../components/unsaved";
 import { en } from "../../i18n/en";
 import { mount, view } from "../../testing/contactpage.testkit";
 import { jsonResponse } from "../../testing/story-utils";
@@ -43,20 +36,19 @@ afterEach(() => {
 
 describe("a contact with little context", () => {
   it("leads with recorded facts without fabricated work or sources", async () => {
-    const user = userEvent.setup();
     mount("overview", sparse);
     expect(
-      await screen.findByRole("heading", { name: "About this contact" }),
+      await screen.findByRole("heading", { name: /^How it stands/ }),
     ).toBeTruthy();
-    // The day's work is answered where the question is asked. On a thin
+    // The Next bar answers where the question is asked. On a thin
     // relationship the answer is what the server found and how far the
-    // reading reached — never "nothing needs you", which is a claim about a
-    // record nobody has written anything about, and never a move read out of
-    // records that are not there.
+    // reading reached. It never says "nothing is due", a claim about a
+    // record nobody has written anything about. It never shows a move read
+    // out of records that are not there.
+    expect(screen.queryByText(en["standing.next.none"])).toBeNull();
     expect(
-      await screen.findByRole("heading", { name: en["today.title"] }),
-    ).toBeTruthy();
-    expect(screen.getByText("No interactions recorded")).toBeTruthy();
+      screen.getAllByText("No interactions recorded").length,
+    ).toBeGreaterThan(0);
     expect(screen.queryByText(en["today.quiet"])).toBeNull();
     expect(screen.getByText(en["contact.overview.coverage"])).toBeTruthy();
     for (const label of [
@@ -69,7 +61,15 @@ describe("a contact with little context", () => {
       expect(screen.queryByText(label)).toBeNull();
     }
     expect(screen.queryByRole("heading", { name: "Consent" })).toBeNull();
-    const sourceFact = screen.getByText("Source").closest(".record-fact");
+  });
+
+  it("names who wrote the record on the Research tab's details", async () => {
+    const user = userEvent.setup();
+    mount("research", sparse);
+    const label = await screen.findByText("Source", {
+      selector: ".fieldgrid-label",
+    });
+    const sourceFact = label.nextElementSibling;
     if (!(sourceFact instanceof HTMLElement)) {
       throw new Error("the Source fact is not on the page");
     }
@@ -77,39 +77,22 @@ describe("a contact with little context", () => {
     expect(screen.getByText("manual")).toBeTruthy();
   });
 
-  it("keeps failed brief and permission reads distinct from successful emptiness, and retries", async () => {
+  it("keeps a failed permission read distinct from successful emptiness, and retries", async () => {
     const user = userEvent.setup();
-    let briefReads = 0;
     let guardReads = 0;
     mount("overview", sparse, [], {
-      "GET /contacts/p-1/brief": () =>
-        ++briefReads === 1
-          ? jsonResponse({ title: "Unavailable", status: 503 }, 503)
-          : jsonResponse({ contact_id: "p-1", sentences: [] }),
       "GET /contacts/p-1/consent/guard": () =>
         ++guardReads === 1
           ? jsonResponse({ title: "Unavailable", status: 503 }, 503)
           : jsonResponse({ contact_id: "p-1", entries: [] }),
     });
-    await screen.findAllByRole("alert");
-    await waitFor(() => expect(screen.getAllByRole("alert")).toHaveLength(2));
-    for (let attempt = 0; attempt < 2; attempt++) {
-      await user.click(
-        within(screen.getAllByRole("alert")[0]).getByRole("button", {
-          name: "Retry",
-        }),
-      );
-      await waitFor(() =>
-        expect(screen.queryAllByRole("alert")).toHaveLength(1 - attempt),
-      );
-    }
+    const alert = await screen.findByRole("alert");
+    await user.click(within(alert).getByRole("button", { name: "Retry" }));
     await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
-    expect(
-      await screen.findByRole("heading", { name: "About this contact" }),
-    ).toBeTruthy();
+    expect(guardReads).toBe(2);
   });
 
-  it("loads the ledger only when requested and refreshes the sidebar guard after recording consent", async () => {
+  it("loads the ledger only when requested and refreshes the column's guard after recording consent", async () => {
     const user = userEvent.setup();
     let ledgerReads = 0;
     let guardReads = 0;
@@ -119,7 +102,7 @@ describe("a contact with little context", () => {
       purpose_key: "business",
       state: "unknown",
     };
-    mount("overview", sparse, [], {
+    mount("research", sparse, [], {
       "GET /consent-purposes": () =>
         jsonResponse({
           data: [
@@ -176,11 +159,12 @@ describe("a contact with little context", () => {
     expect(await within(dialog).findByText("granted")).toBeTruthy();
     expect(within(dialog).queryByTestId("confirm-details-ask")).toBeNull();
     await user.click(within(dialog).getByRole("button", { name: "Close" }));
-    expect(await screen.findByText("Allowed")).toBeTruthy();
+    // The left column and the Research tab's panel read the one guard.
+    expect((await screen.findAllByText("Allowed")).length).toBe(2);
   });
 
   it("does not offer a confirmation send on a read-only record", async () => {
-    mount("overview", {
+    mount("research", {
       ...sparse,
       contact: { ...sparse.contact, writable: false },
     });
@@ -191,7 +175,7 @@ describe("a contact with little context", () => {
   });
 
   it("explains why confirmation cannot be sent without an email", async () => {
-    mount("overview", {
+    mount("research", {
       ...sparse,
       contact: { ...sparse.contact, primary_email: null, emails: [] },
     });
@@ -199,33 +183,6 @@ describe("a contact with little context", () => {
     expect(ask).toHaveProperty("disabled", true);
     expect(screen.getAllByText("No address on file").length).toBeGreaterThan(0);
   });
-});
-
-it("opens details and permissions in a narrow-screen drawer and restores focus", async () => {
-  const user = userEvent.setup();
-  vi.stubGlobal("matchMedia", (query: string) => ({
-    matches: query === "(max-width: 720px)",
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-  }));
-  mount("overview", sparse);
-  const toggle = await screen.findByRole("button", {
-    name: "Show details and permissions",
-  });
-  expect(
-    screen.queryByRole("heading", { name: "Communication permissions" }),
-  ).toBeNull();
-  await user.click(toggle);
-  const dialog = await screen.findByRole("dialog", {
-    name: "Details and permissions",
-  });
-  expect(
-    within(dialog).getByRole("heading", { name: "Communication permissions" }),
-  ).toBeTruthy();
-  expect(await within(dialog).findByTestId("confirm-details-ask")).toBeTruthy();
-  await user.click(within(dialog).getByRole("button", { name: "Close" }));
-  expect(screen.queryByRole("dialog")).toBeNull();
-  expect(document.activeElement).toBe(toggle);
 });
 
 it("names restricted overview sections even when an open commitment leads", async () => {
@@ -256,32 +213,26 @@ it("names restricted overview sections even when an open commitment leads", asyn
   expect(
     await screen.findByRole("checkbox", { name: /Send the pilot quote/ }),
   ).toBeTruthy();
-  expect(
-    screen.getByText(
-      /Not shown: Activity, Contact status, Margince findings, open tasks/,
-    ),
-  ).toBeTruthy();
+  // Each restricted card says so itself instead of a notice naming them all.
+  expect(screen.getAllByText("Not shown").length).toBeGreaterThan(0);
   expect(screen.queryByText("No interactions recorded")).toBeNull();
   expect(screen.queryByText("Nothing needs you today")).toBeNull();
 });
 
-it("keeps the ordinary details pane at tablet width", async () => {
-  vi.stubGlobal("matchMedia", () => ({
-    matches: false,
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-  }));
+it("draws the details column beside the feed, with no switch to hide it", async () => {
   mount("overview", sparse);
   expect(
-    await screen.findByRole("heading", { name: "Communication permissions" }),
+    await screen.findByRole("heading", { name: "Consent and channels" }),
   ).toBeTruthy();
-  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(
+    screen.queryByRole("button", { name: /details and permissions/ }),
+  ).toBeNull();
 });
 
 it("does not predict a confirmation destination when multiple addresses have no selected primary", async () => {
   const first = sparse.contact.emails?.[0];
   if (!first) throw new Error("The fixture needs an email");
-  mount("overview", {
+  mount("research", {
     ...sparse,
     contact: {
       ...sparse.contact,
@@ -302,48 +253,4 @@ it("does not predict a confirmation destination when multiple addresses have no 
     false,
   );
   expect(screen.queryByText(/Send to /)).toBeNull();
-});
-
-it("keeps a mobile Details edit open until it is saved or cancelled", async () => {
-  const user = userEvent.setup();
-  vi.stubGlobal("matchMedia", (query: string) => ({
-    matches: query === "(max-width: 720px)",
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-  }));
-  mount("overview", sparse, [], {}, undefined, (page) => (
-    <UnsavedGuard address="p-1" onKeep={() => undefined}>
-      {() => page}
-    </UnsavedGuard>
-  ));
-  await user.click(
-    await screen.findByRole("button", {
-      name: "Show details and permissions",
-    }),
-  );
-  const dialog = await screen.findByRole("dialog", {
-    name: "Details and permissions",
-  });
-  await user.click(
-    await within(dialog).findByRole("button", { name: "Change Title" }),
-  );
-  const input = within(dialog).getByRole("textbox", { name: "Title" });
-  await user.type(input, "Director");
-  // The drawer's own way out refuses while a field edit is open, and says so
-  // on the control rather than answering the press with nothing.
-  await waitFor(() =>
-    expect(
-      within(dialog)
-        .getByRole("button", { name: "Close" })
-        .hasAttribute("disabled"),
-    ).toBe(true),
-  );
-  fireEvent.keyDown(document, { key: "Escape" });
-  expect(within(dialog).getByDisplayValue("Director")).toBeTruthy();
-  await user.keyboard("{Escape}");
-  expect(
-    screen.getByRole("dialog", { name: "Details and permissions" }),
-  ).toBeTruthy();
-  await user.click(within(dialog).getByRole("button", { name: "Close" }));
-  expect(screen.queryByRole("dialog")).toBeNull();
 });

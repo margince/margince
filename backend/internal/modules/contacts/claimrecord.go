@@ -253,8 +253,8 @@ func (s *Store) SetClaimTaskTx(ctx context.Context, tx pgx.Tx, claimID, taskID i
 		return fmt.Errorf("link the claim to its task: %w", err)
 	}
 	auditID, err := storekit.Audit(ctx, tx, "update", "contact", contactID,
-		map[string]any{claimIDKey: claimID.String(), "task_activity_id": nil},
-		map[string]any{claimIDKey: claimID.String(), "task_activity_id": taskID.String()})
+		map[string]any{claimIDKey: claimID.String(), claimTaskKey: nil},
+		map[string]any{claimIDKey: claimID.String(), claimTaskKey: taskID.String()})
 	if err != nil {
 		return fmt.Errorf("audit the claim's task: %w", err)
 	}

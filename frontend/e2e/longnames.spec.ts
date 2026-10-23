@@ -36,21 +36,33 @@ for (const width of [1280, 390]) {
 
     test("keeps the company name inside its card", async ({ page }) => {
       await openDealWithLongCompany(page, width);
-      const verdicts = await page.getByText(LONG).evaluateAll((nodes) =>
-        nodes.map((node) => {
-          const range = document.createRange();
-          range.selectNodeContents(node);
-          const card = node.closest(".panel, .record-head");
-          return {
-            node: `${node.tagName}.${node.className}`,
-            card: card?.className ?? null,
-            past: card
-              ? range.getBoundingClientRect().right -
-                card.getBoundingClientRect().right
-              : null,
-          };
-        }),
-      );
+      // The record's own nodes: the agent rail beside it is app chrome that
+      // clamps its own lines and echoes the page it is on.
+      const verdicts = await page
+        .locator(".record-split")
+        .getByText(LONG)
+        .evaluateAll((nodes) =>
+          nodes.map((node) => {
+            const range = document.createRange();
+            range.selectNodeContents(node);
+            // A name that ellipsises clips its own overflow, and a range over
+            // its text still measures the whole unclipped run. What the reader
+            // sees ends at the node's own edge.
+            const clips = getComputedStyle(node).overflowX !== "visible";
+            const shown = clips ? node : range;
+            const card = node.closest(
+              ".panel, .record-split-details, .record-split-sheet",
+            );
+            return {
+              node: `${node.tagName}.${node.className}`,
+              card: card?.className ?? null,
+              past: card
+                ? shown.getBoundingClientRect().right -
+                  card.getBoundingClientRect().right
+                : null,
+            };
+          }),
+        );
       expect(verdicts.length).toBeGreaterThan(0);
       for (const verdict of verdicts) {
         expect(verdict.card, `${verdict.node} has a card`).not.toBeNull();

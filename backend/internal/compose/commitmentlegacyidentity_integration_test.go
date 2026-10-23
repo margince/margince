@@ -35,7 +35,7 @@ func TestHistoricalTaskSurvivesMissingParticipantsAndReassignment(t *testing.T) 
 		var err error
 		task, err = writeCommitmentTask(ctx, tx, e.Activities, e.Contacts, commitmentTask{
 			Extractor: transcriptProposalActor, Locator: locator, Summary: "Send revised pricing", Body: quote,
-			SourceActivityID: e.activity.UUID, Assignee: e.Rep2,
+			SourceActivityID: e.activity.UUID, Assignee: e.Rep2, Origin: activities.OriginAgent,
 		})
 		return err
 	}); err != nil {

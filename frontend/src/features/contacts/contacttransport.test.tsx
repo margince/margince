@@ -1,12 +1,6 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  cleanup,
-  render as rtlRender,
-  screen,
-  within,
-} from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { cleanup, render as rtlRender, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
@@ -16,7 +10,7 @@ import {
   jsonResponse,
   meRoute,
 } from "../../testing/story-utils";
-import { ContactBriefCard } from "./contactbrief";
+import { ContactConsentPanel } from "./contactconsentpanel";
 import { ContactMemory } from "./contactmemory";
 import { ContactRail } from "./contactrail";
 
@@ -35,7 +29,6 @@ import { ContactRail } from "./contactrail";
 // contact still owes the reader an envelope.
 
 type Contact360 = components["schemas"]["Contact360"];
-type ContactBrief = components["schemas"]["ContactBrief"];
 type Activity = components["schemas"]["Activity"];
 
 const AT = "2026-08-15T09:00:00Z";
@@ -65,25 +58,6 @@ const aChatMessage = anActivity({
   subject: null,
   body: "họ đã nhắn tin",
   source: "ext:zalo-oa:zalo",
-});
-
-// A mail the reader may read, carrying the summary the server sets for every
-// kind=email row. Without it this row models a shape the API does not send,
-// and the citation would be judged against a message that is not one.
-const aReadableMail = anActivity({
-  id: "a-mail",
-  kind: "email",
-  subject: "Re: the pilot",
-  email_summary: {
-    activity_id: "a-mail",
-    occurred_at: AT,
-    display_status: "team",
-    attachment_count: 0,
-    move: "none",
-    version: 1,
-    subject: "Re: the pilot",
-    preview: "they wrote",
-  },
 });
 
 // A withheld mail that STILL carries its subject, its body and a summary. The
@@ -167,24 +141,6 @@ function viewWith(
   };
 }
 
-// A brief whose one sentence cites one record — the shape the chip row reads.
-function briefCiting(
-  entityType: ContactBrief["sentences"][number]["evidence"][number]["entity_type"],
-  entityId: string,
-): ContactBrief {
-  return {
-    contact_id: "p-1",
-    generated_at: AT,
-    generated_by: "deterministic",
-    sentences: [
-      {
-        text: "They asked about the pilot.",
-        evidence: [{ entity_type: entityType, entity_id: entityId }],
-      },
-    ],
-  };
-}
-
 function render(node: ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -222,181 +178,63 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// The timeline row's transport, which no longer sits in a badge of its own.
-// The avatar-row redesign folded it into the row's meta line as plain text,
-// right after who the row is with: read by that position rather than by the
-// text, so the assertion is about what the meta line SAYS and not a query
-// that had to know the answer first. The sibling selector, not a child one,
-// because a mail row's "Unanswered" status is a `.badge` in that same line
-// too, and a child selector could not tell the two spans apart.
-function timelineTransportCell(container: HTMLElement): HTMLElement {
-  const cell = container.querySelector<HTMLElement>(".meta-row-who + span");
-  if (!cell) {
-    throw new Error("no transport text rendered on the timeline row");
-  }
-  return cell;
+// The card names the transport in the row's line under the title, before who
+// spoke. A chat provider shows the directory's name, mail the kind's word.
+function memory(view: Contact360) {
+  return render(
+    <ContactMemory
+      view={view}
+      onOpenEmail={() => undefined}
+      onFullHistory={() => undefined}
+    />,
+  );
 }
 
-// The brief chip's transport, drawn as an icon beside its own words rather
-// than in a badge: the chip row's own shape, `.pe-source`, one per cited
-// record. Read by shape rather than by text for the same reason as the
-// timeline: the assertion is about what the chip SAYS.
-function chipTransportCell(container: HTMLElement): HTMLElement {
-  const cell = container.querySelector<HTMLElement>(".pe-source");
-  if (!cell) {
-    throw new Error("no source chip rendered");
-  }
-  return cell;
-}
-
-describe("the conversation timeline", () => {
-  it("draws a chat message as a message, named by its transport", async () => {
-    const { container } = render(
-      <ContactMemory view={viewWith({ activities: [aChatMessage] })} />,
-    );
+describe("the What was said card", () => {
+  it("names a chat message by its transport, never as mail", async () => {
+    memory(viewWith({ activities: [aChatMessage] }));
     // The name arrives with the transport directory, which is a fetch.
-    await screen.findAllByText("Zalo OA");
-
-    const cell = timelineTransportCell(container);
-    expect(cell.textContent).toBe("Zalo OA");
-    // The kind's glyph beside the word, the rule every source on the page
-    // follows, so a chat row is told from a mail row at a glance.
-    expect(cell.querySelector(".lucide-message-square")).toBeTruthy();
-    // The reported symptom: an envelope on a contact with no email address.
-    expect(cell.querySelector(".lucide-mail")).toBeNull();
+    expect(
+      await screen.findByText("Zalo OA · they wrote · 15 Aug"),
+    ).toBeTruthy();
+    expect(screen.queryByText(/^Email/)).toBeNull();
   });
 
-  it("still draws mail as mail", () => {
-    const { container } = render(
-      <ContactMemory view={viewWith({ activities: [anActivity({})] })} />,
-    );
-
-    const cell = timelineTransportCell(container);
-    expect(cell.textContent).toBe("Email");
-    // Left red for the same reason as the chat case above: no kind glyph is
-    // drawn on the timeline row for any kind, mail included.
-    expect(cell.querySelector(".lucide-mail")).toBeTruthy();
-    expect(cell.querySelector(".lucide-message-square")).toBeNull();
-  });
-});
-
-describe("the relationship brief's source chips", () => {
-  it("names the transport of a cited chat message", async () => {
-    const { container } = render(
-      <ContactBriefCard
-        brief={briefCiting("activity", "a-chat")}
-        loading={false}
-        view={viewWith({ activities: [aChatMessage] })}
-      />,
-    );
-    // The chip's day rides beside the name, so the reader can tell one chat
-    // citation from another on the same conversation.
-    await screen.findByText("Zalo OA 15 Aug");
-
-    const chip = chipTransportCell(container);
-    expect(chip.textContent).toBe("Zalo OA 15 Aug");
-    expect(chip.querySelector(".lucide-message-square")).toBeTruthy();
-    expect(chip.querySelector(".lucide-mail")).toBeNull();
-  });
-
-  // A cited EMAIL is named by its SUBJECT and opens, like every other citation
-  // of a message in the product. Naming the transport told a reader which pipe
-  // carried the sentence and nothing about which message — and the message is
-  // what they are reaching for when they press a source.
-  it("names a cited mail by its subject and opens it", async () => {
-    const onOpenEmail = vi.fn();
-    render(
-      <ContactBriefCard
-        brief={briefCiting("activity", "a-mail")}
-        loading={false}
-        view={viewWith({ activities: [aReadableMail] })}
-        onOpenEmail={onOpenEmail}
-      />,
-    );
-
-    const cite = screen.getByRole("button", { name: /Re: the pilot/ });
-    await userEvent.click(cite);
-    expect(onOpenEmail).toHaveBeenCalledWith("a-mail");
-  });
-
-  // The transport chip is still right for every kind that is NOT mail, which
-  // is the direction a one-sided change would break: a card that stopped
-  // naming transports altogether would pass an email-only assertion.
-  it("still names the transport of a cited call", () => {
-    const { container } = render(
-      <ContactBriefCard
-        brief={briefCiting("activity", "a-call")}
-        loading={false}
-        view={{
-          ...viewWith({
-            activities: [anActivity({ id: "a-call", kind: "call" })],
-          }),
-        }}
-      />,
-    );
-
-    const chip = chipTransportCell(container);
-    expect(chip.textContent).toBe("Call 15 Aug");
-  });
-
-  // A message this reader is outside the audience of names no subject and
-  // opens nothing. The citation says a source exists without disclosing it.
-  it("neither names nor opens a cited mail that is withheld", () => {
-    const onOpenEmail = vi.fn();
-    render(
-      <ContactBriefCard
-        brief={briefCiting("activity", "a-withheld")}
-        loading={false}
-        view={viewWith({ activities: [aWithheldMail] })}
-        onOpenEmail={onOpenEmail}
-      />,
-    );
-
-    expect(screen.queryByText("Angebot Q4")).toBeNull();
-    expect(screen.getByText("Not shared with you")).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /Angebot Q4/ })).toBeNull();
-    expect(onOpenEmail).not.toHaveBeenCalled();
-  });
-
-  // The brief cites what the WRITER read, which is not bounded by the page of
-  // activities this reader was handed. A citation the page cannot resolve is
-  // named for the one thing it certainly is.
-  it("claims no transport for a citation it cannot resolve", () => {
-    const { container } = render(
-      <ContactBriefCard
-        brief={briefCiting("activity", "a-not-on-this-page")}
-        loading={false}
-        view={viewWith({ activities: [aChatMessage] })}
-      />,
-    );
-
-    const chip = chipTransportCell(container);
-    expect(chip.textContent).toBe("Activity");
-    expect(chip.querySelector(".lucide-mail")).toBeNull();
-    expect(chip.querySelector(".lucide-message-square")).toBeNull();
+  it("still names mail as mail", () => {
+    memory(viewWith({ activities: [anActivity({})] }));
+    expect(screen.getByText("Email · they wrote · 15 Aug")).toBeTruthy();
+    expect(screen.queryByText(/Zalo OA/)).toBeNull();
   });
 });
 
 describe("consent and channels", () => {
+  const GUARD: components["schemas"]["ContactConsentGuard"] = {
+    contact_id: "p-1",
+    entries: [
+      {
+        purpose_key: "business_correspondence",
+        purpose_class: "business_correspondence",
+        channel: "email",
+        verdict: "allowed",
+        reason: "she wrote to you on 15 Aug",
+      },
+    ],
+  };
+
   function renderRail(view: Contact360) {
     render(
       <ContactRail
         view={view}
-        guard={{
-          contact_id: "p-1",
-          entries: [
-            {
-              purpose_key: "business_correspondence",
-              purpose_class: "business_correspondence",
-              channel: "email",
-              verdict: "allowed",
-              reason: "she wrote to you on 15 Aug",
-            },
-          ],
+        consent={{
+          guard: GUARD,
+          loading: false,
+          failed: false,
+          onRetry: () => undefined,
         }}
+        writeRefusalId="write-refused"
       />,
     );
-    return within(screen.getByTestId("contact-rail"));
+    return screen;
   }
 
   it("asserts no verdict for a transport the record does not carry", () => {
@@ -447,13 +285,30 @@ describe("consent and channels", () => {
 
     expect(rail.getByText("Allowed")).toBeTruthy();
     expect(rail.queryByText("No address on file")).toBeNull();
-    expect(rail.getByText("she wrote to you on 15 Aug")).toBeTruthy();
+    // The column states the verdict; the reason behind it is the Research
+    // tab's consent panel's to give.
+    expect(rail.queryByText("she wrote to you on 15 Aug")).toBeNull();
+  });
+
+  it("gives each purpose's reason on the Research tab's consent panel", async () => {
+    installFetchStub({
+      "GET /me": meRoute({}),
+      "GET /contacts/p-1/consent/guard": () => jsonResponse(GUARD),
+    });
+    render(
+      <ContactConsentPanel
+        view={viewWith({ emails: true, activities: [anActivity({})] })}
+      />,
+    );
+
+    expect(await screen.findByText("she wrote to you on 15 Aug")).toBeTruthy();
+    expect(screen.getByText("Allowed")).toBeTruthy();
   });
 });
 
 describe("a message the reader may not read", () => {
   it("says so, and says nothing else, whatever the row carries", () => {
-    render(<ContactMemory view={viewWith({ activities: [aWithheldMail] })} />);
+    memory(viewWith({ activities: [aWithheldMail] }));
 
     // The row stays — a reader can tell a limited conversation from one that
     // never happened.

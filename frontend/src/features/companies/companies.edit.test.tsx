@@ -2,12 +2,15 @@
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  companyEditFields,
+  mapCompanyUpdate,
+} from "../../components/companyform";
 import { company, jsonResponse } from "../../testing/company.fixtures";
 import { stubFetch } from "../../testing/company.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { CompanyScreen } from "./companies";
 import { openProfile, openRecordMenu, render } from "./companies.testkit";
-import { companyEditFields, mapCompanyUpdate } from "./companyform";
 
 afterEach(() => {
   cleanup();
@@ -110,8 +113,12 @@ describe("CompanyScreen — edit domains round-trip (B7)", () => {
     });
     render(<CompanyScreen id="o-1" />);
 
+    // The fixture has no domain yet, so its row is folded in the details.
     await userEvent.click(
-      await screen.findByRole("button", { name: "Change Domains" }),
+      await screen.findByRole("button", { name: /^Show \d+ empty fields$/ }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Change Domain" }),
     );
     // The modal's own row-adder. The rail's details grid also offers an inline
     // "Add domain" to a seat with the grant, and this test is about the form.

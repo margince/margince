@@ -37,7 +37,7 @@ type Pipeline = components["schemas"]["Pipeline"];
 
 // The server's preview of a promotion, read without writing. An absent contact
 // on a `merge` means the match is outside the reader's row scope, not "no match".
-function usePromotePreview(id: string, open: boolean) {
+export function usePromotePreview(id: string, open: boolean) {
   const t = useT();
   return useQuery({
     queryKey: leadPromotePreviewKey(id),

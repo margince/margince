@@ -71,7 +71,7 @@ it("sets the move aside, and the Undo puts it back", async () => {
     >
       <LocaleProvider initial="en">
         <ToastProvider>
-          <DealStatusCardPanel dealId={DEAL} dealName="PIM rollout" />
+          <DealStatusCardPanel deal={{ id: DEAL, name: "PIM rollout" }} />
           <ToastRegion />
         </ToastProvider>
       </LocaleProvider>
@@ -81,7 +81,7 @@ it("sets the move aside, and the Undo puts it back", async () => {
 
   await screen.findByText(REASON);
   await user.click(
-    screen.getByRole("button", { name: en["co.suggest.dismiss"] }),
+    screen.getByRole("button", { name: en["standing.next.snooze"] }),
   );
 
   await waitFor(() => expect(screen.queryByText(REASON)).toBeNull());

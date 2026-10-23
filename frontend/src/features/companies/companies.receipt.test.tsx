@@ -14,7 +14,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import {
-  company,
   company360,
   companyBackstop,
   jsonResponse,
@@ -133,10 +132,10 @@ async function openedReceipt(value: string) {
 }
 
 describe("a cited receipt on the company page opens the page's drawer", () => {
-  it("from the overview's dossier, stepping to the sentence's next receipt", async () => {
+  it("from the Profile tab's dossier, stepping to the sentence's next receipt", async () => {
     const user = userEvent.setup();
     drawAccount();
-    await screen.findByRole("heading", { name: company.display_name });
+    await user.click(await screen.findByRole("button", { name: "Profile" }));
 
     await user.click(
       await screen.findByRole("button", { name: "2 profile fields" }),
@@ -150,20 +149,10 @@ describe("a cited receipt on the company page opens the page's drawer", () => {
     ).toBeTruthy();
   });
 
-  it("from the Profile tab's dossier", async () => {
-    const user = userEvent.setup();
-    drawAccount();
-    await user.click(await screen.findByRole("button", { name: "Profile" }));
-
-    await user.click(
-      await screen.findByRole("button", { name: "2 profile fields" }),
-    );
-    await openedReceipt("Load-shifting software");
-  });
-
   it("from a suggestion's grounds", async () => {
     const user = userEvent.setup();
     drawAccount(SUGGESTED);
+    await user.click(await screen.findByRole("button", { name: /^Tasks/ }));
     await user.click(
       await screen.findByText("They grew and nobody has written since."),
     );
@@ -175,6 +164,7 @@ describe("a cited receipt on the company page opens the page's drawer", () => {
   it("from an answer to a prepared question", async () => {
     const user = userEvent.setup();
     drawAccount();
+    await user.click(await screen.findByRole("button", { name: "Profile" }));
     await user.click(
       await screen.findByRole("button", { name: "What is open here?" }),
     );

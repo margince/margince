@@ -1,60 +1,170 @@
-/* The buying-committee map. Two columns of seats — ours and theirs — with the
-   engagement between them drawn across the middle. Every colour is a token, so
-   the map follows the theme the rest of the page follows. */
+/* The buying committee: our owner, the curves, and the seat rows. The rows
+   and the curves share one pitch, so each curve ends on its row's dot. */
 
-.dc-map {
+.dc-graph {
+  --dc-pitch: 52px;
+  display: grid;
+  grid-template-columns: 72px 72px minmax(0, 1fr);
+  align-items: center;
+  padding-block: var(--space-3) var(--space-2);
+  border-block-start: 1px solid var(--borderSubtle);
+}
+
+/* Our owner: the dot sits on the middle line the curves start from, and the
+   name hangs under it. */
+.dc-us {
+  position: relative;
+  align-self: stretch;
+  min-width: 0;
+  text-align: center;
+}
+
+.dc-us-words {
+  position: absolute;
+  inset-inline: 0;
+  top: calc(50% + 12px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px; /* ds:ignore the name and its sub line sit closer than the smallest step */
+}
+
+.dc-us-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  translate: -50% -50%;
+  corner-shape: round;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--r-full);
+  background: var(--textPrimary);
+}
+
+.dc-us-name {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  font: var(--fontBodySmall);
+  font-weight: var(--fontWeightMedium);
+  color: var(--textPrimary);
+}
+
+.dc-us-role {
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
+
+.dc-links {
   display: block;
-  width: 100%;
-  height: auto;
+  overflow: visible;
 }
 
-/* A thread from our side to a seat. Drawn only where a seat is engaged: an
-   unengaged seat is a name on a list, and a line to one would claim a
-   conversation that never happened. */
-.dc-thread {
+.dc-link {
+  fill: none;
   stroke: var(--success);
-  stroke-width: 2;
-}
-
-.dc-seat {
-  stroke: var(--bgInset);
   stroke-width: 1.5;
 }
 
-.dc-seat-engaged {
-  fill: var(--success);
-}
-
-/* A seat with a name and no two-way exchange. Hollow, because the gap is the
-   point: a reader must be able to count the unengaged seats at a glance. */
-.dc-seat-quiet {
-  fill: var(--bgInset);
-  stroke: var(--borderStrong);
-  stroke-width: 2;
-}
-
-/* Our side. Teal, NOT the indigo family — indigo marks what an agent decided,
-   and the colleagues carrying a deal are contacts. */
-.dc-seat-ours {
-  fill: var(--tealText);
-}
-
-/* The ghost seat: a role the coverage rules say is MISSING. Dashed and empty,
-   because absence is the insight this map exists to carry. */
-.dc-ghost {
-  fill: none;
+.dc-link-gap {
   stroke: var(--warning);
-  stroke-width: 2;
   stroke-dasharray: 3 3;
+}
+
+.dc-seats {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* The dot sits on the curve's end, so the row starts half a dot early. */
+.dc-seat {
+  height: var(--dc-pitch);
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-inline-start: calc(-1 * var(--space-2));
+  min-width: 0;
+}
+
+.dc-seat-open {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  cursor: pointer;
+  border-radius: var(--r-sm);
+}
+
+.dc-seat-open:focus-visible {
+  outline: var(--focus-ring);
+}
+
+.dc-dot {
+  corner-shape: round;
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  border-radius: var(--r-full);
+  box-sizing: border-box;
+}
+
+.dc-dot-engaged {
+  background: var(--success);
+}
+
+.dc-dot-quiet {
+  background: var(--bgInset);
+  border: 2px solid var(--borderStrong);
+}
+
+.dc-dot-gap {
+  border: 1.5px dashed var(--warning);
+  background: var(--warningBg);
+}
+
+.dc-seat-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.dc-seat-name,
+.dc-seat-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dc-seat-name {
+  font: var(--fontBodySmall);
+  font-weight: var(--fontWeightMedium);
+  color: var(--textPrimary);
+}
+
+.dc-seat-open:hover .dc-seat-name {
+  color: var(--accentText);
+}
+
+.dc-seat-sub {
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
+
+.dc-seat-gap .dc-seat-name,
+.dc-seat-gap .dc-seat-sub {
+  color: var(--warningText);
 }
 
 .dc-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-3);
+  gap: var(--space-1) var(--space-3);
   margin: var(--space-3) 0 0;
-  padding: 0;
+  padding: 0 0 var(--space-2);
   list-style: none;
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
 }
 
 .dc-legend li {
@@ -64,11 +174,12 @@
 }
 
 .dc-swatch {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
   corner-shape: round;
+  width: 8px;
+  height: 8px;
+  border-radius: var(--r-full);
   flex: 0 0 auto;
+  box-sizing: border-box;
 }
 
 .dc-swatch-engaged {
@@ -76,10 +187,9 @@
 }
 
 .dc-swatch-quiet {
-  background: var(--bgInset);
-  border: 2px solid var(--borderStrong);
+  background: var(--borderStrong);
 }
 
 .dc-swatch-gap {
-  border: 2px dashed var(--warning);
+  border: 1.5px dashed var(--warning);
 }

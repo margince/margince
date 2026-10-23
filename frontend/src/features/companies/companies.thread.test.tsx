@@ -138,18 +138,29 @@ function drawAccount() {
   return render(<CompanyScreen id="o-1" />);
 }
 
-describe("the account overview's thread opens the messages it names", () => {
-  it("opens a conversation on the spine in the page's email drawer, dated in the record's zone", async () => {
+// The Latest card under How it stands lists the newest exchanges, and each row
+// opens where the rest of the page opens it.
+describe("the account overview's Latest card opens the messages it names", () => {
+  function latest(_container: HTMLElement): HTMLElement {
+    const card = screen
+      .queryByRole("heading", { name: "Latest" })
+      ?.closest<HTMLElement>("section");
+    if (!card) {
+      throw new Error("the overview draws no Latest card");
+    }
+    return card;
+  }
+
+  it("opens a message in the page's email drawer, dated in the record's zone", async () => {
     const user = userEvent.setup();
     const { container } = drawAccount();
     await screen.findByRole("heading", { name: company.display_name });
+    await screen.findAllByText("About scope");
 
-    const spine = container.querySelector<HTMLElement>(".co-spine");
-    if (!spine) {
-      throw new Error("the overview draws no thread spine");
-    }
     await user.click(
-      await within(spine).findByRole("button", { name: /About scope/ }),
+      await within(latest(container)).findByRole("button", {
+        name: /About scope/,
+      }),
     );
 
     const drawer = await screen.findByRole("dialog", { name: "About scope" });
@@ -158,43 +169,5 @@ describe("the account overview's thread opens the messages it names", () => {
         formatDateTime(MESSAGES["a-old"].at, "en", RECORD_ZONE),
       ),
     ).toBeTruthy();
-  });
-
-  it("opens a message row in the folded thread in the page's email drawer", async () => {
-    const user = userEvent.setup();
-    const { container } = drawAccount();
-    await screen.findByRole("heading", { name: company.display_name });
-
-    const fold = container.querySelector<HTMLElement>(".co-thread-fold");
-    const summary = fold?.querySelector("summary");
-    if (!fold || !summary) {
-      throw new Error("the overview draws no thread fold to open");
-    }
-    await user.click(summary);
-    await user.click(
-      await within(fold).findByRole("button", { name: /About capacity/ }),
-    );
-
-    expect(
-      await screen.findByRole("dialog", { name: "About capacity" }),
-    ).toBeTruthy();
-  });
-
-  it("sends the folded thread's deal chip to the deal", async () => {
-    const user = userEvent.setup();
-    const { container } = drawAccount();
-    await screen.findByRole("heading", { name: company.display_name });
-
-    const fold = container.querySelector<HTMLElement>(".co-thread-fold");
-    const summary = fold?.querySelector("summary");
-    if (!fold || !summary) {
-      throw new Error("the overview draws no thread fold to open");
-    }
-    await user.click(summary);
-    await user.click(
-      await within(fold).findByRole("button", { name: "on a deal" }),
-    );
-
-    expect(window.location.hash).toContain("d-7");
   });
 });

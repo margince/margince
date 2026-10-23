@@ -204,3 +204,83 @@
   background-color: var(--bgInset);
   transition-duration: var(--dur-tap);
 }
+
+/* THE PLATE: the figures at the foot of a card (How it stands). One ground
+   edge to edge, cells divided by hairlines instead of air, and as many cells
+   per row as fit at 140px. */
+.stat-strip[data-density="plate"] {
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0;
+  border-block-start: 1px solid var(--borderSubtle);
+  background: var(--bgElevated);
+  --stat-strip-tail: 1;
+}
+.stat-strip[data-density="plate"] > .stat-card,
+.stat-strip[data-density="plate"] > * > .stat-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "label"
+    "figure"
+    "basis";
+  align-content: start;
+  row-gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  border-inline-end: 1px solid var(--borderSubtle);
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  backdrop-filter: none;
+  min-block-size: 0;
+}
+.stat-strip[data-density="plate"] > :last-child,
+.stat-strip[data-density="plate"] > :last-child > .stat-card {
+  border-inline-end: 0;
+}
+.stat-strip[data-density="plate"] .stat-card > * {
+  margin-block-end: 0;
+}
+.stat-strip[data-density="plate"] .stat-card-label {
+  grid-area: label;
+}
+.stat-strip[data-density="plate"] .stat-card-value {
+  grid-area: figure;
+}
+.stat-strip[data-density="plate"] .stat-card-detail {
+  grid-area: basis;
+}
+/* The whole cell is the door, and the label keeps the cell's full width: the
+   door's word stays its accessible name, and only its arrow shows, in the
+   corner, while the cell is pointed at or holds focus. */
+.stat-strip[data-density="plate"] .stat-card-foot {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+}
+/* The foot spans the whole cell so the door's overlay, which stretches over
+   its nearest positioned ancestor, covers the cell and not just the arrow. */
+.stat-strip[data-density="plate"] .stat-card-arrow {
+  position: absolute;
+  inset-block-start: var(--space-2);
+  inset-inline-end: var(--space-2);
+}
+.stat-strip[data-density="plate"] .stat-card-open {
+  color: transparent;
+}
+.stat-strip[data-density="plate"] .stat-card-open-word {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.stat-strip[data-density="plate"] .stat-card:hover .stat-card-open,
+.stat-strip[data-density="plate"] .stat-card-open:focus-visible {
+  color: var(--accentText);
+}
+.stat-strip[data-density="plate"] .stat-card:has(.stat-card-open):hover {
+  background: var(--bgHover);
+}

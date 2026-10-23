@@ -7,11 +7,11 @@ import { FieldGuard } from "../../design-system/rbac";
 import { middayInstant } from "../../format/calendarday";
 import { formatDate, formatDuration, formatMoney } from "../../format/format";
 import type { Locale, useT } from "../../i18n";
+import type { StageTotals } from "../../lib/deals.queries";
 import { toBoardDeal } from "./boarddeal";
 import type { CompanyNaming } from "./dealcompanymarks";
 import { lastMailColumn } from "./dealmailaside";
 import type { Deal, Stage } from "./deals";
-import type { StageTotals } from "./deals.queries";
 
 export function buildColumns(
   stages: Stage[],

@@ -2,7 +2,6 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { PageAsideProvider } from "../../components/pageaside";
 import { COMPANY, project, project360 } from "../../testing/projects.fixtures";
 import {
   emptyPage,
@@ -185,18 +184,4 @@ export const PageClosed: Story = {
       },
     }),
   ),
-};
-
-/** Folded away: the work takes the whole width and the switch reads "show". */
-export const DetailsFolded: Story = {
-  render: () => {
-    installPage(project360());
-    return (
-      <StoryProviders>
-        <PageAsideProvider open={false}>
-          <ProjectScreen id="pr-1" />
-        </PageAsideProvider>
-      </StoryProviders>
-    );
-  },
 };
