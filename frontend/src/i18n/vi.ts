@@ -2135,7 +2135,7 @@ export const vi = {
   "palette.answerSection": "Mục trong sổ tay: {title}",
   "palette.openSetting": "Mở Cài đặt → {page}",
   "palette.askNoAnswer":
-    "Margince trả lời từ sổ tay và tài liệu của bạn. Liên hệ quản trị viên hoặc hỏi thành viên trong nhóm.",
+    "Margince trả lời từ sổ tay và tài liệu của bạn. Liên hệ quản trị viên hoặc hỏi đồng nghiệp.",
   "action.newDeal": "Deal mới",
   "action.booking": "Trang đặt lịch",
 

@@ -86,6 +86,40 @@ export class NoDocumentSetsError extends Error {
 }
 
 /**
+ * Asks each set in turn until one answers something other than `not_covered`.
+ * A failed first ask moves on to the next set. A failed ask after a
+ * `not_covered` is thrown, because showing that answer alone would claim the
+ * later set was searched too.
+ */
+async function askInOrder(
+  order: readonly string[],
+  question: string,
+): Promise<HandbookAnswer> {
+  const asked: string[] = [];
+  let answer: Answer | undefined;
+  let failure: unknown;
+  for (const id of order) {
+    try {
+      answer = await askCorpus(id, question);
+    } catch (error) {
+      if (answer !== undefined) {
+        throw error;
+      }
+      failure ??= error;
+      continue;
+    }
+    asked.push(answer.corpus.name);
+    if (answer.outcome !== "not_covered") {
+      break;
+    }
+  }
+  if (answer === undefined) {
+    throw failure;
+  }
+  return { question, answer, asked };
+}
+
+/**
  * Asks the shipped handbook, and on `not_covered` or a failed ask the
  * workspace's default set. Every other outcome of the first set stands: a set
  * still being read or a missing search lane says nothing about the question.
@@ -112,30 +146,7 @@ export function useHandbookAsk(wanted: boolean) {
       if (order.length === 0) {
         throw new NoDocumentSetsError();
       }
-      const asked: string[] = [];
-      let answer: Answer | undefined;
-      let failure: unknown;
-      for (const id of order) {
-        try {
-          answer = await askCorpus(id, question);
-        } catch (error) {
-          // After a not_covered handbook, showing it alone would claim the
-          // company's documents were searched too.
-          if (answer !== undefined) {
-            throw error;
-          }
-          failure ??= error;
-          continue;
-        }
-        asked.push(answer.corpus.name);
-        if (answer.outcome !== "not_covered") {
-          break;
-        }
-      }
-      if (answer === undefined) {
-        throw failure;
-      }
-      return { question, answer, asked };
+      return askInOrder(order, question);
     },
   });
   return { available: canAsk && askable, mutation };

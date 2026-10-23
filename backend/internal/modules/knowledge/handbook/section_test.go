@@ -67,6 +67,13 @@ func TestAHeadingLosesItsClosingMarks(t *testing.T) {
 	}
 }
 
+func TestAHeadingMayStartWithUpToThreeSpaces(t *testing.T) {
+	got := sections("# Page\n   ### Meetings\n    ### Indented code\n")
+	if len(got) != 1 || got[0].Title != "Meetings" || got[0].Line != 2 {
+		t.Fatalf("sections = %+v, want only the heading indented by three spaces", got)
+	}
+}
+
 func TestSectionsSkipHeadingsInFencesAndComments(t *testing.T) {
 	markdown := strings.Join([]string{
 		"# Page",

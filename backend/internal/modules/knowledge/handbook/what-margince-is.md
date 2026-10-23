@@ -166,7 +166,7 @@ Also called: company summary, meeting prep, what's going on with this account.
 
 ### Where is the Ask box?
 The Margince Ask box is the search field **Search or ask Margince** in the top bar: type a question and press Enter. **Ask your documents**, the first row of the command palette (⌘K), opens a dialog where you pick the document set yourself.
-It answers only from one document set: the **Margince handbook** that comes with every installation, or a set your company filed under Settings → **Knowledge**.
+That dialog answers from the one set you pick. It is the **Margince handbook** that comes with every installation, or a set filed under Settings → **Knowledge**.
 On a company page there is a second, separate panel, **Ask about this company**, with its own **Ask Margince** questions about that one company.
 If the dialog says **No document sets**, there is nothing filed to search yet.
 

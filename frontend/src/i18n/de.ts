@@ -2202,7 +2202,7 @@ export const de = {
   "palette.answerSection": "Abschnitt im Handbuch: {title}",
   "palette.openSetting": "Einstellungen → {page} öffnen",
   "palette.askNoAnswer":
-    "Margince antwortet aus seinem Handbuch und deinen Dokumenten. Frag einen Admin oder ein Teammitglied.",
+    "Margince antwortet aus seinem Handbuch und deinen Dokumenten. Frage einen Admin oder ein Teammitglied.",
   "action.newDeal": "Neuer Deal",
   "action.booking": "Buchungsseite",
 

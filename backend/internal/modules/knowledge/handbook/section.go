@@ -63,8 +63,12 @@ func sections(markdown string) []Section {
 }
 
 // sectionHeading reads a `##` or `###` heading, without the closing `#` run
-// CommonMark allows after a space.
+// CommonMark allows after a space. Up to three leading spaces still make a
+// heading; four make a code block.
 func sectionHeading(line string) (string, bool) {
+	if trimmed := strings.TrimLeft(line, " "); len(line)-len(trimmed) < 4 {
+		line = trimmed
+	}
 	for _, mark := range []string{"### ", "## "} {
 		if title, ok := strings.CutPrefix(line, mark); ok {
 			title = strings.TrimSpace(title)
