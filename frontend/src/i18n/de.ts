@@ -16461,7 +16461,8 @@ export const de = {
   "magic.heading.brief": "Seit deinem letzten Morgenbericht",
   "magic.loading": "Blick in den Maschinenraum",
   "magic.lane.done": "Für dich erledigt",
-  "magic.review.unavailable": "Die Prüfung dieser Änderung wurde nicht geladen.",
+  "magic.review.unavailable":
+    "Die Prüfung dieser Änderung wurde nicht geladen.",
   "magic.lane.needsYou": "Wartet auf dich",
   "magic.lane.couldNotComplete": "Konnte nicht abgeschlossen werden",
   "magic.lane.watching": "Muss wiederhergestellt werden",
