@@ -86,24 +86,8 @@ func (s *Store) AwaitingReplies(ctx context.Context, asOf time.Time) ([]Awaiting
 // customerArms renders the "is this a customer" test, one arm per kind of
 // record. An arm over a kind the reader may not read is FALSE. Whether a deal
 // is open is the deal's business, and a reminder must not disclose it.
-func customerArms(ctx context.Context, openDeal, workingLead string) (string, error) {
-	arms := []struct {
-		objects []string
-		sql     string
-	}{
-		{[]string{"company"}, `EXISTS (SELECT 1 FROM company co
-		    WHERE co.id = sales.company_id AND co.archived_at IS NULL
-		      AND co.lifecycle IN ('prospect', 'opportunity', 'customer'))`},
-		{[]string{"company", "relationship"}, `EXISTS (SELECT 1 FROM relationship job
-		    JOIN company co ON co.id = job.company_id
-		    WHERE job.contact_id = sales.contact_id AND job.kind = 'employment'
-		      AND ` + employment.IsCurrentSQL("job.ended_at") + ` AND co.archived_at IS NULL
-		      AND co.lifecycle IN ('prospect', 'opportunity', 'customer'))`},
-		{[]string{"lead"}, `EXISTS (SELECT 1 FROM lead ld
-		    WHERE (ld.id = sales.lead_id OR ld.from_contact_id = sales.contact_id
-		           OR ld.promoted_contact_id = sales.contact_id) AND ` + workingLead + `)`},
-		{[]string{"deal"}, `EXISTS (SELECT 1 FROM deal d WHERE d.id = sales.deal_id AND ` + openDeal + `)`},
-	}
+func customerArms(ctx context.Context, openDeal, workingLead string, arg func(any) int) (string, error) {
+	arms := customerEvidenceArms(openDeal, workingLead)
 	rendered := make([]string, 0, len(arms))
 	for _, arm := range arms {
 		readable, err := mayReadAll(ctx, arm.objects...)
@@ -111,13 +95,40 @@ func customerArms(ctx context.Context, openDeal, workingLead string) (string, er
 			return "", err
 		}
 		if readable {
-			rendered = append(rendered, arm.sql)
+			scope, err := auth.ScopeClauseFor(ctx, arm.object, arm.alias, arg)
+			if err != nil {
+				return "", err
+			}
+			rendered = append(rendered, fmt.Sprintf(arm.sql, orUnbounded(scope)))
 		}
 	}
 	if len(rendered) == 0 {
 		return scopeNothing, nil
 	}
 	return "(" + strings.Join(rendered, " OR ") + ")", nil
+}
+
+type customerEvidenceArm struct {
+	objects       []string
+	object, alias string
+	sql           string
+}
+
+func customerEvidenceArms(openDeal, workingLead string) []customerEvidenceArm {
+	return []customerEvidenceArm{
+		{[]string{linkEntityCompany}, linkEntityCompany, "co", `EXISTS (SELECT 1 FROM company co
+		    WHERE co.id = sales.company_id AND co.archived_at IS NULL
+		      AND co.lifecycle IN ('prospect', 'opportunity', 'customer') AND (%s))`},
+		{[]string{linkEntityCompany, "relationship"}, linkEntityCompany, "co", `EXISTS (SELECT 1 FROM relationship job
+		    JOIN company co ON co.id = job.company_id
+		    WHERE job.contact_id = sales.contact_id AND job.kind = 'employment'
+		      AND ` + employment.IsCurrentSQL("job.ended_at") + ` AND co.archived_at IS NULL
+		      AND co.lifecycle IN ('prospect', 'opportunity', 'customer') AND (%s))`},
+		{[]string{"lead"}, "lead", "ld", `EXISTS (SELECT 1 FROM lead ld
+		    WHERE (ld.id = sales.lead_id OR ld.from_contact_id = sales.contact_id
+		           OR ld.promoted_contact_id = sales.contact_id) AND ` + workingLead + ` AND (%s))`},
+		{[]string{linkEntityDeal}, linkEntityDeal, "d", `EXISTS (SELECT 1 FROM deal d WHERE d.id = sales.deal_id AND ` + openDeal + ` AND (%s))`},
+	}
 }
 
 func mayReadAll(ctx context.Context, objects ...string) (bool, error) {
@@ -160,7 +171,7 @@ func followUpGatesFor(ctx context.Context, arg func(any) int) (followUpGates, er
 	if g.links == "" {
 		g.links = scopeUnbounded
 	}
-	g.customer, err = customerArms(ctx, liveRecord(openDealPredicate, "d"), liveRecord(workingLeadPredicate, "ld"))
+	g.customer, err = customerArms(ctx, liveRecord(openDealPredicate, "d"), liveRecord(workingLeadPredicate, "ld"), arg)
 	return g, err
 }
 

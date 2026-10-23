@@ -4,6 +4,7 @@
 import type { components } from "../api/schema";
 import { settingsHref } from "../features/settings/settingsrouting";
 import type { MessageKey } from "../i18n/en";
+import { searchActivityRoute, searchEmailRoute } from "../lib/activityroute";
 import { ENTITY, type EntityKind, isEntityKind } from "../lib/entity";
 import type { Route } from "../lib/router";
 
@@ -176,43 +177,6 @@ export function searchHitRoute(type: SearchHitType, id: string): Route | null {
     return settingsHref("fields");
   }
   return null;
-}
-
-/**
- * Where an EMAIL hit goes: the results screen, with that message open.
- *
- * A message has no page of its own — it opens a drawer owned by the page it is
- * on, and that ownership is deliberate: it is what makes a record page reset
- * the drawer when the record changes. So the destination is the one page that
- * already owns this drawer and is already about finding things.
- *
- * The query rides in `id` because the screen is the search results and they
- * have to be the results for something; the message rides in `id2`, which
- * `Route` has carried since the share and contact-tab routes needed a second
- * slot. No routing change, and no app-level owner of "which email is open".
- */
-export function searchEmailRoute(query: string, activityId: string): Route {
-  return { screen: "search", id: querySegment(query), id2: activityId };
-}
-
-// The query as a path segment. routeHash joins segments as given and the
-// search route decodes `id` once, so a "/" or "%" in a query must arrive encoded.
-function querySegment(query: string): string {
-  return encodeURIComponent(query);
-}
-
-// The third segment that opens the activity panel rather than the email one.
-// The email address keeps its two segments, so a link to a message still works.
-export const SEARCH_ACTIVITY_SEGMENT = "activity";
-
-/** Where a meeting, call, note or task hit goes: the results, with it open. */
-export function searchActivityRoute(query: string, activityId: string): Route {
-  return {
-    screen: "search",
-    id: querySegment(query),
-    id2: activityId,
-    id3: SEARCH_ACTIVITY_SEGMENT,
-  };
 }
 
 /**

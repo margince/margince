@@ -15140,7 +15140,7 @@ export const en = {
     "{arrived} new and {gone} already handled since you opened the list.",
   "worklist.walk.title": "List changed",
   "worklist.walk.refresh": "Refresh",
-  "worklist.handled.empty": "No actions taken on your behalf today.",
+  "worklist.handled.empty": "No changes in this history today.",
   "worklist.handled.loading": "Loading actions…",
   "worklist.handled.count": "Recent changes: {count}",
   "worklist.handled.what": "Action",
@@ -15990,6 +15990,8 @@ export const en = {
   "magic.records.empty": "None of these records is in view any more.",
   "magic.records.more": "Show more",
   "magic.records.fromTo": "{from} → {to}",
+  "magic.records.minorUnitsUnknown":
+    "{amount} minor units (currency not recorded)",
   "magic.records.empty_value": "empty",
   "magic.records.count_one": "{count} record",
   "magic.records.count_other": "{count} records",

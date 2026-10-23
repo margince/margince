@@ -21,6 +21,7 @@ package compose
 // the queue reported a clear day.
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -168,6 +169,7 @@ func bookCustomerMeeting(t *testing.T, e *integration.Env, subject string, at ti
 	if err != nil {
 		t.Fatalf("creating the customer for %q: %v", subject, err)
 	}
+	makeMeetingCustomer(t, e, ids.UUID(contact.Id), e.AdminUser)
 	in := activities.LogActivityInput{
 		Kind: "meeting", Subject: &subject, OccurredAt: &at, Source: "manual",
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: ids.UUID(contact.Id)}},
@@ -177,5 +179,25 @@ func bookCustomerMeeting(t *testing.T, e *integration.Env, subject string, at ti
 	}
 	if _, _, err := e.Activities.LogActivity(e.Admin(), in); err != nil {
 		t.Fatalf("booking %q: %v", subject, err)
+	}
+}
+
+func makeMeetingCustomer(t *testing.T, e *integration.Env, contact, owner ids.UUID) {
+	t.Helper()
+	makeMeetingCustomerWithStore(e.Admin(), t, e.Contacts, contact, owner)
+}
+
+func makeMeetingCustomerWithStore(ctx context.Context, t *testing.T, store *contacts.Store, contact, owner ids.UUID) {
+	t.Helper()
+	company, err := store.CreateCompany(ctx, contacts.CreateCompanyInput{DisplayName: "Account " + contact.String(), OwnerID: new(ids.From[ids.UserKind](owner))})
+	if err != nil {
+		t.Fatal(err)
+	}
+	companyID := ids.From[ids.CompanyKind](ids.UUID(company.Id))
+	if _, err := store.UpdateCompany(ctx, companyID, contacts.UpdateCompanyInput{Lifecycle: new("customer")}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.CreateRelationship(ctx, contacts.CreateRelationshipInput{Kind: "employment", ContactID: new(ids.From[ids.ContactKind](contact)), CompanyID: &companyID, Source: "manual"}); err != nil {
+		t.Fatal(err)
 	}
 }

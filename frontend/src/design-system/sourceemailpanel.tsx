@@ -6,26 +6,14 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useT } from "../i18n";
+import { Button } from "./atoms";
 import { EmailEnvelope, emailDetailKey } from "./emailmessage";
 import { EmailText } from "./emailtext";
 import { Heading } from "./heading";
 import { SurfaceState } from "./surfacestate";
 import "./sourceemailpanel.css";
 
-// The message a task was read out of, IN the task — not behind a button that
-// opens a second drawer over the first.
-//
-// `EmailDetail` is the canonical reading of a message and stays that: it is a
-// `Modal`, and a reader who opened a task from their queue is already inside
-// one. Opening the mail there put a drawer over a drawer and asked for a click
-// to see the evidence the task exists because of, which is the one thing the
-// reader came to check. This draws the same body in the panel they are already
-// looking at.
-//
-// What it deliberately does NOT carry: the audience editor, the filed-record
-// links, the reply verb. Those are `EmailDetail`'s, and they are writes — a
-// reader who wants to act on the message opens it properly. This is evidence,
-// read in place.
+// The authorized message stays readable beside the task; its full thread opens separately.
 
 type EmailPresentation = components["schemas"]["EmailPresentation"];
 
@@ -42,10 +30,12 @@ type EmailPresentation = components["schemas"]["EmailPresentation"];
 export function SourceEmailPanel({
   activityId,
   formatWhen,
+  onOpen,
 }: Readonly<{
   activityId: string;
   /** The caller owns the reader's timezone, so it owns the formatting. */
   formatWhen: (iso: string) => string;
+  onOpen?: (subject: string) => void;
 }>) {
   const t = useT();
   const read = useQuery({
@@ -100,7 +90,13 @@ export function SourceEmailPanel({
       </SurfaceState>
     );
   }
-  return <SourceEmailBody presentation={read.data} formatWhen={formatWhen} />;
+  return (
+    <SourceEmailBody
+      presentation={read.data}
+      formatWhen={formatWhen}
+      onOpen={onOpen}
+    />
+  );
 }
 
 /**
@@ -116,9 +112,11 @@ export function SourceEmailPanel({
 function SourceEmailBody({
   presentation,
   formatWhen,
+  onOpen,
 }: Readonly<{
   presentation: EmailPresentation;
   formatWhen: (iso: string) => string;
+  onOpen?: (subject: string) => void;
 }>) {
   const t = useT();
   if (presentation.access.content_state === "withheld") {
@@ -148,6 +146,11 @@ function SourceEmailBody({
         <EmailEnvelope presentation={presentation} formatWhen={formatWhen} />
       </div>
       <EmailText body={presentation.body ?? ""} />
+      {onOpen && (
+        <Button variant="ghost" onClick={() => onOpen(subject)}>
+          {t("timeline.group.openThread")}
+        </Button>
+      )}
     </section>
   );
 }

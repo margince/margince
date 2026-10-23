@@ -119,7 +119,7 @@ func selectMeetingRepairCandidates(ctx context.Context, tx pgx.Tx, limit int) ([
 		   AND split_part(a.captured_by, ':', 2) = ANY($2)
 		   AND NOT EXISTS (
 		       SELECT 1 FROM activity_meeting_attendee_repair r
-		        WHERE r.activity_id = a.id AND r.outcome <> $3)
+		        WHERE r.activity_id = a.id AND r.outcome <> $3 AND r.rule_version >= 2)
 		 ORDER BY a.id
 		 LIMIT $1`, limit, []string{sourceGCal, sourceGraphCal}, repairCapped)
 	if err != nil {
@@ -224,10 +224,10 @@ func repairOneMeeting(ctx context.Context, tx pgx.Tx, c replayCandidate, payload
 // under the current rule, so no later pass offers it again.
 func markMeetingRepaired(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, outcome string) error {
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO activity_meeting_attendee_repair (activity_id, outcome)
-		VALUES ($1, $2)
+		INSERT INTO activity_meeting_attendee_repair (activity_id, outcome, rule_version)
+		VALUES ($1, $2, 2)
 		ON CONFLICT (activity_id) DO UPDATE
-		   SET outcome = excluded.outcome, repaired_at = now()`,
+		   SET outcome = excluded.outcome, repaired_at = now(), rule_version = excluded.rule_version`,
 		activityID, outcome); err != nil {
 		return fmt.Errorf("compose: recording that a meeting's attendees were resolved: %w", err)
 	}

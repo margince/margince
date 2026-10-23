@@ -1,5 +1,5 @@
 import { FieldDiff } from "../../design-system/trust";
-import { type HistoryValueCtx, historyValue } from "./historyvalues";
+import { type HistoryValueCtx, historyValue } from "../../lib/historyvalues";
 
 // One field's before and after, read the way the rest of the record page reads
 // them.

@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { fn, within } from "storybook/test";
 
 import {
   installFetchStub,
@@ -64,6 +65,11 @@ export default meta;
  * its envelope. The sender resolved to a contact, so their name is a link.
  */
 export const Readable: StoryObj = {
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByRole("button", {
+      name: "View full thread",
+    });
+  },
   render: () => {
     installFetchStub({
       [`GET /activities/${ACTIVITY}/email-presentation`]: () =>
@@ -90,6 +96,7 @@ export const Readable: StoryObj = {
       <StoryProviders>
         <SourceEmailPanel
           activityId={ACTIVITY}
+          onOpen={fn()}
           formatWhen={() => "1 Sept 2026, 09:00"}
         />
       </StoryProviders>

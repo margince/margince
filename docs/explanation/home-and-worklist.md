@@ -76,7 +76,11 @@ Raw history keeps the original records and their status.
 An automatic mail task also needs a current request addressed to the user who holds it.
 Editing the displayed body cannot change that evidence.
 The request writer and current task readers share the recipient rule and mail horizon.
-Reads hide old automatic work even before a background job runs.
+Reads hide old automatic work even before a background job runs. Automatic requests have a hard limit of 30 days; a human can still take on older work.
+
+A quiet relationship or a domain waiting for review is a record fact, not a personal duty.
+Both can be read for review but add no Worklist counts or Focus.
+A privacy notice belongs to its assigned case owner, not the contact owner.
 A later email to a contact does not show that a task or promise was done.
 
 ## Focus is a cut of the same ranking
@@ -85,7 +89,7 @@ A later email to a contact does not show that a task or promise was done.
 `focusLimit` (6). It runs before the queue filter and the page limit, so a filter or a short page can never
 hide a card. It is a projection of the one ranking, not a second scoring system.
 
-`focusEligible` keeps rows under `levelRoutine`, with four rules by source. A notice must be urgent work. A
+`focusEligible` keeps rows under `levelRoutine`, with rules by source. A
 task with a future deadline counts only when it is due today. A meeting counts only when it is unprepared
 and starts within 24 hours. An admitted deal suggestion counts when current facts call for action.
 
@@ -187,8 +191,11 @@ Completion events use the original member's current access. A task completion re
 The notice worker removes notices for proposals that ended; the source and audit stay available under their access rules.
 
 The day folds an approval's notice into its decision before counting or paging. The approval engine checks ownership and access by identifier, even beyond the loaded decision page.
-Titles and target records prove no link. A notice keeps its place when no pending decision is in scope.
-`notices_more_available` keeps the original scan bound after folding; Worklist derives its notice coverage from that same field.
+Titles and target records prove no link. A notice stays in the feed when no pending decision is in scope.
+
+Notices that only ask to be read do not become personal work. Decisions, failed actions and delivery
+problems have their own work lanes. `notices_more_available` keeps the feed scan bound after folding;
+it does not claim that more personal work exists.
 
 Signal and transcript readers use the `premium` tier by default. Their certification cases check meaning, ownership and recipient attribution.
 Each reading uses tokens at that tier. Work waits in the queue when the budget runs out.

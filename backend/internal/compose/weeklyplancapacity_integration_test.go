@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -170,11 +171,8 @@ func TestCapacitySkipsAnImportedMeetingWhoseAuthorHoldsNoSeat(t *testing.T) {
 		ids.NewV7(), time.Date(2026, 6, 16, 9, 0, 0, 0, time.UTC), filedBy); err != nil {
 		t.Fatalf("seeding the imported meeting: %v", err)
 	}
-	if _, err := owner.Exec(context.Background(), `
-		INSERT INTO activity (id, kind, subject, occurred_at, meeting_status, source, captured_by)
-		VALUES ($1, 'meeting', 'Filed by hand, no host', $2, 'booked', 'manual', $3)`,
-		ids.NewV7(), time.Date(2026, 6, 17, 9, 0, 0, 0, time.UTC), filedBy); err != nil {
-		t.Fatalf("seeding the hand-filed meeting: %v", err)
+	if _, _, err := e.Activities.LogActivity(rep, activities.LogActivityInput{Kind: "meeting", Subject: new("Personally logged meeting"), OccurredAt: new(time.Date(2026, 6, 17, 9, 0, 0, 0, time.UTC)), MeetingStatus: new("booked"), Source: "manual"}); err != nil {
+		t.Fatal(err)
 	}
 
 	seam := weeklyPlanCapacity{pool: e.Pool}

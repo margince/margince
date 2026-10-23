@@ -190,3 +190,22 @@ export const Phone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
 };
+
+export const OriginalMeeting: StoryObj = {
+  render: () => {
+    installFetchStub({ [ROUTE]: () => jsonResponse(briefReady) });
+    return (
+      <StoryProviders>
+        <ContactMeetingBrief
+          activityId="a-1"
+          open
+          onClose={() => {}}
+          meeting={meetingFacts}
+        />
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    await screen.findByRole("button", { name: "Open original" });
+  },
+};

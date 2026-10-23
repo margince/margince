@@ -167,12 +167,12 @@ func (s *Store) Availability(ctx context.Context, host ids.UserID, from, to time
 		rows, err := tx.Query(ctx, fmt.Sprintf(`
 			SELECT a.occurred_at, CASE WHEN a.booking_interval_exact THEN coalesce(a.duration_seconds, 3600) ELSE 3600 END FROM activity a
 			WHERE a.kind = 'meeting' AND a.archived_at IS NULL
-			  AND a.host_user_id = $%d
+			  AND %s
 			  AND a.occurred_at + (CASE WHEN a.booking_interval_exact THEN coalesce(a.duration_seconds, 3600) ELSE 3600 END) * interval '1 second' > $%d
 			  AND a.occurred_at < $%d
 			  AND a.meeting_status IS DISTINCT FROM 'canceled'
 			  AND %s
-			ORDER BY a.occurred_at`, hostPos, fromPos, toPos, scope), args...)
+			ORDER BY a.occurred_at`, meetingResponsibilitySQL(fmt.Sprintf("$%d", hostPos)), fromPos, toPos, scope), args...)
 		if err != nil {
 			return err
 		}

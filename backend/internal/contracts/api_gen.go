@@ -24141,6 +24141,9 @@ type Activity struct {
 	// Links One activity may link to >1 entity (contact + deal).
 	Links *[]ActivityLink `json:"links,omitempty"`
 
+	// MeetingParticipants Readable external participants on a meeting detail read. Omitted when the activity content is withheld and on list reads. Filing links alone do not imply attendance.
+	MeetingParticipants *[]MeetingParticipant `json:"meeting_participants,omitempty"`
+
 	// MeetingStatus Set only when kind=meeting.
 	MeetingStatus *ActivityMeetingStatus  `json:"meeting_status,omitempty"`
 	OccurredAt    time.Time               `json:"occurred_at"`
@@ -33775,12 +33778,9 @@ type Contact360NextMeeting struct {
 	LinkedDealId *openapi_types.UUID `json:"linked_deal_id,omitempty"`
 
 	// Participants Who is in the room, so the reader knows whether they are single-threaded before they walk in.
-	Participants *[]struct {
-		ContactId openapi_types.UUID `json:"contact_id"`
-		FullName  string             `json:"full_name"`
-	} `json:"participants,omitempty"`
-	StartsAt time.Time `json:"starts_at"`
-	Subject  *string   `json:"subject,omitempty"`
+	Participants *[]MeetingParticipant `json:"participants,omitempty"`
+	StartsAt     time.Time             `json:"starts_at"`
+	Subject      *string               `json:"subject,omitempty"`
 }
 
 // Contact360SinceLastVisit What changed on this contact since the caller last acknowledged seeing them.
@@ -42645,6 +42645,12 @@ type MeetingInvitationRequest struct {
 
 	// VideoCall Add a video call link from the connected calendar. Absent follows the host's profile setting.
 	VideoCall *bool `json:"video_call,omitempty"`
+}
+
+// MeetingParticipant A readable contact with recorded evidence of taking part in this meeting.
+type MeetingParticipant struct {
+	ContactId openapi_types.UUID `json:"contact_id"`
+	FullName  string             `json:"full_name"`
 }
 
 // MeetingPlan The preparation plan: what to DO in the room, as against `sections`, which is what is
@@ -62750,6 +62756,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "links")
 	}
 
+	if raw, found := object["meeting_participants"]; found {
+		err = json.Unmarshal(raw, &a.MeetingParticipants)
+		if err != nil {
+			return fmt.Errorf("error reading 'meeting_participants': %w", err)
+		}
+		delete(object, "meeting_participants")
+	}
+
 	if raw, found := object["meeting_status"]; found {
 		err = json.Unmarshal(raw, &a.MeetingStatus)
 		if err != nil {
@@ -63043,6 +63057,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["links"], err = json.Marshal(a.Links)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'links': %w", err)
+		}
+	}
+
+	if a.MeetingParticipants != nil {
+		object["meeting_participants"], err = json.Marshal(a.MeetingParticipants)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'meeting_participants': %w", err)
 		}
 	}
 

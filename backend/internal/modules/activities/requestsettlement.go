@@ -27,8 +27,7 @@ import (
 const (
 	// RequestSettled means the evidence establishes that nothing remains owed on this request.
 	RequestSettled = "settled"
-	// RequestStillOwed: we replied and left something undone. Remaining names
-	// it in the reader's own seat.
+	// RequestStillOwed leaves an original ask open; Remaining quotes that ask.
 	RequestStillOwed = "still_owed"
 	// RequestUnsure: the model would not commit above the floor. A real answer
 	// and not an absence — the request stays owed, which is what it was before
@@ -47,15 +46,10 @@ const (
 	settlementDueCol       = "due_at"
 	settlementConfidence   = "confidence"
 	settlementDecidedByCol = "decided_by"
+	settlementRuleCol      = "rule_version"
 )
 
-// OwedVerdictCapturedBy is what the owed pass stamps on a reminder it filed.
-//
-// Declared HERE, in the module that writes the row, and read by the compose
-// engine that mints the principal — rather than the other way round, which the
-// layering forbids anyway. The string decides whether a task may be retitled by
-// a machine, so a second spelling of it would be a task nobody could tell from
-// a human's own work.
+// OwedVerdictCapturedBy identifies the automatic request-task writer, including title repairs.
 const OwedVerdictCapturedBy = "system:owed_verdict"
 
 // RepliedRequest is a request with later evidence for the settlement pass.
@@ -71,11 +65,7 @@ type RepliedRequest struct {
 	TaskID *ids.UUID
 	// TaskVersion is what the selection read, carried so the effect can refuse
 	// a task somebody edited in between.
-	TaskVersion int64
-	// TaskMachineMinted says the reminder is the one the owed pass filed, never
-	// one a human accepted. Only a machine-minted, undated task may be retitled
-	// — a human's own subject and deadline are theirs.
-	TaskMachineMinted bool
+	TaskVersion       int64
 	TaskHumanReopened bool
 	// CounterpartyEmail is who this request was with. Carried out of the
 	// selection so the conversation read can bind to the same correspondent
@@ -112,6 +102,7 @@ var repliedRequestsSQL = outstandingRequestSQL + `
  AND EXISTS (` + settlementAnswersSQL() + `)
  AND NOT EXISTS (SELECT 1 FROM activity_request_settlement judged
    WHERE judged.request_activity_id = a.id
+     AND (judged.verdict <> 'still_owed' OR judged.rule_version = '` + storekit.RequestSettlementRule + `')
      AND judged.judged_through_activity_id = (` + newestAnswerSince + `))`
 
 // settlementAnswersSQL selects, as (id, occurred_at), every answer to request a
@@ -170,18 +161,11 @@ func (s *Store) RepliedRequests(ctx context.Context, asOf time.Time, limit int) 
 	}
 	var out []RepliedRequest
 	err := s.tx(ctx, func(tx pgx.Tx) error {
+		args := []any{asOf, limit}
 		rows, err := tx.Query(ctx, storekit.SQLf(`
 			SELECT a.id, coalesce(a.counterparty_email, ''),
 			       latest.id,
 			       task.id, coalesce(task.version, 0),
-			       -- Whether the reminder is still the machine's to sharpen: the
-			       -- pass filed it, nobody has dated it, and nobody has renamed
-			       -- it. The SUBJECT comparison is the half captured_by cannot
-			       -- carry — a human renaming a task leaves the stamp alone, so
-			       -- without it the machine could overwrite the title somebody
-			       -- had just typed.
-			       coalesce(task.captured_by = $2 AND task.due_at IS NULL
-			                AND task.subject IS NOT DISTINCT FROM a.subject, false),
                    `+humanReopenedTaskSQL("task")+`
 			  FROM activity a
 			  CROSS JOIN LATERAL (%s) latest
@@ -190,8 +174,8 @@ func (s *Store) RepliedRequests(ctx context.Context, asOf time.Time, limit int) 
 			   AND task.archived_at IS NULL AND task.is_done = false
 			 WHERE %s
 			 ORDER BY latest.occurred_at DESC, latest.id DESC, a.id DESC
-			 LIMIT $3`, newestAnswerRow, EmailRequestTaskSource, repliedRequestsSQL),
-			asOf, OwedVerdictCapturedBy, limit)
+			 LIMIT $%d`, newestAnswerRow, EmailRequestTaskSource, repliedRequestsSQL, len(args)),
+			args...)
 		if err != nil {
 			return fmt.Errorf("activities: reading answered requests: %w", err)
 		}
@@ -199,7 +183,7 @@ func (s *Store) RepliedRequests(ctx context.Context, asOf time.Time, limit int) 
 		for rows.Next() {
 			var r RepliedRequest
 			if err := rows.Scan(&r.RequestID, &r.CounterpartyEmail, &r.NewestAnswerID,
-				&r.TaskID, &r.TaskVersion, &r.TaskMachineMinted, &r.TaskHumanReopened); err != nil {
+				&r.TaskID, &r.TaskVersion, &r.TaskHumanReopened); err != nil {
 				return err
 			}
 			out = append(out, r)
@@ -216,15 +200,15 @@ func (s *Store) RepliedRequests(ctx context.Context, asOf time.Time, limit int) 
 type RequestSettlementInput struct {
 	Request RepliedRequest
 	Verdict string
-	// Remaining is what is still owed, in the reader's own seat. Only a
-	// still_owed verdict carries one; the column's CHECK refuses the rest.
+	// Remaining quotes the original current message; it never names a new task.
 	Remaining string
 	DueAt     *time.Time
 	// Confidence is the model's own, recorded so a later reader can tell a
 	// judgement the pass was sure of from one it barely reached.
 	Confidence float64
 	// DecidedBy names the classifier that reached it.
-	DecidedBy string
+	DecidedBy    string
+	restorePatch UpdateActivityInput
 }
 
 // SettleRequest records one judgement AND applies it, in one transaction.
@@ -251,7 +235,7 @@ func (s *Store) SettleRequest(ctx context.Context, in RequestSettlementInput) er
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		still, err := requestStillWritable(ctx, tx, in.Request.RequestID)
+		still, err := requestStillWritable(ctx, tx, in)
 		if err != nil {
 			return err
 		}
@@ -264,6 +248,10 @@ func (s *Store) SettleRequest(ctx context.Context, in RequestSettlementInput) er
 			// longer open. Not an error: the judgement is simply dropped, and
 			// the next pass reads whatever the row says then.
 			return nil
+		}
+		in.restorePatch, err = legacySettlementPatch(ctx, tx, in)
+		if err != nil {
+			return err
 		}
 		if err := recordSettlement(ctx, tx, in); err != nil {
 			return err
@@ -281,19 +269,23 @@ func (s *Store) SettleRequest(ctx context.Context, in RequestSettlementInput) er
 // be asked outright. Without it a settlement that finished after an erasure
 // would reinsert a sentence about a subject nobody may now assert anything
 // about, into a table the cascade has already swept.
-func requestStillWritable(ctx context.Context, tx pgx.Tx, requestID ids.UUID) (bool, error) {
-	var live bool
+func requestStillWritable(ctx context.Context, tx pgx.Tx, in RequestSettlementInput) (bool, error) {
+	var body string
 	err := tx.QueryRow(ctx, `
-		SELECT true FROM activity
+		SELECT coalesce(body, '') FROM activity
 		 WHERE id = $1 AND archived_at IS NULL
-		   AND audience = 'workspace' AND restricted_at IS NULL`, requestID).Scan(&live)
+		   AND audience = 'workspace' AND restricted_at IS NULL
+         AND direction = 'inbound' FOR UPDATE`, in.Request.RequestID).Scan(&body)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return false, nil
 	}
 	if err != nil {
 		return false, fmt.Errorf("activities: re-reading the request before settling it: %w", err)
 	}
-	return live, nil
+	if in.Verdict == RequestStillOwed && !RequestRemainderGrounded(body, in.Remaining) {
+		return false, nil
+	}
+	return true, nil
 }
 
 // recordSettlement writes the verdict, replacing any earlier one.
@@ -316,18 +308,19 @@ func recordSettlement(ctx context.Context, tx pgx.Tx, in RequestSettlementInput)
 		settlementDueCol:       dueAt,
 		settlementConfidence:   in.Confidence,
 		settlementDecidedByCol: in.DecidedBy,
+		settlementRuleCol:      storekit.RequestSettlementRule,
 	}
+	args := []any{in.Request.RequestID, in.Request.NewestAnswerID, in.Verdict, remaining, dueAt, in.Confidence, in.DecidedBy, storekit.RequestSettlementRule}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO activity_request_settlement (request_activity_id,
-		       judged_through_activity_id, verdict, remaining, due_at, confidence, decided_by)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		       judged_through_activity_id, verdict, remaining, due_at, confidence, decided_by, rule_version)
+		VALUES (`+storekit.Placeholders(args)+`)
 		ON CONFLICT (request_activity_id) DO UPDATE SET
 		       judged_through_activity_id = EXCLUDED.judged_through_activity_id,
 		       verdict = EXCLUDED.verdict, remaining = EXCLUDED.remaining,
 		       due_at = EXCLUDED.due_at, confidence = EXCLUDED.confidence,
-		       decided_by = EXCLUDED.decided_by, decided_at = now()`,
-		in.Request.RequestID, in.Request.NewestAnswerID, in.Verdict,
-		remaining, dueAt, in.Confidence, in.DecidedBy); err != nil {
+		       decided_by = EXCLUDED.decided_by, rule_version = EXCLUDED.rule_version, decided_at = now()`,
+		args...); err != nil {
 		return fmt.Errorf("activities: recording the request settlement: %w", err)
 	}
 	// TWO call sites with LITERAL verbs rather than one with a variable, and
@@ -372,15 +365,15 @@ func settlementProse(in RequestSettlementInput) (remaining *string, dueAt *time.
 //
 //nolint:nilnil // an absent before-image IS the answer for a first judgement; see above.
 func settlementImage(ctx context.Context, tx pgx.Tx, requestID ids.UUID) (map[string]any, error) {
-	var verdict, decidedBy string
+	var verdict, decidedBy, ruleVersion string
 	var remaining *string
 	var judgedThrough ids.UUID
 	var dueAt *time.Time
 	var confidence float64
 	err := tx.QueryRow(ctx, `
-		SELECT verdict, judged_through_activity_id, remaining, due_at, confidence, decided_by
+		SELECT verdict, judged_through_activity_id, remaining, due_at, confidence, decided_by, rule_version
 		  FROM activity_request_settlement WHERE request_activity_id = $1`,
-		requestID).Scan(&verdict, &judgedThrough, &remaining, &dueAt, &confidence, &decidedBy)
+		requestID).Scan(&verdict, &judgedThrough, &remaining, &dueAt, &confidence, &decidedBy, &ruleVersion)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
@@ -394,6 +387,7 @@ func settlementImage(ctx context.Context, tx pgx.Tx, requestID ids.UUID) (map[st
 		settlementDueCol:       dueAt,
 		settlementConfidence:   confidence,
 		settlementDecidedByCol: decidedBy,
+		settlementRuleCol:      ruleVersion,
 	}, nil
 }
 
@@ -431,30 +425,15 @@ func applySettlement(ctx context.Context, tx pgx.Tx, in RequestSettlementInput) 
 	}
 }
 
-// settlementPatch is what a verdict asks of the task, or false for nothing.
-//
-// still_owed sharpens a task the MACHINE filed and nobody has dated: the
-// subject becomes what is actually owed rather than the mail's subject line,
-// and a deadline lands only if our own words named one. A task a human accepted
-// keeps their wording and their date — TaskMachineMinted is what tells the two
-// apart, and it is read from captured_by rather than inferred from the subject,
-// because a human accepting a request uses the same builder and may keep the
-// same title.
+// settlementPatch completes an answered task; evidence never becomes a replacement title.
 func settlementPatch(in RequestSettlementInput) (UpdateActivityInput, bool) {
 	if in.Request.TaskHumanReopened {
 		return UpdateActivityInput{}, false
 	}
-	switch in.Verdict {
-	case RequestSettled:
+	patch := in.restorePatch
+	if in.Verdict == RequestSettled {
 		done := true
-		return UpdateActivityInput{IsDone: &done}, true
-	case RequestStillOwed:
-		if !in.Request.TaskMachineMinted || in.Remaining == "" {
-			return UpdateActivityInput{}, false
-		}
-		remaining := in.Remaining
-		return UpdateActivityInput{Subject: &remaining, DueAt: in.DueAt}, true
-	default:
-		return UpdateActivityInput{}, false
+		patch.IsDone = &done
 	}
+	return patch, patch.Subject != nil || patch.IsDone != nil || len(patch.Clear) > 0
 }

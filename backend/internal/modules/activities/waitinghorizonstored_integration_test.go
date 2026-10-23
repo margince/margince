@@ -122,3 +122,15 @@ func TestAFailedMeasurementKeepsThePreviousStoredHorizon(t *testing.T) {
 		t.Fatalf("after a failed pass a read answered %d, want the previous 21", got)
 	}
 }
+
+func TestStoredResponseHistoryCannotExtendAutomaticWorkPastThirtyDays(t *testing.T) {
+	ctx, tx, store := storedHorizonTx(t)
+	now := time.Date(2026, 10, 21, 12, 0, 0, 0, time.UTC)
+	store = store.WithClock(func() time.Time { return now })
+	if _, err := tx.Exec(ctx, `INSERT INTO activity_waiting_horizon (horizon_days, measured_at) VALUES (365, $1)`, now); err != nil {
+		t.Fatal(err)
+	}
+	if got := readHorizon(ctx, t, tx, store); got != 30 {
+		t.Fatalf("old stored response history admits %d days of automatic work, want at most30", got)
+	}
+}

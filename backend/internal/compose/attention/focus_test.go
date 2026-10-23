@@ -128,7 +128,7 @@ func TestFocusLeavesInformationalNoticesInUpdatesEvenWhenPinned(t *testing.T) {
 	day := crmcontracts.Attention{AsOf: rankInstant, Notices: lane(item("notice", "notice", withDetail("The deal changed stage")))}
 	svc := &Service{}
 	out := svc.worklistFrom(context.Background(), day, "all", "all", 25, waitingRead{}, worklistCursor{}, nil)
-	if len(out.Queue) != 1 || out.Focus == nil || len(out.Focus.Items) != 0 {
+	if len(out.Queue) != 0 || out.Focus == nil || len(out.Focus.Items) != 0 {
 		t.Fatalf("informational notice filled focus: %+v", out.Focus)
 	}
 	svc.pinned = map[RowRef]bool{{Source: "notice", RowID: "notice"}: true}

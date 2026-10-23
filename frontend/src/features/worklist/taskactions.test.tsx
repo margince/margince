@@ -4,7 +4,9 @@
 
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
+import { formatDateTime } from "../../format/format";
+import { viewerZone } from "../../format/timezone";
 import {
   installFetchStub,
   jsonResponse,
@@ -23,9 +25,20 @@ afterEach(cleanup);
 // search for its exact subject. These hold the link, and hold that a task
 // nobody read out of anything does not offer one.
 
-function stubTask(sourceActivityId: string | null, capturedBy = "human:u-1") {
+function stubTask(
+  sourceActivityId: string | null,
+  capturedBy = "human:u-1",
+  assigneeId?: string,
+  assigneeName?: string,
+) {
   installFetchStub({
     "GET /me": meRoute({ activity: ["read"] }),
+    "GET /users/names": () =>
+      jsonResponse({
+        data: assigneeName
+          ? [{ id: assigneeId, display_name: assigneeName }]
+          : [],
+      }),
     "GET /activities/task-1": () =>
       jsonResponse({
         id: "task-1",
@@ -36,6 +49,7 @@ function stubTask(sourceActivityId: string | null, capturedBy = "human:u-1") {
         occurred_at: "2026-09-08T09:00:00Z",
         is_done: false,
         source_activity_id: sourceActivityId,
+        assignee_id: assigneeId,
         captured_by: capturedBy,
       }),
     // The PLAIN activity read, which is what the reader calls. Stubbing the
@@ -56,13 +70,13 @@ function stubTask(sourceActivityId: string | null, capturedBy = "human:u-1") {
   });
 }
 
-function openTask() {
+function openTask(onClose = () => {}) {
   return render(
     <StoryProviders>
       <TaskDetailModal
         activityId="task-1"
         readOnly={false}
-        onClose={() => {}}
+        onClose={onClose}
         update={
           {
             mutate: () => {},
@@ -118,7 +132,10 @@ test("a transcript refused on reopen is not painted from the cache", async () =>
       }),
     "GET /activities/meeting-9": () =>
       refused
-        ? jsonResponse({ title: "Not found", status: 404 }, 404)
+        ? jsonResponse(
+            { title: "Not found", status: 404, code: "not_found" },
+            404,
+          )
         : jsonResponse({
             id: "meeting-9",
             kind: "meeting",
@@ -135,14 +152,13 @@ test("a transcript refused on reopen is not painted from the cache", async () =>
   );
   await screen.findByText(/Vergleichsblatt mit zwei Produkten/);
 
-  // Access goes away, and the reader is opened again. Escape rather than the
-  // close control: the task drawer and the transcript reader are both dialogs
-  // and both draw a "Close", so naming one finds two.
+  // The task returns after the source closes; reopening must recheck access.
   refused = true;
   await user.keyboard("{Escape}");
-  await user.click(
-    await screen.findByRole("button", { name: "Open original" }),
-  );
+  expect(
+    await screen.findByText("This message is not shared with you"),
+  ).toBeTruthy();
+  expect(screen.queryByRole("button", { name: "Open original" })).toBeNull();
 
   // The words are gone, not merely accompanied by an error.
   await waitFor(() => {
@@ -242,7 +258,7 @@ test("an email request is read in the task, with no click to open it", async () 
   // The presentation's body, never the raw activity's — that endpoint is the
   // normalised read, and the plain activity carries an unparsed copy.
   expect(screen.queryByText("Unparsed body must not be displayed")).toBeNull();
-  // And no button, because there is nothing left for one to open.
+  // The thread opens separately; the initial evidence needs no extra click.
   expect(screen.queryByRole("button", { name: "Open original" })).toBeNull();
 
   // WHERE it sits is the requirement, not merely that it is present: the
@@ -359,4 +375,37 @@ test("a task filed under nothing names no record", async () => {
 
   await screen.findByText(/^Logged/);
   expect(screen.queryByRole("link")).toBeNull();
+});
+
+test("opens the canonical full email thread after closing the task", async () => {
+  stubEmailRequest();
+  const close = vi.fn();
+  openTask(close);
+  await userEvent.click(
+    await screen.findByRole("button", { name: "View full thread" }),
+  );
+  expect(close).toHaveBeenCalledOnce();
+  expect(window.location.hash).toContain("email-1");
+  expect(window.location.hash).toContain("The%20original%20request");
+});
+
+test.each(["Morgan Reed", undefined])(
+  "names the task assignee without exposing an ID (%s)",
+  async (name) => {
+    const id = "11111111-1111-4111-8111-111111111111";
+    stubTask(null, "human:u-1", id, name);
+    const view = openTask();
+    expect(await screen.findByText(name ?? "Name unavailable")).toBeTruthy();
+    expect(view.baseElement.textContent).not.toContain(id);
+    expect(view.baseElement.querySelector(`[title="${id}"]`)).toBeNull();
+  },
+);
+
+test("meeting source preview uses the viewer clock shared by its drawer", async () => {
+  stubTask("meeting-9");
+  openTask();
+  const when = formatDateTime("2026-09-08T08:00:00Z", "en", viewerZone());
+  expect(
+    await screen.findByText(`${when} · Akeneo — Vergleichsblatt`),
+  ).toBeTruthy();
 });

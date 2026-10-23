@@ -95,9 +95,7 @@ func activityDiscoverClause(p principal.Principal, alias string, arg func(any) i
 	// It admits EXISTENCE only. Content still needs the audience arm, the linked
 	// private contact stays unreadable with its own visibility check, and neither
 	// the availability test nor object RBAC is relaxed. Nothing here reads
-	// host_user_id: that column labels whose calendar a row came off, which is
-	// ownership rather than membership, and a label is not evidence that anybody
-	// was present.
+	// host_user_id: a stored host label alone does not prove attendance.
 	return fmt.Sprintf(`%[1]s AND (%[2]s OR %[3]s)`,
 		available, activityReachArms(p, alias, arg), assignedCommitmentArm(p, alias, arg))
 }
@@ -130,15 +128,8 @@ func assignedCommitmentArm(p principal.Principal, alias string, arg func(any) in
 // It is deliberately NARROWER than activityMembershipArm, which decides content.
 // The difference is one column and it is the whole security of this clause.
 //
-// Capture stamps the ACTING SEAT as an activity_participant of every activity it
-// writes (sinkactivity.go stampCaptureParticipants), with no attestation behind
-// it. So "I have a participant row" means only "my connector landed this", and
-// admitting that would let a seat discover every row its own connector ever
-// captured — including one later filed under a record it may not read, which is
-// exactly the state capture refuses to replay onto. Restricting the arm to
-// kind='meeting' does NOT close that: the extension ingress copies a unit's
-// chosen Kind straight through with no vocabulary check (compose/extingress.go),
-// so "meeting" is a word a caller picks.
+// Legacy capture stamps prove ingestion, not attendance. Caller-chosen meeting
+// kinds cannot turn those stamps into permission to discover a record.
 //
 // The three evidenced sources, none of which a caller writes:
 //

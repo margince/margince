@@ -2,7 +2,8 @@
 
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
-import { viewerZone } from "../../format/timezone";
+import { formatDateTime } from "../../format/format";
+import { UTC_ZONE, viewerZone } from "../../format/timezone";
 import { renderWithQueryClient } from "../../testing/queryrender";
 import {
   installFetchStub,
@@ -152,4 +153,71 @@ it("reads out the value of a field the workspace added to activities", async () 
   );
   expect(await screen.findByText("Visit type")).toBeTruthy();
   expect(screen.getByText("on_site")).toBeTruthy();
+});
+
+it("keeps linked contacts as filing context without claiming they attended", async () => {
+  installFetchStub({
+    "GET /me": meRoute({ activity: ["read"] }),
+    "GET /activities/source": () =>
+      jsonResponse({
+        id: "source",
+        kind: "meeting",
+        subject: "Project review",
+        occurred_at: "2026-07-01T09:00:00Z",
+        content_state: "available",
+        links: [
+          {
+            entity_type: "contact",
+            entity_id: "contact-1",
+            label: "Morgan Reed",
+          },
+        ],
+      }),
+  });
+  renderWithQueryClient(
+    <OpenActivityDrawer
+      activityId="source"
+      zone={UTC_ZONE}
+      onClose={() => {}}
+    />,
+  );
+  expect(await screen.findByText("Filed under")).toBeTruthy();
+  expect(
+    screen.getByText(
+      formatDateTime("2026-07-01T09:00:00Z", "en", viewerZone()),
+    ),
+  ).toBeTruthy();
+  expect(screen.queryByText("Attendees")).toBeNull();
+});
+
+it("shows only the meeting's explicit participant projection as attendees", async () => {
+  installFetchStub({
+    "GET /me": meRoute({ activity: ["read"] }),
+    "GET /activities/source": () =>
+      jsonResponse({
+        id: "source",
+        kind: "meeting",
+        subject: "Project review",
+        occurred_at: "2026-07-01T09:00:00Z",
+        content_state: "available",
+        meeting_participants: [
+          {
+            contact_id: "11111111-1111-4111-8111-111111111111",
+            full_name: "Dana Buyer",
+          },
+        ],
+        links: [],
+      }),
+  });
+  renderWithQueryClient(
+    <OpenActivityDrawer
+      activityId="source"
+      zone={viewerZone()}
+      onClose={() => {}}
+    />,
+  );
+  expect(await screen.findByText("Attendees")).toBeTruthy();
+  const contact = screen.getByRole("link", { name: "Dana Buyer" });
+  expect(contact.getAttribute("href")).toContain("contacts");
+  expect(contact.hasAttribute("title")).toBe(false);
 });

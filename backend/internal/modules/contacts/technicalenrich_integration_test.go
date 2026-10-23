@@ -20,6 +20,7 @@ package contacts
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -114,6 +115,22 @@ func TestACompletedLaneReplacesItsOwnRows(t *testing.T) {
 	if len(providers) != 1 || providers[0] != "microsoft365" {
 		t.Errorf("the record holds mail providers %v, want exactly [microsoft365] — a company has one "+
 			"mail system, and keeping the one it left is a claim that is no longer true", providers)
+	}
+	raw, err := json.Marshal(anchorAuditEvidence(ctx, t, e.store, companyID))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var evidence struct {
+		Technical struct {
+			Changes []TechnicalReceiptChange `json:"field_changes"`
+		} `json:"technical"`
+	}
+	if err := json.Unmarshal(raw, &evidence); err != nil {
+		t.Fatal(err)
+	}
+	changes := evidence.Technical.Changes
+	if len(changes) != 1 || changes[0].Before != "Google Workspace" || changes[0].After != "Microsoft 365" {
+		t.Fatalf("receipt lost the actual provider change: %+v", changes)
 	}
 }
 

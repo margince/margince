@@ -78,15 +78,17 @@ func TestAMeetingFollowUpNeedsAHeldMeetingOfTheReadersWithNothingSent(t *testing
 	}
 }
 
-// A calendar sync that imported the meeting into the reader's own mailbox is
-// the reader being in it, whoever hosted it.
-func TestAMeetingTheReadersCalendarImportedIsTheirs(t *testing.T) {
+func TestACalendarImportNeedsActualAttendanceForFollowUp(t *testing.T) {
 	e := setupLoad(t)
 	s := storeAddressing(e, readerAddress)
 	imported := e.metWith(t, e.customerAt(t, "customer"), e.other, "held", 3*24*time.Hour)
 	e.exec(t, `INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2)`, imported, e.rep)
+	if owesMeetingFollowUp(t, s, e, imported) {
+		t.Fatal("a calendar copy invented personal attendance")
+	}
+	e.exec(t, `INSERT INTO activity_participant (activity_id,user_id,role) VALUES ($1,$2,'attendee')`, imported, e.rep)
 	if !owesMeetingFollowUp(t, s, e, imported) {
-		t.Error("a meeting the reader's calendar imported is not their follow-up")
+		t.Fatal("explicit attendee lost their meeting follow-up")
 	}
 }
 

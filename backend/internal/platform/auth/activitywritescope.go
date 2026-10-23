@@ -43,29 +43,9 @@ func EnsureActivityWritable(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	return EnsureActivityWritableIn(ctx, tx, id, true)
 }
 
-// EnsureActivityWritableIn is EnsureActivityWritable against a chosen row
-// liveness. live=false serves a caller that already resolved the row past
-// its own LiveOnly lock and confirmed it is held under a statutory
-// retention obligation (activities.lockActivityForWrite).
-//
-// It skips the content-visible gate's LIVENESS half rather than passing live
-// through to it: ActivityAvailableClause is `restricted_at IS NULL`
-// UNCONDITIONALLY — by design, a restricted row reads as gone to everyone
-// through that gate, live argument or not (ensureActivity's own doc). A
-// caller reaching this function with live=false already proved the row
-// exists by another means (the row lock, taken directly against the table),
-// so re-asking the liveness half would only reproduce the same false 404
-// this exists to remove. What it does NOT earn a skip from is the OTHER
-// half ActivityContentClause folds in for every non-system caller —
-// ActivityAudienceArm, the row's own participants/selected narrowing —
-// which the ownership check below cannot stand in for: ownership answers
-// "is this the caller's team's record", audience answers "did a human limit
-// who reads this ONE message", and a caller who owns a record is not
-// thereby a participant on every limited message under it. An unbounded
-// human is bound by this too — ActivityContentClause's own doc says only
-// the system principal reads the audience arm away, so Unbounded below must
-// not become a bypass a held row's write-authority check does not have to
-// answer for.
+// EnsureActivityWritableIn preserves audience and write authority when a caller
+// already locked an archived or held row. Such callers enforce their own liveness
+// and restricted-content rules; ownership never overrides a limited audience.
 func EnsureActivityWritableIn(ctx context.Context, tx pgx.Tx, id ids.UUID, live bool) error {
 	if live {
 		if err := ensureActivity(ctx, tx, id, ActivityContentClause, true); err != nil {

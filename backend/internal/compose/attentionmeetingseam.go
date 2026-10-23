@@ -42,7 +42,7 @@ func (m attentionMeetings) Today(
 	kind := string(crmcontracts.ActivityKindMeeting)
 	in := activities.ListActivitiesInput{
 		Kind: &kind, OccurredAfter: &from, OccurredBefore: &until, Limit: &limit,
-		ReadableOnly: true,
+		ReadableOnly: true, MeetingWorkOnly: true,
 	}
 	if !applyMeetingScope(ctx, &in, scope, owner) {
 		return nil, nil
@@ -116,7 +116,7 @@ func applyMeetingScope(
 			return false
 		}
 		host := ids.From[ids.UserKind](owner)
-		in.MeetingHost = &host
+		in.OnMeetingOf = &host
 	case attention.TasksUnassigned:
 		in.UnhostedMeetings = true
 	case attention.TasksVisible:
@@ -239,7 +239,7 @@ func (m attentionMeetingsAwaitingOutcome) Since(
 	deep := limit * unansweredReadDepth
 	in := activities.ListActivitiesInput{
 		Kind: &kind, OccurredAfter: &from, OccurredBefore: &until,
-		AwaitingOutcome: true, CustomerMeetingsOnly: true, Limit: &deep, ReadableOnly: true,
+		AwaitingOutcome: true, CustomerMeetingsOnly: true, Limit: &deep, ReadableOnly: true, MeetingWorkOnly: true,
 	}
 	if !applyMeetingScope(ctx, &in, scope, owner) {
 		return nil, nil

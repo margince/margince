@@ -6,8 +6,6 @@ package attention
 // An undecided domain, drawn and ranked as the judgement it is.
 
 import (
-	"time"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 )
@@ -54,27 +52,5 @@ func domainQuestionItem(q DomainQuestion) crmcontracts.AttentionItem {
 		OccurredAt:       &asked,
 		SubjectMovedAt:   q.EvidenceAt,
 		Actions:          actions,
-	}
-}
-
-// classifyDomainQuestion: a judgement, ranked with the other judgements.
-//
-// Routine rather than blocking, and that is the honest level. Nothing is
-// waiting on the answer the way a customer waits on a reply — the mail was
-// already captured or already dropped, and what hangs on this is whether a
-// company record exists. Ranking it as blocking would put a domain nobody has
-// heard of above a buyer who is waiting, which is the failure the decision
-// levels exist to prevent.
-func classifyDomainQuestion(item crmcontracts.AttentionItem, asOf time.Time) ranked {
-	row := base(item, levelRoutine, "decisions", "data_drifts")
-	row.Because = []crmcontracts.WorklistReason{reason("routine", nil)}
-	return ranked{
-		item:       row,
-		occurredAt: occurredOf(item, asOf),
-		// The reader's own, by construction of the read. OpenDomainQuestions
-		// binds to the acting human, so no colleague's question could have come
-		// back — the same claim the capture lane makes about a mailbox, and the
-		// reason this row needs no owner field of its own.
-		ownerRef: ownedByWhoeverIsReading(),
 	}
 }

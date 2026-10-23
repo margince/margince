@@ -17,11 +17,13 @@ import (
 )
 
 type stubNotices struct {
-	rows []UnreadNotice
-	err  error
+	calls int
+	rows  []UnreadNotice
+	err   error
 }
 
 func (s *stubNotices) Unread(context.Context, int) ([]UnreadNotice, error) {
+	s.calls++
 	return s.rows, s.err
 }
 
@@ -79,5 +81,20 @@ func TestEverythingSeenReadsAsAnEmptyLane(t *testing.T) {
 	}
 	if out.Notices == nil || len(*out.Notices) != 0 {
 		t.Fatalf("notices = %v, want an empty lane", out.Notices)
+	}
+}
+
+func TestWorklistDoesNotReadTheOptionalNoticeFeed(t *testing.T) {
+	port := &stubNotices{rows: []UnreadNotice{{ID: ids.NewV7(), Subject: "Capture is catching up", CreatedAt: readInstant}}}
+	svc := noticesLaneService(port)
+	if _, err := svc.Worklist(pageReader(), "mine", "all", ids.Nil, 25, ""); err != nil {
+		t.Fatal(err)
+	}
+	if port.calls != 0 {
+		t.Fatal("personal work fetched notices it cannot admit")
+	}
+	day, err := svc.Assemble(pageReader())
+	if err != nil || day.Notices == nil || len(*day.Notices) != 1 || port.calls != 1 {
+		t.Fatalf("optional feed was lost: %+v, %v", day.Notices, err)
 	}
 }

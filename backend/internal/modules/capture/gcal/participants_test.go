@@ -36,8 +36,8 @@ func TestParticipantsOfNamesTheOrganizerAndAttendees(t *testing.T) {
 		}
 		roles[p.Email] = p.Role
 	}
-	if _, found := roles["me@myco.com"]; found {
-		t.Error("the mailbox owner was recorded from the header; their own row carries the user id the graph joins on")
+	if roles["me@myco.com"] != connector.ParticipantRoleAttendee {
+		t.Error("provider-listed mailbox owner lacks attendee role")
 	}
 	// The organizer's address is capitalized in the payload and lowercase in
 	// the attendee list. Those are one human, and contact_email stores an

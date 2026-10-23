@@ -23,13 +23,22 @@ import (
 )
 
 func TestExistingRequestTaskRequiresItsAssigneeToBeAddressed(t *testing.T) {
-	for _, scenario := range []string{"copied importer", "addressed assignee", "old addressed assignee", "withdrawn request"} {
+	for _, scenario := range []string{"copied importer", "addressed assignee", "old addressed assignee", "thirty-one day request", "withdrawn request"} {
 		t.Run(scenario, func(t *testing.T) {
 			e := integration.Setup(t)
 			at := time.Date(2026, 10, 21, 8, 0, 0, 0, time.UTC)
 			sourceAt := at
 			if scenario == "old addressed assignee" {
 				sourceAt = at.AddDate(-2, 0, 0)
+			}
+			if scenario == "thirty-one day request" {
+				sourceAt = at.AddDate(0, 0, -31)
+				if err := e.DB().Tx(e.Admin(), func(tx pgx.Tx) error {
+					_, err := tx.Exec(e.Admin(), `INSERT INTO activity_waiting_horizon (horizon_days, measured_at) VALUES (365, $1)`, at)
+					return err
+				}); err != nil {
+					t.Fatal(err)
+				}
 			}
 			addressed := e.Rep1
 			if scenario != "copied importer" {

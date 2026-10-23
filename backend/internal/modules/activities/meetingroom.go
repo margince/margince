@@ -28,15 +28,8 @@ import (
 // instead of noticing they are single-threaded.
 const meetingAttendeeCap = 8
 
-// MeetingAttendee is one name in the room. An alias, because the contract types
-// the participant list as an anonymous struct and the decode has to land in
-// that shape.
-//
-//nolint:staticcheck // ST1003: ContactId is the generated contract's spelling; renaming it here would not compile against the wire type
-type MeetingAttendee = struct {
-	ContactId openapi_types.UUID `json:"contact_id"`
-	FullName  string             `json:"full_name"`
-}
+// MeetingAttendee is a named external participant in a readable meeting.
+type MeetingAttendee = crmcontracts.MeetingParticipant
 
 // MeetingRoom is a meeting's linked deal and attendees, each only as far as the
 // reader may see it.
@@ -73,7 +66,7 @@ func MeetingRoomColumns(ctx context.Context, arg func(any) int) (string, error) 
 		         FROM (
 		           SELECT DISTINCT ap.contact_id
 		           FROM activity_participant ap
-		           WHERE ap.activity_id = a.id
+		           WHERE ap.activity_id = a.id AND (NOT `+importedMeetingSQL+` OR ap.role IN ('organizer','attendee'))
 		         ) parts
 		         JOIN contact p ON p.id = parts.contact_id AND p.archived_at IS NULL
 		         WHERE %s

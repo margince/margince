@@ -119,37 +119,6 @@ func TestADecisionAndASystemFailureAreBothReviewAndRepair(t *testing.T) {
 	}
 }
 
-// A relationship going quiet has no lead and no deal at risk, and reconnecting
-// one that was WORTH something is exactly how pipeline gets built.
-func TestARelationshipWorthRevivingIsPipelineToBuild(t *testing.T) {
-	got := sectioned(crmcontracts.WorklistItem{
-		Source:   crmcontracts.WorklistItemSourceRelationshipDecay,
-		Category: crmcontracts.WorklistItemCategoryDealsAtRisk,
-		Level:    levelAgreed,
-	})
-
-	if got != crmcontracts.WorklistItemBriefSectionBriefSectionBuildPipeline {
-		t.Errorf("section = %q, want build_pipeline", got)
-	}
-}
-
-// And a routine one is review, the same as the worklist bands it.
-//
-// Sectioned by source alone, every lapse landed in Build pipeline while the
-// queue sent the routine ones to Review — so a reader's "new revenue" heading
-// held forty contacts they had exchanged one message with years ago.
-func TestARoutineSilenceIsReviewAndRepair(t *testing.T) {
-	got := sectioned(crmcontracts.WorklistItem{
-		Source:   crmcontracts.WorklistItemSourceRelationshipDecay,
-		Category: crmcontracts.WorklistItemCategoryDealsAtRisk,
-		Level:    levelRoutine,
-	})
-
-	if got != crmcontracts.WorklistItemBriefSectionBriefSectionReviewAndRepair {
-		t.Errorf("section = %q, want review_and_repair", got)
-	}
-}
-
 func TestADriftingDealIsRevenueToMove(t *testing.T) {
 	got := sectioned(crmcontracts.WorklistItem{
 		Source:   crmcontracts.WorklistItemSourceDealAtRisk,

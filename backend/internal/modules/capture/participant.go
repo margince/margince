@@ -372,12 +372,21 @@ func StampFurtherParticipants(
 	// carrying both would file under whoever holds the ADDRESS while the row
 	// kept somebody else's account — one row naming two contacts, and an erasure
 	// keyed on either of them reaching a record about the other.
+	args := []any{activityID, addresses, roles, partyListIsAttested, names, accounts, channelProvider}
+	seatMatch, err := calendarSeatMatch(ctx, tx, kind, partyListIsAttested, &args)
+	if err != nil {
+		return err
+	}
+	return stampResolvedParticipants(ctx, tx, seatMatch, args)
+}
+
+func stampResolvedParticipants(ctx context.Context, tx pgx.Tx, seatMatch string, args []any) error {
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO activity_participant (activity_id, user_id, contact_id, address, channel_user_id, role, display_name)
 		SELECT $1, u.id, pe.contact_id, NULLIF(inp.address, ''), NULLIF(inp.account, ''), inp.role, inp.display_name
 		  FROM unnest($2::text[], $3::text[], $5::text[], $6::text[]) AS inp(address, role, display_name, account)
 		  LEFT JOIN app_user u
-		         ON $4 AND inp.address <> '' AND lower(u.email) = inp.address
+		         ON $4 AND inp.address <> '' AND (`+seatMatch+`)
 		  LEFT JOIN LATERAL (
 		       SELECT coalesce(
 		           (SELECT c.contact_id
@@ -392,7 +401,7 @@ func StampFurtherParticipants(
 		             ORDER BY p.contact_id
 		             LIMIT 1)) AS contact_id) pe ON u.id IS NULL
 		ON CONFLICT DO NOTHING`,
-		activityID, addresses, roles, partyListIsAttested, names, accounts, channelProvider); err != nil {
+		args...); err != nil {
 		return fmt.Errorf("capture: stamping the further participants of an interaction: %w", err)
 	}
 	return nil
@@ -463,25 +472,4 @@ func actorUserID(ctx context.Context) ids.UUID {
 // meeting attests nothing by saying so.
 func ParticipantListAttested(rec connector.NormalizedRecord) bool {
 	return rec.Counterparty.SentByOwner() || rec.ParticipantsAreProviderAttested()
-}
-
-// meetingHostUserID is the seat whose calendar this meeting was captured from,
-// for the activity.host_user_id column — nil for every other kind, and for a
-// principal carrying no user.
-//
-// It records WHOSE CALENDAR the row came from, not a claim that they organized
-// the invitation: an attendee's own connector captures an event somebody else
-// called, and this names that attendee. The brief lanes read it to say whose
-// meeting a row is. It is not an authorization input — no read is granted from
-// it alone, because a label saying "this came off your calendar" is ownership,
-// not membership.
-func meetingHostUserID(ctx context.Context, kind string) *ids.UUID {
-	if kind != meetingKind {
-		return nil
-	}
-	user := actorUserID(ctx)
-	if user.IsZero() {
-		return nil
-	}
-	return &user
 }

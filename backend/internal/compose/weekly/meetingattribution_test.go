@@ -18,7 +18,6 @@ import (
 	"testing"
 )
 
-// Held by: this test, named in meetingIsTheirsSQL's own doc comment.
 func TestTheMeetingAttributionHasOneSpelling(t *testing.T) {
 	t.Parallel()
 	// The shape a second, hand-written spelling takes: the host column tested
@@ -40,10 +39,6 @@ func TestTheMeetingAttributionHasOneSpelling(t *testing.T) {
 			t.Fatalf("reading %s: %v", name, err)
 		}
 		scanned++
-		if name == "weeklycounts.go" {
-			// The one permitted spelling, in the helper itself.
-			continue
-		}
 		if hit := handWritten.FindString(string(body)); hit != "" {
 			t.Errorf("%s writes the meeting attribution by hand (%q) — call "+
 				"meetingIsTheirsSQL so both panels credit one meeting to one contact",

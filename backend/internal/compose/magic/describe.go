@@ -85,6 +85,16 @@ func describe(e entry) (description, bool) {
 		}, true
 	}
 	evidence := objectOf(e.Evidence)
+	if technical, ok := evidence["technical"].(map[string]any); ok {
+		count, counted := technical["changes"].(float64)
+		if !counted || count <= 0 {
+			return description{}, false
+		}
+		return description{
+			summary: crmcontracts.MagicSentence{Key: "magic.action.company_profile_read"},
+			reason:  &crmcontracts.MagicSentence{Key: "magic.why.public_records"},
+		}, true
+	}
 	if facts, ok := evidence["facts"].([]any); ok && len(facts) > 0 && len(changedFields(objectOf(e.Before), after)) == 0 {
 		return description{
 			summary: crmcontracts.MagicSentence{Key: "magic.action.company_profile_read"},

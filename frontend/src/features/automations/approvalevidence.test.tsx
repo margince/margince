@@ -6,6 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { DecisionApproval } from "../../design-system/decisioncard";
 import { formatDateTime } from "../../format/format";
+import { viewerZone } from "../../format/timezone";
 import { LocaleProvider, translate } from "../../i18n";
 import { RecordZoneProvider } from "../../lib/recordzone";
 import { messageApproval } from "../../testing/message-approval";
@@ -112,7 +113,7 @@ it.each(["unavailable", "stale", "incomplete"])(
 it("names and dates the source before opening the existing activity reader", async () => {
   show();
   expect(await screen.findByText(/Review meeting/)).toHaveTextContent(
-    formatDateTime(WHEN, "en", RECORD_ZONE),
+    formatDateTime(WHEN, "en", viewerZone()),
   );
   const user = userEvent.setup();
   await user.click(
@@ -183,8 +184,8 @@ it.each([403, 404])(
 it("renders a date without a trailing separator when the source has no subject", async () => {
   show(proposal, { ...source, subject: "" });
   expect(
-    await screen.findByText(formatDateTime(WHEN, "en", RECORD_ZONE)),
-  ).toHaveTextContent(formatDateTime(WHEN, "en", RECORD_ZONE));
+    await screen.findByText(formatDateTime(WHEN, "en", viewerZone())),
+  ).toHaveTextContent(formatDateTime(WHEN, "en", viewerZone()));
   expect(screen.queryByText(/ · $/)).not.toBeInTheDocument();
 });
 

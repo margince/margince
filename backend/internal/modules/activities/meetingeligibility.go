@@ -5,6 +5,8 @@ package activities
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 )
@@ -12,11 +14,13 @@ import (
 // CustomerMeetingSQL shares the customer-link rule between capture and reporting.
 // The activity alias must be a compile-time identifier.
 func CustomerMeetingSQL(activityAlias string) string {
-	return "EXISTS(SELECT 1 FROM activity_link al WHERE al.activity_id=" + activityAlias + ".id AND " + customerLinkSQL + ")"
+	arms := customerEvidenceArms(liveRecord(openDealPredicate, "d"), liveRecord(workingLeadPredicate, "ld"))
+	clauses := make([]string, 0, len(arms))
+	for _, arm := range arms {
+		clauses = append(clauses, fmt.Sprintf(arm.sql, scopeUnbounded))
+	}
+	return "EXISTS(SELECT 1 FROM activity_link sales WHERE sales.activity_id=" + activityAlias + ".id AND (" + strings.Join(clauses, " OR ") + "))"
 }
-
-// customerLinkSQL is what makes a link under alias al a customer link.
-const customerLinkSQL = "(al.contact_id IS NOT NULL OR al.lead_id IS NOT NULL OR al.company_id IS NOT NULL)"
 
 // appendCustomerMeetingClause narrows a list to customer meetings, counting
 // only a customer link whose record this reader may see. A link to a record
@@ -26,13 +30,17 @@ func appendCustomerMeetingClause(ctx context.Context, in ListActivitiesInput, ar
 	if !in.CustomerMeetingsOnly {
 		return where, nil
 	}
-	visible, err := auth.LinkTargetVisibleClause(ctx, "al", arg)
+	customer, err := customerArms(ctx, liveRecord(openDealPredicate, "d"), liveRecord(workingLeadPredicate, "ld"), arg)
+	if err != nil {
+		return nil, err
+	}
+	visible, err := auth.LinkTargetVisibleClause(ctx, "sales", arg)
 	if err != nil {
 		return nil, err
 	}
 	if visible == "" {
 		visible = scopeUnbounded
 	}
-	return append(where, `a.kind = 'meeting' AND EXISTS (SELECT 1 FROM activity_link al WHERE al.activity_id = a.id
-	   AND `+customerLinkSQL+` AND (`+visible+`))`), nil
+	return append(where, `a.kind = 'meeting' AND EXISTS (SELECT 1 FROM activity_link sales WHERE sales.activity_id = a.id
+	   AND `+customer+` AND (`+visible+`))`), nil
 }

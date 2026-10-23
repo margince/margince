@@ -129,6 +129,7 @@ func (requestSettleCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pr
 				Subject: m.Subject, Body: m.Body, OffThread: m.OffThread,
 			}
 		}
+		messages[0].ID = requestID
 		batch[i] = settleCandidate{
 			Request:  activities.RepliedRequest{RequestID: requestID, NewestAnswerID: ids.NewV7()},
 			Messages: messages,

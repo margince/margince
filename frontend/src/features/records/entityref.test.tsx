@@ -102,6 +102,7 @@ describe("EntityRef", () => {
     // middle-click follow, and none of those goes through an onClick.
     const link = await screen.findByRole("link", { name: "Brandt GmbH" });
     expect(link.getAttribute("href")).toBe("#/companies/o-1");
+    expect(link.getAttribute("title")).toBeNull();
     await userEvent.click(link);
     expect(window.location.hash).toBe("#/companies/o-1");
   });

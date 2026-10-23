@@ -6,7 +6,7 @@
 package gates
 
 // The worklist reports a source as possibly having more work behind it when its
-// lane came back at its bound. Two of those bounds live behind a seam
+// lane came back at its bound. The quiet-deal bound lives behind a seam
 // the attention package cannot import, so it keeps its own copy — and a copy
 // nobody checks is a wrong number waiting.
 //
@@ -36,19 +36,6 @@ func TestTheWorklistsCopyOfALaneBoundMatchesTheLaneItself(t *testing.T) {
 			ownerFile: "internal/compose/slipping.go",
 			ownerDecl: `slippingScanLimit\s*=\s*(\d+)`,
 			copyDecl:  `quietDealBound\s*=\s*(\d+)`,
-		},
-		{
-			// The cap the lane HANDS OVER, not the candidate set it reads.
-			//
-			// This lane ranks and cuts: it scans a wider set so the ordering has
-			// something to choose from, then returns the few worth writing. Bound
-			// to the scan depth, a page holding every row it was given still
-			// reported itself complete — the truncation flag answers "was
-			// anything dropped", and what the reader lost was dropped at the cut.
-			name:      "relationship decay",
-			ownerFile: "internal/compose/attentionlanesseam.go",
-			ownerDecl: `decayLaneCap\s*=\s*(\d+)`,
-			copyDecl:  `decayBound\s*=\s*(\d+)`,
 		},
 	}
 	// The file the queue keeps its copies in. Named rather than searched

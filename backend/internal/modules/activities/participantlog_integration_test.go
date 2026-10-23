@@ -93,7 +93,7 @@ func TestAHandLoggedMeetingStampsTheCallerAsOurSide(t *testing.T) {
 	}
 }
 
-func TestAnImportedMeetingStampsItsAuthorSeatNotTheImporter(t *testing.T) {
+func TestAnImportedMeetingDoesNotStampItsRecorderAsAttending(t *testing.T) {
 	e := setupSend(t)
 	contact := e.seedContact(t, "Counterparty")
 	author := e.other
@@ -103,8 +103,8 @@ func TestAnImportedMeetingStampsItsAuthorSeatNotTheImporter(t *testing.T) {
 	if _, stamped := users[e.rep]; stamped {
 		t.Errorf("the importing caller is a participant: %v", users)
 	}
-	if len(users) != 1 || users[author] != "from" {
-		t.Errorf("user participants = %v, want only the author seat as from", users)
+	if len(users) != 0 {
+		t.Errorf("user participants = %v, want no attendance inferred from authorship", users)
 	}
 
 	// Inbound keeps the direction rule: our side receives.

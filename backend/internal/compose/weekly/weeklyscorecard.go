@@ -220,12 +220,6 @@ func scoreLeads(
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	startPos, endPos, userPos := arg(start), arg(end), arg(userID)
-	// The RECORDER, used only where a meeting names no host — the same
-	// fallback countWeekMeetings applies. captured_by is a principal STRING
-	// rather than a user id, which is why this is not simply userID: comparing
-	// the text column to a uuid is a type error, and comparing it to the bare
-	// uuid text would never match.
-	capturedPos := arg("human:" + userID.String())
 	scope, err := auth.ScopeClauseFor(ctx, "lead", "l", arg)
 	if err != nil {
 		return nil, err
@@ -269,12 +263,12 @@ func scoreLeads(
 		    FROM activity_meeting_history h
 		    JOIN activity m ON m.id = h.activity_id
 		   WHERE m.kind = 'meeting'
-		     AND `+meetingIsTheirsSQL("$%[3]d", "$%[6]d")+`
+		     AND `+meetingIsTheirsSQL("$%[3]d")+`
 		     AND m.archived_at IS NULL
 		     AND h.effective_at >= $%[1]d AND h.effective_at < $%[2]d
-		     AND (%[7]s))
+		     AND (%[6]s))
 		SELECT
-		  (SELECT count(*) FROM moved WHERE %[8]s),
+		  (SELECT count(*) FROM moved WHERE %[7]s),
 		  (SELECT count(*) FROM moved WHERE to_status = 'disqualified'),
 		  (SELECT count(*) FROM moved WHERE to_status = 'promoted'),
 		  (SELECT count(*) FROM lead l JOIN mine ON mine.id = l.id
@@ -289,7 +283,7 @@ func scoreLeads(
 		  (SELECT count(*) FROM met WHERE status = 'held' AND NOT partial_pre_history),
 		  (SELECT count(*) FROM met WHERE status = 'no_show' AND NOT partial_pre_history),
 		  (SELECT count(*) FROM met WHERE partial_pre_history)`,
-		startPos, endPos, userPos, scope, mine, capturedPos, meetingScope,
+		startPos, endPos, userPos, scope, mine, meetingScope,
 		climbedTheLadderSQL()), args...).
 		Scan(&block.Advanced, &block.Disqualified, &block.Promoted,
 			&block.AnsweredInTarget, &block.Breached,

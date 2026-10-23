@@ -47,15 +47,7 @@ import (
 // than what was read and a short answer is what truncation looks like. The lane
 // reports its own scan depth instead, which is the shape any source that
 // filters after it scans needs.
-const (
-	quietDealBound = 50
-	// The reconnect lane hands over five, ranked out of a wider candidate set.
-	// Bounded at what the LANE returns rather than at what it scanned: read
-	// against the scan depth, a page holding every row it was given still
-	// reported itself complete, and the sixth relationship was gone with no
-	// count saying so.
-	decayBound = 5
-)
+const quietDealBound = 50
 
 func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSource]bool {
 	bounded := map[crmcontracts.WorklistItemSource]bool{}
@@ -69,16 +61,11 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 		}
 		bounded[source] = len(*lane) >= bound
 	}
-	atCap("domain_question", day.DomainQuestions, DomainQuestionLimit)
 	// The health and receipt lanes share one bound.
 	atCap("failed_approval", day.DidNotRun, doneCap)
 	atCap("dsr", day.Dsr, doneCap)
 	atCap(sourceNoticeCase, day.NoticeCases, doneCap)
 	atCap("ai_work_health", day.AiWorkHealth, doneCap)
-	atCap("notice", day.Notices, doneCap)
-	if day.Notices != nil && day.NoticesMoreAvailable != nil {
-		bounded["notice"] = bounded["notice"] || *day.NoticesMoreAvailable
-	}
 	atCap("automation_run", day.AutomationHealth, doneCap)
 	atCap("bounce", day.Bounces, doneCap)
 	atCap("introduction_request", day.Introductions, doneCap)
@@ -99,7 +86,6 @@ func boundedSources(day crmcontracts.Attention) map[crmcontracts.WorklistItemSou
 	if day.AtRisk != nil && day.AtRiskMoreAvailable != nil {
 		bounded[sourceAtRisk] = bounded[sourceAtRisk] || *day.AtRiskMoreAvailable
 	}
-	atCap("relationship_decay", day.RelationshipDecay, decayBound)
 	atCap("conversation_claim", day.Commitments, doneCap)
 	// The decision lane is read deeper than the rest, because a batch row
 	// counts a pile and a count taken from a page of ten would report ten over
@@ -167,6 +153,9 @@ func unavailable(ctx context.Context, day crmcontracts.Attention) []crmcontracts
 	// between lanes of one page.
 	privacyByRole := !auth.Allows(ctx, "privacy_request", principal.ActionRead)
 	for _, lane := range *day.LanesOmitted {
+		if lane == crmcontracts.AttentionLanesOmittedNotices || lane == crmcontracts.AttentionLanesOmittedDomainQuestions || string(lane) == string(sourceDecay) {
+			continue
+		}
 		// A privacy lane withheld from a reader holding no privacy_request
 		// grant is that permanent role fact. Naming it would put "part of your
 		// day is hidden" on every rep's page forever, which drowns the warning

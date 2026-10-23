@@ -497,6 +497,9 @@ type Activity struct {
 	// Links One activity may link to >1 entity (contact + deal).
 	Links *[]ActivityLink `json:"links,omitempty"`
 
+	// MeetingParticipants Readable external participants on a meeting detail read. Omitted when the activity content is withheld and on list reads. Filing links alone do not imply attendance.
+	MeetingParticipants *[]MeetingParticipant `json:"meeting_participants,omitempty"`
+
 	// MeetingStatus Set only when kind=meeting.
 	MeetingStatus *ActivityMeetingStatus  `json:"meeting_status,omitempty"`
 	OccurredAt    time.Time               `json:"occurred_at"`
@@ -840,6 +843,12 @@ type EmailSummaryDirection string
 // the question cannot be answered honestly — an unanswerable move is not a claim.
 type EmailSummaryMove string
 
+// MeetingParticipant A readable contact with recorded evidence of taking part in this meeting.
+type MeetingParticipant struct {
+	ContactId string `json:"contact_id"`
+	FullName  string `json:"full_name"`
+}
+
 // ProviderRef A reference to a messaging transport registered in THIS installation
 // (ADR-0107). Deliberately a pattern-constrained string rather than an enum:
 // which providers exist is a deployment fact — what this binary composed, including
@@ -1119,6 +1128,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'links': %w", err)
 		}
 		delete(object, "links")
+	}
+
+	if raw, found := object["meeting_participants"]; found {
+		err = json.Unmarshal(raw, &a.MeetingParticipants)
+		if err != nil {
+			return fmt.Errorf("error reading 'meeting_participants': %w", err)
+		}
+		delete(object, "meeting_participants")
 	}
 
 	if raw, found := object["meeting_status"]; found {
@@ -1414,6 +1431,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["links"], err = json.Marshal(a.Links)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'links': %w", err)
+		}
+	}
+
+	if a.MeetingParticipants != nil {
+		object["meeting_participants"], err = json.Marshal(a.MeetingParticipants)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'meeting_participants': %w", err)
 		}
 	}
 

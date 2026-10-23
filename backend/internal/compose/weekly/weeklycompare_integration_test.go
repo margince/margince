@@ -19,14 +19,10 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// capturedBy is the principal string an activity or lead records its writer as.
-//
-// A meeting has no owner column — activity_task_fields reserves assignee_id for
-// tasks — so this IS how a meeting is attributed to the rep who held it, and
-// the counts read it the same way.
 func capturedBy(user ids.UUID) string { return "human:" + user.String() }
 
 // lastWeek is an instant inside the week weekClock's review covers.
@@ -84,15 +80,13 @@ func TestAnUnroutedLeadStillCountsInTheWeekItArrived(t *testing.T) {
 // when they met one.
 func TestOnlyMeetingsThatWereHeldCountTowardTheWeek(t *testing.T) {
 	e := setupWeekly(t)
-	owner := integration.OwnerConn(t)
-	ctx := context.Background()
 	inWeek := lastWeek(t, weekClock)
 
 	for _, status := range []string{"held", "booked", "no_show", "canceled"} {
-		if _, err := owner.Exec(ctx, `
-			INSERT INTO activity (id, kind, subject, occurred_at, meeting_status, source, captured_by)
-			VALUES ($1, 'meeting', $2, $3, $4, 'manual', $5)`,
-			ids.NewV7(), "A meeting ("+status+")", inWeek, status, capturedBy(e.Rep1)); err != nil {
+		if _, _, err := e.Activities.LogActivity(e.repCtx, activities.LogActivityInput{
+			Kind: "meeting", Subject: new("A meeting (" + status + ")"), OccurredAt: &inWeek,
+			MeetingStatus: &status, Source: "manual", HostUserID: new(ids.From[ids.UserKind](e.Rep1)),
+		}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -170,13 +164,14 @@ func TestTheNewCountsAreFrozenAgainstLaterEdits(t *testing.T) {
 	ctx := context.Background()
 	inWeek := lastWeek(t, weekClock)
 
-	meeting := ids.NewV7()
-	if _, err := owner.Exec(ctx, `
-		INSERT INTO activity (id, kind, subject, occurred_at, meeting_status, source, captured_by)
-		VALUES ($1, 'meeting', 'The meeting', $2, 'held', 'manual', $3)`,
-		meeting, inWeek, capturedBy(e.Rep1)); err != nil {
+	recorded, _, err := e.Activities.LogActivity(e.repCtx, activities.LogActivityInput{
+		Kind: "meeting", Subject: new("The meeting"), OccurredAt: &inWeek,
+		MeetingStatus: new("held"), Source: "manual", HostUserID: new(ids.From[ids.UserKind](e.Rep1)),
+	})
+	if err != nil {
 		t.Fatal(err)
 	}
+	meeting := recorded.Id
 	lead := ids.NewV7()
 	if _, err := owner.Exec(ctx, `
 		INSERT INTO lead (id, full_name, status, source, captured_by, owner_id, created_at, routed_at)

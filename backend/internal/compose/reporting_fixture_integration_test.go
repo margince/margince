@@ -122,6 +122,7 @@ func (f *reportingBusinessFixture) outcomes(t *testing.T) {
 		t.Fatal(err)
 	}
 	contactID := ids.UUID(contact.Id)
+	makeMeetingCustomerWithStore(f.human, t, store, contactID, f.env.Rep1)
 	meetings := activities.NewStore(InstallationDB(f.env.Pool)).WithClock(func() time.Time { return f.at })
 	for i := range 12 {
 		f.at = time.Date(2026, 9, 5+i, 15, 0, 0, 0, time.UTC)

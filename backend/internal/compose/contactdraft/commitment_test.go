@@ -401,22 +401,10 @@ func TestAPastMeetingIsNotTheNextOne(t *testing.T) {
 
 var recipientID = openapi_types.UUID(ids.NewV7())
 
-// helper has to land in exactly that anonymous struct to be assignable to it.
-//
-//nolint:staticcheck // ST1003: ContactId is the generated contract's spelling, and this
-func participants(ids ...openapi_types.UUID) *[]struct {
-	ContactId openapi_types.UUID `json:"contact_id"`
-	FullName  string             `json:"full_name"`
-} {
-	out := make([]struct {
-		ContactId openapi_types.UUID `json:"contact_id"`
-		FullName  string             `json:"full_name"`
-	}, 0, len(ids))
+func participants(ids ...openapi_types.UUID) *[]crmcontracts.MeetingParticipant {
+	out := make([]crmcontracts.MeetingParticipant, 0, len(ids))
 	for _, id := range ids {
-		out = append(out, struct {
-			ContactId openapi_types.UUID `json:"contact_id"`
-			FullName  string             `json:"full_name"`
-		}{ContactId: id, FullName: "Somebody"})
+		out = append(out, crmcontracts.MeetingParticipant{ContactId: id, FullName: "Somebody"})
 	}
 	return &out
 }

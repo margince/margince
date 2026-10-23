@@ -104,6 +104,9 @@ func colleagueTx(ctx context.Context, tx pgx.Tx, address string) (ids.UUID, erro
 func stampMessageEnds(
 	ctx context.Context, tx pgx.Tx, id ids.ActivityID, seat ids.UUID, fields ActivityFields, counterparty connector.Counterparty,
 ) error {
+	if fields.Kind == meetingKind {
+		return nil
+	}
 	if err := stampOwnMailRecipient(ctx, tx, id, fields); err != nil {
 		return err
 	}

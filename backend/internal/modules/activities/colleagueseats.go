@@ -25,8 +25,9 @@ import (
 func ColleagueSeats(ctx context.Context, tx pgx.Tx, activityID ids.UUID) ([]ids.UUID, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT DISTINCT ap.user_id
-		  FROM activity_participant ap
-		 WHERE ap.activity_id = $1 AND ap.user_id IS NOT NULL AND ap.role <> $2
+		  FROM activity_participant ap JOIN activity a ON a.id=ap.activity_id
+		 WHERE a.restricted_at IS NULL AND ap.activity_id = $1 AND ap.user_id IS NOT NULL AND ap.role <> $2
+ AND (a.kind <> 'meeting' OR NOT `+importedMeetingSQL+` OR ap.role IN ('organizer','attendee'))
 		 ORDER BY ap.user_id`, activityID, connector.ParticipantRoleBCC)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading the colleagues on an activity: %w", err)

@@ -3,7 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { ComponentProps } from "react";
-import { userEvent, within } from "storybook/test";
+import { screen, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { en } from "../../i18n/en";
 import {
@@ -43,7 +43,15 @@ const RECORDS: MagicLineRecords = {
         id: "00000000-0000-7000-8000-0000000000c1",
         label: "GEM",
       },
-      changes: [{ field: "industry", after: "Software" }],
+      changes: [
+        { field: "industry", after: "Software" },
+        {
+          field: "offer_summary",
+          before: "Inventory planning",
+          after:
+            "Inventory planning and warehouse scheduling. Teams compare supplier lead times, reserve stock, and review shortages across locations. The delivery review includes a documented exception queue and ownership for every open shortage.",
+        },
+      ],
       undo: {
         undoable: true,
         audit_id: "00000000-0000-7000-8000-0000000000a1",
@@ -100,5 +108,48 @@ export const Opened: Story = {
     const dialog = within(await body.findByRole("dialog"));
     await dialog.findByRole("heading", { name: en["magic.records.title"] });
     await dialog.findByText("Kandu GmbH");
+  },
+};
+
+export const ArchivedMeeting: Story = {
+  render: (args) => {
+    installFetchStub({
+      [`GET /magic/lines/${LINE.id}/records`]: () =>
+        jsonResponse({
+          data: [
+            {
+              audit_id: "00000000-0000-7000-8000-0000000000a3",
+              occurred_at: "2026-09-13T07:30:00Z",
+              entity: {
+                type: "activity",
+                id: "00000000-0000-7000-8000-0000000000b1",
+                label: "Planning review",
+              },
+              changes: [
+                { field: "archived_at", after: "2026-09-13T07:30:00Z" },
+              ],
+              undo: {
+                undoable: true,
+                audit_id: "00000000-0000-7000-8000-0000000000a3",
+                version: 4,
+              },
+            },
+          ],
+          page: { has_more: false, total: 1 },
+        }),
+    });
+    return (
+      <StoryProviders>
+        <LineRecordsOpener {...args} summary="Planning review" />
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Planning review" }),
+    );
+    const dialog = within(await screen.findByRole("dialog"));
+    await dialog.findByRole("button", { name: "Planning review" });
+    await dialog.findByRole("button", { name: "Undo" });
   },
 };

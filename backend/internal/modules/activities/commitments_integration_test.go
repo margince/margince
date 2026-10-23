@@ -117,7 +117,7 @@ func (e *promiseEnv) as() context.Context {
 			Objects: map[string]principal.ObjectGrant{
 				"activity": {Read: true}, "contact": {Read: true},
 				"deal": {Read: true}, "project": {Read: true},
-				"company": {Read: true},
+				"company": {Read: true}, "relationship": {Read: true},
 			},
 			RowScope: principal.RowScopeOwn,
 		},

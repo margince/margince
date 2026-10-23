@@ -162,7 +162,7 @@ func TestAJudgedThreadReturnsOnlyWhenSomebodyWritesAgain(t *testing.T) {
 		t.Fatal("the answered request was not offered at all")
 	}
 	if err := store.SettleRequest(asClassifier(e), RequestSettlementInput{
-		Request: candidate, Verdict: RequestStillOwed, Remaining: "Send the quote",
+		Request: candidate, Verdict: RequestStillOwed, Remaining: "Please send the report.",
 		Confidence: 0.9, DecidedBy: "test-model",
 	}); err != nil {
 		t.Fatal(err)
@@ -212,9 +212,8 @@ func TestSettledCompletesTheReminderAndClearsTheRequest(t *testing.T) {
 	}
 }
 
-// still_owed sharpens a MACHINE-filed, undated reminder, so the task says what
-// is actually owed rather than the mail's subject line.
-func TestStillOwedRetitlesTheMachinesOwnUndatedReminder(t *testing.T) {
+// A quote proves the ask; it does not replace the task title or invent a deadline.
+func TestStillOwedKeepsTheOriginalTaskTitleAndDate(t *testing.T) {
 	e := setupLoad(t)
 	store := storeKnowing(e)
 	request := seedEmailRequest(t, e, "Preis für die zweite Charge", "commitment", OwedVerdictAsksUs)
@@ -223,27 +222,23 @@ func TestStillOwedRetitlesTheMachinesOwnUndatedReminder(t *testing.T) {
 
 	asOf := requestInstant.Add(48 * time.Hour)
 	candidate := repliedIDs(t, e, asOf)[request]
-	if !candidate.TaskMachineMinted {
-		t.Fatal("the reminder the owed pass filed does not read as machine-minted, so nothing " +
-			"could ever be retitled")
-	}
 	due := requestInstant.Add(96 * time.Hour)
 	if err := store.SettleRequest(asClassifier(e), RequestSettlementInput{
-		Request: candidate, Verdict: RequestStillOwed, Remaining: "Send the quote",
+		Request: candidate, Verdict: RequestStillOwed, Remaining: "Please send the report.",
 		DueAt: &due, Confidence: 0.9, DecidedBy: "test-model",
 	}); err != nil {
 		t.Fatal(err)
 	}
 
 	_, subject, done, dueAt := taskFor(t, e, request)
-	if subject != "Send the quote" {
+	if subject != "Preis für die zweite Charge" {
 		t.Errorf("the reminder is titled %q, want the thing actually owed", subject)
 	}
 	if done {
 		t.Error("still_owed completed the reminder")
 	}
-	if dueAt == nil || !dueAt.Equal(due) {
-		t.Errorf("due_at = %v, want the date our own words named", dueAt)
+	if dueAt != nil {
+		t.Errorf("settlement changed an undated task: %v", dueAt)
 	}
 }
 
@@ -258,7 +253,6 @@ func TestStillOwedLeavesAHumansOwnDeadlineAlone(t *testing.T) {
 	mintReminder(t, e, requestInstant.Add(2*time.Hour))
 
 	asOf := requestInstant.Add(48 * time.Hour)
-	candidate := repliedIDs(t, e, asOf)[request]
 	task, _, _, _ := taskFor(t, e, request)
 
 	// A human puts a date on it, which is the act that makes it theirs.
@@ -272,12 +266,9 @@ func TestStillOwedLeavesAHumansOwnDeadlineAlone(t *testing.T) {
 
 	// Re-read: the human's edit moved the version, and the candidate the pass
 	// judges has to be the one it read.
-	candidate = repliedIDs(t, e, asOf)[request]
-	if candidate.TaskMachineMinted {
-		t.Fatal("a reminder somebody dated still reads as the machine's to retitle")
-	}
+	candidate := repliedIDs(t, e, asOf)[request]
 	if err := store.SettleRequest(asClassifier(e), RequestSettlementInput{
-		Request: candidate, Verdict: RequestStillOwed, Remaining: "Send the quote",
+		Request: candidate, Verdict: RequestStillOwed, Remaining: "Please send the report.",
 		Confidence: 0.9, DecidedBy: "test-model",
 	}); err != nil {
 		t.Fatal(err)

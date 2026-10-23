@@ -10,10 +10,6 @@ import (
 
 func days(n int) time.Duration { return time.Duration(n) * 24 * time.Hour }
 
-// The whole point of deriving: an agency and an enterprise seller stop getting
-// the same number. One compiled ninety judged both, and it was wrong in
-// opposite directions — a queue full of forgotten conversations for one, a
-// queue dropping live business for the other.
 func TestTheHorizonFollowsWhatTheInstallationActuallyDoes(t *testing.T) {
 	fast := derivedWaitingHorizonDays(waitingHorizonSpread{Slow: days(2), Answered: 500})
 	slow := derivedWaitingHorizonDays(waitingHorizonSpread{Slow: days(40), Answered: 500})
@@ -22,9 +18,8 @@ func TestTheHorizonFollowsWhatTheInstallationActuallyDoes(t *testing.T) {
 		t.Errorf("an installation whose slow answers take two days derives %d days, which is no shorter "+
 			"than the compiled %d — the agency case is unserved", fast, waitingHorizonDays)
 	}
-	if slow <= waitingHorizonDays {
-		t.Errorf("an installation whose slow answers take forty days derives %d days, which is no longer "+
-			"than the compiled %d — the enterprise case is unserved", slow, waitingHorizonDays)
+	if slow != waitingHorizonCeilingDays {
+		t.Errorf("slow response history derived %d days, want the current-work ceiling %d", slow, waitingHorizonCeilingDays)
 	}
 	if fast >= slow {
 		t.Errorf("the faster installation derived %d and the slower %d — the horizon does not follow the "+
@@ -80,8 +75,14 @@ func TestAnUnmeasuredHorizonIsTheCompiledOneAndNotNoDaysAtAll(t *testing.T) {
 		}
 	}
 	// And a measured one is passed through, or the guard would pin every
-	// installation back to ninety and the derivation would reach nothing.
+	// installation back to the default and the derivation would reach nothing.
 	if got := horizonOrDefault(21); got != 21 {
 		t.Errorf("horizonOrDefault(21) = %d, want 21 — the guard is swallowing the measurement", got)
+	}
+}
+
+func TestAnExplicitHorizonCannotBypassTheCurrentWorkLimit(t *testing.T) {
+	if got := horizonOrDefault(365); got != 30 {
+		t.Fatalf("explicit horizon=%d, want30", got)
 	}
 }

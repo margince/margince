@@ -75,8 +75,8 @@ func TestProducedWorklistSourcesKeepTheirContext(t *testing.T) {
 		if _, known := contextSurfaceBySource[source]; !known {
 			t.Errorf("contract source %s is missing", source)
 		}
-		// Bare leads remain in the public contract for saved snapshots; no producer emits them.
-		if source != sourceLeadResponse && !reached[source] {
+		// Saved snapshots retain sources which no longer admit fresh work.
+		if sourceAdmitsWork(source) && !reached[source] {
 			t.Errorf("no production renderer exercised for %s", source)
 		}
 	}

@@ -51,6 +51,14 @@ func stampLoggedParticipants(ctx context.Context, tx pgx.Tx, activityID ids.Acti
 	}
 	stamp := loggedStamp{direction: in.Direction, links: in.Links, envelope: suppliedEnvelope(in)}
 	ourSide := loggedOurSide(ctx, in)
+	if importedMeeting(in) {
+		ourSide = ids.Nil
+		if in.HostUserID != nil {
+			if err := insertLoggedParticipant(ctx, tx, activityID, "organizer", &in.HostUserID.UUID, nil); err != nil {
+				return err
+			}
+		}
+	}
 	if err := stampLoggedCounterparties(ctx, tx, activityID, stamp, ourSide); err != nil {
 		return err
 	}

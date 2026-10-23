@@ -70,8 +70,8 @@ func TestEveryProducerStatesAnOwner(t *testing.T) {
 	// passes on a day that produced three sources: a producer added later would
 	// be as unexamined as it was before anybody wrote this test.
 	for _, source := range ClassifiedSources() {
-		// The public enum retains the retired bare-lead source for older clients.
-		if source == sourceLeadResponse {
+		// Saved snapshots retain sources which no longer admit fresh work.
+		if !sourceAdmitsWork(source) {
 			continue
 		}
 		if !seen[source] {

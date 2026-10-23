@@ -26,7 +26,7 @@ func reportingActor(e *forecastEnv) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	grants := map[string]principal.ObjectGrant{}
-	for _, object := range []string{"report_definition", "report_edition", "report_schedule", "reporting_framework", "sales_target", "deal", "pipeline", "installation_settings", "forecast", "reporting_credit", "activity", "company", "contact", "team_oversight"} {
+	for _, object := range []string{"report_definition", "report_edition", "report_schedule", "reporting_framework", "sales_target", "deal", "pipeline", "installation_settings", "forecast", "reporting_credit", "activity", "company", "contact", "relationship", "team_oversight"} {
 		grants[object] = principal.ObjectGrant{Read: true, Create: true, Update: true, Delete: true}
 	}
 	return principal.WithActor(ctx, principal.Principal{Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1, SeatType: principal.SeatFull, TeamIDs: []ids.UUID{e.Team1}, Permissions: principal.Permissions{RowScope: principal.RowScopeAll, Objects: grants}})

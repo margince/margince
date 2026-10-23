@@ -13,9 +13,8 @@ import { useState } from "react";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
 import { useT } from "../../i18n";
-import { isEntityKind } from "../../lib/entity";
 import { problemMessageOf } from "../../lib/problem";
-import { useRecordRestore } from "../../lib/recordrestore";
+import { isRestoreKind, useRecordRestore } from "../../lib/recordrestore";
 import { invalidateHandledChange } from "../../lib/workkeys";
 import { magicUndoReasonKey } from "./magic.keys";
 
@@ -35,7 +34,7 @@ export function undoPress(
     !undo?.undoable ||
     !undo.audit_id ||
     undo.version === undefined ||
-    !isEntityKind(entityType)
+    !isRestoreKind(entityType)
   ) {
     return null;
   }

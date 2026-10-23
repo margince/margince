@@ -5,6 +5,7 @@ package compose
 
 import (
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -19,7 +20,6 @@ const (
 	fieldProject       = "project"
 	colKind            = "t.kind"
 	colMeetingStatus   = "t.meeting_status"
-	colHostUserID      = "t.host_user_id"
 	colDirection       = "t.direction"
 
 	// activityProjectIDExpr is the project an activity is filed under, read
@@ -37,6 +37,8 @@ const (
 		" JOIN project p ON p.id = al.project_id" +
 		" WHERE al.activity_id = t.id AND al.entity_type = 'project')"
 )
+
+var colHostUserID = storekit.MeetingHostProjection("t")
 
 // projectFilterScope is the read gate every report filtering by project_id
 // runs before the filter binds (reportthreshold.go requireFilterScopes): the

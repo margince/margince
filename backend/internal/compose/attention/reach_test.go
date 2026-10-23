@@ -22,16 +22,16 @@ import (
 // A bound is not a total. A lane read to its limit knows only that more may
 // exist, so it says so rather than reporting the number it happened to read.
 func TestABoundedSourceSaysMoreRatherThanATotal(t *testing.T) {
-	notices := []crmcontracts.AttentionItem{}
+	health := []crmcontracts.AttentionItem{}
 	for i := range doneCap {
-		notices = append(notices, item("n"+string(rune('a'+i)), "notice"))
+		health = append(health, item("n"+string(rune('a'+i)), "ai_work_health"))
 	}
-	day := crmcontracts.Attention{AsOf: rankInstant, Notices: &notices}
+	day := crmcontracts.Attention{AsOf: rankInstant, AiWorkHealth: &health}
 
 	got := (&Service{}).worklistFrom(t.Context(), day, "all", "", 50, waitingRead{}, worklistCursor{}, nil)
 
 	for _, reach := range got.Reach {
-		if reach.Source != "notice" {
+		if reach.Source != "ai_work_health" {
 			continue
 		}
 		if !reach.MoreAvailable {
@@ -48,13 +48,13 @@ func TestABoundedSourceSaysMoreRatherThanATotal(t *testing.T) {
 // A source under its bound is complete, and saying "more available" about it
 // would send a reader looking for work that does not exist.
 func TestASourceUnderItsBoundClaimsNoMore(t *testing.T) {
-	notices := []crmcontracts.AttentionItem{item("only", "notice")}
-	day := crmcontracts.Attention{AsOf: rankInstant, Notices: &notices}
+	health := []crmcontracts.AttentionItem{item("only", "ai_work_health")}
+	day := crmcontracts.Attention{AsOf: rankInstant, AiWorkHealth: &health}
 
 	got := (&Service{}).worklistFrom(t.Context(), day, "all", "", 50, waitingRead{}, worklistCursor{}, nil)
 
 	for _, reach := range got.Reach {
-		if reach.Source == "notice" && reach.MoreAvailable {
+		if reach.Source == "ai_work_health" && reach.MoreAvailable {
 			t.Fatal("a complete source claims more work exists")
 		}
 	}
@@ -93,9 +93,9 @@ func TestAFoldedGroupIsCountedAgainstTheSourcesItStandsFor(t *testing.T) {
 // Two reads of one unchanged day produce the same bytes. Map order is not an
 // order, and a client diffing the payload would see a change that is not one.
 func TestReachIsOrderedTheSameWayTwice(t *testing.T) {
-	notices := []crmcontracts.AttentionItem{item("n", "notice")}
+	health := []crmcontracts.AttentionItem{item("n", "ai_work_health")}
 	bounces := []crmcontracts.AttentionItem{item("b", "bounce")}
-	day := crmcontracts.Attention{AsOf: rankInstant, Notices: &notices, Bounces: &bounces}
+	day := crmcontracts.Attention{AsOf: rankInstant, AiWorkHealth: &health, Bounces: &bounces}
 
 	first := (&Service{}).worklistFrom(t.Context(), day, "all", "", 50, waitingRead{}, worklistCursor{}, nil)
 	second := (&Service{}).worklistFrom(t.Context(), day, "all", "", 50, waitingRead{}, worklistCursor{}, nil)
@@ -150,7 +150,7 @@ func TestEveryBoundedLaneReportsItsTruncation(t *testing.T) {
 	}
 	planned := full(plannedCap, "task")
 	atRisk := full(quietDealBound, "deal_at_risk")
-	decay := full(decayBound, "relationship_decay")
+	decay := full(quietDealBound, "relationship_decay")
 	day := crmcontracts.Attention{
 		AsOf: rankInstant, Planned: planned, AtRisk: &atRisk, RelationshipDecay: &decay,
 	}
@@ -161,7 +161,10 @@ func TestEveryBoundedLaneReportsItsTruncation(t *testing.T) {
 	for _, reach := range got.Reach {
 		marked[reach.Source] = reach.MoreAvailable
 	}
-	for _, source := range []crmcontracts.WorklistReachSource{"task", "deal_at_risk", "relationship_decay"} {
+	if _, found := marked["relationship_decay"]; found {
+		t.Fatal("optional relationship information reported a personal work backlog")
+	}
+	for _, source := range []crmcontracts.WorklistReachSource{"task", "deal_at_risk"} {
 		if !marked[source] {
 			t.Errorf("%s filled its lane and still reports itself complete", source)
 		}
@@ -173,12 +176,12 @@ func TestEveryBoundedLaneReportsItsTruncation(t *testing.T) {
 // two apart from an absence.
 func TestASourceReadAndFoundEmptyStillAppears(t *testing.T) {
 	none := []crmcontracts.AttentionItem{}
-	day := crmcontracts.Attention{AsOf: rankInstant, Notices: &none}
+	day := crmcontracts.Attention{AsOf: rankInstant, AiWorkHealth: &none}
 
 	got := (&Service{}).worklistFrom(t.Context(), day, "all", "", 50, waitingRead{}, worklistCursor{}, nil)
 
 	for _, reach := range got.Reach {
-		if reach.Source == "notice" {
+		if reach.Source == "ai_work_health" {
 			if reach.Considered != 0 || reach.MoreAvailable {
 				t.Fatalf("an empty notice lane reports considered=%d more=%v", reach.Considered, reach.MoreAvailable)
 			}
@@ -194,8 +197,8 @@ func TestASourceReadAndFoundEmptyStillAppears(t *testing.T) {
 // take its truncation signal out of the payload with it.
 func TestNarrowingKeepsTheOtherSourcesInReach(t *testing.T) {
 	planned := []crmcontracts.AttentionItem{item("t1", "task")}
-	notices := []crmcontracts.AttentionItem{item("n1", "notice")}
-	day := crmcontracts.Attention{AsOf: rankInstant, Planned: planned, Notices: &notices}
+	health := []crmcontracts.AttentionItem{item("n1", "ai_work_health")}
+	day := crmcontracts.Attention{AsOf: rankInstant, Planned: planned, AiWorkHealth: &health}
 
 	got := (&Service{}).worklistFrom(t.Context(), day, "all", "system", 50, waitingRead{}, worklistCursor{}, nil)
 
@@ -218,11 +221,11 @@ func TestNarrowingKeepsTheOtherSourcesInReach(t *testing.T) {
 // shared record the reader may see PLUS their own personal queue, and a short
 // personal lane is otherwise indistinguishable from a quiet team.
 func TestReachSaysWhichSourcesDidNotWidenWithAll(t *testing.T) {
-	notices := []crmcontracts.AttentionItem{item("n1", "notice")}
+	health := []crmcontracts.AttentionItem{item("n1", "ai_work_health")}
 	day := crmcontracts.Attention{
-		AsOf:        rankInstant,
-		Notices:     &notices,
-		ThisMorning: []crmcontracts.AttentionItem{item("t1", "task")},
+		AsOf:         rankInstant,
+		AiWorkHealth: &health,
+		ThisMorning:  []crmcontracts.AttentionItem{item("t1", "task")},
 	}
 
 	got := (&Service{}).worklistFrom(t.Context(), day, "all", "", 50, waitingRead{}, worklistCursor{}, nil)
@@ -231,13 +234,13 @@ func TestReachSaysWhichSourcesDidNotWidenWithAll(t *testing.T) {
 	for _, reach := range got.Reach {
 		seen[reach.Source] = reach.Personal
 	}
-	notice, ok := seen["notice"]
+	notice, ok := seen["ai_work_health"]
 	if !ok {
 		t.Fatal("the notice source is absent from reach")
 	}
 	if notice == nil || !*notice {
-		t.Error("notices did not say they answer for the actor only — a reader asking for `all` is " +
-			"shown their own unread notices and told nothing that distinguishes them from the " +
+		t.Error("health did not say they answer for the actor only — a reader asking for `all` is " +
+			"shown their own unread health and told nothing that distinguishes them from the " +
 			"team's")
 	}
 	task, ok := seen["task"]

@@ -14,6 +14,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/mailsubject"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -266,6 +267,7 @@ func firstAnswerAtSQL(inbound, until string) string {
 // The newer-inbound walk names its kinds for the index, as answerArms does.
 func owedSQL(asOf, dismissedStillOwed, informsStillOwed, unjudgedResponseStillOwed string) string {
 	return `(NOT ` + ImportedHistorySQL + ` AND ` + requestOpenSQL + `
+ AND (` + storekit.CurrentRequestSettlementClause("a") + ` OR ` + heldRequestSQL() + `)
  AND (` + capturedReplyAdmissionSQL(unjudgedResponseStillOwed, informsStillOwed) + `)
 	 AND (` + dismissedStillOwed + ` OR ` + notDismissedSQL + `)
 	 AND (` + informsStillOwed + ` OR a.owed_verdict IS DISTINCT FROM '` + OwedVerdictInformsUs + `'

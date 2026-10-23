@@ -3,6 +3,7 @@
 
 import type { components } from "../api/schema";
 import { formatDateTime } from "../format/format";
+import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { useActivity } from "../lib/activityread";
 import { ProblemError, problemCode } from "../lib/problem";
@@ -28,10 +29,12 @@ type Activity = components["schemas"]["Activity"];
 export function SourceEvidence({
   activityId,
   onOpenTranscript,
+  onOpenEmail,
 }: Readonly<{
   activityId: string;
   /** Open the transcript reader, which the host owns along with its drawer. */
   onOpenTranscript: (id: string) => void;
+  onOpenEmail?: (id: string, subject: string) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -72,6 +75,11 @@ export function SourceEvidence({
     return (
       <SourceEmailPanel
         activityId={activityId}
+        onOpen={
+          onOpenEmail
+            ? (subject) => onOpenEmail(activityId, subject)
+            : undefined
+        }
         formatWhen={(iso) => formatDateTime(iso, locale, recordZone)}
       />
     );
@@ -80,7 +88,11 @@ export function SourceEvidence({
     <div>
       <p className="t-caption">
         {[
-          formatDateTime(source.occurred_at, locale, recordZone),
+          formatDateTime(
+            source.occurred_at,
+            locale,
+            source.kind === "meeting" ? viewerZone() : recordZone,
+          ),
           source.subject,
         ]
           .filter(Boolean)

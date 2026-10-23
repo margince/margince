@@ -112,6 +112,7 @@ func (s *Service) worklistIn(
 	// score — from one read of the brief lane. Both travel as values rather than
 	// on the service: feed.go's assembleDay states why a field there would carry
 	// one reader's night onto the next reader's page.
+	reader.decay, reader.domainQuestions, reader.notices = nil, nil, nil
 	day, beside, err := reader.assembleDay(ctx)
 	if err != nil {
 		return crmcontracts.Worklist{}, err
@@ -233,17 +234,6 @@ func (s *Service) worklistFrom(
 	// One unanswered message is one row: the deal it belongs to does not also
 	// appear as drifting.
 	rows = dropDealsAlreadyWaiting(rows)
-	// One CONTACT is one row. "Nobody has spoken to them in sixty days" and
-	// "they wrote last week and are waiting" are both true of the same contact
-	// and read as a contradiction side by side.
-	//
-	// Order does not matter among these three, and it is worth saying why
-	// rather than leaving the next reader to work it out: each drops rows of a
-	// source none of the others READS. This one decides on the waiting rows,
-	// and the pass above removes only `deal_at_risk` rows — so the set
-	// it judges against is the same wherever it sits. A fourth pass that
-	// removed waiting rows would break that, and would have to run last.
-	rows = dropDecayAlreadyWaiting(rows)
 	// Whose queue this is, applied to the rows the same way the lane applied it
 	// to the query. A row belonging to somebody else is not part of this
 	// contact's day, and leaving it in would make a manager's answer to "show me

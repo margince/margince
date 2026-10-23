@@ -147,6 +147,7 @@ func TestAnEmptyDayNamesTheNextCustomerMeetingWithOnlyVisibleAttendees(t *testin
 	e := integration.Setup(t)
 	now := todayAt(9 * time.Hour)
 	visible, hidden := horizonContacts(t, e)
+	makeMeetingCustomer(t, e, visible, e.Rep1)
 	bookOwnMeeting(t, e, "Team sync", now.Add(48*time.Hour), "")
 	bookOwnMeeting(t, e, "Called off", now.Add(60*time.Hour), "canceled", visible)
 	// Booked by the colleague who owns the private buyer, onto Rep1's calendar.

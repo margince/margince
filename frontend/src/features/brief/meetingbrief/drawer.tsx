@@ -15,10 +15,11 @@ import {
   ScopeLine,
 } from "../../../design-system/projectpicker";
 import { formatDate, formatDateTime } from "../../../format/format";
+import { viewerZone } from "../../../format/timezone";
 import { useLocale, useT } from "../../../i18n";
+import { searchActivityRoute } from "../../../lib/activityroute";
 import { ENTITY, isEntityKind } from "../../../lib/entity";
 import { problemMessageOf, unwrap } from "../../../lib/problem";
-import { useRecordZone } from "../../../lib/recordzone";
 import { navigate } from "../../../lib/router";
 import type { MeetingFacts, PreparedFor } from "./header";
 import { type BriefViewState, MeetingBriefView } from "./view";
@@ -65,10 +66,7 @@ export function ContactMeetingBrief({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  // The meeting's time is formatted here rather than by the page that opened
-  // the drawer: the locale and the record zone are this tier's to know, and a
-  // caller passing a pre-formatted string would be a second formatter.
-  const zone = useRecordZone();
+  const zone = viewerZone();
   // The project the reader chose to prepare for. It belongs to ONE meeting:
   // the same drawer is reused for the next meeting on the page, and a scope
   // chosen for a room about the ERP rollout must not narrow the brief for a
@@ -131,6 +129,19 @@ export function ContactMeetingBrief({
         onOpenEmail={onOpenEmail}
         titleId="contact-meeting-title"
         onClose={onClose}
+        onOpenOriginal={
+          activityId && brief.isSuccess
+            ? () => {
+                onClose();
+                navigate(
+                  searchActivityRoute(
+                    meeting?.subject || t("contact.meeting.title"),
+                    activityId,
+                  ),
+                );
+              }
+            : undefined
+        }
         formatWhen={(utcIso) => formatDateTime(utcIso, locale, zone)}
         formatDay={(utcIso) => formatDate(utcIso, locale, zone)}
         scopeSlot={

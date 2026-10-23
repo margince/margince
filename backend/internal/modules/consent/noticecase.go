@@ -249,8 +249,7 @@ func (s *Store) OpenNoticeCasesDueSoonest(ctx context.Context, in NoticeAgendaIn
 		if scope != "" {
 			where += " AND " + scope
 		}
-		// An explicit case assignment takes precedence over the contact's owner.
-		owner := "COALESCE(n.owner_user_id, c.owner_id)"
+		owner := "n.owner_user_id"
 		if in.OwnerID != nil {
 			if in.OwnerID.IsZero() {
 				where += " AND " + owner + " IS NULL"

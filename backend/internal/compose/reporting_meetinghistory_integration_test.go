@@ -24,6 +24,7 @@ func TestReportingMixedMeetingHistoryPreservesRecordedCredit(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	makeMeetingCustomerWithStore(human, t, contacts.NewStore(InstallationDB(e.Pool)).WithClock(clock), ids.UUID(customer.Id), e.Rep1)
 	store := activities.NewStore(InstallationDB(e.Pool)).WithClock(clock)
 	for _, tc := range []struct {
 		name                              string

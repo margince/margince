@@ -8,8 +8,7 @@ package activities
 // Who a logged meeting names as its host.
 //
 // A rep who logs a meeting with no host named held it. An admin who imports
-// another system's meetings did not: the host is the source author's seat, or
-// nobody, and the import must not land in the importer's own upcoming meetings.
+// another system's meetings did not: source authorship does not prove attendance.
 
 import (
 	"context"
@@ -73,20 +72,20 @@ func TestAHandLoggedMeetingIsHostedByTheCaller(t *testing.T) {
 	}
 }
 
-func TestAnImportedMeetingIsHostedByItsAuthorSeatNotTheImporter(t *testing.T) {
+func TestAnImportedMeetingAuthorDoesNotProveAttendance(t *testing.T) {
 	e := setupSend(t)
 	author := e.other
 
 	id := e.logMeeting(t, "m-1", nil, storekit.SourceAuthorInput{AuthorID: &author})
 
-	if host, claims := e.hostOf(t, id); host == nil || *host != author || claims {
-		t.Errorf("host = %v, claims slot = %v; want the author seat, no slot claimed", host, claims)
+	if host, claims := e.hostOf(t, id); host != nil || claims {
+		t.Errorf("host = %v, claims slot = %v; want no inferred host or slot", host, claims)
 	}
 	if e.onMeetingsOf(t, e.rep)[id] {
 		t.Error("the imported meeting is in the importer's meetings")
 	}
-	if !e.onMeetingsOf(t, author)[id] {
-		t.Error("the imported meeting is missing from its author's meetings")
+	if e.onMeetingsOf(t, author)[id] {
+		t.Error("the source author was treated as an attendee")
 	}
 	// Two imported meetings in the same hour for the same author must both land:
 	// an import claims no slot, so the double-booking guard does not apply.
@@ -126,5 +125,66 @@ func TestAnExplicitMeetingHostIsKept(t *testing.T) {
 		if host, _ := e.hostOf(t, id); host == nil || *host != e.other {
 			t.Errorf("%s: host = %v, want the named host", label, host)
 		}
+	}
+}
+
+func TestLegacyImportedHostAndSenderDoNotProvePersonalMeeting(t *testing.T) {
+	e := setupSend(t)
+	id := e.logMeeting(t, "legacy-record", nil, storekit.SourceAuthorInput{AuthorID: &e.other})
+	// These stamps model a historical importer that inferred attendance from its actor.
+	for _, query := range []string{
+		`UPDATE activity SET host_user_id=$2 WHERE id=$1`,
+		`INSERT INTO activity_participant(activity_id,user_id,role) VALUES($1,$2,'from')`,
+		`INSERT INTO capture_import(activity_id,user_id) VALUES($1,$2)`,
+	} {
+		if _, err := e.owner.Exec(e.as(principal.RowScopeAll), query, id, e.rep); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if e.onMeetingsOf(t, e.rep)[id] || e.onMeetingsOf(t, e.other)[id] {
+		t.Fatal("legacy recorder inferred as personal meeting")
+	}
+	row, err := e.store(nil).GetActivity(e.as(principal.RowScopeAll), ids.From[ids.ActivityKind](id), storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if row.HostUserId != nil || (row.ColleagueIds != nil && len(*row.ColleagueIds) != 0) {
+		t.Fatal("source detail names unsupported host")
+	}
+}
+
+func TestImportedMeetingKeepsExplicitInvitedColleague(t *testing.T) {
+	e := setupSend(t)
+	row, _, err := e.store(nil).LogActivity(e.as(principal.RowScopeAll), LogActivityInput{
+		Kind: KindMeeting, Source: "manual", SourceSystem: new("mirror:fixture"), SourceID: new("invited"),
+		Author: storekit.SourceAuthorInput{AuthorID: &e.rep}, AttendeeUserIDs: []ids.UserID{ids.From[ids.UserKind](e.other)},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	id := ids.UUID(row.Id)
+	if e.onMeetingsOf(t, e.rep)[id] || !e.onMeetingsOf(t, e.other)[id] {
+		t.Fatal("recorder and invited colleague were not distinguished")
+	}
+}
+
+func TestAnImportedAttendeeIsNotItsOrganizer(t *testing.T) {
+	e := setupSend(t)
+	id := e.logMeeting(t, "attendee-only", nil, storekit.SourceAuthorInput{AuthorID: &e.other})
+	for _, query := range []string{
+		`UPDATE activity SET host_user_id=$2 WHERE id=$1`,
+		`INSERT INTO activity_participant(activity_id,user_id,role) VALUES($1,$2,'attendee')`,
+	} {
+		if _, err := e.owner.Exec(e.as(principal.RowScopeAll), query, id, e.rep); err != nil {
+			t.Fatal(err)
+		}
+	}
+	row, err := e.store(nil).GetActivity(e.as(principal.RowScopeAll), ids.From[ids.ActivityKind](id), storekit.LiveOnly)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if row.HostUserId != nil || !e.onMeetingsOf(t, e.rep)[id] {
+		t.Fatal("attendee became organizer or lost personal attendance")
 	}
 }

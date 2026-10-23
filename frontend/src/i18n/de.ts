@@ -15181,8 +15181,7 @@ export const de = {
     "Seit dem Öffnen der Liste: {arrived} neu, {gone} bereits erledigt.",
   "worklist.walk.title": "Liste geändert",
   "worklist.walk.refresh": "Aktualisieren",
-  "worklist.handled.empty":
-    "Heute wurden keine Aktionen in deinem Auftrag ausgeführt.",
+  "worklist.handled.empty": "Heute gibt es in diesem Verlauf keine Änderungen.",
   "worklist.handled.loading": "Aktionen werden geladen…",
   "worklist.handled.count": "Letzte Änderungen: {count}",
   "worklist.handled.what": "Aktion",
@@ -16025,6 +16024,8 @@ export const de = {
   "magic.records.empty": "Keiner dieser Datensätze ist noch sichtbar.",
   "magic.records.more": "Mehr anzeigen",
   "magic.records.fromTo": "{from} → {to}",
+  "magic.records.minorUnitsUnknown":
+    "{amount} Untereinheiten (Währung nicht erfasst)",
   "magic.records.empty_value": "leer",
   "magic.records.count_one": "{count} Datensatz",
   "magic.records.count_other": "{count} Datensätze",

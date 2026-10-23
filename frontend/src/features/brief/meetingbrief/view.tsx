@@ -73,6 +73,7 @@ export function MeetingBriefView({
   onOpenEmail,
   titleId,
   onClose,
+  onOpenOriginal,
   scopeSlot,
   formatWhen,
   formatDay,
@@ -85,6 +86,7 @@ export function MeetingBriefView({
   onOpenEmail?: (activityId: string) => void;
   titleId: string;
   onClose: () => void;
+  onOpenOriginal?: () => void;
   // The project picker or the scope line, built by the drawer because only it
   // knows what the reader chose.
   scopeSlot?: ReactNode;
@@ -107,6 +109,11 @@ export function MeetingBriefView({
           preparedFor={preparedFor}
           formatWhen={formatWhen}
         />
+        {onOpenOriginal && (
+          <Button variant="ghost" onClick={onOpenOriginal}>
+            {t("tasks.openSource")}
+          </Button>
+        )}
       </DrawerHead>
       <DrawerBody>
         <div className="mb-body">
@@ -122,11 +129,13 @@ export function MeetingBriefView({
           >
             {brief && (
               <div className="mb-stack">
-                <GlanceLine
-                  brief={brief}
-                  onOpenRecord={onOpenRecord}
-                  onOpenEmail={onOpenEmail}
-                />
+                {!(meeting?.subject && meeting.startsAt) && (
+                  <GlanceLine
+                    brief={brief}
+                    onOpenRecord={onOpenRecord}
+                    onOpenEmail={onOpenEmail}
+                  />
+                )}
                 {/* The plan leads when the server says it is a preparation.
                     An `outline` is added ABOVE the sections rather than in
                     place of them: a half-built plan that hid the risks and

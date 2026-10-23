@@ -39,23 +39,6 @@ func quietDealItem(days int) crmcontracts.AttentionItem {
 	return item
 }
 
-func quietContactItem(days int) crmcontracts.AttentionItem {
-	contactID := ids.NewV7()
-	name := "Dana Weiss"
-	item := crmcontracts.AttentionItem{
-		Id:      contactID.String(),
-		Source:  "relationship_decay",
-		Title:   &name,
-		Subject: subjectOf("contact", contactID),
-		Actions: []crmcontracts.AttentionItemActions{},
-	}
-	if days > 0 {
-		quiet := days
-		item.QuietDays = &quiet
-	}
-	return item
-}
-
 func quietReasonOf(t *testing.T, row crmcontracts.WorklistItem) *crmcontracts.WorklistValue {
 	t.Helper()
 	for _, reason := range row.Because {
@@ -78,20 +61,6 @@ func TestAQuietDealsOwnCountReachesTheReasonItStates(t *testing.T) {
 	}
 	if value.Days == nil || *value.Days != 90 {
 		t.Fatalf("the row says %v days, want the 90 the lane measured", value.Days)
-	}
-}
-
-// The same count on a decay row, which has no deal facts to carry it: this is
-// the source that would lose the number entirely if it rode on the deal.
-func TestALapsedRelationshipsCountReachesTheReasonItStates(t *testing.T) {
-	row := classifyDecay(quietContactItem(63), rankInstant)
-
-	value := quietReasonOf(t, row.item)
-	if value == nil {
-		t.Fatal("a relationship quiet for 63 days says nothing about how long")
-	}
-	if value.Days == nil || *value.Days != 63 {
-		t.Fatalf("the row says %v days, want the 63 the lane measured", value.Days)
 	}
 }
 
@@ -132,7 +101,6 @@ func TestTheIdleCountBecomesTheAgeTheOrderingCarries(t *testing.T) {
 		row  ranked
 	}{
 		{"a drifting deal", classifyRisk(quietDealItem(90), rankInstant, materialBar{}, dayMoney{})},
-		{"a lapsed relationship", classifyDecay(quietContactItem(90), rankInstant)},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			if c.row.waitingDays != 90 {

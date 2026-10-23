@@ -11166,12 +11166,14 @@ components:
           type: array
           description: Who is in the room, so the reader knows whether they are single-threaded before they walk in.
           maxItems: 8
-          items:
-            type: object
-            required: [contact_id, full_name]
-            properties:
-              contact_id: {type: string, format: uuid}
-              full_name: {type: string}
+          items: {$ref: '#/components/schemas/MeetingParticipant'}
+    MeetingParticipant:
+      type: object
+      description: A readable contact with recorded evidence of taking part in this meeting.
+      required: [contact_id, full_name]
+      properties:
+        contact_id: {type: string, format: uuid}
+        full_name: {type: string}
     ConversationClaimKind:
       type: string
       description: |-
@@ -14613,6 +14615,11 @@ components:
         `withheld`.
       required: [id, kind, occurred_at, source, captured_by, created_at, updated_at]
       properties:
+        meeting_participants:
+          type: array
+          readOnly: true
+          description: Readable external participants on a meeting detail read. Omitted when the activity content is withheld and on list reads. Filing links alone do not imply attendance.
+          items: {$ref: '#/components/schemas/MeetingParticipant'}
         commitment_admissions:
           type: array
           readOnly: true

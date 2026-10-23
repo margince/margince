@@ -178,13 +178,7 @@ var meetingFollowUpsSQL = `
 	   AND ` + meetingEndSQL + ` <= $%[1]d::timestamptz - make_interval(days => $%[4]d::int)
 	   AND ` + meetingEndSQL + ` >= $%[1]d::timestamptz - make_interval(days => $%[4]d::int + %[5]d)
 	   AND %[2]s
-	   -- The reader was in it: they held it, their calendar imported it, or
-	   -- they are one of its attendees. The last two are auth's
-	   -- activityMembershipArm; change them there and here.
-	   AND (a.host_user_id = $%[8]d
-	        OR EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id AND ci.user_id = $%[8]d)
-	        OR EXISTS (SELECT 1 FROM activity_participant me
-	                    WHERE me.activity_id = a.id AND me.user_id = $%[8]d))
+	   AND ` + meetingResponsibilitySQL("$%[8]d") + `
 	   -- Nothing from our side since to anyone it was with, filed under them
 	   -- or addressed to them: a message, a call or a later meeting is a
 	   -- follow-up already made. Only the recipients count, uncapped: a

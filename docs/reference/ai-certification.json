@@ -5,8 +5,8 @@
     "sites_best_partial": 0,
     "sites_best_stale": 6,
     "sites_absent": 1,
-    "scenarios": 254,
-    "records": 354,
+    "scenarios": 255,
+    "records": 355,
     "bindings": 18,
     "self_judged_records": 0
   },
@@ -528,29 +528,18 @@
         {
           "task": "request_settlement",
           "label": "Checking whether the reply answered the request",
-          "tier": "local_small",
+          "tier": "premium",
           "model": {
             "provider": "openai_compatible",
-            "model": "google/gemma-4-26b-a4b-it",
+            "model": "google/gemma-4-31b-it",
             "env": "cloud_frontier"
           },
           "band": "not_supported",
           "state": "stale",
-          "fallback": {
-            "tier": "cheap_cloud",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "google/gemma-4-31b-it",
-              "env": "cloud_frontier"
-            },
-            "same_model": false,
-            "band": "not_supported",
-            "state": "stale"
-          },
           "abandoned": 0,
-          "runs": 18,
+          "runs": 24,
           "passed": 15,
-          "cases_failing_often": 1,
+          "cases_failing_often": 2,
           "cases_below_quality_bar": 0
         },
         {
@@ -1370,28 +1359,18 @@
         {
           "task": "request_settlement",
           "label": "Checking whether the reply answered the request",
-          "tier": "local_small",
+          "tier": "premium",
           "model": {
             "provider": "gemini",
-            "model": "gemini-3.1-flash-lite",
-            "env": "cloud_frontier"
+            "model": "gemini-3.6-flash",
+            "env": "cloud_frontier",
+            "thinking_level": "low"
           },
-          "band": "certified",
-          "state": "current",
-          "fallback": {
-            "tier": "cheap_cloud",
-            "model": {
-              "provider": "gemini",
-              "model": "gemini-3.1-flash-lite",
-              "env": "cloud_frontier"
-            },
-            "same_model": true,
-            "band": "certified",
-            "state": "current"
-          },
+          "band": "",
+          "state": "",
           "abandoned": 0,
-          "runs": 30,
-          "passed": 30,
+          "runs": 0,
+          "passed": 0,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
@@ -1681,11 +1660,11 @@
         }
       ],
       "bands": {
-        "certified": 21,
+        "certified": 20,
         "supported_degraded": 7,
         "not_supported": 0
       },
-      "untested": 3,
+      "untested": 4,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -2400,40 +2379,20 @@
         {
           "task": "request_settlement",
           "label": "Checking whether the reply answered the request",
-          "tier": "local_small",
+          "tier": "premium",
           "model": {
             "provider": "gemini_vertex",
-            "model": "gemini-3.1-flash-lite",
-            "env": "eu_hosted"
+            "model": "gemini-3.6-flash",
+            "env": "eu_hosted",
+            "thinking_level": "low"
           },
-          "band": "certified",
-          "state": "current",
-          "fallback": {
-            "tier": "cheap_cloud",
-            "model": {
-              "provider": "gemini_vertex",
-              "model": "gemini-3.1-flash-lite",
-              "env": "eu_hosted"
-            },
-            "same_model": true,
-            "band": "certified",
-            "state": "current",
-            "measured_on": {
-              "provider": "gemini",
-              "model": "gemini-3.1-flash-lite",
-              "env": "cloud_frontier"
-            }
-          },
+          "band": "",
+          "state": "",
           "abandoned": 0,
-          "runs": 30,
-          "passed": 30,
+          "runs": 0,
+          "passed": 0,
           "cases_failing_often": 0,
-          "cases_below_quality_bar": 0,
-          "measured_on": {
-            "provider": "gemini",
-            "model": "gemini-3.1-flash-lite",
-            "env": "cloud_frontier"
-          }
+          "cases_below_quality_bar": 0
         },
         {
           "task": "signal_extract",
@@ -2805,11 +2764,11 @@
         }
       ],
       "bands": {
-        "certified": 20,
+        "certified": 19,
         "supported_degraded": 7,
         "not_supported": 0
       },
-      "untested": 4,
+      "untested": 5,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -3330,7 +3289,7 @@
         {
           "task": "request_settlement",
           "label": "Checking whether the reply answered the request",
-          "tier": "local_small",
+          "tier": "premium",
           "model": {
             "provider": "ollama",
             "model": "gemma4:12b",
@@ -3338,17 +3297,6 @@
           },
           "band": "certified",
           "state": "stale",
-          "fallback": {
-            "tier": "cheap_cloud",
-            "model": {
-              "provider": "ollama",
-              "model": "gemma4:12b",
-              "env": "sovereign"
-            },
-            "same_model": true,
-            "band": "certified",
-            "state": "stale"
-          },
           "abandoned": 0,
           "runs": 24,
           "passed": 23,
@@ -4157,28 +4105,17 @@
         {
           "task": "request_settlement",
           "label": "Checking whether the reply answered the request",
-          "tier": "local_small",
+          "tier": "premium",
           "model": {
             "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
+            "model": "mistralai/mistral-medium-3-5",
             "env": "cloud_frontier"
           },
-          "band": "certified",
-          "state": "stale",
-          "fallback": {
-            "tier": "cheap_cloud",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "openai/gpt-oss-120b",
-              "env": "cloud_frontier"
-            },
-            "same_model": true,
-            "band": "certified",
-            "state": "stale"
-          },
+          "band": "",
+          "state": "",
           "abandoned": 0,
-          "runs": 18,
-          "passed": 18,
+          "runs": 0,
+          "passed": 0,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
@@ -4459,11 +4396,11 @@
         }
       ],
       "bands": {
-        "certified": 14,
+        "certified": 13,
         "supported_degraded": 7,
         "not_supported": 7
       },
-      "untested": 3,
+      "untested": 4,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -4984,28 +4921,17 @@
         {
           "task": "request_settlement",
           "label": "Checking whether the reply answered the request",
-          "tier": "local_small",
+          "tier": "premium",
           "model": {
             "provider": "openai_compatible",
-            "model": "mistralai/ministral-8b-2512",
+            "model": "mistralai/mistral-medium-3-5",
             "env": "eu_hosted"
           },
-          "band": "certified",
-          "state": "stale",
-          "fallback": {
-            "tier": "cheap_cloud",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "mistralai/ministral-14b-2512",
-              "env": "eu_hosted"
-            },
-            "same_model": false,
-            "band": "certified",
-            "state": "stale"
-          },
+          "band": "",
+          "state": "",
           "abandoned": 0,
-          "runs": 18,
-          "passed": 18,
+          "runs": 0,
+          "passed": 0,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
@@ -5286,11 +5212,11 @@
         }
       ],
       "bands": {
-        "certified": 12,
+        "certified": 11,
         "supported_degraded": 2,
         "not_supported": 14
       },
-      "untested": 3,
+      "untested": 4,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -5811,28 +5737,17 @@
         {
           "task": "request_settlement",
           "label": "Checking whether the reply answered the request",
-          "tier": "local_small",
+          "tier": "premium",
           "model": {
             "provider": "openai_compatible",
-            "model": "openai/gpt-6-luna",
+            "model": "openai/gpt-6-sol",
             "env": "cloud_frontier"
           },
-          "band": "certified",
-          "state": "stale",
-          "fallback": {
-            "tier": "cheap_cloud",
-            "model": {
-              "provider": "openai_compatible",
-              "model": "openai/gpt-6-luna",
-              "env": "cloud_frontier"
-            },
-            "same_model": true,
-            "band": "certified",
-            "state": "stale"
-          },
+          "band": "",
+          "state": "",
           "abandoned": 0,
-          "runs": 18,
-          "passed": 18,
+          "runs": 0,
+          "passed": 0,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 0
         },
@@ -6113,11 +6028,11 @@
         }
       ],
       "bands": {
-        "certified": 21,
+        "certified": 20,
         "supported_degraded": 3,
         "not_supported": 4
       },
-      "untested": 3,
+      "untested": 4,
       "unbound": 0,
       "unrecognised": 0
     },
@@ -6638,7 +6553,7 @@
         {
           "task": "request_settlement",
           "label": "Checking whether the reply answered the request",
-          "tier": "local_small",
+          "tier": "premium",
           "model": {
             "provider": "vllm",
             "model": "mlx-community/Qwen3-14B-4bit",
@@ -6646,17 +6561,6 @@
           },
           "band": "not_supported",
           "state": "stale",
-          "fallback": {
-            "tier": "cheap_cloud",
-            "model": {
-              "provider": "vllm",
-              "model": "mlx-community/Qwen3-14B-4bit",
-              "env": "sovereign"
-            },
-            "same_model": true,
-            "band": "not_supported",
-            "state": "stale"
-          },
           "abandoned": 0,
           "runs": 12,
           "passed": 6,
@@ -6986,18 +6890,18 @@
             "model": "google/gemma-4-26b-a4b-it",
             "env": "cloud_frontier"
           },
-          "sites": 6,
+          "sites": 5,
           "sites_current": 4,
           "sites_partial": 0,
-          "sites_stale": 2,
-          "runs": 189,
-          "passed": 166,
-          "reliability": 0.8783068783068783,
+          "sites_stale": 1,
+          "runs": 171,
+          "passed": 151,
+          "reliability": 0.8830409356725146,
           "slowest_p95_ms": 15788,
           "bands": {
             "certified": 1,
             "supported_degraded": 1,
-            "not_supported": 4
+            "not_supported": 3
           }
         },
         {
@@ -7398,7 +7302,7 @@
           "state": "stale",
           "runs": 24,
           "passed": 23,
-          "records": 3
+          "records": 2
         },
         {
           "key": "signal_extract/thread_events",
@@ -7658,11 +7562,11 @@
       "name": "GPT",
       "answer": "mostly",
       "sites_shipped": 47,
-      "sites_measured": 44,
-      "ready": 31,
+      "sites_measured": 43,
+      "ready": 30,
       "usable_with_care": 10,
       "not_reliable_yet": 3,
-      "recheck_pending": 9,
+      "recheck_pending": 8,
       "models": [
         {
           "binding": {
@@ -7670,16 +7574,16 @@
             "model": "openai/gpt-6-luna",
             "env": "cloud_frontier"
           },
-          "sites": 41,
+          "sites": 40,
           "sites_current": 34,
           "sites_partial": 0,
-          "sites_stale": 7,
-          "runs": 576,
-          "passed": 553,
-          "reliability": 0.9600694444444444,
+          "sites_stale": 6,
+          "runs": 558,
+          "passed": 535,
+          "reliability": 0.9587813620071685,
           "slowest_p95_ms": 26943,
           "bands": {
-            "certified": 25,
+            "certified": 24,
             "supported_degraded": 12,
             "not_supported": 4
           }
@@ -7710,16 +7614,16 @@
             "model": "openai/gpt-oss-120b",
             "env": "cloud_frontier"
           },
-          "sites": 41,
+          "sites": 40,
           "sites_current": 34,
           "sites_partial": 0,
-          "sites_stale": 7,
-          "runs": 762,
-          "passed": 694,
-          "reliability": 0.910761154855643,
+          "sites_stale": 6,
+          "runs": 744,
+          "passed": 676,
+          "reliability": 0.9086021505376344,
           "slowest_p95_ms": 19791,
           "bands": {
-            "certified": 15,
+            "certified": 14,
             "supported_degraded": 16,
             "not_supported": 10
           }
@@ -8091,20 +7995,6 @@
           "records": 3
         },
         {
-          "key": "request_settlement/request_settle",
-          "task": "request_settlement",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "openai/gpt-oss-120b",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "stale",
-          "runs": 18,
-          "passed": 18,
-          "records": 2
-        },
-        {
           "key": "site_extract/profile",
           "task": "site_extract",
           "best": {
@@ -8348,8 +8238,8 @@
       "name": "Gemini",
       "answer": "mostly",
       "sites_shipped": 47,
-      "sites_measured": 44,
-      "ready": 33,
+      "sites_measured": 43,
+      "ready": 32,
       "usable_with_care": 10,
       "not_reliable_yet": 1,
       "recheck_pending": 6,
@@ -8360,16 +8250,16 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "sites": 41,
-          "sites_current": 36,
+          "sites": 40,
+          "sites_current": 35,
           "sites_partial": 0,
           "sites_stale": 5,
-          "runs": 669,
-          "passed": 661,
-          "reliability": 0.9880418535127056,
+          "runs": 639,
+          "passed": 631,
+          "reliability": 0.9874804381846636,
           "slowest_p95_ms": 24754,
           "bands": {
-            "certified": 24,
+            "certified": 23,
             "supported_degraded": 16,
             "not_supported": 1
           }
@@ -8786,20 +8676,6 @@
           "records": 2
         },
         {
-          "key": "request_settlement/request_settle",
-          "task": "request_settlement",
-          "best": {
-            "provider": "gemini",
-            "model": "gemini-3.1-flash-lite",
-            "env": "cloud_frontier"
-          },
-          "band": "certified",
-          "state": "current",
-          "runs": 30,
-          "passed": 30,
-          "records": 1
-        },
-        {
           "key": "signal_extract/thread_events",
           "task": "signal_extract",
           "best": {
@@ -9050,11 +8926,11 @@
       "name": "Mistral",
       "answer": "mostly",
       "sites_shipped": 47,
-      "sites_measured": 44,
-      "ready": 24,
+      "sites_measured": 43,
+      "ready": 23,
       "usable_with_care": 12,
       "not_reliable_yet": 8,
-      "recheck_pending": 9,
+      "recheck_pending": 8,
       "models": [
         {
           "binding": {
@@ -9062,16 +8938,16 @@
             "model": "mistralai/ministral-14b-2512",
             "env": "eu_hosted"
           },
-          "sites": 39,
+          "sites": 38,
           "sites_current": 32,
           "sites_partial": 0,
-          "sites_stale": 7,
-          "runs": 537,
-          "passed": 429,
-          "reliability": 0.7988826815642458,
+          "sites_stale": 6,
+          "runs": 519,
+          "passed": 411,
+          "reliability": 0.791907514450867,
           "slowest_p95_ms": 83052,
           "bands": {
-            "certified": 11,
+            "certified": 10,
             "supported_degraded": 10,
             "not_supported": 18
           }
@@ -9082,16 +8958,16 @@
             "model": "mistralai/ministral-8b-2512",
             "env": "eu_hosted"
           },
-          "sites": 6,
+          "sites": 5,
           "sites_current": 4,
           "sites_partial": 0,
-          "sites_stale": 2,
-          "runs": 174,
-          "passed": 156,
-          "reliability": 0.896551724137931,
+          "sites_stale": 1,
+          "runs": 156,
+          "passed": 138,
+          "reliability": 0.8846153846153846,
           "slowest_p95_ms": 5038,
           "bands": {
-            "certified": 4,
+            "certified": 3,
             "supported_degraded": 0,
             "not_supported": 2
           }
@@ -9501,20 +9377,6 @@
           "runs": 12,
           "passed": 12,
           "records": 3
-        },
-        {
-          "key": "request_settlement/request_settle",
-          "task": "request_settlement",
-          "best": {
-            "provider": "openai_compatible",
-            "model": "mistralai/ministral-8b-2512",
-            "env": "eu_hosted"
-          },
-          "band": "certified",
-          "state": "stale",
-          "runs": 18,
-          "passed": 18,
-          "records": 2
         },
         {
           "key": "site_extract/profile",
@@ -10415,12 +10277,12 @@
         "env": "cloud_frontier"
       },
       "sites": 44,
-      "sites_current": 38,
+      "sites_current": 37,
       "sites_partial": 0,
-      "sites_stale": 6,
-      "runs": 828,
-      "passed": 803,
-      "reliability": 0.9698067632850241,
+      "sites_stale": 7,
+      "runs": 831,
+      "passed": 806,
+      "reliability": 0.9699157641395909,
       "slowest_p95_ms": 24754,
       "bands": {
         "certified": 25,
@@ -10495,16 +10357,16 @@
         "model": "gemini-3.6-flash",
         "env": "cloud_frontier"
       },
-      "sites": 2,
-      "sites_current": 1,
+      "sites": 3,
+      "sites_current": 2,
       "sites_partial": 0,
       "sites_stale": 1,
-      "runs": 213,
-      "passed": 209,
-      "reliability": 0.9812206572769953,
+      "runs": 246,
+      "passed": 242,
+      "reliability": 0.983739837398374,
       "slowest_p95_ms": 7294,
       "bands": {
-        "certified": 2,
+        "certified": 3,
         "supported_degraded": 0,
         "not_supported": 0
       }
@@ -20094,7 +19956,7 @@
       "recommended": {
         "binding": {
           "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
+          "model": "gemini-3.6-flash",
           "env": "cloud_frontier"
         },
         "band": "certified",
@@ -20139,6 +20001,12 @@
           "file": "backend/internal/compose/aicert/corpus/request_settlement/declined_and_handed_on_01.yaml"
         },
         {
+          "name": "delivering_feedback_then_asking_them_does_not_reverse_the_duty",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/request_settlement/feedback_delivered_then_our_question.yaml"
+        },
+        {
           "name": "partial_delivery_keeps_the_remaining_invoice_de",
           "expects": "accepted",
           "graded_by": "mechanical",
@@ -20170,22 +20038,50 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 10,
-          "scenarios_total": 10,
-          "runs": 30,
-          "passed": 30,
+          "scenarios_measured": 0,
+          "scenarios_total": 11,
+          "runs": 33,
+          "passed": 33,
           "reliability": 1,
-          "latency_p50_ms": 1075,
-          "latency_p95_ms": 1351,
+          "latency_p50_ms": 1246,
+          "latency_p95_ms": 1690,
           "reported": {
-            "accepted": 30,
+            "accepted": 33,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "11 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_off_the_thread_can_leave_the_request_owed, an_answer_off_the_thread_settles_a_request, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague and 5 more",
+          "stale_cause": {
+            "case_changed": [
+              "delivering_feedback_then_asking_them_does_not_reverse_the_duty"
+            ],
+            "prompt_changed": [
+              "a_reply_that_says_nothing_either_way_is_answered_unsure",
+              "an_answer_off_the_thread_can_leave_the_request_owed",
+              "an_answer_off_the_thread_settles_a_request",
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not",
+              "answering_one_of_two_asks_leaves_the_other_owed",
+              "declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+              "delivering_feedback_then_asking_them_does_not_reverse_the_duty",
+              "partial_delivery_keeps_the_remaining_invoice_de",
+              "partial_delivery_keeps_the_remaining_invoice_en",
+              "partial_delivery_keeps_the_remaining_invoice_vi",
+              "signature_completion_requires_the_matching_document"
+            ],
+            "grader_changed": [
+              "a_reply_that_says_nothing_either_way_is_answered_unsure",
+              "an_answer_off_the_thread_can_leave_the_request_owed",
+              "an_answer_off_the_thread_settles_a_request",
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not",
+              "answering_one_of_two_asks_leaves_the_other_owed",
+              "declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+              "delivering_feedback_then_asking_them_does_not_reverse_the_duty",
+              "signature_completion_requires_the_matching_document"
+            ]
+          }
         },
         {
           "binding": {
@@ -20196,7 +20092,7 @@
           "state": "stale",
           "band": "certified",
           "scenarios_measured": 0,
-          "scenarios_total": 10,
+          "scenarios_total": 11,
           "runs": 18,
           "passed": 18,
           "reliability": 1,
@@ -20208,8 +20104,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "6 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_off_the_thread_can_leave_the_request_owed, an_answer_off_the_thread_settles_a_request, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+          "stale_reason": "6 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_off_the_thread_can_leave_the_request_owed, an_answer_off_the_thread_settles_a_request, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
           "stale_cause": {
+            "case_changed": [
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not"
+            ],
             "prompt_changed": [
               "a_reply_that_says_nothing_either_way_is_answered_unsure",
               "an_answer_off_the_thread_can_leave_the_request_owed",
@@ -20230,6 +20129,29 @@
         },
         {
           "binding": {
+            "provider": "gemini",
+            "model": "gemini-3.6-flash",
+            "env": "cloud_frontier"
+          },
+          "state": "current",
+          "band": "certified",
+          "scenarios_measured": 11,
+          "scenarios_total": 11,
+          "runs": 33,
+          "passed": 33,
+          "reliability": 1,
+          "latency_p50_ms": 2459,
+          "latency_p95_ms": 4723,
+          "reported": {
+            "accepted": 33,
+            "wrong_answer": 0,
+            "invalid": 0,
+            "abstained": 0
+          },
+          "stale_reason": ""
+        },
+        {
+          "binding": {
             "provider": "ollama",
             "model": "gemma4:12b",
             "env": "sovereign"
@@ -20237,7 +20159,7 @@
           "state": "stale",
           "band": "certified",
           "scenarios_measured": 0,
-          "scenarios_total": 10,
+          "scenarios_total": 11,
           "runs": 24,
           "passed": 23,
           "reliability": 0.9583333333333334,
@@ -20249,8 +20171,11 @@
             "invalid": 1,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+          "stale_reason": "4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
           "stale_cause": {
+            "case_changed": [
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not"
+            ],
             "prompt_changed": [
               "a_reply_that_says_nothing_either_way_is_answered_unsure",
               "an_answer_settles_a_request_and_an_acknowledgement_does_not",
@@ -20274,7 +20199,7 @@
           "state": "stale",
           "band": "not_supported",
           "scenarios_measured": 0,
-          "scenarios_total": 10,
+          "scenarios_total": 11,
           "runs": 18,
           "passed": 15,
           "reliability": 0.8333333333333334,
@@ -20286,8 +20211,11 @@
             "invalid": 3,
             "abstained": 0
           },
-          "stale_reason": "6 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_off_the_thread_can_leave_the_request_owed, an_answer_off_the_thread_settles_a_request, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+          "stale_reason": "6 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_off_the_thread_can_leave_the_request_owed, an_answer_off_the_thread_settles_a_request, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
           "stale_cause": {
+            "case_changed": [
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not"
+            ],
             "prompt_changed": [
               "a_reply_that_says_nothing_either_way_is_answered_unsure",
               "an_answer_off_the_thread_can_leave_the_request_owed",
@@ -20315,7 +20243,7 @@
           "state": "stale",
           "band": "not_supported",
           "scenarios_measured": 0,
-          "scenarios_total": 10,
+          "scenarios_total": 11,
           "runs": 24,
           "passed": 15,
           "reliability": 0.625,
@@ -20327,8 +20255,11 @@
             "invalid": 9,
             "abstained": 0
           },
-          "stale_reason": "6 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_off_the_thread_can_leave_the_request_owed, an_answer_off_the_thread_settles_a_request, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+          "stale_reason": "6 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_off_the_thread_can_leave_the_request_owed, an_answer_off_the_thread_settles_a_request, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
           "stale_cause": {
+            "case_changed": [
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not"
+            ],
             "prompt_changed": [
               "a_reply_that_says_nothing_either_way_is_answered_unsure",
               "an_answer_off_the_thread_can_leave_the_request_owed",
@@ -20356,7 +20287,7 @@
           "state": "stale",
           "band": "certified",
           "scenarios_measured": 0,
-          "scenarios_total": 10,
+          "scenarios_total": 11,
           "runs": 18,
           "passed": 18,
           "reliability": 1,
@@ -20368,8 +20299,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "6 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_off_the_thread_can_leave_the_request_owed, an_answer_off_the_thread_settles_a_request, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+          "stale_reason": "6 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_off_the_thread_can_leave_the_request_owed, an_answer_off_the_thread_settles_a_request, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
           "stale_cause": {
+            "case_changed": [
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not"
+            ],
             "prompt_changed": [
               "a_reply_that_says_nothing_either_way_is_answered_unsure",
               "an_answer_off_the_thread_can_leave_the_request_owed",
@@ -20397,7 +20331,7 @@
           "state": "stale",
           "band": "certified",
           "scenarios_measured": 0,
-          "scenarios_total": 10,
+          "scenarios_total": 11,
           "runs": 18,
           "passed": 18,
           "reliability": 1,
@@ -20409,8 +20343,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "6 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_off_the_thread_can_leave_the_request_owed, an_answer_off_the_thread_settles_a_request, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+          "stale_reason": "6 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_off_the_thread_can_leave_the_request_owed, an_answer_off_the_thread_settles_a_request, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
           "stale_cause": {
+            "case_changed": [
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not"
+            ],
             "prompt_changed": [
               "a_reply_that_says_nothing_either_way_is_answered_unsure",
               "an_answer_off_the_thread_can_leave_the_request_owed",
@@ -20438,7 +20375,7 @@
           "state": "stale",
           "band": "certified",
           "scenarios_measured": 0,
-          "scenarios_total": 10,
+          "scenarios_total": 11,
           "runs": 18,
           "passed": 18,
           "reliability": 1,
@@ -20450,8 +20387,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "6 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_off_the_thread_can_leave_the_request_owed, an_answer_off_the_thread_settles_a_request, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+          "stale_reason": "6 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_off_the_thread_can_leave_the_request_owed, an_answer_off_the_thread_settles_a_request, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
           "stale_cause": {
+            "case_changed": [
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not"
+            ],
             "prompt_changed": [
               "a_reply_that_says_nothing_either_way_is_answered_unsure",
               "an_answer_off_the_thread_can_leave_the_request_owed",
@@ -20479,7 +20419,7 @@
           "state": "stale",
           "band": "certified",
           "scenarios_measured": 0,
-          "scenarios_total": 10,
+          "scenarios_total": 11,
           "runs": 18,
           "passed": 18,
           "reliability": 1,
@@ -20491,8 +20431,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "6 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_off_the_thread_can_leave_the_request_owed, an_answer_off_the_thread_settles_a_request, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+          "stale_reason": "6 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_off_the_thread_can_leave_the_request_owed, an_answer_off_the_thread_settles_a_request, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
           "stale_cause": {
+            "case_changed": [
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not"
+            ],
             "prompt_changed": [
               "a_reply_that_says_nothing_either_way_is_answered_unsure",
               "an_answer_off_the_thread_can_leave_the_request_owed",
@@ -20520,7 +20463,7 @@
           "state": "stale",
           "band": "not_supported",
           "scenarios_measured": 0,
-          "scenarios_total": 10,
+          "scenarios_total": 11,
           "runs": 12,
           "passed": 6,
           "reliability": 0.5,
@@ -20532,8 +20475,11 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
+          "stale_reason": "4 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): a_reply_that_says_nothing_either_way_is_answered_unsure, an_answer_settles_a_request_and_an_acknowledgement_does_not, answering_one_of_two_asks_leaves_the_other_owed, declining_settles_a_request_and_so_does_handing_it_to_a_named_colleague",
           "stale_cause": {
+            "case_changed": [
+              "an_answer_settles_a_request_and_an_acknowledgement_does_not"
+            ],
             "prompt_changed": [
               "a_reply_that_says_nothing_either_way_is_answered_unsure",
               "an_answer_settles_a_request_and_an_acknowledgement_does_not",

@@ -109,6 +109,8 @@ func TestOnlyACustomerMeetingOwesAFollowUp(t *testing.T) {
 	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, contact_id) VALUES ($1, $2, 'contact', $3)`,
 		ids.NewV7(), customer, contact)
 
+	e.seedCustomerMeetingLink(t, customer, e.rep)
+
 	kind := "meeting"
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	got, _, err := store.ListActivities(e.as(), ListActivitiesInput{
@@ -154,16 +156,13 @@ func TestAHiddenCustomerLinkMakesNoFollowUp(t *testing.T) {
 		VALUES ($1, 'My buyer', $2, 'seed', 'system')`, mine, e.rep)
 	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, contact_id) VALUES ($1, $2, 'contact', $3)`,
 		ids.NewV7(), visible, mine)
-	// A link the reader can see, to a record that is not a customer (their own
-	// deal), keeps the hidden-link meeting discoverable, so only the customer
-	// rule decides whether it is carried.
-	pipeline, stage, deal := ids.NewV7(), ids.NewV7(), ids.NewV7()
-	e.exec(t, `INSERT INTO pipeline (id, name) VALUES ($1, $2)`, pipeline, "Pipeline "+pipeline.String())
-	e.exec(t, `INSERT INTO stage (id, pipeline_id, name, "position") VALUES ($1, $2, 'Qualified', 1)`, stage, pipeline)
-	e.exec(t, `INSERT INTO deal (id, name, status, owner_id, pipeline_id, stage_id, source, captured_by)
-		VALUES ($1, 'My deal', 'open', $2, $3, $4, 'seed', 'system')`, deal, e.rep, pipeline, stage)
-	e.exec(t, `INSERT INTO activity_link (id, activity_id, entity_type, deal_id) VALUES ($1, $2, 'deal', $3)`,
-		ids.NewV7(), meeting, deal)
+	// A readable project isolates customer eligibility from record discovery.
+	project := ids.NewV7()
+	e.exec(t, `INSERT INTO project(id,name,owner_id,source,captured_by) VALUES($1,'My project',$2,'seed','system')`, project, e.rep)
+	e.exec(t, `INSERT INTO activity_link(activity_id,entity_type,project_id) VALUES($1,'project',$2)`, meeting, project)
+
+	e.seedCustomerMeetingLink(t, meeting, e.other)
+	e.seedCustomerMeetingLink(t, visible, e.rep)
 
 	kind := "meeting"
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
@@ -194,4 +193,11 @@ func TestAHiddenCustomerLinkMakesNoFollowUp(t *testing.T) {
 	if !discoverable {
 		t.Fatal("the hidden-link meeting is not discoverable at all, so this test proves nothing")
 	}
+}
+
+func (e *promiseEnv) seedCustomerMeetingLink(t *testing.T, meeting, owner ids.UUID) {
+	t.Helper()
+	company := ids.NewV7()
+	e.exec(t, `INSERT INTO company(id,display_name,owner_id,lifecycle,source,captured_by) VALUES($1,'Customer account',$2,'customer','seed','system')`, company, owner)
+	e.exec(t, `INSERT INTO relationship(kind,contact_id,company_id,source,captured_by) SELECT 'employment',contact_id,$2,'seed','system' FROM activity_link WHERE activity_id=$1 AND contact_id IS NOT NULL`, meeting, company)
 }

@@ -130,6 +130,17 @@ func addPartialDeliveryProof(t *testing.T, out map[string]judgelessProof, scenar
 		Remaining string `json:"remaining_names"`
 	}](t, sc.Expect.Answer)
 	remaining, _, _ := strings.Cut(expected[0].Remaining, "|")
+	fixture := fixtureValue[[]struct {
+		Messages []struct{ Body string } `json:"messages"`
+	}](t, sc.Fixture)
+	body := fixture[0].Messages[0].Body
+	at := strings.Index(body, remaining)
+	if at < 0 {
+		t.Fatal("expected outstanding item is absent from the original request")
+	}
+	prefix := strings.TrimSpace(body[:at])
+	start := strings.LastIndexAny(prefix, " \t\r\n") + 1
+	remaining = body[start : at+len(remaining)]
 	out[sc.Name] = judgelessProof{correct: settlementReply(remaining, false), wrong: settlementReply(remaining, true), wantWrong: aitasks.OutcomeWrongAnswer}
 }
 

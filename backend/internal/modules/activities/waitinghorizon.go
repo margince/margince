@@ -3,24 +3,6 @@
 
 package activities
 
-// How far back a wait can reach and still be work, measured from what this
-// installation actually does rather than compiled in for everybody.
-//
-// One number judged every installation: an agency answering within the hour and
-// an enterprise seller working sixty-day cycles got the same ninety days. For
-// the agency that is a queue holding conversations everyone has forgotten; for
-// the enterprise it is a queue dropping live business on a date nobody chose.
-//
-// A SETTING was the obvious answer and it is the wrong one. Response
-// expectations plausibly differ per pipeline, per deal size, per customer tier,
-// so a single workspace number papers over that with an authoritative face —
-// and a number nobody revisits is the failure material_threshold_minor already
-// solved the same way: derive the bar from the data rather than ask for it.
-//
-// A derived horizon also makes no promise. Nothing escalates when work crosses
-// it, because nothing was committed to — which is why this needs no new lane
-// and no question about who is told.
-
 import (
 	"context"
 	"fmt"
@@ -47,10 +29,8 @@ const (
 	// waitingHorizonMinSample is how many answered threads the derivation needs
 	// before it will speak.
 	//
-	// A fresh installation has no history at all, and a thin one produces a
-	// wild number from a handful of conversations that happen to be slow. Below
-	// this the compiled ninety stands — stated here rather than left to emerge
-	// from a percentile over three rows.
+	// A small sample can distort the percentile, so the compiled limit applies
+	// until enough conversations have answers.
 	waitingHorizonMinSample = 30
 
 	// waitingHorizonFloorDays and waitingHorizonCeilingDays bound what the
@@ -62,7 +42,7 @@ const (
 	// otherwise derive a horizon that drops a customer who waited a week, and a
 	// week's silence is not history in any business.
 	waitingHorizonFloorDays   = 14
-	waitingHorizonCeilingDays = 365
+	waitingHorizonCeilingDays = storekit.DefaultWaitingHorizonDays
 
 	// waitingHorizonSlack is how much longer than its slow answers an
 	// installation keeps waiting.
@@ -205,5 +185,5 @@ func horizonOrDefault(days int) int {
 	if days <= 0 {
 		return waitingHorizonDays
 	}
-	return days
+	return min(days, waitingHorizonCeilingDays)
 }

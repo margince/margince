@@ -2,6 +2,8 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { formatDateTime } from "../../../format/format";
+import { viewerZone } from "../../../format/timezone";
 import { jsonResponse, StoryProviders } from "../../../testing/story-utils";
 import { ContactMeetingBrief } from "./drawer";
 import { briefReady } from "./fixtures";
@@ -125,4 +127,40 @@ describe("the meeting brief drawer", () => {
     await waitFor(() => expect(urls).toHaveLength(2));
     expect(await screen.findByText("Goal for this meeting")).toBeTruthy();
   });
+});
+
+it("uses the Worklist clock and opens the original meeting without stacking drawers", async () => {
+  seen({ "GET /activities/a-1/meeting-brief": () => jsonResponse(briefReady) });
+  const close = vi.fn();
+  render(
+    <StoryProviders>
+      <ContactMeetingBrief
+        activityId="a-1"
+        open
+        onClose={close}
+        meeting={{
+          subject: "Planning review",
+          startsAt: "2026-09-13T08:30:00Z",
+        }}
+      />
+    </StoryProviders>,
+  );
+  expect(await screen.findByText(/Planning review/)).toBeTruthy();
+  expect(
+    screen.getByText(
+      formatDateTime("2026-09-13T08:30:00Z", "en", viewerZone()),
+      { exact: false },
+    ),
+  ).toBeTruthy();
+  await userEvent.click(
+    await screen.findByRole("button", { name: "Open original" }),
+  );
+  for (const section of briefReady.sections.filter(
+    (section) => section.kind === "header",
+  )) {
+    for (const sentence of section.sentences)
+      expect(screen.queryByText(sentence.text)).toBeNull();
+  }
+  expect(close).toHaveBeenCalledOnce();
+  expect(window.location.hash).toContain("a-1/activity");
 });

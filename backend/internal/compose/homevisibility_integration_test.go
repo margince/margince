@@ -85,10 +85,16 @@ func TestHomeNoticeAgendaUsesResponsibilityAndOpenableContacts(t *testing.T) {
 	e := integration.Setup(t)
 	private := homeNotice(t, e, e.Rep1, true, homeReadTime.Add(-48*time.Hour))
 	for i := range 9 {
-		homeNotice(t, e, e.Rep1, false, homeReadTime.Add(time.Duration(i-24)*time.Hour))
+		duty := homeNotice(t, e, e.Rep1, false, homeReadTime.Add(time.Duration(i-24)*time.Hour))
+		if _, err := consent.NewStore(e.DB()).AssignNoticeCase(e.Admin(), duty.ID, e.Rep1); err != nil {
+			t.Fatal(err)
+		}
 	}
 	mine := homeNotice(t, e, e.AdminUser, false, homeReadTime.Add(-time.Hour))
 	store := consent.NewStore(e.DB())
+	if _, err := store.AssignNoticeCase(e.Admin(), mine.ID, e.AdminUser); err != nil {
+		t.Fatal(err)
+	}
 	rows, err := store.OpenNoticeCasesDueSoonest(e.Admin(), consent.NoticeAgendaInput{OwnerID: &e.AdminUser, Limit: 1})
 	if err != nil || len(rows) != 1 || rows[0].ID != mine.ID {
 		t.Fatalf("personal bounded agenda = %+v, %v; want the reader's duty behind colleagues' earlier deadlines", rows, err)
@@ -212,9 +218,15 @@ func TestCounterpartyReviewRemainsWithItsImportingSeat(t *testing.T) {
 func TestHomeTeamDutiesAreBoundedAfterMembership(t *testing.T) {
 	e := integration.Setup(t)
 	for i := range 9 {
-		homeNotice(t, e, e.Rep3, false, homeReadTime.Add(time.Duration(i-24)*time.Hour))
+		duty := homeNotice(t, e, e.Rep3, false, homeReadTime.Add(time.Duration(i-24)*time.Hour))
+		if _, err := consent.NewStore(e.DB()).AssignNoticeCase(e.Admin(), duty.ID, e.Rep3); err != nil {
+			t.Fatal(err)
+		}
 	}
 	teammate := homeNotice(t, e, e.Rep2, false, homeReadTime)
+	if _, err := consent.NewStore(e.DB()).AssignNoticeCase(e.Admin(), teammate.ID, e.Rep2); err != nil {
+		t.Fatal(err)
+	}
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	feed := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return homeReadTime })
 	day, err := feed.Worklist(ctx, "team", "all", ids.Nil, 100, "")
@@ -265,5 +277,37 @@ func TestUnownedDisclosureDutyAppearsOnlyInUnassignedHome(t *testing.T) {
 		if scope == "unassigned" && (len(got) != 1 || got[0] != duty.ID.String()) {
 			t.Fatalf("unassigned duties = %v", got)
 		}
+	}
+}
+
+func TestUnassignedNoticeIsRecordInformationNotTheContactOwnersWork(t *testing.T) {
+	e := integration.Setup(t)
+	duty := homeNotice(t, e, e.AdminUser, false, homeReadTime.Add(time.Hour))
+	store := consent.NewStore(e.DB())
+	feed := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return homeReadTime })
+	day, err := feed.Worklist(e.Admin(), "mine", "all", ids.Nil, 100, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(noticeIDs(day.Queue)) != 0 || day.Summary.Total != 0 || day.Focus == nil || len(noticeIDs(day.Focus.Items)) != 0 {
+		t.Fatalf("unassigned case became the contact owner's work: %+v", day)
+	}
+	rows, err := store.OpenNoticeCasesDueSoonest(e.Admin(), consent.NoticeAgendaInput{})
+	if err != nil || len(rows) != 1 || rows[0].ID != duty.ID || rows[0].OwnerID != nil {
+		t.Fatalf("authorized unassigned agenda lost its case: %+v, %v", rows, err)
+	}
+	team, err := store.OpenNoticeCasesDueSoonest(e.Admin(), consent.NoticeAgendaInput{TeamOwners: []ids.UUID{e.Rep1}})
+	if err != nil || len(team) != 1 || team[0].ID != duty.ID || team[0].OwnerID != nil {
+		t.Fatalf("authorized team review lost its unassigned case: %+v, %v", team, err)
+	}
+	if _, err := store.GetNoticeCase(e.Admin(), duty.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.AssignNoticeCase(e.Admin(), duty.ID, e.AdminUser); err != nil {
+		t.Fatal(err)
+	}
+	day, err = feed.Worklist(e.Admin(), "mine", "all", ids.Nil, 100, "")
+	if err != nil || len(noticeIDs(day.Queue)) != 1 {
+		t.Fatalf("explicitly assigned duty missing: %+v, %v", day.Queue, err)
 	}
 }

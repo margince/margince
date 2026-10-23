@@ -46,12 +46,9 @@ func classifyDay(day crmcontracts.Attention, asOf time.Time, money dayMoney) []r
 	rows = appendLane(rows, day.Bounces, asOf, classifyBounce)
 	rows = appendLane(rows, day.Undelivered, asOf, classifyUndelivered)
 	rows = appendLane(rows, &day.NeedsYou, asOf, classifyDecision)
-	rows = appendLane(rows, day.RelationshipDecay, asOf, classifyDecay)
 	rows = appendLane(rows, day.CaptureHealth, asOf, classifySystem)
-	rows = appendLane(rows, day.DomainQuestions, asOf, classifyDomainQuestion)
 	rows = appendLane(rows, day.AiWorkHealth, asOf, classifySystem)
 	rows = appendLane(rows, day.AutomationHealth, asOf, classifySystem)
-	rows = appendLane(rows, day.Notices, asOf, classifySystem)
 	rows = appendLane(rows, day.Introductions, asOf, classifyIntroduction)
 	return rows
 }
@@ -67,6 +64,9 @@ func appendLane(
 		return rows
 	}
 	for _, item := range *lane {
+		if !sourceAdmitsWork(crmcontracts.WorklistItemSource(item.Source)) {
+			continue
+		}
 		row := classify(item, asOf)
 		// Read by no classifier, so carried here once for every lane.
 		if item.SubjectMovedAt != nil {
@@ -308,4 +308,14 @@ func appendReadOnly(row crmcontracts.WorklistItem) []crmcontracts.WorklistReason
 		return row.Because
 	}
 	return append(row.Because, reason("read_only", nil))
+}
+
+// Optional information remains readable without creating a personal obligation.
+func sourceAdmitsWork(source crmcontracts.WorklistItemSource) bool {
+	switch source {
+	case sourceLeadResponse, sourceDecay, crmcontracts.WorklistItemSource(sourceNotice), crmcontracts.WorklistItemSource(sourceDomainQuestion):
+		return false
+	default:
+		return true
+	}
 }

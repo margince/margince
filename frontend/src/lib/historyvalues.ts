@@ -1,6 +1,9 @@
-import { formatDateTime, formatMoneyOrAbsent } from "../../format/format";
-import { type Locale, translate } from "../../i18n";
-import { isUuid } from "../../lib/uuid";
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import { formatDateTime, formatMoneyOrAbsent } from "../format/format";
+import { type Locale, translate } from "../i18n";
+import { isUuid } from "./uuid";
 
 // A history value read the way the rest of the record page reads it.
 //

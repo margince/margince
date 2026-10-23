@@ -55,7 +55,7 @@ func (h attentionMeetingHorizon) NextCustomerMeeting(
 	one := 1
 	in := activities.ListActivitiesInput{
 		Kind: &kind, OccurredAfter: &after, OccurredBefore: &before, Sort: &soonestFirst, Limit: &one,
-		AwaitingOutcome: true, CustomerMeetingsOnly: true, ReadableOnly: true,
+		AwaitingOutcome: true, CustomerMeetingsOnly: true, ReadableOnly: true, MeetingWorkOnly: true,
 	}
 	if !applyMeetingScope(ctx, &in, attention.TasksMine, ids.UUID{}) {
 		return crmcontracts.Contact360NextMeeting{}, false, nil

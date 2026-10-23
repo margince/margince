@@ -125,6 +125,9 @@ func TestTheNoticeAgendaCarriesTheAcquisitionToTheWorklist(t *testing.T) {
 	e := integration.Setup(t)
 	duty := homeNotice(t, e, e.AdminUser, false, homeReadTime.Add(-time.Hour))
 
+	if _, err := consent.NewStore(e.DB()).AssignNoticeCase(e.Admin(), duty.ID, e.AdminUser); err != nil {
+		t.Fatal(err)
+	}
 	feed := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return homeReadTime })
 	day, err := feed.Worklist(e.Admin(), "mine", "all", ids.Nil, 100, "")
 	if err != nil {

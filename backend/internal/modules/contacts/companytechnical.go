@@ -251,7 +251,7 @@ func (s *Store) auditTechnicalEnrichment(
 	}
 	delta := map[string]any{
 		"written": written, "removed": removed,
-		"lanes": lanes, "changes": len(changes),
+		"lanes": lanes, "changes": len(changes), "field_changes": technicalReceiptChanges(changes),
 	}
 	auditID, err := storekit.AuditEventWithEvidence(ctx, tx, "update", "company", in.CompanyID.UUID,
 		nil, map[string]any{

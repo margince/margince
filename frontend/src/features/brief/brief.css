@@ -652,6 +652,8 @@
 
 .magic-changes dd {
   margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 
 /* What the duty's deadline rests on, set apart from the sentence above it. */

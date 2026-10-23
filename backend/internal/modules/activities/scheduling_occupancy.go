@@ -16,8 +16,7 @@ func localMeetingSlots(ctx context.Context, tx pgx.Tx, host ids.UserID, from, to
 	args := schedulingArgs{}
 	h, f, t, id := args.add(host), args.add(from), args.add(to), args.add(exclude)
 	rows, err := tx.Query(ctx, `SELECT occurred_at,occurred_at+(CASE WHEN booking_interval_exact THEN duration_seconds ELSE 3600 END)*interval '1 second'
- FROM activity a WHERE host_user_id=`+h+` AND id<>`+id+` AND kind='meeting' AND archived_at IS NULL
- AND (claims_host_slot OR EXISTS(SELECT 1 FROM meeting_invitation m WHERE m.activity_id=a.id))
+ FROM activity a WHERE `+meetingResponsibilitySQL(h)+` AND id<>`+id+` AND kind='meeting' AND archived_at IS NULL
  AND meeting_status IS DISTINCT FROM 'canceled' AND occurred_at<`+t+`
  AND occurred_at+(CASE WHEN booking_interval_exact THEN duration_seconds ELSE 3600 END)*interval '1 second'>`+f+`
  UNION ALL SELECT (appointment->>'Start')::timestamptz,(appointment->>'End')::timestamptz

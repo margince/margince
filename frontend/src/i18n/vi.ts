@@ -14809,7 +14809,7 @@ export const vi = {
     "Từ khi mở danh sách: {arrived} việc mới, {gone} việc đã xử lý.",
   "worklist.walk.title": "Danh sách đã thay đổi",
   "worklist.walk.refresh": "Làm mới",
-  "worklist.handled.empty": "Hôm nay chưa có việc nào được xử lý thay bạn.",
+  "worklist.handled.empty": "Hôm nay chưa có thay đổi nào trong lịch sử này.",
   "worklist.handled.loading": "Đang tải thao tác…",
   "worklist.handled.count": "Thay đổi gần đây: {count}",
   "worklist.handled.what": "Thao tác",
@@ -15626,6 +15626,8 @@ export const vi = {
   "magic.records.empty": "Không hồ sơ nào trong số này còn hiển thị.",
   "magic.records.more": "Hiển thị thêm",
   "magic.records.fromTo": "từ {from} thành {to}",
+  "magic.records.minorUnitsUnknown":
+    "{amount} đơn vị nhỏ (chưa ghi nhận loại tiền)",
   "magic.records.empty_value": "trống",
   "magic.records.count_one": "{count} hồ sơ",
   "magic.records.count_other": "{count} hồ sơ",

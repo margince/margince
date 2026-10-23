@@ -7,7 +7,6 @@ import { useId } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
-import { EntityRef } from "../../components/entityref";
 import { mostSpecificFirst, RecordLinks } from "../../components/recordlinks";
 import {
   Badge,
@@ -26,6 +25,7 @@ import { SourceEvidence } from "../../design-system/sourceevidence";
 import { calendarDay, dueInstant } from "../../format/calendarday";
 import { formatDate, formatDateTime } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
+import { useMemberName } from "../../lib/membernames";
 import { problemCodeOf, unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import "./taskactions.css";
@@ -302,6 +302,7 @@ export function TaskDetailDialog({
   onClose,
   update,
   onOpenSource,
+  onOpenEmail,
 }: Readonly<{
   activityId: string;
   // An archived company takes no new activity, so the verbs below would only
@@ -311,6 +312,7 @@ export function TaskDetailDialog({
   onClose: () => void;
   update: ReturnType<typeof useTaskUpdate>;
   onOpenSource: (id: string) => void;
+  onOpenEmail?: (id: string, subject: string) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -318,6 +320,7 @@ export function TaskDetailDialog({
   const titleId = useId();
   const query = useActivity(activityId);
   const task: Activity | undefined = query.data;
+  const assignee = useMemberName(task?.assignee_id);
   return (
     <Modal open onClose={onClose} labelledBy={titleId} intent="drawer">
       <DrawerHead className="task-detail-head">
@@ -367,7 +370,14 @@ export function TaskDetailDialog({
                 <Badge tone="success">{t("tasks.isDone")}</Badge>
               )}
               {task.assignee_id && (
-                <EntityRef kind="user" id={task.assignee_id} />
+                <span>
+                  {assignee.data ??
+                    t(
+                      assignee.isPending
+                        ? "common.loading"
+                        : "approval.preview.nameUnavailable",
+                    )}
+                </span>
               )}
               {/* A task an agent wrote says so, so a reader knows it was
                   read out of a conversation rather than typed by a colleague. */}
@@ -393,6 +403,7 @@ export function TaskDetailDialog({
               <SourceEvidence
                 activityId={task.source_activity_id}
                 onOpenTranscript={onOpenSource}
+                onOpenEmail={onOpenEmail}
               />
             )}
           </div>

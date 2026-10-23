@@ -66,9 +66,7 @@ var destinationOfSource = map[crmcontracts.WorklistItemSource]crmcontracts.Workl
 	crmcontracts.WorklistItemSourceTask:              destinationToday,
 	crmcontracts.WorklistItemSourceConversationClaim: destinationToday,
 	crmcontracts.WorklistItemSourceBriefItem:         destinationToday,
-	// A contact going quiet is a seller's call to make — reach out, or decide
-	// this relationship is over. The dismissal path exists because it is a
-	// judgement about their own week, not a queue of somebody else's.
+	// Saved rows retain their destination; fresh quiet-contact work is not admitted.
 	crmcontracts.WorklistItemSourceRelationshipDecay: destinationToday,
 	// A bounced or undelivered message is a customer consequence: this named
 	// contact did not receive what was sent to them, and the seller is the one
@@ -81,10 +79,7 @@ var destinationOfSource = map[crmcontracts.WorklistItemSource]crmcontracts.Workl
 	// broken promise — the same shape as the undelivered message beside it, and
 	// not a pipe anybody else can restore.
 	crmcontracts.WorklistItemSourceFailedApproval: destinationToday,
-	// A notice is addressed to one reader and offers `acknowledge`. Nothing
-	// waits on a judgement and nothing is broken: reading it IS the work, and it
-	// leaves the lane when they do.
-	crmcontracts.WorklistItemSourceNotice: destinationToday,
+	crmcontracts.WorklistItemSourceNotice:         destinationToday,
 
 	// Judgements. Work waits on a contact deciding.
 	crmcontracts.WorklistItemSourceApproval:            destinationReview,

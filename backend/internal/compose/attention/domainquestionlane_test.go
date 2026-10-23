@@ -112,13 +112,11 @@ func TestAnUnboundDomainQuestionLaneIsAbsentRatherThanEmpty(t *testing.T) {
 	}
 }
 
-func TestDomainMaintenanceFoldsWithoutEnteringFocus(t *testing.T) {
+func TestStoredDomainMaintenanceFoldsWithoutEnteringFocus(t *testing.T) {
 	for _, count := range []int{2, 3, 60, DomainQuestionLimit} {
 		rows := make([]ranked, 0, count)
 		for i := range count {
-			rows = append(rows, classifyDomainQuestion(domainQuestionItem(DomainQuestion{
-				Domain: fmt.Sprintf("company-%d.test", i), AskedAt: readInstant,
-			}), readInstant))
+			rows = append(rows, ranked{item: crmcontracts.WorklistItem{Id: fmt.Sprintf("company-%d.test", i), Source: "domain_question", Level: levelRoutine, Category: "decisions"}})
 		}
 		grouped := foldRoutineDecisionsBounded(rows, count == DomainQuestionLimit)
 		assertDomainMaintenanceGroup(t, grouped, count)

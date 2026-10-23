@@ -28988,11 +28988,13 @@ export interface components {
             /** Format: uuid */
             linked_deal_id?: string | null;
             /** @description Who is in the room, so the reader knows whether they are single-threaded before they walk in. */
-            participants?: {
-                /** Format: uuid */
-                contact_id: string;
-                full_name: string;
-            }[];
+            participants?: components["schemas"]["MeetingParticipant"][];
+        };
+        /** @description A readable contact with recorded evidence of taking part in this meeting. */
+        MeetingParticipant: {
+            /** Format: uuid */
+            contact_id: string;
+            full_name: string;
         };
         /**
          * @description The eight kinds one extraction mechanism produces (ADR-0097 D1). They share a
@@ -33734,6 +33736,8 @@ export interface components {
          *     `withheld`.
          */
         Activity: {
+            /** @description Readable external participants on a meeting detail read. Omitted when the activity content is withheld and on list reads. Filing links alone do not imply attendance. */
+            readonly meeting_participants?: components["schemas"]["MeetingParticipant"][];
             /** @description Decisions about promises read from this source, included on list and detail reads when its content is visible. */
             readonly commitment_admissions?: components["schemas"]["CommitmentAdmission"][];
             /** Format: uuid */

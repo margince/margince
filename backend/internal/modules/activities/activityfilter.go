@@ -160,14 +160,14 @@ func timelineNarrowings(in ListActivitiesInput, arg func(any) int) []string {
 	if in.UnassignedQueue {
 		where = append(where, unassignedQueueClause())
 	}
+	if in.MeetingWorkOnly {
+		where = append(where, currentMeetingSQL())
+	}
 	if clause := onMeetingOfClause(in.OnMeetingOf, arg); clause != "" {
 		where = append(where, clause)
 	}
-	if in.MeetingHost != nil {
-		where = append(where, sprintf("a.kind = 'meeting' AND a.host_user_id = $%d", arg(*in.MeetingHost)))
-	}
 	if in.UnhostedMeetings {
-		where = append(where, "a.kind = 'meeting' AND a.host_user_id IS NULL")
+		where = append(where, "a.kind = 'meeting' AND ("+meetingHostProjectionSQL()+") IS NULL AND NOT EXISTS (SELECT 1 FROM activity_participant assigned WHERE assigned.activity_id=a.id AND assigned.user_id IS NOT NULL AND assigned.role IN ('organizer','attendee'))")
 	}
 	if clause := openTaskAssigneeClause(in.AssigneeID, in.TaskAsOf, in.mailIdentities, arg); clause != "" {
 		where = append(where, clause)

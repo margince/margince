@@ -38,9 +38,14 @@ from them or from us. With no eligible evidence or no model, the request stays o
 completes its reminder.
 
 A `settled` verdict completes the reminder linked to the evidence, through the ordinary activity writer.
-So it carries the audit row and the event that a human who completes it by hand would carry. `still_owed` may
-change the title of a reminder with no date that the machine filed. The new title names what is still
-open ("Send the offer" in place of the mail's subject line). It never touches a reminder a human accepted, dated or opened again.
+So it carries the audit row and the event that a human who completes it by hand would carry.
+`still_owed` must quote the part of the first request still open. Our later question asks the other
+side to act; it cannot become a new task for us. The quote is proof, not a new task title or
+due date. Quotes from old mail or signatures do not count.
+
+Old `still_owed` results without this proof are read again. Until then, they cannot supply automatic
+work. A task a human has taken stays. A title set by an old result returns to the original request
+title only if no human has taken the task. A rejected result never means the request is complete.
 
 An open reminder always wins over the machine's verdict. Someone who takes the work back up is the
 answer, and the request counts as open again while their task stands. `unsure` records that the pass
@@ -106,7 +111,8 @@ that reached a mailbox does not by itself prove who owns the task. The task is p
 does not make up one.
 
 A request whose labels disagree, or where it is unknown which seat is the recipient, stays open for
-review inside the horizon. Past the waiting horizon a request leaves the Worklist, whatever the
+review inside the horizon. The waiting horizon is at most 30 days, even when older response history suggests a longer wait.
+Past that horizon a request leaves the Worklist, whatever the
 classifier said and whether or not an open deal is linked. The queue holds current work, and old mail
 stays on the record's timeline.
 

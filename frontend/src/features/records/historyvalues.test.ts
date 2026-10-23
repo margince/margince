@@ -4,7 +4,7 @@ import {
   type HistoryValueCtx,
   historyValue,
   isMinorUnitField,
-} from "./historyvalues";
+} from "../../lib/historyvalues";
 
 const ctx = (overrides: Partial<HistoryValueCtx> = {}): HistoryValueCtx => ({
   currency: "EUR",

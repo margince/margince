@@ -9,12 +9,12 @@ import (
 )
 
 // DefaultWaitingHorizonDays applies until response history supports a current measurement.
-const DefaultWaitingHorizonDays = 90
+const DefaultWaitingHorizonDays = 30
 
 // WaitingHorizonStaleAfter bounds how long an old measurement may govern live work.
 const WaitingHorizonStaleAfter = 24 * time.Hour
 
 // WaitingHorizonSQL reads the stored measurement without recomputing it for each task.
 func WaitingHorizonSQL(asOf time.Time, arg func(any) int) string {
-	return fmt.Sprintf(`coalesce((SELECT horizon_days FROM activity_waiting_horizon WHERE measured_at > $%d), $%d)`, arg(asOf.Add(-WaitingHorizonStaleAfter)), arg(DefaultWaitingHorizonDays))
+	return fmt.Sprintf(`least(coalesce((SELECT horizon_days FROM activity_waiting_horizon WHERE measured_at > $%d), $%d), $%d)`, arg(asOf.Add(-WaitingHorizonStaleAfter)), arg(DefaultWaitingHorizonDays), arg(DefaultWaitingHorizonDays))
 }

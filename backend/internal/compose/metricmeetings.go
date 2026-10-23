@@ -12,6 +12,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/reporting"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 func readReportingMeetings(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, _ crmcontracts.ReportingFramework, _ metricEvaluator) ([]reporting.Fact, crmcontracts.ReportingCoverage, error) {
@@ -20,7 +21,7 @@ func readReportingMeetings(ctx context.Context, tx pgx.Tx, frame crmcontracts.Re
 	}
 	var b reportingBindings
 	legacy := "(held.id IS NULL OR held.customer_eligible_at_change IS NULL OR held.partial_pre_history)"
-	owner := "CASE WHEN " + legacy + " THEN a.host_user_id ELSE held.host_id_at_change END"
+	owner := "CASE WHEN " + legacy + " OR " + storekit.ImportedMeetingClause("a") + " THEN " + storekit.MeetingHostProjection("a") + " ELSE held.host_id_at_change END"
 	eligible := "CASE WHEN " + legacy + " THEN " + activities.CustomerMeetingSQL("a") + " ELSE held.customer_eligible_at_change END"
 	start := "COALESCE(held.scheduled_start,a.occurred_at)"
 	_, population, err := analyticsPopulationExpression(ctx, tx, reportingRequested(frame.Scope), owner, b.arg, unownedIsExcluded)

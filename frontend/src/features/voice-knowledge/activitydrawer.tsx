@@ -21,6 +21,7 @@ import { SurfaceState } from "../../design-system/surfacestate";
 import { TIMELINE_KIND_LABEL } from "../../design-system/timelineentry";
 import { isTranscriptActivity } from "../../design-system/transcriptread";
 import { formatDate, formatDateTime } from "../../format/format";
+import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import { activityFollowUpsKey, TASK_QUEUE_KEY } from "../../lib/activitykeys";
 import { useActivity } from "../../lib/activityread";
@@ -33,10 +34,6 @@ import { worklistKey } from "../worklist/worklist.queries";
 import "../../design-system/emaildetail.css";
 
 type Activity = components["schemas"]["Activity"];
-
-// The kinds whose linked contacts were in the room. On a note or a task a
-// linked contact is what the entry is about, so it is filed, not attending.
-const ATTENDED_KINDS = new Set(["meeting", "call"]);
 
 /**
  * One meeting, call, note or task, opened for reading where it was found.
@@ -151,19 +148,17 @@ function ActivityBody({
     activityFollowUpsKey(activity.id),
   ]);
   const links = mostSpecificFirst(activity.links ?? []);
-  const attended = ATTENDED_KINDS.has(activity.kind);
-  const attendees = attended
-    ? links.filter((link) => link.entity_type === "contact")
-    : [];
-  const filed = attended
-    ? links.filter((link) => link.entity_type !== "contact")
-    : links;
+  const filed = links;
   const colleagues = colleaguesOf(activity);
   return (
     <div className="emaildetail__body">
       <div className="emaildetail__parties">
         <PartyLine label={t("activity.detail.when")}>
-          {formatDateTime(activity.occurred_at, locale, zone)}
+          {formatDateTime(
+            activity.occurred_at,
+            locale,
+            activity.kind === "meeting" ? viewerZone() : zone,
+          )}
           {activity.kind === "task" && activity.due_at && (
             <>
               {" "}
@@ -177,11 +172,22 @@ function ActivityBody({
             <Badge tone="success">{t("tasks.isDone")}</Badge>
           )}
         </PartyLine>
-        {attendees.length > 0 && (
-          <PartyLine label={t("activity.detail.attendees")}>
-            <RecordLinks links={attendees} newTab />
-          </PartyLine>
-        )}
+        {activity.kind === "meeting" &&
+          activity.content_state !== "withheld" &&
+          Boolean(activity.meeting_participants?.length) && (
+            <PartyLine label={t("activity.detail.attendees")}>
+              {activity.meeting_participants?.map((contact, index) => (
+                <Fragment key={contact.contact_id}>
+                  {index > 0 && ", "}
+                  <EntityRef
+                    kind="contact"
+                    id={contact.contact_id}
+                    name={contact.full_name}
+                  />
+                </Fragment>
+              ))}
+            </PartyLine>
+          )}
         {colleagues.length > 0 && (
           <PartyLine label={t("activity.detail.colleagues")}>
             {colleagues.map((id, index) => (

@@ -204,7 +204,7 @@ func TestDoneIsOfferedWhereTheRowHasNoOtherWayOff(t *testing.T) {
 	}
 }
 
-func TestDeferredDomainQuestionReturnsOnlyForNewEvidence(t *testing.T) {
+func TestDomainReviewEvidenceDoesNotCreatePersonalDuty(t *testing.T) {
 	pressed := rankInstant.Add(-time.Hour)
 	old := pressed.Add(-time.Hour)
 	fresh := pressed.Add(time.Minute)
@@ -213,7 +213,7 @@ func TestDeferredDomainQuestionReturnsOnlyForNewEvidence(t *testing.T) {
 		evidence *time.Time
 		shown    bool
 	}{
-		{"undated evidence", nil, false}, {"same evidence rescanned", &old, false}, {"new evidence", &fresh, true},
+		{"undated evidence", nil, false}, {"same evidence rescanned", &old, false}, {"new evidence", &fresh, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			question := domainQuestionItem(DomainQuestion{Domain: "example.test", AskedAt: rankInstant, EvidenceAt: tc.evidence})

@@ -121,24 +121,8 @@ func owedAReply(item crmcontracts.WorklistItem) bool {
 	return false
 }
 
-// closesOffAConversation: a meeting already happened and owes an answer.
-//
-// BEFORE preparesAConversation, and a rule of its own rather than an arm of it,
-// because it shares the meetings CATEGORY with the rows that lane prepares —
-// the category is what a reader filters by, so both belong under one pill. What
-// differs is the section: nobody walks into a meeting that is over, and filing
-// it under preparing would tell a rep to get ready for something they already
-// did. Recording what happened is repair.
 func closesOffAConversation(item crmcontracts.WorklistItem) bool {
-	if item.Source == crmcontracts.WorklistItemSourceMeetingOutcome {
-		return true
-	}
-	// A silence nobody has a reason to chase is review work, which is where the
-	// worklist bands it. Left to fall through to its category it would land in
-	// "move revenue" — a lapsed contact drawn under a heading about deals — so
-	// the placement is stated here rather than inherited.
-	return item.Source == crmcontracts.WorklistItemSourceRelationshipDecay &&
-		item.Level >= levelRoutine
+	return item.Source == crmcontracts.WorklistItemSourceMeetingOutcome
 }
 
 // preparesAConversation: a meeting is coming and somebody has to walk in ready.
@@ -152,29 +136,6 @@ func preparesAConversation(item crmcontracts.WorklistItem) bool {
 	return item.Move != nil && item.Move.Action == crmcontracts.WorklistMoveActionOpenMeetingBrief
 }
 
-// sectionBuildsPipeline: work that creates future revenue rather than
-// protecting booked revenue.
-//
-// bands.go's buildsPipeline is CALLED rather than restated — two spellings of
-// "this builds pipeline" would drift — and the band is deliberately NOT read
-// here, though an earlier version of this function read it first. That version
-// was dead code with a paragraph of justification on top: bandOfRow reaches
-// bandBuildPipeline only through this same buildsPipeline, so the band arm could
-// never be true where the call below is false. Deleting it changed no test,
-// which is how it was found.
-//
-// The two arms it does have are the ones buildsPipeline does not answer. A lead
-// row is pipeline by its category even where its subject resolves elsewhere. And
-// a relationship going quiet has no lead and no deal at risk, yet reconnecting is
-// exactly how pipeline gets built.
-//
-// A quiet relationship reaches this arm only when it is worth reviving: a
-// routine one was already claimed by closesOffAConversation above, which is
-// where the level is read. Both arms testing the level would be two spellings
-// of one rule, and the first to run would be the only one that mattered.
 func sectionBuildsPipeline(item crmcontracts.WorklistItem) bool {
-	if item.Source == crmcontracts.WorklistItemSourceRelationshipDecay {
-		return true
-	}
 	return buildsPipeline(item) || item.Category == crmcontracts.WorklistItemCategoryLeads
 }

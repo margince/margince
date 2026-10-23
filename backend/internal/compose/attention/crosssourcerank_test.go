@@ -90,7 +90,6 @@ func TestTheDayIsOrderedAcrossItsSourcesAndNotOnlyWithinThem(t *testing.T) {
 		"promise",             // a promise the rep made
 		"risk",                // revenue at risk, past the pipeline's median
 		"small-risk",          // a deal below that bar: agreed work, not urgent
-		"notice",              // hygiene
 	)
 }
 
@@ -176,7 +175,7 @@ func TestAStaleWaitWithAnOpenDealKeepsItsPlace(t *testing.T) {
 		},
 	)
 
-	assertOrder(t, got, "meeting", waitActivity.String(), "notice")
+	assertOrder(t, got, "meeting", waitActivity.String())
 }
 
 // Fixed ids, so a failure names the row rather than a fresh uuid.

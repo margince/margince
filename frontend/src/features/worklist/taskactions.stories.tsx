@@ -117,8 +117,8 @@ function DetailModal({
           attachment_count: 0,
         },
         body: "Please send the agreed renewal paperwork.",
-        from: [],
-        to: [],
+        from: [{ address: "dana@example.com", display_name: "Dana Buyer" }],
+        to: [{ address: "mira@example.com", display_name: "Mira Voss" }],
         cc: [],
         bcc: [],
         bcc_withheld: false,
@@ -172,7 +172,7 @@ function DetailModal({
       jsonResponse({ id: "d-1", name: "Brandt renewal 2027" }),
     "GET /companies/o-1": () =>
       jsonResponse({ id: "o-1", display_name: "Brandt Automotive" }),
-    "GET /users": () =>
+    "GET /users/names": () =>
       jsonResponse({
         data: [{ id: "u-1", display_name: "Mira Voss" }],
         page: { has_more: false, next_cursor: null },

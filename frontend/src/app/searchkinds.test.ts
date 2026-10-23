@@ -2,15 +2,17 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
+import {
+  SEARCH_ACTIVITY_SEGMENT,
+  searchActivityRoute,
+  searchEmailRoute,
+} from "../lib/activityroute";
 import { parseHash, type Route, routeHash } from "../lib/router";
 import {
   groupSearchHits,
-  SEARCH_ACTIVITY_SEGMENT,
   SEARCH_GROUP_KEY,
   SEARCH_GROUP_ORDER,
   SEARCH_HIT_ORDER,
-  searchActivityRoute,
-  searchEmailRoute,
   searchGroupType,
   searchHitDestination,
   searchHitHasCard,

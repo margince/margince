@@ -17,6 +17,7 @@ import type { MessageKey } from "../../i18n/en";
 import type { EntityKind } from "../../lib/entity";
 import { historyFieldLabel } from "../../lib/historyfieldlabels";
 import { undoRefusalKey, VERSION_SKEW_CODE } from "../../lib/historyundo";
+import { type HistoryValueCtx, historyValue } from "../../lib/historyvalues";
 import { problemCodeOf, problemMessageOf, unwrap } from "../../lib/problem";
 import { useRecordRestore } from "../../lib/recordrestore";
 import { useRecordZone } from "../../lib/recordzone";
@@ -33,7 +34,6 @@ import { historyLine } from "./historyline";
 import { isMergeReference, MergedRecordName } from "./historymergedref";
 import { historyRows } from "./historyreversal";
 import { actorName, ReversalPairRow } from "./historyreversalrow";
-import { type HistoryValueCtx, historyValue } from "./historyvalues";
 import "./history.css";
 
 // The per-record change list: one sentence per audit_log row, from its verb

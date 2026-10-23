@@ -258,6 +258,9 @@ var notADayLane = map[crmcontracts.WorklistItemSource]bool{
 	// from rows that already have their own lanes, and its category is its
 	// members'.
 	crmcontracts.WorklistItemSourceBatch: true,
+	// Silence and mailbox context remain optional information, not duties.
+	crmcontracts.WorklistItemSourceRelationshipDecay: true,
+	crmcontracts.WorklistItemSourceNotice:            true,
 	// Read from its own store rather than from the assembled day: worklist.go
 	// classifies the waiting lane separately, so no Attention field carries
 	// it. Its own suite (waitinglane_integration_test.go) drives it end to end.
@@ -368,11 +371,7 @@ func everyLane() []struct {
 		{"approval", crmcontracts.Attention{AsOf: rankInstant, NeedsYou: []crmcontracts.AttentionItem{
 			item("x", "approval", withKind("send_email")),
 		}}},
-		{"notice", crmcontracts.Attention{AsOf: rankInstant, Notices: lane(item("x", "notice"))}},
 		{"bounce", crmcontracts.Attention{AsOf: rankInstant, Bounces: lane(item("x", "bounce"))}},
-		{"relationship_decay", crmcontracts.Attention{AsOf: rankInstant, RelationshipDecay: lane(
-			item("x", "relationship_decay"),
-		)}},
 		{"conversation_claim", crmcontracts.Attention{AsOf: rankInstant, Commitments: lane(
 			item("x", "conversation_claim", withDue(rankInstant)),
 		)}},

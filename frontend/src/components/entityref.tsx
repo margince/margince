@@ -121,12 +121,9 @@ function UnnamedRef({
     return <span>{t("common.loading")}</span>;
   }
   if (reading === "failed") {
-    // The id stays reachable through the title rather than printed as the
-    // value: on the line it reads as what the read came back with, and the
-    // read came back with nothing.
-    return <span title={id}>{t("ref.nameLoadFailed")}</span>;
+    return <span>{t("ref.nameLoadFailed")}</span>;
   }
-  return <span title={id}>{id}</span>;
+  return <span>{id}</span>;
 }
 
 /**
@@ -220,7 +217,7 @@ function resolvedOrFallback(
   if (resolved == null) {
     return <UnnamedRef id={id} reading={reading} />;
   }
-  return <span title={id}>{resolved}</span>;
+  return <span>{resolved}</span>;
 }
 
 function UserRef({ id, name }: Readonly<{ id: string; name?: string | null }>) {
@@ -285,7 +282,7 @@ function RecordRef({
     return <UnnamedRef id={id} reading={readingOf(query)} />;
   }
   if (asText) {
-    return <span title={id}>{resolved}</span>;
+    return <span>{resolved}</span>;
   }
   // A real anchor, so the record can be opened the ways a link can: a new tab,
   // a new window, a bookmark, the keyboard. A button carried the same route and
@@ -309,7 +306,6 @@ function RecordRef({
       className="entity-link"
       href={routeHash(ENTITY[kind].route(id))}
       onClick={(event) => event.stopPropagation()}
-      title={id}
       {...(newTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
     >
       {resolved}

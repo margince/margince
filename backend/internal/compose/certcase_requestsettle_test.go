@@ -3,7 +3,12 @@
 
 package compose
 
-import "testing"
+import (
+	"encoding/json"
+	"testing"
+
+	"github.com/margince/margince/backend/internal/modules/activities"
+)
 
 // The thing owed may be named in more than one way, and each names it.
 //
@@ -81,5 +86,22 @@ func TestARenderingDoesNotMatchAnUnrelatedUseOfTheWord(t *testing.T) {
 				t.Errorf("remainingNamesIt(%q) = %v, want %v", tc.remaining, got, tc.want)
 			}
 		})
+	}
+}
+
+func TestSettlementCertificationUsesTheOriginalMessageIdentity(t *testing.T) {
+	t.Parallel()
+	prepared, err := (requestSettleCases{}).Prepare(json.RawMessage(`[{"messages":[{"direction":"inbound","body":"Please send the report."},{"direction":"outbound","body":"I will send it tomorrow."}]}]`), json.RawMessage(`[{"verdict":"still_owed"}]`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	actual, ok := prepared.(*requestSettleCase)
+	if !ok {
+		t.Fatal("wrong settlement case")
+	}
+	request := actual.batch[0].Request.RequestID
+	result := settleResult{ID: request.String(), Verdict: activities.RequestStillOwed, Remaining: "send the report", Confidence: 1}
+	if msg := validateSettlePayload(settlePayload{Results: []settleResult{result}}, actual.batch); msg != "" {
+		t.Fatal(msg)
 	}
 }

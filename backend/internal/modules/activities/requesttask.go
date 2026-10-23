@@ -206,10 +206,7 @@ func requesterLinks(filed requestFiling) []ActivityLinkInput {
 }
 
 func emailRequestTaskInput(source crmcontracts.Activity, links []ActivityLinkInput, userID ids.UUID, asOf time.Time) LogActivityInput {
-	subject := "Reply to email"
-	if source.Subject != nil && strings.TrimSpace(*source.Subject) != "" {
-		subject = *source.Subject
-	}
+	subject := emailRequestTaskSubject(source.Subject)
 	sourceSystem, sourceID := EmailRequestTaskSource, source.Id.String()
 	messageID, assignee := ids.UUID(source.Id), ids.From[ids.UserKind](userID)
 	return LogActivityInput{
@@ -218,4 +215,11 @@ func emailRequestTaskInput(source crmcontracts.Activity, links []ActivityLinkInp
 		SourceSystem: &sourceSystem, SourceID: &sourceID, SourceActivityID: &messageID,
 		Source: EmailRequestTaskSource, Origin: OriginSystemRemediation, Links: links,
 	}
+}
+
+func emailRequestTaskSubject(subject *string) string {
+	if subject != nil && strings.TrimSpace(*subject) != "" {
+		return *subject
+	}
+	return "Reply to email"
 }

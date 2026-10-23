@@ -46,7 +46,7 @@ func TestDecisionAnnouncementsFoldBeforeHomeCountsAndWorklistPages(t *testing.T)
 		}
 		cursor = *page.NextCursor
 	}
-	if !seen[decisionID.String()] || !seen[unrelated.String()] || len(seen) != 2 {
+	if !seen[decisionID.String()] || seen[unrelated.String()] || len(seen) != 1 {
 		t.Fatalf("paged obligations: %v", seen)
 	}
 }
@@ -76,7 +76,7 @@ func TestFoldedAnnouncementsPreserveTheNoticeReadBoundary(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(page.Queue) != 1 || !page.Readings.MoreAvailable {
+	if len(page.Queue) != 1 || page.Readings.MoreAvailable {
 		t.Fatalf("folded bounded notices lost coverage: %+v", page.Readings)
 	}
 	day, err := svc.Assemble(pageReader())
@@ -137,5 +137,17 @@ func TestBatchedDecisionsDoNotBringBackTheirAnnouncements(t *testing.T) {
 	}
 	if page.NextCursor != nil || itemsOn(page.Queue) != len(decisions) {
 		t.Fatal("announcements added a second page or inflated the batch count")
+	}
+}
+
+func TestInformationCannotBecomeWorkThroughAnotherLane(t *testing.T) {
+	t.Parallel()
+	day := crmcontracts.Attention{NeedsYou: []crmcontracts.AttentionItem{
+		{Source: sourceNotice, Kind: new("capture_backlog_stalled")},
+		{Source: sourceDomainQuestion},
+		{Source: crmcontracts.AttentionItemSource(sourceDecay)},
+	}}
+	if rows := classifyDay(day, rankInstant, dayMoney{}); len(rows) != 0 {
+		t.Fatalf("information became personal obligations: %+v", rows)
 	}
 }
