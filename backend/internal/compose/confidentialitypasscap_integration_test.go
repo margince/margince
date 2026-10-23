@@ -274,8 +274,8 @@ func TestAnUnreachableDatabaseFailsThePassCapAndTheBacklogReads(t *testing.T) {
 }
 
 // assertPassCapRead fails when the pass would read another cap than the one just
-// saved, so a pass that judges too many threads is told apart from one that read
-// the wrong limit.
+// saved. A pass that read the wrong limit is then told apart from one that
+// judged too many threads under the right one.
 func assertPassCapRead(t *testing.T, e *integration.Env, want int) {
 	t.Helper()
 	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), confidentialityActor)
