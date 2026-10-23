@@ -37,7 +37,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/graphcal"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -84,7 +84,7 @@ var stampedMailboxLabelSQL = `coalesce((
 		         SELECT c.account_label
 		           FROM capture_connection c
 		          WHERE c.provider = split_part(a.captured_by, ':', 2)
-		            AND c.user_id::text = ` + storekit.ConnectorSeatSQL("a") + `
+		            AND c.user_id::text = ` + auth.ConnectorSeatSQL("a") + `
 		          LIMIT 1), '')`
 
 // replayCandidate is one activity whose original is still on file.

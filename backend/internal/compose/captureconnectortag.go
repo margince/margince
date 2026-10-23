@@ -24,7 +24,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/collections"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -100,7 +100,7 @@ func connectorContextTag(ctx context.Context, tx pgx.Tx, activityID, ownerID ids
 		 WHERE c.user_id = $2
 		   AND c.archived_at IS NULL
 		   AND c.provider = split_part(a.captured_by, ':', 2)
-		   AND c.user_id::text = `+storekit.ConnectorSeatSQL("a"),
+		   AND c.user_id::text = `+auth.ConnectorSeatSQL("a"),
 		activityID, ownerID).Scan(&tagID)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// No connection, no word, or a word since archived — all three mean this

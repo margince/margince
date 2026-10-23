@@ -187,7 +187,8 @@ func senderAtOwnDomain(alias string) string {
 const SenderStampsCheckedStep = "recheck_colleague_sender_domains"
 
 // activityMembershipArm is the "I was on this" test for CONTENT: the caller's
-// own seat imported the row, or they are stamped as one of its participants.
+// own seat imported the row, or they are stamped as one of its participants by
+// a row that stands (ParticipantStandsSQL).
 //
 // Its discovery counterpart is activityAttendanceArm above, which is narrower by
 // one column and says why. The two are allowed to differ in exactly that
@@ -209,8 +210,8 @@ const SenderStampsCheckedStep = "recheck_colleague_sender_domains"
 func activityMembershipArm(p principal.Principal, alias string, arg func(any) int) string {
 	me := arg(p.UserID)
 	return fmt.Sprintf(`(EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = %[1]s.id AND ci.user_id = $%[2]d)
-	   OR EXISTS (SELECT 1 FROM activity_participant ap WHERE ap.activity_id = %[1]s.id AND ap.user_id = $%[2]d))`,
-		alias, me)
+	   OR EXISTS (SELECT 1 FROM activity_participant ap WHERE ap.activity_id = %[1]s.id AND ap.user_id = $%[2]d AND %[3]s))`,
+		alias, me, ParticipantStandsSQL("ap", alias))
 }
 
 // ActivityContentClause is the stronger activity gate: discoverable AND the

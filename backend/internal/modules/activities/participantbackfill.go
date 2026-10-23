@@ -58,7 +58,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -135,7 +134,7 @@ func backfillParticipants(ctx context.Context, tx pgx.Tx, limit int) (int, error
 		           -- Class 2: the mailbox owner the connector stamp names.
 		           SELECT u.id
 		             FROM app_user u
-		            WHERE u.id::text = `+storekit.ConnectorSeatSQL("a")+`
+		            WHERE u.id::text = `+auth.ConnectorSeatSQL("a")+`
 		      ) o ON true
 		     WHERE a.archived_at IS NULL
 		       -- The same set every other writer of a participant row accepts,

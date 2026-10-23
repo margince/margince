@@ -177,7 +177,7 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 		       AND pp.contact_id = t.contact_id AND pp.role IN `+interactionRoles+`
 		      JOIN activity a
 		        ON a.id = up.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
-		   AND `+graphCountedActivity+`
+		   AND `+graphCountedActivity+` AND `+auth.ParticipantStandsSQL("up", "a")+`
 		     GROUP BY t.user_id, t.contact_id
 		)
 		INSERT INTO graph_interaction_edge AS e
@@ -212,7 +212,7 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 		         FROM activity_participant up
 		         JOIN activity_participant pp ON pp.activity_id = up.activity_id
 		         JOIN activity a ON a.id = up.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
-		   AND `+graphCountedActivity+`
+		   AND `+graphCountedActivity+` AND `+auth.ParticipantStandsSQL("up", "a")+`
 		        WHERE up.user_id = t.user_id AND up.role IN `+interactionRoles+`
 		          AND pp.contact_id = t.contact_id AND pp.role IN `+interactionRoles+`)`,
 		users, contacts); err != nil {
@@ -394,7 +394,7 @@ func RebuildEdges(ctx context.Context, tx pgx.Tx) error {
 		  FROM activity_participant up
 		  JOIN activity_participant pp ON pp.activity_id = up.activity_id
 		  JOIN activity a ON a.id = up.activity_id AND a.archived_at IS NULL`+audienceWorkspaceOnly+`
-		   AND `+graphCountedActivity+`
+		   AND `+graphCountedActivity+` AND `+auth.ParticipantStandsSQL("up", "a")+`
 		 WHERE up.user_id IS NOT NULL AND up.role IN `+interactionRoles+`
 		   AND pp.contact_id IS NOT NULL AND pp.role IN `+interactionRoles+`
 		 GROUP BY up.user_id, pp.contact_id`); err != nil {
