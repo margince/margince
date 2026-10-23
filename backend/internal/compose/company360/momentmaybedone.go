@@ -30,14 +30,6 @@ import (
 
 // doneQuestions is, per claim on the card, the question its later mail raises.
 func doneQuestions(ctx context.Context, tx pgx.Tx, now time.Time, said momentCopy, items []owedwork.Item) (map[string]crmcontracts.ContactMoment, error) {
-	zone, err := identity.TimezoneAppliedTx(ctx, tx)
-	if err != nil {
-		return nil, err
-	}
-	loc, err := storekit.LoadZone(zone)
-	if err != nil {
-		return nil, err
-	}
 	var bases []activities.PromiseBasis
 	claims := map[ids.UUID]owedwork.Item{}
 	for _, item := range items {
@@ -47,6 +39,16 @@ func doneQuestions(ctx context.Context, tx pgx.Tx, now time.Time, said momentCop
 		}
 	}
 	followUps, err := activities.PromiseFollowUpsTx(ctx, tx, bases, now)
+	if err != nil || len(followUps) == 0 {
+		return nil, err
+	}
+	// The zone only dates a question that exists, so a card with none reads it
+	// not at all.
+	zone, err := identity.TimezoneAppliedTx(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	loc, err := storekit.LoadZone(zone)
 	if err != nil {
 		return nil, err
 	}
