@@ -15665,6 +15665,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/users/service-members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Declare the member that owns an extension's unattended feed. Installation admin only, human only.
+         * @description Creates a member for a scheduled feed to run as, so the feed does not depend on a
+         *     colleague who may one day leave. The extension lands records as this member, and the
+         *     feed's secret is filed under it.
+         *
+         *     It has no login: there is no password and nobody can sign in as it. It has a full seat
+         *     type but is free of the licence seat limit: it is not counted, and declaring one never
+         *     fails on the seat limit. It holds one role, `service_ingest`,
+         *     which can create and update activities, contacts and companies and nothing else.
+         *
+         *     The member serves the one extension named in `extension`. Any other extension asking
+         *     to act as it is refused, so a member declared for one feed cannot be borrowed by
+         *     another.
+         *
+         *     It is archived, never deleted: see `POST /users/service-members/{id}/archive`.
+         *
+         *     Installation admin only (`role: admin`); an agent may never declare one.
+         */
+        post: operations["declareServiceMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/service-members/{id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retire a service member. Installation admin only, human only.
+         * @description Deactivates and archives the member, which stops the feed that runs as it. The row stays, so the audit trail and the secret filed under it keep
+         *     naming something real; nothing deletes a service member.
+         *
+         *     Offboarding a colleague never does this. A feed stops only when somebody archives its
+         *     member. Publishes `user.deactivated`.
+         *
+         *     Answers 404 for an id that is not a live service member, including one already archived.
+         */
+        post: operations["archiveServiceMember"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/names": {
         parameters: {
             query?: never;
@@ -37610,6 +37674,12 @@ export interface components {
         };
         SeatNameListResponse: {
             data: components["schemas"]["SeatName"][];
+        };
+        /** @description A member for an extension's unattended feed. No password and no way in. */
+        ServiceMemberRequest: {
+            /** @description The extension unit the member serves, by its manifest name. Only that unit may act as the member. A name no installed unit carries is accepted and simply never used. */
+            extension: string;
+            display_name: string;
         };
         /** @description A colleague who already left, recorded so imported history can name them. No password and no invitation: this creates a seat that cannot be signed into. */
         FormerMemberRequest: {
@@ -72341,6 +72411,74 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    declareServiceMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ServiceMemberRequest"];
+            };
+        };
+        responses: {
+            /** @description The service member. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["User"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            /** @description Refused: `permission_denied` — the caller is not an installation admin, or is an agent. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Refused: `company_not_described` — this installation has not yet saved its own company through `PUT /company`. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    archiveServiceMember: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The member is archived. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     nameSeats: {

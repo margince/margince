@@ -68,10 +68,8 @@ func NewSeatUsage(db *database.DB) *SeatUsageStore { return &SeatUsageStore{db: 
 // authority for one to act under.
 //
 // `is_agent` is the whole of it. The licence also excludes service accounts, and
-// app_user carries no second marker for one — the only service account in this
-// product is Google's Pub/Sub signer, which is an external identity and holds no
-// row here. A second exclusion would be inventing a distinction the schema does
-// not make.
+// a service member (`service_extension` set) is an `is_agent` row, so it is
+// excluded by the same predicate. It is not counted and never hits the ceiling.
 //
 // This is deliberately NOT the spec's "active" definition (signed in within 30
 // days, UC-ADMIN-03 precondition 3): the two meters therefore disagree, which is

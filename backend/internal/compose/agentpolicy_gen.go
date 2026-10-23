@@ -910,6 +910,8 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/teams":                                                        {Op: "createTeam", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/users":                                                        {Op: "inviteUser", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/users/former":                                                 {Op: "createFormerMember", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/users/service-members":                                        {Op: "declareServiceMember", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/users/service-members/{id}/archive":                           {Op: "archiveServiceMember", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/users/{id}/deactivate":                                        {Op: "deactivateUser", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/users/{id}/password-link":                                     {Op: "issueUserPasswordLink", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/users/{id}/reactivate":                                        {Op: "reactivateUser", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

@@ -23050,6 +23050,78 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+  /users/service-members:
+    post:
+      tags: [Identity]
+      operationId: declareServiceMember
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: Declare the member that owns an extension's unattended feed. Installation admin only, human only.
+      description: |
+        Creates a member for a scheduled feed to run as, so the feed does not depend on a
+        colleague who may one day leave. The extension lands records as this member, and the
+        feed's secret is filed under it.
+
+        It has no login: there is no password and nobody can sign in as it. It has a full seat
+        type but is free of the licence seat limit: it is not counted, and declaring one never
+        fails on the seat limit. It holds one role, `service_ingest`,
+        which can create and update activities, contacts and companies and nothing else.
+
+        The member serves the one extension named in `extension`. Any other extension asking
+        to act as it is refused, so a member declared for one feed cannot be borrowed by
+        another.
+
+        It is archived, never deleted: see `POST /users/service-members/{id}/archive`.
+
+        Installation admin only (`role: admin`); an agent may never declare one.
+      x-agent-access: human-only
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ServiceMemberRequest' }
+      responses:
+        '201':
+          description: The service member.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403':
+          description: >-
+            Refused: `permission_denied` — the caller is not an installation admin, or is an agent.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '409':
+          description: >-
+            Refused: `company_not_described` — this installation has not yet saved its own
+            company through `PUT /company`.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /users/service-members/{id}/archive:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Identity]
+      operationId: archiveServiceMember
+      security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
+      summary: Retire a service member. Installation admin only, human only.
+      description: |
+        Deactivates and archives the member, which stops the feed that runs as it. The row stays, so the audit trail and the secret filed under it keep
+        naming something real; nothing deletes a service member.
+
+        Offboarding a colleague never does this. A feed stops only when somebody archives its
+        member. Publishes `user.deactivated`.
+
+        Answers 404 for an id that is not a live service member, including one already archived.
+      x-agent-access: human-only
+      responses:
+        '204': { description: The member is archived. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
   /users/names:
     get:
       tags: [Identity]
@@ -51249,6 +51321,20 @@ components:
       properties:
         data: { type: array, items: { $ref: '#/components/schemas/SeatName' } }
 
+    ServiceMemberRequest:
+      type: object
+      description: >-
+        A member for an extension's unattended feed. No password and no way in.
+      required: [extension, display_name]
+      properties:
+        extension:
+          type: string
+          minLength: 1
+          maxLength: 64
+          description: >-
+            The extension unit the member serves, by its manifest name. Only that unit may act as
+            the member. A name no installed unit carries is accepted and simply never used.
+        display_name: { type: string, minLength: 1, maxLength: 255 }
     FormerMemberRequest:
       type: object
       description: >-

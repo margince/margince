@@ -3311,6 +3311,14 @@ func (stubs) NameSeats(w nethttp.ResponseWriter, r *nethttp.Request, params crmc
 	httperr.NotImplemented(w, r, "NameSeats")
 }
 
+func (stubs) DeclareServiceMember(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "DeclareServiceMember")
+}
+
+func (stubs) ArchiveServiceMember(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ArchiveServiceMember")
+}
+
 func (stubs) GetUserAccess(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "GetUserAccess")
 }

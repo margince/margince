@@ -404,8 +404,10 @@ checked against the full budget for names, so a name a unit takes today stays go
   connection while it holds one. On a small pool that waits with no end instead of failing
   (`ErrNestedIngest` turns the wait into an error). The core sets the source on the row from the unit and
   the source it declared (`Ingress`, which derives into `manifest.generated.json`). So a unit can put
-  nothing under the name of another unit or of a core connector. The `captured_by` of a landed row also
-  names the member behind it.
+  nothing under the name of another unit or of a core connector.
+
+  The `captured_by` of a landed row also names the member behind it. That member may also be a
+  [service member](../how-to/declare-a-service-member.md), which nobody signs in as.
 
   A source also declares the **identity keys it stands behind** (`Merges`, empty by default). A unit
   supplies every field its provider gives it and decides nothing about identity. The declaration says

@@ -1042,6 +1042,8 @@ public.app_user.app_user_routine_delivery_time_check CHECK ((routine_delivery_ti
 public.app_user.app_user_routine_mail_scope_check CHECK ((routine_mail_scope = ANY (ARRAY['personal'::text, 'team'::text, 'combined'::text])))
 public.app_user.app_user_routine_mail_team_id_fkey FOREIGN KEY (routine_mail_team_id) REFERENCES team(id) ON DELETE SET NULL
 public.app_user.app_user_seat_type_check CHECK ((seat_type = ANY (ARRAY['read'::text, 'full'::text])))
+public.app_user.app_user_service_is_a_passwordless_agent CHECK (((service_extension IS NULL) OR (is_agent AND (password_hash IS NULL) AND (service_extension <> ''::text))))
+public.app_user.app_user_service_never_deleted CREATE TRIGGER app_user_service_never_deleted BEFORE DELETE ON public.app_user FOR EACH ROW EXECUTE FUNCTION refuse_service_member_delete()
 public.app_user.app_user_status_check CHECK ((status = ANY (ARRAY['invited'::text, 'active'::text, 'suspended'::text, 'deactivated'::text])))
 public.app_user.app_user_weekly_delivery_check CHECK (((weekly_delivery IS NULL) OR (weekly_delivery = ANY (ARRAY['none'::text, 'email'::text]))))
 public.app_user.app_user_weekly_delivery_day_check CHECK (((weekly_delivery_day >= 1) AND (weekly_delivery_day <= 7)))
@@ -1073,6 +1075,7 @@ public.app_user.routine_delivery_time text gen=- def=-
 public.app_user.routine_mail_scope text gen=- def=-
 public.app_user.routine_mail_team_id uuid gen=- def=-
 public.app_user.seat_type text NOT NULL gen=- def='full'::text
+public.app_user.service_extension text gen=- def=-
 public.app_user.status text NOT NULL gen=- def='active'::text
 public.app_user.timezone text gen=- def=-
 public.app_user.trg_app_user_updated CREATE TRIGGER trg_app_user_updated BEFORE UPDATE ON public.app_user FOR EACH ROW EXECUTE FUNCTION set_updated_at()
@@ -6377,6 +6380,14 @@ BEGIN
   LOOP
     PERFORM move_last_activity(reached.kind::regclass, reached.id);
   END LOOP;
+END;
+
+public.refuse_service_member_delete() secdef=false cfg=- acl=- BEGIN
+    IF OLD.service_extension IS NOT NULL THEN
+        RAISE EXCEPTION 'a service member is archived, never deleted'
+            USING ERRCODE = 'restrict_violation';
+    END IF;
+    RETURN OLD;
 END;
 
 public.relationship acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false

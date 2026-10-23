@@ -734,6 +734,8 @@ you if you miss them:
 - **You act on a member's live rights.** The member named in `on` must hold one of your unit's secrets with user
   scope, today. Putting in a key is how a member asks you to act for them here. Say an admin takes rights away from a member
   after they connect. From the next call on, their connection can land only what the new rights allow.
+- A feed that must keep running after a colleague leaves runs as a service member. An operator declares one for
+  your unit, and you file the feed's secret under it. See [declare-a-service-member.md](declare-a-service-member.md).
 - **`Key` must be the same on every read.** It is the key that stops copies. Make it from the provider's own id,
   never from a time, a place in a page or your own row id. If you do not, every read writes a second copy, and
   **nothing reports an error**.

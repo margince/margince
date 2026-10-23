@@ -114,17 +114,17 @@ func extensionMemberConsented(ctx context.Context, pool *pgxpool.Pool, unit stri
 	}
 	var consented bool
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
-		// No join to app_user. It carried the scope until ADR-0091 §8 phase D
-		// took the tenant column off that table too, and extension_secret's
-		// user_id is a foreign key onto app_user(id) ON DELETE CASCADE — so a
-		// row that reaches this predicate cannot fail such a join, and one kept
-		// here would read as a check while eliminating nothing.
+		// A service member consents for the unit it was declared for and no
+		// other. Without the join, a unit could name another unit's service
+		// member and borrow the authority the operator gave that feed.
 		return tx.QueryRow(ctx, `
 			SELECT EXISTS (
 				SELECT 1 FROM extension_secret s
+				JOIN app_user u ON u.id = s.user_id
 				WHERE s.extension_name = $1
 				  AND s.user_id = $2
 				  AND s.key = ANY($3)
+				  AND (u.service_extension IS NULL OR u.service_extension = $1)
 			)`, unit, member, declared).Scan(&consented)
 	})
 	if err != nil {

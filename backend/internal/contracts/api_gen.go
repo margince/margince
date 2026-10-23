@@ -48357,6 +48357,14 @@ type SendMessageRequest struct {
 // objected, so naming one here is refused (422 `invalid`).
 type SendMessageRequestCommunicationContext string
 
+// ServiceMemberRequest A member for an extension's unattended feed. No password and no way in.
+type ServiceMemberRequest struct {
+	DisplayName string `json:"display_name"`
+
+	// Extension The extension unit the member serves, by its manifest name. Only that unit may act as the member. A name no installed unit carries is accepted and simply never used.
+	Extension string `json:"extension"`
+}
+
 // ServiceStatus The fixed answer of `GET /status`.
 type ServiceStatus struct {
 	Status ServiceStatusStatus `json:"status"`
@@ -62220,6 +62228,9 @@ type InviteUserJSONRequestBody = InviteUserRequest
 // CreateFormerMemberJSONRequestBody defines body for CreateFormerMember for application/json ContentType.
 type CreateFormerMemberJSONRequestBody = FormerMemberRequest
 
+// DeclareServiceMemberJSONRequestBody defines body for DeclareServiceMember for application/json ContentType.
+type DeclareServiceMemberJSONRequestBody = ServiceMemberRequest
+
 // DeactivateUserJSONRequestBody defines body for DeactivateUser for application/json ContentType.
 type DeactivateUserJSONRequestBody = DeactivateUserRequest
 
@@ -75286,6 +75297,12 @@ type ServerInterface interface {
 	// Name the colleagues behind a set of ids. Read-only.
 	// (GET /users/names)
 	NameSeats(w http.ResponseWriter, r *http.Request, params NameSeatsParams)
+	// Declare the member that owns an extension's unattended feed. Installation admin only, human only.
+	// (POST /users/service-members)
+	DeclareServiceMember(w http.ResponseWriter, r *http.Request)
+	// Retire a service member. Installation admin only, human only.
+	// (POST /users/service-members/{id}/archive)
+	ArchiveServiceMember(w http.ResponseWriter, r *http.Request, id Id)
 	// What this member sees and may do today, from their roles and teams.
 	// (GET /users/{id}/access)
 	GetUserAccess(w http.ResponseWriter, r *http.Request, id Id)
@@ -80419,6 +80436,18 @@ func (_ Unimplemented) CreateFormerMember(w http.ResponseWriter, r *http.Request
 // Name the colleagues behind a set of ids. Read-only.
 // (GET /users/names)
 func (_ Unimplemented) NameSeats(w http.ResponseWriter, r *http.Request, params NameSeatsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Declare the member that owns an extension's unattended feed. Installation admin only, human only.
+// (POST /users/service-members)
+func (_ Unimplemented) DeclareServiceMember(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Retire a service member. Installation admin only, human only.
+// (POST /users/service-members/{id}/archive)
+func (_ Unimplemented) ArchiveServiceMember(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -115768,6 +115797,58 @@ func (siw *ServerInterfaceWrapper) NameSeats(w http.ResponseWriter, r *http.Requ
 	handler.ServeHTTP(w, r)
 }
 
+// DeclareServiceMember operation middleware
+func (siw *ServerInterfaceWrapper) DeclareServiceMember(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeclareServiceMember(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ArchiveServiceMember operation middleware
+func (siw *ServerInterfaceWrapper) ArchiveServiceMember(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ArchiveServiceMember(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetUserAccess operation middleware
 func (siw *ServerInterfaceWrapper) GetUserAccess(w http.ResponseWriter, r *http.Request) {
 
@@ -120948,6 +121029,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/users/names", wrapper.NameSeats)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/users/service-members", wrapper.DeclareServiceMember)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/users/service-members/{id}/archive", wrapper.ArchiveServiceMember)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/users/{id}/access", wrapper.GetUserAccess)

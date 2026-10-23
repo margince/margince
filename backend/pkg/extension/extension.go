@@ -62,7 +62,9 @@
 //     one arrives, `on` becomes that connection's identity and every unit's
 //     poll changes with it. What will NOT change is the pair of facts behind
 //     it: the member has to have deposited a credential with the unit, and the
-//     landing runs on their live authority.
+//     landing runs on their live authority. A service member an operator
+//     declared for the unit is such a member, so a connection that arrives
+//     would carry its id the same way.
 //
 // A unit written against today's surface will need editing when either lands.
 // That is acceptable precisely because the composed set is the trust boundary:

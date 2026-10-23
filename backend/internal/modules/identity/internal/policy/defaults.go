@@ -436,6 +436,19 @@ var defaults = map[string]Document{
 		}),
 		RowScope: principal.RowScopeAll,
 	},
+	// service_ingest is what a service member holds. It is the narrowest grant
+	// that lets a landing succeed: the activity, plus the contact and company
+	// the counterparty ladder may resolve or mint. Row scope `all` lets that
+	// ladder find a contact whoever owns it. A narrower scope would mint a
+	// duplicate. It is not in systemRoles: identity seeds it on first declaration.
+	"service_ingest": {
+		Objects: grid(none, map[string]grant{
+			"activity": writeNoDelete,
+			"contact":  writeNoDelete,
+			"company":  writeNoDelete,
+		}),
+		RowScope: principal.RowScopeAll,
+	},
 }
 
 // MustDefaultJSON returns the seeded policy document for a system role key,

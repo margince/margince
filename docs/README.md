@@ -136,6 +136,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
   (`make bench-daily`).
 - [register-a-webhook.md](how-to/register-a-webhook.md): send events to your own HTTPS endpoint.
 - [add-an-extension.md](how-to/add-an-extension.md): add an extension under `extensions/`.
+- [declare-a-service-member.md](how-to/declare-a-service-member.md): make the account that a timed job
+  of an extension runs as.
 - [debug-an-ai-task.md](how-to/debug-an-ai-task.md): run one AI task on your own input
   (`make ai-probe`).
 - [build-the-desktop-app.md](how-to/build-the-desktop-app.md): build the desktop app for macOS or

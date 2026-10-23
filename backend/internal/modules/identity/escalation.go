@@ -139,6 +139,18 @@ func refuseUnlessCallerOutranksTarget(ctx context.Context, tx pgx.Tx, actor Iden
 	if actor.hasRole(roleAdmin) {
 		return nil
 	}
+	// A service member runs a feed nobody is watching, so only an installation
+	// admin may change or stop it through the member routes.
+	var service bool
+	switch err := tx.QueryRow(ctx,
+		`SELECT service_extension IS NOT NULL FROM app_user WHERE id = $1`, targetID).Scan(&service); {
+	case errors.Is(err, pgx.ErrNoRows):
+		// lockTargetGrants answers not-found below.
+	case err != nil:
+		return err
+	case service:
+		return apperrors.ErrPermissionDenied
+	}
 	target, err := lockTargetGrants(ctx, tx, targetID)
 	if err != nil {
 		return err

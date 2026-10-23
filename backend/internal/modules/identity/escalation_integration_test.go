@@ -129,3 +129,42 @@ func escalationCtx(id Identity) context.Context {
 	})
 	return principal.WithCorrelationID(ctx, ids.NewV7())
 }
+
+// A service member runs a feed nobody is watching, so a delegated member
+// administrator may not stop it, re-role it or archive it. Only an installation
+// admin may.
+func TestADelegatedMemberAdministratorCannotReachAServiceMember(t *testing.T) {
+	e := setupRevocationEnv(t, "svcescalation")
+	delegated := Identity{
+		UserID: ids.New[ids.UserKind](), WorkspaceID: e.admin.WorkspaceID,
+		Roles: []string{"ops"}, SeatType: string(principal.SeatFull),
+		Permissions: principal.Permissions{
+			RoleKeys: []string{"ops"},
+			Objects: map[string]principal.ObjectGrant{
+				objectUserAdmin: {Create: true, Read: true, Update: true, Delete: true},
+			},
+			RowScope: principal.RowScopeAll,
+		},
+	}
+	member, err := e.svc.DeclareServiceMember(escalationCtx(e.admin), e.admin,
+		ServiceMemberInput{Extension: "alpha", DisplayName: "Alpha feed"})
+	if err != nil {
+		t.Fatalf("declaring the service member: %v", err)
+	}
+
+	err = e.svc.DeactivateUser(escalationCtx(delegated), delegated, DeactivateUserInput{UserID: member})
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a delegated holder deactivated a service member: err=%v, want permission denied", err)
+	}
+	err = e.svc.ChangeUserRole(escalationCtx(delegated), delegated, member, "rep")
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a delegated holder re-roled a service member: err=%v, want permission denied", err)
+	}
+	err = e.svc.ArchiveServiceMember(escalationCtx(delegated), delegated, member)
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a delegated holder archived a service member: err=%v, want permission denied", err)
+	}
+	if err := e.svc.ArchiveServiceMember(escalationCtx(e.admin), e.admin, member); err != nil {
+		t.Errorf("an admin archiving a service member: %v", err)
+	}
+}
