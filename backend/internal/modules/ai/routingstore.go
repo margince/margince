@@ -165,6 +165,10 @@ func (s *RoutingStore) probeCandidate(ctx context.Context, stored, next RoutingC
 	if err := s.probeVertexBindings(ctx, stored, candidate); err != nil {
 		return invalidRouting(err)
 	}
+	// After the Vertex probe, which answers for its own provider. Its words are
+	// the ones that provider's admin acts on: a service-account key to add,
+	// not an API key to export. This speaks for the providers it never asks
+	// about.
 	return nil
 }
 
@@ -214,7 +218,17 @@ func (s *RoutingStore) ReplaceIfVersion(ctx context.Context, next RoutingConfig,
 		if expected != "" && current.Revision() != expected {
 			return RoutingConfig{}, RoutingConfig{}, apperrors.ErrVersionSkew
 		}
-		return next.replacing(current)
+		stored, served, err := next.replacing(current)
+		if err != nil {
+			return RoutingConfig{}, RoutingConfig{}, err
+		}
+		// Here rather than beside the Vertex probe. A save naming no Vertex
+		// lane never reaches that probe, and a keyless binding is the save
+		// this has to refuse.
+		if err := s.refuseKeylessBindings(ctx, current, stored); err != nil {
+			return RoutingConfig{}, RoutingConfig{}, invalidRouting(err)
+		}
+		return stored, served, nil
 	}
 	// A save that names no gemini_vertex lane reads and asks nothing, and a
 	// stale one is refused as stale before Google is asked.
@@ -243,7 +257,14 @@ func (s *RoutingStore) SetProviderSettings(ctx context.Context, provider string,
 		return RoutingConfig{}, apperrors.ErrNotFound
 	}
 	settle := func(current RoutingConfig) (RoutingConfig, RoutingConfig, error) {
-		return current.withProviderSettings(provider, next)
+		stored, served, err := current.withProviderSettings(provider, next)
+		if err != nil {
+			return RoutingConfig{}, RoutingConfig{}, err
+		}
+		if err := s.refuseKeylessBindings(ctx, current, stored); err != nil {
+			return RoutingConfig{}, RoutingConfig{}, invalidRouting(err)
+		}
+		return stored, served, nil
 	}
 	// Only a Vertex provider moves a Vertex binding.
 	if provider != providerGeminiVertex {
