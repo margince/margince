@@ -47,14 +47,21 @@ target. The release workflow refuses to publish a set stamped `dev` or nothing a
 
 ## Bootstrap the database once
 
-Margince needs two Postgres roles. Neither may be a superuser or hold `BYPASSRLS`: the api refuses to
-serve on an exempt runtime role.
+Margince needs two Postgres roles that serve and migrate, and a third that only limits extension SQL.
+None may be a superuser or hold `BYPASSRLS`: the api refuses to serve on an exempt runtime role.
 
 - **`margince_owner`** owns the database + tables, runs migrations (DDL) and the
   custom-fields runtime-DDL pool.
 - **`margince_app`** is the runtime role the api + worker connect as. Its table
   grants are applied by the `0001_baseline` migration, which skips them unless
   the role already exists. So create the role *before* the first migration runs.
+- **`ext_runtime`** is a role nobody connects as (`NOLOGIN`). The SQL of an extension runs as it, and it
+  holds only the `ext` schema. The bootstrap creates it and lets `margince_app` switch to it. Create it
+  before the migration `1792762767_a_unit_sql_runs_as_the_ext_runtime_role` runs. That migration stops with
+  an error that names the role while it is missing. Without the role, an extension's `Tx` refuses to run.
+
+On a database that already ran the bootstrap, run `scripts/deploy/db-bootstrap.sql` again as a superuser. It
+can run twice without harm. Then run the migrations again.
 
 Create the roles + database + extensions **once**, as a Postgres superuser. pgvector is not a
 "trusted" extension, so a non-superuser cannot install it from a migration:

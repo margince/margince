@@ -1,3 +1,5 @@
+defacl ext objtype=S acl=ext_runtime=rU/margince_owner
+defacl ext objtype=r acl=ext_runtime=arwd/margince_owner
 defacl public objtype=r acl=margince_app=arwd/margince_owner
 public.activity acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.activity.activity_assignee_id_fkey FOREIGN KEY (assignee_id) REFERENCES app_user(id) ON DELETE SET NULL (assignee_id)
@@ -8326,5 +8328,5 @@ public.workspace_email_domain.workspace_email_domain_pkey PRIMARY KEY (domain)
 public.workspace_email_domain.workspace_email_domain_source_check CHECK ((source = ANY (ARRAY['admin'::text, 'mailbox'::text])))
 public.workspace_email_domain_pkey CREATE UNIQUE INDEX workspace_email_domain_pkey ON public.workspace_email_domain USING btree (domain)
 public.workspace_pkey CREATE UNIQUE INDEX workspace_pkey ON public.workspace USING btree (id)
-schema ext acl=margince_owner=UC/margince_owner,margince_app=U/margince_owner
+schema ext acl=margince_owner=UC/margince_owner,margince_app=U/margince_owner,ext_runtime=U/margince_owner
 schema public acl=margince_owner=UC/margince_owner,margince_app=U/margince_owner

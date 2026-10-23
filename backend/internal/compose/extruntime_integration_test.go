@@ -121,34 +121,16 @@ func TestRuntimeTxRefusesACallWithNoWorkspace(t *testing.T) {
 // TestRuntimeTxCommitsAndRollsBack walks the seam's own contract: the three
 // verbs work, fn returning nil commits, fn returning an error rolls back.
 //
-// It runs against `app_user` — a CORE table, and one holding contacts's names —
-// because the extension's own ext_* tables arrive with the demo unit and this
-// seam has to be correct before there is one.
-//
-// That it SUCCEEDS is the honest demonstration, and the honest statement is
-// blunter than the one this comment used to make: for a core table there is no
-// containment wall at all. Core has carried no row-level security since 0217,
-// so the tenant pin binds a GUC that only the extension tables' policies read,
-// and this unit's SQL carries no workspace predicate of its own. runtime.go
-// once claimed a per-unit database role; none exists, and #628 tracks building
-// one. When it does, this test is expected to need a table the unit actually
-// owns — that it currently does not is the point being recorded here rather
-// than hidden.
-//
-// It used to write workspace.slug, until ADR-0091 retired that column. The
-// substitute is deliberately not another workspace column: the row is identity
-// and lifecycle now, so a unit writing it would be writing a timestamp or a
-// key rather than anything a reader would recognise as damage. A seat's
-// display name is legible as exactly what the missing wall would let through.
+// It runs against a table the unit owns, the only kind its SQL can reach.
 func TestRuntimeTxCommitsAndRollsBack(t *testing.T) {
 	e := setupExtRuntime(t)
+	unitScratchTable(t, probeTable)
 	rt, ctx := e.runtime("alpha")
 
-	// Commit: rename a fixture seat, then read it back in a SECOND
-	// transaction, so what is asserted is durability rather than the write's
-	// own snapshot.
+	// Commit: write a row, then read it back in a SECOND transaction, so what
+	// is asserted is durability rather than the write's own snapshot.
 	if err := rt.Tx(ctx, func(ctx context.Context, tx extension.Tx) error {
-		n, err := tx.Exec(ctx, `UPDATE app_user SET display_name = $1 WHERE id = $2`, "committed", e.Rep1)
+		n, err := tx.Exec(ctx, probeUpsert, "committed", e.Rep1)
 		if err != nil {
 			return err
 		}
@@ -167,7 +149,7 @@ func TestRuntimeTxCommitsAndRollsBack(t *testing.T) {
 	// the one the caller sees — not a wrapped commit failure.
 	sentinel := errors.New("the handler changed its mind")
 	if err := rt.Tx(ctx, func(ctx context.Context, tx extension.Tx) error {
-		if _, err := tx.Exec(ctx, `UPDATE app_user SET display_name = $1 WHERE id = $2`, "rolled-back", e.Rep1); err != nil {
+		if _, err := tx.Exec(ctx, probeUpsert, "rolled-back", e.Rep1); err != nil {
 			return err
 		}
 		return sentinel
@@ -179,16 +161,22 @@ func TestRuntimeTxCommitsAndRollsBack(t *testing.T) {
 	}
 }
 
-// seatName reads the fixture seat back through the seam, exercising Query/Rows
-// on the way — the cursor idiom the published Rows documents, iterated to
-// exhaustion and checked with Err. What these tests need is any column the unit
-// can write through the seam, not this column in particular.
+// probeTable is the unit-owned table these tests write, and probeUpsert the one
+// write that lands a row whether or not an earlier one exists.
+const (
+	probeTable  = "ext.ext_alpha_probe"
+	probeUpsert = `INSERT INTO ` + probeTable + ` (id, body) VALUES ($2, $1)
+		ON CONFLICT (id) DO UPDATE SET body = EXCLUDED.body`
+)
+
+// seatName reads the probe row back through the seam. It uses the cursor idiom
+// the published Rows documents: iterate to exhaustion, then check Err.
 func (e *extRuntimeEnv) seatName(ctx context.Context, t *testing.T, rt *callRuntime) string {
 	t.Helper()
 	var name string
 	seen := 0
 	if err := rt.Tx(ctx, func(ctx context.Context, tx extension.Tx) error {
-		rows, err := tx.Query(ctx, `SELECT display_name FROM app_user WHERE id = $1`, e.Rep1)
+		rows, err := tx.Query(ctx, `SELECT body FROM `+probeTable+` WHERE id = $1`, e.Rep1)
 		if err != nil {
 			return err
 		}
@@ -219,11 +207,12 @@ func (e *extRuntimeEnv) seatName(ctx context.Context, t *testing.T, rt *callRunt
 // pgx.ErrNoRows would be binding a driver the surface never published.
 func TestRuntimeQueryRowReportsAnEmptyMatchAsErrNoRows(t *testing.T) {
 	e := setupExtRuntime(t)
+	unitScratchTable(t, probeTable)
 	rt, ctx := e.runtime("alpha")
 
 	if err := rt.Tx(ctx, func(ctx context.Context, tx extension.Tx) error {
 		var name string
-		err := tx.QueryRow(ctx, `SELECT display_name FROM app_user WHERE id = $1`, ids.NewV7()).Scan(&name)
+		err := tx.QueryRow(ctx, `SELECT body FROM `+probeTable+` WHERE id = $1`, ids.NewV7()).Scan(&name)
 		if !errors.Is(err, extension.ErrNoRows) {
 			t.Errorf("Scan on an empty match = %v, want extension.ErrNoRows", err)
 		}

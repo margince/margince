@@ -399,9 +399,21 @@ Custom fields are refused,
 not dropped. Plan the grants too. Filing needs the caller to hold your unit's object and the core `activity`
 one, and nothing declares that pair yet.
 
-**Your SQL names only your own tables**, in your tests too. `rt.Tx()` runs on the shared `margince_app` role,
-so a statement that names `contact` would work. So `TestExtensionSQLNamesOnlyTheUnitsOwnTables`
-(`backend/gates/extensionsqlscope_test.go`) reads **every `.go` file your unit ships**. It follows the string
+**Your SQL names only your own tables**, in your tests too. `rt.Tx()` runs each statement as the `ext_runtime`
+database role, which holds the `ext` schema and nothing on core tables. A statement that names `contact` is
+refused with `extension.ErrCoreTableRefused`. Reach core records through `tx.Core()`, the read calls and `Ingest`.
+
+Each call takes one statement. A string of statements, such as `RESET ROLE; DELETE ...`, is refused.
+
+`ErrCoreTableRefused` also appears when the role holds no rights on one of your own tables. That happens when a
+role other than the migrate role (`margince_owner`) created the table, because only its tables get the rights
+by default. A missing `ext_runtime` role shows as a different error that starts with
+`compose: confining the unit's SQL`. Fix a missing role with `make db-init`. Fix missing rights by applying
+your migrations as the migrate role.
+
+The role is the same for every unit, so your SQL can still name another unit's `ext` table. Do not.
+`TestExtensionSQLNamesOnlyTheUnitsOwnTables`
+(`backend/gates/extensionsqlscope_test.go`) tells you earlier: it reads **every `.go` file your unit ships**. It follows the string
 values that a table name is written through in most cases, and refuses a table outside `ext.ext_<name>_…`.
 
 A unit

@@ -87,12 +87,10 @@ func (r *callRuntime) endIngest() {
 // INVOCATION's tenant, not whatever tenant the handler's own ctx happens to
 // carry.
 //
-// What the transaction does NOT do is bound fn. Nothing in this database keys
-// on a tenant: an installation holds one workspace (ADR-0061), no table carries
-// workspace_id and no policy reads one, so SQL issued here reaches whatever the
-// application role can name. The boundary that holds is the published seam
-// itself — the grant surface extmigrategate polices and the `ext` schema a unit
-// owns.
+// Nothing in this database keys on a tenant: an installation holds one
+// workspace (ADR-0061), no table carries workspace_id and no policy reads one.
+// What bounds fn is the role each of the unit's statements runs as, which holds
+// the `ext` schema and nothing on the core's tables (see extensionTx.confine).
 func (r *callRuntime) Tx(ctx context.Context, fn func(ctx context.Context, tx extension.Tx) error) error {
 	ctx, err := r.scoped(ctx)
 	if err != nil {

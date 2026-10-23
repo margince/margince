@@ -7,19 +7,16 @@ package gates
 
 // A unit's SQL addresses the unit's own tables.
 //
-// The extension runtime hands a unit a workspace-pinned transaction on the
-// SHARED application role, so its SQL can name any table that role can reach.
-// pkg/extension/runtime.go says so in the open, under "WHAT IS NOT WALLED AT
-// ALL": core's tables, another unit's tables, extension_secret. The fix for the
-// wall itself is a per-unit database role (#628), and this is not it.
+// The extension runtime runs a unit's SQL as a database role that holds nothing
+// on the core's tables. A statement naming one is refused when it runs
+// (pkg/extension/runtime.go, "Verbs only"). This gate warns earlier and
+// cheaper: it fails the build instead of the call. It still has to hold,
+// because the runtime role leaves other units' tables open.
 //
 // WHAT THIS IS: defence against mistakes, and nothing else. It reads the SQL a
-// unit's source spells out and refuses a table that is not the unit's own,
-// which is worth doing BEFORE a unit grows the habit — no shipped unit names a
-// core table today, so the narrowing costs nothing now and costs a rewrite
-// later. A unit is trusted in-process code either way, and a table name the
-// source does not spell out defeats a static reader by construction. Read it as
-// a lint; the boundary is #628's.
+// unit's source spells out and refuses a table that is not the unit's own. A
+// table name the source does not spell out defeats a static reader by
+// construction. Read it as a lint; the runtime role is the boundary.
 //
 // WHAT IT READS. Every .go file a unit ships, tests included: a unit's test that
 // seeds a core table is the same mistake as its handler doing so, and it is
@@ -63,7 +60,7 @@ package gates
 // statement built by anything other than `+` over constants (a Sprintf whose
 // verb is the table, a strings.Builder, a query assembled in a loop) is read as
 // far as its literals go and no further. That is the same bound as the header's
-// first paragraph and the reason the wall is #628's, not this file's.
+// first paragraph and the reason the wall is the runtime role's, not this file's.
 
 import (
 	"fmt"

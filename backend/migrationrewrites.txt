@@ -2,3 +2,5 @@
 # migration filename | table names, separated by commas | why these rows are small and bounded
 # An anonymous DO block uses * because its procedural body executes during startup.
 1792562859_an_admin_can_describe_a_second_legal_entity.up.sql | *, audit_log, role | the procedural body is the trigger that keeps the default entity; audit_log gets one row for the one default entity, and role updates the fixed set of system roles
+1792762767_a_unit_sql_runs_as_the_ext_runtime_role.up.sql | * | the procedural body only grants and revokes privileges on the ext schema; it reads and writes no row
+1792762767_a_unit_sql_runs_as_the_ext_runtime_role.down.sql | * | the procedural body only grants and revokes privileges on the ext schema; it reads and writes no row

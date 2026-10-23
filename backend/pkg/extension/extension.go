@@ -44,9 +44,12 @@
 //     SQL verbs stay for the unit's OWN tables, which is what they were always
 //     the right shape for.
 //
-//     What remains unstable is their REACH: a unit's SQL runs on the shared
-//     application role today, and narrowing it to a per-unit database role
-//     (issue #628) is a change every unit's SQL feels. And Record is OFFERED,
+//     A unit's SQL reaches its own tables only: it runs as a database role
+//     that holds nothing on the core's tables, and a statement naming one is
+//     refused with ErrCoreTableRefused. That is the direction for a unit from
+//     outside the first-party set as well: verbs only, no raw SQL on core
+//     tables, and no database role per unit. What remains unstable is the reach
+//     BETWEEN units, which one shared role still leaves open. And Record is OFFERED,
 //     not enforced — a unit may still write its tables and record nothing — so
 //     a later release that makes recording mandatory would be felt by any unit
 //     that had not adopted it.
