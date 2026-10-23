@@ -12,18 +12,25 @@ package capture
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
+	"runtime"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	capturemod "github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -56,16 +63,20 @@ func relinkInTx(w dealWorld, tx pgx.Tx, mail ids.ActivityID, deal ids.UUID, repl
 	return err
 }
 
-// A colleague files a sibling on one deal while another colleague's answer
-// waits for that sibling's lock. The sibling keeps the deal it was filed on,
+// A colleague files a sibling on a deal of another company while another
+// colleague's answer waits at that sibling's conditional write. The holder
+// takes only the sibling's row lock before the answer starts, so the one
+// thing the answer can wait on is that row: the answer has filed its own mail
+// and chosen the sibling by then. The sibling keeps the deal it was filed on,
 // with no second deal and no audit row from the answer.
 func TestAnAnswerKeepsASiblingFiledWhileItWaited(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
 	w.employee(t, "alice@acme.example", w.customer)
-	operations := w.deal(t, "Acme operations")
+	w.deal(t, "Acme operations")
 	reporting := w.deal(t, "Acme reporting")
+	elsewhere := w.at(t, "Elsewhere").deal(t, "Elsewhere")
 	env.syncSent(t, map[string]bool{"race2a@myco.example": true},
 		email(captureOwner, "", "alice@acme.example", "race2a@myco.example", ""))
 	env.sync(t, mailFrom("alice@acme.example", "race2b@acme.example", "race2a@myco.example", "Re: project"))
@@ -75,15 +86,26 @@ func TestAnAnswerKeepsASiblingFiledWhileItWaited(t *testing.T) {
 	sibling := ids.From[ids.ActivityKind](activityOf(t, e, "race2a@myco.example"))
 	answered := ids.From[ids.ActivityKind](activityOf(t, e, "race2b@acme.example"))
 
-	release := make(chan struct{})
-	pid, held := holdInHumanTx(t, e, w, func(tx pgx.Tx) error { return relinkInTx(w, tx, sibling, operations, false) }, release)
-	holder := <-pid
+	lockedRow, fileNow, release := make(chan struct{}), make(chan struct{}), make(chan struct{})
+	pid, held := holdInHumanTx(t, e, w, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(context.Background(), `SELECT id FROM activity WHERE id = $1 FOR UPDATE`, sibling); err != nil {
+			return err
+		}
+		close(lockedRow)
+		<-fileNow
+		return relinkInTx(w, tx, sibling, elsewhere, false)
+	}, release)
+	<-lockedRow
 	answer := make(chan error, 1)
 	go func() {
 		_, err := activities.NewStore(e.DB()).RelinkActivity(w.ctx, answered, activities.RelinkActivityInput{EntityType: "deal", EntityID: reporting})
 		answer <- err
 	}()
-	waitForLockWaiters(t, e, holder, 1)
+	// The answer reaches the sibling's row while the holder has written
+	// nothing; then the holder files the sibling and commits.
+	waitForActivityRowLock(t, e)
+	close(fileNow)
+	<-pid
 	close(release)
 	if err := <-held; err != nil {
 		t.Fatalf("the colleague's filing: %v", err)
@@ -91,14 +113,34 @@ func TestAnAnswerKeepsASiblingFiledWhileItWaited(t *testing.T) {
 	if err := <-answer; err != nil {
 		t.Fatalf("the answer: %v", err)
 	}
-	wantDeals(t, e, "race2a@myco.example", operations)
+	wantDeals(t, e, "race2a@myco.example", elsewhere)
 	wantDeals(t, e, "race2b@acme.example", reporting)
 	if n := countRows(t, e, `SELECT count(*) FROM audit_log WHERE action = 'activity_relink'
-		 AND entity_id = (SELECT id FROM activity WHERE source_id = 'race2a@myco.example') AND actor_type = 'human'`); n != 1 {
+		 AND entity_id = (SELECT id FROM activity WHERE source_id = 'race2a@myco.example')`); n != 1 {
 		t.Fatalf("the sibling has %d relink audit rows, want only the colleague's", n)
 	}
 	if n := openQuestions(t, e); n != 0 {
 		t.Fatalf("%d questions open after the answer, want 0", n)
+	}
+}
+
+// waitForActivityRowLock returns once a session waits in an activity row
+// lock statement, as pg_stat_activity reports it.
+func waitForActivityRowLock(t *testing.T, e *integration.SearchEnv) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	for {
+		var waiting int
+		if err := e.Pool.QueryRow(ctx, `SELECT count(*) FROM pg_stat_activity
+			 WHERE datname = current_database() AND wait_event_type = 'Lock'
+			   AND query LIKE '%activity%FOR UPDATE%'`).Scan(&waiting); err != nil {
+			t.Fatalf("reading who waits on the row: %v", err)
+		}
+		if waiting >= 1 {
+			return
+		}
+		runtime.Gosched()
 	}
 }
 
@@ -349,5 +391,70 @@ func TestTheOperatorPreviewRefusesALimitOutOfBounds(t *testing.T) {
 		return err
 	}); !errors.Is(err, apperrors.ErrInvalidArgument) {
 		t.Errorf("a repair preview of no mails answered %v, want invalid argument", err)
+	}
+}
+
+// readingQueue is the stage-evidence reading queue at its true boundary: it
+// records each reading the trigger asks for.
+type readingQueue struct {
+	asked []compose.StageEvidenceReadArgs
+}
+
+func (q *readingQueue) EnqueueTx(_ context.Context, _ pgx.Tx, args river.JobArgs, _ *river.InsertOpts) error {
+	if reading, ok := args.(compose.StageEvidenceReadArgs); ok {
+		q.asked = append(q.asked, reading)
+	}
+	return nil
+}
+
+// The repair's link reaches the stage-evidence trigger as the relink event
+// it reads: a current event queues one reading of the mail against its deal,
+// a redelivery is the same reading, and the same event replayed past the
+// trigger's backlog window queues nothing.
+func TestTheRepairsLinkIsReadByTheStageEvidenceTrigger(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	w := newDealWorld(t, e)
+	w.employee(t, "alice@acme.example", w.customer)
+	env.sync(t, mailFrom("alice@acme.example", "ev1@acme.example", "", "status"))
+	deal := w.deal(t, "Acme rollout")
+	if changed := newRepairer(e, w).run(t); changed != 1 {
+		t.Fatalf("the repair changed %d mails, want 1", changed)
+	}
+	mail := activityOf(t, e, "ev1@acme.example")
+	var raw []byte
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `SELECT envelope FROM event_outbox
+			 WHERE envelope->>'type' = 'activity.updated' AND envelope->'entity'->>'id' = $1
+			   AND envelope->'payload'->'changed_fields'->'relinked'->>'entity_id' = $2`, mail.String(), deal.String()).Scan(&raw)
+	}); err != nil {
+		t.Fatalf("reading the repair's relink event: %v", err)
+	}
+	var envelope kevents.Envelope
+	if err := json.Unmarshal(raw, &envelope); err != nil {
+		t.Fatalf("decoding the repair's relink event: %v", err)
+	}
+	queue := &readingQueue{}
+	trigger := compose.NewStageEvidenceTrigger(e.Pool, compose.StageEvidenceDeals(e.Pool), compose.StageEvidenceDomains(e.Pool),
+		queue, nil, slog.Default())
+	for range 2 {
+		if err := trigger.HandleEvent(context.Background(), envelope); err != nil {
+			t.Fatalf("delivering the relink event: %v", err)
+		}
+	}
+	if len(queue.asked) == 0 || queue.asked[0].DealID != deal || queue.asked[0].ActivityID != mail {
+		t.Fatalf("the trigger asked for %+v, want a reading of the mail against its deal", queue.asked)
+	}
+	if len(queue.asked) == 2 && queue.asked[0] != queue.asked[1] {
+		t.Fatalf("a redelivery asked for a different reading: %+v", queue.asked)
+	}
+	old := envelope
+	old.OccurredAt = time.Now().Add(-365 * 24 * time.Hour)
+	queue.asked = nil
+	if err := trigger.HandleEvent(context.Background(), old); err != nil {
+		t.Fatalf("delivering the replayed event: %v", err)
+	}
+	if len(queue.asked) != 0 {
+		t.Fatalf("a replayed old event queued %d readings, want none", len(queue.asked))
 	}
 }
