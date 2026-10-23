@@ -219,9 +219,14 @@ describe("asking the handbook from the search box", () => {
     expect(window.location.hash).toBe("");
   });
 
-  it("says the question was not answered when the ask fails, and keeps the rows", async () => {
+  it("says the question was not answered when every ask fails, and keeps the rows", async () => {
     const user = steppedClock();
-    backend({ replies: { [HANDBOOK_ID]: { status: 500 } } });
+    backend({
+      replies: {
+        [HANDBOOK_ID]: { status: 500 },
+        [DEFAULT_ID]: { status: 500 },
+      },
+    });
     renderPalette();
     await user.type(screen.getByRole("searchbox"), QUESTION);
     await user.keyboard("{Enter}");
@@ -231,6 +236,52 @@ describe("asking the handbook from the search box", () => {
         name: /^See all results for “How do I change my time zone\?”/,
       }),
     ).toBeVisible();
+  });
+
+  it("asks the default set when the handbook ask fails", async () => {
+    const user = steppedClock();
+    const asked = backend({
+      replies: {
+        [HANDBOOK_ID]: { status: 500 },
+        [DEFAULT_ID]: answer(DEFAULT),
+      },
+    });
+    renderPalette();
+    await user.type(screen.getByRole("searchbox"), QUESTION);
+    await user.keyboard("{Enter}");
+    const panel = await answerPanel();
+    expect(within(panel).getByText("From Sales playbook")).toBeVisible();
+    expect(asked).toEqual([HANDBOOK_ID, DEFAULT_ID]);
+  });
+
+  it("asks once when Enter is pressed again on the same question", async () => {
+    const user = steppedClock();
+    const asked = backend();
+    renderPalette();
+    await user.type(screen.getByRole("searchbox"), QUESTION);
+    await user.keyboard("{Enter}");
+    await answerPanel();
+    await user.keyboard("{Enter}");
+    await answerPanel();
+    expect(asked).toEqual([HANDBOOK_ID]);
+  });
+
+  it("says there is no document set when the list turns out empty", async () => {
+    const user = steppedClock();
+    let arrive = () => {};
+    const asked = backend({
+      sets: [],
+      setsArrive: new Promise<void>((resolve) => {
+        arrive = resolve;
+      }),
+    });
+    renderPalette();
+    await user.type(screen.getByRole("searchbox"), QUESTION);
+    await screen.findByRole("button", { name: /^Ask Margince:/ });
+    await user.keyboard("{Enter}");
+    arrive();
+    expect(await screen.findByText("No document sets")).toBeVisible();
+    expect(asked).toEqual([]);
   });
 
   it("keeps the record rows below the answer", async () => {

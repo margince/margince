@@ -2,7 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import type { HandbookAnswer } from "../features/voice-knowledge/corpusaskqueries";
+import {
+  type HandbookAnswer,
+  NoDocumentSetsError,
+} from "../features/voice-knowledge/corpusaskqueries";
 import { StoryProviders, stubWithSession } from "../testing/story-utils";
 import { PaletteAnswer } from "./paletteanswer";
 
@@ -10,7 +13,7 @@ import { PaletteAnswer } from "./paletteanswer";
 // It is written from the handbook, or from the default set when the handbook
 // has nothing. It can also be covered by neither, still pending, or failed.
 const meta: Meta<typeof PaletteAnswer> = {
-  title: "Shell/Command palette/Answer",
+  title: "Shell/Command palette answer",
   component: PaletteAnswer,
 };
 export default meta;
@@ -136,4 +139,9 @@ export const Failed: Story = {
       error: new Error("The service is not reachable."),
       result: undefined,
     }),
+};
+
+export const NoDocumentSets: Story = {
+  render: () =>
+    frame({ ...base, error: new NoDocumentSetsError(), result: undefined }),
 };

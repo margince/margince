@@ -2,8 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Settings } from "lucide-react";
-import { useMemo, useState } from "react";
-import { PendingBody } from "../design-system/atoms";
+import { useEffect, useMemo, useState } from "react";
+import { EmptyState, PendingBody } from "../design-system/atoms";
 import { Button } from "../design-system/button";
 import { Callout } from "../design-system/callout";
 import { Eyebrow } from "../design-system/eyebrow";
@@ -12,15 +12,57 @@ import { useVisibleSettingsPages } from "../features/settings/settingsnav";
 import { settingsHref } from "../features/settings/settingsrouting";
 import { CitedDocument } from "../features/voice-knowledge/citeddocument";
 import { AnswerView } from "../features/voice-knowledge/corpusanswer";
-import type {
-  Answer,
-  HandbookAnswer,
+import {
+  type Answer,
+  type HandbookAnswer,
+  NoDocumentSetsError,
+  useHandbookAsk,
 } from "../features/voice-knowledge/corpusaskqueries";
 import { useT } from "../i18n";
 import { problemMessageOf } from "../lib/problem";
+import { looksLikeQuestion } from "../lib/question";
 import { navigate } from "../lib/router";
+import type { Command } from "./palette";
 
 type Claim = NonNullable<Answer["claims"]>[number];
+
+/**
+ * The search box's ask. A question no destination matched gets a row that
+ * leads the list, so Enter asks it. The hook also holds the answer it got.
+ */
+export function usePaletteAsk(
+  query: string,
+  open: boolean,
+  destinations: number,
+) {
+  const t = useT();
+  const trimmed = query.trim();
+  const question = looksLikeQuestion(trimmed);
+  const { available, mutation } = useHandbookAsk(question);
+  const { reset } = mutation;
+  useEffect(() => {
+    if (open) {
+      reset();
+    }
+  }, [open, reset]);
+  const row: Command | null =
+    available && destinations === 0 && question
+      ? {
+          id: "ask-ai",
+          label: t("palette.askRow", { query: trimmed }),
+          type: "action",
+        }
+      : null;
+  // Only the answer to the words in the box: edited words are a new question.
+  const shown = mutation.variables?.question === trimmed;
+  const ask = () => {
+    // A second Enter on the same words would pay for the answer on screen again.
+    if (!(shown && (mutation.isPending || mutation.isSuccess))) {
+      mutation.mutate({ question: trimmed });
+    }
+  };
+  return { row, shown, ask, mutation };
+}
 
 /**
  * The answer to a question asked in the search box, drawn above the record
@@ -44,6 +86,15 @@ export function PaletteAnswer({
     return (
       <div className="palette-answer">
         <PendingBody label={t("palette.asking")} lines={2} />
+      </div>
+    );
+  }
+  if (error instanceof NoDocumentSetsError) {
+    return (
+      <div className="palette-answer">
+        <EmptyState title={t("corpusAsk.noSetsTitle")}>
+          <p>{t("corpusAsk.noSets")}</p>
+        </EmptyState>
       </div>
     );
   }

@@ -77,10 +77,18 @@ export type HandbookAnswer = Readonly<{
   asked: readonly string[];
 }>;
 
+/** The ask found no document set this reader may ask. */
+export class NoDocumentSetsError extends Error {
+  constructor() {
+    super("no document set to ask");
+    this.name = "NoDocumentSetsError";
+  }
+}
+
 /**
- * Asks the shipped handbook, and on `not_covered` the workspace's default set.
- * Every other outcome of the first set stands: a set still being read or a
- * missing search lane says nothing about the question.
+ * Asks the shipped handbook, and on `not_covered` or a failed ask the
+ * workspace's default set. Every other outcome of the first set stands: a set
+ * still being read or a missing search lane says nothing about the question.
  *
  * The sets are read only once `wanted`, so a box used to look something up
  * costs no request for them. The ask reads them itself, so an Enter pressed
@@ -100,17 +108,27 @@ export function useHandbookAsk(wanted: boolean) {
       question: string;
     }): Promise<HandbookAnswer> => {
       const listed = await client.ensureQueryData(askableSets);
+      const order = handbookAskOrder(listed.items);
+      if (order.length === 0) {
+        throw new NoDocumentSetsError();
+      }
       const asked: string[] = [];
       let answer: Answer | undefined;
-      for (const id of handbookAskOrder(listed.items)) {
-        answer = await askCorpus(id, question);
+      let failure: unknown;
+      for (const id of order) {
+        try {
+          answer = await askCorpus(id, question);
+        } catch (error) {
+          failure ??= error;
+          continue;
+        }
         asked.push(answer.corpus.name);
         if (answer.outcome !== "not_covered") {
           break;
         }
       }
       if (answer === undefined) {
-        throw new Error("no document set to ask");
+        throw failure;
       }
       return { question, answer, asked };
     },

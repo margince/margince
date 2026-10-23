@@ -24,58 +24,53 @@ type Section struct {
 // comments, so a reader of the page never sees it.
 var opensMarker = regexp.MustCompile(`^<!-- opens: settings/([a-z][a-z-]*) -->$`)
 
-// SectionAt is the section a line of a page sits in: the nearest `##` or `###`
-// heading at or above it. False when this build does not ship the page, or
-// when the line is above the page's first section.
-func SectionAt(filename string, line int) (Section, bool) {
+// SectionFor is the section a span of a page's lines, from first to last, is
+// about. A span that runs into a later heading is about that section. A passage
+// starts wherever the chunker cut it, often on the tail of the section above.
+// False when this build does not ship the page, or when the span lies above the
+// page's first section.
+func SectionFor(filename string, first, last int) (Section, bool) {
 	content, ok := Open(filename)
 	if !ok {
 		return Section{}, false
 	}
 	var at Section
 	found := false
-	for _, s := range Sections(string(content)) {
-		if s.Line > line {
+	for _, s := range sections(string(content)) {
+		if s.Line > max(first, last) {
 			break
 		}
 		at, found = s, true
+		if s.Line > first {
+			break
+		}
 	}
 	return at, found
 }
 
-// Sections lists a page's `##` and `###` headings in order, outside code
+// sections lists a page's `##` and `###` headings in order, outside code
 // fences and comments, each with the settings page its marker names.
-func Sections(markdown string) []Section {
+func sections(markdown string) []Section {
 	lines := strings.Split(markdown, "\n")
 	var out []Section
-	var fence string
-	var commented bool
-	for i, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		switch {
-		case commented:
-			commented = !strings.Contains(trimmed, "-->")
-		case fence != "":
-			if closesFence(trimmed, fence) {
-				fence = ""
-			}
-		case fenceOpening(trimmed) != "":
-			fence = fenceOpening(trimmed)
-		case strings.HasPrefix(trimmed, "<!--"):
-			commented = !strings.Contains(trimmed, "-->")
-		default:
-			if title, ok := sectionHeading(line); ok {
-				out = append(out, Section{Title: title, Line: i + 1, Opens: opensUnder(lines, i)})
-			}
+	for i, line := range proseLines(markdown) {
+		if title, ok := sectionHeading(line); ok {
+			out = append(out, Section{Title: title, Line: i + 1, Opens: opensUnder(lines, i)})
 		}
 	}
 	return out
 }
 
+// sectionHeading reads a `##` or `###` heading, without the closing `#` run
+// CommonMark allows after a space.
 func sectionHeading(line string) (string, bool) {
 	for _, mark := range []string{"### ", "## "} {
 		if title, ok := strings.CutPrefix(line, mark); ok {
-			return strings.TrimSpace(title), true
+			title = strings.TrimSpace(title)
+			if closed := strings.TrimRight(title, "#"); strings.HasSuffix(closed, " ") {
+				title = strings.TrimSpace(closed)
+			}
+			return title, true
 		}
 	}
 	return "", false

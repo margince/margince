@@ -13,6 +13,9 @@ describe("looksLikeQuestion", () => {
     "đổi múi giờ như thế nào",
     "my password stopped working?",
     "Wo finde ich die Einstellungen？",
+    "can I export my contacts",
+    "kann man Rollen ändern",
+    "cách nào để đổi múi giờ",
   ])("reads %j as a question", (query) => {
     expect(looksLikeQuestion(query)).toBe(true);
   });
@@ -25,6 +28,10 @@ describe("looksLikeQuestion", () => {
     "Wo Holdings",
     "Anna Schmidt Berlin",
     "pipeline deals open",
+    "Lam Van Minh",
+    "Tai Bao Khi",
+    "Can Do Logistics",
+    "Is Kim Holdings",
     "  ",
   ])("reads %j as a lookup", (query) => {
     expect(looksLikeQuestion(query)).toBe(false);

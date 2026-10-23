@@ -14,12 +14,10 @@ import { usePresence } from "../design-system/presence";
 import { SCHEDULED_SCREEN } from "../features/mail/scheduledqueue";
 import { useVisibleSettingsPages } from "../features/settings/settingsnav";
 import { settingsPageKeywords } from "../features/settings/settingssearch";
-import { useHandbookAsk } from "../features/voice-knowledge/corpusaskqueries";
 import { holdsEveryWord, searchWords } from "../format/collate";
 import { useLocale, useT } from "../i18n";
 import { useCompanyContextShown } from "../lib/companycontextreach";
 import { isImeCommit } from "../lib/imecommit";
-import { looksLikeQuestion } from "../lib/question";
 import { navigate, type Route } from "../lib/router";
 import { settingsHref } from "../lib/settingsrouting";
 import { openAsk, type UrlParams } from "../lib/urlstate";
@@ -29,7 +27,7 @@ import {
   resolveCustomLabel,
 } from "./custom";
 import { CREATE_ID, NAV } from "./nav";
-import { PaletteAnswer } from "./paletteanswer";
+import { PaletteAnswer, usePaletteAsk } from "./paletteanswer";
 import {
   settingsCommandId,
   useConfigurationCommand,
@@ -230,17 +228,12 @@ export function CommandPalette({
   // AC-shell-3: opening CLEARS the input. Focus is the hook's — the input is
   // this dialog's first tab stop, so it lands there either way, and two owners
   // of one focus move is how they come to disagree.
-  const trimmed = query.trim();
-  const question = looksLikeQuestion(trimmed);
-  const handbook = useHandbookAsk(question);
-  const { reset: resetAsk } = handbook.mutation;
   useEffect(() => {
     if (open) {
       setQuery("");
       setPicked(null);
-      resetAsk();
     }
-  }, [open, resetAsk]);
+  }, [open]);
 
   const matched = useMemo(
     () => matchingCommands(commands, query),
@@ -263,32 +256,20 @@ export function CommandPalette({
       }
     : null;
 
-  // A question no destination matched gets a row of its own that leads, so
-  // Enter asks it; the record rows stay below the answer.
-  const askRow: Command | null =
-    handbook.available && filtered.length === 0 && question
-      ? {
-          id: "ask-ai",
-          label: t("palette.askRow", { query: trimmed }),
-          type: "action",
-        }
-      : null;
+  const handbook = usePaletteAsk(query, open, filtered.length);
   const rows = [
-    ...(askRow ? [askRow] : []),
+    ...(handbook.row ? [handbook.row] : []),
     ...filtered,
     ...(seeAll ? [seeAll] : []),
     ...search.commands,
   ];
-  // Only the answer to the words in the box: a reader who edits the question
-  // is asking something else.
-  const asked = handbook.mutation.variables?.question === trimmed;
   const clamp = (index: number) =>
     Math.max(0, Math.min(index, rows.length - 1));
   const selected = picked ?? defaultSelection(rows, filtered.length, query);
 
   const run = (command: Command) => {
     if (command.id === "ask-ai") {
-      handbook.mutation.mutate({ question: trimmed });
+      handbook.ask();
       return;
     }
     onClose();
@@ -369,7 +350,7 @@ export function CommandPalette({
               beside the search box are. */}
           <Kbd>{"esc"}</Kbd>
         </div>
-        {asked ? (
+        {handbook.shown ? (
           <PaletteAnswer
             pending={handbook.mutation.isPending}
             error={handbook.mutation.error}
@@ -396,15 +377,10 @@ export function CommandPalette({
               when one query replaces another under it — a reader typing through
               a slow search should see one steady bar, not one that blinks out
               and returns per letter. */}
-          {/* Asking, always, and deliberately NOT one of the options below.
-              The palette answers two questions — where do I go, and what does
-              this company know — and only the first has a list to scan. Pinned
-              into that list it took the first row, which is the row Enter
-              presses, so a reader typing a screen name would have asked about
-              it instead of going there. Here it is reachable on sight and by
-              Tab, and it carries whatever is typed into the box rather than
-              asking it: a question matched mid-word is one still being
-              written. */}
+          {/* The drawer that asks one set of the reader's choosing, outside the
+              rows so Enter on a screen name never opens it. It carries what is
+              typed into the box rather than asking it. A question the box can
+              read as one gets its own "Ask Margince" row below instead. */}
           <button
             type="button"
             className="palette-ask t-body"
@@ -444,8 +420,9 @@ export function CommandPalette({
 
 // Where Enter lands before the reader picks a row. A destination the words
 // matched keeps it: typing "pipeline" means going to Deals. A record found by
-// search does not, because half a name is still a search: Enter takes the
-// see-all row, which then leads the list, unless the words name a record whole.
+// search does not, because half a name is still a search. Enter then takes the
+// first row, unless the words name a record whole. That row is the ask row for
+// a question, and see-all for anything else.
 function defaultSelection(
   rows: readonly Command[],
   destinations: number,

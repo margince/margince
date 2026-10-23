@@ -6,7 +6,7 @@ import { foldForSearch, searchWords } from "../format/collate";
 // The words a question opens with in English, German and Vietnamese, folded the
 // way `searchWords` folds a query. All three lists hold whatever the screen's
 // language, because a reader asks in the language they think in.
-const LEADING = new Set([
+const QUESTION_WORDS = new Set([
   // en
   "how",
   "what",
@@ -14,14 +14,6 @@ const LEADING = new Set([
   "why",
   "when",
   "which",
-  "who",
-  "can",
-  "could",
-  "do",
-  "does",
-  "is",
-  "are",
-  "should",
   // de
   "wie",
   "was",
@@ -31,23 +23,65 @@ const LEADING = new Set([
   "welche",
   "welcher",
   "welches",
-  "wer",
+]);
+
+// A verb that also opens company names ("Can Do Logistics"), so it counts only
+// with a pronoun or article after it: "can I", "kann man".
+const AUXILIARIES = new Set([
+  "can",
+  "could",
+  "do",
+  "does",
+  "is",
+  "are",
+  "should",
   "kann",
   "konnen",
   "muss",
   "darf",
   "gibt",
-  // vi
-  "lam",
-  "tai",
-  "vi",
-  "cach",
-  "khi",
-  "bao",
+]);
+const SUBJECTS = new Set([
+  "i",
+  "we",
+  "you",
+  "my",
+  "our",
+  "the",
+  "a",
+  "an",
+  "it",
+  "this",
+  "there",
+  "margince",
+  "ich",
+  "man",
+  "wir",
+  "du",
+  "es",
+  "mein",
+  "meine",
+  "der",
+  "die",
+  "das",
+  "ein",
+  "eine",
 ]);
 
+// Vietnamese question phrases. Each is two words, because the single words
+// (lam, tai, bao, khi) are also given names and surnames.
+const LEADING_PHRASES = [
+  "lam sao",
+  "lam the nao",
+  "tai sao",
+  "vi sao",
+  "bao gio",
+  "khi nao",
+  "cach nao",
+  "o dau",
+];
 // Vietnamese most often puts the question at the end: "đổi múi giờ thế nào".
-const TRAILING = ["the nao", "o dau", "khong", "gi", "chua"];
+const TRAILING_PHRASES = ["the nao", "o dau", "khong", "chua"];
 
 /**
  * Whether the text in the search box reads as a question to ask the handbook
@@ -63,9 +97,12 @@ export function looksLikeQuestion(query: string): boolean {
   if (/[?？]\s*$/.test(query)) {
     return true;
   }
+  const [first = "", second = ""] = words;
   const folded = foldForSearch(query.trim());
   return (
-    LEADING.has(words[0] ?? "") ||
-    TRAILING.some((phrase) => folded.endsWith(` ${phrase}`))
+    QUESTION_WORDS.has(first) ||
+    (AUXILIARIES.has(first) && SUBJECTS.has(second)) ||
+    LEADING_PHRASES.some((phrase) => folded.startsWith(`${phrase} `)) ||
+    TRAILING_PHRASES.some((phrase) => folded.endsWith(` ${phrase}`))
   );
 }
