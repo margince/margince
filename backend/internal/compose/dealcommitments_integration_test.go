@@ -8,11 +8,13 @@ package compose
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -57,6 +59,13 @@ func seedDealWatch(t *testing.T) dealWatch {
 // it.
 func (w dealWatch) promiseOn(t *testing.T, deal ids.UUID, subject, body string) ids.UUID {
 	t.Helper()
+	claim, _ := w.promiseWithSource(t, deal, subject, body)
+	return claim
+}
+
+// promiseWithSource is promiseOn answering the message the promise cites too.
+func (w dealWatch) promiseWithSource(t *testing.T, deal ids.UUID, subject, body string) (claimID, source ids.UUID) {
+	t.Helper()
 	message, _, err := w.Activities.LogActivity(w.Admin(), activities.LogActivityInput{
 		Kind: "note", Subject: &subject, Body: &body, Source: "manual",
 		Links: []activities.ActivityLinkInput{{EntityType: "contact", EntityID: w.contact}, {EntityType: "deal", EntityID: deal}},
@@ -71,7 +80,7 @@ func (w dealWatch) promiseOn(t *testing.T, deal ids.UUID, subject, body string) 
 	if err != nil {
 		t.Fatalf("filing the commitment: %v", err)
 	}
-	return ids.UUID(claim.Id)
+	return ids.UUID(claim.Id), ids.UUID(message.Id)
 }
 
 // A customer with two open deals: a promise read out of a message filed on one
@@ -159,6 +168,19 @@ func TestADealWatchNeedsTheContactGrant(t *testing.T) {
 	}
 }
 
+// A reader without the activity grant is refused too: every row quotes a
+// message.
+func TestADealWatchNeedsTheActivityGrant(t *testing.T) {
+	w := seedDealWatch(t)
+	reader := w.As(w.Rep1, []ids.UUID{w.Team1}, principal.Permissions{
+		RoleKeys: []string{"rep"}, RowScope: principal.RowScopeTeam,
+		Objects: map[string]principal.ObjectGrant{"deal": {Read: true}, "contact": {Read: true}},
+	})
+	if _, err := newDealCommitmentHandlers(w.Pool).read(reader, ids.From[ids.DealKind](w.deal)); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Errorf("a reader with no activity grant: err = %v, want permission denied", err)
+	}
+}
+
 // The card lists the most urgent commitments and says when there are more.
 func TestADealWatchSaysWhenMoreAreOwed(t *testing.T) {
 	w := seedDealWatch(t)
@@ -182,21 +204,65 @@ func TestADealWatchSaysWhenMoreAreOwed(t *testing.T) {
 	}
 }
 
-// A reader who may not see the deal's company has no account to read from,
-// and the list says it is incomplete rather than that nothing is owed.
-func TestAMaskedCompanyLeavesTheDealWatchIncomplete(t *testing.T) {
+// noCompanyWatchPerms reads the deal, the contact and the message, and
+// neither the company nor any relationship. The watch maps a promise to the
+// deal by the message it was read from, so it needs nothing more.
+var noCompanyWatchPerms = principal.Permissions{
+	RoleKeys: []string{"rep"}, RowScope: principal.RowScopeTeam,
+	Objects: map[string]principal.ObjectGrant{
+		"deal": {Read: true}, "contact": {Read: true}, "activity": {Read: true},
+	},
+}
+
+// A reader who may not open the deal's company still watches the promise
+// filed on this deal, and the list is complete. The deal itself shows its
+// company masked. A promise from the same company filed on another deal is
+// not this deal's.
+func TestADealWatchNeedsNoCompanyGrant(t *testing.T) {
 	w := seedDealWatch(t)
-	perms := principal.Permissions{
-		RoleKeys: []string{"rep"}, RowScope: principal.RowScopeTeam,
-		Objects: map[string]principal.ObjectGrant{
-			"deal": {Read: true}, "contact": {Read: true}, "activity": {Read: true},
-			"relationship": {Read: true},
-		},
+	other := w.SeedDeal(t, "CRM project", w.pipeline, w.stage, &w.Rep1)
+	w.WsExec(t, `UPDATE deal SET company_id = (SELECT company_id FROM deal WHERE id = $2) WHERE id = $1`, other, w.deal)
+	w.promiseOn(t, other, "Kick-off", "We will attend the CRM kick-off.")
+	reader := w.As(w.Rep1, []ids.UUID{w.Team1}, noCompanyWatchPerms)
+
+	deal, err := w.Deals.GetDeal(reader, ids.From[ids.DealKind](w.deal), storekit.IncludeArchived)
+	if err != nil {
+		t.Fatalf("reading the deal: %v", err)
 	}
-	reader := w.As(w.Rep1, []ids.UUID{w.Team1}, perms)
+	if deal.MaskedFields == nil || !slices.Contains(*deal.MaskedFields, "company_id") {
+		t.Fatalf("the deal shows its company to a reader with no company grant: masked=%v", deal.MaskedFields)
+	}
 	got, err := newDealCommitmentHandlers(w.Pool).read(reader, ids.From[ids.DealKind](w.deal))
-	if err != nil || len(got.Data) != 0 || got.Complete {
-		t.Errorf("a masked company reads as %d row(s), complete=%v, err=%v; want none and incomplete",
-			len(got.Data), got.Complete, err)
+	if err != nil {
+		t.Fatalf("reading the deal's commitments: %v", err)
+	}
+	if len(got.Data) != 1 || ids.UUID(got.Data[0].Id) != w.claim || !got.Complete {
+		t.Errorf("the watch reads %+v (complete=%v), want only this deal's promise and a complete list", got.Data, got.Complete)
+	}
+}
+
+// The same reader may not open the message a promise was read from: the
+// promise is withheld with its quote, and the list says it is incomplete.
+func TestADealWatchWithholdsAPromiseWhoseMessageIsHidden(t *testing.T) {
+	w := seedDealWatch(t)
+	colleague := w.Rep2
+	_, source := w.promiseWithSource(t, w.deal, "Pricing", "We will confirm the pricing.")
+	if _, err := w.Activities.SetAudience(w.Admin(), ids.From[ids.ActivityKind](source), activities.SetAudienceInput{
+		Audience: "selected", Members: []activities.AudienceMember{{SubjectType: "user", SubjectID: colleague}},
+	}); err != nil {
+		t.Fatalf("narrowing the message's audience: %v", err)
+	}
+	reader := w.As(w.Rep1, []ids.UUID{w.Team1}, noCompanyWatchPerms)
+	got, err := newDealCommitmentHandlers(w.Pool).read(reader, ids.From[ids.DealKind](w.deal))
+	if err != nil {
+		t.Fatalf("reading the deal's commitments: %v", err)
+	}
+	if got.Complete || len(got.Data) != 1 || ids.UUID(got.Data[0].Id) != w.claim {
+		t.Errorf("the watch reads %+v (complete=%v), want only the readable promise and an incomplete list", got.Data, got.Complete)
+	}
+	for _, row := range got.Data {
+		if row.SourceQuote == "We will confirm the pricing." {
+			t.Errorf("the hidden message's quote reached the reader")
+		}
 	}
 }
