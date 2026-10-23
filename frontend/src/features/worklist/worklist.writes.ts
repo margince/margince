@@ -203,13 +203,12 @@ export function useApproval(id: string, enabled: boolean) {
 }
 
 /**
- * Set a lapsed contact aside, and put them back.
+ * Set a lapsed contact aside, stop following them for good, or put them back.
  *
- * Thirty days, and the number lives here rather than being asked of the reader.
- * A duration picker on this verb would ask a rep to predict when a quiet
- * relationship becomes worth chasing again, which nobody knows. The contract
- * caps it at ninety because no value means forever. A relationship worth
- * raising once is worth raising again.
+ * Thirty days for "not now", and the number lives here rather than being asked
+ * of the reader: a duration picker would ask a rep to predict when a quiet
+ * relationship becomes worth chasing again. "Stop following" is the reader
+ * saying the relationship is over; restore resumes either.
  */
 export function useNudgeDismissal() {
   const queryClient = useQueryClient();
@@ -217,11 +216,24 @@ export function useNudgeDismissal() {
     queryClient.invalidateQueries({ queryKey: worklistKey });
   };
   const dismiss = useMutation({
-    mutationFn: async (input: { contactId: string }) => {
+    mutationFn: async (input: { contactId: string; permanent?: boolean }) => {
       unwrap(
         await api.PUT("/contacts/{id}/nudge-dismissal", {
           params: { path: { id: input.contactId } },
-          body: { days: DISMISSAL_DAYS },
+          body: input.permanent
+            ? { permanent: true }
+            : { days: DISMISSAL_DAYS },
+        }),
+      );
+    },
+    onSuccess: invalidate,
+  });
+  // Every listed contact in one request, all or none: "Dismiss all".
+  const dismissAll = useMutation({
+    mutationFn: async (input: { contactIds: readonly string[] }) => {
+      unwrap(
+        await api.PUT("/contacts/nudge-dismissals", {
+          body: { contact_ids: [...input.contactIds], days: DISMISSAL_DAYS },
         }),
       );
     },
@@ -237,7 +249,7 @@ export function useNudgeDismissal() {
     },
     onSuccess: invalidate,
   });
-  return { dismiss, restore };
+  return { dismiss, dismissAll, restore };
 }
 
 /**

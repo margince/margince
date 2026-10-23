@@ -12,3 +12,4 @@
 1792679518_a_colleague_can_take_over_a_promise_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1792734530_an_approval_names_the_conversation_that_staged_it_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1792738779_the_slim_outcome_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1792729329_a_reader_can_stop_following_a_contact.down.sql | relationship_nudge_dismissal | only permanent stops are rewritten, at most one row per reader and contact, each chosen by hand, so the set is small

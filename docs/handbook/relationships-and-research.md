@@ -46,6 +46,21 @@ It counts and never shows the messages: "{total} interactions in 90 days · {inb
 
 Where the map is not complete, it says so: "{count} more not shown.", "Some colleagues are not shown."
 
+### When does the Worklist suggest a quiet contact?
+
+When a contact has gone quiet, the Worklist suggests that you get back in touch. These rows have
+their own filter, **Quiet relationships**.
+
+- Only the contact's owner gets the suggestion. Writing to the contact, or being copied on a mail
+  to them, does not make it yours.
+- A contact with no owner, or whose owner has left, is in nobody's Mine. It shows under Unassigned.
+- After 180 days with no exchange, the contact leaves the Worklist. Its own page still shows the
+  silence.
+- **Not now** sets the contact aside for a month. **Stop following** sets it aside with no end
+  date. Both are your choice only, and **Undo** puts the contact back.
+- Under the **Quiet relationships** filter, **Dismiss all shown** sets every shown contact aside
+  for a month.
+
 ### How do I import my LinkedIn connections?
 To import your LinkedIn network, open **Settings**, then **Connections**, and use the **LinkedIn connections** card.
 1. On LinkedIn, open **Settings**, then **Data privacy**, then **Get a copy of your data**, and ask for the archive.

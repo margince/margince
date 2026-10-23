@@ -119,14 +119,13 @@ const decayCandidateCap = 40
 // something to choose from.
 const decayLaneCap = 5
 
-// attentionDecay reads the acting rep's own lapsed relationships.
+// attentionDecay reads the lapsed relationships, routed to each contact's owner.
 //
-// TWO steps, and the order is the design. The projection narrows to the
-// reader's own edges that have been silent past the §4 threshold — one indexed
-// range rather than a sweep. Only then does the contacts module derive what
-// actually changed about those few, through the SAME engine the contact's own
-// page reads, so the lane and that page cannot come to disagree about when
-// somebody went quiet.
+// TWO steps, and the order is the design. The projection narrows to contacts
+// whose every live edge has been silent past the §4 threshold. Only then does
+// the contacts module derive what actually changed about those few, through
+// the SAME engine the contact's own page reads, so the lane and that page
+// cannot come to disagree about when somebody went quiet.
 //
 // A principal with no human behind it holds no relationships of its own, which
 // is a refusal rather than an empty lane: the feed omits and NAMES it instead
@@ -137,67 +136,67 @@ type attentionDecay struct {
 	now   func() time.Time
 }
 
-func (d attentionDecay) Lapsed(ctx context.Context) ([]attention.QuietRelationship, error) {
-	// The read refuses a principal with no human of its own, so this is the
-	// same refusal taken one step earlier: before a transaction is opened for
-	// a lane that cannot produce a row. It is not the security boundary — that
-	// lives in QuietEdgesForUser, where the reader is bound to the actor.
-	if actor, ok := principal.Actor(ctx); !ok || actor.UserID.IsZero() {
+// quietSuggestionCeilingDays is how long after the last qualifying touch a
+// quiet relationship stays a suggestion. Past it the contact leaves the
+// Worklist and keeps its silence on its own page; a first mailbox import must
+// not turn years of history into a morning of follow-ups.
+const quietSuggestionCeilingDays = 180
+
+func (d attentionDecay) Lapsed(
+	ctx context.Context, scope attention.TaskScope, owner ids.UUID,
+) ([]attention.QuietRelationship, error) {
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.UserID.IsZero() {
 		return nil, apperrors.ErrPermissionDenied
 	}
 	now := d.now()
+	read := search.QuietRead{
+		QuietBefore:  now.AddDate(0, 0, -relstrength.QuietDays),
+		TouchedAfter: now.AddDate(0, 0, -quietSuggestionCeilingDays),
+		Limit:        decayCandidateCap,
+		// Contacts this reader set aside, and senders capture judged
+		// personal, an advisor or noise, removed BEFORE the cap. Each module
+		// renders the rule over the table it owns; search never imports a
+		// sibling, so the projection takes it as a hole.
+		Exclude: func(arg func(any) int) (string, error) {
+			dismissed, err := contacts.NotDismissedClause(ctx, "e", now, arg)
+			if err != nil {
+				return "", err
+			}
+			reader := fmt.Sprintf("$%d", arg(actor.UserID))
+			return dismissed + " AND " + capture.PrivateSenderClause("e", reader), nil
+		},
+	}
+	switch scope {
+	case attention.TasksMine:
+		read.Owner = actor.UserID
+	case attention.TasksOwnedBy:
+		if owner.IsZero() {
+			return nil, nil
+		}
+		read.Owner = owner
+	case attention.TasksUnassigned:
+		read.Unowned = true
+	case attention.TasksVisible:
+	}
 	var lapsed []attention.QuietRelationship
 	err := database.WithWorkspaceTx(ctx, d.pool, func(tx pgx.Tx) error {
-		quiet, err := search.QuietEdgesForUser(
-			ctx, tx,
-			now.AddDate(0, 0, -relstrength.QuietDays),
-			decayCandidateCap,
-			// Contacts this reader set aside, removed BEFORE the cap. The
-			// contacts module owns the rows and renders the predicate; search
-			// never imports a sibling, so the projection takes it as a hole.
-			func(arg func(any) int) (string, error) {
-				dismissed, err := contacts.NotDismissedClause(ctx, "e", now, arg)
-				if err != nil {
-					return "", err
-				}
-				// AND the sender verdict's own answer. A contact capture judged
-				// personal, an advisor or noise is not a lapsed business
-				// relationship, and this lane is where that showed: a founder's
-				// clinic and a service desk sat under a heading promising new
-				// revenue. Composed here because each module renders the rule
-				// over the table it owns.
-				// The reader's own id, bound as a placeholder like every other
-				// value here: the ledger is per mailbox owner, and one rep's
-				// private verdict must not decide another rep's pipeline.
-				actor, ok := principal.Actor(ctx)
-				if !ok || actor.UserID.IsZero() {
-					return "", apperrors.ErrPermissionDenied
-				}
-				reader := fmt.Sprintf("$%d", arg(actor.UserID))
-				return dismissed + " AND " + capture.PrivateSenderClause("e", reader), nil
-			},
-		)
+		quiet, err := search.QuietContacts(ctx, tx, read)
 		if err != nil {
 			return err
 		}
 		candidates := make([]ids.ContactID, 0, len(quiet))
-		for _, edge := range quiet {
-			candidates = append(candidates, ids.From[ids.ContactKind](edge.ContactID))
+		for _, found := range quiet {
+			candidates = append(candidates, ids.From[ids.ContactKind](found.Edge.ContactID))
 		}
 		changed, err := d.store.RelationshipChangesForContacts(ctx, tx, candidates, now)
 		if err != nil {
 			return err
 		}
 		// Which of them still carries money, read once for the whole candidate
-		// set. In the SAME transaction as the derivation above, so a deal
-		// closing mid-read cannot make the lane say a contact is worth chasing
-		// for a reason that stopped being true between two statements.
-		//
-		// A reader without the edge grant NARROWS rather than fails. This lane
-		// answers "who have you stopped talking to", and the deal behind a
-		// silence is one fact on that answer, not the answer: failing here
-		// would take a rep's whole decay lane away over a grant that governs
-		// something else. They lose the ranking bump and keep the row.
+		// set in the SAME transaction. A reader without the edge grant
+		// NARROWS rather than fails: the deal behind a silence is one fact on
+		// the row, not the row.
 		funded, err := deals.OpenDealContacts(ctx, tx, candidates)
 		if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
 			return err
@@ -211,20 +210,16 @@ func (d attentionDecay) Lapsed(ctx context.Context) ([]attention.QuietRelationsh
 	return lapsed, nil
 }
 
-// quietRelationships keeps only the contacts the DERIVATION calls quiet.
+// quietRelationships keeps only the contacts the DERIVATION calls quiet, and
+// only while their last qualifying touch is inside the suggestion ceiling.
 //
-// The projection's threshold admitted the candidates; this is the verdict. A
-// candidate whose derived changes say something else — they replied, the band
-// moved — is not on this lane, because the lane's sentence would then be a
-// second opinion about a relationship the contact's own page describes
-// differently.
-//
-// The walk follows the EDGES, not the derivations: the projection handed the
-// candidates over oldest silence first, the derivation returns them in its own
-// order, and the lane owes the rep the projection's — the longest-lapsed
-// contact on top.
+// The projection's threshold admitted the candidates; this is the verdict. The
+// walk follows the EDGES, not the derivations, so the projection's order holds.
+// BOTH halves of the row's sentence come from the derivation: `change.At` is
+// the touch `change.Days` counts from, so the number and the date agree, and
+// the ceiling is measured from that same touch.
 func quietRelationships(
-	quiet []search.InteractionEdge,
+	quiet []search.QuietContact,
 	changed []contacts.ContactChanges,
 	funded map[ids.UUID]bool,
 	now time.Time,
@@ -233,8 +228,10 @@ func quietRelationships(
 	for _, row := range changed {
 		byContact[row.ContactID.UUID] = row
 	}
+	ceiling := now.AddDate(0, 0, -quietSuggestionCeilingDays)
 	lapsed := make([]attention.QuietRelationship, 0, len(changed))
-	for _, edge := range quiet {
+	for _, found := range quiet {
+		edge := found.Edge
 		row, ok := byContact[edge.ContactID]
 		if !ok {
 			continue
@@ -243,23 +240,13 @@ func quietRelationships(
 			if change.Kind != relstrength.ChangeWentQuiet {
 				continue
 			}
-			// BOTH halves of the sentence come from the derivation, never one
-			// from each source. The projection folds only workspace-audience
-			// activity and only this rep's own participation, while the
-			// derivation folds the contact's qualifying interactions, so their
-			// last-touch instants can differ. Taking the number from one and
-			// the date from the other renders "quiet 46 days — last on
-			// <120 days ago>": a card disagreeing with itself, and with the
-			// contact's own page. `change.At` is the touch `change.Days`
-			// counts from, so the two agree by construction.
-			// The strength comes off the EDGE, scored at the read instant, and
-			// the edge is the one the projection already loaded. Scoring it
-			// here rather than storing a band means the lane and the contact's
-			// own page answer from the same arithmetic at the same moment,
-			// which is the property §4 is pure for.
+			if !change.At.After(ceiling) {
+				break
+			}
 			lapsed = append(lapsed, attention.QuietRelationship{
 				ContactID:   row.ContactID.UUID,
 				Name:        row.DisplayName,
+				OwnerID:     found.OwnerID,
 				QuietDays:   change.Days,
 				LastAt:      change.At,
 				Strength:    edge.StrengthOf(now),

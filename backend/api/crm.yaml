@@ -1710,6 +1710,31 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /contacts/nudge-dismissals:
+    put:
+      tags: [Contacts]
+      operationId: dismissRelationshipNudges
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Set several lapsed contacts aside at once — the Worklist's "Dismiss all".
+      description: |
+        The same per-reader decision as `PUT /contacts/{id}/nudge-dismissal`, applied to
+        every listed contact in one transaction: all of them are set aside, or none is.
+        A contact the caller cannot read answers 404 for the whole request, the same as
+        one that does not exist. Each contact is resumed on its own through the DELETE
+        verb.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DismissRelationshipNudgesRequest' }
+      responses:
+        '204': { description: 'Every listed contact is set aside for this reader.' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /contacts/{id}/nudge-dismissal:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -1734,11 +1759,10 @@ paths:
         call. Contrast `not_sales` on a message, which is a fact about the thread and
         holds for everybody.
 
-        NEVER PERMANENT. `days` is capped, and there is no value meaning forever: a
-        permanent dismissal would silently delete a contact from a rep's attention and
-        leave nothing to notice it — the same failure the hidden-backlog guardrail exists
-        to catch, reached by a door that guardrail cannot see. A relationship worth
-        raising once is worth raising again.
+        TEMPORARY OR PERMANENT. `days` sets the contact aside for up to 90 days.
+        `permanent: true` stops following the contact with no end date: the reader has
+        decided the relationship is over. Both are reversible through the DELETE verb, and
+        neither changes the contact's own page, which still shows the silence.
 
         Reading the contact is the licence to set them aside: an id the caller cannot read
         answers 404, the same as one that does not exist.
@@ -1760,8 +1784,9 @@ paths:
       security: [{ cookieAuth: [] }]
       summary: Put a set-aside contact back on the lane — the undo behind the dismiss verb.
       description: |
-        Clears what THIS reader set aside. Idempotent: restoring a contact nobody dismissed
-        is the same success, because the reader's goal state already holds.
+        Clears what THIS reader set aside, temporary or permanent: the resume verb for a
+        stopped contact. Idempotent: restoring a contact nobody dismissed is the same
+        success, because the reader's goal state already holds.
       responses:
         '204': { description: 'Back on the lane, or was never off it.' }
         '401': { $ref: '#/components/responses/Unauthorized' }
@@ -17277,7 +17302,7 @@ paths:
             licence to read a colleague's inbox.
         - name: filter
           in: query
-          schema: { type: string, enum: [all, urgent, customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, system, except_decisions, changed_since_brief] }
+          schema: { type: string, enum: [all, urgent, customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief] }
           description: |
             Narrow the queue. Omitted means everything, which is the default view.
 
@@ -47039,10 +47064,30 @@ components:
           description: The rows, each named by its lane and its id, as a pin names one.
           items: { $ref: '#/components/schemas/WorklistPinRequest' }
 
+    DismissRelationshipNudgesRequest:
+      type: object
+      additionalProperties: false
+      required: [contact_ids]
+      properties:
+        contact_ids:
+          type: array
+          minItems: 1
+          maxItems: 50
+          uniqueItems: true
+          items: { type: string, format: uuid }
+          description: 'The contacts to set aside, as the Worklist listed them.'
+        days:
+          type: integer
+          minimum: 1
+          maximum: 90
+          description: 'How long they stay off the lane, counted from now. Send `days` or `permanent: true`, not both.'
+        permanent:
+          type: boolean
+          description: 'Stop following them for good, for this reader only, until resumed one by one.'
+
     DismissRelationshipNudgeRequest:
       type: object
       additionalProperties: false
-      required: [days]
       properties:
         days:
           type: integer
@@ -47052,12 +47097,13 @@ components:
             How long the contact stays off the lane, counted from now. A COUNT rather than
             a moment, because the server owns "now" — a client computing an instant from a
             clock that is minutes out writes a dismissal that expires early or late for a
-            reason nobody can see.
-
-            Capped at 90 days, and there is no value meaning forever. A quarter is the
-            longest a rep can honestly say "not this one" about a relationship without
-            that being a decision to drop the contact, which is a different act with its
-            own record.
+            reason nobody can see. Send `days` or `permanent: true`, not both.
+        permanent:
+          type: boolean
+          description: |
+            Stop following this contact for good, for this reader only. It has no end
+            date; the reader resumes it with the DELETE verb. A colleague, or a later
+            owner, keeps their own choice.
 
     SetActivityDispositionRequest:
       type: object
@@ -62348,6 +62394,14 @@ components:
             Whether money this reader can see still rests on this contact. Absent is not
             "no": a contact with an open deal the reader may not see reads the same as one
             with none, which is the answer every row-scoped read gives.
+        owner_id:
+          type: string
+          format: uuid
+          description: |
+            The contact's live owner, who this suggestion is for. Absent when the contact
+            has no owner or its owner has left: then the row is nobody's personal work and
+            appears only where unassigned work is listed. Being copied on, or writing, a
+            colleague's mail to the contact never makes a reader its owner.
 
     AttentionPairEvidence:
       type: object
@@ -62487,7 +62541,7 @@ components:
             `scope_options`, because the `team` worklist is the team's live work and the
             week is a lead's verdict on named colleagues. Absent from an older server, which
             a client reads as `none`.
-        filter: { type: string, enum: [all, urgent, customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, system, except_decisions, changed_since_brief], description: 'The narrowing this read applied. The same vocabulary the query parameter takes.' }
+        filter: { type: string, enum: [all, urgent, customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, relationships, system, except_decisions, changed_since_brief], description: 'The narrowing this read applied. The same vocabulary the query parameter takes.' }
         summary: { $ref: '#/components/schemas/WorklistSummary' }
         queue:
           type: array
@@ -62964,7 +63018,7 @@ components:
       properties:
         category:
           type: string
-          enum: [customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, system]
+          enum: [customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, relationships, system]
           description: 'Which kind of work these numbers are about. The same vocabulary the filter uses.'
         considered:
           type: integer
@@ -63602,7 +63656,7 @@ components:
             row rather than a hundred. Its own facts ride in `batch`.
         category:
           type: string
-          enum: [customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, system]
+          enum: [customer_waiting, leads, deals_at_risk, meetings, tasks, decisions, relationships, system]
           description: 'The badge, and the filter it answers to. A reader groups by this; the ORDER never does.'
         urgent:
           type: boolean

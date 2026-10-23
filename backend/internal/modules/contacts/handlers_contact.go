@@ -360,12 +360,42 @@ func (h Handlers) DismissRelationshipNudge(w http.ResponseWriter, r *http.Reques
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	if err := h.store.DismissRelationshipNudge(
-		r.Context(), pathID[ids.ContactKind](id), req.Days); err != nil {
+	span := nudgeSpanOf(req.Days, req.Permanent)
+	if err := h.store.DismissRelationshipNudges(
+		r.Context(), []ids.ContactID{pathID[ids.ContactKind](id)}, span); err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// DismissRelationshipNudges sets every listed contact aside for the calling
+// reader, all or none: the Worklist band's "Dismiss all".
+func (h Handlers) DismissRelationshipNudges(w http.ResponseWriter, r *http.Request) {
+	var req crmcontracts.DismissRelationshipNudgesRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	contactIDs := make([]ids.ContactID, 0, len(req.ContactIds))
+	for _, id := range req.ContactIds {
+		contactIDs = append(contactIDs, ids.From[ids.ContactKind](ids.UUID(id)))
+	}
+	if err := h.store.DismissRelationshipNudges(
+		r.Context(), contactIDs, nudgeSpanOf(req.Days, req.Permanent)); err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// nudgeSpanOf reads the wire's two optional fields; an absent days is zero,
+// which the store refuses unless the stop is permanent.
+func nudgeSpanOf(days *int, permanent *bool) NudgeSpan {
+	span := NudgeSpan{Permanent: permanent != nil && *permanent}
+	if days != nil {
+		span.Days = *days
+	}
+	return span
 }
 
 // RestoreRelationshipNudge puts a set-aside contact back on the reader's lane.

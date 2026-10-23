@@ -34,7 +34,7 @@ type stubDecay struct {
 	calls int
 }
 
-func (s *stubDecay) Lapsed(context.Context) ([]QuietRelationship, error) {
+func (s *stubDecay) Lapsed(context.Context, TaskScope, ids.UUID) ([]QuietRelationship, error) {
 	s.calls++
 	return s.rows, s.err
 }

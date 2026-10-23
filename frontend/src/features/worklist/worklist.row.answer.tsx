@@ -140,7 +140,10 @@ const ANSWER_BY_SOURCE: Partial<
   // means something else and posts elsewhere, so this table is keyed by source.
   relationship_decay: {
     verb: "dismiss",
-    draw: (item) => ({ primary: <NudgeDismiss contactId={item.id} /> }),
+    draw: (item) => ({
+      primary: <NudgeDismiss contactId={item.id} />,
+      equals: <NudgeDismiss contactId={item.id} permanent />,
+    }),
   },
 };
 
@@ -199,7 +202,13 @@ export function rowAnswer(
 // Undoable from the confirmation, like every disposition beside it. The row
 // leaves the lane on success. Without undo, a misclick costs the reader the only
 // address they had for a contact they were not done with.
-function NudgeDismiss({ contactId }: Readonly<{ contactId: string }>) {
+//
+// `permanent` is "Stop following": the same verb with no end date, for a reader
+// who has decided the relationship is over. Its Undo is the resume.
+function NudgeDismiss({
+  contactId,
+  permanent = false,
+}: Readonly<{ contactId: string; permanent?: boolean }>) {
   const t = useT();
   const toast = useToast();
   const { dismiss, restore } = useNudgeDismissal();
@@ -208,38 +217,45 @@ function NudgeDismiss({ contactId }: Readonly<{ contactId: string }>) {
       pending={dismiss.isPending}
       onClick={() =>
         dismiss.mutate(
-          { contactId },
+          { contactId, permanent },
           {
             onSuccess: () =>
-              toast.show(t("worklist.verb.dismissed"), {
-                action: {
-                  kind: "undo",
-                  label: t("worklist.verb.dismissUndo"),
-                  // The toast dismisses itself when the action is pressed.
-                  // A failed undo leaves the contact set aside, with the only
-                  // way back already off the screen.
-                  //
-                  // mutateAsync and a catch: the dismissal removes the row.
-                  // By the time the reader presses Undo, this component is
-                  // unmounted, and React Query has dropped the observer that
-                  // per-call callbacks hang off. A refused undo would fail
-                  // with the screen silent.
-                  onAct: () => {
-                    restore.mutateAsync({ contactId }).catch(() =>
-                      toast.show(t("worklist.verb.dismissUndoFailed"), {
-                        tone: "danger",
-                      }),
-                    );
+              toast.show(
+                t(
+                  permanent
+                    ? "worklist.verb.stopped"
+                    : "worklist.verb.dismissed",
+                ),
+                {
+                  action: {
+                    kind: "undo",
+                    label: t("worklist.verb.dismissUndo"),
+                    // The toast dismisses itself when the action is pressed.
+                    // A failed undo leaves the contact set aside, with the only
+                    // way back already off the screen.
+                    //
+                    // mutateAsync and a catch: the dismissal removes the row.
+                    // By the time the reader presses Undo, this component is
+                    // unmounted, and React Query has dropped the observer that
+                    // per-call callbacks hang off. A refused undo would fail
+                    // with the screen silent.
+                    onAct: () => {
+                      restore.mutateAsync({ contactId }).catch(() =>
+                        toast.show(t("worklist.verb.dismissUndoFailed"), {
+                          tone: "danger",
+                        }),
+                      );
+                    },
                   },
                 },
-              }),
+              ),
             onError: () =>
               toast.show(t("worklist.verb.dismissFailed"), { tone: "danger" }),
           },
         )
       }
     >
-      {t("worklist.verb.dismiss")}
+      {t(permanent ? "worklist.verb.stopFollowing" : "worklist.verb.dismiss")}
     </Button>
   );
 }

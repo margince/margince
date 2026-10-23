@@ -1311,6 +1311,10 @@ func (stubs) CreateContact(w nethttp.ResponseWriter, r *nethttp.Request, params 
 	httperr.NotImplemented(w, r, "CreateContact")
 }
 
+func (stubs) DismissRelationshipNudges(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "DismissRelationshipNudges")
+}
+
 func (stubs) QuickCaptureContact(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.QuickCaptureContactParams) {
 	httperr.NotImplemented(w, r, "QuickCaptureContact")
 }

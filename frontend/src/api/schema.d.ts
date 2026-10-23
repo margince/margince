@@ -942,6 +942,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/contacts/nudge-dismissals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set several lapsed contacts aside at once — the Worklist's "Dismiss all".
+         * @description The same per-reader decision as `PUT /contacts/{id}/nudge-dismissal`, applied to
+         *     every listed contact in one transaction: all of them are set aside, or none is.
+         *     A contact the caller cannot read answers 404 for the whole request, the same as
+         *     one that does not exist. Each contact is resumed on its own through the DELETE
+         *     verb.
+         */
+        put: operations["dismissRelationshipNudges"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/contacts/{id}/nudge-dismissal": {
         parameters: {
             query?: never;
@@ -966,11 +990,10 @@ export interface paths {
          *     call. Contrast `not_sales` on a message, which is a fact about the thread and
          *     holds for everybody.
          *
-         *     NEVER PERMANENT. `days` is capped, and there is no value meaning forever: a
-         *     permanent dismissal would silently delete a contact from a rep's attention and
-         *     leave nothing to notice it — the same failure the hidden-backlog guardrail exists
-         *     to catch, reached by a door that guardrail cannot see. A relationship worth
-         *     raising once is worth raising again.
+         *     TEMPORARY OR PERMANENT. `days` sets the contact aside for up to 90 days.
+         *     `permanent: true` stops following the contact with no end date: the reader has
+         *     decided the relationship is over. Both are reversible through the DELETE verb, and
+         *     neither changes the contact's own page, which still shows the silence.
          *
          *     Reading the contact is the licence to set them aside: an id the caller cannot read
          *     answers 404, the same as one that does not exist.
@@ -979,8 +1002,9 @@ export interface paths {
         post?: never;
         /**
          * Put a set-aside contact back on the lane — the undo behind the dismiss verb.
-         * @description Clears what THIS reader set aside. Idempotent: restoring a contact nobody dismissed
-         *     is the same success, because the reader's goal state already holds.
+         * @description Clears what THIS reader set aside, temporary or permanent: the resume verb for a
+         *     stopped contact. Idempotent: restoring a contact nobody dismissed is the same
+         *     success, because the reader's goal state already holds.
          */
         delete: operations["restoreRelationshipNudge"];
         options?: never;
@@ -34217,19 +34241,28 @@ export interface components {
             /** @description The rows, each named by its lane and its id, as a pin names one. */
             rows: components["schemas"]["WorklistPinRequest"][];
         };
+        DismissRelationshipNudgesRequest: {
+            /** @description The contacts to set aside, as the Worklist listed them. */
+            contact_ids: string[];
+            /** @description How long they stay off the lane, counted from now. Send `days` or `permanent: true`, not both. */
+            days?: number;
+            /** @description Stop following them for good, for this reader only, until resumed one by one. */
+            permanent?: boolean;
+        };
         DismissRelationshipNudgeRequest: {
             /**
              * @description How long the contact stays off the lane, counted from now. A COUNT rather than
              *     a moment, because the server owns "now" — a client computing an instant from a
              *     clock that is minutes out writes a dismissal that expires early or late for a
-             *     reason nobody can see.
-             *
-             *     Capped at 90 days, and there is no value meaning forever. A quarter is the
-             *     longest a rep can honestly say "not this one" about a relationship without
-             *     that being a decision to drop the contact, which is a different act with its
-             *     own record.
+             *     reason nobody can see. Send `days` or `permanent: true`, not both.
              */
-            days: number;
+            days?: number;
+            /**
+             * @description Stop following this contact for good, for this reader only. It has no end
+             *     date; the reader resumes it with the DELETE verb. A colleague, or a later
+             *     owner, keeps their own choice.
+             */
+            permanent?: boolean;
         };
         SetActivityDispositionRequest: {
             /**
@@ -46593,6 +46626,14 @@ export interface components {
              *     with none, which is the answer every row-scoped read gives.
              */
             has_open_deal?: boolean;
+            /**
+             * Format: uuid
+             * @description The contact's live owner, who this suggestion is for. Absent when the contact
+             *     has no owner or its owner has left: then the row is nobody's personal work and
+             *     appears only where unassigned work is listed. Being copied on, or writing, a
+             *     colleague's mail to the contact never makes a reader its owner.
+             */
+            owner_id?: string;
         };
         /** @description One field the detector compared across the two records. */
         AttentionPairEvidence: {
@@ -46733,7 +46774,7 @@ export interface components {
              * @description The narrowing this read applied. The same vocabulary the query parameter takes.
              * @enum {string}
              */
-            filter?: "all" | "urgent" | "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system" | "except_decisions" | "changed_since_brief";
+            filter?: "all" | "urgent" | "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system" | "except_decisions" | "changed_since_brief";
             summary: components["schemas"]["WorklistSummary"];
             /** @description Everything actionable, best-first. The order is the product of this endpoint. */
             queue: components["schemas"]["WorklistItem"][];
@@ -47177,7 +47218,7 @@ export interface components {
              * @description Which kind of work these numbers are about. The same vocabulary the filter uses.
              * @enum {string}
              */
-            category: "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system";
+            category: "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system";
             /** @description How many items of this kind were read and ranked, before any narrowing. */
             considered: number;
             /** @description How many of them the page carries, counting a folded group as its members. */
@@ -47778,7 +47819,7 @@ export interface components {
              * @description The badge, and the filter it answers to. A reader groups by this; the ORDER never does.
              * @enum {string}
              */
-            category: "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system";
+            category: "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system";
             /** @description Whether this work contributes to the urgent summary, independent of a personal pin. */
             urgent?: boolean;
             owner?: components["schemas"]["WorklistOwner"];
@@ -50770,6 +50811,32 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["RecordViewAck"];
                 };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    dismissRelationshipNudges: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DismissRelationshipNudgesRequest"];
+            };
+        };
+        responses: {
+            /** @description Every listed contact is set aside for this reader. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
@@ -67674,7 +67741,7 @@ export interface operations {
                  *     than everything: absent is not false, and a reader asking what changed since a
                  *     night that never happened is owed nothing, not the whole queue.
                  */
-                filter?: "all" | "urgent" | "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "system" | "except_decisions" | "changed_since_brief";
+                filter?: "all" | "urgent" | "customer_waiting" | "leads" | "deals_at_risk" | "meetings" | "tasks" | "decisions" | "relationships" | "system" | "except_decisions" | "changed_since_brief";
                 /** @description How many ranked items to return. */
                 limit?: number;
                 /**

@@ -955,6 +955,7 @@ var agentPolicies = map[string]agentPolicy{
 	"PUT /v1/connectors/{provider}/history-baseline":                        {Op: "setConnectorHistoryBaseline", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/connectors/{provider}/mail-posture":                            {Op: "setConnectorMailPosture", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/connectors/{provider}/signature-enrichment":                    {Op: "setConnectorSignatureEnrichment", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"PUT /v1/contacts/nudge-dismissals":                                     {Op: "dismissRelationshipNudges", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/contacts/{id}/nudge-dismissal":                                 {Op: "dismissRelationshipNudge", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/deal-rooms/{id}/expiry":                                        {Op: "setDealRoomExpiry", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/deals/{id}/documents/{attachmentId}/hide":                      {Op: "hideDealDocument", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

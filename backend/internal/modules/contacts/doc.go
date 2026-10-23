@@ -36,9 +36,8 @@
 // relationship_nudge_dismissal is a lapsed contact ONE reader has set aside,
 // and it is its own table rather than a disposition because a nudge is not an
 // activity: the decay lane's row carries the contact's id, so there is no
-// activity to hang the judgement on. Never permanent — the moment it lifts is
-// NOT NULL, so a dismissal that silently deleted somebody from a rep's
-// attention has no value to store.
+// activity to hang the judgement on. A NULL moment is a permanent stop, which
+// the reader resumes by deleting the row.
 // lead_score_history is the retained series behind "Explain This Score"
 // (ADR-0105): the breakdown is written with the score and read back
 // verbatim, because a decomposition recomputed at read time explains a

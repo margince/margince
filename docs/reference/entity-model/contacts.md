@@ -1620,7 +1620,7 @@ The 42 tables owned by `contacts`, as the migrations build them. [Back to the en
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `contact_id` | `uuid` | yes | Points at `contact.id`. |
-| `dismissed_until` | `timestamp with time zone` | yes |  |
+| `dismissed_until` | `timestamp with time zone` |  |  |
 | `reader_id` | `uuid` | yes | Points at `app_user.id`. |
 | `set_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `set_by` | `text` | yes |  |

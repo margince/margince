@@ -136,11 +136,11 @@ func TestOnlyADerivedSilenceReachesTheDecayLane(t *testing.T) {
 	// projection's — because the lane, not the derivation, owes the rep the
 	// oldest silence on top.
 	quiet := quietRelationships(
-		[]search.InteractionEdge{
-			{ContactID: oldest, LastAt: oldestSpoke},
-			{ContactID: newer, LastAt: newerSpoke},
-			{ContactID: returned, LastAt: newerSpoke},
-		},
+		asQuiet(
+			search.InteractionEdge{ContactID: oldest, LastAt: oldestSpoke},
+			search.InteractionEdge{ContactID: newer, LastAt: newerSpoke},
+			search.InteractionEdge{ContactID: returned, LastAt: newerSpoke},
+		),
 		[]contacts.ContactChanges{
 			{
 				ContactID:   ids.From[ids.ContactKind](returned),
@@ -150,7 +150,7 @@ func TestOnlyADerivedSilenceReachesTheDecayLane(t *testing.T) {
 			{
 				ContactID:   ids.From[ids.ContactKind](newer),
 				DisplayName: "Ines Sommer",
-				Changes:     []relstrength.Change{{Kind: relstrength.ChangeWentQuiet, Days: 41}},
+				Changes:     []relstrength.Change{{Kind: relstrength.ChangeWentQuiet, At: newerSpoke, Days: 41}},
 			},
 			{
 				ContactID:   ids.From[ids.ContactKind](oldest),
@@ -215,6 +215,42 @@ func TestOnlyADerivedSilenceReachesTheDecayLane(t *testing.T) {
 	}
 }
 
+// asQuiet wraps edges as candidates with no live owner.
+func asQuiet(edges ...search.InteractionEdge) []search.QuietContact {
+	out := make([]search.QuietContact, 0, len(edges))
+	for _, edge := range edges {
+		out = append(out, search.QuietContact{Edge: edge})
+	}
+	return out
+}
+
+// A silence older than the suggestion ceiling leaves the lane, counted from
+// the touch the row prints, while one a day inside it stays.
+func TestAQuietRelationshipPastTheCeilingLeavesTheLane(t *testing.T) {
+	inside, past := ids.NewV7(), ids.NewV7()
+	owner := ids.NewV7()
+	ceiling := readInstantForDecay.AddDate(0, 0, -quietSuggestionCeilingDays)
+	lane := quietRelationships(
+		[]search.QuietContact{
+			{Edge: search.InteractionEdge{ContactID: inside, LastAt: ceiling.AddDate(0, 0, 1)}, OwnerID: owner},
+			{Edge: search.InteractionEdge{ContactID: past, LastAt: ceiling}, OwnerID: owner},
+		},
+		[]contacts.ContactChanges{
+			{ContactID: ids.From[ids.ContactKind](inside), DisplayName: "Inside",
+				Changes: []relstrength.Change{{Kind: relstrength.ChangeWentQuiet, At: ceiling.AddDate(0, 0, 1), Days: quietSuggestionCeilingDays - 1}}},
+			{ContactID: ids.From[ids.ContactKind](past), DisplayName: "Past",
+				Changes: []relstrength.Change{{Kind: relstrength.ChangeWentQuiet, At: ceiling, Days: quietSuggestionCeilingDays}}},
+		},
+		nil, readInstantForDecay,
+	)
+	if len(lane) != 1 || lane[0].Name != "Inside" {
+		t.Fatalf("the lane = %+v, want only the relationship inside %d days", lane, quietSuggestionCeilingDays)
+	}
+	if lane[0].OwnerID != owner {
+		t.Errorf("the row is for %s, want the contact's owner %s", lane[0].OwnerID, owner)
+	}
+}
+
 // readInstantForDecay is the moment the lane's derivations are scored at. Fixed
 // rather than time.Now(), because a band is a function of how long ago the last
 // exchange was and a wall clock would make the same fixture answer differently
@@ -227,7 +263,7 @@ var readInstantForDecay = time.Date(2026, 6, 15, 9, 0, 0, 0, time.UTC)
 func TestTheDecayLaneReportsNothingItCannotDerive(t *testing.T) {
 	edge := search.InteractionEdge{ContactID: ids.NewV7(), LastAt: time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC)}
 	quiet := quietRelationships(
-		[]search.InteractionEdge{edge}, nil, map[ids.UUID]bool{}, readInstantForDecay,
+		asQuiet(edge), nil, map[ids.UUID]bool{}, readInstantForDecay,
 	)
 	if len(quiet) != 0 {
 		t.Errorf("the lane invented %d relationships from an empty derivation", len(quiet))
@@ -263,7 +299,7 @@ func TestTheReconnectLaneKeepsTheFiveWorthWriting(t *testing.T) {
 	// leave it out of the five.
 	funded := map[ids.UUID]bool{edges[6].ContactID: true}
 
-	lane := quietRelationships(edges, changed, funded, spoke.AddDate(0, 0, 60))
+	lane := quietRelationships(asQuiet(edges...), changed, funded, spoke.AddDate(0, 0, 60))
 
 	if len(lane) != decayLaneCap {
 		t.Fatalf("the lane hands over %d rows, want %d", len(lane), decayLaneCap)
@@ -274,7 +310,7 @@ func TestTheReconnectLaneKeepsTheFiveWorthWriting(t *testing.T) {
 	}
 	// The premise guard: without the funded one the cut is still five, so the
 	// assertion above is about ORDER rather than about the cap.
-	unfunded := quietRelationships(edges, changed, nil, spoke.AddDate(0, 0, 60))
+	unfunded := quietRelationships(asQuiet(edges...), changed, nil, spoke.AddDate(0, 0, 60))
 	if len(unfunded) != decayLaneCap {
 		t.Errorf("an unfunded set hands over %d rows, want %d", len(unfunded), decayLaneCap)
 	}

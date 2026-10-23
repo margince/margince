@@ -41,6 +41,7 @@ const FILTERS = [
   "meetings",
   "tasks",
   "decisions",
+  "relationships",
   "system",
 ] as const satisfies readonly WorklistFilter[];
 
