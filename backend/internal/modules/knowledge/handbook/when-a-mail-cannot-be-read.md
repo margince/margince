@@ -1,8 +1,8 @@
 <!-- prose:plain -->
 # When a mail cannot be read
 
-Margince stores every captured mail with the text it could read. Sometimes that
-is not all of it. The email then says so above the text, and Margince does not
+Margince stores every captured mail with the text it could read. That is not
+always all of it. The email then says so above the text, and Margince does not
 act on the mail by itself.
 
 ## What the email says
