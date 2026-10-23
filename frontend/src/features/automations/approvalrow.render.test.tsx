@@ -9,8 +9,9 @@ import {
   waitFor,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { api } from "../../api/client";
 import {
   ACTION_TOAST_MS,
   ToastProvider,
@@ -24,6 +25,7 @@ import {
   isPreviewDoor,
   refusedPreview,
 } from "../../testing/sendpermission.testkit";
+import { steppedClock } from "../../testing/steppedclock";
 import { ApprovalRow } from "./approvalrow";
 
 // What a reader sees after approving, and where the button goes.
@@ -110,55 +112,108 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// Only the timeouts are faked, the hold being one. Testing Library drains each
-// event with a setTimeout(0) it advances only when it finds a `jest` global.
-function holdClock() {
-  vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
-  vi.stubGlobal("jest", { advanceTimersByTime: vi.advanceTimersByTime });
-  return userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-}
+const HOLD_TIMERS = [
+  "setTimeout",
+  "clearTimeout",
+  "setInterval",
+  "clearInterval",
+  "Date",
+] as const;
 
-function stubDecisions() {
-  const fetched = vi.fn(async () =>
-    jsonResponse({ id: "ap1", status: "rejected" }),
-  );
+function stubDecisions(answer = () => jsonResponse({ status: "rejected" })) {
+  const fetched = vi.fn(async (_input: RequestInfo | URL) => answer());
   vi.stubGlobal("fetch", fetched);
   return fetched;
 }
 
+const REJECTED = en["decision.status.rejected"];
+const UNDO = en["common.undo"];
+
+function refused(detail: string) {
+  return jsonResponse({ title: "Refused", status: 422, detail }, 422);
+}
+
+function TwoRows({ second }: Readonly<{ second: Approval }>) {
+  return (
+    <>
+      <ApprovalRow approval={closeDateApproval()} />
+      <ApprovalRow approval={second} />
+    </>
+  );
+}
+
 describe("a rejection held for its undo", () => {
-  it("sends nothing inside the window and sends once it closes", async () => {
-    const user = holdClock();
+  it("sends once the window closes and keeps the bar, focused, until the card is decided", async () => {
+    const user = steppedClock({ toFake: [...HOLD_TIMERS] });
     const fetched = stubDecisions();
     render(<ApprovalRow approval={closeDateApproval()} />);
+
     await user.click(screen.getByRole("button", { name: "Reject" }));
-    expect(screen.getByRole("status")).toHaveTextContent(
-      en["decision.status.rejected"],
-    );
+    expect(screen.getByText(REJECTED)).toHaveFocus();
     await vi.advanceTimersByTimeAsync(ACTION_TOAST_MS - 1);
     expect(rejectCalls(fetched)).toBe(0);
 
     await vi.advanceTimersByTimeAsync(1);
     await vi.waitFor(() => expect(rejectCalls(fetched)).toBe(1));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(screen.getByText(REJECTED)).toHaveFocus();
+    expect(screen.queryByRole("button", { name: UNDO })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Reject" })).toBeNull();
   });
 
   it("puts the verbs back and sends nothing when undone", async () => {
-    const user = holdClock();
+    const user = steppedClock({ toFake: [...HOLD_TIMERS] });
     const fetched = stubDecisions();
     render(<ApprovalRow approval={closeDateApproval()} />);
 
     await user.click(screen.getByRole("button", { name: "Reject" }));
-    await user.click(screen.getByRole("button", { name: en["common.undo"] }));
+    await user.click(screen.getByRole("button", { name: UNDO }));
 
-    const reject = screen.getByRole("button", { name: "Reject" });
-    expect(reject).toHaveFocus();
+    expect(screen.getByRole("button", { name: "Reject" })).toHaveFocus();
     expect(screen.getByRole("button", { name: "Approve" })).toBeEnabled();
     await vi.advanceTimersByTimeAsync(ACTION_TOAST_MS * 2);
     expect(rejectCalls(fetched)).toBe(0);
   });
 
+  it("waits while focus is on Undo and sends the rest of the window after it leaves", async () => {
+    const user = steppedClock({ toFake: [...HOLD_TIMERS] });
+    const fetched = stubDecisions();
+    render(<ApprovalRow approval={closeDateApproval()} />);
+
+    await user.click(screen.getByRole("button", { name: "Reject" }));
+    await vi.advanceTimersByTimeAsync(3000);
+    await user.tab();
+    expect(screen.getByRole("button", { name: UNDO })).toHaveFocus();
+    await vi.advanceTimersByTimeAsync(ACTION_TOAST_MS * 2);
+    expect(rejectCalls(fetched)).toBe(0);
+
+    await user.tab();
+    await vi.advanceTimersByTimeAsync(ACTION_TOAST_MS - 3000 - 1);
+    expect(rejectCalls(fetched)).toBe(0);
+    await vi.advanceTimersByTimeAsync(1);
+    await vi.waitFor(() => expect(rejectCalls(fetched)).toBe(1));
+  });
+
+  it("waits while the pointer is on Undo and sends the rest after it leaves", async () => {
+    const user = steppedClock({ toFake: [...HOLD_TIMERS] });
+    const fetched = stubDecisions();
+    render(<ApprovalRow approval={closeDateApproval()} />);
+
+    await user.click(screen.getByRole("button", { name: "Reject" }));
+    const undo = screen.getByRole("button", { name: UNDO });
+    await user.hover(undo);
+    await vi.advanceTimersByTimeAsync(ACTION_TOAST_MS * 2);
+    expect(rejectCalls(fetched)).toBe(0);
+
+    await user.unhover(undo);
+    await vi.advanceTimersByTimeAsync(ACTION_TOAST_MS - 1);
+    expect(rejectCalls(fetched)).toBe(0);
+    await vi.advanceTimersByTimeAsync(1);
+    await vi.waitFor(() => expect(rejectCalls(fetched)).toBe(1));
+  });
+
   it("sends at once when the card leaves the page", async () => {
-    const user = holdClock();
+    const user = steppedClock({ toFake: [...HOLD_TIMERS] });
     const fetched = stubDecisions();
     const { unmount } = render(<ApprovalRow approval={closeDateApproval()} />);
 
@@ -169,7 +224,7 @@ describe("a rejection held for its undo", () => {
   });
 
   it("sends at once when the page is hidden", async () => {
-    const user = holdClock();
+    const user = steppedClock({ toFake: [...HOLD_TIMERS] });
     const fetched = stubDecisions();
     render(<ApprovalRow approval={closeDateApproval()} />);
 
@@ -179,27 +234,175 @@ describe("a rejection held for its undo", () => {
     await vi.waitFor(() => expect(rejectCalls(fetched)).toBe(1));
   });
 
-  it("sends the held rejection at once when another card is answered", async () => {
-    const user = holdClock();
+  it("sends at once when the tab is hidden", async () => {
+    const user = steppedClock({ toFake: [...HOLD_TIMERS] });
+    const fetched = stubDecisions();
+    render(<ApprovalRow approval={closeDateApproval()} />);
+    await user.click(screen.getByRole("button", { name: "Reject" }));
+
+    const shown = vi.spyOn(document, "visibilityState", "get");
+    shown.mockReturnValue("visible");
+    document.dispatchEvent(new Event("visibilitychange"));
+    await vi.advanceTimersByTimeAsync(0);
+    expect(rejectCalls(fetched)).toBe(0);
+    shown.mockReturnValue("hidden");
+    document.dispatchEvent(new Event("visibilitychange"));
+
+    await vi.waitFor(() => expect(rejectCalls(fetched)).toBe(1));
+    shown.mockRestore();
+  });
+
+  it.each([
+    ["approving", "Approve"],
+    ["rejecting", "Reject"],
+  ])(
+    "sends the held rejection at once when another card is answered by %s",
+    async (_how, verb) => {
+      const user = steppedClock({ toFake: [...HOLD_TIMERS] });
+      const fetched = stubDecisions();
+      render(
+        <TwoRows
+          second={closeDateApproval({ id: "ap2", summary: "Second" })}
+        />,
+      );
+
+      const [first] = screen.getAllByRole("button", { name: "Reject" });
+      if (!first) throw new Error("the first row drew no Reject");
+      await user.click(first);
+      await user.click(screen.getByRole("button", { name: verb }));
+
+      await vi.waitFor(() =>
+        expect(decisionCalls(fetched, "/ap1/reject")).toBe(1),
+      );
+      expect(decisionCalls(fetched, "/ap2/reject")).toBe(0);
+    },
+  );
+
+  it("sends the held rejection at once when another card is approved after an edit", async () => {
+    const user = steppedClock({ toFake: [...HOLD_TIMERS] });
     const fetched = stubDecisions();
     render(
-      <>
-        <ApprovalRow approval={closeDateApproval()} />
-        <ApprovalRow
-          approval={closeDateApproval({ id: "ap2", summary: "Second date" })}
-        />
-      </>,
+      <TwoRows
+        second={closeDateApproval({
+          id: "ap2",
+          kind: "advance_deal",
+          summary: "Move Harbor to lost",
+          proposed_change: { lost_reason: "Old reason" },
+        })}
+      />,
     );
 
     const [first] = screen.getAllByRole("button", { name: "Reject" });
     if (!first) throw new Error("the first row drew no Reject");
     await user.click(first);
-    await user.click(screen.getByRole("button", { name: "Approve" }));
+    await user.click(screen.getByRole("button", { name: en["trust.edit"] }));
+    await user.click(
+      screen.getByRole("button", { name: en["decision.approveEdited"] }),
+    );
 
     await vi.waitFor(() => {
       expect(decisionCalls(fetched, "/ap1/reject")).toBe(1);
       expect(decisionCalls(fetched, "/ap2/approve")).toBe(1);
     });
+  });
+
+  it("asks the browser to finish the request even if the page goes", async () => {
+    const user = steppedClock({ toFake: [...HOLD_TIMERS] });
+    stubDecisions();
+    const post = vi.spyOn(api, "POST");
+    render(<ApprovalRow approval={closeDateApproval()} />);
+
+    await user.click(screen.getByRole("button", { name: "Reject" }));
+    await vi.advanceTimersByTimeAsync(ACTION_TOAST_MS);
+
+    expect(post).toHaveBeenCalledWith(
+      "/approvals/{id}/reject",
+      expect.objectContaining({ keepalive: true }),
+    );
+    post.mockRestore();
+  });
+
+  it("sends nothing once the card turns decided elsewhere", async () => {
+    const user = steppedClock({ toFake: [...HOLD_TIMERS] });
+    const fetched = stubDecisions();
+    function Deciding() {
+      const [decided, setDecided] = useState(false);
+      return (
+        <>
+          <ApprovalRow approval={closeDateApproval()} decided={decided} />
+          <button type="button" onClick={() => setDecided(true)}>
+            Decided elsewhere
+          </button>
+        </>
+      );
+    }
+    render(<Deciding />);
+    await user.click(screen.getByRole("button", { name: "Reject" }));
+    await user.click(screen.getByRole("button", { name: "Decided elsewhere" }));
+    await vi.advanceTimersByTimeAsync(ACTION_TOAST_MS * 2);
+    cleanup();
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(rejectCalls(fetched)).toBe(0);
+  });
+
+  it("keeps the bar on a card that runs out inside the window, and still sends", async () => {
+    const user = steppedClock({ toFake: [...HOLD_TIMERS] });
+    const fetched = stubDecisions();
+    render(
+      <ApprovalRow
+        approval={closeDateApproval({
+          expires_at: new Date(Date.now() + 3000).toISOString(),
+        })}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Reject" }));
+    await vi.advanceTimersByTimeAsync(5000);
+    expect(screen.getByText(REJECTED)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: UNDO })).toBeInTheDocument();
+
+    await vi.advanceTimersByTimeAsync(ACTION_TOAST_MS - 5000);
+    await vi.waitFor(() => expect(rejectCalls(fetched)).toBe(1));
+  });
+
+  it("brings the verbs back with the refusal, focus on Reject", async () => {
+    const user = steppedClock({ toFake: [...HOLD_TIMERS] });
+    stubDecisions(() => refused("This proposal can no longer be rejected."));
+    render(<ApprovalRow approval={closeDateApproval()} />);
+
+    await user.click(screen.getByRole("button", { name: "Reject" }));
+    await vi.advanceTimersByTimeAsync(ACTION_TOAST_MS);
+
+    await vi.waitFor(() =>
+      expect(screen.getByRole("button", { name: "Reject" })).toHaveFocus(),
+    );
+    expect(screen.queryByText(REJECTED)).toBeNull();
+  });
+
+  it("says a refusal in a toast when the card has already gone", async () => {
+    const user = steppedClock({ toFake: [...HOLD_TIMERS] });
+    const detail = "This proposal can no longer be rejected.";
+    stubDecisions(() => refused(detail));
+    function Leaving() {
+      const [shown, setShown] = useState(true);
+      return (
+        <>
+          {shown && <ApprovalRow approval={closeDateApproval()} />}
+          <button type="button" onClick={() => setShown(false)}>
+            Leave
+          </button>
+        </>
+      );
+    }
+    render(<Leaving />);
+
+    await user.click(screen.getByRole("button", { name: "Reject" }));
+    await user.click(screen.getByRole("button", { name: "Leave" }));
+
+    await vi.waitFor(() =>
+      expect(screen.getByText(detail)).toBeInTheDocument(),
+    );
   });
 });
 
@@ -227,7 +430,7 @@ describe("the offer to put an approved change back", () => {
   // has happened yet — an assertion that would survive the interaction being
   // removed entirely, and therefore proves nothing about rejecting.
   it("stays silent after a rejection", async () => {
-    const user = holdClock();
+    const user = steppedClock({ toFake: [...HOLD_TIMERS] });
     const fetched = stubDecisions();
     render(<ApprovalRow approval={closeDateApproval()} />);
 
@@ -442,7 +645,7 @@ it.each(["Approve", "Reject"])(
         }),
       ),
     );
-    const user = holdClock();
+    const user = steppedClock({ toFake: [...HOLD_TIMERS] });
     render(<ApprovalRow approval={closeDateApproval()} />, client);
     await user.click(screen.getByRole("button", { name: verdict }));
     await vi.advanceTimersByTimeAsync(ACTION_TOAST_MS);

@@ -69,9 +69,7 @@ export const Held: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(await canvas.findByRole("status")).toHaveTextContent(
-      "Rejected",
-    );
+    await expect(await canvas.findByText("Rejected")).toBeVisible();
     await expect(canvas.getByRole("button", { name: "Undo" })).toBeVisible();
   },
 };

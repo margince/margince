@@ -2,60 +2,56 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Pencil, RotateCcwClock } from "lucide-react";
-import { type RefObject, useId, useRef } from "react";
+import { type RefObject, useLayoutEffect, useRef } from "react";
 import { ActionRow } from "./actionrow";
 import { Button, OverflowMenu } from "./atoms";
 import type { DecisionCardLabels, DecisionCompactWords } from "./decisionhead";
 import { IconAction } from "./iconaction";
 
-/** A rejection the caller holds back before sending it, with the way to take it back. */
+/**
+ * A rejection the caller holds back before sending it. `onUndo` is absent once
+ * it is sent; `onPause` hears whether a pointer or focus is on Undo.
+ */
 export type DecisionHeldRejection = Readonly<{
   label: string;
   undo: string;
-  onUndo: () => void;
+  onUndo?: () => void;
+  onPause?: (paused: boolean) => void;
 }>;
 
-type FocusNext = RefObject<"undo" | "reject" | null>;
+export type FocusNext = RefObject<"label" | "reject" | null>;
 
-function takesFocus(focusNext: FocusNext, control: "undo" | "reject") {
-  return (node: HTMLButtonElement | null) => {
-    if (node && focusNext.current === control) {
-      focusNext.current = null;
+export function takesFocus(
+  focusNextRef: FocusNext,
+  target: "label" | "reject",
+) {
+  return (node: HTMLElement | null) => {
+    if (node && focusNextRef.current === target) {
+      focusNextRef.current = null;
       node.focus();
     }
   };
 }
 
-// The verbs, or the held rejection in their place. One component across the
-// swap, so the focus it asked for survives it.
 export function DecisionAnswers({
   decided,
   held,
   answering,
   onReject,
+  focusNextRef,
   ...verbs
 }: Readonly<
-  Omit<Parameters<typeof DecisionVerbs>[0], "focusNext"> & {
+  Parameters<typeof DecisionVerbs>[0] & {
     decided: boolean;
     held?: DecisionHeldRejection;
     answering: boolean;
   }
 >) {
-  const focusNext = useRef<"undo" | "reject" | null>(null);
   if (decided) {
     return null;
   }
   if (held) {
-    return (
-      <HeldRejectionBar
-        held={held}
-        focusNext={focusNext}
-        onUndo={() => {
-          focusNext.current = "reject";
-          held.onUndo();
-        }}
-      />
-    );
+    return <HeldRejectionBar held={held} focusNextRef={focusNextRef} />;
   }
   if (!answering) {
     return null;
@@ -63,11 +59,11 @@ export function DecisionAnswers({
   return (
     <DecisionVerbs
       {...verbs}
-      focusNext={focusNext}
+      focusNextRef={focusNextRef}
       onReject={
         onReject &&
         (() => {
-          focusNext.current = "undo";
+          focusNextRef.current = "label";
           onReject();
         })
       }
@@ -75,13 +71,12 @@ export function DecisionAnswers({
   );
 }
 
-// Only Accept goes busy while a verdict is out; drawing Reject busy would
-// claim a rejection nobody sent.
+// Only Accept goes busy: a rejection on its way is drawn by the held bar.
 function DecisionVerbs({
   labels,
   compact,
   pending,
-  focusNext,
+  focusNextRef,
   onAccept,
   onEdit,
   onReject,
@@ -91,7 +86,7 @@ function DecisionVerbs({
   /** The dense row's words; absent draws Later and Edit as glyphs. */
   compact?: DecisionCompactWords;
   pending?: boolean;
-  focusNext: FocusNext;
+  focusNextRef: FocusNext;
   onAccept?: () => void;
   onEdit?: () => void;
   onReject?: () => void;
@@ -105,7 +100,7 @@ function DecisionVerbs({
       {onReject && (
         <Button
           variant="danger"
-          ref={takesFocus(focusNext, "reject")}
+          ref={takesFocus(focusNextRef, "reject")}
           disabled={pending}
           onClick={onReject}
         >
@@ -162,29 +157,58 @@ function DecisionVerbs({
   );
 }
 
+// Focus inside the bar when it leaves goes back to Reject, or to the card's
+// lapse notice when Reject is not drawn.
 function HeldRejectionBar({
   held,
-  focusNext,
-  onUndo,
+  focusNextRef,
 }: Readonly<{
   held: DecisionHeldRejection;
-  focusNext: FocusNext;
-  onUndo: () => void;
+  focusNextRef: FocusNext;
 }>) {
-  const saidId = useId();
+  const label = useRef<HTMLElement | null>(null);
+  const over = useRef({ pointer: false, focus: false });
+  const report = (change: Readonly<{ pointer?: boolean; focus?: boolean }>) => {
+    over.current = { ...over.current, ...change };
+    held.onPause?.(over.current.pointer || over.current.focus);
+  };
+  useLayoutEffect(() => {
+    const bar = label.current?.parentElement;
+    return () => {
+      if (bar?.contains(document.activeElement)) {
+        focusNextRef.current = "reject";
+      }
+    };
+  }, [focusNextRef]);
+  const { onUndo } = held;
   return (
     <ActionRow
       className="dcard-verbs"
       primary={
         <>
-          <output id={saidId}>{held.label}</output>
-          <Button
-            ref={takesFocus(focusNext, "undo")}
-            aria-describedby={saidId}
-            onClick={onUndo}
+          <span
+            tabIndex={-1}
+            ref={(node) => {
+              label.current = node;
+              takesFocus(focusNextRef, "label")(node);
+            }}
           >
-            {held.undo}
-          </Button>
+            {held.label}
+          </span>
+          {onUndo && (
+            <Button
+              onPointerEnter={() => report({ pointer: true })}
+              onPointerLeave={() => report({ pointer: false })}
+              onFocus={() => report({ focus: true })}
+              onBlur={() => report({ focus: false })}
+              onClick={() => {
+                focusNextRef.current = "reject";
+                onUndo();
+              }}
+            >
+              {held.undo}
+            </Button>
+          )}
         </>
       }
     />

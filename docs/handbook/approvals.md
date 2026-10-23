@@ -63,7 +63,9 @@ Also called: amend, modify, correct an agent draft.
 ### How do I reject a proposal?
 To turn a proposal down, open it with **Decide** and choose **Reject**. The app asks for no reason. Nothing is applied and no record changes. Rejecting needs the same authority as approving it, and it is recorded the same way.
 
-For 8 seconds you then see **Rejected** and **Undo**, and nothing is sent yet. **Undo** puts the proposal back. When the 8 seconds end, your answer is sent. Leaving the page or answering another proposal sends it at once.
+For 8 seconds you then see **Rejected** and **Undo**, and nothing is sent yet. **Undo** puts the proposal back. When the 8 seconds end, your answer is sent. Leaving the page or answering another proposal sends it at once. While the mouse is over **Undo**, or the keyboard is on it, the 8 seconds stop.
+
+This wait is for one proposal. A proposal in a bundle opens with the rest of its bundle. There you answer each one, and nothing is sent until you choose **Send staged decisions**.
 Also called: decline, deny, dismiss an agent action.
 
 ### What happens if an approval expires?
@@ -224,7 +226,12 @@ log.
 
 For 8 seconds after you choose **Reject**, you see **Rejected** and **Undo**,
 and nothing is sent yet. When the 8 seconds end, your answer is sent. Leaving
-the page or answering another proposal sends it at once.
+the page or answering another proposal sends it at once. While the mouse is
+over **Undo**, or the keyboard is on it, the 8 seconds stop.
+
+This wait is for one proposal. A proposal in a bundle opens with the rest of
+its bundle. There you answer each one, and nothing is sent until you choose
+**Send staged decisions**.
 
 Rejecting needs the same authority as approving, and it is recorded the same
 way.

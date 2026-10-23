@@ -36,10 +36,15 @@ import { vi } from "vitest";
  * Call it ONCE per test and reuse the instance: a second one starts a second
  * view of the document's input state — what is focused, which buttons are held —
  * and the two then disagree, which shows up as an interaction that silently does
- * nothing. Pair it with `vi.useRealTimers()` in `afterEach`.
+ * nothing. Pair it with `vi.useRealTimers()` in `afterEach`. `toFake` narrows
+ * the faked timers; absent fakes vitest's default set.
  */
-export function steppedClock() {
-  vi.useFakeTimers();
+export function steppedClock(
+  options: Readonly<{
+    toFake?: NonNullable<Parameters<typeof vi.useFakeTimers>[0]>["toFake"];
+  }> = {},
+) {
+  vi.useFakeTimers(options.toFake ? { toFake: options.toFake } : undefined);
   Object.assign(globalThis, {
     jest: {
       advanceTimersByTime: (ms: number) => {

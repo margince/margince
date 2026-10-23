@@ -1,78 +1,138 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { DecisionHeldRejection } from "../../design-system/decisioncard";
 import { ACTION_TOAST_MS } from "../../design-system/toast";
+import type { Translator } from "../../i18n";
 
-// A page event rather than a module-level slot: every listener leaves with the
-// card that added it, so nothing outlives the page or a test that rendered it.
 const VERDICT_EVENT = "margince:approval-verdict";
 
+/** `sent` lasts until the card turns decided; a refusal returns to `idle`. */
+export type HeldPhase = "idle" | "held" | "sent";
+
 export type HeldRejection = Readonly<{
-  held: boolean;
+  phase: HeldPhase;
   hold: () => void;
   undo: () => void;
+  pause: (paused: boolean) => void;
   announce: () => void;
 }>;
 
 // One held rejection per page: it is sent when the window ends, the card
 // unmounts, the page hides, or another approval card announces a verdict.
-export function useHeldRejection(send: () => void): HeldRejection {
-  const self = useId();
-  const [held, setHeld] = useState(false);
-  const latestSend = useRef(send);
-  const cancel = useRef<() => void>(() => undefined);
+export function useHeldRejection({
+  send,
+  decided,
+  onRefusedAfterLeaving,
+}: Readonly<{
+  send: () => Promise<unknown>;
+  decided: boolean;
+  onRefusedAfterLeaving: (error: unknown) => void;
+}>): HeldRejection {
+  const [phase, setPhase] = useState<HeldPhase>("idle");
+  const [paused, setPaused] = useState(false);
+  const owed = useRef(false);
+  const left = useRef(false);
+  const remaining = useRef(ACTION_TOAST_MS);
+  const latest = useRef({ send, onRefusedAfterLeaving });
   useEffect(() => {
-    latestSend.current = send;
+    latest.current = { send, onRefusedAfterLeaving };
   });
 
-  useEffect(() => {
-    if (!held) {
+  const release = useCallback(() => {
+    if (!owed.current) {
       return;
     }
-    let settled = false;
-    const flush = () => {
-      if (!settled) {
-        settled = true;
-        latestSend.current();
+    owed.current = false;
+    setPhase("sent");
+    latest.current.send().catch((error: unknown) => {
+      if (left.current) {
+        latest.current.onRefusedAfterLeaving(error);
+      } else {
+        setPhase("idle");
       }
+    });
+  }, []);
+
+  useEffect(() => {
+    if (decided) {
+      owed.current = false;
+    }
+  }, [decided]);
+
+  const holding = phase === "held" && !decided;
+  useEffect(() => {
+    if (!holding || paused) {
+      return;
+    }
+    const started = Date.now();
+    const timer = globalThis.setTimeout(release, remaining.current);
+    return () => {
+      globalThis.clearTimeout(timer);
+      remaining.current -= Date.now() - started;
     };
-    const release = () => {
-      flush();
-      setHeld(false);
-    };
-    const onVerdict = (event: Event) => {
-      if (!(event instanceof CustomEvent) || event.detail !== self) {
+  }, [holding, paused, release]);
+
+  useEffect(() => {
+    if (!holding) {
+      return;
+    }
+    const onHidden = () => {
+      if (document.visibilityState === "hidden") {
         release();
       }
     };
-    cancel.current = () => {
-      settled = true;
-    };
-    const timer = globalThis.setTimeout(release, ACTION_TOAST_MS);
     globalThis.addEventListener("pagehide", release);
-    globalThis.addEventListener(VERDICT_EVENT, onVerdict);
+    globalThis.addEventListener(VERDICT_EVENT, release);
+    document.addEventListener("visibilitychange", onHidden);
     return () => {
-      globalThis.clearTimeout(timer);
       globalThis.removeEventListener("pagehide", release);
-      globalThis.removeEventListener(VERDICT_EVENT, onVerdict);
-      flush();
+      globalThis.removeEventListener(VERDICT_EVENT, release);
+      document.removeEventListener("visibilitychange", onHidden);
     };
-  }, [held, self]);
+  }, [holding, release]);
+
+  useEffect(() => {
+    left.current = false;
+    return () => {
+      left.current = true;
+      release();
+    };
+  }, [release]);
 
   const announce = () => {
-    globalThis.dispatchEvent(new CustomEvent(VERDICT_EVENT, { detail: self }));
+    globalThis.dispatchEvent(new Event(VERDICT_EVENT));
   };
   return {
-    held,
+    phase,
     hold: () => {
       announce();
-      setHeld(true);
+      owed.current = true;
+      remaining.current = ACTION_TOAST_MS;
+      setPaused(false);
+      setPhase("held");
     },
     undo: () => {
-      cancel.current();
-      setHeld(false);
+      owed.current = false;
+      setPhase("idle");
     },
+    pause: setPaused,
     announce,
+  };
+}
+
+export function heldRejectionBar(
+  t: Translator,
+  held: HeldRejection,
+): DecisionHeldRejection | undefined {
+  if (held.phase === "idle") {
+    return undefined;
+  }
+  return {
+    label: t("decision.status.rejected"),
+    undo: t("common.undo"),
+    onUndo: held.phase === "held" ? held.undo : undefined,
+    onPause: held.pause,
   };
 }

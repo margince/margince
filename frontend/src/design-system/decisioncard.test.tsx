@@ -373,7 +373,6 @@ describe("DecisionCard — the verbs", () => {
     ).not.toBeInTheDocument();
   });
 
-  // Not a glyph: a trash can reads as "delete".
   it("names Reject in words, as the danger answer beside Accept", () => {
     render(card());
     const reject = screen.getByRole("button", { name: "Reject" });
@@ -443,41 +442,98 @@ describe("DecisionCard — the verbs", () => {
   });
 });
 
-function HoldingCard({ compact }: Readonly<{ compact?: boolean }>) {
+function HoldingCard({
+  compact,
+  approval: asked = approval(),
+  onPause,
+}: Readonly<{
+  compact?: boolean;
+  approval?: DecisionApproval;
+  onPause?: (paused: boolean) => void;
+}>) {
   const [held, setHeld] = useState(false);
   return card({
+    approval: asked,
     layout: compact ? "row" : "deck",
     compact: compact ? { detail: "Proposal", more: "More options" } : undefined,
     onReject: () => setHeld(true),
     heldRejection: held
-      ? { label: "Rejected", undo: "Undo", onUndo: () => setHeld(false) }
+      ? {
+          label: "Rejected",
+          undo: "Undo",
+          onUndo: () => setHeld(false),
+          onPause,
+        }
       : undefined,
   });
 }
 
 describe("DecisionCard — a rejection held for its undo", () => {
   it.each([false, true])(
-    "swaps the verbs for the bar and hands focus to Undo and back (compact: %s)",
+    "swaps the verbs for the bar, focuses its words, and hands focus back to Reject (compact: %s)",
     async (compact) => {
       const user = userEvent.setup();
       render(<HoldingCard compact={compact} />);
 
       await user.click(screen.getByRole("button", { name: "Reject" }));
 
-      expect(screen.getByRole("status")).toHaveTextContent("Rejected");
+      expect(screen.getByText("Rejected")).toHaveFocus();
       const undo = screen.getByRole("button", { name: "Undo" });
-      expect(undo).toHaveFocus();
-      expect(undo).toHaveAccessibleDescription("Rejected");
+      expect(undo).not.toHaveAttribute("aria-describedby");
       for (const name of ["Reject", "Accept", "Edit"]) {
         expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
       }
 
       await user.click(undo);
 
-      expect(screen.queryByRole("status")).not.toBeInTheDocument();
+      expect(screen.queryByText("Rejected")).not.toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Reject" })).toHaveFocus();
     },
   );
+
+  it("tells the caller while a pointer or focus rests on Undo", async () => {
+    const user = userEvent.setup();
+    const onPause = vi.fn();
+    render(<HoldingCard onPause={onPause} />);
+    await user.click(screen.getByRole("button", { name: "Reject" }));
+    const undo = screen.getByRole("button", { name: "Undo" });
+
+    await user.hover(undo);
+    expect(onPause).toHaveBeenLastCalledWith(true);
+    await user.unhover(undo);
+    expect(onPause).toHaveBeenLastCalledWith(false);
+    await user.tab();
+    expect(undo).toHaveFocus();
+    expect(onPause).toHaveBeenLastCalledWith(true);
+    await user.tab();
+    expect(onPause).toHaveBeenLastCalledWith(false);
+  });
+
+  it("draws the words without Undo once the rejection is on its way", () => {
+    render(card({ heldRejection: { label: "Rejected", undo: "Undo" } }));
+    expect(screen.getByText("Rejected")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Undo" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Reject" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("hands focus to the lapse notice when an undone card has run out", async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<HoldingCard />);
+    await user.click(screen.getByRole("button", { name: "Reject" }));
+    rerender(
+      <HoldingCard
+        approval={approval({ expires_at: new Date(NOW - HOUR).toISOString() })}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Undo" }));
+
+    expect(screen.getByText(LABELS.expired)).toHaveFocus();
+  });
 
   it("draws neither the bar nor the verbs once the decision is history", () => {
     render(

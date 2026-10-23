@@ -102,7 +102,14 @@ export const SavedOnClose: Story = {
       " Pricing attached.",
     );
     await userEvent.click(screen.getByRole("button", { name: "Close" }));
-    await screen.findByText("Draft saved");
+    const toast = await screen.findByText("Draft saved", {
+      selector: ".toast-said",
+    });
+    const region = toast.closest("output");
+    if (!region) throw new Error("the saved draft drew no toast");
+    await expect(
+      within(region).getByRole("button", { name: "Delete" }),
+    ).toBeInTheDocument();
   },
 };
 

@@ -270,8 +270,8 @@ function HoldingCard(args: DecisionCardProps) {
 async function pressReject(canvasElement: HTMLElement) {
   const canvas = within(canvasElement);
   await userEvent.click(await canvas.findByRole("button", { name: "Reject" }));
-  await expect(await canvas.findByRole("status")).toHaveTextContent("Rejected");
-  await expect(canvas.getByRole("button", { name: "Undo" })).toHaveFocus();
+  await expect(await canvas.findByText("Rejected")).toHaveFocus();
+  await expect(canvas.getByRole("button", { name: "Undo" })).toBeVisible();
 }
 
 // A rejection in its undo window: the verbs give way to the bar until the

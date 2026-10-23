@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useId } from "react";
+import { type ReactNode, useId, useRef } from "react";
 import { DecisionContent, DecisionEvidence } from "./decisioncard.content";
 import { type DecisionDisplay, decisionEvidence } from "./decisioncard.payload";
 import {
   DecisionAnswers,
   type DecisionHeldRejection,
+  takesFocus,
 } from "./decisioncard.verbs";
 import { Popover } from "./popover";
 import type { SectionState } from "./surfacestate";
@@ -106,7 +107,7 @@ export type DecisionCardProps = Readonly<{
   onSkip?: () => void;
   /**
    * Drawn in place of the verbs while set. The caller owns the window and the
-   * send; the card moves focus to Undo and, once undone, back to Reject.
+   * send; the card moves focus to its words and, once it leaves, back to Reject.
    */
   heldRejection?: DecisionHeldRejection;
   /**
@@ -195,6 +196,7 @@ export function DecisionCard({
   display = [],
 }: DecisionCardProps) {
   const headingId = useId();
+  const focusNextRef = useRef<"label" | "reject" | null>(null);
   const payload = readPayload(approval, layout, display);
   const lapsed = !decided && decisionLapsed(approval, now);
   // The SAME question the headline asks, so the article's accessible name and
@@ -239,10 +241,19 @@ export function DecisionCard({
   );
   // A lapsed proposal says so where its verbs used to be. Offering Accept on it
   // would be a control whose only possible answer is a refusal.
-  const ranOut = lapsed && <p className="dcard-lapsed">{labels.expired}</p>;
+  const ranOut = lapsed && (
+    <p
+      className="dcard-lapsed"
+      tabIndex={-1}
+      ref={takesFocus(focusNextRef, "reject")}
+    >
+      {labels.expired}
+    </p>
+  );
   const verbs = (
     <DecisionAnswers
       decided={decided}
+      focusNextRef={focusNextRef}
       held={heldRejection}
       answering={!lapsed && !editor}
       labels={labels}

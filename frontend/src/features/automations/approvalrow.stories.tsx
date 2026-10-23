@@ -147,8 +147,6 @@ export const Decided: Story = {
   render: () => <Row subject={approval({ status: "approved" })} decided />,
 };
 
-// Ablehnen holds the rejection for the undo window; nothing is sent until the
-// bar closes.
 export const RejectHeld: Story = {
   render: () => <Row subject={approval({})} locale="de" />,
   play: async ({ canvasElement }) => {
@@ -156,12 +154,12 @@ export const RejectHeld: Story = {
     await userEvent.click(
       await canvas.findByRole("button", { name: de["decision.reject"] }),
     );
-    await expect(await canvas.findByRole("status")).toHaveTextContent(
-      de["decision.status.rejected"],
-    );
+    await expect(
+      await canvas.findByText(de["decision.status.rejected"]),
+    ).toHaveFocus();
     await expect(
       canvas.getByRole("button", { name: de["common.undo"] }),
-    ).toHaveFocus();
+    ).toBeVisible();
   },
 };
 

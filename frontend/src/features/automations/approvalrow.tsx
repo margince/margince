@@ -10,7 +10,6 @@ import { Button, Card } from "../../design-system/atoms";
 import {
   DecisionCard,
   type DecisionCardLabels,
-  type DecisionHeldRejection,
   DecisionStatusChip,
   type DecisionStatusLabels,
 } from "../../design-system/decisioncard";
@@ -33,6 +32,7 @@ import {
   isAlreadyDecided,
   isVersionSkew,
   ProblemError,
+  problemMessageOf,
   unwrap,
 } from "../../lib/problem";
 import { navigate } from "../../lib/router";
@@ -56,7 +56,7 @@ import {
 import { approvalAcceptable, useApprovalNames } from "./approvalresponsibility";
 import { stagedSendOf } from "./approvalsend";
 import { ApprovalDecider, ApprovalTarget } from "./approvaltarget";
-import { type HeldRejection, useHeldRejection } from "./heldrejection";
+import { heldRejectionBar, useHeldRejection } from "./heldrejection";
 import { LinkedInMatchChoice, useLinkedInChoice } from "./linkedinmatchchoice";
 import "./approvalrow.css";
 
@@ -149,20 +149,6 @@ function statusLabels(
     approved: t("decision.status.approved"),
     rejected: t("decision.status.rejected"),
     expired: t("decision.status.expired"),
-  };
-}
-
-function heldBar(
-  t: Translator,
-  held: HeldRejection,
-): DecisionHeldRejection | undefined {
-  if (!held.held) {
-    return undefined;
-  }
-  return {
-    label: t("decision.status.rejected"),
-    undo: t("common.undo"),
-    onUndo: held.undo,
   };
 }
 
@@ -294,8 +280,13 @@ export function ApprovalRow({
   });
 
   // A deadline that lapses inside the window still sends: the server judges
-  // expiry, and its refusal comes back through DecideOutcome like any other.
-  const held = useHeldRejection(() => decide.mutate({ verdict: "reject" }));
+  // expiry. A refusal shows on the card, or as a toast once the card is gone.
+  const held = useHeldRejection({
+    send: () => decide.mutateAsync({ verdict: "reject" }),
+    decided: !!decided,
+    onRefusedAfterLeaving: (error) =>
+      toast.show(problemMessageOf(error, t), { tone: "danger", sticky: true }),
+  });
 
   const change = approval.proposed_change ?? {};
   const linkedIn = useLinkedInChoice(approval);
@@ -453,7 +444,7 @@ export function ApprovalRow({
       // No reason form: a rejection discards a proposal and changes no record.
       // The undo window is the only step between the press and the send.
       onReject={held.hold}
-      heldRejection={heldBar(t, held)}
+      heldRejection={heldRejectionBar(t, held)}
       notice={
         <>
           {/* Read-only: the approver may release or refuse the message, and an
