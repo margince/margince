@@ -20,7 +20,6 @@ describe("the project form offers no key field", () => {
     for (const mode of ["create", "edit"] as const) {
       const fields = projectFields(t, {
         owner: { owners: [], me: "u1" },
-        currentOwner: null,
         mode,
       });
       expect(fields.map((field) => field.key)).not.toContain("key");
@@ -34,12 +33,10 @@ describe("projectFields", () => {
   it("asks for the company at birth and never on edit", () => {
     const create = projectFields(t, {
       owner: { owners: [], me: "u-me" },
-      currentOwner: null,
       mode: "create",
     });
     const edit = projectFields(t, {
       owner: { owners: [], me: "u-me" },
-      currentOwner: "u-other",
       mode: "edit",
     });
     expect(create.map((field) => field.key)).toEqual([
