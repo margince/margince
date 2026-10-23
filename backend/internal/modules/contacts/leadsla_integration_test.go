@@ -788,3 +788,20 @@ func TestAnIntakeSeatMustBeAbleToReadTheLeadsItAnswersFor(t *testing.T) {
 		t.Errorf("the refused nomination was stored anyway")
 	}
 }
+
+// The application and database clocks can disagree. Here the database stamped
+// created_at later than the application's clock reads. A human's first
+// response still lands, and its stamp never precedes the row's creation.
+func TestAFirstResponseIsNeverStampedBeforeTheLeadExisted(t *testing.T) {
+	e := setupPromoteConsent(t)
+	created := time.Date(2099, time.January, 1, 9, 0, 0, 0, time.UTC)
+	lead := e.seedLeadCreatedAt(t, "ahead@example.test", created)
+	status := "contacted"
+	after, err := e.store.UpdateLead(e.ctx, lead, UpdateLeadInput{Status: &status})
+	if err != nil {
+		t.Fatalf("a human moving the lead off new: %v", err)
+	}
+	if after.FirstResponseAt == nil || after.FirstResponseAt.Before(created) {
+		t.Fatalf("first_response_at = %v, want a stamp no earlier than creation %v", after.FirstResponseAt, created)
+	}
+}
