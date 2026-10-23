@@ -48,18 +48,16 @@ Where the map is not complete, it says so: "{count} more not shown.", "Some coll
 
 ### When does the Worklist suggest a quiet contact?
 
-When a contact has gone quiet, the Worklist suggests that you get back in touch. These rows have
-their own filter, **Quiet relationships**.
+When a contact has gone quiet, the Worklist suggests that you get back in touch. These rows carry
+their own badge, **Quiet relationship**.
 
 - Only the contact's owner gets the suggestion. Writing to the contact, or being copied on a mail
   to them, does not make it yours.
 - A contact with no owner, or whose owner has left, is in nobody's Mine. It shows under Unassigned.
 - After 180 days with no exchange, the contact leaves the Worklist. Its own page still shows how
   long it has been quiet.
-- **Not now** hides the contact for a month. **Stop following** hides it with no end date. Both
-  are your choice only, and **Undo** brings the contact back.
-- Under the **Quiet relationships** filter, **Dismiss all shown** hides every shown contact for a
-  month.
+- **Not now** hides the contact for a month. It is your choice only, and **Undo** brings the
+  contact back.
 
 ### How do I import my LinkedIn connections?
 To import your LinkedIn network, open **Settings**, then **Connections**, and use the **LinkedIn connections** card.
