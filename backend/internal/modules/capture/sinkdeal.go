@@ -100,42 +100,60 @@ type DealVerdict struct {
 // AttributeDealTx applies the rule to one activity and writes the link it
 // concludes. With ask nil it raises no question, which is what a repair of old
 // mail wants.
-//
-// The activity row is locked first, as the human relink locks it
-// (activities.relinkActivityRow). Deal links have no one-per-activity index.
-// Without the lock, a relink between the guard and the insert leaves two.
 func AttributeDealTx(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, candidates DealCandidates, ask AskWhichDeal,
 ) (DealVerdict, error) {
-	if _, err := storekit.LockRow(ctx, tx, "activity", activityID.UUID, storekit.LiveOnly); err != nil {
-		if errors.Is(err, apperrors.ErrNotFound) {
-			return DealVerdict{Outcome: DealNone}, nil
-		}
-		return DealVerdict{}, fmt.Errorf("capture: locking the activity to file under a deal: %w", err)
+	return fileOnDeal(dealFiling{decider: ctx, writer: ctx}, tx, activityID, candidates, ask)
+}
+
+// dealFiling is who decides and who writes. Live capture is both. The repair
+// decides with the capturing mailbox's scope and writes as its own actor, with
+// the reason in evidence, so the audit row names who really wrote.
+type dealFiling struct {
+	decider, writer context.Context
+	evidence        map[string]any
+}
+
+// fileOnDeal locks the activity row first, as the human relink locks it
+// (activities.relinkActivityRow). Deal links have no one-per-activity index.
+// Without the lock, a relink between the guard and the insert leaves two.
+func fileOnDeal(f dealFiling, tx pgx.Tx, activityID ids.ActivityID, candidates DealCandidates, ask AskWhichDeal) (DealVerdict, error) {
+	if live, err := lockForDeal(f.writer, tx, activityID); err != nil || !live {
+		return DealVerdict{Outcome: DealNone}, err
 	}
-	facts, err := readDealFacts(ctx, tx, activityID)
+	facts, err := readDealFacts(f.decider, tx, activityID, false)
 	if err != nil || facts.outcome != "" {
 		return DealVerdict{Outcome: facts.outcome}, err
 	}
-	verdict, err := decideDeal(ctx, tx, facts, candidates)
+	verdict, err := decideDeal(f.decider, tx, facts, candidates)
 	if err != nil {
 		return DealVerdict{}, err
 	}
 	switch verdict.Outcome {
 	case DealLinked:
-		landed, err := linkActivityToDeal(ctx, tx, activityID, verdict.Deal)
+		landed, err := linkActivityToDeal(f, tx, activityID, verdict.Deal)
 		if err != nil || !landed {
 			return DealVerdict{Outcome: DealNotWritable}, err
 		}
 	case DealAmbiguous:
 		verdict.Question.ActivityID = activityID
 		if ask != nil {
-			if err := ask(ctx, tx, verdict.Question); err != nil {
+			if err := ask(f.decider, tx, verdict.Question); err != nil {
 				return DealVerdict{}, err
 			}
 		}
 	}
 	return verdict, nil
+}
+
+func lockForDeal(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) (bool, error) {
+	if _, err := storekit.LockRow(ctx, tx, "activity", activityID.UUID, storekit.LiveOnly); err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return false, nil
+		}
+		return false, fmt.Errorf("capture: locking the activity to file under a deal: %w", err)
+	}
+	return true, nil
 }
 
 // attributeDeal runs the rule after the capture committed, on attributeProject's

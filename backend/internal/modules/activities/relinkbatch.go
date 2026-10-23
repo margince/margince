@@ -75,9 +75,15 @@ func (s *Store) RelinkActivity(ctx context.Context, id ids.ActivityID, in Relink
 	}
 	var out crmcontracts.Activity
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		_, held, err := relinkAdmittedRow(ctx, tx, id, in, column)
+		wrote, held, err := relinkAdmittedRow(ctx, tx, id, in, column)
 		if err != nil {
 			return err
+		}
+		// A colleague filing a questioned mail on a deal answers the question.
+		if wrote && in.EntityType == linkEntityDeal {
+			if err := s.answerWhichDealTx(ctx, tx, id, in.EntityID); err != nil {
+				return err
+			}
 		}
 		// held, not a bare storekit.LiveOnly: a no-op relink (the target was
 		// already linked) never reaches relinkActivityRow's own write, so a
@@ -359,6 +365,9 @@ func (s *Store) RelinkThread(ctx context.Context, threadKey string, in RelinkAct
 				return err
 			case written:
 				out.Relinked++
+				if err := s.answerOnFirstDealFiling(ctx, tx, id, in, out.Relinked); err != nil {
+					return err
+				}
 			}
 		}
 		return nil
@@ -420,11 +429,23 @@ func (s *Store) RelinkActivities(ctx context.Context, activityIDs []ids.UUID, in
 			}
 			if written {
 				out.Relinked++
+				if err := s.answerOnFirstDealFiling(ctx, tx, ids.From[ids.ActivityKind](raw), in, out.Relinked); err != nil {
+					return err
+				}
 			}
 		}
 		return nil
 	})
 	return out, err
+}
+
+// answerOnFirstDealFiling lets a batch door's first deal filing answer the
+// deal question, as the single door's does.
+func (s *Store) answerOnFirstDealFiling(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in RelinkActivityInput, relinked int) error {
+	if relinked != 1 || in.EntityType != linkEntityDeal {
+		return nil
+	}
+	return s.answerWhichDealTx(ctx, tx, id, in.EntityID)
 }
 
 func validateRelinkCount(count int) error {

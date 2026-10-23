@@ -29,8 +29,22 @@ func CurrentTaskClause(alias string, asOf time.Time, identities string, arg func
  AND ` + HeldTaskClause("successor") + `)
  AND request_source.occurred_at <= ` + instant + `
  AND request_source.occurred_at >= ` + instant + ` - make_interval(days => ` + horizon + `) AND ` + DirectMailRecipientSQL("request_source", MailSeatAddressesSQL(identities, pinner)) + `)`
-	return fmt.Sprintf(`(coalesce(%[1]s.source_system, '') NOT IN ($%[2]d, $%[3]d) OR `+HumanWroteActivityClause(alias)+`
+	question := CurrentSourceMailClause(alias+".source_activity_id", asOf, arg)
+	return fmt.Sprintf(`(coalesce(%[1]s.source_system, '') NOT IN ($%[2]d, $%[3]d, $%[4]d) OR `+HumanWroteActivityClause(alias)+`
  OR (`+pinner+`, %[1]s.id::text) IN (SELECT reader_id, row_id FROM `+auth.EffectiveWorklistPinsSQL(arg)+` adopted WHERE adopted.source='task')
  OR (%[1]s.source_system = $%[2]d AND `+source+`)
- OR (%[1]s.source_system = $%[3]d AND `+request+`))`, alias, arg(provenance.CommitmentTaskSource), arg(provenance.EmailRequestSource))
+ OR (%[1]s.source_system = $%[3]d AND `+request+`)
+ OR (%[1]s.source_system = $%[4]d AND `+question+`))`, alias, arg(provenance.CommitmentTaskSource), arg(provenance.EmailRequestSource),
+		arg(provenance.WhichDealSource))
+}
+
+// CurrentSourceMailClause is the test that the mail a piece of automatic work
+// is about is still current: live, not in the future, and inside the waiting
+// horizon. An old mail captured today is not current, because its own time
+// decides, never the capture's. source is a compile-time column reference.
+func CurrentSourceMailClause(source string, asOf time.Time, arg func(any) int) string {
+	instant := fmt.Sprintf("$%d::timestamptz", arg(asOf))
+	return `EXISTS (SELECT 1 FROM activity current_source WHERE current_source.id = ` + source + `
+ AND current_source.archived_at IS NULL AND current_source.occurred_at <= ` + instant + `
+ AND current_source.occurred_at >= ` + instant + ` - make_interval(days => ` + WaitingHorizonSQL(asOf, arg) + `))`
 }

@@ -11,6 +11,7 @@ package compose
 
 import (
 	"log/slog"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -99,6 +100,9 @@ type CaptureConfig struct {
 	// which is both the shipped behaviour and what the zero-value
 	// constructions below mean.
 	MaxBackfillMonths int
+	// Now is the clock the deal question judges a mail's currentness by. Nil
+	// is the wall clock.
+	Now func() time.Time
 	// SkipReservedDomainProposals is capture.skip_reserved_domain_proposals,
 	// already resolved: the review sweep raises no contact proposal for a
 	// sender on an RFC 2606 reserved name. ON for a booted role; the zero value
@@ -298,7 +302,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		// and asks its one question through the store that owns tasks.
 		WithDealAttribution(capture.DealAttribution{
 			Candidates: deals.NewStore(InstallationDB(pool), DealsInstallation()),
-			Ask:        whichDealAsker{tasks: activities.NewStore(InstallationDB(pool))}.Ask,
+			Ask:        whichDealAsker{tasks: activities.NewStore(InstallationDB(pool)), now: cfg.clock()}.Ask,
 		}).
 		// The audience derivation, from the module that owns `activity`. It
 		// runs INSIDE the capture transaction because the audience it derives
@@ -375,4 +379,12 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		// Sink is where a payload would be written, and it is a deployment
 		// decision rather than a workspace one -- there is no API that flips it.
 		WithTracePayloads(cfg.TracePayloads)
+}
+
+// clock is the configured clock, or the wall clock.
+func (c CaptureConfig) clock() func() time.Time {
+	if c.Now != nil {
+		return c.Now
+	}
+	return time.Now
 }

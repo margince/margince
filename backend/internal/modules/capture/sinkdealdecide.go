@@ -38,7 +38,9 @@ type threadDeal struct {
 	company *ids.UUID
 }
 
-func readDealFacts(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) (dealFacts, error) {
+// readDealFacts reads the facts. refiling reads past the mail's own deal
+// links, for the repair re-checking a link the rule wrote.
+func readDealFacts(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, refiling bool) (dealFacts, error) {
 	facts := dealFacts{activity: activityID}
 	var kind string
 	var channel *string
@@ -56,7 +58,7 @@ func readDealFacts(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) (d
 	case kind != kindEmail || channel != nil:
 		facts.outcome = DealNotMail
 		return facts, nil
-	case filed:
+	case filed && !refiling:
 		facts.outcome = DealAlreadyFiled
 		return facts, nil
 	case project != nil:

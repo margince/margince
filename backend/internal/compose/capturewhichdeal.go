@@ -17,6 +17,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -25,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -51,6 +53,7 @@ var (
 // whichDealAsker writes the question as a task through the activities store.
 type whichDealAsker struct {
 	tasks *activities.Store
+	now   func() time.Time
 }
 
 // Ask raises the question at most once per thread. The task is keyed on the
@@ -61,11 +64,16 @@ func (a whichDealAsker) Ask(ctx context.Context, tx pgx.Tx, q capture.WhichDeal)
 	if err != nil || seat.IsZero() {
 		return err
 	}
+	// Only current mail asks. An old mail captured today makes no new work,
+	// by the same clause every task reader applies to the question.
 	var thread string
 	var shared bool
+	args := []any{q.ActivityID}
+	arg := func(v any) int { args = append(args, v); return len(args) }
 	err = tx.QueryRow(ctx, `
-		SELECT coalesce(nullif(thread_key, ''), id::text), audience = 'workspace'
-		  FROM activity WHERE id = $1 AND restricted_at IS NULL AND archived_at IS NULL`, q.ActivityID).Scan(&thread, &shared)
+		SELECT coalesce(nullif(a.thread_key, ''), a.id::text), a.audience = 'workspace'
+		  FROM activity a WHERE a.id = $1 AND a.restricted_at IS NULL AND a.archived_at IS NULL
+		   AND `+storekit.CurrentSourceMailClause("a.id", a.now(), arg), args...).Scan(&thread, &shared)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil
 	}

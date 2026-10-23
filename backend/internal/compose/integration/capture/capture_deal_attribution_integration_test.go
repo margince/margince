@@ -11,6 +11,8 @@ package capture
 
 import (
 	"context"
+	"maps"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -24,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -517,7 +520,7 @@ func secondSentMailbox(t *testing.T, e *integration.SearchEnv, user ids.UUID) fu
 	t.Helper()
 	seedCaptureRoleFor(t, e, user)
 	conn := &mailBatchConnector{accountLabel: secondSeatAddress}
-	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{})
+	registry := compose.NewCaptureRegistry(e.Pool, newTestKeyvault(t, e), compose.CaptureConfig{Now: func() time.Time { return captureNow }})
 	registry.Register(conn)
 	connID, err := registry.Connect(humanWithScopes(e, user, []principal.Scope{principal.ScopeRead}), "gmail", connector.Auth("refresh"))
 	if err != nil {
@@ -605,8 +608,9 @@ func TestTheDealRepairFilesOldMailOnceAndLeavesHumansAlone(t *testing.T) {
 	r := newRepairer(e, w)
 
 	preview := r.preview(t)
-	if preview[capturemod.DealLinked] != 1 || preview[capturemod.DealAmbiguous] != 1 || len(preview) != 2 {
-		t.Fatalf("the preview reads %v, want one mail linked and one left for several deals", preview)
+	want := map[capturemod.DealOutcome]int{capturemod.DealLinked: 1, capturemod.DealAmbiguous: 1, capturemod.DealHumanKept: 1}
+	if !maps.Equal(preview, want) {
+		t.Fatalf("the preview reads %v, want %v", preview, want)
 	}
 	wantDeals(t, e, "old1@acme.example")
 	if applied := r.run(t); applied != preview[capturemod.DealLinked] {
@@ -641,28 +645,327 @@ func TestTheDealRepairSeesOnlyWhatTheCapturingMailboxSaw(t *testing.T) {
 	env.sync(t, mailFrom("alice@acme.example", "priv2@acme.example", "priv1@myco.example", "Re: project"))
 	wantDeals(t, e, "priv2@acme.example")
 
+	// Our own thread at a second customer, captured before its deals existed,
+	// so no question was asked; then a colleague files our mail on one deal.
+	beta := w.at(t, "Beta")
+	beta.employee(t, "bob@beta.example", beta.customer)
 	env.syncSent(t, map[string]bool{"own1@myco.example": true},
-		email(captureOwner, "", "alice@acme.example", "own1@myco.example", ""))
-	env.sync(t, mailFrom("alice@acme.example", "own2@acme.example", "own1@myco.example", "Re: project"))
+		email(captureOwner, "", "bob@beta.example", "own1@myco.example", ""))
+	env.sync(t, mailFrom("bob@beta.example", "own2@beta.example", "own1@myco.example", "Re: project"))
+	beta.deal(t, "Beta one")
+	betaTwo := beta.deal(t, "Beta two")
 	ours := ids.From[ids.ActivityKind](activityOf(t, e, "own1@myco.example"))
 	if _, err := activities.NewStore(e.DB()).RelinkActivity(w.ctx, ours, activities.RelinkActivityInput{
-		EntityType: "deal", EntityID: reporting,
+		EntityType: "deal", EntityID: betaTwo,
 	}); err != nil {
 		t.Fatalf("filing our mail on a deal as a human: %v", err)
 	}
-	wantDeals(t, e, "own2@acme.example")
+	wantDeals(t, e, "own2@beta.example")
 
 	r := newRepairer(e, w)
 	if applied := r.run(t); applied != 1 {
 		t.Fatalf("the repair linked %d mails, want only the reply beside our own filed mail", applied)
 	}
 	wantDeals(t, e, "priv2@acme.example")
-	wantDeals(t, e, "own2@acme.example", reporting)
+	wantDeals(t, e, "own2@beta.example", betaTwo)
 
 	// Live capture decides the same way for the same mail.
 	env.sync(t,
 		mailFrom("alice@acme.example", "priv2@acme.example", "priv1@myco.example", "Re: project"),
-		mailFrom("alice@acme.example", "own3@acme.example", "own1@myco.example", "Re: project"))
+		mailFrom("bob@beta.example", "own3@beta.example", "own1@myco.example", "Re: project"))
 	wantDeals(t, e, "priv2@acme.example")
-	wantDeals(t, e, "own3@acme.example", reporting)
+	wantDeals(t, e, "own3@beta.example", betaTwo)
+}
+
+// openQuestions reads the deal questions still open, and whether each is done.
+func openQuestions(t *testing.T, e *integration.SearchEnv) int {
+	t.Helper()
+	return countRows(t, e, `SELECT count(*) FROM activity WHERE source_system = 'which_deal' AND NOT is_done AND archived_at IS NULL`)
+}
+
+// A colleague answers the question by filing one mail of the conversation on a
+// deal. The rest of the conversation follows, its promise shows on that deal's
+// timeline and not on the other deal's, and the question is done. A mail of
+// the conversation already filed elsewhere keeps its deal.
+func TestFilingOneMailAnswersTheDealQuestionForItsConversation(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	w := newDealWorld(t, e)
+	alice := w.employee(t, "alice@acme.example", w.customer)
+	operations := w.deal(t, "Acme operations")
+	reporting := w.deal(t, "Acme reporting")
+
+	env.syncSent(t, map[string]bool{"ans1@myco.example": true},
+		email(captureOwner, "", "alice@acme.example", "ans1@myco.example", ""))
+	env.sync(t, mailFrom("alice@acme.example", "ans2@acme.example", "ans1@myco.example", "Re: project"))
+	// One reply arrives already on a deal, as a connector files it.
+	env.syncFiledUnderDeal(t, map[string][]ids.UUID{"ans3@acme.example": {operations}},
+		mailFrom("alice@acme.example", "ans3@acme.example", "ans1@myco.example", "Re: project"))
+	if n := openQuestions(t, e); n != 1 {
+		t.Fatalf("%d open deal questions before the answer, want 1", n)
+	}
+	// Alice's promise in our own mail of the conversation, read before the
+	// answer, as the extractor files one.
+	promise, err := w.contacts.RecordConversationClaim(w.ctx, contacts.ClaimInput{
+		ContactID: ids.From[ids.ContactKind](alice), Kind: "commitment_theirs", Body: "Send the figures",
+		ActivityID: activityOf(t, e, "ans1@myco.example"), Quote: "We will send the figures.", Source: "extraction",
+	})
+	if err != nil {
+		t.Fatalf("filing the promise: %v", err)
+	}
+	store := activities.NewStore(e.DB())
+	relink := func(sourceID string, deal ids.UUID) {
+		t.Helper()
+		mail := ids.From[ids.ActivityKind](activityOf(t, e, sourceID))
+		if _, err := store.RelinkActivity(w.ctx, mail, activities.RelinkActivityInput{EntityType: "deal", EntityID: deal}); err != nil {
+			t.Fatalf("filing %s as a colleague: %v", sourceID, err)
+		}
+	}
+	relink("ans2@acme.example", reporting)
+
+	wantDeals(t, e, "ans1@myco.example", reporting)
+	wantDeals(t, e, "ans2@acme.example", reporting)
+	wantDeals(t, e, "ans3@acme.example", operations)
+	if n := openQuestions(t, e); n != 0 {
+		t.Fatalf("%d deal questions still open after the answer, want 0", n)
+	}
+	timeline := func(deal ids.UUID) int {
+		t.Helper()
+		rows, _, err := store.ListActivities(w.ctx, activities.ListActivitiesInput{
+			EntityType: new("deal"), EntityID: &deal, Kind: new("email"),
+		})
+		if err != nil {
+			t.Fatalf("reading the deal timeline: %v", err)
+		}
+		return len(rows)
+	}
+	if got := timeline(reporting); got != 2 {
+		t.Fatalf("the answered deal's timeline shows %d mails, want the 2 of the conversation", got)
+	}
+	if got := timeline(operations); got != 1 {
+		t.Fatalf("the other deal's timeline shows %d mails, want only the one already filed there", got)
+	}
+	// The company page still shows the whole conversation.
+	account := w.customer
+	onCompany, _, err := store.ListActivities(w.ctx, activities.ListActivitiesInput{
+		EntityType: new("company"), EntityID: &account, Kind: new("email"),
+	})
+	if err != nil || len(onCompany) != 3 {
+		t.Fatalf("the company timeline shows %d mails (err %v), want the 3 of the conversation", len(onCompany), err)
+	}
+	// The promise watches the answered deal and not the other one.
+	for deal, want := range map[ids.UUID]int{reporting: 1, operations: 0} {
+		if err := database.WithWorkspaceTx(w.ctx, e.Pool, func(tx pgx.Tx) error {
+			rows, _, err := w.contacts.OpenTheirCommitmentsForDeal(w.ctx, tx, deal, 20)
+			if err == nil && (len(rows) != want || (want == 1 && rows[0].ID != ids.UUID(promise.Id))) {
+				t.Errorf("deal %s watches %d promises, want %d", deal, len(rows), want)
+			}
+			return err
+		}); err != nil {
+			t.Fatalf("reading the deal's promises: %v", err)
+		}
+	}
+}
+
+// The repair re-checks the links the rule wrote, from the rule's own audit
+// rows. A link the rule still finds stays. One it now finds elsewhere moves,
+// audited as the repair with its reason. A connector's own deal ref has no
+// such record, so it is reported and left alone.
+func TestTheDealRepairRechecksOnlyTheRulesOwnLinks(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	w := newDealWorld(t, e)
+	alice := w.employee(t, "alice@acme.example", w.customer)
+	first := w.deal(t, "Acme rollout")
+	beta := w.at(t, "Beta")
+	beta.employee(t, "bob@beta.example", beta.customer)
+	betaDeal := beta.deal(t, "Beta rollout")
+	env.sync(t,
+		mailFrom("alice@acme.example", "re1@acme.example", "", "status"),
+		mailFrom("bob@beta.example", "re2@beta.example", "", "status"))
+	env.syncFiledUnderDeal(t, map[string][]ids.UUID{"re3@acme.example": {first}},
+		mailFrom("alice@acme.example", "re3@acme.example", "", "other"))
+	wantDeals(t, e, "re1@acme.example", first)
+	wantDeals(t, e, "re2@beta.example", betaDeal)
+
+	// Acme gains a second deal that alice is a stakeholder on, so the rule now
+	// files her mail there.
+	second := w.deal(t, "Acme reporting")
+	w.stakeholder(t, alice, second)
+	r := newRepairer(e, w)
+	preview := r.preview(t)
+	want := map[capturemod.DealOutcome]int{
+		capturemod.DealMachineMoved: 1, capturemod.DealMachineConfirmed: 1, capturemod.DealUnknownLink: 1,
+	}
+	if !maps.Equal(preview, want) {
+		t.Fatalf("the preview reads %v, want %v", preview, want)
+	}
+	wantDeals(t, e, "re1@acme.example", first)
+	if changed := r.run(t); changed != 1 {
+		t.Fatalf("the repair changed %d mails, want the one the rule now files elsewhere", changed)
+	}
+	wantDeals(t, e, "re1@acme.example", second)
+	wantDeals(t, e, "re2@beta.example", betaDeal)
+	wantDeals(t, e, "re3@acme.example", first)
+	if n := countRows(t, e, `SELECT count(*) FROM audit_log WHERE action = 'activity_relink'
+		 AND actor_type = 'system' AND evidence->>'reason' = 'captured_mail_deal_repair'`); n != 2 {
+		t.Fatalf("%d repair audit rows, want the retraction and the new link, each naming the repair", n)
+	}
+	if again := r.run(t); again != 0 {
+		t.Fatalf("a second repair changed %d more mails, want none", again)
+	}
+}
+
+// The question is asked only about current mail, judged by the mail's own
+// time against the waiting horizon, never by when it was captured. The same
+// clause keeps the question in the colleague's task list, and drops it once
+// the mail ages past the horizon.
+func TestTheDealQuestionIsAskedOnlyAboutCurrentMail(t *testing.T) {
+	horizon := time.Duration(storekit.DefaultWaitingHorizonDays) * 24 * time.Hour
+	for _, c := range []struct {
+		name  string
+		now   time.Time
+		asked bool
+	}{
+		{"on the horizon", mailDay.Add(horizon), true},
+		{"a second past it", mailDay.Add(horizon + time.Second), false},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			env := newCaptureEnvAt(t, c.now)
+			e := env.e
+			w := newDealWorld(t, e)
+			w.employee(t, "alice@acme.example", w.customer)
+			w.deal(t, "Acme operations")
+			w.deal(t, "Acme reporting")
+			env.syncSent(t, map[string]bool{"cur1@myco.example": true},
+				email(captureOwner, "", "alice@acme.example", "cur1@myco.example", ""))
+			if n, _ := whichDealQuestions(t, e); (n == 1) != c.asked {
+				t.Fatalf("%d deal questions for mail of %s, want asked=%v", n, mailDay, c.asked)
+			}
+		})
+	}
+	t.Run("the task list drops it past the horizon", func(t *testing.T) {
+		env := newCaptureEnv(t)
+		e := env.e
+		w := newDealWorld(t, e)
+		w.employee(t, "alice@acme.example", w.customer)
+		w.deal(t, "Acme operations")
+		w.deal(t, "Acme reporting")
+		env.syncSent(t, map[string]bool{"cur2@myco.example": true},
+			email(captureOwner, "", "alice@acme.example", "cur2@myco.example", ""))
+		rep := ids.From[ids.UserKind](e.Rep1)
+		listed := func(asOf time.Time) int {
+			t.Helper()
+			rows, _, err := activities.NewStore(e.DB()).ListActivities(w.ctx, activities.ListActivitiesInput{
+				AssigneeID: &rep, TaskAsOf: &asOf, Kind: new("task"),
+			})
+			if err != nil {
+				t.Fatalf("reading the colleague's tasks: %v", err)
+			}
+			return len(rows)
+		}
+		if got := listed(captureNow); got != 1 {
+			t.Fatalf("the colleague's task list shows %d deal questions for current mail, want 1", got)
+		}
+		if got := listed(mailDay.Add(horizon + time.Hour)); got != 0 {
+			t.Fatalf("the task list still shows %d deal questions after the mail aged out", got)
+		}
+		// A question the colleague took up by hand is theirs, whatever its age.
+		var question ids.UUID
+		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			return tx.QueryRow(context.Background(), `SELECT id FROM activity WHERE source_system = 'which_deal'`).Scan(&question)
+		}); err != nil {
+			t.Fatal(err)
+		}
+		subject := "Which deal: ask Alice on Monday"
+		if _, err := activities.NewStore(e.DB()).UpdateActivity(w.ctx, ids.From[ids.ActivityKind](question),
+			activities.UpdateActivityInput{Subject: &subject}); err != nil {
+			t.Fatalf("taking the question up by hand: %v", err)
+		}
+		if got := listed(mailDay.Add(horizon + time.Hour)); got != 1 {
+			t.Fatalf("the task list shows %d questions the colleague took up, want 1", got)
+		}
+	})
+}
+
+// waitForLockWaiters returns once n other sessions wait on a row lock, so a
+// race is set up by what the database reports rather than by sleeping.
+func waitForLockWaiters(t *testing.T, e *integration.SearchEnv, holder uint32, n int) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	for {
+		var waiting int
+		if err := e.Pool.QueryRow(ctx, `SELECT count(*) FROM pg_stat_activity
+			 WHERE datname = current_database() AND wait_event_type = 'Lock' AND pid <> $1`, holder).Scan(&waiting); err != nil {
+			t.Fatalf("reading who waits on the row: %v", err)
+		}
+		if waiting >= n {
+			return
+		}
+		runtime.Gosched()
+	}
+}
+
+// A colleague's relink and the deal rule reach one mail at once. The rule takes
+// the activity row lock the relink takes, so whichever order the database
+// grants, the mail ends on the one deal the colleague chose.
+func TestARelinkAndTheDealRuleRacingLeaveOneDeal(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	w := newDealWorld(t, e)
+	w.employee(t, "alice@acme.example", w.customer)
+	env.sync(t, mailFrom("alice@acme.example", "race1@acme.example", "", "status"))
+	w.deal(t, "Acme rollout")
+	chosen := w.at(t, "Elsewhere").deal(t, "Elsewhere")
+	mail := ids.From[ids.ActivityKind](activityOf(t, e, "race1@acme.example"))
+
+	holder, err := e.Pool.Begin(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var pid uint32
+	if err := holder.QueryRow(context.Background(), `SELECT pg_backend_pid()`).Scan(&pid); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := holder.Exec(context.Background(), `SELECT id FROM activity WHERE id = $1 FOR UPDATE`, mail); err != nil {
+		t.Fatal(err)
+	}
+	relinked := make(chan error, 1)
+	go func() {
+		_, err := activities.NewStore(e.DB()).RelinkActivity(w.ctx, mail, activities.RelinkActivityInput{
+			EntityType: "deal", EntityID: chosen, ReplaceExistingOfType: true,
+		})
+		relinked <- err
+	}()
+	waitForLockWaiters(t, e, pid, 1)
+	ruled := make(chan error, 1)
+	go func() {
+		connectorCtx := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+			Type: principal.PrincipalConnector, ID: "connector:gmail", UserID: e.Rep1, OnBehalfOf: e.Rep1,
+			SeatType: principal.SeatFull, TeamIDs: []ids.UUID{e.Team1},
+			Permissions: principal.Permissions{
+				Objects: map[string]principal.ObjectGrant{
+					"activity": {Read: true, Update: true}, "deal": {Read: true}, "contact": {Read: true},
+					"company": {Read: true}, "relationship": {Read: true},
+				},
+				RowScope: principal.RowScopeAll,
+			},
+		})
+		ruled <- database.WithWorkspaceTx(connectorCtx, e.Pool, func(tx pgx.Tx) error {
+			_, err := capturemod.AttributeDealTx(connectorCtx, tx, mail, w.store, nil)
+			return err
+		})
+	}()
+	waitForLockWaiters(t, e, pid, 2)
+	if err := holder.Rollback(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if err := <-relinked; err != nil {
+		t.Fatalf("the colleague's relink: %v", err)
+	}
+	if err := <-ruled; err != nil {
+		t.Fatalf("the deal rule: %v", err)
+	}
+	wantDeals(t, e, "race1@acme.example", chosen)
 }

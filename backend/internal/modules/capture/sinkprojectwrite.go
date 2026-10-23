@@ -31,7 +31,7 @@ import (
 // It requires activity.update, not only the activity.create the capture
 // checked. Filing an activity under a project changes who can reach it. It
 // also bumps activity.version, the pin a staged approval re-checks. So it is
-// an update, and recordAttributedLink audits it as one. A principal that may
+// an update, and recordLinkChange audits it as one. A principal that may
 // create captured mail but not change it attributes nothing.
 //
 // Denial is not a fault: a connector role without activity.update is an
@@ -85,7 +85,8 @@ func linkActivityToProject(ctx context.Context, tx pgx.Tx, activityID ids.Activi
 	// Filing changes who the activity reaches, so it moves the version a
 	// staged approval pinned, as the human relink path does
 	// (activities/lifecycle.go).
-	return recordAttributedLink(ctx, tx, activityID, datasource.EntityProject, projectID)
+	return recordLinkChange(ctx, tx, activityID, nil,
+		map[string]any{"entity_type": string(datasource.EntityProject), "entity_id": projectID}, nil)
 }
 
 // stampTheProjectOnTheRow stamps whatever project the activity is ACTUALLY

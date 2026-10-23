@@ -156,7 +156,9 @@ An email stays on no deal when:
 - its contacts work at two companies;
 - it is already on a deal. A deal you chose by hand is never changed.
 
-When several deals fit, one colleague gets one task per thread: "Which deal is this about?". That is the colleague who sent the email, or the one colleague it was addressed to. Nobody else is asked. If no colleague is named that way, nobody is asked.
+When several deals fit, one colleague gets one task per thread: "Which deal is this about?". That is the colleague who sent the email, or the one colleague it was addressed to. Nobody else is asked. If no colleague is named that way, nobody is asked. An email older than the waiting horizon asks nobody, even when it is captured today.
+
+To answer, use **Relink** on any email of that conversation and pick the deal. The other emails of the conversation with the same contact go on that deal too, with the promises read from them. An email already on a deal keeps it. The task is then done.
 
 An email only its participants can read still appears on the deal's timeline. It does not change the deal's last activity date.
 
