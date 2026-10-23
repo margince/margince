@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/meetingmap"
 	"github.com/margince/margince/backend/internal/modules/comms"
 	"github.com/margince/margince/backend/internal/modules/consent"
@@ -193,7 +194,7 @@ func TestAMeetingIsHeldOnlyOnceItsOutcomeSaysSo(t *testing.T) {
 	}
 }
 
-func seatEmail(t *testing.T, e *integration.Env, seat ids.UUID) string {
+func seatEmail(t *testing.T, seat ids.UUID) string {
 	t.Helper()
 	var email string
 	if err := integration.OwnerConn(t).QueryRow(context.Background(), `SELECT email FROM app_user WHERE id = $1`, seat).Scan(&email); err != nil {
@@ -204,15 +205,13 @@ func seatEmail(t *testing.T, e *integration.Env, seat ids.UUID) string {
 
 // captureCalendarEvent runs one provider event through the calendar mapper and
 // the real sink, under the connector of the seat whose calendar holds it.
-func captureCalendarEvent(t *testing.T, e *integration.Env, calendarOf ids.UUID, ev meetingmap.Event) ids.UUID {
+func captureCalendarEvent(t *testing.T, e *integration.Env, calendarOf ids.UUID, ev meetingmap.Event) {
 	t.Helper()
 	raw := []byte(`{"id":"` + ev.ID + `"}`)
-	record := meetingmap.Classify(ev, seatEmail(t, e, calendarOf)).ToRecord(integration.CalendarSystem, raw)
-	ref, err := calendarSink(e).Upsert(calendarOwnerCtx(e, calendarOf), record)
-	if err != nil {
+	record := meetingmap.Classify(ev, seatEmail(t, calendarOf)).ToRecord(integration.CalendarSystem, raw)
+	if _, err := calendarSink(e).Upsert(calendarOwnerCtx(e, calendarOf), record); err != nil {
 		t.Fatalf("capturing %s: %v", ev.ID, err)
 	}
-	return ref.ID
 }
 
 // A calendar that holds a copy of a meeting makes nobody's work. The seat the
@@ -220,7 +219,7 @@ func captureCalendarEvent(t *testing.T, e *integration.Env, calendarOf ids.UUID,
 // connector only imported it does not.
 func TestACalendarCopyIsNotTheImportersMeetingButItsAttendeesAre(t *testing.T) {
 	e := integration.Setup(t)
-	organizer := seatEmail(t, e, e.Rep2)
+	organizer := seatEmail(t, e.Rep2)
 	guest := meetingmap.Actor{Email: "buyer@customer.test"}
 	captureCalendarEvent(t, e, e.Rep1, meetingmap.Event{
 		ID: "evt-copied", Subject: "Colleague's review", StartsAt: laneDay.Add(2 * time.Hour), EndsAt: laneDay.Add(3 * time.Hour),
@@ -228,7 +227,7 @@ func TestACalendarCopyIsNotTheImportersMeetingButItsAttendeesAre(t *testing.T) {
 	})
 	captureCalendarEvent(t, e, e.Rep3, meetingmap.Event{
 		ID: "evt-invited", Subject: "Invited review", StartsAt: laneDay.Add(4 * time.Hour), EndsAt: laneDay.Add(5 * time.Hour),
-		Organizer: guest, Attendees: []meetingmap.Actor{{Email: seatEmail(t, e, e.Rep3)}},
+		Organizer: guest, Attendees: []meetingmap.Actor{{Email: seatEmail(t, e.Rep3)}},
 	})
 
 	if got := myMeetingsToday(t, e, e.Rep1); len(got) != 0 {
@@ -267,5 +266,37 @@ func TestALegacyCalendarRowIsNobodysUntilItsOriginalIsReplayed(t *testing.T) {
 	}
 	if got := read(); got != 1 {
 		t.Fatalf("after the replay the owner reads %d meetings, want the one they accepted", got)
+	}
+}
+
+// An alias a seat declared itself proves nothing about another seat's event,
+// while an address the product proved by delivery binds its seat.
+func TestOnlyAProvenIdentityBindsASeatToACalendarEvent(t *testing.T) {
+	e := integration.Setup(t)
+	declared := "deals-desk@ourco.test"
+	if _, err := capture.NewOwnerIdentityStore(e.DB()).Add(e.As(e.Rep2, nil, integration.AdminPerms), "address", declared); err != nil {
+		t.Fatal(err)
+	}
+	delivered := "rep3-forward@ourco.test"
+	if _, err := integration.OwnerConn(t).Exec(context.Background(), `
+		INSERT INTO capture_owner_identity (user_id, kind, value, source, created_by)
+		VALUES ($1, 'address', $2, 'delivered_to', 'system:alias-discovery')`, e.Rep3, delivered); err != nil {
+		t.Fatal(err)
+	}
+	guest := meetingmap.Actor{Email: "buyer@customer.test"}
+	captureCalendarEvent(t, e, e.Rep1, meetingmap.Event{
+		ID: "evt-declared", Subject: "Desk review", StartsAt: laneDay.Add(2 * time.Hour), EndsAt: laneDay.Add(3 * time.Hour),
+		Organizer: guest, Attendees: []meetingmap.Actor{{Email: declared}},
+	})
+	captureCalendarEvent(t, e, e.Rep3, meetingmap.Event{
+		ID: "evt-delivered", Subject: "Forwarded invite", StartsAt: laneDay.Add(4 * time.Hour), EndsAt: laneDay.Add(5 * time.Hour),
+		Organizer: guest, Attendees: []meetingmap.Actor{{Email: delivered}},
+	})
+
+	if got := myMeetingsToday(t, e, e.Rep2); len(got) != 0 {
+		t.Errorf("a seat that only declared the alias got %v, want none", got)
+	}
+	if got := myMeetingsToday(t, e, e.Rep3); fmt.Sprint(got) != "[Forwarded invite]" {
+		t.Errorf("the seat with the delivered identity got %v, want its own event", got)
 	}
 }

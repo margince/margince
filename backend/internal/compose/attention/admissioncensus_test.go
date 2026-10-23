@@ -125,8 +125,8 @@ func buildsARow(body *ast.BlockStmt) bool {
 	return built
 }
 
-// unadmittedDayReads is every classifyDay call in fn that does not sit inside
-// an admitBySource argument: a reader of the day that skips admission.
+// unadmittedDayReads lists the classifyDay calls in fn that sit outside an
+// admitBySource argument: a reader of the day that skips admission.
 func unadmittedDayReads(fn *ast.FuncDecl) []string {
 	if fn.Name.Name == "classifyDay" {
 		return nil
