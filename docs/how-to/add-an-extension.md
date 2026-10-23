@@ -551,6 +551,9 @@ the AST run inside `fe-unit`: `native-controls`, `ext-imports`, and the action-r
 (`design-system/actionrow.test.ts`). That last gate holds a unit's rows of two or more buttons to
 `gap: var(--gapActions)`, like any other.
 
+**Copy text with `useClipboardCopy`** from `@margince/frontend/design-system`. A gate
+(`design-system/clipboard-spelling.test.ts`) refuses `navigator.clipboard` in a unit as in the core.
+
 **Test your screen next to it.** `make fe-test-ext` runs a `*.test.tsx` under your `frontend/`, and
 `make check-fe` calls it. It is a second `vitest` lane (`frontend/vitest.ext.config.ts`), separate from the core
 one. A unit screen reads its text through the merged catalog, and calls routes that exist only in the merged

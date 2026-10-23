@@ -81,6 +81,9 @@ describe("the published frontend surface", () => {
       "TextInput",
       "TokenInput",
       "TokenList",
+      // useClipboardCopy: the one spelling of a copy, which the clipboard gate
+      // holds unit screens to as well. See the note beside its export.
+      "useClipboardCopy",
     ]);
     expect(Object.keys(apiSurface).sort()).toEqual([
       "ProblemError",
