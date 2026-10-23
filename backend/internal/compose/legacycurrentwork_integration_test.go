@@ -118,7 +118,7 @@ func TestCurrentWorkFromAMailNotReadInFullIsWithheld(t *testing.T) {
 	control := o.askedOfUs(t, "current-control", readInFull(ask))
 	o.captureRequests(t)
 	// A request with an open request task is shown as that task, not as a
-	// waiting row; these two have none, so they are read on the waiting lane.
+	// waiting row. These two have none, so the waiting lane shows them.
 	waitingRequest := o.askedOfUs(t, "waiting-request", readInFull(ask))
 	waitingControl := o.askedOfUs(t, "waiting-control", readInFull(ask))
 	promise := "I will send the pricing by Friday."
