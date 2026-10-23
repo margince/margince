@@ -400,3 +400,39 @@ func TestTechnicalUndoRefusesALaterWriteThatBeganBeforeTheLookup(t *testing.T) {
 		})
 	}
 }
+
+// A merge changes the survivor's facts, so a lookup taken on either company
+// before it can no longer be put back. The survivor's counter moved. The
+// retired company is archived with no counter left.
+func TestAMergeRefusesTheUndoOfALookupOnEitherCompany(t *testing.T) {
+	e := integration.Setup(t)
+	survivor := technicalUndoCompany(t, e, "Merge Survivor GmbH")
+	retired := technicalUndoCompany(t, e, "Merge Retired GmbH")
+	survivorLookup := applyUndoLookup(t, e, survivor, undoObservation("hosting_provider", "host", "Host"))
+	retiredLookup := applyUndoLookup(t, e, retired, undoObservation("hosting_provider", "host", "Host"))
+	if _, err := e.Contacts.MergeCompany(e.Admin(), retired, survivor, nil); err != nil {
+		t.Fatal(err)
+	}
+	held := technicalUndoFacts(t, e, survivor)
+	if answer := advisoryAnswer(e.Admin(), t, e, "company", survivor.UUID, survivorLookup); answer.Undoable ||
+		answer.Reason != string(ReasonLaterCompanyChange) {
+		t.Fatalf("the survivor's lookup previewed %+v after the merge, want a refusal naming the later change", answer)
+	}
+	if reason := refusedFor(t, undoEntry(t, e, "company", survivor.UUID, survivorLookup)); reason != ReasonLaterCompanyChange {
+		t.Fatalf("the survivor's lookup answered %s after the merge, want %s", reason, ReasonLaterCompanyChange)
+	}
+	if reason := refusedFor(t, undoEntry(t, e, "company", retired.UUID, retiredLookup)); reason != ReasonRecordArchived {
+		t.Fatalf("the retired company's lookup answered %s after the merge, want %s", reason, ReasonRecordArchived)
+	}
+	if !sameFacts(t, held, technicalUndoFacts(t, e, survivor)) {
+		t.Fatal("a refused Undo after a merge changed the survivor's facts")
+	}
+	if left := e.WsCount(t, "SELECT count(*) FROM company_fact_revision WHERE company_id = $1", retired.UUID); left != 0 {
+		t.Fatalf("the retired company kept %d fact revision rows", left)
+	}
+	for _, receipt := range []ids.UUID{survivorLookup, retiredLookup} {
+		if reversals, events := reversalWriteShape(t, e, receipt); reversals != 0 || events != 0 {
+			t.Fatalf("a refused Undo committed %d reversal rows and %d events", reversals, events)
+		}
+	}
+}

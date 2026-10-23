@@ -130,6 +130,9 @@ func carryCompanyEnrichment(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 		`DELETE FROM company_fact WHERE company_id = $1`, sourceID); err != nil {
 		return fmt.Errorf("retire the merged-away company facts: %w", err)
 	}
+	if err := settleFactRevisions(ctx, tx, sourceID, targetID); err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO company_profile_field
 		  (company_id, field, value, evidence_snippet, source_url, confidence, source,
@@ -252,6 +255,25 @@ func moveCompanyAssignments(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 		`UPDATE record_assignment SET company_id = $2 WHERE company_id = $1`,
 		sourceID, targetID); err != nil {
 		return fmt.Errorf("repoint the assignments: %w", err)
+	}
+	return nil
+}
+
+// settleFactRevisions moves the survivor's fact counter, so an Undo of a
+// lookup taken on it before the merge is refused. It moves even when the
+// retired company brought no fact the trigger could count. The retired
+// company keeps no counter: it has no facts left to count.
+func settleFactRevisions(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID) error {
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO company_fact_revision AS r (company_id, revision)
+		SELECT $2, 1
+		ON CONFLICT (company_id) DO UPDATE SET revision = r.revision + 1`,
+		sourceID, targetID); err != nil {
+		return fmt.Errorf("move the survivor's fact revision: %w", err)
+	}
+	if _, err := tx.Exec(ctx,
+		`DELETE FROM company_fact_revision WHERE company_id = $1`, sourceID); err != nil {
+		return fmt.Errorf("retire the merged-away company's fact revision: %w", err)
 	}
 	return nil
 }
