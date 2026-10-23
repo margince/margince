@@ -26,6 +26,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -264,6 +265,13 @@ func moveCompanyAssignments(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 // retired company brought no fact the trigger could count. The retired
 // company keeps no counter: it has no facts left to count.
 func settleFactRevisions(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID) error {
+	// Row scope on both companies, so no caller moves the counter of one it
+	// may not see. The merge has already held both.
+	for _, company := range []ids.CompanyID{sourceID, targetID} {
+		if err := auth.EnsureVisible(ctx, tx, entityCompany, company.UUID); err != nil {
+			return err
+		}
+	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO company_fact_revision (company_id, revision)
 		SELECT @target, 1
