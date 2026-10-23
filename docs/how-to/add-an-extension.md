@@ -391,6 +391,11 @@ The call is checked against the live rights of the caller. A subject they cannot
 All of that happens inside the transaction your own row is in, so the two commit together or not at all.
 `backend/pkg/extension/crm` holds the shapes it takes and returns.
 
+**Read core records through the same port.** `tx.Core().Deals()`, `Companies()`, `Signals()`,
+`Activities()` and `CustomFields()` read under the rights of the user who made the call. A tick or a delivery
+has no caller and gets `ErrForbidden`. The verbs, filters and caps are in
+[read-core-records-from-an-extension.md](read-core-records-from-an-extension.md).
+
 Plan for two cases where the core refuses. A scheduled job tick gets `ErrForbidden`. It runs as your unit, with no caller whose
 rights a core write could be checked against (your own tables stay open to writes).
 

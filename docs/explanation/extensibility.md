@@ -141,7 +141,7 @@ A unit may import only `backend/pkg/**`, and only the packages that carry the ma
 - **`pkg/extension/jurisdiction`**: the jurisdiction pack contract (`Pack`, `Retention`,
   `RetentionClass`, the closed lists of values a pack may use, the calendar `Period`).
 - **`pkg/extension/crm`**: the shapes a unit passes to `tx.Core()` and gets back from it. `tx.Core()` is
-  the governed way onto core records.
+  the governed way onto core records, for writes and for reads.
 - **`pkg/extension/messaging`**: the outbound messaging rules a pack supplies. They say how long a reply
   stays a reply, and what exceptions hold for a customer who already buys. They also say what a first
   message must say, and the limits on sales messages. The core engine that approves a send reads them as

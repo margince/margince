@@ -101,36 +101,49 @@ func ReportableColumnsIn(ctx context.Context, tx pgx.Tx, object string) ([]field
 func (s *Service) queryColumns(ctx context.Context, whereTail string, args ...any) ([]fieldcatalog.Column, error) {
 	var cols []fieldcatalog.Column
 	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx,
-			// COALESCE because options is NULL for every non-picklist type, and an
-			// empty jsonb array decodes to the empty set a caller means to read.
-			fmt.Sprintf(
-				`SELECT column_name, type, COALESCE(options, '[]'::jsonb), COALESCE(currency, '')
-				   FROM custom_field WHERE object = $1 %s`, whereTail),
-			args...)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var (
-				c          fieldcatalog.Column
-				optionsRaw []byte
-			)
-			if err := rows.Scan(&c.Name, &c.Type, &optionsRaw, &c.Currency); err != nil {
-				return err
-			}
-			// Decoded through the module's own spelling rather than by scanning
-			// straight into []string: that hands the shape of a malformed column to
-			// pgx's JSON codec, whose error names a driver type, where this names the
-			// column and what it should have held.
-			c.Options, err = unmarshalOptions(optionsRaw)
-			if err != nil {
-				return err
-			}
-			cols = append(cols, c)
-		}
-		return rows.Err()
+		var err error
+		cols, err = queryColumnsIn(ctx, tx, whereTail, args...)
+		return err
 	})
 	return cols, err
+}
+
+// ActiveColumnsIn is ActiveColumns on a transaction the caller already holds,
+// for a caller that cannot take a second connection from inside it. Same
+// answer, same lack of a gate of its own.
+func ActiveColumnsIn(ctx context.Context, tx pgx.Tx, object string) ([]fieldcatalog.Column, error) {
+	return queryColumnsIn(ctx, tx, "AND status = $2 ORDER BY column_name", object, statusActive)
+}
+
+func queryColumnsIn(ctx context.Context, tx pgx.Tx, whereTail string, args ...any) ([]fieldcatalog.Column, error) {
+	rows, err := tx.Query(ctx,
+		// COALESCE because options is NULL for every non-picklist type, and an
+		// empty jsonb array decodes to the empty set a caller means to read.
+		fmt.Sprintf(
+			`SELECT column_name, type, COALESCE(options, '[]'::jsonb), COALESCE(currency, '')
+			   FROM custom_field WHERE object = $1 %s`, whereTail),
+		args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var cols []fieldcatalog.Column
+	for rows.Next() {
+		var (
+			c          fieldcatalog.Column
+			optionsRaw []byte
+		)
+		if err := rows.Scan(&c.Name, &c.Type, &optionsRaw, &c.Currency); err != nil {
+			return nil, err
+		}
+		// Decoded through the module's own spelling, not scanned into []string.
+		// A malformed column then fails naming the column and what it should
+		// have held, where pgx's JSON codec names a driver type.
+		c.Options, err = unmarshalOptions(optionsRaw)
+		if err != nil {
+			return nil, err
+		}
+		cols = append(cols, c)
+	}
+	return cols, rows.Err()
 }

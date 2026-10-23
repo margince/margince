@@ -15,7 +15,9 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -93,8 +95,8 @@ func (r *callRuntime) endIngest() {
 // application role can name. The boundary that holds is the published seam
 // itself — the grant surface extmigrategate polices and the `ext` schema a unit
 // owns.
-func (r *callRuntime) Tx(ctx context.Context, fn func(ctx context.Context, tx extension.Tx) error) error {
-	ctx, err := r.scoped(ctx)
+func (r *callRuntime) Tx(ctx context.Context, fn func(ctx context.Context, tx extension.Tx) error) (err error) {
+	ctx, err = r.scoped(ctx)
 	if err != nil {
 		return err
 	}
@@ -110,6 +112,16 @@ func (r *callRuntime) Tx(ctx context.Context, fn func(ctx context.Context, tx ex
 		return err
 	}
 	defer r.leaveTx()
+	audit := &readAudit{}
+	// Deferred, so it runs after the unit's transaction however that ended,
+	// including a panic. A list's export entry must outlive a rollback the unit
+	// chose. The context keeps the call's values but not its cancellation, so a
+	// cancelled or expired call cannot drop the entry.
+	defer func() {
+		flushCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), auditFlushBudget)
+		defer cancel()
+		err = errors.Join(err, audit.flush(flushCtx, r.deps.pool))
+	}()
 	return database.WithWorkspaceTx(ctx, r.deps.pool, func(tx pgx.Tx) error {
 		// Re-checked inside: opening a transaction is a round trip, and a
 		// Runtime released during it must not reach the callback with a live
@@ -120,9 +132,12 @@ func (r *callRuntime) Tx(ctx context.Context, fn func(ctx context.Context, tx ex
 		return fn(ctx, extensionTx{
 			tx: tx,
 			core: extensionCore{
-				tx: tx, unattended: r.unattended, deps: r.deps, authority: r.scoped, unit: r.unit,
+				tx: tx, unattended: r.unattended, deps: r.deps, authority: r.scoped, unit: r.unit, audit: audit,
 			},
 			ledger: extensionLedger{tx: tx, namespace: namespace, authority: r.scoped},
 		})
 	})
 }
+
+// auditFlushBudget bounds writing a queued export entry once the unit is done.
+const auditFlushBudget = 10 * time.Second

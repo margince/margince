@@ -24,6 +24,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/pkg/extension"
@@ -63,6 +64,9 @@ type extensionCore struct {
 	// passes in.
 	unattended bool
 	deps       extensionRuntimeBinding
+	// audit queues the export entries a list makes, for Tx to write once this
+	// transaction has ended. Nil on a port built without one.
+	audit *readAudit
 	// unit is which extension this port is writing for, and it is here for one
 	// reason: what a unit may name at this door is bounded by what that unit
 	// DECLARED. Taken from the Runtime rather than from the request, for the
@@ -141,11 +145,23 @@ func (a extensionActivities) Create(ctx context.Context, in crm.CreateActivityRe
 	return published, nil
 }
 
+var (
+	errNoAuthority = errors.New("compose: this core port was built without the invocation's authority, so no call can be checked against it")
+	errCoreRefused = errors.New("extension: the core refused this call")
+)
+
 // authorised re-binds the invocation's authority onto the context a verb was
 // handed, and refuses on a Runtime the call has finished with.
 func (c extensionCore) authorised(ctx context.Context) (context.Context, error) {
+	return c.invocationCtx(ctx)
+}
+
+// invocationCtx is authorised under a name no other receiver in this package
+// shares. A reader census matches callees by name, and a shared name would make
+// it mistake the door's reads for the ledger's.
+func (c extensionCore) invocationCtx(ctx context.Context) (context.Context, error) {
 	if c.authority == nil {
-		return nil, errors.New("compose: this core port was built without the invocation's authority, so no write can be checked against it")
+		return nil, errNoAuthority
 	}
 	bound, err := c.authority(ctx)
 	if err != nil {
@@ -158,11 +174,10 @@ func (c extensionCore) authorised(ctx context.Context) (context.Context, error) 
 func (c extensionCore) refuseUnattended() error {
 	if c.unattended {
 		// A job tick and a bus delivery both run with nobody behind them. Core
-		// writes are checked against the CALLER's live RBAC, and there is no
-		// caller to check — the alternatives are a system principal, which
-		// passes every check ever written, or resolving the workspace's agent
-		// seat, which is a governance surface of its own. Both are features;
-		// this is a refusal.
+		// reads and writes are checked against the caller's live RBAC, and there
+		// is no caller to check. A system principal passes every check ever
+		// written. The workspace's agent seat is a governance surface of its own.
+		// Both are features, and this is a refusal.
 		//
 		// It is load-bearing rather than tidy, and most sharply for a delivery:
 		// that one runs as PrincipalSystem, which auth.Require bypasses
@@ -174,7 +189,7 @@ func (c extensionCore) refuseUnattended() error {
 		// keeps shut is the door that would make such a write look authorized.
 		// The unit's OWN tables stay writable, which is what an unattended run
 		// is for.
-		return fmt.Errorf("%w: a scheduled job and a bus delivery run with no caller, and a core write is checked against the caller's own permissions", extension.ErrForbidden)
+		return fmt.Errorf("%w: a scheduled job and a bus delivery run with no caller, and a core read or write is checked against the caller's own permissions", extension.ErrForbidden)
 	}
 	return nil
 }
@@ -203,10 +218,24 @@ func portRefusal(err error) error {
 	if _, ok := errors.AsType[apperrors.FieldFault](err); ok {
 		return extension.ErrInvalid
 	}
+	// A list's own refusals (an unknown custom field, a bad sort or cursor) are
+	// not FieldFaults, and each is the caller's mistake.
+	if _, ok := errors.AsType[*storekit.PredicateError](err); ok {
+		return extension.ErrInvalid
+	}
+	if _, ok := errors.AsType[*storekit.SortError](err); ok {
+		return extension.ErrInvalid
+	}
+	if _, ok := errors.AsType[*storekit.MalformedCursorError](err); ok {
+		return extension.ErrInvalid
+	}
+	if _, ok := errors.AsType[*storekit.CursorSortMismatchError](err); ok {
+		return extension.ErrInvalid
+	}
 	// A fault with no class is the core's own — a broken connection, a
 	// constraint nobody mapped. The unit is told the write failed and nothing
 	// about how; the detail belongs in the core's logs, where it is already.
-	return errors.New("extension: the core refused this write")
+	return errCoreRefused
 }
 
 // transcode carries a value between the internal contract types and the

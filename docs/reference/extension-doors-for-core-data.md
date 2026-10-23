@@ -10,7 +10,7 @@ An extension is a separate unit under `extensions/` that adds to Margince. This 
 | 1. Outside-id storage and lookup | Keep the id a contact, company, deal or project has in another system. Find a company or deal by it. | [rest-api.md](rest-api.md#an-id-from-your-system) | done |
 | 2. Service member for timed jobs | Make an account that nobody signs in as, keep the secret of a timed job under it, and add records as it. A user who leaves does not stop the job. | [declare-a-service-member.md](../how-to/declare-a-service-member.md) | done |
 | 3. Intake path for deals and companies | Send a company or a deal with the id it has in the system it came from. A company typed by hand is matched by its domain. A deal can change stage, and activities can be moved onto the record. | [land-companies-and-deals-from-an-extension.md](../how-to/land-companies-and-deals-from-an-extension.md) | done |
-| 4. `Read doors for core records` | Not yet. An extension will read core records in a safe way. | | planned |
+| 4. `Read doors for core records` | Read deals, companies, signals, activities and the custom-field list as the caller who made the call. Filter by custom-field value and by the outside id. Each list is audited as an export. | [read-core-records-from-an-extension.md](../how-to/read-core-records-from-an-extension.md) | done |
 | 5. `Record lifecycle events` | Not yet. An extension will be told when a record is created or changed. | | planned |
 | 6. `Notices door` | Not yet. An extension will send a notice to the user. | | planned |
 | 7. Skip fields a user edited | Not yet. A job will leave alone what a user typed. | | planned |

@@ -269,6 +269,16 @@ func (s *Store) ActiveDealColumns(ctx context.Context) (CustomColumns, error) {
 	return CustomColumns{cols: cols}, nil
 }
 
+// DealColumnsFrom is ActiveDealColumns through a catalog the caller bound to the
+// transaction it already holds, so reading it takes no second connection.
+func DealColumnsFrom(ctx context.Context, catalog fieldcatalog.Reader) (CustomColumns, error) {
+	cols, err := catalog.ActiveColumns(ctx, dealTable)
+	if err != nil {
+		return CustomColumns{}, err
+	}
+	return CustomColumns{cols: cols}, nil
+}
+
 // Tx opens the transaction every read and write in this module runs inside,
 // bound to the workspace the store holds. Exported because storekit's list
 // helper takes the opener rather than a database handle of its own.
