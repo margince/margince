@@ -196,8 +196,17 @@ export function localDateTimeValue(utcIso: string): string {
 // own record zone): filing it at the zone's own midday is what keeps it on the
 // picked day both there and in the wall clock of any writer within twelve
 // hours of that zone.
+//
+// It renders, so it never throws. An unreal day or a year below 100, which
+// instantAtWallClock refuses, rolls over the way JavaScript parses it instead.
 export function middayInstant(day: string, zone: string): string {
-  return new Date(instantAtWallClock(day, DAY_MS / 2, zone)).toISOString();
+  try {
+    return new Date(instantAtWallClock(day, DAY_MS / 2, zone)).toISOString();
+  } catch (error) {
+    if (!(error instanceof RangeError)) throw error;
+    const rolled = new Date(`${day}T12:00:00Z`);
+    return Number.isNaN(rolled.getTime()) ? day : rolled.toISOString();
+  }
 }
 
 /**
