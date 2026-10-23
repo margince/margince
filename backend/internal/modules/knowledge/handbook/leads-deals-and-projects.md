@@ -296,7 +296,7 @@ Also called: update a project, change the project's end date.
 
 ### How do I change a project's owner?
 To reassign a project in Margince, open it and choose **More actions** → **Assign to a colleague**. Search under **Search colleagues**, pick one and choose **Assign**. It confirms "Assigned to {name}".
-**Edit project** also has **Owner**, which lists the colleagues you may assign to, then **Unassigned**, which releases the project. A project cannot be claimed, so if you release one, only a role that edits every project can assign it again.
+**Edit project** also has **Owner**, which lists the colleagues you may assign to, then **Unassigned**, which releases the project. A project cannot be claimed, so only a role that edits every project or someone it is shared with at **Write** can assign one.
 Also called: hand over a project, change project lead, transfer a project, release a project.
 
 ### How do I add or remove a company on a project?
