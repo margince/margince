@@ -175,6 +175,7 @@ function MeetingOutcomeDialog({
   const queryClient = useQueryClient();
   const [draft, setDraft] = useState<OutcomeDraft | null>(null);
   const [seed, setSeed] = useState<OutcomeSeed | null>(null);
+  const [dayRefused, setDayRefused] = useState(false);
   // The SAME read the task detail makes, and keyed the same way, so a write
   // that invalidates ["activity", id] refreshes whichever of the two is open.
   const meeting = useActivity(id);
@@ -203,15 +204,10 @@ function MeetingOutcomeDialog({
     mutationFn: async (input: {
       draft: OutcomeDraft;
       seed: OutcomeSeed;
-      zone: string;
+      occurredAt: string | undefined;
       transcript: boolean;
     }) => {
-      const occurredAt = movedStart(
-        input.seed,
-        input.draft.day,
-        input.zone,
-        new Date(),
-      );
+      const { occurredAt } = input;
       unwrap(
         await api.PATCH("/activities/{id}", {
           params: {
@@ -258,12 +254,23 @@ function MeetingOutcomeDialog({
               if (save.isPending) {
                 return;
               }
-              save.mutate({
-                draft,
-                seed,
-                zone: recordZone,
-                transcript,
-              });
+              let occurredAt: string | undefined;
+              try {
+                occurredAt = movedStart(
+                  seed,
+                  draft.day,
+                  recordZone,
+                  new Date(),
+                );
+              } catch (error) {
+                // A day the record zone skipped has no start to keep, so
+                // nothing is sent and the reader picks another date.
+                if (!(error instanceof RangeError)) throw error;
+                setDayRefused(true);
+                return;
+              }
+              setDayRefused(false);
+              save.mutate({ draft, seed, occurredAt, transcript });
             }}
           >
             <div className="form-row">
@@ -299,9 +306,10 @@ function MeetingOutcomeDialog({
                     // A meeting cannot have happened in the future, and the cap
                     // makes the box say so rather than leaving the server to.
                     max={calendarDay(new Date(), recordZone)}
-                    onChange={(event) =>
-                      setDraft({ ...draft, day: event.target.value })
-                    }
+                    onChange={(event) => {
+                      setDayRefused(false);
+                      setDraft({ ...draft, day: event.target.value });
+                    }}
                     onClick={(event) => event.currentTarget.showPicker?.()}
                   />
                 )}
@@ -328,6 +336,9 @@ function MeetingOutcomeDialog({
               value={draft.body}
               onChange={(body) => setDraft({ ...draft, body })}
             />
+            {dayRefused && (
+              <ErrorLine>{t("worklist.verb.meetingDayMissing")}</ErrorLine>
+            )}
             <ErrorLine error={save.error} />
           </form>
           <div className="actions">

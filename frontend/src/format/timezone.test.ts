@@ -196,6 +196,17 @@ describe("sameWallClockOnDay", () => {
     ).toBe("2026-10-03T15:30:00.000Z");
   });
 
+  it("refuses a day the zone skipped whole", () => {
+    // Apia jumped from 29 to 31 December 2011; the 30th never happened there.
+    expect(() =>
+      sameWallClockOnDay("2011-12-29T22:00:00Z", "2011-12-30", "Pacific/Apia"),
+    ).toThrow(RangeError);
+    // The day after the jump exists, on the new +14:00 offset.
+    expect(
+      sameWallClockOnDay("2011-12-29T22:00:00Z", "2011-12-31", "Pacific/Apia"),
+    ).toBe("2011-12-30T22:00:00.000Z");
+  });
+
   it("takes the earlier of a wall time the switch repeats", () => {
     // 02:30 happens twice in Berlin on 25 October 2026: at 00:30Z on summer
     // time, then at 01:30Z on winter time.

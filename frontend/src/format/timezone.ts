@@ -258,6 +258,9 @@ function wallClockOfDay(dateOnly: string, timeOfDayMs: number): number {
  * - missing (02:30 in Berlin on 29 March 2026): the first instant after the
  *   gap, 03:00;
  * - twice (02:30 in Berlin on 25 October 2026): the earlier one, on summer time.
+ *
+ * A day the zone skipped whole (30 December 2011 in Apia) has no such instant,
+ * so it is refused rather than filed on a neighbouring day.
  */
 export function instantAtWallClock(
   day: string,
@@ -285,8 +288,15 @@ export function instantAtWallClock(
   if (readings.length > 0) {
     return Math.min(...readings);
   }
-  const beforeGap = wanted - Math.max(...offsets);
-  return firstMinuteReadingAtLeast(wanted, zone, beforeGap) ?? beforeGap;
+  const afterGap = firstMinuteReadingAtLeast(
+    wanted,
+    zone,
+    wanted - Math.max(...offsets),
+  );
+  if (afterGap === undefined || dayInZone(afterGap, zone) !== day) {
+    throw new RangeError(`${day} has no such time in ${zone}`);
+  }
+  return afterGap;
 }
 
 /**

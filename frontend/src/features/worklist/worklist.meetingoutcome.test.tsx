@@ -375,6 +375,21 @@ describe("the start a meeting outcome saves", () => {
     });
   });
 
+  it("sends nothing when the picked day does not exist in the record zone", async () => {
+    // Apia skipped 30 December 2011 when it moved across the date line.
+    const sent: Record<string, unknown>[] = [];
+    stubWithMeetingRead(sent, 200, {
+      ...CAPTURED_MEETING,
+      occurred_at: "2011-12-29T22:00:00Z",
+    });
+    await openAndSave("Pacific/Apia", "2011-12-30");
+
+    expect(
+      await screen.findByText(/does not exist in the company’s time zone/i),
+    ).not.toBeNull();
+    expect(sent).toEqual([]);
+  });
+
   it("checks the save against the version the form was seeded from", async () => {
     const sent: Record<string, unknown>[] = [];
     const preconditions: (string | null)[] = [];
