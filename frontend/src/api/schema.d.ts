@@ -419,6 +419,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/mail-deal-repair/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview what the captured-mail deal repair does and leaves unresolved.
+         * @description Requires data_task:read. This operation changes no record: each mail is decided and the
+         *     result rolled back. It reads at most `limit` captured mails in id order, after `after` when
+         *     given, and counts what the repair does with each: links it, re-checks a link the rule wrote,
+         *     or leaves it. `unknown_provenance_link`, `unknown_provenance`, `human_kept` and `ambiguous`
+         *     are left unresolved by design. `complete` is false when more captured mail follows the page.
+         */
+        post: operations["previewMailDealRepair"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/job-health": {
         parameters: {
             query?: never;
@@ -19456,19 +19480,17 @@ export interface paths {
         };
         /**
          * What the customer committed to that this deal waits on.
-         * @description The open commitments the contacts employed at the deal's company made to us, read
-         *     out of captured activities: overdue first, then by nearest due date, at most 25.
-         *     Each carries the quoted words and the activity they came from, so a reader can check
-         *     it, and its claim id, so a reader with `contact:update` can dismiss it
-         *     (`POST /claims/{id}/settle`).
+         * @description The open commitments the customer made to us in activities filed under this deal:
+         *     overdue first, then by nearest due date, at most 25. A promise from an activity filed
+         *     under another deal of the same company is not this deal's. Each carries the quoted
+         *     words and the activity they came from, so a reader can check it, and its claim id, so
+         *     a reader with `contact:update` can dismiss it (`POST /claims/{id}/settle`).
          *
-         *     Needs `contact:read`, `activity:read` and `relationship:read` on top of the deal
-         *     grant: each row names a contact, quotes a captured activity, and belongs to this
-         *     account through the contact's employment edge. A commitment whose contact or activity the
+         *     Needs `contact:read` and `activity:read` on top of the deal grant: each row names a
+         *     contact and quotes a captured activity. A commitment whose contact or activity the
          *     caller may not see is left out, and `complete` is then false, so the card can say it
-         *     speaks about less than the account rather than that nothing is owed. `has_more`
-         *     says more commitments exist past the 25 returned. A deal with no company has
-         *     nothing to read and answers an empty, complete list.
+         *     speaks about less than the deal rather than that nothing is owed. `has_more` says
+         *     more commitments exist past the 25 returned.
          */
         get: operations["getDealCommitments"];
         put?: never;
@@ -39607,6 +39629,22 @@ export interface components {
             /** Format: date-time */
             last_refused_at?: string;
         };
+        MailDealRepairOutcomeCount: {
+            /** @enum {string} */
+            outcome: "linked" | "already_filed" | "not_writable" | "none" | "ambiguous" | "conflicting_companies" | "not_mail" | "unknown_provenance" | "human_kept" | "unknown_provenance_link" | "machine_confirmed" | "machine_moved" | "machine_retracted" | "machine_retracted_target_refused";
+            count: number;
+        };
+        MailDealRepairPreview: {
+            outcomes: components["schemas"]["MailDealRepairOutcomeCount"][];
+            inspected: number;
+            /** @description False when more captured mail follows this page. */
+            complete: boolean;
+            /**
+             * Format: uuid
+             * @description The last mail inspected; send it as `after` for the next page.
+             */
+            next_after?: string;
+        };
         HomeRepairReview: {
             tasks: components["schemas"]["HomeRepairTask"][];
             counts: components["schemas"]["HomeRepairCounts"];
@@ -49865,6 +49903,37 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    previewMailDealRepair: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    limit: number;
+                    /** Format: uuid */
+                    after?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Outcome counts for the page, and where the next page starts. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailDealRepairPreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -78676,7 +78745,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description The customer's open commitments on this deal's account. */
+            /** @description The customer's open commitments filed under this deal. */
             200: {
                 headers: {
                     [name: string]: unknown;

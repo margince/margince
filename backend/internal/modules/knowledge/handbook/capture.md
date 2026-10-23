@@ -144,7 +144,25 @@ records *which* one. So you can tell "the queue is full" from "one domain is
 filling it".
 
 ### Why was my email not linked to a deal?
-Margince does not link captured email to a deal on its own. Capture files a message under the contacts on it, their company and, where a rule matches, a project. To put an email on a deal, use **Relink** on the message.
+Margince puts a captured email on a deal by itself only when one deal, and no other, fits it:
+
+1. **The project.** An email filed under a project goes on that project's one open deal. If the project has no open deal, or several, the email goes on no deal. The company's deals are not asked.
+2. **Your thread.** Your own sent email in the thread is on a deal. The reply goes on that deal if it is the reply's company's deal.
+3. **The company.** If neither fits, the email goes on the one open deal of the one company its contacts work at. With several open deals, a contact who is a stakeholder on only one of them picks it.
+
+An email stays on no deal when:
+
+- the company has several open deals and nothing picks one;
+- its contacts work at two companies;
+- it is already on a deal. A deal you chose by hand is never changed.
+
+When several deals fit, one colleague gets one task per thread: "Which deal is this about?". That is the colleague who sent the email, or the one colleague it was addressed to. Nobody else is asked. If no colleague is named that way, nobody is asked. An email older than the waiting horizon asks nobody, even when it is captured today.
+
+To answer, use **Relink** on any email of that conversation and pick the deal. The other emails of the conversation with the same contact go on that deal too, with the promises read from them. An email already on a deal keeps it. The task is then done.
+
+An email only its participants can read still appears on the deal's timeline. It does not change the deal's last activity date.
+
+To put an email on a deal yourself, use **Relink** on the message.
 1. Open the contact or company timeline and find the email.
 2. Press **Relink**.
 3. Search for the deal under "Search contacts, companies, deals, leads or projects" and pick it.

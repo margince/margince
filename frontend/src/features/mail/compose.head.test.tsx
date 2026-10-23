@@ -481,6 +481,54 @@ describe("the project a message files under", () => {
   });
 });
 
+// A customer's thread can be filed under the project of another of its deals.
+// Replying from a deal is about that deal, so its own project is the default.
+describe("a reply written from a deal", () => {
+  it("suggests the deal's own project over the thread's", async () => {
+    const other = { ...PROJECT, id: "proj-2", name: "Reporting", key: "RP-3" };
+    fileStubs({
+      "GET /deals/deal-1": () =>
+        jsonResponse({
+          id: "deal-1",
+          name: "Retrofit",
+          project_id: "proj-1",
+          company_id: "company-1",
+        }),
+      "GET /activities/act-1": () =>
+        jsonResponse({
+          id: "act-1",
+          kind: "email",
+          thread_key: "t-1",
+          links: [{ entity_type: "project", entity_id: "proj-2" }],
+        }),
+      "GET /projects/proj-2": () => jsonResponse(other),
+      "GET /companies/company-1/360": () =>
+        jsonResponse({
+          ...COMPANY_360,
+          projects: [PROJECT, other].map(({ id, name, key, phase }) => ({
+            project_id: id,
+            name,
+            key,
+            phase,
+          })),
+        }),
+    });
+    render(
+      <ComposeModal
+        entityType="deal"
+        entityId="deal-1"
+        activityId="act-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Project").textContent).toContain("NW-12"),
+    );
+  });
+});
+
 // The picker stays in its row, so the head keeps its shape, but it offers nothing.
 function expectNoProjectToOffer() {
   const picker = screen.getByLabelText("Project");

@@ -326,6 +326,9 @@ func absorbEcho(ctx context.Context, tx pgx.Tx, survivorID ids.ActivityID, stamp
 //   - one the survivor already holds, which uq_activity_link would refuse;
 //   - a project link when the survivor holds one, since uq_activity_link_project
 //     allows one per activity and the survivor's filing wins;
+//   - a deal link when the survivor holds one: the survivor is a human's send,
+//     and the deal it was sent from wins over the one the deal rule chose for
+//     the echo;
 //   - a link to an archived contact.
 //
 // The survivor is a human's send, so its contact link is work a sender purge's
@@ -363,9 +366,9 @@ func copyEchoLinks(ctx context.Context, tx pgx.Tx, survivorID, echoID ids.Activi
 		          AND coalesce(held.contact_id, held.company_id, held.deal_id, held.lead_id, held.project_id)
 		            = coalesce(echo_link.contact_id, echo_link.company_id, echo_link.deal_id, echo_link.lead_id, echo_link.project_id))
 		   AND (echo_link.contact_id IS NULL OR echo_link.contact_id = ANY($3))
-		   AND NOT (echo_link.entity_type = 'project' AND EXISTS (
+		   AND NOT (echo_link.entity_type IN ('project', 'deal') AND EXISTS (
 		       SELECT 1 FROM activity_link held
-		        WHERE held.activity_id = $1 AND held.entity_type = 'project'))`,
+		        WHERE held.activity_id = $1 AND held.entity_type = echo_link.entity_type))`,
 		survivorID, echoID, held); err != nil {
 		return fmt.Errorf("activities: giving the send the absorbed echo's timeline links: %w", err)
 	}

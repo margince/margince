@@ -30,12 +30,14 @@ func CurrentTaskClause(alias string, asOf time.Time, identities string, arg func
  AND ` + HeldTaskClause("successor") + `)
  AND request_source.occurred_at <= ` + instant + `
  AND request_source.occurred_at >= ` + instant + ` - make_interval(days => ` + horizon + `) AND ` + DirectMailRecipientSQL("request_source", MailSeatAddressesSQL(identities, pinner)) + `)`
+	question := CurrentSourceMailClause(alias+".source_activity_id", asOf, arg)
 	return fmt.Sprintf(`(`+humanOrImportedTaskSQL(alias)+` OR `+HumanWroteActivityClause(alias)+`
  OR (`+pinner+`, %[1]s.id::text) IN (SELECT reader_id, row_id FROM `+auth.EffectiveWorklistPinsSQL(arg)+` adopted WHERE adopted.source='task')
  OR %[1]s.source_system = ANY($%[4]d)
  OR (%[1]s.source_system = $%[2]d AND `+source+`)
- OR (%[1]s.source_system = $%[3]d AND `+request+`))`, alias, arg(provenance.CommitmentTaskSource), arg(provenance.EmailRequestSource),
-		arg(taskSourcesOf(currentByItsWriter)))
+ OR (%[1]s.source_system = $%[3]d AND `+request+`)
+ OR (%[1]s.source_system = ANY($%[5]d) AND `+question+`))`, alias, arg(provenance.CommitmentTaskSource), arg(provenance.EmailRequestSource),
+		arg(taskSourcesOf(currentByItsWriter)), arg(taskSourcesOf(currentBySourceMail)))
 }
 
 // humanOrImportedTaskSQL names the tasks that stay current by their own
@@ -59,6 +61,8 @@ const (
 	// currentByItsWriter: the writer assigned it by its own rule and it lives
 	// by the task's lifecycle.
 	currentByItsWriter
+	// currentBySourceMail: the mail it asks about is current (CurrentSourceMailClause).
+	currentBySourceMail
 )
 
 // taskSourceFamilies is every source_system a native writer stamps on a task
@@ -74,6 +78,7 @@ var taskSourceFamilies = map[string]taskCurrency{
 	provenance.LeadQualifyTaskSource:    currentByItsWriter,
 	provenance.AssuranceTaskSource:      currentByItsWriter,
 	provenance.OvernightReconcileSource: currentByItsWriter,
+	provenance.WhichDealSource:          currentBySourceMail,
 }
 
 // TaskSourceFamilies lists the automatic task sources, for the census gate.
@@ -97,4 +102,15 @@ func taskSourcesOf(currency taskCurrency) []string {
 	}
 	slices.Sort(out)
 	return out
+}
+
+// CurrentSourceMailClause is the test that the mail some automatic work is
+// about is current. It is live, not in the future, and inside the waiting
+// horizon. The mail's own time decides, never the capture's. source is a
+// compile-time column reference.
+func CurrentSourceMailClause(source string, asOf time.Time, arg func(any) int) string {
+	instant := fmt.Sprintf("$%d::timestamptz", arg(asOf))
+	return `EXISTS (SELECT 1 FROM activity current_source WHERE current_source.id = ` + source + `
+ AND current_source.archived_at IS NULL AND current_source.occurred_at <= ` + instant + `
+ AND current_source.occurred_at >= ` + instant + ` - make_interval(days => ` + WaitingHorizonSQL(asOf, arg) + `))`
 }

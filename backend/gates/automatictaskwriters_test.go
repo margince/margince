@@ -43,6 +43,7 @@ const (
 // taskSourceWriters is each writer's declaration, keyed by file:function.
 var taskSourceWriters = map[string][]string{
 	"compose/assurancebundletask.go:mintBundleTask":                       {provenance.AssuranceTaskSource},
+	"compose/capturewhichdeal.go:Ask":                                     {provenance.WhichDealSource},
 	"compose/commitmenttask.go:writeCommitmentTask":                       {provenance.CommitmentTaskSource},
 	"compose/leadqualify.go:remindUnqualifiedLeads":                       {provenance.LeadQualifyTaskSource},
 	"compose/leadsla.go:Apply":                                            {provenance.LeadSLATaskSource},
@@ -74,6 +75,7 @@ var openTaskReadersElsewhere = map[string]string{
 	"modules/activities/lasttouch.go:openChildReminderHoldsAccount":       "an open reminder of the engine's own family holds its re-raise; it creates no work",
 	"modules/activities/lasttouch.go:openReminderHoldsEntity":             "an open reminder of the engine's own family holds its re-raise; it creates no work",
 	"modules/activities/requestrecovery.go:requestAvailableForAcceptance": "checks a request has no accepted task before a human accepts it",
+	"modules/activities/whichdealanswer.go:answerWhichDealTx":             "closes the deal questions a colleague's filing has just answered; it creates no work",
 	"modules/activities/taskwindow.go:openTaskWindowClauses":              "narrows a list the caller already gates with the worklist clauses",
 	"modules/contacts/claimrecord.go:SetClaimTaskTx":                      "links a promise to its own task row",
 	"modules/contacts/lead_read.go:leadNextTaskDueSQL":                    "the lead's next due date as a record fact",

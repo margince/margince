@@ -115,6 +115,8 @@ type StageEvidenceTrigger struct {
 	// a true evidence ledger, and the criteria simply go unread by the policy.
 	propose stageProposer
 	log     *slog.Logger
+	// now is the clock the backlog window is measured on.
+	now func() time.Time
 }
 
 // stageProposer is the proposing half, as this trigger takes it. An interface
@@ -133,8 +135,15 @@ func NewStageEvidenceTrigger(
 	return &StageEvidenceTrigger{
 		pool: pool, deals: store, own: own, read: read, propose: propose,
 		workspace: identity.NewService(pool).InstallationWorkspace,
-		log:       log,
+		log:       log, now: time.Now,
 	}
+}
+
+// WithClock is the trigger on another clock, for a test that fixes one.
+func (t *StageEvidenceTrigger) WithClock(now func() time.Time) *StageEvidenceTrigger {
+	c := *t
+	c.now = now
+	return &c
 }
 
 // StageEvidenceDeals and StageEvidenceDomains are the two halves the worker
@@ -165,7 +174,7 @@ func (t *StageEvidenceTrigger) HandleEvent(ctx context.Context, env events.Envel
 	// from it would place a row against a stage the deal reached long
 	// afterwards, so skipping is nil rather than an error — an error would
 	// redeliver it forever.
-	if time.Since(env.OccurredAt) > stageEvidenceBacklogWindow {
+	if t.now().Sub(env.OccurredAt) > stageEvidenceBacklogWindow {
 		return nil
 	}
 	// Bound HERE rather than at the write, because the READS need it too: the
@@ -331,6 +340,12 @@ func (t *StageEvidenceTrigger) judgeActivity(ctx context.Context, activityID ids
 		}
 		return err
 	}
+	// The activity's own time decides for both halves, not the envelope's. An
+	// envelope is stamped when the event is emitted. An old message filed or
+	// imported today carries a fresh one and would read as if just sent.
+	if t.now().Sub(facts.OccurredAt) > stageEvidenceBacklogWindow {
+		return nil
+	}
 	// The MODEL's half is asked about every activity that reaches a deal,
 	// meeting or not: a criterion settled in prose is settled in an ordinary
 	// email, and the deterministic arm below has nothing to say about one.
@@ -342,14 +357,7 @@ func (t *StageEvidenceTrigger) judgeActivity(ctx context.Context, activityID ids
 	}
 	// A meeting in the future has not been held. The capture path records
 	// scheduled meetings too, and one settles event_held only once it happened.
-	if facts.OccurredAt.After(time.Now()) {
-		return nil
-	}
-	// THE MEETING'S OWN TIME, not the envelope's. An envelope's occurred_at is
-	// stamped when the event is emitted, so a transcript of a six-month-old
-	// meeting imported today carries a fresh envelope and would otherwise be
-	// written as if the meeting had just happened.
-	if time.Since(facts.OccurredAt) > stageEvidenceBacklogWindow {
+	if facts.OccurredAt.After(t.now()) {
 		return nil
 	}
 	proof := deals.MeetingWasHeld(

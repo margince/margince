@@ -448,30 +448,10 @@ func (r *Registry) resolveCredential(ctx context.Context, credentialRef *string,
 // a runtime property), full seat (capture is a write path by nature —
 // the human's ability to grant it is what the scope check consumed).
 func (r *Registry) connectorContext(ctx context.Context, name string, grantedBy ids.UserID) (context.Context, error) {
-	wsID, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return nil, errors.New("capture: sync outside workspace context")
-	}
-	// The authz resolver and the principal seam are untyped (ids.UUID);
-	// widen the typed granting-human id at each of those edges.
-	rbac, err := r.authority.EffectiveRBAC(ctx, wsID, grantedBy.UUID)
-	if err != nil {
-		return nil, fmt.Errorf("capture: granting human no longer resolves — the grant dies with them: %w", err)
-	}
-	seat, err := r.authority.SeatType(ctx, wsID, grantedBy.UUID)
+	runCtx, err := connectorActing(ctx, r.authority, name, grantedBy)
 	if err != nil {
 		return nil, err
 	}
-	p := principal.Principal{
-		Type:        principal.PrincipalConnector,
-		ID:          connectorPrincipalID(name),
-		UserID:      grantedBy.UUID,
-		OnBehalfOf:  grantedBy.UUID,
-		TeamIDs:     rbac.TeamIDs,
-		SeatType:    seat,
-		Permissions: rbac.Permissions,
-	}
-	runCtx := principal.WithActor(ctx, p)
 	return principal.WithCorrelationID(runCtx, ids.NewV7()), nil
 }
 
