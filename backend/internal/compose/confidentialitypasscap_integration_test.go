@@ -106,6 +106,7 @@ func TestThePassJudgesNoMoreThanTheSavedCapAndReadsItEveryRun(t *testing.T) {
 	engine := NewConfidentialityVerdictEngine(e.Pool, brain, slog.Default())
 
 	setPassCap(t, e, 3)
+	assertPassCapRead(t, e, 3)
 	runPassOn(t, e, engine)
 	if got := brain.calls.Load(); got != 3 {
 		t.Fatalf("a pass under a cap of 3 judged %d threads, want 3", got)
@@ -113,6 +114,7 @@ func TestThePassJudgesNoMoreThanTheSavedCapAndReadsItEveryRun(t *testing.T) {
 
 	// The same engine, a larger cap saved between two passes.
 	setPassCap(t, e, 5)
+	assertPassCapRead(t, e, 5)
 	runPassOn(t, e, engine)
 	if got := brain.calls.Load(); got != 8 {
 		t.Fatalf("after raising the cap to 5 the second pass brought the total to %d, want 8", got)
@@ -268,5 +270,17 @@ func TestAnUnreachableDatabaseFailsThePassCapAndTheBacklogReads(t *testing.T) {
 	}
 	if got := brain.calls.Load(); got != 0 {
 		t.Errorf("a pass that could not read its cap still judged %d threads", got)
+	}
+}
+
+// assertPassCapRead fails when the pass would read another cap than the one just
+// saved, so a pass that judges too many threads is told apart from one that read
+// the wrong limit.
+func assertPassCapRead(t *testing.T, e *integration.Env, want int) {
+	t.Helper()
+	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), confidentialityActor)
+	got, err := capture.NewThreadVerdictStore(InstallationDB(e.Pool)).PassCap(ctx)
+	if err != nil || got != want {
+		t.Fatalf("saved a pass cap of %d, and the pass reads %d (err %v)", want, got, err)
 	}
 }
