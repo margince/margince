@@ -14812,6 +14812,12 @@ export const vi = {
   "sched.edit": "Chỉnh sửa",
   "sched.editFor": "Chỉnh sửa: {subject}",
   "sched.withdrawFor": "Thu hồi: {subject}",
+  "sched.editRefused.operatorReason":
+    "Không thể chỉnh sửa: thao tác này sẽ làm mất lý do bạn đã nêu khi hẹn giờ.",
+  "sched.editRefused.files_one":
+    "Không thể chỉnh sửa: {count} tệp đính kèm không còn gửi được.",
+  "sched.editRefused.files_other":
+    "Không thể chỉnh sửa: {count} tệp đính kèm không còn gửi được.",
   "outbox.name": "Tin nhắn đã hẹn giờ",
   "outbox.nameWaiting_one": "Tin nhắn đã hẹn giờ, {count} đang chờ",
   "outbox.nameWaiting_other": "Tin nhắn đã hẹn giờ, {count} đang chờ",

@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { SendPermission } from "../../components/sendpermission";
 import { Badge, Button, Card } from "../../design-system/atoms";
 import {
@@ -6,11 +7,17 @@ import {
   formatTimeOfDay,
   isRenderableZone,
 } from "../../format/format";
-import { type Locale, type Translator, useLocale, useT } from "../../i18n";
+import {
+  type Locale,
+  type Translator,
+  useLocale,
+  usePlural,
+  useT,
+} from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { logUnexpectedError } from "../../lib/problem";
 import { useSendPermission } from "../../lib/usesendpermission";
-import { isEditable } from "./schedulededit";
+import { editRefusalOf, isEditable } from "./schedulededit";
 import type { ScheduledSend, Status } from "./scheduledqueue";
 import { type Move, RescheduleMenu } from "./scheduledsends.reschedule";
 
@@ -139,6 +146,57 @@ function recipientLine(
       });
 }
 
+/** Why the row's Edit is refused, as one line the button points at. */
+function EditRefusalLine({
+  send,
+  id,
+}: Readonly<{ send: ScheduledSend; id: string }>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const refusal = editRefusalOf(send);
+  if (!refusal) {
+    return null;
+  }
+  return (
+    <span id={id} className="t-caption">
+      {refusal.kind === "operatorReason"
+        ? t("sched.editRefused.operatorReason")
+        : plural("sched.editRefused.files", refusal.count, {
+            count: formatNumber(refusal.count, locale),
+          })}
+    </span>
+  );
+}
+
+function EditVerb({
+  send,
+  refusalId,
+  onEdit,
+}: Readonly<{
+  send: ScheduledSend;
+  refusalId: string;
+  onEdit: (send: ScheduledSend) => void;
+}>) {
+  const t = useT();
+  const refused = editRefusalOf(send) !== undefined;
+  if (!refused && !isEditable(send)) {
+    return null;
+  }
+  return (
+    <Button
+      variant="ghost"
+      reasonId={refused ? refusalId : undefined}
+      onClick={() => onEdit(send)}
+    >
+      <span aria-hidden>{t("sched.edit")}</span>
+      <span className="sr-only">
+        {t("sched.editFor", { subject: send.subject })}
+      </span>
+    </Button>
+  );
+}
+
 /** The first line of a message, for a row that says what the message is. */
 function previewOf(body: string | undefined): string | null {
   const line = body?.trim().split(/\s*\n\s*/)[0];
@@ -168,6 +226,7 @@ export function SendRow({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const refusalId = useId();
   const actionable = STILL_MOVABLE.has(send.status);
   const heldReasonKey = send.held_reason
     ? HELD_REASON_LABEL[send.held_reason]
@@ -214,6 +273,7 @@ export function SendRow({
         {heldReasonKey && (
           <p className="scheduledsends-held">{t(heldReasonKey)}</p>
         )}
+        {actionable && <EditRefusalLine send={send} id={refusalId} />}
         {/* The held reason above says a gate stopped it; this says WHOSE decision
             that was and whether anybody may change it, in the same words the
             composer uses. Read-only: the queue moves or withdraws a message, and
@@ -244,14 +304,7 @@ export function SendRow({
               pending={movePending}
               onMove={onMove}
             />
-            {isEditable(send) && (
-              <Button variant="ghost" onClick={() => onEdit(send)}>
-                <span aria-hidden>{t("sched.edit")}</span>
-                <span className="sr-only">
-                  {t("sched.editFor", { subject: send.subject })}
-                </span>
-              </Button>
-            )}
+            <EditVerb send={send} refusalId={refusalId} onEdit={onEdit} />
             <Button variant="danger" onClick={() => onWithdraw(send)}>
               <span aria-hidden>{t("sched.withdraw")}</span>
               <span className="sr-only">

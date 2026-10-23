@@ -63,6 +63,27 @@ const MARKETING = {
   marketing_purpose: "marketing_email",
 };
 
+const FORMATTED = {
+  ...NEW_MESSAGE,
+  html_body:
+    '<p>Here is the <strong>quote</strong>, see <a href="https://acme.test/terms">the terms</a>.</p>',
+  attachments: [
+    {
+      id: "019f7e65-fbf7-7114-b114-40af4af63b01",
+      filename: "quote.pdf",
+      content_type: "application/pdf",
+      byte_size: 2048,
+    },
+    {
+      id: "019f7e65-fbf7-7114-b114-40af4af63b02",
+      filename: "terms.pdf",
+      content_type: "application/pdf",
+      byte_size: 1024,
+    },
+  ],
+  draft_ref: "draft-ref-1",
+};
+
 function mount(rows: unknown[]) {
   const sent = stubRoutes({
     "GET /scheduled-sends": () => jsonResponse(rows),
@@ -255,3 +276,88 @@ it("says so and opens nothing when the reply's thread has no record to file unde
   ).toBeVisible();
   expect(screen.queryByRole("dialog")).toBeNull();
 });
+
+it("keeps the markup, the files and the draft of a message saved without a change", async () => {
+  const user = userEvent.setup();
+  const sent = mount([FORMATTED]);
+  await user.click(
+    await screen.findByRole("button", { name: "Edit: The renewal quote" }),
+  );
+  const composer = within(await screen.findByRole("dialog"));
+  expect(composer.getByText("quote.pdf")).toBeVisible();
+  expect(composer.getByText("terms.pdf")).toBeVisible();
+  await user.click(
+    await screen.findByRole("button", { name: "Schedule send" }),
+  );
+  await waitFor(() =>
+    expect(sent.map((call) => call.key)).toContain(
+      `POST /scheduled-sends/${NEW_MESSAGE.id}/cancel`,
+    ),
+  );
+  const create = sent.find((call) => call.key === "POST /emails");
+  const body = create?.body as Record<string, unknown>;
+  expect(body.html_body).toContain("<strong>quote</strong>");
+  expect(body.html_body).toContain('href="https://acme.test/terms"');
+  expect(body).toMatchObject({
+    attachment_ids: FORMATTED.attachments.map((file) => file.id),
+    draft_ref: "draft-ref-1",
+  });
+});
+
+it("sends without a seeded file the reader removed", async () => {
+  const user = userEvent.setup();
+  const sent = mount([FORMATTED]);
+  await user.click(
+    await screen.findByRole("button", { name: "Edit: The renewal quote" }),
+  );
+  await user.click(
+    await screen.findByRole("button", { name: "Remove quote.pdf" }),
+  );
+  await user.click(
+    await screen.findByRole("button", { name: "Schedule send" }),
+  );
+  await waitFor(() =>
+    expect(sent.some((call) => call.key === "POST /emails")).toBe(true),
+  );
+  const create = sent.find((call) => call.key === "POST /emails");
+  expect(create?.body).toMatchObject({
+    attachment_ids: [FORMATTED.attachments[1]?.id],
+  });
+});
+
+it.each([
+  [
+    "an operator reason",
+    { operator_reason: "Asked for it at the fair" },
+    "Not editable: an edit would drop the reason you gave when scheduling it.",
+  ],
+  [
+    "a file the send would refuse",
+    { attachments_unavailable: 1 },
+    "Not editable: 1 attached file can no longer be sent.",
+  ],
+])(
+  "refuses Edit on a message with %s, says why and still withdraws it",
+  async (_, change, why) => {
+    const user = userEvent.setup();
+    const sent = mount([{ ...NEW_MESSAGE, ...change }]);
+    const edit = await screen.findByRole("button", {
+      name: "Edit: The renewal quote",
+    });
+    expect(edit).toBeDisabled();
+    expect(edit).toHaveAccessibleDescription(why);
+    await user.click(
+      screen.getByRole("button", { name: "Withdraw: The renewal quote" }),
+    );
+    await user.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: "Withdraw message",
+      }),
+    );
+    await waitFor(() =>
+      expect(sent.map((call) => call.key)).toContain(
+        `POST /scheduled-sends/${NEW_MESSAGE.id}/cancel`,
+      ),
+    );
+  },
+);

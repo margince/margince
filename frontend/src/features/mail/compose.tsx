@@ -240,7 +240,7 @@ export function ComposeWindow({
     activityId,
   });
   const fileTarget = answering ?? "";
-  const attached = useTargetFiles(fileTarget);
+  const attached = useTargetFiles(fileTarget, edit?.files);
   // Warn about carriage bounds before staging can refuse the message.
   const carriageBlocks = useCarriageBlocks(
     dial.channel?.id,

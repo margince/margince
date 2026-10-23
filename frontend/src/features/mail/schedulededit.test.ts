@@ -3,7 +3,7 @@
 
 import { expect, it } from "vitest";
 import { viewerZone } from "../../format/timezone";
-import { editSeedOf, isEditable } from "./schedulededit";
+import { editRefusalOf, editSeedOf, isEditable } from "./schedulededit";
 import type { ScheduledSend } from "./scheduledqueue";
 
 const SEND: ScheduledSend = {
@@ -35,6 +35,36 @@ it("seeds the composer from the first link and the grounding links after it", ()
   });
 });
 
+it("seeds the markup, the files and the draft reference the message was frozen with", () => {
+  const seed = editSeedOf({
+    ...SEND,
+    html_body:
+      '<p>One <strong>bold</strong> <a href="https://acme.test">link</a></p>',
+    attachments: [
+      {
+        id: "file-1",
+        filename: "quote.pdf",
+        content_type: "application/pdf",
+        byte_size: 2048,
+      },
+    ],
+    draft_ref: "draft-ref-1",
+  });
+  expect(seed).toMatchObject({
+    html: '<p>One <strong>bold</strong> <a href="https://acme.test">link</a></p>',
+    files: [{ id: "file-1", filename: "quote.pdf", byteSize: 2048 }],
+    draftRef: "draft-ref-1",
+  });
+});
+
+it("draws a plain message's paragraphs and seeds no files and no draft", () => {
+  expect(editSeedOf(SEND)).toMatchObject({
+    html: "<p>One</p><p>Two</p>",
+    files: [],
+    draftRef: "",
+  });
+});
+
 it("also edits a held message, which a human has to act on", () => {
   expect(editSeedOf({ ...SEND, status: "held" })).toBeDefined();
 });
@@ -45,6 +75,8 @@ it.each([
   ["names no record", { links: [] }],
   ["claims a marketing purpose", { marketing_purpose: "marketing_email" }],
   ["carries the legacy consent key", { consent_purpose: "marketing_email" }],
+  ["carries an operator reason", { operator_reason: "Asked at the fair" }],
+  ["holds a file the send would refuse", { attachments_unavailable: 1 }],
 ])("offers no edit on a message that %s", (_, change) => {
   expect(editSeedOf({ ...SEND, ...change })).toBeUndefined();
 });
@@ -62,5 +94,16 @@ it("seeds a reply from the thread's links and names the email it answers", () =>
     replyTo: "activity-1",
     anchor: { type: "company", id: "company-9" },
     recipientId: "contact-9",
+  });
+});
+
+it("names why a waiting message cannot be edited, when the row owes a reason", () => {
+  expect(editRefusalOf(SEND)).toBeUndefined();
+  expect(
+    editRefusalOf({ ...SEND, operator_reason: "Asked at the fair" }),
+  ).toEqual({ kind: "operatorReason" });
+  expect(editRefusalOf({ ...SEND, attachments_unavailable: 2 })).toEqual({
+    kind: "filesUnavailable",
+    count: 2,
   });
 });

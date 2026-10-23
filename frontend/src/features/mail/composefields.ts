@@ -149,7 +149,9 @@ export function useComposeFields({
   const [provenance, setProvenance] = useState<DraftProvenance | null>(null);
   // The served draft the body came from, so the server can tell a sent draft
   // from a rewritten one. It may only name the text on screen.
-  const [draftRef, setDraftRef] = useState<string | null>(null);
+  const [draftRef, setDraftRef] = useState<string | null>(
+    edit?.draftRef || null,
+  );
   // The words as the model last served them; a rewrite may replace only these.
   const [servedBody, setServedBody] = useState("");
   // Two non-error outcomes kept out of react-query's error channel, so the
