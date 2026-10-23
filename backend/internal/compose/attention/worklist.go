@@ -225,6 +225,8 @@ func (s *Service) worklistFrom(
 	rows = append(append(rows, s.planRows...), s.followUps.rows...)
 	waits, waitNote := s.rankedWaits(ctx, waiting, day.AsOf, scope)
 	rows = append(rows, waits...)
+	// One admission rule for every row the page, Focus and counts will read.
+	rows = admitBySource(ctx, rows)
 	// What the night thought of each deal, onto whichever row is about it — the
 	// brief's own row, and the at-risk row the fold below keeps. Stamped BEFORE
 	// the fold so the surviving row can inherit a score even where the night's

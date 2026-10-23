@@ -165,7 +165,7 @@ func (s *Service) readingDone(ctx context.Context, day crmcontracts.Attention) (
 	if s.marked.store == nil || s.marked.probe != nil {
 		return s, nil
 	}
-	candidates := classifyDay(day, day.AsOf, s.money)
+	candidates := admitBySource(ctx, classifyDay(day, day.AsOf, s.money))
 	among := make([]RowRef, 0, len(candidates))
 	for _, row := range candidates {
 		among = append(among, refOf(row))
