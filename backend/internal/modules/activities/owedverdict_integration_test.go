@@ -169,7 +169,7 @@ func TestAJudgedMessageLeavesTheBacklogAndKeepsItsVerdict(t *testing.T) {
 func TestASecondVerdictDoesNotOverwriteTheFirst(t *testing.T) {
 	e := setupLoad(t)
 	contact := e.buyer(t)
-	activity := e.waitingFrom(t, "Can you confirm?", "buyer@customer.test", contact)
+	activity := e.waitingFromToRep(t, "Can you confirm?", "buyer@customer.test", contact)
 	s := storeKnowing(e)
 
 	if _, err := s.SetOwedVerdict(asClassifier(e), activity, OwedVerdictAsksUs, "prompts-test", dbNow(t, e)); err != nil {

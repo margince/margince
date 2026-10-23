@@ -19,10 +19,12 @@ func directMailRecipientSQL(activity, addresses string) string {
 }
 
 // personalMailResponsibilitySQL keeps the inbound mail this seat answers for:
-// the mail addressed to it and to no other seat (soleDirectSeatSQL).
+// the mail addressed to it and to no other seat (soleDirectSeatSQL). With no
+// seat named it keeps every mail somebody answers for, so mail nobody owns
+// never becomes shared or unassigned work. It runs before WaitingScanCap.
 func personalMailResponsibilitySQL(owner *ids.UUID, identities string, arg func(any) int) string {
 	if owner == nil {
-		return scopeUnbounded
+		return "(a.kind <> 'email' OR " + soleDirectSeatSQL(identities) + " IS NOT NULL)"
 	}
 	return fmt.Sprintf("(a.kind = 'email' AND %s = $%d::uuid)", soleDirectSeatSQL(identities), arg(*owner))
 }

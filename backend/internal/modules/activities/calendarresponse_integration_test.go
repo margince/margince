@@ -33,8 +33,8 @@ func seedCalendarMailSaying(t *testing.T, e *loadEnv, method, verdict, text stri
 	source, _, err := store.LogActivity(asClassifier(e), LogActivityInput{
 		Kind: "email", Subject: &subject, Body: &body, Direction: &direction,
 		ThreadKey: ids.NewV7().String(), Source: "test", OccurredAt: &requestInstant,
-		CounterpartyEmail: requestCounterparty,
-		Links:             []ActivityLinkInput{{EntityType: "contact", EntityID: e.buyer(t)}},
+		CounterpartyEmail: requestCounterparty, EmailTo: []string{seatAddress(e.rep)},
+		Links: []ActivityLinkInput{{EntityType: "contact", EntityID: e.buyer(t)}},
 	})
 	if err != nil {
 		t.Fatal(err)

@@ -73,6 +73,15 @@ func seedWaitingMessageLinked(
 		id, direction, subject, at, "human:"+e.AdminUser.String(), thread); err != nil {
 		t.Fatalf("seeding a %s message: %v", direction, err)
 	}
+	// An inbound message names the reading seat in To, as capture records
+	// it: mail nobody is addressed by answers to nobody and is not waiting.
+	if direction == "inbound" {
+		if _, err := owner.Exec(context.Background(), `
+			INSERT INTO activity_participant (activity_id, role, address)
+			SELECT $1, 'to', lower(email) FROM app_user WHERE id = $2`, id, e.AdminUser); err != nil {
+			t.Fatalf("addressing the message: %v", err)
+		}
+	}
 	if contact.IsZero() {
 		return id
 	}
