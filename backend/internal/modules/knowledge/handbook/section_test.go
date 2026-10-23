@@ -9,21 +9,19 @@ import (
 )
 
 func TestSectionForNamesTheTimeZoneSectionAndItsSettingsPage(t *testing.T) {
-	const page = "your-own-settings.md"
-	line := lineOf(t, page, "To change your own time zone in Margince")
-	got, ok := SectionFor(page, line, line)
+	line := lineOf(t, "To change your own time zone in Margince")
+	got, ok := SectionFor(ownSettings, line, line)
 	if !ok {
-		t.Fatalf("SectionFor(%q, %d) found no section", page, line)
+		t.Fatalf("SectionFor(%q, %d) found no section", ownSettings, line)
 	}
 	if got.Title != "How do I change my time zone?" || got.Opens != "meetings" || got.Line != line-2 {
-		t.Fatalf("SectionFor(%q, %d) = %+v, want the time zone section two lines up, opening meetings", page, line, got)
+		t.Fatalf("SectionFor(%q, %d) = %+v, want the time zone section two lines up, opening meetings", ownSettings, line, got)
 	}
 }
 
 func TestSectionForReadsTheHeadingLineItself(t *testing.T) {
-	const page = "your-own-settings.md"
-	heading := lineOf(t, page, "### How do I change my time zone?")
-	got, ok := SectionFor(page, heading, heading)
+	heading := lineOf(t, "### How do I change my time zone?")
+	got, ok := SectionFor(ownSettings, heading, heading)
 	if !ok || got.Line != heading {
 		t.Fatalf("SectionFor on the heading line = %+v, %v; want the section that heading opens", got, ok)
 	}
@@ -39,23 +37,21 @@ func TestSectionForAnswersNothingAboveTheFirstSectionOrForAPageNotShipped(t *tes
 }
 
 func TestASpanRunningIntoALaterHeadingIsAboutThatSection(t *testing.T) {
-	const page = "your-own-settings.md"
-	heading := lineOf(t, page, "### How do I change my time zone?")
-	got, ok := SectionFor(page, heading-3, heading+2)
+	heading := lineOf(t, "### How do I change my time zone?")
+	got, ok := SectionFor(ownSettings, heading-3, heading+2)
 	if !ok || got.Line != heading || got.Opens != "meetings" {
 		t.Fatalf("a span from the section above into the time zone section = %+v, %v; want the time zone section", got, ok)
 	}
-	above, ok := SectionFor(page, heading-3, heading-1)
+	above, ok := SectionFor(ownSettings, heading-3, heading-1)
 	if !ok || above.Line >= heading {
 		t.Fatalf("a span ending above the heading = %+v, %v; want the section above", above, ok)
 	}
 }
 
 func TestASpanOpeningOnAHeadingIsAboutThatSectionThoughItRunsIntoTheNext(t *testing.T) {
-	const page = "your-own-settings.md"
-	heading := lineOf(t, page, "### How do I change my time zone?")
-	next := lineOf(t, page, "### How do I share a booking link?")
-	got, ok := SectionFor(page, heading, next+2)
+	heading := lineOf(t, "### How do I change my time zone?")
+	next := lineOf(t, "### How do I share a booking link?")
+	got, ok := SectionFor(ownSettings, heading, next+2)
 	if !ok || got.Line != heading {
 		t.Fatalf("a span from the time zone heading into the next section = %+v, %v; want the time zone section", got, ok)
 	}
@@ -137,17 +133,20 @@ func mentionsMarker(line string) bool {
 	return comment || strings.Contains(folded, "settings/")
 }
 
-func lineOf(t *testing.T, page, text string) int {
+// ownSettings is the page the section tests read: it holds the time zone section.
+const ownSettings = "your-own-settings.md"
+
+func lineOf(t *testing.T, text string) int {
 	t.Helper()
-	content, ok := Open(page)
+	content, ok := Open(ownSettings)
 	if !ok {
-		t.Fatalf("this build ships no %s", page)
+		t.Fatalf("this build ships no %s", ownSettings)
 	}
 	for i, line := range strings.Split(string(content), "\n") {
 		if strings.HasPrefix(line, text) {
 			return i + 1
 		}
 	}
-	t.Fatalf("%s holds no line starting %q", page, text)
+	t.Fatalf("%s holds no line starting %q", ownSettings, text)
 	return 0
 }
