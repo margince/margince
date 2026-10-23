@@ -20,7 +20,6 @@ import (
 // pairs the filing rule no longer files.
 type DedupeRecheckArgs struct{}
 
-// Kind names the declared dedupe re-check job.
 func (DedupeRecheckArgs) Kind() string { return "dedupe_recheck" }
 
 // FleetWide makes workspace fan-out explicit to the job binder.
