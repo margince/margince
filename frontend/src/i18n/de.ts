@@ -23,6 +23,8 @@ export const de = {
     "Die neue Prüfung ist unsicher. Prüfe die Nachricht, bevor du das Ergebnis änderst.",
   "homeRepair.reason.classificationAdopted":
     "Menschliche Änderungen oder fehlende Nachweise verhindern eine automatische Korrektur.",
+  "homeRepair.reason.classificationIncomplete":
+    "Die Mail oder die letzte Mail davor an diesen Kontakt wurde nicht vollständig gelesen.",
   "homeRepair.reason.classificationWithheld":
     "Ein Teil des Nachrichtenkontexts ist nicht zugänglich. Prüfe ihn vor einer Änderung.",
   "homeRepair.reason.classificationCurrent":
@@ -73,6 +75,10 @@ export const de = {
   "homeRepair.reason.cancelled": "Der zugrunde liegende Termin wurde abgesagt.",
   "homeRepair.reason.requestAge":
     "Die ursprüngliche Anfrage liegt außerhalb des Wartezeitraums. Archivieren markiert sie nicht als beantwortet.",
+  "homeRepair.reason.sourceUnassessed":
+    "Der Text der Quellmail wurde noch nicht geprüft.",
+  "homeRepair.reason.sourceIncomplete":
+    "Der Text der Mail wurde nur zum Teil gelesen.",
   "homeRepair.reason.contextUnread":
     "Spätere Nachrichten wurden noch nicht gelesen.",
   "homeRepair.reason.contextUnassessed":
@@ -3717,6 +3723,16 @@ export const de = {
   "email.thread.fold": "Nachricht von {name} einklappen",
   "email.thread.toLine": "an {names}",
   "email.thread.details": "Details",
+  "email.thread.textForwarded":
+    "Der Text unten stammt aus der weitergeleiteten Mail, nicht vom Verfasser selbst.",
+  "email.thread.textPartial":
+    "Ein Teil des Textes dieser Mail konnte nicht gelesen werden.",
+  "email.thread.textUnassessed":
+    "Margince hat noch nicht geprüft, ob der ganze Text dieser Mail gelesen wurde.",
+  "email.thread.textUnreadable":
+    "Der Text dieser Mail konnte nicht gelesen werden.",
+  "email.thread.textUnreadableHint":
+    "Öffne sie in deinem E-Mail-Programm, um ihn zu sehen.",
   "email.thread.replied": "Antwort gesendet und zum Thread hinzugefügt",
   "email.forward": "Weiterleiten",
   "email.forwardHeader": "Weitergeleitete Nachricht",
@@ -3733,6 +3749,10 @@ export const de = {
   "commitment.review.historical": "Ältere Zusage ohne aktuelle Frist.",
   "commitment.review.beforeBaseline":
     "Vor dem Datum gesendet, ab dem dieses Postfach Zusagen vorschlägt.",
+  "commitment.review.sourceUnassessed":
+    "Der Text der Quellmail wurde noch nicht geprüft.",
+  "commitment.review.sourceIncomplete":
+    "Der Text der Mail wurde nur zum Teil gelesen.",
   "commitment.review.incomplete":
     "Spätere Nachrichten wurden nicht vollständig gelesen. Die Zusage könnte bereits erfüllt sein.",
   "commitment.review.unknownDate":
@@ -11088,6 +11108,8 @@ export const de = {
     "die Befunde dieses Threads haben kein sicheres Ziel, da sich der Thread nicht genau einem Unternehmen zuordnen lässt",
   "pipeline.reason.two_bodies_of_work":
     "die Befunde dieses Threads wären für eines der Projekte falsch, da der Thread 2 Projekte umfasst",
+  "pipeline.reason.thread_not_all_read":
+    "eine Mail in diesem Thread wurde nicht vollständig gelesen, daher könnte eine Zusammenfassung des Rests auslassen, was sie ändert",
   "pipeline.reason.thread_not_all_open":
     "eine Zusammenfassung des ganzen Threads würde eine Teilansicht als vollständig darstellen, da eine Nachricht in diesem Thread für einen Teil seiner Lesenden verborgen ist",
   "pipeline.reason.answered_on_the_company":

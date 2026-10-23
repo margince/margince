@@ -8,6 +8,7 @@ import { type ReactNode, useState } from "react";
 import type { components } from "../api/schema";
 import { useT } from "../i18n";
 import { Avatar } from "./avatar";
+import { Callout } from "./callout";
 import { EmailEntry } from "./emailentry";
 import {
   EmailAttachments,
@@ -236,10 +237,43 @@ function OpenMessage({
           <FiledUnder presentation={presentation} render={renderRecords} />
         </EmailEnvelope>
       )}
+      <TextNotice completeness={presentation.body_completeness} />
       <EmailText body={presentation.body ?? ""} />
       <EmailAttachments files={presentation.attachments} />
       {related?.()}
     </article>
+  );
+}
+
+const TEXT_NOTICES = {
+  partial: "email.thread.textPartial",
+  unreadable: "email.thread.textUnreadable",
+  forwarded: "email.thread.textForwarded",
+  unassessed: "email.thread.textUnassessed",
+} as const;
+
+/**
+ * Says that a mail's text was read only in part, not at all, not yet checked,
+ * or is a forwarded original's.
+ */
+function TextNotice({
+  completeness,
+}: Readonly<{ completeness?: EmailPresentation["body_completeness"] }>) {
+  const t = useT();
+  if (completeness === "forwarded") {
+    return <Callout kind="standing" title={t(TEXT_NOTICES.forwarded)} />;
+  }
+  if (
+    completeness !== "partial" &&
+    completeness !== "unreadable" &&
+    completeness !== "unassessed"
+  ) {
+    return null;
+  }
+  return (
+    <Callout kind="standing" title={t(TEXT_NOTICES[completeness])}>
+      {t("email.thread.textUnreadableHint")}
+    </Callout>
   );
 }
 

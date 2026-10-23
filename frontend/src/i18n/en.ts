@@ -20,6 +20,8 @@ export const en = {
     "The new check is uncertain. Review the message before changing its result.",
   "homeRepair.reason.classificationAdopted":
     "Human changes or missing audit evidence prevent an automatic correction.",
+  "homeRepair.reason.classificationIncomplete":
+    "The mail, or the last mail sent to it before, was not read in full.",
   "homeRepair.reason.classificationWithheld":
     "Some message context is outside current access. Review it before changing this result.",
   "homeRepair.reason.classificationCurrent":
@@ -71,6 +73,10 @@ export const en = {
   "homeRepair.reason.cancelled": "The source meeting was canceled.",
   "homeRepair.reason.requestAge":
     "The original request is past the waiting horizon; archiving does not mark it answered.",
+  "homeRepair.reason.sourceUnassessed":
+    "The text of the source mail has not been checked yet.",
+  "homeRepair.reason.sourceIncomplete":
+    "The text of this mail was only read in part.",
   "homeRepair.reason.contextUnread": "Later messages have not been read.",
   "homeRepair.reason.contextUnassessed":
     "Later messages have not been assessed for changes to this commitment.",
@@ -3726,6 +3732,14 @@ export const en = {
   "email.thread.fold": "Fold the message from {name}",
   "email.thread.toLine": "to {names}",
   "email.thread.details": "Details",
+  "email.thread.textForwarded":
+    "The text below is the forwarded mail, not words the sender wrote.",
+  "email.thread.textPartial":
+    "Part of the text of this mail could not be read.",
+  "email.thread.textUnassessed":
+    "Margince has not yet checked whether it read all of this mail’s text.",
+  "email.thread.textUnreadable": "The text of this mail could not be read.",
+  "email.thread.textUnreadableHint": "Open it in your mail program to see it.",
   "email.thread.replied": "Sent and added to this thread.",
   "email.forward": "Forward",
   "email.forwardHeader": "Forwarded message",
@@ -3743,6 +3757,10 @@ export const en = {
     "Historical commitment without a current deadline.",
   "commitment.review.beforeBaseline":
     "Sent before the date this mailbox suggests commitments from.",
+  "commitment.review.sourceUnassessed":
+    "The text of the source mail has not been checked yet.",
+  "commitment.review.sourceIncomplete":
+    "The text of this mail was only read in part.",
   "commitment.review.incomplete":
     "Later messages were not fully read. The commitment may already be fulfilled.",
   "commitment.review.unknownDate": "The source date could not be verified.",
@@ -11139,6 +11157,8 @@ export const en = {
     "this thread does not map to exactly one company, so its findings have no certain destination",
   "pipeline.reason.two_bodies_of_work":
     "this thread spans 2 projects, so its findings would be wrong for one of them",
+  "pipeline.reason.thread_not_all_read":
+    "a message on this thread was not read in full, so a summary of the rest could leave out what changed it",
   "pipeline.reason.thread_not_all_open":
     "a message on this thread is hidden from some of its readers, so a summary of the whole would present a partial view as complete",
   "pipeline.reason.answered_on_the_company":

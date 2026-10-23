@@ -184,6 +184,7 @@ var threadReaderQuery = conversationCTE(" AND a.thread_key = $1") + `
 		 WHERE ` + threadReachesOneAccount + `
 		   AND ` + threadIsOneBodyOfWork + `
 		   AND ` + threadIsFullyOpen + `
+		   AND ` + threadIsFullyRead + `
 		   AND ` + threadHasANamedReader
 
 // legacyThread is the cited message and the five before it on its thread. A

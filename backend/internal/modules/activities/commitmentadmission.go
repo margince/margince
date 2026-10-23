@@ -23,6 +23,16 @@ const CommitmentAdmissionVersion = "2"
 // AutomaticMailContent is the content boundary shared by extraction and its admission check.
 const AutomaticMailContent = `audience = 'workspace' AND restricted_at IS NULL`
 
+// MailBodyCompleteSQL is the one test automatic work reads a mail body by. A
+// promise, a request or a settlement is read only from text the parser decoded
+// in full. A partial or unreadable body is shown to a reader, never judged.
+// So is an unassessed one: mail captured before completeness was recorded.
+// It waits for the data task that assesses it from its stored original, and
+// stays unassessed when there is none. A body that is not email was never parsed.
+func MailBodyCompleteSQL(alias string) string {
+	return "(" + alias + ".kind <> 'email' OR " + alias + ".body_completeness = 'complete')"
+}
+
 // CommitmentAdmissionReason explains whether evidence supports current automatic work.
 type CommitmentAdmissionReason string
 
@@ -31,6 +41,8 @@ const (
 	CommitmentCurrent           CommitmentAdmissionReason = ""
 	CommitmentHistorical        CommitmentAdmissionReason = "historical_without_current_deadline"
 	CommitmentIncomplete        CommitmentAdmissionReason = "later_context_not_read"
+	CommitmentSourceIncomplete  CommitmentAdmissionReason = "source_text_incomplete"
+	CommitmentSourceUnassessed  CommitmentAdmissionReason = "source_text_unassessed"
 	CommitmentContextUnassessed CommitmentAdmissionReason = "later_context_not_assessed"
 	CommitmentSourceUnavailable CommitmentAdmissionReason = auth.CommitmentEvidenceUnavailable
 	CommitmentSourceUnknown     CommitmentAdmissionReason = "source_time_unknown"
@@ -55,9 +67,15 @@ type CommitmentAdmissionEvidence struct {
 	ProviderReceivedAt *time.Time
 	SourceOccurredAt   *time.Time
 	UnreadLater        bool
-	ContextAssessed    bool
-	CancelledMeeting   bool
-	Meeting            bool
+	// SourceIncomplete is a source mail whose text was not read in full, or is
+	// a forwarded original's. SourceUnassessed is one stored before that was
+	// recorded and not yet checked. LaterUnassessed is the same of a later message.
+	SourceIncomplete bool
+	SourceUnassessed bool
+	LaterUnassessed  bool
+	ContextAssessed  bool
+	CancelledMeeting bool
+	Meeting          bool
 }
 
 // AdmitAutomaticCommitment does not change existing work or assert that a promise was fulfilled.
@@ -67,6 +85,12 @@ func AdmitAutomaticCommitment(evidence CommitmentAdmissionEvidence, asOf time.Ti
 	}
 	if evidence.CancelledMeeting {
 		return CommitmentMeetingCancelled
+	}
+	if evidence.SourceUnassessed {
+		return CommitmentSourceUnassessed
+	}
+	if evidence.SourceIncomplete {
+		return CommitmentSourceIncomplete
 	}
 	if evidence.OccurredAt.After(asOf) {
 		if evidence.Meeting {
@@ -81,7 +105,7 @@ func AdmitAutomaticCommitment(evidence CommitmentAdmissionEvidence, asOf time.Ti
 		}
 	}
 	if evidence.UnreadLater {
-		if !evidence.ContextAssessed {
+		if !evidence.ContextAssessed || evidence.LaterUnassessed {
 			return CommitmentContextUnassessed
 		}
 		return CommitmentIncomplete
@@ -110,13 +134,20 @@ func CommitmentAdmissionEvidenceTx(ctx context.Context, tx pgx.Tx, in Commitment
    WHERE later.kind = a.kind AND later.thread_key = a.thread_key
     AND later.archived_at IS NULL AND `+AutomaticMailContent+`
     AND (later.occurred_at, later.id) > (a.occurred_at, a.id)
-    AND NOT coalesce(later.id = ANY($%[1]d::uuid[]), false))
+    -- A later message read only in part is later context not read.
+    AND (NOT coalesce(later.id = ANY($%[1]d::uuid[]), false) OR NOT `+MailBodyCompleteSQL("later")+`)),
+  a.kind = 'email' AND a.body_completeness NOT IN ('complete', 'unassessed'),
+  a.kind = 'email' AND a.body_completeness = 'unassessed',
+  a.kind = 'email' AND EXISTS (SELECT 1 FROM activity later
+   WHERE later.kind = a.kind AND later.thread_key = a.thread_key AND later.archived_at IS NULL
+    AND `+AutomaticMailContent+` AND later.body_completeness = 'unassessed'
+    AND (later.occurred_at, later.id) > (a.occurred_at, a.id))
  FROM activity a WHERE a.id = $%[2]d`, arg(in.ReadMessages), arg(in.SourceID))
 	if !in.Preview {
 		query += " FOR UPDATE OF a"
 	}
 	var evidence CommitmentAdmissionEvidence
-	if err := tx.QueryRow(ctx, query, args...).Scan(&evidence.OccurredAt, &evidence.RawCaptureID, &evidence.CapturedMail, &evidence.Meeting, &evidence.CancelledMeeting, &evidence.SourceOccurredAt, &evidence.ProviderReceivedAt, &evidence.UnreadLater); err != nil {
+	if err := tx.QueryRow(ctx, query, args...).Scan(&evidence.OccurredAt, &evidence.RawCaptureID, &evidence.CapturedMail, &evidence.Meeting, &evidence.CancelledMeeting, &evidence.SourceOccurredAt, &evidence.ProviderReceivedAt, &evidence.UnreadLater, &evidence.SourceIncomplete, &evidence.SourceUnassessed, &evidence.LaterUnassessed); err != nil {
 		return CommitmentAdmissionEvidence{}, fmt.Errorf("activities: reading commitment admission evidence: %w", err)
 	}
 	if err := auth.EnsureActivityContentVisibleLive(ctx, tx, in.SourceID.UUID); err != nil {

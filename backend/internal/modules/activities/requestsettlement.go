@@ -110,9 +110,26 @@ var repliedRequestsSQL = outstandingRequestSQL + `
  AND a.audience = 'workspace'
  AND a.counterparty_email IS NOT NULL
  AND EXISTS (` + settlementAnswersSQL() + `)
+ AND ` + settlementEvidenceCompleteSQL + `
  AND NOT EXISTS (SELECT 1 FROM activity_request_settlement judged
    WHERE judged.request_activity_id = a.id
      AND judged.judged_through_activity_id = (` + newestAnswerSince + `))`
+
+// settlementEvidenceCompleteSQL keeps a request off the candidate list when its
+// evidence holds a body that was not read in full. The settlement pass would
+// refuse to judge it. A refused request left on the list comes back first on
+// every pass, so a few of them would starve every other request. It covers at
+// least what the pass reads. That is the request, its later thread messages
+// with the same correspondent, and the answers off its thread.
+var settlementEvidenceCompleteSQL = MailBodyCompleteSQL("a") + `
+ AND NOT EXISTS (SELECT 1 FROM activity later
+   WHERE later.thread_key = a.thread_key AND later.kind = a.kind
+     AND later.counterparty_email = a.counterparty_email AND later.archived_at IS NULL
+     AND later.occurred_at <= $1 AND (later.occurred_at, later.id) > (a.occurred_at, a.id)
+     AND NOT ` + MailBodyCompleteSQL("later") + `)
+ AND NOT EXISTS (SELECT 1 FROM (` + offThreadAnswersSQL("a", "$1") + `) off
+   JOIN activity answer ON answer.id = off.id
+   WHERE NOT ` + MailBodyCompleteSQL("answer") + `)`
 
 // settlementAnswersSQL selects, as (id, occurred_at), every answer to request a
 // as of the pass's own instant ($1): our attested reply in the conversation and

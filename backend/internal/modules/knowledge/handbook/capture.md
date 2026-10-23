@@ -38,7 +38,7 @@ A skipped message is not tried again.
 **3. Filing it.** Margince checks that the address was not erased and that the
 message is not only internal. It then stores the message and adds it to the
 timelines of the contacts on it, with its links and attachments. The audit log
-records that this happened, never the subject or the body.
+records that this happened, never the subject or the body. Mail whose text Margince could not read in full is explained in [When a mail cannot be read](when-a-mail-cannot-be-read.md).
 
 **4. Deciding about the sender.** See the ladder below.
 

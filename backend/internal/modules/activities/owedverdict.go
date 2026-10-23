@@ -149,7 +149,12 @@ var priorOutboundJoin = priorOutboundVisibleJoin("true")
 func priorOutboundVisibleJoin(scope string) string {
 	return `LEFT JOIN LATERAL (
   SELECT prior.id, prior.subject, left(prior.body, $%[4]d) AS body, prior.occurred_at
-    FROM activity prior
+    ` + priorOutboundFrom(scope) + `) prior ON true`
+}
+
+// priorOutboundFrom finds that message for candidate a.
+func priorOutboundFrom(scope string) string {
+	return `FROM activity prior
    WHERE a.thread_key IS NOT NULL
      AND a.counterparty_email IS NOT NULL
      AND ` + ourOutboundInThisThread("prior", "a") + `
@@ -160,8 +165,14 @@ func priorOutboundVisibleJoin(scope string) string {
      AND prior.restricted_at IS NULL AND (` + scope + `)
      AND (prior.occurred_at, prior.id) < (a.occurred_at, a.id)
    ORDER BY prior.occurred_at DESC, prior.id DESC
-   LIMIT 1) prior ON true`
+   LIMIT 1`
 }
+
+// priorContextComplete refuses a candidate whose newest prior message of ours
+// was not read in full. That message is the context the verdict turns on, and
+// skipping to an older one would show the model a stale exchange as current.
+// A subquery rather than the join, so it can sit inside the waiting scan.
+var priorContextComplete = `coalesce((SELECT ` + MailBodyCompleteSQL("prior") + ` ` + priorOutboundFrom("true") + `), true)`
 
 // candidateGroupBy keeps the participant aggregation from multiplying the row.
 const candidateGroupBy = `a.id, a.kind, a.subject, a.body, a.has_calendar_part, a.calendar_method, a.occurred_at,
@@ -276,7 +287,8 @@ func (s *Store) OwedBacklog(ctx context.Context, ruleset string, asOf time.Time,
 		// beside it does not cover a confidentiality narrowing.
 		waiting, err := waitingReplyExistsClause(ctx, arg, asOf, nil, nil, own, nil, horizon,
 			`a.owed_verdict IS NULL AND `+owedVerdictDecline.offeredSQL("a.", fmt.Sprintf("$%d", arg(ruleset)))+
-				` AND a.audience = 'workspace' AND a.restricted_at IS NULL`,
+				` AND a.audience = 'workspace' AND a.restricted_at IS NULL AND `+MailBodyCompleteSQL("a")+
+				` AND `+priorContextComplete,
 			// An unjudged calendar response is off the lane until judged, and
 			// judged it must be: any sender can mark a request REPLY.
 			scopeUnbounded)
@@ -365,6 +377,8 @@ func (s *Store) OwedRestale(ctx context.Context, ruleset string, limit, bodyLimi
 			   AND a.archived_at IS NULL
 			   AND a.audience = 'workspace'
 			   AND a.restricted_at IS NULL
+			   AND `+MailBodyCompleteSQL("a")+`
+			   AND `+priorContextComplete+`
 			   -- Declined by every rung under THESE rules (MarkOwedVerdictDeclined):
 			   -- its verdict stands. A decline under older rules is re-offered.
 			   AND `+owedVerdictDecline.offeredSQL("a.", "$%[2]d")+`

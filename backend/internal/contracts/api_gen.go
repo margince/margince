@@ -3508,6 +3508,33 @@ func (e BlockedDomainSource) Valid() bool {
 	}
 }
 
+// Defines values for BodyCompleteness.
+const (
+	BodyCompletenessComplete   BodyCompleteness = "complete"
+	BodyCompletenessForwarded  BodyCompleteness = "forwarded"
+	BodyCompletenessPartial    BodyCompleteness = "partial"
+	BodyCompletenessUnassessed BodyCompleteness = "unassessed"
+	BodyCompletenessUnreadable BodyCompleteness = "unreadable"
+)
+
+// Valid indicates whether the value is a known member of the BodyCompleteness enum.
+func (e BodyCompleteness) Valid() bool {
+	switch e {
+	case BodyCompletenessComplete:
+		return true
+	case BodyCompletenessForwarded:
+		return true
+	case BodyCompletenessPartial:
+		return true
+	case BodyCompletenessUnassessed:
+		return true
+	case BodyCompletenessUnreadable:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for BriefDeliveryMorningBriefDelivery.
 const (
 	BriefDeliveryMorningBriefDeliveryEmail BriefDeliveryMorningBriefDelivery = "email"
@@ -24298,6 +24325,9 @@ type Activity struct {
 	Author *SourceAuthor `json:"author,omitempty"`
 	Body   *string       `json:"body,omitempty"`
 
+	// BodyCompleteness How much of a mail's text Margince could decode. Absent when the content is withheld or the body was erased.
+	BodyCompleteness *BodyCompleteness `json:"body_completeness,omitempty"`
+
 	// BulkMailAttested This message carried an RFC 2369 List-Unsubscribe header, so the SENDER declared it bulk. Per message, never per sender: the same address sends a newsletter and a reply, and treating the sender as bulk would bury the reply.
 	BulkMailAttested *bool `json:"bulk_mail_attested,omitempty"`
 
@@ -29007,6 +29037,16 @@ type BlockedDomainListResponse struct {
 	// page size would tell an operator their domain was never refused when it was.
 	Total int `json:"total"`
 }
+
+// BodyCompleteness How much of a mail's text Margince could decode. `complete`: all of it. `partial`: a text
+// part was not read in full (it broke while decoding, or it ran past the size limit), so
+// the body may lack text. `unreadable`: none of it, so the body holds only the From and To
+// lines Margince adds. `forwarded`: the mail said nothing of its own, and the body is the
+// text of the original it forwarded, not the sender's own words. `unassessed`: a mail
+// stored before this was recorded and not yet checked against its stored original, or one
+// with no original to check. Automatic work (promises, requests and their settlement, and
+// the events read from a conversation) is read only from a `complete` mail body.
+type BodyCompleteness string
 
 // BoughtField One value on a contact that a data provider's purchase wrote and still owns.
 type BoughtField struct {
@@ -37757,12 +37797,15 @@ type EmailPresentation struct {
 
 	// Body The message as plain text, normalised. Null when withheld. Provider payloads are
 	// never handed to a browser to parse.
-	Body      *string            `json:"body,omitempty"`
-	CanRelink bool               `json:"can_relink"`
-	CanReply  bool               `json:"can_reply"`
-	Cc        []EmailParty       `json:"cc"`
-	From      []EmailParty       `json:"from"`
-	Id        openapi_types.UUID `json:"id"`
+	Body *string `json:"body,omitempty"`
+
+	// BodyCompleteness How much of a mail's text Margince could decode. Absent when the content is withheld or the body was erased.
+	BodyCompleteness *BodyCompleteness  `json:"body_completeness,omitempty"`
+	CanRelink        bool               `json:"can_relink"`
+	CanReply         bool               `json:"can_reply"`
+	Cc               []EmailParty       `json:"cc"`
+	From             []EmailParty       `json:"from"`
+	Id               openapi_types.UUID `json:"id"`
 
 	// Lifecycle What kind of message this is. One value today: this read serves delivered
 	// correspondence. A scheduled send and a draft awaiting approval will borrow the
@@ -63049,6 +63092,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "body")
 	}
 
+	if raw, found := object["body_completeness"]; found {
+		err = json.Unmarshal(raw, &a.BodyCompleteness)
+		if err != nil {
+			return fmt.Errorf("error reading 'body_completeness': %w", err)
+		}
+		delete(object, "body_completeness")
+	}
+
 	if raw, found := object["bulk_mail_attested"]; found {
 		err = json.Unmarshal(raw, &a.BulkMailAttested)
 		if err != nil {
@@ -63371,6 +63422,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["body"], err = json.Marshal(a.Body)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'body': %w", err)
+		}
+	}
+
+	if a.BodyCompleteness != nil {
+		object["body_completeness"], err = json.Marshal(a.BodyCompleteness)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'body_completeness': %w", err)
 		}
 	}
 

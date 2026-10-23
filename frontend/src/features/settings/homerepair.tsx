@@ -37,6 +37,8 @@ export const HOME_REPAIR_REASON_LABELS: Record<string, MessageKey> = {
   human_changed_or_provenance_missing:
     "homeRepair.reason.classificationAdopted",
   classification_context_withheld: "homeRepair.reason.classificationWithheld",
+  classification_evidence_incomplete:
+    "homeRepair.reason.classificationIncomplete",
   classification_current: "homeRepair.reason.classificationCurrent",
   classification_changed: "homeRepair.reason.classificationChanged",
   company_has_deal: "homeRepair.reason.dealExists",
@@ -54,6 +56,8 @@ export const HOME_REPAIR_REASON_LABELS: Record<string, MessageKey> = {
   lifecycle_evidence_changed: "homeRepair.reason.evidenceChanged",
   duplicate_pending_proposal: "homeRepair.reason.duplicate",
   later_context_not_read: "homeRepair.reason.contextUnread",
+  source_text_incomplete: "homeRepair.reason.sourceIncomplete",
+  source_text_unassessed: "homeRepair.reason.sourceUnassessed",
   later_context_not_assessed: "homeRepair.reason.contextUnassessed",
   source_time_unknown: "homeRepair.reason.timeUnknown",
   source_time_contradicted: "homeRepair.reason.timeContradicted",

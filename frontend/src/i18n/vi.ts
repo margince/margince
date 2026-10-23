@@ -31,6 +31,7 @@ export const vi = {
     "Lần kiểm tra mới chưa chắc chắn. Xem xét tin nhắn trước khi đổi kết quả.",
   "homeRepair.reason.classificationAdopted":
     "Thay đổi của người dùng hoặc thiếu bằng chứng kiểm toán ngăn việc sửa tự động.",
+  "homeRepair.reason.classificationIncomplete": "Thư này, hoặc thư gửi đi gần nhất trước đó, chưa được đọc hết.",
   "homeRepair.reason.classificationWithheld":
     "Một phần ngữ cảnh tin nhắn nằm ngoài quyền truy cập hiện tại. Xem xét trước khi đổi kết quả.",
   "homeRepair.reason.classificationCurrent":
@@ -79,6 +80,8 @@ export const vi = {
   "homeRepair.reason.cancelled": "Cuộc họp nguồn đã bị hủy.",
   "homeRepair.reason.requestAge":
     "Yêu cầu gốc đã quá thời hạn chờ; lưu trữ không đánh dấu yêu cầu là đã trả lời.",
+  "homeRepair.reason.sourceUnassessed": "Nội dung của thư nguồn chưa được kiểm tra.",
+  "homeRepair.reason.sourceIncomplete": "Nội dung thư chỉ được đọc một phần.",
   "homeRepair.reason.contextUnread": "Các tin nhắn sau đó chưa được đọc.",
   "homeRepair.reason.contextUnassessed":
     "Các tin nhắn sau đó chưa được đánh giá về thay đổi đối với cam kết này.",
@@ -3622,6 +3625,11 @@ export const vi = {
   "email.thread.fold": "Thu gọn thư của {name}",
   "email.thread.toLine": "gửi {names}",
   "email.thread.details": "Chi tiết",
+  "email.thread.textForwarded": "Nội dung bên dưới là thư được chuyển tiếp, không phải lời của chính bên gửi.",
+  "email.thread.textPartial": "Không đọc được một phần nội dung của thư này.",
+  "email.thread.textUnassessed": "Margince chưa kiểm tra xem đã đọc hết nội dung của thư này hay chưa.",
+  "email.thread.textUnreadable": "Không đọc được nội dung của thư này.",
+  "email.thread.textUnreadableHint": "Hãy mở thư trong ứng dụng thư để xem.",
   "email.thread.replied": "Đã gửi và thêm vào chuỗi thư này.",
   "email.forward": "Chuyển tiếp",
   "email.forwardHeader": "Thư được chuyển tiếp",
@@ -3638,6 +3646,8 @@ export const vi = {
   "commitment.review.historical": "Cam kết cũ không có hạn chót hiện tại.",
   "commitment.review.beforeBaseline":
     "Gửi trước ngày hộp thư này bắt đầu gợi ý cam kết.",
+  "commitment.review.sourceUnassessed": "Nội dung của thư nguồn chưa được kiểm tra.",
+  "commitment.review.sourceIncomplete": "Nội dung thư chỉ được đọc một phần.",
   "commitment.review.incomplete":
     "Chưa đọc hết các tin nhắn sau đó. Cam kết có thể đã được hoàn thành.",
   "commitment.review.unknownDate": "Chưa xác minh được ngày của nguồn.",
@@ -10787,6 +10797,7 @@ export const vi = {
     "chuỗi thư này không gắn với đúng một công ty, nên các phát hiện không có nơi lưu chắc chắn",
   "pipeline.reason.two_bodies_of_work":
     "chuỗi thư này trải trên 2 dự án, nên các phát hiện sẽ sai với một trong hai dự án",
+  "pipeline.reason.thread_not_all_read": "một thư trong chuỗi này chưa được đọc hết, nên bản tóm tắt phần còn lại có thể bỏ sót điều đã thay đổi nó",
   "pipeline.reason.thread_not_all_open":
     "một tin nhắn trong chuỗi thư này bị ẩn với một số thành viên xem chuỗi thư, nên bản tóm tắt toàn bộ chuỗi thư sẽ cho thấy một phần như thể là toàn bộ",
   "pipeline.reason.answered_on_the_company":

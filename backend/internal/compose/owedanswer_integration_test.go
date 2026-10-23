@@ -40,6 +40,8 @@ type owedMail struct {
 	authenticated bool
 	// html is an HTML body sent instead of the plain one.
 	html string
+	// encoding is the plain body's Content-Transfer-Encoding, none when empty.
+	encoding string
 	// deliveredTo is the receiving server's Delivered-To, which proves a Bcc
 	// copy reached the seat.
 	deliveredTo string
@@ -74,7 +76,11 @@ func (m owedMail) raw() []byte {
 	if body == "" {
 		body = "Text."
 	}
-	lines = append(lines, "Content-Type: text/plain; charset=utf-8", "", body, "")
+	lines = append(lines, "Content-Type: text/plain; charset=utf-8")
+	if m.encoding != "" {
+		lines = append(lines, "Content-Transfer-Encoding: "+m.encoding)
+	}
+	lines = append(lines, "", body, "")
 	return []byte(strings.Join(lines, "\r\n"))
 }
 

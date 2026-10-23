@@ -68,6 +68,7 @@ type activityScan struct {
 	// passed, exactly like the subject and body.
 	raw              map[string]any
 	bulkMailAttested bool
+	bodyCompleteness string
 	version          int64
 	audience         string
 	// contentAvailable is the caller's audience test, evaluated per row: it
@@ -133,6 +134,7 @@ var activityProjection = []activityColumn{
 	{"a.thread_key", func(s *activityScan) any { return &s.threadKey }},
 	{"a.capture_label", func(s *activityScan) any { return &s.captureLabel }},
 	{"a.bulk_mail_attested", func(s *activityScan) any { return &s.bulkMailAttested }},
+	{"a.body_completeness", func(s *activityScan) any { return &s.bodyCompleteness }},
 	{"a.audience", func(s *activityScan) any { return &s.audience }},
 	{"a.audience_reason", func(s *activityScan) any { return &s.audienceReason }},
 	{"a.raw", func(s *activityScan) any { return &s.raw }},
@@ -266,6 +268,13 @@ func (s *activityScan) record() crmcontracts.Activity {
 	if s.contentAvailable {
 		a.ImportedFrom = provenance.ImportedFrom(s.a.SourceSystem)
 		a.Author = SourceAuthorOf(s.sourceAuthorID, s.sourceAuthorSeatName, s.sourceAuthorName, s.a.SourceSystem)
+	}
+	// Said of a mail's body, so it goes where the body goes. A withheld reader
+	// does not get it, nor does a row whose body an erasure removed, nor any
+	// row that is not mail.
+	if s.contentAvailable && a.Body != nil && s.kind == string(crmcontracts.ActivityKindEmail) {
+		completeness := crmcontracts.BodyCompleteness(s.bodyCompleteness)
+		a.BodyCompleteness = &completeness
 	}
 	if s.language != nil && s.contentAvailable {
 		lang := crmcontracts.ActivityLanguage(*s.language)

@@ -6,7 +6,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity
 
-63 columns · primary key `(id)` · referenced by 38 foreign keys
+64 columns · primary key `(id)` · referenced by 38 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -15,6 +15,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 | `audience` | `text`, default `'workspace'::text` | yes | Who may read this activity's CONTENT once the row is discoverable at all. |
 | `audience_reason` | `text` |  | Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the workspace turned mail sharing off), `no_record` (the message is filed under no record), `pending_verdict` (nothing has judged the message yet), `manual` (a human said so). |
 | `body` | `text` |  |  |
+| `body_completeness` | `text`, default `'complete'::text` | yes | How much of a mail's text Margince could decode. |
 | `booking_interval_exact` | `boolean`, default `false` | yes |  |
 | `bulk_mail_attested` | `boolean`, default `false` | yes | This message carried an RFC 2369 List-Unsubscribe header, so the SENDER declared it bulk. |
 | `calendar_method` | `text` |  | One of `PUBLISH`, `REQUEST`, `REPLY`, `ADD`, `CANCEL`, `REFRESH` and 2 more. |
@@ -90,6 +91,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 **Rules**
 
 - `activity_audience_check`: `CHECK ((audience = ANY (ARRAY['workspace', 'participants', 'selected'])))`
+- `activity_body_completeness_check`: `CHECK ((body_completeness = ANY (ARRAY['complete', 'partial', 'unreadable', 'forwarded', 'unassessed'])))`
 - `activity_calendar_method_check`: `CHECK ((calendar_method = ANY (ARRAY['PUBLISH', 'REQUEST', 'REPLY', 'ADD', 'CANCEL', 'REFRESH', 'COUNTER', 'DECLINECOUNTER'])))`
 - `activity_capture_label_check`: `CHECK (((capture_label IS NULL) OR (capture_label = ANY (ARRAY['commitment', 'meeting', 'noise']))))`
 - `activity_capture_label_stamped`: `CHECK (((capture_label IS NULL) = (capture_labeled_at IS NULL)))`

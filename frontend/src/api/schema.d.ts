@@ -23888,6 +23888,18 @@ export interface components {
             next_cursor?: string | null;
         };
         /**
+         * @description How much of a mail's text Margince could decode. `complete`: all of it. `partial`: a text
+         *     part was not read in full (it broke while decoding, or it ran past the size limit), so
+         *     the body may lack text. `unreadable`: none of it, so the body holds only the From and To
+         *     lines Margince adds. `forwarded`: the mail said nothing of its own, and the body is the
+         *     text of the original it forwarded, not the sender's own words. `unassessed`: a mail
+         *     stored before this was recorded and not yet checked against its stored original, or one
+         *     with no original to check. Automatic work (promises, requests and their settlement, and
+         *     the events read from a conversation) is read only from a `complete` mail body.
+         * @enum {string}
+         */
+        BodyCompleteness: "complete" | "partial" | "unreadable" | "forwarded" | "unassessed";
+        /**
          * @description One email, composed for reading. The message and its parties come from the activity's
          *     own store; the access block is assembled from the same authority that performs the
          *     write, so what this says a caller may do is what the caller may do.
@@ -23913,6 +23925,8 @@ export interface components {
              *     never handed to a browser to parse.
              */
             body?: string | null;
+            /** @description How much of a mail's text Margince could decode. Absent when the content is withheld or the body was erased. */
+            readonly body_completeness?: components["schemas"]["BodyCompleteness"];
             thread_key?: string | null;
             from: components["schemas"]["EmailParty"][];
             to: components["schemas"]["EmailParty"][];
@@ -33945,6 +33959,8 @@ export interface components {
             readonly capture_label?: null | "commitment" | "meeting" | "noise";
             /** @description This message carried an RFC 2369 List-Unsubscribe header, so the SENDER declared it bulk. Per message, never per sender: the same address sends a newsletter and a reply, and treating the sender as bulk would bury the reply. */
             readonly bulk_mail_attested?: boolean;
+            /** @description How much of a mail's text Margince could decode. Absent when the content is withheld or the body was erased. */
+            readonly body_completeness?: components["schemas"]["BodyCompleteness"];
             /** @description Who may read this activity's CONTENT once the row is discoverable at all. `workspace` — everyone who can discover it (the default); `participants` — the humans on it (the capturing mailbox owner, anyone stamped as a participant by seat); `selected` — the participants plus the users and teams named through PATCH /activities/{id}/audience. Set only through that endpoint, by a human with write authority over the activity. The colleague who sent a mail that only another member's mailbox captured may read that one copy, when their login address is at one of the workspace's own domains. */
             readonly audience?: components["schemas"]["ActivityAudience"];
             /** @description Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the workspace turned mail sharing off), `no_record` (the message is filed under no record), `pending_verdict` (nothing has judged the message yet), `manual` (a human said so). Null on a row nothing derived. WITHHELD with the content — the reason describes what the message is about, so a colleague who may not read a held message does not learn why it is held either; it is absent whenever `content_state` is `withheld`. */

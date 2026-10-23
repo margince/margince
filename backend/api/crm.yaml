@@ -34723,6 +34723,19 @@ components:
           type: [string, 'null']
           description: Pass back as `thread_cursor` for the next page. Null when this is the last.
 
+    BodyCompleteness:
+      type: string
+      enum: [complete, partial, unreadable, forwarded, unassessed]
+      description: |
+        How much of a mail's text Margince could decode. `complete`: all of it. `partial`: a text
+        part was not read in full (it broke while decoding, or it ran past the size limit), so
+        the body may lack text. `unreadable`: none of it, so the body holds only the From and To
+        lines Margince adds. `forwarded`: the mail said nothing of its own, and the body is the
+        text of the original it forwarded, not the sender's own words. `unassessed`: a mail
+        stored before this was recorded and not yet checked against its stored original, or one
+        with no original to check. Automatic work (promises, requests and their settlement, and
+        the events read from a conversation) is read only from a `complete` mail body.
+
     EmailPresentation:
       type: object
       x-email-presentation: entry
@@ -34751,6 +34764,12 @@ components:
           description: |
             The message as plain text, normalised. Null when withheld. Provider payloads are
             never handed to a browser to parse.
+        body_completeness:
+          allOf: [{ $ref: '#/components/schemas/BodyCompleteness' }]
+          readOnly: true
+          description: >-
+            How much of a mail's text Margince could decode. Absent when the content is
+            withheld or the body was erased.
         thread_key: { type: [string, 'null'] }
         from:
           type: array
@@ -46652,6 +46671,12 @@ components:
             This message carried an RFC 2369 List-Unsubscribe header, so the SENDER declared it
             bulk. Per message, never per sender: the same address sends a newsletter and a reply,
             and treating the sender as bulk would bury the reply.
+        body_completeness:
+          allOf: [{ $ref: '#/components/schemas/BodyCompleteness' }]
+          readOnly: true
+          description: >-
+            How much of a mail's text Margince could decode. Absent when the content is
+            withheld or the body was erased.
         audience:
           allOf: [{ $ref: '#/components/schemas/ActivityAudience' }]
           readOnly: true

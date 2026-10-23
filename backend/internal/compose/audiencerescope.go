@@ -153,9 +153,19 @@ func (g *AudienceRescopeGen) rescope(ctx context.Context, tx pgx.Tx, activityID 
 	// re-derives under the audience as it now stands (a still-live narrowed
 	// signal keeps its fingerprint, so the re-derivation cannot double it).
 	if threadKey != nil {
-		if _, err := tx.Exec(ctx, `DELETE FROM signal_thread_scan WHERE thread_key = $1`, *threadKey); err != nil {
-			return fmt.Errorf("audience-rescope: marking thread due again: %w", err)
+		if err := markConversationDueTx(ctx, tx, *threadKey); err != nil {
+			return fmt.Errorf("audience-rescope: %w", err)
 		}
+	}
+	return nil
+}
+
+// markConversationDueTx drops a conversation's scan watermark, so the next
+// event pass reads it again as it now stands. Every writer that changes what
+// a conversation says, or who may read it, calls this.
+func markConversationDueTx(ctx context.Context, tx pgx.Tx, threadKey string) error {
+	if _, err := tx.Exec(ctx, `DELETE FROM signal_thread_scan WHERE thread_key = $1`, threadKey); err != nil {
+		return fmt.Errorf("marking the conversation due again: %w", err)
 	}
 	return nil
 }
