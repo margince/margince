@@ -48676,6 +48676,8 @@ export interface components {
             id: string;
             name: string;
             topic_statement: string;
+            /** @description True when the answer came from the handbook set that ships with Margince. Only then do claims carry `section` and `opens`. */
+            shipped: boolean;
         };
         KnowledgeClaim: {
             /** @description One sentence of the answer. Absent when generated_by is deterministic — then the quote stands on its own and no prose was written. */
@@ -48699,6 +48701,20 @@ export interface components {
             end_column?: number;
             /** @description A verbatim span from the retrieved passages, whitespace-collapsed and matched before this claim was allowed to exist. */
             quote: string;
+            section?: components["schemas"]["KnowledgeClaimSection"];
+            opens?: components["schemas"]["KnowledgeClaimOpens"];
+        };
+        /** @description The handbook section the quote sits in. Present only on a claim from a page that ships with Margince, and only when the claim carries a `line`; an uploaded document has no section the server can name. */
+        KnowledgeClaimSection: {
+            /** @description The section's heading, without its `#` marks. */
+            title: string;
+            /** @description The 1-based line of the heading. */
+            line: number;
+        };
+        /** @description The settings page the claim's handbook section is about, from the page's `opens:` marker. The client shows a button to it only when the reader may open that page. */
+        KnowledgeClaimOpens: {
+            /** @description A settings page id, as the settings address takes it. */
+            settings_page: string;
         };
         KnowledgeAnswer: {
             /**

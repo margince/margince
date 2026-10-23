@@ -30,6 +30,7 @@ Switches work at once and need no save. If you leave with changes not saved, Mar
 Also called: save settings, changes not saved, undo changes.
 
 ### How do I change my notifications?
+<!-- opens: settings/notifications -->
 To change your notifications in Margince, open Settings → **Notifications**.
 1. Under **Delivery by kind**, pick how each kind reaches you: **Off**, **In the app**, **Email** or **Daily digest**. Not every kind offers every choice.
 2. Under **Email summaries**, set **Morning brief** and **Weekly review** to **By email** or **Not by email**.
@@ -62,6 +63,7 @@ shows: **This device**. It offers **Install**, says how to add the app, or says
 **Installed**.
 
 ### How do I change my password?
+<!-- opens: settings/account -->
 To change your password in Margince, open Settings → **Account** and choose **Change password** in the **Password** row.
 1. Enter your **Current password**.
 2. Enter a **New password** of at least 12 characters, and type it again in **Confirm new password**.
@@ -72,6 +74,7 @@ Forgot it? Use **Forgot password?** on the sign-in page where it is shown, or as
 Also called: reset my password, update login.
 
 ### How do I turn on two-step sign-in?
+<!-- opens: settings/account -->
 To turn on two-step sign-in in Margince, open Settings → **Account** and choose **Set up** in the **Two-step sign-in** row.
 1. Open an app on your phone that makes sign-in codes, and scan the picture on the screen.
 2. If you cannot scan it, choose **Copy key** and add the **Secret key** to the app instead.
@@ -104,6 +107,7 @@ The code page stays open for five minutes. After that, choose **Back to sign in*
 Also called: sign-in code, code not working, use a backup code.
 
 ### How do I turn off two-step sign-in?
+<!-- opens: settings/account -->
 To turn off two-step sign-in in Margince, open Settings → **Account**, choose **Remove** in the **Two-step sign-in** row, and enter a code.
 The code is one your phone app shows now, or one of your backup codes. Your backup codes stop working with it.
 For new backup codes, or to move to a new phone, remove it and set it up again.
@@ -114,12 +118,14 @@ Also called: new phone, new backup codes, lost phone.
 Keep your backup codes where you can find them without your phone. If you lose both, an administrator can remove two-step sign-in for you from **Settings → Members**. You then sign in with your password and set it up again.
 
 ### How do I change my display name?
+<!-- opens: settings/account -->
 To change your display name in Margince, open Settings → **Account**, edit the **Display name** field, and choose **Save** or press Enter. **Save** shows once you change the name.
 Your display name is what colleagues see on records you edit, in pickers and in the audit log.
 It cannot be empty, and it can be up to 255 characters long. Your email address shows under it, and you do not change it here.
 Also called: my name, profile name, rename myself.
 
 ### How do I add an email signature?
+<!-- opens: settings/account -->
 To add an email signature in Margince, open Settings → **Account** and choose **Edit signature** in the **Email signature** row.
 1. Type your sign-off in **Sign-off**, in plain text.
 2. Choose **Save**.
@@ -130,12 +136,14 @@ An email an agent sends carries no sign-off. AI drafts never add a sign-off, so 
 Also called: email footer, sign-off, signature block.
 
 ### How do I change the language?
+<!-- opens: settings/account -->
 To change the language Margince uses with you, open Settings → **Account**. Pick one in the **Language** row: **English**, **Deutsch** or **Tiếng Việt**.
 The screen changes at once. The choice is saved to your account, so your next sign-in uses it too, and it changes nothing for anyone else.
 The sign-in page has its own language switch at the foot of the page.
 Also called: change to German, switch to Vietnamese, locale, translation.
 
 ### How do I change the theme?
+<!-- opens: settings/account -->
 To change the theme in Margince, open Settings → **Account** and pick a choice in the **Appearance** row: **Light**, **Dark** or **System**.
 You can do the same from the account menu at the top right, under **Theme**. Both change the same setting.
 **System** follows the light or dark setting of your computer or phone, and keeps following it.
@@ -150,6 +158,7 @@ Microsoft 365 calendar is connected, a card
 **Connect a calendar to take bookings** comes first.
 
 ### How do I set up bookings?
+<!-- opens: settings/meetings -->
 To let customers book time with you in Margince, open Settings → **Meetings** and follow **Connect a calendar to take bookings**.
 1. Choose **Connect calendar** and sign in with Google or Microsoft 365. You come back to Meetings, where a note says how the connection went.
 2. Check your hours under **When people can book** and choose **Save availability**.
@@ -158,6 +167,7 @@ The setup card goes away once a calendar is connected.
 Also called: booking page, scheduling link, book a meeting with me.
 
 ### How do I set my bookable hours?
+<!-- opens: settings/meetings -->
 To set when customers can book time with you in Margince, open Settings → **Meetings** and fill in **When people can book**.
 1. Pick your **Working days**.
 2. Set **From**, **Until** and your time zone. Guests see the hours in their own zone.
@@ -172,7 +182,15 @@ needs permission from an administrator."
 
 Opening meeting settings from a booking draft opens another tab; coming back loads the saved settings again.
 
+### How do I change my time zone?
+<!-- opens: settings/meetings -->
+To change your own time zone in Margince, open Settings → **Meetings** and choose a place in the **Timezone** list under **When people can book**. Then choose **Save availability**.
+Your time zone is yours alone, and it decides when customers can book time with you.
+The company's **Reporting timezone** is a separate setting on Settings → **Company profile**, in the **Installation** card. Report periods use it for the whole team, and Admin and Ops change it.
+Also called: change time zone, my time zone, local time, company time zone.
+
 ### How do I share a booking link?
+<!-- opens: settings/meetings -->
 To share your booking link in Margince, open Settings → **Meetings** and choose **Copy link** on the link in **Booking links**.
 1. Turn on **Accept bookings**. It stays off until a calendar is connected and saved under **Calendar**.
 2. Choose **Copy link** and paste it in any place, your email signature too.
@@ -246,6 +264,7 @@ writing voice. It shapes drafts written for you, only you can see it, and it
 learns only from samples you add.
 
 ### How do I set up my writing voice?
+<!-- opens: settings/voice -->
 To set up your writing voice in Margince, open Settings → **Writing voice**, add writing samples, then choose **Build Voice DNA**.
 1. Under **Writing samples**, choose **Add writing samples** and drop or pick files, several at once.
 2. The files can be `.txt`, `.md`, `.pdf`, `.docx`, `.vtt`, `.srt` or `.json`.
@@ -280,6 +299,7 @@ Every member can open this page.
 To connect your AI tool, see [How do I connect my AI tool to Margince?](agents-and-passports.md#how-do-i-connect-my-ai-tool-to-margince).
 
 ### How do I create an agent passport?
+<!-- opens: settings/agents -->
 To create an agent passport, open Settings → **AI access**, then **For developers**, and see [How do I give an agent access to Margince?](agents-and-passports.md#how-do-i-give-an-agent-access-to-margince).
 Also called: API key, access token, connect an AI agent.
 
@@ -322,6 +342,7 @@ The cards, in order:
 **Network reach**. Choose **View** on a row to see its list.
 
 ### How do I connect my mailbox?
+<!-- opens: settings/connections -->
 To connect your mailbox and calendar to Margince, open Settings → **Connections** and choose **Connect Google** or **Connect Microsoft 365** in **Mail and calendar**. Once one account is connected, choose **Add account**.
 1. **Add account** asks which account first: **Google**, **Microsoft 365** or **Another mail host**.
 2. Under **What to bring in**, tick **Mail**, **Calendar** or both, and pick how much past email to import, or **None**. Choose **Continue**.

@@ -2194,6 +2194,15 @@ export const de = {
   "palette.searching": "Datensätze werden durchsucht…",
   "palette.searchFailedTitle": "Suche fehlgeschlagen",
   "palette.searchFailed": "Die Befehle oben funktionieren weiterhin.",
+  "palette.askRow": "Margince fragen: „{query}“",
+  "palette.asking": "Margince wird gefragt…",
+  "palette.answerAria": "Antwort von Margince",
+  "palette.answerFrom": "Aus {name}",
+  "palette.answerAfterHandbook": "Nicht im Handbuch. Aus {name}",
+  "palette.answerSection": "Abschnitt im Handbuch: {title}",
+  "palette.openSetting": "Einstellungen → {page} öffnen",
+  "palette.askNoAnswer":
+    "Margince antwortet aus seinem Handbuch und deinen Dokumenten. Frag einen Admin oder ein Teammitglied.",
   "action.newDeal": "Neuer Deal",
   "action.booking": "Buchungsseite",
 

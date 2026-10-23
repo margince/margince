@@ -40984,9 +40984,12 @@ type KnowledgeAnswerOutcome string
 
 // KnowledgeAnswerCorpus The corpus as an ANSWER needs it: enough to name what was searched and to quote the topic statement back in a refusal, and nothing else. It is not KnowledgeCorpus, because that one carries coverage — which the answer already reports at its own top level — and an answer shipping the same counts down two paths is two components rendering different numbers on one screen with nothing to fail when they disagree. The settings a corpus is administered by (min_similarity, default_ask, reindexing) are no business of a reply.
 type KnowledgeAnswerCorpus struct {
-	Id             openapi_types.UUID `json:"id"`
-	Name           string             `json:"name"`
-	TopicStatement string             `json:"topic_statement"`
+	Id   openapi_types.UUID `json:"id"`
+	Name string             `json:"name"`
+
+	// Shipped True when the answer came from the handbook set that ships with Margince. Only then do claims carry `section` and `opens`.
+	Shipped        bool   `json:"shipped"`
+	TopicStatement string `json:"topic_statement"`
 }
 
 // KnowledgeClaim defines model for KnowledgeClaim.
@@ -41009,11 +41012,32 @@ type KnowledgeClaim struct {
 	// Line The 1-based line of the document where this quote begins, so a reader can open the file and land on it. Absent when the quote could not be located in the passage's own text — a line number pointing at the wrong line is worse than none.
 	Line *int `json:"line,omitempty"`
 
+	// Opens The settings page the claim's handbook section is about, from the page's `opens:` marker. The client shows a button to it only when the reader may open that page.
+	Opens *KnowledgeClaimOpens `json:"opens,omitempty"`
+
 	// Quote A verbatim span from the retrieved passages, whitespace-collapsed and matched before this claim was allowed to exist.
 	Quote string `json:"quote"`
 
+	// Section The handbook section the quote sits in. Present only on a claim from a page that ships with Margince, and only when the claim carries a `line`; an uploaded document has no section the server can name.
+	Section *KnowledgeClaimSection `json:"section,omitempty"`
+
 	// Text One sentence of the answer. Absent when generated_by is deterministic — then the quote stands on its own and no prose was written.
 	Text *string `json:"text,omitempty"`
+}
+
+// KnowledgeClaimOpens The settings page the claim's handbook section is about, from the page's `opens:` marker. The client shows a button to it only when the reader may open that page.
+type KnowledgeClaimOpens struct {
+	// SettingsPage A settings page id, as the settings address takes it.
+	SettingsPage string `json:"settings_page"`
+}
+
+// KnowledgeClaimSection The handbook section the quote sits in. Present only on a claim from a page that ships with Margince, and only when the claim carries a `line`; an uploaded document has no section the server can name.
+type KnowledgeClaimSection struct {
+	// Line The 1-based line of the heading.
+	Line int `json:"line"`
+
+	// Title The section's heading, without its `#` marks.
+	Title string `json:"title"`
 }
 
 // KnowledgeCorpus defines model for KnowledgeCorpus.

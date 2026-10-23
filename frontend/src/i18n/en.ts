@@ -2144,6 +2144,15 @@ export const en = {
   "palette.searching": "Searching records…",
   "palette.searchFailedTitle": "Search failed",
   "palette.searchFailed": "The commands above still work.",
+  "palette.askRow": "Ask Margince: “{query}”",
+  "palette.asking": "Asking Margince…",
+  "palette.answerAria": "Answer from Margince",
+  "palette.answerFrom": "From {name}",
+  "palette.answerAfterHandbook": "Not in the handbook. From {name}",
+  "palette.answerSection": "Handbook section: {title}",
+  "palette.openSetting": "Open Settings → {page}",
+  "palette.askNoAnswer":
+    "Margince answers from its handbook and your documents. Ask an administrator or a colleague.",
   "action.newDeal": "New deal",
   "action.booking": "Booking page",
 

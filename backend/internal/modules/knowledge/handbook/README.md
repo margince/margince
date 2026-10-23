@@ -8,10 +8,10 @@ sign-in and the app.
 Start at [What Margince is](what-margince-is.md) and read on. Each page stands on
 its own, so you can also come straight to the one you need.
 
-To ask this handbook a question inside Margince, press ⌘K (Ctrl+K) to open the
-command palette and choose **Ask your documents**. The **Margince handbook** is
-the document set it answers from, unless an administrator chose another; then
-pick **Margince handbook** in **Document set**.
+To ask this handbook a question inside Margince, type it into the top bar's
+**Search or ask Margince** field and press Enter. The answer comes from the
+**Margince handbook** first, then from your company's default document set. The
+handbook is in English, so questions in English work best.
 
 ## Common questions
 

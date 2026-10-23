@@ -1927,3 +1927,18 @@
 .settingssearch-empty {
   padding: var(--space-1) var(--space-2);
 }
+/* A question's answer sits between the box and the rows, on the list's own
+   inset, so the record rows below it still read as the palette's list. */
+.palette-answer {
+  display: grid;
+  gap: var(--space-2);
+  max-height: 320px;
+  overflow-y: auto;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--borderSubtle);
+}
+.palette-answer-sections {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}

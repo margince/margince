@@ -2127,6 +2127,15 @@ export const vi = {
   "palette.searching": "Đang tìm hồ sơ…",
   "palette.searchFailedTitle": "Tìm kiếm không thành công",
   "palette.searchFailed": "Các lệnh ở trên vẫn hoạt động.",
+  "palette.askRow": "Hỏi Margince: “{query}”",
+  "palette.asking": "Đang hỏi Margince…",
+  "palette.answerAria": "Câu trả lời của Margince",
+  "palette.answerFrom": "Từ {name}",
+  "palette.answerAfterHandbook": "Không có trong sổ tay. Từ {name}",
+  "palette.answerSection": "Mục trong sổ tay: {title}",
+  "palette.openSetting": "Mở Cài đặt → {page}",
+  "palette.askNoAnswer":
+    "Margince trả lời từ sổ tay và tài liệu của bạn. Liên hệ quản trị viên hoặc hỏi thành viên trong nhóm.",
   "action.newDeal": "Deal mới",
   "action.booking": "Trang đặt lịch",
 

@@ -92,6 +92,8 @@ who in my company knows this person
 where are the settings
 how do I change my password
 how do I change the language
+how do I change my time zone
+where do I set the reporting timezone
 how do I set up my writing voice
 how do I import contacts from a spreadsheet
 

@@ -1,0 +1,112 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package handbook
+
+import (
+	"strings"
+	"testing"
+)
+
+func TestSectionAtNamesTheTimeZoneSectionAndItsSettingsPage(t *testing.T) {
+	const page = "your-own-settings.md"
+	line := lineOf(t, page, "To change your own time zone in Margince")
+	got, ok := SectionAt(page, line)
+	if !ok {
+		t.Fatalf("SectionAt(%q, %d) found no section", page, line)
+	}
+	if got.Title != "How do I change my time zone?" || got.Opens != "meetings" || got.Line != line-2 {
+		t.Fatalf("SectionAt(%q, %d) = %+v, want the time zone section two lines up, opening meetings", page, line, got)
+	}
+}
+
+func TestSectionAtReadsTheHeadingLineItself(t *testing.T) {
+	const page = "your-own-settings.md"
+	heading := lineOf(t, page, "### How do I change my time zone?")
+	got, ok := SectionAt(page, heading)
+	if !ok || got.Line != heading {
+		t.Fatalf("SectionAt on the heading line = %+v, %v; want the section that heading opens", got, ok)
+	}
+}
+
+func TestSectionAtAnswersNothingAboveTheFirstSectionOrForAPageNotShipped(t *testing.T) {
+	if got, ok := SectionAt("your-own-settings.md", 1); ok {
+		t.Fatalf("line 1 sits above every section, got %+v", got)
+	}
+	if got, ok := SectionAt("no-such-page.md", 10); ok {
+		t.Fatalf("a page this build does not ship has no sections, got %+v", got)
+	}
+}
+
+func TestSectionsSkipHeadingsInFencesAndComments(t *testing.T) {
+	markdown := strings.Join([]string{
+		"# Page",
+		"## Real",
+		"<!-- opens: settings/account -->",
+		"```",
+		"## In a fence",
+		"```",
+		"<!--",
+		"### In a comment",
+		"-->",
+		"### Also real",
+		"Text before the marker.",
+		"<!-- opens: settings/meetings -->",
+	}, "\n")
+	got := Sections(markdown)
+	want := []Section{{Title: "Real", Line: 2, Opens: "account"}, {Title: "Also real", Line: 10}}
+	if len(got) != len(want) {
+		t.Fatalf("Sections = %+v, want %+v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("Sections[%d] = %+v, want %+v", i, got[i], want[i])
+		}
+	}
+}
+
+// TestEveryOpensMarkerSitsDirectlyUnderAHeading holds the marker rule over every
+// shipped page. A marker anywhere else names a settings page for no section, so
+// no answer would carry it.
+func TestEveryOpensMarkerSitsDirectlyUnderAHeading(t *testing.T) {
+	pages, err := Pages()
+	if err != nil {
+		t.Fatalf("reading the embedded handbook: %v", err)
+	}
+	markers := 0
+	for _, page := range pages {
+		lines := strings.Split(string(page.Content), "\n")
+		for i, line := range lines {
+			if !strings.Contains(line, "opens: settings/") && !strings.Contains(line, "<!-- opens") {
+				continue
+			}
+			markers++
+			if !opensMarker.MatchString(strings.TrimSpace(line)) {
+				t.Errorf("%s:%d: %q is not `<!-- opens: settings/<page-id> -->`", page.Filename, i+1, line)
+				continue
+			}
+			if _, heading := sectionHeading(lines[max(i-1, 0)]); i == 0 || !heading {
+				t.Errorf("%s:%d: an opens marker must sit on the line directly under a ## or ### heading",
+					page.Filename, i+1)
+			}
+		}
+	}
+	if markers == 0 {
+		t.Fatal("no opens marker in the handbook: this gate read nothing and would pass on any page")
+	}
+}
+
+func lineOf(t *testing.T, page, text string) int {
+	t.Helper()
+	content, ok := Open(page)
+	if !ok {
+		t.Fatalf("this build ships no %s", page)
+	}
+	for i, line := range strings.Split(string(content), "\n") {
+		if strings.HasPrefix(line, text) {
+			return i + 1
+		}
+	}
+	t.Fatalf("%s holds no line starting %q", page, text)
+	return 0
+}

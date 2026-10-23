@@ -230,7 +230,20 @@ func renderCorpusAsk(question string, passages []knowledge.Passage) string {
 // came to answer a question about the boiling point of nitrogen by quoting its
 // escalation notes: the floor admitted the only passage there was, and with no
 // writer to refuse, the passage WAS the answer.
+//
+// A claim from the shipped handbook also names its section and settings page.
 func AnswerCorpus(
+	ctx context.Context, lane corpusAskLane, state knowledge.Readiness,
+	question string, passages []knowledge.Passage, lang string, log *slog.Logger,
+) crmcontracts.KnowledgeAnswer {
+	answer := answerCorpus(ctx, lane, state, question, passages, lang, log)
+	if answer.Corpus.Shipped && answer.Claims != nil {
+		stampHandbookSections(*answer.Claims)
+	}
+	return answer
+}
+
+func answerCorpus(
 	ctx context.Context, lane corpusAskLane, state knowledge.Readiness,
 	question string, passages []knowledge.Passage, lang string, log *slog.Logger,
 ) crmcontracts.KnowledgeAnswer {
