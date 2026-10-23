@@ -142,14 +142,22 @@ func freezePayload(in SendEmailInput) scheduledPayload {
 	}
 }
 
-func (p scheduledPayload) thaw() (SendEmailInput, error) {
+func (p scheduledPayload) attachmentIDs() ([]ids.UUID, error) {
 	files := make([]ids.UUID, 0, len(p.AttachmentIDs))
 	for _, raw := range p.AttachmentIDs {
 		id, err := ids.Parse(raw)
 		if err != nil {
-			return SendEmailInput{}, fmt.Errorf("scheduled send: attachment id %q: %w", raw, err)
+			return nil, fmt.Errorf("scheduled send: attachment id %q: %w", raw, err)
 		}
 		files = append(files, id)
+	}
+	return files, nil
+}
+
+func (p scheduledPayload) thaw() (SendEmailInput, error) {
+	files, err := p.attachmentIDs()
+	if err != nil {
+		return SendEmailInput{}, err
 	}
 	evidence, err := p.Evidence.thaw()
 	if err != nil {

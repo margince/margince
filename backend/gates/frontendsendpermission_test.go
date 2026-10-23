@@ -72,12 +72,15 @@ var contractPathLine = regexp.MustCompile(`^  (/[^\s:]+):\s*$`)
 // contractSchemaLine matches a schema entry under `components: schemas:`.
 var contractSchemaLine = regexp.MustCompile(`^    ([A-Za-z][A-Za-z0-9]*):\s*$`)
 
-// contractSchemaRef matches a reference to a named schema anywhere under a
-// path: request body, response or parameter alike. Over-recognition is the safe
-// direction for a census — a response that carried the sender's reason would
-// surface as a door and be looked at, where a narrower match that missed a
-// request body would report PASS over an unasked send.
+// contractSchemaRef matches a reference to a named schema.
 var contractSchemaRef = regexp.MustCompile(`\$ref: '#/components/schemas/([A-Za-z][A-Za-z0-9]*)'`)
+
+// operationKeyLine matches a key at an operation's own depth; requestBody is one,
+// and the next one ends it. Only a body counts: a scheduled message echoes the
+// reason back to its sender, and that response is the outbox, not a send.
+var operationKeyLine = regexp.MustCompile(`^ {0,6}[a-zA-Z/]`)
+
+const requestBodyLine = "      requestBody:"
 
 // senderReasonProperty is the field that marks a schema as a send request body:
 // the sender's own word about why they are writing, recorded and granting
@@ -97,15 +100,18 @@ func sendDoors(t *testing.T) []string {
 	refsByPath := map[string][]string{}
 	carriesSenderReason := map[string]bool{}
 	var path, schema string
-	inSchemas := false
+	inSchemas, inBody := false, false
 	for line := range strings.SplitSeq(string(contract), "\n") {
+		if operationKeyLine.MatchString(line) {
+			inBody = line == requestBodyLine
+		}
 		switch {
 		case line == "components:":
 			inSchemas = true
 			path = ""
 		case !inSchemas && contractPathLine.MatchString(line):
 			path = contractPathLine.FindStringSubmatch(line)[1]
-		case !inSchemas && path != "":
+		case !inSchemas && path != "" && inBody:
 			if m := contractSchemaRef.FindStringSubmatch(line); m != nil {
 				refsByPath[path] = append(refsByPath[path], m[1])
 			}

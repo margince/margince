@@ -235,8 +235,8 @@ internal/modules/activities/companyscope.go#func CompanyLinkedActivityExists
 internal/modules/activities/email.go#const sourceManual
 internal/modules/activities/handlers_email.go#func DeterministicEmailDraft
 internal/modules/activities/handlers_email.go#func IsMailThread
-internal/modules/activities/handlers_email.go#func writeSendOutcome
 internal/modules/activities/handlers_email.go#method Handlers.SendCompanyEmail
+internal/modules/activities/handlers_email.go#method Handlers.writeSendOutcome
 internal/modules/activities/lasttouch.go#method Store.LastTouchBefore
 internal/modules/activities/linktarget.go#var linkIDCoalesce
 internal/modules/activities/mapping.go#const fieldBody

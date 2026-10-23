@@ -7,10 +7,13 @@ package activities
 // caller who names one twice.
 
 import (
+	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -88,6 +91,39 @@ func TestASetWithinTheCapComesBackInOrder(t *testing.T) {
 	for i := range named {
 		if got[i] != named[i] {
 			t.Errorf("file %d is %v, want %v — the order the caller attached them in is the order they arrive", i, got[i], named[i])
+		}
+	}
+}
+
+// A scheduled read counts a file the send would refuse as unavailable. Anything
+// else stops the read: a failed lookup is not a file that is gone.
+func TestOnlyARefusedFileCountsAsUnavailable(t *testing.T) {
+	t.Parallel()
+	refused := []error{
+		fmt.Errorf("resolving an attached file: %w", apperrors.ErrNotFound),
+		fmt.Errorf("resolving an attached file: %w", apperrors.ErrPermissionDenied),
+		&WithheldAttachmentError{Filename: "private.pdf"},
+		&EmptyAttachmentError{Filename: "blank.pdf"},
+	}
+	for _, err := range refused {
+		if !fileRefusedAtSend(err) {
+			t.Errorf("%v did not count as a refused file", err)
+		}
+	}
+	if fileRefusedAtSend(fmt.Errorf("resolving an attached file: %w", context.DeadlineExceeded)) {
+		t.Error("a lookup that timed out counted as a refused file")
+	}
+}
+
+// A message past waiting resolves none of its files: no edit reaches it, so
+// the outbox's history does not cost a lookup per file.
+func TestAMessagePastWaitingResolvesNoFiles(t *testing.T) {
+	t.Parallel()
+	for _, status := range []string{ScheduledStatusReleased, ScheduledStatusSent, ScheduledStatusCancelled} {
+		row := ScheduledSend{Status: status, frozen: scheduledPayload{AttachmentIDs: []string{ids.NewV7().String()}}}
+		files, err := (&Store{}).scheduledFilesOf(context.Background(), row)
+		if err != nil || len(files.attachable) != 0 || files.unavailable != 0 {
+			t.Errorf("%s message resolved its files: %+v, %v", status, files, err)
 		}
 	}
 }

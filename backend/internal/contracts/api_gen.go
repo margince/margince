@@ -47971,6 +47971,15 @@ type ScheduledSend struct {
 	// AnchorActivityId The conversation this reply will join; null for an account-started message.
 	AnchorActivityId *openapi_types.UUID `json:"anchor_activity_id,omitempty"`
 
+	// Attachments The frozen files the sender can still attach, in frozen order, so an edit carries them.
+	// Resolved only while the message is `scheduled` or `held`; absent when none resolve.
+	Attachments *[]ApprovalPreviewFile `json:"attachments,omitempty"`
+
+	// AttachmentsUnavailable How many frozen files the send would now refuse: removed, out of the sender's sight,
+	// kept without bytes, or empty. Not named: a file the sender cannot see answers 404
+	// everywhere else. Absent when every file resolves, and on a message past waiting.
+	AttachmentsUnavailable *int `json:"attachments_unavailable,omitempty"`
+
 	// Bcc Visible to the SENDER, who is the only contact this record is readable by. A scheduled
 	// message's blind-copy list is not workspace-readable the way a sent activity is.
 	Bcc  *[]openapi_types.Email `json:"bcc,omitempty"`
@@ -47988,6 +47997,9 @@ type ScheduledSend struct {
 	ConsentPurpose *string   `json:"consent_purpose,omitempty"`
 	CreatedAt      time.Time `json:"created_at"`
 
+	// DraftRef The voice-draft reference the send carries, frozen with it. Absent when none was given.
+	DraftRef *string `json:"draft_ref,omitempty"`
+
 	// Evidence The records the sender named in support of the message, frozen with it. Absent
 	// when none were named. Evidence is what makes a claimed category supported, so a
 	// preview asked without it would answer "unproven" about a message the fire allows.
@@ -48002,7 +48014,10 @@ type ScheduledSend struct {
 	// `followup_settled` — the recorded request was answered or completed after scheduling.
 	// `meeting_canceled` — the meeting named as follow-up evidence was canceled.
 	HeldReason *ScheduledSendHeldReason `json:"held_reason,omitempty"`
-	Id         openapi_types.UUID       `json:"id"`
+
+	// HtmlBody The frozen markup beside `body`, so an edit keeps the formatting. Absent on a plain message.
+	HtmlBody *string            `json:"html_body,omitempty"`
+	Id       openapi_types.UUID `json:"id"`
 
 	// Links The records an account-started message files itself under, as the send named
 	// them. Absent on a reply: a reply's records come from its anchor, and the ones it
@@ -48015,6 +48030,10 @@ type ScheduledSend struct {
 
 	// MarketingPurpose For a marketing send, the consent purpose key it claimed, frozen with the message.
 	MarketingPurpose *string `json:"marketing_purpose,omitempty"`
+
+	// OperatorReason What the sender typed when a first message was ambiguous, frozen with it. Only its
+	// sender reads this row.
+	OperatorReason *string `json:"operator_reason,omitempty"`
 
 	// ReviewId The review this message's refusal opened, when one stands. Null on every message
 	// nobody refused, and on a held row whose review has since been answered.

@@ -4,6 +4,7 @@
 package activities
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -59,7 +60,12 @@ func (h Handlers) ListScheduledSends(w http.ResponseWriter, r *http.Request, par
 	}
 	out := make([]crmcontracts.ScheduledSend, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, scheduledSendResponse(row))
+		wire, err := h.scheduledSendOnWire(r.Context(), row)
+		if err != nil {
+			writeStoreErr(w, r, err)
+			return
+		}
+		out = append(out, wire)
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
@@ -71,7 +77,7 @@ func (h Handlers) GetScheduledSend(w http.ResponseWriter, r *http.Request, id cr
 		writeStoreErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, scheduledSendResponse(row))
+	h.writeScheduledSend(w, r, http.StatusOK, row)
 }
 
 // RescheduleScheduledSend moves a waiting message to a different moment.
@@ -99,7 +105,7 @@ func (h Handlers) RescheduleScheduledSend(w http.ResponseWriter, r *http.Request
 		writeStoreErr(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, scheduledSendResponse(row))
+	h.writeScheduledSend(w, r, http.StatusOK, row)
 }
 
 // CancelScheduledSend withdraws a waiting message.
@@ -111,8 +117,26 @@ func (h Handlers) CancelScheduledSend(w http.ResponseWriter, r *http.Request, id
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// writeScheduledSend answers with one row, its frozen files resolved for the caller.
+func (h Handlers) writeScheduledSend(w http.ResponseWriter, r *http.Request, status int, row ScheduledSend) {
+	wire, err := h.scheduledSendOnWire(r.Context(), row)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, status, wire)
+}
+
+func (h Handlers) scheduledSendOnWire(ctx context.Context, row ScheduledSend) (crmcontracts.ScheduledSend, error) {
+	files, err := h.store.scheduledFilesOf(ctx, row)
+	if err != nil {
+		return crmcontracts.ScheduledSend{}, err
+	}
+	return scheduledSendResponse(row, files), nil
+}
+
 // scheduledSendResponse renders one row onto the wire.
-func scheduledSendResponse(row ScheduledSend) crmcontracts.ScheduledSend {
+func scheduledSendResponse(row ScheduledSend, files scheduledFiles) crmcontracts.ScheduledSend {
 	out := crmcontracts.ScheduledSend{
 		Id:          openapi_types.UUID(row.ID),
 		Status:      crmcontracts.ScheduledSendStatus(row.Status),
@@ -143,6 +167,14 @@ func scheduledSendResponse(row ScheduledSend) crmcontracts.ScheduledSend {
 	if row.Body != "" {
 		body := row.Body
 		out.Body = &body
+	}
+	out.HtmlBody = ptrOrNil(row.frozen.HTMLBody)
+	out.DraftRef = ptrOrNil(row.frozen.DraftRef)
+	out.OperatorReason = ptrOrNil(row.frozen.OperatorReason)
+	out.Attachments = filesOnWire(files.attachable)
+	if files.unavailable > 0 {
+		unavailable := files.unavailable
+		out.AttachmentsUnavailable = &unavailable
 	}
 	if row.Anchor.UUID != (ids.UUID{}) {
 		anchor := openapi_types.UUID(row.Anchor.UUID)
@@ -186,6 +218,22 @@ func scheduledSendResponse(row ScheduledSend) crmcontracts.ScheduledSend {
 		out.HeldReason = &reason
 	}
 	return out
+}
+
+func filesOnWire(files []OutboundFile) *[]crmcontracts.ApprovalPreviewFile {
+	if len(files) == 0 {
+		return nil
+	}
+	out := make([]crmcontracts.ApprovalPreviewFile, 0, len(files))
+	for _, file := range files {
+		out = append(out, crmcontracts.ApprovalPreviewFile{
+			Id:          openapi_types.UUID(file.AttachmentID),
+			Filename:    file.Filename,
+			ContentType: file.ContentType,
+			ByteSize:    file.ByteSize,
+		})
+	}
+	return &out
 }
 
 // linksOnWire is linkInputsOf read backwards: the frozen records a scheduled
