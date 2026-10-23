@@ -19,6 +19,8 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
@@ -159,7 +161,7 @@ func (r *Registry) Offered(ctx context.Context) []mcp.ToolSpec {
 	words := r.lister()
 	for _, spec := range all {
 		if !spec.Unlisted && invocableByCaller(ctx, spec) {
-			out = append(out, words.listed(spec))
+			out = append(out, words.listed(r.asSeenBy(ctx, spec)))
 		}
 	}
 	return out
@@ -173,10 +175,40 @@ func (r *Registry) Runnable(ctx context.Context) []mcp.ToolSpec {
 	out := make([]mcp.ToolSpec, 0, len(all))
 	for _, spec := range all {
 		if invocableByCaller(ctx, spec) {
-			out = append(out, spec)
+			out = append(out, r.asSeenBy(ctx, spec))
 		}
 	}
 	return out
+}
+
+// asSeenBy is spec with the tier the gate admits this caller on (auth.TierFor).
+// A router's action is admitted on its own verb's spec once routed. So each
+// action is lifted by that spec, and the router by whether its actions agree.
+func (r *Registry) asSeenBy(ctx context.Context, spec mcp.ToolSpec) mcp.ToolSpec {
+	p, ok := principal.Actor(ctx)
+	if !ok {
+		return spec
+	}
+	if len(spec.Actions) == 0 {
+		if tier := auth.TierFor(p, spec); tier != spec.Tier {
+			spec.Tier, spec.TierResolver = tier, nil
+		}
+		return spec
+	}
+	actions := make([]mcp.ToolAction, len(spec.Actions))
+	agree := true
+	for i, action := range spec.Actions {
+		if verb, registered := r.Spec(action.Verb); registered {
+			action.Tier = auth.TierFor(p, verb)
+		}
+		actions[i] = action
+		agree = agree && action.Tier == actions[0].Tier
+	}
+	spec.Actions = actions
+	if agree && actions[0].Tier != mcp.TierDynamic {
+		spec.Tier, spec.TierResolver = actions[0].Tier, nil
+	}
+	return spec
 }
 
 // dynamicTool is implemented by TierDynamic tools that need more than the

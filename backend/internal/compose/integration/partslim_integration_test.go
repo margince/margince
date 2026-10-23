@@ -128,6 +128,68 @@ func payloadOf(t *testing.T, e *Env, sourceID string) string {
 	return payload
 }
 
+func outcomeOf(t *testing.T, e *Env, sourceID string) string {
+	t.Helper()
+	var outcome *string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT parts_slim_outcome FROM raw_capture WHERE source_id = $1`,
+			sourceID).Scan(&outcome)
+	}); err != nil {
+		t.Fatalf("reading the outcome of %s: %v", sourceID, err)
+	}
+	if outcome == nil {
+		t.Fatalf("%s was considered and recorded no outcome", sourceID)
+	}
+	return *outcome
+}
+
+// A considered original says what came out of it.
+//
+// Six of the sweep's seven paths remove nothing, and all seven stamp. Read by
+// the stamp alone, a message whose attachment was never staged reads as one
+// that was slimmed. The oversized original question is answered from the
+// difference.
+func TestAConsideredOriginalSaysWhatCameOut(t *testing.T) {
+	e := Setup(t)
+	ctx := context.Background()
+	blob := blobstore.NewMemory()
+
+	const provable, unstaged = "outcome-provable", "outcome-unstaged"
+	const key = "ws/attachment/outcome-provable"
+	provablePDF, unstagedPDF := slimPDF(3), slimPDF(4)
+
+	if err := blob.Put(ctx, key, bytes.NewReader(provablePDF),
+		int64(len(provablePDF)), "application/pdf"); err != nil {
+		t.Fatalf("staging the provable bytes: %v", err)
+	}
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := seedSlimOriginal(ctx, tx, provable, slimMessage(provablePDF)); err != nil {
+			return err
+		}
+		if err := seedSlimAttachment(ctx, tx, provable, key,
+			int64(len(provablePDF)), slimDigest(provablePDF)); err != nil {
+			return err
+		}
+		// No attachment row, so the object store can vouch for nothing.
+		return seedSlimOriginal(ctx, tx, unstaged, slimMessage(unstagedPDF))
+	}); err != nil {
+		t.Fatalf("seeding: %v", err)
+	}
+
+	store := capture.NewPartSlimStore(e.DB(), blob)
+	if _, err := store.SlimBatch(ctx, 10); err != nil {
+		t.Fatalf("sweeping: %v", err)
+	}
+
+	if got := outcomeOf(t, e, provable); got != "slimmed" {
+		t.Errorf("the slimmed original records %q, want \"slimmed\"", got)
+	}
+	if got := outcomeOf(t, e, unstaged); got != "no_proved_parts" {
+		t.Errorf("the unstaged original records %q, want \"no_proved_parts\"", got)
+	}
+}
+
 func TestTheSweepSlimsOnlyWhatItCanProve(t *testing.T) {
 	e := Setup(t)
 	ctx := context.Background()

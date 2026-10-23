@@ -210,23 +210,6 @@ func (d *twoDoors) sameEffect(t *testing.T, what, viaREST, viaTool string, diffe
 	return rest
 }
 
-// approveAsHuman decides a staged approval as the signed-in human, which is how
-// a human lets a passport's staged write through.
-func (d *twoDoors) approveAsHuman(t *testing.T, approval string) {
-	t.Helper()
-	if status := d.e.Call(t, "POST", "/v1/approvals/"+approval+"/approve", AnyMap{}, nil, nil); status != http.StatusOK {
-		t.Fatalf("approving %s → %d, want 200", approval, status)
-	}
-}
-
-// withApproval is the passport's headers carrying an approved approval to
-// redeem, which is how the route retries a staged write.
-func (d *twoDoors) withApproval(approval string) map[string]string {
-	headers := maps.Clone(d.bearer)
-	headers["X-Approval-Token"] = approval
-	return headers
-}
-
 // sameIDs fails when the route and the tool name different records. Order is not
 // compared, because the two doors page their lists their own way.
 func sameIDs(t *testing.T, what string, rest, tool []string) {
@@ -295,15 +278,6 @@ func (d *twoDoors) sameStaged(t *testing.T, what, viaREST, viaTool string, names
 	if rest.Summary != tool.Summary && !strings.HasPrefix(rest.Summary, tool.Summary+": ") {
 		t.Errorf("%s: the route staged the sentence %q and the tool %q", what, rest.Summary, tool.Summary)
 	}
-	return differInNothingBut(t, what, rest, tool)
-}
-
-// sameStagedByID is sameStaged for an operation whose sentence names the record
-// by its id. The resolver's line has nothing to read there, so the route stages
-// its own. The two sentences need only be present.
-func (d *twoDoors) sameStagedByID(t *testing.T, what, viaREST, viaTool string, names ...string) staged {
-	t.Helper()
-	rest, tool := d.stagedRows(t, what, viaREST, viaTool, names)
 	return differInNothingBut(t, what, rest, tool)
 }
 

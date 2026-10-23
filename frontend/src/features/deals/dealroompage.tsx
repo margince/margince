@@ -16,19 +16,17 @@ import {
   OverflowMenu,
   TextInput,
 } from "../../design-system/atoms";
-import { Callout, type CalloutTone } from "../../design-system/callout";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { ErrorLine } from "../../design-system/errorline";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { Heading } from "../../design-system/heading";
 import { QueryStates } from "../../design-system/querystates";
-import { formatDateAbbrev } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
-import { RoomFacts, RoomText, ViewAsBuyerButton } from "./deal360/dealroomtab";
+import { RoomFacts, StateBanner } from "./deal360/dealroomdeck";
+import { RoomText, ViewAsBuyerButton } from "./deal360/dealroomtab";
 import { DealRoomAccess } from "./dealroomaccess";
 import { DealRoomConversation } from "./dealroomconversation";
 import "./dealroompage.css";
@@ -118,48 +116,6 @@ function RoomPage({
       <DealRoomAccess room={room} mayManage={mayWrite} />
     </div>
   );
-}
-
-/**
- * One band for every standing state of a room: five that differed only in tone
- * and wording had each drawn their own. `standing`, and so silent — the state
- * is true as the page renders — and the claim IS the notice, with no body.
- */
-function StateNotice({
-  tone,
-  claim,
-}: Readonly<{ tone?: CalloutTone; claim: string }>) {
-  return <Callout tone={tone} kind="standing" title={claim} />;
-}
-
-// The state, said in the words a rep needs: what the buyer sees right now,
-// and the way back where there is one.
-function StateBanner({ room }: Readonly<{ room: DealRoom }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  switch (room.state) {
-    case "paused":
-      return <StateNotice tone="warning" claim={t("roompage.banner.paused")} />;
-    case "closed":
-      return <StateNotice claim={t("roompage.banner.closed")} />;
-    case "expired":
-      return (
-        <StateNotice tone="warning" claim={t("roompage.banner.expired")} />
-      );
-    case "archived":
-      return (
-        <StateNotice tone="danger" claim={t("roompage.banner.archived")} />
-      );
-    default:
-      return room.expires_at ? (
-        <StateNotice
-          claim={t("roompage.banner.liveUntil", {
-            when: formatDateAbbrev(room.expires_at, locale, recordZone),
-          })}
-        />
-      ) : null;
-  }
 }
 
 function useRoomVerb(dealId: string) {

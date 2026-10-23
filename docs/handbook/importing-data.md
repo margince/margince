@@ -172,6 +172,11 @@ Also called: duplicates on import, import made copies.
 No. Two contacts that share only a first name are not filed, even at one company. Their last names must match and their first names must be close.
 Also called: duplicate queue too long after import, same name flagged.
 
+### Why did a pair leave the duplicate list without anyone deciding it?
+Margince checks the open duplicate list every night, and each time it starts. It closes a pair that today's rules would no longer suggest, for example two contacts who share only a first name.
+A pair someone has dismissed or reopened is never closed this way. A closed pair keeps its history, and it comes back by itself if the two records start to match again.
+Also called: duplicate gone, shorter duplicate list, fewer duplicates.
+
 ### How do I correct companies with a spreadsheet?
 To correct companies in Margince from a CSV, give each row the company's ID and map that column to **id**.
 1. Use **Export CSV** from **Filters and views**; its **id** column holds each ID.

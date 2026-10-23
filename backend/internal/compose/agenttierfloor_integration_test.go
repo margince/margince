@@ -42,7 +42,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
-	"errors"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -51,7 +51,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -68,38 +67,42 @@ func TestATierFlooredForOneRecordTypeBindsTheToolDoorToo(t *testing.T) {
 	company := seedCompanyForTierFloor(human, t, native)
 
 	// The identical effect POST /v1/projects performs, asked for through the
-	// verb whose tier the contract never tightened.
+	// verb whose tier the contract never tightened. Automatic work may not stage
+	// the approval the floor asks for. So the floor reaching this door shows as
+	// the staging refusal, and nothing is written.
 	_, err := registry.Invoke(tierFloorAgent(t, e), "create_record",
 		json.RawMessage(`{"record_type":"project","fields":{"name":"Unapproved",`+
 			`"company_id":"`+company.String()+`"}}`))
-
-	// Three assertions, answering three different questions, because any two of
-	// them pass for the wrong reason.
-	//
-	// The sentinel alone proves least: workflow.StagedApprovalError unwraps to
-	// ErrRequiresApproval, and so does the bare refusal a tool with no StageInfo
-	// returns — so a fix that tightened the tier and left the call dead-ending
-	// would satisfy it exactly. The staged ROW is what separates "put to a human"
-	// from "refused with nowhere to land", which is the whole point of the two new
-	// StageInfo implementations. The row count says no effect happened, which a
-	// call refused for a missing grant would also satisfy — hence a full seat.
-	if !errors.Is(err, apperrors.ErrRequiresApproval) {
-		t.Errorf("create_record{project} answered %v, want the confirm-first refusal the floor "+
-			"declares for a project — a tier tightened for one record type is a decision the "+
-			"tool door cannot see", err)
+	if !refusedForWantOfAPassport(err) {
+		t.Errorf("create_record{project} answered %v, want the floor to hold it back — a tier tightened "+
+			"for one record type is a decision the tool door must see", err)
 	}
 	if n := liveProjectsNamed(human, t, e, "Unapproved"); n != 0 {
-		t.Errorf("%d project(s) named Unapproved exist; the agent performed unattended a write "+
-			"the floor stages for a human", n)
+		t.Errorf("%d project(s) named Unapproved exist; automatic work performed a write the floor holds back", n)
 	}
-	assertStagedApprovalRow(human, t, e, stagedRow{kind: "create_record", targetType: "project", hasTargetID: false})
 }
 
-// The update half of the same bypass. It is a separate call rather than a table
-// case because it stages a different SHAPE — a target id and a pin, where the
-// create has neither — and because a fix that tightened creates and missed
-// updates would otherwise leave every gate in this package green.
-func TestATightenedUpdateAlsoStagesOnTheToolDoor(t *testing.T) {
+// A floor binds automatic work. An agent on a colleague's passport does what
+// that colleague could do unaided, so the same create runs at once.
+func TestAFloorDoesNotHoldBackAnAgentOnAColleaguesPassport(t *testing.T) {
+	e := integration.Setup(t)
+	human := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
+	registry := composedRegistryFlooring(e, "project")
+	company := seedCompanyForTierFloor(human, t, NewProvider(e.Pool))
+
+	if _, err := registry.Invoke(tierFloorAgentOnPassport(t, e), "create_record",
+		json.RawMessage(`{"record_type":"project","fields":{"name":"Done at once",`+
+			`"company_id":"`+company.String()+`"}}`)); err != nil {
+		t.Fatalf("create_record{project} on a colleague's passport → %v, want it run", err)
+	}
+	if n := liveProjectsNamed(human, t, e, "Done at once"); n != 1 {
+		t.Errorf("%d project(s) named Done at once exist, want the one created", n)
+	}
+}
+
+// The update half of the same bypass. It is a separate call because a fix that
+// tightened creates and missed updates would otherwise leave every gate green.
+func TestATightenedUpdateAlsoHoldsBackTheToolDoor(t *testing.T) {
 	e := integration.Setup(t)
 	human := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	native := NewProvider(e.Pool)
@@ -111,15 +114,12 @@ func TestATightenedUpdateAlsoStagesOnTheToolDoor(t *testing.T) {
 	_, err := registry.Invoke(tierFloorAgent(t, e), "update_record",
 		json.RawMessage(`{"record_type":"project","id":"`+project.String()+
 			`","fields":{"name":"Renamed without asking"}}`))
-
-	if !errors.Is(err, apperrors.ErrRequiresApproval) {
-		t.Errorf("update_record{project} answered %v, want the confirm-first refusal the "+
-			"floor declares for a project patch", err)
+	if !refusedForWantOfAPassport(err) {
+		t.Errorf("update_record{project} answered %v, want the floor to hold the patch back", err)
 	}
 	if n := liveProjectsNamed(human, t, e, "Renamed without asking"); n != 0 {
-		t.Error("the project was renamed unattended; the floor stages that patch for a human")
+		t.Error("the project was renamed by automatic work the floor holds back")
 	}
-	assertStagedApprovalRow(human, t, e, stagedRow{kind: "update_record", targetType: "project", hasTargetID: true})
 }
 
 // An ordinary company patch must NOT stage. `updateCompany` is
@@ -181,38 +181,11 @@ func composedRegistryFlooring(e *integration.Env, recordType string) *agents.Reg
 	return registry
 }
 
-// stagedRow is what a staged approval must look like for the operation that
-// produced it — the shape, not just the fact that something was written.
-type stagedRow struct {
-	kind, targetType string
-	hasTargetID      bool
-}
-
-// assertStagedApprovalRow reads the approval the refusal claims to have minted. Without it
-// this suite could not tell a staged call from one refused with nowhere to land:
-// both answer ErrRequiresApproval, and only one of them puts a question in front
-// of a human.
-func assertStagedApprovalRow(as context.Context, t *testing.T, e *integration.Env, want stagedRow) {
-	t.Helper()
-	var kind, targetType string
-	var targetID *ids.UUID
-	if err := database.WithWorkspaceTx(as, e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(as, `
-			SELECT kind, coalesce(target_entity_type, ''), target_entity_id
-			  FROM approval
-			 WHERE kind = $1 AND status = 'pending'`, want.kind).Scan(&kind, &targetType, &targetID)
-	}); err != nil {
-		t.Fatalf("no pending %s approval was staged (%v) — the call was refused with nowhere to "+
-			"land, which is not the confirm-first promise the contract makes", want.kind, err)
-	}
-	if targetType != want.targetType {
-		t.Errorf("staged target type %q, want %q — the approvals surface scopes an inbox row by "+
-			"probing its target's own visibility, and it cannot probe a type it was not told",
-			targetType, want.targetType)
-	}
-	if got := targetID != nil; got != want.hasTargetID {
-		t.Errorf("staged with a target id = %v, want %v", got, want.hasTargetID)
-	}
+// refusedForWantOfAPassport reports the staging engine's refusal of an agent
+// with no passport, which is how a floor answers automatic work. The engine
+// answers it with a plain error, so its words are matched.
+func refusedForWantOfAPassport(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "an agent stages on its passport")
 }
 
 // seedProjectForTierFloor creates one project through the real writer, so the
@@ -266,10 +239,8 @@ func liveProjectsNamed(as context.Context, t *testing.T, e *integration.Env, nam
 // tierFloorAgent is a passport holding every scope and grant a project create
 // needs, so the only thing left that can refuse it is the tier.
 //
-// The passport is SEEDED rather than invented: a staged approval records the
-// passport it was minted by under a real foreign key, so a synthetic id fails in
-// the database and the test would report a schema complaint where it means to
-// report a governance decision.
+// tierFloorAgent is automatic work: an agent with no passport behind it, which
+// a floor holds back.
 func tierFloorAgent(t *testing.T, e *integration.Env) context.Context {
 	t.Helper()
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
@@ -277,8 +248,17 @@ func tierFloorAgent(t *testing.T, e *integration.Env) context.Context {
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:tier-floor", SeatType: principal.SeatFull,
 		OnBehalfOf: e.Rep1, UserID: e.Rep1,
-		PassportID:  e.SeedPassport(t, integration.OwnerConn(t), "tier floor probe"),
 		Scopes:      principal.NewScopeSet(principal.ScopeRead, principal.ScopeWrite),
 		Permissions: integration.AdminPerms,
 	})
+}
+
+// tierFloorAgentOnPassport is the same agent working on a colleague's passport.
+// The passport is seeded rather than invented, as the gate reads it as a row.
+func tierFloorAgentOnPassport(t *testing.T, e *integration.Env) context.Context {
+	t.Helper()
+	ctx := tierFloorAgent(t, e)
+	p, _ := principal.Actor(ctx)
+	p.PassportID = e.SeedPassport(t, integration.OwnerConn(t), "tier floor probe")
+	return principal.WithActor(ctx, p)
 }

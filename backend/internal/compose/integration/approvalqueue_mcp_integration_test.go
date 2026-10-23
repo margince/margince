@@ -68,6 +68,28 @@ func (q *queueEnv) invoker(t *testing.T, token string) func(tool, args string) (
 	}
 }
 
+// automaticInvoker is invoker for automatic work: the same colleague's
+// authority with no passport behind it, which may not stage a confirm-first call.
+func (q *queueEnv) automaticInvoker(t *testing.T, token string) func(tool, args string) (string, error) {
+	t.Helper()
+	return func(tool, args string) (string, error) {
+		ws, err := q.auth.InstallationWorkspace(context.Background())
+		if err != nil {
+			t.Fatalf("resolving the installation workspace: %v", err)
+		}
+		ctx := principal.WithWorkspaceID(context.Background(), ws.UUID)
+		agent, err := q.auth.AuthenticateAgent(ctx, token)
+		if err != nil {
+			t.Fatalf("authenticating the passport: %v", err)
+		}
+		automatic := agent.Principal()
+		automatic.PassportID, automatic.ConnectionID = ids.UUID{}, ids.UUID{}
+		ctx = principal.WithCorrelationID(principal.WithActor(ctx, automatic), ids.NewV7())
+		out, invokeErr := q.registry.Invoke(ctx, tool, json.RawMessage(args))
+		return string(out), invokeErr
+	}
+}
+
 func (q *queueEnv) mintPassport(t *testing.T, label string, scopes ...string) string {
 	t.Helper()
 	var minted struct {
@@ -263,23 +285,17 @@ func TestAReadOnlyPassportSeesTheQueueAndCannotAnswerIt(t *testing.T) {
 }
 
 // A passport does what its holder could do unaided. Relinking an activity onto
-// a contact, a company or a deal is an association a member undoes in the app
-// with no ceremony, so it must not cost a human decision here either — while a
-// PROJECT destination stays confirm-first, because filing under a project
-// classifies the activity as commercial correspondence, which is write-once.
+// a contact, a company, a deal or a project costs no human decision. Automatic
+// work with no passport behind it is refused a PROJECT destination, because
+// filing under a project marks the activity as commercial correspondence.
 //
-// Both halves are the point. relinkActivityTier has always said so; what it
-// could not do was make the auto-execute half reachable. auth/admit.go raises a
-// dynamic tier that resolves to auto-execute without naming the version it was
-// resolved from, and relink_activity answered no version at all — so EVERY
-// agent relink was raised, whatever its destination.
-//
-// Driven from claude.ai on 2026-08-25 that showed up as three approvals for one
-// logged meeting: the model attached the contact, the company and the deal after
-// the fact, and each attach staged a card the app would never have asked for.
-func TestAnAgentRelinksToAContactWithoutAskingAndStillStagesAProject(t *testing.T) {
+// Each attach after a logged meeting once staged a card the app would never
+// have asked for, which is the shape this holds against.
+func TestAnAgentOnAPassportRelinksWithoutAskingWhileAutomaticWorkIsRefusedAProject(t *testing.T) {
 	q := setupQueue(t)
-	invoke := q.invoker(t, q.mintPassport(t, "relinking agent", "read", "write"))
+	token := q.mintPassport(t, "relinking agent", "read", "write")
+	invoke := q.invoker(t, token)
+	automatic := q.automaticInvoker(t, token)
 
 	var contact struct {
 		ID string `json:"id"`
@@ -341,11 +357,30 @@ func TestAnAgentRelinksToAContactWithoutAskingAndStillStagesAProject(t *testing.
 		})
 	}
 
-	t.Run("a project still stages", func(t *testing.T) {
-		_, err := invoke("relink_activity", `{"activity_id":"`+activity.ID+
+	t.Run("a project is filed at once on a passport", func(t *testing.T) {
+		if _, err := invoke("relink_activity", `{"activity_id":"`+activity.ID+
+			`","entity_type":"project","entity_id":"`+project.ID+`"}`); err != nil {
+			t.Fatalf("relinking to a project on a passport → %v, want it filed at once", err)
+		}
+	})
+
+	t.Run("a project is refused to automatic work", func(t *testing.T) {
+		second, err := invoke("log_activity", `{"kind":"note","body":"relink me later"}`)
+		if err != nil {
+			t.Fatalf("log_activity: %v", err)
+		}
+		var envelope struct {
+			Data struct {
+				ID string `json:"id"`
+			} `json:"data"`
+		}
+		if err := json.Unmarshal([]byte(second), &envelope); err != nil || envelope.Data.ID == "" {
+			t.Fatalf("reading the second activity: %v (%s)", err, second)
+		}
+		_, err = automatic("relink_activity", `{"activity_id":"`+envelope.Data.ID+
 			`","entity_type":"project","entity_id":"`+project.ID+`"}`)
-		if _, ok := errors.AsType[*workflow.StagedApprovalError](err); !ok {
-			t.Fatalf("relinking to a project → %v, want a staged approval — filing under a project is write-once", err)
+		if !isPassportlessStagingRefusal(err) {
+			t.Fatalf("automatic work relinking to a project → %v, want the refusal that it cannot stage", err)
 		}
 	})
 }

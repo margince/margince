@@ -758,11 +758,12 @@ The 24 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## raw_capture
 
-6 columns · primary key `(id)` · referenced by 1 foreign key
+7 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `parts_slim_outcome` | `text` |  | One of `slimmed`, `no_proved_parts`, `unreadable_spelling`, `unrewritable_original`, `nothing_came_out`, `unencodable_result` and 1 more. |
 | `parts_slimmed_at` | `timestamp with time zone` |  |  |
 | `payload` | `jsonb` | yes |  |
 | `received_at` | `timestamp with time zone`, default `now()` | yes |  |
@@ -771,6 +772,7 @@ The 24 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 **Rules**
 
+- `raw_capture_parts_slim_outcome_known`: `CHECK (((parts_slim_outcome IS NULL) OR (parts_slim_outcome = ANY (ARRAY['slimmed', 'no_proved_parts', 'unreadable_spelling', 'unrewritable_original', 'nothing_came_out', 'unencodable_result', 'no_bytes_saved']))))`
 - `raw_capture_source_unique`: `UNIQUE (source_system, source_id)`
 
 **Indexes**

@@ -48,6 +48,7 @@ var modelHandlersThatDegrade = gatekit.Waive(map[string]string{
 	"compose/companydossier.WriteGrowthFit":          "the floor's abstention is the declared degrade, labelled as the floor's, and the lane-failed flag stops it overwriting a real assessment",
 	"compose/contactbrief.Write":                     "the deterministic card is the declared on_budget_exhausted degrade; generated_by tells the reader the floor wrote it",
 	"(*compose/dealstatus.Service).write":            "the deterministic card is the declared degrade, and a warning names the lane that failed so the fallback is not silent",
+	"compose/roombrief.Write":                        "the deterministic brief is the declared on_budget_exhausted degrade; generated_by tells the reader the floor wrote it",
 	"compose/meetingbrief.Write":                     "the floor brief is the declared on_budget_exhausted degrade; generated_by tells the reader the floor wrote it",
 	"compose/meetingbrief.WritePlan":                 "the floor plan is the declared on_budget_exhausted degrade; generated_by tells the reader the floor wrote it",
 	"compose/network.writeIntroNote":                 "the template floor states every fact of the introduction honestly, and generated_by says the floor wrote it",

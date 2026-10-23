@@ -1,11 +1,11 @@
 {
   "totals": {
-    "sites": 47,
+    "sites": 48,
     "sites_best_current": 40,
     "sites_best_partial": 0,
     "sites_best_stale": 6,
-    "sites_absent": 1,
-    "scenarios": 254,
+    "sites_absent": 2,
+    "scenarios": 255,
     "records": 354,
     "bindings": 18,
     "self_judged_records": 0
@@ -6953,7 +6953,7 @@
     {
       "name": "Gemma",
       "answer": "mostly",
-      "sites_shipped": 47,
+      "sites_shipped": 48,
       "sites_measured": 45,
       "ready": 27,
       "usable_with_care": 15,
@@ -7657,7 +7657,7 @@
     {
       "name": "GPT",
       "answer": "mostly",
-      "sites_shipped": 47,
+      "sites_shipped": 48,
       "sites_measured": 44,
       "ready": 31,
       "usable_with_care": 10,
@@ -8347,7 +8347,7 @@
     {
       "name": "Gemini",
       "answer": "mostly",
-      "sites_shipped": 47,
+      "sites_shipped": 48,
       "sites_measured": 44,
       "ready": 33,
       "usable_with_care": 10,
@@ -9049,7 +9049,7 @@
     {
       "name": "Mistral",
       "answer": "mostly",
-      "sites_shipped": 47,
+      "sites_shipped": 48,
       "sites_measured": 44,
       "ready": 24,
       "usable_with_care": 12,
@@ -9759,7 +9759,7 @@
     {
       "name": "Qwen",
       "answer": "not_yet",
-      "sites_shipped": 47,
+      "sites_shipped": 48,
       "sites_measured": 44,
       "ready": 9,
       "usable_with_care": 8,
@@ -24434,6 +24434,24 @@
           "stale_reason": ""
         }
       ]
+    },
+    {
+      "task": "summarize",
+      "site": "deal_room_brief",
+      "key": "summarize/deal_room_brief",
+      "scope": "full_invocation",
+      "missing_context_scopes": [],
+      "best_state": "absent",
+      "recommended": null,
+      "scenarios": [
+        {
+          "name": "deal_room_brief_reads_the_blocker",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/summarize/deal_room_brief_reads_the_blocker_01.yaml"
+        }
+      ],
+      "records": []
     },
     {
       "task": "summarize",

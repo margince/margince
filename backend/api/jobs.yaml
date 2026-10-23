@@ -1555,6 +1555,19 @@ kinds:
       bytes. Each rule selects its runs by status over an index, so on an idle
       installation a pass finds nothing.
 
+  dedupe_recheck:
+    role: worker
+    fleet: true
+    go_type: DedupeRecheckArgs
+    queue: default
+    timeout: 10m
+    opts_owner: caller
+    cadence: 24h
+    reason: >-
+      Closes open duplicate pairs the filing rule no longer files, so a rule
+      that grew stricter also empties the queue it built before. Run at boot as
+      well, so a deploy that changes the rule cleans the old queue the same day.
+
   employment_import_sweep:
     role: worker
     fleet: true

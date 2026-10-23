@@ -16890,6 +16890,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/deal-rooms/{id}/brief": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * A short written brief of what the room's buyers did and what is waiting on the seller.
+         * @description Written from the room's own reads, run AS THE CALLER inside the normal gates: the
+         *     buyers who may enter, the documents, and the threads. Every sentence cites the
+         *     participant, document or thread it was written from, and a sentence citing anything
+         *     else is dropped whole.
+         *
+         *     Written on every request and stored nowhere: a room moves with each buyer's click, and
+         *     a stored brief would be the one thing on the tab that is out of date.
+         *
+         *     Degrades rather than fails: with no model lane, an exhausted budget, or a reply the
+         *     grounding filter refuses, the brief is a deterministic composition of the same records,
+         *     and `generated_by` says which wrote it. A room with nothing to say has no sentences.
+         */
+        get: operations["getDealRoomBrief"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/deal-rooms/{id}/participants": {
         parameters: {
             query?: never;
@@ -24376,7 +24409,7 @@ export interface components {
                 companies_created?: number;
             };
             review: {
-                /** @description Open DH-DDL-1 candidate pairs. */
+                /** @description Every open duplicate candidate pair the reader can see, not only the pairs filed overnight. */
                 dedupe_open?: number;
                 /** @description Pending 🟡 items (enrich, quarantine, merge). */
                 approvals_pending?: number;
@@ -44010,6 +44043,38 @@ export interface components {
             credential: string;
             /** Format: date-time */
             credential_expires_at: string;
+        };
+        /**
+         * @description The room brief on the deal's Deal Room tab: at most four sentences about what the
+         *     room's buyers did and what is waiting on the seller, each citing what it was written
+         *     from.
+         */
+        DealRoomBrief: {
+            /** Format: uuid */
+            room_id: string;
+            /** Format: date-time */
+            generated_at: string;
+            generated_by: components["schemas"]["WrittenBy"];
+            sentences: components["schemas"]["DealRoomBriefSentence"][];
+        };
+        DealRoomBriefSentence: {
+            text: string;
+            /**
+             * @description What kind of claim the sentence is. `fact` restates a record, `assessment` is a
+             *     reading of several, `recommendation` is the one move that follows.
+             * @enum {string}
+             */
+            nature: "fact" | "assessment" | "recommendation";
+            evidence: components["schemas"]["DealRoomBriefEvidence"][];
+        };
+        DealRoomBriefEvidence: {
+            /**
+             * @description A record of this room, which the tab draws beside the brief.
+             * @enum {string}
+             */
+            entity_type: "participant" | "document" | "thread";
+            /** Format: uuid */
+            entity_id: string;
         };
         /**
          * @description One of four fixed groups, as a machine key: `commercial`, `legal`,
@@ -74949,6 +75014,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DealRoomPreviewIssued"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getDealRoomBrief: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The room brief. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DealRoomBrief"];
                 };
             };
             401: components["responses"]["Unauthorized"];

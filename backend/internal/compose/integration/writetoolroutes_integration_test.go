@@ -13,12 +13,10 @@ import (
 	"encoding/json"
 	"maps"
 	"net/http"
-	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -82,34 +80,6 @@ func dealStage(t *testing.T, e *apptest.AppEnv, deal string) string {
 	return read.StageID
 }
 
-// stagedProgressions answers the progress_deal approvals staged on one deal.
-func stagedProgressions(t *testing.T, e *apptest.AppEnv, deal string) []string {
-	t.Helper()
-	return stagedDealCalls(t, e, deal, "progress_deal")
-}
-
-func stagedDealCalls(t *testing.T, e *apptest.AppEnv, deal, kind string) []string {
-	t.Helper()
-	args := []any{deal, kind}
-	rows, err := e.Owner.Query(t.Context(), storekit.SQLf(`SELECT id::text FROM approval WHERE target_entity_id = $%d AND kind = $%d`, len(args)-1, len(args)), args...)
-	if err != nil {
-		t.Fatalf("reading the approvals staged on %s: %v", deal, err)
-	}
-	defer rows.Close()
-	var staged []string
-	for rows.Next() {
-		var id string
-		if err := rows.Scan(&id); err != nil {
-			t.Fatal(err)
-		}
-		staged = append(staged, id)
-	}
-	if err := rows.Err(); err != nil {
-		t.Fatal(err)
-	}
-	return staged
-}
-
 type sharedProgress struct {
 	Deal struct {
 		RecordType string `json:"record_type"`
@@ -150,70 +120,37 @@ func TestTheProgressRouteMovesADealAsTheToolDoes(t *testing.T) {
 	}
 }
 
-// A move to a won stage is confirm-first for an agent. Each door stages one
-// approval and answers as the gate's own staging path does: 403
-// approval_required naming the approval. Its retry under X-Approval-Token runs.
-func TestAConfirmFirstProgressStagesOneApprovalOnEitherDoor(t *testing.T) {
-	d := newTwoDoors(t, "progress-staged", "read", "write")
+// A move to a won stage runs at once on a colleague's passport, as the
+// colleague could in the app. The progress and advance routes and their tools
+// all close the deal, and none of them stages an approval.
+func TestAWonMoveOnAColleaguesPassportRunsAtOnceOnEitherDoor(t *testing.T) {
+	d := newTwoDoors(t, "progress-won", "read", "write")
 	stages := apptest.DiscoverSeededPipeline(t, d.e)
-	viaREST := openDeal(t, d.e, stages, "Rest-won renewal")
-	viaTool := openDeal(t, d.e, stages, "Tool-won renewal")
-	viaGate := openDeal(t, d.e, stages, "Gate-won renewal")
 	win := AnyMap{"to_stage_id": stages.Won, "won_without_contract_reason": "verbal"}
-
-	var refusal fileRefusal
-	if status := d.e.Call(t, "POST", "/v1/deals/"+viaREST+"/progress", win, d.bearer, &refusal); status != http.StatusForbidden || refusal.Code != "approval_required" {
-		t.Fatalf("a won move over REST → %d %q, want 403 approval_required", status, refusal.Code)
-	}
-	staged := stagedProgressions(t, d.e, viaREST)
-	if len(staged) != 1 || !strings.Contains(refusal.Detail, staged[0]) {
-		t.Fatalf("the REST door staged %v and answered %q, want one approval named in the answer", staged, refusal.Detail)
-	}
-	toolRefusal := d.mcp.CallRefused(t, "progress_deal", with(win, "deal_id", viaTool))
-	if fromTool := stagedProgressions(t, d.e, viaTool); len(fromTool) != 1 || !strings.Contains(toolRefusal, fromTool[0]) {
-		t.Fatalf("the tool door staged %v and answered %q, want one approval named in the answer", fromTool, toolRefusal)
-	}
-	var gated fileRefusal
-	if status := d.e.Call(t, "POST", "/v1/deals/"+viaGate+"/advance", win, d.bearer, &gated); status != http.StatusForbidden || gated.Code != refusal.Code {
-		t.Errorf("the advance route answers a won move %d %q, and the progress route 403 %q; one rule answers both",
-			status, gated.Code, refusal.Code)
-	}
-
-	changes := readCommercialPreview(t, d.e, staged[0])
-	if len(changes) != 4 {
-		t.Fatalf("stage effects=%+v", changes)
-	}
-	for _, change := range changes {
-		if change.Field == "stage_id" && (change.Before.Kind != "stage" || change.After.Kind != "stage" || change.Before.Text == stages.Open || change.After.Text == stages.Won) {
-			t.Fatalf("stage labels=%+v", change)
-		}
-	}
+	viaREST := openDeal(t, d.e, stages, "Rest-won renewal")
+	viaAdvance := openDeal(t, d.e, stages, "Advance-won renewal")
+	viaTool := openDeal(t, d.e, stages, "Tool-won renewal")
 	viaAdvanceTool := openDeal(t, d.e, stages, "Tool advance renewal")
-	advanceRefusal := d.mcp.CallRefused(t, "advance_deal", with(win, "deal_id", viaAdvanceTool))
-	advances := stagedDealCalls(t, d.e, viaAdvanceTool, "advance_deal")
-	if len(advances) != 1 || !strings.Contains(advanceRefusal, advances[0]) {
-		t.Fatalf("advance staged=%v refusal=%s", advances, advanceRefusal)
-	}
-	for _, id := range []string{stagedProgressions(t, d.e, viaTool)[0], ExtractStagedApprovalID(t, gated.Detail), advances[0]} {
-		if other := readCommercialPreview(t, d.e, id); !reflect.DeepEqual(changes, other) {
-			t.Fatalf("stage previews disagree: %+v / %+v", changes, other)
+
+	for route, deal := range map[string]string{"progress": viaREST, "advance": viaAdvance} {
+		var answer json.RawMessage
+		if status := d.e.Call(t, "POST", "/v1/deals/"+deal+"/"+route, win, d.bearer, &answer); status != http.StatusOK {
+			t.Errorf("a won move over the %s route → %d %s, want it run", route, status, answer)
 		}
 	}
-
-	if status := d.e.Call(t, "POST", "/v1/approvals/"+staged[0]+"/approve", AnyMap{}, nil, nil); status != http.StatusOK {
-		t.Fatalf("approving %s → %d", staged[0], status)
+	d.mcp.CallOK(t, "progress_deal", with(win, "deal_id", viaTool))
+	d.mcp.CallOK(t, "advance_deal", with(win, "deal_id", viaAdvanceTool))
+	for _, deal := range []string{viaREST, viaAdvance, viaTool, viaAdvanceTool} {
+		if stage := dealStage(t, d.e, deal); stage != stages.Won {
+			t.Errorf("deal %s is at stage %s, want the won stage", deal, stage)
+		}
 	}
-	redeem := maps.Clone(d.bearer)
-	redeem["X-Approval-Token"] = staged[0]
-	var redeemed json.RawMessage
-	if status := d.e.Call(t, "POST", "/v1/deals/"+viaREST+"/progress", win, redeem, &redeemed); status != http.StatusOK {
-		t.Fatalf("the approved retry → %d %s", status, redeemed)
+	var staged int
+	if err := d.e.Owner.QueryRow(t.Context(), `SELECT count(*) FROM approval`).Scan(&staged); err != nil {
+		t.Fatalf("counting approvals: %v", err)
 	}
-	if stage := dealStage(t, d.e, viaREST); stage != stages.Won {
-		t.Errorf("the approved deal is at stage %s, want the won stage", stage)
-	}
-	if again := stagedProgressions(t, d.e, viaREST); len(again) != 1 {
-		t.Errorf("the redemption left %d approvals on the deal, want the one it redeemed", len(again))
+	if staged != 0 {
+		t.Errorf("the won moves staged %d approvals, want none", staged)
 	}
 }
 

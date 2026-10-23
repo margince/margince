@@ -210,7 +210,11 @@ func TestRiverCloseDateSweepAppliesTheSameProvisionalAsDirectSweep(t *testing.T)
 		t.Error("the replacement is the sweep's own estimate and must say so")
 	}
 	if swept.forecastCat == nil || *swept.forecastCat != "commit" {
-		t.Errorf("forecast_category = %s, want the untouched commit override", shownString(swept.forecastCat))
+		// The tier comes with it. best_case here is what the downgrade notch
+		// writes, reached only from a stalled finding this fixture does not
+		// carry. Naming the decision says which of the two an occurrence was.
+		t.Errorf("forecast_category = %s, want the untouched commit override (%s)",
+			shownString(swept.forecastCat), e.sweptTier(t, id))
 	}
 	if got := e.pendingCorrections(t, id); got != 0 {
 		t.Errorf("the job-driven pass raised %d cards, want none — it must do exactly "+

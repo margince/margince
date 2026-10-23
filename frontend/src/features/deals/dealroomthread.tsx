@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { CheckCheck, MessageSquare } from "lucide-react";
+import { CheckCheck, FileText, MessageSquare } from "lucide-react";
 import { useState } from "react";
 import type { components } from "../../api/schema";
 import {
@@ -52,11 +52,22 @@ export type ThreadVerbs = Readonly<{
 export function ThreadList({
   threads,
   verbs,
-}: Readonly<{ threads: readonly DealRoomThread[]; verbs: ThreadVerbs }>) {
+  aboutOf,
+}: Readonly<{
+  threads: readonly DealRoomThread[];
+  verbs: ThreadVerbs;
+  /** What a thread is about, as a label, for a list that mixes documents. */
+  aboutOf?: (thread: DealRoomThread) => string | undefined;
+}>) {
   return (
     <div className="board-threads">
       {threads.map((thread) => (
-        <ThreadRow key={thread.id} thread={thread} verbs={verbs} />
+        <ThreadRow
+          key={thread.id}
+          thread={thread}
+          verbs={verbs}
+          about={aboutOf?.(thread)}
+        />
       ))}
     </div>
   );
@@ -94,7 +105,12 @@ function CommentRow({
 function ThreadRow({
   thread,
   verbs,
-}: Readonly<{ thread: DealRoomThread; verbs: ThreadVerbs }>) {
+  about,
+}: Readonly<{
+  thread: DealRoomThread;
+  verbs: ThreadVerbs;
+  about?: string;
+}>) {
   const t = useT();
   const [reply, setReply] = useState("");
   const [pending, setPending] = useState<"reply" | "resolve" | null>(null);
@@ -119,6 +135,12 @@ function ThreadRow({
   };
   return (
     <div className="thread">
+      {about ? (
+        <span className="t-caption thread-about">
+          <FileText size={12} aria-hidden />
+          {about}
+        </span>
+      ) : null}
       {thread.required_change || resolved ? (
         <div className="thread-head">
           {thread.required_change ? (

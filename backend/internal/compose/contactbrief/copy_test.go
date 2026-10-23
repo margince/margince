@@ -16,6 +16,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/claims"
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy/langcopytest"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -49,7 +50,7 @@ func TestAnUnshippedLanguageFallsBackRatherThanBlank(t *testing.T) {
 func TestTheFloorWritesInTheLanguageItIsGiven(t *testing.T) {
 	in := inputFixture()
 	for _, lang := range textlang.Shipped {
-		prose := Prose(Deterministic(briefContactID, in, string(lang)))
+		prose := claims.Prose(Deterministic(briefContactID, in, string(lang)))
 		want := fmt.Sprintf(floor.IdentityTitleEmployer.In(lang), in.Name, in.Title, in.Employer)
 		if !strings.Contains(prose, want) {
 			t.Errorf("the %s floor does not open with its own identity sentence.\n got: %s\nwant: %s",

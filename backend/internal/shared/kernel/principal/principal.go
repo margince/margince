@@ -121,6 +121,15 @@ type Principal struct {
 	Permissions Permissions
 }
 
+// ActsAsItsUser reports whether p is an agent working on a colleague's passport.
+// Such an agent may do without a human's approval whatever that colleague could
+// do unaided in the product. Their live grants bound it at the store, as they
+// bound the colleague. A passportless agent is automatic work with nobody behind
+// it, and keeps the confirm-first tier and the human-edit precedence split.
+func (p Principal) ActsAsItsUser() bool {
+	return p.Type == PrincipalAgent && !p.PassportID.IsZero() && !p.OnBehalfOf.IsZero()
+}
+
 // Action is one CRUD verb of the object-level RBAC matrix
 // (features/04 §1). Archive counts as delete (soft-delete IS the delete).
 type Action string
