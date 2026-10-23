@@ -139,8 +139,8 @@ func TestTheSubjectLockIsTheFirstRowATransactionTakes(t *testing.T) {
 					continue
 				}
 				judged++
-				hold, lock := holdAndFirstLock(fn, recv, receiverVarName(fn), reachesHold, reachesLock)
-				if hold == token.NoPos || lock == token.NoPos || lock >= hold {
+				hold, lock, lockFirst := holdAndFirstLock(fn, recv, receiverVarName(fn), reachesHold, reachesLock)
+				if hold == token.NoPos || lock == token.NoPos || !lockFirst {
 					continue
 				}
 				key := dir + ":" + scrubKey(recv, fn.Name.Name)
@@ -175,128 +175,159 @@ func TestTheSubjectLockIsTheFirstRowATransactionTakes(t *testing.T) {
 	}
 }
 
-// holdAndFirstLock returns where this function holds its subject and where it
-// first locks a row, either possibly NoPos. A call reaching the hold counts at
-// the call. A call that merely writes does not count as a lock, which
-// under-reports. A bound closure counts where it is called, and a deferred
-// call at the end of the body, because that is when each runs.
+// holdAndFirstLock returns where this function holds its subject, where it
+// first locks a row, and whether the lock runs first. A call reaching the hold
+// counts at the call; a call that merely writes does not, which under-reports.
+// Effects are judged in run order: a bound closure's own effects run, in
+// their order, where it is called, and deferred calls run last.
 func holdAndFirstLock(
 	fn *ast.FuncDecl, recvType, recvVar string,
 	reachesHold func(string) bool, reachesLock func(string) bool,
-) (hold, lock token.Pos) {
+) (hold, lock token.Pos, lockFirst bool) {
 	w := lockWalk{
 		recvType: recvType, recvVar: recvVar, reachesHold: reachesHold, reachesLock: reachesLock,
-		bound: boundClosures(fn.Body), end: fn.Body.End(),
+		bound: boundLiterals(fn.Body), entered: map[*ast.FuncLit]bool{},
 	}
-	return w.scan(fn.Body)
+	hold, lock = token.NoPos, token.NoPos
+	for _, e := range w.effects(fn.Body) {
+		switch {
+		case e.hold && hold == token.NoPos:
+			hold = e.at
+			lockFirst = lock != token.NoPos
+		case !e.hold && lock == token.NoPos:
+			lock = e.at
+		}
+	}
+	return hold, lock, lockFirst
 }
 
-// lockWalk finds the hold and the first lock in one body.
+// lockEffect is one hold or row lock, reported at the position it runs from.
+type lockEffect struct {
+	hold bool
+	at   token.Pos
+}
+
+// lockWalk lists the holds and row locks of one body in run order.
 type lockWalk struct {
 	recvType, recvVar string
 	reachesHold       func(string) bool
 	reachesLock       func(string) bool
-	bound             map[string]*ast.FuncLit
-	end               token.Pos
+	bound             map[*ast.FuncLit]bool
+	entered           map[*ast.FuncLit]bool
 }
 
-func earliest(at *token.Pos, pos token.Pos) {
-	if pos != token.NoPos && (*at == token.NoPos || pos < *at) {
-		*at = pos
-	}
-}
-
-func (w lockWalk) scan(body ast.Node) (hold, lock token.Pos) {
-	hold, lock = token.NoPos, token.NoPos
+func (w lockWalk) effects(body ast.Node) []lockEffect {
+	var ordered, deferred []lockEffect
 	ast.Inspect(body, func(node ast.Node) bool {
 		switch n := node.(type) {
 		case *ast.FuncLit:
-			// A bound closure is judged where it is called, below.
-			for _, lit := range w.bound {
-				if lit == n {
-					return false
-				}
-			}
+			// A bound closure runs where it is called, below.
+			return !w.bound[n]
 		case *ast.DeferStmt:
-			h, l := w.scan(n.Call)
-			if h != token.NoPos {
-				earliest(&hold, w.end)
-			}
-			if l != token.NoPos {
-				earliest(&lock, w.end)
-			}
+			deferred = append(w.effects(n.Call), deferred...)
 			return false
 		case *ast.CallExpr:
-			w.call(n, &hold, &lock)
+			ordered = append(ordered, w.call(n)...)
 		case *ast.BasicLit:
 			if spellsLock(n) {
-				earliest(&lock, n.Pos())
+				ordered = append(ordered, lockEffect{at: n.Pos()})
 			}
 		}
 		return true
 	})
-	return hold, lock
+	// Source order is run order outside closures and defers; a closure call's
+	// effects share its position and keep their own order.
+	sort.SliceStable(ordered, func(i, j int) bool { return ordered[i].at < ordered[j].at })
+	return append(ordered, deferred...)
 }
 
-func (w lockWalk) call(n *ast.CallExpr, hold, lock *token.Pos) {
+func (w lockWalk) call(n *ast.CallExpr) []lockEffect {
+	var out []lockEffect
+	mark := func(hold bool) { out = append(out, lockEffect{hold: hold, at: n.Pos()}) }
 	switch fun := n.Fun.(type) {
 	case *ast.SelectorExpr:
 		if subjectHolds[fun.Sel.Name] {
-			earliest(hold, n.Pos())
-			return
+			mark(true)
+			return out
 		}
-		// A method on this function's own receiver, keyed as the graph keys
-		// it: s.applySignatureField reaching the hold discharges it here, at
-		// the call. And a helper that takes a row LOCKS at its call site, so
+		// A method on this function's own receiver counts at its call, so
 		// moving one statement into a helper cannot hide the order it decides.
 		if base, isIdent := fun.X.(*ast.Ident); isIdent && w.recvVar != "" && base.Name == w.recvVar {
 			if w.reachesHold(scrubKey(w.recvType, fun.Sel.Name)) {
-				earliest(hold, n.Pos())
+				mark(true)
 			}
 			if w.reachesLock(scrubKey(w.recvType, fun.Sel.Name)) {
-				earliest(lock, n.Pos())
+				mark(false)
 			}
 		}
 	case *ast.Ident:
-		if lit, isBound := w.bound[fun.Name]; isBound {
-			h, l := w.scan(lit.Body)
-			if h != token.NoPos {
-				earliest(hold, n.Pos())
+		if lit := w.closureNamed(fun); lit != nil {
+			if w.entered[lit] {
+				return nil
 			}
-			if l != token.NoPos {
-				earliest(lock, n.Pos())
+			w.entered[lit] = true
+			for _, e := range w.effects(lit.Body) {
+				out = append(out, lockEffect{hold: e.hold, at: n.Pos()})
 			}
-			return
+			delete(w.entered, lit)
+			return out
 		}
 		if subjectHolds[fun.Name] || w.reachesHold(fun.Name) {
-			earliest(hold, n.Pos())
+			mark(true)
 		}
 		if w.reachesLock(fun.Name) {
-			earliest(lock, n.Pos())
+			mark(false)
 		}
 	}
+	return out
 }
 
-// boundClosures are the closures a body names, `x := func…` or
-// `var x = func…`, by that name.
-func boundClosures(body *ast.BlockStmt) map[string]*ast.FuncLit {
-	bound := map[string]*ast.FuncLit{}
+// closureNamed resolves a called name to the closure its own declaration
+// bound, by lexical scope, so a shadowing name in an inner block is its own.
+func (w lockWalk) closureNamed(id *ast.Ident) *ast.FuncLit {
+	if id.Obj == nil {
+		return nil
+	}
+	switch decl := id.Obj.Decl.(type) {
+	case *ast.AssignStmt:
+		for i, lhs := range decl.Lhs {
+			if name, isIdent := lhs.(*ast.Ident); isIdent && name.Obj == id.Obj && i < len(decl.Rhs) {
+				if lit, isLit := decl.Rhs[i].(*ast.FuncLit); isLit {
+					return lit
+				}
+				return nil
+			}
+		}
+	case *ast.ValueSpec:
+		for i, name := range decl.Names {
+			if name.Obj == id.Obj && i < len(decl.Values) {
+				if lit, isLit := decl.Values[i].(*ast.FuncLit); isLit {
+					return lit
+				}
+				return nil
+			}
+		}
+	}
+	return nil
+}
+
+// boundLiterals are the closures a body binds to a name.
+func boundLiterals(body *ast.BlockStmt) map[*ast.FuncLit]bool {
+	bound := map[*ast.FuncLit]bool{}
 	ast.Inspect(body, func(node ast.Node) bool {
 		switch n := node.(type) {
 		case *ast.AssignStmt:
 			for i, rhs := range n.Rhs {
-				lit, isLit := rhs.(*ast.FuncLit)
-				if !isLit || i >= len(n.Lhs) {
-					continue
-				}
-				if id, isIdent := n.Lhs[i].(*ast.Ident); isIdent {
-					bound[id.Name] = lit
+				if lit, isLit := rhs.(*ast.FuncLit); isLit && i < len(n.Lhs) {
+					if _, named := n.Lhs[i].(*ast.Ident); named {
+						bound[lit] = true
+					}
 				}
 			}
 		case *ast.ValueSpec:
-			for i, value := range n.Values {
-				if lit, isLit := value.(*ast.FuncLit); isLit && i < len(n.Names) {
-					bound[n.Names[i].Name] = lit
+			for _, value := range n.Values {
+				if lit, isLit := value.(*ast.FuncLit); isLit {
+					bound[lit] = true
 				}
 			}
 		}

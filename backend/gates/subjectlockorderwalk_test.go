@@ -39,6 +39,25 @@ func TestTheLockOrderWalkJudgesWhenCodeRunsNotWhereItIsWritten(t *testing.T) {
 		{"a hold deferred to the end of a body that writes", `
 			defer auth.HoldWritableLive(ctx, tx, "company", id)
 			tx.Exec(ctx, "UPDATE company_fact SET value = $1")`, true},
+		{"a closure that writes and then holds", `
+			work := func() {
+				tx.Exec(ctx, "UPDATE company_fact SET value = $1")
+				auth.HoldWritableLive(ctx, tx, "company", id)
+			}
+			work()`, true},
+		{"a closure that holds and then writes", `
+			work := func() {
+				auth.HoldWritableLive(ctx, tx, "company", id)
+				tx.Exec(ctx, "UPDATE company_fact SET value = $1")
+			}
+			work()`, false},
+		{"an inner closure that shadows a holding one with a write", `
+			work := func() { auth.HoldWritableLive(ctx, tx, "company", id) }
+			{
+				work := func() { tx.Exec(ctx, "UPDATE company_fact SET value = $1") }
+				work()
+			}
+			work()`, true},
 		{"a transaction callback that holds before it writes", `
 			s.tx(ctx, func(tx pgx.Tx) error {
 				auth.HoldWritableLive(ctx, tx, "company", id)
@@ -57,12 +76,12 @@ func TestTheLockOrderWalkJudgesWhenCodeRunsNotWhereItIsWritten(t *testing.T) {
 			if !ok {
 				t.Fatal("the planted source holds no function")
 			}
-			hold, lock := holdAndFirstLock(fn, "", "", never, never)
+			hold, lock, lockFirst := holdAndFirstLock(fn, "", "", never, never)
 			if hold == token.NoPos || lock == token.NoPos {
 				t.Fatalf("the walk found hold=%v lock=%v, want both", hold, lock)
 			}
-			if inverted := lock < hold; inverted != c.inverted {
-				t.Fatalf("the walk read the order as inverted=%t, want %t", inverted, c.inverted)
+			if lockFirst != c.inverted {
+				t.Fatalf("the walk read the order as inverted=%t, want %t", lockFirst, c.inverted)
 			}
 		})
 	}
