@@ -14829,9 +14829,10 @@ export const vi = {
     "{count} tệp đính kèm không còn gửi được. Thu hồi tin nhắn rồi hẹn giờ tin nhắn mới.",
   "sched.editRefused.files_other":
     "{count} tệp đính kèm không còn gửi được. Thu hồi tin nhắn rồi hẹn giờ tin nhắn mới.",
-  "sched.editStale":
-    "Tin nhắn này đã thay đổi sau khi tải danh sách và không thể chỉnh sửa nữa.",
-  "sched.editLoadFailed": "Không thể tải tin nhắn",
+  "sched.editStale.title": "Tin nhắn đã thay đổi",
+  "sched.editStale.body":
+    "Tin nhắn đã thay đổi sau khi tải danh sách. Kiểm tra trạng thái trong danh sách.",
+  "sched.editLoading": "Đang tải tin nhắn…",
   "outbox.name": "Tin nhắn đã hẹn giờ",
   "outbox.nameWaiting_one": "Tin nhắn đã hẹn giờ, {count} đang chờ",
   "outbox.nameWaiting_other": "Tin nhắn đã hẹn giờ, {count} đang chờ",

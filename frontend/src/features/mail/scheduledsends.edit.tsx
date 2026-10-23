@@ -3,17 +3,42 @@
 
 import { useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useEffect, useId } from "react";
-import { Button, Modal } from "../../design-system/atoms";
+import { Modal } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { Heading } from "../../design-system/heading";
+import { QueryStates } from "../../design-system/querystates";
 import { useToast } from "../../design-system/toast";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
-import { problemMessageOf } from "../../lib/problem";
+import { problemStatus } from "../../lib/problem";
 import { ComposeModal } from "./compose";
 import { useThreadProject } from "./composeanchor";
 import { editSeedOf, isEditable, unavailableFilesOf } from "./schedulededit";
 import { type ScheduledSend, useScheduledSend } from "./scheduledqueue";
+
+// What the message's own read and its thread say about opening the composer.
+function useEditRead(send: ScheduledSend | null) {
+  const detail = useScheduledSend(send?.id);
+  const current = detail.data;
+  // The row was read earlier; the message may have gone or changed since.
+  const stale =
+    (current !== undefined && !isEditable(current)) ||
+    (detail.isError && problemStatus(detail.error) === 404);
+  const thread = useThreadProject(send?.anchor_activity_id ?? undefined);
+  const unavailable = current ? unavailableFilesOf(current) : 0;
+  const seed = current
+    ? editSeedOf(current, thread.activity?.links)
+    : undefined;
+  const answers = Boolean(send?.anchor_activity_id);
+  const refused = detail.isError || stale || unavailable > 0;
+  // A thread that read fine but carries no record to file under cannot open.
+  const cannotOpen =
+    answers &&
+    current !== undefined &&
+    !refused &&
+    (thread.failed || (thread.settled && !seed));
+  return { detail, stale, unavailable, seed, cannotOpen };
+}
 
 /**
  * The composer over a scheduled message, opened from its own read. The old
@@ -31,22 +56,7 @@ export function EditComposer({
   const t = useT();
   const toast = useToast();
   const queryClient = useQueryClient();
-  const detail = useScheduledSend(send?.id);
-  const current = detail.data;
-  // The row was read earlier; the message may have gone or changed since.
-  const stale = current !== undefined && !isEditable(current);
-  const thread = useThreadProject(send?.anchor_activity_id ?? undefined);
-  const unavailable = current ? unavailableFilesOf(current) : 0;
-  const seed = current
-    ? editSeedOf(current, thread.activity?.links)
-    : undefined;
-  const answers = Boolean(send?.anchor_activity_id);
-  // A thread that read fine but carries no record to file under cannot open.
-  const cannotOpen =
-    answers &&
-    !stale &&
-    unavailable === 0 &&
-    (thread.failed || (thread.settled && current !== undefined && !seed));
+  const { detail, stale, unavailable, seed, cannotOpen } = useEditRead(send);
   useEffect(() => {
     if (cannotOpen) {
       toast.show(t("compose.anchorGone"), { tone: "danger" });
@@ -64,28 +74,25 @@ export function EditComposer({
   if (!send) {
     return null;
   }
-  if (detail.isError) {
+  if (stale) {
     return (
       <EditBlocked subject={send.subject} onClose={onClose}>
-        <Callout
-          tone="danger"
-          kind="outcome"
-          title={t("sched.editLoadFailed")}
-          actions={
-            <Button variant="primary" onClick={() => void detail.refetch()}>
-              {t("state.retry")}
-            </Button>
-          }
-        >
-          <p>{problemMessageOf(detail.error, t)}</p>
+        <Callout tone="info" kind="standing" title={t("sched.editStale.title")}>
+          <p>{t("sched.editStale.body")}</p>
         </Callout>
       </EditBlocked>
     );
   }
-  if (stale) {
+  if (detail.isPending || detail.isError) {
     return (
       <EditBlocked subject={send.subject} onClose={onClose}>
-        <Callout tone="info" kind="standing" title={t("sched.editStale")} />
+        <QueryStates
+          query={detail}
+          pendingLabel={t("sched.editLoading")}
+          pendingLines={2}
+        >
+          {null}
+        </QueryStates>
       </EditBlocked>
     );
   }

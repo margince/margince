@@ -81,7 +81,9 @@ export const LoadFailed: Story = {
   },
   play: async () => {
     const dialog = within(await screen.findByRole("dialog"));
-    await expect(await dialog.findByText("Message not loaded")).toBeVisible();
+    await expect(
+      await dialog.findByRole("button", { name: "Retry" }),
+    ).toBeVisible();
   },
 };
 
@@ -95,8 +97,30 @@ export const Stale: Story = {
   },
   play: async () => {
     const dialog = within(await screen.findByRole("dialog"));
-    await expect(
-      await dialog.findByText(/can no longer be edited/),
-    ).toBeVisible();
+    await expect(await dialog.findByText("Message changed")).toBeVisible();
   },
+};
+
+/** The message's own read is still out: the composer waits in its place. */
+export const Loading: Story = {
+  render: () => {
+    installFetchStub({ [detailRoute]: () => new Promise<Response>(() => {}) });
+    return <Editing />;
+  },
+  play: async () => {
+    const dialog = within(await screen.findByRole("dialog"));
+    await expect(await dialog.findByRole("status")).toBeInTheDocument();
+  },
+};
+
+export const LoadingPhone: Story = {
+  ...Loading,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
+
+export const StalePhone: Story = {
+  ...Stale,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

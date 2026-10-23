@@ -5,6 +5,7 @@
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   render,
   screen,
@@ -99,6 +100,8 @@ function queueRoutes(rows: readonly Row[], details: readonly Row[] = rows) {
   };
 }
 
+let client: QueryClient;
+
 function mount(
   rows: readonly Row[],
   details: readonly Row[] = rows,
@@ -111,7 +114,7 @@ function mount(
     [`POST /scheduled-sends/${NEW_MESSAGE.id}/cancel`]: () =>
       new Response(null, { status: 204 }),
   });
-  const client = new QueryClient({
+  client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   render(
@@ -126,6 +129,26 @@ function mount(
   );
   return sent;
 }
+
+const THREAD_ROUTE = {
+  [`GET /activities/${REPLY.anchor_activity_id}`]: () =>
+    jsonResponse(THREAD_EMAIL),
+};
+
+// A reply's thread has answered, and every effect of that answer has run.
+async function settled(row: Row) {
+  if (row.anchor_activity_id !== undefined) {
+    await waitFor(() =>
+      expect(
+        client.getQueryState(["activity", row.anchor_activity_id, "filing"])
+          ?.status,
+      ).toBe("success"),
+    );
+  }
+  await act(async () => {});
+}
+
+const ANCHOR_GONE = /no longer available to reply to/;
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"], now: new Date("2026-08-31T10:00:00Z") });
@@ -357,7 +380,7 @@ it("refuses Edit for an operator reason, says why and still withdraws the messag
   });
   expect(edit).toBeDisabled();
   expect(edit).toHaveAccessibleDescription(
-    "Not editable: an edit would drop the reason you gave when scheduling it. Withdraw it and schedule a new message.",
+    "Not editable: an edit would drop the reason you gave when scheduling it. Withdraw the message and schedule a new one.",
   );
   expect(screen.getAllByRole("button", { name: /^Edit: / })).toHaveLength(1);
   await user.click(
@@ -375,25 +398,36 @@ it("refuses Edit for an operator reason, says why and still withdraws the messag
   );
 });
 
-it("says why in place of the composer when the read names a file the send would refuse", async () => {
-  const user = userEvent.setup();
-  mount([NEW_MESSAGE], [{ ...NEW_MESSAGE, attachments_unavailable: 1 }]);
-  await user.click(
-    await screen.findByRole("button", { name: "Edit: The renewal quote" }),
-  );
-  const refusal = within(await screen.findByRole("dialog"));
-  expect(
-    refusal.getByText(
-      "1 attached file can no longer be sent. Withdraw the message and schedule a new one.",
-    ),
-  ).toBeVisible();
-  expect(refusal.queryByLabelText("Subject")).toBeNull();
-  await user.click(refusal.getByRole("button", { name: "Close" }));
-  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-  expect(
-    screen.getByRole("button", { name: "Withdraw: The renewal quote" }),
-  ).toBeEnabled();
-});
+it.each([
+  ["a new message", NEW_MESSAGE],
+  ["a reply", REPLY],
+])(
+  "says why in place of the composer when the read of %s names a file the send would refuse",
+  async (_, row) => {
+    const user = userEvent.setup();
+    mount([row], [{ ...row, attachments_unavailable: 1 }], THREAD_ROUTE);
+    await user.click(
+      await screen.findByRole("button", { name: `Edit: ${row.subject}` }),
+    );
+    const refusal = within(await screen.findByRole("dialog"));
+    expect(
+      await refusal.findByText(
+        "1 attached file can no longer be sent. Withdraw the message and schedule a new one.",
+      ),
+    ).toBeVisible();
+    await settled(row);
+    expect(screen.getByRole("dialog")).toBeVisible();
+    expect(screen.queryByText(ANCHOR_GONE)).toBeNull();
+    expect(screen.queryByLabelText("Subject")).toBeNull();
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", { name: "Close" }),
+    );
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(
+      screen.getByRole("button", { name: `Withdraw: ${row.subject}` }),
+    ).toBeEnabled();
+  },
+);
 
 it("offers a retry when the message's own read fails, and opens once it lands", async () => {
   const user = userEvent.setup();
@@ -416,35 +450,105 @@ it("offers a retry when the message's own read fails, and opens once it lands", 
     await screen.findByRole("button", { name: "Edit: The renewal quote" }),
   );
   const failed = within(await screen.findByRole("dialog"));
-  expect(failed.getByText("Message not loaded")).toBeVisible();
+  expect(
+    await failed.findByText("Could not load this view. Reload the page."),
+  ).toBeVisible();
   await user.click(failed.getByRole("button", { name: "Retry" }));
   expect(await screen.findByLabelText("Subject")).toHaveValue(
     "The renewal quote",
   );
 });
 
+it("holds the composer in a loading state until the message's own read lands", async () => {
+  const user = userEvent.setup();
+  let land: (response: Response) => void = () => {};
+  mount([NEW_MESSAGE], [], {
+    [`GET /scheduled-sends/${NEW_MESSAGE.id}`]: () =>
+      new Promise<Response>((resolve) => {
+        land = resolve;
+      }),
+  });
+  await user.click(
+    await screen.findByRole("button", { name: "Edit: The renewal quote" }),
+  );
+  const loading = within(await screen.findByRole("dialog"));
+  expect(loading.getByText("Loading message…")).toBeInTheDocument();
+  land(jsonResponse(NEW_MESSAGE));
+  expect(await screen.findByLabelText("Subject")).toHaveValue(
+    "The renewal quote",
+  );
+});
+
+it("opens a reply whose thread answers before the message's own read does", async () => {
+  const user = userEvent.setup();
+  let land: (response: Response) => void = () => {};
+  mount([REPLY], [], {
+    ...THREAD_ROUTE,
+    [`GET /scheduled-sends/${REPLY.id}`]: () =>
+      new Promise<Response>((resolve) => {
+        land = resolve;
+      }),
+  });
+  await user.click(
+    await screen.findByRole("button", { name: "Edit: Re: the quote" }),
+  );
+  await settled(REPLY);
+  land(jsonResponse(REPLY));
+  expect(await screen.findByLabelText("Subject")).toHaveValue("Re: the quote");
+  expect(screen.queryByText(ANCHOR_GONE)).toBeNull();
+});
+
 it.each([
-  ["has gone since the list was read", { status: "sent" }],
-  ["now carries an operator reason", { operator_reason: "Asked at the fair" }],
+  ["a new message that has gone", NEW_MESSAGE, { status: "sent" }],
+  ["a reply that has gone", REPLY, { status: "sent" }],
+  [
+    "a message that now carries an operator reason",
+    NEW_MESSAGE,
+    { operator_reason: "Asked at the fair" },
+  ],
 ])(
-  "says so in place of the composer when the message %s, and rereads the list",
-  async (_, change) => {
+  "says so in place of the composer for %s since the list was read, and rereads the list",
+  async (_, row, change) => {
     const user = userEvent.setup();
-    const sent = mount([NEW_MESSAGE], [{ ...NEW_MESSAGE, ...change }]);
+    const sent = mount([row], [{ ...row, ...change }], THREAD_ROUTE);
     await user.click(
-      await screen.findByRole("button", { name: "Edit: The renewal quote" }),
+      await screen.findByRole("button", { name: `Edit: ${row.subject}` }),
     );
     const refusal = within(await screen.findByRole("dialog"));
-    expect(
-      refusal.getByText(
-        "This message changed after the list was loaded and can no longer be edited.",
-      ),
-    ).toBeVisible();
-    expect(refusal.queryByLabelText("Subject")).toBeNull();
+    expect(await refusal.findByText("Message changed")).toBeVisible();
     await waitFor(() =>
       expect(
         sent.filter((call) => call.key === "GET /scheduled-sends"),
       ).toHaveLength(2),
     );
+    await settled(row);
+    expect(screen.getByRole("dialog")).toBeVisible();
+    expect(screen.queryByText(ANCHOR_GONE)).toBeNull();
+    expect(screen.queryByLabelText("Subject")).toBeNull();
   },
 );
+
+it("reads a message whose own read answers 404 as changed, not as a failed load", async () => {
+  const user = userEvent.setup();
+  const sent = mount([NEW_MESSAGE], [], {
+    [`GET /scheduled-sends/${NEW_MESSAGE.id}`]: () =>
+      new Response(
+        JSON.stringify({ type: "about:blank", title: "Gone", status: 404 }),
+        {
+          status: 404,
+          headers: { "Content-Type": "application/problem+json" },
+        },
+      ),
+  });
+  await user.click(
+    await screen.findByRole("button", { name: "Edit: The renewal quote" }),
+  );
+  const refusal = within(await screen.findByRole("dialog"));
+  expect(await refusal.findByText("Message changed")).toBeVisible();
+  expect(refusal.queryByRole("button", { name: "Retry" })).toBeNull();
+  await waitFor(() =>
+    expect(
+      sent.filter((call) => call.key === "GET /scheduled-sends"),
+    ).toHaveLength(2),
+  );
+});

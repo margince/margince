@@ -15197,9 +15197,10 @@ export const de = {
     "{count} angehängte Datei kann nicht mehr gesendet werden. Ziehe die Nachricht zurück und plane eine neue.",
   "sched.editRefused.files_other":
     "{count} angehängte Dateien können nicht mehr gesendet werden. Ziehe die Nachricht zurück und plane eine neue.",
-  "sched.editStale":
-    "Diese Nachricht hat sich nach dem Laden der Liste geändert und kann nicht mehr bearbeitet werden.",
-  "sched.editLoadFailed": "Nachricht nicht geladen",
+  "sched.editStale.title": "Nachricht geändert",
+  "sched.editStale.body":
+    "Die Nachricht wurde nach dem Laden der Liste geändert. Prüfe ihren Status in der Liste.",
+  "sched.editLoading": "Nachricht wird geladen…",
   "outbox.name": "Geplante Nachrichten",
   "outbox.nameWaiting_one": "Geplante Nachrichten, {count} offen",
   "outbox.nameWaiting_other": "Geplante Nachrichten, {count} offen",

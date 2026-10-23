@@ -33,6 +33,7 @@ package gates
 // third such surface arriving without one.
 
 import (
+	"fmt"
 	"io/fs"
 	"maps"
 	"os"
@@ -85,53 +86,89 @@ var operationKeyLine = regexp.MustCompile(`^ {0,6}[a-zA-Z/]`)
 // or followed by a comment, still counts.
 var requestBodyLine = regexp.MustCompile(`^ {6}requestBody:`)
 
-// senderReasonProperty is the field that marks a schema as a send request body:
-// the sender's own word about why they are writing, recorded and granting
-// nothing.
-var senderReasonProperty = regexp.MustCompile(`^        operator_reason:\s*$`)
+// senderReasonProperty is the field that marks a send request body: the
+// sender's own word about why they are writing, recorded and granting nothing.
+// Any depth and flow style count, since a body may nest it or spell it inline.
+var senderReasonProperty = regexp.MustCompile(`\boperator_reason\s*:`)
 
-// sendDoors reads the contract for every path whose schemas carry the sender's
-// reason: the doors through which a sender's own word about a send reaches the
-// engine.
+// sharedRequestBody is a body this scan cannot read, so it refuses one.
+var sharedRequestBody = regexp.MustCompile(`#/components/requestBodies/`)
+
+// sendDoors reads the contract for every path whose request body carries the
+// sender's reason. Those are the doors a sender's own word reaches the engine by.
 func sendDoors(t *testing.T) []string {
 	t.Helper()
 	contract, err := os.ReadFile(sendPermissionContract)
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}
+	doors, err := scanSendDoors(string(contract))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return doors
+}
 
-	refsByPath := map[string][]string{}
-	carriesSenderReason := map[string]bool{}
+// sendDoorScan is what one pass over the contract learns.
+type sendDoorScan struct {
+	refsByPath          map[string][]string
+	inlineDoors         map[string]bool
+	carriesSenderReason map[string]bool
+	refsOfSchema        map[string][]string
+}
+
+func scanSendDoors(contract string) ([]string, error) {
+	scan := sendDoorScan{
+		refsByPath: map[string][]string{}, inlineDoors: map[string]bool{},
+		carriesSenderReason: map[string]bool{}, refsOfSchema: map[string][]string{},
+	}
 	var path, schema string
 	inSchemas, inBody := false, false
-	for line := range strings.SplitSeq(string(contract), "\n") {
+	for line := range strings.SplitSeq(contract, "\n") {
 		if operationKeyLine.MatchString(line) {
 			inBody = requestBodyLine.MatchString(line)
 		}
 		switch {
 		case line == "components:":
-			inSchemas = true
-			path = ""
+			inSchemas, path = true, ""
 		case !inSchemas && contractPathLine.MatchString(line):
 			path = contractPathLine.FindStringSubmatch(line)[1]
 		case !inSchemas && path != "" && inBody:
+			if sharedRequestBody.MatchString(line) {
+				return nil, fmt.Errorf("%s takes a shared request body, which this scan cannot read: "+
+					"inline it, or teach scanSendDoors to follow #/components/requestBodies", path)
+			}
+			if senderReasonProperty.MatchString(line) {
+				scan.inlineDoors[path] = true
+			}
 			for _, m := range contractSchemaRef.FindAllStringSubmatch(line, -1) {
-				refsByPath[path] = append(refsByPath[path], m[1])
+				scan.refsByPath[path] = append(scan.refsByPath[path], m[1])
 			}
 		case inSchemas && contractSchemaLine.MatchString(line):
 			schema = contractSchemaLine.FindStringSubmatch(line)[1]
-		case inSchemas && schema != "" && senderReasonProperty.MatchString(line):
-			carriesSenderReason[schema] = true
+		case inSchemas && schema != "":
+			if senderReasonProperty.MatchString(line) {
+				scan.carriesSenderReason[schema] = true
+			}
+			for _, m := range contractSchemaRef.FindAllStringSubmatch(line, -1) {
+				scan.refsOfSchema[schema] = append(scan.refsOfSchema[schema], m[1])
+			}
 		}
 	}
+	return scan.doors(), nil
+}
 
-	var doors []string
-	for p, refs := range refsByPath {
-		for _, ref := range refs {
-			if carriesSenderReason[ref] {
-				doors = append(doors, p)
-				break
-			}
+// doors follows each body's schemas one reference down, which is how an allOf
+// composes a send body from a shared part that carries the reason.
+func (s sendDoorScan) doors() []string {
+	carries := func(schema string) bool {
+		return s.carriesSenderReason[schema] ||
+			slices.ContainsFunc(s.refsOfSchema[schema], func(part string) bool { return s.carriesSenderReason[part] })
+	}
+	doors := slices.Collect(maps.Keys(s.inlineDoors))
+	for p, refs := range s.refsByPath {
+		if !s.inlineDoors[p] && slices.ContainsFunc(refs, carries) {
+			doors = append(doors, p)
 		}
 	}
 	slices.Sort(doors)
@@ -372,5 +409,62 @@ export const C = () => null;`
 		if got := hookAsksTheEngine(c.rel, c.sources); got != c.want {
 			t.Errorf("%s: hookAsksTheEngine = %v, want %v", c.name, got, c.want)
 		}
+	}
+}
+
+// Each shape a send body can take is found as a door or refused by name. None
+// may pass unseen.
+func TestTheSendDoorScanFindsEveryBodyShapeOrRefusesIt(t *testing.T) {
+	t.Parallel()
+	const probeBody = "paths:\n  /probe:\n    post:\n      requestBody:\n        content:\n          application/json:\n"
+	const answered = "      responses:\n        '200': { description: ok }\ncomponents:\n  schemas:\n"
+	cases := []struct {
+		name, contract string
+		doors          []string
+		refusal        string
+	}{
+		{
+			name: "an inline body carrying the reason is a door",
+			contract: probeBody + "            schema:\n              type: object\n              properties:\n" +
+				"                operator_reason: { type: string }\n" + answered,
+			doors: []string{"/probe"},
+		},
+		{
+			name: "a shared request body is refused by path",
+			contract: "paths:\n  /probe:\n    post:\n      requestBody: { $ref: '#/components/requestBodies/Probe' }\n" +
+				"components:\n  schemas:\n",
+			refusal: "/probe takes a shared request body",
+		},
+		{
+			name: "a body composed from a part carrying the reason is a door",
+			contract: probeBody + "            schema: { $ref: '#/components/schemas/ProbeBody' }\n" + answered +
+				"    ProbeBody:\n      allOf:\n        - $ref: '#/components/schemas/SenderPart'\n" +
+				"    SenderPart:\n      type: object\n      properties:\n        operator_reason: { type: string }\n",
+			doors: []string{"/probe"},
+		},
+		{
+			name: "a response echoing the reason is not a door",
+			contract: "paths:\n  /probe:\n    get:\n      responses:\n        '200':\n          content:\n" +
+				"            application/json:\n              schema: { $ref: '#/components/schemas/Echo' }\n" +
+				"components:\n  schemas:\n    Echo:\n      properties:\n        operator_reason:\n          type: string\n",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			doors, err := scanSendDoors(tc.contract)
+			if tc.refusal != "" {
+				if err == nil || !strings.Contains(err.Error(), tc.refusal) {
+					t.Fatalf("scan answered %v, %v; want a refusal containing %q", doors, err, tc.refusal)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("scan refused: %v", err)
+			}
+			if !slices.Equal(doors, tc.doors) {
+				t.Errorf("doors = %v, want %v", doors, tc.doors)
+			}
+		})
 	}
 }
