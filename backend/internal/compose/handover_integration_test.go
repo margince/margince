@@ -9,9 +9,14 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/projects"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -202,5 +207,28 @@ func TestAHandoverKeepsTheCeilingOverAnAdmin(t *testing.T) {
 	}
 	if _, err := seam.Owned(delegated, e.Rep1); err != nil {
 		t.Errorf("a delegated administrator reading a rep's work → %v, want it admitted", err)
+	}
+}
+
+// The private handover asks the receiver question itself, so a caller that
+// reaches it without the seam still cannot hand records to a seat that may not
+// own them.
+func TestThePrivateHandoverRefusesAReceiverWhoCannotOwn(t *testing.T) {
+	e := integration.Setup(t)
+	private := ids.UUID(seedBulkContacts(t, e, e.Rep1, 1)[0].Id)
+	e.MakeCapturePrivate(t, "contact", private, e.Rep1)
+	deactivate(t, e, e.Rep1)
+	deactivate(t, e, e.Rep3)
+
+	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := contacts.HandOverOwnerPrivateTx(e.Admin(), tx,
+			ids.From[ids.UserKind](e.Rep1), ids.From[ids.UserKind](e.Rep3))
+		return err
+	})
+	if _, ok := errors.AsType[*auth.AssigneeNotAllowedError](err); !ok {
+		t.Errorf("handing private records to a deactivated seat → %v, want the receiver refused", err)
+	}
+	if got := ownerOf(t, e, "contact", private); got != e.Rep1 {
+		t.Errorf("a refused private handover moved the contact to %s", got)
 	}
 }
