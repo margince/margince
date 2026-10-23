@@ -203,13 +203,29 @@ func TestAGuessedParticipantIsNoEvidenceOfPresence(t *testing.T) {
 	}
 	guessed := legacyPair(t, e, conn, "gm-presence-guessed", "connector:gmail", e.Rep1, contact)
 	stamped := legacyPair(t, e, conn, "gm-presence-stamped", "connector:gmail:"+e.Rep1.String(), e.Rep1, contact)
+	// The seat's mailbox delivering it lets the seat read it. It does not make an
+	// addressless seat row real participation, so it adds no interaction.
+	ledger := legacyPair(t, e, conn, "gm-presence-ledger", "connector:gmail", e.Rep1, contact)
+	if _, err := conn.Exec(context.Background(), `INSERT INTO capture_import (activity_id, user_id) VALUES ($1, $2)`, ledger, e.Rep1); err != nil {
+		t.Fatal(err)
+	}
+	header := legacyPair(t, e, conn, "gm-presence-header", "connector:gmail", e.Rep1, contact)
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return capture.StampFurtherParticipants(e.Admin(), tx, ids.From[ids.ActivityKind](header), "email", "", true,
+			[]connector.MessageParticipant{{Email: "a@authz.test", Role: connector.ParticipantRoleTo}})
+	}); err != nil {
+		t.Fatal(err)
+	}
 	seat := mailboxOwnerCtx(e, e.Rep1)
 
 	for name, c := range map[string]struct {
 		activity ids.UUID
 		want     bool
-	}{"guessed": {guessed, false}, "stamped": {stamped, true}} {
+	}{"guessed": {guessed, false}, "stamped": {stamped, true}, "ledger": {ledger, true}, "header": {header, true}} {
 		limitToParticipants(t, conn, c.activity)
+		if got := readsContent(t, e, e.Rep1, c.activity); got != c.want {
+			t.Errorf("%s mail: content readable = %v, want %v", name, got, c.want)
+		}
 		var holds, minable bool
 		if err := database.WithWorkspaceTx(seat, e.Pool, func(tx pgx.Tx) error {
 			var err error
@@ -228,11 +244,18 @@ func TestAGuessedParticipantIsNoEvidenceOfPresence(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error { return search.RebuildEdges(e.Admin(), tx) }); err != nil {
-		t.Fatal(err)
-	}
-	if got := e.WsCount(t, `SELECT count_total FROM graph_interaction_edge WHERE user_id = $1 AND contact_id = $2`, e.Rep1, contact); got != 1 {
-		t.Errorf("the interaction edge counts %d messages, want only the stamped one", got)
+	for name, fold := range map[string]func(context.Context, pgx.Tx) error{
+		"incremental": func(ctx context.Context, tx pgx.Tx) error {
+			return search.RecomputeEdgesForActivities(ctx, tx, []ids.UUID{guessed, stamped, ledger, header})
+		},
+		"rebuild": search.RebuildEdges,
+	} {
+		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error { return fold(e.Admin(), tx) }); err != nil {
+			t.Fatal(err)
+		}
+		if got := e.WsCount(t, `SELECT count_total FROM graph_interaction_edge WHERE user_id = $1 AND contact_id = $2`, e.Rep1, contact); got != 2 {
+			t.Errorf("%s: the interaction edge counts %d messages, want only the stamped and header-proven ones", name, got)
+		}
 	}
 }
 
