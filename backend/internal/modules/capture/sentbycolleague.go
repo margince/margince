@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -140,6 +141,13 @@ func fromAuthenticated(rec connector.NormalizedRecord, from string) bool {
 // stamp: an inbound message whose From the receiving server authenticated.
 func inboundSenderAuthenticated(rec connector.NormalizedRecord, fields ActivityFields) bool {
 	return fields.Direction == connector.DirectionInbound && fromAuthenticated(rec, rec.Counterparty.Email)
+}
+
+// senderIsMachine is the activity's sender_is_machine stamp: an inbound mail
+// whose sender is a sending system. On inbound mail the counterparty is the
+// From address; an outbound mail's sender is the mailbox owner.
+func senderIsMachine(rec connector.NormalizedRecord, fields ActivityFields) bool {
+	return mailidentity.InboundFromSendingSystem(fields.Kind, fields.Direction, rec.Counterparty.Email)
 }
 
 // gmailAuthServer is the authserv-id Gmail names in its Authentication-Results.

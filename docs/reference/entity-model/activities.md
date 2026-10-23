@@ -6,7 +6,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity
 
-64 columns · primary key `(id)` · referenced by 38 foreign keys
+65 columns · primary key `(id)` · referenced by 38 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -57,6 +57,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 | `restricted_until` | `timestamp with time zone` |  |  |
 | `retention_class` | `text` |  |  |
 | `retention_class_at` | `timestamp with time zone` |  |  |
+| `sender_is_machine` | `boolean`, default `false` | yes |  |
 | `sender_was_stranger` | `boolean` |  |  |
 | `sent_by_colleague` | `uuid` |  | Points at `app_user.id`. |
 | `source_activity_id` | `uuid` |  | The conversation or note this task follows from, whether added by a human or read from a conversation. |

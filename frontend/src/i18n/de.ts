@@ -3651,8 +3651,6 @@ export const de = {
   "chronology.all": "Alles",
   "chronology.conversations": "Threads",
   "chronology.conversationsEmpty": "Noch keine Threads.",
-  "convo.yourMove": "Antwort nötig",
-  "convo.waitingOnThem": "Wartet auf Antwort der Gegenseite",
   "chronology.changesEmpty":
     "Seit dem Erstellen dieses Datensatzes wurde kein Feld geändert.",
   "chronology.truncatedActivities":
@@ -10466,11 +10464,6 @@ export const de = {
   "auto.preview.hidden": "Ausgeblendet (kein Zugriff): {n}",
   "auto.preview.explainer":
     "Probelauf ohne Schreibzugriff. Es werden keine Datensätze geändert und nichts gesendet.",
-
-  "strength.bucket.none": "Ruhend",
-  "strength.bucket.weak": "Schwach",
-  "strength.bucket.moderate": "Warm",
-  "strength.bucket.strong": "Stark",
 
   // Die Abdeckungskarte des Beziehungsgraphen (ADR-0078).
   "coverage.seatWithheld": "Ein Kontakt, den du nicht lesen kannst",

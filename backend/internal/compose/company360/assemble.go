@@ -102,6 +102,10 @@ type AssembleOptions struct {
 	// contacts, deals and tags describe the account, not a project, and stay
 	// whole.
 	ProjectID *ids.ProjectID
+	// WrittenByHumanOnly narrows the recent timeline to rows a human wrote
+	// (relstrength.WrittenByHumanSQL) before its cap, for the briefs and
+	// drafts. The page itself keeps every record.
+	WrittenByHumanOnly bool
 }
 
 // AssembleScoped is Assemble narrowed by opts.

@@ -46712,6 +46712,17 @@ components:
           description: >-
             How much of a mail's text Margince could decode. Absent when the content is
             withheld or the body was erased.
+        automatic_kind:
+          type: string
+          nullable: true
+          readOnly: true
+          enum: [product, calendar, sending_system]
+          description: >-
+            What sent this activity when no human wrote it, or null when a human did. `product`
+            is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a
+            response or a cancellation, and `sending_system` mail from a sending system such as a
+            file-share notice, a notification or a delivery report. Such a row is never counted as
+            an exchange, a last contact or a direction of the relationship.
         audience:
           allOf: [{ $ref: '#/components/schemas/ActivityAudience' }]
           readOnly: true

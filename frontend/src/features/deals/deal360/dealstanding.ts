@@ -317,13 +317,16 @@ function soonest(
   return best;
 }
 
-/** The newest message the buyer sent, from the loaded page of the timeline. */
+/**
+ * The newest message the buyer sent, from the loaded page of the timeline. A
+ * row the server says no human wrote (automatic_kind) is not their word.
+ */
 export function lastInbound(
   activities: readonly Activity[],
 ): Activity | undefined {
   let latest: Activity | undefined;
   for (const row of activities) {
-    if (row.direction !== "inbound") {
+    if (row.direction !== "inbound" || row.automatic_kind) {
       continue;
     }
     if (

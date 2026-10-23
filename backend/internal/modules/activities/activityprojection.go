@@ -26,6 +26,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // activityScan holds one row mid-flight: the contract record being built, and
@@ -69,8 +70,12 @@ type activityScan struct {
 	raw              map[string]any
 	bulkMailAttested bool
 	bodyCompleteness string
-	version          int64
-	audience         string
+	// Who sent the row, as relstrength.Evidence reads it into automatic_kind.
+	origin          string
+	calendarMethod  *string
+	senderIsMachine bool
+	version         int64
+	audience        string
 	// contentAvailable is the caller's audience test, evaluated per row: it
 	// decides whether the content columns above reach the caller at all.
 	contentAvailable bool
@@ -135,6 +140,9 @@ var activityProjection = []activityColumn{
 	{"a.capture_label", func(s *activityScan) any { return &s.captureLabel }},
 	{"a.bulk_mail_attested", func(s *activityScan) any { return &s.bulkMailAttested }},
 	{"a.body_completeness", func(s *activityScan) any { return &s.bodyCompleteness }},
+	{"a.origin", func(s *activityScan) any { return &s.origin }},
+	{"a.calendar_method", func(s *activityScan) any { return &s.calendarMethod }},
+	{"a.sender_is_machine", func(s *activityScan) any { return &s.senderIsMachine }},
 	{"a.audience", func(s *activityScan) any { return &s.audience }},
 	{"a.audience_reason", func(s *activityScan) any { return &s.audienceReason }},
 	{"a.raw", func(s *activityScan) any { return &s.raw }},
@@ -309,6 +317,9 @@ func (s *activityScan) record() crmcontracts.Activity {
 	}
 	bulk := s.bulkMailAttested
 	a.BulkMailAttested = &bulk
+	a.AutomaticKind = automaticKindToWire(relstrength.Evidence{
+		Kind: s.kind, Origin: s.origin, CalendarMethod: deref(s.calendarMethod), SenderIsMachine: s.senderIsMachine,
+	})
 	version := s.version
 	a.Version = &version
 	// What a canonical email row draws, composed here so every reader of an
@@ -318,6 +329,17 @@ func (s *activityScan) record() crmcontracts.Activity {
 	// need joins this scan does not have, and the detail read fills them in.
 	a.EmailSummary = RowEmailSummary(a)
 	return a
+}
+
+// automaticKindToWire renders what sent a row no human wrote, nil when a
+// human wrote it.
+func automaticKindToWire(row relstrength.Evidence) *crmcontracts.ActivityAutomaticKind {
+	kind := row.Automatic()
+	if kind == "" {
+		return nil
+	}
+	wire := crmcontracts.ActivityAutomaticKind(kind)
+	return &wire
 }
 
 // RowEmailSummary is the email row's fields, for the kind that has them.

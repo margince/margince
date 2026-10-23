@@ -109,6 +109,10 @@ type AssembleOptions struct {
 	// The rule is activities.ActivityWithinProject; the identity, employment
 	// and network sections describe the contact, not a project, and stay whole.
 	ProjectID *ids.ProjectID
+	// WrittenByHumanOnly narrows the recent timeline to rows a human wrote
+	// (relstrength.WrittenByHumanSQL) before its cap, for the briefs and
+	// drafts. The page itself keeps every record.
+	WrittenByHumanOnly bool
 }
 
 // Assemble reads the whole contact page inside ONE workspace transaction.

@@ -3648,8 +3648,6 @@ export const en = {
   "chronology.all": "All",
   "chronology.conversations": "Threads",
   "chronology.conversationsEmpty": "No threads yet.",
-  "convo.yourMove": "Needs reply",
-  "convo.waitingOnThem": "Awaiting their reply",
   "chronology.changesEmpty":
     "No field has changed since this record was created.",
   "chronology.truncatedActivities":
@@ -10532,11 +10530,6 @@ export const en = {
   "auto.preview.hidden": "{n} hidden (no access)",
   "auto.preview.explainer":
     "Read-only dry run. No records are changed and nothing is sent.",
-
-  "strength.bucket.none": "Dormant",
-  "strength.bucket.weak": "Weak",
-  "strength.bucket.moderate": "Warm",
-  "strength.bucket.strong": "Strong",
 
   // The relationship-graph coverage card (ADR-0078).
   "coverage.seatWithheld": "A contact you cannot read",

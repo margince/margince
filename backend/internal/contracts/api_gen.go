@@ -223,6 +223,27 @@ func (e AccountDraftReasonKind) Valid() bool {
 	}
 }
 
+// Defines values for ActivityAutomaticKind.
+const (
+	ActivityAutomaticKindCalendar      ActivityAutomaticKind = "calendar"
+	ActivityAutomaticKindProduct       ActivityAutomaticKind = "product"
+	ActivityAutomaticKindSendingSystem ActivityAutomaticKind = "sending_system"
+)
+
+// Valid indicates whether the value is a known member of the ActivityAutomaticKind enum.
+func (e ActivityAutomaticKind) Valid() bool {
+	switch e {
+	case ActivityAutomaticKindCalendar:
+		return true
+	case ActivityAutomaticKindProduct:
+		return true
+	case ActivityAutomaticKindSendingSystem:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityCaptureLabel.
 const (
 	ActivityCaptureLabelCommitment ActivityCaptureLabel = "commitment"
@@ -24344,7 +24365,10 @@ type Activity struct {
 	// WITHHELD WITH THE CONTENT. It is absent whenever `content_state` is `withheld`, alongside the subject and the body — a free-text name that arrived with imported text is content about a human, which is why the Art. 17 redaction clears it with the words rather than keeping it as a marker. A reader who may not read a held message does not learn who wrote it either.
 	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who wrote it years earlier in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague wrote a decade of everybody else's correspondence.
 	Author *SourceAuthor `json:"author,omitempty"`
-	Body   *string       `json:"body,omitempty"`
+
+	// AutomaticKind What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, and `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
+	AutomaticKind *ActivityAutomaticKind `json:"automatic_kind,omitempty"`
+	Body          *string                `json:"body,omitempty"`
 
 	// BodyCompleteness How much of a mail's text Margince could decode. Absent when the content is withheld or the body was erased.
 	BodyCompleteness *BodyCompleteness `json:"body_completeness,omitempty"`
@@ -24438,6 +24462,9 @@ type Activity struct {
 	Version              *RowVersion            `json:"version,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
+
+// ActivityAutomaticKind What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, and `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
+type ActivityAutomaticKind string
 
 // ActivityCaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".
 type ActivityCaptureLabel string
@@ -63120,6 +63147,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "author")
 	}
 
+	if raw, found := object["automatic_kind"]; found {
+		err = json.Unmarshal(raw, &a.AutomaticKind)
+		if err != nil {
+			return fmt.Errorf("error reading 'automatic_kind': %w", err)
+		}
+		delete(object, "automatic_kind")
+	}
+
 	if raw, found := object["body"]; found {
 		err = json.Unmarshal(raw, &a.Body)
 		if err != nil {
@@ -63451,6 +63486,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["author"], err = json.Marshal(a.Author)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'author': %w", err)
+		}
+	}
+
+	if a.AutomaticKind != nil {
+		object["automatic_kind"], err = json.Marshal(a.AutomaticKind)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'automatic_kind': %w", err)
 		}
 	}
 

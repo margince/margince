@@ -331,3 +331,26 @@ it("finds the buyer's newest message, never one of ours", () => {
   ]);
   expect(newest?.id).toBe("in2");
 });
+
+it("passes over an inbound row the server says no human wrote", () => {
+  const newest = lastInbound([
+    activity({
+      id: "human",
+      direction: "inbound",
+      occurred_at: "2026-07-01T00:00:00Z",
+    }),
+    activity({
+      id: "accepted",
+      direction: "inbound",
+      occurred_at: "2026-08-01T00:00:00Z",
+      automatic_kind: "calendar",
+    }),
+    activity({
+      id: "bounce",
+      direction: "inbound",
+      occurred_at: "2026-08-02T00:00:00Z",
+      automatic_kind: "sending_system",
+    }),
+  ]);
+  expect(newest?.id).toBe("human");
+});

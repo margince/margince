@@ -126,7 +126,7 @@ func NewService(pool *pgxpool.Pool, view Assembler, profile ProfileReader, lane 
 func (s *Service) assemble(
 	ctx context.Context, companyID ids.CompanyID, withProfile bool, projectID *ids.ProjectID,
 ) (Input, *crmcontracts.ProjectScope, error) {
-	view, err := s.view.AssembleScoped(ctx, companyID, company360.AssembleOptions{ProjectID: projectID})
+	view, err := s.view.AssembleScoped(ctx, companyID, company360.AssembleOptions{ProjectID: projectID, WrittenByHumanOnly: true})
 	if err != nil {
 		return Input{}, nil, err
 	}

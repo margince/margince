@@ -134,7 +134,7 @@ func (s *Service) Draft(
 	// contact they cannot read refuses before a word is written, a deal or
 	// claim they cannot see is not in the view to be found, and a project they
 	// cannot see refuses the scoped read itself (activities.RequireProjectScope).
-	view, err := s.view.AssembleScoped(ctx, contactID, contact360.AssembleOptions{ProjectID: req.ProjectID})
+	view, err := s.view.AssembleScoped(ctx, contactID, contact360.AssembleOptions{ProjectID: req.ProjectID, WrittenByHumanOnly: true})
 	if err != nil {
 		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}

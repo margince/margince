@@ -212,6 +212,13 @@ They show up, ranked at their real level, and do not drop out.
   record of *thinking*. No such record means a real exchange happened. To count them would let a user's own
   to-do list score as a relationship. If the two paths used different lists, a captured note would
   count as an interaction while the same note logged by hand would not.
+- **A row no human wrote** (`relstrength.WrittenByHumanSQL`, part of
+  `relstrength.InteractionCountsSQL`). A mail with a calendar method is an invite, an answer to one,
+  or a notice that a meeting is off. A mail whose sender capture stamped `sender_is_machine` came
+  from a sending system: a file-share notice, an automatic notice or a delivery report. A row with
+  origin `system_notice` or `system_remediation` is the product writing. The same rule moves the
+  contact and company last-touch dates and contact strength, and the read contract names it as
+  `automatic_kind`.
 - **An archived activity.** The fold joins `activity … AND a.archived_at IS NULL`, and the prune step
   removes a pair that has lost all its evidence.
 - **A seat on a deal.** A stakeholder row is a statement about *who should take part*. Only a recorded

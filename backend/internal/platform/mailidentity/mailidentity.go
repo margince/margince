@@ -120,3 +120,10 @@ func ReaderAddress(label, source string) string {
 func DiscoveredMachineAddress(source, label string) bool {
 	return source == "delivered_to" && IsMachineAddress(BareAddress(label))
 }
+
+// InboundFromSendingSystem is an activity's sender_is_machine stamp: a
+// received email whose From address names a sending system. Capture, the
+// create door and the mailbox take-over all ask it.
+func InboundFromSendingSystem(kind, direction, from string) bool {
+	return kind == "email" && direction == "inbound" && IsMachineAddress(from)
+}

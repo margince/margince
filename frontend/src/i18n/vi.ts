@@ -3555,8 +3555,6 @@ export const vi = {
   "chronology.all": "Tất cả",
   "chronology.conversations": "Chuỗi thư",
   "chronology.conversationsEmpty": "Chưa có chuỗi thư nào.",
-  "convo.yourMove": "Cần trả lời",
-  "convo.waitingOnThem": "Đang chờ họ trả lời",
   "chronology.changesEmpty":
     "Chưa có trường nào thay đổi kể từ khi tạo hồ sơ này.",
   "chronology.truncatedActivities":
@@ -10178,11 +10176,6 @@ export const vi = {
   "auto.preview.hidden": "{n} bị ẩn (không có quyền xem)",
   "auto.preview.explainer":
     "Chạy thử chỉ đọc. Không thay đổi hồ sơ nào và không gửi gì.",
-
-  "strength.bucket.none": "Tạm lắng",
-  "strength.bucket.weak": "Yếu",
-  "strength.bucket.moderate": "Thân thiết",
-  "strength.bucket.strong": "Bền chặt",
 
   // The relationship-graph coverage card (ADR-0078).
   "coverage.seatWithheld": "Một liên hệ bạn không xem được",
