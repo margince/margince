@@ -27,9 +27,11 @@ const liftedAgentCallReason = "an agent on its colleague's passport now runs thi
 const cursorArg = "after"
 
 // liftedAgentCallScope selects the live approvals a passport staged for a tool
-// kind that no longer waits.
+// kind that no longer waits. One a scheduled run is paused on stays: the run
+// resumes only on a decision, which a withdrawal never sends.
 const liftedAgentCallScope = `FROM approval WHERE status = 'pending' AND expires_at > now()
-	AND passport_id IS NOT NULL AND kind = ANY(@kinds)`
+	AND passport_id IS NOT NULL AND kind = ANY(@kinds)
+	AND NOT EXISTS (SELECT 1 FROM agent_run r WHERE r.approval_id = approval.id AND r.status = 'awaiting_approval')`
 
 // EstimateLiftedAgentCalls bounds the withdrawal task's work for these kinds.
 func EstimateLiftedAgentCalls(kinds []string) func(context.Context, datatask.Querier, int64) (int64, bool, error) {

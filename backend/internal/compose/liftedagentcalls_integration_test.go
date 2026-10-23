@@ -21,7 +21,8 @@ import (
 
 // An approval a colleague's agent staged for a tool that no longer waits is
 // withdrawn, because the agent's retry already ran the call. One for a tool that
-// still waits, and one staged with no passport, stay.
+// still waits, one staged with no passport, and one a scheduled run is paused on
+// all stay.
 func TestAPendingAgentCallThatNoLongerWaitsIsWithdrawn(t *testing.T) {
 	a := newApprovalNotifyEnv(t)
 	passport := a.e.SeedPassport(t, integration.OwnerConn(t), "lifted call probe")
@@ -38,11 +39,14 @@ func TestAPendingAgentCallThatNoLongerWaitsIsWithdrawn(t *testing.T) {
 	lifted := stage("merge_tags", true)
 	waits := stage("enrich", true)
 	automatic := stage("invite_meeting", false)
+	paused := stage("progress_deal", true)
+	a.e.WsExec(t, `INSERT INTO agent_run (agent_spec, goal, trigger_ref, status, approval_id, pending)
+		VALUES ('probe', 'move a deal', 'lifted-call-probe', 'awaiting_approval', $1, '{}')`, paused)
 
 	if changed := withdrawLiftedAgentCalls(t, a.e); changed != 1 {
 		t.Fatalf("the data task withdrew %d approvals, want the one that no longer waits", changed)
 	}
-	for id, want := range map[ids.ApprovalID]string{lifted: "expired", waits: "pending", automatic: "pending"} {
+	for id, want := range map[ids.ApprovalID]string{lifted: "expired", waits: "pending", automatic: "pending", paused: "pending"} {
 		if got := a.e.WsScalar(t, `SELECT status FROM approval WHERE id = $1`, id); got != want {
 			t.Errorf("approval %s is %s, want %s", id, got, want)
 		}
