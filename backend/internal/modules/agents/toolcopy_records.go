@@ -70,7 +70,7 @@ var createRecordCopy = toolCopy{
 		"what yields them for a deal that does not exist yet. Only the fields the chosen record_type " +
 		"actually stores are accepted, and a field belonging to a neighbouring type is refused " +
 		"rather than dropped. A CONTACT created here is visible to everyone in the workspace, " +
-		"the same as one a human types in.",
+		"the same as one a human types in." + pastDayNeedsATime,
 	Instead: "Search first when the record might already exist — a second copy of a contact or " +
 		"company is a problem that then needs resolve_duplicates to undo. A record that shares only " +
 		"a name, with a different email, phone or employer, is not proof of a duplicate: create " +
@@ -91,7 +91,8 @@ var updateRecordCopy = toolCopy{
 		"overwritten: that part is staged for a human and named in the result, and that part " +
 		"of the write has not happened. It names the record by id; when a name matches " +
 		"two records, a human picks. owner_id is NOT neutral — ownership decides visibility, so " +
-		"reassigning moves the record onto someone else's book and can take it off the owner's.",
+		"reassigning moves the record onto someone else's book and can take it off the owner's. " +
+		"An activity moved to another day keeps its time of day unless the user names one.",
 	Instead: "Use progress_deal to move a deal between stages, and relink_activity " +
 		"to change what an activity is about; neither is a field edit.",
 	Retain: "Send if_version with the version you read, and keep the staged approval id from the " +
@@ -119,7 +120,7 @@ var logActivityCopy = toolCopy{
 		"No deal moves, no field updates, nobody " +
 		"is notified. Unlinked, it appears on no timeline, and adding a link afterwards is a " +
 		"second call — relink_activity — which waits for the user's yes when it files under a " +
-		"project.",
+		"project." + pastDayNeedsATime,
 	Instead: "Use progress_deal when the same event also moves a deal, so move and note are one " +
 		"act; create_task for something still owed; attach_document for a file, whose text never " +
 		"goes into a note.",

@@ -150,6 +150,7 @@ const recordFieldsDescription = "The crm.yaml body for the record_type. The fiel
 	"description, is what says what a write may name. An extra key must be cf_<slug> for a " +
 	"custom field; any other key is refused BY NAME " +
 	"and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. " +
+	"An rfc3339 value carries Z or the offset the user gave. " +
 	"Any field holding a sentence — a description, a summary, a note — is written in whoami's " +
 	"prose_language, whatever language this conversation is in."
 
@@ -222,7 +223,42 @@ func rejectUnknownFields(shapes writeShapes, recordType string, fields json.RawM
 // the decoder then refuses a value that looks correct. Two failed calls were
 // spent on exactly that before the reason was visible, so the requirement is
 // stated where it is read rather than left implied by a keyword.
-const timestampNote = `,"description":"RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused."`
+//
+// The example is UTC: a model copies an example's offset, and a fixed one
+// filed day-only entries at noon in a zone nobody named. The note also sits
+// on required arguments, so it never says to leave a value out.
+const timestampRule = "RFC 3339 WITH a zone offset (…T14:35:00Z, or the offset the user gave); " +
+	"never add an hour or an offset the user did not give; a bare local time is refused."
+
+const timestampNote = `,"description":"` + timestampRule + `"`
+
+// pastDayNeedsATime is the activity-write sentence for a day named without
+// an hour: the server stores the call's own moment for an omitted occurred_at.
+const pastDayNeedsATime = " An omitted occurred_at is the moment of this call, right only for " +
+	"what just happened; for a past day named without a time, ask for the time."
+
+// argumentSchemaFor is schemaFor for a tool ARGUMENT: every date-time member
+// it derives carries timestampRule too, so a generated nested timestamp is
+// documented like a hand-written one. A result schema has no use for it.
+func argumentSchemaFor[T any]() json.RawMessage {
+	return describedSchema[T]("")
+}
+
+func noteTimestamps(node *jsonSchema) {
+	if node == nil {
+		return
+	}
+	if node.Format == "date-time" && node.Description == "" {
+		node.Description = timestampRule
+	}
+	for _, member := range node.Properties {
+		noteTimestamps(member)
+	}
+	noteTimestamps(node.Items)
+	if node.AdditionalProperties != nil {
+		noteTimestamps(node.AdditionalProperties.Schema)
+	}
+}
 
 // proseLanguageNote is the description on every argument that stores a
 // sentence a colleague will later read.

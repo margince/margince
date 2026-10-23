@@ -95,6 +95,7 @@ func describedSchema[T any](description string) json.RawMessage {
 		panic(fmt.Sprintf("describe tool input: %v", err))
 	}
 	shape.Description = description
+	noteTimestamps(shape)
 	raw, err := json.Marshal(shape)
 	if err != nil {
 		//craft:ignore panic-in-domain A schema encoding failure is a composition defect, before any request is admitted.

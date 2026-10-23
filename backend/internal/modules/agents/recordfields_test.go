@@ -11,6 +11,7 @@ import (
 	"go/token"
 	"os"
 	"reflect"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -223,6 +224,93 @@ func TestEveryTimestampArgumentDocumentsItsOffset(t *testing.T) {
 	if checked == 0 {
 		t.Fatal("no schema in this package declares a date-time argument — the scan is broken, not the code")
 	}
+}
+
+// The rendered input schema of every core tool, generated members included:
+// the source census above reads only hand-written schema(…) literals, and a
+// struct-derived argument such as log_activity's follow_up_task.due_at is
+// invisible to it.
+func TestEveryRenderedTimestampArgumentCarriesTheRule(t *testing.T) {
+	checked := 0
+	for name, tool := range idProbeDispatcher(t).registry.tools {
+		var document any
+		if err := json.Unmarshal(tool.Spec().InputSchema, &document); err != nil {
+			t.Fatalf("%s: input schema is not JSON: %v", name, err)
+		}
+		for _, path := range dateTimeMembersWithout(document, timestampRule, name) {
+			t.Errorf("%s: a date-time argument without the timestamp rule", path)
+		}
+		checked += countDateTimes(document)
+	}
+	if checked == 0 {
+		t.Fatal("no tool declares a date-time argument; the walk is broken, not the code")
+	}
+}
+
+// A model copies an example's offset into a day the user named without a
+// time, so the example names UTC and no fixed offset.
+func TestTheTimestampExampleCarriesNoFixedOffset(t *testing.T) {
+	if offset := regexp.MustCompile(`[+-]\d\d:\d\d`).FindString(timestampRule); offset != "" {
+		t.Errorf("timestampRule names the offset %s; a model copies it", offset)
+	}
+	if !strings.Contains(timestampRule, "never add an hour") {
+		t.Error("timestampRule must tell the model not to invent an hour")
+	}
+}
+
+// A day named without a time is the input that became a made-up noon. Each
+// activity-writing tool tells the model what an omitted or moved time does.
+func TestActivityWritersSayWhatAMissingTimeDoes(t *testing.T) {
+	for name, rendered := range map[string]string{
+		"log_activity":  logActivityCopy.render(),
+		"create_record": createRecordCopy.render(),
+	} {
+		if !strings.Contains(rendered, pastDayNeedsATime) {
+			t.Errorf("%s does not say to ask for the time of a past day", name)
+		}
+	}
+	if !strings.Contains(updateRecordCopy.render(), "keeps its time of day unless the user names one") {
+		t.Error("update_record does not say a moved activity keeps its time of day")
+	}
+	if !strings.Contains(recordFieldsDescription, "carries Z or the offset the user gave") {
+		t.Error("the fields description does not say where an rfc3339 offset comes from")
+	}
+}
+
+func dateTimeMembersWithout(node any, rule, path string) []string {
+	var missing []string
+	switch value := node.(type) {
+	case map[string]any:
+		if value["format"] == "date-time" && value["description"] != rule {
+			missing = append(missing, path)
+		}
+		for key, member := range value {
+			missing = append(missing, dateTimeMembersWithout(member, rule, path+"."+key)...)
+		}
+	case []any:
+		for _, member := range value {
+			missing = append(missing, dateTimeMembersWithout(member, rule, path)...)
+		}
+	}
+	return missing
+}
+
+func countDateTimes(node any) int {
+	count := 0
+	switch value := node.(type) {
+	case map[string]any:
+		if value["format"] == "date-time" {
+			count++
+		}
+		for _, member := range value {
+			count += countDateTimes(member)
+		}
+	case []any:
+		for _, member := range value {
+			count += countDateTimes(member)
+		}
+	}
+	return count
 }
 
 // dateTimeOccurrences reports, for each `"format":"date-time"` in the flattened
