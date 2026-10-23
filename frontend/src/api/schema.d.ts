@@ -39706,7 +39706,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            source?: "task" | "approval" | "suggestion" | "verdict";
+            source?: "task" | "approval" | "suggestion" | "verdict" | "settlement";
             /** @enum {string} */
             before_verdict?: "asks_us" | "informs_us";
             /** @enum {string} */
@@ -39715,7 +39715,7 @@ export interface components {
             /** Format: int64 */
             version: number;
             /** @enum {string} */
-            action: "archive_automatic_reminder" | "withdraw_proposal" | "supersede_suggestion" | "reclassify_message" | "human_review" | "leave_current";
+            action: "archive_automatic_reminder" | "withdraw_proposal" | "supersede_suggestion" | "reclassify_message" | "human_review" | "leave_current" | "revalidate_settlement";
             reason: string;
         };
         HomeRepairCounts: {
@@ -39725,6 +39725,8 @@ export interface components {
             supersede: number;
             review: number;
             keep: number;
+            /** @description Older settled request verdicts the email-request settlement pass judges again. */
+            revalidate?: number;
         };
         DataTaskControl: {
             task_id: string;
@@ -49919,7 +49921,7 @@ export interface operations {
                      * @default task
                      * @enum {string}
                      */
-                    source?: "task" | "approval" | "suggestion" | "verdict";
+                    source?: "task" | "approval" | "suggestion" | "verdict" | "settlement";
                 };
             };
         };

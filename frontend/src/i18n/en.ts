@@ -95,6 +95,26 @@ export const en = {
     "Results to change: {reclassify}. Reminders to archive: {archive}. Proposals to withdraw: {withdraw}. Deal suggestions to retire: {supersede}. Keep for review: {review}; keep as current work: {keep}.",
   "homeRepair.apply_one": "Apply {count} reviewed change",
   "homeRepair.apply_other": "Apply {count} reviewed changes",
+  "homeRepair.settlements": "Answered requests",
+  "homeRepair.revalidate": "Judge the request again",
+  "homeRepair.revalidateSummary_one": "{count} request is judged again.",
+  "homeRepair.revalidateSummary_other": "{count} requests are judged again.",
+  "homeRepair.reason.settlementRevalidate":
+    "Margince closed this request before it recorded what it read. It is judged again; a reminder it closed reopens only if work is still owed.",
+  "homeRepair.reason.settlementProvenance":
+    "No record shows that Margince closed this request, so it stays as it is.",
+  "homeRepair.reason.settlementHuman":
+    "A colleague worked on this reminder, so it stays as it is.",
+  "homeRepair.reason.settlementPastHorizon":
+    "The request is past the waiting horizon and stays closed as a record.",
+  "homeRepair.reason.settlementNoAnswers":
+    "No answer Margince may read is left, so it cannot judge this request again. Review it yourself.",
+  "homeRepair.reason.settlementPending":
+    "Margince was asked to judge this request again and has not done so yet.",
+  "homeRepair.reason.settlementUnavailable":
+    "This request is under a hold and cannot be reviewed here.",
+  "homeRepair.reason.settlementChanged":
+    "This request changed after the page was listed. Preview again.",
   "homeRepair.started":
     "The reviewed run is queued. Its progress appears above.",
 

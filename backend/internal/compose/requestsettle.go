@@ -99,11 +99,15 @@ func NewRequestSettler(pool *pgxpool.Pool, brain completer, now func() time.Time
 // reason the owed pass gives: a batch where every verdict abstains makes no
 // progress by the verdict count and would re-ask the same threads forever.
 func (s *RequestSettler) RunWorkspace(ctx context.Context, maxVerdicts int) error {
-	if s.brain == nil {
-		return nil
-	}
 	if maxVerdicts <= 0 {
 		maxVerdicts = settleCatchUpCap
+	}
+	// No model is needed to see that a verdict's evidence is gone.
+	if _, err := s.store.WithdrawLostSettlements(ctx, s.now(), maxVerdicts); err != nil {
+		return fmt.Errorf("request settle: withdrawing verdicts whose evidence is gone: %w", err)
+	}
+	if s.brain == nil {
+		return nil
 	}
 	judged := 0
 	calls := newSweepCalls(maxVerdicts, settleBatchSize)

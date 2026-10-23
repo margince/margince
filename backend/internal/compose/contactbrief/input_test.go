@@ -154,6 +154,29 @@ func TestADismissedClaimNeverReachesTheModel(t *testing.T) {
 	}
 }
 
+// A promise made "this week" carries the date the extractor stored for it. The
+// request the brief sends holds that date beside the claim, and the rule that
+// the brief states it instead of the quote's relative words.
+func TestAPromisesStoredDateReachesTheModelWithTheRuleToStateIt(t *testing.T) {
+	t.Parallel()
+	view := viewFixture(t)
+	due := time.Date(2026, time.September, 4, 17, 0, 0, 0, time.UTC)
+	claims := *view.Claims
+	claims[0].Kind = crmcontracts.ConversationClaimKindCommitmentOurs
+	claims[0].Body = "Send the revised quote with the volume discount."
+	claims[0].SourceQuote = "I will send you the revised quote with the volume discount this week"
+	claims[0].DueAt = &due
+	view.Claims = &claims
+
+	request := BriefRequest(FromView(view), "en")
+	if !strings.Contains(request.System, `state that date, never the relative words its quote used ("this week", "shortly")`) {
+		t.Errorf("the system prompt does not tell the brief to state a claim's date:\n%s", request.System)
+	}
+	if prompt := request.Messages[0].Content; !strings.Contains(prompt, `"due_at":"2026-09-04T17:00:00Z"`) {
+		t.Errorf("the request does not carry the claim's stored date:\n%s", prompt)
+	}
+}
+
 // A relationship_change names no row, so citing it would send a reader to a
 // record that does not exist. The activity and task rows behind a moment do.
 func TestOnlyAMomentsRowBackedEvidenceBecomesACitation(t *testing.T) {

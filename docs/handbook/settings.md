@@ -339,8 +339,8 @@ System health and Reset data sit in the **Governance** group, and Data import in
 
 ### Review automatic Home work
 
-In **Data updates**, choose tasks, approval proposals, deal suggestions or message review, then open
-**Preview items**. Each item shows its name, proposed action and reason. **Inspect** opens the
+In **Data updates**, choose tasks, approval proposals, deal suggestions, message review or answered requests, then open **Preview items**.
+Answered requests that Margince closed before it recorded what it read are judged again; a reminder it closed reopens only if work is still owed. Each item shows its name, proposed action and reason. **Inspect** opens the
 evidence you can read. Only work you can currently read is included. Use **Review next page** to continue.
 
 **Apply reviewed changes** starts the reviewed page. The button names how many changes it will

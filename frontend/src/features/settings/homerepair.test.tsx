@@ -13,6 +13,7 @@ import {
   classificationRepairReview,
   proposalRepairReview as proposalReview,
   repairReview as review,
+  settlementRepairReview,
   suggestionRepairReview,
 } from "./homerepair.fixtures";
 
@@ -239,4 +240,27 @@ it("keeps task review readable without offering an unauthorized archive", async 
   expect(
     screen.queryByRole("button", { name: /Apply .* reviewed change/ }),
   ).not.toBeInTheDocument();
+});
+
+it("reviews older answered requests and activates only their revalidation", async () => {
+  const previews: unknown[] = [];
+  const writes = serve(204, settlementRepairReview, previews);
+  render(<HomeRepairControls version={7} canActivate />);
+  fireEvent.click(screen.getByRole("button", { name: "Answered requests" }));
+  fireEvent.click(screen.getByRole("button", { name: "Preview items" }));
+  expect(
+    await screen.findByText("1 request is judged again."),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByText(
+      "A colleague worked on this reminder, so it stays as it is.",
+    ),
+  ).toBeInTheDocument();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Apply 1 reviewed change" }),
+  );
+  await waitFor(() =>
+    expect(writes).toEqual([{ version: 7, review: settlementRepairReview }]),
+  );
+  expect(previews).toEqual([{ limit: 25, source: "settlement" }]);
 });

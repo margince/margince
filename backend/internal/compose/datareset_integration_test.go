@@ -278,6 +278,9 @@ func TestDropResetCustomFieldColumns(t *testing.T) {
 // entry ratifies the category rather than the instance: it clears the trigger it
 // was written for AND every DELETE trigger added to that table afterwards,
 // including one that really does block. Each trigger earns its own line.
+// settlementEvidenceShare is the reason for the settlement evidence triggers.
+const settlementEvidenceShare = "the settlement evidence generation, not a guard: it takes a shared advisory lock on the deleted row's conversation keys and refuses no delete. A reset waits only while a settlement verdict holds the same conversation, for that verdict's short transaction"
+
 var deleteGuardedSweepTargets = gatekit.Waive(map[string]string{
 	// Not a guard: the trigger counts fact writes and refuses no delete. Its
 	// counter rows go with their company by FK cascade, so a reset that clears
@@ -304,6 +307,10 @@ var deleteGuardedSweepTargets = gatekit.Waive(map[string]string{
 	// reason its own comment gives — a table-keyed entry would ratify the next
 	// DELETE trigger on activity_link sight unseen, including one that blocks.
 	"activity_link activity_link_project_last_activity": "a clock-maintenance trigger, not a guard: it recomputes project.last_activity_at for the project the deleted link filed the activity against and refuses no delete; `project` is not preserved, so the sweep deletes those rows too and the recompute is discarded with them",
+	"activity settlement_evidence_share":                settlementEvidenceShare,
+	"activity_participant settlement_evidence_share":    settlementEvidenceShare,
+	"activity_link settlement_evidence_share":           settlementEvidenceShare,
+	"contact_email settlement_evidence_share":           settlementEvidenceShare,
 	"relationship relationship_last_activity":           "a clock-maintenance trigger, not a guard: it recomputes the employer's last_activity_at and refuses no delete",
 	// Also not a guard (migration 1787226902): BEFORE DELETE ON company, it
 	// sets deal.partner_company_id and deal.partner_attribution to NULL so a deleted

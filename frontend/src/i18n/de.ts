@@ -99,6 +99,27 @@ export const de = {
     "Zu ändernde Ergebnisse: {reclassify}. Erinnerungen zum Archivieren: {archive}. Zurückzuziehende Vorschläge: {withdraw}. Zurückzuziehende Deal-Vorschläge: {supersede}. Zur Prüfung behalten: {review}; als aktuelle Arbeit behalten: {keep}.",
   "homeRepair.apply_one": "{count} geprüfte Änderung anwenden",
   "homeRepair.apply_other": "{count} geprüfte Änderungen anwenden",
+  "homeRepair.settlements": "Beantwortete Anfragen",
+  "homeRepair.revalidate": "Anfrage neu beurteilen",
+  "homeRepair.revalidateSummary_one": "{count} Anfrage wird neu beurteilt.",
+  "homeRepair.revalidateSummary_other":
+    "{count} Anfragen werden neu beurteilt.",
+  "homeRepair.reason.settlementRevalidate":
+    "Margince hat diese Anfrage geschlossen, bevor es festhielt, was es gelesen hat. Die Anfrage wird neu beurteilt; eine geschlossene Erinnerung öffnet sich nur, wenn noch etwas offen ist.",
+  "homeRepair.reason.settlementProvenance":
+    "Kein Eintrag zeigt, dass Margince diese Anfrage geschlossen hat. Die Anfrage bleibt unverändert.",
+  "homeRepair.reason.settlementHuman":
+    "Ein Teammitglied hat an dieser Erinnerung gearbeitet. Die Erinnerung bleibt unverändert.",
+  "homeRepair.reason.settlementPastHorizon":
+    "Die Anfrage liegt außerhalb des Wartezeitraums und bleibt als Eintrag geschlossen.",
+  "homeRepair.reason.settlementNoAnswers":
+    "Es gibt keine Antwort mehr, die Margince lesen darf. Margince kann diese Anfrage nicht neu beurteilen; prüfe sie selbst.",
+  "homeRepair.reason.settlementPending":
+    "Margince soll diese Anfrage neu beurteilen und hat es noch nicht getan.",
+  "homeRepair.reason.settlementUnavailable":
+    "Diese Anfrage ist gesperrt und kann hier nicht geprüft werden.",
+  "homeRepair.reason.settlementChanged":
+    "Diese Anfrage hat sich nach dem Auflisten geändert. Zeige die Vorschau erneut an.",
   "homeRepair.started":
     "Der geprüfte Lauf ist vorgemerkt. Der Fortschritt erscheint oben.",
 

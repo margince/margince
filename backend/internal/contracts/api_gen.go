@@ -11044,6 +11044,7 @@ const (
 	HomeRepairTaskActionHumanReview              HomeRepairTaskAction = "human_review"
 	HomeRepairTaskActionLeaveCurrent             HomeRepairTaskAction = "leave_current"
 	HomeRepairTaskActionReclassifyMessage        HomeRepairTaskAction = "reclassify_message"
+	HomeRepairTaskActionRevalidateSettlement     HomeRepairTaskAction = "revalidate_settlement"
 	HomeRepairTaskActionSupersedeSuggestion      HomeRepairTaskAction = "supersede_suggestion"
 	HomeRepairTaskActionWithdrawProposal         HomeRepairTaskAction = "withdraw_proposal"
 )
@@ -11058,6 +11059,8 @@ func (e HomeRepairTaskAction) Valid() bool {
 	case HomeRepairTaskActionLeaveCurrent:
 		return true
 	case HomeRepairTaskActionReclassifyMessage:
+		return true
+	case HomeRepairTaskActionRevalidateSettlement:
 		return true
 	case HomeRepairTaskActionSupersedeSuggestion:
 		return true
@@ -11107,6 +11110,7 @@ func (e HomeRepairTaskBeforeVerdict) Valid() bool {
 // Defines values for HomeRepairTaskSource.
 const (
 	HomeRepairTaskSourceApproval   HomeRepairTaskSource = "approval"
+	HomeRepairTaskSourceSettlement HomeRepairTaskSource = "settlement"
 	HomeRepairTaskSourceSuggestion HomeRepairTaskSource = "suggestion"
 	HomeRepairTaskSourceTask       HomeRepairTaskSource = "task"
 	HomeRepairTaskSourceVerdict    HomeRepairTaskSource = "verdict"
@@ -11116,6 +11120,8 @@ const (
 func (e HomeRepairTaskSource) Valid() bool {
 	switch e {
 	case HomeRepairTaskSourceApproval:
+		return true
+	case HomeRepairTaskSourceSettlement:
 		return true
 	case HomeRepairTaskSourceSuggestion:
 		return true
@@ -21580,6 +21586,7 @@ func (e RelinkActivityJSONBodyEntityType) Valid() bool {
 // Defines values for PreviewHomeRepairJSONBodySource.
 const (
 	PreviewHomeRepairJSONBodySourceApproval   PreviewHomeRepairJSONBodySource = "approval"
+	PreviewHomeRepairJSONBodySourceSettlement PreviewHomeRepairJSONBodySource = "settlement"
 	PreviewHomeRepairJSONBodySourceSuggestion PreviewHomeRepairJSONBodySource = "suggestion"
 	PreviewHomeRepairJSONBodySourceTask       PreviewHomeRepairJSONBodySource = "task"
 	PreviewHomeRepairJSONBodySourceVerdict    PreviewHomeRepairJSONBodySource = "verdict"
@@ -21589,6 +21596,8 @@ const (
 func (e PreviewHomeRepairJSONBodySource) Valid() bool {
 	switch e {
 	case PreviewHomeRepairJSONBodySourceApproval:
+		return true
+	case PreviewHomeRepairJSONBodySourceSettlement:
 		return true
 	case PreviewHomeRepairJSONBodySourceSuggestion:
 		return true
@@ -39455,9 +39464,12 @@ type HomeRepairCounts struct {
 	Archive    int `json:"archive"`
 	Keep       int `json:"keep"`
 	Reclassify int `json:"reclassify"`
-	Review     int `json:"review"`
-	Supersede  int `json:"supersede"`
-	Withdraw   int `json:"withdraw"`
+
+	// Revalidate Older settled request verdicts the email-request settlement pass judges again.
+	Revalidate *int `json:"revalidate,omitempty"`
+	Review     int  `json:"review"`
+	Supersede  int  `json:"supersede"`
+	Withdraw   int  `json:"withdraw"`
 }
 
 // HomeRepairReview defines model for HomeRepairReview.

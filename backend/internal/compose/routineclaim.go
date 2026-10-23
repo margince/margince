@@ -32,7 +32,7 @@ func routineBriefEngine(pool *pgxpool.Pool) *briefs.BriefEngine {
 	return briefs.NewBriefEngine(pool, contacts.NewStore(InstallationDB(pool)))
 }
 
-func claimRoutine(ctx context.Context, pool *pgxpool.Pool, runID, reviewID ids.UUID, part morningDigest, now time.Time) (routineClaim, bool, error) {
+func claimRoutine(ctx context.Context, pool *pgxpool.Pool, runID, reviewID ids.UUID, part morningDigest, now time.Time, holds ...func(pgx.Tx) error) (routineClaim, bool, error) {
 	var claim routineClaim
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		var won bool
@@ -58,6 +58,11 @@ func claimRoutine(ctx context.Context, pool *pgxpool.Pool, runID, reviewID ids.U
 		}
 		if part.lines.total > 0 {
 			claim.digest, err = notices.NewStore(InstallationDB(pool)).ClaimDigestRunTx(ctx, tx, ids.From[ids.UserKind](mailUser(ctx)), part.window.Day)
+		}
+		for _, hold := range holds {
+			if err == nil {
+				err = hold(tx)
+			}
 		}
 		return err
 	})

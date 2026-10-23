@@ -99,6 +99,28 @@ export const vi = {
     "Kết quả cần đổi: {reclassify}. Lời nhắc cần lưu trữ: {archive}. Đề xuất cần rút: {withdraw}. Đề xuất deal cần ngừng: {supersede}. Giữ để xem xét: {review}; giữ làm công việc hiện tại: {keep}.",
   "homeRepair.apply_one": "Áp dụng {count} thay đổi đã xem xét",
   "homeRepair.apply_other": "Áp dụng {count} thay đổi đã xem xét",
+  "homeRepair.settlements":
+    "Yêu cầu đã trả lời",
+  "homeRepair.revalidate":
+    "Đánh giá lại yêu cầu",
+  "homeRepair.revalidateSummary_one": "{count} yêu cầu được đánh giá lại.",
+  "homeRepair.revalidateSummary_other": "{count} yêu cầu được đánh giá lại.",
+  "homeRepair.reason.settlementRevalidate":
+    "Margince đã đóng yêu cầu này trước khi ghi lại những gì đã đọc. Yêu cầu được đánh giá lại; nhắc việc đã đóng chỉ mở lại nếu vẫn còn việc cần làm.",
+  "homeRepair.reason.settlementProvenance":
+    "Không có bản ghi cho thấy Margince đã đóng yêu cầu này, nên yêu cầu được giữ nguyên.",
+  "homeRepair.reason.settlementHuman":
+    "Một đồng nghiệp đã xử lý nhắc việc này, nên nhắc việc được giữ nguyên.",
+  "homeRepair.reason.settlementPastHorizon":
+    "Yêu cầu đã quá thời hạn chờ và được giữ đóng như một bản ghi.",
+  "homeRepair.reason.settlementNoAnswers":
+    "Không còn câu trả lời nào Margince được đọc, nên không thể đánh giá lại yêu cầu này. Hãy tự xem xét.",
+  "homeRepair.reason.settlementPending":
+    "Margince đã được yêu cầu đánh giá lại yêu cầu này nhưng chưa thực hiện.",
+  "homeRepair.reason.settlementUnavailable":
+    "Yêu cầu này đang bị tạm giữ và không thể xem xét ở đây.",
+  "homeRepair.reason.settlementChanged":
+    "Yêu cầu này đã thay đổi sau khi danh sách được tạo. Hãy xem trước lại.",
   "homeRepair.started":
     "Lượt xử lý đã xem xét đang chờ chạy. Tiến độ hiển thị ở trên.",
   "approval.scheduled.rearm":

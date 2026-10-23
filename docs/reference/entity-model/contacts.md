@@ -675,6 +675,7 @@ The 43 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Triggers**
 
+- `settlement_evidence_share`: `BEFORE INSERT OR DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION settlement_evidence_share_contact_email()`
 - `trg_contact_email_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## contact_phone

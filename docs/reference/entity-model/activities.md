@@ -157,6 +157,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_no_company_meeting_on_rekind`: `BEFORE UPDATE OF kind FOR EACH ROW EXECUTE FUNCTION activity_refuses_becoming_a_company_meeting()`
 - `activity_project_last_activity`: `AFTER UPDATE OF occurred_at, archived_at, audience, origin FOR EACH ROW WHEN (((old.occurred_at IS DISTINCT FROM new.occurred_at) OR (old.archived_at IS DISTINCT FROM new.archived_at) OR (old.audience IS DISTINCT FROM new.audience) OR (old.origin IS DISTINCT FROM new.origin))) EXECUTE FUNCTION trg_activity_project_last_activity()`
 - `activity_refuse_restricted_mutation`: `BEFORE DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION activity_refuse_restricted_mutation()`
+- `settlement_evidence_share`: `BEFORE INSERT OR DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION settlement_evidence_share_activity()`
 - `trg_activity_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## activity_audience_member
@@ -341,6 +342,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_link_last_activity`: `AFTER INSERT OR DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION trg_activity_link_last_activity()`
 - `activity_link_no_company_meeting`: `BEFORE INSERT OR UPDATE FOR EACH ROW EXECUTE FUNCTION activity_link_refuses_a_company_meeting()`
 - `activity_link_project_last_activity`: `AFTER INSERT OR DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION trg_activity_link_project_last_activity()`
+- `settlement_evidence_share`: `BEFORE INSERT OR DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION settlement_evidence_share_link()`
 
 ## activity_mail_reference
 
@@ -437,6 +439,10 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 - `idx_aparticipant_user`: `btree (user_id, activity_id) WHERE (user_id IS NOT NULL)`
 - `uq_activity_participant`: `unique, btree (activity_id, role, user_id, contact_id, address, channel_user_id) NULLS NOT DISTINCT`
 
+**Triggers**
+
+- `settlement_evidence_share`: `BEFORE INSERT OR DELETE OR UPDATE FOR EACH ROW EXECUTE FUNCTION settlement_evidence_share_participant()`
+
 ## activity_reader_state
 
 8 columns · primary key `(activity_id, reader_id)` · referenced by 0 foreign keys
@@ -501,7 +507,7 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity_request_settlement
 
-8 columns · primary key `(request_activity_id)` · referenced by 0 foreign keys
+10 columns · primary key `(request_activity_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -509,9 +515,11 @@ The 29 tables owned by `activities`, as the migrations build them. [Back to the 
 | `decided_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `decided_by` | `text` | yes |  |
 | `due_at` | `timestamp with time zone` |  |  |
+| `judged_evidence` | `text` |  |  |
 | `judged_through_activity_id` | `uuid` | yes | Points at `activity.id`. |
 | `remaining` | `text` |  |  |
 | `request_activity_id` | `uuid` | yes | Points at `activity.id`. |
+| `revalidation_requested_at` | `timestamp with time zone` |  |  |
 | `verdict` | `text` | yes | One of `settled`, `still_owed`, `unsure`. |
 
 **Points at**

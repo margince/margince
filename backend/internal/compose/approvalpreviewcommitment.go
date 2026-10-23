@@ -12,6 +12,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/approvalsubject"
@@ -32,6 +33,18 @@ func (r approvalPreviewReader) commitmentPreview(ctx context.Context, approval c
 		return out, nil //nolint:nilerr // A malformed stored proposal is shown as incomplete.
 	}
 	if !commitmentPreviewIdentityMatches(approval, proposal) {
+		return out, nil
+	}
+	open, err := r.promisesStillOpen(ctx, proposal)
+	if previewUnavailable(err) {
+		out.State = previewUnavailableState
+		return out, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if !open {
+		out.State = previewStaleState
 		return out, nil
 	}
 	sourceType := crmcontracts.ApprovalEvidenceSourceType(string(recordTypeActivity))
@@ -170,4 +183,22 @@ func commitmentPreviewIdentityMatches(approval crmcontracts.Approval, proposal C
 	return !proposal.SourceActivityID.IsZero() && proposal.Locator != "" && strings.TrimSpace(proposal.Summary) != "" && proposal.Quote != "" &&
 		approval.TargetEntityType != nil && *approval.TargetEntityType == string(recordTypeActivity) &&
 		approval.TargetEntityId != nil && ids.UUID(*approval.TargetEntityId) == proposal.SourceActivityID
+}
+
+// promisesStillOpen is whether the promises the proposal names are all still
+// open; one settled or dismissed since staging makes the proposal stale. A
+// proposal naming no claim rests on its recorded commitment decision.
+func (r approvalPreviewReader) promisesStillOpen(ctx context.Context, proposal CommitmentTaskProposal) (bool, error) {
+	var open bool
+	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		claims := commitmentClaimIDs(proposal.ClaimID, proposal.ClaimIDs)
+		if len(claims) == 0 {
+			open, err = activities.CommitmentStillOpenTx(ctx, tx, proposal.SourceActivityID, proposal.Locator)
+			return err
+		}
+		open, err = contacts.NewStore(r.db).ClaimsStillOpenTx(ctx, tx, claims)
+		return err
+	})
+	return open, err
 }

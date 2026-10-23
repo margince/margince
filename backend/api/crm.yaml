@@ -787,7 +787,7 @@ paths:
               properties:
                 limit: {type: integer, minimum: 1, maximum: 1000}
                 after: {type: string, format: uuid}
-                source: {type: string, enum: [task, approval, suggestion, verdict], default: task}
+                source: {type: string, enum: [task, approval, suggestion, verdict, settlement], default: task}
       responses:
         '200':
           description: Exact reviewed identities, dispositions and rule version. Use the last identity to read the next page.
@@ -54442,14 +54442,14 @@ components:
       required: [id, version, action, reason]
       properties:
         id: {type: string, format: uuid}
-        source: {type: string, enum: [task, approval, suggestion, verdict]}
+        source: {type: string, enum: [task, approval, suggestion, verdict, settlement]}
         before_verdict: {type: string, enum: [asks_us, informs_us]}
         after_verdict: {type: string, enum: [asks_us, informs_us]}
         snapshot: {type: string, minLength: 64, maxLength: 64}
         version: {type: integer, format: int64}
         action:
           type: string
-          enum: [archive_automatic_reminder, withdraw_proposal, supersede_suggestion, reclassify_message, human_review, leave_current]
+          enum: [archive_automatic_reminder, withdraw_proposal, supersede_suggestion, reclassify_message, human_review, leave_current, revalidate_settlement]
         reason: {type: string}
 
     HomeRepairCounts:
@@ -54463,6 +54463,7 @@ components:
         supersede: {type: integer, minimum: 0}
         review: {type: integer, minimum: 0}
         keep: {type: integer, minimum: 0}
+        revalidate: {type: integer, minimum: 0, description: Older settled request verdicts the email-request settlement pass judges again.}
 
     DataTaskControl:
       type: object
