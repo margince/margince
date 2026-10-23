@@ -8,9 +8,8 @@ package compose
 //
 // It goes only to the colleague the mailbox confirms is responsible: the seat
 // that sent it, or the one seat capture bound to its To. Copied seats, several
-// seats, an address the sender typed, a mailbox owner or a record owner are no
-// evidence, so with none the mail stays on its company and contacts and
-// nobody is asked.
+// seats, a typed address, a mailbox owner or a record owner are no evidence.
+// With none, nobody is asked.
 
 import (
 	"context"
@@ -55,8 +54,8 @@ type whichDealAsker struct {
 }
 
 // Ask raises the question at most once per thread. The task is keyed on the
-// thread, archived tasks included, so a question a rep dismissed is not asked
-// again and a second mail in the thread adds no second question.
+// thread, archived tasks included. A dismissed question is not asked again,
+// and a second mail in the thread adds none.
 func (a whichDealAsker) Ask(ctx context.Context, tx pgx.Tx, q capture.WhichDeal) error {
 	seat, err := a.respondent(ctx, tx, q.ActivityID.UUID)
 	if err != nil || seat.IsZero() {
@@ -77,9 +76,9 @@ func (a whichDealAsker) Ask(ctx context.Context, tx pgx.Tx, q capture.WhichDeal)
 	if err != nil {
 		return err
 	}
-	// One question per thread for the asked seat. The thread key is the
-	// sender's References root, so it is keyed on the seat as well: a sender
-	// reusing another mailbox's root cannot use up this seat's question.
+	// The thread key is the sender's References root, so the key names the
+	// seat too. A sender reusing another mailbox's root cannot use up this
+	// seat's question.
 	sum := sha256.Sum256([]byte(seat.String() + "\x00" + thread))
 	key, subject, body := hex.EncodeToString(sum[:]), whichDealSubject.In(lang), whichDealBody.In(lang)
 	source, mail, assignee := provenance.WhichDealSource, q.ActivityID.UUID, ids.From[ids.UserKind](seat)
@@ -107,12 +106,10 @@ func (a whichDealAsker) Ask(ctx context.Context, tx pgx.Tx, q capture.WhichDeal)
 
 // respondent is the one colleague the mail names as responsible, or zero.
 //
-// Only rows the mailbox confirms count, never an address the sender typed:
-// a sender could otherwise name any colleague and hand them the question. The
-// seat must have imported the mail into their own mailbox, and either be the
-// sender of mail the provider attests as their sent mail, or hold a To row
-// capture bound to their seat from an address. A seat row without an address only says whose mailbox the
-// copy is in, which cannot tell To from Cc, so on its own it asks nobody.
+// Only rows the mailbox confirms count, never an address the sender typed. The
+// seat imported the mail. It sent the mail with the provider attesting it, or
+// holds a To row capture bound to the seat from an address. A seat row with
+// no address only says whose mailbox the copy is in, not To from Cc.
 func (a whichDealAsker) respondent(ctx context.Context, tx pgx.Tx, mail ids.UUID) (ids.UUID, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT DISTINCT p.user_id

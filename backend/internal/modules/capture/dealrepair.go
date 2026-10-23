@@ -34,10 +34,9 @@ const unfiledCapturedMailSQL = `
 	   AND NOT EXISTS (SELECT 1 FROM activity_link l WHERE l.activity_id = a.id AND l.entity_type = 'deal')`
 
 // DealRepair files mail captured before the deal rule under the deal the rule
-// finds for it now. Each mail is decided by AttributeDealTx acting as the
-// connector of a mailbox that imported it, with that seat's live authority,
-// so the repair sees only the threads, projects and deals live capture would
-// have seen. It asks nobody: old mail does not become a new question.
+// finds for it now. AttributeDealTx decides each mail as the connector of a
+// mailbox that imported it, with that seat's live authority. So the repair
+// sees only what live capture would have seen. It asks nobody.
 type DealRepair struct {
 	Candidates DealCandidates
 	Authority  authz.Resolver

@@ -5,10 +5,9 @@
 
 package capture
 
-// The deal rule end to end: a captured mail goes on the one deal it is about,
-// on no deal when several fit, and a human's choice is never undone. Companies,
-// contacts, employment, stakeholders, projects and deals are written by their
-// own stores; mail arrives through the production sink.
+// The deal rule end to end. A captured mail goes on the one deal it is about,
+// or on none when several fit. A human's choice is never undone. Each
+// record is written by its own store; mail arrives through the production sink.
 
 import (
 	"context"
@@ -60,8 +59,8 @@ func newDealWorld(t *testing.T, e *integration.SearchEnv) dealWorld {
 			RowScope: principal.RowScopeAll,
 		},
 	})
-	// Who works where, and who is a stakeholder, are edges, and the rule reads
-	// them with the capturing seat's own edge grant, as a rep's role has it.
+	// Employment and stakeholders are edges. The rule reads them with the
+	// capturing seat's own edge grant, as a rep's role has it.
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE role
 			   SET permissions = jsonb_set(permissions, '{objects,relationship}', '{"read":true}')
@@ -244,8 +243,8 @@ func wantDeals(t *testing.T, e *integration.SearchEnv, sourceID string, want ...
 }
 
 // One customer with one open deal: inbound and outbound mail both land on it,
-// the deal's last activity moves to the mail, and each link is audited as the
-// connector's, which is what tells it from a human relink.
+// and the deal's last activity moves to the mail. Each link is audited as the
+// connector's, which tells it from a human relink.
 func TestCaptureFilesMailOnTheCustomersOnlyOpenDeal(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
@@ -293,8 +292,8 @@ func TestCaptureFilesPrivateMailWithoutMovingTheDealsClock(t *testing.T) {
 }
 
 // Two open deals and nothing that ties the thread to one: neither mail goes on
-// a deal, and the colleague who wrote the first is asked once for the thread.
-// A stakeholder on exactly one of the deals is the positive control.
+// a deal. The colleague who wrote the first is asked once for the thread. A
+// stakeholder on only one of the deals is the positive control.
 func TestCaptureAsksOnceWhenSeveralOpenDealsFitAMail(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
@@ -349,8 +348,7 @@ func TestCaptureAsksNobodyWhenNoColleagueIsResponsible(t *testing.T) {
 
 // The project comes first. A mail naming a project with one open deal goes on
 // that deal, not on the company's other open deal. A project with no open deal
-// files nothing even though the company has exactly one, and a project with
-// two asks.
+// files nothing even though the company has one, and a project with two asks.
 func TestCaptureFilesMailOnItsProjectsDealFirst(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
@@ -421,9 +419,9 @@ func TestCaptureFilesNothingWhenTheMailNamesTwoCompanies(t *testing.T) {
 	}
 }
 
-// A sender types the thread they claim to reply to. A reply from our customer
-// in a thread we sent and a colleague filed on one deal goes on that deal; the
-// same claim from someone at another company, or from nobody we know, does not.
+// A sender types the thread they claim to reply to. Our customer's reply in a
+// thread we sent and filed on one deal goes on that deal. The same claim from
+// another company, or from nobody we know, does not.
 func TestCaptureFollowsOurThreadOnlyForTheSameCompany(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
@@ -483,8 +481,8 @@ func TestCaptureAsksNoColleagueTheSenderNamed(t *testing.T) {
 	}
 }
 
-// Mail that reads as ours without the provider attesting it is not proof we
-// wrote it: its deal is no clue for a reply, and it names nobody to ask.
+// Mail that reads as ours without the provider attesting it does not prove we
+// wrote it. Its deal is no clue for a reply, and it names nobody to ask.
 func TestCaptureCountsOnlyAttestedMailAsOurs(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
@@ -578,10 +576,10 @@ func (r repairer) run(t *testing.T) int {
 	return out.Changed
 }
 
-// Mail captured before its deal existed is filed by the repair exactly where
-// capture would file it today. The preview says what the run will do, the run
-// links only where one deal fits, a human's link is untouched, nobody is
-// asked, and a second run changes nothing.
+// Mail captured before its deal existed is filed by the repair where capture
+// would file it today. The preview says what the run will do. The run links
+// only where one deal fits, leaves a human's link alone and asks nobody. A
+// second run changes nothing.
 func TestTheDealRepairFilesOldMailOnceAndLeavesHumansAlone(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
@@ -627,8 +625,8 @@ func TestTheDealRepairFilesOldMailOnceAndLeavesHumansAlone(t *testing.T) {
 
 // The repair decides as the mailbox that captured the mail, never with the
 // system's reach. A reply whose only filed sibling is a colleague's private
-// sent mail stays on no deal, live and in the repair alike; the same reply
-// next to our own filed mail goes on its deal, live and in the repair alike.
+// sent mail stays on no deal. A reply beside our own filed mail goes on its
+// deal. Live capture and the repair agree on both.
 func TestTheDealRepairSeesOnlyWhatTheCapturingMailboxSaw(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e

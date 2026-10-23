@@ -4,13 +4,11 @@
 package deals
 
 // The open deals the capture rule chooses a mail's deal among
-// (capture.DealCandidates). Each read answers at most two ids, because the
-// rule only asks whether there is exactly one.
+// (capture.DealCandidates), at most two per read.
 //
-// The reads count every open deal, not only the ones in the caller's row
-// scope. A seat that sees one of a company's two deals has not learned which
-// one a mail is about, and counting only what it sees would turn that into a
-// guess. The link the rule then writes still passes auth.EnsureLinkTarget.
+// The reads count every open deal, not only those in the caller's row scope.
+// A seat that sees one of two deals has not learned which one a mail is about.
+// The link the rule writes still passes auth.EnsureLinkTarget.
 
 import (
 	"context"
@@ -65,7 +63,7 @@ func (s *Store) OpenDealsWithStakeholders(
 		return nil, err
 	}
 	if edgeScope == "" {
-		edgeScope = "true"
+		edgeScope = predicateAlways
 	}
 	return collectCandidates(ctx, tx, `SELECT d.id FROM deal d
 		 WHERE d.company_id = $1 AND `+openDealSQL+`

@@ -17,6 +17,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
+// sqlUnscoped stands in for a scope clause a caller's grant leaves empty.
+const sqlUnscoped = "true"
+
 // dealFacts is what the rule reads about one mail, all of it recorded on the
 // mail's own rows. outcome is set when the rule has nothing to decide.
 type dealFacts struct {
@@ -138,9 +141,9 @@ func oneDeal(deals []ids.UUID, question WhichDeal) DealVerdict {
 	}
 }
 
-// mailContacts answers the live contacts among the mail's participants, read
-// from activity_participant, not activity_link: the participant link arm caps
-// how many get a link, so a copied contact can be missing from the links.
+// mailContacts answers the live contacts among the mail's participants. They
+// come from activity_participant: the participant link arm caps how many get
+// a link, so a copied contact can be missing from activity_link.
 func mailContacts(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) ([]ids.UUID, error) {
 	if !auth.ReadGranted(ctx, "contact") {
 		return nil, nil
@@ -161,14 +164,10 @@ func mailContacts(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) ([]
 	return contacts, nil
 }
 
-// mailCompanies is the customer companies the mail names: its company links
-// and every current employer of its participants, at most two. Every current
-// employment counts, not only the primary one, so a contact with two employers
-// is conflicting evidence rather than a guess. The installation's own company
-// is never a customer.
-//
-// A caller without the edge grant reads no employers, which leaves only the
-// company links: the honest answer for that caller.
+// mailCompanies is the customer companies the mail names, at most two: its
+// company links and every current employer of its participants. A contact
+// with two employers is conflicting evidence, not a guess. The installation's
+// own company is never a customer. Without the edge grant, only links count.
 func mailCompanies(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, contacts []ids.UUID) ([]ids.UUID, error) {
 	if !auth.ReadGranted(ctx, "company") {
 		return nil, nil
@@ -183,7 +182,7 @@ func mailCompanies(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, co
 		return nil, err
 	default:
 		if edgeScope == "" {
-			edgeScope = "true"
+			edgeScope = sqlUnscoped
 		}
 		employers = fmt.Sprintf(`
 		UNION
@@ -210,13 +209,10 @@ func mailCompanies(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, co
 }
 
 // threadDeals is the open deals our own sent mail in the mail's thread is
-// filed under, at most two, with each deal's company. Only a sibling proven
-// ours counts: the thread key is the sender's References root, and any other
-// sibling may be the sender's own earlier forgery. The proof is spelled as
-// activities.ourOutboundInThisThread spells it; a module cannot import it,
-// and the answer-walk census reads it here. Siblings and deals are the
-// ones the capturing seat may read; held or archived siblings settle nothing,
-// for the reasons threadProject gives.
+// filed under, at most two, with each deal's company. The thread key is the
+// sender's References root, so only a sibling proven ours counts. The proof is
+// spelled as in activities.ourOutboundInThisThread, which capture cannot
+// import. Only siblings and deals the capturing seat may read count.
 func threadDeals(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) ([]threadDeal, error) {
 	if !auth.ReadGranted(ctx, "deal") {
 		return nil, nil
@@ -233,7 +229,7 @@ func threadDeals(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) ([]t
 	}
 	for _, clause := range []*string{&siblingScope, &dealScope} {
 		if *clause == "" {
-			*clause = "true"
+			*clause = sqlUnscoped
 		}
 	}
 	rows, err := tx.Query(ctx, `

@@ -54,19 +54,16 @@ func linkActivityToDeal(ctx context.Context, tx pgx.Tx, activityID ids.ActivityI
 	return true, recordAttributedLink(ctx, tx, activityID, datasource.EntityDeal, dealID)
 }
 
-// recordAttributedLink is the bookkeeping every automatic filing owes once its
-// link landed: the activity version bump a staged approval re-checks, and the
+// recordAttributedLink is the bookkeeping an automatic filing owes once its
+// link landed. It bumps the version a staged approval re-checks. It writes the
 // activity_relink audit row a human relink also writes. The audit row's
-// connector or system principal is what tells an automatic link from a human
-// one, and the deal repair reads exactly that.
-//
-// No public event rides with it: the filing is part of one message arriving,
-// which activity.captured already announced.
+// principal tells an automatic link from a human one. No event rides with it:
+// activity.captured already announced the message.
 func recordAttributedLink(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, entity datasource.EntityType, entityID ids.UUID,
 ) error {
 	// The trigger set_updated_at_bump_version does the bump; this only has to
-	// be a genuine UPDATE of the row.
+	// be an UPDATE of the row.
 	if _, err := tx.Exec(ctx, `UPDATE activity SET updated_at = now() WHERE id = $1 AND archived_at IS NULL`, activityID); err != nil {
 		return fmt.Errorf("capture: bumping the filed activity's version: %w", err)
 	}

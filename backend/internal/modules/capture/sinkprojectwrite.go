@@ -28,14 +28,11 @@ import (
 
 // linkActivityToProject writes the one link the ladder concluded.
 //
-// It REQUIRES activity.update, and that is not belt-and-braces over the
-// activity.create the capture already checked. Filing an activity under a
-// project changes who can reach it and bumps activity.version, which is the pin
-// a staged approval re-checks before it redeems — so this is an update of the
-// activity by every test that matters, and the audit row says so
-// (recordAttributedLink). A principal that may create captured mail but not
-// change it attributes nothing, which is the honest outcome rather than a
-// silent widening of what create means.
+// It requires activity.update, not only the activity.create the capture
+// checked. Filing an activity under a project changes who can reach it. It
+// also bumps activity.version, the pin a staged approval re-checks. So it is
+// an update, and recordAttributedLink audits it as one. A principal that may
+// create captured mail but not change it attributes nothing.
 //
 // Denial is not a fault: a connector role without activity.update is an
 // ordinary configuration, so its mail lands filed under nothing.

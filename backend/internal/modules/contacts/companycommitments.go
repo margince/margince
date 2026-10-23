@@ -129,10 +129,9 @@ func openCompanyClaims(
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return nil, false, err
 	}
-	// The employment edge decides which promises are this account's, and the
-	// row it yields NAMES the contact it was promised to. That is an endpoint
-	// pair — this contact works here — which relationship.read governs on its
-	// own; the contact and activity grants above do not cover it.
+	// The employment edge decides which promises are this account's. It names
+	// an endpoint pair (this contact works here), which relationship.read
+	// governs; the contact and activity grants above do not cover it.
 	employed := func(arg func(any) int) (string, error) {
 		return employedAtAccount(ctx, fmt.Sprintf("$%d", arg(companyID)), arg)
 	}
@@ -140,12 +139,10 @@ func openCompanyClaims(
 	if err != nil {
 		return nil, false, err
 	}
-	// COMPLETENESS IS A SECOND COUNT, not a flag on a row. The scope clauses
-	// sit inside the query's own EXISTS and WHERE, so a promise this caller may
-	// not see never becomes a row — there is nothing to mark. Fewer admitted
-	// than exist means something was withheld, and the card can say it is
-	// speaking about less than the account rather than reporting silence as
-	// "nothing outstanding".
+	// Completeness is a second count, not a flag on a row: a promise this
+	// caller may not see never becomes a row. Fewer admitted than exist means
+	// something was withheld, so the card can say it speaks about less than
+	// the account.
 	total, err := countCompanyCommitments(ctx, tx, companyID, asOf, side)
 	if err != nil {
 		return nil, false, err

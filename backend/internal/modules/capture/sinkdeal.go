@@ -3,11 +3,8 @@
 
 package capture
 
-// Filing a captured mail under the one deal it is about. Capture runs
-// AttributeDealTx after every capture of a mail, and the deal repair runs it
-// over mail captured before the rule.
-//
-// The rule, in order, first answer wins:
+// Filing a captured mail under the one deal it is about. Capture and the deal
+// repair both run AttributeDealTx. The rule, in order, first answer wins:
 //   - a mail that already has a deal link is left alone, so a human relink
 //     always wins;
 //   - a mail filed under a project goes on that project's one open deal. None
@@ -16,7 +13,7 @@ package capture
 //     the mail's company;
 //   - else the one open deal of the one company the mail's participants work
 //     at. With several open deals, a participant who is a stakeholder on
-//     exactly one of them picks it.
+//     only one of them picks it.
 //
 // Being at a company is not proof of which of its deals a mail is about. When
 // several deals stay plausible the mail goes on none of them and the Ask seam
@@ -39,7 +36,7 @@ import (
 
 // DealCandidates reads the open deals the rule chooses among. `deal` belongs
 // to the deals module, so compose injects it. Each read answers at most two
-// ids, because the rule only asks "exactly one?". It takes the caller's
+// ids, because the rule only asks "only one?". It takes the caller's
 // transaction for the reason ProjectKeyMatcher does.
 type DealCandidates interface {
 	OpenDealsOfProject(ctx context.Context, tx pgx.Tx, projectID ids.UUID) ([]ids.UUID, error)
@@ -81,6 +78,7 @@ func (s *Sink) WithDealAttribution(attribution DealAttribution) *Sink {
 // DealOutcome names what the rule concluded for one mail.
 type DealOutcome string
 
+// The outcomes, from "nothing to decide" to "linked".
 const (
 	DealNotMail          DealOutcome = "not_mail"
 	DealAlreadyFiled     DealOutcome = "already_filed"
@@ -103,10 +101,9 @@ type DealVerdict struct {
 // concludes. With ask nil it raises no question, which is what a repair of old
 // mail wants.
 //
-// The activity row is locked first. The human relink takes the same lock
-// first (activities.relinkActivityRow), and deal links have no one-per-activity
-// index, so without it a relink landing between the guard and the insert would
-// leave two deal links.
+// The activity row is locked first, as the human relink locks it
+// (activities.relinkActivityRow). Deal links have no one-per-activity index.
+// Without the lock, a relink between the guard and the insert leaves two.
 func AttributeDealTx(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, candidates DealCandidates, ask AskWhichDeal,
 ) (DealVerdict, error) {
@@ -141,10 +138,9 @@ func AttributeDealTx(
 	return verdict, nil
 }
 
-// attributeDeal runs the rule after the capture committed, on the terms
-// attributeProject runs: its own transaction, on every capture of the
-// activity so the next capture retries a fault, and a fault is logged and
-// never returned.
+// attributeDeal runs the rule after the capture committed, on attributeProject's
+// terms: its own transaction, on every capture so the next one retries a
+// fault. A fault is logged and never returned.
 func (s *Sink) attributeDeal(ctx context.Context, rec connector.NormalizedRecord, ref datasource.EntityRef) {
 	if s.deals.Candidates == nil || ref.Type != datasource.EntityActivity {
 		return
