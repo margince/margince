@@ -15751,6 +15751,7 @@ export const de = {
   "worklist.filter.meetings": "Termine",
   "worklist.filter.tasks": "Aufgaben",
   "worklist.filter.decisions": "Freigaben",
+  "worklist.filter.relationships": "Ruhende Beziehungen",
   "worklist.filter.system": "System",
   "worklist.filter.linked.urgent":
     "Es werden nur dringende Einträge angezeigt: Jemand wartet, oder eine Zusage droht gebrochen zu werden.",
