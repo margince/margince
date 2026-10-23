@@ -145,16 +145,29 @@ func (w leadSLAEscalation) Apply(ctx context.Context, ev workflow.Event, eff wor
 		words := mailcopy.For(string(identity.BaseLanguageForRecord(ctx, tx)))
 		subject := words.NoticeSLASubject
 		in.Subject = &subject
-		if _, _, err := w.activities.LogActivityTx(ctx, tx, in); err != nil {
+		task := in
+		var target *ids.UserID
+		if in.AssigneeID != nil {
+			holds, err := seatCanHold(ctx, tx, *in.AssigneeID)
+			if err != nil {
+				return err
+			}
+			if holds {
+				target = in.AssigneeID
+				task.AdmitInvitedAssignee()
+			}
+		}
+		task.AssigneeID = target
+		if _, _, err := w.activities.LogActivityTx(ctx, tx, task); err != nil {
 			return fmt.Errorf("logging the task: %w", err)
 		}
-		// A breach with no named target still writes its task; there is nobody
-		// to address the notice to, and inventing one would misdeliver it.
-		if in.AssigneeID == nil {
+		// A breach with no seat to address still writes its task; there is
+		// nobody to address the notice to, and inventing one would misdeliver it.
+		if target == nil {
 			return nil
 		}
 		if _, err := w.notices.CreateTx(ctx, tx, notices.NewNotice{
-			Recipient: *in.AssigneeID,
+			Recipient: *target,
 			Kind:      noticeKindLeadSLA,
 			Subject:   subject,
 			Body:      words.NoticeSLABody,
@@ -167,6 +180,16 @@ func (w leadSLAEscalation) Apply(ctx context.Context, ev workflow.Event, eff wor
 		return workflow.RunResult{}, fmt.Errorf("lead sla escalation: %w", err)
 	}
 	return workflow.RunResult{Applied: eff.Actions}, nil
+}
+
+// seatCanHold says whether the task writer will accept the seat as an assignee.
+//
+// The bus can redeliver the event after its target has left. A refused task
+// write aborts the transaction and loses the breach, so the writer's own rule
+// (activities.NewTaskSeatState) is asked first.
+func seatCanHold(ctx context.Context, tx pgx.Tx, seat ids.UserID) (bool, error) {
+	state, err := activities.NewTaskSeatState(ctx, tx, seat)
+	return state != activities.SeatCannotHoldWork, err
 }
 
 func (leadSLAEscalation) IdempotencyKey(ev workflow.Event) string {
