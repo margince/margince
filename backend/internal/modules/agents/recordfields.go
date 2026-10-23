@@ -227,15 +227,13 @@ func rejectUnknownFields(shapes writeShapes, recordType string, fields json.RawM
 // The example is UTC: a model copies an example's offset, and a fixed one
 // filed day-only entries at noon in a zone nobody named. The note also sits
 // on required arguments, so it never says to leave a value out.
-const timestampRule = "RFC 3339 WITH a zone offset (…T14:35:00Z, or the offset the user gave); " +
-	"never add an hour or an offset the user did not give; a bare local time is refused."
+const timestampRule = "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset."
 
 const timestampNote = `,"description":"` + timestampRule + `"`
 
 // pastDayNeedsATime is the activity-write sentence for a day named without
 // an hour: the server stores the call's own moment for an omitted occurred_at.
-const pastDayNeedsATime = " An omitted occurred_at is the moment of this call, right only for " +
-	"what just happened; for a past day named without a time, ask for the time."
+const pastDayNeedsATime = " Omitted, occurred_at means now; ask the time of a past day named without one."
 
 // argumentSchemaFor is schemaFor for a tool ARGUMENT: every date-time member
 // it derives carries timestampRule too, so a generated nested timestamp is

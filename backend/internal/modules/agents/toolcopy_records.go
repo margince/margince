@@ -113,15 +113,14 @@ var updateRecordCopy = toolCopy{
 var logActivityCopy = toolCopy{
 	Purpose: "Record something that happened — a call, a meeting, a note, a message — on the " +
 		"records it was about: name every one of them in this call. A meeting is with a contact, " +
-		"and also concerns their company and the deal it is for.",
+		"and also concerns their company and its deal.",
 	Limits: "It writes history and can add a follow_up_task to a meeting, call or note in the same " +
-		"transaction. That task inherits source links and audience; its assignee must be able to " +
-		"read the source. Source-identity replay returns the original activity without adding a task. " +
+		"transaction; the task inherits source links and audience, and its assignee must be able to " +
+		"read the source. A source-identity replay returns the original and adds no task. " +
 		"No deal moves, no field updates, nobody " +
-		"is notified. Unlinked, it appears on no timeline, and adding a link afterwards is a " +
-		"second call — relink_activity — which waits for the user's yes when it files under a " +
-		"project." + pastDayNeedsATime,
-	Instead: "Use progress_deal when the same event also moves a deal, so move and note are one " +
+		"is notified. Unlinked, it is on no timeline; relink_activity links it later." +
+		pastDayNeedsATime,
+	Instead: "Use progress_deal when the event also moves a deal, so move and note are one " +
 		"act; create_task for something still owed; attach_document for a file, whose text never " +
 		"goes into a note.",
 	Retain: "Keep the activity id — draft_outbound and send_outbound identify a conversation " +

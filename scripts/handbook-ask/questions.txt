@@ -219,3 +219,5 @@ how do I verify a webhook signature
 how do I customise the webhook body
 can I only get a message when a deal is won
 how do I change the company reporting time zone
+how do I mark a meeting as held
+how do I record that a customer did not show up to a meeting

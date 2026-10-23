@@ -10,16 +10,16 @@
   "totals": {
     "tools": 37,
     "resources": 9,
-    "tool_catalog_bytes": 126747,
+    "tool_catalog_bytes": 127702,
     "resource_catalog_bytes": 3588,
-    "approx_wire_tokens_total": 32583,
+    "approx_wire_tokens_total": 32822,
     "largest_tool_bytes": 8748,
     "largest_tool": "preview_import",
     "tool_catalog_composition": {
-      "description_bytes": 32375,
-      "input_schema_bytes": 60271,
+      "description_bytes": 32535,
+      "input_schema_bytes": 61066,
       "output_schema_bytes": 25189,
-      "description_plus_input_schema_bytes": 92646
+      "description_plus_input_schema_bytes": 93601
     }
   },
   "tools": {
@@ -467,7 +467,7 @@
                   "type": "string"
                 },
                 "due_at": {
-                  "description": "RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
+                  "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
                   "format": "date-time",
                   "type": "string"
                 },
@@ -870,7 +870,7 @@
               "type": "string"
             },
             "due_at": {
-              "description": "log, task only: RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
+              "description": "log, task only: RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
               "format": "date-time",
               "type": "string"
             },
@@ -906,6 +906,7 @@
                   "type": "string"
                 },
                 "due_at": {
+                  "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
                   "format": "date-time",
                   "type": "string"
                 },
@@ -964,7 +965,7 @@
               "type": "array"
             },
             "occurred_at": {
-              "description": "log only: RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
+              "description": "log only: RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
               "format": "date-time",
               "type": "string"
             },
@@ -1730,7 +1731,7 @@
               "type": "integer"
             },
             "from": {
-              "description": "RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
+              "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
               "format": "date-time",
               "type": "string"
             },
@@ -1745,7 +1746,7 @@
               "type": "boolean"
             },
             "to": {
-              "description": "RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
+              "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
               "format": "date-time",
               "type": "string"
             }
@@ -2037,7 +2038,7 @@
           "readOnlyHint": false,
           "title": "Create a record"
         },
-        "description": "Create a contact, company, deal, lead, project, activity or relationship that does not exist yet. Creating a deal requires a pipeline_id and a stage_id, and the workspace's pipeline list is what yields them for a deal that does not exist yet. Only the fields the chosen record_type actually stores are accepted, and a field belonging to a neighbouring type is refused rather than dropped. A CONTACT created here is visible to everyone in the workspace, the same as one a human types in. Search first when the record might already exist — a second copy of a contact or company is a problem that then needs resolve_duplicates to undo. A record that shares only a name, with a different email, phone or employer, is not proof of a duplicate: create it — the create files the pair for review, and you report the pair as filed, unresolved until the reviewer decides. Several contacts, companies or leads at once — a pasted list, a CSV — go through preview_import, which checks every row and writes nothing; creating them one by one skips that check. The new record's id comes back in the result; keep it for anything that links to it. When the user says where they met the contact, pass that word as offer_tag: it only offers the tag, and change_tags still needs their yes. (Runs immediately; requires passport scope \"write\".)",
+        "description": "Create a contact, company, deal, lead, project, activity or relationship that does not exist yet. Creating a deal requires a pipeline_id and a stage_id, and the workspace's pipeline list is what yields them for a deal that does not exist yet. Only the fields the chosen record_type actually stores are accepted, and a field belonging to a neighbouring type is refused rather than dropped. A CONTACT created here is visible to everyone in the workspace, the same as one a human types in. Omitted, occurred_at means now; ask the time of a past day named without one. Search first when the record might already exist — a second copy of a contact or company is a problem that then needs resolve_duplicates to undo. A record that shares only a name, with a different email, phone or employer, is not proof of a duplicate: create it — the create files the pair for review, and you report the pair as filed, unresolved until the reviewer decides. Several contacts, companies or leads at once — a pasted list, a CSV — go through preview_import, which checks every row and writes nothing; creating them one by one skips that check. The new record's id comes back in the result; keep it for anything that links to it. When the user says where they met the contact, pass that word as offer_tag: it only offers the tag, and change_tags still needs their yes. (Runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -2047,7 +2048,7 @@
               "type": "string"
             },
             "fields": {
-              "description": "The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields, and answered by read_workspace with topic=record_fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. Any field holding a sentence — a description, a summary, a note — is written in whoami's prose_language, whatever language this conversation is in.",
+              "description": "The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields, and answered by read_workspace with topic=record_fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. An rfc3339 value carries Z or the offset the user gave. Any field holding a sentence — a description, a summary, a note — is written in whoami's prose_language, whatever language this conversation is in.",
               "type": "object"
             },
             "idempotency_key": {
@@ -3953,10 +3954,12 @@
                                 "interval": {
                                   "properties": {
                                     "end_at": {
+                                      "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
                                       "format": "date-time",
                                       "type": "string"
                                     },
                                     "start_at": {
+                                      "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
                                       "format": "date-time",
                                       "type": "string"
                                     }
@@ -5242,7 +5245,7 @@
               "type": "string"
             },
             "evaluated_at": {
-              "description": "standard only",
+              "description": "standard only: RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
               "format": "date-time",
               "type": "string"
             },
@@ -5319,6 +5322,7 @@
                   "type": "string"
                 },
                 "through": {
+                  "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
                   "format": "date-time",
                   "type": "string"
                 }
@@ -5397,10 +5401,12 @@
                 "interval": {
                   "properties": {
                     "end_at": {
+                      "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
                       "format": "date-time",
                       "type": "string"
                     },
                     "start_at": {
+                      "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
                       "format": "date-time",
                       "type": "string"
                     }
@@ -6130,7 +6136,7 @@
               "type": "string"
             },
             "end": {
-              "description": "RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
+              "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
               "format": "date-time",
               "type": "string"
             },
@@ -6179,7 +6185,7 @@
               "type": "string"
             },
             "start": {
-              "description": "RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
+              "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
               "format": "date-time",
               "type": "string"
             },
@@ -6331,7 +6337,7 @@
               "type": "string"
             },
             "scheduled_at": {
-              "description": "email_new, email_reply only: RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
+              "description": "email_new, email_reply only: RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
               "format": "date-time",
               "type": "string"
             },
@@ -6377,7 +6383,7 @@
           "readOnlyHint": false,
           "title": "Update a record"
         },
-        "description": "Change stored field values on a record that already exists — a corrected title, an amount, an expected close date. Only the fields you send change, and only the fields the record type stores (a contact's email addresses are not among them). A field a HUMAN last set is not overwritten: that part is staged for a human and named in the result, and that part of the write has not happened. It names the record by id; when a name matches two records, a human picks. owner_id is NOT neutral — ownership decides visibility, so reassigning moves the record onto someone else's book and can take it off the owner's. Use change_state with action=move_deal to move a deal between stages, and change_activities with action=relink to change what an activity is about; neither is a field edit. Send if_version with the version you read, and keep the staged approval id from the result if you intend to retry the same change once a human has released it. (Runs immediately; requires passport scope \"write\".)",
+        "description": "Change stored field values on a record that already exists — a corrected title, an amount, an expected close date. Only the fields you send change, and only the fields the record type stores (a contact's email addresses are not among them). A field a HUMAN last set is not overwritten: that part is staged for a human and named in the result, and that part of the write has not happened. It names the record by id; when a name matches two records, a human picks. owner_id is NOT neutral — ownership decides visibility, so reassigning moves the record onto someone else's book and can take it off the owner's. An activity moved to another day keeps its time of day unless the user names one. Use change_state with action=move_deal to move a deal between stages, and change_activities with action=relink to change what an activity is about; neither is a field edit. Send if_version with the version you read, and keep the staged approval id from the result if you intend to retry the same change once a human has released it. (Runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -6387,7 +6393,7 @@
               "type": "string"
             },
             "fields": {
-              "description": "Only sent fields change. Fields a human last edited are not applied: they are staged for approval and named in the result's staged_approval. The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields, and answered by read_workspace with topic=record_fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. Any field holding a sentence — a description, a summary, a note — is written in whoami's prose_language, whatever language this conversation is in.",
+              "description": "Only sent fields change. Fields a human last edited are not applied: they are staged for approval and named in the result's staged_approval. The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields, and answered by read_workspace with topic=record_fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. An rfc3339 value carries Z or the offset the user gave. Any field holding a sentence — a description, a summary, a note — is written in whoami's prose_language, whatever language this conversation is in.",
               "type": "object"
             },
             "id": {

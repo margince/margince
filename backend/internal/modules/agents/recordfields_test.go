@@ -253,7 +253,7 @@ func TestTheTimestampExampleCarriesNoFixedOffset(t *testing.T) {
 	if offset := regexp.MustCompile(`[+-]\d\d:\d\d`).FindString(timestampRule); offset != "" {
 		t.Errorf("timestampRule names the offset %s; a model copies it", offset)
 	}
-	if !strings.Contains(timestampRule, "never add an hour") {
+	if !strings.Contains(timestampRule, "never invent an hour or offset") {
 		t.Error("timestampRule must tell the model not to invent an hour")
 	}
 }
