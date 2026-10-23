@@ -199,6 +199,7 @@ it("draws an answered proposal in the review as history, without verbs", async (
   );
   await screen.findByText("A rejected date");
 
+  expect(screen.getAllByText("Rejected")).toHaveLength(1);
   expect(screen.getAllByRole("button", { name: "Reject" })).toHaveLength(1);
   expect(screen.getAllByRole("button", { name: "Approve" })).toHaveLength(1);
 });

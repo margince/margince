@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import type { DecisionHeldRejection } from "../../design-system/decisioncard";
 import { ACTION_TOAST_MS, type Toast } from "../../design-system/toast";
 import type { Translator } from "../../i18n";
@@ -41,7 +47,7 @@ export function useHeldRejection({
   const left = useRef(false);
   const remaining = useRef(ACTION_TOAST_MS);
   const latest = useRef({ send, decided, onRefusedAfterLeaving });
-  useEffect(() => {
+  useLayoutEffect(() => {
     latest.current = { send, decided, onRefusedAfterLeaving };
   });
 

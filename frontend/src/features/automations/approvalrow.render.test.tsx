@@ -417,7 +417,7 @@ describe("a rejection held for its undo", () => {
     expect(sticky).toBe(tone === "danger");
   });
 
-  it("sends nothing when the row turns decided and leaves in one go", async () => {
+  it("sends nothing when the row is decided before it leaves", async () => {
     const user = steppedClock({ toFake: [...HOLD_TIMERS] });
     const fetched = stubDecisions();
     const view = render(<ApprovalRow approval={closeDateApproval()} />);
@@ -443,7 +443,9 @@ describe("a rejection held for its undo", () => {
     await user.tab();
     await user.keyboard("{Enter}");
     await user.click(screen.getByRole("button", { name: "Reject" }));
-    await vi.advanceTimersByTimeAsync(ACTION_TOAST_MS);
+    await vi.advanceTimersByTimeAsync(ACTION_TOAST_MS - 1);
+    expect(rejectCalls(fetched)).toBe(0);
+    await vi.advanceTimersByTimeAsync(1);
 
     await vi.waitFor(() => expect(rejectCalls(fetched)).toBe(1));
   });
