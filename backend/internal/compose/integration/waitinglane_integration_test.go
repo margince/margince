@@ -88,7 +88,7 @@ func seedWaitingMessageLinked(
 // that answered nobody would pass every refusal test in this file.
 func TestAnUnansweredMessageReachesTheReader(t *testing.T) {
 	e := Setup(t)
-	seedWaitingMessage(t, e, "thread-waiting-admit", "inbound", "Re: pricing", waitingInstant.Add(-83*24*time.Hour))
+	seedWaitingMessage(t, e, "thread-waiting-admit", "inbound", "Re: pricing", waitingInstant.Add(-20*24*time.Hour))
 
 	waiting, err := activities.NewStore(e.DB()).WaitingReplies(e.Admin(), waitingInstant)
 	if err != nil {
