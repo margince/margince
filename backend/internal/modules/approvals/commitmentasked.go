@@ -32,10 +32,9 @@ type AskedPair struct {
 }
 
 // StillAskedOf answers, for system maintenance, whether each approval is
-// pending. For a payload-owned kind it also asks whether the row is still put
-// to the member its notice went to. That is PendingAskedOfInTx's question without the
-// grants the recipient's own session would add. Other kinds answer as
-// StillPending does.
+// pending and still put to the member its notice went to. That is
+// PendingAskedOfInTx's question without the grants the recipient's own session
+// would add. A row that names no decider is asked of nobody.
 func (s *Service) StillAskedOf(ctx context.Context, tx pgx.Tx, pairs []AskedPair) (map[AskedPair]bool, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return nil, err
@@ -67,7 +66,7 @@ func (s *Service) StillAskedOf(ctx context.Context, tx pgx.Tx, pairs []AskedPair
 	now := s.now()
 	for _, pair := range pairs {
 		a, found := byID[pair.Approval]
-		out[pair] = found && a.PendingAt(now) && (!approvalsubject.PayloadOwned(a.Kind) || askedOf(a, pair.Recipient))
+		out[pair] = found && a.PendingAt(now) && askedOf(a, pair.Recipient)
 	}
 	return out, nil
 }

@@ -135,8 +135,10 @@ func TestNoticeReconciliationResumesPastAPageOfPendingDecisions(t *testing.T) {
 			t.Fatal("missing approval still has an actionable notice")
 		}
 	}
-	if got := a.unreadFor(t, a.e.Rep1); got != 1 {
-		t.Fatalf("shared pending notice count=%d", got)
+	// The approval names the admin as its decider, so the copy that reached
+	// Rep1 is taken back while it is still pending.
+	if got := a.unreadFor(t, a.e.Rep1); got != 0 {
+		t.Fatalf("a member the pending approval is not asked of still has %d notices", got)
 	}
 }
 
@@ -263,5 +265,32 @@ func TestNoticeReconciliationRetractsASenderQuestionAnnouncedToAnotherMember(t *
 	}
 	if got := a.unreadFor(t, a.e.Rep1); got != 0 {
 		t.Fatalf("the member the question is not for still has %d notices", got)
+	}
+}
+
+// A pending approval announced to everybody who could decide it, as it was
+// before each request named one decider, keeps only its decider's copy.
+func TestNoticeReconciliationTakesBackAPendingApprovalsCopyFromAMemberItIsNotFor(t *testing.T) {
+	a := newApprovalNotifyEnv(t)
+	a.grantRole(t, a.e.AdminUser)
+	id, staged := a.stageCorrection(t)
+	a.deliver(t, staged)
+	ctx := principal.SystemActing(a.e.Admin(), approvalNoticeRetractActor)
+	if _, err := notices.NewStore(a.db).Create(ctx, notices.NewNotice{
+		Recipient: ids.From[ids.UserKind](a.e.Rep1), Kind: notices.KindApprovalPending,
+		Subject: stagedSummary, DedupeKey: approvalNoticeDedupeKey(id.UUID),
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	sweep := principal.SystemActing(a.e.Admin(), approvalNoticeReconcileActor)
+	if _, changed, err := newApprovalNoticeReconcileWorker(a.e.Pool).reconcilePage(sweep, ids.Nil); err != nil || changed != 1 {
+		t.Fatalf("the sweep took back %d notices (err %v), want the copy for the member it is not for", changed, err)
+	}
+	if got := a.unreadFor(t, a.e.Rep1); got != 0 {
+		t.Errorf("the member the approval is not for still has %d notices", got)
+	}
+	if got := a.unreadFor(t, a.e.AdminUser); got != 1 {
+		t.Errorf("the decider has %d notices, want their own one", got)
 	}
 }
