@@ -13,6 +13,7 @@ package integration
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/importjobtest"
@@ -97,8 +98,7 @@ func (d *twoDoors) decisionOn(t *testing.T, approval string) decided {
 	return out
 }
 
-// stagedApprovalOn answers the one approval a confirm-first tag merge left on a
-// tag.
+// stagedApprovalOn answers the one approval a staged call left on a record.
 func (d *twoDoors) stagedApprovalOn(t *testing.T, tag string) string {
 	t.Helper()
 	var id string
@@ -111,14 +111,20 @@ func (d *twoDoors) stagedApprovalOn(t *testing.T, tag string) string {
 // A staged action approved or rejected by another passport is decided alike
 // over either door. The status and the reason are the same, and so are the rows
 // behind them.
+//
+// A site read is the call staged here, as it still waits for a human on a
+// colleague's passport.
 func TestDecideApprovalLeavesTheSameOnEitherDoor(t *testing.T) {
-	proposer := newTwoDoors(t, "decide-write-doors", "read", "write")
+	proposer := newTwoDoors(t, "decide-write-doors", "read", "write", "enrich")
 	decider := proposer.lend(t, "decider", "read", "write")
-	into := createdID(t, proposer.e, "/v1/tags", AnyMap{"name": "Decide target", "color": "sky"})
 	stage := func(name string) string {
-		tag := createdID(t, proposer.e, "/v1/tags", AnyMap{"name": name, "color": "sky"})
-		proposer.toolRefused(t, "merge_tags", map[string]any{"tag_id": tag, "into_tag_id": into})
-		return proposer.stagedApprovalOn(t, tag)
+		domain := strings.ToLower(strings.ReplaceAll(name, " ", "-")) + ".example"
+		company := createdID(t, proposer.e, "/v1/companies", AnyMap{
+			"source": "manual", "display_name": name,
+			"domains": []AnyMap{{"domain": domain, "is_primary": true}},
+		})
+		proposer.toolRefused(t, "enrich", map[string]any{"company_id": company})
+		return proposer.stagedApprovalOn(t, company)
 	}
 	approveREST, approveTool := stage("Approve via rest"), stage("Approve via tool")
 	rejectREST, rejectTool := stage("Reject via rest"), stage("Reject via tool")

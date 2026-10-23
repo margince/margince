@@ -230,22 +230,19 @@ func TestTheRESTDoorAlsoCollectsExactlyOneApprovalPerIdenticalCall(t *testing.T)
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	var contact struct {
+	// Reading a company's site is the REST call that still waits on a
+	// colleague's passport, so it is the one that exercises the mechanism.
+	var company struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Greta Human"}, nil, &contact); status != http.StatusCreated {
-		t.Fatalf("human create → %d", status)
+	if status := e.Call(t, "POST", "/v1/companies", AnyMap{
+		"source": "manual", "display_name": "Duplicate Approval GmbH",
+		"domains": []AnyMap{{"domain": "example.com", "is_primary": true}},
+	}, nil, &company); status != http.StatusCreated {
+		t.Fatalf("company create → %d", status)
 	}
-	var minted struct {
-		Token string `json:"token"`
-	}
-	if status := e.Call(t, "POST", "/v1/passports", AnyMap{
-		"label": "duplicate-approval agent", "scopes": []string{"read", "write"},
-	}, nil, &minted); status != http.StatusCreated {
-		t.Fatalf("issue passport → %d", status)
-	}
-	bearer := map[string]string{"Authorization": "Bearer " + minted.Token}
-	overwrite := AnyMap{"full_name": "Greta Machine"}
+	bearer := apptest.PassportBearer(t, e, "duplicate-approval agent", "read", "enrich")
+	enrich := "/v1/companies/" + company.ID + "/enrich"
 
 	stage := func(what string) (id, detail string) {
 		t.Helper()
@@ -253,22 +250,22 @@ func TestTheRESTDoorAlsoCollectsExactlyOneApprovalPerIdenticalCall(t *testing.T)
 			Code   string `json:"code"`
 			Detail string `json:"detail"`
 		}
-		status := e.Call(t, "PATCH", "/v1/contacts/"+contact.ID, overwrite, bearer, &problem)
+		status := e.Call(t, "POST", enrich, nil, bearer, &problem)
 		if status != http.StatusForbidden || problem.Code != "approval_required" {
 			t.Fatalf("%s → %d %q, want 403 approval_required", what, status, problem.Code)
 		}
 		return ExtractStagedApprovalID(t, problem.Detail), problem.Detail
 	}
 
-	first, _ := stage("the first refused overwrite")
-	second, secondDetail := stage("the identical overwrite, still undecided")
+	first, _ := stage("the first refused enrich")
+	second, secondDetail := stage("the identical enrich, still undecided")
 	if second != first {
 		t.Fatalf("re-sending staged approval %s, want the live one (%s)", second, first)
 	}
 	if !strings.Contains(secondDetail, "staged as approval") {
 		t.Fatalf("undecided refusal %q does not tell the agent to wait for a human", secondDetail)
 	}
-	assertContactApprovalCount(t, e, 1, "two identical refused PATCHes")
+	assertEnrichApprovalCount(t, e, 1, "two identical refused enrich calls")
 
 	if status := e.Call(t, "POST", "/v1/approvals/"+first+"/approve", AnyMap{}, nil, nil); status != http.StatusOK {
 		t.Fatalf("human approve → %d", status)
@@ -276,38 +273,38 @@ func TestTheRESTDoorAlsoCollectsExactlyOneApprovalPerIdenticalCall(t *testing.T)
 
 	// The identical request WITHOUT the token, after the decision: pointed at
 	// the approval it already has, and told so in words it can act on.
-	released, releasedDetail := stage("the identical overwrite after approval")
+	released, releasedDetail := stage("the identical enrich after approval")
 	if released != first {
 		t.Fatalf("after approval the door answered %s, want the approved one (%s)", released, first)
 	}
 	if !strings.Contains(releasedDetail, "already approved this exact request") {
 		t.Fatalf("refusal %q does not tell the agent its request is already approved", releasedDetail)
 	}
-	assertContactApprovalCount(t, e, 1, "an identical PATCH after the approval")
+	assertEnrichApprovalCount(t, e, 1, "an identical enrich after the approval")
 
-	withToken := map[string]string{"Authorization": "Bearer " + minted.Token, "X-Approval-Token": first}
-	if status := e.Call(t, "PATCH", "/v1/contacts/"+contact.ID, overwrite, withToken, nil); status != http.StatusOK {
-		t.Fatalf("approved retry → %d, want the patch to execute", status)
+	// The approved retry passes the gate. What enrich then does is its own
+	// business, so only a refusal from the gate would fail this.
+	withToken := map[string]string{"Authorization": bearer["Authorization"], "X-Approval-Token": first}
+	var redeemed struct {
+		Code string `json:"code"`
 	}
-	var current struct {
-		FullName string `json:"full_name"`
-	}
-	if status := e.Call(t, "GET", "/v1/contacts/"+contact.ID, nil, bearer, &current); status != http.StatusOK || current.FullName != "Greta Machine" {
-		t.Fatalf("approved overwrite did not land: %d %q", status, current.FullName)
+	status := e.Call(t, "POST", enrich, nil, withToken, &redeemed)
+	if redeemed.Code == "approval_required" || redeemed.Code == "approval_token_invalid" {
+		t.Fatalf("approved retry → %d %q, want it past the gate", status, redeemed.Code)
 	}
 }
 
-// assertContactApprovalCount counts the update_record approvals in the workspace.
-func assertContactApprovalCount(t *testing.T, e *apptest.AppEnv, want int, after string) {
+// assertEnrichApprovalCount counts the enrich approvals in the workspace.
+func assertEnrichApprovalCount(t *testing.T, e *apptest.AppEnv, want int, after string) {
 	t.Helper()
 	var got int
 	if err := apptest.InWorkspace(e, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT count(*) FROM approval WHERE kind = 'update_record'`).Scan(&got)
+			`SELECT count(*) FROM approval WHERE kind = 'enrich'`).Scan(&got)
 	}); err != nil {
 		t.Fatalf("counting the staged approvals: %v", err)
 	}
 	if got != want {
-		t.Fatalf("%d update_record approvals after %s, want %d", got, after, want)
+		t.Fatalf("%d enrich approvals after %s, want %d", got, after, want)
 	}
 }

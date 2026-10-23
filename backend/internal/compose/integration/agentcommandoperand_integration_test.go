@@ -94,16 +94,20 @@ func TestAConfirmFirstFactCallAgainstAnUnseeableCompanyStagesNothing(t *testing.
 // one approval could redeem the other and a human triaging the inbox cannot see
 // which of the two they are answering.
 //
-// Driven through two overwrites of one human-written contact name: the same
-// verb on the same row, differing only in the value proposed.
+// Driven through two reads of one company's site that differ only in the page
+// named. A site read still waits on a colleague's passport, as the model picks
+// the address.
 func TestTwoStagedCallsDifferingOnlyInArgumentsAreDistinguishable(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	contactID := createdID(t, e, "/v1/contacts", AnyMap{"source": "manual", "full_name": "Hana Human"})
-	bearer := agentBearer(t, e, "overwrite agent")
+	companyID := createdID(t, e, "/v1/companies", AnyMap{
+		"source": "manual", "display_name": "Two Pages GmbH",
+		"domains": []AnyMap{{"domain": "example.com", "is_primary": true}},
+	})
+	bearer := apptest.PassportBearer(t, e, "site-read agent", "read", "enrich")
 
-	approvalA := stageNameOverwrite(t, e, bearer, contactID, "Hana Alpha")
-	approvalB := stageNameOverwrite(t, e, bearer, contactID, "Hana Beta")
+	approvalA := stageSiteRead(t, e, bearer, companyID, "https://example.com/about")
+	approvalB := stageSiteRead(t, e, bearer, companyID, "https://example.com/team")
 
 	typeA, targetA, hashA, summaryA := readApproval(t, e, approvalA)
 	typeB, targetB, hashB, summaryB := readApproval(t, e, approvalB)
@@ -135,16 +139,16 @@ func readApproval(t *testing.T, e *apptest.AppEnv, approvalID string) (targetTyp
 	return targetType, targetID, diffHash, summary
 }
 
-// stageNameOverwrite provokes a refused agent overwrite of a human-written
-// contact name and returns the approval id it staged.
-func stageNameOverwrite(t *testing.T, e *apptest.AppEnv, bearer map[string]string, contactID, fullName string) string {
+// stageSiteRead asks for a read of one page of a company's site, which waits
+// for a human, and returns the approval id it staged.
+func stageSiteRead(t *testing.T, e *apptest.AppEnv, bearer map[string]string, companyID, url string) string {
 	t.Helper()
 	var problem struct {
 		Code   string `json:"code"`
 		Detail string `json:"detail"`
 	}
-	if status := e.Call(t, "PATCH", "/v1/contacts/"+contactID, AnyMap{"full_name": fullName}, bearer, &problem); status != http.StatusForbidden || problem.Code != "approval_required" {
-		t.Fatalf("agent overwrite to %q → %d %q, want 403 approval_required", fullName, status, problem.Code)
+	if status := e.Call(t, "POST", "/v1/companies/"+companyID+"/enrich", AnyMap{"url": url}, bearer, &problem); status != http.StatusForbidden || problem.Code != "approval_required" {
+		t.Fatalf("agent site read of %q → %d %q, want 403 approval_required", url, status, problem.Code)
 	}
 	return ExtractStagedApprovalID(t, problem.Detail)
 }

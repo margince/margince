@@ -140,8 +140,12 @@ func TestAnAgentOnAColleaguesPassportRunsAConfirmFirstCall(t *testing.T) {
 	pinned := func() (mcp.TierResolverInput, error) {
 		return mcp.TierResolverInput{TargetStageSemantic: "won", ObservedVersion: new(int64(4))}, nil
 	}
-	if _, err := fullSeatGate().Admit(onPassport, dynamic, pinned); err != nil {
+	admitted, err := fullSeatGate().Admit(onPassport, dynamic, pinned)
+	if err != nil {
 		t.Errorf("a move to won on a colleague's passport → %v, want it admitted", err)
+	}
+	if _, pinned := AutoExecutePin(admitted); pinned {
+		t.Error("a lifted won move carries the open-move pin, so the store refuses it")
 	}
 	webRead := mcp.ToolSpec{
 		Name: "enrich", RequiredScope: principal.ScopeWrite, Tier: mcp.TierConfirmationRequired, WaitsEvenForItsUser: true,

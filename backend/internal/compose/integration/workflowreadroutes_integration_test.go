@@ -20,30 +20,29 @@ import (
 )
 
 // A staged approval lists and reads the same on GET /approvals and
-// list_approvals, and on GET /approvals/{id} and read_approval.
+// list_approvals, and on GET /approvals/{id} and read_approval. A site read is
+// staged, as it still waits for a human on a colleague's passport.
 func TestApprovalRoutesAnswerAsTheirTools(t *testing.T) {
-	d := newTwoDoors(t, "approval-read-doors", "read", "write")
-	stages := apptest.DiscoverSeededPipeline(t, d.e)
-	deal := openDeal(t, d.e, stages, "Approval door deal")
-	win := AnyMap{"to_stage_id": stages.Won, "won_without_contract_reason": "verbal"}
-	if status := d.e.Call(t, "POST", "/v1/deals/"+deal+"/progress", win, d.bearer, nil); status != http.StatusForbidden {
-		t.Fatalf("a won move should stage an approval → %d", status)
+	d := newTwoDoors(t, "approval-read-doors", "read", "write", "enrich")
+	company := createdID(t, d.e, "/v1/companies", AnyMap{
+		"source": "manual", "display_name": "Approval Door GmbH",
+		"domains": []AnyMap{{"domain": "example.com", "is_primary": true}},
+	})
+	if status := d.e.Call(t, "POST", "/v1/companies/"+company+"/enrich", AnyMap{}, d.bearer, nil); status != http.StatusForbidden {
+		t.Fatalf("a site read should stage an approval → %d", status)
 	}
-	staged := stagedProgressions(t, d.e, deal)
-	if len(staged) != 1 {
-		t.Fatalf("the won move staged %v, want one approval", staged)
-	}
+	staged := []string{d.stagedApprovalOn(t, company)}
 
 	pending := d.rest(t, "GET", "/v1/approvals?status=pending", nil)
 	pendingTool := d.tool(t, "list_approvals", map[string]any{"status": "pending"})
-	bothDoorsName(t, "pending approvals", pending, pendingTool, staged[0], deal)
+	bothDoorsName(t, "pending approvals", pending, pendingTool, staged[0], company)
 	one := d.rest(t, "GET", "/v1/approvals/"+staged[0], nil)
 	oneTool := d.tool(t, "read_approval", map[string]any{"staged_action_id": staged[0]})
-	bothDoorsName(t, "one approval", one, oneTool, staged[0], deal)
+	bothDoorsName(t, "one approval", one, oneTool, staged[0], company)
 
 	// The ids are labelled differently on the two doors; the kind and the
 	// status the approval is in must be the same.
-	want := sharedApproval{Kind: "progress_deal", Status: "pending"}
+	want := sharedApproval{Kind: "enrich", Status: "pending"}
 	if got := sameRecords[sharedApproval](t, "one approval", one, oneTool); got != want {
 		t.Errorf("the approval reads %+v, want %+v", got, want)
 	}

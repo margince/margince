@@ -110,7 +110,7 @@ type ToolSpec struct {
 	Egress    bool // true if the tool reaches outside the workspace (send_email, webhooks)
 	// WaitsEvenForItsUser keeps a confirm-first tool waiting for a human when an
 	// agent acts as its user. Set where the model, not the colleague, picks the
-	// address the call reaches, which a colleague working in the app never hands over.
+	// address the call reaches, and where a call cannot name the rows it changes.
 	WaitsEvenForItsUser bool
 	// HumanOnly marks a tool that exists in the registry so REST can dispatch
 	// it by name, but that no Agent or Buyer principal may ever invoke or be

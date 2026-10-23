@@ -181,6 +181,7 @@ func (g *Gate) Admit(ctx context.Context, spec mcp.ToolSpec, resolve func() (mcp
 	// tier then decides nothing, so a version it could not name raises nothing,
 	// and one it did name is still bound below. Automatic work with nobody
 	// behind it keeps both rules.
+	resolvedAuto := tier == mcp.TierAutoExecute
 	if TierFor(p, spec) == mcp.TierAutoExecute {
 		tier = mcp.TierAutoExecute
 	} else if tier == mcp.TierAutoExecute && spec.Tier == mcp.TierDynamic && observed == nil {
@@ -202,7 +203,10 @@ func (g *Gate) Admit(ctx context.Context, spec mcp.ToolSpec, resolve func() (mcp
 	// agent gate both come through Admit, and a rule spelled twice on this seam
 	// is how the tier itself came to judge both endpoints of a deal move on one
 	// door and only the destination on the other.
-	if observed != nil {
+	// A tier lifted for an agent acting as its user binds no pin: the pin also
+	// tells the store the move is the open one the tier admitted, and a lifted
+	// call is the colleague's own move, which the tier model does not govern.
+	if observed != nil && resolvedAuto {
 		ctx = withAutoExecutePin(ctx, *observed)
 	}
 	return ctx, nil

@@ -5,15 +5,12 @@
 
 package integration
 
-// A conversation filed under the wrong company is moved back by relinking, so a
-// credential may release the move it staged for its own human. What it releases
-// is the exact set of activities it named: a thread key is refused, and a mail
-// that joins the conversation afterwards is not moved under an approval that
-// never described it. A project relink is released the same way: a member can
-// undo the filing, so only the undo stays out of the credential's hands.
+// A credential relinks activities as its colleague could in the app, at once.
+// It moves the exact set it names: a thread key is refused, and a mail in the
+// conversation it did not name is not moved. A project filing is made the same
+// way, and only a member can undo it.
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"strings"
@@ -26,7 +23,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
 // relinkLender gives Rep1 a real role holding what staging, releasing and the
@@ -56,65 +52,38 @@ func companyLinks(t *testing.T, e *Env, activity, company ids.UUID) int {
 	return e.WsCount(t, `SELECT count(*) FROM activity_link WHERE activity_id = $1 AND company_id = $2`, activity, company)
 }
 
-func TestACredentialReleasesTheCompanyRelinkItStagedAndMovesExactlyTheNamedActivities(t *testing.T) {
+func TestACredentialRelinksExactlyTheNamedActivitiesToACompanyAtOnce(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	f := seedThreadFixture(t, e, owner)
 	relinkLender(t, e)
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
-	agent := relinkAgentCtx(e, e.SeedPassport(t, owner, "relink self-release"))
+	agent := relinkAgentCtx(e, e.SeedPassport(t, owner, "relink company"))
 	company := e.SeedCompany(t, "Right GmbH", nil)
 
-	// The key form is refused for every destination: it is re-read at the retry.
+	// The key form is refused for every destination: a key names a conversation
+	// that may grow.
 	_, err := registry.Invoke(agent, "relink_thread", json.RawMessage(
 		`{"thread_key":"`+f.key+`","entity_type":"company","entity_id":"`+company.String()+`"}`))
 	var bad *agents.BadArgsError
 	if !errors.As(err, &bad) || !strings.Contains(bad.Guidance, "relink_activities") {
 		t.Fatalf("relink_thread onto a company → %v, want a refusal naming relink_activities", err)
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM approval`); n != 0 {
-		t.Fatalf("relink_thread left %d staged approval(s); a thread key cannot be approved", n)
-	}
 
-	args := `{"activity_ids":["` + f.mine[0].String() + `","` + f.mine[1].String() +
-		`"],"entity_type":"company","entity_id":"` + company.String() + `"}`
-	_, err = registry.Invoke(agent, "relink_activities", json.RawMessage(args))
-	var staged *workflow.StagedApprovalError
-	if !errors.As(err, &staged) {
-		t.Fatalf("relink_activities onto a company → %v, want a staged approval", err)
-	}
-	if !staged.ReleasableByCaller {
-		t.Fatal("the staged answer does not say this credential can release the move; it is undoable")
-	}
-
-	// A mail joins the conversation after the call was staged.
+	// A mail in the conversation the call does not name.
 	late := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, body, occurred_at, source, captured_by, thread_key)
 		VALUES ($1, 'email', 'Re: milestone (late)', 'body', now(), 'manual', 'human:x', $2)`, f.key)
 
-	if _, err := registry.Invoke(agent, "decide_approval", json.RawMessage(
-		`{"staged_action_id":"`+staged.ApprovalID.String()+`","decision":"approve"}`)); err != nil {
-		t.Fatalf("the credential could not release the company relink it staged: %v", err)
-	}
-	var decidedByLender bool
-	var actor string
-	if err := owner.QueryRow(context.Background(), `
-		SELECT a.decided_by = p.on_behalf_of,
-		       (SELECT l.actor_type FROM audit_log l WHERE l.entity_id = a.id AND l.action = 'approve')
-		  FROM approval a JOIN passport p ON p.id = a.passport_id WHERE a.id = $1`,
-		staged.ApprovalID.UUID).Scan(&decidedByLender, &actor); err != nil {
-		t.Fatalf("reading the decision back: %v", err)
-	}
-	if !decidedByLender || actor != "agent" {
-		t.Errorf("decision recorded as lender=%v through actor %q, want the lender through the agent", decidedByLender, actor)
-	}
-
-	out, err := registry.Invoke(agent, "relink_activities", json.RawMessage(
-		args[:len(args)-1]+`,"approval_id":"`+staged.ApprovalID.String()+`"}`))
+	out, err := registry.Invoke(agent, "relink_activities", json.RawMessage(`{"activity_ids":["`+
+		f.mine[0].String()+`","`+f.mine[1].String()+`"],"entity_type":"company","entity_id":"`+company.String()+`"}`))
 	if err != nil {
-		t.Fatalf("the released retry → %v", err)
+		t.Fatalf("relink_activities onto a company on a passport → %v, want it run at once", err)
 	}
 	if got := relinkedCount(t, out); got != 2 {
 		t.Errorf("relinked = %d, want the two named activities", got)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM approval`); n != 0 {
+		t.Errorf("the relink left %d staged approval(s), want none", n)
 	}
 	for _, id := range f.mine {
 		if companyLinks(t, e, id, company) != 1 {
@@ -128,14 +97,13 @@ func TestACredentialReleasesTheCompanyRelinkItStagedAndMovesExactlyTheNamedActiv
 		}
 	}
 	if companyLinks(t, e, late, company) != 0 {
-		t.Error("a mail that joined the thread after the approval was moved under an approval that never described it")
+		t.Error("a mail the call did not name was moved")
 	}
 }
 
-// A project relink is released by the credential that staged it, because a
-// member can take the filing back: the retry files exactly the named activity and
-// stamps it, and the undo is a named member's decision the credential cannot make.
-func TestACredentialReleasesTheProjectRelinkItStagedAndOnlyAMemberUndoesTheFiling(t *testing.T) {
+// A credential files an activity under a project at once, and stamps it. The
+// undo is a named member's decision the credential cannot make.
+func TestACredentialFilesUnderAProjectAndOnlyAMemberUndoesTheFiling(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	f := seedThreadFixture(t, e, owner)
@@ -143,47 +111,22 @@ func TestACredentialReleasesTheProjectRelinkItStagedAndOnlyAMemberUndoesTheFilin
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
 	agent := relinkAgentCtx(e, e.SeedPassport(t, owner, "relink project"))
 
-	args := `{"activity_ids":["` + f.mine[0].String() + `"],"entity_type":"project","entity_id":"` + f.project.String() + `"}`
-	_, err := registry.Invoke(agent, "relink_activities", json.RawMessage(args))
-	var staged *workflow.StagedApprovalError
-	if !errors.As(err, &staged) {
-		t.Fatalf("relink_activities onto a project → %v, want a staged approval", err)
-	}
-	if !staged.ReleasableByCaller {
-		t.Fatal("the staged answer does not say this credential can release a project relink; the filing is undoable")
-	}
-	if projectLinks(t, e, f.mine[0], f.project) != 0 {
-		t.Fatal("staging filed the activity before anybody said yes")
-	}
-
-	if _, err := registry.Invoke(agent, "decide_approval", json.RawMessage(
-		`{"staged_action_id":"`+staged.ApprovalID.String()+`","decision":"approve"}`)); err != nil {
-		t.Fatalf("the credential could not release the project relink it staged: %v", err)
-	}
-	var decidedByLender bool
-	if err := owner.QueryRow(context.Background(), `
-		SELECT a.decided_by = p.on_behalf_of FROM approval a JOIN passport p ON p.id = a.passport_id WHERE a.id = $1`,
-		staged.ApprovalID.UUID).Scan(&decidedByLender); err != nil || !decidedByLender {
-		t.Fatalf("decision recorded as the lender = %v (err %v), want the lender through the agent", decidedByLender, err)
-	}
-
 	out, err := registry.Invoke(agent, "relink_activities", json.RawMessage(
-		args[:len(args)-1]+`,"approval_id":"`+staged.ApprovalID.String()+`"}`))
+		`{"activity_ids":["`+f.mine[0].String()+`"],"entity_type":"project","entity_id":"`+f.project.String()+`"}`))
 	if err != nil {
-		t.Fatalf("the released retry → %v", err)
+		t.Fatalf("relink_activities onto a project on a passport → %v, want it filed at once", err)
 	}
 	if got := relinkedCount(t, out); got != 1 {
 		t.Errorf("relinked = %d, want the one named activity", got)
 	}
 	if projectLinks(t, e, f.mine[0], f.project) != 1 || projectLinks(t, e, f.mine[1], f.project) != 0 {
-		t.Error("the released relink did not file exactly the named activity")
+		t.Error("the relink did not file exactly the named activity")
 	}
 	filed := ids.ActivityID{UUID: f.mine[0]}
 	if readProjectStamp(t, e, filed.UUID).class == nil {
-		t.Fatal("the filing the credential released was not stamped")
+		t.Fatal("the filing was not stamped")
 	}
 
-	// The credential can stage and release the filing, never withdraw the class.
 	if _, err := e.Activities.UndoProjectFiling(agent, filed, undoReason); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("an agent undoing the filing → %v, want a permission denial", err)
 	}
@@ -196,7 +139,9 @@ func TestACredentialReleasesTheProjectRelinkItStagedAndOnlyAMemberUndoesTheFilin
 	}
 }
 
-func TestARelinkOutsideTheLendersScopeCannotBeReleased(t *testing.T) {
+// A set that names an activity outside the lender's scope is refused as a
+// whole, so none of it moves.
+func TestARelinkReachingOutsideTheLendersScopeMovesNothing(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	f := seedThreadFixture(t, e, owner)
@@ -205,17 +150,10 @@ func TestARelinkOutsideTheLendersScopeCannotBeReleased(t *testing.T) {
 	agent := relinkAgentCtx(e, e.SeedPassport(t, owner, "relink bounds"))
 	company := e.SeedCompany(t, "Right GmbH", nil)
 
-	args := `{"activity_ids":["` + f.mine[0].String() + `","` + f.theirs.String() +
-		`"],"entity_type":"company","entity_id":"` + company.String() + `"}`
-	_, err := registry.Invoke(agent, "relink_activities", json.RawMessage(args))
-	var staged *workflow.StagedApprovalError
-	if !errors.As(err, &staged) {
-		t.Fatalf("relink_activities → %v, want a staged approval", err)
-	}
-	_, err = registry.Invoke(agent, "decide_approval", json.RawMessage(
-		`{"staged_action_id":"`+staged.ApprovalID.String()+`","decision":"approve"}`))
-	if _, incomplete := errors.AsType[*approvals.PreviewContextError](err); !incomplete {
-		t.Fatalf("releasing a hidden activity: %v, want non-decidable preview", err)
+	_, err := registry.Invoke(agent, "relink_activities", json.RawMessage(`{"activity_ids":["`+
+		f.mine[0].String()+`","`+f.theirs.String()+`"],"entity_type":"company","entity_id":"`+company.String()+`"}`))
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("relink_activities over a hidden activity → %v, want not found", err)
 	}
 	for _, id := range []ids.UUID{f.mine[0], f.theirs} {
 		if companyLinks(t, e, id, company) != 0 {

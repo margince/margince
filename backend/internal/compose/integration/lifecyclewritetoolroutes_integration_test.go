@@ -151,44 +151,22 @@ func TestRelinkWritesLeaveTheSameOnEitherDoor(t *testing.T) {
 	}
 	d.sameEffect(t, "relink", restOne, toolOne)
 
-	// A batch is confirm-first for an agent whatever it is filed under: each
-	// door stages one approval of the same kind, and moves nothing.
+	// A batch runs at once on either door, as the passport's colleague could
+	// relink it, and the two doors leave the same rows.
 	toRest := createdID(t, d.e, "/v1/contacts", AnyMap{"full_name": "Batch To Rest", "source": "manual"})
 	toTool := createdID(t, d.e, "/v1/contacts", AnyMap{"full_name": "Batch To Tool", "source": "manual"})
 	restA, toolA := note("Rest batch"), note("Tool batch")
-	var refusal fileRefusal
-	if status := d.e.Call(t, "POST", "/v1/activities/relink-bulk", AnyMap{
+	d.restStatus(t, "POST", "/v1/activities/relink-bulk", AnyMap{
 		"activity_ids": []string{restA}, "entity_type": "contact", "entity_id": toRest, "replace_existing_of_type": true,
-	}, d.bearer, &refusal); status != http.StatusForbidden || refusal.Code != "approval_required" {
-		t.Fatalf("a batch relink over REST → %d %q, want 403 approval_required", status, refusal.Code)
-	}
-	d.toolRefused(t, "relink_activities", map[string]any{
-		"activity_ids": []string{toolA}, "entity_type": "contact", "entity_id": toTool, "replace_existing_of_type": true,
-	})
-	for _, id := range []string{restA, toolA} {
-		if got := linkedTo(id); len(got) != 1 || got[0] != from {
-			t.Errorf("activity %s is linked to %v after a staged batch, want it left on %s", id, got, from)
-		}
-	}
-	d.sameStagedByID(t, "relink batch", toRest, toTool, "Batch To Rest", "Batch To Tool")
-
-	// Once a human approves, the retry carrying the approval moves the activity,
-	// and the two doors leave the same rows.
-	approvalREST, approvalTool := d.stagedApprovalOn(t, toRest), d.stagedApprovalOn(t, toTool)
-	d.approveAsHuman(t, approvalREST)
-	d.approveAsHuman(t, approvalTool)
-	d.restStatusWith(t, "POST", "/v1/activities/relink-bulk", AnyMap{
-		"activity_ids": []string{restA}, "entity_type": "contact", "entity_id": toRest, "replace_existing_of_type": true,
-	}, d.withApproval(approvalREST), http.StatusOK)
+	}, http.StatusOK)
 	d.tool(t, "relink_activities", map[string]any{
 		"activity_ids": []string{toolA}, "entity_type": "contact", "entity_id": toTool, "replace_existing_of_type": true,
-		"approval_id": approvalTool,
 	})
 	if got := linkedTo(restA); len(got) != 1 || got[0] != toRest {
-		t.Errorf("activity %s is linked to %v after the approved batch, want only %s", restA, got, toRest)
+		t.Errorf("activity %s is linked to %v after the batch, want only %s", restA, got, toRest)
 	}
 	if got := linkedTo(toolA); len(got) != 1 || got[0] != toTool {
-		t.Errorf("activity %s is linked to %v after the approved batch, want only %s", toolA, got, toTool)
+		t.Errorf("activity %s is linked to %v after the batch, want only %s", toolA, got, toTool)
 	}
 	d.sameEffect(t, "relink batch", restA, toolA, "subject")
 
@@ -210,7 +188,7 @@ func TestRelinkWritesLeaveTheSameOnEitherDoor(t *testing.T) {
 	if said == "" || !strings.Contains(toolRefusal, said) {
 		t.Errorf("the route refused a thread move with %d %q and the tool with %q, want one refusal", restStatus, threadRefusal.Detail, toolRefusal)
 	}
-	if staged := d.stagedOn(t, toRest); len(staged) != 1 {
-		t.Errorf("the thread move left %d approvals on the destination besides the batch's, want none", len(staged)-1)
+	if staged := d.stagedOn(t, toRest); len(staged) != 0 {
+		t.Errorf("the batch and the thread move left %d approvals on the destination, want none", len(staged))
 	}
 }
