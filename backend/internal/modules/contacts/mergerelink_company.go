@@ -265,10 +265,10 @@ func moveCompanyAssignments(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 // retired company brought no fact the trigger could count. The retired
 // company keeps no counter: it has no facts left to count.
 func settleFactRevisions(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID) error {
-	// Row scope on both companies, so no caller moves the counter of one it
-	// may not see. The merge has already held both.
+	// Both companies require write authority; a read share cannot move their
+	// counters. The merge has already held both.
 	for _, company := range []ids.CompanyID{sourceID, targetID} {
-		if err := auth.EnsureVisible(ctx, tx, entityCompany, company.UUID); err != nil {
+		if err := auth.EnsureWritable(ctx, tx, entityCompany, company.UUID); err != nil {
 			return err
 		}
 	}
