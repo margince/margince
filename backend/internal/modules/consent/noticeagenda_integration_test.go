@@ -109,3 +109,37 @@ func TestADutyCarriesTheAcquisitionItsDeadlineRunsFrom(t *testing.T) {
 		}
 	}
 }
+
+// A privacy duty is the explicitly assigned seat's, never the contact
+// owner's by default: owning the record is not being asked to send a notice.
+// An unassigned case reads as unassigned, where nobody's Mine holds it.
+func TestANoticeCaseWithNoAssigneeIsNotTheContactOwnersWork(t *testing.T) {
+	e := setupChannelConsent(t)
+	if _, err := e.owner.Exec(context.Background(), `UPDATE contact SET owner_id = $1 WHERE id = $2`, e.user, e.contact); err != nil {
+		t.Fatal(err)
+	}
+	acq := seedAcquisition(t, e, "purchased_or_imported")
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		return OpenNoticeCaseTx(e.ctx, tx, NoticeCaseInput{
+			ContactID: e.contact, AcquisitionID: acq, Rule: RuleArt14, DueAt: time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC),
+		})
+	}); err != nil {
+		t.Fatalf("recording the duty: %v", err)
+	}
+	owner := e.user
+	mine, err := e.store.OpenNoticeCasesDueSoonest(privacyOperator(e), NoticeAgendaInput{OwnerID: &owner, Limit: 10})
+	if err != nil {
+		t.Fatalf("reading the owner's agenda: %v", err)
+	}
+	if len(mine) != 0 {
+		t.Fatalf("the contact owner's agenda holds %d cases, want none: nobody assigned it to them", len(mine))
+	}
+	nobody := ids.UUID{}
+	unassigned, err := e.store.OpenNoticeCasesDueSoonest(privacyOperator(e), NoticeAgendaInput{OwnerID: &nobody, Limit: 10})
+	if err != nil {
+		t.Fatalf("reading the unassigned agenda: %v", err)
+	}
+	if len(unassigned) != 1 || unassigned[0].OwnerID != nil {
+		t.Fatalf("the unassigned agenda = %+v, want the one case with no owner", unassigned)
+	}
+}

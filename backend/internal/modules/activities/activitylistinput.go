@@ -80,20 +80,15 @@ type ListActivitiesInput struct {
 	// capture provenance, imports and participants — never host_user_id. These
 	// only choose which of the rows a reader already passes the lane is about.
 	//
-	// OnMeetingOf is "mine": the meetings this contact is genuinely on — their own
-	// calendar hosted it, their seat imported it, or they are stamped as a
-	// participant. Three sources because a meeting reaches a contact three ways,
-	// and asking about the host alone would drop every meeting a colleague was
-	// invited to.
+	// OnMeetingOf is "mine" and MeetingHost is one named seat's day; both ask
+	// storekit.MeetingResponsibilitySQL, so a rep's own day and a manager's
+	// view of it hold the same meetings. A seat that only imported a copy, or
+	// was copied on mail about it, does not answer for the meeting.
 	OnMeetingOf *ids.UserID
-	// MeetingHost is one NAMED contact's own calendar — a manager opening the day
-	// of the rep an exception named. Exact, unlike OnMeetingOf: asking for a
-	// rep's day means the rep's calendar, not every meeting they were invited to.
 	MeetingHost *ids.UserID
-	// UnhostedMeetings is the meetings no calendar claims: booked in the app, or
-	// captured before the host was recorded. Its own scope for the reason
-	// UnassignedQueue is one — unowned work is picked up deliberately rather
-	// than arriving unbidden in everybody's day.
+	// UnhostedMeetings is the meetings no seat answers for by that rule. Its
+	// own scope for the reason UnassignedQueue is one: unowned work is picked
+	// up deliberately rather than arriving unbidden in everybody's day.
 	UnhostedMeetings bool
 
 	// ReadableOnly drops the rows this caller may discover but not read, in SQL,

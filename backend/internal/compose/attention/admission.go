@@ -13,7 +13,7 @@ import (
 // Which owner answers each source may give, and so whose personal work its
 // rows can become.
 //
-// Personal automatic work needs an evidenced responsible person. Each source
+// Personal automatic work needs an evidenced responsible seat. Each source
 // declares where that evidence comes from: an assignee or owner column, a read
 // bound to the acting human, the deal's owner, the direct recipients of a
 // mail, or a meeting's recorded host. A row whose source has no entry has no

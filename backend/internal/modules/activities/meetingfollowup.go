@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
@@ -178,13 +179,9 @@ var meetingFollowUpsSQL = `
 	   AND ` + meetingEndSQL + ` <= $%[1]d::timestamptz - make_interval(days => $%[4]d::int)
 	   AND ` + meetingEndSQL + ` >= $%[1]d::timestamptz - make_interval(days => $%[4]d::int + %[5]d)
 	   AND %[2]s
-	   -- The reader was in it: they held it, their calendar imported it, or
-	   -- they are one of its attendees. The last two are auth's
-	   -- activityMembershipArm; change them there and here.
-	   AND (a.host_user_id = $%[8]d
-	        OR EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id AND ci.user_id = $%[8]d)
-	        OR EXISTS (SELECT 1 FROM activity_participant me
-	                    WHERE me.activity_id = a.id AND me.user_id = $%[8]d))
+	   -- The reader took part in it, by the one meeting-responsibility rule.
+	   -- Importing a copy or being copied on its mail is not taking part.
+	   AND ` + storekit.MeetingResponsibilitySQL("a", "$%[8]d") + `
 	   -- Nothing from our side since to anyone it was with, filed under them
 	   -- or addressed to them: a message, a call or a later meeting is a
 	   -- follow-up already made. Only the recipients count, uncapped: a
