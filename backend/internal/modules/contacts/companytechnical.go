@@ -193,9 +193,9 @@ func (s *Store) ApplyTechnicalEnrichmentTx(
 	// id buys nothing (existence-hiding 404). LIVE, because a scheduled run
 	// reaches this with no human in the loop to notice an archived company.
 	//
-	// HELD, not only probed: an undo of an earlier lookup holds the company
-	// while it compares and rewrites these facts, and a lookup landing in
-	// between would be overwritten by it.
+	// Held, not only probed. An undo of an earlier lookup holds the company
+	// while it compares and rewrites these facts, so a lookup cannot land in
+	// between.
 	if err := auth.HoldWritableLive(ctx, tx, "company", in.CompanyID.UUID); err != nil {
 		return err
 	}

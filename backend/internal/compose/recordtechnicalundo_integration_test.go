@@ -104,7 +104,7 @@ func withoutVersioning(facts []map[string]any) []map[string]any {
 	return out
 }
 
-func sameJSON(t *testing.T, a, b any) bool {
+func sameFacts(t *testing.T, a, b []map[string]any) bool {
 	t.Helper()
 	left, err := json.Marshal(a)
 	if err != nil {
@@ -131,7 +131,7 @@ func TestTechnicalUndoPutsBackTheReplacedFactsOnceWithTheirSource(t *testing.T) 
 		t.Fatalf("undo: %v", err)
 	}
 	after := technicalUndoFacts(t, e, company)
-	if !sameJSON(t, withoutVersioning(before), withoutVersioning(after)) {
+	if !sameFacts(t, withoutVersioning(before), withoutVersioning(after)) {
 		t.Fatalf("undo did not put back the replaced rows with their source:\nbefore %v\nafter  %v", before, after)
 	}
 	for i := range before {
@@ -187,7 +187,7 @@ func TestTwoUndosOfOneLookupPutItBackOnce(t *testing.T) {
 }
 
 // Every later write to the company or its facts refuses the Undo, and the
-// refusal leaves the rows exactly as they were.
+// refusal leaves the rows as they were.
 func TestTechnicalUndoRefusesAfterALaterCompanyOrFactWrite(t *testing.T) {
 	cases := map[string]func(t *testing.T, e *integration.Env, company ids.CompanyID){
 		"an unrelated company edit": func(t *testing.T, e *integration.Env, company ids.CompanyID) {
@@ -229,7 +229,7 @@ func TestTechnicalUndoRefusesAfterALaterCompanyOrFactWrite(t *testing.T) {
 			if reason := refusedFor(t, undoEntry(t, e, "company", company.UUID, receipt)); reason != ReasonLaterCompanyChange {
 				t.Fatalf("the Undo answered %s, want %s", reason, ReasonLaterCompanyChange)
 			}
-			if !sameJSON(t, held, technicalUndoFacts(t, e, company)) {
+			if !sameFacts(t, held, technicalUndoFacts(t, e, company)) {
 				t.Fatal("a refused Undo changed the facts")
 			}
 			if reversals, events := reversalWriteShape(t, e, receipt); reversals != 0 || events != 0 {
@@ -240,7 +240,7 @@ func TestTechnicalUndoRefusesAfterALaterCompanyOrFactWrite(t *testing.T) {
 }
 
 // A refresh that observed what the company already held writes its audit row
-// and nothing else: no event, and no snapshot a receipt could offer back.
+// and nothing else. It has no event and no snapshot to offer back.
 func TestASameValueRefreshIsAnObservationAndNotAChange(t *testing.T) {
 	e := integration.Setup(t)
 	company := technicalUndoCompany(t, e, "Refresh GmbH")
@@ -291,13 +291,13 @@ func TestTechnicalUndoRefusesAnArchivedOrMergedCompany(t *testing.T) {
 	if reason := refusedFor(t, undoEntry(t, e, "company", survivor.UUID, survivorReceipt)); reason != ReasonLaterCompanyChange {
 		t.Fatalf("the survivor's lookup answered %s after the merge moved facts onto it, want %s", reason, ReasonLaterCompanyChange)
 	}
-	if !sameJSON(t, survivorFacts, technicalUndoFacts(t, e, survivor)) {
+	if !sameFacts(t, survivorFacts, technicalUndoFacts(t, e, survivor)) {
 		t.Fatal("a refused Undo after a merge changed the survivor's facts")
 	}
 }
 
-// A reader who may not see the company learns nothing from the Undo route:
-// the answer is the not-found every other hidden record gets, and nothing is
+// A reader who may not see the company learns nothing from the Undo route.
+// The answer is the refusal every other hidden record gets, and nothing is
 // written.
 func TestTechnicalUndoOfAHiddenCompanyIsNotFound(t *testing.T) {
 	e := integration.Setup(t)
@@ -317,7 +317,7 @@ func TestTechnicalUndoOfAHiddenCompanyIsNotFound(t *testing.T) {
 	if refusal, refused := errors.AsType[RefusedRestore](err); refused {
 		t.Fatalf("the hidden company's Undo gave a reason (%s), which tells the reader the change exists", refusal.Reason)
 	}
-	if !sameJSON(t, held, technicalUndoFacts(t, e, company)) {
+	if !sameFacts(t, held, technicalUndoFacts(t, e, company)) {
 		t.Fatal("a hidden reader's Undo changed the facts")
 	}
 }

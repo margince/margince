@@ -175,20 +175,11 @@ func TestTheSubjectLockIsTheFirstRowATransactionTakes(t *testing.T) {
 	}
 }
 
-// holdAndFirstLock returns the position where this function holds its subject
-// and the position of the first row it locks, either of which may be NoPos.
-//
-// A CALL to a function that reaches the hold counts as the hold, at the call's
-// own position: that is the LinkedIn shape, where the write sat in the caller
-// and the lock two frames down. A call to a function that merely writes is not
-// counted as a lock, which is the direction that under-reports — stated rather
-// than hidden, because resolving it needs the callee's statements at the
-// caller's position and this walk has one file at a time.
-//
-// Source position is run order except in two places, and both are resolved to
-// when the code RUNS. A closure bound to a name runs where the name is called,
-// not where it is written. A deferred call runs at return, after everything
-// else in the body.
+// holdAndFirstLock returns where this function holds its subject and where it
+// first locks a row, either possibly NoPos. A call reaching the hold counts at
+// the call. A call that merely writes does not count as a lock, which
+// under-reports. A bound closure counts where it is called, and a deferred
+// call at the end of the body, because that is when each runs.
 func holdAndFirstLock(
 	fn *ast.FuncDecl, recvType, recvVar string,
 	reachesHold func(string) bool, reachesLock func(string) bool,

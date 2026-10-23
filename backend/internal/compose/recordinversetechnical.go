@@ -5,7 +5,7 @@ package compose
 
 // A technical lookup's receipt, judged and reversed through the contacts
 // module's own inverse. The lookup changes company_fact rows and no company
-// column, so the field replay has no image to send; the module keeps the
+// column, so the field replay has no image to send. The module keeps the
 // rows and the rule for when they may come back.
 
 import (

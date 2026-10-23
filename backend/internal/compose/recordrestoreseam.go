@@ -117,9 +117,8 @@ func recordVersion(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUI
 // returns a record is a read, and a refusal that distinguishes a hidden record
 // from an absent one has disclosed the record.
 //
-// The object grant comes first: row scope alone admits a seat that may read
-// no record of this type, and the reason it would then be refused with tells
-// it the change exists.
+// The object grant comes first. Row scope alone admits a seat that may read
+// no record of this type, and a refusal reason tells it the change exists.
 func recordIsVisibleToCaller(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID) error {
 	if err := requireReadGrant(ctx, entityType); err != nil {
 		return err

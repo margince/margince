@@ -89,7 +89,7 @@ func TestNativeStageReceiptHasTheSameIdentityOnBothHomeReaders(t *testing.T) {
 	if !found {
 		t.Fatalf("no shared receipt identity: handled=%+v done=%+v", handled.Receipts, receipt.Done)
 	}
-	// One population: every receipt the worklist reads stands behind exactly
+	// One population: every receipt the worklist reads stands behind one
 	// one line of the done lane.
 	for _, r := range handled.Receipts {
 		standing := 0

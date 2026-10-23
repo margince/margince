@@ -3,12 +3,9 @@
 
 // One Undo press from a receipt, and the one refresh after it.
 //
-// Both receipt surfaces press the same restore route. After a success AND
-// after a refusal, the receipt's own answer and the record it named are read
-// again: a refusal usually means the record moved, and a reader shown the old
-// "Undo" beside the new refusal is told two things at once. Invalidating
-// leaves an open editor's own copy alone, so its If-Match still catches the
-// change instead of overwriting it.
+// After a success and after a refusal, the receipt and its record are read
+// again. A refusal usually means the record moved. An open editor keeps its
+// own copy, so its If-Match still catches the change.
 
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";

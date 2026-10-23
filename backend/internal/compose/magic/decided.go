@@ -5,11 +5,10 @@ package magic
 
 // The done lane's second source: decisions the system took for the reader.
 //
-// ONE LIST, ONE IDENTITY. The audit rows above and the system's decisions
-// overlap: a stage move an auto-approval applied is both an audit row and an
-// approval, and a close-date correction is an audit row its receipt names by
-// the same id. Each line carries the receipt ids it stands for, so a decision
-// already standing behind a line is not drawn a second time.
+// The audit rows and the system's decisions overlap. An applied stage move is
+// both an audit row and an approval. A close-date correction's receipt has
+// its audit row's id. Each line carries the receipt ids it stands for, so a
+// decision already behind a line is not drawn twice.
 
 import (
 	"context"
@@ -88,9 +87,9 @@ func decidedLines(drawn []crmcontracts.MagicLine, decided []DecidedReceipt) []cr
 	return out
 }
 
-// decidedLine dresses one decision. It offers no Undo: an approval is a
-// decision the record it named can revisit, and a correction with its own
-// way back is always an audit line already.
+// decidedLine dresses one decision. It offers no Undo. The record an
+// approval named can revisit it, and a correction with a way back is always
+// an audit line already.
 func decidedLine(receipt DecidedReceipt) crmcontracts.MagicLine {
 	values := map[string]string{"kind": receipt.Kind}
 	sentence := "magic.action.decided_kind"

@@ -13,8 +13,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// A decision already standing behind an audit line, alone or folded into a
-// grouped one, is not drawn twice; one nothing stands for is drawn once.
+// A decision behind an audit line, alone or grouped, is not drawn twice. A
+// decision no line stands for is drawn once.
 func TestADecisionIsDrawnOnceAcrossBothSources(t *testing.T) {
 	t.Parallel()
 	at := time.Date(2026, time.October, 20, 9, 0, 0, 0, time.UTC)

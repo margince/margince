@@ -6,12 +6,10 @@ package contacts
 // Taking back one technical lookup: the module's own inverse of
 // ApplyTechnicalEnrichmentTx.
 //
-// The lookup writes company_fact rows and no company column, so the audit row
-// has no before-image a field replay could send. The receipt instead carries
-// the exact fact rows of the lookup's fields before and after the write, under
-// a format number. Undo puts the before rows back only while the company and
-// its facts still stand as the lookup left them; any later company or fact
-// write refuses it, because a reversal then would overwrite work nobody undid.
+// The lookup writes company_fact rows and no company column, so its audit row
+// has no before-image. Its receipt carries the fact rows before and after,
+// under a format number. Undo puts them back only while the company and its
+// facts stand as the lookup left them, so it never overwrites later work.
 
 import (
 	"context"

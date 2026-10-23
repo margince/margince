@@ -12,9 +12,9 @@ import (
 	"testing"
 )
 
-// The lock-order walk judged on planted bodies: a child row taken before the
-// company hold must be found however the code is arranged, and a body that
-// holds first must pass however its writes are arranged.
+// The lock-order walk judged on planted bodies. A child row taken before the
+// company hold is found however the code is arranged. A body that holds first
+// passes however its writes are arranged.
 func TestTheLockOrderWalkJudgesWhenCodeRunsNotWhereItIsWritten(t *testing.T) {
 	t.Parallel()
 	cases := []struct {

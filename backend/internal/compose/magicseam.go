@@ -53,9 +53,8 @@ func newMagicService(
 		})
 }
 
-// magicDecidedReceipts hands the done lane the same receipts the worklist's
-// receipt read assembles, by their canonical ids, so the two surfaces show
-// one population rather than two.
+// magicDecidedReceipts hands the done lane the receipts the worklist reads,
+// by their canonical ids. The two surfaces then show one population.
 type magicDecidedReceipts struct{ receipts attentionReceipts }
 
 func (m magicDecidedReceipts) DecidedSince(ctx context.Context, since time.Time, limit int) ([]magic.DecidedReceipt, error) {
