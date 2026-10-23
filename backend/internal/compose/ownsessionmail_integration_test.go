@@ -6,59 +6,46 @@
 package compose
 
 import (
-	"context"
 	"testing"
 
-	"github.com/jackc/pgx/v5"
-
-	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// An approval the decider's own connected AI client staged is not emailed to
-// them: the conversation shows it. The digest still lists it, and one staged
-// with no connection, as an overnight run's, is still emailed.
+// An approval the decider's own live conversation staged is not emailed to
+// them, as the conversation shows it. The digest still lists it. Handed to a
+// colleague since, it is emailed to them like any other.
 func TestAnApprovalStagedInTheDecidersOwnSessionIsNotEmailed(t *testing.T) {
 	a := newApprovalNotifyEnv(t)
 	a.grantRole(t, a.e.AdminUser)
-	passport := a.e.SeedPassport(t, integration.OwnerConn(t), "own session probe")
-	var grant ids.UUID
-	if err := database.WithWorkspaceTx(a.e.Admin(), a.e.Pool, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(context.Background(), `INSERT INTO oauth_client (client_id, client_name, redirect_uris, created_via)
-			VALUES ('own-session', 'Claude', ARRAY['https://x.example/cb'], 'admin')`); err != nil {
-			return err
-		}
-		return tx.QueryRow(context.Background(), `INSERT INTO oauth_grant (client_id, user_id, scopes)
-			VALUES ('own-session', $1, ARRAY['write']) RETURNING id`, a.e.AdminUser).Scan(&grant)
-	}); err != nil {
-		t.Fatal(err)
-	}
+	a.grantRole(t, a.e.Rep1)
 	id, _ := a.stageCorrection(t)
-	a.e.WsExec(t, `UPDATE approval SET on_behalf_of = $2, requested_decider_id = $2, passport_id = $3 WHERE id = $1`,
-		id, a.e.AdminUser, passport)
+	a.e.WsExec(t, `UPDATE approval SET requested_decider_id = $2 WHERE id = $1`, id, a.e.AdminUser)
 
-	attempt := notices.EmailAttempt{
-		ApprovalID: &id, Notice: notices.Notice{Kind: notices.KindApprovalPending}, Recipient: ids.From[ids.UserKind](a.e.AdminUser),
-	}
-	send := func(use approvalNoticeUse) bool {
+	send := func(seat ids.UUID, use approvalNoticeUse) bool {
 		t.Helper()
+		attempt := notices.EmailAttempt{
+			ApprovalID: &id, Notice: notices.Notice{Kind: notices.KindApprovalPending}, Recipient: ids.From[ids.UserKind](seat),
+		}
 		_, _, sent, err := refreshApprovalNotice(a.e.Admin(), a.e.Pool, attempt, clocktest.Now(t), use)
 		if err != nil {
 			t.Fatal(err)
 		}
 		return sent
 	}
-	if !send(forSingleEmail) {
-		t.Fatal("an approval staged with no connection was not emailed")
+	if !send(a.e.AdminUser, forSingleEmail) {
+		t.Fatal("an approval no conversation staged was not emailed")
 	}
-	a.e.WsExec(t, `UPDATE approval SET staged_by_connection = $2 WHERE id = $1`, id, grant)
-	if send(forSingleEmail) {
-		t.Error("an approval the decider's own AI client staged was emailed to them")
+	a.e.WsExec(t, `UPDATE approval SET staged_in_conversation_of = $2 WHERE id = $1`, id, a.e.AdminUser)
+	if send(a.e.AdminUser, forSingleEmail) {
+		t.Error("an approval the decider's own conversation staged was emailed to them")
 	}
-	if !send(forDigestLine) {
-		t.Error("the digest dropped an approval the decider's own AI client staged")
+	if !send(a.e.AdminUser, forDigestLine) {
+		t.Error("the digest dropped an approval the decider's own conversation staged")
+	}
+	a.e.WsExec(t, `UPDATE approval SET requested_decider_id = $2 WHERE id = $1`, id, a.e.Rep1)
+	if !send(a.e.Rep1, forSingleEmail) {
+		t.Error("an approval handed to a colleague was not emailed to them")
 	}
 }
