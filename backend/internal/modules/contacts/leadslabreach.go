@@ -133,18 +133,22 @@ func collectBreaches(rows pgx.Rows) ([]SLABreach, error) {
 	return out, rows.Err()
 }
 
-// ownerAnswers says whether the lead's owner can be handed the escalation: a
-// colleague who still works here and may be given work. It asks
-// auth.EnsureAssignee, which also vets the intake seat below.
-func (b SLABreach) ownerAnswers(ctx context.Context, tx pgx.Tx) (bool, error) {
-	if b.OwnerID == nil {
-		return false, nil
-	}
-	err := auth.EnsureAssignee(ctx, tx, b.OwnerID.UUID)
+// SeatAnswersBreach says whether a seat can be handed a lead's escalation: an
+// active human colleague whose seat can write. It asks auth.EnsureAssignee,
+// which also vets the intake seat. The scan and the delivery of its event share it.
+func SeatAnswersBreach(ctx context.Context, tx pgx.Tx, seat ids.UUID) (bool, error) {
+	err := auth.EnsureAssignee(ctx, tx, seat)
 	if errors.As(err, new(*auth.AssigneeNotAllowedError)) {
 		return false, nil
 	}
 	return err == nil, err
+}
+
+func (b SLABreach) ownerAnswers(ctx context.Context, tx pgx.Tx) (bool, error) {
+	if b.OwnerID == nil {
+		return false, nil
+	}
+	return SeatAnswersBreach(ctx, tx, b.OwnerID.UUID)
 }
 
 func markBreach(ctx context.Context, tx pgx.Tx, b SLABreach, now time.Time) error {

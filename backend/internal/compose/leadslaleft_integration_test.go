@@ -25,7 +25,9 @@ func TestAnEscalationWhoseTargetLeftStillWritesItsTask(t *testing.T) {
 		{"deactivated target, no intake seat", `status = 'deactivated'`, false},
 		{"archived target, no intake seat", `archived_at = now()`, false},
 		{"invited target, no intake seat", `status = 'invited'`, false},
+		{"read-seat target, no intake seat", `seat_type = 'read'`, false},
 		{"deactivated target, intake seat set", `status = 'deactivated'`, true},
+		{"read-seat target, intake seat set", `seat_type = 'read'`, true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

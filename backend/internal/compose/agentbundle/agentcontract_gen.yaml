@@ -16013,7 +16013,7 @@ components:
           format: uuid
           description: |-
             Who answers when a lead nobody can answer for misses its target: one nobody owns,
-            or one whose owner has left. Null means nobody is configured, and such a breach is
+            or one whose owner cannot be handed work. Null means nobody is configured, and such a breach is
             recorded without being addressed. Also reads null once the named seat can no longer
             work the queue — suspended, archived, an agent, a read seat — because a desk nobody
             reads is the same silence as none.

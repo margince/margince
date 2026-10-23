@@ -182,15 +182,14 @@ func (w leadSLAEscalation) Apply(ctx context.Context, ev workflow.Event, eff wor
 // while it is an active colleague, else the intake seat, else nobody.
 //
 // The target was chosen when the scan ran, and the run is delivered later, so
-// the colleague may have left in between. A refused task write aborts the
-// transaction and loses the breach, so the writer's own rule is asked first.
-// An invited seat is not accepted, as the scan does not accept it either.
+// the seat may have changed in between. A refused task write aborts the
+// transaction and loses the breach, so the scan's own rule is asked again.
 func deliverableSeat(ctx context.Context, tx pgx.Tx, named *ids.UserID) (ids.UserID, bool, error) {
 	if named == nil {
 		return ids.UserID{}, false, nil
 	}
-	state, err := activities.NewTaskSeatState(ctx, tx, *named)
-	if err != nil || state == activities.SeatActive {
+	answers, err := contacts.SeatAnswersBreach(ctx, tx, named.UUID)
+	if err != nil || answers {
 		return *named, err == nil, err
 	}
 	intake, configured, err := contacts.IntakeSeat(ctx, tx)

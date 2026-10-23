@@ -66,8 +66,8 @@ var FirstResponseTargetMinutes = config.DefineStored(config.Spec[int]{
 // UnassignedEscalationUserID is who answers for a lead nobody owns, or whose
 // owner has left.
 //
-// A breach on a lead with an active owner escalates to that owner. Any other
-// breach had nobody: its task went to no one and no notice went out.
+// A breach goes to the lead's owner while that owner can be handed work. Else
+// it goes to this seat when one is set and eligible, and to nobody when not.
 //
 // A SETTING, because "who runs the intake queue" is an operator's decision and
 // no column holds it. Empty leaves the breach unaddressed; the queue view shows it.

@@ -1095,7 +1095,7 @@ Payload for lead.sla_breached: the first scan on which a lead's first-response d
 | Field | Type | Always present | What it is |
 |---|---|---|---|
 | `data.deadline` | string (date-time) | yes | The first-response deadline that passed. |
-| `data.escalation_target` | string (uuid) | no | The user the escalation task is assigned to. It is the lead's owner while that owner is an active colleague, else the intake seat. Absent when no such seat exists, so it can differ from `owner_id`. |
+| `data.escalation_target` | string (uuid) | no | The seat the scan chose for the escalation: the lead's owner while that owner can be handed work, else the intake seat. Delivery asks again, so the task and notice can go to the intake seat instead, or to nobody. Absent when no seat was chosen, so it can differ from `owner_id`. |
 | `data.owner_id` | string (uuid) | no | The lead's owner at breach time (absent when unrouted). |
 
 ### `lead.updated`
