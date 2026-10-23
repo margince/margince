@@ -10,6 +10,7 @@ import { Button, Card } from "../../design-system/atoms";
 import {
   DecisionCard,
   type DecisionCardLabels,
+  type DecisionHeldRejection,
   DecisionStatusChip,
   type DecisionStatusLabels,
 } from "../../design-system/decisioncard";
@@ -55,6 +56,7 @@ import {
 import { approvalAcceptable, useApprovalNames } from "./approvalresponsibility";
 import { stagedSendOf } from "./approvalsend";
 import { ApprovalDecider, ApprovalTarget } from "./approvaltarget";
+import { type HeldRejection, useHeldRejection } from "./heldrejection";
 import { LinkedInMatchChoice, useLinkedInChoice } from "./linkedinmatchchoice";
 import "./approvalrow.css";
 
@@ -147,6 +149,20 @@ function statusLabels(
     approved: t("decision.status.approved"),
     rejected: t("decision.status.rejected"),
     expired: t("decision.status.expired"),
+  };
+}
+
+function heldBar(
+  t: Translator,
+  held: HeldRejection,
+): DecisionHeldRejection | undefined {
+  if (!held.held) {
+    return undefined;
+  }
+  return {
+    label: t("decision.status.rejected"),
+    undo: t("common.undo"),
+    onUndo: held.undo,
   };
 }
 
@@ -252,6 +268,8 @@ export function ApprovalRow({
       return unwrap(
         await api.POST(path, {
           params: { path: { id: approval.id } },
+          // A held rejection released on pagehide has to outlive the page.
+          keepalive: input.verdict === "reject",
           ...(input.verdict === "approve" && input.editedPayload
             ? { body: { edited_payload: input.editedPayload } }
             : {}),
@@ -274,6 +292,10 @@ export function ApprovalRow({
       }
     },
   });
+
+  // A deadline that lapses inside the window still sends: the server judges
+  // expiry, and its refusal comes back through DecideOutcome like any other.
+  const held = useHeldRejection(() => decide.mutate({ verdict: "reject" }));
 
   const change = approval.proposed_change ?? {};
   const linkedIn = useLinkedInChoice(approval);
@@ -316,6 +338,7 @@ export function ApprovalRow({
 
   const approveEdited = () => {
     if (!approvalAcceptable(approval)) return;
+    held.announce();
     decide.mutate({
       verdict: "approve",
       editedPayload: { ...change, ...draft },
@@ -412,11 +435,13 @@ export function ApprovalRow({
       }
       onAccept={
         approvalAcceptable(approval)
-          ? () =>
+          ? () => {
+              held.announce();
               decide.mutate({
                 verdict: "approve",
                 editedPayload: linkedIn?.edited,
-              })
+              });
+            }
           : undefined
       }
       // Offered only where the kind has something a reader may change. Disabled
@@ -425,10 +450,10 @@ export function ApprovalRow({
       // write is in flight, so a press here during it left the reader inside a
       // form they could not leave until the request came back.
       onEdit={strings.length > 0 ? startEdit : undefined}
-      // One press, no reason form: a rejection discards a proposal and changes
-      // no record, so it carries the same weight as Accept and asks nothing
-      // extra. The contract's reason field stays for callers that have one.
-      onReject={() => decide.mutate({ verdict: "reject" })}
+      // No reason form: a rejection discards a proposal and changes no record.
+      // The undo window is the only step between the press and the send.
+      onReject={held.hold}
+      heldRejection={heldBar(t, held)}
       notice={
         <>
           {/* Read-only: the approver may release or refuse the message, and an

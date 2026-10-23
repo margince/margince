@@ -5,6 +5,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   type DecisionApproval,
@@ -372,6 +373,43 @@ describe("DecisionCard — the verbs", () => {
     ).not.toBeInTheDocument();
   });
 
+  // Not a glyph: a trash can reads as "delete".
+  it("names Reject in words, as the danger answer beside Accept", () => {
+    render(card());
+    const reject = screen.getByRole("button", { name: "Reject" });
+    expect(reject).toHaveTextContent("Reject");
+    expect(reject).not.toHaveAttribute("aria-label");
+    expect(reject).toHaveClass("btn-danger");
+    expect(screen.getByRole("button", { name: "Accept" })).toHaveClass(
+      "btn-primary",
+    );
+    expect(reject.nextElementSibling).toBe(
+      screen.getByRole("button", { name: "Accept" }),
+    );
+  });
+
+  it("keeps Later and Edit as glyphs on the full card", () => {
+    render(card({ onSkip: () => undefined }));
+    expect(screen.getByRole("button", { name: "Later" })).toHaveAttribute(
+      "aria-label",
+      "Later",
+    );
+    expect(screen.getByRole("button", { name: "Edit" })).toHaveAttribute(
+      "aria-label",
+      "Edit",
+    );
+  });
+
+  it("draws Accept busy and every other verb disabled while a verdict is out", () => {
+    render(card({ pending: true, onSkip: () => undefined }));
+    const accept = screen.getByRole("button", { name: "Accept" });
+    expect(accept).toHaveAttribute("aria-busy", "true");
+    expect(accept).not.toBeDisabled();
+    for (const name of ["Reject", "Later", "Edit"]) {
+      expect(screen.getByRole("button", { name })).toBeDisabled();
+    }
+  });
+
   // A surface with no word for "later" must not get an unnamed button for it.
   it("withholds Later where the surface has no word for it", () => {
     const { skip, ...unnamed } = LABELS;
@@ -401,6 +439,55 @@ describe("DecisionCard — the verbs", () => {
     expect(screen.getByText("the editor")).toBeInTheDocument();
     expect(
       screen.queryByRole("button", { name: "Accept" }),
+    ).not.toBeInTheDocument();
+  });
+});
+
+function HoldingCard({ compact }: Readonly<{ compact?: boolean }>) {
+  const [held, setHeld] = useState(false);
+  return card({
+    layout: compact ? "row" : "deck",
+    compact: compact ? { detail: "Proposal", more: "More options" } : undefined,
+    onReject: () => setHeld(true),
+    heldRejection: held
+      ? { label: "Rejected", undo: "Undo", onUndo: () => setHeld(false) }
+      : undefined,
+  });
+}
+
+describe("DecisionCard — a rejection held for its undo", () => {
+  it.each([false, true])(
+    "swaps the verbs for the bar and hands focus to Undo and back (compact: %s)",
+    async (compact) => {
+      const user = userEvent.setup();
+      render(<HoldingCard compact={compact} />);
+
+      await user.click(screen.getByRole("button", { name: "Reject" }));
+
+      expect(screen.getByRole("status")).toHaveTextContent("Rejected");
+      const undo = screen.getByRole("button", { name: "Undo" });
+      expect(undo).toHaveFocus();
+      expect(undo).toHaveAccessibleDescription("Rejected");
+      for (const name of ["Reject", "Accept", "Edit"]) {
+        expect(screen.queryByRole("button", { name })).not.toBeInTheDocument();
+      }
+
+      await user.click(undo);
+
+      expect(screen.queryByRole("status")).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Reject" })).toHaveFocus();
+    },
+  );
+
+  it("draws neither the bar nor the verbs once the decision is history", () => {
+    render(
+      card({
+        decided: true,
+        heldRejection: { label: "Rejected", undo: "Undo", onUndo: vi.fn() },
+      }),
+    );
+    expect(
+      screen.queryByRole("button", { name: "Undo" }),
     ).not.toBeInTheDocument();
   });
 });
@@ -554,33 +641,34 @@ describe("DecisionCard at list density", () => {
     expect(trigger).toHaveFocus();
   });
 
-  it("spells Accept and Later and folds reject and edit into the menu", async () => {
+  it("spells Reject and Accept and folds Later and Edit into the menu", async () => {
     const user = userEvent.setup();
     render(card({ layout: "row", compact: COMPACT, onSkip: () => undefined }));
 
     expect(screen.getByRole("button", { name: "Accept" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Later" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Reject" })).toHaveTextContent(
+      "Reject",
+    );
     expect(
-      screen.queryByRole("button", { name: "Reject" }),
+      screen.queryByRole("button", { name: "Later" }),
     ).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: COMPACT.more }));
 
     expect(
-      await screen.findByRole("button", { name: "Reject" }),
+      await screen.findByRole("button", { name: "Later" }),
     ).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Edit" })).toBeInTheDocument();
   });
 
   // A menu over no verbs is a control that opens nothing.
-  it("draws no menu when the caller offered neither reject nor edit", () => {
+  it("draws no menu when the caller offered neither later nor edit", () => {
     render(
       card({
         layout: "row",
         compact: COMPACT,
         onEdit: undefined,
-        onReject: undefined,
-        onSkip: () => undefined,
+        onSkip: undefined,
       }),
     );
 

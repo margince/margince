@@ -104,9 +104,9 @@ describe("waiting on you", () => {
     expect(await screen.findByText(en["decision.draftBody"])).toBeTruthy();
   });
 
-  // Accept and Later keep their words; the two heavier verdicts go in the menu,
-  // where each has a whole line to say what it does.
-  it("spells Accept and Later and folds reject and edit into a menu", async () => {
+  // Every decision is a yes/no question on the line; Later and Edit wait in
+  // the menu.
+  it("spells Reject and Approve and folds Later and Edit into a menu", async () => {
     const user = userEvent.setup();
     render(section(1));
 
@@ -114,10 +114,10 @@ describe("waiting on you", () => {
       screen.getByRole("button", { name: en["brief.approval.approve"] }),
     ).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: en["brief.deck.later"] }),
-    ).toBeTruthy();
+      screen.getByRole("button", { name: en["decision.reject"] }).textContent,
+    ).toBe(en["decision.reject"]);
     expect(
-      screen.queryByRole("button", { name: en["decision.reject"] }),
+      screen.queryByRole("button", { name: en["brief.deck.later"] }),
     ).toBeNull();
 
     await user.click(
@@ -125,7 +125,7 @@ describe("waiting on you", () => {
     );
 
     expect(
-      await screen.findByRole("button", { name: en["decision.reject"] }),
+      await screen.findByRole("button", { name: en["brief.deck.later"] }),
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: en["trust.edit"] })).toBeTruthy();
   });
