@@ -3,17 +3,14 @@
 
 package activities
 
-import (
-	"fmt"
-
-	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
-)
+import "fmt"
 
 // Provider attestation or a colleague's retained copy establishes that an outbound is ours.
 // A sender-controlled thread key alone cannot prove that we answered this correspondent.
 func ourOutboundInThisThread(row, anchor string) string {
-	return correspondentInThisThread(row, anchor) + `
-     AND ` + correspondence.OurOutboundSQL(row)
+	return correspondentInThisThread(row, anchor) + fmt.Sprintf(`
+     AND %[1]s.direction = 'outbound'
+     AND (%[1]s.counterparty_outbound_attested OR %[1]s.sent_by_colleague IS NOT NULL)`, row)
 }
 
 // CapturedInboundSQL requires both connector provenance and receiving-server sender authentication.

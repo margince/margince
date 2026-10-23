@@ -160,6 +160,9 @@ func rankedClaims(
 	ctx context.Context, tx pgx.Tx, belongs func(arg func(any) int) (string, error),
 	limit int, asOf time.Time, side func(time.Time, func(any) int) string,
 ) ([]CompanyCommitment, int, error) {
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+		return nil, 0, err
+	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	owned, err := belongs(arg)

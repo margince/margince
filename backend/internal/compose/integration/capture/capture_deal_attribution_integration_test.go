@@ -24,6 +24,7 @@ import (
 	capturemod "github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/datatask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -32,7 +33,7 @@ import (
 // known answer.
 var mailDay = time.Date(2026, 6, 4, 8, 0, 0, 0, time.UTC)
 
-// dealWorld is one customer company with its people, seeded through the
+// dealWorld is one customer company with its contacts, seeded through the
 // stores that own each table.
 type dealWorld struct {
 	projectSeeder
@@ -92,8 +93,8 @@ func (w dealWorld) company(t *testing.T, name string) ids.UUID {
 	return ids.UUID(created.Id)
 }
 
-// person creates a contact with one address, employed at company.
-func (w dealWorld) person(t *testing.T, address string, company ids.UUID) ids.UUID {
+// employee creates a contact with one address, employed at company.
+func (w dealWorld) employee(t *testing.T, address string, company ids.UUID) ids.UUID {
 	t.Helper()
 	created, err := w.contacts.CreateContact(w.ctx, contacts.CreateContactInput{
 		FullName: strings.Split(address, "@")[0], Source: "manual",
@@ -248,7 +249,7 @@ func TestCaptureFilesMailOnTheCustomersOnlyOpenDeal(t *testing.T) {
 	e := env.e
 	shareMailbox(t, env)
 	w := newDealWorld(t, e)
-	w.person(t, "alice@acme.example", w.customer)
+	w.employee(t, "alice@acme.example", w.customer)
 	deal := w.deal(t, "Acme rollout")
 
 	env.syncSent(t, map[string]bool{"out1@myco.example": true},
@@ -278,7 +279,7 @@ func TestCaptureFilesPrivateMailWithoutMovingTheDealsClock(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
-	w.person(t, "alice@acme.example", w.customer)
+	w.employee(t, "alice@acme.example", w.customer)
 	deal := w.deal(t, "Acme rollout")
 
 	env.sync(t, mailFrom("alice@acme.example", "priv1@acme.example", "", "status"))
@@ -296,8 +297,8 @@ func TestCaptureAsksOnceWhenSeveralOpenDealsFitAMail(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
-	w.person(t, "alice@acme.example", w.customer)
-	bob := w.person(t, "bob@acme.example", w.customer)
+	w.employee(t, "alice@acme.example", w.customer)
+	bob := w.employee(t, "bob@acme.example", w.customer)
 	w.deal(t, "Acme operations")
 	reporting := w.deal(t, "Acme reporting")
 	w.stakeholder(t, bob, reporting)
@@ -326,8 +327,8 @@ func TestCaptureAsksNobodyWhenNoColleagueIsResponsible(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
-	w.person(t, "alice@acme.example", w.customer)
-	w.person(t, "carol@acme.example", w.customer)
+	w.employee(t, "alice@acme.example", w.customer)
+	w.employee(t, "carol@acme.example", w.customer)
 	w.deal(t, "Acme operations")
 	w.deal(t, "Acme reporting")
 
@@ -352,7 +353,7 @@ func TestCaptureFilesMailOnItsProjectsDealFirst(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
-	w.person(t, "alice@acme.example", w.customer)
+	w.employee(t, "alice@acme.example", w.customer)
 	crm := w.project(t, "CRM project")
 	crmDeal := w.dealOnProject(t, "CRM licences", crm.ID)
 	w.deal(t, "Acme operations")
@@ -361,7 +362,7 @@ func TestCaptureFilesMailOnItsProjectsDealFirst(t *testing.T) {
 
 	empty := w.project(t, "Audit")
 	idle := w.at(t, "Idle")
-	idle.person(t, "dora@idle.example", idle.customer)
+	idle.employee(t, "dora@idle.example", idle.customer)
 	idle.deal(t, "Idle renewal")
 	env.sync(t, mailFrom("dora@idle.example", "pj2@idle.example", "", "["+empty.Key+"] scope"))
 	wantDeals(t, e, "pj2@idle.example")
@@ -383,7 +384,7 @@ func TestCaptureNeverUndoesAHumanDealRelink(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
-	w.person(t, "alice@acme.example", w.customer)
+	w.employee(t, "alice@acme.example", w.customer)
 	only := w.deal(t, "Acme rollout")
 	other := w.at(t, "Elsewhere").deal(t, "Elsewhere")
 
@@ -406,10 +407,10 @@ func TestCaptureFilesNothingWhenTheMailNamesTwoCompanies(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
-	w.person(t, "alice@acme.example", w.customer)
+	w.employee(t, "alice@acme.example", w.customer)
 	w.deal(t, "Acme rollout")
 	partner := w.company(t, "Partner")
-	w.person(t, "pat@partner.example", partner)
+	w.employee(t, "pat@partner.example", partner)
 
 	env.sync(t, mailFrom("alice@acme.example", "two1@acme.example", "", "intro", "pat@partner.example"))
 	wantDeals(t, e, "two1@acme.example")
@@ -425,11 +426,11 @@ func TestCaptureFollowsOurThreadOnlyForTheSameCompany(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
-	w.person(t, "alice@acme.example", w.customer)
+	w.employee(t, "alice@acme.example", w.customer)
 	w.deal(t, "Acme operations")
 	reporting := w.deal(t, "Acme reporting")
 	evil := w.company(t, "Evil")
-	w.person(t, "mallory@evil.example", evil)
+	w.employee(t, "mallory@evil.example", evil)
 
 	env.syncSent(t, map[string]bool{"thr1@myco.example": true},
 		email(captureOwner, "", "alice@acme.example", "thr1@myco.example", ""))
@@ -468,7 +469,7 @@ func TestCaptureAsksNoColleagueTheSenderNamed(t *testing.T) {
 		t.Fatalf("giving the named colleague a role: %v", err)
 	}
 	w := newDealWorld(t, e)
-	w.person(t, "alice@acme.example", w.customer)
+	w.employee(t, "alice@acme.example", w.customer)
 	w.deal(t, "Acme operations")
 	w.deal(t, "Acme reporting")
 
@@ -486,7 +487,7 @@ func TestCaptureCountsOnlyAttestedMailAsOurs(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
 	w := newDealWorld(t, e)
-	w.person(t, "alice@acme.example", w.customer)
+	w.employee(t, "alice@acme.example", w.customer)
 	w.deal(t, "Acme operations")
 	reporting := w.deal(t, "Acme reporting")
 
@@ -508,4 +509,70 @@ func TestCaptureCountsOnlyAttestedMailAsOurs(t *testing.T) {
 	}
 	env.sync(t, mailFrom("alice@acme.example", "una2@acme.example", "una1@myco.example", "Re: project"))
 	wantDeals(t, e, "una2@acme.example")
+}
+
+// Mail captured before its deal existed is filed by the repair exactly where
+// capture would file it today. The preview counts what the repair inspects,
+// the run links only where one deal fits, a human's link is untouched, nobody
+// is asked, and a second run changes nothing.
+func TestTheDealRepairFilesOldMailOnceAndLeavesHumansAlone(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	w := newDealWorld(t, e)
+	w.employee(t, "alice@acme.example", w.customer)
+	beta := w.at(t, "Beta")
+	beta.employee(t, "bob@beta.example", beta.customer)
+	env.sync(t,
+		mailFrom("alice@acme.example", "old1@acme.example", "", "status"),
+		mailFrom("bob@beta.example", "old2@beta.example", "", "status"),
+		mailFrom("alice@acme.example", "old3@acme.example", "", "other"),
+	)
+	only := w.deal(t, "Acme rollout")
+	beta.deal(t, "Beta one")
+	beta.deal(t, "Beta two")
+	elsewhere := w.at(t, "Elsewhere").deal(t, "Elsewhere")
+	human := ids.From[ids.ActivityKind](activityOf(t, e, "old3@acme.example"))
+	if _, err := activities.NewStore(e.DB()).RelinkActivity(w.ctx, human, activities.RelinkActivityInput{
+		EntityType: "deal", EntityID: elsewhere,
+	}); err != nil {
+		t.Fatalf("filing a mail as a human: %v", err)
+	}
+
+	system := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS),
+		principal.Principal{Type: principal.PrincipalSystem, ID: "system:data-task"})
+	var preview int64
+	if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
+		var err error
+		preview, _, err = capturemod.EstimateDealRepair(system, tx, 1000)
+		return err
+	}); err != nil {
+		t.Fatalf("previewing the repair: %v", err)
+	}
+	if preview != 2 {
+		t.Fatalf("the preview counts %d mails to inspect, want the 2 captured mails on no deal", preview)
+	}
+	repair := func() int {
+		t.Helper()
+		var out datatask.BatchOut
+		if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
+			var err error
+			out, err = capturemod.RepairDealLinksTx(system, tx, datatask.BatchIn{Limit: 50, RunID: ids.NewV7()}, w.store)
+			return err
+		}); err != nil {
+			t.Fatalf("running the repair: %v", err)
+		}
+		return out.Changed
+	}
+	if applied := repair(); applied != 1 {
+		t.Fatalf("the repair linked %d mails, want 1 of the %d previewed", applied, preview)
+	}
+	wantDeals(t, e, "old1@acme.example", only)
+	wantDeals(t, e, "old2@beta.example")
+	wantDeals(t, e, "old3@acme.example", elsewhere)
+	if n, _ := whichDealQuestions(t, e); n != 0 {
+		t.Fatalf("the repair raised %d deal questions, want none", n)
+	}
+	if again := repair(); again != 0 {
+		t.Fatalf("a second repair linked %d more mails, want none", again)
+	}
 }

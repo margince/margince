@@ -52,6 +52,9 @@ func (s *Store) OpenTheirCommitmentsForDeal(
 // asked without the caller's scope and answering only a number, for the reason
 // countCompanyCommitments gives.
 func countDealCommitments(ctx context.Context, tx pgx.Tx, dealID ids.UUID, asOf time.Time) (int, error) {
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+		return 0, err
+	}
 	args := []any{dealID}
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	var total int

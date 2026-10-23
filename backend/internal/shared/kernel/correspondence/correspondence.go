@@ -40,12 +40,3 @@ func LockIdentity(address string) string {
 func Fold(address string) string {
 	return strings.ToLower(strings.TrimSpace(address))
 }
-
-// OurOutboundSQL is the test that an activity row is mail we sent. The
-// direction alone is not: a sender can make a message read as ours. The
-// provider's sent-mail attestation or a colleague's sender stamp is what
-// proves it. alias is a compile-time table alias.
-func OurOutboundSQL(alias string) string {
-	return alias + ".direction = 'outbound' AND (" + alias + ".counterparty_outbound_attested OR " +
-		alias + ".sent_by_colleague IS NOT NULL)"
-}
