@@ -340,9 +340,9 @@ func (t *StageEvidenceTrigger) judgeActivity(ctx context.Context, activityID ids
 		}
 		return err
 	}
-	// THE ACTIVITY'S OWN TIME, not the envelope's, for both halves. An envelope
-	// is stamped when the event is emitted, so an old message filed or imported
-	// today carries a fresh one and would be read as if it had just happened.
+	// The activity's own time decides for both halves, not the envelope's. An
+	// envelope is stamped when the event is emitted. An old message filed or
+	// imported today carries a fresh one and would read as if just sent.
 	if t.now().Sub(facts.OccurredAt) > stageEvidenceBacklogWindow {
 		return nil
 	}

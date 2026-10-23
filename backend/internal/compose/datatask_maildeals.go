@@ -17,9 +17,9 @@ import (
 )
 
 // mailDealsDataTask files mail captured before the deal rule under the one
-// deal the rule finds for it, and re-checks the links the rule itself wrote,
-// deciding as the mailbox that captured it. It asks nobody and never touches
-// a colleague's filing; what it cannot resolve the operator preview reports.
+// deal the rule finds for it, and re-checks the links the rule itself wrote.
+// It decides as the mailbox that captured each mail, and asks nobody. It never
+// touches a colleague's filing; the operator preview reports what it leaves.
 func mailDealsDataTask(pool *pgxpool.Pool) datatask.Task {
 	db := InstallationDB(pool)
 	repair := mailDealRepair(pool)

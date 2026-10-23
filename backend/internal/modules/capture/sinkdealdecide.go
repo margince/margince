@@ -197,8 +197,8 @@ func mailCompanies(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, co
 }
 
 // threadDeals is the open deals of company that proven mail of this mail's
-// conversation is filed under, at most two once the whole population is
-// filtered. The conversation and the proof are correspondence's, as the deal
+// conversation is filed under. It answers at most two, after the whole
+// population is filtered. The conversation and the proof are correspondence's, as the deal
 // answer and the request settlement read them. The mail itself must be proven
 // too: a reply anyone could have typed follows no deal. Only siblings and
 // deals the capturing seat may read count.

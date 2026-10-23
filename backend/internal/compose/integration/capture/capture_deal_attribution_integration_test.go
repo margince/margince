@@ -15,7 +15,6 @@ import (
 	"maps"
 	"net/http"
 	"net/http/httptest"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -936,88 +935,4 @@ func TestTheDealQuestionIsAskedOnlyAboutCurrentMail(t *testing.T) {
 			t.Fatalf("the task list shows %d questions the colleague took up, want 1", got)
 		}
 	})
-}
-
-// waitForLockWaiters returns once n other sessions wait on a row lock. The race
-// is set up by what the database reports, not by sleeping.
-func waitForLockWaiters(t *testing.T, e *integration.SearchEnv, holder uint32, n int) {
-	t.Helper()
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	for {
-		var waiting int
-		if err := e.Pool.QueryRow(ctx, `SELECT count(*) FROM pg_stat_activity
-			 WHERE datname = current_database() AND wait_event_type = 'Lock' AND pid <> $1`, holder).Scan(&waiting); err != nil {
-			t.Fatalf("reading who waits on the row: %v", err)
-		}
-		if waiting >= n {
-			return
-		}
-		runtime.Gosched()
-	}
-}
-
-// A colleague's relink and the deal rule reach one mail at once. The rule takes
-// the activity row lock the relink takes. In either order the database grants,
-// the mail ends on the one deal the colleague chose.
-func TestARelinkAndTheDealRuleRacingLeaveOneDeal(t *testing.T) {
-	env := newCaptureEnv(t)
-	e := env.e
-	w := newDealWorld(t, e)
-	w.employee(t, "alice@acme.example", w.customer)
-	env.sync(t, mailFrom("alice@acme.example", "race1@acme.example", "", "status"))
-	w.deal(t, "Acme rollout")
-	chosen := w.at(t, "Elsewhere").deal(t, "Elsewhere")
-	mail := ids.From[ids.ActivityKind](activityOf(t, e, "race1@acme.example"))
-
-	holder, err := e.Pool.Begin(context.Background())
-	if err != nil {
-		t.Fatal(err)
-	}
-	var pid uint32
-	if err := holder.QueryRow(context.Background(), `SELECT pg_backend_pid()`).Scan(&pid); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := holder.Exec(context.Background(), `SELECT id FROM activity WHERE id = $1 FOR UPDATE`, mail); err != nil {
-		t.Fatal(err)
-	}
-	relinked := make(chan error, 1)
-	go func() {
-		_, err := activities.NewStore(e.DB()).RelinkActivity(w.ctx, mail, activities.RelinkActivityInput{
-			EntityType: "deal", EntityID: chosen, ReplaceExistingOfType: true,
-		})
-		relinked <- err
-	}()
-	waitForLockWaiters(t, e, pid, 1)
-	ruled := make(chan error, 1)
-	go func() {
-		connectorCtx := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
-			Type: principal.PrincipalConnector, ID: "connector:gmail", UserID: e.Rep1, OnBehalfOf: e.Rep1,
-			SeatType: principal.SeatFull, TeamIDs: []ids.UUID{e.Team1},
-			Permissions: principal.Permissions{
-				Objects: map[string]principal.ObjectGrant{
-					"activity": {Read: true, Update: true}, "deal": {Read: true}, "contact": {Read: true},
-					"company": {Read: true}, "relationship": {Read: true},
-				},
-				RowScope: principal.RowScopeAll,
-			},
-		})
-		ruled <- database.WithWorkspaceTx(connectorCtx, e.Pool, func(tx pgx.Tx) error {
-			_, err := capturemod.AttributeDealTx(connectorCtx, tx, mail, capturemod.DealAttribution{
-				Candidates: w.store, Filer: compose.ActivityDealFiler(),
-			})
-			return err
-		})
-	}()
-	waitForLockWaiters(t, e, pid, 2)
-	if err := holder.Rollback(context.Background()); err != nil {
-		t.Fatal(err)
-	}
-	if err := <-relinked; err != nil {
-		t.Fatalf("the colleague's relink: %v", err)
-	}
-	if err := <-ruled; err != nil {
-		t.Fatalf("the deal rule: %v", err)
-	}
-	wantDeals(t, e, "race1@acme.example", chosen)
 }

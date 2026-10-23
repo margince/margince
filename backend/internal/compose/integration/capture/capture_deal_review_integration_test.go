@@ -6,8 +6,8 @@
 package capture
 
 // The deal rule's shared writers under concurrency, the whole conversation
-// population, the bulk answer, the repair's honest outcomes and its relink
-// event. Every writer is the production one; races are set up by what the
+// population, the bulk answer, the repair's reported outcomes and its relink
+// event. Every writer is the production one. Races are set up by what the
 // database reports, never by sleeping.
 
 import (
@@ -32,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // holdInHumanTx runs fn in a colleague's transaction and keeps it open until
@@ -65,9 +66,9 @@ func relinkInTx(w dealWorld, tx pgx.Tx, mail ids.ActivityID, deal ids.UUID, repl
 
 // A colleague files a sibling on a deal of another company while another
 // colleague's answer waits at that sibling's conditional write. The holder
-// takes only the sibling's row lock before the answer starts, so the one
-// thing the answer can wait on is that row: the answer has filed its own mail
-// and chosen the sibling by then. The sibling keeps the deal it was filed on,
+// takes only the sibling's row lock before the answer starts. So the one
+// thing the answer can wait on is that row, after it filed its own mail and
+// chose the sibling. The sibling keeps the deal it was filed on,
 // with no second deal and no audit row from the answer.
 func TestAnAnswerKeepsASiblingFiledWhileItWaited(t *testing.T) {
 	env := newCaptureEnv(t)
@@ -145,7 +146,7 @@ func waitForActivityRowLock(t *testing.T, e *integration.SearchEnv) {
 }
 
 // The conversation is one correspondent's. Our mail to alice filed on one
-// deal is no clue for bob's reply on the same References root; the company's
+// deal is no clue for bob's reply on the same References root. The company's
 // two deals leave bob's mail on none. Siblings filed on two of alice's
 // company's deals make her authenticated reply ambiguous, though a third
 // company's deal sorts between them.
@@ -264,7 +265,7 @@ func TestTheRepairKeepsAColleaguesFilingMadeWhileItWaited(t *testing.T) {
 
 // The rule's new answer is a deal a colleague closes while the repair waits
 // for its row. The repair asks the deal's admission before it takes anything
-// back, so it reports the refusal: the rule's old link comes off and nothing
+// back, so it reports the refusal. The rule's old link comes off and nothing
 // is written in its place. The change is announced with the relink event
 // its consumers read.
 func TestTheRepairReportsARefusedTargetAndAnnouncesItsChange(t *testing.T) {
@@ -342,7 +343,7 @@ func TestTheOperatorPreviewStillShowsWhatTheRepairLeft(t *testing.T) {
 	}
 }
 
-// Two unrelated mails whose thread key is empty are no conversation: our
+// Two unrelated mails whose thread key is empty are no conversation. Our
 // filed mail is no clue for the other, and the company's two deals leave it
 // on none.
 func TestMailWithAnEmptyThreadKeyFollowsNoConversation(t *testing.T) {
@@ -494,4 +495,88 @@ func (q *readingQueue) first(t *testing.T) compose.StageEvidenceReadArgs {
 		t.Fatal("the trigger queued no reading of the repaired mail")
 	}
 	return q.asked[0]
+}
+
+// waitForLockWaiters returns once n other sessions wait on a row lock. The race
+// is set up by what the database reports, not by sleeping.
+func waitForLockWaiters(t *testing.T, e *integration.SearchEnv, holder uint32, n int) {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	for {
+		var waiting int
+		if err := e.Pool.QueryRow(ctx, `SELECT count(*) FROM pg_stat_activity
+			 WHERE datname = current_database() AND wait_event_type = 'Lock' AND pid <> $1`, holder).Scan(&waiting); err != nil {
+			t.Fatalf("reading who waits on the row: %v", err)
+		}
+		if waiting >= n {
+			return
+		}
+		runtime.Gosched()
+	}
+}
+
+// A colleague's relink and the deal rule reach one mail at once. The rule takes
+// the activity row lock the relink takes. In either order the database grants,
+// the mail ends on the one deal the colleague chose.
+func TestARelinkAndTheDealRuleRacingLeaveOneDeal(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	w := newDealWorld(t, e)
+	w.employee(t, "alice@acme.example", w.customer)
+	env.sync(t, mailFrom("alice@acme.example", "race1@acme.example", "", "status"))
+	w.deal(t, "Acme rollout")
+	chosen := w.at(t, "Elsewhere").deal(t, "Elsewhere")
+	mail := ids.From[ids.ActivityKind](activityOf(t, e, "race1@acme.example"))
+
+	holder, err := e.Pool.Begin(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var pid uint32
+	if err := holder.QueryRow(context.Background(), `SELECT pg_backend_pid()`).Scan(&pid); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := holder.Exec(context.Background(), `SELECT id FROM activity WHERE id = $1 FOR UPDATE`, mail); err != nil {
+		t.Fatal(err)
+	}
+	relinked := make(chan error, 1)
+	go func() {
+		_, err := activities.NewStore(e.DB()).RelinkActivity(w.ctx, mail, activities.RelinkActivityInput{
+			EntityType: "deal", EntityID: chosen, ReplaceExistingOfType: true,
+		})
+		relinked <- err
+	}()
+	waitForLockWaiters(t, e, pid, 1)
+	ruled := make(chan error, 1)
+	go func() {
+		connectorCtx := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.WS), principal.Principal{
+			Type: principal.PrincipalConnector, ID: "connector:gmail", UserID: e.Rep1, OnBehalfOf: e.Rep1,
+			SeatType: principal.SeatFull, TeamIDs: []ids.UUID{e.Team1},
+			Permissions: principal.Permissions{
+				Objects: map[string]principal.ObjectGrant{
+					"activity": {Read: true, Update: true}, "deal": {Read: true}, "contact": {Read: true},
+					"company": {Read: true}, "relationship": {Read: true},
+				},
+				RowScope: principal.RowScopeAll,
+			},
+		})
+		ruled <- database.WithWorkspaceTx(connectorCtx, e.Pool, func(tx pgx.Tx) error {
+			_, err := capturemod.AttributeDealTx(connectorCtx, tx, mail, capturemod.DealAttribution{
+				Candidates: w.store, Filer: compose.ActivityDealFiler(),
+			})
+			return err
+		})
+	}()
+	waitForLockWaiters(t, e, pid, 2)
+	if err := holder.Rollback(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if err := <-relinked; err != nil {
+		t.Fatalf("the colleague's relink: %v", err)
+	}
+	if err := <-ruled; err != nil {
+		t.Fatalf("the deal rule: %v", err)
+	}
+	wantDeals(t, e, "race1@acme.example", chosen)
 }
