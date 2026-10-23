@@ -41449,10 +41449,11 @@ type LeadSettings struct {
 	// shows each as read-only. Empty when nothing is locked. A write ignores it.
 	Locks *SettingLocks `json:"locks,omitempty"`
 
-	// UnassignedEscalationUserId Who answers when a lead nobody owns misses its target. Null means nobody is
-	// configured, and an unowned breach is recorded without being addressed. Also reads
-	// null once the named seat can no longer work the queue — suspended, archived, an
-	// agent, a read seat — because a desk nobody reads is the same silence as none.
+	// UnassignedEscalationUserId Who answers when a lead nobody can answer for misses its target: one nobody owns,
+	// or one whose owner cannot be handed work. Null means nobody is configured, and such a breach is
+	// recorded without being addressed. Also reads null once the named seat can no longer
+	// work the queue — suspended, archived, an agent, a read seat — because a desk nobody
+	// reads is the same silence as none.
 	UnassignedEscalationUserId *openapi_types.UUID `json:"unassigned_escalation_user_id,omitempty"`
 }
 
@@ -51341,9 +51342,11 @@ type UpdateLeadSettingsRequest struct {
 	FirstResponseEnabled       *bool `json:"first_response_enabled,omitempty"`
 	FirstResponseTargetMinutes *int  `json:"first_response_target_minutes,omitempty"`
 
-	// UnassignedEscalationUserId Who answers when a lead NOBODY owns misses its first-response target. An owned
-	// lead's breach escalates to its owner; without this, an unowned one escalated to
-	// nobody at all.
+	// UnassignedEscalationUserId Who answers when a lead nobody can answer for misses its first-response target:
+	// one nobody owns, or one whose owner cannot be handed work: not active, archived, an
+	// agent, or on a read seat. An owned lead's breach escalates to its owner while that
+	// owner can be handed work. Otherwise it goes to this seat, and to nobody when none
+	// is set.
 	//
 	// Must name a seat that can be handed work AND may read leads, else `422` — an
 	// escalation carries the lead it is about, so a desk that cannot open the record is

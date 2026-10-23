@@ -16012,10 +16012,11 @@ components:
           type: [string, 'null']
           format: uuid
           description: |-
-            Who answers when a lead nobody owns misses its target. Null means nobody is
-            configured, and an unowned breach is recorded without being addressed. Also reads
-            null once the named seat can no longer work the queue — suspended, archived, an
-            agent, a read seat — because a desk nobody reads is the same silence as none.
+            Who answers when a lead nobody can answer for misses its target: one nobody owns,
+            or one whose owner cannot be handed work. Null means nobody is configured, and such a breach is
+            recorded without being addressed. Also reads null once the named seat can no longer
+            work the queue — suspended, archived, an agent, a read seat — because a desk nobody
+            reads is the same silence as none.
     DisqualifyLeadRequest:
       type: object
       description: Why the lead is closed. Both fields are optional on the wire so an agent's governed disqualify still works; the UI always sends a reason.
