@@ -6266,8 +6266,10 @@ public.provider_run_reservation_pkey CREATE UNIQUE INDEX provider_run_reservatio
 public.provider_run_subject_identity CREATE UNIQUE INDEX provider_run_subject_identity ON public.provider_run USING btree (id, contact_id, provider)
 public.raw_capture acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.raw_capture.id uuid NOT NULL gen=- def=uuidv7()
+public.raw_capture.parts_slim_outcome text gen=- def=-
 public.raw_capture.parts_slimmed_at timestamp with time zone gen=- def=-
 public.raw_capture.payload jsonb NOT NULL gen=- def=-
+public.raw_capture.raw_capture_parts_slim_outcome_known CHECK (((parts_slim_outcome IS NULL) OR (parts_slim_outcome = ANY (ARRAY['slimmed'::text, 'no_proved_parts'::text, 'unreadable_spelling'::text, 'unrewritable_original'::text, 'nothing_came_out'::text, 'unencodable_result'::text, 'no_bytes_saved'::text]))))
 public.raw_capture.raw_capture_pkey PRIMARY KEY (id)
 public.raw_capture.raw_capture_source_unique UNIQUE (source_system, source_id)
 public.raw_capture.received_at timestamp with time zone NOT NULL gen=- def=now()
