@@ -23,7 +23,7 @@ describe("projectOwnerField", () => {
   // blank value, which is also the default.
   it("offers every colleague at birth with the creator first as the blank", () => {
     const [owner] = field({ owners, me: "u-me" }, "create");
-    expect(owner?.required).toBeFalsy();
+    expect(owner?.required).toBeUndefined();
     expect(owner?.options).toEqual([
       { value: "", label: "Jane Doe" },
       { value: "u-other", label: "Omar Haddad" },
@@ -36,24 +36,15 @@ describe("projectOwnerField", () => {
     expect(owner?.options).toEqual([{ value: "", label: "<project.ownerMe>" }]);
   });
 
-  it("offers an owned project's edit every colleague, then Unassigned, and never requires one", () => {
+  it("offers every colleague and then Unassigned on edit, and requires none", () => {
     const [owner] = field({ owners, me: "u-me" }, "edit");
-    expect(owner?.required).toBeFalsy();
+    expect(owner?.required).toBeUndefined();
     expect(owner?.options).toEqual([
       { value: "u-me", label: "Jane Doe" },
       { value: "u-other", label: "Omar Haddad" },
       { value: "u-third", label: "Lena Brandt" },
       { value: "", label: "<list.unowned>" },
     ]);
-  });
-
-  it("offers Unassigned on an edit of a project nobody owns", () => {
-    const [owner] = field({ owners, me: "u-me" }, "edit");
-    expect(owner?.required).toBeFalsy();
-    expect(owner?.options?.at(-1)).toEqual({
-      value: "",
-      label: "<list.unowned>",
-    });
   });
 
   it("says so beneath the select when the colleague list is incomplete", () => {
