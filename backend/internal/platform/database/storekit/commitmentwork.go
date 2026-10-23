@@ -30,12 +30,22 @@ func CurrentTaskClause(alias string, asOf time.Time, identities string, arg func
  AND ` + HeldTaskClause("successor") + `)
  AND request_source.occurred_at <= ` + instant + `
  AND request_source.occurred_at >= ` + instant + ` - make_interval(days => ` + horizon + `) AND ` + DirectMailRecipientSQL("request_source", MailSeatAddressesSQL(identities, pinner)) + `)`
-	return fmt.Sprintf(`(NOT (coalesce(%[1]s.source_system, '') = ANY($%[4]d)) OR `+HumanWroteActivityClause(alias)+`
+	return fmt.Sprintf(`(`+humanOrImportedTaskSQL(alias)+` OR `+HumanWroteActivityClause(alias)+`
  OR (`+pinner+`, %[1]s.id::text) IN (SELECT reader_id, row_id FROM `+auth.EffectiveWorklistPinsSQL(arg)+` adopted WHERE adopted.source='task')
- OR %[1]s.source_system = ANY($%[5]d)
+ OR %[1]s.source_system = ANY($%[4]d)
  OR (%[1]s.source_system = $%[2]d AND `+source+`)
  OR (%[1]s.source_system = $%[3]d AND `+request+`))`, alias, arg(provenance.CommitmentTaskSource), arg(provenance.EmailRequestSource),
-		arg(automaticTaskSources()), arg(taskSourcesOf(currentByItsWriter)))
+		arg(taskSourcesOf(currentByItsWriter)))
+}
+
+// humanOrImportedTaskSQL names the tasks that stay current by their own
+// lifecycle with no automatic family. One has no source_system: a human or an
+// agent created it by hand. The other is in an importer's reserved namespace.
+// Any other source_system waits for its family in taskSourceFamilies, or for a
+// human to write or adopt the task.
+func humanOrImportedTaskSQL(alias string) string {
+	return fmt.Sprintf(`(coalesce(%[1]s.source_system, '') = '' OR starts_with(%[1]s.source_system, '%[2]s'))`,
+		alias, provenance.ReservedSourceSystemPrefix)
 }
 
 // taskCurrency is how an automatic task stays current work.
@@ -52,8 +62,7 @@ const (
 )
 
 // taskSourceFamilies is every source_system a native writer stamps on a task
-// it creates with no human behind it. A task from any other source_system is a
-// human's or an import's, and stays current by its own lifecycle.
+// it creates with no human behind it, with how that task stays current.
 //
 // Held by: TestEveryAutomaticTaskWriterAndOpenTaskReaderIsDeclared (backend/gates/automatictaskwriters_test.go)
 var taskSourceFamilies = map[string]taskCurrency{

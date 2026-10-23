@@ -81,7 +81,7 @@ var openTaskReadersElsewhere = map[string]string{
 }
 
 var (
-	openTaskKind = regexp.MustCompile(`kind\s*=\s*'task'`)
+	openTaskKind = regexp.MustCompile(`(?i)kind\s*(?:=\s*'task'|IN\s*\([^)]*'task'[^)]*\))`)
 	openTaskDone = regexp.MustCompile(`is_done`)
 )
 
@@ -347,11 +347,17 @@ func mintBotTask() activities.LogActivityInput {
 	source := "bot"
 	return activities.LogActivityInput{Kind: "task", SourceSystem: &source}
 }`
-	reader := `package planted
-const botQueue = "SELECT id FROM activity a WHERE a.kind = 'task' AND NOT a.is_done"
-func readBotQueue() string { return botQueue }`
-	for name, src := range map[string]string{"writer": writer, "reader": reader} {
-		found := scanTaskCensus(t, "internal", map[string]string{"modules/planted/" + name + ".go": src})
+	planted := map[string]string{"writer": writer}
+	for form, where := range map[string]string{
+		"equality":         "a.kind = 'task' AND NOT a.is_done",
+		"one-item IN":      "a.kind IN ('task') AND NOT a.is_done",
+		"IN list":          "a.kind in ('note', 'task') AND a.is_done = false",
+		"IS NOT TRUE done": "a.kind = 'task' AND a.is_done IS NOT TRUE",
+	} {
+		planted["reader, "+form] = "package planted\nconst botQueue = \"SELECT id FROM activity a WHERE " + where + "\"\nfunc readBotQueue() string { return botQueue }"
+	}
+	for name, src := range planted {
+		found := scanTaskCensus(t, "internal", map[string]string{"modules/planted/planted.go": src})
 		if faults := taskCensusFaults(found); len(faults) == 0 {
 			t.Errorf("a planted unregistered %s passed the task census", name)
 		}
