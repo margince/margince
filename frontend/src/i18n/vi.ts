@@ -1664,6 +1664,7 @@ export const vi = {
   "systemJob.client_registration_read": "Đọc cách đăng ký công cụ AI",
   "systemJob.erasure_replay": "Xóa lại dữ liệu sau khi khôi phục",
   "systemJob.extension_inventory": "Kiểm kê tiện ích mở rộng",
+  "systemJob.extension_privacy": "Kiểm tra quyền riêng tư của tiện ích mở rộng",
   "systemJob.extraction_activity_reannounce": "Sửa hoạt động đã trích xuất",
   "systemJob.forecast_snapshot": "Ảnh chụp dự báo hằng ngày",
   "systemJob.geocode": "Tra cứu địa chỉ công ty",

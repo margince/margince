@@ -191,7 +191,7 @@ func (e *Eraser) EraseContact(ctx context.Context, contactID ids.UUID, reason st
 			return err
 		}
 
-		return tombstoneContactErasure(ctx, tx, subject, reason, contactErasureCounts{
+		return e.eraseExtensionsAndTombstone(ctx, tx, subject, reason, leadsWiped, activitiesRedacted, contactErasureCounts{
 			emailsSuppressed: len(emails), rawRowsPurged: rawPurged, aiPayloadsPurged: aiPayloadsPurged,
 			activitiesRedacted: len(activitiesRedacted), activitiesRestricted: len(activitiesHeld),
 			channelIdentitiesSuppressed: channelsSuppressed,

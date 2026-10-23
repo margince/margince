@@ -25,6 +25,7 @@ type contactErasureCounts struct {
 	activitiesRedacted          int
 	activitiesRestricted        int
 	channelIdentitiesSuppressed int
+	extensionRowsCleared        int
 }
 
 // tombstoneContactErasure closes the cascade with action=erase and counts only —
@@ -38,6 +39,7 @@ func tombstoneContactErasure(ctx context.Context, tx pgx.Tx, subject ids.Contact
 		"ai_payloads_purged": counts.aiPayloadsPurged, "activities_redacted": counts.activitiesRedacted,
 		"activities_restricted":         counts.activitiesRestricted,
 		"channel_identities_suppressed": counts.channelIdentitiesSuppressed,
+		"extension_rows_cleared":        counts.extensionRowsCleared,
 	})
 	if err != nil {
 		return err

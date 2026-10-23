@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -31,8 +32,9 @@ import (
 // mirrored in consent would be a second declaration of what Art. 15 owes, and it
 // would drift one release behind the one piicoverage_test.go checks.
 type subjectAccessSeam struct {
-	db   *database.DB
-	blob blobstore.Store
+	db         *database.DB
+	blob       blobstore.Store
+	extensions extprivacy.Registry
 }
 
 // withBlobstore returns a copy that can rebuild a slimmed provider original.
@@ -47,8 +49,8 @@ func (s *subjectAccessSeam) withBlobstore(blob blobstore.Store) *subjectAccessSe
 }
 
 // newSubjectAccessAssembler binds the Art. 15 export over one database.
-func newSubjectAccessAssembler(db *database.DB) *subjectAccessSeam {
-	return &subjectAccessSeam{db: db}
+func newSubjectAccessAssembler(db *database.DB, extensions extprivacy.Registry) *subjectAccessSeam {
+	return &subjectAccessSeam{db: db, extensions: extensions}
 }
 
 // AssemblePackage answers the serialized Art. 15 package for one subject.
@@ -60,7 +62,7 @@ func newSubjectAccessAssembler(db *database.DB) *subjectAccessSeam {
 // those checks here would be a second answer to who may read a subject's whole
 // record.
 func (s *subjectAccessSeam) AssemblePackage(ctx context.Context, contactID ids.UUID) ([]byte, error) {
-	pkg, err := privacy.AssembleSAR(ctx, s.db, ids.From[ids.ContactKind](contactID))
+	pkg, err := privacy.AssembleSARWithExtensions(ctx, s.db, ids.From[ids.ContactKind](contactID), s.extensions)
 	if err != nil {
 		return nil, err
 	}

@@ -118,6 +118,49 @@ func preflightSubjectRights(e extension.Extension, codes map[jurisdiction.Code]e
 	return nil
 }
 
+// preflightIdentity checks what names one unit: its name, namespace, version and
+// description, and that no other unit in the set holds the name.
+func preflightIdentity(e extension.Extension, seen map[extension.Name]bool, namespaces map[string]extension.Name) error {
+	if err := e.Name.Validate(); err != nil {
+		return fmt.Errorf("compose: %w", err)
+	}
+	if seen[e.Name] {
+		return fmt.Errorf("compose: extension %q composed twice — the enabled set under extensions/ carries one directory per unit", e.Name)
+	}
+	seen[e.Name] = true
+	if err := reserveNamespace(e.Name, namespaces); err != nil {
+		return err
+	}
+	if err := e.Version.Validate(); err != nil {
+		return fmt.Errorf("compose: extension %q: %w", e.Name, err)
+	}
+	if err := e.Description.Validate(); err != nil {
+		return fmt.Errorf("compose: extension %q: %w", e.Name, err)
+	}
+	return nil
+}
+
+// preflightPrivacy checks one unit's personal-data declaration against its own
+// namespace. Whether the declaration matches the migrated schema needs the
+// database, so extprivacy.Verify holds that half.
+func preflightPrivacy(e extension.Extension) error {
+	namespace, err := e.Name.Namespace()
+	if err != nil {
+		return fmt.Errorf("compose: %w", err)
+	}
+	declared := make(map[string]bool, len(e.Privacy))
+	for _, t := range e.Privacy {
+		if err := t.Validate(namespace); err != nil {
+			return fmt.Errorf("compose: extension %q: %w", e.Name, err)
+		}
+		if declared[t.Name] {
+			return fmt.Errorf("compose: extension %q declares privacy for table %q twice", e.Name, t.Name)
+		}
+		declared[t.Name] = true
+	}
+	return nil
+}
+
 // preflightDocuments checks one unit's documents. Pack codes are unique across
 // units, so the unit's own-pack rule also keeps two units from shipping
 // documents under one code.

@@ -220,7 +220,7 @@ func forgetUntoldSiteLeadTx(ctx context.Context, tx pgx.Tx, approvalID ids.Appro
 	if err := consent.RecordLeadNoticeFailedTx(ctx, tx, approvalID, failure); err != nil {
 		return err
 	}
-	return privacy.EraseUntoldLeadTx(ctx, tx, privacy.UntoldLead{ApprovalID: approvalID})
+	return privacy.EraseUntoldLeadTx(ctx, tx, privacy.UntoldLead{ApprovalID: approvalID, Extensions: ExtensionData()})
 }
 
 // siteLeadsRefused is the one staging-side check, asked by every path that would

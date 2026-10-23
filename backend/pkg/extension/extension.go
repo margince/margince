@@ -83,6 +83,7 @@ import (
 	"github.com/margince/margince/backend/pkg/extension/compliancedocs"
 	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
 	"github.com/margince/margince/backend/pkg/extension/messaging"
+	"github.com/margince/margince/backend/pkg/extension/privacy"
 	"github.com/margince/margince/backend/pkg/extension/subjectrights"
 )
 
@@ -249,6 +250,12 @@ type Extension struct {
 	// one-set-per-code rule as Messaging, and the code must be one of this
 	// unit's own Jurisdictions.
 	SubjectRights []subjectrights.Rules
+
+	// Privacy declares, for every table the unit owns, which core record its
+	// rows belong to, which columns are personal data and the retention class.
+	// The boot refuses a unit whose schema holds a table this leaves out. It
+	// refuses a changed declaration that kept its Version.
+	Privacy []privacy.Table
 
 	// Documents are the compliance documents the unit ships for its
 	// jurisdictions. The admin page serves the selected jurisdiction's set.

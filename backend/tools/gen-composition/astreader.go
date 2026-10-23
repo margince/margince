@@ -353,7 +353,7 @@ func (r *unitReader) readExtensionField(elt ast.Expr, file *ast.File, m *unitMan
 		if err == nil {
 			err = r.joinJobsToContract(served(declared), r.jobs)
 		}
-	case "Jurisdictions", "Messaging", "SubjectRights", "Documents":
+	case "Jurisdictions", "Messaging", "SubjectRights", "Documents", "Privacy":
 		// Recognized and skipped. All four are policy or content the core
 		// consults: retention floors, messaging rules, request deadlines and
 		// compliance documents. None is an operation an operator resolves, so

@@ -22,6 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	extdecl "github.com/margince/margince/backend/pkg/extension/privacy"
 )
 
 // retentionExecutor applies one action to one record inside the pass's audited
@@ -215,6 +216,9 @@ func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, eraser 
 	}
 	if err == nil {
 		err = scrubContactGraphTraces(ctx, tx, id, subjectEmails, subjectAccounts, subjectName, linkedInHandles)
+	}
+	if err == nil {
+		_, err = clearExtensionRows(ctx, tx, eraser.extensions, "retention", map[extdecl.RecordKind][]ids.UUID{extdecl.Contact: {id}})
 	}
 	return err
 }

@@ -18,6 +18,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -65,6 +66,13 @@ func (p *Provider) WithStopCarrier(carrier StopCarrier) *Provider {
 // WithStopCarrier does.
 func (p *Provider) WithSatelliteCarriers(consent ConsentSatelliteCarrier, intros IntroCarrier) *Provider {
 	p.store = p.store.WithSatelliteCarriers(consent, intros)
+	return p
+}
+
+// WithExtensions mirrors the HTTP wiring: a provider merge refuses a record
+// that extension rows depend on.
+func (p *Provider) WithExtensions(r extprivacy.Registry) *Provider {
+	p.store = p.store.WithExtensions(r)
 	return p
 }
 

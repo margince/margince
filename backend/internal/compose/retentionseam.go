@@ -46,6 +46,7 @@ import (
 func NewRetentionServiceFor(db *database.DB, blob blobstore.Store, log *slog.Logger) *privacy.RetentionService {
 	return privacy.NewRetentionService(db, blob, log, RawCapturePurgerFor(db)).
 		WithCountry(identity.CountryForDecision).
+		WithExtensions(ExtensionData()).
 		WithEdgeInvalidator(func(ctx context.Context, tx pgx.Tx, activityID ids.UUID) error {
 			return search.RecomputeEdgesForActivities(ctx, tx, []ids.UUID{activityID})
 		})
@@ -82,7 +83,7 @@ func privacyPayloads(vault keyvault.Vault) privacy.PayloadPurger {
 func ComposedEraser(pool *pgxpool.Pool, blob blobstore.Store, vault keyvault.Vault) *privacy.Eraser {
 	db := InstallationDB(pool)
 	return privacy.NewEraser(db).WithCountry(identity.CountryForDecision).WithBlobstore(blob).WithRawCapturePurger(RawCapturePurgerFor(db)).
-		WithPayloadVault(privacyPayloads(vault))
+		WithPayloadVault(privacyPayloads(vault)).WithExtensions(ExtensionData())
 }
 
 func (s *Server) rewirePrivacyVault(pool *pgxpool.Pool) {

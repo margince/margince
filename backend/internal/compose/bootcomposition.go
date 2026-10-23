@@ -37,6 +37,9 @@ func RecordComposition(
 	if err := ObserveExtensionInventory(ctx, pool, log, exts); err != nil {
 		return fmt.Errorf("compose: recording the composed extension set: %w", err)
 	}
+	if err := VerifyExtensionPrivacy(ctx, pool, exts); err != nil {
+		return fmt.Errorf("compose: checking the extensions' privacy declarations: %w", err)
+	}
 	if err := ReconcileChannelProviders(ctx, pool); err != nil {
 		return fmt.Errorf("compose: registering this binary's channel vocabulary: %w", err)
 	}

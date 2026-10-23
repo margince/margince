@@ -360,6 +360,35 @@ deadlines. A pack compiled in but not selected applies nothing.
 `privacy.ResolveFloorPolicy` resolves the floor once per decision. Every path that destroys data passes
 it down.
 
+### Extension tables
+
+An extension's tables sit in the `ext` schema, outside the tables the eraser knows by name. So a unit
+declares, per table, which core record each row belongs to, which columns are personal data and which
+retention class holds it (`Extension.Privacy`). The core then does the work itself:
+
+```mermaid
+flowchart LR
+    D[Unit declaration] --> B[Boot check against the schema]
+    D --> E[Erasure or anonymize]
+    D --> X[Subject export]
+    D --> M[Merge check]
+    E --> A[Core audit entry and event]
+```
+
+| Action | What core does to extension rows |
+|---|---|
+| Erasure | Clears the personal columns of rows linked to the subject, to the subject's earlier lead records and to the activities it cleared. An activity held under a floor keeps its rows. |
+| Retention rule that strips a contact of its name | Clears the rows linked to the contact. |
+| Audit | Writes an `anonymize` audit entry and a `retention.applied` event for each cleared row. The compliance log then hides the before and after images of the row's earlier entries. |
+| Subject export | Lists the declared columns of the same rows under `extension_data`. |
+| Merge of a contact, lead or company | Refuses with a conflict that counts the rows linking to it. Archive the record instead. Core deletes no contact or company. |
+| A website lead is erased because its notice failed. This is the one lead core deletes | Clears the rows linked to the lead, and to the notice mail it deletes, before the lead goes. |
+
+The retention class comes from the core's closed set. A unit cannot add a class.
+
+For the declaration and the boot check, see
+[Add an extension](../how-to/add-an-extension.md#declare-the-personal-data-in-your-tables).
+
 ### Request deadlines
 
 A pack may declare a deadline per request kind (`SubjectRights`), in calendar units or in hours. A kind

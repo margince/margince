@@ -21,6 +21,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/extprivacy"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -39,6 +40,14 @@ func (e *Eraser) WithCountry(country CountryReader) *Eraser {
 	clone := *e
 	clone.country = country
 	return &clone
+}
+
+// WithExtensions gives the retention service's eraser the extension tables to
+// clear.
+func (s *RetentionService) WithExtensions(r extprivacy.Registry) *RetentionService {
+	out := *s
+	out.eraser = s.eraser.WithExtensions(r)
+	return &out
 }
 
 // WithCountry is the retention service's spelling: its selectors, and the

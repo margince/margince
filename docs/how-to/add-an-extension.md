@@ -117,7 +117,8 @@ review on its own.
 
    **Import only `backend/pkg/**` packages that carry `//margince:extension-surface`**. Today those are
    `pkg/extension`, `pkg/extension/jurisdiction`, `pkg/extension/crm`, `pkg/extension/messaging`,
-   `pkg/extension/subjectrights` and `pkg/extension/compliancedocs`. Any import of `internal/**`,
+   `pkg/extension/subjectrights`, `pkg/extension/compliancedocs`, `pkg/extension/accounting` and
+   `pkg/extension/privacy`. Any import of `internal/**`,
    `cmd/**`, a `pkg` package with no mark, the `composition` module or another extension fails the `arch` test.
    The compiler already keeps `internal/**` out of reach, and the test holds the rest.
 
@@ -424,6 +425,56 @@ tables the earlier files created, and it is still its own file.
 **Index what your reads sort by.** Until an index covers that order, a list that reads the newest first and
 limits the page is a full scan. It also sorts every row the unit has ever written. That is no problem at the size a
 unit starts at, and it is at the size it reaches.
+
+## Declare the personal data in your tables
+
+Every table the unit creates needs one entry in the `Privacy` field. The core's eraser, subject export and
+merge check read it. Your unit never runs an erasure of its own, and never writes the audit entry for one.
+
+```go
+Privacy: []privacy.Table{{
+	Name:      "ext_<name>_note",
+	Links:     []privacy.Link{{Column: "activity_id", Record: privacy.Activity}},
+	Personal:  []string{"body"},
+	Retention: jurisdiction.CommercialCorrespondence,
+}},
+```
+
+| Field | What to put in it |
+|---|---|
+| `Links` | The columns that hold the id of a core record: `contact`, `lead`, `company` or `activity`. |
+| `Personal` | The columns the core clears on erasure and serves in a subject export. See [what clearing does](#what-clearing-does). |
+| `Retention` | One of the core's own classes. A unit cannot add one. |
+
+A row belongs to a subject when one of its links names the subject. Erasure and export find rows by
+`contact`, `lead` or `activity`. A `company` link only feeds the merge check, so a table with personal columns
+needs one of the other three.
+
+A table with no `Links` and no `Personal` columns declares that it holds no personal data. A table with
+personal columns needs a `uuid` column named `id`.
+
+### What clearing does
+
+A column that can hold NULL (no value) is set to NULL. A column that must hold a value is set to the empty
+value of its type:
+
+| Column type | Cleared to |
+|---|---|
+| `text`, `varchar` | `''` |
+| `bytea` (binary data) | an empty `bytea` |
+| `jsonb` | `{}` |
+| Any other type | The boot refuses it |
+
+A `CHECK` that refuses the empty value fails the erasure. So let a personal column hold NULL.
+
+The core, not the unit, writes the audit entry. It writes one `anonymize` entry and one event for each row it
+clears.
+
+At start-up the core compares the declaration with the migrated schema and refuses to boot on a mismatch.
+Once the installation is set up, it also records a hash of the declaration against the unit's `Version`.
+A changed declaration then needs a new version. `TestEveryExtensionTableHasAPrivacyDeclaration` checks the schema
+half from source. [Privacy and
+consent](../explanation/privacy-and-consent.md#extension-tables) says what core does with a declaration.
 
 ## Own secrets
 

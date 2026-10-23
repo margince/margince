@@ -87,6 +87,7 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 		WithProfileVerdictReader(profileverdicts.MergeReader(InstallationDB(pool))).
 		WithFeedbackCarryReader(ai.NewFeedbackStore(InstallationDB(pool))).
 		WithGrantCarrier(identity.NewServiceFor(InstallationDB(pool))).
+		WithExtensions(ExtensionData()).
 		WithInstallationRenamer(installationRenamer(pool))
 }
 
@@ -474,8 +475,8 @@ func newConsentHandlers(pool *pgxpool.Pool) consent.Handlers {
 		// here is answered there rather than sitting in a second queue nobody
 		// reads.
 		WithReviewRouter(reviewRouter{approvals: approvalsServiceWithEffects(pool)}).
-		WithEraser(privacy.NewEraser(InstallationDB(pool)).WithCountry(identity.CountryForDecision)).
-		WithSubjectAccessAssembler(newSubjectAccessAssembler(InstallationDB(pool))).
+		WithEraser(privacy.NewEraser(InstallationDB(pool)).WithCountry(identity.CountryForDecision).WithExtensions(ExtensionData())).
+		WithSubjectAccessAssembler(newSubjectAccessAssembler(InstallationDB(pool), ExtensionData())).
 		WithInstallationName(consent.InstallationNameFunc(func(ctx context.Context) (string, error) {
 			return identity.InstallationNameForPublicPage(ctx, pool)
 		})).

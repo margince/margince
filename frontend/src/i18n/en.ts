@@ -1660,6 +1660,7 @@ export const en = {
   "systemJob.client_registration_read": "AI tool registration read",
   "systemJob.erasure_replay": "Erasure replay after a restore",
   "systemJob.extension_inventory": "Extension inventory",
+  "systemJob.extension_privacy": "Extension privacy check",
   "systemJob.extraction_activity_reannounce": "Extracted activity repair",
   "systemJob.forecast_snapshot": "Daily forecast snapshot",
   "systemJob.geocode": "Company address lookup",
