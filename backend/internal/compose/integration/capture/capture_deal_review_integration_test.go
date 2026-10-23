@@ -220,9 +220,11 @@ func TestTheRepairKeepsAColleaguesFilingMadeWhileItWaited(t *testing.T) {
 	wantDeals(t, e, "aba1@acme.example", first)
 }
 
-// The rule now finds a deal the capturing seat may not file on. The repair
-// takes back the rule's old link, writes nothing in its place, and says so.
-// The link it takes back is announced with the relink event its consumers read.
+// The rule's new answer is a deal a colleague closes while the repair waits
+// for its row. The repair asks the deal's admission before it takes anything
+// back, so it reports the refusal: the rule's old link comes off and nothing
+// is written in its place. The change is announced with the relink event
+// its consumers read.
 func TestTheRepairReportsARefusedTargetAndAnnouncesItsChange(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
@@ -231,33 +233,52 @@ func TestTheRepairReportsARefusedTargetAndAnnouncesItsChange(t *testing.T) {
 	first := w.deal(t, "Acme rollout")
 	env.sync(t, mailFrom("alice@acme.example", "ref1@acme.example", "", "status"))
 	wantDeals(t, e, "ref1@acme.example", first)
-	// A deal another team owns, which a team-scoped seat cannot file on.
-	companyID, rep3 := ids.From[ids.CompanyKind](w.customer), ids.From[ids.UserKind](e.Rep3)
-	hidden, err := w.store.CreateDeal(w.ctx, deals.CreateDealInput{
-		Name: "Acme hidden", PipelineID: w.pipelineID, StageID: w.stageID, CompanyID: &companyID, OwnerID: &rep3, Source: "manual",
-	})
-	if err != nil {
-		t.Fatalf("creating the other team's deal: %v", err)
-	}
-	w.stakeholder(t, alice, ids.UUID(hidden.Id))
+	closing := w.deal(t, "Acme reporting")
+	w.stakeholder(t, alice, closing)
+	var lost ids.UUID
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(context.Background(), `UPDATE role SET permissions = jsonb_set(permissions, '{row_scope}', '"team"') WHERE key = 'capture_rep'`)
-		return err
+		return tx.QueryRow(context.Background(), `INSERT INTO stage (pipeline_id, name, position, semantic, win_probability)
+			VALUES ($1, 'Lost', 9, 'lost', 0) RETURNING id`, w.pipelineID).Scan(&lost)
 	}); err != nil {
-		t.Fatal(err)
+		t.Fatalf("seeding the lost stage: %v", err)
 	}
+
+	release := make(chan struct{})
+	reason := "Budget moved"
+	pid, held := holdInHumanTx(t, e, w, func(tx pgx.Tx) error {
+		_, err := w.store.AdvanceDealTx(w.ctx, tx, ids.From[ids.DealKind](closing), deals.AdvanceDealInput{
+			ToStageID: ids.From[ids.StageKind](lost), LostReason: &reason,
+		}, deals.CustomColumns{})
+		return err
+	}, release)
+	holder := <-pid
 	r := newRepairer(e, w)
-	if preview := r.preview(t); preview[capturemod.DealMachineRetractedRefused] != 1 {
-		t.Fatalf("the preview reads %v, want the refused target reported", preview)
+	type result struct {
+		changed int
+		err     error
 	}
-	if changed := r.run(t); changed != 1 {
-		t.Fatalf("the repair changed %d mails, want 1", changed)
+	repaired := make(chan result, 1)
+	go func() {
+		changed, err := r.runErr()
+		repaired <- result{changed, err}
+	}()
+	waitForLockWaiters(t, e, holder, 1)
+	close(release)
+	if err := <-held; err != nil {
+		t.Fatalf("closing the deal: %v", err)
+	}
+	if got := <-repaired; got.err != nil || got.changed != 1 {
+		t.Fatalf("the repair changed %d mails (err %v), want 1", got.changed, got.err)
 	}
 	wantDeals(t, e, "ref1@acme.example")
-	if n := countRows(t, e, `SELECT count(*) FROM event_outbox o JOIN activity a ON a.id::text = o.envelope->>'entity_id'
-		 WHERE a.source_id = 'ref1@acme.example' AND o.envelope->>'type' = 'activity.updated'
-		   AND o.envelope->'data'->'changed_fields'->'relinked'->>'entity_id' = '`+first.String()+`'`); n < 1 {
-		t.Fatalf("the repair's change wrote %d relink events, want one its consumers read", n)
+	if n := countRows(t, e, `SELECT count(*) FROM audit_log WHERE action = 'activity_relink' AND actor_type = 'system'
+		 AND evidence->>'reason' = 'captured_mail_deal_repair' AND before->>'entity_id' = '`+first.String()+`'`); n != 1 {
+		t.Fatalf("%d repair retraction audit rows, want 1", n)
+	}
+	if n := countRows(t, e, `SELECT count(*) FROM event_outbox o
+		 WHERE o.envelope->>'type' = 'activity.updated'
+		   AND o.envelope->'payload'->'changed_fields'->'relinked'->>'entity_id' = '`+first.String()+`'`); n != 1 {
+		t.Fatalf("the repair's change wrote %d relink events, want the one its consumers read", n)
 	}
 }
 
