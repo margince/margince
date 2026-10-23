@@ -2,8 +2,9 @@
 # Update the handbook
 
 Every build puts the handbook in `docs/handbook/` into the program. Every start files it as the
-**Margince handbook** document set. On a new install, that set is the
-default behind **Ask your documents** (⌘K). A page you write is the answer a user
+**Margince handbook** document set. A question typed into **Search or ask
+Margince** asks that set first, whatever the default set is. It asks the default
+set only when the handbook does not cover the question. A page you write is the answer a user
 gets to a question, or the reason they get **Not covered by this set**. Write it
 for the machine that reads it, and measure it before and after.
 
@@ -58,6 +59,15 @@ last word, and each item names where the rule is.
   `backend/gates/companyvocabulary_test.go` allows that one page to use it by name, because the ask cannot
   find a synonym that no page has. Put such a word in the glossary, not on a
   task page.
+- **Name the settings page a task is on.** Under a `###` heading whose answer is a
+  settings page, put `<!-- opens: settings/<page-id> -->` on the next line. The
+  id is one in `frontend/src/lib/settingscatalog*.ts`. The answer
+  then carries a button to that page for a reader who may open it. The Markdown
+  reader hides the line. `backend/internal/modules/knowledge/handbook/section_test.go`
+  fails a marker that is not directly under a heading, and
+  `frontend/src/features/settings/handbookopens.test.ts` fails an id the catalog does not list.
+- **Write in English.** The ask searches the English page with the words of the
+  question. So a question in German or Vietnamese can miss a section that answers it.
 - **Links stay in `docs/handbook/`.** The folder is a corpus that stands on its own.
   After the upload, a link out of it goes to no page.
 

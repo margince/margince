@@ -170,7 +170,7 @@ func analyticsPopulationExpression(ctx context.Context, tx pgx.Tx, requested Req
 		// makes for a named colleague, so it stays exact for the same reason,
 		// regardless of unowned.
 		return resolved, fmt.Sprintf(
-			"%s IN (%s)", col, liveTeamMembersSQL(arg(*resolved.ID), "= $%d")), nil
+			"%s IN (%s)", col, teamMembersSQL(arg(*resolved.ID), "= $%d")), nil
 	case ScopeKindManagedTeams:
 		// A team manager who named nothing is asking about the work they are
 		// accountable for, which is their teams AND themselves. Themselves
@@ -181,7 +181,7 @@ func analyticsPopulationExpression(ctx context.Context, tx pgx.Tx, requested Req
 		teams := arg(p.TeamIDs)
 		clause := fmt.Sprintf(
 			"(%s = $%d OR %s IN (%s))",
-			col, me, col, liveTeamMembersSQL(teams, "= ANY($%d)"))
+			col, me, col, teamMembersSQL(teams, "= ANY($%d)"))
 		if unowned == unownedIsPartOfDefault {
 			// Always the caller's own default population (never requestable by
 			// name, see ScopeKindManagedTeams's own doc), so the same
@@ -211,19 +211,15 @@ func ownedOrUnowned(col, clause string) string {
 	return fmt.Sprintf("(%s IS NULL OR %s)", col, clause)
 }
 
-// liveTeamMembersSQL selects the members of a team, as the installation stands
-// today: a live team, and a member who can still act.
-//
-// Membership rows deliberately outlive both — an archived team keeps its rows so
-// a restore brings them back, and deactivating a seat leaves the row alone. A
-// predicate reading team_membership by itself therefore measures contacts who left,
-// which is the defect this replaces: the resolver refuses a departed colleague as
-// a population of their own while their deals went on counting inside their old
-// team's total.
-func liveTeamMembersSQL(pos int, match string) string {
+// teamMembersSQL selects the members of a live team whose work its numbers
+// count. Those are members who can act, and members who left but are not archived.
+// A departed colleague's open deals stay in the totals until somebody takes
+// them over. Every screen marks that owner as having left.
+func teamMembersSQL(pos int, match string) string {
 	return fmt.Sprintf(`SELECT tm.user_id FROM team_membership tm
 		JOIN team t ON t.id = tm.team_id AND t.archived_at IS NULL
-		JOIN app_user u ON u.id = tm.user_id AND `+identity.LiveMemberSQL("u")+`
+		JOIN app_user u ON u.id = tm.user_id
+		 AND ((`+identity.LiveMemberSQL("u")+`) OR (`+identity.DepartedMemberSQL("u")+`))
 		WHERE tm.team_id `+match, pos)
 }
 

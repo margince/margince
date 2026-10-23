@@ -797,7 +797,7 @@
           ]
         },
         "unassigned_escalation_user_id": {
-          "description": "The user id of the colleague who answers for a lead nobody owns once it misses its target; empty means nobody, and a boot value that names no active colleague reaches nobody and logs a warning.",
+          "description": "The user id of the colleague who answers for a lead nobody owns, or whose owner has left, once it misses its target; empty means nobody, and a boot value that names no active colleague reaches nobody and logs a warning.",
           "type": [
             "string",
             "null"

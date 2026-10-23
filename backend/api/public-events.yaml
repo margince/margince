@@ -1919,7 +1919,11 @@ components:
         escalation_target:
           type: string
           format: uuid
-          description: The user the escalation task is assigned to (absent when nobody owns the lead).
+          description: >-
+            The seat the scan chose for the escalation: the lead's owner while that owner can be
+            handed work, else the intake seat. Delivery asks again, so the task and notice can
+            go to the intake seat instead, or to nobody. Absent when no seat was chosen, so it
+            can differ from `owner_id`.
       additionalProperties: false
 
     PublicEventLeadUpdated:

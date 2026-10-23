@@ -2127,6 +2127,15 @@ export const vi = {
   "palette.searching": "Đang tìm hồ sơ…",
   "palette.searchFailedTitle": "Tìm kiếm không thành công",
   "palette.searchFailed": "Các lệnh ở trên vẫn hoạt động.",
+  "palette.askRow": "Hỏi Margince: “{query}”",
+  "palette.asking": "Đang hỏi Margince…",
+  "palette.answerAria": "Câu trả lời của Margince",
+  "palette.answerFrom": "Từ {name}",
+  "palette.answerAfterHandbook": "Không có trong sổ tay. Từ {name}",
+  "palette.answerSection": "Mục trong sổ tay: {title}",
+  "palette.openSetting": "Mở Cài đặt → {page}",
+  "palette.askNoAnswer":
+    "Margince trả lời từ sổ tay và tài liệu của bạn. Liên hệ quản trị viên hoặc hỏi đồng nghiệp.",
   "action.newDeal": "Deal mới",
   "action.booking": "Trang đặt lịch",
 
@@ -2439,6 +2448,7 @@ export const vi = {
   "common.saving": "Đang lưu…",
   "common.loading": "Đang tải…",
   "ref.nameLoadFailed": "Không thể tải tên",
+  "ref.memberLeft": "{name} (đã nghỉ)",
   "owner.rosterFailed":
     "Không thể tải danh sách thành viên. Hãy tải lại trang để chọn một người.",
   "ref.notInRoster":
@@ -10812,7 +10822,7 @@ export const vi = {
     "Tài khoản đầy đủ quyền không bị vô hiệu hóa hay tạm khóa, kể cả trợ lý AI. Tài khoản chỉ xem không giới hạn và không được tính.",
   "settings.rates.fxTitle": "Tỷ giá",
   "settings.rates.fxIntro":
-    "Tỷ giá quy đổi số tiền ngoại tệ sang loại tiền cơ sở. Tỷ giá mới có hiệu lực từ hôm nay trở đi; tỷ giá đã áp dụng trước đây không bao giờ thay đổi.",
+    "Tỷ giá quy đổi số tiền ngoại tệ sang loại tiền cơ sở. Tỷ giá mới có hiệu lực từ hôm nay trở đi. Chỉ được chọn ngày trong quá khứ nếu ngày đó trước tỷ giá đầu tiên của loại tiền. Tỷ giá đã có hiệu lực không bao giờ thay đổi.",
   "settings.rates.fxWithheld":
     "Chỉ quản trị viên hoặc thành viên Vận hành mới xem được tỷ giá. Mọi số liệu tổng hợp trong bản cài đặt đều quy đổi theo tỷ giá này.",
   "settings.rates.readOnly":
@@ -15158,6 +15168,8 @@ export const vi = {
   "worklist.scope.team": "Nhóm",
   "worklist.scope.all": "Tất cả",
   "worklist.owner.shared": "Cùng phụ trách: {names}",
+  "worklist.owner.left":
+    "{name} đã nghỉ. Việc này cần người chịu trách nhiệm mới.",
   "worklist.owner.sharedCount_one": "{count} bên nhận phụ trách",
   "worklist.owner.sharedCount_other": "{count} bên nhận phụ trách",
   "worklist.owner.visibleLabel": "Đang xem",

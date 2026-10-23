@@ -15807,7 +15807,8 @@ export interface paths {
         /**
          * Count the live records a member still owns. Member administration, human-only.
          * @description How many live leads, contacts, companies, deals and projects the member owns that the
-         *     caller can see. Deactivating a member moves none of them, so the deactivate dialog reads
+         *     caller can see. For a member who left, it also counts the contacts and companies only
+         *     they can see (captured and never made shared), which the handover also moves. Deactivating a member moves none of them, so the deactivate dialog reads
          *     this to say what would be left behind. Works for any non-archived member, deactivated or
          *     not, because work is best handed over before the account is closed.
          */
@@ -15818,8 +15819,9 @@ export interface paths {
          * @description Hands each live lead, contact, company, deal and project the member owns to `to_user_id`.
          *     Every record moves through its own owner-change write, so each gets the audit row and
          *     event a single reassignment writes, and a deal's pending proposals follow it to the new
-         *     owner. A record the caller may not change stays with the member and is counted in
-         *     `left`; nothing else is said about it. `to_user_id` must be a seat the caller may make an
+         *     owner. For a member who left, the contacts and companies only they can see move too and
+         *     stay private, now to the new owner; an active member keeps theirs. A record the caller may not change stays with the member and is counted
+         *     in `left`; nothing else is said about it. `to_user_id` must be a seat the caller may make an
          *     owner (an active human seat that can write, inside the caller's write scope), else `422`
          *     with `code: owner_not_assignable` and nothing moves. Tasks, automations and deal-room
          *     stewardships are not moved.
@@ -36073,10 +36075,11 @@ export interface components {
             first_response_target_minutes: number;
             /**
              * Format: uuid
-             * @description Who answers when a lead nobody owns misses its target. Null means nobody is
-             *     configured, and an unowned breach is recorded without being addressed. Also reads
-             *     null once the named seat can no longer work the queue — suspended, archived, an
-             *     agent, a read seat — because a desk nobody reads is the same silence as none.
+             * @description Who answers when a lead nobody can answer for misses its target: one nobody owns,
+             *     or one whose owner cannot be handed work. Null means nobody is configured, and such a breach is
+             *     recorded without being addressed. Also reads null once the named seat can no longer
+             *     work the queue — suspended, archived, an agent, a read seat — because a desk nobody
+             *     reads is the same silence as none.
              */
             unassigned_escalation_user_id?: string | null;
         };
@@ -36085,9 +36088,11 @@ export interface components {
             first_response_target_minutes?: number;
             /**
              * Format: uuid
-             * @description Who answers when a lead NOBODY owns misses its first-response target. An owned
-             *     lead's breach escalates to its owner; without this, an unowned one escalated to
-             *     nobody at all.
+             * @description Who answers when a lead nobody can answer for misses its first-response target:
+             *     one nobody owns, or one whose owner cannot be handed work: not active, archived, an
+             *     agent, or on a read seat. An owned lead's breach escalates to its owner while that
+             *     owner can be handed work. Otherwise it goes to this seat, and to nobody when none
+             *     is set.
              *
              *     Must name a seat that can be handed work AND may read leads, else `422` — an
              *     escalation carries the lead it is about, so a desk that cannot open the record is
@@ -37878,11 +37883,13 @@ export interface components {
             /** Format: date-time */
             archived_at?: string | null;
         };
-        /** @description A colleague's id and the name a human would recognise them by. Deliberately nothing else: this answers what an id is CALLED, for a caller that already holds the id off a record they can read. Email, status and seat type are the roster's answers, and a naming read has no business disclosing them. */
+        /** @description A colleague's id, the name a human would recognise them by, and whether they left. This answers what an id is CALLED, for a caller that already holds the id off a record they can read. Email and seat type are the roster's answers, and a naming read has no business disclosing them. */
         SeatName: {
             /** Format: uuid */
             id: string;
             display_name: string;
+            /** @description True when the colleague left (deactivated). A record they still own counts in their team's views and needs a new owner, so a screen that names them through this read can say they left. Any member could already tell, because the roster leaves a departed colleague out. */
+            departed: boolean;
         };
         SeatNameListResponse: {
             data: components["schemas"]["SeatName"][];
@@ -48693,6 +48700,8 @@ export interface components {
             id: string;
             name: string;
             topic_statement: string;
+            /** @description True when the answer came from the handbook set that ships with Margince. Only then do claims carry `section` and `opens`. */
+            shipped: boolean;
         };
         KnowledgeClaim: {
             /** @description One sentence of the answer. Absent when generated_by is deterministic — then the quote stands on its own and no prose was written. */
@@ -48716,6 +48725,20 @@ export interface components {
             end_column?: number;
             /** @description A verbatim span from the retrieved passages, whitespace-collapsed and matched before this claim was allowed to exist. */
             quote: string;
+            section?: components["schemas"]["KnowledgeClaimSection"];
+            opens?: components["schemas"]["KnowledgeClaimOpens"];
+        };
+        /** @description The handbook section the quote sits in. Present only on a claim from a page that ships with Margince, and only when the claim carries a `line`; an uploaded document has no section the server can name. */
+        KnowledgeClaimSection: {
+            /** @description The section's heading, without its `#` marks. */
+            title: string;
+            /** @description The 1-based line of the heading. */
+            line: number;
+        };
+        /** @description The settings page the claim's handbook section is about, from the page's `opens:` marker. The client shows a button to it only when the reader may open that page. */
+        KnowledgeClaimOpens: {
+            /** @description A settings page id, as the settings address takes it. */
+            settings_page: string;
         };
         KnowledgeAnswer: {
             /**

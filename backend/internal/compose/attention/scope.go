@@ -367,13 +367,30 @@ func (s *Service) keepTeams(ctx context.Context, rows []ranked) ([]ranked, scope
 	if err != nil {
 		return nil, scopeNote{failed: true}
 	}
-	return rowsForRoster(rows, roster), scopeNote{truncated: cut}
+	former, err := s.formerTeammates(ctx)
+	if err != nil {
+		return nil, scopeNote{failed: true}
+	}
+	return rowsForRoster(rows, roster, former...), scopeNote{truncated: cut}
 }
 
-func rowsForRoster(rows []ranked, roster []TeamMember) []ranked {
-	team := make(map[ids.UUID]bool, len(roster))
+// formerTeammates is the bound reader's answer, or nobody when none is bound.
+func (s *Service) formerTeammates(ctx context.Context) ([]ids.UUID, error) {
+	if s.former == nil {
+		return nil, nil
+	}
+	return s.former.FormerTeammatesOfCaller(ctx)
+}
+
+// rowsForRoster keeps the rows owned by the roster and by former teammates,
+// whose work stays in the team's view until somebody takes it over.
+func rowsForRoster(rows []ranked, roster []TeamMember, former ...ids.UUID) []ranked {
+	team := make(map[ids.UUID]bool, len(roster)+len(former))
 	for _, member := range roster {
 		team[member.UserID] = true
+	}
+	for _, id := range former {
+		team[id] = true
 	}
 	kept := make([]ranked, 0, len(rows))
 	for _, row := range rows {

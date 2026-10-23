@@ -203,6 +203,7 @@ type Service struct {
 	// admits. A lane whose absence widened a scope would be a security hole
 	// wearing the shape of a missing feature.
 	teammates   Teammates
+	former      FormerTeammates
 	namedTeams  NamedTeams
 	weeklyPlans WeeklyPlans
 	planRows    []ranked

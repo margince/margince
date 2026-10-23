@@ -24,7 +24,6 @@ export function useProjectCreateForm({
   const owner = useOwnerPicker(null);
   const core = projectFields(t, {
     owner,
-    currentOwner: null,
     mode: "create",
   }).filter((field) => pinned === undefined || field.key !== "company_id");
   const create = async (values: Record<string, string>) => {

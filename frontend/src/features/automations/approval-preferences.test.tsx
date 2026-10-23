@@ -169,3 +169,37 @@ it("pages explicit muted history, returns to the first page, and closes review",
   expect(screen.queryByText("First reviewed date")).toBeNull();
   expect(screen.getByRole("switch").getAttribute("aria-checked")).toBe("true");
 });
+
+it("draws an answered proposal in the review as history, without verbs", async () => {
+  const user = userEvent.setup();
+  vi.stubGlobal("fetch", async (input: RequestInfo | URL) => {
+    const request =
+      input instanceof Request ? input : new Request(String(input));
+    const url = new URL(request.url);
+    if (url.pathname.endsWith("/me")) return response(meFixture({}));
+    if (url.pathname.endsWith("/approvals")) {
+      return response({
+        data: ["rejected", "pending"].map((status) => ({
+          id: `ap-${status}`,
+          kind: "close_date_correction",
+          status,
+          summary: `A ${status} date`,
+          proposed_by: "system:close-date",
+          created_at: "2026-08-20T09:00:00Z",
+          proposed_change: { expected_close_date: "2026-11-15" },
+        })),
+        page: { has_more: false },
+      });
+    }
+    return response({ data: [{ kind: "close_date_correction", muted: true }] });
+  });
+  mount();
+  await user.click(
+    await screen.findByRole("button", { name: "Review including muted" }),
+  );
+  await screen.findByText("A rejected date");
+
+  expect(screen.getAllByText("Rejected")).toHaveLength(1);
+  expect(screen.getAllByRole("button", { name: "Reject" })).toHaveLength(1);
+  expect(screen.getAllByRole("button", { name: "Approve" })).toHaveLength(1);
+});

@@ -89,9 +89,9 @@ export const Restored: Story = {
   play: restoredOnScreen,
 };
 
-/** Save as draft, beside Send: the draft is written and a toast confirms it,
+/** Closed over unsaved words: the draft is written and a toast confirms it,
  *  carrying the one verb that takes it back. */
-export const SavedAsDraft: Story = {
+export const SavedOnClose: Story = {
   render: savedDraftStory({
     "PUT /mail-drafts": () => jsonResponse({ ...SAVED, version: 4 }),
   }),
@@ -101,10 +101,15 @@ export const SavedAsDraft: Story = {
       screen.getByRole("textbox", { name: "Body" }),
       " Pricing attached.",
     );
-    await userEvent.click(
-      screen.getByRole("button", { name: "Save as draft" }),
-    );
-    await screen.findByText("Draft saved");
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+    const toast = await screen.findByText("Draft saved", {
+      selector: ".toast-said",
+    });
+    const region = toast.closest("output");
+    if (!region) throw new Error("the saved draft drew no toast");
+    await expect(
+      within(region).getByRole("button", { name: "Delete" }),
+    ).toBeInTheDocument();
   },
 };
 
@@ -118,9 +123,7 @@ export const ChangedElsewhere: Story = {
       screen.getByRole("textbox", { name: "Body" }),
       " Pricing attached.",
     );
-    await userEvent.click(
-      screen.getByRole("button", { name: "Save as draft" }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
     await screen.findByText("Draft changed in another window");
   },
 };

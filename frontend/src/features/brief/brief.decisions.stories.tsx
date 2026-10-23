@@ -115,8 +115,7 @@ export const RowOpen: Story = {
   },
 };
 
-// The heavier verdicts, out of the menu. A rejection and an edit each get a
-// whole line to say what they do, which is the trade a glyph cannot make.
+// The menu opened: Later and Edit; the line keeps the yes/no pair.
 export const OtherAnswers: Story = {
   args: { ...BASE, items: MANY },
   play: async ({ canvasElement }) => {

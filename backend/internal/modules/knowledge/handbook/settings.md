@@ -124,6 +124,7 @@ Seeing the rates needs the permission to read exchange rates. The Admin and Ops 
 **Company context** is what Margince knows about your own company, where it read it, and a place to tell it facts yourself. Only an Admin sees this card and edits it; Ops finds the page without it.
 
 ### How do I add a second company we work under?
+<!-- opens: settings/company -->
 
 **Legal entities** lists the companies you work under. Every installation starts with one, marked **Default**. It takes its name, address, VAT ID and logo from the company above, so you change those on the company form. A colleague nobody has assigned works for the default.
 
@@ -134,6 +135,7 @@ To add another, an Admin chooses **New legal entity** and types its name, its le
 The Sign-in and apps page in Settings (group **Company**) holds how members sign in to the installation, and the Google and Microsoft apps. Admin and Ops change it; Management can read it.
 
 ### How do I require two-step sign-in for every member?
+<!-- opens: settings/authentication -->
 To require two-step sign-in for every member of Margince, open Settings → **Sign-in and apps** and turn on **Require second factor**. Margince asks you to confirm first.
 A member without two-step sign-in is asked to set it up the next time they sign in or open Margince, before anything else opens.
 Members who already use it go on as before, with their own phone app.

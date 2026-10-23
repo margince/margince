@@ -61,7 +61,11 @@ To change a proposal before it runs, open it with **Decide** and choose **Edit**
 Also called: amend, modify, correct an agent draft.
 
 ### How do I reject a proposal?
-To turn a proposal down, open it with **Decide** and choose **Reject**. In the app this is one press with no reason form. Nothing is applied and no record changes. Rejecting needs the same authority as approving it, and it is recorded the same way.
+To turn a proposal down, open it with **Decide** and choose **Reject**. The app asks for no reason. Nothing is applied and no record changes. Rejecting needs the same authority as approving it, and it is recorded the same way.
+
+For 8 seconds you then see **Rejected** and **Undo**, and nothing is sent yet. **Undo** puts the proposal back. When the 8 seconds end, your answer is sent. Leaving the page, switching to another tab or app, or answering another proposal sends it at once. While the mouse is over **Undo**, or the keyboard is on it, the 8 seconds stop.
+
+This wait is for one proposal. A proposal in a bundle opens with the rest of its bundle. There you answer each one, and nothing is sent until you choose **Send staged decisions**.
 Also called: decline, deny, dismiss an agent action.
 
 ### What happens if an approval expires?
@@ -89,7 +93,7 @@ A promise read from mail or a meeting and **Add contact from mail** are the exce
 
 The email names the record as its heading and says what is proposed. For a change to a record, it lists each field with its value now and the value after the change, up to eight fields. It also says why you are asked. It leaves out any value you may not see.
 
-The email goes out about three minutes after the approval is staged. Approvals waiting for you from those few minutes arrive together in one email, one section each. An approval you already answered in Margince is left out.
+The email goes out about three minutes after the approval is staged. Approvals waiting for you from those few minutes arrive together in one email, one section each. An approval you already answered in Margince is left out. No email goes out for an approval your own connected AI tool raised while you work with it, because the conversation shows it to you. It still waits in your approvals list and your digest.
 Also called: approval email, decision needed, who gets notified, approval notice.
 
 ### Who is asked about a promise read from mail or a meeting?
@@ -219,6 +223,16 @@ original.
 **Reject.** Nothing is applied and no record changes. The app asks for no
 reason. When an agent rejects with a reason, the reason is kept in the audit
 log.
+
+For 8 seconds after you choose **Reject**, you see **Rejected** and **Undo**,
+and nothing is sent yet. When the 8 seconds end, your answer is sent. Leaving
+the page, switching to another tab or app, or answering another proposal sends
+it at once. While the mouse is over **Undo**, or the keyboard is on it, the 8
+seconds stop.
+
+This wait is for one proposal. A proposal in a bundle opens with the rest of
+its bundle. There you answer each one, and nothing is sent until you choose
+**Send staged decisions**.
 
 Rejecting needs the same authority as approving, and it is recorded the same
 way.

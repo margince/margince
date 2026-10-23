@@ -2194,6 +2194,15 @@ export const de = {
   "palette.searching": "Datensätze werden durchsucht…",
   "palette.searchFailedTitle": "Suche fehlgeschlagen",
   "palette.searchFailed": "Die Befehle oben funktionieren weiterhin.",
+  "palette.askRow": "Margince fragen: „{query}“",
+  "palette.asking": "Margince wird gefragt…",
+  "palette.answerAria": "Antwort von Margince",
+  "palette.answerFrom": "Aus {name}",
+  "palette.answerAfterHandbook": "Nicht im Handbuch. Aus {name}",
+  "palette.answerSection": "Abschnitt im Handbuch: {title}",
+  "palette.openSetting": "Einstellungen → {page} öffnen",
+  "palette.askNoAnswer":
+    "Margince antwortet aus seinem Handbuch und deinen Dokumenten. Frage einen Admin oder ein Teammitglied.",
   "action.newDeal": "Neuer Deal",
   "action.booking": "Buchungsseite",
 
@@ -2512,6 +2521,7 @@ export const de = {
   "common.saving": "Wird gespeichert…",
   "common.loading": "Wird geladen…",
   "ref.nameLoadFailed": "Name wurde nicht geladen",
+  "ref.memberLeft": "{name} (ausgeschieden)",
   "owner.rosterFailed":
     "Die Teammitglieder konnten nicht geladen werden. Lade die Seite neu, um eines zu wählen.",
   "ref.notInRoster":
@@ -11105,7 +11115,7 @@ export const de = {
     "Volle Plätze, die nicht deaktiviert oder gesperrt sind, Agenten eingeschlossen. Leseplätze sind unbegrenzt und zählen nicht mit.",
   "settings.rates.fxTitle": "Wechselkurse",
   "settings.rates.fxIntro":
-    "Wechselkurse, die Beträge in Fremdwährung in die Basiswährung umrechnen. Neue Kurse gelten ab heute oder später. Frühere Kurse ändern sich nie.",
+    "Wechselkurse, die Beträge in Fremdwährung in die Basiswährung umrechnen. Neue Kurse gelten ab heute oder später. Ein früheres Datum geht nur vor dem ersten Kurs der Währung. Ein Kurs, der schon gilt, ändert sich nie.",
   "settings.rates.fxWithheld":
     "Nur Admins und Operations sehen Wechselkurse. Jede Gesamtsumme in der Installation wird damit umgerechnet.",
   "settings.rates.readOnly":
@@ -15532,6 +15542,8 @@ export const de = {
   "worklist.scope.team": "Team",
   "worklist.scope.all": "Alle",
   "worklist.owner.shared": "Gemeinsam zuständig: {names}",
+  "worklist.owner.left":
+    "{name} ist ausgeschieden. Dieser Eintrag braucht ein neues verantwortliches Teammitglied.",
   "worklist.owner.sharedCount_one": "{count} zuständige Empfangende",
   "worklist.owner.sharedCount_other": "{count} zuständige Empfangende",
   "worklist.owner.visibleLabel": "Ansicht",

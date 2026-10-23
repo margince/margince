@@ -23238,7 +23238,8 @@ paths:
       summary: Count the live records a member still owns. Member administration, human-only.
       description: |
         How many live leads, contacts, companies, deals and projects the member owns that the
-        caller can see. Deactivating a member moves none of them, so the deactivate dialog reads
+        caller can see. For a member who left, it also counts the contacts and companies only
+        they can see (captured and never made shared), which the handover also moves. Deactivating a member moves none of them, so the deactivate dialog reads
         this to say what would be left behind. Works for any non-archived member, deactivated or
         not, because work is best handed over before the account is closed.
       x-agent-access: human-only
@@ -23260,8 +23261,9 @@ paths:
         Hands each live lead, contact, company, deal and project the member owns to `to_user_id`.
         Every record moves through its own owner-change write, so each gets the audit row and
         event a single reassignment writes, and a deal's pending proposals follow it to the new
-        owner. A record the caller may not change stays with the member and is counted in
-        `left`; nothing else is said about it. `to_user_id` must be a seat the caller may make an
+        owner. For a member who left, the contacts and companies only they can see move too and
+        stay private, now to the new owner; an active member keeps theirs. A record the caller may not change stays with the member and is counted
+        in `left`; nothing else is said about it. `to_user_id` must be a seat the caller may make an
         owner (an active human seat that can write, inside the caller's write scope), else `422`
         with `code: owner_not_assignable` and nothing moves. Tasks, automations and deal-room
         stewardships are not moved.
@@ -49128,10 +49130,11 @@ components:
           type: [string, 'null']
           format: uuid
           description: |
-            Who answers when a lead nobody owns misses its target. Null means nobody is
-            configured, and an unowned breach is recorded without being addressed. Also reads
-            null once the named seat can no longer work the queue — suspended, archived, an
-            agent, a read seat — because a desk nobody reads is the same silence as none.
+            Who answers when a lead nobody can answer for misses its target: one nobody owns,
+            or one whose owner cannot be handed work. Null means nobody is configured, and such a breach is
+            recorded without being addressed. Also reads null once the named seat can no longer
+            work the queue — suspended, archived, an agent, a read seat — because a desk nobody
+            reads is the same silence as none.
 
     UpdateLeadSettingsRequest:
       type: object
@@ -49142,9 +49145,11 @@ components:
           type: [string, 'null']
           format: uuid
           description: |
-            Who answers when a lead NOBODY owns misses its first-response target. An owned
-            lead's breach escalates to its owner; without this, an unowned one escalated to
-            nobody at all.
+            Who answers when a lead nobody can answer for misses its first-response target:
+            one nobody owns, or one whose owner cannot be handed work: not active, archived, an
+            agent, or on a read seat. An owned lead's breach escalates to its owner while that
+            owner can be handed work. Otherwise it goes to this seat, and to nobody when none
+            is set.
 
             Must name a seat that can be handed work AND may read leads, else `422` — an
             escalation carries the lead it is about, so a desk that cannot open the record is
@@ -51563,14 +51568,21 @@ components:
     SeatName:
       type: object
       description: >
-        A colleague's id and the name a human would recognise them by. Deliberately nothing
-        else: this answers what an id is CALLED, for a caller that already holds the id off a
-        record they can read. Email, status and seat type are the roster's answers, and a
-        naming read has no business disclosing them.
-      required: [id, display_name]
+        A colleague's id, the name a human would recognise them by, and whether they left.
+        This answers what an id is CALLED, for a caller that already holds the id off a record
+        they can read. Email and seat type are the roster's answers, and a naming read has no
+        business disclosing them.
+      required: [id, display_name, departed]
       properties:
         id: { type: string, format: uuid }
         display_name: { type: string }
+        departed:
+          type: boolean
+          description: >
+            True when the colleague left (deactivated). A record they still own counts in their
+            team's views and needs a new owner, so a screen that names them through this read can
+            say they left.
+            Any member could already tell, because the roster leaves a departed colleague out.
     SeatNameListResponse:
       type: object
       required: [data]
@@ -64705,7 +64717,7 @@ components:
 
     KnowledgeAnswerCorpus:
       type: object
-      required: [id, name, topic_statement]
+      required: [id, name, topic_statement, shipped]
       description: >-
         The corpus as an ANSWER needs it: enough to name what was searched and to
         quote the topic statement back in a refusal, and nothing else. It is not
@@ -64718,6 +64730,11 @@ components:
         id: { type: string, format: uuid }
         name: { type: string }
         topic_statement: { type: string }
+        shipped:
+          type: boolean
+          description: >-
+            True when the answer came from the handbook set that ships with Margince.
+            Only then do claims carry `section` and `opens`.
 
     KnowledgeClaim:
       type: object
@@ -64779,6 +64796,36 @@ components:
           description: >-
             A verbatim span from the retrieved passages, whitespace-collapsed and
             matched before this claim was allowed to exist.
+        section:
+          $ref: '#/components/schemas/KnowledgeClaimSection'
+        opens:
+          $ref: '#/components/schemas/KnowledgeClaimOpens'
+
+    KnowledgeClaimSection:
+      type: object
+      required: [title, line]
+      description: >-
+        The handbook section the quote sits in. Present only on a claim from a page
+        that ships with Margince, and only when the claim carries a `line`; an
+        uploaded document has no section the server can name.
+      properties:
+        title:
+          type: string
+          description: The section's heading, without its `#` marks.
+        line: { type: integer, minimum: 1, description: The 1-based line of the heading. }
+
+    KnowledgeClaimOpens:
+      type: object
+      required: [settings_page]
+      description: >-
+        The settings page the claim's handbook section is about, from the page's
+        `opens:` marker. The client shows a button to it only when the reader may
+        open that page.
+      properties:
+        settings_page:
+          type: string
+          pattern: '^[a-z][a-z-]*$'
+          description: A settings page id, as the settings address takes it.
 
     KnowledgeAnswer:
       type: object

@@ -138,3 +138,37 @@ func (s *Service) LiveTeammatesOfCaller(ctx context.Context) ([]TeamMember, bool
 	}
 	return members, false, nil
 }
+
+// FormerTeammatesOfCaller lists the colleagues who left (deactivated, not
+// archived) and still sit on a live team with the caller. A team view keeps
+// counting the work they still own, marked as needing a new owner.
+//
+// Not part of LiveTeammatesOfCaller: that roster draws the board and decides
+// whose queue a lead may open, and a departed colleague has neither.
+func (s *Service) FormerTeammatesOfCaller(ctx context.Context) ([]ids.UUID, error) {
+	if err := auth.RequireHuman(ctx); err != nil {
+		return nil, err
+	}
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.Type != principal.PrincipalHuman || actor.UserID.IsZero() {
+		return nil, apperrors.ErrPermissionDenied
+	}
+	var former []ids.UUID
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `
+			SELECT DISTINCT u.id
+			  FROM team_membership ma
+			  JOIN team_membership mb ON mb.team_id = ma.team_id
+			  JOIN team t ON t.id = ma.team_id AND t.archived_at IS NULL
+			  JOIN app_user u ON u.id = mb.user_id AND NOT u.is_agent
+			                 AND `+DepartedMemberSQL("u")+`
+			 WHERE ma.user_id = $1
+			 ORDER BY u.id`, actor.UserID)
+		if err != nil {
+			return err
+		}
+		former, err = pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+		return err
+	})
+	return former, err
+}

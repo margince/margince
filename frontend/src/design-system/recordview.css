@@ -48,6 +48,39 @@
     var(--space-6)
   );
   overflow-y: auto;
+  /* The card scrolls only to stay in view, so its bar is no part of the
+     picture until the pointer is on the card. */
+  scrollbar-color: transparent transparent;
+}
+/* Under :where() so the shell's accent still lights the bar itself
+   (app.css). */
+.record-split-details:where(:hover) {
+  scrollbar-color: var(--borderControl) transparent;
+}
+/* Chrome and Safari draw a 6px bar from the WebKit pseudo-elements, which
+   they ignore while either standard property is set; Firefox keeps the thin
+   standard bar. Three classes outrank the shell's hover rule (app.css). */
+@supports selector(::-webkit-scrollbar) {
+  .record-split .record-split-row .record-split-details {
+    scrollbar-width: auto;
+    scrollbar-color: auto;
+  }
+  .record-split-details::-webkit-scrollbar {
+    width: 6px;
+  }
+  /* The track stops short of the card's rounded corners. */
+  .record-split-details::-webkit-scrollbar-track {
+    margin: var(--r-lg) 0;
+  }
+  .record-split-details::-webkit-scrollbar-thumb {
+    background: transparent;
+  }
+  .record-split-details:hover::-webkit-scrollbar-thumb {
+    background: var(--borderControl);
+  }
+  .record-split-details::-webkit-scrollbar-thumb:hover {
+    background: var(--accent);
+  }
 }
 .record-split-sheet {
   flex: 1 1 0;

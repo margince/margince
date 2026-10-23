@@ -40984,9 +40984,12 @@ type KnowledgeAnswerOutcome string
 
 // KnowledgeAnswerCorpus The corpus as an ANSWER needs it: enough to name what was searched and to quote the topic statement back in a refusal, and nothing else. It is not KnowledgeCorpus, because that one carries coverage — which the answer already reports at its own top level — and an answer shipping the same counts down two paths is two components rendering different numbers on one screen with nothing to fail when they disagree. The settings a corpus is administered by (min_similarity, default_ask, reindexing) are no business of a reply.
 type KnowledgeAnswerCorpus struct {
-	Id             openapi_types.UUID `json:"id"`
-	Name           string             `json:"name"`
-	TopicStatement string             `json:"topic_statement"`
+	Id   openapi_types.UUID `json:"id"`
+	Name string             `json:"name"`
+
+	// Shipped True when the answer came from the handbook set that ships with Margince. Only then do claims carry `section` and `opens`.
+	Shipped        bool   `json:"shipped"`
+	TopicStatement string `json:"topic_statement"`
 }
 
 // KnowledgeClaim defines model for KnowledgeClaim.
@@ -41009,11 +41012,32 @@ type KnowledgeClaim struct {
 	// Line The 1-based line of the document where this quote begins, so a reader can open the file and land on it. Absent when the quote could not be located in the passage's own text — a line number pointing at the wrong line is worse than none.
 	Line *int `json:"line,omitempty"`
 
+	// Opens The settings page the claim's handbook section is about, from the page's `opens:` marker. The client shows a button to it only when the reader may open that page.
+	Opens *KnowledgeClaimOpens `json:"opens,omitempty"`
+
 	// Quote A verbatim span from the retrieved passages, whitespace-collapsed and matched before this claim was allowed to exist.
 	Quote string `json:"quote"`
 
+	// Section The handbook section the quote sits in. Present only on a claim from a page that ships with Margince, and only when the claim carries a `line`; an uploaded document has no section the server can name.
+	Section *KnowledgeClaimSection `json:"section,omitempty"`
+
 	// Text One sentence of the answer. Absent when generated_by is deterministic — then the quote stands on its own and no prose was written.
 	Text *string `json:"text,omitempty"`
+}
+
+// KnowledgeClaimOpens The settings page the claim's handbook section is about, from the page's `opens:` marker. The client shows a button to it only when the reader may open that page.
+type KnowledgeClaimOpens struct {
+	// SettingsPage A settings page id, as the settings address takes it.
+	SettingsPage string `json:"settings_page"`
+}
+
+// KnowledgeClaimSection The handbook section the quote sits in. Present only on a claim from a page that ships with Margince, and only when the claim carries a `line`; an uploaded document has no section the server can name.
+type KnowledgeClaimSection struct {
+	// Line The 1-based line of the heading.
+	Line int `json:"line"`
+
+	// Title The section's heading, without its `#` marks.
+	Title string `json:"title"`
 }
 
 // KnowledgeCorpus defines model for KnowledgeCorpus.
@@ -41449,10 +41473,11 @@ type LeadSettings struct {
 	// shows each as read-only. Empty when nothing is locked. A write ignores it.
 	Locks *SettingLocks `json:"locks,omitempty"`
 
-	// UnassignedEscalationUserId Who answers when a lead nobody owns misses its target. Null means nobody is
-	// configured, and an unowned breach is recorded without being addressed. Also reads
-	// null once the named seat can no longer work the queue — suspended, archived, an
-	// agent, a read seat — because a desk nobody reads is the same silence as none.
+	// UnassignedEscalationUserId Who answers when a lead nobody can answer for misses its target: one nobody owns,
+	// or one whose owner cannot be handed work. Null means nobody is configured, and such a breach is
+	// recorded without being addressed. Also reads null once the named seat can no longer
+	// work the queue — suspended, archived, an agent, a read seat — because a desk nobody
+	// reads is the same silence as none.
 	UnassignedEscalationUserId *openapi_types.UUID `json:"unassigned_escalation_user_id,omitempty"`
 }
 
@@ -48178,8 +48203,10 @@ type SearchResultTrustTier string
 // SearchResultType defines model for SearchResult.Type.
 type SearchResultType string
 
-// SeatName A colleague's id and the name a human would recognise them by. Deliberately nothing else: this answers what an id is CALLED, for a caller that already holds the id off a record they can read. Email, status and seat type are the roster's answers, and a naming read has no business disclosing them.
+// SeatName A colleague's id, the name a human would recognise them by, and whether they left. This answers what an id is CALLED, for a caller that already holds the id off a record they can read. Email and seat type are the roster's answers, and a naming read has no business disclosing them.
 type SeatName struct {
+	// Departed True when the colleague left (deactivated). A record they still own counts in their team's views and needs a new owner, so a screen that names them through this read can say they left. Any member could already tell, because the roster leaves a departed colleague out.
+	Departed    bool               `json:"departed"`
 	DisplayName string             `json:"display_name"`
 	Id          openapi_types.UUID `json:"id"`
 }
@@ -51360,9 +51387,11 @@ type UpdateLeadSettingsRequest struct {
 	FirstResponseEnabled       *bool `json:"first_response_enabled,omitempty"`
 	FirstResponseTargetMinutes *int  `json:"first_response_target_minutes,omitempty"`
 
-	// UnassignedEscalationUserId Who answers when a lead NOBODY owns misses its first-response target. An owned
-	// lead's breach escalates to its owner; without this, an unowned one escalated to
-	// nobody at all.
+	// UnassignedEscalationUserId Who answers when a lead nobody can answer for misses its first-response target:
+	// one nobody owns, or one whose owner cannot be handed work: not active, archived, an
+	// agent, or on a read seat. An owned lead's breach escalates to its owner while that
+	// owner can be handed work. Otherwise it goes to this seat, and to nobody when none
+	// is set.
 	//
 	// Must name a seat that can be handed work AND may read leads, else `422` — an
 	// escalation carries the lead it is about, so a desk that cannot open the record is

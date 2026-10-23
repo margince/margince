@@ -54,6 +54,10 @@ export { Callout, type CalloutTone } from "../design-system/callout";
 // was. A binary a rep has to weigh is the one choice that must be readable at
 // rest, and no radio group existed to publish until this one.
 export { type Choice, ChoiceList } from "../design-system/choicelist";
+// useClipboardCopy, because the clipboard-spelling gate scans unit screens too,
+// and a unit had no other way to copy that passes it. It guards the secure
+// context and says why a copy failed, which a hand-written copy gets wrong.
+export { useClipboardCopy } from "../design-system/clipboardcopy";
 // DataTable, because a unit that has ROWS to show has otherwise to write a
 // bare `<table>`, and no extension ships a stylesheet — so what it gets is the
 // browser's default table, unaligned, unbounded, and scrolling the whole page

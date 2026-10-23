@@ -2,8 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import type { Locale } from "../../i18n";
+import { de } from "../../i18n/de";
 import {
   approvalRowSubject as approval,
   ApprovalRowStory as Row,
@@ -143,6 +145,22 @@ export const Expiring: Story = {
 // A decided row is read-only: the history of what was decided, with no verbs.
 export const Decided: Story = {
   render: () => <Row subject={approval({ status: "approved" })} decided />,
+};
+
+export const RejectHeld: Story = {
+  render: () => <Row subject={approval({})} locale="de" />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: de["decision.reject"] }),
+    );
+    await expect(
+      await canvas.findByText(de["decision.status.rejected"]),
+    ).toHaveFocus();
+    await expect(
+      canvas.getByRole("button", { name: de["common.undo"] }),
+    ).toBeVisible();
+  },
 };
 
 // The world moved under the proposal. The honest offer is to re-stage, not to

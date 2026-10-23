@@ -55,6 +55,10 @@ func (s *Service) teamExceptionsIn(ctx context.Context) (crmcontracts.TeamExcept
 	if err != nil {
 		return crmcontracts.TeamExceptions{}, err
 	}
+	former, err := s.formerTeammates(ctx)
+	if err != nil {
+		return crmcontracts.TeamExceptions{}, err
+	}
 	day, err := s.Assemble(ctx)
 	if err != nil {
 		return crmcontracts.TeamExceptions{}, err
@@ -66,7 +70,7 @@ func (s *Service) teamExceptionsIn(ctx context.Context) (crmcontracts.TeamExcept
 	if err != nil {
 		return crmcontracts.TeamExceptions{}, err
 	}
-	found := exceptionsFor(rowsForRoster(classifyDay(day, day.AsOf, money), roster), day.AsOf)
+	found := exceptionsFor(rowsForRoster(classifyDay(day, day.AsOf, money), roster, former...), day.AsOf)
 	out := crmcontracts.TeamExceptions{
 		AsOf:       day.AsOf,
 		Exceptions: found,

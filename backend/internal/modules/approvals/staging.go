@@ -414,16 +414,18 @@ func (s *Service) insertProposalInTx(ctx context.Context, tx pgx.Tx, in StageInp
 			                       target_entity_type, target_entity_id, target_version,
 			                       co_target_entity_type, co_target_entity_id, co_target_version,
 			                       target_label, summary, proposed_change, diff_hash, expires_at,
-			                       bundle_id, evidence, requested_decider_id, requested_decider_source)
+			                       bundle_id, evidence, requested_decider_id, requested_decider_source,
+			                       staged_in_conversation_of)
 			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
-			         now() + $17::interval, $18, $19, $20, $21)
+			         now() + $17::interval, $18, $19, $20, $21, $22)
 			 RETURNING expires_at`,
 		id, in.Kind, p.ID, nullUUID(p.OnBehalfOf), nullUUID(p.PassportID), nullUUID(p.ConnectionID),
 		nullStr(in.TargetType), nullUUID(in.TargetID), in.TargetVersion,
 		nullStr(in.CoTargetType), nullUUID(in.CoTargetID), coTargetVersion,
 		stagedTargetLabel(ctx, tx, in),
 		nullStr(in.Summary), in.ProposedChange, in.DiffHash, ttlFor(in.Kind, in.TTL).String(),
-		nullUUID(in.BundleID), evidence, decider.member, string(decider.source)).Scan(&expiresAt); err != nil {
+		nullUUID(in.BundleID), evidence, decider.member, string(decider.source),
+		nullUUID(conversationOf(ctx, p))).Scan(&expiresAt); err != nil {
 		return ids.ApprovalID{}, err
 	}
 	expiresAt = expiresAt.UTC()

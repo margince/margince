@@ -6,7 +6,7 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 
 ## approval
 
-34 columns · primary key `(id)` · referenced by 4 foreign keys
+35 columns · primary key `(id)` · referenced by 4 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -35,6 +35,7 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 | `requested_decider_id` | `uuid` |  | The member explicitly asked to decide, independent of who has permission to approve. |
 | `requested_decider_source` | `text` |  |  |
 | `staged_by_connection` | `uuid` |  | Points at `oauth_grant.id`. |
+| `staged_in_conversation_of` | `uuid` |  | Points at `app_user.id`. |
 | `status` | `text`, default `'pending'::text` | yes | One of `pending`, `approved`, `rejected`, `expired`. |
 | `summary` | `text` |  | One-line description of the proposed change. |
 | `target_entity_id` | `uuid` |  |  |
@@ -54,6 +55,7 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 | `passport_id` | `passport` | deleting the parent keeps this row and clears the link |
 | `requested_decider_id` | `app_user` | deleting the parent keeps this row and clears the link |
 | `staged_by_connection` | `oauth_grant` | deleting the parent keeps this row and clears the link |
+| `staged_in_conversation_of` | `app_user` | deleting the parent keeps this row and clears the link |
 
 **Rules**
 
