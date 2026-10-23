@@ -204,17 +204,17 @@ func TestAutomaticWorkIsRefusedTheFieldsAHumanTyped(t *testing.T) {
 }
 
 // automaticWork is an agent with no passport behind it, acting for the
-// workspace's first colleague. It still stages a confirm-first call and a write
-// over a human-typed value.
+// signed-in colleague. It is refused a confirm-first call and a write over a
+// human-typed value.
 func automaticWork(t *testing.T, e *apptest.AppEnv) context.Context {
 	t.Helper()
-	var ws, colleague ids.UUID
+	var ws ids.UUID
 	if err := e.Owner.QueryRow(t.Context(), `SELECT id FROM workspace LIMIT 1`).Scan(&ws); err != nil {
 		t.Fatalf("reading the workspace: %v", err)
 	}
-	if err := e.Owner.QueryRow(t.Context(),
-		`SELECT id FROM app_user WHERE is_agent = false ORDER BY created_at, id LIMIT 1`).Scan(&colleague); err != nil {
-		t.Fatalf("reading the colleague: %v", err)
+	colleague, err := ids.Parse(sessionUserID(t, e))
+	if err != nil {
+		t.Fatalf("reading the signed-in colleague: %v", err)
 	}
 	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), ws), ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{

@@ -57,8 +57,8 @@ func TestInviteMeetingOnAColleaguesPassportIsStagedOnNeitherDoor(t *testing.T) {
 	if status := d.e.Call(t, "POST", "/v1/scheduling/invitations", invitation(viaREST), d.bearer, &refusal); refusal.Code == "approval_required" {
 		t.Fatalf("an invitation over REST → %d %q, want it past the approval gate", status, refusal.Code)
 	}
-	if got := d.mcp.Call(t, "invite_meeting", invitation(viaTool)); strings.Contains(got.Text, "staged as approval") {
-		t.Fatalf("an invitation over the tool was staged:\n%s", got.Text)
+	if refused := d.toolRefused(t, "invite_meeting", invitation(viaTool)); strings.Contains(refused, "staged as approval") {
+		t.Fatalf("an invitation over the tool was staged:\n%s", refused)
 	}
 	var staged int
 	if err := d.e.Owner.QueryRow(t.Context(), `SELECT count(*) FROM approval`).Scan(&staged); err != nil {
