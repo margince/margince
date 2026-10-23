@@ -2512,6 +2512,7 @@ export const de = {
   "common.saving": "Wird gespeichert…",
   "common.loading": "Wird geladen…",
   "ref.nameLoadFailed": "Name wurde nicht geladen",
+  "ref.memberLeft": "{name} (ausgeschieden)",
   "owner.rosterFailed":
     "Die Teammitglieder konnten nicht geladen werden. Lade die Seite neu, um eines zu wählen.",
   "ref.notInRoster":
@@ -15526,6 +15527,8 @@ export const de = {
   "worklist.scope.team": "Team",
   "worklist.scope.all": "Alle",
   "worklist.owner.shared": "Gemeinsam zuständig: {names}",
+  "worklist.owner.left":
+    "{name} ist ausgeschieden. Das braucht eine neue Zuständigkeit.",
   "worklist.owner.sharedCount_one": "{count} zuständige Empfangende",
   "worklist.owner.sharedCount_other": "{count} zuständige Empfangende",
   "worklist.owner.visibleLabel": "Ansicht",

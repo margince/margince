@@ -642,8 +642,8 @@ func TestASavedRunIsReAskedUnderTheReadersOwnLens(t *testing.T) {
 	}
 }
 
-// A team's numbers keep counting the open deals of a member who left, until
-// somebody takes them over, so the total does not drop the day they leave.
+// A team's numbers keep counting the open deals of a member who left. The total
+// does not drop the day they leave.
 func TestATeamsNumbersKeepCountingADepartedMembersDeals(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)

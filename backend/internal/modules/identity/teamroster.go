@@ -140,9 +140,8 @@ func (s *Service) LiveTeammatesOfCaller(ctx context.Context) ([]TeamMember, bool
 }
 
 // FormerTeammatesOfCaller lists the colleagues who left (deactivated, not
-// archived) and are still members of a live team with the caller. A team view
-// keeps counting the work they still own, marked as needing a new owner, so
-// the team's numbers do not drop silently when somebody leaves.
+// archived) and still sit on a live team with the caller. A team view keeps
+// counting the work they still own, marked as needing a new owner.
 //
 // Not part of LiveTeammatesOfCaller: that roster draws the board and decides
 // whose queue a lead may open, and a departed colleague has neither.

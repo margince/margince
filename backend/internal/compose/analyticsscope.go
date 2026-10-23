@@ -211,14 +211,10 @@ func ownedOrUnowned(col, clause string) string {
 	return fmt.Sprintf("(%s IS NULL OR %s)", col, clause)
 }
 
-// teamMembersSQL selects the members of a live team whose work the team's
-// numbers count: those who can still act, and those who left but are not
-// archived.
-//
-// A departed colleague's open deals stay in the team's totals until somebody
-// takes them over, so the team's numbers do not drop the day a person leaves.
-// The deals name their owner, and every screen marks that owner as having left.
-// Membership rows outlive an archived team, so the live-team join stays.
+// teamMembersSQL selects the members of a live team whose work its numbers
+// count. Those are members who can act, and members who left but are not archived.
+// A departed colleague's open deals stay in the totals until somebody takes
+// them over. Every screen marks that owner as having left.
 func teamMembersSQL(pos int, match string) string {
 	return fmt.Sprintf(`SELECT tm.user_id FROM team_membership tm
 		JOIN team t ON t.id = tm.team_id AND t.archived_at IS NULL

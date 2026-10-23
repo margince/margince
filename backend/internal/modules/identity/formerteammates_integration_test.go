@@ -12,8 +12,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// A teammate who left is a former teammate; one who stays is not, and a
-// colleague who left from another team is nobody's former teammate here.
+// A teammate who left is a former teammate. One who stays is not. A colleague
+// who left another team is nobody's former teammate here.
 func TestAFormerTeammateIsSomebodyWhoLeftTheReadersTeam(t *testing.T) {
 	e := setupRevocationEnv(t, "former-teammates")
 	sales, err := e.svc.CreateTeam(e.wsCtx(e.admin), e.admin, "DACH Sales")

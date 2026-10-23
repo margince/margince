@@ -135,6 +135,26 @@ func TestAHandoverMovesPrivateRecordsAndKeepsThemPrivate(t *testing.T) {
 	}
 }
 
+// A colleague who still works here keeps their private records: only the work
+// of somebody who left is handed over that far.
+func TestAHandoverLeavesAnActiveMembersPrivateRecordsAlone(t *testing.T) {
+	e := integration.Setup(t)
+	private := ids.UUID(seedBulkContacts(t, e, e.Rep1, 1)[0].Id)
+	e.MakeCapturePrivate(t, "contact", private, e.Rep1)
+	seam := handoverSeamFor(e)
+
+	owned, err := seam.Owned(e.Admin(), e.Rep1)
+	if err != nil || owned.Contact != 0 {
+		t.Fatalf("owned = %+v, %v; want an active member's private contact neither counted nor shown", owned, err)
+	}
+	if _, err := seam.HandOver(e.Admin(), e.Rep1, e.Rep2); err != nil {
+		t.Fatalf("hand over: %v", err)
+	}
+	if got := ownerOf(t, e, "contact", private); got != e.Rep1 {
+		t.Errorf("an active member's private contact moved to %s", got)
+	}
+}
+
 // The receiver must be somebody the caller may make an owner. The member is no
 // receiver of their own work. A caller without member administration hands on
 // nobody's work.

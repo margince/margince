@@ -15807,8 +15807,8 @@ export interface paths {
         /**
          * Count the live records a member still owns. Member administration, human-only.
          * @description How many live leads, contacts, companies, deals and projects the member owns that the
-         *     caller can see, plus the contacts and companies only the member can see (captured and
-         *     never made shared), which the handover also moves. Deactivating a member moves none of them, so the deactivate dialog reads
+         *     caller can see. For a member who left, it also counts the contacts and companies only
+         *     they can see (captured and never made shared), which the handover also moves. Deactivating a member moves none of them, so the deactivate dialog reads
          *     this to say what would be left behind. Works for any non-archived member, deactivated or
          *     not, because work is best handed over before the account is closed.
          */
@@ -15819,8 +15819,8 @@ export interface paths {
          * @description Hands each live lead, contact, company, deal and project the member owns to `to_user_id`.
          *     Every record moves through its own owner-change write, so each gets the audit row and
          *     event a single reassignment writes, and a deal's pending proposals follow it to the new
-         *     owner. Contacts and companies only the member can see move too and stay private, now to
-         *     the new owner. A record the caller may not change stays with the member and is counted
+         *     owner. For a member who left, the contacts and companies only they can see move too and
+         *     stay private, now to the new owner; an active member keeps theirs. A record the caller may not change stays with the member and is counted
          *     in `left`; nothing else is said about it. `to_user_id` must be a seat the caller may make an
          *     owner (an active human seat that can write, inside the caller's write scope), else `422`
          *     with `code: owner_not_assignable` and nothing moves. Tasks, automations and deal-room

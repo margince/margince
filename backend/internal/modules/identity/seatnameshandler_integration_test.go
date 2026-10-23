@@ -201,9 +201,8 @@ func TestTheAnswerFollowsTheOrderAsked(t *testing.T) {
 	}
 }
 
-// The shape is the disclosure decision: a naming read hands back a name and
-// whether the colleague left, and a later "while we are here" addition of the
-// email has to argue with this.
+// The shape is the disclosure decision. A naming read hands back a name and
+// whether the colleague left. Adding the email later has to argue with this.
 func TestTheAnswerCarriesNothingButTheName(t *testing.T) {
 	e := setupRevocationEnv(t, "seat-names-shape")
 	rep := inviteAndLogin(t, e, "rep@acme.test", "Rep One")

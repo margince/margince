@@ -2439,6 +2439,7 @@ export const vi = {
   "common.saving": "Đang lưu…",
   "common.loading": "Đang tải…",
   "ref.nameLoadFailed": "Không thể tải tên",
+  "ref.memberLeft": "{name} (đã nghỉ)",
   "owner.rosterFailed":
     "Không thể tải danh sách thành viên. Hãy tải lại trang để chọn một người.",
   "ref.notInRoster":
@@ -15152,6 +15153,8 @@ export const vi = {
   "worklist.scope.team": "Nhóm",
   "worklist.scope.all": "Tất cả",
   "worklist.owner.shared": "Cùng phụ trách: {names}",
+  "worklist.owner.left":
+    "{name} đã nghỉ. Việc này cần người chịu trách nhiệm mới.",
   "worklist.owner.sharedCount_one": "{count} bên nhận phụ trách",
   "worklist.owner.sharedCount_other": "{count} bên nhận phụ trách",
   "worklist.owner.visibleLabel": "Đang xem",

@@ -23,9 +23,9 @@ func LiveMemberSQL(alias string) string {
 	return fmt.Sprintf("%sstatus = 'active' AND %sarchived_at IS NULL", prefix, prefix)
 }
 
-// DepartedMemberSQL is a colleague who left but is not archived: deactivated,
-// so they act on nothing, while the work they still own counts in their team's
-// views until somebody takes it over.
+// DepartedMemberSQL is a colleague who left but is not archived. They act on
+// nothing, while the work they still own counts in their team's views until
+// somebody takes it over.
 func DepartedMemberSQL(alias string) string {
 	prefix := ""
 	if alias != "" {

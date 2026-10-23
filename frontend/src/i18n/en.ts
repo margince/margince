@@ -2477,6 +2477,7 @@ export const en = {
   // never becomes a link, because a name that did not load cannot be trusted as
   // a destination.
   "ref.nameLoadFailed": "Name did not load",
+  "ref.memberLeft": "{name} (left)",
   "owner.rosterFailed": "Colleagues did not load. Reload the page to pick one.",
   "ref.notInRoster": "Currently assigned (no longer in the user list)",
 
@@ -15476,6 +15477,7 @@ export const en = {
   "worklist.scope.team": "Team",
   "worklist.scope.all": "All",
   "worklist.owner.shared": "Shared responsibility: {names}",
+  "worklist.owner.left": "{name} left. This needs a new owner.",
   "worklist.owner.sharedCount_one": "{count} responsible recipient",
   "worklist.owner.sharedCount_other": "{count} responsible recipients",
   "worklist.owner.visibleLabel": "Viewing",

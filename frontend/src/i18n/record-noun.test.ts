@@ -612,6 +612,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "systemJob.assign_owner_release",
     "history.field.owner_id",
     "share.access.writeNote",
+    "worklist.owner.left",
     "list.owner",
     "co.pulse.owner",
     "approval.field.owner",
