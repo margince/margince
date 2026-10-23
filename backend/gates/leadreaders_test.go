@@ -79,6 +79,7 @@ var predicateLeadReads = gatekit.Waive(map[string]string{
 // (platform/auth/rbac.go), so the gate would admit them anyway and the entry
 // records why asking was never the point.
 var lifecycleLeadReads = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/deduperecheck.go:readLeadSide":                        "the nightly duplicate re-check reads both leads of an open pair, under the system principal behind auth.RequireSystem, to re-score it. Its only effect is whether the pair stays on the review queue; no lead column reaches any caller",
 	"internal/modules/contacts/captureorigin.go:CaptureMintedForSeatTx":              "the mailbox purge asks whether any lead was promoted into a candidate contact or made from it, and if so keeps the contact. Its only effect is to keep a record, never to disclose one: no lead column leaves the predicate, and what the statement returns is contact ids the purge already selected",
 	"internal/modules/privacy/sarreporting.go:sarReportingSections":                  "Subject access export follows promoted leads to include every copied fact about the authenticated rights-case subject, regardless of the operator’s lead visibility.",
 	"internal/modules/privacy/reportingquestions.go:heldQuestionSource":              "Retention lifecycle checks legal holds on every record behind a kept question answer before selecting an edition for expiry; it returns edition ids to the audited eraser, not source records to a reader.",

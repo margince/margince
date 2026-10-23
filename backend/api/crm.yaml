@@ -24823,6 +24823,39 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /deal-rooms/{id}/brief:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Deals]
+      operationId: getDealRoomBrief
+      x-waits-on-model: always
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      summary: A short written brief of what the room's buyers did and what is waiting on the seller.
+      description: |
+        Written from the room's own reads, run AS THE CALLER inside the normal gates: the
+        buyers who may enter, the documents, and the threads. Every sentence cites the
+        participant, document or thread it was written from, and a sentence citing anything
+        else is dropped whole.
+
+        Written on every request and stored nowhere: a room moves with each buyer's click, and
+        a stored brief would be the one thing on the tab that is out of date.
+
+        Degrades rather than fails: with no model lane, an exhausted budget, or a reply the
+        grounding filter refuses, the brief is a deterministic composition of the same records,
+        and `generated_by` says which wrote it. A room with nothing to say has no sentences.
+      responses:
+        '200':
+          description: The room brief.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DealRoomBrief' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /deal-rooms/{id}/participants:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -35231,7 +35264,7 @@ components:
         review:
           type: object
           properties:
-            dedupe_open: { type: integer, description: 'Open DH-DDL-1 candidate pairs.' }
+            dedupe_open: { type: integer, description: 'Every open duplicate candidate pair the reader can see, not only the pairs filed overnight.' }
             approvals_pending: { type: integer, description: 'Pending 🟡 items (enrich, quarantine, merge).' }
             classify:
               type: object
@@ -59518,6 +59551,48 @@ components:
           type: string
           description: The one-time `mdr_` credential. Shown once; the server keeps only its digest.
         credential_expires_at: { type: string, format: date-time }
+
+    DealRoomBrief:
+      type: object
+      description: |
+        The room brief on the deal's Deal Room tab: at most four sentences about what the
+        room's buyers did and what is waiting on the seller, each citing what it was written
+        from.
+      required: [room_id, generated_at, generated_by, sentences]
+      properties:
+        room_id: { type: string, format: uuid }
+        generated_at: { type: string, format: date-time }
+        generated_by: { $ref: '#/components/schemas/WrittenBy' }
+        sentences:
+          type: array
+          maxItems: 4
+          items: { $ref: '#/components/schemas/DealRoomBriefSentence' }
+
+    DealRoomBriefSentence:
+      type: object
+      required: [text, nature, evidence]
+      properties:
+        text: { type: string }
+        nature:
+          type: string
+          enum: [fact, assessment, recommendation]
+          description: |
+            What kind of claim the sentence is. `fact` restates a record, `assessment` is a
+            reading of several, `recommendation` is the one move that follows.
+        evidence:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/DealRoomBriefEvidence' }
+
+    DealRoomBriefEvidence:
+      type: object
+      required: [entity_type, entity_id]
+      properties:
+        entity_type:
+          type: string
+          enum: [participant, document, thread]
+          description: A record of this room, which the tab draws beside the brief.
+        entity_id: { type: string, format: uuid }
 
     DealRoomDocumentGroup:
       type: string

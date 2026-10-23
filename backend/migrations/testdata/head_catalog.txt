@@ -1103,6 +1103,7 @@ public.approval.approval_pkey PRIMARY KEY (id)
 public.approval.approval_requested_decider_fkey FOREIGN KEY (requested_decider_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.approval.approval_requested_decider_source_check CHECK ((requested_decider_source = ANY (ARRAY['payload_owner'::text, 'on_behalf_of'::text, 'stager'::text, 'record_owner'::text])))
 public.approval.approval_staged_by_connection_fkey FOREIGN KEY (staged_by_connection) REFERENCES oauth_grant(id) ON DELETE SET NULL
+public.approval.approval_staged_in_conversation_of_fkey FOREIGN KEY (staged_in_conversation_of) REFERENCES app_user(id) ON DELETE SET NULL
 public.approval.approval_status_check CHECK ((status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text, 'expired'::text])))
 public.approval.approval_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.approval.bundle_id uuid gen=- def=-
@@ -1130,6 +1131,7 @@ public.approval.proposed_change jsonb NOT NULL gen=- def=-
 public.approval.requested_decider_id uuid gen=- def=-
 public.approval.requested_decider_source text gen=- def=-
 public.approval.staged_by_connection uuid gen=- def=-
+public.approval.staged_in_conversation_of uuid gen=- def=-
 public.approval.status text NOT NULL gen=- def='pending'::text
 public.approval.summary text gen=- def=-
 public.approval.target_entity_id uuid gen=- def=-
@@ -6264,8 +6266,10 @@ public.provider_run_reservation_pkey CREATE UNIQUE INDEX provider_run_reservatio
 public.provider_run_subject_identity CREATE UNIQUE INDEX provider_run_subject_identity ON public.provider_run USING btree (id, contact_id, provider)
 public.raw_capture acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.raw_capture.id uuid NOT NULL gen=- def=uuidv7()
+public.raw_capture.parts_slim_outcome text gen=- def=-
 public.raw_capture.parts_slimmed_at timestamp with time zone gen=- def=-
 public.raw_capture.payload jsonb NOT NULL gen=- def=-
+public.raw_capture.raw_capture_parts_slim_outcome_known CHECK (((parts_slim_outcome IS NULL) OR (parts_slim_outcome = ANY (ARRAY['slimmed'::text, 'no_proved_parts'::text, 'unreadable_spelling'::text, 'unrewritable_original'::text, 'nothing_came_out'::text, 'unencodable_result'::text, 'no_bytes_saved'::text]))))
 public.raw_capture.raw_capture_pkey PRIMARY KEY (id)
 public.raw_capture.raw_capture_source_unique UNIQUE (source_system, source_id)
 public.raw_capture.received_at timestamp with time zone NOT NULL gen=- def=now()

@@ -26,7 +26,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/retentionscope"
-	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
 // A legal hold on the project an activity was filed under outranks the undo: the
@@ -317,10 +316,9 @@ func waitUntilBlockedBy(t *testing.T, holder interface {
 	}
 }
 
-// A credential is not offered, and is refused, the release of a project relink
-// over an activity an erasure is about to restrict: that filing could never be
-// undone.
-func TestACredentialDoesNotReleaseAProjectRelinkOverAnActivityUnderErasure(t *testing.T) {
+// A credential files an activity under a project as its colleague could in the
+// app, also while an erasure is open on the activity's contact. Nothing waits.
+func TestACredentialFilesAnActivityUnderErasureAsItsColleagueCould(t *testing.T) {
 	e := Setup(t)
 	owner := OwnerConn(t)
 	f := seedThreadFixture(t, e, owner)
@@ -335,23 +333,13 @@ func TestACredentialDoesNotReleaseAProjectRelinkOverAnActivityUnderErasure(t *te
 	e.WsExec(t, `INSERT INTO data_subject_request (kind, status, subject_ref, due_at, contact_id)
 		VALUES ('erasure', 'open', $1::text, now() + interval '30 days', $2)`, contact.String(), contact)
 
-	_, err := registry.Invoke(agent, "relink_activities", json.RawMessage(
+	if _, err := registry.Invoke(agent, "relink_activities", json.RawMessage(
 		`{"activity_ids":["`+f.mine[0].String()+`"],"entity_type":"project","entity_id":"`+f.project.String()+`"}`,
-	))
-	var staged *workflow.StagedApprovalError
-	if !errors.As(err, &staged) {
-		t.Fatalf("relink_activities → %v, want a staged approval", err)
+	)); err != nil {
+		t.Fatalf("relink_activities on a passport → %v, want it filed at once", err)
 	}
-	if staged.ReleasableByCaller {
-		t.Error("the staged answer offers a release of a filing an erasure would make permanent")
-	}
-	if _, err := registry.Invoke(agent, "decide_approval", json.RawMessage(
-		`{"staged_action_id":"`+staged.ApprovalID.String()+`","decision":"approve"}`,
-	)); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Fatalf("the credential's own release → %v, want a permission denial", err)
-	}
-	if projectLinks(t, e, f.mine[0], f.project) != 0 {
-		t.Error("the refused release filed the activity")
+	if projectLinks(t, e, f.mine[0], f.project) != 1 {
+		t.Error("the relink did not file the activity under the project")
 	}
 }
 

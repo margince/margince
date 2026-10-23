@@ -159,7 +159,6 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/integrations:markSkipped":            "a run skipped before it ran, under the lock the selector took to decide that",
 	"internal/modules/privacy:Update":                      "the retention policy is read FOR UPDATE by the caller that edits it",
 	"internal/modules/integrations:bumpClaimAttempt":       "attempt_count = attempt_count + 1 is the read and the write in one statement, so the database orders two bumps and no count is read into Go to be written back; the backoff that follows is computed from the returned value",
-	"internal/modules/capture:stamp":                       "parts_slimmed_at = now() records that the sweep considered the row and changes nothing else, so two sweeps stamping it write the same fact",
 	"internal/modules/capture:MarkWithheldFromWorkspaceTx": "withheld_from_workspace = true is a one-way constant, and withholding twice withholds",
 	"internal/modules/comms:ClearPayloadRef":               "payload_ref = NULL after the vault entry is already destroyed, and one clearing is one clearing; the order is what the file explains",
 	"internal/modules/comms:reKey":                         "the re-key writes the provider's own message id and derives the thread key in SQL from the row's current one, so nothing read into Go is written back",

@@ -268,3 +268,37 @@
   gap: var(--space-1);
   min-width: 0;
 }
+
+/* The stacked board is two panels in the page's own stack, so its wrapper
+   draws nothing. */
+.board-stacked {
+  display: contents;
+}
+
+/* The deck: the documents and one conversation column beside them, the
+   column fixed so a long thread wraps instead of narrowing the gallery. */
+.board-deck {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 24rem);
+  gap: var(--gapCards);
+  align-items: start;
+}
+
+@media (max-width: 1100px) {
+  .board-deck {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Which document a thread in the conversation column is about. */
+.thread-about {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.thread-about svg {
+  flex: none;
+}

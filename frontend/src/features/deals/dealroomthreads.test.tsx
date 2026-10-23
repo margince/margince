@@ -362,3 +362,35 @@ describe("a board nobody may write to", () => {
     expect(screen.queryByRole("button", { name: "New thread" })).toBeNull();
   });
 });
+
+describe("the deck layout", () => {
+  function deck(threads: DealRoomThread[]) {
+    render(
+      <LocaleProvider initial="en">
+        <DocumentBoard
+          title="Documents"
+          groups={[{ key: "contract", label: "Contract" }]}
+          documents={[DOCUMENT]}
+          threads={threads}
+          empty="No documents yet"
+          verbs={{ mayRequireChange: false }}
+          layout="deck"
+        />
+      </LocaleProvider>,
+    );
+  }
+
+  it("names the document each thread in the conversation is about", () => {
+    deck([
+      thread(),
+      thread({ id: "th-2", document_id: "doc-gone" }),
+      thread({ id: "th-3", document_id: null }),
+    ]);
+
+    expect(screen.getByText("About Rahmenvertrag")).toBeInTheDocument();
+    expect(
+      screen.getByText("About a document no longer in the room"),
+    ).toBeInTheDocument();
+    expect(screen.getAllByText(/^About /)).toHaveLength(2);
+  });
+});

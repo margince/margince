@@ -5,12 +5,13 @@
 
 package integration
 
-// The writes that reach outside: enrich and invite_meeting are confirm-first
-// for an agent. Each door stages one approval of the same kind and runs nothing
-// until a human approves. Each test asks both doors about two equal records.
+// The writes that reach outside. enrich stays confirm-first even on a
+// colleague's passport, so each door stages one approval of the same kind.
+// invite_meeting runs at once on that passport, as the colleague's own would.
 
 import (
 	"net/http"
+	"strings"
 	"testing"
 )
 
@@ -35,10 +36,10 @@ func TestEnrichStagesTheSameApprovalOnEitherDoor(t *testing.T) {
 	}
 }
 
-// A calendar invitation is staged, not sent, on either door. Only the staging is
-// compared: an approved invitation goes to a calendar provider, and the harness
-// has no stand-in for one.
-func TestInviteMeetingStagesTheSameApprovalOnEitherDoor(t *testing.T) {
+// A calendar invitation on a colleague's passport is not staged on either door:
+// it goes to the calendar step at once. The harness has no calendar provider, so
+// only the absence of a staging is compared.
+func TestInviteMeetingOnAColleaguesPassportIsStagedOnNeitherDoor(t *testing.T) {
 	d := newTwoDoors(t, "invite-write-doors", "read", "write", "send")
 	contact := func(name string) string {
 		return createdID(t, d.e, "/v1/contacts", AnyMap{"full_name": name, "source": "manual"})
@@ -53,12 +54,17 @@ func TestInviteMeetingStagesTheSameApprovalOnEitherDoor(t *testing.T) {
 	}
 
 	var refusal fileRefusal
-	if status := d.e.Call(t, "POST", "/v1/scheduling/invitations", invitation(viaREST), d.bearer, &refusal); status != http.StatusForbidden || refusal.Code != "approval_required" {
-		t.Fatalf("an invitation over REST → %d %q, want 403 approval_required", status, refusal.Code)
+	if status := d.e.Call(t, "POST", "/v1/scheduling/invitations", invitation(viaREST), d.bearer, &refusal); refusal.Code == "approval_required" {
+		t.Fatalf("an invitation over REST → %d %q, want it past the approval gate", status, refusal.Code)
 	}
-	d.toolRefused(t, "invite_meeting", invitation(viaTool))
-	card := d.sameStaged(t, "invite", viaREST, viaTool, "Invite Rest", "Invite Tool")
-	if card.Status != "pending" {
-		t.Errorf("the staged invitation is %+v, want a pending one", card)
+	if refused := d.toolRefused(t, "invite_meeting", invitation(viaTool)); strings.Contains(refused, "staged as approval") {
+		t.Fatalf("an invitation over the tool was staged:\n%s", refused)
+	}
+	var staged int
+	if err := d.e.Owner.QueryRow(t.Context(), `SELECT count(*) FROM approval`).Scan(&staged); err != nil {
+		t.Fatalf("counting approvals: %v", err)
+	}
+	if staged != 0 {
+		t.Errorf("the two invitations staged %d approvals, want none", staged)
 	}
 }

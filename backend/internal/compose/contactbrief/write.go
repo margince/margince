@@ -18,7 +18,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/claims"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
@@ -195,53 +194,15 @@ func ParseBrief(reply, contactID string, in Input) ([]Sentence, error) {
 }
 
 // keepGroundedSentences drops any sentence whose citations do not point at
-// records this input actually carried, then applies the brief's two volume
-// bounds.
-//
-// The reader's trust in the brief is the citation: a sentence pointing at an id
-// that was never in the input is either invented or points somewhere the reader
-// cannot go, and neither is worth showing. Dropping the sentence is the honest
-// response — the remaining ones still say true things.
-//
-// Grounding decides FIRST, before the recommendation budget is spent. Counting
-// an ungrounded recommendation would let one malformed claim suppress the valid
-// advice behind it, and the reader would lose the advice and be told nothing
-// about why.
+// records this input carried, then applies the brief's two volume bounds.
 func keepGroundedSentences(sentences []Sentence, contactID string, in Input) []Sentence {
-	known := knownRecords(contactID, in)
-	out := make([]Sentence, 0, min(len(sentences), maxSentences))
-	recommendations := 0
-	for _, sentence := range sentences {
-		if len(out) == maxSentences {
-			break
-		}
-		if !knownNature[sentence.Nature] {
-			sentence.Nature = natureFact
-		}
-		if !claims.Grounded(sentence, known) {
-			continue
-		}
-		if sentence.Nature == natureRecommendation {
-			if recommendations == maxRecommendations {
-				continue
-			}
-			recommendations++
-		}
-		out = append(out, sentence)
-	}
-	return claims.Dedupe(out)
-}
-
-// Prose is the brief's sentences as one readable block. Exported for the
-// certification case, which asks whether the model's words say anything this
-// relationship's own records produced — a question about the prose rather than
-// about any one sentence's citations.
-func Prose(sentences []Sentence) string {
-	texts := make([]string, 0, len(sentences))
-	for _, sentence := range sentences {
-		texts = append(texts, sentence.Text)
-	}
-	return strings.Join(texts, " ")
+	return claims.KeepBrief(sentences, knownRecords(contactID, in), claims.BriefBounds{
+		Sentences:       maxSentences,
+		Recommendations: maxRecommendations,
+		Natures:         knownNature,
+		Fact:            natureFact,
+		Recommendation:  natureRecommendation,
+	})
 }
 
 // knownRecords is what this brief was written from, keyed by TYPE AND ID.

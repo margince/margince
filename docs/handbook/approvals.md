@@ -93,7 +93,7 @@ A promise read from mail or a meeting and **Add contact from mail** are the exce
 
 The email names the record as its heading and says what is proposed. For a change to a record, it lists each field with its value now and the value after the change, up to eight fields. It also says why you are asked. It leaves out any value you may not see.
 
-The email goes out about three minutes after the approval is staged. Approvals waiting for you from those few minutes arrive together in one email, one section each. An approval you already answered in Margince is left out.
+The email goes out about three minutes after the approval is staged. Approvals waiting for you from those few minutes arrive together in one email, one section each. An approval you already answered in Margince is left out. No email goes out for an approval your own connected AI tool raised while you work with it, because the conversation shows it to you. It still waits in your approvals list and your digest.
 Also called: approval email, decision needed, who gets notified, approval notice.
 
 ### Who is asked about a promise read from mail or a meeting?

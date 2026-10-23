@@ -8,22 +8,102 @@
   margin: var(--space-1) 0 0;
 }
 
-/* The room's attendance and the one verb that shows what a buyer sees, on one
-   line: the reading says who has been in, and the verb is how a rep checks
-   what they read. */
-.roomtab-head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--gapActions);
-}
-
-/* The preview and the way to the room's own page, kept together at the end of
-   the head so the space between them is the actions gap, not the head's. */
+/* The preview and the room's settings, kept together at the end of the band
+   so the space between them is the actions gap, not the band's. */
 .roomtab-verbs {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--gapActions);
+}
+
+/* The room's band: what it is, how it stands, its first paragraph and who is
+   in it, on the well ground with the accent's wash at its start edge, the
+   verbs at the foot of its far end. */
+.roomtab-band {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--padPanel);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  background:
+    radial-gradient(ellipse at 0% 0%, var(--accentLight), transparent 60%),
+    var(--bgWell);
+}
+
+.roomtab-band-id {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  flex: 1 1 28rem;
+}
+
+.roomtab-band-kind {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.roomtab-band-kind svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--accentText);
+}
+
+.roomtab-band-title {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* The welcome is the buyer's first paragraph, so it keeps a reading measure
+   rather than the band's width. */
+.roomtab-band-welcome {
+  margin: 0;
+  max-width: 40rem;
+  color: var(--textSecondary);
+  text-wrap: pretty;
+}
+
+.roomtab-band-seats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.roomtab-band-seats .roompage-facts {
+  margin: 0;
+}
+
+/* The settings dialog: one column, with the end date and the contact side by
+   side because each is one short answer. */
+.roommanage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.roommanage-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: var(--space-4);
+}
+
+/* The brief's sentences, each with the records it was written from under it. */
+.roombrief {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.roombrief p {
+  margin: 0;
 }

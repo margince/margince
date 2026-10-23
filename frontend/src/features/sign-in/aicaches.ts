@@ -20,5 +20,6 @@ export const LANGUAGE_DEPENDENT_QUERY_PREFIXES = [
   ["meetingBrief"],
   ["contactBrief"],
   ["deal-status"],
+  ["deal-room-brief"],
   ["brief"],
 ] as const;

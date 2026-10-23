@@ -9172,6 +9172,48 @@ func (e DealLastEmailDirection) Valid() bool {
 	}
 }
 
+// Defines values for DealRoomBriefEvidenceEntityType.
+const (
+	DealRoomBriefEvidenceEntityTypeDocument    DealRoomBriefEvidenceEntityType = "document"
+	DealRoomBriefEvidenceEntityTypeParticipant DealRoomBriefEvidenceEntityType = "participant"
+	DealRoomBriefEvidenceEntityTypeThread      DealRoomBriefEvidenceEntityType = "thread"
+)
+
+// Valid indicates whether the value is a known member of the DealRoomBriefEvidenceEntityType enum.
+func (e DealRoomBriefEvidenceEntityType) Valid() bool {
+	switch e {
+	case DealRoomBriefEvidenceEntityTypeDocument:
+		return true
+	case DealRoomBriefEvidenceEntityTypeParticipant:
+		return true
+	case DealRoomBriefEvidenceEntityTypeThread:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for DealRoomBriefSentenceNature.
+const (
+	DealRoomBriefSentenceNatureAssessment     DealRoomBriefSentenceNature = "assessment"
+	DealRoomBriefSentenceNatureFact           DealRoomBriefSentenceNature = "fact"
+	DealRoomBriefSentenceNatureRecommendation DealRoomBriefSentenceNature = "recommendation"
+)
+
+// Valid indicates whether the value is a known member of the DealRoomBriefSentenceNature enum.
+func (e DealRoomBriefSentenceNature) Valid() bool {
+	switch e {
+	case DealRoomBriefSentenceNatureAssessment:
+		return true
+	case DealRoomBriefSentenceNatureFact:
+		return true
+	case DealRoomBriefSentenceNatureRecommendation:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DealRoomDeliveryState.
 const (
 	DealRoomDeliveryStateConsumed   DealRoomDeliveryState = "consumed"
@@ -36701,6 +36743,46 @@ type DealRoomAuthor struct {
 	Side string `json:"side"`
 }
 
+// DealRoomBrief The room brief on the deal's Deal Room tab: at most four sentences about what the
+// room's buyers did and what is waiting on the seller, each citing what it was written
+// from.
+type DealRoomBrief struct {
+	GeneratedAt time.Time `json:"generated_at"`
+
+	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
+	// lane. `deterministic` — the structured fallback, used when no lane is configured
+	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
+	// reader deciding how much to trust a sentence needs to know which wrote it.
+	GeneratedBy WrittenBy               `json:"generated_by"`
+	RoomId      openapi_types.UUID      `json:"room_id"`
+	Sentences   []DealRoomBriefSentence `json:"sentences"`
+}
+
+// DealRoomBriefEvidence defines model for DealRoomBriefEvidence.
+type DealRoomBriefEvidence struct {
+	EntityId openapi_types.UUID `json:"entity_id"`
+
+	// EntityType A record of this room, which the tab draws beside the brief.
+	EntityType DealRoomBriefEvidenceEntityType `json:"entity_type"`
+}
+
+// DealRoomBriefEvidenceEntityType A record of this room, which the tab draws beside the brief.
+type DealRoomBriefEvidenceEntityType string
+
+// DealRoomBriefSentence defines model for DealRoomBriefSentence.
+type DealRoomBriefSentence struct {
+	Evidence []DealRoomBriefEvidence `json:"evidence"`
+
+	// Nature What kind of claim the sentence is. `fact` restates a record, `assessment` is a
+	// reading of several, `recommendation` is the one move that follows.
+	Nature DealRoomBriefSentenceNature `json:"nature"`
+	Text   string                      `json:"text"`
+}
+
+// DealRoomBriefSentenceNature What kind of claim the sentence is. `fact` restates a record, `assessment` is a
+// reading of several, `recommendation` is the one move that follows.
+type DealRoomBriefSentenceNature string
+
 // DealRoomComment defines model for DealRoomComment.
 type DealRoomComment struct {
 	// Author Who spoke — which side, and the name that side knows them by.
@@ -43381,7 +43463,7 @@ type MorningDigest struct {
 			Noise       *int `json:"noise,omitempty"`
 		} `json:"classify,omitempty"`
 
-		// DedupeOpen Open DH-DDL-1 candidate pairs.
+		// DedupeOpen Every open duplicate candidate pair the reader can see, not only the pairs filed overnight.
 		DedupeOpen *int `json:"dedupe_open,omitempty"`
 	} `json:"review"`
 }
@@ -74341,6 +74423,9 @@ type ServerInterface interface {
 	// Edit a Deal Room's title and welcome message (partial).
 	// (PATCH /deal-rooms/{id})
 	UpdateDealRoom(w http.ResponseWriter, r *http.Request, id Id, params UpdateDealRoomParams)
+	// A short written brief of what the room's buyers did and what is waiting on the seller.
+	// (GET /deal-rooms/{id}/brief)
+	GetDealRoomBrief(w http.ResponseWriter, r *http.Request, id Id)
 	// Freeze the room's content, keeping buyer access.
 	// (POST /deal-rooms/{id}/close)
 	CloseDealRoom(w http.ResponseWriter, r *http.Request, id Id)
@@ -78190,6 +78275,12 @@ func (_ Unimplemented) GetDealRoom(w http.ResponseWriter, r *http.Request, id Id
 // Edit a Deal Room's title and welcome message (partial).
 // (PATCH /deal-rooms/{id})
 func (_ Unimplemented) UpdateDealRoom(w http.ResponseWriter, r *http.Request, id Id, params UpdateDealRoomParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// A short written brief of what the room's buyers did and what is waiting on the seller.
+// (GET /deal-rooms/{id}/brief)
+func (_ Unimplemented) GetDealRoomBrief(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -97797,6 +97888,38 @@ func (siw *ServerInterfaceWrapper) UpdateDealRoom(w http.ResponseWriter, r *http
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UpdateDealRoom(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetDealRoomBrief operation middleware
+func (siw *ServerInterfaceWrapper) GetDealRoomBrief(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetDealRoomBrief(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -120207,6 +120330,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/deal-rooms/{id}", wrapper.UpdateDealRoom)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/deal-rooms/{id}/brief", wrapper.GetDealRoomBrief)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/deal-rooms/{id}/close", wrapper.CloseDealRoom)

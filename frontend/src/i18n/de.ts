@@ -1705,6 +1705,7 @@ export const de = {
   "systemJob.deal_key_names": "Ergänzung von Deal-Schlüsseln",
   "systemJob.deal_room_link_request": "Link-Anfrage für den Deal Room",
   "systemJob.deal_room_timeline": "Verlauf im Deal Room",
+  "systemJob.dedupe_recheck": "Erneute Prüfung der Duplikat-Prüfliste",
   "systemJob.deployment_secret_seal": "Versiegelung von Geheimnissen",
   "systemJob.domain_triage": "Vorprüfung von Websites",
   "systemJob.employment_import_worker": "Import des Werdegangs",
@@ -7134,10 +7135,9 @@ export const de = {
     "Lesen, zusammenfassen, entwerfen: läuft sofort und wird vollständig protokolliert.",
   "settings.tierSend":
     "E-Mails senden, Termine buchen, einen Kontakt oder Deal ändern: läuft sofort, wenn der Agent diese Berechtigung hat. Mit der Berechtigung ist die Freigabe bereits erteilt.",
-  "settings.tierWait":
-    "Anreicherung und Zusammenführen von Tags: warten in Freigaben.",
+  "settings.tierWait": "Anreicherung aus dem Web: wartet in Freigaben.",
   "settings.tierAdvance":
-    "Deal-Phase weiterschieben: wartet nur, wenn der Schritt den Deal als gewonnen oder verloren abschließt.",
+    "Deal-Phase ändern oder Deal abschließen, Aktivitäten einem Projekt zuordnen: läuft sofort, wenn der Agent die Berechtigung hat.",
   "settings.locked": "Gesperrt",
   "settings.purposes": "Einwilligungszwecke",
   "settings.purposesSub":
@@ -7744,6 +7744,7 @@ export const de = {
   "jobs.kind.document_extract": "Dokumentauswertung",
   "jobs.kind.embed_drift_sweep": "Nachholen des Suchindex",
   "jobs.kind.embed_reindex": "Neuaufbau des Suchindex",
+  "jobs.kind.dedupe_recheck": "Erneute Prüfung der Duplikat-Prüfliste",
   "jobs.kind.employment_import_sweep": "Import des Werdegangs",
   "jobs.kind.finance_sync": "Abgleich mit der Buchhaltung auf Anforderung",
   "jobs.kind.finance_sync_sweep": "Abgleich mit der Buchhaltung",
@@ -10140,6 +10141,45 @@ export const de = {
   "buyer.docs.downloadShort": "Herunterladen",
   "buyer.poweredBy": "Betrieben mit",
   "buyer.poweredByMargince": "Betrieben mit Margince",
+  "roomtab.documents": "Dokumente",
+  "roomtab.welcomeEmpty":
+    "Noch keine Begrüßung. Mit ihr beginnt, was die Käuferseite liest.",
+  "roomtab.setup.title": "Raum vorbereiten",
+  "roomtab.setup.text": "Begrüßung schreiben",
+  "roomtab.setup.textHint":
+    "Der erste Absatz, den die Käuferseite beim Öffnen des Raums liest.",
+  "roomtab.setup.editText": "Begrüßung schreiben",
+  "roomtab.setup.invite": "Käuferseite einladen",
+  "roomtab.setup.inviteHint":
+    "Jede eingeladene Adresse bekommt einen eigenen, persönlichen Link.",
+  "roomtab.setup.document": "Dokument hinzufügen",
+  "roomtab.setup.documentHint":
+    "Wähle unter Dokumente eine Datei aus dem Deal.",
+  "roomtab.setup.thread": "Thread beginnen",
+  "roomtab.setup.threadHint":
+    "Stelle unter Unterhaltung eine Frage, die sich in einer Zeile beantworten lässt.",
+  "roomtab.brief.title": "Zusammenfassung des Raums",
+  "roomtab.brief.pending": "Raum wird gelesen…",
+  "roomtab.brief.from": "Aus: {sources}",
+  "roomtab.brief.roomThread": "Ein Thread im Raum",
+  "roomtab.manage.liveHint":
+    "Die Käuferseite kann lesen, herunterladen und kommentieren.",
+  "roomtab.manage.save": "Änderungen speichern",
+  "roomtab.manage.openPage": "Seite des Raums öffnen",
+  "roomtab.manage.expiryHint":
+    "Lass das Feld leer, wenn es kein Enddatum geben soll. Das Datum gilt in UTC.",
+  "roomtab.manage.contactLabel": "Dein Kontakt",
+  "roomtab.manage.contactHint":
+    "Wähle, wer im Team für die Käuferseite ansprechbar ist.",
+  "roomtab.manage.contactOwner": "Für den Deal zuständig",
+  "roomtab.manage.textHeading": "Titel und Begrüßung",
+  "roomtab.manage.welcomeHint": "Der erste Absatz, den die Käuferseite liest.",
+  "roomtab.manage.foot":
+    "Die Käuferseite sieht Änderungen beim nächsten Öffnen des Raums.",
+  "threads.conversationTitle": "Unterhaltung",
+  "threads.about": "Zu {title}",
+  "threads.aboutRemoved": "Zu einem Dokument, das nicht mehr im Raum ist",
+  "roomtab.brief.unknownSource": "Ein Eintrag in diesem Raum",
   "threads.roomTitle": "Threads im Raum",
   "threads.aboutThis_other": "{count} Threads zu diesem Dokument",
   "threads.aboutThis_one": "{count} Thread zu diesem Dokument",

@@ -824,7 +824,7 @@ well the others do.
 | Tries per test case | 3 at first (`RUNS=` changes it for one run); a borderline case gets 3 more at a time, up to 9 |
 | Quality opinions per try | 1; a 2nd when it is within 10 points of a bar or under the lowest, a 3rd when the two are more than 5 apart; the middle one counts |
 | How sure every bound is | one-sided 90% (z = 1.2816 for a pass rate, Student's t for an average score, whose spread is taken as at least 5 points) |
-| Quality bar 70 / 50 / 40: 143 test cases | ✅ Ready needs scores averaging at least 70, allowing for doubt, no case whose best-case average is under 70, and no single try under 40; ⚠️ Usable with care needs at least 50, and no case whose best-case average is under 40 |
+| Quality bar 70 / 50 / 40: 144 test cases | ✅ Ready needs scores averaging at least 70, allowing for doubt, no case whose best-case average is under 70, and no single try under 40; ⚠️ Usable with care needs at least 50, and no case whose best-case average is under 40 |
 | Quality bar 80 / 60 / 50: 15 test cases | ✅ Ready needs scores averaging at least 80, allowing for doubt, no case whose best-case average is under 80, and no single try under 50; ⚠️ Usable with care needs at least 60, and no case whose best-case average is under 50 |
 | Quality bar 75 / 55 / 45: 2 test cases | ✅ Ready needs scores averaging at least 75, allowing for doubt, no case whose best-case average is under 75, and no single try under 45; ⚠️ Usable with care needs at least 55, and no case whose best-case average is under 45 |
 
@@ -1209,12 +1209,12 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 | | |
 |---|---:|
-| Shipped invocation sites | 47 |
+| Shipped invocation sites | 48 |
 | … best state `current` | 40 |
 | … best state `partial` | 0 |
 | … best state `stale` | 6 |
-| … `absent` on every binding | 1 |
-| Scenarios in the corpus | 254 |
+| … `absent` on every binding | 2 |
+| Scenarios in the corpus | 255 |
 | Committed records | 354 |
 | Bindings measured | 18 |
 
@@ -1278,7 +1278,7 @@ today. It says nothing about how well the model did; that is the band.
 <details>
 <summary>Every site, and the best model tested on it</summary>
 
-### Index of sites (47)
+### Index of sites (48)
 
 Which model to run each site on, and what that choice rests on.
 
@@ -1321,6 +1321,7 @@ Which model to run each site on, and what that choice rests on.
 | [`summarize/company_brief`](#summarizecompany_brief) | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `certified` | 1.00 | `current` | 2 | 13 |
 | [`summarize/company_dossier`](#summarizecompany_dossier) | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `certified` | 1.00 | `current` | 1 | 13 |
 | [`summarize/contact_brief`](#summarizecontact_brief) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 | `current` | 2 | 13 |
+| [`summarize/deal_room_brief`](#summarizedeal_room_brief) | - | - | - | `absent` | 1 | 0 |
 | [`summarize/meeting_brief`](#summarizemeeting_brief) | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `certified` | 1.00 | `current` | 1 | 13 |
 | [`summarize/meeting_plan`](#summarizemeeting_plan) | `gemini · gemini-3.5-flash-lite · cloud_frontier` | `supported_degraded` | 1.00 | `current` | 1 | 13 |
 | [`tag_suggest/interest`](#tag_suggestinterest) | - | - | - | `absent` | 5 | 0 |
@@ -2989,6 +2990,23 @@ Records (13):
 | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | `current` | 2/2 | `supported_degraded` | 6 | 6 | 1.00 | 6597ms | 19895ms | 6 | 0 | 0 | 0 |
 | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | `current` | 2/2 | `not_supported` | 18 | 11 | 0.61 | 1390ms | 3135ms | 11 | 6 | 0 | 1 |
 | `vllm · mlx-community/Qwen3-14B-4bit · sovereign` | `current` | 2/2 | `not_supported` | 18 | 2 | 0.11 | 64712ms | 118960ms | 2 | 8 | 0 | 8 |
+
+</details>
+
+<details>
+<summary><code>summarize/deal_room_brief</code>: 1 scenario(s), 0 record(s), best state absent</summary>
+
+##### `summarize/deal_room_brief`
+
+Scope a run of it can claim: `full_invocation`.
+
+Scenarios (1):
+
+| Scenario | Expects | Quality | Case |
+|---|---|---|---|
+| `deal_room_brief_reads_the_blocker` | `accepted` | judge | [deal_room_brief_reads_the_blocker_01.yaml](../../backend/internal/compose/aicert/corpus/summarize/deal_room_brief_reads_the_blocker_01.yaml) |
+
+No record: this site has never been certified on any binding.
 
 </details>
 

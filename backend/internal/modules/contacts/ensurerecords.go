@@ -126,9 +126,9 @@ func recordDedupeCandidate(ctx context.Context, tx pgx.Tx, entityType string, a,
 		RETURNING id`, leftCol, rightCol),
 		entityType, left, right, confidence, payload, source, by).Scan(&candidateID)
 	if errors.Is(err, pgx.ErrNoRows) {
-		// This pair is already proposed. Nothing was written, so nothing is
-		// audited — a no-op must not mint history.
-		return false, nil
+		// This pair is already proposed, and a no-op must not mint history.
+		// Unless the system archived it undecided: filing it again brings it back.
+		return refileArchivedCandidateTx(ctx, tx, entityType, leftCol, rightCol, left, right, confidence, payload)
 	}
 	if err != nil {
 		return false, fmt.Errorf("contacts: recording dedupe candidate: %w", err)
