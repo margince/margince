@@ -38,8 +38,8 @@ func (t checkAvailability) Spec() mcp.ToolSpec {
 		OpenAPIOp: "getAvailability",
 		InputSchema: schema(`{"type":"object","required":["from","to"],"properties":{
 			"host_user_id":{"type":"string","format":"uuid","description":"Defaults to the acting principal's user"},
-			"from":{"type":"string","format":"date-time"` + timestampNote + `},
-			"to":{"type":"string","format":"date-time"` + timestampNote + `},
+			"from":{"type":"string","format":"date-time"` + windowNote + `},
+			"to":{"type":"string","format":"date-time"` + windowNote + `},
 			"duration_minutes":{"type":"integer","minimum":15,"maximum":480},"reliable":{"type":"boolean","default":false,"description":"Require live calendar occupancy and booking policy; fails if unavailable"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[AvailabilityResult](),
@@ -159,8 +159,8 @@ func (t bookMeetingTool) Spec() mcp.ToolSpec {
 		// here had drifted to offer a `project` link the contract refuses.
 		InputSchema: schema(`{"type":"object","required":["start","end","links"],"properties":{
 			"host_user_id":{"type":"string","format":"uuid"},
-			"start":{"type":"string","format":"date-time"` + timestampNote + `},
-			"end":{"type":"string","format":"date-time"` + timestampNote + `},
+			"start":{"type":"string","format":"date-time"` + windowNote + `},
+			"end":{"type":"string","format":"date-time"` + windowNote + `},
 			"subject":{"type":"string"},
 			"links":{"type":"array","minItems":1,"items":{"type":"object","required":["entity_type","entity_id"],"properties":{
 				"entity_type":{"type":"string","enum":` + activityLinkEntityTypeEnum + `},

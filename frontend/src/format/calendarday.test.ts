@@ -13,6 +13,7 @@ import {
   sameCalendarDay,
   today,
 } from "./calendarday";
+import { displayDay } from "./format.dates";
 import { viewerZone } from "./timezone";
 
 vi.mock("./timezone", async (importOriginal) => {
@@ -199,6 +200,14 @@ describe("localDateTimeValue", () => {
 });
 
 describe("middayInstant", () => {
+  it("renders an unreal day by rolling it over instead of throwing", () => {
+    // The write path refuses such a day; a screen showing one must not crash.
+    expect(displayDay("2026-02-30", "Europe/Berlin").toISOString()).toBe(
+      "2026-03-02T12:00:00.000Z",
+    );
+    expect(() => middayInstant("0099-09-09", "Europe/Berlin")).not.toThrow();
+  });
+
   it("lands at the zone's own noon of the picked day, either side of a DST switch", () => {
     // Berlin is +01:00 in January and +02:00 in July.
     expect(middayInstant("2026-01-15", "Europe/Berlin")).toBe(

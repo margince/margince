@@ -15,9 +15,9 @@ input and output schema in folds below it. What a tool may do and whether a huma
 |---|---:|
 | Tools | 37 |
 | Resources | 9 |
-| Tool catalog | 123.8 KB |
+| Tool catalog | 124.6 KB |
 | Resource catalog | 3.5 KB |
-| Approx. wire tokens | 32583 |
+| Approx. wire tokens | 32798 |
 | Largest tool | `preview_import` (8.5 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -33,10 +33,10 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
 | Output schemas | 24.6 KB | 19% | **No**: a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 31.6 KB | 25% | Yes, every step |
-| Input schemas | 58.9 KB | 47% | Yes, every step |
-| _Names, annotations, punctuation_ | 8.7 KB | 7% | Partly |
-| **Description + input schema** | **90.5 KB** | **73%** | **the recurring cost** |
+| Descriptions (incl. governance clause) | 31.8 KB | 25% | Yes, every step |
+| Input schemas | 59.6 KB | 47% | Yes, every step |
+| _Names, annotations, punctuation_ | 8.7 KB | 6% | Partly |
+| **Description + input schema** | **91.3 KB** | **73%** | **the recurring cost** |
 
 Output schemas are the largest part of the total and are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -61,15 +61,15 @@ descriptions and input schemas are what each step pays for.
 |---|---|:-:|---|---:|
 | [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 417 |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 300 |
-| [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 809 |
-| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1361 |
+| [`bulk_update_records`](#bulk_update_records) | Change many records at once |  |  | 808 |
+| [`change_activities`](#change_activities) | Log, plan and file activities |  |  | 1386 |
 | [`change_lists`](#change_lists) | Make and change lists |  |  | 592 |
 | [`change_record_parts`](#change_record_parts) | Change the parts of a record |  |  | 567 |
 | [`change_state`](#change_state) | Move a lead, deal or project on |  |  | 866 |
 | [`change_tags`](#change_tags) | Change tags |  |  | 553 |
-| [`check_availability`](#check_availability) | Check calendar availability | yes |  | 342 |
+| [`check_availability`](#check_availability) | Check calendar availability | yes |  | 337 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 279 |
-| [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 643 |
+| [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 672 |
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 429 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 517 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 395 |
@@ -77,7 +77,7 @@ descriptions and input schemas are what each step pays for.
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 401 |
 | [`list_documents`](#list_documents) | List a record's documents | yes |  | 216 |
 | [`preview_import`](#preview_import) | Preview an import |  |  | 1001 |
-| [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 998 |
+| [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 1045 |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 154 |
 | [`read_attention`](#read_attention) | See what needs attention | yes |  | 326 |
 | [`read_context`](#read_context) | Get the story so far | yes |  | 395 |
@@ -87,14 +87,14 @@ descriptions and input schemas are what each step pays for.
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 292 |
 | [`read_record`](#read_record) | Read a record | yes |  | 307 |
 | [`read_relationships`](#read_relationships) | Read who we know, and how well | yes |  | 359 |
-| [`read_reports`](#read_reports) | Read sales reports | yes |  | 1812 |
+| [`read_reports`](#read_reports) | Read sales reports | yes |  | 1902 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 351 |
 | [`read_view`](#read_view) | Read a view | yes |  | 989 |
 | [`read_workspace`](#read_workspace) | Read how this workspace is set up | yes |  | 488 |
 | [`resolve_duplicates`](#resolve_duplicates) | Merge two records or dismiss a flagged pair |  |  | 393 |
-| [`schedule_meeting`](#schedule_meeting) | Book or invite to a meeting |  |  | 474 |
+| [`schedule_meeting`](#schedule_meeting) | Book or invite to a meeting |  |  | 469 |
 | [`send_outbound`](#send_outbound) | Send a message |  |  | 1014 |
-| [`update_record`](#update_record) | Update a record |  | [`ui://margince/field-conflict.html`](#field_conflict_view) | 585 |
+| [`update_record`](#update_record) | Update a record |  | [`ui://margince/field-conflict.html`](#field_conflict_view) | 620 |
 | [`whoami`](#whoami) | Who this passport acts for | yes |  | 129 |
 
 ## Resources
@@ -733,7 +733,7 @@ passport scope "write".)
           "type": "string"
         },
         "due_at": {
-          "description": "RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
+          "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
           "format": "date-time",
           "type": "string"
         },
@@ -1149,7 +1149,7 @@ arguments for relink, relink_many; requires passport scope "write".)
       "type": "string"
     },
     "due_at": {
-      "description": "log, task only: RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
+      "description": "log, task only: RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
       "format": "date-time",
       "type": "string"
     },
@@ -1185,6 +1185,7 @@ arguments for relink, relink_many; requires passport scope "write".)
           "type": "string"
         },
         "due_at": {
+          "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
           "format": "date-time",
           "type": "string"
         },
@@ -1243,7 +1244,7 @@ arguments for relink, relink_many; requires passport scope "write".)
       "type": "array"
     },
     "occurred_at": {
-      "description": "log only: RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
+      "description": "log only: RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
       "format": "date-time",
       "type": "string"
     },
@@ -2063,7 +2064,7 @@ Availability is checked again when reserving the time.
       "type": "integer"
     },
     "from": {
-      "description": "RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
+      "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
       "format": "date-time",
       "type": "string"
     },
@@ -2078,7 +2079,7 @@ Availability is checked again when reserving the time.
       "type": "boolean"
     },
     "to": {
-      "description": "RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
+      "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
       "format": "date-time",
       "type": "string"
     }
@@ -2387,16 +2388,17 @@ Create a contact, company, deal, lead, project, activity or relationship that do
 Creating a deal requires a pipeline_id and a stage_id, and the workspace's pipeline list is what
 yields them for a deal that does not exist yet. Only the fields the chosen record_type actually
 stores are accepted, and a field belonging to a neighbouring type is refused rather than dropped. A
-CONTACT created here is visible to everyone in the workspace, the same as one a human types in.
-Search first when the record might already exist — a second copy of a contact or company is a
-problem that then needs resolve_duplicates to undo. A record that shares only a name, with a
-different email, phone or employer, is not proof of a duplicate: create it — the create files the
-pair for review, and you report the pair as filed, unresolved until the reviewer decides. Several
-contacts, companies or leads at once — a pasted list, a CSV — go through preview_import, which
-checks every row and writes nothing; creating them one by one skips that check. The new record's id
-comes back in the result; keep it for anything that links to it. When the user says where they met
-the contact, pass that word as offer_tag: it only offers the tag, and change_tags still needs their
-yes. (Runs immediately; requires passport scope "write".)
+CONTACT created here is visible to everyone in the workspace, the same as one a human types in. No
+occurred_at means now; for a past day with no time, ask. Search first when the record might already
+exist — a second copy of a contact or company is a problem that then needs resolve_duplicates to
+undo. A record that shares only a name, with a different email, phone or employer, is not proof of a
+duplicate: create it — the create files the pair for review, and you report the pair as filed,
+unresolved until the reviewer decides. Several contacts, companies or leads at once — a pasted
+list, a CSV — go through preview_import, which checks every row and writes nothing; creating them
+one by one skips that check. The new record's id comes back in the result; keep it for anything that
+links to it. When the user says where they met the contact, pass that word as offer_tag: it only
+offers the tag, and change_tags still needs their yes. (Runs immediately; requires passport scope
+"write".)
 ```
 
 Renders its result in [`ui://margince/create-followups.html`](#create_followups_view), visible to `model`.
@@ -2413,7 +2415,7 @@ Renders its result in [`ui://margince/create-followups.html`](#create_followups_
       "type": "string"
     },
     "fields": {
-      "description": "The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields, and answered by read_workspace with topic=record_fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. Any field holding a sentence — a description, a summary, a note — is written in whoami's prose_language, whatever language this conversation is in.",
+      "description": "The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields, and answered by read_workspace with topic=record_fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. An rfc3339 value carries Z or the offset the user gave. Any field holding a sentence — a description, a summary, a note — is written in whoami's prose_language, whatever language this conversation is in.",
       "type": "object"
     },
     "idempotency_key": {
@@ -4419,10 +4421,12 @@ read_reports for the standard metrics and named reports. Keep a saved query's id
                         "interval": {
                           "properties": {
                             "end_at": {
+                              "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
                               "format": "date-time",
                               "type": "string"
                             },
                             "start_at": {
+                              "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
                               "format": "date-time",
                               "type": "string"
                             }
@@ -5789,7 +5793,7 @@ search its evidence, and quote coverage with each number.
       "type": "string"
     },
     "evaluated_at": {
-      "description": "standard only",
+      "description": "standard only: RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
       "format": "date-time",
       "type": "string"
     },
@@ -5866,6 +5870,7 @@ search its evidence, and quote coverage with each number.
           "type": "string"
         },
         "through": {
+          "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
           "format": "date-time",
           "type": "string"
         }
@@ -5944,10 +5949,12 @@ search its evidence, and quote coverage with each number.
         "interval": {
           "properties": {
             "end_at": {
+              "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
               "format": "date-time",
               "type": "string"
             },
             "start_at": {
+              "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
               "format": "date-time",
               "type": "string"
             }
@@ -6715,7 +6722,7 @@ passport scope "send".)
       "type": "string"
     },
     "end": {
-      "description": "RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
+      "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
       "format": "date-time",
       "type": "string"
     },
@@ -6764,7 +6771,7 @@ passport scope "send".)
       "type": "string"
     },
     "start": {
-      "description": "RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
+      "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
       "format": "date-time",
       "type": "string"
     },
@@ -6925,7 +6932,7 @@ scope "send".)
       "type": "string"
     },
     "scheduled_at": {
-      "description": "email_new, email_reply only: RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused.",
+      "description": "email_new, email_reply only: RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
       "format": "date-time",
       "type": "string"
     },
@@ -6968,11 +6975,11 @@ contact's email addresses are not among them). A field a HUMAN last set is not o
 part is staged for a human and named in the result, and that part of the write has not happened. It
 names the record by id; when a name matches two records, a human picks. owner_id is NOT neutral —
 ownership decides visibility, so reassigning moves the record onto someone else's book and can take
-it off the owner's. Use change_state with action=move_deal to move a deal between stages, and
-change_activities with action=relink to change what an activity is about; neither is a field edit.
-Send if_version with the version you read, and keep the staged approval id from the result if you
-intend to retry the same change once a human has released it. (Runs immediately; requires passport
-scope "write".)
+it off the owner's. An activity moved to another day keeps its time of day unless the user names
+one. Use change_state with action=move_deal to move a deal between stages, and change_activities
+with action=relink to change what an activity is about; neither is a field edit. Send if_version
+with the version you read, and keep the staged approval id from the result if you intend to retry
+the same change once a human has released it. (Runs immediately; requires passport scope "write".)
 ```
 
 Renders its result in [`ui://margince/field-conflict.html`](#field_conflict_view), visible to `model`, `app`.
@@ -6989,7 +6996,7 @@ Renders its result in [`ui://margince/field-conflict.html`](#field_conflict_view
       "type": "string"
     },
     "fields": {
-      "description": "Only sent fields change. Fields a human last edited are not applied: they are staged for approval and named in the result's staged_approval. The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields, and answered by read_workspace with topic=record_fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. Any field holding a sentence — a description, a summary, a note — is written in whoami's prose_language, whatever language this conversation is in.",
+      "description": "Only sent fields change. Fields a human last edited are not applied: they are staged for approval and named in the result's staged_approval. The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields, and answered by read_workspace with topic=record_fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. An rfc3339 value carries Z or the offset the user gave. Any field holding a sentence — a description, a summary, a note — is written in whoami's prose_language, whatever language this conversation is in.",
       "type": "object"
     },
     "id": {

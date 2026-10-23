@@ -46,9 +46,8 @@ func stampHumanFirstResponse(ctx context.Context, p *storekit.Patch, current crm
 	return nil
 }
 
-// firstResponseStamp is when a human's response is recorded: the module's
-// clock, but never before the lead's own created_at. The database stamped
-// created_at with its clock, and the two clocks can disagree by seconds.
+// firstResponseStamp is when a response is recorded: the given time, but never
+// before the lead's own created_at, which the database stamped with its clock.
 func firstResponseStamp(now, created time.Time) time.Time {
 	if now.Before(created) {
 		return created.UTC()
