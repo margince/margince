@@ -831,8 +831,7 @@ func TestClosingAProjectWithABlankReasonIsRefused(t *testing.T) {
 	}
 }
 
-// A JSON null on owner_id releases the project: the handler turns the null key
-// into a clear, so the column is NULL and the audit image carries the change.
+// The handler turns a null key into a clear.
 func TestAProjectPatchSentOwnerNullReleasesTheProject(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
