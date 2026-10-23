@@ -55,6 +55,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // The closed set of verdicts. Two, because the question is a yes or a no and a
@@ -172,7 +173,7 @@ func priorOutboundFrom(scope string) string {
 // was not read in full. That message is the context the verdict turns on, and
 // skipping to an older one would show the model a stale exchange as current.
 // A subquery rather than the join, so it can sit inside the waiting scan.
-var priorContextComplete = `coalesce((SELECT ` + MailBodyCompleteSQL("prior") + ` ` + priorOutboundFrom("true") + `), true)`
+var priorContextComplete = `coalesce((SELECT ` + provenance.MailBodyCompleteSQL("prior") + ` ` + priorOutboundFrom("true") + `), true)`
 
 // candidateGroupBy keeps the participant aggregation from multiplying the row.
 const candidateGroupBy = `a.id, a.kind, a.subject, a.body, a.has_calendar_part, a.calendar_method, a.occurred_at,
@@ -287,7 +288,7 @@ func (s *Store) OwedBacklog(ctx context.Context, ruleset string, asOf time.Time,
 		// beside it does not cover a confidentiality narrowing.
 		waiting, err := waitingReplyExistsClause(ctx, arg, asOf, nil, nil, own, nil, horizon,
 			`a.owed_verdict IS NULL AND `+owedVerdictDecline.offeredSQL("a.", fmt.Sprintf("$%d", arg(ruleset)))+
-				` AND a.audience = 'workspace' AND a.restricted_at IS NULL AND `+MailBodyCompleteSQL("a")+
+				` AND a.audience = 'workspace' AND a.restricted_at IS NULL AND `+provenance.MailBodyCompleteSQL("a")+
 				` AND `+priorContextComplete,
 			// An unjudged calendar response is off the lane until judged, and
 			// judged it must be: any sender can mark a request REPLY.
@@ -377,7 +378,7 @@ func (s *Store) OwedRestale(ctx context.Context, ruleset string, limit, bodyLimi
 			   AND a.archived_at IS NULL
 			   AND a.audience = 'workspace'
 			   AND a.restricted_at IS NULL
-			   AND `+MailBodyCompleteSQL("a")+`
+			   AND `+provenance.MailBodyCompleteSQL("a")+`
 			   AND `+priorContextComplete+`
 			   -- Declined by every rung under THESE rules (MarkOwedVerdictDeclined):
 			   -- its verdict stands. A decline under older rules is re-offered.

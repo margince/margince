@@ -23,16 +23,6 @@ const CommitmentAdmissionVersion = "2"
 // AutomaticMailContent is the content boundary shared by extraction and its admission check.
 const AutomaticMailContent = `audience = 'workspace' AND restricted_at IS NULL`
 
-// MailBodyCompleteSQL is the one test automatic work reads a mail body by. A
-// promise, a request or a settlement is read only from text the parser decoded
-// in full. A partial or unreadable body is shown to a reader, never judged.
-// So is an unassessed one: mail captured before completeness was recorded.
-// It waits for the data task that assesses it from its stored original, and
-// stays unassessed when there is none. A body that is not email was never parsed.
-func MailBodyCompleteSQL(alias string) string {
-	return "(" + alias + ".kind <> 'email' OR " + alias + ".body_completeness = 'complete')"
-}
-
 // CommitmentAdmissionReason explains whether evidence supports current automatic work.
 type CommitmentAdmissionReason string
 
@@ -135,7 +125,7 @@ func CommitmentAdmissionEvidenceTx(ctx context.Context, tx pgx.Tx, in Commitment
     AND later.archived_at IS NULL AND `+AutomaticMailContent+`
     AND (later.occurred_at, later.id) > (a.occurred_at, a.id)
     -- A later message read only in part is later context not read.
-    AND (NOT coalesce(later.id = ANY($%[1]d::uuid[]), false) OR NOT `+MailBodyCompleteSQL("later")+`)),
+    AND (NOT coalesce(later.id = ANY($%[1]d::uuid[]), false) OR NOT `+provenance.MailBodyCompleteSQL("later")+`)),
   a.kind = 'email' AND a.body_completeness NOT IN ('complete', 'unassessed'),
   a.kind = 'email' AND a.body_completeness = 'unassessed',
   a.kind = 'email' AND EXISTS (SELECT 1 FROM activity later

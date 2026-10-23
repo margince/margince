@@ -23,6 +23,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // threadMessages reads one window of a conversation, oldest first, so the
@@ -93,7 +94,7 @@ func threadWindow(
 		       coalesce(left(body, $1), ''),
 		       coalesce(substring(body FROM $1 + 1), ''), occurred_at, NOT complete
 		  FROM (SELECT id, direction, subject, body, occurred_at,
-		               `+activities.MailBodyCompleteSQL("activity")+` AS complete
+		               `+provenance.MailBodyCompleteSQL("activity")+` AS complete
 		          FROM activity
 		         WHERE thread_key = $2 AND kind = 'email' AND archived_at IS NULL
 		           -- The audience, tested HERE and not only in the pass that

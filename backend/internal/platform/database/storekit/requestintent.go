@@ -3,6 +3,8 @@
 
 package storekit
 
+import "github.com/margince/margince/backend/internal/shared/kernel/provenance"
+
 // HumanReviewedOwedClause recognizes the explicit classification review writer.
 func HumanReviewedOwedClause(alias string) string {
 	return SQLf(`EXISTS(SELECT 1 FROM audit_log reviewed WHERE reviewed.entity_type='activity'
@@ -10,6 +12,10 @@ func HumanReviewedOwedClause(alias string) string {
 }
 
 // AutomaticRequestIntentClause excludes pending or withdrawn judgments from personal work.
+// A cached verdict is no stronger than the text it was read from. It stands only
+// while that mail was read in full, or when a human reviewed the classification.
 func AutomaticRequestIntentClause(alias string) string {
-	return alias + `.owed_verdict = 'asks_us' AND (` + alias + `.capture_label IS DISTINCT FROM 'noise' OR ` + HumanReviewedOwedClause(alias) + `)`
+	reviewed := HumanReviewedOwedClause(alias)
+	return alias + `.owed_verdict = 'asks_us' AND (` + alias + `.capture_label IS DISTINCT FROM 'noise' OR ` + reviewed + `)
+ AND (` + provenance.MailBodyCompleteSQL(alias) + ` OR ` + reviewed + `)`
 }

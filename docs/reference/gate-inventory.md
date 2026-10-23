@@ -128,6 +128,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `lockspelling_test.go` | H2 | One lock, two modules, and no import between them. |
 | `logokeycolumns_test.go` | H3 | The mark reference check reads every column a mark's key can be stored in. |
 | `magiccaptureconcerns_test.go` | H2 | Every condition capture can raise is a condition the watching lane draws. |
+| `mailbodycompleteness_test.go` | H2 | TestAutomaticWorkReadsOnlyMailReadInFull holds the clauses that keep automatic work current to provenance.MailBodyCompleteSQL. |
 | `mailbrieflink_test.go` | H1 | The Brief's address is spelled twice: the frontend routes it, and outbound mail links to it before the app it opens is running. |
 | `mailcopy_test.go` | H2 | The weekly message's labels are the weekly panel's labels. |
 | `meetinghorizonparity_test.go` | H2 | How far into the diary a meeting still says a relationship is live, spelled twice in two modules that may not import each other, and held equal here. |

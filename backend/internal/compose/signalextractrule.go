@@ -3,7 +3,10 @@
 
 package compose
 
-import "github.com/margince/margince/backend/internal/modules/activities"
+import (
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+)
 
 // THE RULE the signal extractor reads conversations by, spelled once.
 //
@@ -129,7 +132,7 @@ var conversationHead = `
 			       NOT EXISTS (SELECT 1 FROM activity t
 			                    WHERE t.thread_key = a.thread_key AND t.kind = 'email'
 			                      AND t.archived_at IS NULL
-			                      AND NOT ` + activities.MailBodyCompleteSQL("t") + `) AS every_message_read
+			                      AND NOT ` + provenance.MailBodyCompleteSQL("t") + `) AS every_message_read
 			  FROM activity a
 			  LEFT JOIN (` + activities.CompanyReachSet() + `) ro ON ro.activity_id = a.id
 			  -- Safe to widen the row set: every aggregate above is DISTINCT,

@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // The closed set the column's CHECK admits, spelled here because the store is
@@ -121,15 +122,15 @@ var repliedRequestsSQL = outstandingRequestSQL + `
 // every pass, so a few of them would starve every other request. It covers at
 // least what the pass reads. That is the request, its later thread messages
 // with the same correspondent, and the answers off its thread.
-var settlementEvidenceCompleteSQL = MailBodyCompleteSQL("a") + `
+var settlementEvidenceCompleteSQL = provenance.MailBodyCompleteSQL("a") + `
  AND NOT EXISTS (SELECT 1 FROM activity later
    WHERE later.thread_key = a.thread_key AND later.kind = a.kind
      AND later.counterparty_email = a.counterparty_email AND later.archived_at IS NULL
      AND later.occurred_at <= $1 AND (later.occurred_at, later.id) > (a.occurred_at, a.id)
-     AND NOT ` + MailBodyCompleteSQL("later") + `)
+     AND NOT ` + provenance.MailBodyCompleteSQL("later") + `)
  AND NOT EXISTS (SELECT 1 FROM (` + offThreadAnswersSQL("a", "$1") + `) off
    JOIN activity answer ON answer.id = off.id
-   WHERE NOT ` + MailBodyCompleteSQL("answer") + `)`
+   WHERE NOT ` + provenance.MailBodyCompleteSQL("answer") + `)`
 
 // settlementAnswersSQL selects, as (id, occurred_at), every answer to request a
 // as of the pass's own instant ($1): our attested reply in the conversation and
