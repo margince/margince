@@ -24,10 +24,10 @@ type Section struct {
 // comments, so a reader of the page never sees it.
 var opensMarker = regexp.MustCompile(`^<!-- opens: settings/([a-z][a-z-]*) -->$`)
 
-// SectionFor is the section a span of a page's lines, from first to last, is
-// about. A span that opens on a heading is about that section; one that runs
-// from the tail of the section above into a heading is about the later one,
-// because the chunker cuts a passage wherever it likes.
+// SectionFor names the section a span of lines, first to last, is about.
+// A span that opens on a heading is about that section. A span that runs from
+// the tail of one section into a heading is about the later one. The chunker
+// cuts a passage wherever it likes, so both happen.
 // False when this build does not ship the page, or when the span lies above the
 // page's first section.
 func SectionFor(filename string, first, last int) (Section, bool) {

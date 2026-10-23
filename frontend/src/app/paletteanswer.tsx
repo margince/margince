@@ -7,9 +7,7 @@ import { EmptyState, PendingBody } from "../design-system/atoms";
 import { Button } from "../design-system/button";
 import { Callout } from "../design-system/callout";
 import { Eyebrow } from "../design-system/eyebrow";
-import type { SettingsPageId } from "../lib/settingscatalog";
 import { useVisibleSettingsPages } from "../features/settings/settingsnav";
-import { settingsHref } from "../lib/settingsrouting";
 import { CitedDocument } from "../features/voice-knowledge/citeddocument";
 import { AnswerView } from "../features/voice-knowledge/corpusanswer";
 import {
@@ -22,6 +20,8 @@ import { useT } from "../i18n";
 import { problemMessageOf } from "../lib/problem";
 import { looksLikeQuestion } from "../lib/question";
 import { navigate } from "../lib/router";
+import type { SettingsPageId } from "../lib/settingscatalog";
+import { settingsHref } from "../lib/settingsrouting";
 import type { Command } from "./palette";
 
 type Claim = NonNullable<Answer["claims"]>[number];
