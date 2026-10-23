@@ -230,30 +230,37 @@ const timestampRule = "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); nev
 // stated where it is read rather than left implied by a keyword.
 const timestampNote = `,"description":"` + timestampRule + `"`
 
+// windowRule is the rule for a time the model must choose, such as a search
+// window or a slot to book. The model picks that hour, so only the offset is
+// fixed.
+const windowRule = "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset."
+
+const windowNote = `,"description":"` + windowRule + `"`
+
 // pastDayNeedsATime is the activity-write sentence for a day named without
 // an hour: the server stores the call's own moment for an omitted occurred_at.
-const pastDayNeedsATime = " Omitted, occurred_at means now; ask the time of a past day named without one."
+const pastDayNeedsATime = " No occurred_at means now; for a past day with no time, ask."
 
 // argumentSchemaFor is schemaFor for a tool ARGUMENT. Every date-time member
-// it derives carries timestampRule, like a hand-written one. A result schema
-// has no use for it.
-func argumentSchemaFor[T any]() json.RawMessage {
-	return describedSchema[T]("")
+// it derives carries `rule`, like a hand-written one. A result schema has no
+// use for it.
+func argumentSchemaFor[T any](rule string) json.RawMessage {
+	return describedSchema[T]("", rule)
 }
 
-func noteTimestamps(node *jsonSchema) {
+func noteTimestamps(node *jsonSchema, rule string) {
 	if node == nil {
 		return
 	}
 	if node.Format == "date-time" && node.Description == "" {
-		node.Description = timestampRule
+		node.Description = rule
 	}
 	for _, member := range node.Properties {
-		noteTimestamps(member)
+		noteTimestamps(member, rule)
 	}
-	noteTimestamps(node.Items)
+	noteTimestamps(node.Items, rule)
 	if node.AdditionalProperties != nil {
-		noteTimestamps(node.AdditionalProperties.Schema)
+		noteTimestamps(node.AdditionalProperties.Schema, rule)
 	}
 }
 

@@ -12,7 +12,12 @@
 // All but `today` are pure and take their zone (or the reader's own wall clock)
 // as input, so nothing here has to be tested against the machine's own zone.
 
-import { endOfDayInZone, viewerZone } from "./timezone";
+import {
+  DAY_MS,
+  endOfDayInZone,
+  instantAtWallClock,
+  viewerZone,
+} from "./timezone";
 
 // The calendar day an instant falls on, in a named IANA zone, as `yyyy-mm-dd` so
 // two of them compare as strings without a second parse.
@@ -191,39 +196,9 @@ export function localDateTimeValue(utcIso: string): string {
 // own record zone): filing it at the zone's own midday is what keeps it on the
 // picked day both there and in the wall clock of any writer within twelve
 // hours of that zone.
-//
-// Found without a timezone table: read what wall time the zone shows at UTC
-// noon of that day, then shift the instant by the difference from the noon
-// that was wanted. One correction is exact because a zone's offset does not
-// change within the couple of hours the shift moves through — DST switches
-// happen at night, and the target is midday.
 export function middayInstant(day: string, zone: string): string {
-  const utcNoon = new Date(`${day}T12:00:00Z`);
-  const parts = new Map(
-    new Intl.DateTimeFormat("en-CA", {
-      timeZone: zone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      // h23, not `hour12: false`: some ICU builds resolve the latter to h24,
-      // which prints midnight as "24" and breaks the ISO string below.
-      hourCycle: "h23",
-    })
-      .formatToParts(utcNoon)
-      .map((part) => [part.type, part.value]),
-  );
-  const shown = new Date(
-    `${parts.get("year")}-${parts.get("month")}-${parts.get("day")}T${parts.get("hour")}:${parts.get("minute")}:00Z`,
-  );
-  const wanted = new Date(`${day}T12:00:00Z`);
-  return new Date(
-    utcNoon.getTime() - (shown.getTime() - wanted.getTime()),
-  ).toISOString();
+  return new Date(instantAtWallClock(day, DAY_MS / 2, zone)).toISOString();
 }
-
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * The ISO 8601 week number of a `yyyy-mm-dd` day. A week runs Monday to

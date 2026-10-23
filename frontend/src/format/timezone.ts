@@ -223,7 +223,7 @@ function startOfDayInstant(dateOnly: string, zone: string): number {
 }
 
 const MINUTE_MS = 60_000;
-const DAY_MS = 86_400_000;
+export const DAY_MS = 86_400_000;
 
 // The first whole minute after `from` at which `zone`'s wall clock reads
 // `wall` or later: the end of a removed span. Two hours covers every
@@ -252,29 +252,27 @@ function wallClockOfDay(dateOnly: string, timeOfDayMs: number): number {
 }
 
 /**
- * The instant on `day` at which `zone`'s wall clock reads what it read at
- * `instant`: a meeting moved to another day keeps its time of day there.
- *
- * On a DST switch day a wall time can be missing or happen twice:
+ * The instant on `day` at which `zone`'s wall clock reads `timeOfDayMs` past
+ * midnight, in whole seconds. On a DST switch day a wall time can be missing
+ * or happen twice:
  * - missing (02:30 in Berlin on 29 March 2026): the first instant after the
- *   gap, so the meeting lands at 03:00;
+ *   gap, 03:00;
  * - twice (02:30 in Berlin on 25 October 2026): the earlier one, on summer time.
- *
- * The source's milliseconds are kept, because the wall clock is read to the
- * second and a stored start must not lose its fraction.
  */
-export function sameWallClockOnDay(
-  instant: string,
+export function instantAtWallClock(
   day: string,
+  timeOfDayMs: number,
   zone: string,
-): string {
-  const sourceMs = Date.parse(instant);
-  if (!isRealCalendarDay(day) || Number.isNaN(sourceMs)) {
-    throw new RangeError(`cannot move ${instant} to the day ${day}`);
+): number {
+  if (!isRealCalendarDay(day)) {
+    throw new RangeError(`not a calendar day: ${day}`);
   }
-  const fraction = sourceMs - Math.floor(sourceMs / 1000) * 1000;
-  const sourceWall = wallClockMs(sourceMs, zone);
-  const wanted = wallClockOfDay(day, ((sourceWall % DAY_MS) + DAY_MS) % DAY_MS);
+  // Date.UTC maps years 0-99 onto 1900-1999, so such a day would resolve to
+  // another century without a sign.
+  if (Number(day.slice(0, 4)) < 100) {
+    throw new RangeError(`year out of range: ${day}`);
+  }
+  const wanted = wallClockOfDay(day, timeOfDayMs);
   // The offsets a day either side of the wanted time. On a switch day they
   // are the two in force; on any other day they agree.
   const offsets = [
@@ -285,11 +283,32 @@ export function sameWallClockOnDay(
     .map((offset) => wanted - offset)
     .filter((candidate) => wallClockMs(candidate, zone) === wanted);
   if (readings.length > 0) {
-    return new Date(Math.min(...readings) + fraction).toISOString();
+    return Math.min(...readings);
   }
   const beforeGap = wanted - Math.max(...offsets);
+  return firstMinuteReadingAtLeast(wanted, zone, beforeGap) ?? beforeGap;
+}
+
+/**
+ * The instant on `day` at which `zone`'s wall clock reads what it read at
+ * `instant`. A meeting moved to another day keeps its time of day there, by
+ * the DST rule of `instantAtWallClock`. The source's milliseconds are kept,
+ * because the wall clock is read to the second.
+ */
+export function sameWallClockOnDay(
+  instant: string,
+  day: string,
+  zone: string,
+): string {
+  const sourceMs = Date.parse(instant);
+  if (Number.isNaN(sourceMs)) {
+    throw new RangeError(`not an instant: ${instant}`);
+  }
+  const fraction = sourceMs - Math.floor(sourceMs / 1000) * 1000;
+  const sourceWall = wallClockMs(sourceMs, zone);
+  const timeOfDay = ((sourceWall % DAY_MS) + DAY_MS) % DAY_MS;
   return new Date(
-    firstMinuteReadingAtLeast(wanted, zone, beforeGap) ?? beforeGap,
+    instantAtWallClock(day, timeOfDay, zone) + fraction,
   ).toISOString();
 }
 

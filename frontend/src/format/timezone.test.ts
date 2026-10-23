@@ -171,11 +171,11 @@ describe("sameWallClockOnDay", () => {
       moved: "2026-04-02T13:00:00.000Z",
     },
     {
-      why: "a quarter-hour offset keeps its minutes",
-      source: "2026-01-15T14:00:00Z",
+      why: "a Kathmandu 01:45 on the 16th moves to 01:45 on the 20th",
+      source: "2026-01-15T20:00:00Z",
       zone: "Asia/Kathmandu",
       day: "2026-01-20",
-      moved: "2026-01-20T14:00:00.000Z",
+      moved: "2026-01-19T20:00:00.000Z",
     },
   ])("$why", ({ source, zone, day, moved }) => {
     expect(sameWallClockOnDay(source, day, zone)).toBe(moved);
@@ -212,6 +212,20 @@ describe("sameWallClockOnDay", () => {
         "Asia/Bangkok",
       ),
     ).toBe("2026-01-16T14:00:00.250Z");
+    // Also when the wall time falls in a gap and lands after it.
+    expect(
+      sameWallClockOnDay(
+        "2026-03-20T01:30:00.250Z",
+        "2026-03-29",
+        "Europe/Berlin",
+      ),
+    ).toBe("2026-03-29T01:00:00.250Z");
+  });
+
+  it("refuses a year Date.UTC would move into the 1900s", () => {
+    expect(() =>
+      sameWallClockOnDay("2026-01-15T14:00:00Z", "0099-09-09", "Asia/Bangkok"),
+    ).toThrow(RangeError);
   });
 
   it("refuses a day that does not exist", () => {

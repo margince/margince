@@ -1958,7 +1958,7 @@
     },
     {
       "name": "read_reports",
-      "tokens": 1910,
+      "tokens": 1902,
       "agents": [],
       "required_by_cases": [
         "case49_who_can_introduce_us"
@@ -2090,7 +2090,7 @@
     },
     {
       "name": "read_analytics",
-      "tokens": 1049,
+      "tokens": 1045,
       "agents": [],
       "required_by_cases": [
         "case20_put_it_in_the_board_pack"
@@ -2294,7 +2294,7 @@
     },
     {
       "name": "create_record",
-      "tokens": 677,
+      "tokens": 672,
       "agents": [],
       "required_by_cases": [
         "case1_log_it",
@@ -2479,7 +2479,7 @@
     },
     {
       "name": "schedule_meeting",
-      "tokens": 473,
+      "tokens": 469,
       "agents": [],
       "required_by_cases": [
         "case46_get_us_in_a_room"
@@ -2660,7 +2660,7 @@
     },
     {
       "name": "check_availability",
-      "tokens": 341,
+      "tokens": 337,
       "agents": [],
       "required_by_cases": [
         "case23_find_us_a_slot"

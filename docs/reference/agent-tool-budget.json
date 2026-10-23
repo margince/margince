@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 37,
     "system_frame_tokens": 597,
-    "tokens": 22495,
-    "median_tool_tokens": 473,
-    "mean_tool_tokens": 607
+    "tokens": 22470,
+    "median_tool_tokens": 469,
+    "mean_tool_tokens": 606
   },
   "agents": [
     {
@@ -68,11 +68,11 @@
         "whats_slipping_this_week"
       ],
       "of_served_tools": 37,
-      "tokens": 6088,
-      "listing_tokens": 3217,
+      "tokens": 6090,
+      "listing_tokens": 3219,
       "step_schema_tokens": 2274,
       "percent_of_ceiling": 18,
-      "headroom_tokens": 17122,
+      "headroom_tokens": 17120,
       "dangling_cross_references": [
         "at_risk_relationships → read_relationships",
         "log_activity → draft_outbound",
@@ -85,7 +85,7 @@
   "tool_cost": [
     {
       "name": "read_reports",
-      "tokens": 1910
+      "tokens": 1902
     },
     {
       "name": "find_records",
@@ -97,7 +97,7 @@
     },
     {
       "name": "read_analytics",
-      "tokens": 1049
+      "tokens": 1045
     },
     {
       "name": "send_outbound",
@@ -129,7 +129,7 @@
     },
     {
       "name": "create_record",
-      "tokens": 677
+      "tokens": 672
     },
     {
       "name": "update_record",
@@ -157,7 +157,7 @@
     },
     {
       "name": "schedule_meeting",
-      "tokens": 473
+      "tokens": 469
     },
     {
       "name": "decide_approvals",
@@ -193,7 +193,7 @@
     },
     {
       "name": "check_availability",
-      "tokens": 341
+      "tokens": 337
     },
     {
       "name": "read_attention",

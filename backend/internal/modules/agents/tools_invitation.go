@@ -39,7 +39,7 @@ func (t inviteMeetingTool) Spec() mcp.ToolSpec {
 		Unlisted:    true,
 		Description: inviteMeetingCopy.render(),
 		Instead:     inviteMeetingCopy.Instead,
-		InputSchema: argumentSchemaFor[crmcontracts.MeetingInvitationRequest](), OutputSchema: schemaFor[crmcontracts.MeetingInvitation](),
+		InputSchema: argumentSchemaFor[crmcontracts.MeetingInvitationRequest](windowRule), OutputSchema: schemaFor[crmcontracts.MeetingInvitation](),
 	}
 }
 

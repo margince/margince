@@ -10,16 +10,16 @@
   "totals": {
     "tools": 37,
     "resources": 9,
-    "tool_catalog_bytes": 127702,
+    "tool_catalog_bytes": 127604,
     "resource_catalog_bytes": 3588,
-    "approx_wire_tokens_total": 32822,
+    "approx_wire_tokens_total": 32798,
     "largest_tool_bytes": 8748,
     "largest_tool": "preview_import",
     "tool_catalog_composition": {
-      "description_bytes": 32535,
-      "input_schema_bytes": 61066,
+      "description_bytes": 32517,
+      "input_schema_bytes": 60986,
       "output_schema_bytes": 25189,
-      "description_plus_input_schema_bytes": 93601
+      "description_plus_input_schema_bytes": 93503
     }
   },
   "tools": {
@@ -1731,7 +1731,7 @@
               "type": "integer"
             },
             "from": {
-              "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
+              "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
               "format": "date-time",
               "type": "string"
             },
@@ -1746,7 +1746,7 @@
               "type": "boolean"
             },
             "to": {
-              "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
+              "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
               "format": "date-time",
               "type": "string"
             }
@@ -2038,7 +2038,7 @@
           "readOnlyHint": false,
           "title": "Create a record"
         },
-        "description": "Create a contact, company, deal, lead, project, activity or relationship that does not exist yet. Creating a deal requires a pipeline_id and a stage_id, and the workspace's pipeline list is what yields them for a deal that does not exist yet. Only the fields the chosen record_type actually stores are accepted, and a field belonging to a neighbouring type is refused rather than dropped. A CONTACT created here is visible to everyone in the workspace, the same as one a human types in. Omitted, occurred_at means now; ask the time of a past day named without one. Search first when the record might already exist — a second copy of a contact or company is a problem that then needs resolve_duplicates to undo. A record that shares only a name, with a different email, phone or employer, is not proof of a duplicate: create it — the create files the pair for review, and you report the pair as filed, unresolved until the reviewer decides. Several contacts, companies or leads at once — a pasted list, a CSV — go through preview_import, which checks every row and writes nothing; creating them one by one skips that check. The new record's id comes back in the result; keep it for anything that links to it. When the user says where they met the contact, pass that word as offer_tag: it only offers the tag, and change_tags still needs their yes. (Runs immediately; requires passport scope \"write\".)",
+        "description": "Create a contact, company, deal, lead, project, activity or relationship that does not exist yet. Creating a deal requires a pipeline_id and a stage_id, and the workspace's pipeline list is what yields them for a deal that does not exist yet. Only the fields the chosen record_type actually stores are accepted, and a field belonging to a neighbouring type is refused rather than dropped. A CONTACT created here is visible to everyone in the workspace, the same as one a human types in. No occurred_at means now; for a past day with no time, ask. Search first when the record might already exist — a second copy of a contact or company is a problem that then needs resolve_duplicates to undo. A record that shares only a name, with a different email, phone or employer, is not proof of a duplicate: create it — the create files the pair for review, and you report the pair as filed, unresolved until the reviewer decides. Several contacts, companies or leads at once — a pasted list, a CSV — go through preview_import, which checks every row and writes nothing; creating them one by one skips that check. The new record's id comes back in the result; keep it for anything that links to it. When the user says where they met the contact, pass that word as offer_tag: it only offers the tag, and change_tags still needs their yes. (Runs immediately; requires passport scope \"write\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -3954,12 +3954,12 @@
                                 "interval": {
                                   "properties": {
                                     "end_at": {
-                                      "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
+                                      "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
                                       "format": "date-time",
                                       "type": "string"
                                     },
                                     "start_at": {
-                                      "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
+                                      "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
                                       "format": "date-time",
                                       "type": "string"
                                     }
@@ -5245,7 +5245,7 @@
               "type": "string"
             },
             "evaluated_at": {
-              "description": "standard only: RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
+              "description": "standard only: RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
               "format": "date-time",
               "type": "string"
             },
@@ -5322,7 +5322,7 @@
                   "type": "string"
                 },
                 "through": {
-                  "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
+                  "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
                   "format": "date-time",
                   "type": "string"
                 }
@@ -5401,12 +5401,12 @@
                 "interval": {
                   "properties": {
                     "end_at": {
-                      "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
+                      "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
                       "format": "date-time",
                       "type": "string"
                     },
                     "start_at": {
-                      "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
+                      "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
                       "format": "date-time",
                       "type": "string"
                     }
@@ -6136,7 +6136,7 @@
               "type": "string"
             },
             "end": {
-              "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
+              "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
               "format": "date-time",
               "type": "string"
             },
@@ -6185,7 +6185,7 @@
               "type": "string"
             },
             "start": {
-              "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset.",
+              "description": "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset.",
               "format": "date-time",
               "type": "string"
             },

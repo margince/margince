@@ -175,7 +175,8 @@ func TestWriteToolsAcceptRealFieldsAndTheCustomFieldChannel(t *testing.T) {
 	}
 }
 
-// Every schema argument declaring a date-time must splice in timestampNote.
+// Every schema argument declaring a date-time must splice in timestampNote or
+// windowNote.
 //
 // Derived from the SOURCE of every schema(…) expression in this package, not
 // from a list of tools: the first version of this gate hand-listed two tools
@@ -230,30 +231,52 @@ func TestEveryTimestampArgumentDocumentsItsOffset(t *testing.T) {
 // The source census above reads only hand-written schema(…) literals. A
 // struct-derived argument such as follow_up_task.due_at is invisible to it.
 func TestEveryRenderedTimestampArgumentCarriesTheRule(t *testing.T) {
-	checked := 0
+	rendered := map[string]string{}
 	for name, tool := range idProbeDispatcher(t).registry.tools {
 		var document any
 		if err := json.Unmarshal(tool.Spec().InputSchema, &document); err != nil {
 			t.Fatalf("%s: input schema is not JSON: %v", name, err)
 		}
-		for _, path := range dateTimeMembersWithout(document, timestampRule, name) {
-			t.Errorf("%s: a date-time argument without the timestamp rule", path)
-		}
-		checked += countDateTimes(document)
+		collectDateTimes(document, name, rendered)
 	}
-	if checked == 0 {
+	if len(rendered) == 0 {
 		t.Fatal("no tool declares a date-time argument; the walk is broken, not the code")
+	}
+	for path, description := range rendered {
+		if description != timestampRule && description != windowRule {
+			t.Errorf("%s: a date-time argument without a timestamp rule: %q", path, description)
+		}
+	}
+	// A recorded moment must not get an hour the user never said. A window or
+	// a slot is chosen, so only its offset is fixed.
+	for path, want := range map[string]string{
+		"log_activity.properties.occurred_at":                      timestampRule,
+		"log_activity.properties.due_at":                           timestampRule,
+		"log_activity.properties.follow_up_task.properties.due_at": timestampRule,
+		"check_availability.properties.from":                       windowRule,
+		"check_availability.properties.to":                         windowRule,
+		"book_meeting.properties.start":                            windowRule,
+		"book_meeting.properties.end":                              windowRule,
+	} {
+		if rendered[path] != want {
+			t.Errorf("%s carries %q, want %q", path, rendered[path], want)
+		}
 	}
 }
 
 // A model copies an example's offset into a day the user named without a
 // time, so the example names UTC and no fixed offset.
 func TestTheTimestampExampleCarriesNoFixedOffset(t *testing.T) {
-	if offset := regexp.MustCompile(`[+-]\d\d:\d\d`).FindString(timestampRule); offset != "" {
-		t.Errorf("timestampRule names the offset %s; a model copies it", offset)
+	for name, rule := range map[string]string{"timestampRule": timestampRule, "windowRule": windowRule} {
+		if offset := regexp.MustCompile(`[+-]\d\d:\d\d`).FindString(rule); offset != "" {
+			t.Errorf("%s names the offset %s; a model copies it", name, offset)
+		}
 	}
 	if !strings.Contains(timestampRule, "never invent an hour or offset") {
 		t.Error("timestampRule must tell the model not to invent an hour")
+	}
+	if strings.Contains(windowRule, "hour") || !strings.Contains(windowRule, "never invent an offset") {
+		t.Error("windowRule must fix only the offset; the model chooses a window's hour")
 	}
 }
 
@@ -276,42 +299,28 @@ func TestActivityWritersSayWhatAMissingTimeDoes(t *testing.T) {
 	}
 }
 
+// collectDateTimes records the description of every date-time member under
+// its dotted path.
+//
 //craft:ignore naked-any a decoded JSON Schema document is any-shaped; a typed decode would drop the members this walk must see
-func dateTimeMembersWithout(node any, rule, path string) []string {
-	var missing []string
-	switch value := node.(type) {
-	case map[string]any:
-		if value["format"] == "date-time" && value["description"] != rule {
-			missing = append(missing, path)
-		}
-		for key, member := range value {
-			missing = append(missing, dateTimeMembersWithout(member, rule, path+"."+key)...)
-		}
-	case []any:
-		for _, member := range value {
-			missing = append(missing, dateTimeMembersWithout(member, rule, path)...)
-		}
-	}
-	return missing
-}
-
-//craft:ignore naked-any a decoded JSON Schema document is any-shaped; a typed decode would drop the members this walk must see
-func countDateTimes(node any) int {
-	count := 0
+func collectDateTimes(node any, path string, out map[string]string) {
 	switch value := node.(type) {
 	case map[string]any:
 		if value["format"] == "date-time" {
-			count++
+			description, isText := value["description"].(string)
+			if !isText {
+				description = "(no description)"
+			}
+			out[path] = description
 		}
-		for _, member := range value {
-			count += countDateTimes(member)
+		for key, member := range value {
+			collectDateTimes(member, path+"."+key, out)
 		}
 	case []any:
 		for _, member := range value {
-			count += countDateTimes(member)
+			collectDateTimes(member, path, out)
 		}
 	}
-	return count
 }
 
 // dateTimeOccurrences reports, for each `"format":"date-time"` in the flattened
@@ -351,8 +360,11 @@ func schemaText(expr ast.Expr) string {
 		case *ast.Ident:
 			// timestampNote is a string constant; splice its value in so the
 			// per-occurrence check sees the text a caller would receive.
-			if node.Name == "timestampNote" {
+			switch node.Name {
+			case "timestampNote":
 				literal += timestampNote
+			case "windowNote":
+				literal += windowNote
 			}
 		case *ast.CallExpr:
 			for _, arg := range node.Args {
