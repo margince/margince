@@ -382,9 +382,9 @@ func TestOneToolCallSpendsOneOfTheCallCeiling(t *testing.T) {
 		"confirm-first that waits even for its user, staged and never run": {
 			tier: mcp.TierConfirmationRequired, waits: true, wantCalls: 0, wantErr: apperrors.ErrRequiresApproval,
 		},
-		"auto-execute, nothing presented":                          {tier: mcp.TierAutoExecute, wantCalls: 1},
-		"auto-execute, redeeming a presented approval":             {tier: mcp.TierAutoExecute, presented: true, wantCalls: 1},
-		"confirm-first, redeeming a presented approval":            {tier: mcp.TierConfirmationRequired, presented: true, wantCalls: 1},
+		"auto-execute, nothing presented":                                {tier: mcp.TierAutoExecute, wantCalls: 1},
+		"auto-execute, redeeming a presented approval":                   {tier: mcp.TierAutoExecute, presented: true, wantCalls: 1},
+		"confirm-first, redeeming a presented approval":                  {tier: mcp.TierConfirmationRequired, presented: true, wantCalls: 1},
 		"confirm-first on a colleague's passport, run as that colleague": {tier: mcp.TierConfirmationRequired, wantCalls: 1},
 	} {
 		t.Run(name, func(t *testing.T) {
