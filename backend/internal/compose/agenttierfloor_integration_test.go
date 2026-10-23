@@ -68,7 +68,7 @@ func TestATierFlooredForOneRecordTypeBindsTheToolDoorToo(t *testing.T) {
 
 	// The identical effect POST /v1/projects performs, asked for through the
 	// verb whose tier the contract never tightened. Automatic work may not stage
-	// the approval the floor asks for, so the floor reaching this door shows as
+	// the approval the floor asks for. So the floor reaching this door shows as
 	// the staging refusal, and nothing is written.
 	_, err := registry.Invoke(tierFloorAgent(t, e), "create_record",
 		json.RawMessage(`{"record_type":"project","fields":{"name":"Unapproved",`+

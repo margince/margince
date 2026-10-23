@@ -240,7 +240,7 @@ func TestAFlooredAccountSendFromAutomaticWorkIsRefusedAndNothingLeaves(t *testin
 }
 
 // An agent on a colleague's passport sends at once under the same floor, as the
-// colleague could from the app: one message leaves and nothing is staged.
+// colleague could from the app. One message leaves and nothing is staged.
 func TestAFlooredAccountSendOnAColleaguesPassportLeavesAtOnce(t *testing.T) {
 	a := setupAccountSend(t)
 	args, err := json.Marshal(map[string]any{

@@ -5,7 +5,7 @@
 
 package integration
 
-// The human-edit-precedence gate (interfaces.md §2.1) is per FIELD, and it
+// The human-edit-precedence gate is per FIELD, and it
 // binds automatic work: an agent with no passport behind it. Its patch applies
 // wherever it keeps clear of human-typed values. The human-owned fields it
 // touches are split off into a staged approval, and only a human decision,
@@ -169,7 +169,7 @@ func contactNameAndTitle(t *testing.T, invoke func(tool, args string) (json.RawM
 	return rec.Fields.FullName, rec.Fields.Title
 }
 
-// Automatic work with no passport applies the fields nobody typed and is refused
+// Automatic work with no passport applies the fields nobody typed. It is refused
 // the ones a human last wrote: it may not stage an approval, so nothing waits.
 func TestAutomaticWorkIsRefusedTheFieldsAHumanTyped(t *testing.T) {
 	e := apptest.SetupApp(t)

@@ -6,7 +6,7 @@
 package integration
 
 // What automatic work's batch relink onto a project answers. It may not stage the
-// approval a project destination asks for, so both the thread form and the named
+// approval a project destination asks for. Both the thread form and the named
 // set are refused and nothing is filed.
 
 import (
@@ -47,7 +47,7 @@ func TestAutomaticWorkIsRefusedABatchRelinkOntoAProject(t *testing.T) {
 	e.WsExec(t, `INSERT INTO role_assignment (role_id, user_id) SELECT r.id, $1 FROM role r WHERE r.key = 'relink-lender'`, e.Rep1)
 	agent := relinkAgentCtx(e, ids.UUID{})
 
-	// The thread form is refused before any staging: a key names a conversation
+	// The thread form is refused before any staging. A key names a conversation
 	// that may grow, so the refusal sends the caller to the named set.
 	_, err := registry.Invoke(agent, "relink_thread",
 		json.RawMessage(`{"thread_key":"`+f.key+`","entity_type":"project","entity_id":"`+f.project.String()+`"}`))

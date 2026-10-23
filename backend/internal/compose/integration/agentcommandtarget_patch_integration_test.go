@@ -16,7 +16,7 @@ import (
 )
 
 // An agent on a colleague's passport overwrites a name a human typed at once,
-// as the colleague could in the app, and stages nothing for anyone to approve.
+// as the colleague could in the app. It stages nothing for anyone to approve.
 func TestARestPatchOnAColleaguesPassportOverwritesAHumanWrittenNameAtOnce(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)

@@ -13,9 +13,9 @@ package integration
 // create body had no audit row carrying its key, HumanOwnedConflicts found
 // no conflict, and the whole patch applied at the auto-execute tier. The
 // shipped deal form posts name, amount_minor, currency and
-// expected_close_date together, which made that the ordinary case rather
-// than an edge one: automatic work could turn EUR 2,500.00 into EUR 1.00 and
-// move the forecast, with no human asked. Automatic work may not stage an
+// expected_close_date together, which made that the ordinary case. Automatic
+// work could turn EUR 2,500.00 into EUR 1.00 and move the forecast, with no
+// human asked. Automatic work may not stage an
 // approval, so such a patch is refused.
 
 import (
@@ -64,7 +64,7 @@ func TestAutomaticWorkCannotSilentlyOverwriteCreateTimeHumanValues(t *testing.T)
 	}
 
 	// Automatic work rewrites the money and the forecast. Neither key appears
-	// in the create audit's after-image, which is the whole point.
+	// in the create audit's after-image, so only the create rule can protect them.
 	if held := automaticPatch(t, e, "deal", deal.ID, AnyMap{
 		"amount_minor": 100, "expected_close_date": "2027-06-30",
 	}); !held {

@@ -62,7 +62,7 @@ func TestAutomaticWorkIsRefusedNarrowingWhoSeesAHumanCreatedRecord(t *testing.T)
 	}
 }
 
-// A boolean default is not nobody's edit: a product a human added is on sale
+// A boolean default is not nobody's edit. A product a human added is on sale
 // because it is active, so automatic work may not take it off sale.
 func TestAutomaticWorkIsRefusedMovingABooleanDefaultOnAHumanCreatedRecord(t *testing.T) {
 	e := apptest.SetupApp(t)

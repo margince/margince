@@ -182,7 +182,7 @@ func TestAnAgentArchivesAnEdgeOnItsOwnPassport(t *testing.T) {
 }
 
 // Under a tier floor, automatic work with no passport may not stage the archive
-// the floor asks for, so it is refused and the edge stays live.
+// the floor asks for. It is refused and the edge stays live.
 func TestAFlooredEdgeArchiveIsRefusedToAutomaticWork(t *testing.T) {
 	e := setupRelationships(t)
 

@@ -203,9 +203,9 @@ func (g *Gate) Admit(ctx context.Context, spec mcp.ToolSpec, resolve func() (mcp
 	// agent gate both come through Admit, and a rule spelled twice on this seam
 	// is how the tier itself came to judge both endpoints of a deal move on one
 	// door and only the destination on the other.
-	// A tier lifted for an agent acting as its user binds no pin: the pin also
-	// tells the store the move is the open one the tier admitted, and a lifted
-	// call is the colleague's own move, which the tier model does not govern.
+	// A tier lifted for an agent acting as its user binds no pin. The pin also
+	// tells the store the move is the open one the tier admitted. A lifted call
+	// is the colleague's own move, which the tier model does not govern.
 	if observed != nil && resolvedAuto {
 		ctx = withAutoExecutePin(ctx, *observed)
 	}
