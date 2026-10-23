@@ -210,9 +210,8 @@ func TestAHandoverKeepsTheCeilingOverAnAdmin(t *testing.T) {
 	}
 }
 
-// The private handover asks the receiver question itself, so a caller that
-// reaches it without the seam still cannot hand records to a seat that may not
-// own them.
+// The private handover asks the receiver question itself. A caller that reaches
+// it without the seam still cannot hand records to a seat that may not own them.
 func TestThePrivateHandoverRefusesAReceiverWhoCannotOwn(t *testing.T) {
 	e := integration.Setup(t)
 	private := ids.UUID(seedBulkContacts(t, e, e.Rep1, 1)[0].Id)
