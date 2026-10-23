@@ -73,3 +73,12 @@ func (s *Service) PendingInScope(ctx context.Context, scope ListInput, named []i
 	})
 	return visible, err
 }
+
+// StagedInItsDecidersSession reports whether the decider staged this through
+// an AI client connected on their own passport, which shows them the request in
+// the conversation they are having. A passport minted without a connection,
+// such as the overnight run's, is unattended and does not count.
+func (a row) StagedInItsDecidersSession() bool {
+	return a.ConnectionID != nil && a.PassportID != nil && a.OnBehalfOf != nil &&
+		requestedDecider(a) == a.OnBehalfOf.UUID
+}

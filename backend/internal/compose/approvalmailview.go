@@ -52,6 +52,11 @@ func refreshApprovalNotice(
 	if !approval.PendingAt(now) {
 		return attempt, facts, false, nil
 	}
+	// The decider is in the conversation that staged it and sees it there. Their
+	// approvals list and digest still carry it.
+	if use == forSingleEmail && approval.StagedInItsDecidersSession() {
+		return attempt, facts, false, nil
+	}
 	current, err := service.GetWire(ctx, *attempt.ApprovalID)
 	if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
 		return attempt, facts, false, nil
