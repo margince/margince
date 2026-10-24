@@ -409,12 +409,18 @@ func TestUnjudgedMessagesAreTheOnesThisPassReadsFirstAndNoEventCites(t *testing.
 	if got := unjudgedMessages(thread, events); len(got) != 2 || got[0] != plain || got[1] != fresh {
 		t.Errorf("a never-read thread: got %v, want the two uncited messages", got)
 	}
-	readTo := day(3)
+	readTo := day(4)
 	thread.ReadTo = &readTo
 	if got := unjudgedMessages(thread, events); len(got) != 1 || got[0] != fresh {
 		t.Errorf("a message an earlier pass judged was read again: %v", got)
 	}
 	if got := unjudgedMessages(thread, nil); len(got) != 1 || got[0] != fresh {
 		t.Errorf("an earlier pass's messages must stay out of the focus even uncited: %v", got)
+	}
+	// Mail imported later can carry the very instant the last read reached.
+	sameInstant := day(5)
+	thread.ReadTo = &sameInstant
+	if got := unjudgedMessages(thread, nil); len(got) != 1 || got[0] != fresh {
+		t.Errorf("a message at the instant the last read reached is not in the focus: %v", got)
 	}
 }

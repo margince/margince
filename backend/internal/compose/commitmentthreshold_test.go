@@ -21,7 +21,7 @@ var waivedRecords = gatekit.Waive(map[string]string{
 		" verdict it had before this gate existed and says nothing about how it reads a soft promise",
 })
 
-const rerunCertLane = "re-run the cert lane: make -C backend e2e-ai-certify"
+const rerunCertLane = "re-run the cert lane: make -C backend e2e-ai TASK=<task> MODEL=<provider>:<model>"
 
 // Certified firm promises must clear the automatic-task threshold.
 func TestAutomaticTaskConfidenceFitsCertifiedCommitments(t *testing.T) {

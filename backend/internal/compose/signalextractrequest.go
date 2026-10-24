@@ -145,6 +145,8 @@ func extractRequest(thread settledThread, lang string) model.Request {
 	}
 }
 
+const directionUnknown = "unknown"
+
 // directionWord says who wrote a message in words the model reads the same way
 // every time. An empty direction is left unclaimed rather than guessed. A
 // commitment attributed to the wrong side is worse than one attributed to
@@ -156,6 +158,6 @@ func directionWord(direction string) string {
 	case "outbound":
 		return "from us"
 	default:
-		return "unknown"
+		return directionUnknown
 	}
 }

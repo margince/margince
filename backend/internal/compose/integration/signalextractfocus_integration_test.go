@@ -188,9 +188,12 @@ func TestAMessageAnEarlierPassJudgedIsNotReadAgain(t *testing.T) {
 	if brain.calls != 4 {
 		t.Fatalf("the model was called %d times, want two readings in each of two passes", brain.calls)
 	}
+	// The follow-up is the newest message the first pass read. It sits at the
+	// watermark instant, which later mail can share, so it is read again.
 	line := focusLine(t, brain.requests[3])
-	if !strings.Contains(line, later.String()) || strings.Contains(line, conv.promise.String()) || strings.Contains(line, conv.followup.String()) {
-		t.Errorf("the second pass must focus on the new message only: %s", line)
+	if !strings.Contains(line, later.String()) || !strings.Contains(line, conv.followup.String()) ||
+		strings.Contains(line, conv.promise.String()) || strings.Contains(line, conv.need.String()) {
+		t.Errorf("the second pass must focus on the new message and the one at the watermark: %s", line)
 	}
 }
 

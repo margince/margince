@@ -159,32 +159,48 @@ func (x *SignalExtractor) readThread(
 		// watermark stays where it is and the conversation is read again.
 		return 0, err
 	}
-	if focus := unjudgedMessages(thread, events); len(events) > 0 && len(events) < extractMaxEvents && len(focus) > 0 {
-		focused := thread
-		focused.Focus, focused.EventCap = focus, extractMaxEvents-len(events)
-		more, askErr := x.askReading(ctx, focused)
-		if errors.Is(askErr, errRefusedReading) {
-			// The first answer stands, but the thread is not retired: the
-			// messages the second reading was for have still not been judged.
-			raised, read, commitErr := x.commitReading(ctx, wsID, thread, events, now, false)
-			if commitErr != nil && !errors.Is(commitErr, errRefusedReading) {
-				return raised, commitErr
-			}
-			if !read {
-				return raised, nil
-			}
-			return raised, x.deferRefusedReading(ctx, wsID, thread, now, askErr)
-		}
-		if askErr != nil {
-			return 0, askErr
-		}
-		events = append(events, more...)
+	more, err := x.askFocusedReading(ctx, thread, events)
+	if errors.Is(err, errRefusedReading) {
+		return x.keepFirstReading(ctx, wsID, thread, events, now, err)
 	}
-	raised, _, err := x.commitReading(ctx, wsID, thread, events, now, true)
+	if err != nil {
+		return 0, err
+	}
+	events = append(events, more...)
+	raised, _, err := x.commitReading(ctx, thread, events, now, true)
 	if errors.Is(err, errRefusedReading) {
 		return raised, x.deferRefusedReading(ctx, wsID, thread, now, err)
 	}
 	return raised, err
+}
+
+// askFocusedReading asks a second time about the unjudged messages. It asks
+// only when the first reading found something and left room for more.
+func (x *SignalExtractor) askFocusedReading(
+	ctx context.Context, thread settledThread, events []extractedEvent,
+) ([]extractedEvent, error) {
+	focus := unjudgedMessages(thread, events)
+	if len(events) == 0 || len(events) >= extractMaxEvents || len(focus) == 0 {
+		return nil, nil
+	}
+	focused := thread
+	focused.Focus, focused.EventCap = focus, extractMaxEvents-len(events)
+	return x.askReading(ctx, focused)
+}
+
+// keepFirstReading commits the first reading when the second was refused. The
+// thread is not retired: the messages the second reading was for are unjudged.
+func (x *SignalExtractor) keepFirstReading(
+	ctx context.Context, wsID ids.WorkspaceID, thread settledThread, events []extractedEvent, now time.Time, refusal error,
+) (int, error) {
+	raised, read, err := x.commitReading(ctx, thread, events, now, false)
+	if err != nil && !errors.Is(err, errRefusedReading) {
+		return raised, err
+	}
+	if !read {
+		return raised, nil
+	}
+	return raised, x.deferRefusedReading(ctx, wsID, thread, now, refusal)
 }
 
 // unjudgedMessages are the messages this pass reads for the first time. No
@@ -260,7 +276,7 @@ func (x *SignalExtractor) deferRefusedReading(
 // that is only partly answered. It reports false when the rule no longer reads
 // the conversation, in which case nothing was written.
 func (x *SignalExtractor) commitReading(
-	ctx context.Context, wsID ids.WorkspaceID, thread settledThread, events []extractedEvent, now time.Time, retire bool,
+	ctx context.Context, thread settledThread, events []extractedEvent, now time.Time, retire bool,
 ) (int, bool, error) {
 	raised, complete, read := 0, true, false
 	if err := database.WithWorkspaceTx(ctx, x.pool, func(tx pgx.Tx) error {
