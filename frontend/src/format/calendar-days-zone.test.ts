@@ -10,12 +10,10 @@ import { filesUnder, parseSource } from "../../scripts/lib/source-tree";
 
 // A day count is reckoned in the zone the date beside it is drawn in.
 //
-// `calendarDaysBetween` takes the zone as a required third argument, so tsc
-// already fails a caller that forgets it. This gate covers the two ways to
-// count in UTC that tsc cannot see. One is passing the literal "UTC". The other
-// is flooring a millisecond span to days by hand (`Math.floor(x / 86_400_000)`)
-// outside the one module that owns the rule. Like zone-by-purpose.test.ts, it reads every
-// file and parses every file whose text can hold a finding. A new screen is gated the day it lands.
+// `calendarDaysBetween` requires the zone, so tsc catches a caller that forgets it.
+// This gate covers what tsc cannot see: passing the literal "UTC", and flooring a
+// millisecond span by hand (`Math.floor(x / 86_400_000)`) outside the owning module.
+// It parses every file whose text can hold a finding, so a new screen is gated at once.
 
 const srcRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const owner = join(srcRoot, "format", "format.dates.ts");
