@@ -335,9 +335,9 @@ func TestCompanyAddressPreviewKeepsObjectRowAndFieldScope(t *testing.T) {
 		ctx  context.Context
 		want error
 	}{
-		"no object grant":                  {principal.WithActor(ctx, noRead), apperrors.ErrPermissionDenied},
+		"no object grant":                 {principal.WithActor(ctx, noRead), apperrors.ErrPermissionDenied},
 		"another owner's private company": {e.asOwnScoped(e.otherRep), apperrors.ErrNotFound},
-		"a withheld address part":          {principal.WithActor(ctx, masked), apperrors.ErrPermissionDenied},
+		"a withheld address part":         {principal.WithActor(ctx, masked), apperrors.ErrPermissionDenied},
 	} {
 		t.Run(name, func(t *testing.T) {
 			preview, err := e.store.PreviewCompanyRead(tc.ctx, proposal)
