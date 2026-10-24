@@ -28,7 +28,7 @@ func markSentBySystem(t *testing.T, id ids.UUID) {
 }
 
 // A thread written only by a sending system is not on the queue, so it costs no
-// model call and files no signal. The same fixture from a person is offered, and
+// model call and files no signal. The same fixture from a human sender is offered, and
 // the trace names the arm for the first.
 func TestAThreadOfOnlySendingSystemMailIsNotRead(t *testing.T) {
 	e := integration.Setup(t)
@@ -44,7 +44,7 @@ func TestAThreadOfOnlySendingSystemMailIsNotRead(t *testing.T) {
 		t.Error("a thread of only sending-system mail was offered to the reader")
 	}
 	if !offered[humanKey] {
-		t.Fatal("the same conversation from a person is not offered, so the skip proves nothing")
+		t.Fatal("the same conversation from a human sender is not offered, so the skip proves nothing")
 	}
 
 	reading, err := NewThreadReadings(e.DB(), func() time.Time { return traceReadClock }).
@@ -59,8 +59,8 @@ func TestAThreadOfOnlySendingSystemMailIsNotRead(t *testing.T) {
 }
 
 // A message from a sending system adds no company to its thread. Here a
-// notification sits on another account (its address was imported as a contact
-// there) and a person writes from the real one: the thread reaches one account.
+// notice sits on another account, because its address was imported as a contact
+// there. A human sender writes from the real one, so the thread reaches one account.
 func TestASendingSystemMessageDoesNotPullAThreadOntoItsCompany(t *testing.T) {
 	e := integration.Setup(t)
 	real := e.SeedCompany(t, "Real Customer", &e.Rep1)
@@ -84,6 +84,6 @@ func TestASendingSystemMessageDoesNotPullAThreadOntoItsCompany(t *testing.T) {
 		t.Fatalf("due threads = %+v, want only %q: the notice pulled its own company onto the thread", due, key)
 	}
 	if due[0].CompanyID != real {
-		t.Errorf("thread company = %v, want the account the person wrote from (%v)", due[0].CompanyID, real)
+		t.Errorf("thread company = %v, want the account the human sender wrote from (%v)", due[0].CompanyID, real)
 	}
 }

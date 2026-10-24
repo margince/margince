@@ -64,7 +64,7 @@ func TestDeliverySystemSendersAreRecognizedInTheShapesTheyArriveIn(t *testing.T)
 	}
 }
 
-func TestNotificationAddressesAreSendingSystemsButPeopleAtTheBaseDomainAreNot(t *testing.T) {
+func TestNotificationAddressesAreSendingSystemsButHumansAtTheBaseDomainAreNot(t *testing.T) {
 	t.Parallel()
 	token := strings.Repeat("aorgB9", 34)
 	for address, want := range map[string]bool{

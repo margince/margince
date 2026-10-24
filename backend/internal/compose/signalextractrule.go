@@ -54,7 +54,7 @@ var conversationHead = `
 			            AND b.archived_at IS NULL AND b.captured_by LIKE 'connector:%'
 			       ))::uuid AS oldest_id,
 			       count(DISTINCT a.id) AS message_count,
-			       -- A thread with no message from a person has nothing to read
+			       -- A thread with no message from a human sender has nothing to read
 			       -- for what it says about an account.
 			       bool_or(NOT a.sender_is_machine) AS has_human_sender,
 			       min(ro.company_id::text) AS one_company,
@@ -170,14 +170,14 @@ const conversationTail = `
 		)
 `
 
-// The arms of the offer, each with the reason it is an arm. A member reading the
-// trace sees one of these as the answer, so the wording of the comment and the
-// wording of the rung's reason are about the same fact.
+// The arms of the offer, each with the reason it is an arm.
+// A member reading the trace sees one of these as the answer.
+// The comment and the rung's reason state the same fact.
 const (
-	// At least one message from a person. A thread whose every message comes
+	// At least one message from a human sender. A thread whose every message comes
 	// from a sending system (a file-share notice, a comment notification) is
-	// not read: no model call and no signal, because a finding on it would
-	// land on the notification tool's company.
+	// not read. It gets no model call and no signal, because a finding on it
+	// would land on the notification tool's company.
 	threadHasAHumanSender = `c.has_human_sender`
 
 	// Exactly one account across the whole thread. A conversation touching two

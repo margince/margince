@@ -47,8 +47,8 @@ type LastTouchCandidate struct {
 // live, an engagement rather than a notice, visible to the workspace, and not
 // the engine's own output. The scan reads it to find a silence and the
 // resolver (CompleteQuietRemindersReachedBy) to find its end, so a touch that
-// would not have moved the anchor does not close the reminder either. Mail
-// from a sending system is not contact, so it ends no silence.
+// would not have moved the anchor does not close the reminder either.
+// Mail from a sending system is not contact. It ends no silence.
 //
 // The three positions bind systemSource, systemCapturedBy and
 // systemCapturedByPattern; source alone is a client's to spell, so it is

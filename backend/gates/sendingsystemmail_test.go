@@ -10,10 +10,10 @@ package gates
 //
 // activity.sender_is_machine stores whether mail came from a notification tool.
 // A reader that walks the company reach set or the scoring kind group without
-// the arm counts a file-share notice as contact, or files a finding on the
-// notification tool's company. The subjects come from the tree: every top-level
-// declaration that renders the reach set or the kind group, judged on whether
-// the same declaration reaches the arm.
+// the arm counts a file-share notice as contact. It may also file a finding on
+// the notification tool's company. The subjects come from the tree. They are
+// the top-level declarations that render the reach set or the kind group.
+// Each is judged on whether the same declaration reaches the arm.
 
 import (
 	"go/ast"
@@ -35,13 +35,13 @@ var armRenderers = map[string]bool{
 }
 
 // subjectRenderers are the renderers whose use makes a declaration a reader of
-// captured mail for people-facing features.
+// captured mail for contact and company features.
 var subjectRenderers = map[string]bool{
 	"CompanyReachSet":         true,
 	"InteractionKindSQLGroup": true,
 }
 
-// countsSendingSystemMail are the readers that deliberately keep mail from a
+// countsSendingSystemMail are the readers that keep mail from a
 // sending system. Each says why that is right.
 var countsSendingSystemMail = gatekit.Waive(map[string]string{
 	"internal/compose/dealscoutsql.go :: scoutEvidenceSQL": "reads outbound mail only, and a sending system never receives a reply from us as its own mail, so no row of it carries the stamp",
@@ -136,9 +136,9 @@ func callTargetName(n ast.Node) string {
 	return ""
 }
 
-// armCarriers is the set of declaration names that reach the machine-sender arm:
-// by the column's name in a string, by an arm renderer, or by calling a bare
-// package-local carrier. A fixpoint, so a helper that reaches the arm through
+// armCarriers is the set of declaration names that reach the machine-sender arm.
+// A declaration reaches it by the column's name in a string, by an arm renderer,
+// or by calling a bare package-local carrier. It is a fixpoint, so a helper that reaches the arm through
 // another helper counts.
 func armCarriers(units []declUnit) map[string]bool {
 	carriers := map[string]bool{}

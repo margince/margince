@@ -107,7 +107,7 @@ func HasMachineMarker(localpart string) bool {
 
 // notificationHosts are full mail hosts that only a groupware service's
 // document, drive and calendar notices come from. They are matched whole, never
-// by registrable domain, because a person can hold a mailbox at the base domain.
+// by registrable domain, because a human sender can hold a mailbox at the base domain.
 var notificationHosts = map[string]bool{
 	"docs.google.com":     true,
 	"drive.google.com":    true,
@@ -115,7 +115,7 @@ var notificationHosts = map[string]bool{
 }
 
 // tokenReplyMinLength is the shortest opaque token after "<letter>+" that
-// counts as a reply-routing token. A person's own name+tag address is far
+// counts as a reply-routing token. A human sender's own name+tag address is far
 // shorter.
 const tokenReplyMinLength = 32
 

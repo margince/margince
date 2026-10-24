@@ -135,13 +135,13 @@ func TestACalledOffMeetingAnswersNoQuietReminder(t *testing.T) {
 }
 
 // Mail from a sending system is not contact, so it ends no silence. The same
-// mail from a person does.
+// mail from a human sender does.
 func TestMailFromASendingSystemAnswersNoQuietReminder(t *testing.T) {
 	for _, test := range []struct {
 		name    string
 		machine bool
 		closed  int
-	}{{"a file-share notice", true, 0}, {"a person's reply", false, 1}} {
+	}{{"a file-share notice", true, 0}, {"a human reply", false, 1}} {
 		t.Run(test.name, func(t *testing.T) {
 			e := setupRecency(t)
 			deal := e.seedQuietDeal(t, pinnedQuiet)
