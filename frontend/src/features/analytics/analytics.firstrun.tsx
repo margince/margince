@@ -1,33 +1,51 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery } from "@tanstack/react-query";
-import { api } from "../../api/client";
 import { Button, EmptyState } from "../../design-system/atoms";
 import { useT } from "../../i18n";
-import { useCan } from "../../lib/capability";
-import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
+import type { AnalyticsScope } from "./analytics.context";
 
-// No deal this reader can see, archived ones included. The reports are empty
-// because nothing they could measure has been recorded. A row of empty charts
-// does not say that, so the page names the first step. It speaks of the
-// reader's deals only, because their row scope may hide everyone else's.
-export function FirstRunNotice() {
+// Said when the server reports that the population an answer measured holds
+// no deal, archived ones included. The server computes the flag with the
+// figures, so the notice and the numbers cannot describe different
+// populations. Unknown (absent) and true say nothing.
+export function FirstRunNotice({
+  holdsDeals,
+  scope,
+  allowedScopes,
+  onSelectScope,
+}: Readonly<{
+  holdsDeals: boolean | undefined;
+  scope: AnalyticsScope;
+  allowedScopes: readonly AnalyticsScope[];
+  onSelectScope: (scope: AnalyticsScope) => void;
+}>) {
   const t = useT();
-  const canReadDeals = useCan("deal", "read");
-  const probe = useQuery({
-    queryKey: ["deals", "first-run"],
-    enabled: canReadDeals,
-    queryFn: async () =>
-      unwrap(
-        await api.GET("/deals", {
-          params: { query: { limit: 1, include_archived: true } },
-        }),
-      ),
-  });
-  if (!canReadDeals || !probe.data || probe.data.data.length > 0) {
+  if (holdsDeals !== false) {
     return null;
+  }
+  const company = allowedScopes.find((offer) => offer.kind === "workspace");
+  if (scope.kind === "owner" && company) {
+    return (
+      <EmptyState
+        title={t("analytics.emptyOwnTitle")}
+        action={
+          <Button onClick={() => onSelectScope(company)}>
+            {t("analytics.emptyOwnAction")}
+          </Button>
+        }
+      >
+        {t("analytics.emptyOwnBody")}
+      </EmptyState>
+    );
+  }
+  if (scope.kind === "team") {
+    return (
+      <EmptyState title={t("analytics.emptyTeamTitle", { scope: scope.label })}>
+        {t("analytics.emptyTeamBody", { scope: scope.label })}
+      </EmptyState>
+    );
   }
   return (
     <EmptyState

@@ -57,7 +57,7 @@ type derivationOutcome struct {
 // predicates + the caller's row-scope clause) in one transaction.
 func (e *reportEngine) fetchDerivation(ctx context.Context, report string, spec reportSpec, plan derivationPlan, out *derivationOutcome) error {
 	return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
-		if err := requireNamedRecords(ctx, tx, spec, predicatesAsFilters(plan.predicates)); err != nil {
+		if err := requireNamedRecords(ctx, tx, spec, requestedReportScope(plan.scope), predicatesAsFilters(plan.predicates)); err != nil {
 			return err
 		}
 		var args []any
@@ -320,8 +320,8 @@ func derivationWhere(
 	// And the same owner narrowing, so a breakdown's drill-through opens only
 	// the owners its headline counted. A row handle pins its owner, which
 	// requireMeasurableOwners has already judged.
-	owners, narrowed, err := ownerBreakdownClause(ctx, tx, spec,
-		requested.Kind == "" && breaksDownByOwner(spec, plan.groupBy) && !pinsOwner(spec, predicateFields(plan.preds)), arg)
+	owners, narrowed, err := ownerBreakdownClause(ctx, tx, spec, requested,
+		narrowsOwnerBreakdown(requested, ownerBreakdown{breaksDownByOwner(spec, plan.groupBy), pinsOwner(spec, predicateFields(plan.preds))}), arg)
 	if err != nil {
 		return nil, "", err
 	}

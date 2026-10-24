@@ -17094,6 +17094,10 @@ components:
           items:
             type: string
             format: uuid
+        scope_holds_deals:
+          type: boolean
+          description: >-
+            Whether the population this answer measured holds any deal, archived ones included, computed with the same population clause as the figures. Absent when unknown (a stored edition captured before the field existed) or when the answer is not about deals. False means the scope is empty, which is different from a scope with no wins.
     ReportingCoverage:
       type: object
       additionalProperties: false
@@ -17978,6 +17982,10 @@ components:
         - timezone
         - base_currency
       properties:
+        scope_holds_deals:
+          type: boolean
+          description: >-
+            Whether the population this answer measured holds any deal, archived ones included, computed with the same population clause as the figures. Absent when unknown (a stored edition captured before the field existed) or when the answer is not about deals. False means the scope is empty, which is different from a scope with no wins.
         period_start: {type: string, format: date}
         period_end:
           type: string
@@ -18678,6 +18686,10 @@ components:
       type: object
       required: [report, plan, columns, rows, as_of, timezone, base_currency, fiscal_year_start_month]
       properties:
+        scope_holds_deals:
+          type: boolean
+          description: >-
+            Whether the population this answer measured holds any deal, archived ones included, computed with the same population clause as the figures. Absent when unknown (a stored edition captured before the field existed) or when the answer is not about deals. False means the scope is empty, which is different from a scope with no wins.
         report: {type: string}
         as_of:
           type: string

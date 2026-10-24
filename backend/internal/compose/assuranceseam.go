@@ -81,7 +81,18 @@ const assuranceSubjectsSQL = `
 		         WHERE r.kind = 'deal_stakeholder'
 		           AND r.deal_id = d.id
 		           AND r.role = $3
-		           AND r.archived_at IS NULL) AS has_economic_buyer
+		           AND r.archived_at IS NULL) AS has_economic_buyer,
+		       (SELECT count(*)
+		          FROM stage_exit_criterion c
+		         WHERE c.stage_id = d.stage_id
+		           AND c.required
+		           AND c.archived_at IS NULL
+		           AND NOT EXISTS (SELECT 1
+		              FROM deal_stage_evidence e
+		             WHERE e.criterion_id = c.id
+		               AND e.deal_id = d.id
+		               AND e.met
+		               AND e.refuted_at IS NULL)) AS unmet_exit_criteria
 		FROM deal d
 		LEFT JOIN stage s ON s.id = d.stage_id
 		WHERE d.archived_at IS NULL AND d.status = 'open'
@@ -140,7 +151,7 @@ func AssuranceSubjects(ctx context.Context, tx pgx.Tx) ([]assurance.Subject, err
 		err := row.Scan(&dealID, &owner, &out.AmountMinor, &currency,
 			&out.ExpectedClose, &out.CloseProvisional, &category, &stage, &lastInbound,
 			&out.OfferTotalMinor, &out.ContractTotalMinor, &out.CloseDatePushes,
-			&out.HasNextStep, &out.HasEconomicBuyer)
+			&out.HasNextStep, &out.HasEconomicBuyer, &out.UnmetExitCriteria)
 		out.DealID = dealID.String()
 		if owner != nil {
 			out.Owner = owner.String()

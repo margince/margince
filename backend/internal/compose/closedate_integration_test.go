@@ -328,33 +328,17 @@ func TestCloseDateSweepRollsClearOverdueActiveDealProvisionally(t *testing.T) {
 	}
 }
 
-// A slipped close date is, by deal_forecast_history's own reckoning, the single
-// most common reason a real forecast moves — and the nightly corrector is the
-// writer that slips the most of them. It moves the date without touching the
-// stage, which is exactly the move deal_stage_history cannot see, so a
-// reconstruction blind to the sweep reconciles over human edits and silently
-// omits every machine re-date while presenting itself as the whole answer.
+// A machine re-date is attributable rather than anonymous history.
 //
-// The row is stamped with the corrector's own principal rather than a human's:
-// changed_by exists to say who moved it, and "nobody" is not one of the answers.
-func TestCloseDateSweepRecordsTheForecastItMoved(t *testing.T) {
+// The nightly corrector moves a close date without touching the stage, which
+// is the move deal_stage_history cannot see. audit_log is where that move is
+// read from, and changed_by exists to say who made it: "nobody" is not one of
+// the answers.
+func TestCloseDateSweepAttributesTheDateItMoved(t *testing.T) {
 	e := setupCloseDate(t)
-	// The 🟢 worked example again: overdue, active, no override — the tier that
-	// re-dates the deal outright, so the move is the sweep's and nothing else's.
+	// The worked example again: overdue, active, no override. That is the tier
+	// which re-dates the deal outright, so the move is the sweep's alone.
 	id := e.seedSweepDeal(t, "Slipped but alive", e.early, nil, new(-12), 3)
-
-	forecastRows := func(t *testing.T) int {
-		t.Helper()
-		var n int
-		if err := e.owner.QueryRow(context.Background(),
-			`SELECT count(*) FROM deal_forecast_history WHERE deal_id = $1`, id).Scan(&n); err != nil {
-			t.Fatal(err)
-		}
-		return n
-	}
-	if got := forecastRows(t); got != 0 {
-		t.Fatalf("the seed wrote %d forecast rows, want 0 — it plants the row directly", got)
-	}
 
 	if err := e.sweep(); err != nil {
 		t.Fatal(err)
@@ -364,28 +348,25 @@ func TestCloseDateSweepRecordsTheForecastItMoved(t *testing.T) {
 	if swept := e.readSwept(t, id); swept.expectedClose == nil || !swept.expectedClose.Equal(want) {
 		t.Fatalf("the sweep did not re-date the deal (%v), so the rest of this test proves nothing", swept.expectedClose)
 	}
-	if got := forecastRows(t); got != 1 {
-		t.Fatalf("the sweep wrote %d forecast rows, want 1 — it moved the close date and a "+
-			"reconstruction of the forecast as of any date after the run would read the overdue one", got)
-	}
 
-	var recordedDate *time.Time
-	var changedBy string
+	var after, actorType, actorID string
 	if err := e.owner.QueryRow(context.Background(),
-		`SELECT close_date_at_change, changed_by FROM deal_forecast_history WHERE deal_id = $1`,
-		id).Scan(&recordedDate, &changedBy); err != nil {
-		t.Fatal(err)
+		`SELECT after::text, actor_type, actor_id FROM audit_log
+		 WHERE entity_type = 'deal' AND entity_id = $1 AND action = 'update'
+		 ORDER BY occurred_at DESC LIMIT 1`, id).Scan(&after, &actorType, &actorID); err != nil {
+		t.Fatalf("no audit row for the overnight re-date: %v", err)
 	}
-	if recordedDate == nil || !recordedDate.Equal(want) {
-		t.Errorf("recorded close date = %v, want %s — the row carries the date the deal now has",
-			recordedDate, want.Format(time.DateOnly))
+	if !strings.Contains(after, want.Format(time.DateOnly)) {
+		t.Errorf("the audit row carries %s, want the date the deal now has (%s)",
+			after, want.Format(time.DateOnly))
 	}
 	// closeDateSweepActor is what the WORKER binds (jobs_deals.go), so this
-	// asserts the attribution production actually writes rather than a spelling
-	// the fixture chose for itself.
-	if changedBy != closeDateSweepActor {
-		t.Errorf("changed_by = %q, want %q — the recorder takes the running principal, so a "+
-			"machine re-date is attributable rather than anonymous history", changedBy, closeDateSweepActor)
+	// asserts the attribution production writes rather than a spelling the
+	// fixture chose for itself. Both halves: a sweep writing as a human would
+	// carry the right name under the wrong type.
+	if actorType != string(principal.PrincipalSystem) || actorID != closeDateSweepActor {
+		t.Errorf("the audit row is attributed to %s/%s, want %s/%s",
+			actorType, actorID, principal.PrincipalSystem, closeDateSweepActor)
 	}
 }
 

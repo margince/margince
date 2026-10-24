@@ -145,7 +145,6 @@ var tableOwners = map[string]string{
 	"deal_room_engagement":  "internal/modules/dealrooms",
 	// Kept apart from deal_stage_history rather than folded into it: readers
 	// outside this module count that table's rows as stage movements.
-	"deal_forecast_history": "internal/modules/deals",
 	// The nightly close-date pass and the eligible set it froze at the start of
 	// one. Deals-owned rather than folded into assurance's run tables: a module
 	// never writes a sibling's, and the two sweeps answer to different rules.

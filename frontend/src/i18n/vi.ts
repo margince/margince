@@ -1,6 +1,6 @@
 import type { MessageKey } from "./en";
 
-// Vietnamese catalog. `satisfies` forces exact key parity with en.ts;
+// Vietnamese catalog. The type annotation forces exact key parity with en.ts.
 // i18n.test.ts proves every value differs from its English counterpart
 // except the allowlisted brand names, endonyms and other strings that are
 // correct in English on purpose.
@@ -13,7 +13,9 @@ import type { MessageKey } from "./en";
 //   - "tổ chức" is never the registered legal entity — that sense is
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
-export const vi = {
+// Annotated, not inferred: the inferred literal type of a catalog this size is
+// past what tsc will serialize (TS7056).
+export const vi: Readonly<Record<MessageKey, string>> = {
   "homeRepair.taskPermission":
     "Cần quyền lưu trữ hoạt động để lưu trữ các công việc đã xem xét.",
   "homeRepair.classificationPermission":
@@ -6081,6 +6083,13 @@ export const vi = {
   "analytics.firstRunBody":
     "Phân tích sẽ có dữ liệu khi các deal bạn xem được được ghi nhận. Mở Deal để tạo mới hoặc nhập dữ liệu.",
   "analytics.firstRunAction": "Mở Deal",
+  "analytics.emptyOwnTitle": "Bạn chưa sở hữu deal nào",
+  "analytics.emptyOwnBody":
+    "Các số liệu này chỉ gồm deal của riêng bạn, và bạn chưa có deal nào. Chọn Whole company để xem số liệu của công ty.",
+  "analytics.emptyOwnAction": "Xem Whole company",
+  "analytics.emptyTeamTitle": "{scope} chưa có deal nào",
+  "analytics.emptyTeamBody": "Không ai trong {scope} sở hữu deal nào.",
+  "analytics.deliveryCoversAll": "Các số liệu này bao gồm mọi dự án bạn đọc được.",
   "analytics.attention": "Cần chú ý",
   "analytics.attentionNoOwner": "Chưa giao",
   "analytics.attentionAtStake": "{amount} bị ảnh hưởng",
@@ -6395,6 +6404,7 @@ export const vi = {
   "review.noEconomicBuyer": "Chưa xác định ai ký",
   "review.buyerSilent": "Bên mua đã im lặng",
   "review.commitUnpriced": "Commit nhưng chưa có số tiền",
+  "review.stageExitUnmet": "Chưa đạt tiêu chí để rời giai đoạn",
   "review.unknownCheck": "Kiểm tra chưa đặt tên",
   "review.sheetTitle": "Trả lời kiểm tra",
   "review.outcomeLegend": "Loại câu trả lời",
@@ -16935,4 +16945,4 @@ export const vi = {
   "project.standing.peek.started": "Bắt đầu làm việc",
   "project.standing.peek.today": "Hôm nay",
   "project.standing.peek.documents": "Tệp của dự án này, mới nhất trước",
-} as const satisfies Record<MessageKey, string>;
+};

@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -52,10 +53,9 @@ func (h analyticsContextHandlers) GetAnalyticsContext(w http.ResponseWriter, r *
 	ctx := r.Context()
 	var out crmcontracts.AnalyticsContext
 	err := h.db.Tx(ctx, func(tx pgx.Tx) error {
-		// The same gate the rest of the analytics surface takes: this route
-		// discloses which teams and contacts a caller may measure, which is not
-		// a thing to hand somebody who may not read a forecast at all.
-		if err := auth.Require(ctx, objectForecast, principal.ActionRead); err != nil {
+		// This route discloses which teams a caller may measure, which is not
+		// a thing to hand somebody who may read neither forecasts nor deals.
+		if err := requireForecastOrDealRead(ctx); err != nil {
 			return err
 		}
 		frame, err := readReportFrame(ctx, tx)
@@ -76,6 +76,17 @@ func (h analyticsContextHandlers) GetAnalyticsContext(w http.ResponseWriter, r *
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// requireForecastOrDealRead admits a seat that reads forecasts or deals.
+// The picker offers populations for the deal totals too. A deal reader with no
+// forecast grant would otherwise get no picker.
+func requireForecastOrDealRead(ctx context.Context) error {
+	err := auth.Require(ctx, objectForecast, principal.ActionRead)
+	if err == nil || !errors.Is(err, apperrors.ErrPermissionDenied) {
+		return err
+	}
+	return auth.Require(ctx, tableDeal, principal.ActionRead)
 }
 
 // analyticsContextFor assembles the caller's frame, minus the installation's
@@ -122,7 +133,9 @@ func analyticsContextFor(ctx context.Context, tx pgx.Tx, now time.Time) (crmcont
 }
 
 // allowedScopesFor enumerates what the screen may offer, in the order a control
-// should show them: the widest population first, then the narrowings.
+// should show them: the widest population first, then the narrowings. Totals
+// are offered to every seat (a team seat's own teams come first); the seat's
+// default is unchanged.
 func allowedScopesFor(
 	ctx context.Context, tx pgx.Tx, p principal.Principal,
 ) ([]crmcontracts.AnalyticsScope, error) {
@@ -139,33 +152,20 @@ func allowedScopesFor(
 	mine := crmcontracts.AnalyticsScope{Kind: crmcontracts.AnalyticsScopeKindOwner, Label: me}
 	mine.Id = ptrUUID(self)
 
-	switch lens {
-	case principal.RowScopeAll:
-		out := []crmcontracts.AnalyticsScope{
-			{Kind: crmcontracts.AnalyticsScopeKindWorkspace, Label: workspaceLabel},
-		}
-		teams, err := liveTeamsOf(ctx, tx, nil)
-		if err != nil {
-			return nil, err
-		}
-		return append(append(out, teams...), mine), nil
-
-	case principal.RowScopeTeam:
-		if len(p.TeamIDs) == 0 {
-			return []crmcontracts.AnalyticsScope{mine}, nil
-		}
-		out := []crmcontracts.AnalyticsScope{
-			{Kind: crmcontracts.AnalyticsScopeKindManagedTeams, Label: managedTeamsLabel},
-		}
-		teams, err := liveTeamsOf(ctx, tx, p.TeamIDs)
-		if err != nil {
-			return nil, err
-		}
-		return append(append(out, teams...), mine), nil
-
-	default:
-		return []crmcontracts.AnalyticsScope{mine}, nil
+	out := []crmcontracts.AnalyticsScope{}
+	if lens == principal.RowScopeTeam && len(p.TeamIDs) > 0 {
+		out = append(out, crmcontracts.AnalyticsScope{
+			Kind: crmcontracts.AnalyticsScopeKindManagedTeams, Label: managedTeamsLabel,
+		})
 	}
+	out = append(out, crmcontracts.AnalyticsScope{
+		Kind: crmcontracts.AnalyticsScopeKindWorkspace, Label: workspaceLabel,
+	})
+	teams, err := liveTeamsOf(ctx, tx, nil)
+	if err != nil {
+		return nil, err
+	}
+	return append(append(out, teams...), mine), nil
 }
 
 // liveTeamsOf names the live teams, either all of them or a given set.

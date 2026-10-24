@@ -42,6 +42,9 @@ export const render = (ui: ReactNode): RenderResult => {
 };
 
 export type ReportsStubOpts = {
+  // What the deal reports say about the evaluated population; absent, the
+  // field is not sent, as for a server that predates it.
+  scopeHoldsDeals?: boolean;
   onRun?: (key: string, body: Record<string, unknown>) => void;
   // Model a server that sends only PART of the frame — an installation
   // mid-upgrade, which is the one place a partial result actually arrives.
@@ -207,6 +210,9 @@ function reportAnswer(key: string, opts: ReportsStubOpts) {
     plan: {},
     columns: [],
     rows: reportRows(key, opts),
+    ...(opts.scopeHoldsDeals == null
+      ? {}
+      : { scope_holds_deals: opts.scopeHoldsDeals }),
     ...(opts.totalRows?.[key] == null
       ? {}
       : { total_rows: opts.totalRows[key] }),

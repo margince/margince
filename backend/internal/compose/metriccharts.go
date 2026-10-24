@@ -31,6 +31,9 @@ func reportingGroups(out *reporting.Evaluation, chart crmcontracts.ReportingChar
 	labels := map[string]string{}
 	for _, fact := range metricFacts(out.Facts, chart.Metric, chart.ContextId) {
 		key, label := fact.StageID, fact.StageLabel
+		if owners && fact.OwnerWithheld {
+			continue
+		}
 		if owners {
 			key, label = fact.OwnerID.String(), fact.OwnerLabel
 			if fact.OwnerID.IsZero() {
