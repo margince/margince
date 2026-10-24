@@ -51278,7 +51278,14 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
-            /** @description An email on the request already belongs to a live contact. */
+            /**
+             * @description An email on the request already belongs to a live contact. `duplicate_email` names
+             *     the contact when the caller can read it. `contact_held_by_colleague` answers when
+             *     the caller cannot: it names no contact and no owner, and the owner gets a request
+             *     in their Review queue to share the contact with the caller. `share_requested` is
+             *     true while that request is open, and false once the owner declined it or when no
+             *     owner can be asked. A second attempt files no second request.
+             */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -51339,7 +51346,11 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
-            /** @description The email already belongs to a live contact. */
+            /**
+             * @description The email already belongs to a live contact: `duplicate_email`, or
+             *     `contact_held_by_colleague` with `share_requested` when the caller cannot read it,
+             *     as on `createContact`.
+             */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -61960,7 +61971,10 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
-            /** @description Lead already promoted. */
+            /**
+             * @description Lead already promoted, or its email belongs to a contact the caller cannot read
+             *     (`contact_held_by_colleague` with `share_requested`, as on `createContact`).
+             */
             409: {
                 headers: {
                     [name: string]: unknown;

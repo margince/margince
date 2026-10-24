@@ -395,6 +395,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.preview.acquiredAt": "Ngày thu thập",
   "approval.preview.promotedLead": "Lead sẽ chuyển đổi",
   "approval.preview.sourceActivity": "Lịch sử gắn với lead nguồn này",
+  "approval.preview.sourceWithheldActivities":
+    "Lịch sử khác của lead nguồn này mà bạn không thể đọc",
   "approval.preview.sourceConsent": "Đồng ý của lead nguồn này",
   "approval.preview.channelPosition": "Vị trí trong danh sách",
   "approval.preview.emailCorrespondence": "Địa chỉ được coi là đã có trao đổi",
@@ -615,6 +617,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.preview.promotionMoveActivity": "Hoạt động sẽ chuyển sang liên hệ",
   "approval.preview.promotionDuplicateActivity":
     "Hoạt động đã có ở liên hệ; bỏ liên kết lead",
+  "approval.preview.promotionWithheldActivities":
+    "Các hoạt động khác cũng được chuyển mà bạn không thể đọc",
   "approval.preview.promotionConsentBefore": "Sự đồng ý trước khi chuyển đổi",
   "approval.preview.promotionRestriction": "Hạn chế sẽ chuyển sang",
   "approval.preview.promotionRestrictionAuthority": "Hạn chế được ghi nhận bởi",
@@ -1788,6 +1792,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agentJob.capture_counterparty_verdict": "Kiểm tra bên gửi thư",
   "agentJob.coldstart": "Tiếp cận đầu tiên",
   "agentJob.company_name_promotion": "Cập nhật tên công ty",
+  "agentJob.contact_share": "Yêu cầu chia sẻ liên hệ",
   "agentJob.deal_scout": "Trinh sát deal",
   "agentJob.dealscout": "Trinh sát deal",
   "agentJob.deepread": "Trình đọc trang web",
@@ -2502,6 +2507,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Hồ sơ này đã thay đổi sau khi bạn mở. Tải lại để xem thay đổi, rồi thực hiện lại thao tác.",
   "common.duplicate.email":
     "Một liên hệ hoặc lead khác đã có địa chỉ email này, nên email chưa được lưu ở đây.",
+  "common.heldByColleague":
+    "Một đồng nghiệp đã có liên hệ này.",
+  "common.heldByColleague.asked":
+    "Một đồng nghiệp đã có liên hệ này. Margince đã đề nghị họ chia sẻ liên hệ với bạn.",
   "common.duplicate.domain":
     "Một công ty khác đã có tên miền này, nên tên miền chưa được lưu ở đây.",
   "common.duplicate.linkedinUrl":
@@ -3420,6 +3429,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.kind.linkedin_match": "Đối chiếu LinkedIn",
   "approval.kind.site_lead": "Thêm liên hệ từ trang web",
   "approval.kind.capture_counterparty": "Thêm liên hệ từ email",
+  "approval.kind.contact_share": "Chia sẻ liên hệ",
   "approval.kind.company_name_promotion": "Đổi tên công ty",
   "approval.kind.vcard_create": "Tạo liên hệ từ danh thiếp",
   "approval.kind.lifecycle_change": "Giai đoạn vòng đời",

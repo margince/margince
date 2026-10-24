@@ -151,39 +151,50 @@ func parseDisplayName(displayName string) (ParsedName, bool) {
 	return parsed, true
 }
 
-// parseLocalPart reads the mailbox identifier — the last evidence there is.
-//
-// It is far more willing to abstain than the display-name path: a local part is
-// not a claim about a name, it is an address that sometimes contains one.
-func parseLocalPart(email string) ParsedName {
-	local, _, ok := strings.Cut(strings.TrimSpace(email), "@")
-	if !ok || local == "" {
-		return ParsedName{Full: strings.TrimSpace(email)}
+// readableLocalPart returns the local part of an address and, when it reads as
+// name-shaped words, those words. ok is false when the local part is empty, a
+// role mailbox, or has a field that did not read as a word. A dropped field
+// would change which contact this is ("josé.maria.garcia" minus a decomposed
+// "josé" is a different contact), so the whole reading is refused.
+func readableLocalPart(email string) (local string, tokens []string, ok bool) {
+	local, _, found := strings.Cut(strings.TrimSpace(email), "@")
+	if !found || local == "" {
+		return strings.TrimSpace(email), nil, false
 	}
 	// Plus-addressing is a routing tag the mailbox owner appended, never part
 	// of their name: `anna.weber+crm@` is Anna Weber.
 	local = correspondence.LocalPartBase(local)
 	if hasRoleToken(local) {
-		return ParsedName{Full: local}
+		return local, nil, false
 	}
 	tokens, complete := localPartTokens(local)
 	if len(tokens) == 0 || !complete {
-		// Something in the address did not read as a word — a dropped field
-		// would change WHICH human this is ("josé.maria.garcia" minus a
-		// decomposed "josé" is a different contact), so the whole reading is
-		// refused rather than silently shortened.
+		return local, nil, false
+	}
+	return local, tokens, true
+}
+
+// parseLocalPart reads the mailbox identifier, the last evidence there is.
+//
+// It abstains far more often than the display-name path. A local part is not a
+// claim about a name, it is an address that sometimes contains one.
+func parseLocalPart(email string) ParsedName {
+	local, tokens, ok := readableLocalPart(email)
+	if !ok {
+		return ParsedName{Full: local}
+	}
+	// "dv@" and "d.v@" are initials, not a word anyone is called. The local part
+	// is shown as it is and no name is claimed from it.
+	if readsAsInitials(tokens) {
 		return ParsedName{Full: local}
 	}
 	// One token is a surname, a handle, or a first name — the local part does
 	// not say which, so it names the contact without splitting them.
+	full := addressGuessName(tokens)
 	if len(tokens) == 1 {
-		return ParsedName{Full: titleCaseToken(tokens[0])}
+		return ParsedName{Full: full}
 	}
-	cased := make([]string, 0, len(tokens))
-	for _, token := range tokens {
-		cased = append(cased, titleCaseToken(token))
-	}
-	full := strings.Join(cased, " ")
+	cased := strings.Fields(full)
 	parsed := ParsedName{Full: full}
 	if first, last, ok := splitFirstLast(cased); ok {
 		parsed.First, parsed.Last, parsed.Confident = first, last, true

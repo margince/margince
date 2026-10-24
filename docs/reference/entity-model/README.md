@@ -28,8 +28,8 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 326 |
-| Columns | 3847 |
+| Tables | 327 |
+| Columns | 3850 |
 | Foreign keys | 532 |
 | Owning areas | 36 |
 
@@ -97,7 +97,7 @@ erDiagram
 | [assignments](assignments.md) | 2 |
 | [assurance](assurance.md) | 7 |
 | [automation](automation.md) | 3 |
-| [capture](capture.md) | 24 |
+| [capture](capture.md) | 25 |
 | [collections](collections.md) | 13 |
 | [commissions](commissions.md) | 1 |
 | [comms](comms.md) | 1 |
@@ -189,6 +189,7 @@ erDiagram
 | [`bulk_operation`](compose.md#bulk_operation) | compose | 13 | 0 |
 | [`capture_alias_refused`](capture.md#capture_alias_refused) | capture | 3 | 0 |
 | [`capture_alias_sighting`](capture.md#capture_alias_sighting) | capture | 5 | 0 |
+| [`capture_answered_sweep_cursor`](capture.md#capture_answered_sweep_cursor) | capture | 3 | 0 |
 | [`capture_auto_enrich_budget`](capture.md#capture_auto_enrich_budget) | capture | 2 | 0 |
 | [`capture_auto_enrich_state`](capture.md#capture_auto_enrich_state) | capture | 7 | 0 |
 | [`capture_backfill`](capture.md#capture_backfill) | capture | 25 | 2 |

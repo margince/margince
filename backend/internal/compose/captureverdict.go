@@ -88,7 +88,9 @@ type CounterpartyVerdictEngine struct {
 	// skipReservedDomains closes a review row for a sender on a reserved name
 	// instead of staging its proposal (captureverdictsweeps.go).
 	skipReservedDomains bool
-	log                 *slog.Logger
+	// answeredPage is how many contacts one reconciling pass publishes.
+	answeredPage int
+	log          *slog.Logger
 }
 
 // NewCounterpartyVerdictEngine builds the engine over the pool and the verdict
@@ -114,6 +116,7 @@ func NewCounterpartyVerdictEngine(
 		transactional: capture.NewTransactionalList(
 			lists.TransactionalExtra, lists.TransactionalNever),
 		skipReservedDomains: lists.SkipReservedDomainProposals,
+		answeredPage:        answeredSweepContacts,
 		log:                 log,
 	}
 }

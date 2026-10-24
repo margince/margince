@@ -6,7 +6,7 @@ import {
   problemCode,
   problemFieldErrors,
 } from "./problembody";
-import { PROBLEM_CODE_COPY } from "./problemcodecopy";
+import { heldByColleagueCopy, PROBLEM_CODE_COPY } from "./problemcodecopy";
 
 export type { FieldProblem } from "./problembody";
 export {
@@ -56,7 +56,9 @@ function problemDetail(
   t?: (key: MessageKey) => string,
 ): string | null {
   const copyKey =
-    PROBLEM_CODE_COPY.get(problemCode(problem) ?? "") ?? fieldCopyKey(problem);
+    heldByColleagueCopy(problem) ??
+    PROBLEM_CODE_COPY.get(problemCode(problem) ?? "") ??
+    fieldCopyKey(problem);
   if (t && copyKey) return t(copyKey);
   if (isRecord(problem)) {
     // A field present but blank puts no words on the screen, like an absent one.

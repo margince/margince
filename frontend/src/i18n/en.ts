@@ -379,6 +379,8 @@ export const en = {
   "approval.preview.acquiredAt": "Acquired on",
   "approval.preview.promotedLead": "Lead to promote",
   "approval.preview.sourceActivity": "History linked to this source lead",
+  "approval.preview.sourceWithheldActivities":
+    "Further history on this source lead you cannot read",
   "approval.preview.sourceConsent": "Consent on this source lead",
   "approval.preview.channelPosition": "Position in list",
   "approval.preview.emailCorrespondence":
@@ -601,6 +603,8 @@ export const en = {
   "approval.preview.promotionMoveActivity": "Activity to move to contact",
   "approval.preview.promotionDuplicateActivity":
     "Activity already on contact; remove lead link",
+  "approval.preview.promotionWithheldActivities":
+    "Further activities that move, which you cannot read",
   "approval.preview.promotionConsentBefore":
     "Contact consent before qualification",
   "approval.preview.promotionRestriction": "Restriction to carry",
@@ -1783,6 +1787,7 @@ export const en = {
   "agentJob.capture_counterparty_verdict": "Mail sender check",
   "agentJob.coldstart": "First approach",
   "agentJob.company_name_promotion": "Company name update",
+  "agentJob.contact_share": "Contact share request",
   "agentJob.deal_scout": "Deal Scout",
   "agentJob.dealscout": "Deal Scout",
   "agentJob.deepread": "Website reader",
@@ -2535,6 +2540,9 @@ export const en = {
     "This record changed after you opened it. Reload it to see the change, then make yours again.",
   "common.duplicate.email":
     "Another contact or lead already has this email address, so it was not saved here.",
+  "common.heldByColleague": "A colleague already has this contact.",
+  "common.heldByColleague.asked":
+    "A colleague already has this contact. Margince asked them to share it with you.",
   "common.duplicate.domain":
     "Another company already has this domain, so it was not saved here.",
   "common.duplicate.linkedinUrl":
@@ -3519,6 +3527,7 @@ export const en = {
   "approval.kind.linkedin_match": "LinkedIn match",
   "approval.kind.site_lead": "Add contact from website",
   "approval.kind.capture_counterparty": "Add contact from mail",
+  "approval.kind.contact_share": "Share a contact",
   "approval.kind.company_name_promotion": "Rename company",
   "approval.kind.vcard_create": "Create contact from card",
   "approval.kind.lifecycle_change": "Lifecycle stage",

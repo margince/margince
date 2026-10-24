@@ -15,7 +15,6 @@ package compose
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 
@@ -57,7 +56,10 @@ func (w *csvWriters) createContact(ctx context.Context, row migration.Row, typed
 		}
 		return ids.UUID(contact.Id), nil
 	})
-	if _, ok := errors.AsType[*contacts.DuplicateEmailError](err); ok {
+	// The row's own transaction has ended, so a colleague holding the address
+	// is asked to share it, as on every other create door.
+	err = w.contacts.AskHolderToShare(ctx, err)
+	if contacts.IsClaimedEmail(err) {
 		// The same sentence the preview used, so an approval decided on
 		// "skipped, the address is held" is not answered by different words.
 		return skippedFor(contactEmailClaimedWhy), nil

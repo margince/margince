@@ -128,6 +128,7 @@ func newCSVWriters(
 			WithStopCarrier(consent.NewStore(db)).
 			WithSatelliteCarriers(consent.NewStore(db), introductions.NewStore(db, time.Now)).
 			WithGrantCarrier(identity.NewServiceFor(db)).
+			WithShareRequests(contactShareRequests(db.Pool())).
 			WithInstallationRenamer(installationRenamer(db.Pool())),
 		deals:            dealsStoreOver(db),
 		activities:       activities.NewStore(db),
@@ -353,7 +354,7 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 		// is one bad row, not a failed run: skip it with the reason and let the
 		// rest of the file land. Unhandled, this error aborts the whole
 		// migration, which is the wrong answer to a typo in a spreadsheet.
-		if _, ok := errors.AsType[*contacts.DuplicateEmailError](err); ok {
+		if contacts.IsClaimedEmail(err) {
 			return skippedFor(duplicateEmailWhy), nil
 		}
 		if _, ok := errors.AsType[*contacts.DuplicateDomainError](err); ok {

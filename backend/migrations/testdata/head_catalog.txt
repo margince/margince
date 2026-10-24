@@ -1629,6 +1629,13 @@ public.capture_alias_sighting.user_id uuid NOT NULL gen=- def=-
 public.capture_alias_sighting.value text NOT NULL gen=- def=-
 public.capture_alias_sighting_once_per_message CREATE UNIQUE INDEX capture_alias_sighting_once_per_message ON public.capture_alias_sighting USING btree (user_id, value, source)
 public.capture_alias_sighting_pkey CREATE UNIQUE INDEX capture_alias_sighting_pkey ON public.capture_alias_sighting USING btree (id)
+public.capture_answered_sweep_cursor acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.capture_answered_sweep_cursor.after_contact_id uuid gen=- def=-
+public.capture_answered_sweep_cursor.capture_answered_sweep_cursor_one_row CHECK (singleton)
+public.capture_answered_sweep_cursor.capture_answered_sweep_cursor_pkey PRIMARY KEY (singleton)
+public.capture_answered_sweep_cursor.singleton boolean NOT NULL gen=- def=true
+public.capture_answered_sweep_cursor.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.capture_answered_sweep_cursor_pkey CREATE UNIQUE INDEX capture_answered_sweep_cursor_pkey ON public.capture_answered_sweep_cursor USING btree (singleton)
 public.capture_auto_enrich_budget acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.capture_auto_enrich_budget.budget_date date NOT NULL gen=- def=-
 public.capture_auto_enrich_budget.capture_auto_enrich_budget_pkey PRIMARY KEY (budget_date)

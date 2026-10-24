@@ -326,7 +326,8 @@ var tableOwners = map[string]string{
 	"capture_test_mailbox_sent": "internal/modules/capture",
 	// One receipt per repair pass per workspace turn — bookkeeping about a
 	// pass rather than a record fact, not audited; pruned to a history.
-	"capture_sweep_run": "internal/modules/capture",
+	"capture_sweep_run":             "internal/modules/capture",
+	"capture_answered_sweep_cursor": "internal/modules/capture",
 	// What the pipeline decided about each message, for 24 hours. Written by
 	// the sink alone; compose reads it and sweeps it, and the verdict engine
 	// writes nothing here — its answers live in the disposition ledger and are
