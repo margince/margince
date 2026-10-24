@@ -1164,7 +1164,6 @@ export const de = {
     "Wird mit jeder Kalendereinladung erstellt, auch bei Buchungen über deinen Link. Beim Buchen kannst du den Link für einen einzelnen Termin deaktivieren.",
   "scheduling.videoTeamsHelp":
     "Benötigt ein Microsoft-365-Geschäfts- oder Schulkonto.",
-  "scheduling.locationFallback": "Gilt für Termine ohne Videocall.",
   "scheduling.unsaved": "Du hast ungespeicherte Änderungen",
   "scheduling.discard": "Verwerfen",
   "scheduling.brand": "Unternehmensname und Logo",
@@ -16765,7 +16764,6 @@ export const de = {
   "scheduling.video.own": "Eigener Link oder eigene Adresse",
   "scheduling.video.ownHelp":
     "Ein Zoom-Raum, eine Telefonnummer oder eine Büroadresse. Für jede Buchung gleich.",
-  "scheduling.video.ownSaved": "Gespeicherte Adresse: {location}",
   "scheduling.video.none": "Kein Ort",
   "scheduling.video.noneHelp":
     "Stimme die Details per E-Mail mit deinem Gast ab.",

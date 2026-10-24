@@ -85,26 +85,33 @@ it("maps each video tile onto the video_call and location pair the profile keeps
   expect(videoOf({ video_call: false, location: "  " })).toBe("none");
 });
 
-it("leaves a legacy address alone when only the meeting name changes", () => {
-  expect(
-    linkChanges(legacy, {
-      title: "Intro call",
-      length: "30",
-      minutes: "30",
-      video: videoOf(legacy),
-      location: legacy.location,
-    }),
-  ).toEqual({ title: "Intro call" });
+it("clears a legacy address when the video app is saved, and leaves it out of a title-only edit's video pair", () => {
+  const draft = {
+    title: "Intro call",
+    length: "30" as const,
+    minutes: "30",
+    video: videoOf(legacy),
+    location: legacy.location,
+  };
+  expect(linkChanges(legacy, draft)).toEqual({
+    title: "Intro call",
+    video_call: true,
+    location: "",
+  });
+  const app = { ...legacy, video_call: true, location: "" };
+  expect(linkChanges(app, { ...draft, location: "" })).toEqual({
+    title: "Intro call",
+  });
 });
 
-it("opens a legacy profile on the calendar's video app and shows the address it kept", async () => {
+it("opens a legacy profile on the calendar's video app without showing the address it kept", async () => {
   mount(legacy);
   const meet = await screen.findByRole("radio", { name: /Google Meet/ });
   expect(meet).toHaveProperty("checked", true);
   expect(
     screen.getByRole("radio", { name: /Your own link or address/ }),
   ).toHaveProperty("checked", false);
-  expect(screen.getByText(/Saved address: Video call/)).toBeTruthy();
+  expect(screen.queryByText(/Saved address/)).toBeNull();
 });
 
 it("offers Teams only to a host whose bookings go to a Microsoft calendar", async () => {
@@ -165,7 +172,7 @@ it("takes any other length from 15 minutes to 8 hours and nothing outside it", a
   await user.click(save);
   await waitFor(() => expect(writes).toHaveLength(1));
   expect(writes[0]).toMatchObject({ duration_minutes: 120 });
-  expect(writes[0]).toMatchObject({ location: legacy.location });
+  expect(writes[0]).toMatchObject({ location: "", video_call: true });
 });
 
 it("replaces the address only after the confirmation", async () => {

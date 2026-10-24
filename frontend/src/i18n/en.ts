@@ -1128,7 +1128,6 @@ export const en = {
   "scheduling.videoDefaultHelp":
     "Created with each calendar invite, including bookings from your link. You can switch it off for a single meeting when you book.",
   "scheduling.videoTeamsHelp": "Needs a work or school Microsoft 365 account.",
-  "scheduling.locationFallback": "Used for meetings without a video call.",
   "scheduling.unsaved": "You have unsaved changes",
   "scheduling.discard": "Discard",
   "scheduling.brand": "Company name and logo",
@@ -16695,7 +16694,6 @@ export const en = {
   "scheduling.video.own": "Your own link or address",
   "scheduling.video.ownHelp":
     "A Zoom room, a phone number or an office address. The same for every booking.",
-  "scheduling.video.ownSaved": "Saved address: {location}",
   "scheduling.video.none": "No location",
   "scheduling.video.noneHelp": "Agree on the details with your guest by email.",
   "scheduling.locationLabel": "Link or address",

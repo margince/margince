@@ -1142,7 +1142,6 @@ export const vi = {
     "Tạo cùng mỗi lời mời trên lịch, kể cả lịch họp đặt qua liên kết đặt lịch. Có thể tắt cho từng cuộc họp khi đặt lịch.",
   "scheduling.videoTeamsHelp":
     "Cần tài khoản Microsoft 365 cơ quan hoặc trường học.",
-  "scheduling.locationFallback": "Dùng cho cuộc họp không có gọi video.",
   "scheduling.unsaved": "Có thay đổi chưa lưu",
   "scheduling.discard": "Bỏ thay đổi",
   "scheduling.brand": "Tên và logo công ty",
@@ -16329,7 +16328,6 @@ export const vi = {
   "scheduling.video.own": "Liên kết hoặc địa chỉ riêng",
   "scheduling.video.ownHelp":
     "Một phòng Zoom, một số điện thoại hoặc một địa chỉ văn phòng. Giống nhau cho mọi lượt đặt.",
-  "scheduling.video.ownSaved": "Địa chỉ đã lưu: {location}",
   "scheduling.video.none": "Không có địa điểm",
   "scheduling.video.noneHelp": "Thống nhất chi tiết với khách qua email.",
   "scheduling.locationLabel": "Liên kết hoặc địa chỉ",
