@@ -193,7 +193,9 @@ describe("what a rep is shown", () => {
       ),
     );
     expect(screen.getByText(/objected to marketing/i)).toBeInTheDocument();
-    expect(screen.getByText(/including an administrator/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/only an administrator can still send past this/i),
+    ).toBeInTheDocument();
   });
 
   // The rule that matters most: a control nobody may press teaches a rep the
