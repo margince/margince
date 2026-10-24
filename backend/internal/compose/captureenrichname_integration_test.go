@@ -168,14 +168,14 @@ func TestAnUnclearOrderWritesNoNameAndStillMarksTheMailRead(t *testing.T) {
 	}
 }
 
-func TestADisplayNameAPersonOwnsIsNotReplacedBySignature(t *testing.T) {
+func TestAUserSetDisplayNameIsNotReplacedBySignature(t *testing.T) {
 	e := integration.Setup(t)
 	contact := seedNamedContact(t, e, "mai4@acme.example", "Mai", "user:colleague")
 
 	runNamePass(t, e, vietnameseReply)
 
 	if row := readNameRow(t, e, contact); row.Full != "Mai" || row.Audited != 0 {
-		t.Errorf("display = %q with %d name audit rows; a name a person owns must stay", row.Full, row.Audited)
+		t.Errorf("display = %q with %d name audit rows; a name a user set must stay", row.Full, row.Audited)
 	}
 }
 
