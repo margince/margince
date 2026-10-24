@@ -220,42 +220,16 @@ var (
 func pausesInsideStatements(fset *token.FileSet, file *ast.File) []int {
 	var lines []int
 	ast.Inspect(file, func(node ast.Node) bool {
-		expr, isExpr := node.(ast.Expr)
-		if !isExpr {
-			return true
+		// FoldTotal: a statement mixing literals with a variable is judged on
+		// what it shows. A match stops the walk, so one statement reports once.
+		text, isString := gatekit.StringExpr(node, nil, gatekit.FoldTotal)
+		if isString && pauseCall.MatchString(text) && pauseSkipper.MatchString(text) {
+			lines = append(lines, fset.Position(node.Pos()).Line)
+			return false
 		}
-		text, isString := joinedString(expr)
-		if !isString {
-			return true
-		}
-		if pauseCall.MatchString(text) && pauseSkipper.MatchString(text) {
-			lines = append(lines, fset.Position(expr.Pos()).Line)
-		}
-		return false
+		return true
 	})
 	return lines
-}
-
-// joinedString is a string literal's text, or the text of literals joined by
-// +, so a statement split over several lines is read whole.
-func joinedString(expr ast.Expr) (string, bool) {
-	switch e := expr.(type) {
-	case *ast.BasicLit:
-		return gatekit.LiteralText(e)
-	case *ast.ParenExpr:
-		return joinedString(e.X)
-	case *ast.BinaryExpr:
-		if e.Op != token.ADD {
-			return "", false
-		}
-		left, ok := joinedString(e.X)
-		if !ok {
-			return "", false
-		}
-		right, ok := joinedString(e.Y)
-		return left + right, ok
-	}
-	return "", false
 }
 
 // skipDir reports whether a directory holds no compiled call site.
