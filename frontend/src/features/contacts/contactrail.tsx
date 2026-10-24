@@ -167,7 +167,7 @@ export function ContactHoldSection({ view }: Readonly<{ view: Contact360 }>) {
   return (
     <Panel title={t("hold.sectionTitle")}>
       <PanelBody>
-        <CounterpartyHoldRow email={email} />
+        <CounterpartyHoldRow scope={{ address: email }} />
       </PanelBody>
     </Panel>
   );

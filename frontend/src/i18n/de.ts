@@ -9099,12 +9099,14 @@ export const de = {
   "hold.sectionTitle": "Private Korrespondenz",
   "hold.notHeld":
     "E-Mails mit diesem Kontakt folgen der Einstellung deines Postfachs.",
+  "hold.notHeldCompany":
+    "E-Mails mit diesem Unternehmen folgen der Einstellung deines Postfachs.",
   "hold.heldByAddress":
     "E-Mails mit dieser Adresse sind nur für die Beteiligten sichtbar.",
   "hold.heldByDomain":
     "E-Mails mit {domain} sind nur für die Beteiligten sichtbar.",
-  "hold.holdAddress": "Privat halten",
-  "hold.holdDomain": "Alles von {domain} privat halten",
+  "hold.holdAddress": "Mit dieser Adresse privat halten",
+  "hold.holdDomain": "Mit allen bei {domain} privat halten",
   "hold.lift": "Aufheben",
   "hold.liftingWidensNothing":
     "Das Aufheben gilt für neue E-Mails. Bereits privat gehaltene E-Mails bleiben privat.",

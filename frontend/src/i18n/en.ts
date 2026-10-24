@@ -9154,12 +9154,13 @@ export const en = {
   "connectors.historyBaseline.clear": "Clear date",
   "hold.sectionTitle": "Private correspondence",
   "hold.notHeld": "Mail with this contact follows your mailbox setting.",
+  "hold.notHeldCompany": "Mail with this company follows your mailbox setting.",
   "hold.heldByAddress":
     "Mail with this address is visible only to the people on it.",
   "hold.heldByDomain":
     "Mail with {domain} is visible only to the people on it.",
-  "hold.holdAddress": "Keep private",
-  "hold.holdDomain": "Keep all of {domain} private",
+  "hold.holdAddress": "Keep private with this address",
+  "hold.holdDomain": "Keep private with everyone at {domain}",
   "hold.lift": "Lift",
   "hold.liftingWidensNothing":
     "Lifting applies to new mail. Mail already held stays held.",

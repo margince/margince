@@ -8858,12 +8858,14 @@ export const vi = {
   "connectors.historyBaseline.clear": "Xóa ngày",
   "hold.sectionTitle": "Trao đổi riêng tư",
   "hold.notHeld": "Thư với liên hệ này tuân theo cài đặt hộp thư của bạn.",
+  "hold.notHeldCompany":
+    "Thư với công ty này tuân theo cài đặt hộp thư của bạn.",
   "hold.heldByAddress":
     "Thư với địa chỉ này chỉ những người có trong thư mới xem được.",
   "hold.heldByDomain":
     "Thư với {domain} chỉ những người có trong thư mới xem được.",
-  "hold.holdAddress": "Giữ riêng tư",
-  "hold.holdDomain": "Giữ riêng tư toàn bộ {domain}",
+  "hold.holdAddress": "Giữ riêng tư với địa chỉ này",
+  "hold.holdDomain": "Giữ riêng tư với tất cả tại {domain}",
   "hold.lift": "Bỏ giữ",
   "hold.liftingWidensNothing":
     "Bỏ giữ áp dụng cho thư mới. Thư đã giữ vẫn bị giữ.",

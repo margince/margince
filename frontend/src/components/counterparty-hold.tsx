@@ -46,23 +46,66 @@ function useHolds() {
   });
 }
 
-// The hold that covers this address, if the caller placed one. An address hold
-// names it exactly; a domain hold covers every address under it, including a
-// subdomain, the way the server folds one.
-export function holdCovering(
+/** What a hold control is about: one address, or one whole domain. */
+export type HoldScope =
+  | { address: string; domain?: never }
+  | { domain: string; address?: never };
+
+// A domain hold covers its own domain and every subdomain under it, the way the
+// server folds one.
+function domainHoldCovers(hold: Hold, domain: string): boolean {
+  return (
+    hold.kind === "domain" &&
+    (domain === hold.value || domain.endsWith(`.${hold.value}`))
+  );
+}
+
+// The hold that covers this address, if the caller placed one: the address
+// itself, or a domain hold over its domain.
+export function holdCoveringAddress(
   holds: readonly Hold[] | undefined,
-  email: string | undefined,
+  address: string | undefined,
 ): Hold | undefined {
-  if (!email) {
+  if (!address) {
     return undefined;
   }
-  const address = email.trim().toLowerCase();
-  const domain = address.slice(address.indexOf("@") + 1);
-  return holds?.find((hold) =>
-    hold.kind === "address"
-      ? hold.value === address
-      : domain === hold.value || domain.endsWith(`.${hold.value}`),
+  const normal = address.trim().toLowerCase();
+  const domain = normal.slice(normal.indexOf("@") + 1);
+  return holds?.find(
+    (hold) =>
+      (hold.kind === "address" && hold.value === normal) ||
+      domainHoldCovers(hold, domain),
   );
+}
+
+// The hold that covers this whole domain. An address hold never does: it names
+// one mailbox, not the company.
+export function holdCoveringDomain(
+  holds: readonly Hold[] | undefined,
+  domain: string | undefined,
+): Hold | undefined {
+  if (!domain) {
+    return undefined;
+  }
+  const normal = domain.trim().toLowerCase();
+  return holds?.find((hold) => domainHoldCovers(hold, normal));
+}
+
+// Everything the render and the press need, derived once from the scope so no
+// branch can build an address out of a domain.
+function resolveScope(scope: HoldScope) {
+  const address = scope.address?.trim().toLowerCase();
+  const domain = (scope.domain ?? address?.slice(address.indexOf("@") + 1))
+    ?.trim()
+    .toLowerCase();
+  if (!domain) {
+    return undefined;
+  }
+  return {
+    address,
+    domain,
+    verbs: (address ? ["address", "domain"] : ["domain"]) as readonly string[],
+  };
 }
 
 function usePlaceHold() {
@@ -112,25 +155,26 @@ function useLiftHold() {
 /**
  * The hold control for one correspondent, for the record rails.
  *
- * `email` is the address the record is known by; a record with none cannot be
- * held by address and the control stands down rather than offering a press that
- * would have nothing to name.
+ * `scope` is either the address a contact is known by (both verbs: this address,
+ * or everyone at its domain) or the domain a company is known by (only the
+ * domain verb, since a company has no address of its own). An empty value
+ * stands the control down rather than offering a press with nothing to name.
  */
-export function CounterpartyHoldRow({
-  email,
-}: Readonly<{ email: string | undefined }>) {
+export function CounterpartyHoldRow({ scope }: Readonly<{ scope: HoldScope }>) {
   const t = useT();
   const holds = useHolds();
   const place = usePlaceHold();
   const lift = useLiftHold();
   const [asking, setAsking] = useState<"address" | "domain" | null>(null);
 
-  if (!email) {
+  const resolved = resolveScope(scope);
+  if (!resolved) {
     return null;
   }
-  const address = email.trim().toLowerCase();
-  const domain = address.slice(address.indexOf("@") + 1);
-  const held = holdCovering(holds.data?.data, address);
+  const { address, domain, verbs } = resolved;
+  const held = address
+    ? holdCoveringAddress(holds.data?.data, address)
+    : holdCoveringDomain(holds.data?.data, domain);
 
   if (held) {
     return (
@@ -157,11 +201,13 @@ export function CounterpartyHoldRow({
 
   return (
     <div>
-      <p>{t("hold.notHeld")}</p>
+      <p>{t(address ? "hold.notHeld" : "hold.notHeldCompany")}</p>
       <div className="card-actions">
-        <Button variant="ghost" onClick={() => setAsking("address")}>
-          {t("hold.holdAddress")}
-        </Button>
+        {verbs.includes("address") && (
+          <Button variant="ghost" onClick={() => setAsking("address")}>
+            {t("hold.holdAddress")}
+          </Button>
+        )}
         {/* A domain hold is the one worth having for an advisor: a firm answers
             from whichever address picked up the file. Offered as its own verb
             rather than a modifier, because the two reach very different sets. */}
@@ -185,9 +231,10 @@ export function CounterpartyHoldRow({
         confirmLabel={t("hold.confirmVerb")}
         pending={place.isPending}
         onConfirm={() => {
-          if (asking) {
+          const value = asking === "domain" ? domain : address;
+          if (asking && value) {
             place.mutate(
-              { kind: asking, value: asking === "domain" ? domain : address },
+              { kind: asking, value },
               { onSuccess: () => setAsking(null) },
             );
           }
@@ -196,7 +243,7 @@ export function CounterpartyHoldRow({
         <p>
           {asking === "domain"
             ? t("hold.confirmDomainBody", { domain })
-            : t("hold.confirmAddressBody", { address })}
+            : t("hold.confirmAddressBody", { address: address ?? "" })}
         </p>
         {/* The limit, stated where the decision is made rather than discovered
             afterwards: a hold placed today does not reach back over a year of

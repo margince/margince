@@ -28,11 +28,7 @@ export function CompanyHoldSection({
   return (
     <Disclosure summary={<SectionSummary title={t("hold.sectionTitle")} />}>
       <PanelBody>
-        {/* The row takes an ADDRESS and derives the domain from it, which is
-            what every contact page hands it. An account has only the domain, so
-            it is handed a bare address at that domain — the same value the
-            row's own domain verb would compute. */}
-        <CounterpartyHoldRow email={`x@${host}`} />
+        <CounterpartyHoldRow scope={{ domain: host }} />
       </PanelBody>
     </Disclosure>
   );
