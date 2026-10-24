@@ -1,6 +1,6 @@
 import type { MessageKey } from "./en";
 
-// Vietnamese catalog. The type annotation forces exact key parity with en.ts;
+// Vietnamese catalog. The type annotation forces exact key parity with en.ts.
 // i18n.test.ts proves every value differs from its English counterpart
 // except the allowlisted brand names, endonyms and other strings that are
 // correct in English on purpose.

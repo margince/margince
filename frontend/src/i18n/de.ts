@@ -1,7 +1,7 @@
 import type { MessageKey } from "./en";
 
 // German catalog, the A24 default locale. The type annotation forces exact key
-// parity with en at compile time; i18n.test.ts re-checks it at runtime so a
+// parity with en at compile time. i18n.test.ts re-checks it at runtime, so a
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 // Annotated, not inferred: the inferred literal type of a catalog this size is
