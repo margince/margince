@@ -349,11 +349,11 @@ func TestCloseDateSweepAttributesTheDateItMoved(t *testing.T) {
 		t.Fatalf("the sweep did not re-date the deal (%v), so the rest of this test proves nothing", swept.expectedClose)
 	}
 
-	var after, actor string
+	var after, actorType, actorID string
 	if err := e.owner.QueryRow(context.Background(),
-		`SELECT after::text, captured_by FROM audit_log
+		`SELECT after::text, actor_type, actor_id FROM audit_log
 		 WHERE entity_type = 'deal' AND entity_id = $1 AND action = 'update'
-		 ORDER BY occurred_at DESC LIMIT 1`, id).Scan(&after, &actor); err != nil {
+		 ORDER BY occurred_at DESC LIMIT 1`, id).Scan(&after, &actorType, &actorID); err != nil {
 		t.Fatalf("no audit row for the overnight re-date: %v", err)
 	}
 	if !strings.Contains(after, want.Format(time.DateOnly)) {
@@ -362,9 +362,11 @@ func TestCloseDateSweepAttributesTheDateItMoved(t *testing.T) {
 	}
 	// closeDateSweepActor is what the WORKER binds (jobs_deals.go), so this
 	// asserts the attribution production writes rather than a spelling the
-	// fixture chose for itself.
-	if actor != closeDateSweepActor {
-		t.Errorf("captured_by = %q, want %q", actor, closeDateSweepActor)
+	// fixture chose for itself. Both halves: a sweep writing as a human would
+	// carry the right name under the wrong type.
+	if actorType != string(principal.PrincipalSystem) || actorID != closeDateSweepActor {
+		t.Errorf("the audit row is attributed to %s/%s, want %s/%s",
+			actorType, actorID, principal.PrincipalSystem, closeDateSweepActor)
 	}
 }
 
