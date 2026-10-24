@@ -6139,6 +6139,7 @@ END;
 public.project_health_assessment_pkey CREATE UNIQUE INDEX project_health_assessment_pkey ON public.project_health_assessment USING btree (id)
 public.project_health_assessment_project_id_key CREATE UNIQUE INDEX project_health_assessment_project_id_key ON public.project_health_assessment USING btree (project_id, id)
 public.project_phase_history acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.project_phase_history.audit_log_id uuid gen=- def=-
 public.project_phase_history.changed_by text NOT NULL gen=- def=-
 public.project_phase_history.from_phase text gen=- def=-
 public.project_phase_history.id uuid NOT NULL gen=- def=uuidv7()

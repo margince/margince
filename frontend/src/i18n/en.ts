@@ -15422,7 +15422,6 @@ export const en = {
   "project.history.title": "Phase history",
   "project.history.empty": "No phase change recorded yet.",
   "project.history.moved": "{from} → {to}",
-  "project.history.bySystem": "System",
   "project.deals.title": "Deals",
   "project.deals.empty":
     "No deal is linked to this project yet. A deal selects its project on its own form.",
@@ -15486,8 +15485,9 @@ export const en = {
   "project.aside.ended": "Ended",
   "project.aside.closedReason": "Closing reason",
   "project.history.since": "Since {date}",
-  "project.history.by": "by {name}",
-  "project.history.openedBy": "opened by {name}",
+  "project.history.movedBy": "{subject} moved it",
+  "project.history.openedBy": "{subject} opened it",
+  "project.history.unknown": "Who made this move was not recorded",
   "project.standing.unassessed":
     "Nobody has recorded how delivery is going yet.",
   "project.standing.assessedBy": "Assessed {date} by {author}.",
@@ -15510,7 +15510,6 @@ export const en = {
   "project.standing.event.signed": "Contract signed",
   "project.standing.event.won": "{name} won",
   "project.standing.event.end": "Target end",
-  "project.standing.event.by": "{date} · by {name}",
   "project.standing.event.dueLate": "due {date} · late",
   "project.standing.event.due": "due {date}",
   "project.standing.lastUpdate": "Last update",

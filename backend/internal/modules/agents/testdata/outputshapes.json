@@ -10256,10 +10256,31 @@
                       "format": "date-time"
                     },
                     "changed_by": {
-                      "type": "string"
-                    },
-                    "changed_by_name": {
-                      "type": "string"
+                      "type": "object",
+                      "properties": {
+                        "actor_id": {
+                          "type": "string"
+                        },
+                        "actor_name": {
+                          "type": "string"
+                        },
+                        "actor_type": {
+                          "type": "string"
+                        },
+                        "agent_client": {
+                          "type": "string"
+                        },
+                        "on_behalf_of_name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "actor_id",
+                        "actor_name",
+                        "actor_type",
+                        "agent_client",
+                        "on_behalf_of_name"
+                      ]
                     },
                     "from_phase": {
                       "type": "string"
@@ -10273,8 +10294,6 @@
                   },
                   "required": [
                     "changed_at",
-                    "changed_by",
-                    "changed_by_name",
                     "from_phase",
                     "reason",
                     "to_phase"

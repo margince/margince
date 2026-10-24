@@ -66,15 +66,24 @@ type Project360PhaseHistory struct {
 }
 
 // Project360Transition is one phase move; from_phase is empty on the birth
-// row, and changed_by_name is empty for a principal the user table does not
-// hold.
+// row, and changed_by is absent when the audit row of the move is not known, which
+// a caller reads as "unknown", never as the system.
 type Project360Transition struct {
-	FromPhase     string    `json:"from_phase"`
-	ToPhase       string    `json:"to_phase"`
-	Reason        string    `json:"reason"`
-	ChangedAt     time.Time `json:"changed_at"`
-	ChangedBy     string    `json:"changed_by"`
-	ChangedByName string    `json:"changed_by_name"`
+	FromPhase string                 `json:"from_phase"`
+	ToPhase   string                 `json:"to_phase"`
+	Reason    string                 `json:"reason"`
+	ChangedAt time.Time              `json:"changed_at"`
+	ChangedBy *Project360Attribution `json:"changed_by,omitempty"`
+}
+
+// Project360Attribution is who made a move: the actor kind, the colleague an
+// agent acted for and the tool it was typed through.
+type Project360Attribution struct {
+	ActorType      string `json:"actor_type"`
+	ActorID        string `json:"actor_id"`
+	ActorName      string `json:"actor_name"`
+	OnBehalfOfName string `json:"on_behalf_of_name"`
+	AgentClient    string `json:"agent_client"`
 }
 
 // Project360PhaseDuration is the seconds a project has spent in one phase,

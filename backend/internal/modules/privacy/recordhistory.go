@@ -165,16 +165,17 @@ func recordHistoryEntry(row recordAuditRow, mask entityFieldMask) RecordHistoryE
 		// them as changes to fields the record has never had.
 		before, after = nil, nil
 	}
+	who := attributionOf(row)
 	return RecordHistoryEntry{
 		Edge:              edge,
-		AgentClient:       row.agentClientName,
+		AgentClient:       who.AgentClient,
 		ID:                row.id,
-		ActorType:         row.actorType,
-		ActorID:           row.actorID,
-		ActorName:         row.actorDisplayName,
-		OnBehalfOf:        row.onBehalfOf,
-		OnBehalfOfName:    row.onBehalfOfName,
-		PassportID:        row.passportID,
+		ActorType:         who.ActorType,
+		ActorID:           who.ActorID,
+		ActorName:         who.ActorName,
+		OnBehalfOf:        who.OnBehalfOf,
+		OnBehalfOfName:    who.OnBehalfOfName,
+		PassportID:        who.PassportID,
 		Action:            row.action,
 		OccurredAt:        row.occurredAt,
 		AuthorizationRule: row.authorizationRule,

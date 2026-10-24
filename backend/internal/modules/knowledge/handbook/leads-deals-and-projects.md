@@ -285,7 +285,7 @@ A project page in Margince brings together everything filed under the work. Its 
 The large column opens with the figures **Open deals**, **Won deals**, **Open commitments** and **Activity**. Then come **Delivery health**, and the **Deals** card with **New deal**.
 Then comes **Open commitments**: open tasks filed under the project, soonest due first, late ones marked **Overdue**. The timeline follows.
 
-The side column of a project page in Margince holds **Companies**, **Responsibilities**, **Stakeholders**, **Contracts**, **Documents** and **Phase history**. **Phase history** records every phase move, with who made it and the reason. Files attached to the project's deals stay on the deals.
+The side column of a project page in Margince holds **Companies**, **Responsibilities**, **Stakeholders**, **Contracts**, **Documents** and **Phase history**. **Phase history** records every phase move, with who made it and the reason. A move an AI agent made names the colleague it worked for and the tool, as in "Anna Weber, via Claude, moved it". If nobody recorded who made a move, Phase history says so; it is never shown as **System**. Files attached to the project's deals stay on the deals.
 
 ### How do I edit or rename a project?
 To edit or rename a project in Margince, open it from **Projects** and choose **More actions** → **Edit project**. Change the fields and choose **Save**.

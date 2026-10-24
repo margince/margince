@@ -122,17 +122,16 @@ func recordPhaseTransition(ctx context.Context, tx pgx.Tx, id ids.ProjectID,
 		return fmt.Errorf("apply project phase patch: %w", err)
 	}
 
-	if _, err := tx.Exec(ctx,
-		`INSERT INTO project_phase_history (project_id, from_phase, to_phase, reason, changed_by)
-		 VALUES ($1, $2, $3, $4, $5)`,
-		id, fromPhase, in.ToPhase, in.Reason, by); err != nil {
-		return fmt.Errorf("record project phase history: %w", err)
-	}
-
 	auditID, err := storekit.AuditWithEvidence(ctx, tx, "advance_phase", projectObject, id.UUID,
 		p.Before(), p.After(), evidence)
 	if err != nil {
 		return fmt.Errorf("audit project advance: %w", err)
+	}
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO project_phase_history (project_id, from_phase, to_phase, reason, changed_by, audit_log_id)
+		 VALUES ($1, $2, $3, $4, $5, $6)`,
+		id, fromPhase, in.ToPhase, in.Reason, by, auditID); err != nil {
+		return fmt.Errorf("record project phase history: %w", err)
 	}
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, projectPhaseChangedPayload(fromPhase, in)); err != nil {
 		return fmt.Errorf("emit project.phase_changed: %w", err)

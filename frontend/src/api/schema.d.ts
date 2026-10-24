@@ -32785,6 +32785,37 @@ export interface components {
             data: components["schemas"]["Project360PhaseTransition"][];
             phase_durations: components["schemas"]["Project360PhaseDuration"][];
         };
+        /**
+         * @description Who a recorded change is attributed to, read from the audit row the change
+         *     wrote. The fields mean what they mean on AuditHistoryEntry, and a client
+         *     renders them with the same helper.
+         */
+        PrincipalAttribution: {
+            /** @enum {string} */
+            actor_type: "human" | "agent" | "system" | "connector" | "buyer";
+            actor_id: string;
+            /** @description Resolved display name for a human actor_id; null for machine actors and for a member whose user row no longer resolves. */
+            actor_name?: string | null;
+            /**
+             * Format: uuid
+             * @description Granting human's user id for agent actions.
+             */
+            on_behalf_of?: string | null;
+            /** @description Resolved display name for on_behalf_of. */
+            on_behalf_of_name?: string | null;
+            /**
+             * @description The NAME of the tool a delegated change was typed through — "Claude",
+             *     "Cursor" — resolved from the OAuth client behind the row's passport.
+             *     Null when the passport was minted by hand in Settings, when the client
+             *     row is gone, and for every write that was not delegated.
+             */
+            agent_client?: string | null;
+            /**
+             * Format: uuid
+             * @description The Agent Seat Passport the change was made under; null for a write that was not delegated.
+             */
+            passport_id?: string | null;
+        };
         Project360PhaseTransition: {
             /** Format: uuid */
             id: string;
@@ -32794,11 +32825,14 @@ export interface components {
             reason: string | null;
             /** Format: date-time */
             changed_at: string;
-            /** @description The principal that moved the phase — its id as stamped; and the seat's display name when the id names an app user. */
-            changed_by: {
-                id: string;
-                display_name: string | null;
-            };
+            /**
+             * @description Who made the move, from the audit row written in the same transaction.
+             *     Absent when that row is not known: a move recorded before the link existed
+             *     and not matched to one audit row, or an audit row that no longer exists.
+             *     A reader says "unknown" for an absent value and never "System"; the
+             *     system principal is `actor_type: system`.
+             */
+            changed_by?: components["schemas"]["PrincipalAttribution"];
         };
         Project360PhaseDuration: {
             phase: string;

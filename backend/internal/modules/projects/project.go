@@ -112,18 +112,19 @@ func createProjectTx(
 		return crmcontracts.Project{}, fmt.Errorf("put the project's company on it: %w", err)
 	}
 
-	// The birth row: from_phase NULL, exactly as deal_stage_history records
-	// a deal's first placement. A project's history is complete from row one.
-	if _, err := tx.Exec(ctx,
-		`INSERT INTO project_phase_history (project_id, from_phase, to_phase, changed_by)
-		 VALUES ($1, NULL, $2, $3)`,
-		id, PhaseInitiative, by); err != nil {
-		return crmcontracts.Project{}, fmt.Errorf("record project phase history: %w", err)
-	}
-
 	auditID, err := storekit.Audit(ctx, tx, "create", projectObject, id.UUID, nil, map[string]any{projectNameField: in.Name})
 	if err != nil {
 		return crmcontracts.Project{}, fmt.Errorf("audit project create: %w", err)
+	}
+	// The birth row: from_phase NULL, exactly as deal_stage_history records
+	// a deal's first placement. A project's history is complete from row one,
+	// and it names the audit row of the same transaction so the reader can say
+	// who created the project.
+	if _, err := tx.Exec(ctx,
+		`INSERT INTO project_phase_history (project_id, from_phase, to_phase, changed_by, audit_log_id)
+		 VALUES ($1, NULL, $2, $3, $4)`,
+		id, PhaseInitiative, by, auditID); err != nil {
+		return crmcontracts.Project{}, fmt.Errorf("record project phase history: %w", err)
 	}
 	created := crmcontracts.PublicEventProjectCreated{
 		Name:      in.Name,

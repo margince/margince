@@ -13819,9 +13819,33 @@ components:
       properties:
         data: {type: array, items: {$ref: '#/components/schemas/Project360PhaseTransition'}}
         phase_durations: {type: array, items: {$ref: '#/components/schemas/Project360PhaseDuration'}}
+    PrincipalAttribution:
+      type: object
+      description: |-
+        Who a recorded change is attributed to, read from the audit row the change
+        wrote. The fields mean what they mean on AuditHistoryEntry, and a client
+        renders them with the same helper.
+      required: [actor_type, actor_id]
+      properties:
+        actor_type: {type: string, enum: [human, agent, system, connector, buyer]}
+        actor_id: {type: string}
+        actor_name: {type: [string, 'null'], description: "Resolved display name for a human actor_id; null for machine actors and for a member whose user row no longer resolves."}
+        on_behalf_of: {type: [string, 'null'], format: uuid, description: Granting human's user id for agent actions.}
+        on_behalf_of_name: {type: [string, 'null'], description: Resolved display name for on_behalf_of.}
+        agent_client:
+          type: [string, 'null']
+          description: |-
+            The NAME of the tool a delegated change was typed through — "Claude",
+            "Cursor" — resolved from the OAuth client behind the row's passport.
+            Null when the passport was minted by hand in Settings, when the client
+            row is gone, and for every write that was not delegated.
+        passport_id:
+          type: [string, 'null']
+          format: uuid
+          description: The Agent Seat Passport the change was made under; null for a write that was not delegated.
     Project360PhaseTransition:
       type: object
-      required: [id, from_phase, to_phase, reason, changed_at, changed_by]
+      required: [id, from_phase, to_phase, reason, changed_at]
       properties:
         id: {type: string, format: uuid}
         from_phase: {type: [string, 'null'], description: Null on the birth row.}
@@ -13829,12 +13853,13 @@ components:
         reason: {type: [string, 'null']}
         changed_at: {type: string, format: date-time}
         changed_by:
-          type: object
-          description: The principal that moved the phase — its id as stamped; and the seat's display name when the id names an app user.
-          required: [id, display_name]
-          properties:
-            id: {type: string}
-            display_name: {type: [string, 'null']}
+          allOf: [{$ref: '#/components/schemas/PrincipalAttribution'}]
+          description: |-
+            Who made the move, from the audit row written in the same transaction.
+            Absent when that row is not known: a move recorded before the link existed
+            and not matched to one audit row, or an audit row that no longer exists.
+            A reader says "unknown" for an absent value and never "System"; the
+            system principal is `actor_type: system`.
     Project360PhaseDuration:
       type: object
       required: [phase, seconds, current]
