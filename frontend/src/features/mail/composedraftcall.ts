@@ -80,6 +80,8 @@ export type DraftAsk = Readonly<{
   epoch: number;
   body: string;
   html: string;
+  // The words as the model last served them, empty before any draft.
+  servedBody: string;
   instruction?: string;
 }>;
 
@@ -103,7 +105,7 @@ export function fillFromDraft(
     setReasoning: (next: DraftReason[]) => void;
     setScope: (next: ProjectScope | undefined) => void;
   }>,
-) {
+): boolean {
   const drafted = result.draft;
   // A subject holding only the project tag has no words of the rep's yet, so
   // the drafted subject fills in behind the tag.
@@ -115,7 +117,8 @@ export function fillFromDraft(
         : drafted.subject,
     );
   }
-  if (!form.body || form.rewrite) {
+  const replacesBody = !form.body || form.rewrite === true;
+  if (replacesBody) {
     form.setBody(drafted.body);
     form.setServedBody(drafted.body);
     form.setDraftRef(drafted.draft_ref ?? null);
@@ -133,6 +136,7 @@ export function fillFromDraft(
   if (form.toEmpty && drafted.to?.length) {
     form.setTo(drafted.to);
   }
+  return replacesBody;
 }
 
 // What survives clearing a subject: the project tag. The composer put it
@@ -146,28 +150,22 @@ export function keptTag(subject: string): string {
 async function draftFromActivity({
   activityId,
   intent,
+  rewriteOf,
   t,
 }: Readonly<{
   activityId: string;
   intent: string;
+  rewriteOf: string;
   t: Translate;
 }>): Promise<DraftResult> {
   const { data, error, response } = await api.POST(
     "/activities/{id}/draft-email",
     {
       params: { path: { id: activityId } },
-      body: intent.trim() ? { intent: intent.trim() } : {},
+      body: steering(intent, rewriteOf),
     },
   );
-  if (response.status === 501) {
-    return { available: false as const, reason: "no_model" as const };
-  }
-  // openapi-fetch reports a falsy `error` for a bodiless gateway 5xx, so
-  // success needs a 2xx with a body.
-  if (!response.ok || !data) {
-    throwProblem(error || { title: t("compose.actionFailed") });
-  }
-  return { available: true as const, draft: data };
+  return draftAnswer(response, error, data, t, rewriteOf);
 }
 
 // What a draft route makes of its answer. A 501 says the stack has no model
@@ -204,6 +202,14 @@ function steering(intent: string, rewriteOf: string) {
   };
 }
 
+// The words a draft call is asked to revise: the model's own served draft
+// while it is untouched, which is also when the rewrite verbs are offered. Any
+// other body is the rep's work. It goes out as a first draft, and the fill
+// keeps the rep's words.
+function rewriteOfAsk(ask: DraftAsk): string {
+  return ask.body !== "" && ask.body === ask.servedBody ? ask.body : "";
+}
+
 // A follow-up after a meeting: everyone else it was with, and the meeting
 // itself, which the server reads first.
 export type FollowUp = Readonly<{
@@ -225,17 +231,19 @@ function followUpBody(followUp: FollowUp | undefined) {
 async function draftFromLead({
   entityId,
   intent,
+  rewriteOf,
   t,
 }: Readonly<{
   entityId: string;
   intent: string;
+  rewriteOf: string;
   t: Translate;
 }>): Promise<DraftResult> {
   const { data, error, response } = await api.POST("/leads/{id}/draft-email", {
     params: { path: { id: entityId } },
-    body: intent.trim() ? { intent: intent.trim() } : {},
+    body: steering(intent, rewriteOf),
   });
-  return draftAnswer(response, error, data, t);
+  return draftAnswer(response, error, data, t, rewriteOf);
 }
 
 // The contact-started draft. The record in the path is the recipient, and the
@@ -294,7 +302,7 @@ async function draftFromAccount({
   t: Translate;
 }>): Promise<DraftResult> {
   if (entityType === "lead") {
-    return draftFromLead({ entityId, intent, t });
+    return draftFromLead({ entityId, intent, rewriteOf, t });
   }
   if (entityType === "contact") {
     return draftFromContact({
@@ -357,9 +365,14 @@ export function useDraftMutation({
       const intentOf = ask.instruction ?? ask.intent;
       // The body on screen goes with every ask, so words the rep wrote are
       // revised rather than ignored. A blank body asks for a first draft.
-      const rewriteOf = ask.body;
+      const rewriteOf = rewriteOfAsk(ask);
       if (activityId) {
-        return draftFromActivity({ activityId, intent: intentOf, t });
+        return draftFromActivity({
+          activityId,
+          intent: intentOf,
+          rewriteOf,
+          t,
+        });
       }
       return draftFromAccount({
         entityType,
