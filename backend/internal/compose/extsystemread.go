@@ -28,6 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/fieldmask"
@@ -190,14 +191,7 @@ func readDealSummary(ctx context.Context, pool *pgxpool.Pool, id ids.UUID) (exte
 const dealResponsibleQuery = `
 	SELECT u.id, u.id IS NOT DISTINCT FROM d.owner_id
 	  FROM deal d
-	  JOIN app_user u ON NOT u.is_agent AND %s AND (
-	       u.id = d.owner_id
-	    OR u.id IN (SELECT a.user_id FROM record_assignment a
-	                 WHERE a.deal_id = d.id AND a.archived_at IS NULL AND a.user_id IS NOT NULL)
-	    OR u.id IN (SELECT m.user_id FROM record_assignment a
-	                  JOIN team t ON t.id = a.team_id AND t.archived_at IS NULL
-	                  JOIN team_membership m ON m.team_id = t.id
-	                 WHERE a.deal_id = d.id AND a.archived_at IS NULL))
+	  JOIN app_user u ON NOT u.is_agent AND %s AND %s
 	 WHERE d.id = $1
 	 ORDER BY 2 DESC, u.email
 	 LIMIT $2`
@@ -212,7 +206,8 @@ func readDealResponsible(ctx context.Context, pool *pgxpool.Pool, id ids.UUID) (
 		if !exists {
 			return extension.ErrNotFound
 		}
-		rows, err := tx.Query(ctx, fmt.Sprintf(dealResponsibleQuery, workforce.LiveMemberSQL("u")), id, extension.MaxResponsible)
+		rows, err := tx.Query(ctx, fmt.Sprintf(dealResponsibleQuery, workforce.LiveMemberSQL("u"), storekit.DealTeamSQL("d", "u.id")),
+			id, extension.MaxResponsible)
 		if err != nil {
 			return err
 		}

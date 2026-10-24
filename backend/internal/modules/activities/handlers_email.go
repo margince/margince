@@ -117,11 +117,23 @@ func (h Handlers) GetReplyRecipient(w http.ResponseWriter, r *http.Request, id c
 	for _, seat := range mailboxes {
 		seats = append(seats, openapi_types.UUID(seat))
 	}
+	standing, err := h.store.ConversationStandingFor(ctx, anchor)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	var dealOwner *openapi_types.UUID
+	if standing.DealOwner != nil {
+		owner := openapi_types.UUID(*standing.DealOwner)
+		dealOwner = &owner
+	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.ReplyRecipient{
-		FullName:       recipient.FullName,
-		FirstName:      recipient.FirstName,
-		Address:        address,
-		MailboxUserIds: seats,
+		FullName:             recipient.FullName,
+		FirstName:            recipient.FirstName,
+		Address:              address,
+		MailboxUserIds:       seats,
+		ViewerOnConversation: standing.OnConversation,
+		DealOwnerUserId:      dealOwner,
 	})
 }
 

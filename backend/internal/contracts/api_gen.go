@@ -47626,6 +47626,10 @@ type ReplyRecipient struct {
 	// Address Where the reply is sent: the counterparty's own corresponding address where the thread carries one, else their primary live address. Never one of this installation's own contacts. Empty when the thread offers none — including a thread whose every participant is a colleague — which the reader fills in themselves.
 	Address string `json:"address"`
 
+	// DealOwnerUserId The owner of the deal this message is filed under, for the client to name through its roster. Null when the message is filed under no deal the caller may read, or that deal has no owner. A deal the caller cannot read answers null, the same as no deal.
+	// With several readable deals, an open deal comes before a won or lost one, and then the deal the message was filed under most recently. That is the deal the conversation is about now.
+	DealOwnerUserId *openapi_types.UUID `json:"deal_owner_user_id"`
+
 	// FirstName What a greeting uses. Split server-side rather than in a prompt: a model asked to shorten a name shortens "Dr. Anne-Marie Weiß-Konrad" differently every call.
 	FirstName string `json:"first_name"`
 
@@ -47636,6 +47640,10 @@ type ReplyRecipient struct {
 	// A label of where the message arrived, never a grant. It is answered only to a caller who may already read the message's content, and a seat named here is named because their credential delivered the row.
 	// Empty is an answer: a hand-logged activity was typed rather than delivered, and a row whose recorded provenance names no seat this company still holds resolves to nobody. Always an array, never null.
 	MailboxUserIds []openapi_types.UUID `json:"mailbox_user_ids"`
+
+	// ViewerOnConversation Whether the caller already belongs to this conversation, so a composer can say when a reply comes from somebody the contact has not been writing with. A label, never a grant: it never refuses a send.
+	// True when either holds. The caller is on the thread: one of their own addresses, or their seat, is the From, To or Cc of the message or of another message in its thread that they may read. Their addresses are their login, the addresses they declared and their connected mailboxes; an address another seat holds on equal or stronger evidence is not theirs. Or the caller is on the team of a deal the message is filed under: its owner, assigned to it, or a member of a team assigned to it. A deal counts only when the caller may read it, so the answer never shows that a hidden deal exists.
+	ViewerOnConversation bool `json:"viewer_on_conversation"`
 }
 
 // ReportBlock One element of a report. What fields are legal is decided by `kind`.

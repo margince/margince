@@ -5809,7 +5809,8 @@ export interface paths {
          *     `mailbox_user_ids` answers a different question from the three name fields:
          *     not who the reply goes TO, but whose mailbox the message being answered
          *     arrived in. A composer shows it so a reply into a colleague's conversation
-         *     says so before it is sent.
+         *     says so before it is sent. `viewer_on_conversation` and `deal_owner_user_id`
+         *     say whether the caller is part of that conversation, and who owns its deal.
          */
         get: operations["getReplyRecipient"];
         put?: never;
@@ -34999,6 +35000,17 @@ export interface components {
          *     thread degrades to the most likely counterparty rather than to nobody.
          */
         ReplyRecipient: {
+            /**
+             * @description Whether the caller already belongs to this conversation, so a composer can say when a reply comes from somebody the contact has not been writing with. A label, never a grant: it never refuses a send.
+             *     True when either holds. The caller is on the thread: one of their own addresses, or their seat, is the From, To or Cc of the message or of another message in its thread that they may read. Their addresses are their login, the addresses they declared and their connected mailboxes; an address another seat holds on equal or stronger evidence is not theirs. Or the caller is on the team of a deal the message is filed under: its owner, assigned to it, or a member of a team assigned to it. A deal counts only when the caller may read it, so the answer never shows that a hidden deal exists.
+             */
+            viewer_on_conversation: boolean;
+            /**
+             * Format: uuid
+             * @description The owner of the deal this message is filed under, for the client to name through its roster. Null when the message is filed under no deal the caller may read, or that deal has no owner. A deal the caller cannot read answers null, the same as no deal.
+             *     With several readable deals, an open deal comes before a won or lost one, and then the deal the message was filed under most recently. That is the deal the conversation is about now.
+             */
+            deal_owner_user_id: string | null;
             /**
              * @description Every member of this company whose OWN mailbox this message was delivered to, in the order the imports were recorded. It says whose conversation a reply would be joining: a thread that reached only a colleague's mailbox is theirs, and a reply still goes out from the caller's own mailbox under the caller's own name.
              *     A label of where the message arrived, never a grant. It is answered only to a caller who may already read the message's content, and a seat named here is named because their credential delivered the row.

@@ -15258,8 +15258,17 @@ components:
       description: |-
         Who a reply to a message is addressed to: one contact, resolved from the
         message's participants by role.
-      required: [full_name, first_name, address, mailbox_user_ids]
+      required: [full_name, first_name, address, mailbox_user_ids, viewer_on_conversation, deal_owner_user_id]
       properties:
+        viewer_on_conversation:
+          type: boolean
+          description: >-
+            Whether the caller already belongs to this conversation, so a composer can say when a reply comes from somebody the contact has not been writing with. A label, never a grant: it never refuses a send.
+        deal_owner_user_id:
+          type: [string, 'null']
+          format: uuid
+          description: >-
+            The owner of the deal this message is filed under, for the client to name through its roster. Null when the message is filed under no deal the caller may read, or that deal has no owner. A deal the caller cannot read answers null, the same as no deal.
         mailbox_user_ids:
           type: array
           uniqueItems: true
