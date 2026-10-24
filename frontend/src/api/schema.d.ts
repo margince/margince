@@ -36908,6 +36908,16 @@ export interface components {
             hidden: boolean;
             /** @description For a reference to a company or project this caller may open, its name. */
             label?: string | null;
+            /** @description For a link field (a tag, an owner team, a project company), what the record holds, named where this caller may open it. An empty array is a record that holds none. `value` is null then. */
+            linked?: components["schemas"]["ListLinkedValue"][];
+        };
+        ListLinkedValue: {
+            /** @description The linked row's id, or the value itself where the field has no row. Empty when hidden. */
+            value: string;
+            /** @description The name of the linked row, when this caller may open it. */
+            label?: string | null;
+            /** @description The value names a row this caller may not open. */
+            hidden: boolean;
         };
         CreateListRequest: {
             name: string;
@@ -36987,6 +36997,8 @@ export interface components {
             hidden?: boolean;
             /** @description For a reference to a company or project this caller may open, its name. */
             value_label?: string | null;
+            /** @description For a link field (a tag, an owner team, a project company), what the record holds, named where this caller may open it. An empty array is a record that holds none. */
+            linked?: components["schemas"]["ListLinkedValue"][];
         };
         ListMemberExplanation: {
             /** Format: uuid */

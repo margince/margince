@@ -96,6 +96,8 @@ export type SentenceWords = Readonly<{
   locale: Locale;
   zone: string;
   retiredTags?: ReadonlySet<string>;
+  /** Tag names by id, so a tag clause names its tags instead of counting them. */
+  tagNames?: ReadonlyMap<string, string>;
 }>;
 
 export function useSentenceWords(): SentenceWords {
@@ -110,7 +112,10 @@ export function useSentenceWords(): SentenceWords {
       .filter((tag) => tag.archived_at != null)
       .map((tag) => tag.id),
   );
-  return { t, plural, locale, zone: viewerZone(), retiredTags };
+  const tagNames = new Map(
+    (catalog.data?.data ?? []).map((tag) => [tag.id, tag.name]),
+  );
+  return { t, plural, locale, zone: viewerZone(), retiredTags, tagNames };
 }
 
 /** One clause as a filter states it: a stored leaf, or a verdict's clause. */
@@ -309,6 +314,10 @@ function typedOperandText(
   if (!field.references || operand === "") {
     return undefined;
   }
+  const named = tagNamesText(operand, field, words);
+  if (named !== undefined) {
+    return named;
+  }
   const ids = Array.isArray(operand) ? operand.length : 1;
   const count = { count: formatNumber(ids, locale) };
   const retired = retiredTagCount(operand, field, words);
@@ -322,6 +331,34 @@ function typedOperandText(
         tags: counted,
         retired: formatNumber(retired, locale),
       });
+}
+
+/**
+ * The names of a tag clause's tags, or undefined when any tag has no name to
+ * give: the catalog is withheld from this seat, or lacks the tag. The caller
+ * then counts them, which never names one tag and miscounts another.
+ */
+function tagNamesText(
+  operand: unknown,
+  field: VocabularyField,
+  words: SentenceWords,
+): string | undefined {
+  const { tagNames } = words;
+  // A retired tag keeps its own wording, which says no record carries one.
+  if (
+    field.references !== "tag" ||
+    tagNames === undefined ||
+    retiredTagCount(operand, field, words) > 0
+  ) {
+    return undefined;
+  }
+  const tagIds: unknown[] = Array.isArray(operand) ? operand : [operand];
+  const names = tagIds.map((id) =>
+    typeof id === "string" ? tagNames.get(id) : undefined,
+  );
+  return names.every((name) => name !== undefined)
+    ? names.map((name) => `"${name}"`).join(", ")
+    : undefined;
 }
 
 /**

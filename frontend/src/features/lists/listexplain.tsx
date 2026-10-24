@@ -17,6 +17,7 @@ import {
 import type {
   ListClauseVerdict,
   ListExplanation,
+  ListLinkedValue,
   ListRecordType,
 } from "../../lib/lists.queries";
 import { useMemberNames } from "../../lib/membernames";
@@ -115,10 +116,9 @@ function Verdict({
           ? t("lists.why.hidden")
           : t("lists.why.value", {
               value:
-                node.value == null
-                  ? t("lists.why.empty")
-                  : (node.value_label ??
-                    valueText(node.field ?? "", node.value)),
+                node.linked === undefined
+                  ? scalarValueText(node, valueText, t)
+                  : linkedText(node.linked, t),
             })}
       </span>
       {clause.note !== undefined && (
@@ -126,6 +126,35 @@ function Verdict({
       )}
     </p>
   );
+}
+
+function scalarValueText(
+  node: ListClauseVerdict,
+  valueText: (name: string, raw: string) => string,
+  t: ReturnType<typeof useT>,
+): string {
+  return node.value == null
+    ? t("lists.why.empty")
+    : (node.value_label ?? valueText(node.field ?? "", node.value));
+}
+
+/**
+ * What a link field holds on a record: the names of the rows it links, a
+ * hidden entry as the hidden word, and an empty link as empty. The member
+ * table reads a link cell through this too, so the two screens agree.
+ */
+export function linkedText(
+  linked: readonly ListLinkedValue[],
+  t: ReturnType<typeof useT>,
+): string {
+  if (linked.length === 0) {
+    return t("lists.why.empty");
+  }
+  return linked
+    .map((one) =>
+      one.hidden ? t("lists.why.hidden") : (one.label ?? one.value),
+    )
+    .join(", ");
 }
 
 /**

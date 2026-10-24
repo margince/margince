@@ -292,8 +292,8 @@ describe("a record page's lists", () => {
     expect(retired.closest("p")).toHaveTextContent(
       en["filters.sentence.retiredTagNote"],
     );
-    // The live tag's clause beside it is an ordinary one, with no such note.
-    const counted = screen.getByText("1 tag", { selector: "strong" });
+    // The live tag's clause beside it names the tag, with no such note.
+    const counted = screen.getByText('"Key account"', { selector: "strong" });
     expect(counted.closest("p")).not.toHaveTextContent(
       en["filters.sentence.retiredTagNote"],
     );

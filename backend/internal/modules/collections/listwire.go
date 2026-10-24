@@ -297,7 +297,7 @@ func wireMember(m memberRow) crmcontracts.ListMember {
 	if m.Values != nil {
 		values := make(map[string]crmcontracts.ListFieldValue, len(m.Values))
 		for field, v := range m.Values {
-			values[field] = crmcontracts.ListFieldValue{Value: v.Value, Hidden: v.Hidden, Label: v.Label}
+			values[field] = crmcontracts.ListFieldValue{Value: v.Value, Hidden: v.Hidden, Label: v.Label, Linked: wireLinked(v.Linked)}
 		}
 		out.Values = &values
 	}
@@ -321,6 +321,7 @@ func wireVerdict(n storekit.ExplainNode) crmcontracts.ListClauseVerdict {
 		hidden := true
 		out.Hidden = &hidden
 	}
+	out.Linked = wireLinked(n.Linked)
 	return out
 }
 
@@ -353,4 +354,17 @@ func wirePage(page storekit.Page) crmcontracts.PageInfo {
 		info.NextCursor = &page.NextCursor
 	}
 	return info
+}
+
+// wireLinked maps the values behind a link field; nil where the field is not
+// read back, so the key is absent rather than an empty list.
+func wireLinked(linked []storekit.LinkedValue) *[]crmcontracts.ListLinkedValue {
+	if linked == nil {
+		return nil
+	}
+	out := make([]crmcontracts.ListLinkedValue, 0, len(linked))
+	for _, v := range linked {
+		out = append(out, crmcontracts.ListLinkedValue{Value: v.Value, Label: v.Label, Hidden: v.Hidden})
+	}
+	return &out
 }

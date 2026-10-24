@@ -233,6 +233,23 @@ describe("a filter read as one sentence", () => {
     );
   });
 
+  it("names the tags of a tag clause when every one has a name, and counts them otherwise", () => {
+    const named = {
+      ...en,
+      tagNames: new Map([
+        ["t-a", "Wanted"],
+        ["t-b", "Other"],
+      ]),
+    };
+    const tagged = (value: string | string[]) =>
+      read(newGroup("and", [newLeaf("tag", "in", value)]), named);
+    expect(tagged(["t-a", "t-b"])).toBe('Tag is any of "Wanted", "Other"');
+    expect(tagged(["t-a", "t-unknown"])).toBe("Tag is any of 2 tags");
+    expect(read(newGroup("and", [newLeaf("tag", "eq", "t-a")]), named)).toBe(
+      'Tag is "Wanted"',
+    );
+  });
+
   it("names a retired tag archived under every operator, and says no record carries one", () => {
     const retiring = { ...en, retiredTags: new Set(["t-old", "t-gone"]) };
     const tagged = (op: "eq" | "neq" | "in", value: string | string[]) =>

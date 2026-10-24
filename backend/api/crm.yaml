@@ -50024,6 +50024,19 @@ components:
         value: { type: [string, 'null'], description: 'The value as text, as the explanation states it; null when the record holds none.' }
         hidden: { type: boolean, description: 'The value is not shown to this caller.' }
         label: { type: [string, 'null'], description: 'For a reference to a company or project this caller may open, its name.' }
+        linked:
+          type: array
+          maxItems: 50
+          items: { $ref: '#/components/schemas/ListLinkedValue' }
+          description: 'For a link field (a tag, an owner team, a project company), what the record holds, named where this caller may open it. An empty array is a record that holds none. `value` is null then.'
+
+    ListLinkedValue:
+      type: object
+      required: [value, hidden]
+      properties:
+        value: { type: string, description: 'The linked row''s id, or the value itself where the field has no row. Empty when hidden.' }
+        label: { type: [string, 'null'], description: 'The name of the linked row, when this caller may open it.' }
+        hidden: { type: boolean, description: 'The value names a row this caller may not open.' }
 
     CreateListRequest:
       type: object
@@ -50089,6 +50102,11 @@ components:
         value: { type: [string, 'null'], description: 'The record''s current value of the field, as text.' }
         hidden: { type: boolean, description: 'The value is not shown to this caller.' }
         value_label: { type: [string, 'null'], description: 'For a reference to a company or project this caller may open, its name.' }
+        linked:
+          type: array
+          maxItems: 50
+          items: { $ref: '#/components/schemas/ListLinkedValue' }
+          description: 'For a link field (a tag, an owner team, a project company), what the record holds, named where this caller may open it. An empty array is a record that holds none.'
 
     ListMemberExplanation:
       type: object

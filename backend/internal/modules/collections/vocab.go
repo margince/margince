@@ -88,6 +88,7 @@ func tagLinkFor(entity string) storekit.Field {
 		Type:       storekit.FieldID,
 		References: storekit.RefTag,
 		Link:       storekit.TagLinkTemplate(entity),
+		ReadsLink:  true,
 	}
 }
 
@@ -130,6 +131,7 @@ var ownerTeamField = storekit.Field{
 	Expr:       "tm.team_id",
 	Type:       storekit.FieldID,
 	References: storekit.RefTeam,
+	ReadsLink:  true,
 	Link: "EXISTS (SELECT 1 FROM team_membership tm WHERE tm.user_id = " + colOwnerID +
 		" AND %s)",
 }
@@ -162,6 +164,7 @@ func projectCompanyField() storekit.Field {
 		Expr:       "c.company_id",
 		Type:       storekit.FieldID,
 		References: storekit.RefCompany,
+		ReadsLink:  true,
 		Link: "EXISTS (SELECT 1 FROM relationship c WHERE c.kind = 'project_company'" +
 			" AND c.project_id = t.id AND c.archived_at IS NULL AND %s)",
 	}
@@ -174,7 +177,7 @@ func customerField(
 	column string, fieldType storekit.FieldType, options ...string,
 ) storekit.Field {
 	return storekit.Field{
-		Expr: "o." + column, Type: fieldType, Link: customerLink, Options: options,
+		Expr: "o." + column, Type: fieldType, Link: customerLink, ReadsLink: true, Options: options,
 	}
 }
 

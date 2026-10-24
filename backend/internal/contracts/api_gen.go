@@ -42396,7 +42396,10 @@ type ListClauseVerdict struct {
 	// Hidden The value is not shown to this caller.
 	Hidden *bool                  `json:"hidden,omitempty"`
 	Join   *ListClauseVerdictJoin `json:"join,omitempty"`
-	Op     *string                `json:"op,omitempty"`
+
+	// Linked For a link field (a tag, an owner team, a project company), what the record holds, named where this caller may open it. An empty array is a record that holds none.
+	Linked *[]ListLinkedValue `json:"linked,omitempty"`
+	Op     *string            `json:"op,omitempty"`
 
 	// Operand The clause's value as the filter states it.
 	Operand interface{} `json:"operand,omitempty"`
@@ -42446,6 +42449,9 @@ type ListFieldValue struct {
 
 	// Label For a reference to a company or project this caller may open, its name.
 	Label *string `json:"label,omitempty"`
+
+	// Linked For a link field (a tag, an owner team, a project company), what the record holds, named where this caller may open it. An empty array is a record that holds none. `value` is null then.
+	Linked *[]ListLinkedValue `json:"linked,omitempty"`
 
 	// Value The value as text, as the explanation states it; null when the record holds none.
 	Value *string `json:"value,omitempty"`
@@ -42506,6 +42512,18 @@ type ListHistoryEntryReason string
 type ListHistoryResponse struct {
 	Data []ListHistoryEntry `json:"data"`
 	Page PageInfo           `json:"page"`
+}
+
+// ListLinkedValue defines model for ListLinkedValue.
+type ListLinkedValue struct {
+	// Hidden The value names a row this caller may not open.
+	Hidden bool `json:"hidden"`
+
+	// Label The name of the linked row, when this caller may open it.
+	Label *string `json:"label,omitempty"`
+
+	// Value The linked row's id, or the value itself where the field has no row. Empty when hidden.
+	Value string `json:"value"`
 }
 
 // ListListResponse defines model for ListListResponse.
