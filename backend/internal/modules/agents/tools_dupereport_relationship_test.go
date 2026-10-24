@@ -47,11 +47,11 @@ func TestEmploymentRelationshipCreateReportsTheContactsPairs(t *testing.T) {
 	}
 }
 
-func TestCreateRecordCopyTellsAnAgentToLinkTheSameEmployerContact(t *testing.T) {
+func TestCreateRecordCopyTellsAnAgentToAskAboutTheSameEmployerContact(t *testing.T) {
 	if strings.Contains(createRecordCopy.Instead, "create it") {
 		t.Fatal("create_record copy still says to create a same-name contact")
 	}
-	if !strings.Contains(createRecordCopy.Instead, "same employer, link the meeting to that contact") {
-		t.Fatalf("copy does not say to link the existing contact: %s", createRecordCopy.Instead)
+	if !strings.Contains(createRecordCopy.Instead, "same employer, ask the human whether it is the same person") {
+		t.Fatalf("copy does not say to ask the human: %s", createRecordCopy.Instead)
 	}
 }

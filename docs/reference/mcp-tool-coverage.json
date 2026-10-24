@@ -2267,7 +2267,7 @@
     },
     {
       "name": "create_record",
-      "tokens": 749,
+      "tokens": 748,
       "agents": [],
       "required_by_cases": [
         "case1_log_it",

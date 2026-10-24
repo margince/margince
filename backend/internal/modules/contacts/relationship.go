@@ -433,7 +433,17 @@ func (s *Store) archiveRelationshipWithEvidence(ctx context.Context, id ids.UUID
 				return err
 			}
 		}
-		return emitRelationshipChangeWithEvidence(ctx, tx, "archive", nil, out, evidence)
+		if err := emitRelationshipChangeWithEvidence(ctx, tx, "archive", nil, out, evidence); err != nil {
+			return err
+		}
+		if out.Kind != employmentKind || out.ContactID == nil {
+			return nil
+		}
+		capturedBy, err := storekit.CapturedBy(ctx)
+		if err != nil {
+			return err
+		}
+		return fileEmployerTwins(ctx, tx, *out.ContactID, capturedBy)
 	})
 	return out, err
 }

@@ -20,8 +20,9 @@ const employerTwinSource = "employment_edge_recheck"
 // runs, so the shared employer only counts as evidence when this runs after the
 // edge is written.
 //
-// Every writer that can make an employment edge live and current calls it in
-// its own transaction, so the edge and the pair commit together.
+// The create, update, archive, capture, domain-triage and provider-claim
+// writers call it in their own transaction, so the edge and the pair commit
+// together. A company merge moves edges without calling it.
 func fileEmployerTwins(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, by string) error {
 	return recheckContactForDuplicates(ctx, tx, contactID, employerTwinSource, by)
 }
