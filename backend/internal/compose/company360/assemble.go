@@ -185,6 +185,8 @@ func (s *Service) sections(ctx context.Context, tx pgx.Tx, companyID ids.Company
 		// grants and the same row scope, so they can see further back than a
 		// truncated section page without ever seeing wider.
 		{sectionSuggestions, a.readSuggestions},
+		// Before moments, which takes its "ours" claims from the same read.
+		{sectionCommitments, a.readOpenCommitments},
 		// After next_steps, whose rows it ranks. See moment.go.
 		{sectionMoments, a.readMoment},
 	}
@@ -239,6 +241,11 @@ type assembly struct {
 	staged        []crmcontracts.Approval
 	stagedRead    bool
 	stagedRefused bool
+
+	ours         []contacts.CompanyCommitment
+	oursComplete bool
+	oursErr      error
+	oursRead     bool
 }
 
 // contactStrengths reads every visible contact's §4 score once per request.

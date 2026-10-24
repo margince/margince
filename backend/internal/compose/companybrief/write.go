@@ -17,6 +17,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/claims"
 	"github.com/margince/margince/backend/internal/compose/promptlang"
@@ -107,7 +108,11 @@ The company context describes US, the ones reading this. It is never a fact abou
 Cite the ids the summary gave you. A sentence about the account itself cites the company.
 Put ids ONLY in evidence. An id must never appear in a sentence's text — the reader sees the text, and an id there is unreadable.
 Write one claim per sentence, plainly, addressing the reader as "you" where natural, and never open with the company name twice.
-If the summary names sections_omitted, say nothing about those subjects at all — the reader is not allowed to see them.`
+If the summary names sections_omitted, say nothing about those subjects at all — the reader is not allowed to see them.` + "\n" + openWorkRule
+
+// openWorkRule explains the summary's open work to every prompt that reads it,
+// so the brief and the answers never call a commitment a task.
+const openWorkRule = `In the summary, open_tasks are tasks somebody filed. open_commitments are promises read out of conversations and are not tasks: side says whose promise it is ("ours" or "theirs"), and holder names the contact who made a promise to us. A commitment on our side has no holder: say it is ours and name nobody. When open_work_capped or open_work_withheld is true, the lists are not the whole of what is open. Name each open item with its name, its holder and its due date wherever the summary gives them.`
 
 // briefSystemFor names THIS call's data boundary; see promptfence.Fence.Rule.
 //
@@ -361,6 +366,13 @@ func knownRecords(companyID string, in Input) map[Evidence]string {
 	for _, task := range in.OpenTasks {
 		known[Evidence{EntityType: citeActivity, EntityID: task.ID}] = claims.Source(task)
 	}
+	for _, commitment := range in.OpenCommitments {
+		// A commitment cites the message it was read from, which Recent may
+		// carry too, and one message can hold two promises. The texts are
+		// joined under the one key so a sentence is held to all of them.
+		key := Evidence{EntityType: citeActivity, EntityID: commitment.ActivityID}
+		known[key] = strings.TrimSpace(known[key] + "\n" + claims.Source(commitment))
+	}
 	return known
 }
 
@@ -371,7 +383,7 @@ func knownRecords(companyID string, in Input) map[Evidence]string {
 // for them. What a sentence about the account may state is what the account
 // row says: its industry, its size, its lifetime won.
 func accountItself(in Input) string {
-	in.Contacts, in.OpenDeals, in.Recent, in.OpenTasks = nil, nil, nil, nil
+	in.Contacts, in.OpenDeals, in.Recent, in.OpenTasks, in.OpenCommitments = nil, nil, nil, nil, nil
 	return claims.Source(in)
 }
 
@@ -388,7 +400,7 @@ type recordKey struct {
 // cannot be trusted to relay a record's name correctly, and never from the
 // evidence a sentence already carries, which for the model lane has none.
 func recordNames(in Input) map[recordKey]string {
-	names := make(map[recordKey]string, len(in.OpenDeals)+len(in.Recent)+len(in.Contacts)+len(in.OpenTasks))
+	names := make(map[recordKey]string, len(in.OpenDeals)+len(in.Recent)+len(in.Contacts)+len(in.OpenTasks)+len(in.OpenCommitments))
 	for _, deal := range in.OpenDeals {
 		names[recordKey{citeDeal, deal.ID}] = deal.Name
 	}
@@ -400,6 +412,15 @@ func recordNames(in Input) map[recordKey]string {
 	}
 	for _, task := range in.OpenTasks {
 		names[recordKey{citeActivity, task.ID}] = task.Name
+	}
+	// A commitment's message is named by the promise, not the subject line, and
+	// the first of two promises from one message keeps the name.
+	claimed := make(map[recordKey]bool, len(in.OpenCommitments))
+	for _, commitment := range in.OpenCommitments {
+		key := recordKey{citeActivity, commitment.ActivityID}
+		if !claimed[key] {
+			names[key], claimed[key] = commitment.Claim, true
+		}
 	}
 	return names
 }
@@ -417,7 +438,7 @@ func withEvidenceNames(sentences []Sentence, in Input) []Sentence {
 		evidence := sentences[i].Evidence
 		for j := range evidence {
 			key := recordKey{evidence[j].EntityType, evidence[j].EntityID}
-			if name, ok := names[key]; ok && name != "" {
+			if name, ok := names[key]; ok && name != "" && evidence[j].Name == "" {
 				evidence[j].Name = name
 			}
 		}

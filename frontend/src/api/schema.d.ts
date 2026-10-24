@@ -28508,6 +28508,12 @@ export interface components {
             overdue: boolean;
             /** Format: uuid */
             assignee_id?: string | null;
+            /**
+             * @description The assignee's name while they are a live workspace member. Null when the task has no
+             *     assignee or the name cannot be given, so a reader says nothing about who holds it
+             *     instead of printing an id.
+             */
+            assignee_name?: string | null;
             /** Format: uuid */
             linked_deal_id?: string | null;
             /** Format: uuid */
@@ -28518,6 +28524,33 @@ export interface components {
              *     from has to name the row it will act on, or every press is last-write-wins.
              */
             version?: components["schemas"]["RowVersion"];
+        };
+        /**
+         * @description One open promise read out of a conversation with a contact at this account, in the order
+         *     overdue, then dated, then undated.
+         *
+         *     `kind` says whose promise it is. An `ours` commitment was made by our side and names no
+         *     owner: nothing on file says who holds it, so the reader says it is ours and nothing
+         *     more. A `theirs` commitment names the contact who made it.
+         */
+        Company360Commitment: {
+            /** Format: uuid */
+            claim_id: string;
+            /**
+             * Format: uuid
+             * @description The message the promise was read from, which is what a citation opens.
+             */
+            activity_id: string;
+            /** @enum {string} */
+            kind: "ours" | "theirs";
+            /** @description The promise, verbatim. */
+            body: string;
+            /** Format: uuid */
+            contact_id: string;
+            contact_name: string;
+            /** Format: date-time */
+            due_at?: string | null;
+            overdue: boolean;
         };
         /**
          * @description The next meeting with this account that has not happened yet, and who is in it.
@@ -28780,7 +28813,7 @@ export interface components {
             next_meeting?: components["schemas"]["Company360NextMeeting"];
             health?: components["schemas"]["Company360Health"];
             /** @description The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none". */
-            sections_omitted: ("contacts" | "deals" | "projects" | "strength" | "activities" | "tags" | "list_memberships" | "pending_approvals" | "next_steps" | "since_last_visit" | "suggestions" | "last_touch" | "state_strip" | "health" | "next_meeting" | "moments" | "billing_contacts")[];
+            sections_omitted: ("contacts" | "deals" | "projects" | "strength" | "activities" | "tags" | "list_memberships" | "pending_approvals" | "next_steps" | "since_last_visit" | "suggestions" | "last_touch" | "state_strip" | "health" | "next_meeting" | "moments" | "billing_contacts" | "commitments")[];
             contacts?: {
                 data: components["schemas"]["Company360Contact"][];
                 page: components["schemas"]["PageInfo"];
@@ -28805,6 +28838,17 @@ export interface components {
             };
             next_steps?: {
                 data: components["schemas"]["Company360NextStep"][];
+                page: components["schemas"]["PageInfo"];
+            };
+            /**
+             * @description The promises read out of conversations that are still open, ours and theirs. Absent,
+             *     with `commitments` named in `sections_omitted`, when the caller lacks the contact or
+             *     activity grant. Never an empty list standing in for a refusal. Claims carry no
+             *     project, so a project-narrowed page lists them account-wide. `attention_withheld` is
+             *     set when the caller's row scope hid some.
+             */
+            open_commitments?: {
+                data: components["schemas"]["Company360Commitment"][];
                 page: components["schemas"]["PageInfo"];
             };
             since_last_visit?: components["schemas"]["Company360SinceLastVisit"];

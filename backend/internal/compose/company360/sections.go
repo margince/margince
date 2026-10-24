@@ -22,6 +22,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
@@ -187,7 +188,7 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 		extra += " AND " + activities.NotSystemMinted("a", arg)
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT a.id, coalesce(a.subject, ''), a.due_at, a.assignee_id, a.occurred_at, a.version,
+		SELECT a.id, coalesce(a.subject, ''), a.due_at, a.assignee_id, coalesce(u.display_name, ''), a.occurred_at, a.version,
 		       (SELECT dl.deal_id FROM activity_link dl
 		         WHERE dl.activity_id = a.id AND dl.entity_type = 'deal' AND %[3]s
 		         ORDER BY dl.id LIMIT 1),
@@ -195,12 +196,13 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 		         WHERE pl.activity_id = a.id AND pl.entity_type = 'contact' AND %[4]s
 		         ORDER BY pl.id LIMIT 1)
 		FROM activity a
+		LEFT JOIN app_user u ON u.id = a.assignee_id AND %[8]s
 		WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL AND %[1]s
 		  AND %[2]s%[6]s%[7]s
 		ORDER BY (a.due_at IS NULL), a.due_at, a.occurred_at, a.id
 		LIMIT %[5]d`,
 		activityScope, activities.CompanyLinkedActivityExists(companyPos), linkVisible, contactVisible, limit+1,
-		opts.projectScope(arg), extra), args...)
+		opts.projectScope(arg), extra, identity.LiveMemberSQL("u")), args...)
 	if err != nil {
 		return nil, crmcontracts.PageInfo{}, nil, err
 	}
@@ -209,6 +211,7 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 		var step crmcontracts.Company360NextStep
 		var id ids.UUID
 		var assignee, dealID, contactID *ids.UUID
+		var assigneeName string
 		// Read only to order by: the account's task list does not show when a
 		// task was filed, but two tasks due the same day have to rank the same
 		// here as on the contact page, and there the older one leads.
@@ -218,13 +221,14 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 		// go and find the version first would be two round trips for one click,
 		// and the version it found could already be the wrong one.
 		var version int64
-		if err := row.Scan(&id, &step.Subject, &step.DueAt, &assignee, &occurredAt, &version,
+		if err := row.Scan(&id, &step.Subject, &step.DueAt, &assignee, &assigneeName, &occurredAt, &version,
 			&dealID, &contactID); err != nil {
 			return step, err
 		}
 		step.ActivityId = openapi_types.UUID(id)
 		step.Version = &version
 		step.AssigneeId = uuidPtr(assignee)
+		step.AssigneeName = namedOrNobody(assigneeName)
 		step.LinkedDealId = uuidPtr(dealID)
 		step.LinkedContactId = uuidPtr(contactID)
 		step.Overdue = deadline.Passed(step.DueAt, now)

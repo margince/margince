@@ -52,7 +52,14 @@ disagreeing:
 
 `contacts` · `strength` · `deals` · `projects` · `activities` · `last_touch` ·
 `state_strip` · `health` · `next_steps` · `next_meeting` · `tags` ·
-`list_memberships` · `pending_approvals` · `since_last_visit` · `suggestions`
+`list_memberships` · `pending_approvals` · `since_last_visit` · `suggestions` ·
+`commitments`
+
+`commitments` fills `open_commitments`: the promises read out of conversations that are still open,
+ours and theirs, in the order the other owed-work lists use. A promise we made names nobody, because
+nothing on file says who owns it. Claims carry no project, so a project-narrowed page lists them for the
+whole account. The moment card reads our side from the same read. The company brief and the "what is
+open" answer take these rows as their `open_commitments`, together with the tasks' `assignee_name`.
 
 They run in a fixed order, so two reads of the same account give the same `sections_omitted` list. Any
 error that is not a permission refusal fails the whole read. A section that failed for a real reason must

@@ -4730,6 +4730,7 @@ func (e CompanyVisibility) Valid() bool {
 const (
 	Company360SectionsOmittedActivities       Company360SectionsOmitted = "activities"
 	Company360SectionsOmittedBillingContacts  Company360SectionsOmitted = "billing_contacts"
+	Company360SectionsOmittedCommitments      Company360SectionsOmitted = "commitments"
 	Company360SectionsOmittedContacts         Company360SectionsOmitted = "contacts"
 	Company360SectionsOmittedDeals            Company360SectionsOmitted = "deals"
 	Company360SectionsOmittedHealth           Company360SectionsOmitted = "health"
@@ -4753,6 +4754,8 @@ func (e Company360SectionsOmitted) Valid() bool {
 	case Company360SectionsOmittedActivities:
 		return true
 	case Company360SectionsOmittedBillingContacts:
+		return true
+	case Company360SectionsOmittedCommitments:
 		return true
 	case Company360SectionsOmittedContacts:
 		return true
@@ -4783,6 +4786,24 @@ func (e Company360SectionsOmitted) Valid() bool {
 	case Company360SectionsOmittedSuggestions:
 		return true
 	case Company360SectionsOmittedTags:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for Company360CommitmentKind.
+const (
+	Company360CommitmentKindOurs   Company360CommitmentKind = "ours"
+	Company360CommitmentKindTheirs Company360CommitmentKind = "theirs"
+)
+
+// Valid indicates whether the value is a known member of the Company360CommitmentKind enum.
+func (e Company360CommitmentKind) Valid() bool {
+	switch e {
+	case Company360CommitmentKindOurs:
+		return true
+	case Company360CommitmentKindTheirs:
 		return true
 	default:
 		return false
@@ -31307,6 +31328,16 @@ type Company360 struct {
 		Data []Company360NextStep `json:"data"`
 		Page PageInfo             `json:"page"`
 	} `json:"next_steps,omitempty"`
+
+	// OpenCommitments The promises read out of conversations that are still open, ours and theirs. Absent,
+	// with `commitments` named in `sections_omitted`, when the caller lacks the contact or
+	// activity grant. Never an empty list standing in for a refusal. Claims carry no
+	// project, so a project-narrowed page lists them account-wide. `attention_withheld` is
+	// set when the caller's row scope hid some.
+	OpenCommitments *struct {
+		Data []Company360Commitment `json:"data"`
+		Page PageInfo               `json:"page"`
+	} `json:"open_commitments,omitempty"`
 	PendingApprovals *struct {
 		Data []Approval `json:"data"`
 		Page PageInfo   `json:"page"`
@@ -31370,6 +31401,29 @@ type Company360 struct {
 
 // Company360SectionsOmitted defines model for Company360.SectionsOmitted.
 type Company360SectionsOmitted string
+
+// Company360Commitment One open promise read out of a conversation with a contact at this account, in the order
+// overdue, then dated, then undated.
+//
+// `kind` says whose promise it is. An `ours` commitment was made by our side and names no
+// owner: nothing on file says who holds it, so the reader says it is ours and nothing
+// more. A `theirs` commitment names the contact who made it.
+type Company360Commitment struct {
+	// ActivityId The message the promise was read from, which is what a citation opens.
+	ActivityId openapi_types.UUID `json:"activity_id"`
+
+	// Body The promise, verbatim.
+	Body        string                   `json:"body"`
+	ClaimId     openapi_types.UUID       `json:"claim_id"`
+	ContactId   openapi_types.UUID       `json:"contact_id"`
+	ContactName string                   `json:"contact_name"`
+	DueAt       *time.Time               `json:"due_at,omitempty"`
+	Kind        Company360CommitmentKind `json:"kind"`
+	Overdue     bool                     `json:"overdue"`
+}
+
+// Company360CommitmentKind defines model for Company360Commitment.Kind.
+type Company360CommitmentKind string
 
 // Company360Contact One current employee of the account, as the company view shows them.
 type Company360Contact struct {
@@ -31577,8 +31631,13 @@ type Company360NextMeeting struct {
 
 // Company360NextStep One open task on the account, ordered overdue → due → undated.
 type Company360NextStep struct {
-	ActivityId      openapi_types.UUID  `json:"activity_id"`
-	AssigneeId      *openapi_types.UUID `json:"assignee_id,omitempty"`
+	ActivityId openapi_types.UUID  `json:"activity_id"`
+	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
+
+	// AssigneeName The assignee's name while they are a live workspace member. Null when the task has no
+	// assignee or the name cannot be given, so a reader says nothing about who holds it
+	// instead of printing an id.
+	AssigneeName    *string             `json:"assignee_name,omitempty"`
 	DueAt           *time.Time          `json:"due_at,omitempty"`
 	LinkedContactId *openapi_types.UUID `json:"linked_contact_id,omitempty"`
 	LinkedDealId    *openapi_types.UUID `json:"linked_deal_id,omitempty"`
