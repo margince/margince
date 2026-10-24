@@ -1120,7 +1120,7 @@ The 44 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `idx_lead_linkedin`: `btree (linkedin_url) WHERE (linkedin_url IS NOT NULL)`
 - `idx_lead_merged_into`: `btree (merged_into_id) WHERE (merged_into_id IS NOT NULL)`
 - `idx_lead_name_trgm`: `gin (f_fold_apostrophes(lower(((COALESCE(full_name, '') || ' ') || COALESCE(company_name, '')))) gin_trgm_ops)`
-- `idx_lead_origin`: `btree (origin) WHERE ((archived_at IS NULL) AND (origin IS NOT NULL))`
+- `idx_lead_origin`: `btree (origin)`
 - `idx_lead_owner`: `btree (owner_id) WHERE (archived_at IS NULL)`
 - `idx_lead_project`: `btree (project_id) WHERE ((project_id IS NOT NULL) AND (archived_at IS NULL))`
 - `idx_lead_promoted_contact`: `btree (promoted_contact_id) WHERE (promoted_contact_id IS NOT NULL)`

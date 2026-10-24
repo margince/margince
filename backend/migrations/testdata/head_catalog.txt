@@ -4704,7 +4704,7 @@ public.idx_lead_linkedin CREATE INDEX idx_lead_linkedin ON public.lead USING btr
 public.idx_lead_manual_signal_lead CREATE INDEX idx_lead_manual_signal_lead ON public.lead_manual_signal USING btree (lead_id, set_at DESC)
 public.idx_lead_merged_into CREATE INDEX idx_lead_merged_into ON public.lead USING btree (merged_into_id) WHERE (merged_into_id IS NOT NULL)
 public.idx_lead_name_trgm CREATE INDEX idx_lead_name_trgm ON public.lead USING gin (f_fold_apostrophes(lower(((COALESCE(full_name, ''::text) || ' '::text) || COALESCE(company_name, ''::text)))) gin_trgm_ops)
-public.idx_lead_origin CREATE INDEX idx_lead_origin ON public.lead USING btree (origin) WHERE ((archived_at IS NULL) AND (origin IS NOT NULL))
+public.idx_lead_origin CREATE INDEX idx_lead_origin ON public.lead USING btree (origin)
 public.idx_lead_owner CREATE INDEX idx_lead_owner ON public.lead USING btree (owner_id) WHERE (archived_at IS NULL)
 public.idx_lead_project CREATE INDEX idx_lead_project ON public.lead USING btree (project_id) WHERE ((project_id IS NOT NULL) AND (archived_at IS NULL))
 public.idx_lead_promoted_contact CREATE INDEX idx_lead_promoted_contact ON public.lead USING btree (promoted_contact_id) WHERE (promoted_contact_id IS NOT NULL)

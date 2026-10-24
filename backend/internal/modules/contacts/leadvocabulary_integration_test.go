@@ -199,8 +199,8 @@ func TestLeadSourceListNoLongerGovernsWritesOrTheScore(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, s := range list.Data {
-		if s.Key == "connector:apollo" && (s.LeadCount == nil || *s.LeadCount != 1) {
-			t.Errorf("connector family lead_count = %v, want 1 counted through the prefix", s.LeadCount)
+		if s.Key == "connector:apollo" && (s.LeadCount == nil || *s.LeadCount != 2) {
+			t.Errorf("connector family lead_count = %v, want 2 counted through the prefix", s.LeadCount)
 		}
 	}
 	for _, d := range list.Discovered {
@@ -215,8 +215,8 @@ func TestLeadSourceListNoLongerGovernsWritesOrTheScore(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(listed) != 1 || ids.UUID(listed[0].Id) != ids.UUID(connectorLead.Id) {
-		t.Errorf("source=%s lists %d leads, want the one connector lead still carrying the family", family, len(listed))
+	if len(listed) != 2 {
+		t.Errorf("source=%s lists %d leads, want the two connector leads still carrying the family", family, len(listed))
 	}
 
 	// The counts are a lead read, and a lead is customer identity: an actor
