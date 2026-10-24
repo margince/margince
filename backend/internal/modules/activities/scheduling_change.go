@@ -273,6 +273,9 @@ func (s *Store) executeInvitation(ctx context.Context, row invitationRow) (*conn
 	}
 	if row.Command != invitationCancel {
 		appointment := row.Appointment
+		if appointment.VideoCall {
+			appointment.Location = ""
+		}
 		if row.Receipt != nil {
 			appointment.EventID = row.Receipt.EventID
 		}
