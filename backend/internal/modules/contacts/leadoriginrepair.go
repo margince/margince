@@ -53,7 +53,7 @@ func BackfillLeadOriginTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit 
 		SELECT l.id, `+capturedOriginSQL+`
 		  FROM lead l
 		  JOIN raw_capture r ON r.source_system = l.source_system AND r.source_id = l.source_id
-		 WHERE l.id > $1 AND l.origin IS NULL AND jsonb_typeof(r.payload) = 'object'
+		 WHERE l.id > $1 AND l.archived_at IS NULL AND l.origin IS NULL AND jsonb_typeof(r.payload) = 'object'
 		 ORDER BY l.id LIMIT $2 FOR UPDATE OF l`, after, limit, capturedOriginKeys)
 	if err != nil {
 		return nil, 0, fmt.Errorf("contacts: reading leads to give an origin: %w", err)
@@ -83,6 +83,9 @@ func BackfillLeadOriginTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit 
 		if !ok {
 			continue
 		}
+		if err := auth.EnsureWritableLive(ctx, tx, leadEntity, row.id); err != nil {
+			return nil, 0, err
+		}
 		if err := setBackfilledOrigin(ctx, tx, row.id, key); err != nil {
 			return nil, 0, err
 		}
@@ -92,7 +95,7 @@ func BackfillLeadOriginTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit 
 }
 
 func setBackfilledOrigin(ctx context.Context, tx pgx.Tx, id ids.UUID, key string) error {
-	tag, err := tx.Exec(ctx, `UPDATE lead SET origin = $2 WHERE id = $1 AND origin IS NULL`, id, key)
+	tag, err := tx.Exec(ctx, `UPDATE lead SET origin = $2 WHERE id = $1 AND origin IS NULL AND archived_at IS NULL`, id, key)
 	if err != nil {
 		return fmt.Errorf("contacts: giving a lead its origin: %w", err)
 	}
@@ -122,12 +125,13 @@ func CountLeadOriginBackfills(ctx context.Context, q interface {
 	err := q.QueryRow(ctx, `SELECT count(*) FROM (
 		SELECT 1 FROM lead l
 		  JOIN raw_capture r ON r.source_system = l.source_system AND r.source_id = l.source_id
-		 WHERE l.origin IS NULL AND jsonb_typeof(r.payload) = 'object' LIMIT $1) pending`, limit+1).Scan(&count)
+		 WHERE l.archived_at IS NULL AND l.origin IS NULL AND jsonb_typeof(r.payload) = 'object' LIMIT $1) pending`, limit+1).Scan(&count)
 	return count, err
 }
 
 // RescoreOpenLeadsTx scores one page of open leads again from their origin and
-// signals. It goes through the recompute the activity events use, which writes
+// signals. It reads the page unlocked and holds each lead as it scores it, so the
+// subject is the first row it locks. It goes through the recompute the activity events use, which writes
 // the history entry, audit row and event, moves only score_computed under a
 // human's override, and writes nothing for a score that is already right, so a
 // second run changes nothing.
@@ -138,7 +142,7 @@ func RescoreOpenLeadsTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit in
 	rows, err := tx.Query(ctx, `
 		SELECT id FROM lead
 		 WHERE id > $1 AND archived_at IS NULL AND status = ANY($3)
-		 ORDER BY id LIMIT $2 FOR UPDATE`, after, limit, openLeadStatusNames())
+		 ORDER BY id LIMIT $2`, after, limit, openLeadStatusNames())
 	if err != nil {
 		return nil, 0, fmt.Errorf("contacts: reading leads to score: %w", err)
 	}
@@ -155,6 +159,9 @@ func RescoreOpenLeadsTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit in
 		return nil, 0, err
 	}
 	for _, id := range scanned {
+		if err := auth.HoldWritableLive(ctx, tx, leadEntity, id); err != nil {
+			return nil, 0, err
+		}
 		before, err := leadScoreMarks(ctx, tx, id)
 		if err != nil {
 			return nil, 0, err
@@ -191,6 +198,9 @@ func CountOpenLeads(ctx context.Context, q interface {
 // leadScoreMarks is the pair of numbers a rescore can move, as one comparable
 // string so "did it change" is a single equality.
 func leadScoreMarks(ctx context.Context, tx pgx.Tx, id ids.UUID) (string, error) {
+	if err := auth.Require(ctx, leadEntity, principal.ActionRead); err != nil {
+		return "", err
+	}
 	var score int
 	var computed *int
 	if err := tx.QueryRow(ctx, `SELECT score, score_computed FROM lead WHERE id = $1`, id).Scan(&score, &computed); err != nil {

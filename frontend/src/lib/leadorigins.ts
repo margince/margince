@@ -9,7 +9,7 @@ import { throwProblem, unwrap } from "./problem";
 
 // A lead answers two questions, and each has one reader here.
 //
-// Origin says where the person came from: a key from the administered list,
+// Origin says where the lead came from: a key from the administered list,
 // beside a short note. A human, an importer or capture sets it, and it is the
 // only lead fact the score and the origin filter read.
 //

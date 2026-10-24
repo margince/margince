@@ -11,6 +11,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -69,7 +70,8 @@ func TestTheOriginTaskRescoresAndFillsOriginsAndReplaysSafely(t *testing.T) {
 	e.WsExec(t, `UPDATE lead SET source_system = 'crm_sync', source_id = 'cap-F' WHERE id = $1`, human)
 	e.WsExec(t, `INSERT INTO raw_capture (source_system, source_id, payload) VALUES ('crm_sync', 'cap-F', '{"LeadSource":"Referral"}'::jsonb)`)
 
-	task := leadScoresFollowOriginDataTask(func() time.Time { return time.Now() })
+	now := clocktest.Now(t)
+	task := leadScoresFollowOriginDataTask(func() time.Time { return now })
 	for i := range task.Steps {
 		task.Steps[i].Limit, task.Steps[i].MinLimit = 2, 1
 	}

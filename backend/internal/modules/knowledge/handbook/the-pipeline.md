@@ -262,8 +262,8 @@ dismissed deal back.
 ## Where a deal came from
 
 A deal carries an **acquisition source**: the business channel it came from. It
-is a different field from a lead source. A lead source records how a record
-reached Margince; an acquisition source records which channel won the business.
+is a different field from a lead origin. A lead origin records where a lead
+came from; an acquisition source records which channel won the business.
 
 The list is for an administrator, at **Settings → Acquisition sources**. A name
 you add makes a key that never changes after that, so renaming it later keeps

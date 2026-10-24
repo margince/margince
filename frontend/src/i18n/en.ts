@@ -6363,6 +6363,7 @@ export const en = {
   "analytics.field.quiet_since": "Quiet since",
   "analytics.field.size_band": "Company size",
   "analytics.field.source": "Source",
+  "analytics.field.origin": "Origin",
   "analytics.field.stage_id": "Stage",
   "analytics.field.stalled": "Stalled",
   "analytics.field.status": "Status",

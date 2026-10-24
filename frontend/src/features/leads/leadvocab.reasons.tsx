@@ -27,7 +27,7 @@ import {
   LEAD_DISQUALIFY_REASONS_KEY,
   type LeadDisqualifyReason,
   useLeadDisqualifyReasons,
-} from "./leadsources";
+} from "./leadhandling";
 import {
   leadsColumn,
   useRemovalFocus,

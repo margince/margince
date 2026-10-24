@@ -9,7 +9,7 @@ import { leadIdentityName } from "../../format/leadname";
 import { useT } from "../../i18n";
 import { leadWriteKeys } from "../../lib/leadkeys";
 import { problemMessageOf, unwrap } from "../../lib/problem";
-import { useLeadDisqualifyReasons } from "./leadsources";
+import { useLeadDisqualifyReasons } from "./leadhandling";
 
 type Lead = components["schemas"]["Lead"];
 

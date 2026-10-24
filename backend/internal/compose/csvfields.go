@@ -64,7 +64,7 @@ const leadStatusNew = "new"
 // on the open ladder; the terminal statuses go through promote and disqualify.
 const leadTargetStatus = "status"
 
-// leadTargetOrigin and leadTargetOriginDetail are where the person came from, as
+// leadTargetOrigin and leadTargetOriginDetail are where the lead came from, as
 // the source system worded it. The cell is free text: the store resolves it to
 // a lead_origin key, or keeps the wording in the detail (contacts.ResolveOrigin).
 const (

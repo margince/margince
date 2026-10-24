@@ -6139,6 +6139,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.field.quiet_since": "Im lặng từ",
   "analytics.field.size_band": "Quy mô công ty",
   "analytics.field.source": "Nguồn",
+  "analytics.field.origin": "Nguồn gốc",
   "analytics.field.stage_id": "Giai đoạn",
   "analytics.field.stalled": "Đình trệ",
   "analytics.field.status": "Trạng thái",

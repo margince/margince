@@ -12,7 +12,7 @@ import { Switch } from "../../design-system/switch";
 import { useToast } from "../../design-system/toast";
 import { lockReasonOr } from "../../format/settinglocks";
 import { useT } from "../../i18n";
-import { useLeadSettings, useUpdateLeadSettings } from "./leadsources";
+import { useLeadSettings, useUpdateLeadSettings } from "./leadhandling";
 import { useVocabGrants } from "./leadvocab.rows";
 
 export { LeadOriginsCard } from "./leadvocab.origins";

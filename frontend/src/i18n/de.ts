@@ -6312,6 +6312,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.field.quiet_since": "Ruhig seit",
   "analytics.field.size_band": "Unternehmensgröße",
   "analytics.field.source": "Quelle",
+  "analytics.field.origin": "Herkunft",
   "analytics.field.stage_id": "Phase",
   "analytics.field.stalled": "Stockt",
   "analytics.field.status": "Status",

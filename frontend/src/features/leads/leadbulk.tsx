@@ -18,7 +18,7 @@ import {
   throwProblem,
   unwrap,
 } from "../../lib/problem";
-import { useLeadDisqualifyReasons } from "./leadsources";
+import { useLeadDisqualifyReasons } from "./leadhandling";
 
 type Lead = components["schemas"]["Lead"];
 

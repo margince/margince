@@ -40,10 +40,10 @@ import { listQueryParams } from "../../lib/tagfilter";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
 import { LeadBulkBar } from "./leadbulk";
+import { useLeadSettings } from "./leadhandling";
 import { LEAD_STATUS_FILTER_OPTIONS, LeadBoard } from "./leadpresentation";
 import { leadColumns } from "./leads.columns";
 import { leadIdentityFields } from "./leads.contactoffers";
-import { useLeadSettings } from "./leadsources";
 import "./leads.css";
 import { createLead, UNASSIGNED_OWNER } from "./leads.list.queries";
 

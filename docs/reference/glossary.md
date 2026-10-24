@@ -62,6 +62,10 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Ollama | A tool that runs language models on your own machine. |
 | OpenDocument | The open file format for text, tables and slides. |
 | OpenRouter | A service that routes model calls to many AI providers. |
+| Origin | Where a lead came from, such as a referral or an event, chosen from a list in Settings. |
+| origin | Where a lead came from, such as a referral or an event, chosen from a list in Settings. |
+| Origins | The list of places a lead can come from, kept in Settings. |
+| origins | The list of places a lead can come from, kept in Settings. |
 | PKCE | Proof Key for Code Exchange: a one-time secret that ties the end of a sign-in to its start. |
 | pnpm | The package manager for the web app. |
 | Postgres | PostgreSQL, the database Margince stores its data in. |
