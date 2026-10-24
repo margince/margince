@@ -73,7 +73,7 @@ func (s *Store) UpdateContact(ctx context.Context, id ids.ContactID, in UpdateCo
 		out, err = s.updateContactInTx(ctx, tx, id, in, active)
 		return err
 	})
-	return out, err
+	return out, s.AskHolderToShare(ctx, err)
 }
 
 // updateContactInTx is the edit itself, on the caller's transaction: the write

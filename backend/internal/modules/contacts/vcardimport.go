@@ -221,8 +221,9 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 	if errors.Is(err, errCardSourceNarrowed) {
 		return result, nil
 	}
-	// A colleague's contact holds the card's address. tx has already asked
-	// them to share it; the card is skipped with the refusal's own words.
+	// A colleague's contact holds the card's address. They are asked to share
+	// it, and the card is skipped with the refusal's own words.
+	err = s.AskHolderToShare(ctx, err)
 	if held, ok := errors.AsType[*ContactHeldByColleagueError](err); ok {
 		return VCardResult{Index: index, FullName: result.FullName, Outcome: VCardSkipped, Reason: held.Error()}, nil
 	}

@@ -111,7 +111,7 @@ func (s *Store) CreateContact(ctx context.Context, in CreateContactInput) (crmco
 		out, err = s.createContactInTx(ctx, tx, in, by, active)
 		return err
 	})
-	return out, err
+	return out, s.AskHolderToShare(ctx, err)
 }
 
 // CreateContactTx is CreateContact for a caller that already opened a

@@ -273,11 +273,14 @@ func wroteBack() string {
 		   AND ` + auth.ActivityAvailableClause("inbound") + `)`
 }
 
-// answeredExchange is the one spelling of an exchange: the message at alias
-// is an inbound, non-bulk reply from address, on a thread where this workspace
-// sent attested mail of the same kind to the same address. wroteBack and the
-// publication evidence (addressAnswered) both start from it; only the second
-// adds the holds. address is a placeholder or column, never request text.
+// answeredExchange is an exchange: the message at alias is an inbound,
+// non-bulk reply from address, on a thread where this workspace sent attested
+// mail of the same kind to the same address. wroteBack and the publication
+// evidence (addressAnswered) both start from it; only the second adds the
+// holds. address is a placeholder or column, never request text.
+//
+// Held by: TestBothExchangeQuestionsAreBuiltFromOnePredicate
+// (backend/internal/modules/capture/answeredexchange_test.go)
 func answeredExchange(alias, address string) string {
 	return fmt.Sprintf(`%[1]s.counterparty_email = %[2]s
 		   AND %[1]s.direction = 'inbound'

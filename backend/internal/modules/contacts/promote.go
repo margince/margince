@@ -145,7 +145,7 @@ func (s *Store) QualifyLead(ctx context.Context, id ids.LeadID, in PromoteLeadIn
 			return err
 		})
 		if _, moved := errors.AsType[*promoteTargetMovedError](err); !moved {
-			return out, err
+			return out, s.AskHolderToShare(ctx, err)
 		}
 	}
 	return PromoteOutcome{}, apperrors.ErrConflict

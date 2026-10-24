@@ -24,6 +24,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -112,6 +113,9 @@ func (s *Store) followShareOwnerTx(ctx context.Context, tx pgx.Tx, id ids.Contac
 	if s.shareRequests == nil || sameOwner(from, to) {
 		return nil
 	}
+	if err := storekit.LockWriteIdentity(ctx, tx, shareRequestLock, id.String()); err != nil {
+		return err
+	}
 	return s.shareRequests.FollowOwnerTx(ctx, tx, id, to)
 }
 
@@ -140,8 +144,8 @@ func (p *Provider) WithShareRequests(requests ShareRequests) *Provider {
 //
 // It runs after the refused transaction rolled back. The refusal aborts the
 // write it answers, and on the race path a unique violation has already
-// poisoned that transaction. Store-owned writes reach it through tx. A door
-// that owns its transaction calls it after that transaction ends.
+// poisoned that transaction. Every door calls it once its own transaction
+// ended; TestEveryCreateDoorAsksTheColleagueWhoHoldsTheAddress holds the doors.
 func (s *Store) AskHolderToShare(ctx context.Context, err error) error {
 	held, ok := errors.AsType[*ContactHeldByColleagueError](err)
 	if !ok || s.shareRequests == nil {
@@ -167,16 +171,24 @@ func (s *Store) AskHolderToShare(ctx context.Context, err error) error {
 	return err
 }
 
-// lockHolder reads the contact's owner on the request's own transaction and
-// holds the contact row. An owner change either lands first and is the owner
-// read here, or waits and then withdraws the request it finds
-// (ShareRequests.FollowOwnerTx). A contact with no owner refuses and nobody is
-// asked; an owner who left is refused by the approvals queue, which asks only
-// a member who may still decide.
+// shareRequestLock serialises filing a contact's share request against a
+// change of its owner. An advisory lock rather than the contact row: the
+// filing takes no row before its own staging, and the owner change already
+// holds the row.
+const shareRequestLock = "contact_share"
+
+// lockHolder reads the contact's owner on the request's own transaction,
+// under the lock an owner change takes before it withdraws requests. The
+// change either commits first and is the owner read here, or waits and then
+// withdraws the request this files (ShareRequests.FollowOwnerTx). A contact
+// with no owner refuses and nobody is asked; an owner who left is refused by
+// the approvals queue, which asks only a member who may still decide.
 func lockHolder(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) (ids.UUID, bool, error) {
+	if err := storekit.LockWriteIdentity(ctx, tx, shareRequestLock, contactID.String()); err != nil {
+		return ids.Nil, false, err
+	}
 	var owner *ids.UUID
-	err := tx.QueryRow(ctx, `
-		SELECT owner_id FROM contact WHERE id = $1 AND archived_at IS NULL FOR UPDATE`,
+	err := tx.QueryRow(ctx, `SELECT owner_id FROM contact WHERE id = $1 AND archived_at IS NULL`,
 		contactID).Scan(&owner)
 	if errors.Is(err, pgx.ErrNoRows) || (err == nil && owner == nil) {
 		return ids.Nil, false, nil
