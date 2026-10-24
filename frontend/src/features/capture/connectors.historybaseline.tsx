@@ -9,6 +9,7 @@ import { Button } from "../../design-system/atoms";
 import { DateInput, isISODate } from "../../design-system/dateinput";
 import { ErrorLine } from "../../design-system/errorline";
 import { SettingRow } from "../../design-system/settingrow";
+import { middayInstant } from "../../format/calendarday";
 import { formatDate } from "../../format/format";
 import { INTL_LOCALE } from "../../format/intllocale";
 import { viewerZone, zoneNameAndOffset } from "../../format/timezone";
@@ -38,7 +39,7 @@ export function HistoryBaselineRow({
               date: formatDate(baseline.date, locale, baseline.timezone),
               zone: zoneNameAndOffset(
                 INTL_LOCALE[locale],
-                new Date(baseline.date),
+                new Date(middayInstant(baseline.date, baseline.timezone)),
                 baseline.timezone,
               ),
             })} ${help}`

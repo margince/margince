@@ -105,6 +105,24 @@ it("states the stored date and zone, and clears it as null", async () => {
   await waitFor(() => expect(sent).toEqual([{ date: null }]));
 });
 
+it("names the offset in force at midday of a daylight-change baseline", () => {
+  render(
+    <HistoryBaselineRow
+      conn={connection({
+        history_baseline: {
+          date: "2026-03-29",
+          timezone: "Europe/Berlin",
+          set_at: "2026-03-30T09:00:00Z",
+        },
+      })}
+    />,
+  );
+
+  expect(
+    screen.getByText(/Central European Summer Time · UTC\+2/),
+  ).toBeTruthy();
+});
+
 it("offers no clear verb when no date is set", () => {
   render(<HistoryBaselineRow conn={connection()} />);
   expect(
