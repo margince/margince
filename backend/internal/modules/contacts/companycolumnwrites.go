@@ -74,7 +74,7 @@ var companyColumnWrites = map[string]companyColumnWrite{
 // A refused split leaves existing structured fields untouched during automatic fill.
 // An explicit replacement preserves the whole text in the profile field.
 func writeCompanyAddress(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, raw string, authority companyWriteAuthority) (bool, error) {
-	address, split := splitScrapedAddress(raw)
+	address, split := SplitAddressText(raw)
 	if !split && authority == fillUnclaimed {
 		return false, nil
 	}

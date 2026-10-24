@@ -61,13 +61,13 @@ func TestSplitScrapedAddressFindsEachPart(t *testing.T) {
 		},
 	}
 	for _, tc := range cases {
-		got, ok := splitScrapedAddress(tc.raw)
+		got, ok := SplitAddressText(tc.raw)
 		if !ok {
-			t.Errorf("splitScrapedAddress(%q) refused an address with a street, postal code and city", tc.raw)
+			t.Errorf("SplitAddressText(%q) refused an address with a street, postal code and city", tc.raw)
 			continue
 		}
 		if got, want := addressPartsOf(got), addressPartsOf(tc.want); got != want {
-			t.Errorf("splitScrapedAddress(%q)\n got %q\nwant %q", tc.raw, got, want)
+			t.Errorf("SplitAddressText(%q)\n got %q\nwant %q", tc.raw, got, want)
 		}
 	}
 }
@@ -90,8 +90,8 @@ func TestSplitScrapedAddressRefusesWhatItWouldHaveToGuess(t *testing.T) {
 		"Example Road 1600 Building 12345 Example City",
 		"Example Street 1 12345",
 	} {
-		if got, ok := splitScrapedAddress(raw); ok || addressPartsOf(got) != addressPartsOf(crmcontracts.Address{}) {
-			t.Errorf("splitScrapedAddress(%q) = %s, true; want a refusal with nothing filled", raw, fmt.Sprint(addressPartsOf(got)))
+		if got, ok := SplitAddressText(raw); ok || addressPartsOf(got) != addressPartsOf(crmcontracts.Address{}) {
+			t.Errorf("SplitAddressText(%q) = %s, true; want a refusal with nothing filled", raw, fmt.Sprint(addressPartsOf(got)))
 		}
 	}
 }

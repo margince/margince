@@ -8,6 +8,7 @@ package compose
 // and the report says so.
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"strings"
@@ -116,7 +117,8 @@ func (w *csvWriters) ownerOf(row migration.Row) (*ids.UserID, *migration.Skipped
 }
 
 // landingCells is checkedCells with the row's owner: a known seat rides in
-// typed, and an unknown address is the warning the row lands with.
+// typed. An unknown address or an unsplit line 1 is the warning the row lands
+// with.
 func (w *csvWriters) landingCells(row migration.Row) (map[string]any, *migration.SkippedRow, *migration.SkippedRow) {
 	typed, invalid := w.checkedCells(row)
 	if invalid != nil {
@@ -129,7 +131,7 @@ func (w *csvWriters) landingCells(row migration.Row) (map[string]any, *migration
 		}
 		typed[csvTargetOwner] = owner.UUID
 	}
-	return typed, nil, warning
+	return typed, nil, cmp.Or(warning, w.unsplitAddressWarning(row))
 }
 
 // ownerFrom is the seat a create or an update names, nil when the file named

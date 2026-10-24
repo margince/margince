@@ -52,9 +52,9 @@ var countryByName = func() map[string]string {
 	return names
 }()
 
-// splitScrapedAddress requires a street, postal code and city without dropping
+// SplitAddressText requires a street, postal code and city without dropping
 // source text. An unplaced trailing part refuses the whole split.
-func splitScrapedAddress(raw string) (crmcontracts.Address, bool) {
+func SplitAddressText(raw string) (crmcontracts.Address, bool) {
 	var parts []string
 	for part := range strings.SplitSeq(addressSeparators.Replace(raw), "\n") {
 		if part = strings.TrimSpace(part); part != "" {

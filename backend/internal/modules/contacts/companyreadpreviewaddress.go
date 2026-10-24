@@ -28,7 +28,7 @@ func previewReadAddress(ctx context.Context, tx pgx.Tx, id ids.CompanyID, curren
 	if err != nil || value == "" {
 		return nil, err
 	}
-	proposed, split := splitScrapedAddress(value)
+	proposed, split := SplitAddressText(value)
 	if !split {
 		return nil, nil
 	}
@@ -61,7 +61,7 @@ func previewReadAddress(ctx context.Context, tx pgx.Tx, id ids.CompanyID, curren
 // previewNewCompanyAddress is previewReadAddress for a company the read would
 // create, which has no address to keep.
 func previewNewCompanyAddress(field ColdStartFieldInput) []CompanyReadValue {
-	proposed, split := splitScrapedAddress(field.Value)
+	proposed, split := SplitAddressText(field.Value)
 	if !split {
 		return nil
 	}

@@ -99,6 +99,12 @@ Also called: ID from another system, key column, record ID from my old system.
 - **Custom fields:** a custom field has its own column. A list field takes one of its allowed values. A field that takes several values has them split by `;`.
 Also called: record owner, tag a group of records, import custom fields.
 
+### How does an address in one column import?
+A company or contact file may hold the whole address in one column. Map that column to `address.line1` and map no other address column. Margince then splits the address into its parts.
+
+If Margince cannot split it, the address stays in line 1, and the test run warns about that row. A file that also maps another address part keeps line 1 as it is written.
+Also called: import a full address, split an address column.
+
 ### How do I set a prospect's status?
 A `leads.csv` row can carry a `status`: `new`, `contacted` or `engaged`. Case does not matter. An empty box leaves a new prospect as `new`, and an existing one as it is.
 

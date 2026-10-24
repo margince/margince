@@ -11,8 +11,11 @@ package contacts
 // specification's examples passes and then meets a file from a laptop.
 
 import (
+	"reflect"
 	"strings"
 	"testing"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 func TestParseVCardsReadsTheCardsExportersWrite(t *testing.T) {
@@ -82,11 +85,22 @@ func TestParseVCardsReadsTheCardsExportersWrite(t *testing.T) {
 			want: VCardEntry{FullName: "Jürgen Müller"},
 		},
 		{
-			name: "a structured address becomes one line",
+			name: "a structured address becomes one line and its parts",
 			card: "BEGIN:VCARD\nFN:Postal Contact\nADR;TYPE=WORK:;;Hauptstr. 1;Berlin;;10115;Germany\nEND:VCARD\n",
 			// The post-office box and extended address are dropped; what
 			// remains is what a record shows.
-			want: VCardEntry{FullName: "Postal Contact", Address: "Hauptstr. 1, Berlin, 10115, Germany"},
+			want: VCardEntry{
+				FullName: "Postal Contact", Address: "Hauptstr. 1, Berlin, 10115, Germany",
+				PostalAddress: crmcontracts.Address{Line1: new("Hauptstr. 1"), City: new("Berlin"), PostalCode: new("10115"), Country: new("DE")},
+			},
+		},
+		{
+			name: "a country no column stores stays in line 2",
+			card: "BEGIN:VCARD\nFN:Postal Contact\nADR:;;Main St 1;Springfield;;12345;Freedonia\nEND:VCARD\n",
+			want: VCardEntry{
+				FullName: "Postal Contact", Address: "Main St 1, Springfield, 12345, Freedonia",
+				PostalAddress: crmcontracts.Address{Line1: new("Main St 1"), Line2: new("Freedonia"), City: new("Springfield"), PostalCode: new("12345")},
+			},
 		},
 		{
 			name: "a home email is personal",
@@ -271,6 +285,9 @@ func assertVCardEntry(t *testing.T, got, want VCardEntry) {
 	}
 	if got.Address != want.Address {
 		t.Errorf("address = %q, want %q", got.Address, want.Address)
+	}
+	if !reflect.DeepEqual(got.PostalAddress, want.PostalAddress) {
+		t.Errorf("postal address parts = %+v, want %+v", got.PostalAddress, want.PostalAddress)
 	}
 	assertChannels(t, "emails", got.Emails, want.Emails)
 	assertChannels(t, "phones", got.Phones, want.Phones)

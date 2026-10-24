@@ -27,6 +27,7 @@ import (
 	"strings"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -43,6 +44,9 @@ type VCardEntry struct {
 	Phones  []VCardChannel
 	URL     string
 	Address string
+	// PostalAddress is the same ADR property in its parts, as the record's
+	// address columns hold them.
+	PostalAddress crmcontracts.Address
 	// Revised is what the card's REV property states: when this card was last
 	// changed. Nil where it states none, and the import then dates the card
 	// from its own clock.
@@ -299,6 +303,7 @@ func applyVCardProperty(entry *VCardEntry, name string, params []string, raw str
 	case "ADR":
 		if entry.Address == "" {
 			entry.Address = addressFromStructured(params, raw)
+			entry.PostalAddress = postalAddressFromStructured(params, raw)
 		}
 	case "REV":
 		if entry.Revised == nil {
@@ -449,6 +454,27 @@ func nameFromStructured(params []string, raw string) string {
 		ordered = append(ordered, parts[0])
 	}
 	return strings.Join(ordered, " ")
+}
+
+// postalAddressFromStructured reads ADR into the address columns. A country the
+// card names in a way no column can store stays in line 2, so no text is lost.
+func postalAddressFromStructured(params []string, raw string) crmcontracts.Address {
+	parts := splitVCardComponents(params, raw)
+	part := func(i int) *string {
+		if i < len(parts) && parts[i] != "" {
+			return &parts[i]
+		}
+		return nil
+	}
+	out := crmcontracts.Address{Line1: part(2), City: part(3), Region: part(4), PostalCode: part(5)}
+	if country := part(6); country != nil {
+		if code, named := addressCountry(*country); named {
+			out.Country = &code
+		} else {
+			out.Line2 = country
+		}
+	}
+	return out
 }
 
 // addressFromStructured reads ADR: pobox;ext;street;locality;region;code;country
