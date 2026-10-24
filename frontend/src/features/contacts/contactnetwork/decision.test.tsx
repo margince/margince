@@ -127,6 +127,7 @@ function ask(over: Partial<IntroRequest> = {}): IntroRequest {
     introducer_display_name: "Sofia Meier",
     route_type: "direct",
     status: "requested",
+    origin: "asked",
     internal_reason: "Renewal conversation",
     name_drop_allowed: false,
     note_generated_by: "human",

@@ -15,6 +15,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -45,9 +47,8 @@ import (
 // "this must stay private", and treating them as holds narrowed every ordinary
 // contact the verdict was about to publish.
 //
-// The four named here are the real ones: a mailbox whose floor is narrower than
-// the workspace, a counterparty somebody put a hold on, a [Confidential] marker,
-// and a thread a classifier already judged confidential.
+// The real ones are the verdict-proof holds (verdictProofReasons) and a thread
+// a classifier already judged confidential.
 //
 // A RESTRICTED activity is a hold in its own right, and the arm is a LEFT JOIN
 // so it stands whether or not the thread carries a verdict. This is the one
@@ -78,11 +79,11 @@ func ThreadHoldsItsCounterparty(ctx context.Context, tx pgx.Tx, activityID ids.U
 // evidence ask the same question of other messages, so they take this rather
 // than a second copy.
 func CounterpartyHeldOn(alias string) string {
+	held := "'" + strings.Join(append(slices.Clone(verdictProofReasons), audienceReasonInheritedVerdict), "', '") + "'"
 	return fmt.Sprintf(`(%[1]s.restricted_at IS NOT NULL
-		OR (%[1]s.audience <> 'workspace' AND %[1]s.audience_reason IN (
-		      'workspace_floor', 'counterparty', 'explicitly_confidential', 'inherited_verdict'))
+		OR (%[1]s.audience <> 'workspace' AND %[1]s.audience_reason IN (%[2]s))
 		OR EXISTS (
 		      SELECT 1 FROM capture_thread_verdict v
 		       WHERE v.thread_key = %[1]s.thread_key AND %[1]s.thread_key <> ''
-		         AND v.status IN ('held', 'unsure', 'held_by_owner', 'pending')))`, alias)
+		         AND v.status IN ('held', 'unsure', 'held_by_owner', 'pending')))`, alias, held)
 }
