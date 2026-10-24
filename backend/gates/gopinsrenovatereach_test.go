@@ -28,6 +28,7 @@ package gates
 import (
 	"encoding/json"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -147,16 +148,82 @@ func goPinNamed(t *testing.T, matchString string) *regexp.Regexp {
 	return pattern
 }
 
-func anyMatches(t *testing.T, patterns []string, path string) bool {
+func anyMatches(t *testing.T, patterns []string, file string) bool {
 	t.Helper()
 	for _, pattern := range patterns {
-		matched, err := regexp.MatchString(pattern, path)
-		if err != nil {
-			t.Fatalf("compiling the custom manager's file pattern %q: %v", pattern, err)
-		}
-		if matched {
+		if reachesLikeRenovate(t, pattern, file) {
 			return true
 		}
 	}
 	return false
+}
+
+// reachesLikeRenovate answers whether Renovate would read `pattern` as naming
+// `file`. That is not Go's regexp question.
+//
+// Renovate takes a pattern as a regex only between slashes, and as a minimatch
+// glob otherwise. Compiling every pattern as a regex is what let
+// `^docs/how-to/add-an-extension\.md$` satisfy this gate while naming no
+// file: as a glob, `^` and `\.` are literals no path carries.
+//
+// path.Match is not minimatch. It has no `**`, so a pattern crossing
+// directories answers false here. The gate then asks for a regex, which is
+// the stricter way to be wrong.
+func reachesLikeRenovate(t *testing.T, pattern, file string) bool {
+	t.Helper()
+	if len(pattern) > 1 && strings.HasPrefix(pattern, "/") && strings.HasSuffix(pattern, "/") {
+		re, err := regexp.Compile(pattern[1 : len(pattern)-1])
+		if err != nil {
+			t.Fatalf("compiling the custom manager's file pattern %q as a regex: %v", pattern, err)
+		}
+		return re.MatchString(file)
+	}
+	matched, err := path.Match(pattern, file)
+	if err != nil {
+		t.Fatalf("reading the custom manager's file pattern %q as a glob: %v", pattern, err)
+	}
+	return matched
+}
+
+// The Makefile's digest pins, asked of the Makefile rather than of a list.
+//
+// Six SBOM tools are pinned there, and Renovate has no manager for a
+// Makefile. So each is a hand edit nothing prompts until a custom manager
+// claims the file: syft sat on v1.50.0 after v1.51.1 fixed a pnpm-lock read.
+//
+// The corpus is every `*_IMAGE` line the Makefile carries. A seventh pin
+// fails this by being written rather than by being remembered.
+func TestEveryMakefileImagePinIsOneRenovateCanOffer(t *testing.T) {
+	t.Parallel()
+	const makefile = "Makefile"
+	text, err := os.ReadFile(filepath.Join(repoRoot, makefile))
+	if err != nil {
+		t.Fatalf("reading %s: %v", makefile, err)
+	}
+	pinned := regexp.MustCompile(`(?m)^([A-Z_]+_IMAGE)\s*\?=`).FindAllStringSubmatch(string(text), -1)
+	if len(pinned) == 0 {
+		t.Fatal("no *_IMAGE pin in the Makefile, so this gate reads a corpus that " +
+			"has moved and would pass over every pin there is")
+	}
+	claimed := map[string]bool{}
+	for _, manager := range readRenovateConfig(t).CustomManagers {
+		if !anyMatches(t, manager.ManagerFilePatterns, makefile) {
+			continue
+		}
+		for _, matchString := range manager.MatchStrings {
+			for _, hit := range goPinNamed(t, matchString).FindAllString(string(text), -1) {
+				for _, pin := range pinned {
+					if strings.Contains(hit, pin[1]) {
+						claimed[pin[1]] = true
+					}
+				}
+			}
+		}
+	}
+	for _, pin := range pinned {
+		if !claimed[pin[1]] {
+			t.Errorf("%s is pinned by digest in the Makefile and no custom manager offers it an "+
+				"update, so it moves only when somebody edits it by hand", pin[1])
+		}
+	}
 }

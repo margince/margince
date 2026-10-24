@@ -26,9 +26,18 @@
   },
   "customManagers": [
     {
+      "description": "The Makefile pins six SBOM tools by digest, each with its tag in a trailing comment. Renovate has no manager for a Makefile, so without this one none of the six is ever offered an update: syft sat on v1.50.0 after v1.51.1 fixed the two-document pnpm-lock read. The digest is what runs and the comment is what a reader checks, so both move together or the comment starts lying.",
+      "customType": "regex",
+      "managerFilePatterns": ["/^Makefile$/"],
+      "matchStrings": [
+        "[A-Z_]+_IMAGE\\s*\\?=\\s*(?<depName>[^@\\s]+)@(?<currentDigest>sha256:[a-f0-9]+)\\s*#\\s*(?<currentValue>\\S+)"
+      ],
+      "datasourceTemplate": "docker"
+    },
+    {
       "description": "docs/how-to/add-an-extension.md shows a go.mod verbatim, and whoever writes the next extension copies it — so the version in that fence is a pin like any other, and goversionpins_test.go holds it as one. No manager owns a fenced block, which is why the bump reached everything else and left the how-to a patch behind.",
       "customType": "regex",
-      "managerFilePatterns": ["^docs/how-to/add-an-extension\\.md$"],
+      "managerFilePatterns": ["/^docs\\/how-to\\/add-an-extension\\.md$/"],
       "matchStrings": ["\\n\\s*go (?<currentValue>\\d+\\.\\d+\\.\\d+)\\n"],
       "depNameTemplate": "go",
       "datasourceTemplate": "golang-version"
