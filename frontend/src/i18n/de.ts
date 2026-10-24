@@ -7708,6 +7708,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du darfst dieses Mitglied nicht als verantwortlich eintragen, daher bist du für seine Zeilen verantwortlich.",
   "import.reason.owner_unknown":
     "Kein Mitglied hat diese E-Mail-Adresse, daher bist du verantwortlich; ein Lead bleibt nicht zugewiesen. Betroffene Zeilen: {rows}.",
+  "import.reason.address_not_split":
+    "Die Adresse ließ sich nicht in Straße, Postleitzahl und Ort aufteilen, daher bleibt sie in der ersten Adresszeile.",
   "import.reason.phone_needs_country":
     "„{value}“ braucht die Landesvorwahl, zum Beispiel +49 30 1234567.",
   "import.reason.record_archived":
@@ -11294,6 +11296,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "companyTriage.checkedAt": "geprüft {when}",
   "pipeline.reason.no_named_reader":
     "dieser Thread hat keine Lesenden, an die sich ein Befund richten ließe",
+  "pipeline.reason.from_sending_systems":
+    "dieser Thread enthält nur E-Mails von Systemen, etwa Benachrichtigungen, und wird nicht gelesen",
   "pipeline.reason.transport_not_read":
     "dieser Schritt liest nur E-Mails, und die Nachricht kam über einen anderen Kanal",
   "pipeline.reason.sender_undecided":
@@ -14237,6 +14241,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du stehst im Austausch mit {through} im selben Unternehmen.",
   "contact.graph.noRoute":
     "Im Unternehmen steht noch niemand im Austausch mit diesem Kontakt oder dessen Unternehmen.",
+  "contact.network.captureGap_one":
+    "{names} steht in den Threads dieses Kontakts und hat kein Postfach verbunden, daher kann spätere Post hier fehlen.",
+  "contact.network.captureGap_other":
+    "{names} stehen in den Threads dieses Kontakts und haben kein Postfach verbunden, daher kann spätere Post hier fehlen.",
+  "contact.network.captureGapInvited": "{name} (noch nicht angemeldet)",
   "contact.graph.noDirect":
     "Im Unternehmen hat noch niemand mit diesem Kontakt korrespondiert.",
   "contact.graph.sideColumn": "Vorstellungen und Veränderungen",

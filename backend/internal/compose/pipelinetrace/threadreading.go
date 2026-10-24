@@ -24,6 +24,7 @@ type ThreadReading struct {
 	// connector. Nothing below is meaningful then.
 	Known bool
 
+	HasAHumanSender   bool
 	ReachesOneAccount bool
 	IsOneBodyOfWork   bool
 	IsFullyOpen       bool

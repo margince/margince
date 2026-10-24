@@ -11497,6 +11497,7 @@ const (
 	ImportReasonCodeActivityTypeUnknown          ImportReasonCode = "activity_type_unknown"
 	ImportReasonCodeActivityTypeUnnamed          ImportReasonCode = "activity_type_unnamed"
 	ImportReasonCodeActivityUnlinked             ImportReasonCode = "activity_unlinked"
+	ImportReasonCodeAddressNotSplit              ImportReasonCode = "address_not_split"
 	ImportReasonCodeAmountNegative               ImportReasonCode = "amount_negative"
 	ImportReasonCodeAuthorTooLong                ImportReasonCode = "author_too_long"
 	ImportReasonCodeCannotCreate                 ImportReasonCode = "cannot_create"
@@ -11622,6 +11623,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeActivityTypeUnnamed:
 		return true
 	case ImportReasonCodeActivityUnlinked:
+		return true
+	case ImportReasonCodeAddressNotSplit:
 		return true
 	case ImportReasonCodeAmountNegative:
 		return true
@@ -34598,6 +34601,16 @@ type ContactBrief struct {
 	Sentences []CompanyBriefSentence `json:"sentences"`
 }
 
+// ContactCaptureGap One colleague on a contact's threads whose mail is not captured.
+type ContactCaptureGap struct {
+	DisplayName string `json:"display_name"`
+
+	// Invited True when the colleague has not signed in yet.
+	Invited        bool               `json:"invited"`
+	LastOnThreadAt time.Time          `json:"last_on_thread_at"`
+	UserId         openapi_types.UUID `json:"user_id"`
+}
+
 // ContactConsentGuard Whether an outbound message to this contact is allowed right now, per purpose and
 // channel, WITH the reason (ADR-0098 D6).
 //
@@ -35062,8 +35075,14 @@ type ContactMomentRule string
 // ContactNetwork The colleagues who know this contact, warmest first. Ordering is the answer, not
 // a presentation detail: it is who to ask.
 type ContactNetwork struct {
-	Colleagues []ContactNetworkColleague `json:"colleagues"`
-	ContactId  openapi_types.UUID        `json:"contact_id"`
+	// CaptureGaps Colleagues who are on this contact's threads and have no connected mailbox, so
+	// later replies they alone receive may be missing here. Information only: a seat
+	// listed here is not a route in, owns no work and may not send. An invited seat
+	// appears here and never in `colleagues`. At most ten are returned, most recent
+	// first.
+	CaptureGaps []ContactCaptureGap       `json:"capture_gaps"`
+	Colleagues  []ContactNetworkColleague `json:"colleagues"`
+	ContactId   openapi_types.UUID        `json:"contact_id"`
 }
 
 // ContactNetworkColleague One colleague's own relationship with this contact.

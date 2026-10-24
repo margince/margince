@@ -14,9 +14,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -64,7 +66,10 @@ func (s *Store) updateMatchedByCard(
 	}
 	result.Outcome = VCardUpdated
 	result.ContactID = &contactID
-	return s.fillFromVCard(ctx, tx, contactID, entry)
+	if err := s.fillFromVCard(ctx, tx, contactID, entry); err != nil {
+		return err
+	}
+	return fillAddressFromCard(ctx, tx, contactID, entry)
 }
 
 // createFromCard turns a card nobody matched into a contact.
@@ -116,3 +121,20 @@ func (s *Store) createFromCard(
 // transaction. The caller recognises this one error and reports the card's own
 // outcome, which the arm has already filled in.
 var errCardSourceNarrowed = errors.New("contacts: the message this card arrived on is no longer readable here")
+
+// vcardRecordAddress is the card's address in the record's parts. A card
+// staged before the parts were read carries only the one line, which goes
+// through the splitter every other line-1 writer uses.
+func vcardRecordAddress(entry VCardEntry) *crmcontracts.Address {
+	if parts := addressOrNil(entry.PostalAddress); parts != nil {
+		return parts
+	}
+	line := strings.TrimSpace(entry.Address)
+	if line == "" {
+		return nil
+	}
+	if split, ok := SplitAddressText(line); ok {
+		return &split
+	}
+	return &crmcontracts.Address{Line1: &line}
+}

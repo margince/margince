@@ -37,6 +37,7 @@ import (
 func whoKnowsLister(pool *pgxpool.Pool, store *contacts.Store) agents.WhoKnowsLister {
 	return func(ctx context.Context, contactID ids.UUID) (agents.WhoKnowsReading, error) {
 		var out []agents.KnownColleague
+		var gaps []agents.CaptureGap
 		var truncated bool
 		var contactName string
 		err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
@@ -90,9 +91,21 @@ func whoKnowsLister(pool *pgxpool.Pool, store *contacts.Store) agents.WhoKnowsLi
 				return err
 			}
 			contactName = anchor[contactID]
+			seats, err := contactSeatGaps(ctx, tx, contactID)
+			if err != nil {
+				return err
+			}
+			for _, s := range seats {
+				gaps = append(gaps, agents.CaptureGap{
+					UserID: s.UserID, DisplayName: s.DisplayName, Invited: s.Invited,
+					LastOnThreadAt: s.LastOnThread,
+				})
+			}
 			return nil
 		})
-		return agents.WhoKnowsReading{ContactName: contactName, Colleagues: out, Truncated: truncated}, err
+		return agents.WhoKnowsReading{
+			ContactName: contactName, Colleagues: out, CaptureGaps: gaps, Truncated: truncated,
+		}, err
 	}
 }
 

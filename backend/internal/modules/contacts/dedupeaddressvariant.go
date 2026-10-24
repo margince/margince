@@ -84,7 +84,8 @@ func addressVariantContacts(ctx context.Context, tx pgx.Tx, c ContactCandidate) 
 		   AND e.archived_at IS NULL
 		   AND ($3::uuid IS NULL OR e.contact_id <> $3)
 		 GROUP BY e.contact_id
-		 ORDER BY e.contact_id`, bases, folded, c.ExcludeID)
+		 ORDER BY e.contact_id
+		 LIMIT $4`, bases, folded, c.ExcludeID, dedupeRivalLimit)
 	if err != nil {
 		return nil, fmt.Errorf("dedupe contact address variant: %w", err)
 	}

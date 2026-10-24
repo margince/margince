@@ -191,6 +191,7 @@ var registrations = []Registration{{
 		ReasonEventsRaised, ReasonNothingMaterial, ReasonThreadStillMoving,
 		ReasonAwaitingScan, ReasonReadingParked, ReasonNoSingleAccount,
 		ReasonTwoBodiesOfWork, ReasonThreadNotAllOpen, ReasonThreadNotAllRead, ReasonNoNamedReader,
+		ReasonFromSendingSystems,
 	},
 }, {
 	Stage:        StageClaimExtraction,

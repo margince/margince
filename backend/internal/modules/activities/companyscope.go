@@ -76,13 +76,26 @@ func CompanyReachedActivities(companiesPos int) string {
 // Its branch reaches the employees' activities through participantEntry first,
 // and that same `EXISTS` decides which of them count.
 func companyReach(operand string) string {
+	participantBranch := sprintf(participantEntry+participantEmployerArm, operand, "e0.company_id")
+	return companyLinkReach(operand) + "\n\t\t    UNION " + participantBranch
+}
+
+// companyLinkReach is companyReach without the participant arm: the activities
+// filed against the account, its deals or its employees.
+func companyLinkReach(operand string) string {
 	linkBranch := func(column string) string {
 		return sprintf("SELECT l.activity_id, %[1]s AS company_id %[2]s\n\t\t    WHERE %[1]s = %[3]s",
 			column, companyArms, operand)
 	}
-	participantBranch := sprintf(participantEntry+participantEmployerArm, operand, "e0.company_id")
 	return linkBranch("l.company_id") + "\n\t\t    UNION " + linkBranch("d.company_id") +
-		"\n\t\t    UNION " + linkBranch("r.company_id") + "\n\t\t    UNION " + participantBranch
+		"\n\t\t    UNION " + linkBranch("r.company_id")
+}
+
+// CompanyFiledActivityExists is the predicate over the three link arms only. A
+// file of a mail that merely CC'd an employee is not a document of that
+// employee's employer.
+func CompanyFiledActivityExists(companyPos int) string {
+	return "a.id IN (SELECT reach.activity_id FROM (" + companyLinkReach(sprintf("$%d", companyPos)) + ") reach)"
 }
 
 // companyArms is the three links themselves — the account an activity is filed

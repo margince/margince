@@ -24,6 +24,7 @@ var (
 	ownerRefusedWhy         = migration.Why(migration.ReasonOwnerRefused)
 	unknownOwnerWhy         = migration.WhyCount(migration.ReasonOwnerUnknown, "rows", 1)
 	newTagWhy               = migration.Why(migration.ReasonTagNew)
+	addressNotSplitWhy      = migration.Why(migration.ReasonAddressNotSplit)
 	createdTagWhy           = migration.Why(migration.ReasonTagCreated)
 	contactUnnamedWhy       = migration.Why(migration.ReasonContactUnnamed)
 	companyNameEmptyWhy     = migration.Why(migration.ReasonCompanyNameEmpty)

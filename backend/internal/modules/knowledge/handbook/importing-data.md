@@ -99,6 +99,12 @@ Also called: ID from another system, key column, record ID from my old system.
 - **Custom fields:** a custom field has its own column. A list field takes one of its allowed values. A field that takes several values has them split by `;`.
 Also called: record owner, tag a group of records, import custom fields.
 
+### How does an address in one column import?
+A company or contact file may hold the whole address in one column. Map that column to `address.line1` and map no other address column. Margince then splits the address into its parts.
+
+If Margince cannot split it, the address stays in line 1, and the test run warns about that row. A file that also maps another address part keeps line 1 as it is written.
+Also called: import a full address, split an address column.
+
 ### How do I set a prospect's status?
 A `leads.csv` row can carry a `status`: `new`, `contacted` or `engaged`. Case does not matter. An empty box leaves a new prospect as `new`, and an existing one as it is.
 
@@ -184,6 +190,12 @@ Also called: duplicate queue too long after import, same name flagged.
 Margince checks the open duplicate list every night, and each time it starts. It closes a pair that today's rules would no longer suggest, for example two contacts who share only a first name.
 A pair someone has dismissed or reopened is never closed this way. A closed pair keeps its history, and it comes back by itself if the two records start to match again.
 Also called: duplicate gone, shorter duplicate list, fewer duplicates.
+
+### Does Margince find duplicates that were already there before?
+Yes. Every night Margince compares each company and contact that changed that day with all the others. It lists each new pair it finds on the duplicate list. An upgrade compares every record once.
+
+So two companies that one import wrote at the same time are listed, and so are records written before a matching rule existed. A pair someone has dismissed or merged is never listed again. Margince never merges a pair by itself.
+Also called: old duplicates, duplicates from before, duplicates not found, existing duplicates.
 
 ### How do I correct companies with a spreadsheet?
 To correct companies in Margince from a CSV, give each row the company's ID and map that column to **id**.

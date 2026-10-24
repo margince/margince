@@ -271,7 +271,7 @@ func resolveOrCreateColdStartCompany(ctx context.Context, tx pgx.Tx, host, by st
 	if err != nil {
 		return ids.CompanyID{}, false, err
 	}
-	if err := match.recordIfReview(ctx, tx, companyID, coldStartSource, by); err != nil {
+	if _, err := match.recordIfReview(ctx, tx, companyID, coldStartSource, by); err != nil {
 		return ids.CompanyID{}, false, err
 	}
 	return companyID, true, nil

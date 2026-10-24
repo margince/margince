@@ -65,6 +65,15 @@ func reviewContact(ctx context.Context, tx pgx.Tx, c ContactCandidate) (ContactR
 			}
 		}
 	}
+	var subject *ids.UUID
+	if c.ExcludeID != nil {
+		subject = &c.ExcludeID.UUID
+	}
+	reviews, err := newRivals(ctx, tx, entityContact, subject, reviews,
+		func(r ReviewMatch) ids.UUID { return r.ContactID.UUID })
+	if err != nil {
+		return ContactResolution{}, err
+	}
 	return resolutionOf(reviews), nil
 }
 

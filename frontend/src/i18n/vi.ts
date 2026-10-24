@@ -7477,6 +7477,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Bạn không thể đặt thành viên này làm người chịu trách nhiệm nên bạn trở thành người chịu trách nhiệm các hàng của họ.",
   "import.reason.owner_unknown":
     "Không có thành viên nào có email này nên bạn trở thành người chịu trách nhiệm; lead vẫn chưa giao. Số hàng nêu email này: {rows}.",
+  "import.reason.address_not_split":
+    "Không tách được địa chỉ thành đường, mã bưu chính và thành phố nên địa chỉ vẫn nằm ở dòng địa chỉ đầu tiên.",
   "import.reason.phone_needs_country":
     "“{value}” cần mã quốc gia, ví dụ +49 30 1234567.",
   "import.reason.record_archived":
@@ -10963,6 +10965,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "companyTriage.checkedAt": "đã kiểm tra {when}",
   "pipeline.reason.no_named_reader":
     "chuỗi thư này không có thành viên nào để nhận phát hiện",
+  "pipeline.reason.from_sending_systems":
+    "chuỗi thư này chỉ có thư từ hệ thống gửi, như thông báo, nên không được đọc",
   "pipeline.reason.transport_not_read":
     "bước này chỉ đọc email, còn tin nhắn đến qua kênh khác",
   "pipeline.reason.sender_undecided":
@@ -13852,6 +13856,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.graph.routeViaYou": "Bạn trao đổi với {through} ở cùng công ty.",
   "contact.graph.noRoute":
     "Chưa ai trong công ty trao đổi với liên hệ này hoặc công ty của họ.",
+  "contact.network.captureGap_one":
+    "{names} có trong các cuộc trao đổi với liên hệ này nhưng chưa kết nối hộp thư, nên thư về sau có thể bị thiếu.",
+  "contact.network.captureGap_other":
+    "{names} có trong các cuộc trao đổi với liên hệ này nhưng chưa kết nối hộp thư, nên thư về sau có thể bị thiếu.",
+  "contact.network.captureGapInvited": "{name} (chưa đăng nhập)",
   "contact.graph.noDirect": "Chưa ai trong công ty trao đổi với liên hệ này.",
   "contact.graph.sideColumn": "Giới thiệu và thay đổi",
   "contact.graph.recordWorksWith": "Theo hồ sơ: làm việc cùng {name}",
