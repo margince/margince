@@ -1,7 +1,7 @@
-import type { components } from "../../api/schema";
-import type { Translator } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
-import { actorAttribution, isAuditActorType } from "../settings/audit";
+import type { components } from "../api/schema";
+import type { Translator } from "../i18n";
+import type { MessageKey } from "../i18n/en";
+import { actorAttribution, isAuditActorType } from "./auditactor";
 import { HISTORY_VERB } from "./historyverbs";
 
 // One history entry as a sentence in the reader's language. A link change, or a

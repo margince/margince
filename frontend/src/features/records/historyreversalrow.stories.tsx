@@ -6,11 +6,11 @@ import { userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { formatDateTime } from "../../format/format";
 import { useT } from "../../i18n";
+import { historyLine } from "../../lib/historyline";
 import {
   expectNameAndValueApart,
   StoryProviders,
 } from "../../testing/story-utils";
-import { historyLine } from "./historyline";
 import type { PairRow } from "./historyreversal";
 import { ReversalPairRow } from "./historyreversalrow";
 

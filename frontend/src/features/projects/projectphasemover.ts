@@ -1,6 +1,6 @@
 import type { components } from "../../api/schema";
 import type { Translator } from "../../i18n";
-import { historySubject } from "../records/historyline";
+import { historySubject } from "../../lib/historyline";
 
 type PhaseMover = components["schemas"]["PrincipalAttribution"];
 
