@@ -275,6 +275,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `docsnamedthings_test.go` | H2 | A page that tells the reader to run a make target, set an environment variable or follow a contribution rule is a claim about the tree. |
 | `docsreachability_test.go` | H3 | Every page under docs/ is reachable by following links from docs/README.md. |
 | `doitokenexposure_test.go` | H2 | The plaintext confirm token goes into the mail body and nowhere else. |
+| `draftlanguageevidence_test.go` | H2 | Every draft route reads its language from the same evidence. |
 | `draftreplyreader_test.go` | H2 | A {subject, body} model reply has one reader. |
 | `draftsteering_test.go` | H2 | Every draft-email route takes the same steering. |
 | `duplicateindex_test.go` | H2 | One set of columns, one index. |

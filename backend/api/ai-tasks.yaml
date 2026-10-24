@@ -84,7 +84,9 @@
 #                     only a local decision model.
 #   company_context   the ADR-0065 policy: `none`, or scopes + token_budget
 #                     (+ conditional, meaning "only when the caller requests
-#                     it"). Absent-by-accident must be a build error, never a
+#                     it"; + offering_selectable, meaning "the caller may name
+#                     which legal entity's offering the context describes").
+#                     Absent-by-accident must be a build error, never a
 #                     runtime one.
 #   cost_unit         the ADR-0067/0068 unit rule BY NAME. The arithmetic
 #                     (observed-unit and denominator functions, the work-shape
@@ -266,7 +268,7 @@ tasks:
     on_outage: degrades
     status: shipped
     sites: [growth_fit]
-    company_context: {scopes: [offer, positioning, proof], token_budget: 1200}
+    company_context: {scopes: [offer, positioning, proof], token_budget: 1200, offering_selectable: true}
     doc: "How well one company fits what we sell. The only site on the company view that must read OUR offering as well as theirs — a fit is a claim about two companies, and judging one against a guess about the other is what the DOSS-AC-13 band cap exists to stop. Our own context is never citable: evidence is target-side only, so a factor drawn from what we sell is labelled an assessment and still cites their records, or the grounding filter drops it (DOSS-AC-6). The band the model proposes is not the band served — the deterministic completeness gate can lower it to `unknown` or cap it at `moderate`, and never raises it."
 
   draft_reply:

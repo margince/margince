@@ -1546,6 +1546,9 @@ export interface paths {
          *     the introducer sees an empty list rather than a refusal: whether a colleague was asked
          *     about this contact is exactly the fact the row protects.
          *
+         *     An introduction recorded after the fact (`origin: recorded`) is the exception: both
+         *     colleagues vouched for it, so every reader of the contact sees it.
+         *
          *     Newest first. Settled asks stay in the list — what was asked and answered is the
          *     history the next ask is decided against.
          */
@@ -1566,6 +1569,39 @@ export interface paths {
          *     the first is unanswered is a duplicate, not a reminder, and it answers `409`.
          */
         post: operations["createIntroRequest"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/contacts/{id}/introductions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record an introduction to this contact that already happened.
+         * @description A colleague introduced another colleague to this contact outside Margince, with no ask
+         *     behind it. The row is an `IntroRequest` with `origin: recorded`, born `introduced`, so
+         *     nothing mistakes it for an ask that went through accept and mark.
+         *
+         *     Only the colleague who introduced (`introducer_user_id`) or the colleague who was
+         *     introduced (`introduced_user_id`) may record it, and the caller must be one of the two.
+         *     Anyone who can read the contact can read the recorded row. Both seats must be live
+         *     members of the workspace and must differ.
+         *
+         *     Recording the same pair for the same contact twice answers `409`. Recording is a
+         *     human's claim about two colleagues, so no agent tool does it.
+         */
+        post: operations["recordIntroduction"];
         delete?: never;
         options?: never;
         head?: never;
@@ -10142,7 +10178,7 @@ export interface paths {
          * Archive a legal entity nobody works for any more.
          * @description Needs `legal_entity:delete`. The default entity is refused as 409
          *     `legal_entity_default_is_permanent`. An entity that still has members is refused as
-         *     409 `legal_entity_has_members`: move its users to another entity first.
+         *     409 `legal_entity_has_members`: move its users to another entity first. 409 `legal_entity_is_assessed_against`: companies are still judged against its offering; choose another for them first.
          *     A stale `If-Match` version is refused as 409 `version_skew`.
          */
         post: operations["archiveLegalEntity"];
@@ -27439,6 +27475,11 @@ export interface components {
              * @description Single-level hierarchy FK; no cycles.
              */
             parent_company_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The legal entity whose offering the growth fit judges this company against. Null means the main offering.
+             */
+            assess_against_entity_id?: string | null;
             /** Format: uuid */
             merged_into_id?: string | null;
             /**
@@ -27552,6 +27593,13 @@ export interface components {
             owner_id?: string | null;
             /** Format: uuid */
             parent_company_id?: string | null;
+            /**
+             * Format: uuid
+             * @description The legal entity whose offering the growth fit judges this company against. Send the
+             *     default entity's id to return to the main offering. An entity that does not exist or is
+             *     archived answers 422 naming this field. Absent leaves it untouched.
+             */
+            assess_against_entity_id?: string | null;
             /** @description Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains. */
             domains?: components["schemas"]["CompanyDomainInput"][];
             /**
@@ -27852,6 +27900,15 @@ export interface components {
          * @enum {string}
          */
         GrowthFitNextStep: "gather_inputs" | "record_profile" | "confirm_offering" | "configure_model" | "retry_later";
+        /** @description The legal entity whose offering a growth fit was measured against. */
+        GrowthFitOffering: {
+            /** Format: uuid */
+            entity_id: string;
+            /** @description The entity's name; for the default entity, the company's name. */
+            display_name: string;
+            /** @description True when this is the main offering. */
+            is_default: boolean;
+        };
         /**
          * @description Cached per reader (DOSS-DDL-2), because it folds seat-dependent workspace context
          *     and makes recommendations.
@@ -27872,6 +27929,7 @@ export interface components {
              */
             band_capped_reason?: string | null;
             data_completeness: components["schemas"]["DataCompleteness"];
+            assessed_against?: components["schemas"]["GrowthFitOffering"];
             /**
              * @description The one named thing to do that would most improve this answer, or absent when
              *     nothing is holding it back.
@@ -29230,6 +29288,11 @@ export interface components {
              * @description When they last wrote to us, leaving out email an import brought in as history. Equal to `last_inbound_at` when nothing imported is newer. The re-engaged suggestion reads this, because history that arrived by import is not a reply. Absent when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
              */
             last_live_inbound_at?: string | null;
+            /**
+             * Format: date-time
+             * @description The newest exchange in either direction, a meeting included: the moment "quiet for N days" counts from. Absent when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
+             */
+            last_contact_at?: string | null;
             /** @description The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none". */
             sections_omitted: ("employments" | "deal_roles" | "projects" | "strength" | "network" | "activities" | "next_steps" | "consent" | "profile_fields" | "since_last_visit" | "last_touch" | "relationship_changes" | "moments" | "commercial" | "next_meeting" | "claims" | "conversation_memory" | "provider_profile" | "dead_addresses" | "billing_roles")[];
             strength?: components["schemas"]["RelationshipStrength"];
@@ -30017,7 +30080,12 @@ export interface components {
             id: string;
             /** Format: uuid */
             contact_id: string;
-            /** Format: uuid */
+            origin: components["schemas"]["IntroOrigin"];
+            recorded_channel?: components["schemas"]["IntroRecordedChannel"];
+            /**
+             * Format: uuid
+             * @description The colleague who asked, or for a recorded introduction the colleague who was introduced.
+             */
             requester_user_id: string;
             requester_display_name?: string;
             /** Format: uuid */
@@ -30030,8 +30098,8 @@ export interface components {
              */
             through_contact_id?: string;
             through_display_name?: string;
-            /** @description Why the requester is asking. Read by the colleague, never by the contact. */
-            internal_reason: string;
+            /** @description Why the requester is asking. Read by the colleague, never by the contact. Null for a recorded introduction, which has no ask behind it. */
+            internal_reason?: string | null;
             /** @description What is in it for the contact, in the requester's words. */
             value_for_target?: string;
             /** @description The prospect-facing copy the colleague can paste. The only one of the three a contact outside the company ever reads. */
@@ -30060,9 +30128,9 @@ export interface components {
             requested_at: string;
             /**
              * Format: date-time
-             * @description When an unanswered ask goes stale. A colleague's silence is an answer the requester needs to be able to act on.
+             * @description When an unanswered ask goes stale. A colleague's silence is an answer the requester needs to be able to act on. Null for a recorded introduction, which nobody answers.
              */
-            due_at: string;
+            due_at?: string | null;
             /** Format: date-time */
             decided_at?: string | null;
             /** Format: date-time */
@@ -30108,6 +30176,35 @@ export interface components {
          * @enum {string}
          */
         IntroFallbackPolicy: "name_drop" | "next_route" | "none";
+        /**
+         * @description How the row came to be. `asked` went through the ask lifecycle. `recorded` is an introduction that already happened outside Margince, born `introduced`.
+         * @enum {string}
+         */
+        IntroOrigin: "asked" | "recorded";
+        /**
+         * @description How a recorded introduction was made.
+         * @enum {string}
+         */
+        IntroRecordedChannel: "in_person" | "email" | "call" | "other";
+        /** @description An introduction that already happened. The caller must be the introducer or the introduced colleague; the two must differ. */
+        RecordIntroductionInput: {
+            /**
+             * Format: uuid
+             * @description The colleague who made the introduction.
+             */
+            introducer_user_id: string;
+            /**
+             * Format: uuid
+             * @description The colleague who was introduced to the contact.
+             */
+            introduced_user_id: string;
+            /**
+             * Format: date
+             * @description The day it happened. Not in the future.
+             */
+            introduced_on: string;
+            channel: components["schemas"]["IntroRecordedChannel"];
+        };
         IntroRequestListResponse: {
             data: components["schemas"]["IntroRequest"][];
         };
@@ -41177,6 +41274,7 @@ export interface components {
             bic?: string | null;
             /** @description The legal notice the entity prints, up to 4000 characters. */
             imprint?: string | null;
+            offering?: components["schemas"]["LegalEntityOffering"];
             /** @description Where the entity's logo is streamed from. Null when it has none. */
             logo_url?: string | null;
             /** @description How many users are assigned to the entity. Always 0 on the default entity, whose members are the users with no assignment. */
@@ -41198,6 +41296,19 @@ export interface components {
             city?: string | null;
             region?: string | null;
         };
+        /**
+         * @description What a further legal entity sells and to whom, the offering a company can be judged against.
+         *     The default entity's offering is the company profile, so these stay null there and a write to
+         *     them answers `legal_entity_field_on_company_form`. The offering is confirmed once the entity
+         *     has a name, an `offer_summary` and an `icp`.
+         */
+        LegalEntityOffering: {
+            offer_summary?: string | null;
+            /** @description The ideal customer profile. */
+            icp?: string | null;
+            value_proposition?: string | null;
+            usp?: string | null;
+        };
         LegalEntityListResponse: {
             data: components["schemas"]["LegalEntity"][];
         };
@@ -41217,6 +41328,7 @@ export interface components {
             iban?: string;
             bic?: string;
             imprint?: string;
+            offering?: components["schemas"]["LegalEntityOffering"];
         };
         /** @description A field left out keeps its value; a field sent as an empty string is cleared. */
         UpdateLegalEntityRequest: {
@@ -41232,6 +41344,7 @@ export interface components {
             iban?: string;
             bic?: string;
             imprint?: string;
+            offering?: components["schemas"]["LegalEntityOffering"];
         };
         LegalEntityMember: {
             /** Format: uuid */
@@ -51883,6 +51996,38 @@ export interface operations {
         };
         responses: {
             /** @description The ask is recorded and the colleague can see it. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntroRequest"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    recordIntroduction: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordIntroductionInput"];
+            };
+        };
+        responses: {
+            /** @description The introduction is recorded. */
             201: {
                 headers: {
                     [name: string]: unknown;

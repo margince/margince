@@ -1443,6 +1443,10 @@ func (stubs) CreateIntroRequest(w nethttp.ResponseWriter, r *nethttp.Request, id
 	httperr.NotImplemented(w, r, "CreateIntroRequest")
 }
 
+func (stubs) RecordIntroduction(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RecordIntroduction")
+}
+
 func (stubs) MergeContact(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.MergeContactParams) {
 	httperr.NotImplemented(w, r, "MergeContact")
 }

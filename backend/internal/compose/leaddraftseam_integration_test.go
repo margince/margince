@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/contactdraft"
+	"github.com/margince/margince/backend/internal/compose/draftcore"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -66,7 +67,7 @@ func TestTheLeadDraftQuotesTheLeadNotTheNoticesAfterIt(t *testing.T) {
 	if !quoted {
 		t.Errorf("the lead's own message is missing from the draft's correspondence: %+v", recent)
 	}
-	if text := contactdraft.CorrespondenceTextOf(rows); !strings.Contains(text, "rollout") || strings.Contains(text, "deck was shared") {
+	if text := strings.Join(draftcore.LanguageEvidenceOf(rows, now), "\n"); !strings.Contains(text, "rollout") || strings.Contains(text, "deck was shared") {
 		t.Errorf("the drafting language reads %q, want the lead's words only", text)
 	}
 

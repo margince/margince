@@ -122,10 +122,16 @@ func industryKnown(in Input, now time.Time) (bool, time.Time) {
 type Offering struct {
 	Confirmed   bool
 	Fingerprint string
+	// ID and Name say which legal entity's offering was read, so the answer
+	// can name what it judged. ID is empty on an installation with no entity.
+	ID        string
+	Name      string
+	IsDefault bool
 }
 
-// SelfOffering answers what this workspace knows about itself.
-type SelfOffering func(ctx context.Context) (Offering, error)
+// SelfOffering answers what this workspace knows about itself. entityID names
+// the legal entity whose offering to read; empty is the main offering.
+type SelfOffering func(ctx context.Context, entityID string) (Offering, error)
 
 // Completeness counts how many required inputs this assembly actually holds,
 // and names the ones it does not (DOSS-FORM-2).

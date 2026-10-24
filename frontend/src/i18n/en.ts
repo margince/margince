@@ -1978,6 +1978,7 @@ export const en = {
   "history.field.fx_rate_date": "FX rate date",
   "history.field.fx_rate_to_base": "FX rate",
   "history.field.industry": "Industry",
+  "history.field.assess_against_entity_id": "Rated against",
   "history.field.is_done": "Done",
   "history.field.last_name": "Last name",
   "history.field.legal_name": "Legal name",
@@ -13841,6 +13842,9 @@ export const en = {
   "webhooks.event.intro_request.closed.label": "Introduction request closed",
   "webhooks.event.intro_request.closed.when":
     "A request ends without an introduction.",
+  "webhooks.event.intro_request.recorded.label": "Introduction recorded",
+  "webhooks.event.intro_request.recorded.when":
+    "A colleague records an introduction that happened outside Margince.",
   "webhooks.eventGroup.consent_privacy": "Consent and privacy",
   "webhooks.event.consent.changed.label": "Consent recorded",
   "webhooks.event.consent.changed.when":
@@ -14237,6 +14241,31 @@ export const en = {
   "contact.intro.whenDays": "last contact {days} days ago",
   "contact.intro.whenNever": "no recent contact",
   "contact.intro.askTitle": "Ask for an introduction to {name}",
+  "contact.intro.recordAction": "Record an introduction",
+  "contact.intro.recordTitle": "Record an introduction to {name}",
+  "contact.intro.recordHint":
+    "Use this for an introduction that already happened outside Margince. Only the colleague who introduced or the colleague who was introduced can record it.",
+  "contact.intro.recordIntroducer": "Introduced by",
+  "contact.intro.recordIntroduced": "Introduced colleague",
+  "contact.intro.recordDate": "Date",
+  "contact.intro.recordChannel": "How it happened",
+  "contact.intro.channelInPerson": "Face to face",
+  "contact.intro.channelEmail": "By email",
+  "contact.intro.channelCall": "By call",
+  "contact.intro.channelOther": "Another way",
+  "contact.intro.recordSubmit": "Record introduction",
+  "contact.intro.recordFailed":
+    "The introduction was not recorded. You must be one of the two colleagues. Retry.",
+  "contact.intro.recordDuplicate":
+    "This introduction is already recorded for these two colleagues.",
+  "contact.intro.recordGone":
+    "The contact or one of the colleagues could not be found. Reload and retry.",
+  "contact.intro.recordInvalid":
+    "Check the date: it cannot be in the future. Then retry.",
+  "contact.intro.recordFailedGeneric":
+    "The introduction was not recorded. Retry.",
+  "contact.intro.recordedBadge": "Recorded after the fact",
+  "contact.intro.recordedIntroduced": "introduced",
   "contact.intro.cancel": "Cancel",
   "contact.intro.askAction": "Request introduction",
   "contact.intro.askFailed": "The request was not recorded. Retry.",

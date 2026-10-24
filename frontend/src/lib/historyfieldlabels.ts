@@ -45,6 +45,7 @@ const HISTORY_FIELD_LABELS = new Map<string, MessageKey>([
   ["fx_rate_date", "history.field.fx_rate_date"],
   ["fx_rate_to_base", "history.field.fx_rate_to_base"],
   ["industry", "history.field.industry"],
+  ["assess_against_entity_id", "history.field.assess_against_entity_id"],
   ["is_done", "history.field.is_done"],
   ["last_name", "history.field.last_name"],
   ["legal_name", "history.field.legal_name"],

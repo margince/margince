@@ -79,9 +79,12 @@ func GrowthFitRequest(in Input, lang string) model.Request {
 		// the task contract declares the company block UNCONDITIONAL here and
 		// there is no flag to set: a growth fit written without it is the guess
 		// the band cap exists to flag.
-		MaxTokens:      ai.ReasoningOutputMaxTokens,
-		ResponseSchema: growthFitSchema(),
-		SecretStripper: ai.NewSecretStripper(),
+		// The offering the context describes is the one the cache key was built
+		// from: both read it off the same Input.
+		CompanyContextOffering: in.AssessAgainst,
+		MaxTokens:              ai.ReasoningOutputMaxTokens,
+		ResponseSchema:         growthFitSchema(),
+		SecretStripper:         ai.NewSecretStripper(),
 	}
 }
 

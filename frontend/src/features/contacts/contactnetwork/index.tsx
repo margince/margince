@@ -27,6 +27,7 @@ import { availabilityLabel, RoutesPanel, useOwnRoute } from "../contactroutes";
 import { IntroAsksPanel } from "../introasks";
 import { IntroDrawer } from "../introdrawer";
 import { type IntroRequest, useIntroRequests } from "../introrequests";
+import { RecordIntroductionButton } from "../recordintroduction";
 import { DecisionStrip } from "./decision";
 import { EdgeDetail } from "./edgedetail";
 import { LeadPanel } from "./leadpanel";
@@ -222,6 +223,11 @@ export function ContactNetworkTab({
             />
           ) : null
         }
+      />
+
+      <RecordIntroductionButton
+        contactId={contactId}
+        contactName={read.targetName}
       />
 
       {/* What moved lately closes the tab, under the picture it changed. */}

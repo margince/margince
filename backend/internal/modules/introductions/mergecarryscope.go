@@ -33,9 +33,20 @@ const (
 )`
 )
 
+// introCarryRecordedLosers names the recorded introductions a merge would put
+// twice on one pair of colleagues: the unique index on the pair refuses the
+// re-home otherwise. The older row stands, whichever contact it was on.
+const introCarryRecordedLosers = `
+ SELECT CASE WHEN (s.requested_at,s.id)<(t.requested_at,t.id) THEN t.id ELSE s.id END AS id
+ FROM intro_request s JOIN intro_request t
+ ON t.contact_id=@target AND s.contact_id=@source
+ AND t.introducer_user_id=s.introducer_user_id AND t.requester_user_id=s.requester_user_id
+ WHERE s.origin='recorded' AND t.origin='recorded' AND s.archived_at IS NULL AND t.archived_at IS NULL`
+
 func introCarryArgs(from, to ids.ContactID) pgx.NamedArgs {
 	return pgx.NamedArgs{
 		"source": from, "target": to, "open": openStatuses(),
 		"self_reason": mergedSelfRouteReason, "duplicate_reason": mergedDuplicateReason,
+		"recorded_reason": mergedRecordedDuplicateReason,
 	}
 }

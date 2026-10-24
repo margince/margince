@@ -2388,8 +2388,10 @@ public.company.address_line2 text gen=- def=-
 public.company.address_postal_code text gen=- def=-
 public.company.address_region text gen=- def=-
 public.company.archived_at timestamp with time zone gen=- def=-
+public.company.assess_against_entity_id uuid gen=- def=-
 public.company.captured_by text NOT NULL gen=- def=-
 public.company.company_anchor_is_permanent CHECK (((NOT is_anchor) OR ((archived_at IS NULL) AND (merged_into_id IS NULL))))
+public.company.company_assess_against_entity_id_fkey FOREIGN KEY (assess_against_entity_id) REFERENCES legal_entity(id) ON DELETE RESTRICT
 public.company.company_delete_clears_deal_partner CREATE TRIGGER company_delete_clears_deal_partner BEFORE DELETE ON public.company FOR EACH ROW EXECUTE FUNCTION deal_clear_partner_attribution_on_company_delete()
 public.company.company_description_length CHECK (((description IS NULL) OR (length(description) <= 500)))
 public.company.company_geocode_resolved_has_a_point CHECK (((geocode_status IS DISTINCT FROM 'ok'::text) OR ((geocode_lat IS NOT NULL) AND (geocode_lon IS NOT NULL) AND ((geocode_lat >= ('-90'::integer)::double precision) AND (geocode_lat <= (90)::double precision)) AND ((geocode_lon >= ('-180'::integer)::double precision) AND (geocode_lon <= (180)::double precision)))))
@@ -4587,6 +4589,7 @@ public.idx_communication_decision_delivery CREATE INDEX idx_communication_decisi
 public.idx_communication_review_delivery_intent CREATE INDEX idx_communication_review_delivery_intent ON public.communication_review USING btree (delivery_intent_id)
 public.idx_communication_suppression_contact CREATE INDEX idx_communication_suppression_contact ON public.communication_suppression USING btree (contact_id)
 public.idx_communication_suppression_lead CREATE INDEX idx_communication_suppression_lead ON public.communication_suppression USING btree (lead_id)
+public.idx_company_assess_against_entity CREATE INDEX idx_company_assess_against_entity ON public.company USING btree (assess_against_entity_id) WHERE (assess_against_entity_id IS NOT NULL)
 public.idx_company_created_keyset CREATE INDEX idx_company_created_keyset ON public.company USING btree (created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.idx_company_domain_company CREATE INDEX idx_company_domain_company ON public.company_domain USING btree (company_id)
 public.idx_company_domain_disposition_company CREATE INDEX idx_company_domain_disposition_company ON public.company_domain_disposition USING btree (company_id)
@@ -4898,18 +4901,23 @@ public.intro_request.contact_id uuid NOT NULL gen=- def=-
 public.intro_request.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.intro_request.decided_at timestamp with time zone gen=- def=-
 public.intro_request.decision_reason text gen=- def=-
-public.intro_request.due_at timestamp with time zone NOT NULL gen=- def=-
+public.intro_request.due_at timestamp with time zone gen=- def=-
 public.intro_request.fallback_policy text NOT NULL gen=- def='none'::text
 public.intro_request.forwardable_note text NOT NULL gen=- def=''::text
 public.intro_request.id uuid NOT NULL gen=- def=uuidv7()
-public.intro_request.internal_reason text NOT NULL gen=- def=-
+public.intro_request.internal_reason text gen=- def=-
+public.intro_request.intro_request_asked_has_due CHECK (((origin <> 'asked'::text) OR (due_at IS NOT NULL)))
+public.intro_request.intro_request_channel_iff_recorded CHECK (((origin = 'recorded'::text) = (recorded_channel IS NOT NULL)))
 public.intro_request.intro_request_contact_id_fkey FOREIGN KEY (contact_id) REFERENCES contact(id) ON DELETE CASCADE
 public.intro_request.intro_request_distinct_seats CHECK ((requester_user_id <> introducer_user_id))
 public.intro_request.intro_request_fallback CHECK ((fallback_policy = ANY (ARRAY['name_drop'::text, 'next_route'::text, 'none'::text])))
 public.intro_request.intro_request_introducer_user_id_fkey FOREIGN KEY (introducer_user_id) REFERENCES app_user(id)
 public.intro_request.intro_request_note_origin CHECK ((note_generated_by = ANY (ARRAY['human'::text, 'model'::text, 'deterministic'::text])))
+public.intro_request.intro_request_origin_known CHECK ((origin = ANY (ARRAY['asked'::text, 'recorded'::text])))
 public.intro_request.intro_request_pkey PRIMARY KEY (id)
-public.intro_request.intro_request_reason_present CHECK ((internal_reason <> ''::text))
+public.intro_request.intro_request_reason_by_origin CHECK ((((origin = 'asked'::text) AND (internal_reason IS NOT NULL) AND (internal_reason <> ''::text)) OR ((origin = 'recorded'::text) AND (internal_reason IS NULL))))
+public.intro_request.intro_request_recorded_channel_known CHECK (((recorded_channel IS NULL) OR (recorded_channel = ANY (ARRAY['in_person'::text, 'email'::text, 'call'::text, 'other'::text]))))
+public.intro_request.intro_request_recorded_is_introduced CHECK (((origin <> 'recorded'::text) OR ((status = 'introduced'::text) AND (introduced_at IS NOT NULL) AND (through_contact_id IS NULL) AND (decision_reason IS NULL) AND (suggested_user_id IS NULL) AND (decided_at IS NULL) AND (name_dropped_at IS NULL) AND (replied_at IS NULL) AND (source_activity_id IS NULL) AND (closed_at IS NULL))))
 public.intro_request.intro_request_requester_user_id_fkey FOREIGN KEY (requester_user_id) REFERENCES app_user(id)
 public.intro_request.intro_request_route_shape CHECK (((route_type = 'through_contact'::text) = (through_contact_id IS NOT NULL)))
 public.intro_request.intro_request_route_type CHECK ((route_type = ANY (ARRAY['direct'::text, 'through_contact'::text])))
@@ -4924,6 +4932,8 @@ public.intro_request.name_drop_allowed boolean NOT NULL gen=- def=false
 public.intro_request.name_dropped_at timestamp with time zone gen=- def=-
 public.intro_request.note_ai_generated boolean NOT NULL gen=- def=false
 public.intro_request.note_generated_by text NOT NULL gen=- def='human'::text
+public.intro_request.origin text NOT NULL gen=- def='asked'::text
+public.intro_request.recorded_channel text gen=- def=-
 public.intro_request.replied_at timestamp with time zone gen=- def=-
 public.intro_request.requested_at timestamp with time zone NOT NULL gen=- def=now()
 public.intro_request.requester_user_id uuid NOT NULL gen=- def=-
@@ -4940,6 +4950,7 @@ public.intro_request_due CREATE INDEX intro_request_due ON public.intro_request 
 public.intro_request_for_contact CREATE INDEX intro_request_for_contact ON public.intro_request USING btree (contact_id, requested_at DESC)
 public.intro_request_open_route CREATE UNIQUE INDEX intro_request_open_route ON public.intro_request USING btree (contact_id, introducer_user_id, through_contact_id) NULLS NOT DISTINCT WHERE ((status = ANY (ARRAY['requested'::text, 'accepted'::text, 'name_drop_approved'::text])) AND (archived_at IS NULL))
 public.intro_request_pkey CREATE UNIQUE INDEX intro_request_pkey ON public.intro_request USING btree (id)
+public.intro_request_recorded_pair CREATE UNIQUE INDEX intro_request_recorded_pair ON public.intro_request USING btree (contact_id, introducer_user_id, requester_user_id) WHERE ((origin = 'recorded'::text) AND (archived_at IS NULL))
 public.ix_confirm_token_contact CREATE INDEX ix_confirm_token_contact ON public.confirm_token USING btree (contact_id)
 public.ix_confirm_token_lead CREATE INDEX ix_confirm_token_lead ON public.confirm_token USING btree (lead_id) WHERE (lead_id IS NOT NULL)
 public.ix_contact_confirm_submission_contact CREATE INDEX ix_contact_confirm_submission_contact ON public.contact_confirm_submission USING btree (contact_id)
@@ -5280,26 +5291,32 @@ public.legal_entity.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.legal_entity.default_language text gen=- def=-
 public.legal_entity.display_name text gen=- def=-
 public.legal_entity.iban text gen=- def=-
+public.legal_entity.icp text gen=- def=-
 public.legal_entity.id uuid NOT NULL gen=- def=uuidv7()
 public.legal_entity.imprint text gen=- def=-
 public.legal_entity.is_default boolean NOT NULL gen=- def=false
 public.legal_entity.legal_entity_bic_shape CHECK (((bic IS NULL) OR (bic ~ '^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$'::text)))
 public.legal_entity.legal_entity_country_shape CHECK (((country IS NULL) OR (country ~ '^[a-z]{2}$'::text)))
+public.legal_entity.legal_entity_default_has_no_offering CHECK (((NOT is_default) OR ((offer_summary IS NULL) AND (icp IS NULL) AND (value_proposition IS NULL) AND (usp IS NULL))))
 public.legal_entity.legal_entity_default_is_permanent CHECK (((NOT is_default) OR (archived_at IS NULL)))
 public.legal_entity.legal_entity_default_reads_the_anchor CHECK (((NOT is_default) OR ((display_name IS NULL) AND (legal_name IS NULL) AND (address_line1 IS NULL) AND (address_line2 IS NULL) AND (address_postal_code IS NULL) AND (address_city IS NULL) AND (address_region IS NULL) AND (vat_id IS NULL) AND (register_court IS NULL) AND (register_number IS NULL) AND (logo_object_key IS NULL))))
 public.legal_entity.legal_entity_iban_shape CHECK (((iban IS NULL) OR (iban ~ '^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$'::text)))
 public.legal_entity.legal_entity_imprint_bounded CHECK (((imprint IS NULL) OR (length(imprint) <= 4000)))
 public.legal_entity.legal_entity_language_shape CHECK (((default_language IS NULL) OR (default_language ~ '^[a-z]{2}$'::text)))
 public.legal_entity.legal_entity_names_itself CHECK ((is_default OR ((btrim(COALESCE(display_name, ''::text)) <> ''::text) AND (btrim(COALESCE(legal_name, ''::text)) <> ''::text) AND (country IS NOT NULL))))
+public.legal_entity.legal_entity_offering_bounded CHECK (((length(offer_summary) <= 4000) AND (length(icp) <= 4000) AND (length(value_proposition) <= 4000) AND (length(usp) <= 4000)))
 public.legal_entity.legal_entity_pkey PRIMARY KEY (id)
 public.legal_entity.legal_entity_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.legal_entity.legal_name text gen=- def=-
 public.legal_entity.logo_object_key text gen=- def=-
+public.legal_entity.offer_summary text gen=- def=-
 public.legal_entity.register_court text gen=- def=-
 public.legal_entity.register_number text gen=- def=-
 public.legal_entity.trg_legal_entity_default_is_permanent CREATE TRIGGER trg_legal_entity_default_is_permanent BEFORE DELETE OR UPDATE ON public.legal_entity FOR EACH ROW EXECUTE FUNCTION legal_entity_refuse_default_retirement()
 public.legal_entity.trg_legal_entity_updated CREATE TRIGGER trg_legal_entity_updated BEFORE UPDATE ON public.legal_entity FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.legal_entity.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.legal_entity.usp text gen=- def=-
+public.legal_entity.value_proposition text gen=- def=-
 public.legal_entity.vat_id text gen=- def=-
 public.legal_entity.version bigint NOT NULL gen=- def=1
 public.legal_entity_member acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false

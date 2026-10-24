@@ -50,7 +50,7 @@ func companyContextScopesFor(task ai.Task) ([]contacts.CompanyContextScope, erro
 // inside the boundary the calling prompt declared.
 
 type companyContextReader interface {
-	GetCompanyContext(context.Context, []contacts.CompanyContextScope) (contacts.CompanyContext, error)
+	GetCompanyContext(context.Context, []contacts.CompanyContextScope, contacts.OfferingSelector) (contacts.CompanyContext, error)
 }
 
 type companyContextProvider struct {
@@ -71,7 +71,9 @@ func (p *companyContextProvider) Prepare(ctx context.Context, task ai.Task, req 
 		return model.Request{}, fmt.Errorf("compose: AI task %q has no company-context policy", task)
 	}
 	requested := req.IncludeCompanyContext
+	chosenOffering := req.CompanyContextOffering
 	req.IncludeCompanyContext = false
+	req.CompanyContextOffering = ""
 	req.ContextScopes = nil
 	req.ContextFingerprint = ""
 	req.ContextBytes = 0
@@ -91,7 +93,13 @@ func (p *companyContextProvider) Prepare(ctx context.Context, task ai.Task, req 
 	if p == nil || p.reader == nil {
 		return req, nil
 	}
-	companyContext, err := p.reader.GetCompanyContext(ctx, scopes)
+	offering := contacts.OfferingSelector{}
+	if policy.OfferingSelectable {
+		if offering, err = contacts.ParseOfferingSelector(chosenOffering); err != nil {
+			return model.Request{}, fmt.Errorf("compose: company-context offering for %s: %w", task, err)
+		}
+	}
+	companyContext, err := p.reader.GetCompanyContext(ctx, scopes, offering)
 	if err != nil {
 		if errors.Is(err, apperrors.ErrNotFound) {
 			return req, nil

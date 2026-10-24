@@ -33,6 +33,13 @@ type LegalEntityAddress struct {
 	Line1, Line2, PostalCode, City, Region *string
 }
 
+// LegalEntityOffering is what a further entity says it sells and to whom. The
+// default entity's offering is the anchor company's profile, so these stay nil
+// there.
+type LegalEntityOffering struct {
+	OfferSummary, ICP, ValueProposition, USP *string
+}
+
 // EntityIdentity is what a document, page or mail says about the entity behind
 // it. On the default entity the anchor-held fields are the anchor's.
 type EntityIdentity struct {
@@ -57,6 +64,7 @@ type EntityIdentity struct {
 	IBAN              *string
 	BIC               *string
 	Imprint           *string
+	Offering          LegalEntityOffering
 }
 
 // LegalEntity is one entity as the settings screen lists it.
@@ -83,7 +91,7 @@ func (a *legalEntityArgs) add(value any) string {
 const legalEntityColumns = `id, is_default, coalesce(display_name, ''), legal_name,
 	address_line1, address_line2, address_postal_code, address_city, address_region,
 	vat_id, register_court, register_number, logo_object_key, country, default_language,
-	bank_account_holder, iban, bic, imprint, version, created_at, updated_at, archived_at,
+	bank_account_holder, iban, bic, imprint, offer_summary, icp, value_proposition, usp, version, created_at, updated_at, archived_at,
 	(SELECT count(*) FROM legal_entity_member m WHERE m.legal_entity_id = legal_entity.id)`
 
 func scanLegalEntity(row pgx.Row) (LegalEntity, error) {
@@ -92,7 +100,8 @@ func scanLegalEntity(row pgx.Row) (LegalEntity, error) {
 	err := row.Scan(&e.ID, &e.IsDefault, &e.DisplayName, &e.LegalName,
 		&e.Address.Line1, &e.Address.Line2, &e.Address.PostalCode, &e.Address.City, &e.Address.Region,
 		&e.VatID, &e.RegisterCourt, &e.RegisterNumber, &e.LogoObjectKey, &e.Country, &e.DefaultLanguage,
-		&e.BankAccountHolder, &e.IBAN, &e.BIC, &e.Imprint, &out.Version, &out.CreatedAt, &out.UpdatedAt,
+		&e.BankAccountHolder, &e.IBAN, &e.BIC, &e.Imprint,
+		&e.Offering.OfferSummary, &e.Offering.ICP, &e.Offering.ValueProposition, &e.Offering.USP, &out.Version, &out.CreatedAt, &out.UpdatedAt,
 		&out.ArchivedAt, &out.MemberCount)
 	return out, err
 }

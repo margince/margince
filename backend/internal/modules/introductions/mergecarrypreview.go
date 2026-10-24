@@ -24,12 +24,14 @@ func (s *Store) PreviewIntroCarryTx(ctx context.Context, tx pgx.Tx, from, to ids
 	if err := auth.Require(ctx, "introduction", principal.ActionRead); err != nil {
 		return nil, err
 	}
-	rows, err := tx.Query(ctx, introCarryClosures+`
+	rows, err := tx.Query(ctx, introCarryClosures+`, recorded_losers AS (`+introCarryRecordedLosers+`)
  SELECT r.id,r.version,r.contact_id,`+introCarryContact+`,r.through_contact_id,`+introCarryThrough+`,
- r.status,CASE WHEN l.id IS NULL THEN r.status ELSE 'cancelled' END,
- CASE WHEN l.id IS NULL THEN '' WHEN l.self_route THEN @self_reason ELSE @duplicate_reason END
- FROM intro_request r LEFT JOIN losers l ON l.id=r.id
- WHERE `+introCarrySource+` ORDER BY r.id LIMIT 501`, introCarryArgs(from, to))
+ r.status,
+ CASE WHEN l.id IS NOT NULL THEN 'cancelled' WHEN rl.id IS NOT NULL THEN 'archived' ELSE r.status END,
+ CASE WHEN l.id IS NOT NULL THEN CASE WHEN l.self_route THEN @self_reason ELSE @duplicate_reason END
+ WHEN rl.id IS NOT NULL THEN @recorded_reason ELSE '' END
+ FROM intro_request r LEFT JOIN losers l ON l.id=r.id LEFT JOIN recorded_losers rl ON rl.id=r.id
+ WHERE `+introCarrySource+` OR rl.id IS NOT NULL ORDER BY r.id LIMIT 501`, introCarryArgs(from, to))
 	if err != nil {
 		return nil, fmt.Errorf("introductions: previewing carried requests: %w", err)
 	}
