@@ -117,7 +117,7 @@ Anyone the merged-away contact was shared with can open the contact you kept. Of
 Also called: combine, deduplicate, remove a duplicate.
 
 ### How do I call a contact?
-To call a contact from Margince, press **Call** in its header, or click a phone number. It dials the main number, or else the first, in your phone app; Margince does not make or record calls.
+To call a contact from Margince, press **Call** in its header; it dials the main number, or else the first, in your phone app. Click any number in **Details** to dial that one; Margince does not make or record calls.
 **Call** is refused with no phone number, or on an archived contact; the first says "No phone number on this contact." under the buttons. **More actions** → **Full history** opens **History**, where **Log activity** → **Call** logs the call. A logged call in **What was said** or on **History** offers **Call**; so does the top bar of **Overview** when a call made its task.
 Also called: phone a contact, click to call, dial.
 
