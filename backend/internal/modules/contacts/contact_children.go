@@ -231,8 +231,8 @@ func insertContactEmails(ctx context.Context, tx pgx.Tx, wsID ids.WorkspaceID, c
 // ensureContactEmailsUnclaimed is the dedupe pre-check, so the 409 can
 // carry the existing id; the unique index remains the structural
 // guarantee under races. The existing id is disclosed only when the
-// caller could read that row; the conflict itself is still answered
-// (existence-hiding survives the 409).
+// caller could read that row; a caller who cannot gets the held refusal
+// (heldcontact.go).
 func ensureContactEmailsUnclaimed(ctx context.Context, tx pgx.Tx, emails []ContactEmailInput) error {
 	return ensureContactEmailsUnclaimedExcept(ctx, tx, ids.ContactID{}, emails)
 }
@@ -254,15 +254,7 @@ func ensureContactEmailsUnclaimedExcept(ctx context.Context, tx pgx.Tx, self ids
 		if err != nil {
 			return fmt.Errorf("probe email dedupe: %w", err)
 		}
-		dup := &DuplicateEmailError{Email: e.Email}
-		visible, err := auth.VisibleTo(ctx, tx, "contact", existing.UUID)
-		if err != nil {
-			return err
-		}
-		if visible {
-			dup.ExistingID = existing
-		}
-		return dup
+		return claimedEmailRefusal(ctx, tx, e.Email, existing)
 	}
 	return nil
 }

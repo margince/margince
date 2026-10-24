@@ -87,6 +87,8 @@ type Store struct {
 	// grantCarrier moves the shares on a retiring record; nil refuses a merge
 	// that would strand one (grantcarry.go).
 	grantCarrier GrantCarrier
+	// shareRequests files the request a held address raises; nil asks nobody.
+	shareRequests ShareRequestFiler
 	// renameInstallation keeps the installation's name on the anchor's display
 	// name (anchorname.go); nil refuses an anchor rename.
 	renameInstallation InstallationRenamer
@@ -171,14 +173,17 @@ func (s *Store) WithVatCheckEnqueue(enqueue VatCheckEnqueue) *Store {
 	return s
 }
 
+// tx runs fn in one transaction. A write refused because a colleague holds
+// the address asks that colleague to share it here, so every door this store
+// opens a transaction for asks.
 func (s *Store) tx(ctx context.Context, fn func(pgx.Tx) error) error {
-	return s.db.Tx(ctx, fn)
+	return s.AskHolderToShare(ctx, s.db.Tx(ctx, fn))
 }
 
 // txRetryingLockCycles is tx for a write that files under shared records and
 // has no effect outside its transaction, so a deadlock victim is run again.
 func (s *Store) txRetryingLockCycles(ctx context.Context, fn func(pgx.Tx) error) error {
-	return storekit.RetryLockCycles(ctx, func() error { return s.db.Tx(ctx, fn) })
+	return s.AskHolderToShare(ctx, storekit.RetryLockCycles(ctx, func() error { return s.db.Tx(ctx, fn) }))
 }
 
 // txSnapshot is tx for a read whose answer is COMPOSED from more than one

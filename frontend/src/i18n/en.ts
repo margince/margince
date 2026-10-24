@@ -2535,6 +2535,10 @@ export const en = {
     "This record changed after you opened it. Reload it to see the change, then make yours again.",
   "common.duplicate.email":
     "Another contact or lead already has this email address, so it was not saved here.",
+  "common.heldByColleague":
+    "A colleague already has this person.",
+  "common.heldByColleague.asked":
+    "A colleague already has this person. We asked them to share the contact.",
   "common.duplicate.domain":
     "Another company already has this domain, so it was not saved here.",
   "common.duplicate.linkedinUrl":
@@ -3519,6 +3523,7 @@ export const en = {
   "approval.kind.linkedin_match": "LinkedIn match",
   "approval.kind.site_lead": "Add contact from website",
   "approval.kind.capture_counterparty": "Add contact from mail",
+  "approval.kind.contact_share": "Share a contact",
   "approval.kind.company_name_promotion": "Rename company",
   "approval.kind.vcard_create": "Create contact from card",
   "approval.kind.lifecycle_change": "Lifecycle stage",

@@ -309,7 +309,7 @@ func (s *Store) EnsureContactByEmail(ctx context.Context, fullName, email, sourc
 	}
 	// A concurrent capture of the same email won the race: its row IS
 	// the idempotent answer.
-	if _, ok := errors.AsType[*DuplicateEmailError](err); ok {
+	if IsClaimedEmail(err) {
 		if id, found, lookupErr := lookup(); lookupErr == nil && found {
 			return id, nil
 		}

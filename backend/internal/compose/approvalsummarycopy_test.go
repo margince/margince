@@ -29,6 +29,7 @@ var approvalSummaryHoles = map[string][]string{
 	"signaturePrivate":             nil,
 	"draftedReplyWaiting":          {"%q"},
 	"counterpartyWorthKeeping":     {"%s"},
+	"contactShareAsked":            {"%s"},
 	"companyRename":                {"%s", "%s"},
 	"siteLeadFound":                {"%s", "%s", "%s"},
 	"enrichmentOf":                 {"%s"},

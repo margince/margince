@@ -201,19 +201,11 @@ func createContact(ctx context.Context, tx pgx.Tx, match ContactResolution, spec
 // resolver deliberately matches across the whole workspace — a duplicate the
 // caller cannot see is still a duplicate — so the answer would otherwise
 // confirm the existence of a record outside their row scope, and confirm it
-// by a chosen address at that. The refusal still stands either way; only the
-// pointer is withheld.
+// by a chosen address at that. The refusal still stands either way; a caller
+// who cannot see the record gets the held refusal (heldcontact.go).
 func refusedContactCreate(ctx context.Context, tx pgx.Tx, match ContactResolution, spec ContactSpec) error {
 	if match.MatchedLane == LaneEmail && len(spec.Emails) > 0 {
-		dup := &DuplicateEmailError{Email: spec.Emails[0].Email}
-		visible, err := auth.VisibleTo(ctx, tx, entityContact, match.ContactID.UUID)
-		if err != nil {
-			return err
-		}
-		if visible {
-			dup.ExistingID = match.ContactID
-		}
-		return dup
+		return claimedEmailRefusal(ctx, tx, spec.Emails[0].Email, match.ContactID)
 	}
 	// Other lanes name no record: the message says which key collided, never
 	// whose row it was.

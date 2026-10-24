@@ -124,6 +124,31 @@ func refuseUnknownGrantVocabulary(in CreateGrantInput) error {
 }
 
 func (s *Service) CreateRecordGrant(ctx context.Context, in CreateGrantInput) (grantRow, error) {
+	if err := s.refuseMalformedGrant(ctx, in); err != nil {
+		return grantRow{}, err
+	}
+	var out grantRow
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		out, err = createRecordGrantInTx(ctx, tx, in)
+		return err
+	})
+	return out, err
+}
+
+// CreateRecordGrantTx is CreateRecordGrant on a transaction the caller owns,
+// for a share that must commit with the decision releasing it. The checks are
+// the same, in the same order.
+func (s *Service) CreateRecordGrantTx(ctx context.Context, tx pgx.Tx, in CreateGrantInput) error {
+	if err := s.refuseMalformedGrant(ctx, in); err != nil {
+		return err
+	}
+	_, err := createRecordGrantInTx(ctx, tx, in)
+	return err
+}
+
+// refuseMalformedGrant is what a share settles before any transaction opens.
+func (s *Service) refuseMalformedGrant(ctx context.Context, in CreateGrantInput) error {
 	// Both ids, and both before anything else: a grant is a triple of record,
 	// subject and access, and each id is required by the contract — a claim only
 	// this check makes true. Unguarded, a zero record_id reaches the row-scope
@@ -131,117 +156,117 @@ func (s *Service) CreateRecordGrant(ctx context.Context, in CreateGrantInput) (g
 	// not-found for something the caller never named. The record refusal comes
 	// first because it is what the grant is ABOUT.
 	if err := httperr.RequireBodyID("record_id", in.RecordID); err != nil {
-		return grantRow{}, err
+		return err
 	}
 	if err := httperr.RequireBodyID("subject_id", in.SubjectID); err != nil {
-		return grantRow{}, err
+		return err
 	}
 	if err := refuseUnknownGrantVocabulary(in); err != nil {
-		return grantRow{}, err
+		return err
 	}
 	if err := refuseAnExpiryAlreadyPast(in.ExpiresAt, s.now()); err != nil {
-		return grantRow{}, err
+		return err
 	}
 	// Sharing widens who sees the record — the grantor needs the
 	// record's own write grant (the spec's manage_sharing permission,
 	// ADR-0039, is not yet in this build's policy vocabulary).
-	if err := auth.Require(ctx, in.RecordType, principal.ActionUpdate); err != nil {
-		return grantRow{}, err
-	}
+	return auth.Require(ctx, in.RecordType, principal.ActionUpdate)
+}
+
+// createRecordGrantInTx is the share itself: who may grant it, who may hold
+// it, and the audited upsert.
+func createRecordGrantInTx(ctx context.Context, tx pgx.Tx, in CreateGrantInput) (grantRow, error) {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman {
 		return grantRow{}, errors.New("crmauth: only a human shares records directly; agents stage through the approval gate")
 	}
-	var out grantRow
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// Scope-intersection: you can only share what you can see (H1
-		// probe on the client-supplied record reference).
-		if err := auth.EnsureLinkTarget(ctx, tx, in.RecordType, in.RecordID); err != nil {
-			return err
-		}
-		subjectTable := "app_user"
-		if in.SubjectType == "team" {
-			subjectTable = "team"
-		}
-		var subjectExists bool
-		if err := tx.QueryRow(ctx,
-			storekit.SQLf(`SELECT EXISTS (SELECT 1 FROM %s WHERE id = $1)`, subjectTable),
-			in.SubjectID).Scan(&subjectExists); err != nil {
-			return err
-		}
-		if !subjectExists {
-			return apperrors.ErrNotFound
-		}
-		// Two rules bind a grant and they judge different contacts.
-		//
-		// Scope-intersection (ADR-0039) judges the GRANTOR, at every access
-		// level. EnsureLinkTarget above is satisfied by the grant arm, so a
-		// caller whose only claim is a share passes IT — which is why the
-		// authority question is asked separately here. It is asked whatever
-		// access is asserted, because the upsert restates the whole grant: its
-		// TERM as well as its width, so a `read` assertion rewrites an existing
-		// grant's expiry, reason and access just as a `write` one does.
-		//
-		// The seat ceiling (AAD-AC-4) judges the RECIPIENT, and it reads the
-		// asserted access — a `read` grant to a read seat is fine.
-		//
-		// Both bind a re-assert exactly as they bind a first share: the upsert
-		// makes the second call a real write where the unique constraint used
-		// to end it.
-		if err := auth.EnsureCanGrant(ctx, tx, in.RecordType, in.RecordID); err != nil {
-			return err
-		}
-		if err := refuseWriteGrantToReadSeat(ctx, tx, in); err != nil {
-			return err
-		}
-		// The precondition read and the write it feeds must run under one lock:
-		// FOR UPDATE cannot order two callers CREATING this grant at once,
-		// because an absent row locks nothing, and the loser would then audit a
-		// first share over a row it actually displaced.
-		if err := storekit.LockWriteIdentity(ctx, tx, "record_grant", grantIdentity(in)); err != nil {
-			return err
-		}
-		prior, replaced, err := replacedGrant(ctx, tx, in)
-		if err != nil {
-			return err
-		}
-		var before map[string]any
-		if replaced {
-			before = grantImage(prior)
-		}
-		// A grant is identified by its natural key, not by its id, so a
-		// re-assert restates the SAME row: `expires_at` takes the proposed
-		// value even when that value is NULL (the contract says a re-assert
-		// resets it, and a COALESCE here would make an expiry unclearable), and
-		// `granted_by` moves to the caller, who is accountable for the access
-		// now in force.
-		if out, err = scanGrant(tx.QueryRow(ctx, `
-			INSERT INTO record_grant (record_type, record_id, subject_type, subject_id,
-			                          access, granted_by, reason, expires_at)
-			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-			ON CONFLICT (record_type, record_id, subject_type, subject_id) DO UPDATE
-			SET access     = EXCLUDED.access,
-			    expires_at = EXCLUDED.expires_at,
-			    reason     = EXCLUDED.reason,
-			    granted_by = EXCLUDED.granted_by,
-			    version    = record_grant.version + 1
-			RETURNING `+grantColumns,
-			in.RecordType, in.RecordID, in.SubjectType, in.SubjectID,
-			in.Access, actor.UserID, in.Reason, in.ExpiresAt)); err != nil {
-			return fmt.Errorf("upsert record_grant: %w", err)
-		}
-		// `record_share` in both directions, downgrades included: the contract
-		// pins the verb, and `record_unshare` belongs to revocation. Which way
-		// the access moved is the image pair's job to say, so both images
-		// render the PERSISTED row through one shape — an image omitting a
-		// field the upsert can change would report nothing moved when it did.
-		if _, err := storekit.Audit(ctx, tx, "record_share",
-			in.RecordType, in.RecordID, before, grantImage(out)); err != nil {
-			return fmt.Errorf("audit record_share: %w", err)
-		}
-		return nil
-	})
-	return out, err
+	// Scope-intersection: you can only share what you can see (H1
+	// probe on the client-supplied record reference).
+	if err := auth.EnsureLinkTarget(ctx, tx, in.RecordType, in.RecordID); err != nil {
+		return grantRow{}, err
+	}
+	subjectTable := "app_user"
+	if in.SubjectType == "team" {
+		subjectTable = "team"
+	}
+	var subjectExists bool
+	if err := tx.QueryRow(ctx,
+		storekit.SQLf(`SELECT EXISTS (SELECT 1 FROM %s WHERE id = $1)`, subjectTable),
+		in.SubjectID).Scan(&subjectExists); err != nil {
+		return grantRow{}, err
+	}
+	if !subjectExists {
+		return grantRow{}, apperrors.ErrNotFound
+	}
+	// Two rules bind a grant and they judge different contacts.
+	//
+	// Scope-intersection (ADR-0039) judges the GRANTOR, at every access
+	// level. EnsureLinkTarget above is satisfied by the grant arm, so a
+	// caller whose only claim is a share passes IT — which is why the
+	// authority question is asked separately here. It is asked whatever
+	// access is asserted, because the upsert restates the whole grant: its
+	// TERM as well as its width, so a `read` assertion rewrites an existing
+	// grant's expiry, reason and access just as a `write` one does.
+	//
+	// The seat ceiling (AAD-AC-4) judges the RECIPIENT, and it reads the
+	// asserted access — a `read` grant to a read seat is fine.
+	//
+	// Both bind a re-assert exactly as they bind a first share: the upsert
+	// makes the second call a real write where the unique constraint used
+	// to end it.
+	if err := auth.EnsureCanGrant(ctx, tx, in.RecordType, in.RecordID); err != nil {
+		return grantRow{}, err
+	}
+	if err := refuseWriteGrantToReadSeat(ctx, tx, in); err != nil {
+		return grantRow{}, err
+	}
+	// The precondition read and the write it feeds must run under one lock:
+	// FOR UPDATE cannot order two callers CREATING this grant at once,
+	// because an absent row locks nothing, and the loser would then audit a
+	// first share over a row it actually displaced.
+	if err := storekit.LockWriteIdentity(ctx, tx, "record_grant", grantIdentity(in)); err != nil {
+		return grantRow{}, err
+	}
+	prior, replaced, err := replacedGrant(ctx, tx, in)
+	if err != nil {
+		return grantRow{}, err
+	}
+	var before map[string]any
+	if replaced {
+		before = grantImage(prior)
+	}
+	// A grant is identified by its natural key, not by its id, so a
+	// re-assert restates the SAME row: `expires_at` takes the proposed
+	// value even when that value is NULL (the contract says a re-assert
+	// resets it, and a COALESCE here would make an expiry unclearable), and
+	// `granted_by` moves to the caller, who is accountable for the access
+	// now in force.
+	out, err := scanGrant(tx.QueryRow(ctx, `
+		INSERT INTO record_grant (record_type, record_id, subject_type, subject_id,
+		                          access, granted_by, reason, expires_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		ON CONFLICT (record_type, record_id, subject_type, subject_id) DO UPDATE
+		SET access     = EXCLUDED.access,
+		    expires_at = EXCLUDED.expires_at,
+		    reason     = EXCLUDED.reason,
+		    granted_by = EXCLUDED.granted_by,
+		    version    = record_grant.version + 1
+		RETURNING `+grantColumns,
+		in.RecordType, in.RecordID, in.SubjectType, in.SubjectID,
+		in.Access, actor.UserID, in.Reason, in.ExpiresAt))
+	if err != nil {
+		return grantRow{}, fmt.Errorf("upsert record_grant: %w", err)
+	}
+	// `record_share` in both directions, downgrades included: the contract
+	// pins the verb, and `record_unshare` belongs to revocation. Which way
+	// the access moved is the image pair's job to say, so both images
+	// render the PERSISTED row through one shape — an image omitting a
+	// field the upsert can change would report nothing moved when it did.
+	if _, err := storekit.Audit(ctx, tx, "record_share",
+		in.RecordType, in.RecordID, before, grantImage(out)); err != nil {
+		return grantRow{}, fmt.Errorf("audit record_share: %w", err)
+	}
+	return out, nil
 }
 
 // grantIdentity renders the natural key the contract identifies a grant by —
@@ -322,16 +347,37 @@ func refuseWriteGrantToReadSeat(ctx context.Context, tx pgx.Tx, in CreateGrantIn
 	if in.Access != string(crmcontracts.RecordGrantAccessRecordGrantAccessWrite) || in.SubjectType == "team" {
 		return nil
 	}
-	var seat string
-	if err := tx.QueryRow(ctx,
-		`SELECT seat_type FROM app_user WHERE id = $1`, in.SubjectID).Scan(&seat); err != nil {
-		return fmt.Errorf("read the subject's seat: %w", err)
+	seat, err := seatOf(ctx, tx, in.SubjectID)
+	if err != nil {
+		return err
 	}
-	if !principal.SeatType(seat).CanMutate() {
+	if !seat.CanMutate() {
 		return fmt.Errorf("a write grant needs a full seat; the subject holds %q: %w",
 			seat, apperrors.ErrSeatTierInsufficient)
 	}
 	return nil
+}
+
+// ShareAccessForTx is the widest access a share may give this member under the
+// seat ceiling: write for a seat that may write, read for one that may not.
+func ShareAccessForTx(ctx context.Context, tx pgx.Tx, member ids.UUID) (string, error) {
+	seat, err := seatOf(ctx, tx, member)
+	if err != nil {
+		return "", err
+	}
+	if seat.CanMutate() {
+		return string(crmcontracts.RecordGrantAccessRecordGrantAccessWrite), nil
+	}
+	return string(crmcontracts.RecordGrantAccessRecordGrantAccessRead), nil
+}
+
+func seatOf(ctx context.Context, tx pgx.Tx, member ids.UUID) (principal.SeatType, error) {
+	var seat string
+	if err := tx.QueryRow(ctx,
+		`SELECT seat_type FROM app_user WHERE id = $1`, member).Scan(&seat); err != nil {
+		return "", fmt.Errorf("read the subject's seat: %w", err)
+	}
+	return principal.SeatType(seat), nil
 }
 
 // mayRevoke answers who may take a share away, and it is deliberately not the

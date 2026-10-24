@@ -322,13 +322,14 @@ func (s *Store) promoteTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.
 		// Merging CHANGES the matched contact — the lead's fields land on it —
 		// and returns it, so the probe asks for write authority and the refusal
 		// still discloses nothing: a match the promoter cannot change answers a
-		// bare conflict, not the record, exactly as one they cannot see does.
+		// bare conflict, not the record. One they cannot see is a colleague's,
+		// and answers the held refusal.
 		writable, verr := auth.WritableBy(ctx, tx, "contact", match.ContactID.UUID)
 		if verr != nil {
 			return ids.ContactID{}, nil, verr
 		}
 		if !writable {
-			return ids.ContactID{}, nil, apperrors.ErrConflict
+			return ids.ContactID{}, nil, unwritablePromotionTarget(ctx, tx, match, candidate)
 		}
 		*merged = true
 		mergeFields, merr := s.mergeLeadIntoContact(ctx, tx, lead, match.ContactID, by)
@@ -413,4 +414,18 @@ func carryLeadPhone(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, cont
 		return err
 	}
 	return insertContactPhones(ctx, tx, contactID, lead.Source, by, phones)
+}
+
+// unwritablePromotionTarget answers a promotion whose exact match the promoter
+// may not change: the held refusal when they cannot see it either, and a bare
+// conflict when they can.
+func unwritablePromotionTarget(ctx context.Context, tx pgx.Tx, match ContactResolution, candidate ContactCandidate) error {
+	if match.MatchedLane != LaneEmail || len(candidate.Emails) == 0 {
+		return apperrors.ErrConflict
+	}
+	refusal := claimedEmailRefusal(ctx, tx, candidate.Emails[0], match.ContactID)
+	if _, held := errors.AsType[*ContactHeldByColleagueError](refusal); held || !IsClaimedEmail(refusal) {
+		return refusal
+	}
+	return apperrors.ErrConflict
 }

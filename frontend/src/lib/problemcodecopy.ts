@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { MessageKey } from "../i18n/en";
+import { problemCode, problemDetails } from "./problembody";
 
 // Wire codes whose server detail is not a sentence for this screen's reader,
 // and the catalog copy problemDetail (problem.ts) shows in its place.
@@ -31,3 +32,12 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
   ["win_evidence_required", "deals.winEvidenceRequired"],
   ["run_in_flight", "import.reason.run_in_flight"],
 ]);
+
+// The held refusal names no record; its words depend only on whether the
+// colleague who holds the person was asked to share them.
+export function heldByColleagueCopy(problem: unknown): MessageKey | undefined {
+  if (problemCode(problem) !== "contact_held_by_colleague") return undefined;
+  return problemDetails(problem)?.share_requested === true
+    ? "common.heldByColleague.asked"
+    : "common.heldByColleague";
+}

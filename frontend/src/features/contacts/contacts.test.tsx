@@ -480,6 +480,53 @@ describe("ContactsScreen — dedupe view-existing link (P-16)", () => {
   });
 });
 
+describe("ContactsScreen — a colleague holds the person", () => {
+  async function createHeld(shareRequested: boolean) {
+    stubFetch(async (url, method) => {
+      if (method === "POST" && url.includes("/contacts")) {
+        return jsonResponse(
+          {
+            type: "about:blank",
+            title: "Conflict",
+            detail: "a colleague already has this person",
+            code: "contact_held_by_colleague",
+            details: { share_requested: shareRequested },
+          },
+          409,
+        );
+      }
+      return emptyPage();
+    });
+    render(<ContactsScreen />);
+    await userEvent.click(screen.getByTestId("new-record"));
+    await userEvent.type(screen.getByLabelText("Full name *"), "Pat Example");
+    await userEvent.click(screen.getByText("Add email"));
+    await userEvent.type(screen.getByLabelText("Email *"), "person@example.test");
+    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+  }
+
+  it("says the colleague was asked to share the contact", async () => {
+    await createHeld(true);
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          "A colleague already has this person. We asked them to share the contact.",
+        ),
+      ).toBeTruthy(),
+    );
+    expect(screen.queryByText("View existing record")).toBeNull();
+  });
+
+  it("drops the request once the colleague declined it", async () => {
+    await createHeld(false);
+    await waitFor(() =>
+      expect(
+        screen.getByText("A colleague already has this person."),
+      ).toBeTruthy(),
+    );
+  });
+});
+
 describe("activityTimeline", () => {
   const base = {
     id: "a-1",
