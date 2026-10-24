@@ -719,8 +719,11 @@ func contactChanges(ctx context.Context, t *testing.T, e *Env, contactID ids.Con
 	t.Helper()
 	var out []relstrength.Change
 	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		var err error
-		out, err = e.Contacts.ContactRelationshipChangesTx(ctx, tx, contactID, roomFixedNow, nil)
+		touches, zone, err := contactTouches(ctx, tx, contactID)
+		if err != nil {
+			return err
+		}
+		out, err = e.Contacts.ContactRelationshipChangesTx(ctx, tx, contactID, roomFixedNow, nil, touches[contactID], zone)
 		return err
 	})
 	return out, err
@@ -740,6 +743,7 @@ func TestRelationshipChangesAreDerivedFromTheTimeline(t *testing.T) {
 		id := SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, direction, source, captured_by)
 			VALUES ($1, 'email', 'thread', '`+at+`', 'inbound', 'manual', 'human:x')`)
 		LinkActivity(t, owner, id, "contact", mine)
+		LinkActivitySender(t, owner, id, mine)
 	}
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, roomPerms)

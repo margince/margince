@@ -47,11 +47,23 @@ func (s *Service) strengthSection(
 // answer different questions and a caller may hold the grant for one reading
 // and still lose the other to a section fault. Both fold the same §4 curve, so
 // they cannot disagree about the same window.
+//
+// The quiet count starts from the touch the last-touch section prints, read by
+// the same statement, and is counted in the installation zone.
 func (s *Service) relationshipChangesSection(
 	ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
-	now time.Time, within *ids.ProjectID, out *crmcontracts.Contact360,
+	now time.Time, opts AssembleOptions, out *crmcontracts.Contact360,
 ) error {
-	changes, err := s.contacts.ContactRelationshipChangesTx(ctx, tx, contactID, now, within)
+	touched, err := LastTouchFor(ctx, tx, []ids.ContactID{contactID}, opts)
+	if err != nil {
+		return err
+	}
+	zone, err := recordZone(ctx, tx)
+	if err != nil {
+		return err
+	}
+	changes, err := s.contacts.ContactRelationshipChangesTx(
+		ctx, tx, contactID, now, opts.ProjectID, touched[contactID].Touches(), zone)
 	if err != nil {
 		return err
 	}

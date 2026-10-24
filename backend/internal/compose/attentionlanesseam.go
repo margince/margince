@@ -23,12 +23,14 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/attention"
+	"github.com/margince/margince/backend/internal/compose/contact360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -224,7 +226,19 @@ func (d attentionDecay) quietPage(
 	for _, found := range quiet {
 		candidates = append(candidates, ids.From[ids.ContactKind](found.Edge.ContactID))
 	}
-	changed, err := d.store.RelationshipChangesForContacts(ctx, tx, candidates, now)
+	touched, err := contact360.LastTouchFor(ctx, tx, candidates, contact360.AssembleOptions{})
+	if err != nil {
+		return quietPageResult{}, err
+	}
+	touches := make(map[ids.ContactID]relstrength.Touches, len(touched))
+	for id, touch := range touched {
+		touches[id] = touch.Touches()
+	}
+	zone, err := identity.ZoneAppliedTx(ctx, tx)
+	if err != nil {
+		return quietPageResult{}, err
+	}
+	changed, err := d.store.RelationshipChangesForContacts(ctx, tx, candidates, now, touches, zone)
 	if err != nil {
 		return quietPageResult{}, err
 	}

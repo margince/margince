@@ -32,6 +32,23 @@ type LastTouch struct {
 	// history. Only the re-engaged suggestion reads it; every other consumer
 	// counts imported mail as engagement.
 	LiveInboundAt *time.Time
+	// ContactAt is the newest exchange of any direction, a meeting included:
+	// the moment "quiet for N days" counts from. It passes the same human and
+	// sender rules as the two clocks above, so a colleague's message on a
+	// shared thread cannot make a contact look recently heard from.
+	ContactAt *time.Time
+	// PrecedingContactAt is the newest exchange strictly before InboundAt,
+	// the far side of the silence a reply broke.
+	PrecedingContactAt *time.Time
+}
+
+// Touches is what the relationship-change derivation needs from this answer.
+func (t LastTouch) Touches() relstrength.Touches {
+	return relstrength.Touches{
+		LastTouch:     t.ContactAt,
+		LatestInbound: t.InboundAt,
+		Preceding:     t.PrecedingContactAt,
+	}
 }
 
 // LastTouchFor answers the two moments for every contact in the set the caller
@@ -91,15 +108,22 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 		WHERE a.archived_at IS NULL AND %s AND (%s)%s%s`,
 		fmt.Sprintf(contactReachesActivity, "c.id"), scope, projectScope(opts, arg),
 		auth.AudienceWorkspaceOnly("a"))
+	humanClock := relstrength.LastActivityCountsSQL("a", "now()") + " AND " + relstrength.WrittenByHumanSQL("a")
+	sender := contacts.SenderPredicate("c.id", "a")
+	inbound := fmt.Sprintf(`a.direction = 'inbound' AND %s AND %s`, sender, humanClock)
+	exchange := fmt.Sprintf(`a.kind IN %s AND %s AND (a.direction IS DISTINCT FROM 'inbound' OR %s)`,
+		relstrength.InteractionKindSQLGroup(), humanClock, sender)
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
 		SELECT c.id,
-		       (SELECT max(a.occurred_at) %[1]s AND a.direction = 'inbound' AND %[2]s AND %[5]s),
+		       (SELECT max(a.occurred_at) %[1]s AND %[2]s),
 		       (SELECT max(a.occurred_at) %[1]s AND a.direction = 'outbound' AND %[5]s),
-		       (SELECT max(a.occurred_at) %[1]s AND a.direction = 'inbound' AND %[2]s AND %[5]s AND NOT %[6]s)
+		       (SELECT max(a.occurred_at) %[1]s AND %[2]s AND NOT %[6]s),
+		       (SELECT max(a.occurred_at) %[1]s AND %[7]s),
+		       (SELECT max(a.occurred_at) %[1]s AND %[7]s
+		           AND a.occurred_at < (SELECT max(a.occurred_at) %[1]s AND %[2]s))
 		FROM contact c
 		WHERE c.id = ANY($%[3]d) AND c.archived_at IS NULL AND (%[4]s)`,
-		reached, contacts.SenderPredicate("c.id", "a"), wantedPos, visible,
-		relstrength.LastActivityCountsSQL("a", "now()")+" AND "+relstrength.WrittenByHumanSQL("a"), activities.ImportedHistorySQL), args...)
+		reached, inbound, wantedPos, visible, humanClock, activities.ImportedHistorySQL, exchange), args...)
 	if err != nil {
 		return nil, err
 	}
@@ -107,7 +131,8 @@ func LastTouchFor(ctx context.Context, tx pgx.Tx, contactIDs []ids.ContactID, op
 	for rows.Next() {
 		var contactID ids.ContactID
 		var touch LastTouch
-		if err := rows.Scan(&contactID, &touch.InboundAt, &touch.OutboundAt, &touch.LiveInboundAt); err != nil {
+		if err := rows.Scan(&contactID, &touch.InboundAt, &touch.OutboundAt, &touch.LiveInboundAt,
+			&touch.ContactAt, &touch.PrecedingContactAt); err != nil {
 			return nil, err
 		}
 		out[contactID] = touch

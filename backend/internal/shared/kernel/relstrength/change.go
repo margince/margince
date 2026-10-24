@@ -25,7 +25,11 @@ package relstrength
 // its own design; if it is built, this is worth revisiting with a real
 // workload behind it.
 
-import "time"
+import (
+	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
+)
 
 // The thresholds a change clears before it is worth putting in front of
 // somebody. They are product decisions and live beside the §4 tunables so
@@ -76,6 +80,18 @@ type Change struct {
 	ToBucket   string
 }
 
+// Touches are the three moments the derivation reads off the contact's last
+// touch, owned by the page's last-touch reader. They are typed here because a
+// module cannot import the compose package that reads them.
+type Touches struct {
+	// LastTouch is the newest exchange of any direction.
+	LastTouch *time.Time
+	// LatestInbound is when they last wrote.
+	LatestInbound *time.Time
+	// Preceding is the newest exchange strictly before LatestInbound.
+	Preceding *time.Time
+}
+
 // ChangeInputs are the counted facts the derivation needs. As with Inputs, the
 // caller decides which interactions counted; this package does not re-ask.
 type ChangeInputs struct {
@@ -89,6 +105,13 @@ type ChangeInputs struct {
 	Previous Inputs
 	// LatestInbound is when they last wrote to us; nil if they never have.
 	LatestInbound *time.Time
+	// LastTouch is the newest interaction of any direction, the moment a
+	// quiet relationship is counted from. The caller reads it from the same
+	// statement that names the sent and received dates a surface prints, so
+	// the count and those dates cannot come from two questions.
+	LastTouch *time.Time
+	// Zone is the calendar every day count here is drawn in. Nil means UTC.
+	Zone *time.Location
 	// PrecedingInteraction is the last interaction of any direction strictly
 	// before LatestInbound — the far side of the silence that reply broke.
 	// Nil when their reply is the first interaction on record, which is a
@@ -102,11 +125,14 @@ type ChangeInputs struct {
 // It is pure for the same reason Compute is: the caller passes `now`, so a
 // test states an instant instead of arranging for one.
 func Changes(in ChangeInputs, now time.Time) []Change {
+	if in.Zone == nil {
+		in.Zone = time.UTC
+	}
 	var out []Change
 	if c, ok := repliedAfterGap(in, now); ok {
 		out = append(out, c)
 	}
-	if c, ok := wentQuiet(in.Current.LastInteraction, now); ok {
+	if c, ok := wentQuiet(in.LastTouch, now, in.Zone); ok {
 		out = append(out, c)
 	}
 	if c, ok := bandMoved(in, now); ok {
@@ -124,14 +150,14 @@ func repliedAfterGap(in ChangeInputs, now time.Time) (Change, bool) {
 	if in.LatestInbound == nil || in.PrecedingInteraction == nil {
 		return Change{}, false
 	}
-	gap := int(in.LatestInbound.Sub(*in.PrecedingInteraction).Hours() / 24)
+	gap := elapsed.Days(*in.PrecedingInteraction, *in.LatestInbound, in.Zone)
 	if gap < ReplyGapDays {
 		return Change{}, false
 	}
 	// A reply that itself went quiet afterwards is not the headline any more —
 	// the silence since is. Bounding it by the same window the score folds
 	// keeps the two telling one story.
-	if now.Sub(*in.LatestInbound).Hours()/24 > WindowDays {
+	if elapsed.Days(*in.LatestInbound, now, in.Zone) > WindowDays {
 		return Change{}, false
 	}
 	return Change{Kind: ChangeRepliedAfterGap, At: *in.LatestInbound, Days: gap}, true
@@ -142,11 +168,11 @@ func repliedAfterGap(in ChangeInputs, now time.Time) (Change, bool) {
 // "Established" is doing the work: a contact nobody has ever spoken to has not
 // gone quiet, they were never loud, and saying otherwise turns every dormant
 // record into an alert.
-func wentQuiet(lastInteraction *time.Time, now time.Time) (Change, bool) {
+func wentQuiet(lastInteraction *time.Time, now time.Time, zone *time.Location) (Change, bool) {
 	if lastInteraction == nil {
 		return Change{}, false
 	}
-	days := int(now.Sub(*lastInteraction).Hours() / 24)
+	days := elapsed.Days(*lastInteraction, now, zone)
 	if days < QuietDays {
 		return Change{}, false
 	}

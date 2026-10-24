@@ -76,6 +76,7 @@ func TestChangesDoesNotCallAFirstContactAReturn(t *testing.T) {
 func TestChangesDropsAStaleReturnAndReportsTheSilenceSince(t *testing.T) {
 	in := ChangeInputs{
 		Current:              Inputs{LastInteraction: daysAgo(100), Count90d: 0},
+		LastTouch:            daysAgo(100),
 		LatestInbound:        daysAgo(100),
 		PrecedingInteraction: daysAgo(200),
 	}
@@ -145,5 +146,39 @@ func TestChangesReportsCoolingWhenTheBandFell(t *testing.T) {
 	}
 	if c.ToBucket == "" {
 		t.Error("a cooling change named no band to have fallen to")
+	}
+}
+
+// The count starts from the owner's touch, not from the strength fold's last
+// interaction: a fold that saw a newer row the owner rejects must not shorten
+// the silence, and the reverse must not lengthen it.
+func TestWentQuietCountsFromTheLastTouchNotTheFold(t *testing.T) {
+	in := ChangeInputs{
+		Current:   Inputs{LastInteraction: daysAgo(5), Count90d: 1},
+		LastTouch: daysAgo(60),
+	}
+	c, found := kindsOf(Changes(in, now))[ChangeWentQuiet]
+	if !found || c.Days != 60 || !c.At.Equal(*daysAgo(60)) {
+		t.Errorf("went_quiet = %+v (found %v), want 60 days from the last touch", c, found)
+	}
+	if _, found := kindsOf(Changes(ChangeInputs{Current: in.Current}, now))[ChangeWentQuiet]; found {
+		t.Error("a contact with no touch was reported as gone quiet")
+	}
+}
+
+// 20:00 UTC on 20 June is already 21 June in Bangkok, so the same two instants
+// are 45 calendar days apart in UTC and 44 in Bangkok.
+func TestWentQuietCountsInTheGivenZone(t *testing.T) {
+	bangkok, err := time.LoadLocation("Asia/Bangkok")
+	if err != nil {
+		t.Fatal(err)
+	}
+	at := time.Date(2026, 6, 20, 20, 0, 0, 0, time.UTC)
+	read := time.Date(2026, 8, 4, 10, 0, 0, 0, time.UTC)
+	if c := kindsOf(Changes(ChangeInputs{LastTouch: &at}, read))[ChangeWentQuiet]; c.Days != 45 {
+		t.Errorf("UTC days = %d, want 45", c.Days)
+	}
+	if _, found := kindsOf(Changes(ChangeInputs{LastTouch: &at, Zone: bangkok}, read))[ChangeWentQuiet]; found {
+		t.Error("in Bangkok this is day 44, below the quiet threshold, and must not be reported")
 	}
 }
