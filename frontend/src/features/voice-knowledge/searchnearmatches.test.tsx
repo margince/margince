@@ -4,9 +4,9 @@
 /** @vitest-environment happy-dom */
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { searchHitRoute } from "../../app/searchkinds";
 import { LocaleProvider } from "../../i18n";
 import { routeHash } from "../../lib/router";
+import { searchHitRoute } from "../../lib/searchkinds";
 import { NearMatches } from "./searchnearmatches";
 
 afterEach(cleanup);

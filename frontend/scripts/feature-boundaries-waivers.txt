@@ -372,14 +372,12 @@ reach features/records/recordmark.test.tsx features/settings/writetohost.tsx
 reach features/records/recordreferences.ts features/companies/companyprojects.tsx
 reach features/records/recordroles.tsx features/leads/leadvocab.rows.tsx
 reach features/records/recordtab.ts features/worklist/worklist.return.tsx
-reach features/records/relationships.tsx app/searchkinds.ts
 reach features/records/timelineactions.tsx features/lists/audiencemembers.tsx
 reach features/records/timelineactions.tsx features/mail/compose.tsx
 reach features/settings/account-settings.tsx app/account.tsx
 reach features/settings/account-settings.tsx features/sign-in/mfacard.tsx
 reach features/settings/account-settings.tsx features/sign-in/passwordcard.tsx
 reach features/settings/acquisitionsources.tsx features/leads/leadvocab.rows.tsx
-reach features/settings/audit.tsx app/searchkinds.ts
 reach features/settings/embedreindex.tsx features/ai/aiusage.tsx
 reach features/settings/financesource.tsx features/contacts/contactemployers.tsx
 reach features/settings/followupsettings.tsx features/worklist/worklist.queries.ts
@@ -470,8 +468,6 @@ reach features/voice-knowledge/activitydrawer.tsx features/records/activityfiles
 reach features/voice-knowledge/activitydrawer.tsx features/records/activityfollowups.tsx
 reach features/voice-knowledge/activitydrawer.tsx features/worklist/worklist.queries.ts
 reach features/voice-knowledge/documentextraction.tsx app/ai-activity.ts
-reach features/voice-knowledge/search.tsx app/searchkinds.ts
-reach features/voice-knowledge/searchpanels.tsx app/searchkinds.ts
 reach features/voice-knowledge/searchpanels.tsx features/mail/openemaildrawer.tsx
 reach features/worklist/taskdetailmodal.tsx features/voice-knowledge/activitydrawer.tsx
 reach features/worklist/worklist.briefverbs.tsx features/brief/brief.queries.ts

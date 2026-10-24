@@ -3,20 +3,20 @@
 
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
-import {
-  type SearchRecordCardType,
-  searchHitHasCard,
-  searchHitRoute,
-} from "../../app/searchkinds";
 import { Badge } from "../../design-system/atoms";
 import { EmailEntry } from "../../design-system/emailentry";
 import { RecordCard } from "../../design-system/recordcard";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
+import { companyTabRoute } from "../../lib/companytab";
 import { ENTITY } from "../../lib/entity";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate, routeHash } from "../../lib/router";
-import { companyTabRoute } from "../../lib/companytab";
+import {
+  type SearchRecordCardType,
+  searchHitHasCard,
+  searchHitRoute,
+} from "../../lib/searchkinds";
 import type { OpenHit } from "./searchpanels";
 
 type SearchResult = components["schemas"]["SearchResult"];

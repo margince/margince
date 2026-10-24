@@ -3,13 +3,13 @@ import { ratingTone, statTone } from "../../design-system/readingtone";
 import { StatStrip } from "../../design-system/statstrip";
 import { omitted } from "../../design-system/surfacestate";
 import { useLocale, useT } from "../../i18n";
+import type { CompanyTab } from "../../lib/companytab";
 import { useRecordZone } from "../../lib/recordzone";
 import type { Company360 } from "./company360";
 import { MoneyStat } from "./company360.money";
 import { PipelineCard, StripWithheld } from "./company360.strip";
 import { LastTouchStat } from "./company360lasttouch";
 import { NextMeetingStat } from "./companynextmeeting";
-import type { CompanyTab } from "../../lib/companytab";
 
 /**
  * The figures at the foot of How it stands, in the design's order. They are

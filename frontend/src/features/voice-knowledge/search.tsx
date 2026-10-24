@@ -5,15 +5,6 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { type FormEvent, useState } from "react";
 import { api, FIRST_PAGE } from "../../api/client";
 import type { components } from "../../api/schema";
-import {
-  groupSearchHits,
-  SEARCH_FILTER_KEY,
-  SEARCH_GROUP_KEY,
-  SEARCH_HIT_ORDER,
-  type SearchHitType,
-  searchGroupType,
-  searchHitHasCard,
-} from "../../app/searchkinds";
 import { Button, EmptyState, SearchField } from "../../design-system/atoms";
 import { FilterPills } from "../../design-system/filterpills";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -25,6 +16,15 @@ import {
 import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { navigate, useRoute } from "../../lib/router";
+import {
+  groupSearchHits,
+  SEARCH_FILTER_KEY,
+  SEARCH_GROUP_KEY,
+  SEARCH_HIT_ORDER,
+  type SearchHitType,
+  searchGroupType,
+  searchHitHasCard,
+} from "../../lib/searchkinds";
 import { useUrlParams } from "../../lib/urlstate";
 import { SearchHit } from "./searchhit";
 import { NearMatches } from "./searchnearmatches";
@@ -43,7 +43,7 @@ type SearchResult = components["schemas"]["SearchResult"];
 // be fifty emails with the company itself nowhere on the page. Narrowed to one
 // type, it is that type's ranked list, paged.
 //
-// The order and the headings come from app/searchkinds.ts, which the ⌘K palette
+// The order and the headings come from lib/searchkinds.ts, which the ⌘K palette
 // reads too. They were a pair of literals here until a type the server returned
 // went missing from both — project hits came back ranked and were dropped on the
 // floor, because a list that has to be edited by hand once per new type is a

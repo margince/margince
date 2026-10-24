@@ -12,12 +12,12 @@ import { provenanceOf } from "../../design-system/provenanceof";
 import { formatDayMonth } from "../../format/format.dates";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import type { CompanyTab } from "../../lib/companytab";
 import { useMemberName } from "../../lib/membernames";
 import { useRecordZone } from "../../lib/recordzone";
 import { recordNamesIn } from "./company360";
 import { latestExchanges } from "./companyoverviewrows";
 import { activityHeadline } from "./companyrecent";
-import type { CompanyTab } from "../../lib/companytab";
 import "./company360.css";
 
 type Company360 = components["schemas"]["Company360"];

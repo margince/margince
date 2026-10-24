@@ -6,7 +6,7 @@ import { StoryProviders } from "../../testing/story-utils";
 import { NearMatches } from "./searchnearmatches";
 
 const meta: Meta<typeof NearMatches> = {
-  title: "Features/Search/NearMatches",
+  title: "Patterns/Search near matches",
   component: NearMatches,
 };
 export default meta;

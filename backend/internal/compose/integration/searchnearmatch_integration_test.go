@@ -18,14 +18,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func nearIDs(page search.Page) []string {
-	out := make([]string, 0, len(page.NearMatches))
-	for _, m := range page.NearMatches {
-		out = append(out, m.ID.String())
-	}
-	return out
-}
-
 func seedContact(t *testing.T, e *SearchEnv, name string) string {
 	t.Helper()
 	return e.SeedID(t, `INSERT INTO contact (id, full_name, source, captured_by) VALUES ($1, $2, 'manual', 'human:x')`, name).String()
@@ -143,7 +135,7 @@ func TestEveryNearMatchPredicateReadsItsTrigramIndex(t *testing.T) {
 		if _, err := tx.Exec(ctx, `SET LOCAL enable_seqscan = off`); err != nil {
 			t.Fatal(err)
 		}
-		var plan string
+		var plan strings.Builder
 		rows, err := tx.Query(ctx, `EXPLAIN SELECT t.id FROM `+table+` t WHERE `+predicate, "kowalcyk")
 		if err != nil {
 			t.Fatal(err)
@@ -153,14 +145,14 @@ func TestEveryNearMatchPredicateReadsItsTrigramIndex(t *testing.T) {
 			if err := rows.Scan(&line); err != nil {
 				t.Fatal(err)
 			}
-			plan += line + "\n"
+			plan.WriteString(line + "\n")
 		}
 		rows.Close()
 		if err := tx.Rollback(ctx); err != nil {
 			t.Fatal(err)
 		}
-		if !strings.Contains(plan, "idx_"+entity+"_name_trgm") {
-			t.Errorf("the %s near-match predicate does not read idx_%s_name_trgm:\n%s", entity, entity, plan)
+		if !strings.Contains(plan.String(), "idx_"+entity+"_name_trgm") {
+			t.Errorf("the %s near-match predicate does not read idx_%s_name_trgm:\n%s", entity, entity, plan.String())
 		}
 	}
 }

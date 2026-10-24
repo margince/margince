@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
-import { searchHitRoute } from "../../app/searchkinds";
 import { useT } from "../../i18n";
 import { routeHash } from "../../lib/router";
+import { searchHitRoute } from "../../lib/searchkinds";
 import "./search.css";
 
 type SearchNearMatch = components["schemas"]["SearchNearMatch"];

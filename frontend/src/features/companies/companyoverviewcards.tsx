@@ -17,6 +17,7 @@ import { formatMoneyWhole, formatNumber } from "../../format/format";
 import { formatDayMonth } from "../../format/format.dates";
 import { PHASE_LABEL } from "../../format/projectphase";
 import { useLocale, usePlural, useT } from "../../i18n";
+import type { CompanyTab } from "../../lib/companytab";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { useRecordZone } from "../../lib/recordzone";
 import { routeHash } from "../../lib/router";
@@ -32,7 +33,6 @@ import {
   type WorkRow,
   workInFlight,
 } from "./companyoverviewrows";
-import type { CompanyTab } from "../../lib/companytab";
 import "./company360.css";
 
 type Company360 = components["schemas"]["Company360"];

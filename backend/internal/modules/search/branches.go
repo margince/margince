@@ -235,8 +235,10 @@ const noSnippet = "NULL"
 const columnName = "name"
 
 var searchBranches = []searchBranch{
-	{entity: "contact", table: entityContact, title: "full_name", snippet: noSnippet, identifier: storekit.ContactEmails,
-		nearName: "f_fold_apostrophes(lower(%s.full_name))"},
+	{
+		entity: "contact", table: entityContact, title: "full_name", snippet: noSnippet,
+		identifier: storekit.ContactEmails, nearName: "f_fold_apostrophes(lower(%s.full_name))",
+	},
 	{
 		entity: "company", table: entityCompany, title: "display_name", snippet: noSnippet,
 		extraWhere: "NOT %s.is_anchor", identifier: storekit.CompanyDomains,

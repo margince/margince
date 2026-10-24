@@ -8,6 +8,7 @@ import { Heading } from "../../design-system/heading";
 import { RecordView } from "../../design-system/recordview";
 import { useT } from "../../i18n";
 import { taskWriteKeys } from "../../lib/activitykeys";
+import type { CompanyTab } from "../../lib/companytab";
 import { invalidateCompany } from "../../lib/recordwritekeys";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
@@ -29,7 +30,6 @@ import {
 import { CompanyHeadLines } from "./companyheaderfacts";
 import { CompanyMarks } from "./companymarks";
 import { CompanyRail } from "./companyrail";
-import type { CompanyTab } from "../../lib/companytab";
 
 // openTaskId is scoped to the account being read, like the tab. The route
 // swaps one company for another without unmounting this component, so a
