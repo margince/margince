@@ -169,11 +169,9 @@ func QuickFindClause(pos int, nameExpr string) string {
 // Identifier is a record's identifier table — the addresses and domains contacts
 // paste in when they are not typing a name.
 //
-// Table is joined by FK to the row's own id. Column stores its values
-// lower-cased under a CHECK. The exact arm uses the unique index on the value
-// (uq_contact_email_dedupe, uq_company_domain); the contains arm finds a
-// fragment and reads a trigram index on f_fold_apostrophes(lower(Column))
-// (idx_contact_email_trgm, idx_company_domain_trgm, idx_lead_email_trgm).
+// Table is joined by FK to the row's own id, and Column stores lower-cased
+// values under a CHECK. The exact arm uses the unique index on the value. The
+// contains arm reads a trigram index on f_fold_apostrophes(lower(Column)).
 type Identifier struct {
 	Table  string
 	FK     string

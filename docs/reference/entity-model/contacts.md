@@ -144,6 +144,7 @@ The 44 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `company_domain_pkey`: `unique, btree (id)`
 - `idx_company_domain_company`: `btree (company_id)`
+- `idx_company_domain_trgm`: `gin (f_fold_apostrophes(lower(domain)) gin_trgm_ops) WHERE (archived_at IS NULL)`
 - `uq_company_domain`: `unique, btree (domain) WHERE (archived_at IS NULL)`
 - `uq_company_domain_primary`: `unique, btree (company_id) WHERE (is_primary AND (archived_at IS NULL))`
 
@@ -673,6 +674,7 @@ The 44 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `idx_contact_email_base`: `btree (regexp_replace(lower(email), '^([^+@]+)\+[^@]*@', '\1@')) WHERE (archived_at IS NULL)`
 - `idx_contact_email_contact`: `btree (contact_id)`
 - `idx_contact_email_correspondence`: `btree (email) WHERE (from_correspondence AND (archived_at IS NULL))`
+- `idx_contact_email_trgm`: `gin (f_fold_apostrophes(lower(email)) gin_trgm_ops) WHERE (archived_at IS NULL)`
 - `uq_contact_email_dedupe`: `unique, btree (email) WHERE (archived_at IS NULL)`
 - `uq_contact_email_primary`: `unique, btree (contact_id, email_type) WHERE (is_primary AND (archived_at IS NULL))`
 
@@ -1119,6 +1121,7 @@ The 44 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `idx_lead_candidate_company`: `btree (candidate_company_key) WHERE ((candidate_company_key IS NOT NULL) AND (archived_at IS NULL))`
 - `idx_lead_disqualify_reason`: `btree (disqualify_reason_id) WHERE (disqualify_reason_id IS NOT NULL)`
+- `idx_lead_email_trgm`: `gin (f_fold_apostrophes(lower(email)) gin_trgm_ops) WHERE (archived_at IS NULL)`
 - `idx_lead_from_contact`: `btree (from_contact_id) WHERE (from_contact_id IS NOT NULL)`
 - `idx_lead_linkedin`: `btree (linkedin_url) WHERE (linkedin_url IS NOT NULL)`
 - `idx_lead_merged_into`: `btree (merged_into_id) WHERE (merged_into_id IS NOT NULL)`

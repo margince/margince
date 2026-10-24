@@ -46,11 +46,11 @@ func (n planNode) walk(visit func(planNode)) {
 	}
 }
 
-// AssertIndexed fails t unless the quick-find over table, matching nameExpr and
-// the identifier arm id (zero when the list has none), reads index and, when id
-// is set, identifierIndex, and scans no table. Sequential scans are priced out for the one statement, so a scan left
-// in the plan means the planner had no index to use, not that it chose not to
-// on a small table.
+// AssertIndexed fails t unless the quick-find over table reads index and scans
+// no table. It matches nameExpr and the identifier arm id (zero when the list
+// has none), and when id is set it also requires identifierIndex. Sequential scans are priced out
+// for the one statement. A scan left in the plan therefore means the planner
+// had no index to use.
 func AssertIndexed(t *testing.T, table, nameExpr, index string, id storekit.Identifier, identifierIndex string) {
 	t.Helper()
 	dsn := os.Getenv("MARGINCE_TEST_DSN")
@@ -117,11 +117,11 @@ func AssertIndexed(t *testing.T, table, nameExpr, index string, id storekit.Iden
 }
 
 // dropCompetingIndexes drops, inside the plan transaction, every index on table
-// except those in keep, the full-text index and those backing a constraint. The
-// test tables are empty, and on an empty table the planner prices a trigram
-// index above a partial btree that also covers the live rows, so without this
-// the plan would never show whether the identifier index can serve the contains
-// arm. A lead's own address shares its table with the name arm, hence keep.
+// except those in keep, the full-text index and those backing a constraint.
+// On an empty test table the planner prices a trigram index above a partial
+// btree that covers the same rows. Without the drop, the plan would never show
+// whether the identifier index can serve the contains arm.
+// A lead's own address shares its table with the name arm, hence keep.
 func dropCompetingIndexes(ctx context.Context, tx pgx.Tx, table string, keep ...string) error {
 	rows, err := tx.Query(ctx, `
 		SELECT i.relname
