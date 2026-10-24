@@ -49,4 +49,4 @@ a5f0633da0c9bcb048f592cef53e3bced9583c4e e5a82786d1b7231e23936099e6305e7b9244be8
 28b85567196374137b62f75d2d1849b6d65d2a59 5e8151789247b842b7cee867e6cf6b262d62d7be ratified-agent-reads-allowance-retired
 ccb5c671bcb9781769fb9550e7bddfb5a3b0934c b2a77ae532eea4f11b438f13bd34c4330ff01cdc ratified-every-draft-email-route-takes-the-same-steering-and-intent-limit
 236434a7133e1bbbff3b6cabd1352dad36ee74b8 fccd891a6a7d58721bbbd8c6745d063ff9c20a8d ratified-industry-is-one-fixed-list-of-codes-and-growth-fit-sends-its-missing-inputs-and-next-step-as-codes
-fe8b211c8351fb5e4cbb7aa4bce58fb2f54e89f9 f19450bcd87449e936418f051e6efe7e0e349f85 ratified-8573-a-phase-move-names-its-actor-from-the-audit-row-and-may-be-unknown
+b7b06dc10359127ff57ad0baad7a4adb9e74b913 541e6db26df483432708952efd3f9c496d330d34 ratified-8573-a-phase-move-names-its-actor-from-the-audit-row-and-may-be-unknown
