@@ -43,7 +43,10 @@ type UpdateLeadInput struct {
 	// Origin corrects where the lead came from; the score follows it.
 	Origin       *string
 	OriginDetail *string
-	Score        *int
+	// OriginHint is raw wording only an importer sets. It fills an origin the
+	// lead does not have yet and never replaces one (settleOriginHint).
+	OriginHint string
+	Score      *int
 	// ScoreOverrideReason is the written reason for a score override; nil
 	// means the field was absent (no override change). The explicit CLEAR
 	// gesture is ClearScoreOverride, not an empty string — an empty reason
@@ -270,6 +273,10 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 			return crmcontracts.Lead{}, err
 		}
 	}
+	in, err = settleOriginHint(ctx, tx, current, in)
+	if err != nil {
+		return crmcontracts.Lead{}, err
+	}
 	if in.Origin != nil {
 		if err := ensureAssignableOrigin(ctx, tx, strings.TrimSpace(*in.Origin), current.Origin); err != nil {
 			return crmcontracts.Lead{}, err
@@ -495,4 +502,28 @@ func setLeadOrigin(p *storekit.Patch, current crmcontracts.Lead, in UpdateLeadIn
 		p.Set(leadOriginDetailField, current.OriginDetail, detail)
 	}
 	return nil
+}
+
+// settleOriginHint turns an importer's wording into an origin or a note, but
+// only for a lead with no origin: a human may have set it, and the file knows no
+// better. Decided here under the row lock, so a human's edit that lands between
+// the import's read and its write still wins. The wording that does not resolve
+// becomes the note, and never replaces one.
+func settleOriginHint(ctx context.Context, tx pgx.Tx, current crmcontracts.Lead, in UpdateLeadInput) (UpdateLeadInput, error) {
+	hint := strings.TrimSpace(in.OriginHint)
+	if hint == "" || current.Origin != nil || in.Origin != nil {
+		return in, nil
+	}
+	key, ok, err := ResolveOrigin(ctx, tx, hint)
+	if err != nil {
+		return in, err
+	}
+	switch {
+	case ok:
+		in.Origin = &key
+	case current.OriginDetail == nil && in.OriginDetail == nil:
+		detail := cleanOriginDetail(hint, true)
+		in.OriginDetail = &detail
+	}
+	return in, nil
 }

@@ -92,6 +92,12 @@ type LeadFields struct {
 	Email       string
 	CompanyName string
 	Title       string
+	// Origin is where the prospect came from, a lead_origin key, and empty for a
+	// connector that carries none. The table's foreign key refuses an unknown
+	// key, so the sink needs no catalog of its own. OriginDetail is the
+	// connector's own wording beside it.
+	Origin       string
+	OriginDetail string
 	// Unowned declines ownership on the granting human's behalf, for a capture
 	// that is a RECORD rather than an assignment.
 	//

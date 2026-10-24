@@ -32,11 +32,11 @@ func seedManualLead(t *testing.T) (context.Context, *Store, crmcontracts.Lead, i
 	return ctx, store, created, ids.From[ids.LeadKind](ids.UUID(created.Id))
 }
 
-// The rescore a source change owes lands in the series with the number the lead
+// The rescore an origin change owes lands in the series with the number the lead
 // now shows. The edit wrote that number in the same UPDATE.
-func TestARescoreOnASourceChangeIsInTheSeriesAndTheAuditDiff(t *testing.T) {
+func TestARescoreOnAnOriginChangeIsInTheSeriesAndTheAuditDiff(t *testing.T) {
 	ctx, store, _, id := seedManualLead(t)
-	updated, err := store.UpdateLead(ctx, id, UpdateLeadInput{Source: new("referral")})
+	updated, err := store.UpdateLead(ctx, id, UpdateLeadInput{Origin: new("referral")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -53,21 +53,21 @@ func TestARescoreOnASourceChangeIsInTheSeriesAndTheAuditDiff(t *testing.T) {
 		  ORDER BY occurred_at DESC, id DESC LIMIT 1`, id).Scan(&after); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(after, `"source"`) || strings.Contains(after, `"score"`) {
-		t.Fatalf("the edit's audit row should carry the source and not the score derived from it, got %s", after)
+	if !strings.Contains(after, `"origin"`) || strings.Contains(after, `"score"`) {
+		t.Fatalf("the edit's audit row should carry the origin and not the score derived from it, got %s", after)
 	}
 }
 
 // Under a Commercial Judgement override the rescore moves the machine value
 // and leaves the human's number alone, still in one version.
-func TestASourceChangeUnderAnOverrideMovesOnlyTheMachineScore(t *testing.T) {
+func TestAnOriginChangeUnderAnOverrideMovesOnlyTheMachineScore(t *testing.T) {
 	ctx, store, _, id := seedManualLead(t)
 	human, reason := 88, "strategic account"
 	set, err := store.UpdateLead(ctx, id, UpdateLeadInput{Score: &human, ScoreOverrideReason: &reason})
 	if err != nil {
 		t.Fatal(err)
 	}
-	updated, err := store.UpdateLead(ctx, id, UpdateLeadInput{Source: new("referral"), IfVersion: set.Version})
+	updated, err := store.UpdateLead(ctx, id, UpdateLeadInput{Origin: new("referral"), IfVersion: set.Version})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,18 +75,18 @@ func TestASourceChangeUnderAnOverrideMovesOnlyTheMachineScore(t *testing.T) {
 		t.Fatalf("score = %d, want the human's %d", updated.Score, human)
 	}
 	if updated.ScoreComputed == nil || *updated.ScoreComputed == *set.ScoreComputed {
-		t.Fatalf("machine score should follow the source: before %v, after %v", set.ScoreComputed, updated.ScoreComputed)
+		t.Fatalf("machine score should follow the origin: before %v, after %v", set.ScoreComputed, updated.ScoreComputed)
 	}
 	if got, want := *updated.Version, *set.Version+1; got != want {
 		t.Fatalf("version = %d, want %d", got, want)
 	}
 }
 
-// A source whose weight equals the old one moves no score, writes no series
+// An origin whose weight equals the old one moves no score, writes no series
 // entry, and still raises the version once.
-func TestASourceChangeThatLeavesTheScoreAlonePutsNothingInTheSeries(t *testing.T) {
+func TestAnOriginChangeThatLeavesTheScoreAlonePutsNothingInTheSeries(t *testing.T) {
 	ctx, store, _, id := seedManualLead(t)
-	low, err := store.UpdateLead(ctx, id, UpdateLeadInput{Source: new("import")})
+	low, err := store.UpdateLead(ctx, id, UpdateLeadInput{Origin: new("event")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,12 +94,12 @@ func TestASourceChangeThatLeavesTheScoreAlonePutsNothingInTheSeries(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
-	updated, err := store.UpdateLead(ctx, id, UpdateLeadInput{Source: new("crawl"), IfVersion: low.Version})
+	updated, err := store.UpdateLead(ctx, id, UpdateLeadInput{Origin: new("other"), IfVersion: low.Version})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if updated.Score != low.Score {
-		t.Fatalf("premise: two low-intent sources must score alike, got %d then %d", low.Score, updated.Score)
+		t.Fatalf("premise: two neutral origins must score alike, got %d then %d", low.Score, updated.Score)
 	}
 	after, err := store.ExplainLeadScore(ctx, id, ExplainLeadScoreInput{History: true, Limit: 50})
 	if err != nil {
@@ -189,17 +189,17 @@ func TestAHumanRenameStampsTheNameAsHumanChosen(t *testing.T) {
 	}
 }
 
-func TestALeadSourceChangeThatMovesTheScoreRaisesItsVersionByOne(t *testing.T) {
+func TestAnOriginChangeThatMovesTheScoreRaisesItsVersionByOne(t *testing.T) {
 	ctx, store, created, id := seedManualLead(t)
-	updated, err := store.UpdateLead(ctx, id, UpdateLeadInput{Source: new("referral")})
+	updated, err := store.UpdateLead(ctx, id, UpdateLeadInput{Origin: new("referral")})
 	if err != nil {
-		t.Fatalf("change source: %v", err)
+		t.Fatalf("change origin: %v", err)
 	}
 	if updated.Score == created.Score {
-		t.Fatalf("premise: the source change must move the score, both %d", created.Score)
+		t.Fatalf("premise: the origin change must move the score, both %d", created.Score)
 	}
 	if got, want := *updated.Version, *created.Version+1; got != want {
-		t.Fatalf("version after a source change that rescored = %d, want %d", got, want)
+		t.Fatalf("version after an origin change that rescored = %d, want %d", got, want)
 	}
 }
 

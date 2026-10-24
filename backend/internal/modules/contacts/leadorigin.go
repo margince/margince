@@ -35,8 +35,7 @@ import (
 const (
 	leadOriginField       = "origin"
 	leadOriginDetailField = "origin_detail"
-	// LeadOriginDetailMax is the bound lead_origin_detail_bounded enforces.
-	LeadOriginDetailMax = 500
+	LeadOriginDetailMax   = values.MaxLeadOriginDetailRunes
 	// leadOriginFilterUnset is the list filter's word for a lead with no origin.
 	leadOriginFilterUnset = "unset"
 )

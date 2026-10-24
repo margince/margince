@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
+	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -63,13 +64,21 @@ const leadStatusNew = "new"
 // on the open ladder; the terminal statuses go through promote and disqualify.
 const leadTargetStatus = "status"
 
+// leadTargetOrigin and leadTargetOriginDetail are where the person came from, as
+// the source system worded it. The cell is free text: the store resolves it to
+// a lead_origin key, or keeps the wording in the detail (contacts.ResolveOrigin).
+const (
+	leadTargetOrigin       = "origin"
+	leadTargetOriginDetail = "origin_detail"
+)
+
 // The fields a CSV import may target, per object. Each one round-trips: the
 // writer can both create and update it. A create-only target would stop
 // honouring the file on the second upload.
 //
 // The caller picks `lead` or `contact` per run. Neither skips the identity ladder.
 var csvTargets = map[string][]string{
-	migration.ObjectLead: {fieldFullName, fieldEmail, fieldPhone, fieldTitle, companyNameField, fieldLinkedIn, leadTargetStatus, csvTargetAuthor, csvTargetOwner, csvTargetTags},
+	migration.ObjectLead: {fieldFullName, fieldEmail, fieldPhone, fieldTitle, companyNameField, fieldLinkedIn, leadTargetStatus, leadTargetOrigin, leadTargetOriginDetail, csvTargetAuthor, csvTargetOwner, csvTargetTags},
 	// `domain` is what actually identifies a company. Its absence is why a
 	// spreadsheet's website column had nowhere to go, and why company dedupe
 	// falls back to matching names — which two real companies may legitimately
@@ -247,6 +256,9 @@ func changedFields(encoded []byte, mapped map[string]string, typed map[string]an
 		if field == leadTargetStatus && incoming == "" {
 			continue
 		}
+		if leadOriginKeptOnReimport(current, field, incoming) {
+			continue
+		}
 		want := canonicalFor(field, incoming)
 		value, checked := typed[field]
 		if field == csvTargetOwner && !checked {
@@ -274,6 +286,21 @@ func changedFields(encoded []byte, mapped map[string]string, typed map[string]an
 // object, so `current["address.city"]` is always absent and EVERY address
 // value compared as changed — which, on the update path, rewrote the whole
 // address on every re-import of an unchanged file.
+// leadOriginKeptOnReimport is true when a file's origin cell changes nothing: a
+// lead that already has an origin (or note) keeps it, because a human may have
+// set it and a later file knows no better, and a wording the lead already holds
+// as its note is not news. The store applies the same rule under the row lock;
+// this only keeps the run from counting a rewrite that cannot happen.
+func leadOriginKeptOnReimport(current map[string]json.RawMessage, field, incoming string) bool {
+	switch field {
+	case leadTargetOrigin:
+		return textOf(current[leadTargetOrigin]) != "" || textOf(current[leadTargetOriginDetail]) == incoming
+	case leadTargetOriginDetail:
+		return textOf(current[leadTargetOriginDetail]) != ""
+	}
+	return false
+}
+
 func storedValue(current map[string]json.RawMessage, field string) json.RawMessage {
 	if column, renamed := dealStoredColumns[field]; renamed {
 		return current[column]
@@ -379,13 +406,33 @@ func leadCreateFrom(fields map[string]string, typed map[string]any, sourceSystem
 	in.LinkedInURL = checkedString(fields, typed, fieldLinkedIn)
 	in.Title = importString(fields, fieldTitle)
 	in.CompanyName = importString(fields, "company_name")
+	in.OriginDetail = originNoteFrom(fields)
+	if hint := importString(fields, leadTargetOrigin); hint != nil {
+		in.OriginHint = *hint
+	}
 	in.CustomFields = customFieldsFrom(fields, typed)
 	return in
+}
+
+// originNoteFrom reads the origin note cell, cut to what the column holds. A
+// spreadsheet cell can run to any length and a note is not worth refusing a row
+// over, so the importer keeps the start of it.
+func originNoteFrom(fields map[string]string) *string {
+	note := importString(fields, leadTargetOriginDetail)
+	if note == nil {
+		return nil
+	}
+	cut := textcut.Runes(*note, values.MaxLeadOriginDetailRunes)
+	return &cut
 }
 
 // leadUpdateFrom builds the patch for the fields that actually differ.
 func leadUpdateFrom(changed map[string]string, typed map[string]any) contacts.UpdateLeadInput {
 	var status *string
+	var originHint string
+	if hint := importString(changed, leadTargetOrigin); hint != nil {
+		originHint = *hint
+	}
 	if text, ok := typed[leadTargetStatus].(string); ok {
 		if _, given := changed[leadTargetStatus]; given {
 			status = &text
@@ -399,6 +446,8 @@ func leadUpdateFrom(changed map[string]string, typed map[string]any) contacts.Up
 		LinkedInURL:  checkedString(changed, typed, fieldLinkedIn),
 		Title:        importString(changed, fieldTitle),
 		CompanyName:  importString(changed, "company_name"),
+		OriginHint:   originHint,
+		OriginDetail: originNoteFrom(changed),
 		OwnerID:      ownerFrom(changed, typed),
 		CustomFields: customFieldsFrom(changed, typed),
 	}

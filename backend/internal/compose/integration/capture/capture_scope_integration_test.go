@@ -165,3 +165,41 @@ func TestCaptureSkipsAnActivityReplayWhoseIncumbentLeftTheGrantingHumansScope(t 
 		t.Errorf("the refused replay left %d activity rows, want the single original", n)
 	}
 }
+
+// A connector that carries an origin files its lead under it, one that carries
+// none leaves it empty, and the foreign key refuses a key the catalog lacks, so
+// the sink needs no copy of the catalog.
+func TestCaptureFilesALeadUnderTheOriginTheConnectorCarries(t *testing.T) {
+	e := integration.SetupSearch(t)
+	fake := &scopeFake{records: []connector.NormalizedRecord{
+		{
+			EntityType: datasource.EntityLead,
+			NaturalKey: connector.NaturalKey{SourceSystem: "graph", SourceID: "with-origin"},
+			Fields: capturemod.LeadFields{
+				FullName: "Has Origin", Email: "origin@capture.test", Origin: "referral", OriginDetail: "via the Berlin partner",
+			},
+			Source: "graph", CapturedBy: "connector:graph",
+		},
+		{
+			EntityType: datasource.EntityLead,
+			NaturalKey: connector.NaturalKey{SourceSystem: "graph", SourceID: "without-origin"},
+			Fields:     capturemod.LeadFields{FullName: "No Origin", Email: "none@capture.test"},
+			Source:     "graph", CapturedBy: "connector:graph",
+		},
+	}}
+	registry, _ := newScopeCaptureRegistry(t, e, fake)
+	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
+	connID, err := registry.Connect(grantCtx, "graph", connector.Auth("token"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := registry.SyncOnce(grantCtx, connID); err != nil {
+		t.Fatalf("sync: %v", err)
+	}
+	if n := countRows(t, e, `SELECT count(*) FROM lead WHERE source_id = 'with-origin' AND origin = 'referral' AND origin_detail = 'via the Berlin partner'`); n != 1 {
+		t.Errorf("the lead with an origin was filed under it %d times, want once", n)
+	}
+	if n := countRows(t, e, `SELECT count(*) FROM lead WHERE source_id = 'without-origin' AND origin IS NULL AND origin_detail IS NULL`); n != 1 {
+		t.Errorf("the lead without an origin has one %d times, want none", n)
+	}
+}
