@@ -105,21 +105,47 @@ func HasMachineMarker(localpart string) bool {
 		machineMarkers[strings.Join(parts[1:], "")]
 }
 
-// HasMachineLocalpart reports whether an address's local part names a sending
-// system rather than a human. No domain allowlist overrules it: nobody answers
-// at noreply@ on any domain.
-func HasMachineLocalpart(address string) bool {
+// notificationHosts are full mail hosts that only a groupware service's
+// document, drive and calendar notices come from. They are matched whole, never
+// by registrable domain, because a person can hold a mailbox at the base domain.
+var notificationHosts = map[string]bool{
+	"docs.google.com":     true,
+	"drive.google.com":    true,
+	"calendar.google.com": true,
+}
+
+// tokenReplyMinLength is the shortest opaque token after "<letter>+" that
+// counts as a reply-routing token. A person's own name+tag address is far
+// shorter.
+const tokenReplyMinLength = 32
+
+// isTokenReplyLocalpart matches the reply address a notification mailer mints:
+// one letter, a plus, and a long opaque token (d+<token>).
+func isTokenReplyLocalpart(local string) bool {
+	return len(local) >= 2+tokenReplyMinLength && local[1] == '+' &&
+		(local[0] >= 'a' && local[0] <= 'z' || local[0] >= 'A' && local[0] <= 'Z')
+}
+
+// machineShape is the one rule for "this address belongs to a sending system":
+// a marker local part, a token reply address, or a notification host.
+func machineShape(address string) bool {
 	at := strings.LastIndex(address, "@")
 	if at <= 0 || at == len(address)-1 {
 		return false
 	}
-	local := address[:at]
-	return IsMachineLocalpart(local) || HasMachineMarker(local)
+	local, host := address[:at], strings.ToLower(address[at+1:])
+	return IsMachineLocalpart(local) || HasMachineMarker(local) ||
+		isTokenReplyLocalpart(local) || notificationHosts[host]
 }
+
+// HasMachineLocalpart reports whether an address names a sending system rather
+// than a human, by its local part or its notification host. No domain
+// allowlist overrules it: nobody answers at noreply@ on any domain.
+func HasMachineLocalpart(address string) bool { return machineShape(address) }
 
 // IsMachineAddress reports mail infrastructure and machine-only sender addresses.
 func IsMachineAddress(address string) bool {
-	if HasMachineLocalpart(address) {
+	if machineShape(address) {
 		return true
 	}
 	at := strings.LastIndex(address, "@")

@@ -54,6 +54,9 @@ var conversationHead = `
 			            AND b.archived_at IS NULL AND b.captured_by LIKE 'connector:%'
 			       ))::uuid AS oldest_id,
 			       count(DISTINCT a.id) AS message_count,
+			       -- A thread with no message from a person has nothing to read
+			       -- for what it says about an account.
+			       bool_or(NOT a.sender_is_machine) AS has_human_sender,
 			       min(ro.company_id::text) AS one_company,
 			       count(DISTINCT ro.company_id) AS company_count,
 			       -- The same question one level down. A thread is read as one
@@ -134,7 +137,11 @@ var conversationHead = `
 			                      AND t.archived_at IS NULL
 			                      AND NOT ` + provenance.MailBodyCompleteSQL("t") + `) AS every_message_read
 			  FROM activity a
-			  LEFT JOIN (` + activities.CompanyReachSet() + `) ro ON ro.activity_id = a.id
+			  -- A sending system's message reaches no company: a contact holding
+			  -- its address (an old import) must not pull the notice onto their
+			  -- company.
+			  LEFT JOIN (` + activities.CompanyReachSet() + `) ro
+			    ON ro.activity_id = a.id AND NOT a.sender_is_machine
 			  -- Safe to widen the row set: every aggregate above is DISTINCT,
 			  -- bool_and or min, so a message repeated once per project link
 			  -- contributes the same value it did.
@@ -167,6 +174,12 @@ const conversationTail = `
 // trace sees one of these as the answer, so the wording of the comment and the
 // wording of the rung's reason are about the same fact.
 const (
+	// At least one message from a person. A thread whose every message comes
+	// from a sending system (a file-share notice, a comment notification) is
+	// not read: no model call and no signal, because a finding on it would
+	// land on the notification tool's company.
+	threadHasAHumanSender = `c.has_human_sender`
+
 	// Exactly one account across the whole thread. A conversation touching two
 	// would have its events filed against whichever the join happened to pick,
 	// and a signal on the wrong account is worse than no signal.
@@ -243,7 +256,8 @@ var dueThreadsQuery = conversationCTE("") + `		SELECT c.thread_key, c.one_compan
 		       NULLIF(s.last_activity_at, '-infinity'), s.scanned_from, s.scanned_from_id
 		  FROM conversation c
 		  LEFT JOIN signal_thread_scan s ON s.thread_key = c.thread_key
-		 WHERE ` + threadReachesOneAccount + `
+		 WHERE ` + threadHasAHumanSender + `
+		   AND ` + threadReachesOneAccount + `
 		   AND ` + threadIsOneBodyOfWork + `
 		   AND ` + threadIsFullyOpen + `
 		   AND ` + threadIsFullyRead + `
@@ -266,7 +280,8 @@ var dueThreadsQuery = conversationCTE("") + `		SELECT c.thread_key, c.one_compan
 // to the queue's — the arms carry their own $N and a renumbering would mean two
 // spellings of each.
 var threadOfferQuery = conversationCTE(" AND a.thread_key = $5") + `
-		SELECT ` + threadReachesOneAccount + `,
+		SELECT ` + threadHasAHumanSender + `,
+		       ` + threadReachesOneAccount + `,
 		       ` + threadIsOneBodyOfWork + `,
 		       ` + threadIsFullyOpen + `,
 		       ` + threadIsFullyRead + `,
