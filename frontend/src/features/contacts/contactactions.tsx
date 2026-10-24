@@ -166,6 +166,7 @@ export function ContactActions({
         slot="record_header.contact"
         record={{ type: "contact", id: contactId }}
       />
+      <ExtensionEntries slot="record_mark.contact" />
       {/* Every secondary verb, behind one control. A header that put edit,
           merge and archive beside the daily verbs made the destructive one as
           easy to reach as the routine one, and read as a toolbar rather than

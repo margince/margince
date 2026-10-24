@@ -13,7 +13,7 @@ import {
   Plug,
 } from "lucide-react";
 import { ActionRow } from "../design-system/actionrow";
-import { Button } from "../design-system/atoms";
+import { Badge, Button } from "../design-system/atoms";
 import { translate, useLocale } from "../i18n";
 import { grants } from "../lib/capability";
 import type { EntityKind } from "../lib/entity";
@@ -43,6 +43,9 @@ export const ENTRY_ICONS: Readonly<Record<string, LucideIcon>> = {
   plug: Plug,
 };
 
+// A slot with this prefix draws each entry as a note, not a button.
+const MARK_SLOT_PREFIX = "record_mark.";
+
 /**
  * The composed units' entries for one slot, as buttons that open the unit's
  * screen on `record`. An entry shows only to a reader holding read on the
@@ -71,6 +74,15 @@ export function ExtensionEntries({
   );
   if (shown.length === 0) {
     return null;
+  }
+  if (slot.startsWith(MARK_SLOT_PREFIX)) {
+    return shown.map((entry) => (
+      <EntryMark
+        key={`${entry.unit}/${entry.target}`}
+        entry={entry}
+        label={translate(locale, entry.label)}
+      />
+    ));
   }
   const buttons = shown.map((entry) => (
     <EntryButton
@@ -108,6 +120,16 @@ export function LogActivityEntries({
       }
     />
   );
+}
+
+function EntryMark({
+  entry,
+  label,
+}: Readonly<{ entry: UnitEntry; label: string }>) {
+  const icon = Object.hasOwn(ENTRY_ICONS, entry.icon)
+    ? ENTRY_ICONS[entry.icon]
+    : undefined;
+  return <Badge icon={icon}>{label}</Badge>;
 }
 
 function EntryButton({

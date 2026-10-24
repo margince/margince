@@ -25,6 +25,9 @@ export const EXTENSION_ENTRY_SLOTS = [
   "record_header.contact",
   "record_header.company",
   "record_header.deal",
+  "record_mark.contact",
+  "record_mark.company",
+  "record_mark.deal",
 ] as const;
 
 export type ExtensionEntrySlot = (typeof EXTENSION_ENTRY_SLOTS)[number];

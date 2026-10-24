@@ -126,6 +126,7 @@ export function CompanyHeaderActions({
         slot="record_header.company"
         record={{ type: "company", id: company.id }}
       />
+      <ExtensionEntries slot="record_mark.company" />
       {drawer && (
         <LogActivityAction
           entityType="company"
