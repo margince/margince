@@ -5,7 +5,7 @@ package compose
 
 import (
 	"context"
-	"fmt"
+	"log/slog"
 
 	"github.com/jackc/pgx/v5"
 
@@ -14,7 +14,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -25,8 +24,10 @@ import (
 //
 // Only the stored original names every party. The participant rows do not:
 // capture records no sign that the cap dropped a crowded list, and mail
-// stamped before Cc rows existed has none. So mail without an original is
-// never held, and the second step counts it as parties unknown.
+// stamped before Cc rows existed has none. So mail without a readable original
+// is never held. The second step counts the mail with no original. A row whose
+// original does not parse is logged by id and stays in the first step's
+// unchanged count; only Go can tell that it does not parse.
 func membersOnlyMailDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792838024_members_only_mail", Version: 1,
@@ -87,9 +88,13 @@ func holdMembersOnlyMailBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchI
 	var hold []ids.ActivityID
 	for _, candidate := range candidates {
 		scanned = append(scanned, candidate.ID)
-		parties, err := originalParties(candidate.Payload)
-		if err != nil {
-			return datatask.BatchOut{}, err
+		parties, readable := originalParties(candidate.Payload)
+		if !readable {
+			// Left open, like mail with no original: one corrupt row must not
+			// stop the repair of every row behind it.
+			slog.WarnContext(ctx, "members-only repair: stored original unreadable, row left open",
+				"activity_id", candidate.ID)
+			continue
 		}
 		if members.CoverEveryParty(parties) {
 			hold = append(hold, ids.From[ids.ActivityKind](candidate.ID))
@@ -102,19 +107,18 @@ func holdMembersOnlyMailBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchI
 	return datatask.AdvanceUUID(in, scanned, held)
 }
 
-// originalParties is every address the original's headers name, Bcc included.
-// An unreadable original keeps the step pending, as the recipient restore
-// does, rather than report a judgement it could not make.
-func originalParties(payload []byte) ([]string, error) {
+// originalParties is every address the original's headers name, Bcc
+// included, and false when the original cannot be read.
+func originalParties(payload []byte) ([]string, bool) {
 	raw, err := capture.DecodeStoredOriginal(payload)
 	if err != nil {
-		return nil, fmt.Errorf("a stored original is unreadable: %w", apperrors.ErrInvalidArgument)
+		return nil, false
 	}
 	parsed, err := mailmap.Parse(raw, "")
 	if err != nil {
-		return nil, fmt.Errorf("a stored original is unreadable: %w", apperrors.ErrInvalidArgument)
+		return nil, false
 	}
-	return parsed.Addresses(), nil
+	return parsed.Addresses(), true
 }
 
 // countUnknownPartiesBatch pages the open mail without an original, so the

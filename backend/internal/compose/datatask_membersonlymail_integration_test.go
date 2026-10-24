@@ -29,7 +29,7 @@ type colleagueMailFixture struct {
 	e                                    *integration.Env
 	colleagues, unstored, shared, manual ids.UUID
 	outside, crowd, crowdUnstored        ids.UUID
-	crowdOfOutsiders                     ids.UUID
+	crowdOfOutsiders, corrupt            ids.UUID
 }
 
 func colleagueMessage(key, from, to, cc string) []byte {
@@ -70,7 +70,7 @@ func newColleagueMailFixture(t *testing.T) colleagueMailFixture {
 	for key, to := range map[string][2]string{
 		"colleagues": {colleague, ""}, "unstored": {colleague, ""}, "shared": {colleague, ""},
 		"manual": {colleague, ""}, "outside": {"dana@client.test", ""},
-		"crowd": {colleague, team}, "crowd-unstored": {colleague, team}, "crowd-of-outsiders": {colleague, crowd},
+		"crowd": {colleague, team}, "corrupt": {colleague, ""}, "crowd-unstored": {colleague, team}, "crowd-of-outsiders": {colleague, crowd},
 	} {
 		captureMailVia(t, e, e.Rep1, "gmail", colleagueMessage(key, self, to[0], to[1]))
 	}
@@ -78,7 +78,8 @@ func newColleagueMailFixture(t *testing.T) colleagueMailFixture {
 	f.shared, f.manual = activityBySubject(t, e, "shared"), activityBySubject(t, e, "manual")
 	f.outside, f.crowd = activityBySubject(t, e, "outside"), activityBySubject(t, e, "crowd")
 	f.crowdUnstored, f.crowdOfOutsiders = activityBySubject(t, e, "crowd-unstored"), activityBySubject(t, e, "crowd-of-outsiders")
-	for _, id := range []ids.UUID{f.colleagues, f.unstored, f.shared, f.manual, f.crowd, f.crowdUnstored, f.crowdOfOutsiders} {
+	f.corrupt = activityBySubject(t, e, "corrupt")
+	for _, id := range []ids.UUID{f.corrupt, f.colleagues, f.unstored, f.shared, f.manual, f.crowd, f.crowdUnstored, f.crowdOfOutsiders} {
 		e.WsExec(t, `UPDATE activity SET audience = 'workspace', audience_reason = NULL WHERE id = $1`, id)
 		e.WsExec(t, `UPDATE capture_import SET posture_at_import = 'shared', verdict_reason = NULL, verdict_reasons = NULL
 		              WHERE activity_id = $1`, id)
@@ -92,7 +93,22 @@ func newColleagueMailFixture(t *testing.T) colleagueMailFixture {
 		              DELETE FROM raw_capture rc USING gone
 		               WHERE rc.source_system = gone.source_system AND rc.source_id = gone.source_id`, id)
 	}
+	e.WsExec(t, `UPDATE raw_capture rc SET payload = to_jsonb('not a message'::text)
+	              FROM activity a WHERE a.id = $1 AND `+storedMailOriginal, f.corrupt)
 	return f
+}
+
+// stepStatus is where one of the task's steps stands.
+func (f colleagueMailFixture) stepStatus(t *testing.T, step string) string {
+	t.Helper()
+	var status string
+	if err := database.WithWorkspaceTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `SELECT status FROM data_task_run WHERE task_id = $1 AND step = $2`,
+			membersOnlyMailDataTask().ID, step).Scan(&status)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return status
 }
 
 // unknownParties is what the task reported as mail it could not judge.
@@ -170,6 +186,12 @@ func TestTheMembersOnlyTaskHoldsColleaguesMailOnceAndLeavesPeoplesDecisions(t *t
 		if got, _ := f.audience(t, id); got != "workspace" {
 			t.Errorf("%s was judged on an incomplete party list: %q", name, got)
 		}
+	}
+	if got, _ := f.audience(t, f.corrupt); got != "workspace" {
+		t.Errorf("mail whose original does not parse was judged anyway: %q", got)
+	}
+	if got := f.stepStatus(t, "hold_members_only_mail"); got != datatask.Done {
+		t.Errorf("one unreadable original left the hold step %q, want it done", got)
 	}
 	if got := f.unknownParties(t); got != 3 {
 		t.Errorf("the task reports %d mail(s) with unknown parties, want the 3 without an original", got)
