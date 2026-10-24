@@ -6,7 +6,7 @@ package compose
 import "testing"
 
 // The store holds the code, so a file spelling the industry another way is not
-// a change, and re-importing an unchanged file reports nothing to update.
+// a change. Re-importing an unchanged file reports nothing to update.
 func TestAnImportedIndustryIsComparedAsTheCodeItNames(t *testing.T) {
 	stored := []byte(`{"industry":"healthcare"}`)
 	for _, cell := range []string{"Healthcare", "health care", "Gesundheitswesen"} {

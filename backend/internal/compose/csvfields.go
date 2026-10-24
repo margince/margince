@@ -328,13 +328,7 @@ func canonicalFor(field, value string) string {
 	trimmed := strings.TrimSpace(value)
 	switch field {
 	case fieldIndustry:
-		// The store holds the code a text names, so a file that spells the
-		// industry another way is no change. Text that names no code compares
-		// as written.
-		if code, ok := contacts.ResolveIndustry(trimmed); ok {
-			return code
-		}
-		return trimmed
+		return canonicalIndustry(trimmed)
 	case fieldEmail:
 		return correspondence.Fold(trimmed)
 	case fieldDomain:

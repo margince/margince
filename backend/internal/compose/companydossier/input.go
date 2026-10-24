@@ -38,9 +38,9 @@ import (
 type Facts interface {
 	ListCompanyProfileFields(ctx context.Context, id ids.CompanyID) ([]crmcontracts.CompanyProfileField, error)
 	ListCompanyFacts(ctx context.Context, id ids.CompanyID) ([]crmcontracts.CompanyFact, error)
-	// GetCompany is read for the company's name and its industry column. The
-	// rail that narrates the writing has to say which company, and the column
-	// is the industry the record shows, so the assessment counts it as known.
+	// GetCompany is read for the company's name and its industry column.
+	// The rail has to say which company. The column is the industry the
+	// record shows, so the assessment counts it as known.
 	GetCompany(ctx context.Context, id ids.CompanyID, archived storekit.ArchivedFilter) (crmcontracts.Company, error)
 }
 

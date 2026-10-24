@@ -60,9 +60,9 @@ const freshness = 30 * 24 * time.Hour
 // and the one rule that says whether the company has it.
 //
 // The fields inside counts are the CONTRACT's, so a required input naming a
-// field the contract does not have fails to compile. Spelled as strings, such an
-// input would simply never be found, and the completeness figure would then be
-// permanently short by one, reported with total confidence.
+// field the contract lacks fails to compile. Spelled as strings, such an input
+// would never be found. The figure would then be short by one, reported with
+// total confidence.
 type requiredInput struct {
 	code   crmcontracts.GrowthFitInput
 	counts func(in Input, now time.Time) (bool, time.Time)
@@ -81,8 +81,8 @@ func factInput(code crmcontracts.GrowthFitInput, field crmcontracts.CompanyFactF
 }
 
 // requiredInputs are the seven inputs covering the five things a fit is judged
-// on: what they offer, the market they serve, their size, the technology they
-// run, and who does the buying. The prose halves are profile fields; size and
+// on. Those are what they offer, the market they serve, their size, the
+// technology they run, and who does the buying. The prose halves are profile fields; size and
 // technology are extracted facts, because that is where this system records them.
 var requiredInputs = []requiredInput{
 	profileInput(crmcontracts.GrowthFitInputOfferSummary, crmcontracts.CompanyProfileFieldFieldOfferSummary),
@@ -94,10 +94,10 @@ var requiredInputs = []requiredInput{
 	factInput(crmcontracts.GrowthFitInputTechnology, crmcontracts.CompanyFactFieldTechnology),
 }
 
-// industryKnown is the one place that decides whether a company's industry is
-// known, so the screen, the model input and the completeness figure agree.
+// industryKnown decides whether a company's industry is known, so the screen,
+// the model input and the completeness figure agree.
 //
-// The company column is the record's own field, set by hand or by import, and
+// The company column is the record's own field, set by hand or by import. It
 // carries no read time, so it counts like a human value and never expires. The
 // sidecar profile field holds what a site read wrote and ages out.
 func industryKnown(in Input, now time.Time) (bool, time.Time) {

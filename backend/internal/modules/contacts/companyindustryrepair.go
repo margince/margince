@@ -28,10 +28,10 @@ type IndustryRemapPage struct {
 const companiesWithLegacyIndustry = `industry IS NOT NULL AND industry <> ALL($1::text[])`
 
 // RemapCompanyIndustriesTx gives each company holding industry text the code
-// that text names, or no code with the text kept in the description. It writes
-// through the same patch and the same audit and event tail as a company edit,
-// so the search index and every listener see an ordinary update. It leaves
-// field_provenance alone, so a description a contact wrote stays theirs.
+// that text names, or no code with the text kept in the description.
+// It writes through the patch and the audit and event tail of a company edit,
+// so listeners see an ordinary update. It leaves field_provenance alone, so a
+// description a contact wrote stays theirs.
 func RemapCompanyIndustriesTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) (IndustryRemapPage, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return IndustryRemapPage{}, err

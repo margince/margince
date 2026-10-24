@@ -109,10 +109,9 @@ func headerLine(value string) string {
 }
 
 // companyColumnArgument is the value a company column write binds. An empty
-// value binds NULL, so an unfilled field reads as absent and never as the empty
-// answer. The industry column binds the code the text names; unmapped reports
-// text that names no code, which the human form clears to NULL and the
-// read-back paths do not write at all.
+// value binds NULL, so an unfilled field never reads as the empty answer.
+// The industry column binds the code the text names. Unmapped reports text that
+// names no code: the human form clears the column, read-back paths write nothing.
 func companyColumnArgument(column, value string) (stored *string, unmapped bool) {
 	if column == columnIndustry && value != "" {
 		write := resolveIndustryWrite(&value)

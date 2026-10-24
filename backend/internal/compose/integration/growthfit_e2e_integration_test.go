@@ -191,10 +191,9 @@ func cachedGrowthFitReaders(t *testing.T, e *apptest.AppEnv, companyID string) [
 	return readers
 }
 
-// A company whose column shows an industry is never listed as missing it, and
-// the figure moves with the real write that set it: the PATCH changes the
-// fingerprint, so the next read re-assesses, while a read with no write between
-// serves the cache.
+// A company whose column shows an industry is never listed as missing it.
+// The PATCH changes the fingerprint, so the next read re-assesses. A read with
+// no write between serves the cache.
 func TestAnIndustryTheCompanyShowsIsNotListedAsMissing(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)

@@ -330,9 +330,9 @@ func createCompany(ctx context.Context, tx pgx.Tx, match CompanyMatch, spec Comp
 }
 
 // CompanyIndustryColumns decides the industry and description a new company
-// row stores: the code the text names, and for text that names none the
+// row stores. That is the code the text names, or for text that names none the
 // description with the source note added. A note alone never claims the
-// description, because the caller's own description is stamped from the input.
+// description, because the stamp follows the caller's own input.
 func CompanyIndustryColumns(raw, description *string) (industry, desc *string) {
 	write := resolveIndustryWrite(raw)
 	if write.note == "" {

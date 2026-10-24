@@ -101,15 +101,15 @@ func industryKeys(table []industryEntry) (keys map[string]string, clashes []stri
 var industryByKey, _ = industryKeys(industryTable)
 
 // ResolveIndustry answers the code a text means. The match is exact on the
-// folded spelling, with no fuzzy step and no model, so one text always gives
-// one code; a phrase that names no code, such as a list of products, gives none.
+// folded spelling, with no fuzzy step and no model. One text always gives one
+// code. A phrase that names no code, such as a list of products, gives none.
 func ResolveIndustry(raw string) (string, bool) {
 	code, ok := industryByKey[industryKey(raw)]
 	return code, ok
 }
 
-// IndustryLabel words a code in one language, and answers "" for anything that
-// is not a code so a stale value is never shown as a label.
+// IndustryLabel words a code in one language. It answers "" for anything that
+// is not a code, so a stale value is never shown as a label.
 func IndustryLabel(code string, lang textlang.Lang) string {
 	for _, e := range industryTable {
 		if string(e.code) == code {
@@ -119,9 +119,8 @@ func IndustryLabel(code string, lang textlang.Lang) string {
 	return ""
 }
 
-// IndustryWords is what a reader sees for a stored value: the label of a code,
-// and the value as stored for anything that is no code (a company not yet
-// repaired), so a reader never sees a blank where a value exists.
+// IndustryWords is what a reader sees for a stored value. A code gives its
+// label. Anything else, such as a company not yet repaired, shows as stored.
 func IndustryWords(stored string, lang textlang.Lang) string {
 	if label := IndustryLabel(stored, lang); label != "" {
 		return label

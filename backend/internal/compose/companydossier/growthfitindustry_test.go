@@ -25,8 +25,8 @@ func missingCodes(t *testing.T, in Input) []crmcontracts.GrowthFitInput {
 	return *got.Missing
 }
 
-// A company that shows an industry is never listed as missing it, whichever
-// store holds the value; a column has no age, a site-read row does.
+// A company that shows an industry is never listed as missing it.
+// A column has no age and a site-read row does.
 func TestAnIndustryTheCompanyShowsIsNeverListedAsMissing(t *testing.T) {
 	fresh := assessedAt.Add(-24 * time.Hour)
 	stale := assessedAt.Add(-90 * 24 * time.Hour)
@@ -58,8 +58,8 @@ func TestAnIndustryTheCompanyShowsIsNeverListedAsMissing(t *testing.T) {
 	}
 }
 
-// The seven codes the wire carries, in the order the table is read, so a code
-// the client has no wording for is a contract change and not a drift.
+// The wire carries the seven codes in table order.
+// A code the client has no wording for is then a contract change, not a drift.
 func TestAMissingInputIsSentAsItsCodeAndNotAsEnglish(t *testing.T) {
 	got := missingCodes(t, Input{})
 	want := []crmcontracts.GrowthFitInput{

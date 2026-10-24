@@ -70,8 +70,8 @@ func TestTheIndustryListIsOneSetInTheContractTheOwnerAndTheClient(t *testing.T) 
 	}
 }
 
-// Each language words every code the same way on both sides of the wire, so a
-// label read in a prompt and a label read on a screen are one string.
+// Each language words every code the same way on both sides of the wire.
+// A label read in a prompt and a label read on a screen are one string.
 func TestEveryIndustryCodeIsWordedTheSameInGoAndInEveryClientCatalog(t *testing.T) {
 	t.Parallel()
 	for lang, file := range map[textlang.Lang]string{

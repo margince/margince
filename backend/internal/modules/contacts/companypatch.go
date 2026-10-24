@@ -95,9 +95,9 @@ func setCompanyCheckedFields(ctx context.Context, tx pgx.Tx, p *storekit.Patch, 
 	return nil
 }
 
-// setCompanyIndustry stages the industry column through the vocabulary owner. A
-// text that names no code leaves a standing code alone, so a bad cell cannot
-// erase a good value, and keeps the raw text in the description instead.
+// setCompanyIndustry stages the industry column through the vocabulary owner.
+// Text that names no code leaves a standing code alone, so a bad cell cannot
+// erase a good value. The raw text goes into the description instead.
 func setCompanyIndustry(p *storekit.Patch, current crmcontracts.Company, in UpdateCompanyInput) {
 	if in.Industry == nil {
 		return
