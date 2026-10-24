@@ -36,9 +36,9 @@ type Clock func() time.Time
 type BaseLanguage func(ctx context.Context) string
 
 // UserLanguage answers the language the calling rep reads the app in, or ""
-// when they never chose one. It sits above the installation's language: the
-// rep is the one who sends the draft, so their own language is the better
-// guess for a contact who has never written. Any correspondence that names a
+// when they never chose one. It sits above the installation's language.
+// The rep sends the draft, so their own language is the better guess for a
+// contact who has never written. Any correspondence that names a
 // language outranks it.
 type UserLanguage func(ctx context.Context) string
 
@@ -143,9 +143,9 @@ type Written struct {
 // could not work out a greeting is worse than a draft the rep edits.
 //
 // The ladder is stored, then the correspondence (the answered message, then the
-// rest of the thread), then the draft being
-// rewritten, then the rep's typed purpose, then the rep's own app language,
-// then the installation's language, then English. A purpose too short to clear
+// rest of the thread). Then the draft being rewritten, then the rep's typed
+// purpose, then the rep's own app language, then the installation's language,
+// then English. A purpose too short to clear
 // the detector's bar falls to the rep's app language, which is why that tier
 // sits above the installation's.
 func (r *Resolver) Resolve(ctx context.Context, written Written, state convstate.State) Envelope {

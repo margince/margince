@@ -20,13 +20,13 @@ const (
 )
 
 // LanguageEvidence is the text a draft's language is read from, one string per
-// message with subject and body together. The recipient's own inbound mail
-// comes first, newest first, because it is the best evidence of their language;
-// our outbound mail and logged notes follow, so a thread where only we wrote
+// message with subject and body together. Inbound mail comes first, newest
+// first, because it is the best evidence of the other side's language.
+// Our outbound mail and logged notes follow. So a thread where only we wrote
 // still resolves.
 //
-// One string per message rather than a joined blob: textlang.FirstKnown takes
-// the first text that clears the detector, so a short message does not dilute
+// One string per message rather than a joined blob. textlang.FirstKnown takes
+// the first text that clears the detector. So a short message does not dilute
 // a clear one next to it.
 func LanguageEvidence(turns []Turn) []string {
 	ordered := make([]Turn, 0, len(turns))
@@ -53,9 +53,11 @@ func LanguageEvidence(turns []Turn) []string {
 }
 
 // LanguageEvidenceOf reads a record's recent activities, newest first, through
-// the shared conversation reader and returns their language evidence.
+// the shared conversation reader and returns their language evidence. The
+// reader keeps every row so LanguageEvidence orders before it cuts: newer
+// outbound mail must not push an older inbound message out of the window.
 func LanguageEvidenceOf(activities []crmcontracts.Activity, now time.Time) []string {
-	return LanguageEvidence(Conversation(activities, nil, now, LanguageEvidenceTurns))
+	return LanguageEvidence(Conversation(activities, nil, now, len(activities)))
 }
 
 func isInbound(turn Turn) bool {

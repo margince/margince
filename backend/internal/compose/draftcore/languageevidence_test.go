@@ -45,13 +45,26 @@ func TestLanguageEvidenceDropsWithheldAndEmptyRowsAndStaysBounded(t *testing.T) 
 		rows = append(rows, turnRow(crmcontracts.ActivityKindEmail, in, 3+i, strings.Repeat("long ", 500)))
 	}
 	got := draftcore.LanguageEvidenceOf(rows, turnsNow)
-	// The reader's window holds LanguageEvidenceTurns turns, one of which is the empty row.
-	if want := draftcore.LanguageEvidenceTurns - 1; len(got) != want {
+	if want := draftcore.LanguageEvidenceTurns; len(got) != want {
 		t.Errorf("got %d strings, want %d", len(got), want)
 	}
 	for _, text := range got {
 		if strings.Contains(text, "secret") || len([]rune(text)) > draftcore.LanguageEvidenceRunes {
 			t.Errorf("evidence leaked a withheld row or exceeded the rune bound: %d runes", len([]rune(text)))
 		}
+	}
+}
+
+func TestLanguageEvidenceKeepsAnOldInboundMessageBehindManyNewerOutboundOnes(t *testing.T) {
+	t.Parallel()
+	in, out := crmcontracts.ActivityDirectionInbound, crmcontracts.ActivityDirectionOutbound
+	var rows []crmcontracts.Activity
+	for i := range draftcore.LanguageEvidenceTurns + 3 {
+		rows = append(rows, turnRow(crmcontracts.ActivityKindEmail, out, i+1, "our newer mail"))
+	}
+	rows = append(rows, turnRow(crmcontracts.ActivityKindEmail, in, 40, "their old reply"))
+	got := draftcore.LanguageEvidenceOf(rows, turnsNow)
+	if len(got) == 0 || !strings.HasSuffix(got[0], "their old reply") {
+		t.Errorf("first evidence = %q, want their old inbound reply ahead of newer outbound mail", got)
 	}
 }
