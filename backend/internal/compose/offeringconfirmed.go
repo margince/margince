@@ -16,16 +16,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
-// offeringConfirmed reads the offering a company is judged against: whether it
-// is confirmed (DOSS-AC-13) and a digest of what it says, so a cached fit is
-// invalidated when that changes.
+// offeringConfirmed reads whether the offering a company is judged against is
+// confirmed (DOSS-AC-13), plus a digest of it for the cache key.
 //
-// Confirmed and the digest come from one read of the context the growth-fit task
-// sends, so they cannot describe two states. The content never leaves as text:
-// a fit derived from what we sell must still cite their records (DOSS-AC-6).
-//
-// An offering that does not exist yet reads as not confirmed instead of as an
-// error, so a workspace mid-onboarding still gets capped bands with the reason.
+// Both come from one read of the context the growth-fit task sends, so they
+// cannot describe two states. Only the digest travels, never the text (DOSS-AC-6).
+// A missing offering reads as not confirmed, so onboarding still gets capped bands.
 func offeringConfirmed(store *contacts.Store) companydossier.SelfOffering {
 	return func(ctx context.Context, entityID string) (companydossier.Offering, error) {
 		return readOffering(ctx, store, entityID)

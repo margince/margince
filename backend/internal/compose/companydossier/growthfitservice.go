@@ -285,12 +285,9 @@ func (g storedGrowthFit) mayStandIn(found bool, fingerprint string, now time.Tim
 // company's facts, the assembly rules, the model routing version, and whether
 // this workspace has confirmed its own offering.
 //
-// The offering is the difference from the dossier's fingerprint, and neither
-// half of it is optional. Confirming it changes the band cap without touching a
-// company record; editing it changes the fit while `confirmed` stays true. The
-// chosen entity id is a component too, so switching to an offering with
-// identical text still re-keys. The language is a component of its own: the
-// assessment is written in it and nothing else moves when it changes.
+// The offering is what differs from the dossier's fingerprint. Confirming it
+// moves the band cap and editing it moves the fit. The chosen entity id is a
+// component too, so a switch to identical text still re-keys.
 func growthFitFingerprint(in Input, routingVersion string, offering Offering, lang string) (string, error) {
 	encoded, err := json.Marshal(in)
 	if err != nil {

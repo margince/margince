@@ -218,11 +218,9 @@ type Request struct {
 	// company-context block. They are trace metadata, never provider inputs.
 	ContextBytes          int
 	ContextTokensEstimate int
-	// IncludeCompanyContext opts into a conditional task policy; compose clears
-	// it before routing and it cannot select scopes or bypass a `none` policy.
+	// IncludeCompanyContext opts into a conditional policy; compose clears it before routing.
 	IncludeCompanyContext bool
-	// CompanyContextOffering names the legal entity whose offering the context
-	// describes; empty is the main one. Honoured only for an offering_selectable task.
+	// CompanyContextOffering names the legal entity whose offering the context describes; empty is the main one.
 	CompanyContextOffering string
 	// ResponseSchema, when non-nil, is a JSON Schema the completion must
 	// conform to. Providers with schema-constrained decoding enforce it at
