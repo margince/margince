@@ -190,6 +190,13 @@ func (s *Store) EnsureCounterpartyTx(ctx context.Context, tx pgx.Tx, in EnsureCo
 	if suppressed {
 		return EnsureCounterpartyResult{}, ErrCounterpartySuppressed
 	}
+	seats, err := storekit.WorkspaceSeatAddresses(ctx, tx)
+	if err != nil {
+		return EnsureCounterpartyResult{}, err
+	}
+	if seats.Covers(in.Email) {
+		return EnsureCounterpartyResult{}, ErrCounterpartyIsSeat
+	}
 	if err := s.ensureContact(ctx, tx, in, &res); err != nil {
 		return EnsureCounterpartyResult{}, err
 	}
@@ -237,10 +244,7 @@ func (s *Store) ensureContact(ctx context.Context, tx pgx.Tx, in EnsureCounterpa
 	if err := auth.Require(ctx, entityContact, principal.ActionCreate); err != nil {
 		return err
 	}
-	parsed, err := s.nameCounterparty(ctx, tx, in)
-	if err != nil {
-		return err
-	}
+	parsed := ParseContactName(in.DisplayName, in.Email)
 	name := parsed.Full
 	// The workspace's own consumer-mail list travels with the candidate: the
 	// employer-agreement term must judge a shared domain the same way capture

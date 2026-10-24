@@ -102,6 +102,9 @@ func (p contactsEnsurer) EnsureCounterparty(ctx context.Context, in capture.Ensu
 		OwnerScoped:     true,
 		NarrowedBecause: contacts.NarrowedAwaitingVerdict,
 	})
+	if errors.Is(err, contacts.ErrCounterpartyIsSeat) {
+		return capture.EnsureOutcome{}, nil
+	}
 	if errors.Is(err, contacts.ErrCounterpartySuppressed) {
 		// A13: the erased address stays dead — a deliberate no-op, not a
 		// fault for the reconcile queue, and nothing was created to count.

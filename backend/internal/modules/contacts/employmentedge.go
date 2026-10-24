@@ -91,6 +91,9 @@ func plantEmploymentEdge(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyIn
 	if err := storekit.LockWriteIdentity(ctx, tx, employmentKind, contactID.String()); err != nil {
 		return err
 	}
+	if seat, err := contactIsSeatTx(ctx, tx, contactID.UUID); err != nil || seat {
+		return err
+	}
 	var edgeID ids.UUID
 	err := tx.QueryRow(ctx, `
 		INSERT INTO relationship (kind, contact_id, company_id, is_current_primary, source, captured_by, first_observed_at)

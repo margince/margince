@@ -125,7 +125,7 @@ type counterpartyCreation struct {
 // whose company question is still open, which somebody has to queue a
 // triage read for.
 type counterpartyCreated struct {
-	// Suppressed marks an address erased between capture and the answer. Nothing
+	// Suppressed marks an address erased, or a seat's own. Nothing
 	// was created: erasure outranks a verdict.
 	Suppressed bool
 	// TriageDomain names the domain still owed a company verdict, empty
@@ -157,7 +157,7 @@ func createCounterpartyRecords(ctx context.Context, tx pgx.Tx, store *contacts.S
 		NarrowedBecause:   in.NarrowedBecause,
 		SkipLeadPromotion: in.SkipLeadPromotion,
 	})
-	if errors.Is(err, contacts.ErrCounterpartySuppressed) {
+	if errors.Is(err, contacts.ErrCounterpartySuppressed) || errors.Is(err, contacts.ErrCounterpartyIsSeat) {
 		return counterpartyCreated{Suppressed: true}, nil
 	}
 	if err != nil {
