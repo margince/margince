@@ -12,6 +12,8 @@ import {
   TextInput,
 } from "../../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
+import { DateInput, isoOrBlank } from "../../design-system/dateinput";
+import { refuseUnreadableField } from "../../design-system/formvalidity";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import {
@@ -217,9 +219,10 @@ function FxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
     onError: (err: Error) => setError(problemMessageOf(err, t)),
   });
   const ready = from.trim() !== "" && rate.trim() !== "";
-  function submit(event: FormEvent) {
+  function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!ready || save.isPending) return;
+    if (!ready || save.isPending || refuseUnreadableField(event.currentTarget))
+      return;
     setError(null);
     save.mutate();
   }
@@ -253,10 +256,9 @@ function FxRateModal({ onClose }: Readonly<{ onClose: () => void }>) {
         </Field>
         <Field label={t("settings.rates.colEffective")}>
           {(control) => (
-            <TextInput
+            <DateInput
               {...control}
-              type="date"
-              value={effectiveDate}
+              value={isoOrBlank(effectiveDate)}
               onChange={(e) => setEffectiveDate(e.target.value)}
             />
           )}

@@ -5,7 +5,7 @@
 
 import { useId } from "react";
 import { SegmentedControl, TextInput } from "../../design-system/atoms";
-import { DateInput } from "../../design-system/dateinput";
+import { DateInput, isoOrBlank } from "../../design-system/dateinput";
 import { Select } from "../../design-system/select";
 import { TokenInput } from "../../design-system/tokeninput";
 import { useT } from "../../i18n";
@@ -417,11 +417,7 @@ function DateValue({
         />
       ) : (
         <DateInput
-          value={
-            (typeof value === "string" ? value : "") as
-              | ""
-              | `${number}-${number}-${number}`
-          }
+          value={typeof value === "string" ? isoOrBlank(value) : ""}
           onChange={(event) => onChange(event.target.value)}
           aria-label={label}
         />

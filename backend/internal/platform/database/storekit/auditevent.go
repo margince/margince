@@ -81,6 +81,9 @@ func writeAuditRow(ctx context.Context, tx pgx.Tx, action, entityType string, en
 			return ids.Nil, err
 		}
 	}
+	if err := maskAuditColumns(entityType, &beforeJSON, &afterJSON, &evidenceJSON); err != nil {
+		return ids.Nil, err
+	}
 
 	id := ids.NewV7()
 	_, err = tx.Exec(ctx,

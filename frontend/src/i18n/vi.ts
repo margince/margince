@@ -1846,6 +1846,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Công ty hoặc dữ kiện của công ty đã thay đổi sau lần tra cứu này, nên hoàn tác sẽ ghi đè thay đổi sau đó.",
   "history.undo.noRestoreSnapshot":
     "Lần tra cứu này được ghi lại trước khi các dữ kiện cũ được lưu giữ, nên không thể hoàn tác.",
+  "history.undo.credentialNotKept":
+    "Văn bản trước đó chứa mật khẩu, và lịch sử chỉ lưu mật khẩu ở dạng đã che, nên không thể hoàn tác thay đổi này.",
   "history.reversal.collapsed": "Thay đổi của {actor}, {undoer} đã hoàn tác",
   "history.reversal.collapsedSelf":
     "{actor} đã hoàn tác thay đổi của chính mình",
@@ -5890,6 +5892,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "{channel} gửi văn bản của tin nhắn có tệp dưới dạng chú thích tối đa {limit} ký tự; tin nhắn này có {length}. Rút ngắn, hoặc gửi tệp riêng.",
   "calendar.previousMonth": "Tháng trước",
   "calendar.nextMonth": "Tháng sau",
+  "calendar.chooseDate": "Chọn ngày",
+  "calendar.chooseDateFor": "Chọn ngày: {field}",
+  "calendar.today": "Hôm nay",
+  "calendar.clear": "Xóa",
+  "calendar.patternDay": "dd",
+  "calendar.patternMonth": "mm",
+  "calendar.patternYear": "yyyy",
+  "calendar.invalidDate": "Nhập ngày theo dạng {pattern}.",
+  "calendar.earliest": "Ngày sớm nhất: {date}",
+  "calendar.latest": "Ngày muộn nhất: {date}",
   "compose.schedulePick": "Chọn ngày và giờ",
   "compose.scheduleDate": "Ngày",
   "compose.scheduleTime": "Giờ",

@@ -1899,6 +1899,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das Unternehmen oder seine Angaben haben sich nach dieser Abfrage geändert. Ein Rückgängigmachen würde diese spätere Änderung überschreiben.",
   "history.undo.noRestoreSnapshot":
     "Diese Abfrage wurde gespeichert, bevor die früheren Angaben aufbewahrt wurden. Darum lässt sie sich nicht rückgängig machen.",
+  "history.undo.credentialNotKept":
+    "Der frühere Text enthielt ein Passwort, und der Verlauf bewahrt Passwörter nur maskiert auf. Darum lässt sich diese Änderung nicht rückgängig machen.",
   "history.reversal.collapsed":
     "Änderung von {actor}, rückgängig gemacht von {undoer}",
   "history.reversal.collapsedSelf":
@@ -6048,6 +6050,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "{channel} sendet den Text einer Nachricht mit Dateien als Bildunterschrift mit höchstens {limit} Zeichen. Diese Nachricht hat {length}. Kürze den Text oder sende die Dateien separat.",
   "calendar.previousMonth": "Voriger Monat",
   "calendar.nextMonth": "Nächster Monat",
+  "calendar.chooseDate": "Datum wählen",
+  "calendar.chooseDateFor": "Datum wählen: {field}",
+  "calendar.today": "Heute",
+  "calendar.clear": "Leeren",
+  "calendar.patternDay": "TT",
+  "calendar.patternMonth": "MM",
+  "calendar.patternYear": "JJJJ",
+  "calendar.invalidDate": "Gib ein Datum im Format {pattern} ein.",
+  "calendar.earliest": "Frühestes Datum: {date}",
+  "calendar.latest": "Spätestes Datum: {date}",
   "compose.schedulePick": "Datum und Uhrzeit wählen",
   "compose.scheduleDate": "Datum",
   "compose.scheduleTime": "Uhrzeit",

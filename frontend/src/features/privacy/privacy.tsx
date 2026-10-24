@@ -20,6 +20,7 @@ import {
 } from "../../design-system/confirmphrase";
 import { ErrorLine } from "../../design-system/errorline";
 import { FilterPills } from "../../design-system/filterpills";
+import { refuseUnreadableField } from "../../design-system/formvalidity";
 import { PanelBody, PanelIntro } from "../../design-system/panel";
 import {
   LoadMoreButton,
@@ -170,7 +171,11 @@ export function NewDsrForm({ onDone }: Readonly<{ onDone: () => void }>) {
         className="form-stack"
         onSubmit={(event) => {
           event.preventDefault();
-          if (ready && !create.isPending)
+          if (
+            ready &&
+            !create.isPending &&
+            !refuseUnreadableField(event.currentTarget)
+          )
             create.mutate({ request: draft, computed });
         }}
       >

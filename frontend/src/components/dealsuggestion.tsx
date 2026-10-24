@@ -11,8 +11,9 @@
 
 import { type ReactNode, useId, useState } from "react";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
-import { DateInput, isISODate } from "../design-system/dateinput";
+import { DateInput, isoOrBlank } from "../design-system/dateinput";
 import { ErrorLine } from "../design-system/errorline";
+import { refuseUnreadableField } from "../design-system/formvalidity";
 import { Heading } from "../design-system/heading";
 import { MoneyInput } from "../design-system/moneyinput";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -382,7 +383,7 @@ export function AcceptSuggestionDialog({
           {(control) => (
             <DateInput
               {...control}
-              value={isISODate(draft.closeDate) ? draft.closeDate : ""}
+              value={isoOrBlank(draft.closeDate)}
               onChange={(event) => set({ closeDate: event.target.value })}
               data-testid="deal-suggestion-close"
             />
@@ -397,7 +398,11 @@ export function AcceptSuggestionDialog({
         <Button
           variant="primary"
           disabled={!draft.name.trim() || accept.isPending}
-          onClick={submit}
+          onClick={(event) => {
+            if (!refuseUnreadableField(event.currentTarget)) {
+              submit();
+            }
+          }}
           data-testid="deal-suggestion-confirm"
         >
           {t("dealSuggestion.confirm")}

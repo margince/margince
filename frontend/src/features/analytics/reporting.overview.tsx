@@ -3,7 +3,7 @@ import { type ReactNode, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button, SegmentedControl } from "../../design-system/atoms";
-import { type ISODate, isISODate } from "../../design-system/dateinput";
+import { type ISODate, isoOrBlank } from "../../design-system/dateinput";
 import { ErrorLine } from "../../design-system/errorline";
 import { FilterBar } from "../../design-system/filterbar";
 import { QueryGate } from "../../design-system/querystates";
@@ -96,8 +96,8 @@ function useOverviewFilters(
   const setTemplate = (value: string) => replaceDial("view", value);
   const from = params.get("from") ?? "";
   const through = params.get("through") ?? "";
-  const start: ISODate | "" = isISODate(from) ? from : "";
-  const end: ISODate | "" = isISODate(through) ? through : "";
+  const start: ISODate | "" = isoOrBlank(from);
+  const end: ISODate | "" = isoOrBlank(through);
   const setStart = (value: string) => replaceDial("from", value);
   const setEnd = (value: string) => replaceDial("through", value);
   const period =

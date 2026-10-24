@@ -6,6 +6,7 @@ import {
   calendarDay,
   calendarMonth,
   dueInstant,
+  isoDay,
   isoWeekOf,
   isRealCalendarDay,
   localDateTimeValue,
@@ -196,6 +197,16 @@ describe("localDateTimeValue", () => {
     expect(localDateTimeValue(instant).slice(0, 10)).toBe(
       calendarDay(new Date(instant), readerZone),
     );
+  });
+});
+
+describe("isoDay", () => {
+  it("names a local date's own day, its year written in four digits", () => {
+    const early = new Date(2000, 0, 1);
+    early.setFullYear(99, 8, 9);
+
+    expect(isoDay(new Date(2026, 4, 6, 23, 59))).toBe("2026-05-06");
+    expect(isoDay(early)).toBe("0099-09-09");
   });
 });
 

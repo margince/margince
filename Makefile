@@ -420,8 +420,9 @@ ds-spacing-roles:
 ## drawer clipped its own heading against the viewport edge.
 space-tokens:
 	frontend/scripts/check-space-tokens.sh
-## native-controls — no browser-drawn dropdown: `<select>`, `<option>` or
-## `<optgroup>` anywhere under frontend/src or extensions/*/frontend. It is a
+## native-controls — no browser-drawn control: `<select>`, `<option>`,
+## `<optgroup>` or a native date input (`type="date"` on `input` or
+## `TextInput`) anywhere under frontend/src or extensions/*/frontend. It is a
 ## vitest fitness function over the TypeScript AST now — see
 ## frontend/src/design-system/native-controls.test.ts — so it runs in `fe-unit`
 ## with the rest of the suite. This target keeps its name for anyone who runs

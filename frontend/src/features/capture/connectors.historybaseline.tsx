@@ -6,8 +6,13 @@ import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
-import { DateInput, isISODate } from "../../design-system/dateinput";
+import {
+  DateInput,
+  isISODate,
+  isoOrBlank,
+} from "../../design-system/dateinput";
 import { ErrorLine } from "../../design-system/errorline";
+import { refuseUnreadableField } from "../../design-system/formvalidity";
 import { SettingRow } from "../../design-system/settingrow";
 import { middayInstant } from "../../format/calendarday";
 import { formatDate } from "../../format/format";
@@ -47,20 +52,22 @@ export function HistoryBaselineRow({
       }
       layout="stack"
       control={(controlProps) => (
-        <div className="form-stack">
+        <div className="form-stack" data-date-scope>
           <div className="connector-baseline">
             <DateInput
               {...controlProps}
-              value={isISODate(draft) ? draft : ""}
+              value={isoOrBlank(draft)}
               disabled={save.isPending}
               onChange={(event) => setDraft(event.target.value)}
             />
             <Button
               disabled={!changed}
               pending={save.isPending}
-              onClick={() =>
-                save.mutate({ date: draft, timezone: viewerZone() })
-              }
+              onClick={(event) => {
+                if (!refuseUnreadableField(event.currentTarget)) {
+                  save.mutate({ date: draft, timezone: viewerZone() });
+                }
+              }}
             >
               {t("connectors.historyBaseline.save")}
             </Button>

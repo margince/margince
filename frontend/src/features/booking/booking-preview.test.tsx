@@ -248,13 +248,15 @@ it("refuses days with nothing free and clears the time when another day is chose
   // The first day with a free time is chosen for the guest.
   await user.click(await screen.findByRole("button", { name: slotName(0) }));
   expect(
-    screen.getByRole("button", {
-      name: "Tuesday, 6 October 2026, nothing free",
-    }),
-  ).toHaveProperty("disabled", true);
+    screen
+      .getByRole("button", { name: "Tuesday, 6 October 2026, nothing free" })
+      .getAttribute("aria-disabled"),
+  ).toBe("true");
   expect(
-    screen.getByRole("button", { name: "Monday, 5 October 2026" }),
-  ).toHaveProperty("disabled", false);
+    screen
+      .getByRole("button", { name: "Monday, 5 October 2026" })
+      .getAttribute("aria-disabled"),
+  ).toBeNull();
   await user.click(
     screen.getByRole("button", { name: "Wednesday, 7 October 2026" }),
   );
@@ -285,10 +287,10 @@ it("says when a month has no free time rather than hiding availability", async (
     await screen.findByText("No free times this month. Try the next month."),
   ).toBeTruthy();
   expect(
-    screen.getByRole("button", {
-      name: "Monday, 5 October 2026, nothing free",
-    }),
-  ).toHaveProperty("disabled", true);
+    screen
+      .getByRole("button", { name: "Monday, 5 October 2026, nothing free" })
+      .getAttribute("aria-disabled"),
+  ).toBe("true");
   expect(screen.queryByRole("button", { name: CONFIRM })).toBeNull();
 });
 

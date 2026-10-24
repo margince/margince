@@ -14,6 +14,7 @@ import {
   SearchField,
   TextInput,
 } from "../../design-system/atoms";
+import { DateInput, type ISODate } from "../../design-system/dateinput";
 import { Heading } from "../../design-system/heading";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
@@ -29,6 +30,7 @@ import "./candidatepicker.css";
 import "../../design-system/querystates.css";
 import "./relationships.css";
 import { ErrorLine } from "../../design-system/errorline";
+import { refuseUnreadableField } from "../../design-system/formvalidity";
 import {
   type EdgeOption,
   edgeOptions,
@@ -120,7 +122,7 @@ export function AddRelationshipAction({
     defaultOption.kind,
   );
   const [role, setRole] = useState("");
-  const [startedAt, setStartedAt] = useState("");
+  const [startedAt, setStartedAt] = useState<ISODate | "">("");
   const [term, setTerm] = useState("");
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [target, setTarget] = useState<Candidate | null>(null);
@@ -293,9 +295,8 @@ export function AddRelationshipAction({
           </Field>
           <Field label={t("rel.startedAt")}>
             {(control) => (
-              <TextInput
+              <DateInput
                 {...control}
-                type="date"
                 value={startedAt}
                 onChange={(event) => setStartedAt(event.target.value)}
               />
@@ -318,16 +319,17 @@ export function AddRelationshipAction({
           <Button
             variant="primary"
             disabled={!target || mutation.isPending}
-            onClick={() =>
-              target &&
-              mutation.mutate({
-                target,
-                kind,
-                field: endpoint.field,
-                role,
-                startedAt,
-              })
-            }
+            onClick={(event) => {
+              if (target && !refuseUnreadableField(event.currentTarget)) {
+                mutation.mutate({
+                  target,
+                  kind,
+                  field: endpoint.field,
+                  role,
+                  startedAt,
+                });
+              }
+            }}
             data-testid="add-relationship-submit"
           >
             {t("create.save")}

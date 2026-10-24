@@ -1,12 +1,6 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import {
-  cleanup,
-  fireEvent,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
@@ -208,11 +202,10 @@ describe("opening a DSR (G-2)", () => {
       "anna@acme.test",
     );
     await screen.findByText(/GDPR, one calendar month/);
-    // type="date" only accepts a programmatic value change in jsdom (same
-    // limitation tasks.test.tsx works around for its own due-date field).
-    fireEvent.change(screen.getByLabelText(/earlier deadline/i), {
-      target: { value: "2026-07-15" },
-    });
+    await userEvent.type(
+      screen.getByRole("textbox", { name: /earlier deadline/i }),
+      "15/07/2026",
+    );
     await userEvent.click(
       screen.getByRole("button", { name: /open request/i }),
     );

@@ -48,6 +48,9 @@ describe("the published frontend surface", () => {
       // sideways with it. Not ListTable: that one is a record list with
       // server-backed dials a caller owes state to.
       "DataTable",
+      // DateInput: the gate that refuses the browser's date field reads unit
+      // screens too. See the note beside its export.
+      "DateInput",
       "EmptyState",
       // ErrorLine: a unit saying a write failed has otherwise only a bare `<p>`,
       // with no danger ink and no announcement. See the note beside its export.
@@ -81,6 +84,8 @@ describe("the published frontend surface", () => {
       "TextInput",
       "TokenInput",
       "TokenList",
+      "isISODate",
+      "isoOrBlank",
       // useClipboardCopy: the one spelling of a copy, which the clipboard gate
       // holds unit screens to as well. See the note beside its export.
       "useClipboardCopy",

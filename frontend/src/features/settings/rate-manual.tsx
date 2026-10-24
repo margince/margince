@@ -7,12 +7,14 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Button, Field, Modal, TextInput } from "../../design-system/atoms";
 import { ComboBox } from "../../design-system/combobox";
+import { DateInput, isoOrBlank } from "../../design-system/dateinput";
 import {
   DrawerBody,
   DrawerFoot,
   DrawerHead,
 } from "../../design-system/drawerbands";
 import { ErrorLine } from "../../design-system/errorline";
+import { refuseUnreadableField } from "../../design-system/formvalidity";
 import { Heading } from "../../design-system/heading";
 import { WriteRefused } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
@@ -119,6 +121,7 @@ export function PriceForm({
     initial?.cache_write_per_mtok ?? "0",
   );
   const [effectiveDate, setEffectiveDate] = useState(startDate(initial));
+  const floor = isoOrBlank(today()) || undefined;
   // What the model is FOR. Always sent: a price filed without one is filed as
   // chat, and a new embedder then never reaches the embeddings picker.
   const [lane, setLane] = useState<ModelLane>(
@@ -213,11 +216,11 @@ export function PriceForm({
         {initial ? null : <LaneField lane={lane} onChange={setLane} />}
         <Field label={t("settings.rates.colEffective")}>
           {(control) => (
-            <TextInput
+            <DateInput
               {...control}
-              type="date"
-              min={today()}
-              value={effectiveDate}
+              min={floor}
+              today={floor}
+              value={isoOrBlank(effectiveDate)}
               onChange={(e) => setEffectiveDate(e.target.value)}
             />
           )}
@@ -248,7 +251,10 @@ export function PriceForm({
       </Button>
       <Button
         variant="primary"
-        onClick={() => {
+        onClick={(event) => {
+          if (refuseUnreadableField(event.currentTarget)) {
+            return;
+          }
           setError(null);
           save.mutate({
             provider: provider.trim(),
@@ -339,7 +345,7 @@ function NewPriceIdentity({
 // gap on top of its own margin.
 function inlineFrame(fields: ReactNode, actions: ReactNode) {
   return (
-    <div>
+    <div data-date-scope>
       {fields}
       <div className="actions rates-manual-actions">{actions}</div>
     </div>

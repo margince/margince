@@ -146,6 +146,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The frame line names the installation zone as Intl's long name plus offset, and only a fixed zone makes that expected text independent of the machine.",
   },
   {
+    file: "features/analytics/reporting.filters.test.tsx",
+    why: "The custom period marks today in the workspace zone; only a zone behind every viewer's own makes that day differ from the machine's.",
+  },
+  {
     file: "features/companies/company360-strip.test.tsx",
     why: "The last-contact day count follows the zone its date is drawn in; the case pins UTC+7 where a UTC count is a day off.",
   },

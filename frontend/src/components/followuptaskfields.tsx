@@ -1,4 +1,5 @@
 import { Checkbox, Field, TextInput } from "../design-system/atoms";
+import { DateInput, isoOrBlank } from "../design-system/dateinput";
 import { useT } from "../i18n";
 import type { TaskDraft } from "../lib/activitybody";
 import { ActivityBodyField } from "./activitybodyfield";
@@ -41,10 +42,9 @@ export function FollowUpTaskFields({
           </Field>
           <Field label={t("log.dueAt")}>
             {(control) => (
-              <TextInput
+              <DateInput
                 {...control}
-                type="date"
-                value={value.day}
+                value={isoOrBlank(value.day)}
                 onChange={(event) => patch({ day: event.target.value })}
               />
             )}

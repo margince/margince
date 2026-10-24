@@ -10,11 +10,18 @@ import {
   TextInput,
 } from "../design-system/atoms";
 import {
+  DateInput,
+  type ISODate,
+  isISODate,
+  isoOrBlank,
+} from "../design-system/dateinput";
+import {
   DrawerBody,
   DrawerFoot,
   DrawerHead,
 } from "../design-system/drawerbands";
 import { ErrorLine } from "../design-system/errorline";
+import { refuseUnreadableField } from "../design-system/formvalidity";
 import { Heading } from "../design-system/heading";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useSinglePress } from "../design-system/presslatch";
@@ -60,6 +67,14 @@ import { useUnsavedGuard } from "./unsaved";
 
 // Meetings arrive through the calendar rather than a preselected form address.
 type OpeningKind = "note" | "task" | "call";
+
+function latestDayOf(
+  kind: ActivityDraft["kind"],
+  recordZone: string,
+): ISODate | undefined {
+  const day = todayDay(kind, recordZone);
+  return kind !== "task" && isISODate(day) ? day : undefined;
+}
 
 // One form serves record cards and drawers; banded callers own its frame.
 export function LogActivityForm({
@@ -203,6 +218,9 @@ export function LogActivityForm({
       className="form-stack"
       onSubmit={singlePress((event) => {
         event.preventDefault();
+        if (refuseUnreadableField(event.currentTarget)) {
+          return;
+        }
         log.mutate({
           draft: { ...draft, sourceActivityId, custom: custom.body() },
           zone: recordZone,
@@ -244,25 +262,17 @@ export function LogActivityForm({
           hint={draft.kind === "task" ? undefined : t("log.dateHint")}
         >
           {(control) => (
-            <TextInput
+            <DateInput
               {...control}
-              type="date"
-              value={draft.day}
+              value={isoOrBlank(draft.day)}
               // A note or meeting cannot have happened in the future, and the
               // cap makes the picker say so; a due date has no such ceiling.
               // occurredInstant clamps a typed-in future day the same way, and
               // against the same clock, so the box refuses exactly the days the
               // submit would have moved.
-              max={
-                draft.kind === "task"
-                  ? undefined
-                  : todayDay(draft.kind, recordZone)
-              }
+              max={latestDayOf(draft.kind, recordZone)}
+              today={isoOrBlank(todayDay(draft.kind, recordZone)) || undefined}
               onChange={(event) => setField({ day: event.target.value })}
-              // A native date input opens its calendar only from the tiny
-              // icon; a click on the value just places a caret. Opening on
-              // any click is what a writer reaching for "the date" expects.
-              onClick={(event) => event.currentTarget.showPicker?.()}
             />
           )}
         </Field>

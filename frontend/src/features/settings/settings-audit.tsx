@@ -17,7 +17,7 @@ import {
 import { CellStack } from "../../design-system/cellstack";
 import { useClipboardCopy } from "../../design-system/clipboardcopy";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
-import { DateInput, isISODate } from "../../design-system/dateinput";
+import { DateInput, isoOrBlank } from "../../design-system/dateinput";
 import { useSettledValue } from "../../design-system/debouncedsearch";
 import { FilterBar } from "../../design-system/filterbar";
 import { IconAction } from "../../design-system/iconaction";
@@ -110,7 +110,7 @@ function AuditLogFilterBar({
       {(field) => (
         <DateInput
           {...field}
-          value={isISODate(filters[key]) ? filters[key] : ""}
+          value={isoOrBlank(filters[key])}
           onChange={(event) => set(key)(event.target.value)}
         />
       )}

@@ -55397,11 +55397,14 @@ components:
             around both rules. `detail` names the kind. `later_company_change` refuses a
             technical lookup after any later write to the company or its facts, a refresh to
             the same value included. `no_restore_snapshot` refuses a lookup recorded before
-            receipts kept the facts it replaced.
+            receipts kept the facts it replaced. `credential_not_kept` refuses an entry whose
+            earlier text held a credential: history keeps it masked, and the record keeps the
+            text as typed, so putting it back would write the mask over the record.
           enum: [no_before_image, not_a_replayable_verb, unsupported_record_type, superseded,
                  behind_erasure_boundary, already_undone, not_restorable_by_this_path,
                  record_archived, null_unwritable_by_module, not_writable_by_caller,
-                 edge_relink_unsupported, later_company_change, no_restore_snapshot, null]
+                 edge_relink_unsupported, later_company_change, no_restore_snapshot,
+                 credential_not_kept, null]
         detail:
           type: [string, 'null']
           description: >-
