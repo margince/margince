@@ -99,6 +99,22 @@ func TestAReplyRewriteCarriesTheDraftOnScreenIntoThePrompt(t *testing.T) {
 	}
 }
 
+func TestAShortReplyToAnEnglishThreadIsDraftedInEnglishWhateverTheAppLanguage(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	logReplyMessage(ctx, t, e, "pilot", "Pilot", "Thanks for the update, we plan to review the proposal with our team next week and come back to you.", 0)
+	anchor := logReplyMessage(ctx, t, e, "pilot", "Pilot", "ok", time.Hour)
+	brain := &replyBrainStub{response: model.Response{Text: `{"subject":"Pilot","body":"Great."}`}}
+	drafter := newReplyDrafter(e.Pool, brain, slog.New(slog.DiscardHandler))
+	drafter.envelope = draftfloor.NewResolver().WithUserLanguage(func(context.Context) string { return "vi" })
+	if _, err := drafter.DraftEmailWithProvenance(ctx, ids.UUID(anchor.Id), draftfloor.Steering{}); err != nil {
+		t.Fatal(err)
+	}
+	if content := brain.request.Messages[0].Content; !strings.Contains(content, `"output_language":"en"`) {
+		t.Fatalf("the thread's English lost to the app language: %s", content)
+	}
+}
+
 // A text-only adapter is still governed by the HTTP surface's selected subject.
 type plainReplyStub struct{}
 

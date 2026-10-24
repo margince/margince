@@ -17,9 +17,9 @@ import (
 const replyContextTurns = 6
 
 // The selected message remains separate so a newer turn cannot become the reply target.
-func (d replyDrafter) replyConversation(ctx context.Context, anchor crmcontracts.Activity) (string, error) {
+func (d replyDrafter) replyConversation(ctx context.Context, anchor crmcontracts.Activity) ([]draftcore.Turn, error) {
 	if anchor.ThreadKey == nil || strings.TrimSpace(*anchor.ThreadKey) == "" {
-		return "", nil
+		return nil, nil
 	}
 	// Reserve a slot for the selected anchor, which may be in the page.
 	limit, kind := replyContextTurns+1, string(crmcontracts.ActivityKindEmail)
@@ -27,10 +27,9 @@ func (d replyDrafter) replyConversation(ctx context.Context, anchor crmcontracts
 		ThreadKey: anchor.ThreadKey, Kind: &kind, Limit: &limit, WrittenByHuman: true,
 	})
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	turns := draftcore.Conversation(rows, &anchor, d.envelope.Now(), replyContextTurns)
-	return replyConversationText(turns), nil
+	return draftcore.Conversation(rows, &anchor, d.envelope.Now(), replyContextTurns), nil
 }
 
 // replyConversationText renders the turns the way the reply prompt describes

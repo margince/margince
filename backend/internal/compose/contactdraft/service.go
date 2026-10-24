@@ -139,7 +139,7 @@ func (s *Service) Draft(
 		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}
 	req.Envelope = s.envelope.Resolve(ctx,
-		draftfloor.Written{Body: CorrespondenceText(view), Rewrite: req.RewriteOf, Purpose: req.Intent},
+		draftfloor.Written{Thread: languageEvidence(view, s.envelope.Now()), Rewrite: req.RewriteOf, Purpose: req.Intent},
 		ConversationState(view, s.envelope.Now()))
 	in := FromView(view, req)
 	if in.AlsoTo, err = s.coRecipients(ctx, contactID, req.AlsoTo); err != nil {

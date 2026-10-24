@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/compose/accountdraft"
 	"github.com/margince/margince/backend/internal/compose/company360"
 	"github.com/margince/margince/backend/internal/compose/companybrief"
 	"github.com/margince/margince/backend/internal/compose/contact360"
 	"github.com/margince/margince/backend/internal/compose/contactbrief"
+	"github.com/margince/margince/backend/internal/compose/draftcore"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -144,7 +144,7 @@ func TestAutomaticMailPastTheCapLeavesTheHumanMessageInTheBriefs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(accountdraft.CorrespondenceText(draftView), "their-pricing-reply") {
+	if !strings.Contains(strings.Join(draftcore.LanguageEvidenceOf(draftView.Activities.Data, f.now), "\n"), "their-pricing-reply") {
 		t.Error("the drafting language reads the notices instead of the human reply")
 	}
 

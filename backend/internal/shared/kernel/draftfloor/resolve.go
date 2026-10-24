@@ -38,7 +38,8 @@ type BaseLanguage func(ctx context.Context) string
 // UserLanguage answers the language the calling rep reads the app in, or ""
 // when they never chose one. It sits above the installation's language: the
 // rep is the one who sends the draft, so their own language is the better
-// guess for a contact who has never written.
+// guess for a contact who has never written. Any correspondence that names a
+// language outranks it.
 type UserLanguage func(ctx context.Context) string
 
 // Resolver assembles the envelope every drafting surface is handed.
@@ -118,6 +119,11 @@ type Written struct {
 	Body string
 	// Subject is the fallback text, read only when the body says nothing.
 	Subject string
+	// Thread is the other messages of the conversation, in the order
+	// draftcore.LanguageEvidence gives them: the recipient's own mail first.
+	// Read after the answered message so a reply whose own text names no
+	// language still follows the exchange, not the rep's app language.
+	Thread []string
 	// Rewrite is the draft being rewritten, read after the correspondence and
 	// before the purpose: "make it shorter" must not change its language.
 	Rewrite string
@@ -136,7 +142,8 @@ type Written struct {
 // draft unsigned (DRAFT-AC-E-6) — a drafting screen that errors because it
 // could not work out a greeting is worse than a draft the rep edits.
 //
-// The ladder is stored, then the correspondence, then the draft being
+// The ladder is stored, then the correspondence (the answered message, then the
+// rest of the thread), then the draft being
 // rewritten, then the rep's typed purpose, then the rep's own app language,
 // then the installation's language, then English. A purpose too short to clear
 // the detector's bar falls to the rep's app language, which is why that tier
@@ -161,7 +168,10 @@ func (r *Resolver) Resolve(ctx context.Context, written Written, state convstate
 // order both ladders trust it. One list, so a rewrite or a first message with
 // no correspondence keeps the du or Sie of the text that chose its language.
 func (w Written) evidence() []string {
-	return []string{w.Body, w.Subject, w.Rewrite, w.Purpose}
+	out := make([]string, 0, 4+len(w.Thread))
+	out = append(out, w.Body, w.Subject)
+	out = append(out, w.Thread...)
+	return append(out, w.Rewrite, w.Purpose)
 }
 
 // register is the first du or Sie the evidence shows.
