@@ -65,7 +65,16 @@ func reviewContact(ctx context.Context, tx pgx.Tx, c ContactCandidate) (ContactR
 			}
 		}
 	}
-	return resolutionOf(reviews[:min(len(reviews), dedupeRivalLimit)]), nil
+	var subject *ids.UUID
+	if c.ExcludeID != nil {
+		subject = &c.ExcludeID.UUID
+	}
+	reviews, err := newRivals(ctx, tx, entityContact, subject, reviews,
+		func(r ReviewMatch) ids.UUID { return r.ContactID.UUID })
+	if err != nil {
+		return ContactResolution{}, err
+	}
+	return resolutionOf(reviews), nil
 }
 
 // resolutionOf names the first review match as the resolution's decision, so

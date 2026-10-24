@@ -108,9 +108,3 @@ func fileNameDomainTwins(ctx context.Context, tx pgx.Tx, claimant ids.CompanyID,
 	}
 	return nil
 }
-
-// keepBestRivals cuts the ranked rivals to dedupeRivalLimit, best first.
-func keepBestRivals(match CompanyMatch) CompanyMatch {
-	match.Ranked = match.Ranked[:min(len(match.Ranked), dedupeRivalLimit)]
-	return match
-}

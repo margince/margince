@@ -11,6 +11,7 @@ package contacts
 import (
 	"context"
 	"os"
+	"strconv"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -216,4 +217,57 @@ func TestANameManyCompaniesShareFilesAtMostTheRivalLimit(t *testing.T) {
 		}
 		after = page.Scanned[0]
 	}
+}
+
+// The rival cap bounds new filings. Five dismissed look-alikes must not hide
+// a sixth rival behind them, for either record type.
+func TestADismissedLookAlikeDoesNotTakeARivalsPlace(t *testing.T) {
+	for entity, create := range map[DedupeScanEntity]func(*dedupeEnv, context.Context, *testing.T, int) ids.UUID{
+		DedupeScanCompanies: func(e *dedupeEnv, ctx context.Context, t *testing.T, _ int) ids.UUID {
+			return e.createNamedCompany(ctx, t, "Acme Widgets").UUID
+		},
+		DedupeScanContacts: func(e *dedupeEnv, ctx context.Context, t *testing.T, i int) ids.UUID {
+			return e.plainContact(ctx, t, "Mia Schulz", "mia"+strconv.Itoa(i)+"@lookalike.example")
+		},
+	} {
+		t.Run(string(entity), func(t *testing.T) {
+			e := setupDedupe(t)
+			ctx := e.as()
+			subject := create(e, ctx, t, 0)
+			for i := 1; i < 7; i++ {
+				create(e, ctx, t, i)
+			}
+			e.forgetFiledPairs(ctx, t)
+			if filed := e.scanOne(t, entity, subject); filed != dedupeRivalLimit {
+				t.Fatalf("the first scan filed %d pairs, want %d", filed, dedupeRivalLimit)
+			}
+			for _, row := range openCandidates(ctx, t, e, string(entity)) {
+				if _, err := e.store.DisposeDedupeCandidate(ctx, row.ID, "not_a_duplicate", nil); err != nil {
+					t.Fatalf("dismiss: %v", err)
+				}
+			}
+			if filed := e.scanOne(t, entity, subject); filed != 1 {
+				t.Errorf("the scan after five dismissals filed %d pairs, want the sixth rival", filed)
+			}
+		})
+	}
+}
+
+// scanOne runs one record through the scan's re-check and answers the pairs
+// it filed.
+func (e *dedupeEnv) scanOne(t *testing.T, entity DedupeScanEntity, id ids.UUID) int {
+	t.Helper()
+	system := e.asScan()
+	var filed int
+	if err := e.store.tx(system, func(tx pgx.Tx) error {
+		scanner, err := newDedupeScanner(system, tx, entity, nil)
+		if err != nil {
+			return err
+		}
+		filed, err = scanner.file(system, tx, id)
+		return err
+	}); err != nil {
+		t.Fatalf("scan one %s: %v", entity, err)
+	}
+	return filed
 }
