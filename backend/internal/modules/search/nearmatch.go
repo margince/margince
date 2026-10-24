@@ -43,7 +43,7 @@ func nearNeedle(queryPos int) string {
 	return fmt.Sprintf("f_fold_apostrophes(lower($%d::text))", queryPos)
 }
 
-// NearPredicate returns the table and the WHERE predicate, for the given alias
+// NearPredicate returns the table and the `WHERE` predicate, for the given alias
 // and query placeholder number, that an entity's near-match pass filters on.
 // It is empty for an entity with no near-match branch.
 func NearPredicate(entity, alias string, queryPos int) (table, predicate string) {
