@@ -94,7 +94,7 @@ type sqlCall struct {
 func TestEveryContentionProbeClearsTheStatsSnapshot(t *testing.T) {
 	t.Parallel()
 	fset := gatekit.SourceFileSet()
-	offenders := scanTrees(t, fset, func(path string, file *ast.File) []string {
+	offenders := scanTrees(t, func(path string, file *ast.File) []string {
 		var found []string
 		for _, decl := range file.Decls {
 			fn, isFunc := decl.(*ast.FuncDecl)
@@ -130,7 +130,7 @@ issue both statements on it.`,
 
 // scanTrees runs check over every Go file in probeTrees and returns its
 // findings sorted, so each census reads the same files.
-func scanTrees(t *testing.T, fset *token.FileSet, check func(path string, file *ast.File) []string) []string {
+func scanTrees(t *testing.T, check func(path string, file *ast.File) []string) []string {
 	t.Helper()
 	var findings []string
 	for _, tree := range probeTrees {
@@ -188,7 +188,7 @@ func scanTree(root string, check func(path string, file *ast.File) []string) ([]
 func TestEveryPauseIsItsOwnStatement(t *testing.T) {
 	t.Parallel()
 	fset := gatekit.SourceFileSet()
-	pauses := scanTrees(t, fset, func(path string, file *ast.File) []string {
+	pauses := scanTrees(t, func(path string, file *ast.File) []string {
 		var found []string
 		for _, line := range pausesInsideStatements(fset, file) {
 			found = append(found, fmt.Sprintf("%s:%d", path, line))
