@@ -13,7 +13,7 @@ import (
 )
 
 // removedLinksNamed counts the activity's relink audit rows whose before names
-// exactly the given ids of the given entity type.
+// the given ids of the given entity type and no others.
 func removedLinksNamed(t *testing.T, e *Env, activity ids.UUID, entityType string, removed ...ids.UUID) int {
 	t.Helper()
 	return e.WsCount(t, `SELECT count(*) FROM audit_log
@@ -24,8 +24,8 @@ func removedLinksNamed(t *testing.T, e *Env, activity ids.UUID, entityType strin
 		activity, entityType, removed)
 }
 
-// A replacing relink names the links it removed in the audit row's before, for
-// the single and the named-set door and for a contact and a project link alike.
+// A replacing relink names the links it removed in the audit row's before.
+// The single door and the named-set door both do it.
 func TestReplacingRelinkNamesTheRemovedLinksInTheAuditBefore(t *testing.T) {
 	e := Setup(t)
 	admin := e.As(e.Rep1, nil, AdminPerms)
