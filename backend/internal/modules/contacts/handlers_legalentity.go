@@ -43,6 +43,7 @@ func (h Handlers) CreateLegalEntity(w http.ResponseWriter, r *http.Request) {
 		Address: addressInput(body.Address), VatID: body.VatId, RegisterCourt: body.RegisterCourt,
 		RegisterNumber: body.RegisterNumber, DefaultLanguage: body.DefaultLanguage,
 		BankAccountHolder: body.BankAccountHolder, IBAN: body.Iban, BIC: body.Bic, Imprint: body.Imprint,
+		Offering: offeringInput(body.Offering),
 	})
 	if err != nil {
 		writeStoreErr(w, r, err)
@@ -77,6 +78,7 @@ func (h Handlers) UpdateLegalEntity(w http.ResponseWriter, r *http.Request, id c
 		Address: addressInput(body.Address), VatID: body.VatId, RegisterCourt: body.RegisterCourt,
 		RegisterNumber: body.RegisterNumber, DefaultLanguage: body.DefaultLanguage,
 		BankAccountHolder: body.BankAccountHolder, IBAN: body.Iban, BIC: body.Bic, Imprint: body.Imprint,
+		Offering: offeringInput(body.Offering),
 	}, ifVersion)
 	if err != nil {
 		writeStoreErr(w, r, err)
@@ -151,7 +153,7 @@ func LegalEntityWire(e LegalEntity) crmcontracts.LegalEntity {
 		Address: crmcontracts.LegalEntityAddress{Line1: a.Line1, Line2: a.Line2, PostalCode: a.PostalCode, City: a.City, Region: a.Region},
 		VatId:   e.VatID, RegisterCourt: e.RegisterCourt, RegisterNumber: e.RegisterNumber,
 		Country: e.Country, DefaultLanguage: e.DefaultLanguage, BankAccountHolder: e.BankAccountHolder,
-		Iban: e.IBAN, Bic: e.BIC, Imprint: e.Imprint, LogoUrl: legalEntityLogoURL(e.EntityIdentity),
+		Iban: e.IBAN, Bic: e.BIC, Imprint: e.Imprint, Offering: offeringWire(e.Offering), LogoUrl: legalEntityLogoURL(e.EntityIdentity),
 		MemberCount: e.MemberCount, Version: e.Version, CreatedAt: e.CreatedAt, UpdatedAt: e.UpdatedAt,
 		ArchivedAt: e.ArchivedAt,
 	}
@@ -179,4 +181,15 @@ func addressInput(a *crmcontracts.LegalEntityAddress) LegalEntityAddress {
 		return LegalEntityAddress{}
 	}
 	return LegalEntityAddress{Line1: a.Line1, Line2: a.Line2, PostalCode: a.PostalCode, City: a.City, Region: a.Region}
+}
+
+func offeringInput(o *crmcontracts.LegalEntityOffering) LegalEntityOffering {
+	if o == nil {
+		return LegalEntityOffering{}
+	}
+	return LegalEntityOffering{OfferSummary: o.OfferSummary, ICP: o.Icp, ValueProposition: o.ValueProposition, USP: o.Usp}
+}
+
+func offeringWire(o LegalEntityOffering) *crmcontracts.LegalEntityOffering {
+	return &crmcontracts.LegalEntityOffering{OfferSummary: o.OfferSummary, Icp: o.ICP, ValueProposition: o.ValueProposition, Usp: o.USP}
 }

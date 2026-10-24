@@ -29,8 +29,8 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 323 |
-| Columns | 3822 |
-| Foreign keys | 530 |
+| Columns | 3830 |
+| Foreign keys | 531 |
 | Owning areas | 36 |
 
 ## The 12 records everything else hangs off
@@ -41,7 +41,7 @@ Ranked by how many foreign keys point at them.
 |---|---|--:|--:|
 | [`app_user`](identity.md#app_user) | [identity](identity.md) | 30 | 141 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 32 | 45 |
-| [`company`](contacts.md#company) | [contacts](contacts.md) | 43 | 43 |
+| [`company`](contacts.md#company) | [contacts](contacts.md) | 44 | 43 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 65 | 38 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 43 | 25 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 40 | 17 |
@@ -220,7 +220,7 @@ erDiagram
 | [`communication_override`](consent.md#communication_override) | consent | 10 | 1 |
 | [`communication_review`](consent.md#communication_review) | consent | 10 | 2 |
 | [`communication_suppression`](consent.md#communication_suppression) | consent | 12 | 1 |
-| [`company`](contacts.md#company) | contacts | 43 | 43 |
+| [`company`](contacts.md#company) | contacts | 44 | 43 |
 | [`company_brief`](compose.md#company_brief) | compose | 7 | 0 |
 | [`company_domain`](contacts.md#company_domain) | contacts | 10 | 0 |
 | [`company_domain_disposition`](contacts.md#company_domain_disposition) | contacts | 22 | 1 |
@@ -309,7 +309,7 @@ erDiagram
 | [`idempotency_key`](compose.md#idempotency_key) | compose | 10 | 0 |
 | [`import_record_map`](migration.md#import_record_map) | migration | 7 | 0 |
 | [`import_run`](migration.md#import_run) | migration | 34 | 1 |
-| [`intro_request`](introductions.md#intro_request) | introductions | 29 | 0 |
+| [`intro_request`](introductions.md#intro_request) | introductions | 31 | 0 |
 | [`knowledge_chunk`](knowledge.md#knowledge_chunk) | knowledge | 11 | 0 |
 | [`knowledge_corpus`](knowledge.md#knowledge_corpus) | knowledge | 12 | 1 |
 | [`knowledge_document`](knowledge.md#knowledge_document) | knowledge | 16 | 1 |
@@ -320,7 +320,7 @@ erDiagram
 | [`lead_privacy_notice`](consent.md#lead_privacy_notice) | consent | 12 | 0 |
 | [`lead_score_history`](contacts.md#lead_score_history) | contacts | 9 | 0 |
 | [`lead_source`](contacts.md#lead_source) | contacts | 10 | 0 |
-| [`legal_entity`](contacts.md#legal_entity) | contacts | 24 | 1 |
+| [`legal_entity`](contacts.md#legal_entity) | contacts | 28 | 2 |
 | [`legal_entity_member`](contacts.md#legal_entity_member) | contacts | 4 | 0 |
 | [`legal_review`](deals.md#legal_review) | deals | 17 | 1 |
 | [`linkedin_account`](contacts.md#linkedin_account) | contacts | 6 | 0 |
@@ -357,7 +357,7 @@ erDiagram
 | [`product`](deals.md#product) | deals | 18 | 1 |
 | [`project`](projects.md#project) | projects | 23 | 10 |
 | [`project_health_assessment`](projects.md#project_health_assessment) | projects | 10 | 1 |
-| [`project_phase_history`](projects.md#project_phase_history) | projects | 7 | 0 |
+| [`project_phase_history`](projects.md#project_phase_history) | projects | 8 | 0 |
 | [`provider_applied_field`](contacts.md#provider_applied_field) | contacts | 10 | 0 |
 | [`provider_connection`](integrations.md#provider_connection) | integrations | 20 | 1 |
 | [`provider_connection_budget`](integrations.md#provider_connection_budget) | integrations | 6 | 0 |

@@ -2481,6 +2481,9 @@ paths:
         the introducer sees an empty list rather than a refusal: whether a colleague was asked
         about this contact is exactly the fact the row protects.
 
+        An introduction recorded after the fact (`origin: recorded`) is the exception: both
+        colleagues vouched for it, so every reader of the contact sees it.
+
         Newest first. Settled asks stay in the list — what was asked and answered is the
         history the next ask is decided against.
       responses:
@@ -2518,6 +2521,44 @@ paths:
       responses:
         '201':
           description: The ask is recorded and the colleague can see it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IntroRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /contacts/{id}/introductions:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Contacts]
+      operationId: recordIntroduction
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Record an introduction to this contact that already happened.
+      description: |
+        A colleague introduced another colleague to this contact outside Margince, with no ask
+        behind it. The row is an `IntroRequest` with `origin: recorded`, born `introduced`, so
+        nothing mistakes it for an ask that went through accept and mark.
+
+        Only the colleague who introduced (`introducer_user_id`) or the colleague who was
+        introduced (`introduced_user_id`) may record it, and the caller must be one of the two.
+        Anyone who can read the contact can read the recorded row. Both seats must be live
+        members of the workspace and must differ.
+
+        Recording the same pair for the same contact twice answers `409`. Recording is a
+        human's claim about two colleagues, so no agent tool does it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RecordIntroductionInput' }
+      responses:
+        '201':
+          description: The introduction is recorded.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/IntroRequest' }
@@ -15687,7 +15728,7 @@ paths:
       description: |
         Needs `legal_entity:delete`. The default entity is refused as 409
         `legal_entity_default_is_permanent`. An entity that still has members is refused as
-        409 `legal_entity_has_members`: move its users to another entity first.
+        409 `legal_entity_has_members`: move its users to another entity first. 409 `legal_entity_is_assessed_against`: companies are still judged against its offering; choose another for them first.
         A stale `If-Match` version is refused as 409 `version_skew`.
       parameters:
         - $ref: '#/components/parameters/IfMatch'
@@ -38642,6 +38683,10 @@ components:
             NOT writable, so a client reading a response from a server too old to send it
             fails closed.
         parent_company_id: { type: [string, 'null'], format: uuid, description: Single-level hierarchy FK; no cycles. }
+        assess_against_entity_id:
+          type: [string, 'null']
+          format: uuid
+          description: The legal entity whose offering the growth fit judges this company against. Null means the main offering.
         merged_into_id: { type: [string, 'null'], format: uuid }
         computed_fields:
           type: array
@@ -38814,6 +38859,13 @@ components:
         address: { $ref: '#/components/schemas/Address' }
         owner_id: { type: [string, 'null'], format: uuid }
         parent_company_id: { type: [string, 'null'], format: uuid }
+        assess_against_entity_id:
+          type: [string, 'null']
+          format: uuid
+          description: |
+            The legal entity whose offering the growth fit judges this company against. Send the
+            default entity's id to return to the main offering. An entity that does not exist or is
+            archived answers 422 naming this field. Absent leaves it untouched.
         domains:
           type: array
           description: Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains.
@@ -39153,6 +39205,14 @@ components:
         is to record our own profile, `confirm_offering` is to confirm our own offering,
         `configure_model` is to set up a model and `retry_later` is to try the read again.
 
+    GrowthFitOffering:
+      type: object
+      description: The legal entity whose offering a growth fit was measured against.
+      required: [entity_id, display_name, is_default]
+      properties:
+        entity_id: { type: string, format: uuid }
+        display_name: { type: string, description: "The entity's name; for the default entity, the company's name." }
+        is_default: { type: boolean, description: True when this is the main offering. }
     CompanyGrowthFit:
       type: object
       description: |
@@ -39174,6 +39234,8 @@ components:
             Why the band could not go higher — our own offering context being unconfirmed
             caps it at `moderate` (DOSS-AC-13). Null when nothing capped it.
         data_completeness: { $ref: '#/components/schemas/DataCompleteness' }
+        assessed_against:
+          $ref: '#/components/schemas/GrowthFitOffering'
         next_step:
           $ref: '#/components/schemas/GrowthFitNextStep'
           description: |
@@ -42074,19 +42136,25 @@ components:
         - requester_user_id
         - introducer_user_id
         - route_type
-        - internal_reason
+        - origin
         - status
         - name_drop_allowed
         - fallback_policy
         - note_generated_by
         - note_ai_generated
         - requested_at
-        - due_at
         - version
       properties:
         id: { type: string, format: uuid }
         contact_id: { type: string, format: uuid }
-        requester_user_id: { type: string, format: uuid }
+        origin:
+          $ref: '#/components/schemas/IntroOrigin'
+        recorded_channel:
+          $ref: '#/components/schemas/IntroRecordedChannel'
+        requester_user_id:
+          type: string
+          format: uuid
+          description: The colleague who asked, or for a recorded introduction the colleague who was introduced.
         requester_display_name: { type: string }
         introducer_user_id: { type: string, format: uuid }
         introducer_display_name: { type: string }
@@ -42098,8 +42166,10 @@ components:
           description: Set when the ask goes via someone else at the contact's company.
         through_display_name: { type: string }
         internal_reason:
-          type: string
-          description: Why the requester is asking. Read by the colleague, never by the contact.
+          type: [string, 'null']
+          description: >-
+            Why the requester is asking. Read by the colleague, never by the contact. Null for
+            a recorded introduction, which has no ask behind it.
         value_for_target:
           type: string
           description: What is in it for the contact, in the requester's words.
@@ -42141,9 +42211,11 @@ components:
             the audit trail.
         requested_at: { type: string, format: date-time }
         due_at:
-          type: string
+          type: [string, 'null']
           format: date-time
-          description: When an unanswered ask goes stale. A colleague's silence is an answer the requester needs to be able to act on.
+          description: >-
+            When an unanswered ask goes stale. A colleague's silence is an answer the requester
+            needs to be able to act on. Null for a recorded introduction, which nobody answers.
         decided_at: { type: [string, 'null'], format: date-time }
         introduced_at: { type: [string, 'null'], format: date-time }
         name_dropped_at: { type: [string, 'null'], format: date-time }
@@ -42218,6 +42290,46 @@ components:
         in the drawer, so the answer survives the tab that gave it.
       enum: [name_drop, next_route, none]
       x-enum-varnames: [IntroFallbackPolicyNameDrop, IntroFallbackPolicyNextRoute, IntroFallbackPolicyNone]
+
+    IntroOrigin:
+      type: string
+      description: >-
+        How the row came to be. `asked` went through the ask lifecycle. `recorded` is an
+        introduction that already happened outside Margince, born `introduced`.
+      enum: [asked, recorded]
+      x-enum-varnames: [IntroOriginAsked, IntroOriginRecorded]
+
+    IntroRecordedChannel:
+      type: string
+      description: How a recorded introduction was made.
+      enum: [in_person, email, call, other]
+      x-enum-varnames:
+        - IntroRecordedChannelInPerson
+        - IntroRecordedChannelEmail
+        - IntroRecordedChannelCall
+        - IntroRecordedChannelOther
+
+    RecordIntroductionInput:
+      type: object
+      description: >-
+        An introduction that already happened. The caller must be the introducer or the
+        introduced colleague; the two must differ.
+      required: [introducer_user_id, introduced_user_id, introduced_on, channel]
+      properties:
+        introducer_user_id:
+          type: string
+          format: uuid
+          description: The colleague who made the introduction.
+        introduced_user_id:
+          type: string
+          format: uuid
+          description: The colleague who was introduced to the contact.
+        introduced_on:
+          type: string
+          format: date
+          description: The day it happened. Not in the future.
+        channel:
+          $ref: '#/components/schemas/IntroRecordedChannel'
 
     IntroRequestListResponse:
       type: object
@@ -45397,9 +45509,34 @@ components:
         data: { type: array, items: { $ref: '#/components/schemas/Project360PhaseTransition' } }
         phase_durations: { type: array, items: { $ref: '#/components/schemas/Project360PhaseDuration' } }
 
+    PrincipalAttribution:
+      type: object
+      description: |
+        Who a recorded change is attributed to, read from the audit row the change
+        wrote. The fields mean what they mean on AuditHistoryEntry, and a client
+        renders them with the same helper.
+      required: [actor_type, actor_id]
+      properties:
+        actor_type: { type: string, enum: [human, agent, system, connector, buyer] }
+        actor_id: { type: string }
+        actor_name: { type: [string, 'null'], description: "Resolved display name for a human actor_id; null for machine actors and for a member whose user row no longer resolves." }
+        on_behalf_of: { type: [string, 'null'], format: uuid, description: Granting human's user id for agent actions. }
+        on_behalf_of_name: { type: [string, 'null'], description: Resolved display name for on_behalf_of. }
+        agent_client:
+          type: [string, 'null']
+          description: |
+            The NAME of the tool a delegated change was typed through — "Claude",
+            "Cursor" — resolved from the OAuth client behind the row's passport.
+            Null when the passport was minted by hand in Settings, when the client
+            row is gone, and for every write that was not delegated.
+        passport_id:
+          type: [string, 'null']
+          format: uuid
+          description: The Agent Seat Passport the change was made under; null for a write that was not delegated.
+
     Project360PhaseTransition:
       type: object
-      required: [id, from_phase, to_phase, reason, changed_at, changed_by]
+      required: [id, from_phase, to_phase, reason, changed_at]
       properties:
         id: { type: string, format: uuid }
         from_phase: { type: [string, 'null'], description: Null on the birth row. }
@@ -45407,12 +45544,13 @@ components:
         reason: { type: [string, 'null'] }
         changed_at: { type: string, format: date-time }
         changed_by:
-          type: object
-          description: The principal that moved the phase — its id as stamped; and the seat's display name when the id names an app user.
-          required: [id, display_name]
-          properties:
-            id: { type: string }
-            display_name: { type: [string, 'null'] }
+          allOf: [{ $ref: '#/components/schemas/PrincipalAttribution' }]
+          description: |
+            Who made the move, from the audit row written in the same transaction.
+            Absent when that row is not known: a move recorded before the link existed
+            and not matched to one audit row, or an audit row that no longer exists.
+            A reader says "unknown" for an absent value and never "System"; the
+            system principal is `actor_type: system`.
 
     Project360PhaseDuration:
       type: object
@@ -55387,11 +55525,14 @@ components:
             around both rules. `detail` names the kind. `later_company_change` refuses a
             technical lookup after any later write to the company or its facts, a refresh to
             the same value included. `no_restore_snapshot` refuses a lookup recorded before
-            receipts kept the facts it replaced.
+            receipts kept the facts it replaced. `credential_not_kept` refuses an entry whose
+            earlier text held a credential: history keeps it masked, and the record keeps the
+            text as typed, so putting it back would write the mask over the record.
           enum: [no_before_image, not_a_replayable_verb, unsupported_record_type, superseded,
                  behind_erasure_boundary, already_undone, not_restorable_by_this_path,
                  record_archived, null_unwritable_by_module, not_writable_by_caller,
-                 edge_relink_unsupported, later_company_change, no_restore_snapshot, null]
+                 edge_relink_unsupported, later_company_change, no_restore_snapshot,
+                 credential_not_kept, null]
         detail:
           type: [string, 'null']
           description: >-
@@ -56312,6 +56453,7 @@ components:
           type: string
           nullable: true
           description: The legal notice the entity prints, up to 4000 characters.
+        offering: { $ref: '#/components/schemas/LegalEntityOffering' }
         logo_url:
           type: string
           nullable: true
@@ -56332,6 +56474,18 @@ components:
         postal_code: { type: string, nullable: true }
         city: { type: string, nullable: true }
         region: { type: string, nullable: true }
+    LegalEntityOffering:
+      type: object
+      description: |
+        What a further legal entity sells and to whom, the offering a company can be judged against.
+        The default entity's offering is the company profile, so these stay null there and a write to
+        them answers `legal_entity_field_on_company_form`. The offering is confirmed once the entity
+        has a name, an `offer_summary` and an `icp`.
+      properties:
+        offer_summary: { type: string, nullable: true, maxLength: 4000 }
+        icp: { type: string, nullable: true, maxLength: 4000, description: The ideal customer profile. }
+        value_proposition: { type: string, nullable: true, maxLength: 4000 }
+        usp: { type: string, nullable: true, maxLength: 4000 }
     LegalEntityListResponse:
       type: object
       required: [data]
@@ -56355,6 +56509,7 @@ components:
         iban: { type: string, description: Spaces are removed and letters upper-cased before the check. }
         bic: { type: string }
         imprint: { type: string, maxLength: 4000 }
+        offering: { $ref: '#/components/schemas/LegalEntityOffering' }
     UpdateLegalEntityRequest:
       type: object
       description: A field left out keeps its value; a field sent as an empty string is cleared.
@@ -56371,6 +56526,7 @@ components:
         iban: { type: string }
         bic: { type: string }
         imprint: { type: string, maxLength: 4000 }
+        offering: { $ref: '#/components/schemas/LegalEntityOffering' }
     LegalEntityMember:
       type: object
       required: [user_id, legal_entity_id, assigned_at]

@@ -34,13 +34,14 @@ func clearableContactColumns(current crmcontracts.Contact) map[string]storekit.C
 //nolint:goconst // wire field names against column names, each its own vocabulary — see clearableContactColumns
 func clearableCompanyColumns(current crmcontracts.Company) map[string]storekit.Clearable {
 	return map[string]storekit.Clearable{
-		"legal_name":        {Column: "legal_name", Current: current.LegalName},
-		"description":       {Column: "description", Current: current.Description},
-		"industry":          {Column: "industry", Current: current.Industry},
-		"size_band":         {Column: "size_band", Current: current.SizeBand},
-		"linkedin_url":      {Column: "linkedin_url", Current: current.LinkedinUrl},
-		"owner_id":          {Column: ownerIDColumn, Current: current.OwnerId},
-		"parent_company_id": {Column: "parent_company_id", Current: current.ParentCompanyId},
+		"legal_name":               {Column: "legal_name", Current: current.LegalName},
+		"description":              {Column: "description", Current: current.Description},
+		"industry":                 {Column: "industry", Current: current.Industry},
+		"size_band":                {Column: "size_band", Current: current.SizeBand},
+		"linkedin_url":             {Column: "linkedin_url", Current: current.LinkedinUrl},
+		"owner_id":                 {Column: ownerIDColumn, Current: current.OwnerId},
+		"parent_company_id":        {Column: "parent_company_id", Current: current.ParentCompanyId},
+		"assess_against_entity_id": {Column: "assess_against_entity_id", Current: current.AssessAgainstEntityId},
 	}
 }
 

@@ -31,6 +31,7 @@ import { useNow } from "../../format/now";
 import { formatRelativeTime } from "../../format/relativetime";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { actorAttribution } from "../../lib/auditactor";
 import { useCan } from "../../lib/capability";
 import { ENTITY, isEntityKind } from "../../lib/entity";
 import { unwrap } from "../../lib/problem";
@@ -40,7 +41,6 @@ import {
   ACTOR_ICON,
   AUDIT_ACTION_VALUES,
   actionLabel,
-  actorAttribution,
   entityLabel,
 } from "./audit";
 import { AuditDetail } from "./settings-audit.detail";

@@ -760,6 +760,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/contacts/{id}/enrichment-runs":                                {Op: "createContactEnrichmentRun", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/contacts/{id}/intro-note-draft":                               {Op: "draftIntroNote", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/contacts/{id}/intro-requests":                                 {Op: "createIntroRequest", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/contacts/{id}/introductions":                                  {Op: "recordIntroduction", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/contacts/{id}/merge":                                          {Op: "mergeContact", Access: "tool", Tool: "merge_records", RecordType: "contact", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/contacts/{id}/moment/dismiss":                                 {Op: "dismissContactMoment", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/contacts/{id}/profile-fields/{field}/restore":                 {Op: "restoreContactProfileField", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

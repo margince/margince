@@ -211,6 +211,18 @@ func (s *Store) ArchiveLegalEntity(ctx context.Context, id ids.LegalEntityID, if
 				fmt.Sprintf("%d users still work for this legal entity; move them to another entity first", before.MemberCount),
 			}
 		}
+		var judged int
+		var countArgs legalEntityArgs
+		if err := tx.QueryRow(ctx, `SELECT count(*) FROM company WHERE assess_against_entity_id = `+countArgs.add(id),
+			countArgs...).Scan(&judged); err != nil {
+			return fmt.Errorf("count the companies judged against a legal entity: %w", err)
+		}
+		if judged > 0 {
+			return &LegalEntityRefusal{
+				"legal_entity_is_assessed_against",
+				fmt.Sprintf("%d companies are judged against this legal entity's offering; choose another offering for them first", judged),
+			}
+		}
 		var args legalEntityArgs
 		if _, err := tx.Exec(ctx, `UPDATE legal_entity SET archived_at = now() WHERE id = `+args.add(id), args...); err != nil {
 			return fmt.Errorf("archive legal entity: %w", err)

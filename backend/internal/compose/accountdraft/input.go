@@ -348,31 +348,14 @@ func instant(at *time.Time) time.Time {
 	return *at
 }
 
-// CorrespondenceText is what this account has been written to and from,
-// newest first, for detecting the language its correspondence runs in.
-//
-// Subjects and bodies both, because a subject line rarely carries enough words
-// to clear the detector's floor on its own. This drafter opens a new
-// conversation, so the text is evidence about the ACCOUNT's language rather
-// than about a thread being answered — a German account gets a German first
-// touch even though nothing is being replied to.
-func CorrespondenceText(view crmcontracts.Company360) string {
+// languageEvidence is what the account's correspondence language is read from.
+// This drafter opens a new conversation, so the text is evidence about the
+// ACCOUNT's language rather than about a thread being answered.
+func languageEvidence(view crmcontracts.Company360, now time.Time) []string {
 	if view.Activities == nil {
-		return ""
+		return nil
 	}
-	var text strings.Builder
-	for i, act := range view.Activities.Data {
-		if i == draftInputActivities {
-			break
-		}
-		if act.Subject != nil {
-			text.WriteString(*act.Subject + "\n")
-		}
-		if act.Body != nil {
-			text.WriteString(*act.Body + "\n\n")
-		}
-	}
-	return text.String()
+	return draftcore.LanguageEvidenceOf(view.Activities.Data, now)
 }
 
 func foldRecent(view crmcontracts.Company360) []ActIn {

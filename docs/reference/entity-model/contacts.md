@@ -6,7 +6,7 @@ The 44 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## company
 
-43 columns · primary key `(id)` · referenced by 43 foreign keys
+44 columns · primary key `(id)` · referenced by 43 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -17,6 +17,7 @@ The 44 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `address_line2` | `text` |  |  |
 | `address_postal_code` | `text` |  |  |
 | `address_region` | `text` |  |  |
+| `assess_against_entity_id` | `uuid` |  | The legal entity whose offering the growth fit judges this company against. |
 | `description` | `text` |  | One human-written line saying what the company does, shown under the title on the company page. |
 | `display_name` | `text` | yes |  |
 | `geocode_input_hash` | `text` |  |  |
@@ -58,6 +59,7 @@ The 44 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 | Columns | Table | When the parent goes |
 |---|---|---|
+| `assess_against_entity_id` | `legal_entity` | the parent cannot be deleted while this row points at it |
 | `merged_into_id` | `company` | deleting the parent keeps this row and clears the link |
 | `owner_id` | `app_user` | deleting the parent keeps this row and clears the link |
 | `parent_company_id` | `company` | deleting the parent keeps this row and clears the link |
@@ -85,6 +87,7 @@ The 44 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `company_linkedin_url_key`: `unique, btree (lower(linkedin_url)) WHERE ((linkedin_url IS NOT NULL) AND (archived_at IS NULL))`
 - `company_pkey`: `unique, btree (id)`
+- `idx_company_assess_against_entity`: `btree (assess_against_entity_id) WHERE (assess_against_entity_id IS NOT NULL)`
 - `idx_company_created_keyset`: `btree (created_at DESC, id DESC) WHERE (archived_at IS NULL)`
 - `idx_company_geocoded`: `btree (geocode_lat, geocode_lon) WHERE ((geocode_status = 'ok') AND (archived_at IS NULL))`
 - `idx_company_import_display_name`: `btree (f_fold_import_name(display_name)) WHERE ((archived_at IS NULL) AND (merged_into_id IS NULL))`
@@ -1312,7 +1315,7 @@ The 44 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## legal_entity
 
-24 columns · primary key `(id)` · referenced by 1 foreign key
+28 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1328,12 +1331,16 @@ The 44 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `default_language` | `text` |  | The ISO 639-1 language the entity's documents default to. |
 | `display_name` | `text` |  | The name the product shows for the entity. |
 | `iban` | `text` |  | The IBAN, upper case, without spaces. |
+| `icp` | `text` |  |  |
 | `imprint` | `text` |  | The legal notice the entity prints, up to 4000 characters. |
 | `is_default` | `boolean`, default `false` | yes | The entity a user with no assignment works for. |
 | `legal_name` | `text` |  | The registered name documents are issued under. |
 | `logo_object_key` | `text` |  |  |
+| `offer_summary` | `text` |  |  |
 | `register_court` | `text` |  | The court that keeps the entity's commercial register entry. |
 | `register_number` | `text` |  | The entity's commercial register number. |
+| `usp` | `text` |  |  |
+| `value_proposition` | `text` |  |  |
 | `vat_id` | `text` |  | The entity's VAT identification number. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
@@ -1345,12 +1352,14 @@ The 44 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `legal_entity_bic_shape`: `CHECK (((bic IS NULL) OR (bic ~ '^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$')))`
 - `legal_entity_country_shape`: `CHECK (((country IS NULL) OR (country ~ '^[a-z]{2}$')))`
+- `legal_entity_default_has_no_offering`: `CHECK (((NOT is_default) OR ((offer_summary IS NULL) AND (icp IS NULL) AND (value_proposition IS NULL) AND (usp IS NULL))))`
 - `legal_entity_default_is_permanent`: `CHECK (((NOT is_default) OR (archived_at IS NULL)))`
 - `legal_entity_default_reads_the_anchor`: `CHECK (((NOT is_default) OR ((display_name IS NULL) AND (legal_name IS NULL) AND (address_line1 IS NULL) AND (address_line2 IS NULL) AND (address_postal_code IS NULL) AND (address_city IS NULL) AND (address_region IS NULL) AND (vat_id IS NULL) AND (register_court IS NULL) AND (register_number IS NULL) AND (logo_object_key IS NULL))))`
 - `legal_entity_iban_shape`: `CHECK (((iban IS NULL) OR (iban ~ '^[A-Z]{2}[0-9]{2}[A-Z0-9]{11,30}$')))`
 - `legal_entity_imprint_bounded`: `CHECK (((imprint IS NULL) OR (length(imprint) <= 4000)))`
 - `legal_entity_language_shape`: `CHECK (((default_language IS NULL) OR (default_language ~ '^[a-z]{2}$')))`
 - `legal_entity_names_itself`: `CHECK ((is_default OR ((btrim(COALESCE(display_name, '')) <> '') AND (btrim(COALESCE(legal_name, '')) <> '') AND (country IS NOT NULL))))`
+- `legal_entity_offering_bounded`: `CHECK (((length(offer_summary) <= 4000) AND (length(icp) <= 4000) AND (length(value_proposition) <= 4000) AND (length(usp) <= 4000)))`
 - `legal_entity_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**

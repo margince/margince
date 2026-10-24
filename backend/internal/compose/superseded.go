@@ -42,7 +42,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // moneyPair is read as ONE field for supersession. amount_minor is a count of
@@ -98,7 +98,7 @@ func reportedAs(superseded []string, asked []string) []string {
 // written in, rather than a per-type Go conversion that would disagree about
 // dates and money.
 func fieldsThatMovedSince(ctx context.Context, tx pgx.Tx, row AuditRow) ([]string, error) {
-	after, entityType, id := row.After, row.EntityType, row.EntityID
+	after, entityType := row.After, row.EntityType
 	if len(after) == 0 {
 		return nil, nil
 	}
@@ -117,7 +117,7 @@ func fieldsThatMovedSince(ctx context.Context, tx pgx.Tx, row AuditRow) ([]strin
 	if len(asked) == 0 {
 		return nil, nil
 	}
-	moved, err := columnsThatMoved(ctx, tx, entityType, id, asked)
+	moved, err := columnsThatMoved(ctx, tx, row, asked)
 	if err != nil {
 		return nil, err
 	}
@@ -138,18 +138,24 @@ func fieldsThatMovedSince(ctx context.Context, tx pgx.Tx, row AuditRow) ([]strin
 
 // columnsThatMoved names the image keys that are columns of the record and
 // hold something other than the image's value now. A timestamp column is the
-// same value in any zone, and the audit image is spelled in the writer's zone where
-// the row is read in the session's, so those two compare as instants.
-func columnsThatMoved(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID, asked []byte) ([]string, error) {
+// same value in any zone. The image spells it in the writer's zone and the row
+// reads it in the session's, so the two compare as instants. The image stores
+// text with its credentials masked, so a column nobody wrote since compares in
+// that form too.
+func columnsThatMoved(ctx context.Context, tx pgx.Tx, row AuditRow, asked []byte) ([]string, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT k.key, to_jsonb(r) -> k.key, k.value,
 		       EXISTS (SELECT 1 FROM pg_attribute a
-		               WHERE a.attrelid = $3::regclass AND a.attname = k.key AND a.atttypid = 'timestamptz'::regtype)
+		               WHERE a.attrelid = $3::regclass AND a.attname = k.key AND a.atttypid = 'timestamptz'::regtype),
+		       EXISTS (SELECT 1 FROM audit_log later
+		               WHERE later.entity_type = $4 AND later.entity_id = $1 AND later.after ? k.key
+		                 AND (later.occurred_at, later.id) >
+		                     (SELECT this.occurred_at, this.id FROM audit_log this WHERE this.id = $5))
 		FROM jsonb_each($2::jsonb) AS k(key, value)
-		JOIN `+pgx.Identifier{entityType}.Sanitize()+` r ON r.id = $1
+		JOIN `+pgx.Identifier{row.EntityType}.Sanitize()+` r ON r.id = $1
 		WHERE to_jsonb(r) ? k.key
 		  AND to_jsonb(r) -> k.key IS DISTINCT FROM k.value
-		ORDER BY 1`, id, asked, pgx.Identifier{entityType}.Sanitize())
+		ORDER BY 1`, row.EntityID, asked, pgx.Identifier{row.EntityType}.Sanitize(), row.EntityType, row.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -157,16 +163,39 @@ func columnsThatMoved(ctx context.Context, tx pgx.Tx, entityType string, id ids.
 	var moved []string
 	for rows.Next() {
 		var key string
-		var timestamp bool
+		var timestamp, rewritten bool
 		var live, stated json.RawMessage
-		if err := rows.Scan(&key, &live, &stated, &timestamp); err != nil {
+		if err := rows.Scan(&key, &live, &stated, &timestamp, &rewritten); err != nil {
 			return nil, err
 		}
-		if !timestamp || !sameInstant(live, stated) {
-			moved = append(moved, key)
+		if timestamp && sameInstant(live, stated) {
+			continue
 		}
+		if liveStandsInForImage(row.EntityType, stated, rewritten) && sameOnceAudited(row.EntityType, live, stated) {
+			continue
+		}
+		moved = append(moved, key)
 	}
 	return moved, rows.Err()
+}
+
+// liveStandsInForImage reports whether an image value is text the trail keeps
+// masked and no later audit row wrote its key. The record's live column then
+// holds what that write left, unmasked, and a comparison with the value reads
+// the column instead of the image.
+func liveStandsInForImage(entityType string, stated json.RawMessage, rewritten bool) bool {
+	var image string
+	return !rewritten && json.Unmarshal(stated, &image) == nil && storekit.HoldsMaskedText(entityType, image)
+}
+
+// sameOnceAudited reports whether a live text column is the image's text once
+// the trail's masking is applied to it.
+func sameOnceAudited(entityType string, live, stated json.RawMessage) bool {
+	var text, image string
+	if json.Unmarshal(live, &text) != nil || json.Unmarshal(stated, &image) != nil {
+		return false
+	}
+	return storekit.AuditedText(entityType, text) == image
 }
 
 // sameInstant reports whether two jsonb strings are one point in time.

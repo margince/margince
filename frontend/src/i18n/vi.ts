@@ -1868,6 +1868,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Công ty hoặc dữ kiện của công ty đã thay đổi sau lần tra cứu này, nên hoàn tác sẽ ghi đè thay đổi sau đó.",
   "history.undo.noRestoreSnapshot":
     "Lần tra cứu này được ghi lại trước khi các dữ kiện cũ được lưu giữ, nên không thể hoàn tác.",
+  "history.undo.credentialNotKept":
+    "Văn bản trước đó chứa mật khẩu, và lịch sử chỉ lưu mật khẩu ở dạng đã che, nên không thể hoàn tác thay đổi này.",
   "history.reversal.collapsed": "Thay đổi của {actor}, {undoer} đã hoàn tác",
   "history.reversal.collapsedSelf":
     "{actor} đã hoàn tác thay đổi của chính mình",
@@ -2003,6 +2005,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.fx_rate_date": "Ngày tỷ giá",
   "history.field.fx_rate_to_base": "Tỷ giá",
   "history.field.industry": "Ngành",
+  "history.field.assess_against_entity_id": "Đánh giá theo",
   "history.field.is_done": "Xong",
   "history.field.last_name": "Họ",
   "history.field.legal_name": "Tên pháp lý",
@@ -13527,6 +13530,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webhooks.event.intro_request.closed.label": "Đã đóng yêu cầu giới thiệu",
   "webhooks.event.intro_request.closed.when":
     "Yêu cầu kết thúc mà không có lời giới thiệu.",
+  "webhooks.event.intro_request.recorded.label": "Đã ghi nhận lời giới thiệu",
+  "webhooks.event.intro_request.recorded.when":
+    "Một đồng nghiệp ghi nhận lời giới thiệu diễn ra bên ngoài Margince.",
   "webhooks.eventGroup.consent_privacy": "Sự đồng ý và quyền riêng tư",
   "webhooks.event.consent.changed.label": "Đã ghi nhận sự đồng ý",
   "webhooks.event.consent.changed.when":
@@ -13922,6 +13928,31 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.intro.whenDays": "liên lạc gần nhất {days} ngày trước",
   "contact.intro.whenNever": "chưa có liên lạc gần đây",
   "contact.intro.askTitle": "Nhờ giới thiệu với {name}",
+  "contact.intro.recordAction": "Ghi nhận một lần giới thiệu",
+  "contact.intro.recordTitle": "Ghi nhận lần giới thiệu với {name}",
+  "contact.intro.recordHint":
+    "Dùng khi lần giới thiệu đã diễn ra bên ngoài Margince. Chỉ đồng nghiệp đã giới thiệu hoặc đồng nghiệp được giới thiệu mới ghi nhận được.",
+  "contact.intro.recordIntroducer": "Giới thiệu bởi",
+  "contact.intro.recordIntroduced": "Đồng nghiệp được giới thiệu",
+  "contact.intro.recordDate": "Ngày",
+  "contact.intro.recordChannel": "Diễn ra bằng cách nào",
+  "contact.intro.channelInPerson": "Gặp trực tiếp",
+  "contact.intro.channelEmail": "Qua email",
+  "contact.intro.channelCall": "Qua cuộc gọi",
+  "contact.intro.channelOther": "Cách khác",
+  "contact.intro.recordSubmit": "Ghi nhận giới thiệu",
+  "contact.intro.recordFailed":
+    "Không thể ghi nhận lần giới thiệu. Bạn phải là một trong hai đồng nghiệp. Thử lại.",
+  "contact.intro.recordDuplicate":
+    "Lần giới thiệu này đã được ghi nhận cho hai đồng nghiệp này.",
+  "contact.intro.recordGone":
+    "Không tìm thấy liên hệ hoặc một trong các đồng nghiệp. Hãy tải lại và thử lại.",
+  "contact.intro.recordInvalid":
+    "Kiểm tra ngày: không được ở tương lai. Sau đó thử lại.",
+  "contact.intro.recordFailedGeneric":
+    "Không thể ghi nhận lần giới thiệu. Thử lại.",
+  "contact.intro.recordedBadge": "Ghi nhận sau khi xảy ra",
+  "contact.intro.recordedIntroduced": "đã giới thiệu",
   "contact.intro.cancel": "Hủy",
   "contact.intro.askAction": "Yêu cầu giới thiệu",
   "contact.intro.askFailed": "Không thể ghi nhận yêu cầu. Thử lại.",
@@ -15076,7 +15107,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "project.history.title": "Lịch sử giai đoạn",
   "project.history.empty": "Chưa ghi nhận thay đổi giai đoạn nào.",
   "project.history.moved": "{from} → {to}",
-  "project.history.bySystem": "Hệ thống",
   "project.deals.title": "Deal",
   "project.deals.empty":
     "Chưa có deal nào gắn với dự án này. Mỗi deal chọn dự án trong biểu mẫu của deal đó.",
@@ -15123,8 +15153,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "project.started": "Bắt đầu",
   "project.aside.closeNote": "Khi đóng dự án, bạn cần nêu lý do.",
   "project.history.since": "Từ {date}",
-  "project.history.by": "bởi {name}",
-  "project.history.openedBy": "{name} tạo",
+  "project.history.movedBy": "{subject} đã chuyển giai đoạn",
+  "project.history.openedBy": "{subject} đã tạo dự án",
+  "project.history.unknown": "Không ghi nhận ai đã thực hiện thay đổi này",
   "project.standing.unassessed": "Chưa ai ghi nhận tình hình triển khai.",
   "project.standing.assessedBy": "{author} đánh giá ngày {date}.",
   "project.standing.assessedOn": "Đánh giá ngày {date}.",
@@ -15146,7 +15177,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "project.standing.event.signed": "Đã ký hợp đồng",
   "project.standing.event.won": "Thắng {name}",
   "project.standing.event.end": "Kết thúc dự kiến",
-  "project.standing.event.by": "{date} · bởi {name}",
   "project.standing.event.dueLate": "hạn {date} · trễ",
   "project.standing.event.due": "hạn {date}",
   "project.standing.event.lastUpdate": "{date} · cập nhật gần nhất",

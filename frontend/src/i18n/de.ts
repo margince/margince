@@ -1921,6 +1921,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das Unternehmen oder seine Angaben haben sich nach dieser Abfrage geändert. Ein Rückgängigmachen würde diese spätere Änderung überschreiben.",
   "history.undo.noRestoreSnapshot":
     "Diese Abfrage wurde gespeichert, bevor die früheren Angaben aufbewahrt wurden. Darum lässt sie sich nicht rückgängig machen.",
+  "history.undo.credentialNotKept":
+    "Der frühere Text enthielt ein Passwort, und der Verlauf bewahrt Passwörter nur maskiert auf. Darum lässt sich diese Änderung nicht rückgängig machen.",
   "history.reversal.collapsed":
     "Änderung von {actor}, rückgängig gemacht von {undoer}",
   "history.reversal.collapsedSelf":
@@ -2071,6 +2073,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.fx_rate_date": "Datum des Wechselkurses",
   "history.field.fx_rate_to_base": "Wechselkurs",
   "history.field.industry": "Branche",
+  "history.field.assess_against_entity_id": "Bewertet gegen",
   "history.field.is_done": "Erledigt",
   "history.field.last_name": "Nachname",
   "history.field.legal_name": "Rechtlicher Name",
@@ -13897,6 +13900,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Vorstellungsanfrage geschlossen",
   "webhooks.event.intro_request.closed.when":
     "Eine Anfrage endet ohne Vorstellung.",
+  "webhooks.event.intro_request.recorded.label": "Vorstellung erfasst",
+  "webhooks.event.intro_request.recorded.when":
+    "Ein Teammitglied erfasst eine Vorstellung, die außerhalb von Margince stattfand.",
   "webhooks.eventGroup.consent_privacy": "Einwilligung und Datenschutz",
   "webhooks.event.consent.changed.label": "Einwilligung erfasst",
   "webhooks.event.consent.changed.when":
@@ -14309,6 +14315,31 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.whenDays": "letzter Kontakt vor {days} Tagen",
   "contact.intro.whenNever": "kein Kontakt in letzter Zeit",
   "contact.intro.askTitle": "Vorstellung bei {name} anfragen",
+  "contact.intro.recordAction": "Eine Vorstellung erfassen",
+  "contact.intro.recordTitle": "Vorstellung bei {name} erfassen",
+  "contact.intro.recordHint":
+    "Nutze das für eine Vorstellung, die bereits außerhalb von Margince stattgefunden hat. Nur das Teammitglied, das vorgestellt hat, oder das vorgestellte Teammitglied kann sie erfassen.",
+  "contact.intro.recordIntroducer": "Vorgestellt von",
+  "contact.intro.recordIntroduced": "Vorgestelltes Teammitglied",
+  "contact.intro.recordDate": "Datum",
+  "contact.intro.recordChannel": "Wie es geschah",
+  "contact.intro.channelInPerson": "Persönlich",
+  "contact.intro.channelEmail": "Per E-Mail",
+  "contact.intro.channelCall": "Per Anruf",
+  "contact.intro.channelOther": "Auf anderem Weg",
+  "contact.intro.recordSubmit": "Vorstellung erfassen",
+  "contact.intro.recordFailed":
+    "Die Vorstellung wurde nicht erfasst. Du musst eines der beiden Teammitglieder sein. Bitte versuche es erneut.",
+  "contact.intro.recordDuplicate":
+    "Diese Vorstellung ist für diese beiden Teammitglieder bereits erfasst.",
+  "contact.intro.recordGone":
+    "Der Kontakt oder ein Teammitglied wurde nicht gefunden. Lade neu und versuche es erneut.",
+  "contact.intro.recordInvalid":
+    "Prüfe das Datum: es darf nicht in der Zukunft liegen. Versuche es dann erneut.",
+  "contact.intro.recordFailedGeneric":
+    "Die Vorstellung wurde nicht erfasst. Bitte versuche es erneut.",
+  "contact.intro.recordedBadge": "Nachträglich erfasst",
+  "contact.intro.recordedIntroduced": "hat vorgestellt",
   "contact.intro.cancel": "Abbrechen",
   "contact.intro.askAction": "Vorstellung anfragen",
   "contact.intro.askFailed":
@@ -15479,7 +15510,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "project.history.title": "Phasenverlauf",
   "project.history.empty": "Noch kein Phasenwechsel erfasst.",
   "project.history.moved": "{from} → {to}",
-  "project.history.bySystem": "System",
   "project.deals.title": "Deals",
   "project.deals.empty":
     "Noch kein Deal ist mit diesem Projekt verknüpft. Das Projekt eines Deals wird im Formular des Deals ausgewählt.",
@@ -15527,8 +15557,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "project.started": "Gestartet",
   "project.aside.closeNote": "Wer ein Projekt schließt, gibt einen Grund an.",
   "project.history.since": "Seit {date}",
-  "project.history.by": "von {name}",
-  "project.history.openedBy": "angelegt von {name}",
+  "project.history.movedBy": "{subject} hat die Phase gewechselt",
+  "project.history.openedBy": "{subject} hat das Projekt angelegt",
+  "project.history.unknown":
+    "Wer diesen Wechsel vorgenommen hat, wurde nicht erfasst",
   "project.standing.unassessed":
     "Noch hat niemand erfasst, wie die Umsetzung läuft.",
   "project.standing.assessedBy": "Bewertet am {date} von {author}.",
@@ -15551,7 +15583,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "project.standing.event.signed": "Vertrag unterschrieben",
   "project.standing.event.won": "{name} gewonnen",
   "project.standing.event.end": "Geplantes Ende",
-  "project.standing.event.by": "{date} · von {name}",
   "project.standing.event.dueLate": "fällig am {date} · verspätet",
   "project.standing.event.due": "fällig am {date}",
   "project.standing.event.lastUpdate": "{date} · letzte Aktualisierung",

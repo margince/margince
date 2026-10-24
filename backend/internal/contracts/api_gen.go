@@ -12238,6 +12238,48 @@ func (e IntroNoteOrigin) Valid() bool {
 	}
 }
 
+// Defines values for IntroOrigin.
+const (
+	IntroOriginIntroOriginAsked    IntroOrigin = "asked"
+	IntroOriginIntroOriginRecorded IntroOrigin = "recorded"
+)
+
+// Valid indicates whether the value is a known member of the IntroOrigin enum.
+func (e IntroOrigin) Valid() bool {
+	switch e {
+	case IntroOriginIntroOriginAsked:
+		return true
+	case IntroOriginIntroOriginRecorded:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for IntroRecordedChannel.
+const (
+	IntroRecordedChannelIntroRecordedChannelCall     IntroRecordedChannel = "call"
+	IntroRecordedChannelIntroRecordedChannelEmail    IntroRecordedChannel = "email"
+	IntroRecordedChannelIntroRecordedChannelInPerson IntroRecordedChannel = "in_person"
+	IntroRecordedChannelIntroRecordedChannelOther    IntroRecordedChannel = "other"
+)
+
+// Valid indicates whether the value is a known member of the IntroRecordedChannel enum.
+func (e IntroRecordedChannel) Valid() bool {
+	switch e {
+	case IntroRecordedChannelIntroRecordedChannelCall:
+		return true
+	case IntroRecordedChannelIntroRecordedChannelEmail:
+		return true
+	case IntroRecordedChannelIntroRecordedChannelInPerson:
+		return true
+	case IntroRecordedChannelIntroRecordedChannelOther:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for IntroRequestDecisionInputDecision.
 const (
 	IntroRequestDecisionInputDecisionIntroDecisionAccepted         IntroRequestDecisionInputDecision = "accepted"
@@ -14491,6 +14533,33 @@ func (e PreferenceCenterRefusedReason) Valid() bool {
 	case PreferenceCenterRefusedReasonConfirmationSent:
 		return true
 	case PreferenceCenterRefusedReasonConfirmationUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for PrincipalAttributionActorType.
+const (
+	PrincipalAttributionActorTypeAgent     PrincipalAttributionActorType = "agent"
+	PrincipalAttributionActorTypeBuyer     PrincipalAttributionActorType = "buyer"
+	PrincipalAttributionActorTypeConnector PrincipalAttributionActorType = "connector"
+	PrincipalAttributionActorTypeHuman     PrincipalAttributionActorType = "human"
+	PrincipalAttributionActorTypeSystem    PrincipalAttributionActorType = "system"
+)
+
+// Valid indicates whether the value is a known member of the PrincipalAttributionActorType enum.
+func (e PrincipalAttributionActorType) Valid() bool {
+	switch e {
+	case PrincipalAttributionActorTypeAgent:
+		return true
+	case PrincipalAttributionActorTypeBuyer:
+		return true
+	case PrincipalAttributionActorTypeConnector:
+		return true
+	case PrincipalAttributionActorTypeHuman:
+		return true
+	case PrincipalAttributionActorTypeSystem:
 		return true
 	default:
 		return false
@@ -18482,6 +18551,7 @@ func (e TransitionPolicyMode) Valid() bool {
 const (
 	UndoabilityReasonAlreadyUndone           UndoabilityReason = "already_undone"
 	UndoabilityReasonBehindErasureBoundary   UndoabilityReason = "behind_erasure_boundary"
+	UndoabilityReasonCredentialNotKept       UndoabilityReason = "credential_not_kept"
 	UndoabilityReasonEdgeRelinkUnsupported   UndoabilityReason = "edge_relink_unsupported"
 	UndoabilityReasonLaterCompanyChange      UndoabilityReason = "later_company_change"
 	UndoabilityReasonNoBeforeImage           UndoabilityReason = "no_before_image"
@@ -18501,6 +18571,8 @@ func (e UndoabilityReason) Valid() bool {
 	case UndoabilityReasonAlreadyUndone:
 		return true
 	case UndoabilityReasonBehindErasureBoundary:
+		return true
+	case UndoabilityReasonCredentialNotKept:
 		return true
 	case UndoabilityReasonEdgeRelinkUnsupported:
 		return true
@@ -31167,6 +31239,9 @@ type Company struct {
 	Address    *Address   `json:"address,omitempty"`
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
+	// AssessAgainstEntityId The legal entity whose offering the growth fit judges this company against. Null means the main offering.
+	AssessAgainstEntityId *openapi_types.UUID `json:"assess_against_entity_id,omitempty"`
+
 	// Author Who created this company in the system it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a company somebody entered here has no author but the one `captured_by` already names.
 	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
 	Author *SourceAuthor `json:"author,omitempty"`
@@ -32935,6 +33010,9 @@ type CompanyGraphSignalRoute struct {
 // dropped. Our own profile is not a record this reader can open, and citing it would
 // invent a citation (DOSS-AC-6).
 type CompanyGrowthFit struct {
+	// AssessedAgainst The legal entity whose offering a growth fit was measured against.
+	AssessedAgainst *GrowthFitOffering `json:"assessed_against,omitempty"`
+
 	// Band How well this company fits what we sell (DOSS-PARAM-8).
 	//
 	// `unknown` is the ABSTENTION, not a low score. It says the assembly did not have
@@ -36211,12 +36289,18 @@ type CreateLegalEntityRequest struct {
 	DisplayName     string  `json:"display_name"`
 
 	// Iban Spaces are removed and letters upper-cased before the check.
-	Iban           *string `json:"iban,omitempty"`
-	Imprint        *string `json:"imprint,omitempty"`
-	LegalName      string  `json:"legal_name"`
-	RegisterCourt  *string `json:"register_court,omitempty"`
-	RegisterNumber *string `json:"register_number,omitempty"`
-	VatId          *string `json:"vat_id,omitempty"`
+	Iban      *string `json:"iban,omitempty"`
+	Imprint   *string `json:"imprint,omitempty"`
+	LegalName string  `json:"legal_name"`
+
+	// Offering What a further legal entity sells and to whom, the offering a company can be judged against.
+	// The default entity's offering is the company profile, so these stay null there and a write to
+	// them answers `legal_entity_field_on_company_form`. The offering is confirmed once the entity
+	// has a name, an `offer_summary` and an `icp`.
+	Offering       *LegalEntityOffering `json:"offering,omitempty"`
+	RegisterCourt  *string              `json:"register_court,omitempty"`
+	RegisterNumber *string              `json:"register_number,omitempty"`
+	VatId          *string              `json:"vat_id,omitempty"`
 }
 
 // CreateListRequest defines model for CreateListRequest.
@@ -39463,6 +39547,16 @@ type GrowthFitInput string
 // `configure_model` is to set up a model and `retry_later` is to try the read again.
 type GrowthFitNextStep string
 
+// GrowthFitOffering The legal entity whose offering a growth fit was measured against.
+type GrowthFitOffering struct {
+	// DisplayName The entity's name; for the default entity, the company's name.
+	DisplayName string             `json:"display_name"`
+	EntityId    openapi_types.UUID `json:"entity_id"`
+
+	// IsDefault True when this is the main offering.
+	IsDefault bool `json:"is_default"`
+}
+
 // GrowthFitSubScore One dimension of the growth-fit assessment, with the reason for its score.
 //
 // The reason is REQUIRED: a bar with a number and no sentence is the unexplainable score
@@ -41159,6 +41253,9 @@ type IntroFallbackPolicy string
 // IntroNoteOrigin Who wrote the forwardable note. `deterministic` is the product's own template, which is what a client gets when no model is configured — a stated floor rather than a failure.
 type IntroNoteOrigin string
 
+// IntroOrigin How the row came to be. `asked` went through the ask lifecycle. `recorded` is an introduction that already happened outside Margince, born `introduced`.
+type IntroOrigin string
+
 // IntroPaths What `intro_path_to` answers: the colleagues who know someone at the company, warmest first.
 type IntroPaths struct {
 	CandidatesTruncated bool               `json:"candidates_truncated"`
@@ -41173,6 +41270,9 @@ type IntroPaths struct {
 		UserId          openapi_types.UUID `json:"user_id"`
 	} `json:"routes"`
 }
+
+// IntroRecordedChannel How a recorded introduction was made.
+type IntroRecordedChannel string
 
 // IntroRequest One rep's ask that a colleague open a door, and how it was answered.
 //
@@ -41191,8 +41291,8 @@ type IntroRequest struct {
 	// DecisionReason The colleague's words when they declined or suggested somebody else.
 	DecisionReason *string `json:"decision_reason,omitempty"`
 
-	// DueAt When an unanswered ask goes stale. A colleague's silence is an answer the requester needs to be able to act on.
-	DueAt time.Time `json:"due_at"`
+	// DueAt When an unanswered ask goes stale. A colleague's silence is an answer the requester needs to be able to act on. Null for a recorded introduction, which nobody answers.
+	DueAt *time.Time `json:"due_at,omitempty"`
 
 	// FallbackPolicy What the requester wants to happen if the colleague says no. Stored rather than held in the drawer, so the answer survives the tab that gave it.
 	FallbackPolicy IntroFallbackPolicy `json:"fallback_policy"`
@@ -41201,8 +41301,8 @@ type IntroRequest struct {
 	ForwardableNote *string            `json:"forwardable_note,omitempty"`
 	Id              openapi_types.UUID `json:"id"`
 
-	// InternalReason Why the requester is asking. Read by the colleague, never by the contact.
-	InternalReason        string             `json:"internal_reason"`
+	// InternalReason Why the requester is asking. Read by the colleague, never by the contact. Null for a recorded introduction, which has no ask behind it.
+	InternalReason        *string            `json:"internal_reason,omitempty"`
 	IntroducedAt          *time.Time         `json:"introduced_at,omitempty"`
 	IntroducerDisplayName *string            `json:"introducer_display_name,omitempty"`
 	IntroducerUserId      openapi_types.UUID `json:"introducer_user_id"`
@@ -41215,11 +41315,19 @@ type IntroRequest struct {
 	NoteAiGenerated bool `json:"note_ai_generated"`
 
 	// NoteGeneratedBy Who wrote the forwardable note. `deterministic` is the product's own template, which is what a client gets when no model is configured — a stated floor rather than a failure.
-	NoteGeneratedBy      IntroNoteOrigin    `json:"note_generated_by"`
-	RepliedAt            *time.Time         `json:"replied_at,omitempty"`
-	RequestedAt          time.Time          `json:"requested_at"`
-	RequesterDisplayName *string            `json:"requester_display_name,omitempty"`
-	RequesterUserId      openapi_types.UUID `json:"requester_user_id"`
+	NoteGeneratedBy IntroNoteOrigin `json:"note_generated_by"`
+
+	// Origin How the row came to be. `asked` went through the ask lifecycle. `recorded` is an introduction that already happened outside Margince, born `introduced`.
+	Origin IntroOrigin `json:"origin"`
+
+	// RecordedChannel How a recorded introduction was made.
+	RecordedChannel      *IntroRecordedChannel `json:"recorded_channel,omitempty"`
+	RepliedAt            *time.Time            `json:"replied_at,omitempty"`
+	RequestedAt          time.Time             `json:"requested_at"`
+	RequesterDisplayName *string               `json:"requester_display_name,omitempty"`
+
+	// RequesterUserId The colleague who asked, or for a recorded introduction the colleague who was introduced.
+	RequesterUserId openapi_types.UUID `json:"requester_user_id"`
 
 	// RouteType `direct` is a colleague who corresponds with the contact themselves. `through_contact` goes via someone else at the contact's company.
 	RouteType ContactGraphRouteType `json:"route_type"`
@@ -42298,6 +42406,12 @@ type LegalEntity struct {
 	// MemberCount How many users are assigned to the entity. Always 0 on the default entity, whose members are the users with no assignment.
 	MemberCount int `json:"member_count"`
 
+	// Offering What a further legal entity sells and to whom, the offering a company can be judged against.
+	// The default entity's offering is the company profile, so these stay null there and a write to
+	// them answers `legal_entity_field_on_company_form`. The offering is confirmed once the entity
+	// has a name, an `offer_summary` and an `icp`.
+	Offering *LegalEntityOffering `json:"offering,omitempty"`
+
 	// RegisterCourt The court that keeps the entity's commercial register entry.
 	RegisterCourt *string `json:"register_court,omitempty"`
 
@@ -42334,6 +42448,18 @@ type LegalEntityMember struct {
 // LegalEntityMemberListResponse defines model for LegalEntityMemberListResponse.
 type LegalEntityMemberListResponse struct {
 	Data []LegalEntityMember `json:"data"`
+}
+
+// LegalEntityOffering What a further legal entity sells and to whom, the offering a company can be judged against.
+// The default entity's offering is the company profile, so these stay null there and a write to
+// them answers `legal_entity_field_on_company_form`. The offering is confirmed once the entity
+// has a name, an `offer_summary` and an `icp`.
+type LegalEntityOffering struct {
+	// Icp The ideal customer profile.
+	Icp              *string `json:"icp,omitempty"`
+	OfferSummary     *string `json:"offer_summary,omitempty"`
+	Usp              *string `json:"usp,omitempty"`
+	ValueProposition *string `json:"value_proposition,omitempty"`
 }
 
 // LegalReview A review as the reviewer reads it.
@@ -45498,6 +45624,35 @@ type PreviewSendRequest struct {
 	To []openapi_types.Email `json:"to"`
 }
 
+// PrincipalAttribution Who a recorded change is attributed to, read from the audit row the change
+// wrote. The fields mean what they mean on AuditHistoryEntry, and a client
+// renders them with the same helper.
+type PrincipalAttribution struct {
+	ActorId string `json:"actor_id"`
+
+	// ActorName Resolved display name for a human actor_id; null for machine actors and for a member whose user row no longer resolves.
+	ActorName *string                       `json:"actor_name,omitempty"`
+	ActorType PrincipalAttributionActorType `json:"actor_type"`
+
+	// AgentClient The NAME of the tool a delegated change was typed through — "Claude",
+	// "Cursor" — resolved from the OAuth client behind the row's passport.
+	// Null when the passport was minted by hand in Settings, when the client
+	// row is gone, and for every write that was not delegated.
+	AgentClient *string `json:"agent_client,omitempty"`
+
+	// OnBehalfOf Granting human's user id for agent actions.
+	OnBehalfOf *openapi_types.UUID `json:"on_behalf_of,omitempty"`
+
+	// OnBehalfOfName Resolved display name for on_behalf_of.
+	OnBehalfOfName *string `json:"on_behalf_of_name,omitempty"`
+
+	// PassportId The Agent Seat Passport the change was made under; null for a write that was not delegated.
+	PassportId *openapi_types.UUID `json:"passport_id,omitempty"`
+}
+
+// PrincipalAttributionActorType defines model for PrincipalAttribution.ActorType.
+type PrincipalAttributionActorType string
+
 // PrivacyInformationPage The answer for a privacy-notice link: what the installation holds about this contact, where
 // it came from, what it is used for, and the rights the contact has over it.
 //
@@ -45843,11 +45998,12 @@ type Project360PhaseHistory struct {
 type Project360PhaseTransition struct {
 	ChangedAt time.Time `json:"changed_at"`
 
-	// ChangedBy The principal that moved the phase — its id as stamped; and the seat's display name when the id names an app user.
-	ChangedBy struct {
-		DisplayName *string `json:"display_name"`
-		Id          string  `json:"id"`
-	} `json:"changed_by"`
+	// ChangedBy Who made the move, from the audit row written in the same transaction.
+	// Absent when that row is not known: a move recorded before the link existed
+	// and not matched to one audit row, or an audit row that no longer exists.
+	// A reader says "unknown" for an absent value and never "System"; the
+	// system principal is `actor_type: system`.
+	ChangedBy *PrincipalAttribution `json:"changed_by,omitempty"`
 
 	// FromPhase Null on the birth row.
 	FromPhase *string            `json:"from_phase"`
@@ -46975,6 +47131,21 @@ type RecordGrantRecordType string
 
 // RecordGrantSubjectType defines model for RecordGrant.SubjectType.
 type RecordGrantSubjectType string
+
+// RecordIntroductionInput An introduction that already happened. The caller must be the introducer or the introduced colleague; the two must differ.
+type RecordIntroductionInput struct {
+	// Channel How a recorded introduction was made.
+	Channel IntroRecordedChannel `json:"channel"`
+
+	// IntroducedOn The day it happened. Not in the future.
+	IntroducedOn openapi_types.Date `json:"introduced_on"`
+
+	// IntroducedUserId The colleague who was introduced to the contact.
+	IntroducedUserId openapi_types.UUID `json:"introduced_user_id"`
+
+	// IntroducerUserId The colleague who made the introduction.
+	IntroducerUserId openapi_types.UUID `json:"introducer_user_id"`
+}
 
 // RecordListsResponse defines model for RecordListsResponse.
 type RecordListsResponse struct {
@@ -51384,12 +51555,12 @@ type Undoability struct {
 	// Detail The fields a refusal names, where naming them is the better explanation — which field was superseded, which one cannot be written back. Never the only thing a reader renders; `reason` is what the product says.
 	Detail *string `json:"detail,omitempty"`
 
-	// Reason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind. `later_company_change` refuses a technical lookup after any later write to the company or its facts, a refresh to the same value included. `no_restore_snapshot` refuses a lookup recorded before receipts kept the facts it replaced.
+	// Reason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind. `later_company_change` refuses a technical lookup after any later write to the company or its facts, a refresh to the same value included. `no_restore_snapshot` refuses a lookup recorded before receipts kept the facts it replaced. `credential_not_kept` refuses an entry whose earlier text held a credential: history keeps it masked, and the record keeps the text as typed, so putting it back would write the mask over the record.
 	Reason   *UndoabilityReason `json:"reason,omitempty"`
 	Undoable bool               `json:"undoable"`
 }
 
-// UndoabilityReason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind. `later_company_change` refuses a technical lookup after any later write to the company or its facts, a refresh to the same value included. `no_restore_snapshot` refuses a lookup recorded before receipts kept the facts it replaced.
+// UndoabilityReason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind. `later_company_change` refuses a technical lookup after any later write to the company or its facts, a refresh to the same value included. `no_restore_snapshot` refuses a lookup recorded before receipts kept the facts it replaced. `credential_not_kept` refuses an entry whose earlier text held a credential: history keeps it masked, and the record keeps the text as typed, so putting it back would write the mask over the record.
 type UndoabilityReason string
 
 // UpdateAcquisitionSourceRequest Every field optional; an omitted one is left alone.
@@ -51547,6 +51718,11 @@ type UpdateCompanyProfileFieldRequest struct {
 type UpdateCompanyRequest struct {
 	// Address Structured postal address.
 	Address *Address `json:"address,omitempty"`
+
+	// AssessAgainstEntityId The legal entity whose offering the growth fit judges this company against. Send the
+	// default entity's id to return to the main offering. An entity that does not exist or is
+	// archived answers 422 naming this field. Absent leaves it untouched.
+	AssessAgainstEntityId *openapi_types.UUID `json:"assess_against_entity_id,omitempty"`
 
 	// Description One human-written line saying what the company does. Absent leaves it untouched; an empty string clears it, the same spelling every other nullable text field on this record uses.
 	Description *string `json:"description,omitempty"`
@@ -52256,9 +52432,15 @@ type UpdateLegalEntityRequest struct {
 	Iban              *string             `json:"iban,omitempty"`
 	Imprint           *string             `json:"imprint,omitempty"`
 	LegalName         *string             `json:"legal_name,omitempty"`
-	RegisterCourt     *string             `json:"register_court,omitempty"`
-	RegisterNumber    *string             `json:"register_number,omitempty"`
-	VatId             *string             `json:"vat_id,omitempty"`
+
+	// Offering What a further legal entity sells and to whom, the offering a company can be judged against.
+	// The default entity's offering is the company profile, so these stay null there and a write to
+	// them answers `legal_entity_field_on_company_form`. The offering is confirmed once the entity
+	// has a name, an `offer_summary` and an `icp`.
+	Offering       *LegalEntityOffering `json:"offering,omitempty"`
+	RegisterCourt  *string              `json:"register_court,omitempty"`
+	RegisterNumber *string              `json:"register_number,omitempty"`
+	VatId          *string              `json:"vat_id,omitempty"`
 }
 
 // UpdateListRequest defines model for UpdateListRequest.
@@ -62975,6 +63157,9 @@ type DraftIntroNoteJSONRequestBody DraftIntroNoteJSONBody
 // CreateIntroRequestJSONRequestBody defines body for CreateIntroRequest for application/json ContentType.
 type CreateIntroRequestJSONRequestBody = IntroRequestInput
 
+// RecordIntroductionJSONRequestBody defines body for RecordIntroduction for application/json ContentType.
+type RecordIntroductionJSONRequestBody = RecordIntroductionInput
+
 // MergeContactJSONRequestBody defines body for MergeContact for application/json ContentType.
 type MergeContactJSONRequestBody MergeContactJSONBody
 
@@ -64461,6 +64646,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "archived_at")
 	}
 
+	if raw, found := object["assess_against_entity_id"]; found {
+		err = json.Unmarshal(raw, &a.AssessAgainstEntityId)
+		if err != nil {
+			return fmt.Errorf("error reading 'assess_against_entity_id': %w", err)
+		}
+		delete(object, "assess_against_entity_id")
+	}
+
 	if raw, found := object["author"]; found {
 		err = json.Unmarshal(raw, &a.Author)
 		if err != nil {
@@ -64763,6 +64956,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		object["archived_at"], err = json.Marshal(a.ArchivedAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'archived_at': %w", err)
+		}
+	}
+
+	if a.AssessAgainstEntityId != nil {
+		object["assess_against_entity_id"], err = json.Marshal(a.AssessAgainstEntityId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'assess_against_entity_id': %w", err)
 		}
 	}
 
@@ -72138,6 +72338,14 @@ func (a *UpdateCompanyRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "address")
 	}
 
+	if raw, found := object["assess_against_entity_id"]; found {
+		err = json.Unmarshal(raw, &a.AssessAgainstEntityId)
+		if err != nil {
+			return fmt.Errorf("error reading 'assess_against_entity_id': %w", err)
+		}
+		delete(object, "assess_against_entity_id")
+	}
+
 	if raw, found := object["description"]; found {
 		err = json.Unmarshal(raw, &a.Description)
 		if err != nil {
@@ -72257,6 +72465,13 @@ func (a UpdateCompanyRequest) MarshalJSON() ([]byte, error) {
 		object["address"], err = json.Marshal(a.Address)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'address': %w", err)
+		}
+	}
+
+	if a.AssessAgainstEntityId != nil {
+		object["assess_against_entity_id"], err = json.Marshal(a.AssessAgainstEntityId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'assess_against_entity_id': %w", err)
 		}
 	}
 
@@ -75293,6 +75508,9 @@ type ServerInterface interface {
 	// Ask a colleague to introduce you to this contact.
 	// (POST /contacts/{id}/intro-requests)
 	CreateIntroRequest(w http.ResponseWriter, r *http.Request, id Id)
+	// Record an introduction to this contact that already happened.
+	// (POST /contacts/{id}/introductions)
+	RecordIntroduction(w http.ResponseWriter, r *http.Request, id Id)
 	// Merge this contact into a target (non-lossy).
 	// (POST /contacts/{id}/merge)
 	MergeContact(w http.ResponseWriter, r *http.Request, id Id, params MergeContactParams)
@@ -79070,6 +79288,12 @@ func (_ Unimplemented) ListIntroRequests(w http.ResponseWriter, r *http.Request,
 // Ask a colleague to introduce you to this contact.
 // (POST /contacts/{id}/intro-requests)
 func (_ Unimplemented) CreateIntroRequest(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Record an introduction to this contact that already happened.
+// (POST /contacts/{id}/introductions)
+func (_ Unimplemented) RecordIntroduction(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -97189,6 +97413,38 @@ func (siw *ServerInterfaceWrapper) CreateIntroRequest(w http.ResponseWriter, r *
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateIntroRequest(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RecordIntroduction operation middleware
+func (siw *ServerInterfaceWrapper) RecordIntroduction(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RecordIntroduction(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -121575,6 +121831,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/contacts/{id}/intro-requests", wrapper.CreateIntroRequest)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/contacts/{id}/introductions", wrapper.RecordIntroduction)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/contacts/{id}/merge", wrapper.MergeContact)

@@ -110,11 +110,12 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 
 ## project_phase_history
 
-7 columns · primary key `(id)` · referenced by 0 foreign keys
+8 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `audit_log_id` | `uuid` |  |  |
 | `changed_by` | `text` | yes |  |
 | `from_phase` | `text` |  |  |
 | `occurred_at` | `timestamp with time zone`, default `now()` | yes |  |

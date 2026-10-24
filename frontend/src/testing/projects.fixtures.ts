@@ -58,7 +58,11 @@ export function project360(overrides: Partial<Project360> = {}): Project360 {
           to_phase: "initiative",
           reason: null,
           changed_at: "2026-06-01T09:00:00Z",
-          changed_by: { id: "u-me", display_name: "Me" },
+          changed_by: {
+            actor_type: "human",
+            actor_id: "human:u-me",
+            actor_name: "Me",
+          },
         },
       ],
       phase_durations: [

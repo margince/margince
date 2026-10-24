@@ -152,6 +152,7 @@ func scanCompany(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	var linkedinURL *string
 	var version int64
 	var visibility string
+	var assessAgainst *ids.UUID
 	var sourceSystem, authorName, authorSeatName *string
 	var authorID *ids.UUID
 
@@ -161,7 +162,7 @@ func scanCompany(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 		&lifecycle, &parentID, &mergedInto, &logoObjectKey, &linkedinURL, &o.Source, &o.CapturedBy,
 		&sourceSystem, &authorID, &authorName, &authorSeatName,
 		&version, &o.CreatedAt, &o.UpdatedAt, &o.ArchivedAt, &o.IsAnchor,
-		&o.LastActivityAt, &o.LegalHold,
+		&o.LastActivityAt, &o.LegalHold, &assessAgainst,
 	}
 	cf := storekit.ScanDests(active)
 	if err := row.Scan(append(append(dests, cf...), extra...)...); err != nil {
@@ -182,6 +183,7 @@ func scanCompany(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	o.Lifecycle = &lc
 	o.LogoUrl = LogoURL(id, logoObjectKey, LogoWide)
 	o.LinkedinUrl = linkedinURL
+	o.AssessAgainstEntityId = uuidPtr(assessAgainst)
 	if a := addressOrNil(addr); a != nil {
 		o.Address = a
 	}

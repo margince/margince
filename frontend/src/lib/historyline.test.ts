@@ -2,11 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
-import type { components } from "../../api/schema";
-import { type Locale, translate } from "../../i18n";
-import { de } from "../../i18n/de";
-import { en, type MessageKey } from "../../i18n/en";
-import { vi } from "../../i18n/vi";
+import type { components } from "../api/schema";
+import { type Locale, translate } from "../i18n";
+import { de } from "../i18n/de";
+import { en, type MessageKey } from "../i18n/en";
+import { vi } from "../i18n/vi";
 import {
   type HistoryLineFacts,
   historyLine,

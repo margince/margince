@@ -147,7 +147,7 @@ func (s *Service) envelopeFor(ctx context.Context, view crmcontracts.Company360,
 	// No stored language: an account history is many messages, and the language
 	// of whichever one sorted first is not the language of the exchange.
 	return s.envelope.Resolve(ctx,
-		draftfloor.Written{Body: CorrespondenceText(view), Rewrite: req.RewriteOf, Purpose: req.Intent},
+		draftfloor.Written{Thread: languageEvidence(view, s.envelope.Now()), Rewrite: req.RewriteOf, Purpose: req.Intent},
 		ConversationState(view, s.envelope.Now()))
 }
 

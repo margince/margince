@@ -7,7 +7,7 @@ import {
   actorAttribution,
   HUMAN_ACTOR_PREFIX,
   isAuditActorType,
-} from "../settings/audit";
+} from "../../lib/auditactor";
 import { domainReasonLabels } from "./worklist.domainreason";
 import type { WorklistItem } from "./worklist.queries";
 

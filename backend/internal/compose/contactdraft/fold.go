@@ -66,16 +66,13 @@ func instant(at *time.Time) time.Time {
 	return *at
 }
 
-// CorrespondenceText is the counterparty's own writing this draft answers,
-// newest first, for detecting what language the correspondence is in.
-//
-// Subjects and bodies both, because a subject line rarely carries enough words
-// to clear the detector's floor on its own.
-func CorrespondenceText(view crmcontracts.Contact360) string {
+// languageEvidence is what the language of this contact's correspondence is
+// read from; see draftcore.LanguageEvidence for the order.
+func languageEvidence(view crmcontracts.Contact360, now time.Time) []string {
 	if view.Activities == nil {
-		return ""
+		return nil
 	}
-	return CorrespondenceTextOf(view.Activities.Data)
+	return draftcore.LanguageEvidenceOf(view.Activities.Data, now)
 }
 
 func recipientOf(view crmcontracts.Contact360) RecipientIn {
@@ -330,29 +327,6 @@ func FoldRecent(activities []crmcontracts.Activity, now time.Time) []ActIn {
 		out = append(out, folded)
 	}
 	return out
-}
-
-// CorrespondenceTextOf is the counterparty's own writing, newest first, for
-// detecting what language a correspondence is in.
-//
-// The slice-taking twin of CorrespondenceText above, for the same reason
-// FoldRecent is exported: a lead's language is read off a lead's activities by
-// the same rule, and the rule is "subjects and bodies both, bounded the same
-// way" rather than anything about a Contact360.
-func CorrespondenceTextOf(activities []crmcontracts.Activity) string {
-	var text strings.Builder
-	for i, activity := range activities {
-		if i == DraftInputActivities {
-			break
-		}
-		if activity.Subject != nil {
-			text.WriteString(*activity.Subject + "\n")
-		}
-		if activity.Body != nil {
-			text.WriteString(*activity.Body + "\n\n")
-		}
-	}
-	return text.String()
 }
 
 // omittedNames renders the withheld sections as plain strings for the writer.

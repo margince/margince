@@ -555,6 +555,7 @@ const (
 	IntroRequestCompleted                 SubscribableEventType = "intro_request.completed"
 	IntroRequestCreated                   SubscribableEventType = "intro_request.created"
 	IntroRequestDecided                   SubscribableEventType = "intro_request.decided"
+	IntroRequestRecorded                  SubscribableEventType = "intro_request.recorded"
 	IntroRequestReplied                   SubscribableEventType = "intro_request.replied"
 	LeadCreated                           SubscribableEventType = "lead.created"
 	LeadDemoted                           SubscribableEventType = "lead.demoted"
@@ -765,6 +766,8 @@ func (e SubscribableEventType) Valid() bool {
 	case IntroRequestCreated:
 		return true
 	case IntroRequestDecided:
+		return true
+	case IntroRequestRecorded:
 		return true
 	case IntroRequestReplied:
 		return true
@@ -1877,6 +1880,14 @@ type PublicEventIntroRequestDecided struct {
 // PublicEventIntroRequestDecidedDecision defines model for PublicEventIntroRequestDecided.Decision.
 type PublicEventIntroRequestDecidedDecision string
 
+// PublicEventIntroRequestRecorded Payload for intro_request.recorded, a colleague recorded an introduction that already happened outside Margince. It is not intro_request.completed. That event means an ask was marked done, and its consumers must not see a row that never had an ask. `introducer_user_id` made the introduction and `introduced_user_id` was introduced.
+type PublicEventIntroRequestRecorded struct {
+	ContactId        openapi_types.UUID `json:"contact_id"`
+	IntroRequestId   openapi_types.UUID `json:"intro_request_id"`
+	IntroducedUserId openapi_types.UUID `json:"introduced_user_id"`
+	IntroducerUserId openapi_types.UUID `json:"introducer_user_id"`
+}
+
 // PublicEventIntroRequestReplied Payload for intro_request.replied — the contact answered, observed from captured activity rather than asserted by a contact. `source_activity_id` is the evidence, so a reader can open the message the claim rests on.
 type PublicEventIntroRequestReplied struct {
 	ContactId        openapi_types.UUID  `json:"contact_id"`
@@ -2980,6 +2991,10 @@ func (PublicEventIntroRequestDecided) EventType() string { return "intro_request
 
 func (PublicEventIntroRequestDecided) EntityType() string { return "contact" }
 
+func (PublicEventIntroRequestRecorded) EventType() string { return "intro_request.recorded" }
+
+func (PublicEventIntroRequestRecorded) EntityType() string { return "contact" }
+
 func (PublicEventIntroRequestReplied) EventType() string { return "intro_request.replied" }
 
 func (PublicEventIntroRequestReplied) EntityType() string { return "contact" }
@@ -3324,6 +3339,7 @@ var PublicEventVersions = map[string]int{
 	"intro_request.completed":                   1,
 	"intro_request.created":                     1,
 	"intro_request.decided":                     1,
+	"intro_request.recorded":                    1,
 	"intro_request.replied":                     1,
 	"lead.created":                              1,
 	"lead.demoted":                              1,
@@ -3465,6 +3481,7 @@ var PublicEventSamples = map[string]string{
 	"intro_request.completed":                   "{\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"intro_request_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"outcome\":\"introduced\"}",
 	"intro_request.created":                     "{\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"intro_request_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"introducer_user_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"requester_user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"intro_request.decided":                     "{\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"decision\":\"accepted\",\"intro_request_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"introducer_user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
+	"intro_request.recorded":                    "{\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"intro_request_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"introduced_user_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"introducer_user_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"intro_request.replied":                     "{\"contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"intro_request_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"source_activity_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"lead.created":                              "{\"source_system\":\"Sample source system\"}",
 	"lead.demoted":                              "{\"from_contact_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"unwind\":\"Sample unwind\"}",
