@@ -25,7 +25,8 @@ import {
 import { useCanWrite } from "../lib/capability";
 import { UnsavedContext, useUnsavedRegistry } from "../lib/unsavedclaims";
 import { EntityRef } from "./entityref";
-import { LogActivityAction, LogActivityForm } from "./logactivity";
+import { LogActivityForm } from "./logactivity";
+import { LogActivityAction } from "./logactivity.action";
 
 type StartedCall = CallRecord & Readonly<{ seq: number }>;
 

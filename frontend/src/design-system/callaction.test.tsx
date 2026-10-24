@@ -2,10 +2,19 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 /** @vitest-environment happy-dom */
-import { cleanup, fireEvent, screen, within } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  cleanup,
+  fireEvent,
+  render as rtlRender,
+  screen,
+  within,
+} from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { telUri } from "../format/contacturi";
+import { LocaleProvider } from "../i18n";
 import { CallStartProvider } from "../lib/callstart";
+import { INSTALLATION_SETTINGS_KEY } from "../lib/uploadlimit";
 import { renderWithQueryClient } from "../testing/queryrender";
 import { CallAction } from "./callaction";
 
@@ -295,6 +304,38 @@ describe("CallAction offers the number's chat in each messenger", () => {
     render(<CallAction appearance="value" record={DANA} number={DIALS} />);
     expect(await chatLinks()).toHaveLength(3);
   });
+
+  it.each([
+    ["the server fails", () => jsonResponse({ status: 500 }, 500)],
+    [
+      "the network fails",
+      (): Response => {
+        throw new TypeError("Failed to fetch");
+      },
+    ],
+  ])(
+    "offers no chat when %s, so a link turned off stays off",
+    async (_, answer) => {
+      answerSettings(answer);
+      const client = new QueryClient({
+        defaultOptions: { queries: { retry: false } },
+      });
+      rtlRender(
+        <QueryClientProvider client={client}>
+          <LocaleProvider initial="en">
+            <CallAction appearance="value" record={DANA} number={DIALS} />
+          </LocaleProvider>
+        </QueryClientProvider>,
+      );
+      await vi.waitFor(() =>
+        expect(client.getQueryState(INSTALLATION_SETTINGS_KEY)?.status).toBe(
+          "error",
+        ),
+      );
+      expect(screen.getByRole("link", { name: DIALS })).toBeTruthy();
+      expect(screen.queryByRole("link", { name: /^Open chat in / })).toBeNull();
+    },
+  );
 
   it("offers no chat for a number without its country code, and asks nothing", () => {
     const fetchSpy = answerSettings(() => jsonResponse(ALL_ON));

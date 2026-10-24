@@ -3,6 +3,7 @@
 
 import type { components } from "../api/schema";
 import type { MessengerUris } from "../format/contacturi";
+import { problemStatus } from "./problem";
 import { useInstallationSettings } from "./uploadlimit";
 
 type InstallationSettings = components["schemas"]["InstallationSettings"];
@@ -42,11 +43,11 @@ export function messengerOn(
 
 /** The messengers whose chat links this installation shows beside a number. */
 export function useCallMessengers(): readonly Messenger[] {
-  const { data, isError } = useInstallationSettings();
+  const { data, error } = useInstallationSettings();
   if (data) {
     return MESSENGERS.filter((messenger) => messengerOn(data, messenger));
   }
-  // A custom role may read contacts without reading these settings; it still
-  // gets the installation default, which is on.
-  return isError ? MESSENGERS : [];
+  // A role refused this read still gets the installation default, which is on.
+  // Any other failure shows none, or a link an admin turned off would return.
+  return problemStatus(error) === 403 ? MESSENGERS : [];
 }

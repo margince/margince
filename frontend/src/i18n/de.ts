@@ -12304,7 +12304,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "installationSettings.callTelegram": "Telegram-Chat",
   "installationSettings.callZalo": "Zalo-Chat",
   "installationSettings.callingHint":
-    "Ein Link neben jeder Telefonnummer mit Ländervorwahl öffnet den Chat in dieser App. Die App erhält die Nummer.",
+    "Solange ein Schalter aktiv ist, öffnet ein Link neben jeder Telefonnummer mit Ländervorwahl den Chat in dieser App. Die App erhält die Nummer.",
   "installationSettings.editField": "{field} bearbeiten",
   "installationSettings.save": "Speichern",
   "signInMethods.title": "Anmeldemethoden",

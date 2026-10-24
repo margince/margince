@@ -5,7 +5,7 @@ import { CalendarPlus, CheckSquare, FileText } from "lucide-react";
 import { useId, useRef } from "react";
 import type { components } from "../../api/schema";
 import { ExtensionEntries } from "../../components/extensionentries";
-import { LogActivityAction } from "../../components/logactivity";
+import { LogActivityAction } from "../../components/logactivity.action";
 import { searchCompanyContacts } from "../../components/meetingattendees";
 import { Button } from "../../design-system/atoms";
 import { VerbWord } from "../../design-system/iconaction";

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useCallback, useRef } from "react";
-import { LogActivityAction } from "../../components/logactivity";
+import { LogActivityAction } from "../../components/logactivity.action";
 import type { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import {

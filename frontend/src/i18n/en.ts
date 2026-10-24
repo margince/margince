@@ -12315,7 +12315,7 @@ export const en = {
   "installationSettings.callTelegram": "Telegram chat",
   "installationSettings.callZalo": "Zalo chat",
   "installationSettings.callingHint":
-    "A link beside each phone number with a country code opens the chat in that app. The app receives the number.",
+    "While a switch is on, a link beside each phone number with a country code opens the chat in that app. The app receives the number.",
   "installationSettings.editField": "Edit {field}",
   "installationSettings.save": "Save",
   "signInMethods.title": "Sign-in methods",
