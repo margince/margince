@@ -670,6 +670,55 @@ export const LeadNextTaskFromCall: Story = {
   },
 };
 
+// The move is about that same task, so its bar offers Call beside the reply.
+const owedCallMoment: components["schemas"]["ContactMoment"] = {
+  ...openPromiseMoment,
+  claim_key: "open_promise:p-1:a-7",
+  headline: "You owe them: Call Dana back about the depot retrofit",
+  evidence: [
+    {
+      type: "task",
+      id: "a-7",
+      label: "Call Dana back about the depot retrofit",
+    },
+  ],
+  recommended_action: {
+    kind: "draft_reply",
+    label: "Write to them",
+    state: "available",
+  },
+};
+
+export const LeadMomentFromCall: Story = {
+  name: "Lead moment · owed a call back",
+  render: () => {
+    installFetchStub({
+      "GET /me": meRoute({ activity: ["read", "update"] }),
+      "GET /activities/call-7": () =>
+        jsonResponse({
+          id: "call-7",
+          kind: "call",
+          content_state: "available",
+          occurred_at: "2026-08-09T15:00:00Z",
+        }),
+    });
+    return (
+      <StoryProviders>
+        <div style={{ maxWidth: 720 }}>
+          <ContactToday
+            view={calledBack}
+            moment={owedCallMoment}
+            onAction={() => {}}
+          />
+        </div>
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    await screen.findByRole("link", { name: en["record.verb.call"] });
+  },
+};
+
 // --- Drawers: the surfaces the page opens over itself ------------------------
 //
 // Each renders open, since a closed drawer paints nothing. Writing to the

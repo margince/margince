@@ -1,6 +1,6 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
@@ -39,6 +39,8 @@ afterEach(() => {
 
 type Contact360 = components["schemas"]["Contact360"];
 type ContactMoment = components["schemas"]["ContactMoment"];
+type Activity = components["schemas"]["Activity"];
+type ContactPhone = components["schemas"]["ContactPhone"];
 
 const CAPTURED = {
   source: "manual",
@@ -131,6 +133,7 @@ function show(view: Contact360, moment?: ContactMoment) {
       </LocaleProvider>
     </QueryClientProvider>,
   );
+  return client;
 }
 
 describe("the move the panel leads with", () => {
@@ -362,4 +365,98 @@ describe("Call on the next task", () => {
     expect(screen.getByText(OPEN_TASK.subject)).toBeTruthy();
     expect(dial()).toBeNull();
   });
+});
+
+describe("Call on the move a call left owed", () => {
+  const PHONE: ContactPhone = {
+    id: "ph-1",
+    phone: "+49 30 1234567",
+    phone_type: "mobile",
+    is_primary: true,
+    position: 0,
+    ...CAPTURED,
+  };
+  const CALLED: Activity = {
+    ...OPEN_TASK,
+    id: "a-7",
+    subject: "Call Dana back on Monday",
+    source_activity_id: "call-1",
+    links: [{ entity_type: "contact", entity_id: "p-1" }],
+  };
+  const TYPED: Activity = { ...CALLED, id: "a-6", source_activity_id: null };
+  const OWED: ContactMoment = {
+    ...PROMISE,
+    headline: "You owe them: Call Dana back on Monday",
+    evidence: [{ type: "task", id: "a-7", label: "Call Dana back" }],
+    recommended_action: {
+      kind: "draft_reply",
+      label: "Write to them",
+      state: "available",
+    },
+  };
+  const viewWith = (contact: Partial<Contact360["contact"]>): Contact360 => ({
+    ...VIEW,
+    contact: { ...VIEW.contact, phones: [PHONE], ...contact },
+    next_steps: { data: [CALLED, TYPED], page: { has_more: false } },
+  });
+  const dial = () => document.querySelector('a[href^="tel:"]');
+
+  beforeEach(() =>
+    installFetchStub({
+      "GET /me": meRoute({ activity: ["read"] }),
+      "GET /activities/call-1": () =>
+        jsonResponse({
+          id: "call-1",
+          kind: "call",
+          content_state: "available",
+          occurred_at: "2026-08-09T09:00:00Z",
+        }),
+    }),
+  );
+
+  it("offers Call beside the server's own action when the task came from a call", async () => {
+    show(viewWith({}), OWED);
+
+    const call = await screen.findByRole("link", {
+      name: en["record.verb.call"],
+    });
+    expect(call.getAttribute("href")).toBe("tel:+49301234567");
+    expect(screen.getByRole("button", { name: "Write to them" })).toBeTruthy();
+  });
+
+  const quiet: [
+    string,
+    Partial<ContactMoment>,
+    Partial<Contact360["contact"]>,
+  ][] = [
+    [
+      "a hand-typed task",
+      { evidence: [{ type: "task", id: "a-6", label: "Typed" }] },
+      {},
+    ],
+    [
+      "a record that is not a task",
+      { evidence: [{ type: "activity", id: "a-7", label: "Re: renewal" }] },
+      {},
+    ],
+    [
+      "a task the record does not list",
+      { evidence: [{ type: "task", id: "a-5", label: "Gone" }] },
+      {},
+    ],
+    ["an archived contact", {}, { archived_at: "2026-08-01T00:00:00Z" }],
+  ];
+  it.each(quiet)(
+    "offers no Call on a move about %s",
+    async (_, moment, contact) => {
+      const client = show(viewWith(contact), { ...OWED, ...moment });
+
+      // Every read has answered, so a missing Call is the decision, not a wait.
+      await waitFor(() => expect(client.isFetching()).toBe(0));
+      expect(
+        screen.getByRole("button", { name: "Write to them" }),
+      ).toBeTruthy();
+      expect(dial()).toBeNull();
+    },
+  );
 });

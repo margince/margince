@@ -41,10 +41,12 @@
   font: var(--fontBody);
   color: var(--textSecondary);
 }
+/* Sized to its verbs, so the cap is what lets it wrap on a narrow bar. */
 .next-bar-verbs {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--space-2);
   flex: none;
+  max-width: 100%;
 }

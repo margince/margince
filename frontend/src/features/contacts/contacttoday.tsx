@@ -121,6 +121,10 @@ function MomentBar({
   const { locale } = useLocale();
   const notNow = useMomentSetAside(view.contact.id);
   const defer = notNow.deferOf(moment);
+  const task = momentTask(moment, view);
+  const call = task && (
+    <TaskCallAction task={task} pageContact={view.contact} />
+  );
   return (
     <NextBar
       title={moment.headline}
@@ -133,11 +137,14 @@ function MomentBar({
       }
       action={
         moment.may_be_done ? (
-          <MayBeDoneVerbs
-            moment={moment}
-            question={moment.may_be_done}
-            view={view}
-          />
+          <>
+            <MayBeDoneVerbs
+              moment={moment}
+              question={moment.may_be_done}
+              view={view}
+            />
+            {call}
+          </>
         ) : (
           <>
             <ActionVerb
@@ -145,6 +152,7 @@ function MomentBar({
               primary
               onAction={onAction}
             />
+            {call}
             {notNow.failure && <ErrorLine error={notNow.failure} inline />}
           </>
         )
@@ -264,6 +272,28 @@ function AnswerBar({
     );
   }
   return <NextBar />;
+}
+
+// The listed task the move is about: its first evidence task, else the promise
+// it may have settled.
+function momentTask(
+  moment: ContactMoment,
+  view: Contact360,
+): Activity | undefined {
+  const ids = [
+    ...moment.evidence
+      .filter((item) => item.type === "task")
+      .map((item) => item.id),
+    moment.may_be_done?.promise_id,
+  ];
+  const tasks = view.next_steps?.data ?? [];
+  for (const id of ids) {
+    const task = tasks.find((row) => row.id === id);
+    if (task) {
+      return task;
+    }
+  }
+  return undefined;
 }
 
 // The due date of what the move says is owed. It is the promise the move may already have

@@ -132,3 +132,36 @@ export const LongGermanNarrow: Story = {
     more: { count: 2, onOpen: noop },
   },
 };
+
+/** Three verbs and the task count on a phone: the verbs wrap inside the bar
+ *  rather than run past its edge. */
+export const ThreeVerbsOnPhone: Story = {
+  args: {
+    title: "You owe them: Call Dana back on Monday",
+    sub: "Due in 2 days.",
+    action: (
+      <>
+        <Button variant="primary" onClick={noop}>
+          Write to them
+        </Button>
+        <Button onClick={noop}>Call</Button>
+      </>
+    ),
+    snooze: { onSnooze: noop },
+    more: { count: 3, onOpen: noop },
+  },
+  parameters: { layout: "fullscreen" },
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  play: async ({ canvasElement }) => {
+    const bar = canvasElement.querySelector(".next-bar-row");
+    const edge = bar?.getBoundingClientRect().right ?? 0;
+    const verbs = canvasElement.querySelectorAll(".next-bar-verbs > *");
+    await expect(verbs.length).toBe(4);
+    for (const verb of verbs) {
+      await expect(verb.getBoundingClientRect().right).toBeLessThanOrEqual(
+        edge,
+      );
+    }
+  },
+};
