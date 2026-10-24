@@ -3,9 +3,9 @@
 
 package contacts
 
-// The stored half of moving the score from a lead's source to its origin: fill
-// an origin from the capture a lead was written from, then score every open
-// lead again. Both are bounded pages the data task runs through its executor.
+// The stored half of moving the score from a lead's source to its origin.
+// One page fills an origin from the capture a lead was written from. Another
+// scores every open lead again. The data task runs both through its executor.
 
 import (
 	"context"
@@ -25,8 +25,8 @@ import (
 
 // capturedOriginKeys are the payload names a source system words a lead's
 // origin under, compared with case and underscores ignored. The payload is a
-// connector's own object, so the list is closed: a wording found under any other
-// name is left alone rather than guessed at.
+// connector's own object, so the list is closed. A wording under any other name
+// is left alone.
 var capturedOriginKeys = []string{"leadsource"}
 
 // capturedOriginSQL reads the first of those names out of a retained capture
@@ -40,11 +40,11 @@ type lacksOrigin struct {
 }
 
 // BackfillLeadOriginTx fills the origin of one page of leads from the wording
-// their retained capture carries, and only where it resolves to an active
-// catalog key. A lead that already has an origin is not selected, so a human's
-// choice is never touched and a second run changes nothing. A lead imported from
-// a file has no retained capture (the import keeps ids only), so it stays
-// without an origin and scores neutral.
+// their retained capture carries, only where it resolves to an active catalog key.
+// A lead that already has an origin is not selected, so a human's choice is never
+// touched and a second run changes nothing. A lead imported from a file has no
+// retained capture, because the import keeps ids only. It stays without an origin
+// and scores neutral.
 func BackfillLeadOriginTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) (scanned []ids.UUID, changed int, err error) {
 	if err := requireLeadRepair(ctx); err != nil {
 		return nil, 0, err
@@ -131,10 +131,12 @@ func CountLeadOriginBackfills(ctx context.Context, q interface {
 
 // RescoreOpenLeadsTx scores one page of open leads again from their origin and
 // signals. It reads the page unlocked and holds each lead as it scores it, so the
-// subject is the first row it locks. It goes through the recompute the activity events use, which writes
-// the history entry, audit row and event, moves only score_computed under a
-// human's override, and writes nothing for a score that is already right, so a
-// second run changes nothing.
+// lead is the first row it locks.
+//
+// It goes through the recompute the activity events use. That writes the history
+// entry, audit row and event, and moves only score_computed under a human's
+// override. It writes nothing for a score that is already right, so a second run
+// changes nothing.
 func RescoreOpenLeadsTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int, now time.Time) (scanned []ids.UUID, changed int, err error) {
 	if err := requireLeadRepair(ctx); err != nil {
 		return nil, 0, err

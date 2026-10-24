@@ -174,9 +174,9 @@ func TestWithManualFoldsHumanInputIntoOneTotal(t *testing.T) {
 	}
 }
 
-// seededOriginIntents is the weighting the migration seeds, kept here so the
-// unit scorer has a fixture; the integration test proves the seed and this
-// table agree.
+// seededOriginIntents is the weighting the migration seeds. The unit scorer
+// uses it as a fixture, and the integration test proves the seed and this table
+// agree.
 var seededOriginIntents = OriginIntents{
 	"event": SourceIntentNeutral, "linkedin": SourceIntentNeutral, "other": SourceIntentNeutral,
 	"referral": SourceIntentHigh, "partner": SourceIntentHigh, "website": SourceIntentHigh,

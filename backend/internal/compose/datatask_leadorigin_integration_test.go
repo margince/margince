@@ -34,10 +34,9 @@ func leadOriginState(t *testing.T, e *integration.Env) string {
 	return e.WsScalar(t, `SELECT string_agg(full_name || ':' || coalesce(origin, '-') || ':' || score || ':' || coalesce(score_computed::text, '-') || ':' || version, ',' ORDER BY full_name) FROM lead`)
 }
 
-// The task lifts stored scores that an old source weight lowered, fills an
-// origin only where a retained capture names one that resolves, and a second
-// run finds nothing left to change. A human's score override and a human's
-// origin are never touched.
+// The task lifts stored scores that an old source weight lowered. It fills an
+// origin only where a retained capture names one that resolves. A second run
+// finds nothing left to change, and a human's override and origin stay as set.
 func TestTheOriginTaskRescoresAndFillsOriginsAndReplaysSafely(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")

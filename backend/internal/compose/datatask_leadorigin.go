@@ -18,9 +18,9 @@ import (
 // leadScoresFollowOriginDataTask repairs what the move from source to origin
 // left behind. The first step fills an origin from the capture a lead was
 // written from, where the wording resolves to a catalog key. The second scores
-// every open lead again, which lifts the penalty the old import weight put on
-// leads that came in through a file or a connector. Both write through the
-// contacts module's own transaction functions and are safe to run twice.
+// every open lead again. That lifts the penalty the old import weight put on
+// leads from a file or a connector. Both steps write through the contacts
+// module's transaction functions, and a second run changes nothing.
 func leadScoresFollowOriginDataTask(now func() time.Time) datatask.Task {
 	return datatask.Task{
 		ID: "core/1792811003_lead_scores_follow_origin", Version: 1,

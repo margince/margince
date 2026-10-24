@@ -5,9 +5,7 @@ package contacts
 
 import (
 	"context"
-	"fmt"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -480,50 +478,4 @@ func statusSetByFor(ctx context.Context) (string, error) {
 		return string(crmcontracts.LeadStatusSetByLeadStatusSetBySystem), nil
 	}
 	return string(crmcontracts.LeadStatusSetByLeadStatusSetByHuman), nil
-}
-
-// setLeadOrigin folds the origin and its note onto the patch. A blank origin is
-// refused rather than stored: clearing is the explicit null, which reaches the
-// patch through Clear.
-func setLeadOrigin(p *storekit.Patch, current crmcontracts.Lead, in UpdateLeadInput) error {
-	if in.Origin != nil {
-		origin := strings.TrimSpace(*in.Origin)
-		if origin == "" {
-			return &values.ParseError{Field: leadOriginField, Code: codeRequired, Message: "origin must not be empty; pass null to clear it"}
-		}
-		p.Set(leadOriginField, current.Origin, origin)
-	}
-	if in.OriginDetail != nil {
-		detail := cleanOriginDetail(*in.OriginDetail, false)
-		if utf8.RuneCountInString(detail) > LeadOriginDetailMax {
-			return &values.ParseError{Field: leadOriginDetailField, Code: "too_long",
-				Message: fmt.Sprintf("origin_detail is at most %d characters", LeadOriginDetailMax)}
-		}
-		p.Set(leadOriginDetailField, current.OriginDetail, detail)
-	}
-	return nil
-}
-
-// settleOriginHint turns an importer's wording into an origin or a note, but
-// only for a lead with no origin: a human may have set it, and the file knows no
-// better. Decided here under the row lock, so a human's edit that lands between
-// the import's read and its write still wins. The wording that does not resolve
-// becomes the note, and never replaces one.
-func settleOriginHint(ctx context.Context, tx pgx.Tx, current crmcontracts.Lead, in UpdateLeadInput) (UpdateLeadInput, error) {
-	hint := strings.TrimSpace(in.OriginHint)
-	if hint == "" || current.Origin != nil || in.Origin != nil {
-		return in, nil
-	}
-	key, ok, err := ResolveOrigin(ctx, tx, hint)
-	if err != nil {
-		return in, err
-	}
-	switch {
-	case ok:
-		in.Origin = &key
-	case current.OriginDetail == nil && in.OriginDetail == nil:
-		detail := cleanOriginDetail(hint, true)
-		in.OriginDetail = &detail
-	}
-	return in, nil
 }

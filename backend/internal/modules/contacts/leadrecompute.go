@@ -121,7 +121,7 @@ func recomputeLeadScoreTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, now
 // scoreLeadFor is the weighted-signal formula over a lead's title and origin,
 // plus the signals the database holds for it. The title and origin are
 // arguments because an edit scores the values it is about to write. The row's
-// source (how it reached Margince) is deliberately not an input.
+// source (how it reached Margince) is not an input.
 func scoreLeadFor(
 	ctx context.Context, tx pgx.Tx, leadID ids.LeadID, now time.Time, title, origin *string,
 ) (LeadScoring, error) {

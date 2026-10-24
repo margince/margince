@@ -105,9 +105,9 @@ func TestLeadOriginCatalogRefusesWhatTheContractPromises(t *testing.T) {
 	}
 }
 
-// The score reads the origin and nothing else about where a lead came from. A
-// lead written by an import scores the same as a typed one with the same origin,
-// and a lead with no origin scores neutral whatever its source says.
+// The score reads the origin and nothing else about where a lead came from.
+// An imported lead scores the same as a typed one with the same origin. A lead
+// with no origin scores neutral whatever its source says.
 func TestOnlyTheOriginScoresALead(t *testing.T) {
 	e := setupPromoteConsent(t)
 	keepOriginCatalogAsSeeded(t, e)

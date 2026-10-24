@@ -27,9 +27,9 @@ import (
 )
 
 // The migration's seed and the code's fixture name the same seven origins with
-// the same weights: a seed edited without the fixture (or the reverse) fails
-// here rather than in a scorer that quietly scores differently on a fresh
-// installation than the unit tests say it does.
+// the same weights. A seed edited without the fixture, or the reverse, fails
+// here. Otherwise a fresh installation would score differently than the unit
+// tests say.
 func TestLeadOriginSeedMatchesTheScorerFixture(t *testing.T) {
 	e := setupPromoteConsent(t)
 	var seeded OriginIntents
@@ -113,9 +113,9 @@ func TestLeadSourceCRUDRefusesWhatTheContractPromises(t *testing.T) {
 	}
 }
 
-// The deprecated source list governs nothing: an inactive key is accepted on
-// create and on correction, a source value never moves the score, and the
-// list filter and the counts still read the source column as before.
+// The deprecated source list governs nothing. An inactive key is accepted on
+// create and on correction, and a source value never moves the score. The list
+// filter and the counts still read the source column as before.
 func TestLeadSourceListNoLongerGovernsWritesOrTheScore(t *testing.T) {
 	e := setupPromoteConsent(t)
 	list, err := e.store.ListLeadSources(e.ctx)

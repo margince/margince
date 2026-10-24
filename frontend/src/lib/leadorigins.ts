@@ -35,8 +35,8 @@ export function useLeadOrigins() {
   });
 }
 
-// A payload that is not the contract's array, or a row without a key, is
-// treated as nothing rather than crashing the render that reads it.
+// A payload that is not the contract's array is treated as empty. So is a row
+// without a key. Neither crashes the render that reads it.
 function listed(origins: readonly LeadOrigin[] | undefined): LeadOrigin[] {
   if (!Array.isArray(origins)) return [];
   return origins.filter(
@@ -105,9 +105,10 @@ const WRITTEN_BY: Readonly<
 };
 
 /**
- * How the row got into Margince, in words: "Imported from <upload>" for an
- * import, the connector's name for a connector, "Created manually" for a typed
- * lead. Never the raw `connector:apollo:a-1` token or an import's stamp.
+ * How the row got into Margince, in words. An import reads "Imported from
+ * <upload>", a connector reads as its name, and a typed lead reads "Created
+ * manually". The raw `connector:apollo:a-1` token and an import's stamp never
+ * show.
  */
 export function addedViaFor(
   lead: Readonly<{ source?: string | null; imported_from?: string | null }>,

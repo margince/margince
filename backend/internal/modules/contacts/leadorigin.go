@@ -3,21 +3,19 @@
 
 package contacts
 
-// Lead origins are the administered answer to "where did this lead come
-// from" (lead_origin): referral, event, a cold list. A human, an importer or
-// capture sets one on a lead, and it is the only lead fact the score, the
-// origin filter and the report read.
+// Lead origins answer "where did this lead come from" (lead_origin): referral,
+// event, a cold list. A human, an importer or capture sets one. It is the only
+// lead fact the score, the origin filter and the report read.
 //
-// It is not lead.source, which says how the ROW reached Margince (typed in, an
-// import, a connector) and never scores. Reading one column for both questions
-// made a CRM import look like a low-intent enquiry.
+// It is not lead.source, which says how the row reached Margince and never
+// scores. One column for both questions made an import look like a low-intent
+// enquiry.
 
 import (
 	"context"
 	"errors"
 	"fmt"
 	"strings"
-	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -28,7 +26,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -76,9 +73,9 @@ func LoadOriginIntents(ctx context.Context, tx pgx.Tx) (OriginIntents, error) {
 }
 
 // ResolveOrigin maps the free text a source system used onto an active catalog
-// key: the key itself, else the label, both compared after the key
-// derivation. No match answers false and never a guessed key, so an importer
-// keeps the unmatched wording instead of misfiling the lead.
+// key: the key itself, else the label, both after the key derivation. No match
+// answers false and never a guessed key. The importer then keeps the wording
+// instead of misfiling the lead.
 func ResolveOrigin(ctx context.Context, tx pgx.Tx, text string) (string, bool, error) {
 	wanted := deriveSourceKey(text)
 	if wanted == "" {
@@ -150,56 +147,6 @@ func ensureAssignableOrigin(ctx context.Context, tx pgx.Tx, key string, current 
 		return &InactiveLeadOriginError{Key: key}
 	}
 	return nil
-}
-
-// cleanOriginDetail trims the note and bounds it the way the column does, so a
-// long unmatched cell is cut here and not refused by the constraint.
-func cleanOriginDetail(detail string, bound bool) string {
-	detail = strings.TrimSpace(detail)
-	if bound {
-		detail = textcut.Runes(detail, LeadOriginDetailMax)
-	}
-	return detail
-}
-
-// admitLeadOrigin settles a new lead's origin and detail before the score is
-// derived from them. A key a human, agent or connector named must be an active
-// catalog key. An importer's free text goes through ResolveOrigin, and when it
-// does not resolve the wording is kept in the detail with origin left NULL.
-func admitLeadOrigin(ctx context.Context, tx pgx.Tx, in CreateLeadInput) (CreateLeadInput, error) {
-	if in.Origin != nil {
-		key := strings.TrimSpace(*in.Origin)
-		in.Origin = nil
-		if key != "" {
-			if err := ensureAssignableOrigin(ctx, tx, key, nil); err != nil {
-				return in, err
-			}
-			in.Origin = &key
-		}
-	} else if hint := strings.TrimSpace(in.OriginHint); hint != "" {
-		key, ok, err := ResolveOrigin(ctx, tx, hint)
-		if err != nil {
-			return in, err
-		}
-		if ok {
-			in.Origin = &key
-		} else if in.OriginDetail == nil {
-			detail := cleanOriginDetail(hint, true)
-			in.OriginDetail = &detail
-		}
-	}
-	if in.OriginDetail != nil {
-		detail := cleanOriginDetail(*in.OriginDetail, false)
-		if utf8.RuneCountInString(detail) > LeadOriginDetailMax {
-			return in, &values.ParseError{Field: leadOriginDetailField, Code: "too_long",
-				Message: fmt.Sprintf("origin_detail is at most %d characters", LeadOriginDetailMax)}
-		}
-		in.OriginDetail = nil
-		if detail != "" {
-			in.OriginDetail = &detail
-		}
-	}
-	return in, nil
 }
 
 // CreateLeadOriginInput is one new administered origin.

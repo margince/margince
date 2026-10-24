@@ -166,9 +166,9 @@ func TestCaptureSkipsAnActivityReplayWhoseIncumbentLeftTheGrantingHumansScope(t 
 	}
 }
 
-// A connector that carries an origin files its lead under it, one that carries
-// none leaves it empty, and the foreign key refuses a key the catalog lacks, so
-// the sink needs no copy of the catalog.
+// A connector that carries an origin files its lead under it. One that carries
+// none leaves it empty. The foreign key refuses a key the catalog lacks, so the
+// sink needs no copy of the catalog.
 func TestCaptureFilesALeadUnderTheOriginTheConnectorCarries(t *testing.T) {
 	e := integration.SetupSearch(t)
 	fake := &scopeFake{records: []connector.NormalizedRecord{
