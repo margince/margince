@@ -274,8 +274,19 @@ func listAttachments(ctx context.Context, tx pgx.Tx, entityType string, entityID
 	lim := storekit.ClampLimit(limit)
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	where := sprintf(`at.entity_type = $%d AND at.entity_id = $%d AND at.archived_at IS NULL`,
-		arg(entityType), arg(entityID))
+	var where string
+	if entityType == holderContact {
+		// A contact's Documents also holds the files of mails linked to it, each
+		// gated on its own mail.
+		visible, err := visibleParentClause(ctx, arg)
+		if err != nil {
+			return nil, storekit.Page{}, err
+		}
+		where = documentMembership(holderContact, arg(entityID)) + " AND " + visible
+	} else {
+		where = sprintf(`at.entity_type = $%d AND at.entity_id = $%d AND at.archived_at IS NULL`,
+			arg(entityType), arg(entityID))
+	}
 	if cursor != nil && *cursor != "" {
 		c, err := storekit.DecodeCursor(*cursor)
 		if err != nil {
