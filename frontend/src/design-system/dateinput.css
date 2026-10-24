@@ -1,5 +1,7 @@
+/* The text box floors at its own pattern (set inline from the placeholder), so
+ * the shell may not shrink below the box plus the calendar button. */
 .date-input {
-  min-inline-size: 0;
+  min-inline-size: min-content;
 }
 .date-input .icon-action {
   flex: none;

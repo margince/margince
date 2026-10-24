@@ -108,6 +108,7 @@ export function DateInput({
   const popupId = useId();
   const refusedId = useId();
   const refusal = (day: ISODate) => outsideRange(day, min, max, pattern, t);
+  const patternText = placeholderOf(pattern, t);
   const chooseName = calendarName(box["aria-label"] ?? labelText, t);
 
   const problem = draft
@@ -170,7 +171,11 @@ export function DateInput({
           autoComplete="off"
           disabled={disabled}
           readOnly={readOnly}
-          placeholder={placeholder ?? placeholderOf(pattern, t)}
+          placeholder={placeholder ?? patternText}
+          style={{
+            minInlineSize: `${patternText.length}ch`,
+            ...box.style,
+          }}
           aria-invalid={draft?.refused === undefined ? ariaInvalid : true}
           aria-describedby={describedByIds(
             draft?.refused !== undefined && refusedId,
