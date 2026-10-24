@@ -65,9 +65,9 @@ type Project360PhaseHistory struct {
 	Durations   []Project360PhaseDuration `json:"phase_durations"`
 }
 
-// Project360Transition is one phase move; from_phase is empty on the birth
-// row, and changed_by is absent when the audit row of the move is not known, which
-// a caller reads as "unknown", never as the system.
+// Project360Transition is one phase move. from_phase is empty on the birth
+// row. changed_by is absent when the audit row of the move is not known; a
+// caller reads that as "unknown", never as the system.
 type Project360Transition struct {
 	FromPhase string                 `json:"from_phase"`
 	ToPhase   string                 `json:"to_phase"`

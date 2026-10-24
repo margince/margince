@@ -6,7 +6,7 @@
 package integration
 
 // The project's phase history names who made each move the way the record
-// History does, read from the audit row the writer wrote in the same
+// History does. It reads the audit row the writer wrote in the same
 // transaction. Every project here is made and moved through the real store.
 
 import (
@@ -98,8 +98,8 @@ func TestPhaseHistoryNamesAHumanAndNeverInventsASystemMove(t *testing.T) {
 		t.Errorf("a human move reads %+v, want a named human", who)
 	}
 
-	// A move whose link is missing, or points at an audit row that is gone,
-	// reads as unknown: the actor is absent, not a system actor.
+	// A move with a missing link, or a link to a gone audit row, reads as
+	// unknown. The actor is absent; it is not a system actor.
 	conn := OwnerConn(t)
 	if _, err := conn.Exec(context.Background(),
 		`UPDATE project_phase_history SET audit_log_id = NULL WHERE project_id = $1 AND from_phase IS NULL`, p.ID); err != nil {

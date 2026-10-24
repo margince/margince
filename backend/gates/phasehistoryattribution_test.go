@@ -9,13 +9,12 @@ package gates
 //
 // A table with both `changed_by` (a flat principal id) and `audit_log_id` has
 // the audit row that holds the actor type, the represented human, the passport
-// and the client. A statement that reads such a table's `changed_by` and joins
-// `app_user` to name the actor guesses from the `human:` prefix, so an agent's
-// move reads as nobody or as the system. The name comes from
-// privacy.AuditAttributionsTx instead.
+// and the client. A statement that joins `app_user` on `changed_by` guesses
+// from the `human:` prefix. An agent's move then reads as nobody or as the
+// system. The name comes from privacy.AuditAttributionsTx instead.
 //
-// The subjects are derived from the head catalog, so a second history table that
-// gains `audit_log_id` is covered the day it does.
+// The subjects come from the head catalog, so a second history table that
+// gains `audit_log_id` is covered at once.
 
 import (
 	"go/ast"

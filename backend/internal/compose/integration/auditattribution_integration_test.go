@@ -5,7 +5,7 @@
 
 package integration
 
-// AuditAttributionsTx answers "who made this change" for a stored audit link.
+// AuditAttributionsTx answers "who acted" for a stored audit link.
 // It must agree with the record History on every actor shape, because the two
 // are the same fact shown on two screens.
 

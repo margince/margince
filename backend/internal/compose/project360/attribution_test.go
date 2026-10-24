@@ -11,9 +11,9 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
-// PrincipalAttribution is a declared mirror of the attribution fields of
-// AuditHistoryEntry: the same JSON names, the same Go types and the same actor
-// kinds, so one frontend helper reads both.
+// PrincipalAttribution mirrors the attribution fields of AuditHistoryEntry.
+// It has the same JSON names, Go types and actor kinds, so one frontend helper
+// reads both.
 func TestPrincipalAttributionMirrorsTheAuditHistoryEntry(t *testing.T) {
 	audit := reflect.TypeFor[crmcontracts.AuditHistoryEntry]()
 	for field := range reflect.TypeFor[crmcontracts.PrincipalAttribution]().Fields() {

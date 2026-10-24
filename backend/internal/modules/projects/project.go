@@ -116,10 +116,10 @@ func createProjectTx(
 	if err != nil {
 		return crmcontracts.Project{}, fmt.Errorf("audit project create: %w", err)
 	}
-	// The birth row: from_phase NULL, exactly as deal_stage_history records
-	// a deal's first placement. A project's history is complete from row one,
-	// and it names the audit row of the same transaction so the reader can say
-	// who created the project.
+	// The birth row has from_phase NULL, as deal_stage_history records a deal's
+	// first placement. A project's history is complete from row one. The row
+	// names the audit row of the same transaction, so the reader can say who
+	// created the project.
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO project_phase_history (project_id, from_phase, to_phase, changed_by, audit_log_id)
 		 VALUES ($1, NULL, $2, $3, $4)`,

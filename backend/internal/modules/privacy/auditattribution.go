@@ -12,11 +12,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// AuditAttribution is who an audit row is attributed to: the actor, the human
-// whose authority a machine acted under, and the tool it was typed through.
+// AuditAttribution is who an audit row is attributed to. It holds the actor,
+// the human whose authority a machine acted under, and the tool it was typed
+// through.
 // The record History reads these fields from the same row through
-// attributionOf, so a surface that carries a stored audit link cannot read
-// them differently.
+// attributionOf. A surface that carries a stored audit link therefore cannot
+// read them differently.
 type AuditAttribution struct {
 	ActorType      string
 	ActorID        string
@@ -42,9 +43,9 @@ func attributionOf(row recordAuditRow) AuditAttribution {
 
 // AuditAttributionsTx resolves the attribution of the given audit rows in one
 // query, through the projection the record History uses. Only rows written for
-// the named entity count: the stored link has no foreign key, so a link to
+// the named entity count. The stored link has no foreign key, so a link to
 // another record's audit row must read as unknown. An id with no matching
-// audit row is absent from the result; the caller reads that as unknown, not
+// audit row is absent from the result. The caller reads that as unknown, not
 // as the system.
 func AuditAttributionsTx(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID, auditIDs []ids.UUID) (map[ids.UUID]AuditAttribution, error) {
 	out := make(map[ids.UUID]AuditAttribution, len(auditIDs))

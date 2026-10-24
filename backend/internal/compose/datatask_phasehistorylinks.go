@@ -14,9 +14,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// phaseHistoryLinksDataTask links the project phase moves written before the
-// audit link existed to the audit row of their own transaction, so the history
-// can name who made the move. A row with no single match stays unlinked and
+// phaseHistoryLinksDataTask links each project phase move written before the
+// audit link existed to the audit row of its own transaction. The history can
+// then name who made the move. A row with no single match stays unlinked and
 // reads as unknown.
 func phaseHistoryLinksDataTask() datatask.Task {
 	return datatask.Task{

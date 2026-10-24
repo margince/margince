@@ -24,11 +24,11 @@ type PhaseHistoryLinkPage struct {
 	Linked  int
 }
 
-// linkPhaseHistorySQL links a history row only when exactly one audit row
-// matches. The pair a transaction writes shares occurred_at because both
-// columns default to now(), the transaction start, and the action tells the
-// birth row from a move. Two moves in one transaction match two audit rows
-// each, so they stay unlinked: nothing is guessed.
+// linkPhaseHistorySQL links a history row only when one audit row matches.
+// The pair a transaction writes shares occurred_at, because both columns
+// default to now(), the transaction start. The action tells the birth row from
+// a move. Two moves in one transaction match two audit rows each, so they stay
+// unlinked and nothing is guessed.
 const linkPhaseHistorySQL = `
 	WITH page AS (
 	    SELECT h.id, h.project_id, h.from_phase, h.occurred_at

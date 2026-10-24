@@ -27,9 +27,9 @@ type PhaseTransition struct {
 	ToPhase   string
 	Reason    *string
 	// AuditLogID is the audit row the writer wrote in the same transaction; it
-	// holds who moved the project. Nil when the link is unknown (a row older
-	// than the column that no backfill could match), which a reader must show
-	// as unknown, never as the system.
+	// holds who moved the project. Nil when the link is unknown, for a row older
+	// than the column that no backfill could match. A reader shows that as
+	// unknown, never as the system.
 	AuditLogID *ids.UUID
 	OccurredAt time.Time
 }
