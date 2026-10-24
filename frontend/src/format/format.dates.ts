@@ -1,11 +1,14 @@
 import type { Locale } from "../i18n";
-import { middayInstant } from "./calendarday";
+import { calendarDay, middayInstant } from "./calendarday";
 import { INTL_LOCALE } from "./intllocale";
 import {
   dateTimePreferences,
   formatPreferredDate,
   hourCycle,
 } from "./preferences";
+import { assertIanaZone } from "./timezone";
+
+export { assertIanaZone, isRenderableZone } from "./timezone";
 
 /** A month number has no viewer timezone. UTC keeps Intl's scaffolding in the same month. */
 export function monthName(month: number, locale: Locale): string {
@@ -50,37 +53,6 @@ export function fullDayName(day: Date, locale: Locale): string {
   return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
     dateStyle: "full",
   }).format(day);
-}
-
-// IANA zone names only (AC-DS-TZ4). Fixed offsets ("+01:00", "Etc/GMT-1")
-// freeze DST rules without a sign, so they throw at the edge.
-export function assertIanaZone(zone: string): void {
-  if (/^[+-]\d{2}:?\d{2}$/.test(zone) || /^(Etc\/)?GMT[+-]?\d*$/i.test(zone)) {
-    throw new Error(
-      `timezone must be an IANA name, got fixed offset "${zone}"`,
-    );
-  }
-  // Intl rejects unknown names: constructing with the zone throws a RangeError
-  // that propagates. format() forces the value to be consumed.
-  new Intl.DateTimeFormat("en-US", { timeZone: zone }).format();
-}
-
-/**
- * Whether the formatters above will accept this zone, asked without throwing.
- *
- * A page rendering a list of moments cannot let one row's zone take it down,
- * so it asks before it formats. A probe with Intl alone learns only that the
- * name resolves. `Etc/GMT-1`, `GMT` and `+01:00` resolve, then throw inside
- * `formatDate`. So this derives from the assertion, the one reading of
- * "a zone this renders".
- */
-export function isRenderableZone(zone: string): boolean {
-  try {
-    assertIanaZone(zone);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 // Calendar dates are not UTC-midnight instants: their day survives every zone.
@@ -179,6 +151,28 @@ export function formatDayMonth(
     day: "numeric",
     month: "short",
   }).format(displayDay(utcIso, zone));
+}
+
+// Not `formatDayMonth` on a card: a bare "4 Mar" is ambiguous once the date is
+// outside `now`'s year. `now` is the caller's, so the formatter stays pure.
+// A fixed numeric date format has no short form, so it always writes the year.
+export function formatDayMonthNearYear(
+  utcIso: string,
+  locale: Locale,
+  zone: string,
+  now: Date,
+): string {
+  if (dateTimePreferences().dateFormat !== "locale")
+    return formatDate(utcIso, locale, zone);
+  assertIanaZone(zone);
+  const day = displayDay(utcIso, zone);
+  const yearIn = (at: Date) => calendarDay(at, zone).slice(0, 4);
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    timeZone: zone,
+    day: "numeric",
+    month: "short",
+    ...(yearIn(day) === yearIn(now) ? {} : { year: "numeric" }),
+  }).format(day);
 }
 
 /**

@@ -8,6 +8,8 @@ import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { rowsState, SurfaceState } from "../../design-system/surfacestate";
 import { formatDateTime } from "../../format/format";
+import { INTL_LOCALE } from "../../format/intllocale";
+import { zoneNameAndOffset } from "../../format/timezone";
 import { type Locale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { Section } from "../../lib/analytics.address";
@@ -332,7 +334,11 @@ export function ReportCard({
                 <span className="t-caption">
                   {t("analytics.frame", {
                     asOf: formatDateTime(run.as_of, locale, run.timezone),
-                    zone: run.timezone,
+                    zone: zoneNameAndOffset(
+                      INTL_LOCALE[locale],
+                      new Date(run.as_of),
+                      run.timezone,
+                    ),
                   })}
                 </span>
               ) : undefined

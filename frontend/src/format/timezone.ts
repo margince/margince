@@ -68,6 +68,37 @@ export const UTC_ZONE = "UTC";
 
 export const FALLBACK_RECORD_ZONE = "Europe/Berlin";
 
+// IANA zone names only (AC-DS-TZ4). Fixed offsets ("+01:00", "Etc/GMT-1")
+// freeze DST rules without a sign, so they throw at the edge.
+export function assertIanaZone(zone: string): void {
+  if (/^[+-]\d{2}:?\d{2}$/.test(zone) || /^(Etc\/)?GMT[+-]?\d*$/i.test(zone)) {
+    throw new Error(
+      `timezone must be an IANA name, got fixed offset "${zone}"`,
+    );
+  }
+  // Intl rejects unknown names: constructing with the zone throws a RangeError
+  // that propagates. format() forces the value to be consumed.
+  new Intl.DateTimeFormat("en-US", { timeZone: zone }).format();
+}
+
+/**
+ * Whether the formatters will accept this zone, asked without throwing.
+ *
+ * A page rendering a list of moments cannot let one row's zone take it down,
+ * so it asks before it formats. A probe with Intl alone learns only that the
+ * name resolves. `Etc/GMT-1`, `GMT` and `+01:00` resolve, then throw inside
+ * `formatDate`. So this derives from the assertion, the one reading of
+ * "a zone this renders".
+ */
+export function isRenderableZone(zone: string): boolean {
+  try {
+    assertIanaZone(zone);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * The zone the reader's own browser is in, or `UTC` when it will not say.
  *
@@ -90,13 +121,21 @@ export const FALLBACK_RECORD_ZONE = "Europe/Berlin";
  * of those places, and "Tuesday, 08:00" with no zone is the sentence that gets
  * that wrong.
  *
+ * A named `zone` reads that zone instead of the reader's own.
+ *
  * Both halves come from Intl's own names, so the zone reads in the reader's
  * language; the offset is spelled UTC rather than Intl's GMT, because that is
  * what the rest of the product says.
  */
-export function zoneNameAndOffset(locale: string, at: Date): string {
+export function zoneNameAndOffset(
+  locale: string,
+  at: Date,
+  zone?: string,
+): string {
+  // A zone the formatters refuse is shown as stored, not dropped.
+  if (zone !== undefined && !isRenderableZone(zone)) return zone;
   const named = (style: "long" | "shortOffset") =>
-    new Intl.DateTimeFormat(locale, { timeZoneName: style })
+    new Intl.DateTimeFormat(locale, { timeZone: zone, timeZoneName: style })
       .formatToParts(at)
       .find((piece) => piece.type === "timeZoneName")?.value ?? "";
   return [named("long"), named("shortOffset").replace("GMT", "UTC")]

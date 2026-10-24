@@ -93,7 +93,10 @@ it("states the stored date and zone, and clears it as null", async () => {
     />,
   );
 
-  expect(screen.getByText(/Europe\/Berlin/)).toBeTruthy();
+  expect(
+    screen.getByText(/Central European Standard Time · UTC\+1/),
+  ).toBeTruthy();
+  expect(screen.queryByText(/Europe\/Berlin/)).toBeNull();
   await user.click(
     screen.getByRole("button", {
       name: en["connectors.historyBaseline.clear"],

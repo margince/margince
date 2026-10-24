@@ -7,6 +7,8 @@ import {
   formatTimeOfDay,
   isRenderableZone,
 } from "../../format/format";
+import { INTL_LOCALE } from "../../format/intllocale";
+import { zoneNameAndOffset } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { logUnexpectedError } from "../../lib/problem";
@@ -113,7 +115,15 @@ function Moment({
     <span className="scheduledsends-moment">
       {when}
       {zone !== readerZone && (
-        <span className="t-caption">{t("sched.inZone", { zone })}</span>
+        <span className="t-caption">
+          {t("sched.inZone", {
+            zone: zoneNameAndOffset(
+              INTL_LOCALE[locale],
+              new Date(send.scheduled_at),
+              zone,
+            ),
+          })}
+        </span>
       )}
     </span>
   );

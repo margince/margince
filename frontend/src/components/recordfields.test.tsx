@@ -86,6 +86,21 @@ describe("record fields", () => {
     ).not.toBeInTheDocument();
     expect(save).toHaveBeenCalledTimes(1);
   });
+  it("shows a date field in the reader's format, never the stored ISO day", () => {
+    render(
+      <RecordFields
+        title="Details"
+        kind="deal"
+        fields={[{ key: "close", labelText: "Expected close", type: "date" }]}
+        record={{ id: "d1", version: 1, close: "2026-03-01" }}
+        canEdit
+        save={vi.fn<RecordFieldSave>(async () => undefined)}
+      />,
+      { wrapper },
+    );
+    expect(screen.getByText("1 Mar 2026")).toBeInTheDocument();
+    expect(screen.queryByText("2026-03-01")).not.toBeInTheDocument();
+  });
   it("renders unset fields, and does not write an unchanged value", async () => {
     const save = vi.fn<RecordFieldSave>(async () => undefined);
     const user = userEvent.setup();

@@ -17,6 +17,7 @@ export {
   formatDateTime,
   formatDayLong,
   formatDayMonth,
+  formatDayMonthNearYear,
   formatDayRange,
   formatTimeOfDay,
   fullDayName,

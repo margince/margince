@@ -208,7 +208,7 @@ describe("customFieldDisplay", () => {
     expect(customFieldDisplay(cf({ type: "text" }), "", opts)).toBeNull();
   });
 
-  it("shows text / number / date / picklist as their stored value", () => {
+  it("shows text / number / picklist as their stored value, and a date localized as their stored value", () => {
     expect(customFieldDisplay(cf({ type: "text" }), "hello", opts)).toBe(
       "hello",
     );
@@ -216,7 +216,7 @@ describe("customFieldDisplay", () => {
       "42.5",
     );
     expect(customFieldDisplay(cf({ type: "date" }), "2026-03-01", opts)).toBe(
-      "2026-03-01",
+      "1 Mar 2026",
     );
     expect(customFieldDisplay(cf({ type: "picklist" }), "Reseller", opts)).toBe(
       "Reseller",
