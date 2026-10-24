@@ -221,9 +221,9 @@ const leadQuickFindExpr = `(coalesce(full_name, '') || ' ' || coalesce(company_n
 
 func leadQuickFindClause(query string, arg func(any) int) string {
 	pos := arg(strings.TrimSpace(query))
-	return storekit.SQLf(`(%s OR email = lower($%d)
+	return storekit.SQLf(`(%s
 		OR lower(rtrim(linkedin_url, '/')) = lower(rtrim($%d, '/')))`,
-		storekit.QuickFindClause(pos, leadQuickFindExpr), pos, pos)
+		storekit.QuickFindClauseWith(pos, leadQuickFindExpr, storekit.LeadEmails), pos)
 }
 
 // scanLeadPage drains one list query's rows: each lead plus, under a

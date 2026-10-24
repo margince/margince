@@ -168,14 +168,11 @@ func QuickFindClause(pos int, nameExpr string) string {
 // Identifier is a record's identifier table — the addresses and domains contacts
 // paste in when they are not typing a name.
 //
-// Table is joined by FK to the row's own id, and Column is matched EXACTLY
-// against the lower-cased query. Both identifier tables store their values
-// lower-cased under a CHECK and carry a unique index on the value alone
-// (uq_contact_email_dedupe, uq_company_domain), so this arm is one index lookup.
-//
-// Exact, with no prefix arm: `LIKE 'x%'` is not reliably indexed under the
-// database's collation, and a search that silently reads the whole table is
-// worse than one that finds nothing.
+// Table is joined by FK to the row's own id. Column stores its values
+// lower-cased under a CHECK. The exact arm uses the unique index on the value
+// (uq_contact_email_dedupe, uq_company_domain); the contains arm finds a
+// fragment and reads a trigram index on f_fold_apostrophes(lower(Column))
+// (idx_contact_email_trgm, idx_company_domain_trgm, idx_lead_email_trgm).
 type Identifier struct {
 	Table  string
 	FK     string
@@ -199,18 +196,36 @@ func QuickFindClauseWith(pos int, nameExpr string, id Identifier) string {
 	return "(" + clause + ")"
 }
 
-// The identifier tables of the two record types a pasted handle names. The
-// contact and company lists and the cross-object search all read them here.
+// The identifier columns of the record types a pasted handle names. The
+// contact, company and lead lists and the cross-object search all read them here.
 var (
 	ContactEmails  = Identifier{Table: "contact_email", FK: "contact_id", Column: "email"}
 	CompanyDomains = Identifier{Table: "company_domain", FK: "company_id", Column: "domain"}
+	LeadEmails     = Identifier{Table: "lead", FK: "id", Column: "email"}
 )
 
-// MatchSQL is true when a live identifier row of the record equals the query at
+// ExactSQL is true when a live identifier row of the record equals the query at
 // pos. The ARRAY is built once, so the primary key joins the bitmap union over
 // the name indexes. `IN (SELECT ...)` or EXISTS runs per row and scans the table.
+// Ranking reads this arm, so a fragment hit is not lifted above a name match.
+func (id Identifier) ExactSQL(pos int, idColumn string) string {
+	return id.arraySQL(idColumn, fmt.Sprintf("%s = lower(btrim($%d))", id.Column, pos))
+}
+
+// ContainsSQL is true when a live identifier row of the record contains the
+// query at pos. It spells the expression the identifier's trigram index holds,
+// and escapes the query so `%` and `_` search for themselves.
+func (id Identifier) ContainsSQL(pos int, idColumn string) string {
+	return id.arraySQL(idColumn, fmt.Sprintf("f_fold_apostrophes(lower(%s)) LIKE '%%' || %s || '%%'",
+		id.Column, EscapeLikeSQL(fmt.Sprintf("f_fold_apostrophes(lower(btrim($%d)))", pos))))
+}
+
+// MatchSQL finds a record by a whole identifier or by a fragment of one.
 func (id Identifier) MatchSQL(pos int, idColumn string) string {
-	return fmt.Sprintf(`%[1]s = ANY (ARRAY(SELECT %[3]s FROM %[4]s
-	              WHERE archived_at IS NULL AND %[5]s = lower(btrim($%[2]d))))`,
-		idColumn, pos, id.FK, id.Table, id.Column)
+	return id.ExactSQL(pos, idColumn) + " OR " + id.ContainsSQL(pos, idColumn)
+}
+
+func (id Identifier) arraySQL(idColumn, predicate string) string {
+	return fmt.Sprintf(`%s = ANY (ARRAY(SELECT %s FROM %s
+	              WHERE archived_at IS NULL AND %s))`, idColumn, id.FK, id.Table, predicate)
 }

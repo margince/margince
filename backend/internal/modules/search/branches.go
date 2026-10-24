@@ -95,8 +95,8 @@ func snippetIsEvidence(entity string) bool {
 const activityRankSample = 2000
 
 // ownMatch is the predicate that finds a record by its own text: the name index,
-// or an exact identifier the record carries. identifierPos binds the query the
-// first time an identifier arm asks for it.
+// or an identifier (whole or a fragment) the record carries. identifierPos
+// binds the query the first time an identifier arm asks for it.
 func (b searchBranch) ownMatch(alias, tsquery string, identifierPos func() int) string {
 	if b.identifier.Table == "" {
 		return fmt.Sprintf("%s.search_tsv @@ %s", alias, tsquery)
@@ -105,13 +105,14 @@ func (b searchBranch) ownMatch(alias, tsquery string, identifierPos func() int) 
 		alias, tsquery, b.identifier.MatchSQL(identifierPos(), alias+".id"))
 }
 
-// ownScore lifts an identifier hit into the whole-word tier, so a pasted address
-// ranks its contact above every name that merely starts like it.
+// ownScore lifts a whole-identifier hit into the whole-word tier, so a pasted
+// address ranks its contact above every name that merely starts like it. A
+// fragment hit stays unlifted.
 func (b searchBranch) ownScore(alias, score string, identifierPos func() int) string {
 	if b.identifier.Table == "" {
 		return score
 	}
-	return fmt.Sprintf("(%s + (%s)::int)", score, b.identifier.MatchSQL(identifierPos(), alias+".id"))
+	return fmt.Sprintf("(%s + (%s)::int)", score, b.identifier.ExactSQL(identifierPos(), alias+".id"))
 }
 
 // bindIdentifier binds the whole query for the identifier arms on first use. A

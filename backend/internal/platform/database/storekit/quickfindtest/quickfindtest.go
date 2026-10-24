@@ -47,11 +47,11 @@ func (n planNode) walk(visit func(planNode)) {
 }
 
 // AssertIndexed fails t unless the quick-find over table, matching nameExpr and
-// the identifier arm id (zero when the list has none), reads index and scans no
-// table. Sequential scans are priced out for the one statement, so a scan left
+// the identifier arm id (zero when the list has none), reads index and, when id
+// is set, identifierIndex, and scans no table. Sequential scans are priced out for the one statement, so a scan left
 // in the plan means the planner had no index to use, not that it chose not to
 // on a small table.
-func AssertIndexed(t *testing.T, table, nameExpr, index string, id storekit.Identifier) {
+func AssertIndexed(t *testing.T, table, nameExpr, index string, id storekit.Identifier, identifierIndex string) {
 	t.Helper()
 	dsn := os.Getenv("MARGINCE_TEST_DSN")
 	if dsn == "" {
@@ -82,6 +82,11 @@ func AssertIndexed(t *testing.T, table, nameExpr, index string, id storekit.Iden
 	if _, err := tx.Exec(ctx, `SET LOCAL enable_seqscan = off`); err != nil {
 		t.Fatalf("pricing out sequential scans: %v", err)
 	}
+	if id.Table != "" {
+		if err := dropCompetingIndexes(ctx, tx, id.Table, identifierIndex, index); err != nil {
+			t.Fatalf("clearing the other %s indexes for the plan: %v", id.Table, err)
+		}
+	}
 	statement := `EXPLAIN (FORMAT JSON) SELECT id FROM ` + pgx.Identifier{table}.Sanitize() +
 		` WHERE ` + storekit.QuickFindClauseWith(1, nameExpr, id)
 	var raw []byte
@@ -92,9 +97,10 @@ func AssertIndexed(t *testing.T, table, nameExpr, index string, id storekit.Iden
 	if err := json.Unmarshal(raw, &plans); err != nil || len(plans) != 1 {
 		t.Fatalf("reading the %s quick-find plan (%v): %s", table, err, raw)
 	}
-	used := false
+	used, identifierUsed := false, false
 	plans[0].Plan.walk(func(n planNode) {
 		used = used || n.IndexName == index
+		identifierUsed = identifierUsed || n.IndexName == identifierIndex
 		if n.NodeType == "Seq Scan" {
 			t.Errorf("the %s quick-find scans %s, so every search reads that whole table. Plan: %s",
 				table, n.RelationName, raw)
@@ -104,4 +110,38 @@ func AssertIndexed(t *testing.T, table, nameExpr, index string, id storekit.Iden
 		t.Errorf("the %s quick-find over %s does not read %s; index the exact expression the query "+
 			"matches. Plan: %s", table, nameExpr, index, raw)
 	}
+	if id.Table != "" && !identifierUsed {
+		t.Errorf("the %s identifier arm does not read %s; index the exact expression the contains "+
+			"arm matches. Plan: %s", table, identifierIndex, raw)
+	}
+}
+
+// dropCompetingIndexes drops, inside the plan transaction, every index on table
+// except those in keep, the full-text index and those backing a constraint. The
+// test tables are empty, and on an empty table the planner prices a trigram
+// index above a partial btree that also covers the live rows, so without this
+// the plan would never show whether the identifier index can serve the contains
+// arm. A lead's own address shares its table with the name arm, hence keep.
+func dropCompetingIndexes(ctx context.Context, tx pgx.Tx, table string, keep ...string) error {
+	rows, err := tx.Query(ctx, `
+		SELECT i.relname
+		FROM pg_index x
+		JOIN pg_class i ON i.oid = x.indexrelid
+		WHERE x.indrelid = $1::regclass AND i.relname <> ALL ($2)
+		  AND pg_get_indexdef(x.indexrelid) NOT LIKE '%search_tsv%'
+		  AND NOT EXISTS (SELECT 1 FROM pg_constraint c WHERE c.conindid = x.indexrelid)`,
+		pgx.Identifier{table}.Sanitize(), keep)
+	if err != nil {
+		return err
+	}
+	names, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	if err != nil {
+		return err
+	}
+	for _, name := range names {
+		if _, err := tx.Exec(ctx, `DROP INDEX `+pgx.Identifier{name}.Sanitize()); err != nil {
+			return err
+		}
+	}
+	return nil
 }

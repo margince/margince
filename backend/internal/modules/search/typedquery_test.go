@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // Which part of a query is matched whole, and which is offered as a prefix.
@@ -335,5 +337,20 @@ func TestMailRanksABoundedSampleAndRecordsRankEveryMatch(t *testing.T) {
 		if sampled != wantSample {
 			t.Errorf("%s branch ranks a sample of %d: %v, want %v:\n%s", entity, activityRankSample, sampled, wantSample, sql)
 		}
+	}
+}
+
+// A fragment hit finds the record but does not lift it into the whole-word
+// tier, or an address fragment would outrank a real name match.
+func TestOnlyAWholeIdentifierRaisesTheScore(t *testing.T) {
+	t.Parallel()
+	b := searchBranch{identifier: storekit.ContactEmails}
+	pos := func() int { return 4 }
+
+	if match := b.ownMatch("c", "q", pos); !strings.Contains(match, "LIKE") {
+		t.Errorf("the match no longer finds a fragment of an address: %s", match)
+	}
+	if score := b.ownScore("c", "1", pos); strings.Contains(score, "LIKE") {
+		t.Errorf("a fragment of an address raises the score: %s", score)
 	}
 }
