@@ -110,4 +110,26 @@ describe("coverage", () => {
     expect(holdCoveringAddress(holds, "x@sub.parent.example")?.id).toBe("d");
     expect(holdCoveringAddress(holds, "other@firm.example")).toBeUndefined();
   });
+
+  it("picks the narrowest of overlapping domain holds", () => {
+    const nested = [
+      { id: "p", kind: "domain", value: "example.com", created_at: "" },
+      { id: "s", kind: "domain", value: "sub.example.com", created_at: "" },
+    ] as const;
+    expect(holdCoveringDomain(nested, "sub.example.com")?.id).toBe("s");
+    expect(holdCoveringAddress(nested, "a@sub.example.com")?.id).toBe("s");
+  });
+
+  it("compares internationalised domains in their stored xn-- form", () => {
+    const idn = [
+      {
+        id: "i",
+        kind: "domain",
+        value: "xn--mnich-kva.example",
+        created_at: "",
+      },
+    ] as const;
+    expect(holdCoveringAddress(idn, "p@münich.example")?.id).toBe("i");
+    expect(holdCoveringDomain(idn, "münich.example.")?.id).toBe("i");
+  });
 });

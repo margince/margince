@@ -6,6 +6,7 @@ import { CounterpartyHoldRow } from "../../components/counterparty-hold";
 import { Disclosure } from "../../design-system/disclosure";
 import { PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
+import { companyWebsite } from "./companyheader";
 import { SectionSummary } from "./companyrailshared";
 
 type Company = components["schemas"]["Company"];
@@ -21,7 +22,8 @@ export function CompanyHoldSection({
   company,
 }: Readonly<{ company: Company | undefined }>) {
   const t = useT();
-  const host = hostOf(company?.website_url);
+  const website = company ? companyWebsite(company) : undefined;
+  const host = hostOf(website);
   if (!host) {
     return null;
   }

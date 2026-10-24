@@ -63,3 +63,11 @@ it("renders nothing for a company with no website", () => {
   renderSection({ website_url: null } as Company);
   expect(screen.queryByText("Private correspondence")).toBeNull();
 });
+
+it("offers the hold from the primary domain row when website_url is absent", async () => {
+  renderSection({
+    website_url: null,
+    domains: [{ domain: "example.com", is_primary: true }],
+  } as Company);
+  expect(await screen.findByText("Private correspondence")).toBeTruthy();
+});

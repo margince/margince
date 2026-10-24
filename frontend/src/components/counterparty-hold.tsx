@@ -60,6 +60,28 @@ function domainHoldCovers(hold: Hold, domain: string): boolean {
   );
 }
 
+// The server stores domains as lowercase ASCII without a trailing dot, so an
+// internationalised domain must be compared in its xn-- form.
+function normalizeDomain(domain: string): string {
+  const lower = domain.trim().toLowerCase().replace(/\.$/, "");
+  try {
+    return new URL(`http://${lower}`).hostname || lower;
+  } catch {
+    return lower;
+  }
+}
+
+// The narrowest domain hold over this domain: lifting a parent hold would
+// unprotect sibling subdomains that the pressed row never named.
+function narrowestDomainHold(
+  holds: readonly Hold[] | undefined,
+  domain: string,
+): Hold | undefined {
+  return holds
+    ?.filter((hold) => domainHoldCovers(hold, domain))
+    .sort((a, b) => b.value.length - a.value.length)[0];
+}
+
 // The hold that covers this address, if the caller placed one: the address
 // itself, or a domain hold over its domain.
 export function holdCoveringAddress(
@@ -70,11 +92,10 @@ export function holdCoveringAddress(
     return undefined;
   }
   const normal = address.trim().toLowerCase();
-  const domain = normal.slice(normal.indexOf("@") + 1);
-  return holds?.find(
-    (hold) =>
-      (hold.kind === "address" && hold.value === normal) ||
-      domainHoldCovers(hold, domain),
+  const domain = normalizeDomain(normal.slice(normal.indexOf("@") + 1));
+  return (
+    holds?.find((hold) => hold.kind === "address" && hold.value === normal) ??
+    narrowestDomainHold(holds, domain)
   );
 }
 
@@ -87,20 +108,18 @@ export function holdCoveringDomain(
   if (!domain) {
     return undefined;
   }
-  const normal = domain.trim().toLowerCase();
-  return holds?.find((hold) => domainHoldCovers(hold, normal));
+  return narrowestDomainHold(holds, normalizeDomain(domain));
 }
 
 // Everything the render and the press need, derived once from the scope so no
 // branch can build an address out of a domain.
 function resolveScope(scope: HoldScope) {
   const address = scope.address?.trim().toLowerCase();
-  const domain = (scope.domain ?? address?.slice(address.indexOf("@") + 1))
-    ?.trim()
-    .toLowerCase();
-  if (!domain) {
+  const rawDomain = scope.domain ?? address?.slice(address.indexOf("@") + 1);
+  if (!rawDomain?.trim()) {
     return undefined;
   }
+  const domain = normalizeDomain(rawDomain);
   return {
     address,
     domain,
