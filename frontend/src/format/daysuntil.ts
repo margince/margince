@@ -16,8 +16,8 @@ import { calendarDaysBetween, displayDay } from "./format";
  *
  * A count in UTC is wrong beside a rendered date. A reader thirteen hours
  * ahead of UTC, opening a project on the morning of the 18th, read a target
- * end of the 20th as three mornings off. The right answer is two. UTC had not turned the
- * page yet. The count started from a day the reader was no longer in.
+ * end of the 20th as three mornings off. The right answer is two. UTC had not
+ * turned the page yet. The count started from a day the reader was no longer in.
  * Both halves name their day the same way here, so they cannot disagree.
  *
  * It is `calendarDaysBetween` in the record zone, with the date rendered
