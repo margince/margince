@@ -77,7 +77,11 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   // The phase history is a card on the overview. The birth row (the first
   // phase, filed by whoever created the project) is on screen without a press.
   await expect(page.getByText("Phasenverlauf")).toBeVisible();
-  await expect(page.getByText(/hat das Projekt angelegt/)).toBeVisible();
+  await expect(
+    page
+      .getByRole("region", { name: "Phasenverlauf" })
+      .getByText(/Lars Brandt hat das Projekt angelegt/),
+  ).toBeVisible();
   // A new project has filed no documents, and its standing says so.
   await expect(
     page.locator(".standing-sheet").getByText("Keine angehängt"),
