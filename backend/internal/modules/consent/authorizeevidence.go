@@ -145,16 +145,24 @@ func wroteIntoThread(ctx context.Context, tx pgx.Tx, threadKey string, subject s
 }
 
 // copiedOnThisMatter reports whether the recipient was a To or Cc participant of
-// a captured mail on this message's thread, with our side on the thread too.
+// a captured mail someone outside our side sent onto this message's thread,
+// with our side on the thread too.
 //
 // It supports business correspondence about THIS thread's matter only: the
 // thread key scopes the query, and recordBasis keys the basis row by the same
 // thread, so it never becomes standing permission for the contact. Being copied
 // is not authorship (repliesToTheSubject asks for that); this is the weaker
 // ground that makes a reply-all or a follow-up on the thread's subject
-// writable, and a marketing claim against it is still denied by the claim check
-// in decideResolved. The legal reading of the rule goes to counsel before
+// writable, and a marketing claim against it is still denied by
+// putClaimToEvidence. The legal reading of the rule goes to counsel before
 // release, which is why it lives in this one function.
+//
+// The copying mail must be inbound with an author who is not one of our seats,
+// or a rep could make the evidence by copying the contact on their own mail.
+// Capture files a colleague's mail as outbound (sent_by_colleague), so the
+// direction test covers that case too. Our side's activity must be
+// connector-captured on the same medium and provider: a thread key alone is
+// shared across media, and a hand-typed activity says whatever its author typed.
 //
 // Named by anchor when there is one and by thread key otherwise, the same
 // choice repliedIntoThisConversation makes, so staging and transmit agree.
@@ -176,18 +184,26 @@ func copiedOnThisMatter(ctx context.Context, tx pgx.Tx, req commsauthz.Request, 
 			  FROM activity a
 			  JOIN activity_participant p ON p.activity_id = a.id
 			 WHERE a.thread_key = $6
+			   AND a.direction = 'inbound'
 			   AND a.archived_at IS NULL
 			   AND a.captured_by LIKE 'connector:%'
 			   AND p.role IN ('to', 'cc')
 			   AND `+participantIsTheSubject+`
 			   AND EXISTS (
+			       SELECT 1 FROM activity_participant author
+			        WHERE author.activity_id = a.id
+			          AND author.role = 'from'
+			          AND author.user_id IS NULL)
+			   AND EXISTS (
 			       SELECT 1
 			         FROM activity ours
 			         JOIN activity_participant op ON op.activity_id = ours.id
 			        WHERE ours.thread_key = a.thread_key
+			          AND ours.kind = a.kind
+			          AND ours.channel_provider IS NOT DISTINCT FROM a.channel_provider
 			          AND ours.archived_at IS NULL
-			          AND op.user_id IS NOT NULL
-			   )
+			          AND ours.captured_by LIKE 'connector:%'
+			          AND op.user_id IS NOT NULL)
 		)`, subject.Kind, subject.ID, subject.Address, subject.ChannelProvider, subject.ChannelUserID, threadKey).Scan(&found)
 	if err != nil {
 		return false, fmt.Errorf("consent: read whether the recipient was copied on this thread: %w", err)

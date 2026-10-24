@@ -677,3 +677,41 @@ func TestALeadWhoWroteRecentlyCanBeFollowedUp(t *testing.T) {
 		t.Errorf("basis = %q, want subject_initiated_correspondence", d.Basis)
 	}
 }
+
+// A lead's claim is put to the evidence the same way a contact's is: marketing
+// to a lead who wrote in is refused, and any other contradicted claim yields
+// but stays on the row.
+func TestALeadsClaimIsPutToTheEvidence(t *testing.T) {
+	cases := map[commsauthz.Category]commsauthz.Verdict{
+		commsauthz.CategoryMarketing:         commsauthz.VerdictDeny,
+		commsauthz.CategoryRequestedFollowup: commsauthz.VerdictAllow,
+	}
+	for claim, want := range cases {
+		t.Run(string(claim), func(t *testing.T) {
+			e := setupLeadConsent(t)
+			gate := NewGate(e.store)
+			ctx := e.leadActorContext()
+			anchor := e.inboundFromTheLead(ctx, t)
+
+			var d commsauthz.Decision
+			if err := e.store.db.Tx(ctx, func(tx pgx.Tx) error {
+				var err error
+				d, err = gate.decideOne(ctx, tx, connector.Recipient{Email: e.leadEmail},
+					commsauthz.Request{AnchorActivityID: anchor, Context: claim}, commsauthz.PhaseStaging)
+				return err
+			}); err != nil {
+				t.Fatalf("deciding: %v", err)
+			}
+
+			if d.Verdict != want {
+				t.Fatalf("verdict = %q (%s), want %q", d.Verdict, d.ReasonCode, want)
+			}
+			if want == commsauthz.VerdictDeny && d.ReasonCode != commsauthz.ReasonClaimContradictsResolution {
+				t.Errorf("reason = %q, want claim_contradicts_resolution", d.ReasonCode)
+			}
+			if d.Requested != claim {
+				t.Errorf("requested = %q, want the claim %q kept on the row", d.Requested, claim)
+			}
+		})
+	}
+}

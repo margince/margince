@@ -13,35 +13,64 @@ package consent
 import (
 	"context"
 	"testing"
-	"time"
 
-	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
 
-// capturedMail plants a message a connector captured on a thread, naming the
-// subject in the given role and optionally one of our own seats.
+// copiedMail describes one captured mail that copies the subject: who wrote it,
+// which way it went, and whether one of our seats received it.
+type copiedMail struct {
+	threadKey   string
+	subjectRole string
+	direction   string
+	// ourAuthor puts one of our seats in From instead of an outside sender.
+	ourAuthor bool
+	// ourRecipient puts one of our seats in To, as capture does for the
+	// mailbox that received the mail.
+	ourRecipient bool
+	capturedBy   string
+}
+
+// capturedMail plants a mail a connector captured: an outside sender writing to
+// one of our seats with the subject in To or Cc, unless the fields say otherwise.
 func (e *resolveEnv) capturedMail(t *testing.T, threadKey, subjectRole string, withOurSide bool) ids.UUID {
+	t.Helper()
+	return e.plantCopiedMail(t, copiedMail{
+		threadKey: threadKey, subjectRole: subjectRole, direction: "inbound",
+		ourRecipient: withOurSide, capturedBy: "connector:gmail",
+	})
+}
+
+func (e *resolveEnv) plantCopiedMail(t *testing.T, m copiedMail) ids.UUID {
 	t.Helper()
 	ctx := context.Background()
 	id := ids.NewV7()
 	if _, err := e.owner.Exec(ctx, `
 		INSERT INTO activity (id, kind, direction, thread_key, occurred_at, source, captured_by)
-		VALUES ($1, 'email', 'inbound', $2, now() - interval '1 hour', 'gmail', 'connector:gmail')`,
-		id, threadKey); err != nil {
+		VALUES ($1, 'email', $2, $3, now() - interval '1 hour', 'gmail', $4)`,
+		id, m.direction, m.threadKey, m.capturedBy); err != nil {
 		t.Fatalf("planting the captured mail: %v", err)
 	}
 	if _, err := e.owner.Exec(ctx, `
 		INSERT INTO activity_participant (activity_id, contact_id, address, role)
-		VALUES ($1, $2, $3, $4)`, id, e.contact, e.address, subjectRole); err != nil {
+		VALUES ($1, $2, $3, $4)`, id, e.contact, e.address, m.subjectRole); err != nil {
 		t.Fatalf("planting the subject participant: %v", err)
 	}
-	if withOurSide {
+	author := `INSERT INTO activity_participant (activity_id, address, role) VALUES ($1, 'third@party.test', 'from')`
+	authorArgs := []any{id}
+	if m.ourAuthor {
+		author = `INSERT INTO activity_participant (activity_id, user_id, role) VALUES ($1, $2, 'from')`
+		authorArgs = append(authorArgs, e.user)
+	}
+	if _, err := e.owner.Exec(ctx, author, authorArgs...); err != nil {
+		t.Fatalf("planting the author: %v", err)
+	}
+	if m.ourRecipient {
 		if _, err := e.owner.Exec(ctx, `
-			INSERT INTO activity_participant (activity_id, user_id, role) VALUES ($1, $2, 'from')`,
+			INSERT INTO activity_participant (activity_id, user_id, role) VALUES ($1, $2, 'to')`,
 			id, e.user); err != nil {
-			t.Fatalf("planting our participant: %v", err)
+			t.Fatalf("planting our recipient: %v", err)
 		}
 	}
 	return id
@@ -76,6 +105,30 @@ func TestACcParticipantStillNeedsAnAnswerForAnUnrelatedTopic(t *testing.T) {
 	}
 }
 
+// Our own side must never be able to make the evidence by copying the contact.
+func TestOurOwnMailCopyingTheContactIsNotEvidence(t *testing.T) {
+	cases := map[string]copiedMail{
+		"outbound mail we sent": {direction: "outbound", ourAuthor: true},
+		// Capture files a colleague's copy as outbound, with the colleague
+		// named only by address.
+		"a colleague's mail filed as outbound": {direction: "outbound", ourRecipient: true},
+		"inbound mail one of our seats wrote": {
+			direction: "inbound", ourAuthor: true, ourRecipient: true,
+		},
+	}
+	for name, m := range cases {
+		t.Run(name, func(t *testing.T) {
+			e := setupResolve(t)
+			m.threadKey, m.subjectRole, m.capturedBy = "thread-ours", "cc", "connector:gmail"
+			e.plantCopiedMail(t, m)
+
+			if got := e.resolve(t, commsauthz.Request{ThreadKey: "thread-ours"}); got.Supported {
+				t.Fatalf("our own mail copying the contact supported a first mail: %+v", got)
+			}
+		})
+	}
+}
+
 func TestTheCcRuleNeedsOurSideOnTheThreadAndAConnectorCapture(t *testing.T) {
 	e := setupResolve(t)
 	e.capturedMail(t, "thread-no-us", "cc", false)
@@ -83,14 +136,44 @@ func TestTheCcRuleNeedsOurSideOnTheThreadAndAConnectorCapture(t *testing.T) {
 		t.Error("a thread none of our seats took part in supported a first mail")
 	}
 
-	e.activity(t, "thread-typed", "inbound", clocktest.Now(t).Add(-time.Hour), e.address, "cc")
-	if _, err := e.owner.Exec(context.Background(), `
-		INSERT INTO activity_participant (activity_id, user_id, role)
-		SELECT id, $1, 'from' FROM activity WHERE thread_key = 'thread-typed'`, e.user); err != nil {
-		t.Fatal(err)
-	}
+	e.plantCopiedMail(t, copiedMail{
+		threadKey: "thread-typed", subjectRole: "cc", direction: "inbound", capturedBy: "human:x",
+	})
+	e.plantCopiedMail(t, copiedMail{
+		threadKey: "thread-typed", subjectRole: "bcc", direction: "inbound",
+		ourRecipient: true, capturedBy: "connector:gmail",
+	})
 	if got := e.resolve(t, commsauthz.Request{ThreadKey: "thread-typed"}); got.Supported {
 		t.Error("a hand-typed activity manufactured the evidence a connector capture provides")
+	}
+}
+
+// A thread key is shared across media, so our side on a hand-typed activity or
+// on another medium with the same key does not count.
+func TestOurSideMustBeOnACapturedMailOfTheSameThread(t *testing.T) {
+	cases := map[string]string{
+		"hand-typed":    `INSERT INTO activity (id, kind, direction, thread_key, occurred_at, source, captured_by) VALUES ($1, 'email', 'outbound', 'thread-split', now(), 'gmail', 'human:x')`,
+		"another media": `INSERT INTO activity (id, kind, direction, thread_key, occurred_at, source, captured_by) VALUES ($1, 'call', 'outbound', 'thread-split', now(), 'gmail', 'connector:gmail')`,
+	}
+	for name, ours := range cases {
+		t.Run(name, func(t *testing.T) {
+			e := setupResolve(t)
+			e.capturedMail(t, "thread-split", "cc", false)
+			oursID := ids.NewV7()
+			ctx := context.Background()
+			if _, err := e.owner.Exec(ctx, ours, oursID); err != nil {
+				t.Fatalf("planting our activity: %v", err)
+			}
+			if _, err := e.owner.Exec(ctx, `
+				INSERT INTO activity_participant (activity_id, user_id, role) VALUES ($1, $2, 'from')`,
+				oursID, e.user); err != nil {
+				t.Fatalf("planting our participant: %v", err)
+			}
+
+			if got := e.resolve(t, commsauthz.Request{ThreadKey: "thread-split"}); got.Supported {
+				t.Fatalf("our side off the captured mail thread supported a first mail: %+v", got)
+			}
+		})
 	}
 }
 
