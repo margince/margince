@@ -83,7 +83,7 @@ If what remains does not answer the question, return an empty sentences array ra
 // The answer is filed against the account and read by whoever asks the same
 // question next, so it takes the installation's language like the brief above.
 func askSystemFor(question crmcontracts.CompanyQuestion, fence promptfence.Fence, lang string) string {
-	return askSystem + "\n" + askInstruction[question] + "\n" +
+	return askSystem + "\n" + openWorkRule + "\n" + askInstruction[question] + "\n" +
 		promptlang.Rule(lang) + "\n" + fence.Rule("account summary")
 }
 
@@ -291,7 +291,7 @@ type openGroup struct {
 
 // requiredOpenCitations states what a complete open-work answer cites. It is
 // every record of a kind when there are at most listedRecords, otherwise
-// listedRecords distinct ones. The floor lists that much, so it always passes
+// listedRecords of them. The floor lists that much, so it always passes
 // the check built on it. A new kind of open record has to be added here, and a
 // test fails until it is.
 func requiredOpenCitations(in Input) []openGroup {
@@ -313,37 +313,36 @@ func requiredOpenCitations(in Input) []openGroup {
 		{Field: "OpenCommitments", Cites: commitments},
 	}
 	for i := range groups {
-		groups[i].Cites = distinctEvidence(groups[i].Cites)
 		groups[i].Need = min(len(groups[i].Cites), listedRecords)
 	}
 	return groups
 }
 
-func distinctEvidence(cites []Evidence) []Evidence {
-	seen := make(map[Evidence]bool, len(cites))
-	out := cites[:0:0]
-	for _, cite := range cites {
-		if !seen[cite] {
-			seen[cite] = true
-			out = append(out, cite)
-		}
-	}
-	return out
-}
-
 // uncitedOpenWork names the first kind of open record the sentences cite too
 // few of, or returns "" when they cite enough.
 func uncitedOpenWork(sentences []Sentence, in Input) string {
-	cited := map[Evidence]bool{}
+	// Counted per sentence: two promises read from one message cite the same
+	// activity, so each needs a sentence of its own to count as listed.
+	citing := map[Evidence]int{}
 	for _, sentence := range sentences {
+		once := map[Evidence]bool{}
 		for _, cite := range sentence.Evidence {
-			cited[Evidence{EntityType: cite.EntityType, EntityID: cite.EntityID}] = true
+			key := Evidence{EntityType: cite.EntityType, EntityID: cite.EntityID}
+			if !once[key] {
+				once[key] = true
+				citing[key]++
+			}
 		}
 	}
 	for _, group := range requiredOpenCitations(in) {
 		found := 0
+		left := map[Evidence]int{}
 		for _, cite := range group.Cites {
-			if cited[cite] {
+			if _, seen := left[cite]; !seen {
+				left[cite] = citing[cite]
+			}
+			if left[cite] > 0 {
+				left[cite]--
 				found++
 			}
 		}

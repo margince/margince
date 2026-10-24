@@ -151,6 +151,37 @@ func openTaskPromises(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, n
 	return steps, filed, err
 }
 
+// hiddenNextStepsExist reports whether an open task of the account lies outside
+// the caller's activity row scope. The section's statement filters on that
+// scope, so without this a hidden task reads as no task and "what is open"
+// would answer from a list that looks whole.
+func hiddenNextStepsExist(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, opts AssembleOptions) (bool, error) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	companyPos := arg(companyID)
+	activityScope, err := auth.ActivityContentClause(ctx, "a", arg)
+	if err != nil {
+		return false, err
+	}
+	if activityScope == "" {
+		return false, nil
+	}
+	identities, err := storekit.MailSeatIdentitiesSQL(ctx, tx, arg)
+	if err != nil {
+		return false, err
+	}
+	current := activities.CurrentTaskClause("a", now, identities, arg)
+	var hidden bool
+	err = tx.QueryRow(ctx, fmt.Sprintf(`
+		SELECT EXISTS (
+		  SELECT 1 FROM activity a
+		  WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL
+		    AND NOT coalesce((%s), false) AND %s AND %s%s)`,
+		activityScope, activities.CompanyLinkedActivityExists(companyPos), current,
+		opts.projectScope(arg)), args...).Scan(&hidden)
+	return hidden, err
+}
+
 // readNextSteps is the read both callers share: same statement, same gates,
 // same scan. Two things move per caller: the bound, which the cut honours —
 // the promise read's wide cap and the section's page are different bounds,

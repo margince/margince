@@ -27890,7 +27890,8 @@ export interface components {
          * @description The prepared questions. Fixed, because each one names the records its answer is
          *     written from — which is what makes the answer citable.
          *
-         *     `whats_open` — the open deals and the open tasks. Deliberately not approvals: an
+         *     `whats_open` — the open deals, the open tasks and the open commitments (promises
+         *     read out of conversations, not tasks). Deliberately not approvals: an
          *     approval is not a citable record type here, and an answer that named one could
          *     not be checked the way every other sentence can.
          *     `meeting_prep` — who to talk to, where the pipeline stands, what is unanswered.

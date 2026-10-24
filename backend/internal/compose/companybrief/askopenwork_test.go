@@ -276,3 +276,26 @@ func TestAViewWithItsOpenWorkCutFoldsTheGapIntoTheInput(t *testing.T) {
 		t.Errorf("task holder = %q, want %q", got, name)
 	}
 }
+
+func TestTwoPromisesFromOneMessageNeedASentenceEach(t *testing.T) {
+	in := Input{OpenCommitments: []CommitmentIn{
+		{ID: "c1", ActivityID: commitmentActivity, Claim: "Send the price list", Side: sideOurs},
+		{ID: "c2", ActivityID: commitmentActivity, Claim: "Book the site visit", Side: sideOurs},
+	}}
+	cite := []Evidence{{EntityType: citeActivity, EntityID: commitmentActivity}}
+	one := []Sentence{{Text: "You send the price list.", Evidence: cite}}
+	if uncitedOpenWork(one, in) != "OpenCommitments" {
+		t.Error("one sentence passed for two promises")
+	}
+	two := append(one, Sentence{Text: "You book the site visit.", Evidence: cite})
+	if missing := uncitedOpenWork(two, in); missing != "" {
+		t.Errorf("a sentence per promise still leaves out %s", missing)
+	}
+}
+
+func TestTheAskPromptCarriesTheOpenWorkRule(t *testing.T) {
+	system := AskRequest(crmcontracts.CompanyQuestionWhatsOpen, Input{}, "en").System
+	if !strings.Contains(system, openWorkRule) {
+		t.Error("the ask prompt lacks the open-work rule")
+	}
+}

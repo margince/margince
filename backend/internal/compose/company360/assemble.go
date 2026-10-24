@@ -396,6 +396,13 @@ func (a *assembly) readNextSteps() error {
 		Data []crmcontracts.Company360NextStep `json:"data"`
 		Page crmcontracts.PageInfo             `json:"page"`
 	}{Data: data, Page: page}
+	hidden, err := hiddenNextStepsExist(a.ctx, a.tx, a.companyID, a.now, a.opts)
+	if err != nil {
+		return err
+	}
+	if hidden {
+		markAttentionWithheld(a.out)
+	}
 	return nil
 }
 
