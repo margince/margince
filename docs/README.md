@@ -144,6 +144,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
   and other core records from an extension, under the rights of the user.
 - [react-to-record-lifecycle-events.md](how-to/react-to-record-lifecycle-events.md): learn when a company or
   deal is erased, or a deal is merged.
+- [send-a-notice-from-an-extension.md](how-to/send-a-notice-from-an-extension.md): tell a user or a role about
+  a record from an extension.
 - [debug-an-ai-task.md](how-to/debug-an-ai-task.md): run one AI task on your own input
   (`make ai-probe`).
 - [build-the-desktop-app.md](how-to/build-the-desktop-app.md): build the desktop app for macOS or

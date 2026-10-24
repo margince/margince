@@ -60,6 +60,8 @@ type Core interface {
 	Companies() CompanyRepo
 	Signals() SignalRepo
 	CustomFields() CustomFieldRepo
+	// Notices returns the door for telling a member about a record; see notices.go.
+	Notices() NoticeRepo
 }
 
 // ActivityRepo reads and writes the shared timeline, the record every other
