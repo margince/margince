@@ -739,7 +739,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "reporting.activeTargets": "Aktive Ziele",
   "reporting.allTargets": "Alle Ziele",
   "reporting.noTargetsYet":
-    "Noch kein Ziel festgelegt. Ziele legen die Teamleitung, die Geschäftsleitung oder ein Admin fest.",
+    "Noch ist kein Ziel festgelegt. Ziele legen die Teamleitung, die Geschäftsleitung oder ein Admin fest.",
   "reporting.periodYear": "Jahr",
   "reporting.periodMonth": "Startmonat",
   "reporting.closedOn": "Abgeschlossen am",
