@@ -127,7 +127,7 @@ export function ReportingTargetDialog({
               input: {
                 metric,
                 scope,
-                pipeline_id: heldPipeline(definition, pipeline),
+                pipeline_id: heldPipeline(target, definition, pipeline),
                 period_kind: periodKind,
                 period_start: periodStart,
                 value,
@@ -381,10 +381,14 @@ function TargetPipelineField({
   );
 }
 
+// A revision keeps its target's pipeline, which the server holds immutable,
+// whether or not the catalog has loaded.
 function heldPipeline(
+  target: Target | undefined,
   definition: MetricDefinition | undefined,
   pipeline: string,
 ): string | undefined {
+  if (target) return target.definition.pipeline_id;
   return takesPipeline(definition) && pipeline ? pipeline : undefined;
 }
 

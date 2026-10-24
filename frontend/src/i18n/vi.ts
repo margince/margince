@@ -966,7 +966,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.group.influenced": "Hỗ trợ deal",
   "reporting.group.active": "Đang hoạt động",
   "reporting.group.inactive": "Không hoạt động",
-  "reporting.group.partnerHidden": "Đối tác không xem được",
+  "reporting.group.partnerHidden": "Đối tác bạn không xem được",
   "reporting.noViews":
     "Vai trò hiện tại không được xem số liệu nào trên trang này. Liên hệ quản trị viên để được cấp quyền.",
   "reporting.partners": "Đối tác",

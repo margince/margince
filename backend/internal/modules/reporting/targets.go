@@ -197,11 +197,6 @@ func (s *Service) validateTarget(ctx context.Context, tx pgx.Tx, in *crmcontract
 	if index < 0 {
 		return empty, "", refuse("metric", "unsupported", "this metric does not support targets")
 	}
-	// A figure without the pipeline filter reads nothing on one, so a target
-	// held to a pipeline would never show.
-	if in.PipelineId != nil && (catalog.Metrics[index].AllowedFilters == nil || !slices.Contains(*catalog.Metrics[index].AllowedFilters, "pipeline")) {
-		return empty, "", refuse("pipeline_id", "not_filterable", "this metric counts every pipeline; save the target without one")
-	}
 	scope, err := s.authority.Scope(ctx, tx, in.Scope, true)
 	if err != nil {
 		return empty, "", refusedField("scope", err)
@@ -245,6 +240,9 @@ func (s *Service) CreateTarget(ctx context.Context, in crmcontracts.ReportingTar
 		if err != nil {
 			return err
 		}
+		if err := s.refuseUnfilteredPipeline(ctx, in); err != nil {
+			return err
+		}
 		out.Definition = in
 		out.Interval = interval
 		out.Unit = unit
@@ -260,6 +258,24 @@ func (s *Service) CreateTarget(ctx context.Context, in crmcontracts.ReportingTar
 		return recordChange(ctx, tx, "sales_target", ids.UUID(out.Id), "create", nil, out)
 	})
 	return out, storedError(err)
+}
+
+// refuseUnfilteredPipeline refuses a new target on a pipeline its figure ignores.
+// Only a create asks, since a stored target can never change its pipeline.
+func (s *Service) refuseUnfilteredPipeline(ctx context.Context, in crmcontracts.ReportingTargetInput) error {
+	if in.PipelineId == nil {
+		return nil
+	}
+	catalog, err := s.evaluator.Catalog(ctx, textlang.English)
+	if err != nil {
+		return err
+	}
+	for _, metric := range catalog.Metrics {
+		if metric.Id == in.Metric && (metric.AllowedFilters == nil || !slices.Contains(*metric.AllowedFilters, "pipeline")) {
+			return refuse("pipeline_id", "not_filterable", "this metric counts every pipeline; save the target without one")
+		}
+	}
+	return nil
 }
 
 func (s *Service) saveTargetRevision(ctx context.Context, tx pgx.Tx, target crmcontracts.ReportingTarget) error {

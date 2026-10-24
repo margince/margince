@@ -194,6 +194,41 @@ func TestReportingTargetsTakeAPipelineOnlyWhereTheFigureFiltersByOne(t *testing.
 	requireRefusedField(t, err, "pipeline_id")
 }
 
+func TestReportingStoredTargetOnAnUnfilteredPipelineStaysRevisableAndRetirable(t *testing.T) {
+	f := reportingBusiness(t)
+	input := f.target.Definition
+	input.Metric, input.PipelineId = "meetings_held", nil
+	stored, err := f.service.CreateTarget(f.human, input)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// No writer saves such a target, so the stored row is given its pipeline directly.
+	pipeline := f.target.Definition.PipelineId
+	if _, err := f.env.owner.Exec(f.human, "UPDATE sales_target SET pipeline_id=$1 WHERE id=$2", pipeline, stored.Id); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.env.owner.Exec(f.human, "UPDATE sales_target_revision SET definition=jsonb_set(definition,'{pipeline_id}',to_jsonb($1::text)) WHERE target_id=$2", pipeline.String(), stored.Id); err != nil {
+		t.Fatal(err)
+	}
+	stored, err = f.service.GetTarget(f.human, ids.UUID(stored.Id))
+	if err != nil || stored.Definition.PipelineId == nil || *stored.Definition.PipelineId != *pipeline {
+		t.Fatalf("stored target lost its pipeline: %+v %v", stored, err)
+	}
+	revision := stored.Definition
+	revision.Value, revision.Reason = 20, "Revised plan"
+	revised, err := f.service.UpdateTarget(f.human, ids.UUID(stored.Id), stored.Version, revision)
+	if err != nil {
+		t.Fatalf("revise a stored target: %v", err)
+	}
+	retired := true
+	revision.Retired, revision.Reason = &retired, "Plan withdrawn"
+	if _, err := f.service.UpdateTarget(f.human, ids.UUID(stored.Id), revised.Version, revision); err != nil {
+		t.Fatalf("retire a stored target: %v", err)
+	}
+	_, err = f.service.CreateTarget(f.human, stored.Definition)
+	requireRefusedField(t, err, "pipeline_id")
+}
+
 // requireRefusedField holds the 422 shape the contract lists: a refusal that
 // names the field to fix, not a bare invalid argument.
 func requireRefusedField(t *testing.T, err error, field string) {
