@@ -67,6 +67,8 @@ export function CallingSettingsRows({
         {MESSENGERS.map((messenger) => {
           const key = MESSENGER_SETTING[messenger];
           const name = t(LABEL[messenger]);
+          const writing =
+            update.isPending && update.variables?.[key] !== undefined;
           return (
             <SettingRow
               key={messenger}
@@ -81,10 +83,10 @@ export function CallingSettingsRows({
                   label={name}
                   labelHidden
                   checked={messengerOn(settings, messenger)}
-                  disabled={!canManage}
-                  pending={
-                    update.isPending && update.variables?.[key] !== undefined
-                  }
+                  // One write at a time: the three share a mutation, and a
+                  // second answer could land before the first and be overwritten.
+                  disabled={!canManage || (update.isPending && !writing)}
+                  pending={writing}
                   reason={lockReasonOr(
                     settings.locks,
                     `installation.${key}`,

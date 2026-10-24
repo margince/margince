@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useCallback, useId, useState } from "react";
 import type { components } from "../../api/schema";
 import { liveProjects } from "../../design-system/projectpicker";
 import { RecordView } from "../../design-system/recordview";
@@ -97,6 +97,7 @@ export function ContactPageV2({
   // Which drawer is open, if any. One at a time: two surfaces over the same
   // record would each claim to be the thing the reader is doing.
   const [drawer, setDrawer] = useState<Drawer>(null);
+  const openCallLog = useCallback(() => setDrawer("activity_call"), []);
   const [briefedMeeting, openBrief] = useBriefedMeeting();
   // What the action that opened the composer wanted written. A rung knows WHY
   // it fired and says so in its prefill; before this the client dropped that
@@ -216,7 +217,7 @@ export function ContactPageV2({
         <ContactCallStart
           contactId={id}
           canLog={!activity.pending && activity.refusedId === undefined}
-          onCall={() => setDrawer("activity_call")}
+          onCall={openCallLog}
         >
           <RecordView
             back={<WorklistReturnLink />}

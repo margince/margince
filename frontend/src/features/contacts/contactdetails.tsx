@@ -110,7 +110,7 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
           "phone",
           t("create.phone"),
           phone && (
-            <>
+            <span className="fieldgrid-handle">
               <ContactLink
                 kind="phone"
                 value={phone.phone}
@@ -120,7 +120,7 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
                 bought={bought.get(`phone:${phone.id}`)}
                 subject={phone.phone}
               />
-            </>
+            </span>
           ),
           Boolean(phone),
         ),

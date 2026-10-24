@@ -581,6 +581,45 @@ describe("the calling switches", () => {
     );
   });
 
+  it("holds the other switches while one switch's write is out", async () => {
+    const user = userEvent.setup();
+    const { fetchMock } = backendFor(SETTINGS_EDITOR);
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const req =
+          input instanceof Request ? input : new Request(String(input), init);
+        if (req.method === "PATCH") await held;
+        return fetchMock(req);
+      }),
+    );
+    render(<InstallationSettingsCard />);
+
+    await user.click(
+      await screen.findByRole("switch", { name: "WhatsApp chat" }),
+    );
+    const telegram = screen.getByRole<HTMLButtonElement>("switch", {
+      name: "Telegram chat",
+    });
+    await waitFor(() => expect(telegram.disabled).toBe(true));
+    expect(
+      screen
+        .getByRole("switch", { name: "WhatsApp chat" })
+        .getAttribute("aria-busy"),
+    ).toBe("true");
+    release();
+    await waitFor(() => expect(telegram.disabled).toBe(false));
+    expect(
+      screen
+        .getByRole("switch", { name: "WhatsApp chat" })
+        .getAttribute("aria-checked"),
+    ).toBe("false");
+  });
+
   it("turns one messenger off with a patch of its own key alone", async () => {
     const user = userEvent.setup();
     const { fetchMock, patch } = backendFor(SETTINGS_EDITOR);

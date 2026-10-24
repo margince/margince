@@ -12290,7 +12290,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "installationSettings.callZalo": "Zalo-Chat",
   "installationSettings.callingHint":
     "Ein Link neben jeder Telefonnummer mit Ländervorwahl öffnet den Chat in dieser App. Die App erhält die Nummer.",
-  "callAction.openChat": "Chat in {app} öffnen",
   "installationSettings.editField": "{field} bearbeiten",
   "installationSettings.save": "Speichern",
   "signInMethods.title": "Anmeldemethoden",
@@ -14440,6 +14439,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.action.noTransport":
     "Keine Adresse und kein Thread, auf den geantwortet werden kann.",
   "contact.action.call": "Anrufen",
+  "callAction.openChat": "Chat in {app} öffnen",
   "contact.action.noPhone": "Dieser Kontakt hat keine Telefonnummer.",
   "contact.action.meetings": "Termine",
   "contact.action.workAsLead": "Als Lead bearbeiten",

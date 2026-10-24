@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useRef } from "react";
+import { useCallback, useRef } from "react";
 import { LogActivityAction } from "../../components/logactivity";
 import type { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -170,13 +170,17 @@ export function ContactCallStart({
   children: ReactNode;
 }>) {
   const shell = useCallStart();
-  const start: CallStart = (record) => {
-    if (record.entityId === contactId) {
-      onCall();
-      return;
-    }
-    shell?.(record);
-  };
+  // Stable, so the provider does not re-render every number on the page.
+  const start = useCallback<CallStart>(
+    (record) => {
+      if (record.entityId === contactId) {
+        onCall();
+        return;
+      }
+      shell?.(record);
+    },
+    [contactId, onCall, shell],
+  );
   return (
     <CallStartProvider start={canLog ? start : null}>
       {children}

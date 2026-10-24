@@ -11951,7 +11951,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "installationSettings.callZalo": "Trò chuyện Zalo",
   "installationSettings.callingHint":
     "Liên kết cạnh mỗi số điện thoại có mã quốc gia sẽ mở cuộc trò chuyện trong ứng dụng đó. Ứng dụng nhận được số điện thoại.",
-  "callAction.openChat": "Mở cuộc trò chuyện trong {app}",
   "installationSettings.editField": "Sửa {field}",
   "installationSettings.save": "Lưu",
   "signInMethods.title": "Phương thức đăng nhập",
@@ -14047,6 +14046,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.action.noTransport":
     "Không có địa chỉ và không có chuỗi thư nào để trả lời.",
   "contact.action.call": "Gọi",
+  "callAction.openChat": "Mở cuộc trò chuyện trong {app}",
   "contact.action.noPhone": "Liên hệ này chưa có số điện thoại.",
   "contact.action.meetings": "Cuộc họp",
   "contact.action.workAsLead": "Xử lý như lead",

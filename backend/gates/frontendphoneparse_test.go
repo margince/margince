@@ -16,6 +16,7 @@ import (
 	"regexp/syntax"
 	"slices"
 	"strconv"
+	"strings"
 	"testing"
 	"unicode"
 
@@ -45,12 +46,20 @@ func TestTheFrontendPhoneParseMatchesParsePhone(t *testing.T) {
 	}
 
 	goPattern := withoutCaptures(t, "values.E164Pattern", values.E164Pattern)
-	tsPattern := withoutCaptures(t, frontendContactURI+" E164", tsRegexLiteral(t, source, "E164"))
+	e164Body, e164Flags := tsRegexLiteral(t, source, "E164")
+	if strings.ContainsAny(e164Flags, "gy") {
+		t.Errorf("%s: E164 carries flags %q; with g or y, exec keeps lastIndex and the next number is read from the middle. Drop them", frontendContactURI, e164Flags)
+	}
+	tsPattern := withoutCaptures(t, frontendContactURI+" E164", e164Body)
 	if goPattern != tsPattern {
 		t.Errorf("E.164 drifted: values.E164Pattern reads %s, %s E164 reads %s. Change the side that moved", goPattern, frontendContactURI, tsPattern)
 	}
 
-	compareSeparators(t, tsRegexLiteral(t, source, "PHONE_SEPARATORS"))
+	separators, separatorFlags := tsRegexLiteral(t, source, "PHONE_SEPARATORS")
+	if !strings.Contains(separatorFlags, "g") {
+		t.Errorf("%s: PHONE_SEPARATORS lacks the g flag, so replace strips only the first separator and ParsePhone strips all. Add g", frontendContactURI)
+	}
+	compareSeparators(t, separators)
 	compareDialPrefix(t, body)
 }
 
@@ -120,15 +129,15 @@ func compareDialPrefix(t *testing.T, e164DigitsBody string) {
 	}
 }
 
-// tsRegexLiteral is the body of the one `const name = /body/flags;` statement in source.
-func tsRegexLiteral(t *testing.T, source, name string) string {
+// tsRegexLiteral is the body and flags of the one `const name = /body/flags;` statement in source.
+func tsRegexLiteral(t *testing.T, source, name string) (body, flags string) {
 	t.Helper()
-	statement := regexp.MustCompile(`(?m)^(?:export\s+)?const\s+` + regexp.QuoteMeta(name) + `\s*=\s*/(.+)/[a-z]*;\s*$`)
+	statement := regexp.MustCompile(`(?m)^(?:export\s+)?const\s+` + regexp.QuoteMeta(name) + `\s*=\s*/(.+)/([a-z]*);\s*$`)
 	found := statement.FindAllStringSubmatch(source, -1)
 	if len(found) != 1 {
 		t.Fatalf("%s: found %d `const %s = /…/;` statements, want 1. A rename makes this gate read nothing; rename it here too", frontendContactURI, len(found), name)
 	}
-	return found[0][1]
+	return found[0][1], found[0][2]
 }
 
 func tsFunctionBody(t *testing.T, source, name string) string {
