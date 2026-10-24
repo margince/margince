@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useId } from "react";
+import { type MouseEvent, type ReactNode, useId } from "react";
 import { Button } from "./atoms";
 import { useTooltip } from "./tooltip";
 import "./iconaction.css";
@@ -81,7 +81,7 @@ type IconActionLink = {
   /** Where the glyph goes (a `tel:`), drawn as a link with the same square. */
   href: string;
   /** Runs beside the navigation, never instead of it. */
-  onClick?: () => void;
+  onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
 } & { [Key in Exclude<keyof IconActionPress, "href" | "onClick">]?: never };
 
 /**

@@ -10,7 +10,7 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
-import { useT } from "../i18n";
+import { type Translator, useT } from "../i18n";
 import { UnsavedContext, useUnsavedRegistry } from "../lib/unsavedclaims";
 import { useBackdropDismiss } from "./backdrop";
 import { ConfirmModal } from "./confirmmodal";
@@ -234,20 +234,15 @@ export function Modal({
         </div>
       </div>
       {/* Portalled to the body on its own; it sits here only for React. */}
-      <ConfirmModal
-        open={open && asking}
-        title={t("unsaved.title")}
-        confirmLabel={t("unsaved.discard")}
-        confirmVariant="danger"
-        // Closing the question keeps the draft, as `UnsavedGuard`'s does.
-        onClose={() => setAsking(false)}
-        onConfirm={() => {
+      {discardDraftQuestion(
+        t,
+        open && asking,
+        () => setAsking(false),
+        () => {
           setAsking(false);
           onClose();
-        }}
-      >
-        <p>{t("unsaved.dialogBody")}</p>
-      </ConfirmModal>
+        },
+      )}
     </div>,
     document.body,
   );
@@ -268,4 +263,26 @@ function modalClass(intent: ModalIntent, span: DrawerSpan) {
       : "modal modal-drawer modal-drawer-wide";
   }
   if (intent === "full") return "modal modal-full";
+}
+
+/** The question a dirty close asks, for a dialog and for a form open inside one. */
+export function discardDraftQuestion(
+  t: Translator,
+  open: boolean,
+  onKeep: () => void,
+  onDiscard: () => void,
+) {
+  return (
+    <ConfirmModal
+      open={open}
+      title={t("unsaved.title")}
+      confirmLabel={t("unsaved.discard")}
+      confirmVariant="danger"
+      // Closing the question keeps the draft, as `UnsavedGuard`'s does.
+      onClose={onKeep}
+      onConfirm={onDiscard}
+    >
+      <p>{t("unsaved.dialogBody")}</p>
+    </ConfirmModal>
+  );
 }

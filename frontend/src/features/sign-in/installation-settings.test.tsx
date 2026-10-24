@@ -9,11 +9,12 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, type MockInstance, vi } from "vitest";
 import { DateFormatsProvider } from "../../app/dateformats";
 import { formatDate } from "../../format/format";
 import { LocaleProvider, useLocale } from "../../i18n";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
+import { LANGUAGE_DEPENDENT_QUERY_PREFIXES } from "./aicaches";
 import { InstallationSettingsCard } from "./installation-settings";
 
 // Settings → Installation: the company's name, reporting zone and base
@@ -94,10 +95,10 @@ function backendFor(allow: GrantSpec, opts: BackendOptions = {}) {
   return { fetchMock, patch: () => capturedPatch };
 }
 
-function render(node: ReactNode) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+function render(
+  node: ReactNode,
+  client = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+) {
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider>{node}</LocaleProvider>
@@ -497,7 +498,64 @@ it("saves regional formats together and updates existing date readers", async ()
   expect(await screen.findByText("23.09.2026")).toBeTruthy();
 });
 
+function languageRefetches(
+  invalidate: MockInstance<QueryClient["invalidateQueries"]>,
+): unknown[] {
+  const prefixes = new Set(
+    LANGUAGE_DEPENDENT_QUERY_PREFIXES.map((prefix) => JSON.stringify(prefix)),
+  );
+  return invalidate.mock.calls
+    .map(([filters]) => JSON.stringify(filters?.queryKey))
+    .filter((key) => prefixes.has(key));
+}
+
 describe("the calling switches", () => {
+  it("refetches no model-written text, since a messenger is no language", async () => {
+    const user = userEvent.setup();
+    const { fetchMock, patch } = backendFor(SETTINGS_EDITOR);
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    render(<InstallationSettingsCard />, client);
+
+    await user.click(await screen.findByRole("switch", { name: "Zalo chat" }));
+    await waitFor(() => expect(patch()).toEqual({ call_zalo: false }));
+    await waitFor(() =>
+      expect(
+        screen
+          .getByRole("switch", { name: "Zalo chat" })
+          .getAttribute("aria-checked"),
+      ).toBe("false"),
+    );
+    expect(languageRefetches(invalidate)).toEqual([]);
+  });
+
+  it("refetches every model-written text when the base language is saved", async () => {
+    const user = userEvent.setup();
+    const { fetchMock, patch } = backendFor(SETTINGS_EDITOR);
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
+    const invalidate = vi.spyOn(client, "invalidateQueries");
+    render(<InstallationSettingsCard />, client);
+
+    const dialog = await openFrom(user, /edit base language/i);
+    await user.click(
+      within(dialog).getByRole("combobox", { name: /base language/i }),
+    );
+    await user.click(screen.getByRole("option", { name: "Deutsch" }));
+    await user.click(within(dialog).getByRole("button", { name: /^save$/i }));
+    await waitFor(() => expect(patch()).toEqual({ base_language: "de" }));
+    await waitFor(() =>
+      expect(languageRefetches(invalidate)).toHaveLength(
+        LANGUAGE_DEPENDENT_QUERY_PREFIXES.length,
+      ),
+    );
+  });
+
   it("turns one messenger off with a patch of its own key alone", async () => {
     const user = userEvent.setup();
     const { fetchMock, patch } = backendFor(SETTINGS_EDITOR);

@@ -11,9 +11,11 @@ import {
   within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import type { ReactNode } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { CallAction } from "../design-system/callaction";
 import { telUri } from "../format/contacturi";
+import { type CallStart, CallStartProvider } from "../lib/callstart";
 import { useMe } from "../lib/session";
 import {
   installFetchStub,
@@ -21,7 +23,7 @@ import {
   meRoute,
   StoryProviders,
 } from "../testing/story-utils";
-import { CallLogHost } from "./calllog.host";
+import { CallLogHost, CallLogInline, useCallLogFor } from "./calllog.host";
 
 afterEach(cleanup);
 
@@ -70,6 +72,53 @@ describe("a call started under the shell's host", () => {
     expect(
       within(dialog).getByRole("combobox", { name: "Type" }).textContent,
     ).toContain("Call");
+    expect(await within(dialog).findByText("Dana Buyer")).toBeTruthy();
+  });
+
+  it("keeps the open log and its words when the page under it changes", async () => {
+    const user = userEvent.setup();
+    installFetchStub({
+      "GET /me": meRoute({ activity: ["create"] }, { seat: "full" }),
+    });
+    const page = (shown: ReactNode) => (
+      <StoryProviders>
+        <CallLogHost>
+          <SessionAnswered />
+          {shown}
+        </CallLogHost>
+      </StoryProviders>
+    );
+    const { rerender } = render(
+      page(<CallAction appearance="value" number={DIALS} record={DANA} />),
+    );
+    await screen.findByText("session answered");
+    fireEvent.click(screen.getByRole("link", { name: DIALS }));
+    const dialog = await screen.findByRole("dialog", { name: "Log activity" });
+    await user.type(
+      within(dialog).getByRole("textbox", { name: "Subject" }),
+      "Busy",
+    );
+
+    rerender(page(<p>Another screen</p>));
+    expect(
+      within(screen.getByRole("dialog", { name: "Log activity" })).getByRole(
+        "textbox",
+        { name: "Subject" },
+      ),
+    ).toHaveProperty("value", "Busy");
+  });
+
+  // A mouse press in Safari leaves the link unfocused, as fireEvent does here.
+  it("hands focus back to the pressed link, focused or not", async () => {
+    const user = userEvent.setup();
+    const { link } = await mountHost();
+
+    fireEvent.click(link);
+    const dialog = await screen.findByRole("dialog", { name: "Log activity" });
+    await user.click(within(dialog).getByRole("button", { name: "Close" }));
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(document.activeElement).toBe(link);
   });
 
   it("files the saved call on the number's contact", async () => {
@@ -114,6 +163,125 @@ describe("a call started under the shell's host", () => {
 
     expect(fireEvent.click(link)).toBe(true);
     expect(link.getAttribute("href")).toBe(telUri(DIALS));
-    expect(screen.queryByRole("dialog")).toBeNull();
+    await expect(
+      screen.findByRole("dialog", undefined, { timeout: 300 }),
+    ).rejects.toThrow();
+  });
+});
+
+// A dialog logs its own contact's call in place and hands any other on.
+function TaskLike({ contactId }: Readonly<{ contactId: string }>) {
+  const { call, start, close } = useCallLogFor(contactId);
+  return (
+    <CallStartProvider start={start}>
+      <CallAction
+        appearance="button"
+        number={DIALS}
+        label="Call own"
+        record={DANA}
+      />
+      <CallAction
+        appearance="button"
+        number={DIALS}
+        label="Call other"
+        record={{ entityType: "contact", entityId: "p-2" }}
+      />
+      {call && <CallLogInline call={call} onClose={close} />}
+    </CallStartProvider>
+  );
+}
+
+function mountInline(outer: CallStart | null) {
+  installFetchStub({
+    "GET /me": meRoute({ activity: ["create"] }, { seat: "full" }),
+  });
+  render(
+    <StoryProviders>
+      <CallStartProvider start={outer}>
+        <TaskLike contactId="p-1" />
+      </CallStartProvider>
+    </StoryProviders>,
+  );
+}
+
+describe("a call started inside a surface that logs in place", () => {
+  it("logs its own contact here and hands another contact's call on", () => {
+    const outer = vi.fn();
+    mountInline(outer);
+
+    fireEvent.click(screen.getByRole("link", { name: "Call other" }));
+    expect(outer).toHaveBeenCalledWith({
+      entityType: "contact",
+      entityId: "p-2",
+    });
+    expect(screen.queryByRole("region", { name: "Log activity" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("link", { name: "Call own" }));
+    expect(outer).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("region", { name: "Log activity" })).toBeTruthy();
+  });
+
+  it("only dials where nothing above it logs", async () => {
+    mountInline(null);
+
+    fireEvent.click(screen.getByRole("link", { name: "Call own" }));
+    await expect(
+      screen.findByRole("region", undefined, { timeout: 300 }),
+    ).rejects.toThrow();
+  });
+
+  it("brings focus back to the open form on a second press", async () => {
+    const user = userEvent.setup();
+    mountInline(vi.fn());
+    const own = screen.getByRole("link", { name: "Call own" });
+
+    fireEvent.click(own);
+    const log = screen.getByRole("region", { name: "Log activity" });
+    await waitFor(() =>
+      expect(log.contains(document.activeElement)).toBe(true),
+    );
+    await user.type(
+      within(log).getByRole("textbox", { name: "Subject" }),
+      "Busy",
+    );
+    own.focus();
+    fireEvent.click(own);
+
+    await waitFor(() =>
+      expect(log.contains(document.activeElement)).toBe(true),
+    );
+    expect(
+      within(log).getByRole("textbox", { name: "Subject" }),
+    ).toHaveProperty("value", "Busy");
+  });
+
+  it("asks before Close throws away typed words, and keeps them on Cancel", async () => {
+    const user = userEvent.setup();
+    mountInline(vi.fn());
+
+    fireEvent.click(screen.getByRole("link", { name: "Call own" }));
+    const log = screen.getByRole("region", { name: "Log activity" });
+    await user.type(
+      within(log).getByRole("textbox", { name: "Subject" }),
+      "Busy",
+    );
+    await user.click(within(log).getByRole("button", { name: "Close" }));
+
+    const question = await screen.findByRole("dialog", {
+      name: "Discard unsaved changes?",
+    });
+    await user.click(within(question).getByRole("button", { name: "Cancel" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+    expect(screen.getByRole("region", { name: "Log activity" })).toBeTruthy();
+
+    await user.click(within(log).getByRole("button", { name: "Close" }));
+    await user.click(
+      within(
+        await screen.findByRole("dialog", { name: "Discard unsaved changes?" }),
+      ).getByRole("button", { name: "Discard changes" }),
+    );
+    await waitFor(() =>
+      expect(screen.queryByRole("region", { name: "Log activity" })).toBeNull(),
+    );
   });
 });

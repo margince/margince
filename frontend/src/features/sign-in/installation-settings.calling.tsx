@@ -19,6 +19,7 @@ import {
   MESSENGER_SETTING,
   MESSENGERS,
   type Messenger,
+  messengerOn,
 } from "../../lib/callmessengers";
 
 type InstallationSettings = components["schemas"]["InstallationSettings"];
@@ -79,7 +80,7 @@ export function CallingSettingsRows({
                   )}
                   label={name}
                   labelHidden
-                  checked={settings[key]}
+                  checked={messengerOn(settings, messenger)}
                   disabled={!canManage}
                   pending={
                     update.isPending && update.variables?.[key] !== undefined

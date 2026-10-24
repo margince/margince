@@ -36,8 +36,7 @@ function OnceSeated({ children }: Readonly<{ children: ReactNode }>) {
   return useMe().data ? children : null;
 }
 
-// The press opens Log activity on Call over the page. The capture stops the
-// frame following the `tel:`, which a real browser hands to the phone.
+// The press opens Log activity on Call, naming the contact it files on.
 export const Host: Story = {
   render: () => {
     stubSeat();
@@ -45,14 +44,12 @@ export const Host: Story = {
       <StoryProviders>
         <CallLogHost>
           <OnceSeated>
-            <div onClickCapture={(event) => event.preventDefault()}>
-              <CallAction
-                appearance="button"
-                number="+49 30 1234 5678"
-                label={en["record.verb.call"]}
-                record={DANA}
-              />
-            </div>
+            <CallAction
+              appearance="button"
+              number="+49 30 1234 5678"
+              label={en["record.verb.call"]}
+              record={DANA}
+            />
           </OnceSeated>
         </CallLogHost>
       </StoryProviders>
@@ -77,7 +74,7 @@ export const Inline: Story = {
     stubSeat();
     return (
       <StoryProviders>
-        <CallLogInline call={DANA} onClose={() => {}} />
+        <CallLogInline call={{ ...DANA, seq: 1 }} onClose={() => {}} />
       </StoryProviders>
     );
   },

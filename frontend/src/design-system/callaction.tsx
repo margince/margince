@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Phone } from "lucide-react";
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import {
   type MessengerUris,
   messengerUris,
@@ -46,9 +46,14 @@ type CallActionProps = { record: CallRecord } & (
  *  `value` adds a chat link per messenger the installation turns on. */
 export function CallAction(props: Readonly<CallActionProps>) {
   const start = useCallStart();
-  // Never `preventDefault`: the operating system still places the call; the
-  // start only offers to log it on `record`.
-  const onClick = start ? () => start(props.record) : undefined;
+  // Never `preventDefault`: the operating system still places the call. Safari
+  // leaves a pressed link unfocused, and the log form hands focus back to it.
+  const onClick = start
+    ? (event: MouseEvent<HTMLAnchorElement>) => {
+        event.currentTarget.focus();
+        start(props.record);
+      }
+    : undefined;
   // No `target="_blank"`: the operating system takes a `tel:`, and a blank
   // target leaves an empty tab behind in some browsers.
   const href = props.number === undefined ? null : telUri(props.number);
@@ -60,7 +65,7 @@ export function CallAction(props: Readonly<CallActionProps>) {
     return withChats(
       props.number,
       <a
-        className={props.className ?? "link-button"}
+        className={`${props.className ?? "link-button"} callaction-number`}
         href={href}
         onClick={onClick}
       >
@@ -103,7 +108,7 @@ export function linkVerb(
   href: string,
   glyph: ReactNode,
   label: string,
-  onClick?: () => void,
+  onClick?: (event: MouseEvent<HTMLAnchorElement>) => void,
 ) {
   return (
     <a className="btn btn-ghost" href={href} onClick={onClick}>
@@ -119,7 +124,7 @@ function withChats(number: string, dial: ReactNode) {
 }
 
 // Its own component so only a number with a country code reads the settings.
-// The wrapper stays while they load, so a focused number is not remounted.
+// No wrapper: the number stays the first child a host's layout measures.
 function WithMessengers({
   dial,
   chats,
@@ -127,7 +132,7 @@ function WithMessengers({
   const t = useT();
   const messengers = useCallMessengers();
   return (
-    <span className="callaction-value">
+    <>
       {dial}
       {messengers.length > 0 && (
         <span className="callaction-chats">
@@ -144,6 +149,6 @@ function WithMessengers({
           ))}
         </span>
       )}
-    </span>
+    </>
   );
 }

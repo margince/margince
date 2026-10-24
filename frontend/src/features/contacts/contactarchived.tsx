@@ -9,7 +9,6 @@ import { IdentityLine } from "../../design-system/identityline";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { RecordView } from "../../design-system/recordview";
 import { useT } from "../../i18n";
-import { CallStartProvider } from "../../lib/callstart";
 import { invalidateRecord } from "../../lib/recordwritekeys";
 import { useRecordZone } from "../../lib/recordzone";
 import { RecordHistoryTab } from "../records/history";
@@ -51,13 +50,7 @@ export function ArchivedContactPage({
             <RecordAccess key={contact.id} kind="contact" record={contact} />
           </IdentityLine>
         }
-        badges={
-          // An archived contact takes no activity: its number dials, and no
-          // log form opens.
-          <CallStartProvider start={null}>
-            <ContactFacts contact={contact} />
-          </CallStartProvider>
-        }
+        badges={<ContactFacts contact={contact} />}
         actions={
           <ContactActions
             view={{ contact }}

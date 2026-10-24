@@ -406,6 +406,7 @@ export function LogActivityAction({
   disabledReasonId,
   onClose,
   onLogged,
+  about,
 }: Readonly<{
   entityType: EntityKind;
   entityId: string;
@@ -430,6 +431,9 @@ export function LogActivityAction({
   onClose?: () => void;
   // Only a successful write asks the caller to refresh; dismissal does not.
   onLogged?: () => void;
+  // The record named under the heading, for a drawer opened over a page that
+  // does not show it.
+  about?: ReactNode;
 }>) {
   const t = useT();
   const titleId = useId();
@@ -455,11 +459,16 @@ export function LogActivityAction({
       )}
       <Modal open={open} onClose={close} labelledBy={titleId} intent="drawer">
         <DrawerHead>
-          <Heading size="large" id={titleId} className="t-h2">
+          <Heading
+            size="large"
+            id={titleId}
+            className={`t-h2${about ? " modal-title" : ""}`}
+          >
             {/* The heading answers the verb that opened it: a reader who
                 pressed "Add task" reads "Log activity" as the wrong dialog. */}
             {t(verb)}
           </Heading>
+          {about && <p className="t-caption">{about}</p>}
         </DrawerHead>
         <LogActivityForm
           entityType={entityType}

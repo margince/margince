@@ -32,8 +32,9 @@ import { mostSpecificFirst, RecordLinks } from "./recordlinks";
 import "./taskactions.css";
 import { ErrorLine } from "../design-system/errorline";
 import { useActivity } from "../lib/activityread";
-import { CallStartProvider, useCallStart } from "../lib/callstart";
-import { CallLogInline, useStartedCall } from "./calllog.host";
+import { CallStartProvider } from "../lib/callstart";
+import { useTaskContact } from "../lib/taskcontact";
+import { CallLogInline, useCallLogFor } from "./calllog.host";
 import { useCompleteTask } from "./taskcomplete";
 import { TaskNextSteps } from "./tasknextsteps";
 import { refetchAfterWrite } from "./taskwritefollowup";
@@ -323,7 +324,7 @@ export function TaskDetailDialog({
   const query = useActivity(activityId);
   const task: Activity | undefined = query.data;
   // Logged here rather than in the shell's drawer, which would cover the task.
-  const callLog = useStartedCall(useCallStart() !== null);
+  const callLog = useCallLogFor(useTaskContact(task).contact?.id);
   const body = useRef<HTMLDivElement>(null);
   const verbs = useRef<HTMLDivElement>(null);
   // The task's own verbs, else the box: Enter on a first-focused link or Call

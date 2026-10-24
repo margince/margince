@@ -383,22 +383,8 @@ describe("logging a call started on the page", () => {
 
     const [number] = await screen.findAllByRole("link", { name: NUMBER });
     expect(fireEvent.click(number)).toBe(true);
-    expect(screen.queryByRole("dialog")).toBeNull();
-  });
-
-  it("only dials an archived contact's number", async () => {
-    mountWithCalls(withPhone, {
-      "GET /contacts/p-1": () =>
-        jsonResponse({
-          ...withPhone.contact,
-          archived_at: "2026-08-14T09:00:00Z",
-        }),
-    });
-    await screen.findByText("Archived");
-
-    const number = await screen.findByRole("link", { name: NUMBER });
-    expect(fireEvent.click(number)).toBe(true);
-    expect(number.getAttribute("href")).toBe("tel:+493012345678");
-    expect(screen.queryByRole("dialog")).toBeNull();
+    await expect(
+      screen.findByRole("dialog", undefined, { timeout: 300 }),
+    ).rejects.toThrow();
   });
 });

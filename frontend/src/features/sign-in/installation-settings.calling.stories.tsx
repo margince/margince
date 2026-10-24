@@ -106,7 +106,20 @@ export const Editable: Story = {
   },
 };
 
-export const Dark: Story = { globals: { theme: "dark" } };
+export const Dark: Story = {
+  globals: { theme: "dark" },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("switch", { name: "WhatsApp chat" });
+    await expect(document.documentElement.dataset.theme).toBe("dark");
+    for (const name of ["WhatsApp chat", "Telegram chat", "Zalo chat"]) {
+      await expect(canvas.getByRole("switch", { name })).toHaveAttribute(
+        "aria-checked",
+        "true",
+      );
+    }
+  },
+};
 
 export const ReadOnly: Story = {
   render: () => <Calling canManage={false} />,
@@ -144,6 +157,16 @@ export const LockedByEnvironment: Story = {
 export const Refused: Story = {
   render: () => <Calling refused />,
   play: async ({ canvasElement }) => {
-    await within(canvasElement).findByRole("switch", { name: "WhatsApp chat" });
+    const canvas = within(canvasElement);
+    const whatsapp = await canvas.findByRole("switch", {
+      name: "WhatsApp chat",
+    });
+    await userEvent.click(whatsapp);
+    await expect(whatsapp).toHaveAttribute("aria-checked", "true");
+    const refusal = canvas.getByText("Settings not saved");
+    const callout = refusal.closest("[id]");
+    await expect(whatsapp.getAttribute("aria-describedby") ?? "").toContain(
+      callout?.id ?? "no refusal id",
+    );
   },
 };

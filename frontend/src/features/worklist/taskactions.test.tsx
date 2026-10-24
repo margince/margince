@@ -13,8 +13,10 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, test, vi } from "vitest";
 import { CallLogHost } from "../../components/calllog.host";
+import { useTaskUpdate } from "../../components/taskactions";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { taskWriteKeys } from "../../lib/activitykeys";
 import { useMe } from "../../lib/session";
 import { type WriteTo, WriteToProvider } from "../../lib/writeto";
 import {
@@ -736,6 +738,19 @@ test.each([
   },
 );
 
+// The real task write, so a call that completed the task would be seen.
+function TaskDialogWithItsWrites() {
+  const update = useTaskUpdate(taskWriteKeys("contact", "c-1"));
+  return (
+    <TaskDetailModal
+      activityId="task-1"
+      readOnly={false}
+      onClose={() => {}}
+      update={update}
+    />
+  );
+}
+
 function SessionAnswered() {
   return useMe().data ? <p>session answered</p> : null;
 }
@@ -743,6 +758,7 @@ function SessionAnswered() {
 test("Call logs the call inside the dialog, on the task's contact, and leaves the task open", async () => {
   const user = userEvent.setup();
   const posted: unknown[] = [];
+  const patched: unknown[] = [];
   stubNextSteps({
     routes: {
       "GET /me": meRoute({ activity: ["read", "create"] }, { seat: "full" }),
@@ -750,23 +766,17 @@ test("Call logs the call inside the dialog, on the task's contact, and leaves th
         posted.push(body);
         return jsonResponse({ id: "a-9", kind: "call" }, 201);
       },
+      "PATCH /activities/task-1": (body) => {
+        patched.push(body);
+        return jsonResponse({}, 200);
+      },
     },
   });
   render(
     <StoryProviders>
       <CallLogHost>
         <SessionAnswered />
-        <TaskDetailModal
-          activityId="task-1"
-          readOnly={false}
-          onClose={() => {}}
-          update={
-            {
-              mutate: () => {},
-              isPending: false,
-            } as unknown as Parameters<typeof TaskDetailModal>[0]["update"]
-          }
-        />
+        <TaskDialogWithItsWrites />
       </CallLogHost>
     </StoryProviders>,
   );
@@ -800,4 +810,5 @@ test("Call logs the call inside the dialog, on the task's contact, and leaves th
   );
   expect(screen.getByRole("dialog")).toBeTruthy();
   expect(document.activeElement).toBe(dial);
+  expect(patched).toHaveLength(0);
 });

@@ -4,6 +4,7 @@
 import {
   type ReactNode,
   useCallback,
+  useContext,
   useEffect,
   useId,
   useRef,
@@ -13,16 +14,20 @@ import { Button } from "../design-system/atoms";
 import { focusableWithin } from "../design-system/dialogfocus";
 import { useFocusHandoff } from "../design-system/focushandoff";
 import { Heading } from "../design-system/heading";
+import { discardDraftQuestion } from "../design-system/modal";
 import { useT } from "../i18n";
 import {
   type CallRecord,
   type CallStart,
   CallStartProvider,
+  useCallStart,
 } from "../lib/callstart";
 import { useCanWrite } from "../lib/capability";
+import { UnsavedContext, useUnsavedRegistry } from "../lib/unsavedclaims";
+import { EntityRef } from "./entityref";
 import { LogActivityAction, LogActivityForm } from "./logactivity";
 
-type StartedCall = CallRecord & Readonly<{ seq: number }>;
+export type StartedCall = CallRecord & Readonly<{ seq: number }>;
 
 /** The call started last, counted so each press mounts a fresh form. */
 export function useStartedCall(enabled: boolean): Readonly<{
@@ -38,8 +43,23 @@ export function useStartedCall(enabled: boolean): Readonly<{
   return { call, start: enabled ? start : null, close };
 }
 
+/**
+ * A surface that logs calls to its own contact in place, and hands any other
+ * contact's call on. No start above it means none here either.
+ */
+export function useCallLogFor(contactId: string | undefined) {
+  const outer = useCallStart();
+  const { call, start, close } = useStartedCall(outer !== null);
+  const routed: CallStart | null =
+    outer && start
+      ? (record) =>
+          record.entityId === contactId ? start(record) : outer(record)
+      : null;
+  return { call, start: routed, close };
+}
+
 // Once, in the shell, so a surface showing a number names its contact and knows
-// nothing about log forms.
+// nothing about log forms. Above the routes, so typed words survive a page move.
 export function CallLogHost({ children }: Readonly<{ children: ReactNode }>) {
   // useCanWrite, not useCan: a read seat is refused the POST before RBAC.
   const { call, start, close } = useStartedCall(
@@ -56,6 +76,7 @@ export function CallLogHost({ children }: Readonly<{ children: ReactNode }>) {
           askedKind="call"
           openOnMount
           onClose={close}
+          about={<EntityRef kind="contact" id={call.entityId} asText />}
         />
       )}
     </CallStartProvider>
@@ -66,11 +87,16 @@ export function CallLogHost({ children }: Readonly<{ children: ReactNode }>) {
 export function CallLogInline({
   call,
   onClose,
-}: Readonly<{ call: CallRecord; onClose: () => void }>) {
+}: Readonly<{ call: StartedCall; onClose: () => void }>) {
   const t = useT();
   const titleId = useId();
   const section = useRef<HTMLElement>(null);
   const opener = useRef<HTMLElement | null>(null);
+  // The dialog's draft question would only ask on the dialog's own close.
+  const drafts = useUnsavedRegistry(useContext(UnsavedContext));
+  const [asking, setAsking] = useState(false);
+  const requestClose = () => (drafts.dirty ? setAsking(true) : onClose());
+  // biome-ignore lint/correctness/useExhaustiveDependencies: the press count is the trigger, so a second Call brings focus back to the open form.
   useEffect(() => {
     const active = document.activeElement;
     opener.current =
@@ -80,7 +106,7 @@ export function CallLogInline({
     if (section.current) {
       focusableWithin(section.current)[0]?.focus();
     }
-  }, []);
+  }, [call.seq]);
   useFocusHandoff(section, () =>
     opener.current?.isConnected ? opener.current : null,
   );
@@ -89,23 +115,34 @@ export function CallLogInline({
       <Heading size="small" id={titleId}>
         {t("log.title")}
       </Heading>
-      <LogActivityForm
-        entityType={call.entityType}
-        entityId={call.entityId}
-        askedKind="call"
-        onLogged={onClose}
-        frame={(form, submit) => (
-          <>
-            {form}
-            <div className="form-actions">
-              {submit}
-              <Button variant="ghost" onClick={onClose}>
-                {t("common.close")}
-              </Button>
-            </div>
-          </>
-        )}
-      />
+      <UnsavedContext.Provider value={drafts}>
+        <LogActivityForm
+          entityType={call.entityType}
+          entityId={call.entityId}
+          askedKind="call"
+          onLogged={onClose}
+          frame={(form, submit) => (
+            <>
+              {form}
+              <div className="form-actions">
+                {submit}
+                <Button variant="ghost" onClick={requestClose}>
+                  {t("common.close")}
+                </Button>
+              </div>
+            </>
+          )}
+        />
+      </UnsavedContext.Provider>
+      {discardDraftQuestion(
+        t,
+        asking,
+        () => setAsking(false),
+        () => {
+          onClose();
+          opener.current?.focus();
+        },
+      )}
     </section>
   );
 }

@@ -30,15 +30,21 @@ export const MESSENGER_SETTING = {
   zalo: "call_zalo",
 } as const satisfies Record<Messenger, keyof InstallationSettings>;
 
+/** Whether the installation shows `messenger`'s chat link. */
+export function messengerOn(
+  settings: Partial<InstallationSettings>,
+  messenger: Messenger,
+): boolean {
+  // A server older than these settings omits them, and its links cannot have
+  // been turned off.
+  return settings[MESSENGER_SETTING[messenger]] !== false;
+}
+
 /** The messengers whose chat links this installation shows beside a number. */
 export function useCallMessengers(): readonly Messenger[] {
   const { data, isError } = useInstallationSettings();
   if (data) {
-    // A server older than these settings omits them, and its links cannot have
-    // been turned off.
-    return MESSENGERS.filter(
-      (messenger) => data[MESSENGER_SETTING[messenger]] !== false,
-    );
+    return MESSENGERS.filter((messenger) => messengerOn(data, messenger));
   }
   // A custom role may read contacts without reading these settings; it still
   // gets the installation default, which is on.
