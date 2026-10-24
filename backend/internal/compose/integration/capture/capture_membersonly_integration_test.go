@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	capturemod "github.com/margince/margince/backend/internal/modules/capture"
@@ -97,18 +98,35 @@ func TestMailBetweenColleaguesIsHeldFromTheWorkspace(t *testing.T) {
 	}
 }
 
-func TestADeclaredAddressCountsAsAMember(t *testing.T) {
+// A declared identity is a claim nobody proved, so it makes no member. If it
+// did, one seat claiming an outsider's address would hold every colleague's
+// mail with that outsider.
+func TestAnUnprovedClaimMakesNoMember(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
 	declareIdentity(t, e, e.Rep3, capturemod.IdentityKindAddress, colleaguePrivate)
 	private := sentToColleague(env, t, colleaguePrivate, "", "members-private@myco.example")
-
-	if got, reason := audienceOf(t, e, private); got != "participants" || reason != activities.ReasonMembersOnly {
-		t.Fatalf("mail to a colleague's declared address is %q / %q, want participants / members_only", got, reason)
+	if _, reason := audienceOf(t, e, private); reason == activities.ReasonMembersOnly {
+		t.Error("a colleague's declared address alone made the mail members-only")
 	}
-	// A declaration proves nothing about delivery, so it grants no read.
-	if readsContent(t, e, e.Rep3, private) {
-		t.Error("a declared address alone let the colleague read a copy their own mailbox never received")
+
+	syncColleague := secondMailbox(t, e, e.Rep3)
+	declareIdentity(t, e, e.Rep1, capturemod.IdentityKindAddress, "x@outside.example")
+	syncColleague(t, email("x@outside.example", "X Outside", secondSeatAddress, "members-claimed@outside.example", ""))
+	claimed := activityIDOf(t, e, "members-claimed@outside.example")
+	if _, reason := audienceOf(t, e, claimed); reason == activities.ReasonMembersOnly {
+		t.Error("one seat claiming an outsider's address held a colleague's mail with that outsider")
+	}
+}
+
+func TestAProvedMailboxAddressCountsAsAMember(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	seedCaptureRoleFor(t, e, e.Rep3)
+	mailboxFor(t, e, e.Rep3, "rep3@sister.example", compose.CaptureConfig{})
+	toMailbox := sentToColleague(env, t, "rep3@sister.example", "", "members-mailbox@myco.example")
+	if _, reason := audienceOf(t, e, toMailbox); reason != activities.ReasonMembersOnly {
+		t.Fatalf("mail to a colleague's connected mailbox reads %q, want members_only", reason)
 	}
 }
 

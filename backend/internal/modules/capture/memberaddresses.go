@@ -9,55 +9,56 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// MemberAddresses is every address the workspace knows belongs to one of its
-// members, read across all seats. It only ever narrows an audience and never
-// reaches a reader, which is why a seat's unproved declaration may count here
-// while it may not count as proof of delivery (SeatProvedAddressTx).
-//
-// Exact addresses only, plus the domains an administrator vouched for. A
-// seat's own domain claim is left out: one seat could otherwise hold every
-// colleague's mail with a whole outside domain.
+// MemberAddresses is every address proven to belong to one of the workspace's
+// members, read across all seats. Only proven addresses count: a declared
+// identity or a typed IMAP label is a claim, and one seat claiming an outsider
+// would silently hold every colleague's mail with that outsider.
 type MemberAddresses struct{ known SelfSet }
 
 // MemberAddressesTx reads the set inside the workspace's transaction: each
-// seat's login, its declared and discovered addresses, and its live mailbox
-// labels. An archived seat no longer counts. An invited or departed one does,
-// as in colleagueTx: their mail was still the workspace's mail.
+// seat's login and each mailbox address a provider attested (provedAddressesTx,
+// the rule SeatProvedAddressTx trusts). An archived seat no longer counts. An
+// invited or departed one does, as in colleagueTx: their mail was still the
+// workspace's mail.
 func MemberAddressesTx(ctx context.Context, tx pgx.Tx) (MemberAddresses, error) {
+	rows, err := tx.Query(ctx, `SELECT id, email FROM app_user WHERE archived_at IS NULL`)
+	if err != nil {
+		return MemberAddresses{}, fmt.Errorf("capture: reading the members' logins: %w", err)
+	}
+	defer rows.Close()
+	seats := map[ids.UUID]bool{}
+	var addresses []string
+	for rows.Next() {
+		var seat ids.UUID
+		var login string
+		if err := rows.Scan(&seat, &login); err != nil {
+			return MemberAddresses{}, fmt.Errorf("capture: reading the members' logins: %w", err)
+		}
+		seats[seat] = true
+		addresses = append(addresses, login)
+	}
+	if err := rows.Err(); err != nil {
+		return MemberAddresses{}, fmt.Errorf("capture: reading the members' logins: %w", err)
+	}
+	proved, err := provedAddressesTx(ctx, tx)
+	if err != nil {
+		return MemberAddresses{}, err
+	}
+	for _, mailbox := range proved {
+		if seats[mailbox.Seat] {
+			addresses = append(addresses, mailbox.Address)
+		}
+	}
 	own, err := TrustedOwnDomainsTx(ctx, tx)
 	if err != nil {
 		return MemberAddresses{}, err
 	}
-	rows, err := tx.Query(ctx, `
-		SELECT u.email, 'login' FROM app_user u WHERE u.archived_at IS NULL
-		 UNION ALL
-		SELECT i.value, i.source FROM capture_owner_identity i
-		  JOIN app_user u ON u.id = i.user_id
-		 WHERE i.kind = 'address' AND u.archived_at IS NULL
-		 UNION ALL
-		SELECT c.account_label, '' FROM capture_connection c
-		  JOIN app_user u ON u.id = c.user_id
-		 WHERE c.archived_at IS NULL AND coalesce(c.account_label, '') <> '' AND u.archived_at IS NULL`)
-	if err != nil {
-		return MemberAddresses{}, fmt.Errorf("capture: reading the members' addresses: %w", err)
-	}
-	defer rows.Close()
-	var addresses []string
-	for rows.Next() {
-		var value, source string
-		if err := rows.Scan(&value, &source); err != nil {
-			return MemberAddresses{}, fmt.Errorf("capture: reading the members' addresses: %w", err)
-		}
-		if discoveredMachineAddress(source, value) {
-			continue
-		}
-		addresses = append(addresses, bareAddress(value))
-	}
-	if err := rows.Err(); err != nil {
-		return MemberAddresses{}, fmt.Errorf("capture: reading the members' addresses: %w", err)
-	}
+	// The company's own domains, subdomains included: a shared mailbox, a list
+	// or a colleague without a seat there is still internal mail.
 	return MemberAddresses{known: NewSelfSet(addresses, own.Domains())}, nil
 }
 
