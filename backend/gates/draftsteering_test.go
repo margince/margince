@@ -30,20 +30,20 @@ type draftRouteSpec struct {
 }
 
 type draftRouteOp struct {
-	OperationID string `yaml:"operationId"`
+	OperationID string `yaml:"operationId"` //nolint:tagliatelle // OpenAPI's key, not ours to rename
 	MCP         struct {
 		Verb string `yaml:"verb"`
-	} `yaml:"x-mcp-tool"`
+	} `yaml:"x-mcp-tool"` //nolint:tagliatelle // OpenAPI's key, not ours to rename
 	RequestBody struct {
 		Content map[string]struct {
 			Schema draftRouteSchema `yaml:"schema"`
 		} `yaml:"content"`
-	} `yaml:"requestBody"`
+	} `yaml:"requestBody"` //nolint:tagliatelle // OpenAPI's key, not ours to rename
 }
 
 type draftRouteSchema struct {
 	Ref   string             `yaml:"$ref"`
-	AllOf []draftRouteSchema `yaml:"allOf"`
+	AllOf []draftRouteSchema `yaml:"allOf"` //nolint:tagliatelle // OpenAPI's key, not ours to rename
 }
 
 func (s draftRouteSchema) steered() bool {

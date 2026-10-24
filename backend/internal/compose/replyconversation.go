@@ -41,7 +41,7 @@ func replyConversationText(turns []draftcore.Turn) string {
 	for _, turn := range turns {
 		direction := turn.Direction
 		if direction == "" {
-			direction = "unknown"
+			direction = "unknown" //nolint:goconst // the prompt's word for a turn without direction, unrelated to preview lifecycles
 		}
 		relation := "at or before the selected message"
 		if turn.AfterAnchor {
