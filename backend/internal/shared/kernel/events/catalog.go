@@ -105,6 +105,7 @@ var catalog = map[string]struct {
 	"company.archived": {companyStreamEntity, 1},
 	"company.merged":   {companyStreamEntity, 1},
 	"company.restored": {companyStreamEntity, 1},
+	"company.erased":   {companyStreamEntity, 1},
 
 	"deal.created":       {dealStreamEntity, 1},
 	"pipeline.created":   {dealStreamEntity, 1},
@@ -118,6 +119,8 @@ var catalog = map[string]struct {
 	"deal.owner_changed": {dealStreamEntity, 1},
 	"deal.archived":      {dealStreamEntity, 1},
 	"deal.restored":      {dealStreamEntity, 1},
+	"deal.merged":        {dealStreamEntity, 1},
+	"deal.erased":        {dealStreamEntity, 1},
 	// The project rides the deal family stream: it is the body of work the
 	// deals hang off, and a consumer interested in one is interested in both.
 	"project.created":       {dealStreamEntity, 1},

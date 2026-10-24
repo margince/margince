@@ -12630,6 +12630,10 @@ export const vi = {
   "webhooks.event.deal.restored.label": "Đã khôi phục deal",
   "webhooks.event.deal.restored.when":
     "Một deal được khôi phục từ kho lưu trữ.",
+  "webhooks.event.deal.merged.label": "Đã gộp deal",
+  "webhooks.event.deal.merged.when": "Hai deal được gộp thành một.",
+  "webhooks.event.deal.erased.label": "Đã xóa vĩnh viễn deal",
+  "webhooks.event.deal.erased.when": "Một deal bị xóa vĩnh viễn.",
   "webhooks.eventGroup.offers": "Báo giá",
   "webhooks.event.offer.created.label": "Đã tạo phiên bản báo giá",
   "webhooks.event.offer.created.when":
@@ -12704,6 +12708,8 @@ export const vi = {
   "webhooks.event.company.restored.label": "Đã khôi phục công ty",
   "webhooks.event.company.restored.when":
     "Một công ty được khôi phục từ kho lưu trữ.",
+  "webhooks.event.company.erased.label": "Đã xóa vĩnh viễn công ty",
+  "webhooks.event.company.erased.when": "Một công ty bị xóa vĩnh viễn.",
   "webhooks.eventGroup.leads": "Lead",
   "webhooks.event.lead.created.label": "Đã tạo lead",
   "webhooks.event.lead.created.when":

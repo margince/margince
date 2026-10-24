@@ -142,6 +142,8 @@ ready before we need it, because the first date comes 24 hours after we learn of
   core a company or a deal with the id it has in its own system.
 - [read-core-records-from-an-extension.md](how-to/read-core-records-from-an-extension.md): read deals, companies
   and other core records from an extension, under the rights of the user.
+- [react-to-record-lifecycle-events.md](how-to/react-to-record-lifecycle-events.md): learn when a company or
+  deal is erased, or a deal is merged.
 - [debug-an-ai-task.md](how-to/debug-an-ai-task.md): run one AI task on your own input
   (`make ai-probe`).
 - [build-the-desktop-app.md](how-to/build-the-desktop-app.md): build the desktop app for macOS or

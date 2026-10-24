@@ -132,3 +132,12 @@ type CustomFieldRepo interface {
 	// type that has none.
 	List(ctx context.Context, object string) ([]CustomField, error)
 }
+
+// Tombstone is all a read of an erased company or deal may answer: the id that
+// was and the kind of record it named. It has no other field, so nothing the
+// erasure removed can come back through it.
+type Tombstone struct {
+	ID string `json:"id"`
+	// Kind is company or deal.
+	Kind string `json:"kind"`
+}

@@ -12953,6 +12953,11 @@ export const de = {
   "webhooks.event.deal.restored.label": "Deal wiederhergestellt",
   "webhooks.event.deal.restored.when":
     "Ein archivierter Deal wird wiederhergestellt.",
+  "webhooks.event.deal.merged.label": "Deals zusammengeführt",
+  "webhooks.event.deal.merged.when":
+    "Zwei Deals werden zu einem zusammengeführt.",
+  "webhooks.event.deal.erased.label": "Deal gelöscht",
+  "webhooks.event.deal.erased.when": "Ein Deal wird endgültig gelöscht.",
   "webhooks.eventGroup.offers": "Angebote",
   "webhooks.event.offer.created.label": "Angebotsrevision erstellt",
   "webhooks.event.offer.created.when":
@@ -13030,6 +13035,9 @@ export const de = {
   "webhooks.event.company.restored.label": "Unternehmen wiederhergestellt",
   "webhooks.event.company.restored.when":
     "Ein archiviertes Unternehmen wird wiederhergestellt.",
+  "webhooks.event.company.erased.label": "Unternehmen gelöscht",
+  "webhooks.event.company.erased.when":
+    "Ein Unternehmen wird endgültig gelöscht.",
   "webhooks.eventGroup.leads": "Leads",
   "webhooks.event.lead.created.label": "Lead erstellt",
   "webhooks.event.lead.created.when":
