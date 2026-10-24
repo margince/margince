@@ -194,7 +194,7 @@ func (s *Store) EnsureCounterpartyTx(ctx context.Context, tx pgx.Tx, in EnsureCo
 	if err != nil {
 		return EnsureCounterpartyResult{}, err
 	}
-	if seats.Covers(in.Email) {
+	if seats.Covers(in.Email, in.OwnerID) {
 		return EnsureCounterpartyResult{}, ErrCounterpartyIsSeat
 	}
 	if err := s.ensureContact(ctx, tx, in, &res); err != nil {

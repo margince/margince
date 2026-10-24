@@ -115,12 +115,14 @@ func readCompanyContacts(ctx context.Context, tx pgx.Tx, contactID ids.ContactID
 		scope = narrowsNothing
 	}
 	// A workspace seat is never a coworker at another company, whatever edge
-	// an older write left on it. Count and page share this predicate.
+	// an older write left on it. An alias the viewer only typed hides the
+	// contact from the viewer alone. Count and page share this predicate.
 	seats, err := storekit.WorkspaceSeatAddresses(ctx, tx)
 	if err != nil {
 		return nil, 0, err
 	}
-	seatPos := arg(seats.Sorted())
+	viewer, _ := principal.Actor(ctx)
+	seatPos := arg(seats.For(viewer.UserID))
 	limitPos := arg(graphAccountCap)
 
 	// count(*) OVER () rides the same row-scoped predicate as the page, so the

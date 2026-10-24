@@ -287,15 +287,17 @@ func (e *CounterpartyVerdictEngine) contactStaysTheOwners(
 	return contacts.NarrowedOutboundNoAnswer, nil
 }
 
-// correctRefusedVerdict replaces the `real` status of a verdict that created
-// nothing. Erasure is permanent, so it records `suppressed`. A seat's address
-// records `noise`, which expires, so mail from the address is judged again once
-// the seat no longer claims it.
+// seatAddressReason explains a `real` row with no contact behind it.
+const seatAddressReason = "the address belongs to a workspace seat, so no contact was made"
+
+// correctRefusedVerdict settles a verdict that created nothing. Erasure is
+// permanent, so it records `suppressed`. A seat's address keeps `real`: the
+// sender is a human, every later capture asks the seat check again, and a
+// `noise` row would hide the colleague's mail.
 func (e *CounterpartyVerdictEngine) correctRefusedVerdict(ctx context.Context, tx pgx.Tx, id ids.UUID, created counterpartyCreated) error {
 	if created.SeatAddress {
 		return e.pending.CorrectResolution(ctx, tx, id,
-			capture.PendingStatusReal, capture.PendingStatusNoise,
-			"the address belongs to a workspace seat")
+			capture.PendingStatusReal, capture.PendingStatusReal, seatAddressReason)
 	}
 	return e.pending.CorrectResolution(ctx, tx, id,
 		capture.PendingStatusReal, capture.PendingStatusSuppressed,

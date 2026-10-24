@@ -10,44 +10,85 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// SeatAddressSet holds every address a live seat entered or connected, folded
-// to lower case. An address two seats both claim still counts, and an address
-// counts before it is verified.
+// SeatAddresses answers whether an address belongs to a live seat, and how
+// that is shown. A login, a connected mailbox or a provider-attested alias
+// speaks for the whole workspace. A typed or inferred alias speaks for its own
+// seat alone, because any seat can type a client's address.
 //
-// The set only decides. Never return its members to a client, because one
-// seat's private aliases are not a fact for the rest of the workspace.
-type SeatAddressSet map[string]struct{}
+// Never return the members to a client: a seat's aliases are private to it.
+type SeatAddresses struct {
+	proven   map[string]struct{}
+	declared map[string]map[ids.UUID]struct{}
+}
 
 // WorkspaceSeatAddresses reads the set from the same records MailSeatIdentities
 // folds. A domain-kind identity is not read, so it covers no address.
-func WorkspaceSeatAddresses(ctx context.Context, tx pgx.Tx) (SeatAddressSet, error) {
-	bySeat, err := MailSeatIdentities(ctx, tx)
+func WorkspaceSeatAddresses(ctx context.Context, tx pgx.Tx) (SeatAddresses, error) {
+	records, err := readMailSeatIdentities(ctx, tx)
 	if err != nil {
-		return nil, err
+		return SeatAddresses{}, err
 	}
-	set := SeatAddressSet{}
-	for _, addresses := range bySeat {
-		for _, address := range addresses {
-			set[address] = struct{}{}
+	set := SeatAddresses{proven: map[string]struct{}{}, declared: map[string]map[ids.UUID]struct{}{}}
+	for _, record := range records {
+		address := mailidentity.ReaderAddress(record.label, record.source)
+		if address == "" {
+			continue
 		}
+		if provenSeatSource(record.source) {
+			set.proven[address] = struct{}{}
+			continue
+		}
+		seat, err := ids.Parse(record.seat)
+		if err != nil {
+			return SeatAddresses{}, err
+		}
+		if set.declared[address] == nil {
+			set.declared[address] = map[ids.UUID]struct{}{}
+		}
+		set.declared[address][seat] = struct{}{}
 	}
 	return set, nil
 }
 
-// Covers reports whether address, in any case, is a seat address.
-func (s SeatAddressSet) Covers(address string) bool {
-	_, ok := s[mailidentity.ReaderAddress(address, "")]
-	return ok
+func provenSeatSource(source string) bool {
+	switch source {
+	case "login", provedMailboxSource, "provider":
+		return true
+	}
+	return false
 }
 
-// Sorted lists the addresses for binding as one SQL array argument.
-func (s SeatAddressSet) Sorted() []string {
-	out := make([]string, 0, len(s))
-	for address := range s {
+// Covers reports whether address, in any case, is a seat address as seen by
+// asking: proven for any seat, or declared by asking itself. ids.Nil asks for
+// proof alone, which is the answer for every other seat's records.
+func (s SeatAddresses) Covers(address string, asking ids.UUID) bool {
+	folded := mailidentity.ReaderAddress(address, "")
+	if _, ok := s.proven[folded]; ok {
+		return true
+	}
+	return s.declaredBy(folded, asking)
+}
+
+// For lists the addresses Covers admits for asking, sorted, for binding as
+// one SQL array argument.
+func (s SeatAddresses) For(asking ids.UUID) []string {
+	out := make([]string, 0, len(s.proven))
+	for address := range s.proven {
 		out = append(out, address)
+	}
+	for address := range s.declared {
+		if _, proven := s.proven[address]; !proven && s.declaredBy(address, asking) {
+			out = append(out, address)
+		}
 	}
 	sort.Strings(out)
 	return out
+}
+
+func (s SeatAddresses) declaredBy(address string, asking ids.UUID) bool {
+	_, ok := s.declared[address][asking]
+	return ok && !asking.IsZero()
 }

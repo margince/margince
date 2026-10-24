@@ -352,7 +352,7 @@ func plantDomainEmployment(ctx context.Context, tx pgx.Tx, domain string, compan
 			WHERE r.contact_id = p.id AND `+employment.CurrentPrimarySlotSQL("r")+`)
 		ON CONFLICT DO NOTHING
 		RETURNING id, contact_id`,
-		companyID, domainTriageSource(domain), by, candidates, domain, mailClockSkewAllowance, seats.Sorted())
+		companyID, domainTriageSource(domain), by, candidates, domain, mailClockSkewAllowance, seats.For(ids.Nil))
 	if err != nil {
 		return 0, fmt.Errorf("contacts: planting the employment edges for %s: %w", domain, err)
 	}
