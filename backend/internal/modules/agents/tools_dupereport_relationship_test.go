@@ -51,7 +51,7 @@ func TestCreateRecordCopyTellsAnAgentToAskAboutTheSameEmployerContact(t *testing
 	if strings.Contains(createRecordCopy.Instead, "create it") {
 		t.Fatal("create_record copy still says to create a same-name contact")
 	}
-	if !strings.Contains(createRecordCopy.Instead, "same employer, ask the human whether it is the same person") {
+	if !strings.Contains(createRecordCopy.Instead, "same employer, ask the human whether it is the same contact") {
 		t.Fatalf("copy does not say to ask the human: %s", createRecordCopy.Instead)
 	}
 }

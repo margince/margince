@@ -142,8 +142,8 @@ type createdRecord struct {
 }
 
 // reportCreateDuplicates is reportDuplicates for any create. An employment edge
-// is reported against its contact: the edge is what gives the contact an
-// employer, and the pair it filed names the contact, not the edge.
+// is reported against its contact. The edge gives the contact its employer,
+// and the pair it filed names the contact.
 func (t createRecord) reportCreateDuplicates(ctx context.Context, recordType string, fields json.RawMessage, id ids.UUID) []DuplicateCandidate {
 	if recordType != "relationship" {
 		return t.reportDuplicates(ctx, recordType, id)
