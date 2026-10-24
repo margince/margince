@@ -84,10 +84,10 @@ func (s *Store) CorrectCloseDay(ctx context.Context, id ids.DealID, in CorrectCl
 func (s *Store) correctCloseDayInTx(ctx context.Context, tx pgx.Tx, id ids.DealID,
 	in CorrectCloseDayInput, active []fieldcatalog.Column,
 ) (crmcontracts.Deal, error) {
-	if err := auth.EnsureWritable(ctx, tx, dealTable, id.UUID); err != nil {
+	if _, err := storekit.LockRow(ctx, tx, dealTable, id.UUID, storekit.LiveOnly); err != nil {
 		return crmcontracts.Deal{}, err
 	}
-	if _, err := storekit.LockRow(ctx, tx, dealTable, id.UUID, storekit.LiveOnly); err != nil {
+	if err := auth.EnsureWritable(ctx, tx, dealTable, id.UUID); err != nil {
 		return crmcontracts.Deal{}, err
 	}
 	current, err := readDeal(ctx, tx, id, storekit.LiveOnly, nil)

@@ -33,6 +33,7 @@ type closeDayEnv struct {
 func setupClosedDealEnv(t *testing.T) closeDayEnv {
 	t.Helper()
 	e := setupConfigEnv(t)
+	now := time.Now().UTC()
 	// Winning stamps correspondence and starts delivery through seams the
 	// composition injects; neither is under test here.
 	e.store = NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)), Installation{
@@ -41,9 +42,8 @@ func setupClosedDealEnv(t *testing.T) closeDayEnv {
 		StampCorrespondence:     func(context.Context, pgx.Tx, ids.DealID, string) error { return nil },
 		StartDeliveryForWonDeal: func(context.Context, pgx.Tx, ids.DealID, string) error { return nil },
 		ContractVisible:         func(context.Context, string, func(any) int) (string, error) { return "FALSE", nil },
-	})
+	}).WithClock(func() time.Time { return now })
 
-	now := time.Now().UTC()
 	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 	env := closeDayEnv{configEnv: e, today: today, oldDay: today.AddDate(0, 0, -10), oldTotal: 5000}
 	e.seedRate(t, "JPY", "0.005", today.AddDate(0, 0, -20))

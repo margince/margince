@@ -37,14 +37,14 @@ export function CorrectCloseDayAction({
   const [day, setDay] = useState(current);
   const correct = useMutation({
     mutationKey: ["deal-edit", deal.id],
-    mutationFn: async (closedOn: string) =>
+    mutationFn: async (v: { id: string; version: number; closedOn: string }) =>
       unwrap(
         await api.POST("/deals/{id}/close-day", {
           params: {
-            path: { id: deal.id },
-            ...ifMatch(requireVersion(deal.version)),
+            path: { id: v.id },
+            ...ifMatch(v.version),
           },
-          body: { closed_on: closedOn },
+          body: { closed_on: v.closedOn },
         }),
         t,
       ),
@@ -75,7 +75,13 @@ export function CorrectCloseDayAction({
         confirmLabel={t("deal.correctCloseDayConfirm")}
         confirmDisabled={!isISODate(day) || day === current}
         pending={correct.isPending}
-        onConfirm={() => correct.mutate(day)}
+        onConfirm={() =>
+          correct.mutate({
+            id: deal.id,
+            version: requireVersion(deal.version),
+            closedOn: day,
+          })
+        }
       >
         <Field
           label={t("deal.correctCloseDayLabel")}
