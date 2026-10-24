@@ -76,10 +76,37 @@ func (h Handlers) SetLeadManualSignal(w http.ResponseWriter, r *http.Request, id
 
 // ClearLeadManualSignal serves DELETE
 // /leads/{id}/manual-signals/{factor}.
-func (h Handlers) ClearLeadManualSignal(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, factor string) {
-	if err := h.store.ClearLeadManualSignal(r.Context(), pathID[ids.LeadKind](id), factor); err != nil {
+func (h Handlers) ClearLeadManualSignal(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, factor crmcontracts.LeadManualSignalFactor) {
+	if err := h.store.ClearLeadManualSignal(r.Context(), pathID[ids.LeadKind](id), string(factor)); err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// GetLeadSignalCatalog serves GET /lead-signal-catalog: the manual scoring
+// vocabulary, read from the same catalog the store
+// validates against.
+func (h Handlers) GetLeadSignalCatalog(w http.ResponseWriter, r *http.Request) {
+	catalog := LeadSignalCatalog()
+	out := crmcontracts.LeadSignalCatalog{Factors: make([]crmcontracts.LeadSignalCatalogFactor, 0, len(catalog))}
+	for _, f := range catalog {
+		factor := crmcontracts.LeadSignalCatalogFactor{
+			Factor: crmcontracts.LeadManualSignalFactor(f.ID), Bands: make([]crmcontracts.LeadSignalBand, 0, len(f.Bands)),
+		}
+		if f.CompanyField != "" {
+			factor.CompanyField = &f.CompanyField
+		}
+		for _, b := range f.Bands {
+			sizes := b.CompanySizeBands
+			if sizes == nil {
+				sizes = []string{}
+			}
+			factor.Bands = append(factor.Bands, crmcontracts.LeadSignalBand{
+				Id: b.ID, Points: b.Points, Min: b.Min, Max: b.Max, CompanySizeBands: sizes,
+			})
+		}
+		out.Factors = append(out.Factors, factor)
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
 }

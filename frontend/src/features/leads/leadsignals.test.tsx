@@ -13,6 +13,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
 import { LeadManualSignals } from "./leadsignals";
+import { SIGNAL_CATALOG } from "./leadsignals.fixture";
 
 // The manual half of the lead score, asked as three plain questions. What the
 // suite is here to hold is the wire: a rep who answers a question and presses
@@ -51,6 +52,12 @@ function backend(writes: Write[], refuse?: (factor: string) => boolean) {
           headers: { "Content-Type": "application/problem+json" },
         },
       );
+    }
+    if (url.endsWith("/lead-signal-catalog")) {
+      return new Response(JSON.stringify(SIGNAL_CATALOG), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
     }
     if (url.includes("/manual-signals") && method === "GET") {
       return new Response(JSON.stringify({ data: [] }), {
@@ -263,23 +270,27 @@ describe("LeadManualSignals", () => {
   it("shows the repair marker as a translated label, not the stored constant", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn(async () =>
-        Response.json({
-          data: [
-            {
-              factor: "employees",
-              band: "51-200",
-              points: 8,
-              signal_kind: "assumption",
-              confidence: null,
-              reason: "No evidence recorded",
-              set_by: "11111111-1111-4111-8111-111111111111",
-              set_at: "2026-10-01T10:00:00Z",
-              superseded_at: null,
-              superseded_by: null,
-            },
-          ],
-        }),
+      vi.fn(async (input: RequestInfo | URL) =>
+        String(input instanceof Request ? input.url : input).endsWith(
+          "/lead-signal-catalog",
+        )
+          ? Response.json(SIGNAL_CATALOG)
+          : Response.json({
+              data: [
+                {
+                  factor: "employees",
+                  band: "51-200",
+                  points: 8,
+                  signal_kind: "assumption",
+                  confidence: null,
+                  reason: "No evidence recorded",
+                  set_by: "11111111-1111-4111-8111-111111111111",
+                  set_at: "2026-10-01T10:00:00Z",
+                  superseded_at: null,
+                  superseded_by: null,
+                },
+              ],
+            }),
       ),
     );
     render(

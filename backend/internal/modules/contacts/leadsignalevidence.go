@@ -5,6 +5,7 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -39,7 +40,6 @@ func StockManualSignalReasons() []string {
 // image of the row before and after.
 type unevidencedSignal struct {
 	id            ids.UUID
-	lead          ids.LeadID
 	before, after map[string]any
 }
 
@@ -64,14 +64,23 @@ func MarkUnevidencedManualSignalsTx(ctx context.Context, tx pgx.Tx, after ids.UU
 	marked := map[ids.LeadID][]map[string]any{}
 	var order []ids.LeadID
 	for _, h := range hits {
-		if _, err := tx.Exec(ctx, `UPDATE lead_manual_signal SET reason = $2 WHERE id = $1`, h.id, ManualSignalNoEvidence); err != nil {
+		// Only a row still holding the stock sentence is rewritten.
+		var lead ids.LeadID
+		err := tx.QueryRow(ctx,
+			`UPDATE lead_manual_signal SET reason = $2 WHERE id = $1 AND reason = $3 RETURNING lead_id`,
+			h.id, ManualSignalNoEvidence, h.before[fieldKeyReason]).Scan(&lead)
+		if errors.Is(err, pgx.ErrNoRows) {
+			continue
+		}
+		if err != nil {
 			return nil, 0, fmt.Errorf("contacts: marking a manual signal without evidence: %w", err)
 		}
-		if _, seen := marked[h.lead]; !seen {
-			order = append(order, h.lead)
+		changed++
+		if _, seen := marked[lead]; !seen {
+			order = append(order, lead)
 		}
-		before[h.lead] = append(before[h.lead], h.before)
-		marked[h.lead] = append(marked[h.lead], h.after)
+		before[lead] = append(before[lead], h.before)
+		marked[lead] = append(marked[lead], h.after)
 	}
 	for _, lead := range order {
 		auditID, err := storekit.Audit(ctx, tx, "update", "lead", lead.UUID,
@@ -86,12 +95,12 @@ func MarkUnevidencedManualSignalsTx(ctx context.Context, tx pgx.Tx, after ids.UU
 			return nil, 0, err
 		}
 	}
-	return scanned, len(hits), nil
+	return scanned, changed, nil
 }
 
 func readUnevidencedPage(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) ([]ids.UUID, []unevidencedSignal, error) {
 	rows, err := tx.Query(ctx,
-		`SELECT id, lead_id, factor, band, points, reason FROM lead_manual_signal
+		`SELECT id, factor, band, points, reason FROM lead_manual_signal
 		  WHERE id > $1 ORDER BY id LIMIT $2 FOR UPDATE`, after, limit)
 	if err != nil {
 		return nil, nil, fmt.Errorf("contacts: reading manual signals to repair: %w", err)
@@ -103,7 +112,7 @@ func readUnevidencedPage(ctx context.Context, tx pgx.Tx, after ids.UUID, limit i
 		var s unevidencedSignal
 		var factor, band, reason string
 		var points int
-		if err := rows.Scan(&s.id, &s.lead, &factor, &band, &points, &reason); err != nil {
+		if err := rows.Scan(&s.id, &factor, &band, &points, &reason); err != nil {
 			return nil, nil, fmt.Errorf("contacts: reading a manual signal to repair: %w", err)
 		}
 		scanned = append(scanned, s.id)

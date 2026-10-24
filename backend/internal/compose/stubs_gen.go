@@ -2203,6 +2203,10 @@ func (stubs) UpdateLeadDisqualifyReason(w nethttp.ResponseWriter, r *nethttp.Req
 	httperr.NotImplemented(w, r, "UpdateLeadDisqualifyReason")
 }
 
+func (stubs) GetLeadSignalCatalog(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetLeadSignalCatalog")
+}
+
 func (stubs) ListLeadSources(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListLeadSources")
 }
@@ -2267,7 +2271,7 @@ func (stubs) SetLeadManualSignal(w nethttp.ResponseWriter, r *nethttp.Request, i
 	httperr.NotImplemented(w, r, "SetLeadManualSignal")
 }
 
-func (stubs) ClearLeadManualSignal(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, factor string) {
+func (stubs) ClearLeadManualSignal(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, factor crmcontracts.LeadManualSignalFactor) {
 	httperr.NotImplemented(w, r, "ClearLeadManualSignal")
 }
 

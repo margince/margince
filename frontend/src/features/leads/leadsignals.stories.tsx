@@ -9,6 +9,7 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { LeadManualSignals } from "./leadsignals";
+import { SIGNAL_CATALOG } from "./leadsignals.fixture";
 
 // The human half of the lead score: three plain questions a rep can answer in
 // one pass, and the provenance the wire still needs behind "More".
@@ -47,6 +48,7 @@ const stored = [
 
 function stubSignalRoutes(): void {
   installFetchStub({
+    "GET /lead-signal-catalog": () => jsonResponse(SIGNAL_CATALOG),
     // A literal path, not a template: the stub keys on the request's own
     // pathname, so `{id}` would route nothing and the fallback's empty page
     // would quietly stand in for the list.
@@ -103,6 +105,7 @@ export const Closed: Story = {
 export const NothingStoredYet: Story = {
   render: () => {
     installFetchStub({
+      "GET /lead-signal-catalog": () => jsonResponse(SIGNAL_CATALOG),
       "GET /leads/l-1/manual-signals": () => jsonResponse({ data: [] }),
       "GET /users": () =>
         jsonResponse({
