@@ -347,6 +347,70 @@ func TestOneFailingContactDoesNotStopTheVerdictPass(t *testing.T) {
 	requireNarrowed(t, e, stuck, contacts.NarrowedOutboundNoAnswer)
 }
 
+// A run of contacts that keep failing does not hide the ones after it: the
+// pass moves past them and reaches the rest, more than a page later.
+func TestFailingContactsDoNotStarveTheContactsBehindThem(t *testing.T) {
+	e := setupWithOwnMailbox(t)
+	stuck := []string{"one@stuckfirst.example", "two@stuckfirst.example", "three@stuckfirst.example"}
+	fine := []string{"four@finelater.example", "five@finelater.example"}
+	var refused []string
+	for i, email := range append(append([]string{}, stuck...), fine...) {
+		loseTheLivePromotion(t, e, email, fmt.Sprintf("thr-starve-%d", i))
+		if i < len(stuck) {
+			refused = append(refused, "'"+contactIDFor(t, e, email).String()+"'")
+		}
+	}
+	refuseUpdates(t, "contact", "OLD.id IN ("+strings.Join(refused, ", ")+")")
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
+	engine.answeredPage = 2
+
+	// Two pages hold a failure each; the third holds only a contact that lands.
+	for pass, wantFailure := range []bool{true, true, false} {
+		err := engine.PublishAnsweredContactsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS))
+		if (err != nil) != wantFailure {
+			t.Errorf("pass %d answered %v, want a reported failure: %v", pass+1, err, wantFailure)
+		}
+	}
+
+	for _, email := range fine {
+		if visibility, _ := contactVisibility(t, e, email); visibility != "workspace" {
+			t.Errorf("%s behind a failing run stayed %q, want workspace", email, visibility)
+		}
+	}
+}
+
+// A pass that reaches the end starts over, so a contact skipped for a failure
+// is published once it stops failing.
+func TestThePassStartsOverAndRetriesASkippedContact(t *testing.T) {
+	e := setupWithOwnMailbox(t)
+	emails := []string{"first@wraparound.example", "second@wraparound.example", "third@wraparound.example"}
+	for i, email := range emails {
+		loseTheLivePromotion(t, e, email, fmt.Sprintf("thr-wrap-%d", i))
+	}
+	first := contactIDFor(t, e, emails[0])
+	refuseUpdates(t, "contact", fmt.Sprintf("OLD.id = '%s' AND NEW.title IS DISTINCT FROM 'publishable'", first))
+	engine := NewCounterpartyVerdictEngine(e.Pool, &scriptedVerdictBrain{}, CaptureConfig{}, slog.Default())
+	engine.answeredPage = 2
+	pass := func() error {
+		return engine.PublishAnsweredContactsWorkspace(principal.WithWorkspaceID(context.Background(), e.WS))
+	}
+	if err := pass(); err == nil {
+		t.Fatal("the first pass reported no failure for the refused contact")
+	}
+	if err := pass(); err != nil {
+		t.Fatalf("the second pass, which reaches the end: %v", err)
+	}
+	e.WsExec(t, `UPDATE contact SET title = 'publishable' WHERE id = $1`, first)
+
+	if err := pass(); err != nil {
+		t.Fatalf("the pass after the end: %v", err)
+	}
+
+	if visibility, _ := contactVisibility(t, e, emails[0]); visibility != "workspace" {
+		t.Errorf("the skipped contact stayed %q after the pass started over, want workspace", visibility)
+	}
+}
+
 // loseTheLivePromotion captures the address's reply under the owner's grant
 // without contact update, so the live promotion is refused by its own object
 // gate and the contact is left owed publication.

@@ -52,21 +52,24 @@ func publishAnsweredTx(
 	return capture.ClearWithheldFromWorkspaceTx(ctx, tx, email)
 }
 
-// PublishAnsweredContactsWorkspace publishes every contact in the workspace
-// whose address has answered, one transaction per contact.
+// PublishAnsweredContactsWorkspace publishes the next page of contacts in the
+// workspace whose address has answered, one transaction per contact, then
+// stores where the next pass goes on from.
+//
+// A contact that fails is skipped and counted, and the position moves past it.
+// It is offered again once the pass wraps, so a failing run of contacts never
+// hides the ones behind it.
 func (e *CounterpartyVerdictEngine) PublishAnsweredContactsWorkspace(ctx context.Context) error {
 	return e.inWorkspace(ctx, func(wsCtx context.Context, _ ids.UUID) error {
 		var owed []capture.AnsweredContact
 		if err := database.WithWorkspaceTx(wsCtx, e.pool, func(tx pgx.Tx) error {
 			var err error
 			owed, err = capture.AnsweredContactsTx(wsCtx, tx,
-				string(contacts.NarrowedOutboundNoAnswer), answeredSweepContacts)
+				string(contacts.NarrowedOutboundNoAnswer), e.answeredPage)
 			return err
 		}); err != nil {
 			return fmt.Errorf("verdict: reading the contacts owed publication on an answer: %w", err)
 		}
-		// One contact that fails must not starve the ones behind it on every tick,
-		// so the pass carries on and reports every failure together.
 		var failed []error
 		for _, c := range owed {
 			if err := database.WithWorkspaceTx(wsCtx, e.pool, func(tx pgx.Tx) error {
@@ -76,6 +79,13 @@ func (e *CounterpartyVerdictEngine) PublishAnsweredContactsWorkspace(ctx context
 				failed = append(failed, fmt.Errorf("verdict: publishing answered contact %s: %w", c.ContactID, err))
 			}
 		}
-		return errors.Join(failed...)
+		advanced := database.WithWorkspaceTx(wsCtx, e.pool, func(tx pgx.Tx) error {
+			return capture.AdvanceAnsweredSweepTx(wsCtx, tx, owed, e.answeredPage)
+		})
+		if len(failed) > 0 {
+			return errors.Join(advanced, fmt.Errorf("verdict: %d of %d answered contacts not published: %w",
+				len(failed), len(owed), errors.Join(failed...)))
+		}
+		return advanced
 	})
 }

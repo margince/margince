@@ -75,9 +75,10 @@ type AnsweredContact struct {
 	Email     string
 }
 
-// AnsweredContactsTx lists owner-scoped contacts narrowed for `reason` whose
-// address has answered. A reconciling pass publishes what the live capture
-// hook missed, and rows narrowed before a colleague's reply counted.
+// AnsweredContactsTx lists up to limit owner-scoped contacts narrowed for
+// `reason` whose address has answered, in id order after the pass's stored
+// position. A reconciling pass publishes what the live capture hook missed,
+// and rows narrowed before a colleague's reply counted.
 //
 // The reason is the caller's value, not spelled here: the vocabulary belongs to
 // the contacts module. The evidence is addressAnswered, the fragment the live
@@ -90,6 +91,7 @@ func AnsweredContactsTx(ctx context.Context, tx pgx.Tx, reason string, limit int
 		  JOIN contact_email pe ON pe.contact_id = p.id AND pe.archived_at IS NULL
 		 WHERE p.visibility = 'owner' AND p.narrowing_reason = $1
 		   AND p.archived_at IS NULL AND p.merged_into_id IS NULL
+		   AND p.id > coalesce((SELECT after_contact_id FROM capture_answered_sweep_cursor), '00000000-0000-0000-0000-000000000000'::uuid)
 		   AND `+evidence+`
 		 ORDER BY p.id, pe.email
 		 LIMIT $2`, reason, limit)
@@ -109,4 +111,22 @@ func AnsweredContactsTx(ctx context.Context, tx pgx.Tx, reason string, limit int
 		return nil, fmt.Errorf("capture: listing contacts whose address answered: %w", err)
 	}
 	return out, nil
+}
+
+// AdvanceAnsweredSweepTx stores where the pass goes on from. A page shorter
+// than the pass asked for reached the end, and the next pass starts over, so a
+// contact skipped for a failure is offered again on the next round.
+func AdvanceAnsweredSweepTx(ctx context.Context, tx pgx.Tx, page []AnsweredContact, limit int) error {
+	var after *ids.UUID
+	if len(page) == limit && limit > 0 {
+		after = &page[len(page)-1].ContactID
+	}
+	if _, err := tx.Exec(ctx, `
+		INSERT INTO capture_answered_sweep_cursor (singleton, after_contact_id, updated_at)
+		VALUES (true, $1, now())
+		ON CONFLICT (singleton) DO UPDATE
+		   SET after_contact_id = EXCLUDED.after_contact_id, updated_at = EXCLUDED.updated_at`, after); err != nil {
+		return fmt.Errorf("capture: storing where the answered-contact pass stopped: %w", err)
+	}
+	return nil
 }

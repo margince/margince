@@ -36,7 +36,9 @@
 // bookkeeping, not audited; rows are retained, unlike capture_trace's own
 // swept 24-hour window), and capture_sweep_run (one receipt per repair pass
 // per workspace turn, so "when did it last succeed" outlives River's day of
-// retention — bookkeeping about a pass, not audited).
+// retention — bookkeeping about a pass, not audited), and
+// capture_answered_sweep_cursor (where the pass publishing answered contacts
+// stopped, so every stored contact is reached — bookkeeping, not audited).
 //
 // Two more tables back the undo of an owner identity.
 // capture_owner_identity_withdrawn holds a withdrawn identity for the ten
