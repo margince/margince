@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
 import {
   installFetchStub,
   jsonResponse,
@@ -58,7 +59,11 @@ function story(items: Preference[], refuseWrites = false) {
     });
     return (
       <StoryProviders>
-        <NotificationSettingsCard />
+        {/* A pick waits on the page's one save bar, as on Settings. */}
+        <SavePageProvider>
+          <NotificationSettingsCard />
+          <PageSaveBar />
+        </SavePageProvider>
       </StoryProviders>
     );
   };

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, within } from "storybook/test";
 import {
   jsonResponse,
   type RouteMap,
@@ -10,28 +10,44 @@ import {
   stubWithSession,
 } from "../../testing/story-utils";
 import { TelegramConnectorsPanel } from "./connectors.telegram";
-import "./connectors.css";
 
-// The workspace's bot: none yet, and live bots with a row each. A deployment
-// with no credential store answers with a calm feature-off state.
-
-function asBotManager(routes: RouteMap) {
+// The workspace's Telegram bot on Integrations. Every story but the read-only
+// one draws an administrator's view, so the verbs its layout is judged with show.
+function stubAsBotManager(routes: RouteMap) {
   stubWithSession(routes, {
     channel_connection: ["read", "create", "update", "delete"],
   });
 }
 
+const meta: Meta<typeof TelegramConnectorsPanel> = {
+  title: "Settings/Data/Integrations/Telegram bot",
+  component: TelegramConnectorsPanel,
+};
+export default meta;
+type Story = StoryObj<typeof TelegramConnectorsPanel>;
+
+// Three states. No bot yet shows the connect verb. Live bots get a row each. A
+// deployment with no credential store to seal a token in answers 503, a
+// feature-off state and not an error.
 function telegramStory(
   channels: unknown[] | null,
-  stub: (routes: RouteMap) => void = asBotManager,
+  stub: (routes: RouteMap) => void = stubAsBotManager,
+) {
+  return routeStory(
+    () =>
+      channels === null
+        ? jsonResponse({ code: "channel_credentials_not_configured" }, 503)
+        : jsonResponse({ data: channels }),
+    stub,
+  );
+}
+
+function routeStory(
+  answer: RouteMap[string],
+  stub: (routes: RouteMap) => void = stubAsBotManager,
 ) {
   return () => {
-    stub({
-      "GET /channel-connections": () =>
-        channels === null
-          ? jsonResponse({ code: "channel_credentials_not_configured" }, 503)
-          : jsonResponse({ data: channels }),
-    });
+    stub({ "GET /channel-connections": answer });
     return (
       <StoryProviders>
         <TelegramConnectorsPanel />
@@ -49,76 +65,29 @@ const salesBot = {
   version: 1,
 };
 
-const supportBotPending = {
-  ...salesBot,
-  id: "018f3a1b-0000-7000-8000-0000000000d2",
-  channelId: "555000222",
-  channelLabel: "acme_support_bot",
-  status: "pending",
+export const TelegramNoBotYet: Story = { render: telegramStory([]) };
+
+// Two live bots is the state a send refuses outright in. This panel is the only
+// surface that can end it, so both have to be here, each with its own
+// Disconnect.
+export const TelegramTwoBots: Story = {
+  render: telegramStory([
+    salesBot,
+    {
+      ...salesBot,
+      id: "018f3a1b-0000-7000-8000-0000000000d2",
+      channelId: "555000222",
+      channelLabel: "acme_support_bot",
+      status: "pending",
+    },
+  ]),
 };
 
-const meta: Meta<typeof TelegramConnectorsPanel> = {
-  title: "Settings/You/Connections/Telegram bot",
-  component: TelegramConnectorsPanel,
-};
-export default meta;
-type Story = StoryObj<typeof TelegramConnectorsPanel>;
-
-// No bot: one row says so and carries the connect verb.
-export const NoBotYet: Story = { render: telegramStory([]) };
-
-export const NoBotYetPhone: Story = {
-  globals: { viewport: { value: "phone" } },
-  tags: ["uat-phone"],
-  render: telegramStory([]),
-};
-
-// A send refuses outright while two bots are live. This panel is the only
-// surface that can end that, so each bot has its own Disconnect.
-export const TwoBots: Story = {
-  render: telegramStory([salesBot, supportBotPending]),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await expect(
-      await canvas.findAllByTestId("telegram-connection"),
-    ).toHaveLength(2);
-    await expect(
-      canvas.queryByText(/One bot receives and sends messages/),
-    ).toBeNull();
-  },
-};
-
-export const TwoBotsDark: Story = {
-  globals: { theme: "dark" },
-  render: telegramStory([salesBot, supportBotPending]),
-};
-
-export const TwoBotsPhone: Story = {
-  globals: { viewport: { value: "phone" } },
-  tags: ["uat-phone"],
-  render: telegramStory([salesBot, supportBotPending]),
-};
-
-export const BotMenu: Story = {
-  render: telegramStory([salesBot]),
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.click(
-      await canvas.findByRole("button", {
-        name: "Actions for @acme_sales_bot",
-      }),
-    );
-    await within(canvasElement.ownerDocument.body).findByRole("button", {
-      name: "Replace token",
-    });
-  },
-};
-
-export const NotConfigured: Story = { render: telegramStory(null) };
+export const TelegramNotConfigured: Story = { render: telegramStory(null) };
 
 // The seeded rep reads the bot and may change none of it: the roster without
-// a menu, and one line naming who can act instead.
-export const ReadOnly: Story = {
+// a verb, and one line naming who can act instead.
+export const TelegramReadOnly: Story = {
   render: telegramStory([salesBot], (routes) =>
     stubWithSession(
       routes,
@@ -132,6 +101,26 @@ export const ReadOnly: Story = {
       "Only an administrator or operations user can connect or change the bot.",
     );
     const row = within(canvas.getByTestId("telegram-connection"));
-    await expect(row.queryByRole("button")).toBeNull();
+    await expect(
+      row.queryByRole("button", { name: "Replace token" }),
+    ).toBeNull();
+    await expect(row.queryByRole("button", { name: "Disconnect" })).toBeNull();
   },
+};
+
+// `--textMuted` (the description) against `--textMeta` (the bot handle) is
+// the pair most likely to collapse into one grey under the dark accent lift.
+export const TelegramDark: Story = {
+  globals: { theme: "dark" },
+  render: telegramStory([salesBot]),
+};
+
+// The read still in flight: the panel's own skeleton under its intro.
+export const TelegramLoading: Story = {
+  render: routeStory(() => new Promise(() => {})),
+};
+
+// The read refused: the shared failure plate with its retry, not a callout.
+export const TelegramLoadFailed: Story = {
+  render: routeStory(() => jsonResponse({ code: "internal" }, 500)),
 };

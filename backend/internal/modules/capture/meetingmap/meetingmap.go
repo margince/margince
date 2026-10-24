@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -111,6 +112,7 @@ type Meeting struct {
 	icalUID         string
 	subject         string
 	body            string
+	masked          bool
 	occurredAt      time.Time
 	allDay          bool
 	durationSeconds *int
@@ -128,12 +130,14 @@ func Classify(ev Event, owner string) Meeting {
 	ownerDom := domainOf(owner)
 	attendeeEmails, external := classifyAttendees(ev.Attendees, ownerDom)
 	organizerDom := domainOf(ev.Organizer.Email)
+	body, masked := buildBody(ev, attendeeEmails)
 
 	return Meeting{
 		id:              strings.TrimSpace(ev.ID),
 		icalUID:         strings.TrimSpace(ev.ICalUID),
 		subject:         strings.TrimSpace(ev.Subject),
-		body:            buildBody(ev, attendeeEmails),
+		body:            body,
+		masked:          masked,
 		occurredAt:      ev.StartsAt,
 		allDay:          ev.AllDay,
 		durationSeconds: eventDuration(ev),
@@ -148,7 +152,7 @@ func Classify(ev Event, owner string) Meeting {
 		// multi-party meeting on the strength of a malformed address.
 		hasExternal:  external > 0 || organizerIsExternal(ev.Organizer.Email, organizerDom, ownerDom),
 		addresses:    eventAddresses(ev, owner),
-		participants: meetingParties(ev, strings.ToLower(strings.TrimSpace(owner))),
+		participants: meetingParties(ev),
 	}
 }
 
@@ -159,21 +163,18 @@ func Classify(ev Event, owner string) Meeting {
 func (m Meeting) Participants() connector.Parties { return m.participants }
 
 // meetingParties returns the organizer and attendees as participant rows,
-// excluding the account owner.
+// the account owner included when the provider lists them.
 //
-// The owner is excluded because capture stamps them separately from the
-// connection that produced the event — that row carries their user_id, which is
-// what the interaction graph joins on, whereas a row built from this header
-// would carry only an address and join nothing.
+// The owner's own role is the evidence that they take part, and capture binds
+// that row to their seat. A calendar that only holds a copy of somebody else's
+// meeting names them nowhere here. The sink's directional row for the owner
+// records only whose calendar the event came from.
 //
 // Organizer wins over attendee when the same address holds both, which is the
 // common case for a meeting somebody scheduled and then attended: organizing is
 // the stronger statement about their part in it.
-func meetingParties(ev Event, ownerLower string) connector.Parties {
+func meetingParties(ev Event) connector.Parties {
 	seen := map[string]bool{}
-	if ownerLower != "" {
-		seen[ownerLower] = true
-	}
 
 	var out []connector.MessageParticipant
 	add := func(email, name, role string) {
@@ -218,11 +219,13 @@ func (m Meeting) ToRecord(connectorName string, raw []byte) connector.Normalized
 		EntityType: datasource.EntityActivity,
 		NaturalKey: connector.NaturalKey{SourceSystem: connectorName, SourceID: m.id},
 		Fields: capture.ActivityFields{
-			Kind:            "meeting",
-			Subject:         m.subject,
-			Body:            m.body,
-			OccurredAt:      m.occurredAt,
-			DurationSeconds: m.durationSeconds,
+			Kind:    "meeting",
+			Subject: m.subject,
+			Body:    m.body,
+			// The sink adds a mask of the subject to this.
+			CredentialsMasked: m.masked,
+			OccurredAt:        m.occurredAt,
+			DurationSeconds:   m.durationSeconds,
 			// A meeting is not directional (no inbound/outbound sender).
 			Direction: "",
 		},
@@ -274,17 +277,20 @@ func classifyAttendees(attendees []Actor, ownerDom string) (emails []string, ext
 }
 
 // buildBody folds the organizer, the attendee list, and the event description
-// into the stored meeting body, bounded to a legible excerpt.
-func buildBody(ev Event, attendeeEmails []string) string {
+// into the stored meeting body, bounded to a legible excerpt. Credentials are
+// masked before the cut, so a key the cut would split is still found whole.
+// masked says the mask changed the body.
+func buildBody(ev Event, attendeeEmails []string) (body string, masked bool) {
 	header := "Organizer: " + orDash(strings.TrimSpace(ev.Organizer.Email))
 	if len(attendeeEmails) > 0 {
 		header += "\nAttendees: " + strings.Join(attendeeEmails, ", ")
 	}
-	body := header
+	body = header
 	if desc := strings.TrimSpace(ev.Description); desc != "" {
 		body = header + "\n\n" + desc
 	}
-	return textcut.BytesMarked(body, MaxBodyLen, "…")
+	maskedBody := credentialmask.MaskText(body)
+	return textcut.BytesMarked(maskedBody, MaxBodyLen, "…"), maskedBody != body
 }
 
 // AllDayStart anchors an all-day date (YYYY-MM-DD) at noon UTC.

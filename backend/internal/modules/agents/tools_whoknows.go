@@ -12,6 +12,7 @@ package agents
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -40,7 +41,19 @@ type WhoKnowsReading struct {
 	// string here is "no name to show", never "a name was denied".
 	ContactName string
 	Colleagues  []KnownColleague
+	// CaptureGaps are colleagues on the contact's threads with no connected
+	// mailbox. They are information, never entries of Colleagues.
+	CaptureGaps []CaptureGap
 	Truncated   bool
+}
+
+// CaptureGap is one colleague whose mail with a contact is not captured. It
+// mirrors the REST ContactCaptureGap field for field.
+type CaptureGap struct {
+	UserID         ids.UUID  `json:"user_id"`
+	DisplayName    string    `json:"display_name"`
+	Invited        bool      `json:"invited"`
+	LastOnThreadAt time.Time `json:"last_on_thread_at"`
 }
 
 // WhoKnowsAnswer is what who_knows answers: the colleagues who know one
@@ -57,6 +70,7 @@ type WhoKnowsAnswer struct {
 	// nothing rather than a blank where a name belongs.
 	ContactName string           `json:"contact_name,omitempty"`
 	Colleagues  []KnownColleague `json:"colleagues"`
+	CaptureGaps []CaptureGap     `json:"capture_gaps"`
 }
 
 // --- who_knows (🟢 read) ---
@@ -116,7 +130,15 @@ func (t whoKnowsTool) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	if truncated {
 		noteWarning(ctx, warningSweepTruncated, whoKnowsTruncatedMessage)
 	}
+	gaps := reading.CaptureGaps
+	if gaps == nil {
+		gaps = []CaptureGap{}
+	}
+	if len(gaps) > 0 {
+		noteWarning(ctx, warningCaptureGap, captureGapMessage)
+	}
 	return json.Marshal(WhoKnowsAnswer{
 		ContactID: args.ContactID, ContactName: reading.ContactName, Colleagues: colleagues,
+		CaptureGaps: gaps,
 	})
 }

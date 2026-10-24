@@ -9,15 +9,16 @@ import { PanelNotices } from "../../design-system/panelnotices";
 import { QueryGate } from "../../design-system/querystates";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { Switch } from "../../design-system/switch";
+import { useToast } from "../../design-system/toast";
 import { lockReasonOr } from "../../format/settinglocks";
 import { useT } from "../../i18n";
-import { useLeadSettings, useUpdateLeadSettings } from "../../lib/leadsources";
+import { useLeadSettings, useUpdateLeadSettings } from "./leadhandling";
 import { useVocabGrants } from "./leadvocab.rows";
 
+export { LeadOriginsCard } from "./leadvocab.origins";
 // Every role reads these cards and only the custom_field write verbs change
 // them, so a control disables rather than hide.
 export { LeadDisqualifyReasonsCard } from "./leadvocab.reasons";
-export { LeadSourcesCard } from "./leadvocab.sources";
 
 // The first-response target's bounds (15 minutes to 7 days), checked here so a
 // refusal never leaves the page. backend/gates/settingbounds_test.go holds them
@@ -41,6 +42,7 @@ export function LeadHandlingCard() {
   const refusal = grants.refusal && t("leadHandling.readOnly");
   const query = useLeadSettings();
   const update = useUpdateLeadSettings();
+  const toast = useToast();
   const refusalId = useId();
   const refusedFor = (
     setting: "first_response_enabled" | "first_response_target_minutes",
@@ -80,7 +82,10 @@ export function LeadHandlingCard() {
                   )}
                   testId="lead-first-response-switch"
                   onChange={(next) =>
-                    update.mutate({ first_response_enabled: next })
+                    update.mutate(
+                      { first_response_enabled: next },
+                      { onSuccess: () => toast.show(t("settings.saved")) },
+                    )
                   }
                 />
               )}
@@ -103,7 +108,7 @@ export function LeadHandlingCard() {
               )}
               describedBy={refusedFor("first_response_target_minutes")}
               onCommit={(minutes) =>
-                update.mutate({ first_response_target_minutes: minutes })
+                update.mutateAsync({ first_response_target_minutes: minutes })
               }
             />
           </SettingList>

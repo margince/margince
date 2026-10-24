@@ -80,8 +80,9 @@ const RETIRED_NOUN: Record<string, RegExp> = {
 // catalog is judged against the retired noun.
 const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
   en: [
-    // These name the human making a promise or decision, not a contact record.
-    "approval.commitment.assignDecider",
+    // A booking guest is a human, not the CRM contact record type.
+    "scheduling.personalLinksFoot",
+    "scheduling.whenTitle",
 
     // Names this rename leaves alone: Settings → People, which heads the SEATS
     // group beside Company and Sales, not this record type.
@@ -132,7 +133,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "hold.heldByAddress",
     "hold.heldByDomain",
     "mailSharing.danger",
-    "mailSharing.posture.private",
+    "mailSharing.plate.private",
     "roompage.closeBody",
     "timeline.group.bulk_one",
     "timeline.group.bulk_other",
@@ -156,8 +157,14 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // A human being in a sentence about contacts rather than about the record.
     "deals.winReasonVerbal",
     "privacy.inboxAdminOnly",
+    // A human being on the committee, or who owns or sets something, not the record type.
+    "contact.card.committee_one",
+    "contact.card.committee_other",
   ],
   de: [
+    // The meeting host and a booking guest are humans, not the CRM contact
+    // record type.
+    "scheduling.personalLinksFoot",
     // Reviewed work names its human author, never a contact record.
     "homeRepair.reason.adopted",
     // These name users, recipients and participants, not contact records.
@@ -179,7 +186,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "approval.preview.intendedAttendee",
     // These name the human making a promise or decision, not a contact record.
     "approval.commitment.unresolved",
-    "approval.commitment.assignDecider",
 
     // The meeting host is a human, not the CRM contact record type.
     "scheduling.windowHorizon",
@@ -228,6 +234,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "share.rosterLoading",
     "share.subject",
     "users.deactivateConfirmBody",
+    "users.membersTitle",
     // Somebody on a message, an invitation or a deal room — a sender, a
     // recipient, an attendee, a guest.
     "access.issued.oneTime",
@@ -261,8 +268,13 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "sendPermission.reason.tooMany",
     "sendPermission.reason.unconfirmed",
     "sendPermission.reason.withdrawn",
+    // A human being on the committee, or who owns or sets something, not the record type.
+    "co.aside.visibleOnlyOwner",
+    "contact.card.committee_one",
+    "contact.card.committee_other",
   ],
   vi: [
+    "linkedinReach.sub",
     // Reviewed work names its human author, never a contact record.
     "homeRepair.reason.classificationAdopted",
     "homeRepair.reason.adopted",
@@ -306,7 +318,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "approval.responsibility.requestedFrom",
     "approval.commitment.promiser",
     "approval.commitment.unresolved",
-    "approval.commitment.assignDecider",
 
     // The sender category names a human role, not the contact record.
     "history.field.admission_sender_kind",
@@ -322,7 +333,9 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "recordAccess.option.owner",
     "recordAccess.option.ownerNeeded",
     "whoCanSee.reason.sameTeam",
-    // The meeting host is a human, not the CRM contact record type.
+    // The meeting host and a booking guest are humans, not the CRM contact
+    // record type.
+    "scheduling.personalLinksFoot",
     "scheduling.windowHorizon",
     "scheduling.windowLimits",
     "scheduling.calendarUnavailable",
@@ -395,6 +408,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "ob.digest.referenceNote",
     "ob.manual.icpHint",
     "contact.intro.stepRoutePick",
+    "settings.page.authentication.sub",
     "settings.voice.noticeAskQueueFull",
     "settings.voice.refusalSpeaker",
     "settings.voice.speakerQuestion",
@@ -414,7 +428,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "captureHealth.fact.exhausted",
     "captureActivity.col.message",
     "senders.byYou",
-    "compose.derivedReply",
     "log.attendee",
     "log.otherAttendees",
     "activity.detail.attendees",
@@ -443,12 +456,17 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "compose.audienceParticipantsHint",
     "compose.audienceSelected",
     "compose.audienceSelectedHint",
-    "compose.bccHint",
     "compose.consentBlocked",
     "compose.emptyRecipients",
     "compose.multiRecipientWarning",
     "compose.sharedUnsubscribeToken",
     "compose.threadGone",
+    // "người gửi" is a sender, a human the mailbox heard from.
+    "connectors.heldPointer.label",
+    "connectors.heldPointer.none",
+    "connectors.heldPointer.some_one",
+    "connectors.heldPointer.some_other",
+    "connectors.heldPointer.unknown",
     "connectors.mailPosture.help.classified",
     "connectors.mailPosture.help.held",
     "email.access.sentence.participants",
@@ -459,7 +477,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "hold.heldByAddress",
     "hold.heldByDomain",
     "mailSharing.danger",
-    "mailSharing.posture.private",
+    "mailSharing.plate.private",
     "roompage.banner.closed",
     "roompage.banner.expired",
     "roompage.banner.paused",
@@ -468,6 +486,17 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "roompage.pauseHint",
     "roompage.previewNotYours",
     "roompage.viewAsBuyer",
+    "roomtab.manage.contactHint",
+    "roomtab.manage.contactLabel",
+    "roomtab.manage.contactOwner",
+    "roomtab.manage.foot",
+    "roomtab.manage.liveHint",
+    "roomtab.manage.welcomeHint",
+    "roomtab.setup.invite",
+    "roomtab.setup.inviteHint",
+    "roomtab.setup.textHint",
+    "roomtab.setup.threadHint",
+    "roomtab.welcomeEmpty",
     "sched.held.consentWithdrawn",
     "sched.recipientsMore",
     "sched.recipientsUnknown",
@@ -546,7 +575,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "heldThreads.heldByOthers_one",
     "heldThreads.heldByOthers_other",
     "lead.bulkOwnerPick",
-    "linkedinReach.sub",
     "log.transcriptHint",
     "noticeDuty.what",
     "ob.manual.buying_centerHint",
@@ -595,12 +623,12 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "systemJob.assign_owner_release",
     "history.field.owner_id",
     "share.access.writeNote",
+    "worklist.owner.left",
     "list.owner",
     "co.pulse.owner",
     "approval.field.owner",
     "lead.bulkOwner",
     "lead.ownerLabel",
-    "deal.briefEmptyDetail",
     "recordRoles.intro",
     "bulk.owner",
     "whoCanSee.group.owner",
@@ -628,6 +656,19 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "magic.consequence.owner_changed",
     "legalReview.packOwner",
     "legalReview.settingsHint",
+    "legalReview.col.requestedBy",
+    "legalReview.col.decidedBy",
+    // A human being on the committee, or who owns or sets something, not the record type.
+    "co.overview.noEconomicBuyer",
+    "co.aside.visibleEveryone",
+    "co.aside.visibleOnlyOwner",
+    "deal.committee.gap.singleThreaded",
+    "deal.committee.foot",
+    "contact.card.noEconomicBuyer",
+    "contact.card.committee_one",
+    "contact.card.committee_other",
+    "contact.aside.ownerGone",
+    "lead.signal.setBy",
   ],
 };
 

@@ -1,3 +1,4 @@
+import type { StatusKind } from "../design-system/statusbadge";
 import type { MessageKey } from "../i18n/en";
 import { problemFieldErrors } from "./problem";
 
@@ -58,15 +59,12 @@ export const DSR_STATUS_LABEL: Record<DsrStatus, MessageKey> = {
   rejected: "privacy.statusRejected",
 };
 
-// Work in flight reads info; a closed request reads its outcome.
-export const DSR_STATUS_TONE: Record<
-  DsrStatus,
-  "info" | "success" | "danger" | undefined
-> = {
-  open: undefined,
-  in_progress: "info",
-  fulfilled: "success",
-  rejected: "danger",
+// Rejected is an outcome the officer chose, not a breakage, so it stays grey.
+export const DSR_STATUS_KIND: Record<DsrStatus, StatusKind> = {
+  open: "neutral",
+  in_progress: "neutral",
+  fulfilled: "done",
+  rejected: "neutral",
 };
 
 // The status machine refuses an illegal move with a validation error naming

@@ -278,3 +278,20 @@
     min-height: max(var(--controlHeight), 44px);
   }
 }
+
+/* The setup reminder: a ghost Button whose count Badge carries the progress. */
+.setup-reminder {
+  white-space: nowrap;
+}
+/* No room for the words at phone width: the count stays, and the words stay
+   in the accessible name. */
+@media (max-width: 700px) {
+  .setup-reminder-word {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}

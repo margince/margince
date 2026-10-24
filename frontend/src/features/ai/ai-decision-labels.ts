@@ -153,12 +153,9 @@ export function gaveUpLabel(code: string, t: T): string {
   return words ? t(words.phrase) : code;
 }
 
-// Why an attempt ran, where the answer is that the decision model before it did
-// not stand. An explicit switch rather than a key built from the wire string:
-// the catalog is a closed union, and the reason field is a free string the
-// server widens without notice. Anything else is shown as sent — an ordinary
-// fallback reason is already an operator's word, and an unknown one is "some
-// reason", never a refusal.
+// Why an attempt ran. An explicit switch rather than a key built from the wire
+// string. The catalog is a closed union, and the server widens the free reason
+// string without notice. An unknown reason is shown as sent, never a refusal.
 export function attemptReasonLabel(reason: string, t: T): string {
   switch (reason) {
     case "decision_below_floor":
@@ -173,6 +170,12 @@ export function attemptReasonLabel(reason: string, t: T): string {
       return t("aicalls.reason.decision_uncertified");
     case "decision_local_only":
       return t("aicalls.reason.decision_local_only");
+    case "provider_error":
+      return t("aicalls.reason.provider_error");
+    case "schema_invalid":
+      return t("aicalls.reason.schema_invalid");
+    case "budget_degrade":
+      return t("aicalls.reason.budget_degrade");
     case "timeout":
       return t("aicalls.reason.timeout");
     default:

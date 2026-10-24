@@ -1,0 +1,52 @@
+/* NextBar: one row at the top of a record's Overview. The word "Next" and a
+   rule, the move and why, then its verbs at the end edge. */
+
+.next-bar-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-5);
+}
+.next-bar-label {
+  flex: none;
+  font: var(--fontHeadingXSmall);
+  color: var(--textSecondary);
+  white-space: nowrap;
+}
+.next-bar-rule {
+  align-self: stretch;
+  inline-size: 1px;
+  background: var(--borderSubtle);
+}
+.next-bar-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  flex: 1 1 280px;
+  min-inline-size: 0;
+}
+.next-bar-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.next-bar-title {
+  font: var(--fontHeadingSmall);
+  color: var(--textPrimary);
+}
+.next-bar-sub,
+.next-bar-none {
+  font: var(--fontBody);
+  color: var(--textSecondary);
+}
+/* Sized to its verbs, so the cap is what lets it wrap on a narrow bar. */
+.next-bar-verbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  flex: none;
+  max-width: 100%;
+}

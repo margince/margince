@@ -169,7 +169,6 @@ describe("depth", () => {
       // The capture mark while the agent is reading: a halo in the same tint as
       // the mark's fill. That is the state, not an elevation.
       "src/features/contacts/contactnetwork.css: box-shadow: 0 0 0 4px var(--accentLight)",
-      "src/features/import/backfill.css: box-shadow: 0 0 0 4px var(--aiLight)",
       // The relay step the reader is on, ringed the same way — a position in a
       // sequence rather than a lift off the page.
       // The pulse marking the finding a jump just landed on: a ring that holds

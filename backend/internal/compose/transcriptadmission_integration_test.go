@@ -17,9 +17,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func TestTranscriptAdmissionPreservesHistoryAndFutureDeadlines(t *testing.T) {
+func TestTranscriptAdmissionProposesLateLogsAndFutureDeadlines(t *testing.T) {
 	for _, future := range []bool{false, true} {
-		t.Run(map[bool]string{false: "historical", true: "future deadline"}[future], func(t *testing.T) {
+		t.Run(map[bool]string{false: "late log", true: "future deadline"}[future], func(t *testing.T) {
 			e := setupTranscript(t)
 			now := time.Date(2026, 10, 18, 12, 0, 0, 0, time.UTC)
 			old := now.AddDate(-2, 0, 0)
@@ -30,7 +30,7 @@ func TestTranscriptAdmissionPreservesHistoryAndFutureDeadlines(t *testing.T) {
 			if future {
 				due = "2026-11-20"
 			}
-			payload, err := json.Marshal(map[string]any{"proposals": []map[string]any{{"summary": "Send revised pricing", "owner": "Priya", "source_lines": []int{3}, "confidence": 0.9, "due_date": due, "commitment": openCommitmentMeaning(due, "Friday")}}})
+			payload, err := json.Marshal(map[string]any{"proposals": []map[string]any{{"summary": "Send revised pricing", "owner": "Priya", "promiser_ref": "seat:" + e.Rep1.String(), "source_lines": []int{3}, "confidence": 0.9, "due_date": due, "commitment": openCommitmentMeaning(due, "Friday")}}})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -60,18 +60,18 @@ func TestTranscriptAdmissionPreservesHistoryAndFutureDeadlines(t *testing.T) {
 				t.Fatalf("decisions = %#v", source.CommitmentAdmissions)
 			}
 			decision := (*source.CommitmentAdmissions)[0]
-			if decision.CurrentWork != future {
-				t.Fatalf("decision = %#v", decision)
-			}
-			want := 0
+			wantOutcome := CommitmentHistoricalProposed
 			if future {
-				want = 1
+				wantOutcome = CommitmentProposed
 			}
-			if got := e.WsCount(t, `SELECT count(*) FROM approval`); got != want {
-				t.Fatalf("proposals = %d, want %d", got, want)
+			if !decision.CurrentWork || decision.Outcome != string(wantOutcome) {
+				t.Fatalf("decision = %#v, want %s held open for the card", decision, wantOutcome)
+			}
+			if got := e.WsCount(t, `SELECT count(*) FROM approval`); got != 1 {
+				t.Fatalf("proposals = %d, want 1", got)
 			}
 			if e.taskCount(t) != 0 {
-				t.Fatal("an unnamed owner received an automatic task")
+				t.Fatal("a promise its colleague did not say aloud became an automatic task")
 			}
 		})
 	}

@@ -19,6 +19,7 @@ import {
 } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { Badge } from "./atoms";
+import { moveLabel } from "./emailentry";
 import type { ContactOn } from "./participants";
 import type { Provenance } from "./trust";
 import "./composed.css";
@@ -244,47 +245,28 @@ export function isConversationKind(kind: string): boolean {
 }
 
 /**
- * MoveFlag is whose move a conversation is waiting on, read off its newest
- * message: their word standing last means the move is ours. One spelling
- * serves every cut. The same chip shows on the row in the full chronology and
- * in the Conversations reading. A thread that read "your move" on one cut and
- * said nothing on the other would be two claims about one conversation.
- *
- * Only on the row that stands for the conversation (a collapsed thread, or a
- * lone message). Never on the members inside an expanded thread, where every
- * reply would otherwise carry a verdict about the whole exchange.
+ * MoveFlag is whose move a conversation waits on: the server's move for its
+ * newest message (moveLabel). A colleague's inbound invitation owes nobody a
+ * reply, so the direction cannot say it. Only on the row that stands for the
+ * conversation, never on the members of an expanded thread.
  */
-// Whether the entry carries a direction a move can be read off. Both flag
-// sites share this guard, so a wrapper cannot render an empty chip row.
-export function conversationDirection(
-  entry: TimelineEntry,
-): "inbound" | "outbound" | undefined {
-  if (!CONVERSATION_KINDS.has(entry.kind)) {
-    return undefined;
-  }
-  return entry.direction === "inbound" || entry.direction === "outbound"
-    ? entry.direction
-    : undefined;
+export function entryMove(entry: TimelineEntry): MessageKey | undefined {
+  return moveLabel(entry.emailSummary, entry.withheld === true);
 }
 
 export function MoveFlag({ entry }: Readonly<{ entry: TimelineEntry }>) {
   const t = useT();
-  // A withheld row claims no move, in either direction. "Your move" over
-  // content the reader may not read tells them they owe a reply to words they
-  // are not allowed to see. The row's own per-message move label is already
-  // suppressed for that reason. Leaving this one unsuppressed made the two
-  // disagree about one row, and this is the one on screen.
-  if (entry.withheld) {
+  const move = entryMove(entry);
+  if (!move) {
     return null;
   }
-  const direction = conversationDirection(entry);
-  if (direction === "inbound") {
-    return <Badge tone="warning">{t("convo.yourMove")}</Badge>;
-  }
-  if (direction === "outbound") {
-    return <Badge>{t("convo.waitingOnThem")}</Badge>;
-  }
-  return null;
+  return (
+    <Badge
+      tone={entry.emailSummary?.move === "needs_reply" ? "warning" : undefined}
+    >
+      {t(move)}
+    </Badge>
+  );
 }
 
 /**

@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { SETTINGS_PAGES } from "./settingscatalog";
+import { SETTINGS_PAGES } from "../../lib/settingscatalog";
 
 // Every catalog page renders something, and nothing renders that is not a page.
 //
@@ -51,7 +51,7 @@ const CARDS_THE_REGISTER_REACHED = [
   "FxRatesCard",
   "CompanyContextCard",
   "SignInMethodsCard",
-  "OAuthAppCards",
+  "OAuthAppsCard",
   "ExtensionAccessCard",
   "UsersAdminCard",
   "TeamsCard",
@@ -65,7 +65,7 @@ const CARDS_THE_REGISTER_REACHED = [
   "CustomFieldsAdmin",
   "TagVocabularyCard",
   "PipelinesCard",
-  "LeadSourcesCard",
+  "LeadOriginsCard",
   "LeadDisqualifyReasonsCard",
   "LeadHandlingCard",
   "ProductsAdmin",
@@ -167,7 +167,8 @@ describe("the split lost no card", () => {
     // The same for the card that left Connections, which is also a tab
     // function: gone from the tab, not merely gone from the case line.
     expect(bodyOf("ConnectionsTab")).not.toContain("<MailSharingCard />");
-    expect(bodyOf("ConnectionsTab")).toContain("<MailSharingPostureRow />");
+    // What it says stays here, as the plate under the mail card.
+    expect(bodyOf("ConnectionsTab")).toContain("<ConnectorsCard />");
   });
 
   it("names enough cards to make that meaningful", () => {

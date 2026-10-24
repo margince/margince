@@ -12,6 +12,7 @@ import {
 import { Badge } from "../../../design-system/atoms";
 import { formatDate } from "../../../format/format";
 import { useLocale, useT } from "../../../i18n";
+import { bucketLabel } from "../../../lib/bucketlabel";
 import { throwProblem } from "../../../lib/problem";
 import { useRecordZone } from "../../../lib/recordzone";
 import { CoverageExplorer } from "../../contacts/coverageexplorer";
@@ -211,7 +212,7 @@ export function CompanyContactsList({
             key: "strength",
             header: t("co.contacts.strength"),
             cell: (contact: CompanyContact) => (
-              <span>{t(`strength.bucket.${contact.strength.bucket}`)}</span>
+              <span>{bucketLabel(contact.strength.bucket, t)}</span>
             ),
             sort: "strength",
             numeric: true,

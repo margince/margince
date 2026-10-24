@@ -23,7 +23,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/margince/margince/backend/internal/compose/installseam"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -165,7 +164,7 @@ func NewCloseDateCorrector(pool *pgxpool.Pool, log *slog.Logger) *deals.CloseDat
 	return deals.NewCloseDateCorrector(db,
 		closeDatePolicy{svc: NewApprovalsService(db), owner: owner},
 		quietReviewReader{db: db, owner: owner},
-		log, installseam.Deals()).WithBaseLanguage(installationLanguage(pool))
+		log, DealsInstallation()).WithBaseLanguage(installationLanguage(pool))
 }
 
 // closeDateConfirmEffect executes an approved close-date confirmation:

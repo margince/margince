@@ -19,12 +19,14 @@ package compose
 import (
 	"context"
 	"log/slog"
+	"sync/atomic"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // borderlineBacklog seeds senders whose answers all land between the two
@@ -114,5 +116,37 @@ func TestASenderTheBudgetCouldNotPayForIsLeftForAHuman(t *testing.T) {
 	// claimable would be re-judged next pass at the cost of another attempt.
 	if n := countIn(t, e, `SELECT count(*) FROM capture_pending_counterparty WHERE status = 'pending'`); n != 0 {
 		t.Errorf("%d senders were left claimable rather than answered", n)
+	}
+}
+
+// unreadableVerdictBrain replies with text no verdict can be read from, so
+// every judgment fails and no sender is ever answered.
+type unreadableVerdictBrain struct{ calls atomic.Int64 }
+
+func (b *unreadableVerdictBrain) Complete(context.Context, model.Request) (model.Response, error) {
+	b.calls.Add(1)
+	return model.Response{Text: "not a verdict"}, nil
+}
+
+// A model that never produces a usable answer still spends the cap. Counting
+// only answered senders would let a failing model run the pass over every
+// sender that is due. A claim of eight would also run past a cap of three.
+func TestAFailingModelStillSpendsTheVerdictPassCap(t *testing.T) {
+	e := integration.Setup(t)
+	const passCap = 3
+	for range 12 {
+		address := "unreadable-" + ids.NewV7().String() + "@failing.example"
+		seedPendingDisposition(t, e, address, "failing.example", seedCapturedMail(t, e, address, "hello"))
+	}
+	brain := &unreadableVerdictBrain{}
+
+	engine := NewCounterpartyVerdictEngine(e.Pool, brain, CaptureConfig{}, slog.Default())
+	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), e.WS), passCap); err != nil {
+		t.Fatalf("verdict pass: %v", err)
+	}
+
+	if got := brain.calls.Load(); got != passCap {
+		t.Fatalf("a pass under a cap of %d asked the model about %d senders while none could be answered, want %d",
+			passCap, got, passCap)
 	}
 }

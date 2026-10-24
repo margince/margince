@@ -3,10 +3,11 @@
 
 import type { components } from "../../api/schema";
 import { Disclosure } from "../../design-system/atoms";
-import { Callout } from "../../design-system/callout";
 import { NumberSettingRow } from "../../design-system/numbersetting";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
+import { PanelNotices } from "../../design-system/panelnotices";
 import { QueryGate } from "../../design-system/querystates";
+import { useSavePage } from "../../design-system/savepage";
 import { SettingList } from "../../design-system/settingrow";
 import { boundsText } from "../../format/bounds";
 import { formatNumber } from "../../format/format";
@@ -14,7 +15,6 @@ import { formatInterval } from "../../format/interval";
 import { lockReasonOr } from "../../format/settinglocks";
 import { useLocale, usePlural, useT, type Words } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
-import { problemMessageOf } from "../../lib/problem";
 import { useInstallationSettings } from "../../lib/uploadlimit";
 import { useUpdateInstallationSettings } from "../sign-in/installation-settings";
 
@@ -183,6 +183,8 @@ function OperationsCard({
   const canManage = useCanWrite("installation_settings", "update");
   const query = useInstallationSettings(canRead);
   const update = useUpdateInstallationSettings(() => undefined);
+  // In a page the bar shows a refused save, so the card would say it twice.
+  const inPage = useSavePage() !== null;
   if (!canRead) {
     return null;
   }
@@ -206,7 +208,11 @@ function OperationsCard({
             t,
             undefined,
           )}
-          onCommit={(next) => update.mutate({ [row.property]: next })}
+          onCommit={(next) =>
+            inPage
+              ? update.mutateAsync({ [row.property]: next })
+              : update.mutate({ [row.property]: next })
+          }
         />
       ))}
     </SettingList>
@@ -231,17 +237,13 @@ function OperationsCard({
         {fold && gated}
       </PanelBody>
       {!fold && gated}
-      {update.isError && (
-        <PanelBody>
-          <Callout
-            tone="danger"
-            kind="outcome"
-            title={t("operations.updateFailed")}
-          >
-            {problemMessageOf(update.error, t)}
-          </Callout>
-        </PanelBody>
-      )}
+      <PanelNotices
+        refused={
+          update.isError && !inPage
+            ? { title: t("operations.updateFailed"), error: update.error }
+            : undefined
+        }
+      />
     </Panel>
   );
 }

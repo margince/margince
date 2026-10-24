@@ -1,18 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The deal's own Deal Room reading, shared by two doors: the record's Deal
-// Room tab (deals.tsx) and the room's own page (dealroompage.tsx), reached
-// from a mailed link or a bookmark. Both mount the same sections rather than
-// each drawing its own — a second copy of "who is in the room" is how a tab
-// and a page come to disagree about it.
+// The deal's own Deal Room reading. The record's tab and the room's own page
+// (dealroompage.tsx) mount the same sections, so the two cannot disagree.
 //
-// The tab is the narrower of the two: it carries the reading, the editable
-// text and the preview, and links to the room's own page for the room's verbs
-// (pause, close, set an expiry), which stand there beside its identity band.
+// The tab leads with the room's band, what is still missing, and the brief,
+// then sets the documents beside the conversation. Its settings open in a
+// dialog; the room's page keeps them for a mailed link.
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { DoorOpen, ExternalLink } from "lucide-react";
+import { DoorOpen, ExternalLink, Settings2 } from "lucide-react";
 import { useState } from "react";
 import { api } from "../../../api/client";
 import type { components } from "../../../api/schema";
@@ -33,17 +30,14 @@ import { ConfirmModal } from "../../../design-system/confirmmodal";
 import { ErrorLine } from "../../../design-system/errorline";
 import { Panel, PanelBody } from "../../../design-system/panel";
 import { QueryStates } from "../../../design-system/querystates";
-import { formatNumber } from "../../../format/format";
-import { useLocale, useT } from "../../../i18n";
+import { useT } from "../../../i18n";
 import { useCanWrite } from "../../../lib/capability";
 import { problemMessageOf, unwrap } from "../../../lib/problem";
-import { navigate } from "../../../lib/router";
-import {
-  buyerLink,
-  DealRoomAccess,
-  useRoomAttendance,
-} from "../dealroomaccess";
+import { buyerLink, DealRoomAccess } from "../dealroomaccess";
 import { DealRoomConversation } from "../dealroomconversation";
+import { RoomBrief } from "./dealroombrief";
+import { RoomBand, RoomSetup, StateAction, StateBanner } from "./dealroomdeck";
+import { ManageRoomDialog } from "./dealroommanage";
 import "./dealroomtab.css";
 
 type DealRoom = components["schemas"]["DealRoom"];
@@ -83,74 +77,52 @@ function RoomReading({
   const t = useT();
   const finished = FINISHED_STATES.has(room.state);
   const refusal = refusalFor(finished, mayWrite, t);
+  const [managing, setManaging] = useState(false);
+  // Each opening remounts the dialog, so it starts from the room as it is.
+  const [opening, setOpening] = useState(0);
+  const manage = () => {
+    setOpening((n) => n + 1);
+    setManaging(true);
+  };
   return (
     <div className="record-stack">
-      {/* Who has been in, the one way to see what they see, and the way to the
-          room's own verbs. They stand with the attendance rather than inside a
-          panel: they are the room's, not its access list's or its text's. */}
-      <div className="roomtab-head">
-        <RoomFacts room={room} />
-        {mayWrite ? (
-          <div className="roomtab-verbs">
-            <ViewAsBuyerButton room={room} />
-            <ManageRoomButton room={room} />
-          </div>
-        ) : null}
-      </div>
-      {/* Who may walk in, and the verbs that change it, ON the tab rather than
-          only in the record's details pane: the pane is shut when a reader
-          arrives, so a room they had just opened offered them no way to let
-          anybody into it. */}
-      <DealRoomAccess room={room} mayManage={mayWrite && !finished} />
-      <RoomText room={room} refusal={refusal} />
-      <DealRoomConversation room={room} refusal={refusal} />
-    </div>
-  );
-}
-
-// The way to the room's own page, where its lifecycle verbs live — and, once
-// the room is closed, the revoke and new-link verbs this tab stops offering.
-function ManageRoomButton({ room }: Readonly<{ room: DealRoom }>) {
-  const t = useT();
-  return (
-    <Button
-      variant="ghost"
-      onClick={() =>
-        navigate({ screen: "deals", id: room.deal_id, id2: "room" })
-      }
-    >
-      <DoorOpen aria-hidden />
-      {t("roompage.manage")}
-    </Button>
-  );
-}
-
-// Who is in the room, under its name: how many were invited, how many have
-// been through the door, and when a buyer last looked. The counts come from
-// the same participants read the Access panel makes, so this is a second
-// READING of one request rather than a second request.
-//
-// It is a summary and the panel is the register: the line says how many, the
-// panel says who — which is why the two are not one fact said twice.
-export function RoomFacts({ room }: Readonly<{ room: DealRoom }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const { invited, active, lastSeen, counted } = useRoomAttendance(room.id);
-  if (!counted) {
-    return null;
-  }
-  return (
-    <p className="t-caption roompage-facts">
-      <span>
-        {t("room.card.contacts", {
-          invited: formatNumber(invited, locale),
-          active: formatNumber(active, locale),
-        })}
-      </span>
-      {lastSeen ? (
-        <span>{t("room.card.lastSeen", { when: lastSeen.slice(0, 10) })}</span>
+      <RoomBand
+        room={room}
+        verbs={
+          mayWrite ? (
+            <>
+              <ViewAsBuyerButton room={room} />
+              <Button onClick={manage}>
+                <Settings2 aria-hidden />
+                {t("roompage.manage")}
+              </Button>
+            </>
+          ) : null
+        }
+      />
+      <StateBanner
+        room={room}
+        action={
+          mayWrite ? <StateAction room={room} onManage={manage} /> : undefined
+        }
+      />
+      {mayWrite && !finished ? (
+        <RoomSetup room={room} onEditText={manage} />
       ) : null}
-    </p>
+      <RoomBrief roomId={room.id} />
+      <DealRoomConversation room={room} refusal={refusal} layout="deck" />
+      {/* Who may walk in, and the verbs that change it, ON the tab: the
+          record's details pane is shut when a reader arrives. */}
+      <DealRoomAccess room={room} mayManage={mayWrite && !finished} />
+      {mayWrite ? (
+        <ManageRoomDialog
+          key={opening}
+          room={room}
+          open={managing}
+          onClose={() => setManaging(false)}
+        />
+      ) : null}
+    </div>
   );
 }
 

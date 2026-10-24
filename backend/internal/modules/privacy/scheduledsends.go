@@ -123,8 +123,7 @@ func redactScheduledSends(ctx context.Context, tx pgx.Tx, reason string, emails 
 }
 
 // closeReviewsForErasedMessages ends the reviews standing over the messages the
-// scrub above just cancelled, and retracts the cards those reviews were handed
-// to.
+// scrub above just cancelled.
 //
 // WHY THIS IS NOT ALREADY DONE by the erasure's own review scrub. That scrub
 // (erasure_consent.go, clearRefusedSendReviews) empties the REFUSALS — the
@@ -135,60 +134,15 @@ func redactScheduledSends(ctx context.Context, tx pgx.Tx, reason string, emails 
 // emptied message at an emptied address list, from a system that has just
 // certified the subject's data destroyed.
 //
-// WHY NOT THE STAGED-APPROVAL SWEEP EITHER. That sweep finds cards by the
-// subject they name — contact target, lead twin, or the address quoted in the
-// payload. A routed review's card names none of those: its payload is the
-// review id and the intent id, because the card asks "may this refused send go"
-// and never repeats who it was to. So the card survives every arm of that
-// match, and the only thing that knows it exists is the review row itself.
+// Cancelled, since nothing was sent. The account matches the one consent's own
+// closer writes for the same move, so two cancelled reviews read alike
+// whichever engine ended them.
 //
-// CANCELLED, not resolved: nothing was sent. The account this writes is the one
-// consent's own closer writes for the same move, in the same words, because a
-// reader comparing two cancelled reviews should not have to work out which
-// engine ended each.
-//
-// IN SQL HERE RATHER THAN THROUGH CONSENT'S CLOSER, for the reason the approval
-// withdrawal above is in SQL: privacy is a sibling of both consent and
-// approvals and may import neither, and an erasure runs as one destructive
-// transaction that must not depend on a seam a deployment could leave unwired.
-// A review left live because a port was nil is a subject's Art. 17 request
-// half-done.
+// The SQL is written here because privacy may not import consent. An erasure
+// must not depend on a seam a deployment could leave unwired.
 func closeReviewsForErasedMessages(ctx context.Context, tx pgx.Tx, reason string, intents []ids.UUID) error {
 	if len(intents) == 0 {
 		return nil
-	}
-	// THE CARD FIRST, THE REVIEW SECOND, and the order is the interesting part.
-	//
-	// Every path that touches both rows takes the APPROVAL lock before the
-	// review's: routing stages the card and then marks the review awaiting, a
-	// decline locks the approval and reaches the review through its declined
-	// effect, and consent's own closer was reordered to match. Taking them the
-	// other way round here would make this erasure the one writer that inverts
-	// them, and a cancellation or a decline landing concurrently would deadlock
-	// — with the erasure as one of the two victims, which is an Art. 17 request
-	// failing on a lock.
-	//
-	// It also puts this statement in step with redactStagedApprovals, which
-	// runs a few lines later in the SAME transaction and locks approvals too.
-	//
-	// Forced expiry rather than deletion, matching that sweep: a decider who
-	// had the card open learns the question ended instead of finding an empty
-	// row where their work was.
-	const pendingReviews = `status = 'pending' AND id IN (
- SELECT approval_id FROM communication_review
- WHERE delivery_intent_id = ANY(@intents) AND resolved_at IS NULL AND approval_id IS NOT NULL)`
-	args := pgx.StrictNamedArgs{"intents": intents}
-	if err := eraseApprovalNoticesMatching(ctx, tx, reason, causeContactErasure, pendingReviews, args); err != nil {
-		return err
-	}
-	if _, err := tx.Exec(ctx, `
-		UPDATE approval
-		   SET `+blankStagedProposal+`,
-		       status = 'expired',
-		       decision_reason = '`+subjectWithdrawal+`',
-		       decided_at = now()
-		 WHERE `+pendingReviews, args); err != nil {
-		return fmt.Errorf("retracting the cards asking about the subject's erased messages: %w", err)
 	}
 	// RETURNING the ids, so each closure can be tombstoned below. An erasure
 	// that ended somebody's work and recorded nothing is exactly the silent

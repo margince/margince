@@ -8,6 +8,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
+const fieldForecastCategory = "forecast_category"
+
 // The activity report's own vocabulary. Spelled here rather than borrowed from
 // an unrelated surface that happens to use the same words: renaming a report
 // dimension must never rename a capture target type.
@@ -153,7 +155,7 @@ var prebuiltReports = map[string]reportSpec{
 		table:     tableDeal,
 		joins:     []string{joinStageForWinProbability},
 		baseWhere: whereArchivedNull,
-		basePlain: "live (unarchived) deals",
+		basePlain: "live (unarchived) deals; native money requires a currency split, while base money uses the shared as-of valuation",
 		// The Pipeline board's column totals, over the same deals the board
 		// draws as cards: every deal the reader may see. Its owner dial goes
 		// through the owner gate (reportownergate.go).
@@ -170,10 +172,10 @@ var prebuiltReports = map[string]reportSpec{
 			// could not answer while partner_sourced was a filter alone.
 			fieldPartnerCompanyID: colPartnerCompanyID,
 		},
-		measures: map[string]string{
+		measures: baseMoneyMeasures(map[string]string{
 			fieldAmountMinor:         colAmountMinor,
 			fieldWeightedAmountMinor: weightedAmountMinorExpr,
-		},
+		}),
 		nativeMeasures: nativeMoney(fieldAmountMinor, fieldWeightedAmountMinor),
 		// No stage_id filter: nothing serves it (the screen groups BY stage_id
 		// instead), and a filter key this report has no caller for is public
@@ -183,11 +185,12 @@ var prebuiltReports = map[string]reportSpec{
 		// the engine's generic `expr = $n` rendering already handles with no
 		// special-casing.
 		filters: map[string]string{
-			fieldPipelineID:     colPipelineID,
-			fieldStatus:         colStatus,
-			fieldOwnerID:        colOwnerID,
-			fieldCompanyID:      colCompanyID,
-			fieldPartnerSourced: deals.PartnerSourcedSQL("t"),
+			fieldForecastCategory: "t.forecast_category",
+			fieldPipelineID:       colPipelineID,
+			fieldStatus:           colStatus,
+			fieldOwnerID:          colOwnerID,
+			fieldCompanyID:        colCompanyID,
+			fieldPartnerSourced:   deals.PartnerSourcedSQL("t"),
 			// Narrowing to ONE partner, beside the boolean that asks whether
 			// there is one. The board's totals are read from this report with
 			// the deals screen's own filter dials, so a dial the screen offers
@@ -243,12 +246,14 @@ var prebuiltReports = map[string]reportSpec{
 			fieldStatus:  colStatus,
 			fieldOwnerID: colOwnerID,
 			fieldSource:  colSource,
+			fieldOrigin:  colOrigin,
 		},
 		measures: map[string]string{},
 		filters: map[string]string{
 			fieldStatus:  colStatus,
 			fieldOwnerID: colOwnerID,
 			fieldSource:  colSource,
+			fieldOrigin:  colOrigin,
 		},
 		defaultBy: []string{fieldStatus},
 		defaultAggs: []reportAggregate{
@@ -347,12 +352,12 @@ var prebuiltReports = map[string]reportSpec{
 		baseWhere: whereOpenDeal,
 		basePlain: "open, unarchived deals (win probability read live from the deal's current stage; a commit/best_case deal whose close date is past, missing, or provisional reports as 'slipped' instead, per formulas §11)",
 		dimensions: map[string]string{
-			fieldOwnerID:        colOwnerID,
-			fieldStageID:        colStageID,
-			fieldPipelineID:     colPipelineID,
-			"forecast_category": forecastCategoryExpr,
-			fieldCurrency:       colCurrency,
-			fieldWinProbability: colWinProbability,
+			fieldOwnerID:          colOwnerID,
+			fieldStageID:          colStageID,
+			fieldPipelineID:       colPipelineID,
+			fieldForecastCategory: forecastCategoryExpr,
+			fieldCurrency:         colCurrency,
+			fieldWinProbability:   colWinProbability,
 			// The same question deals-by-stage answers, asked of the pipeline
 			// rather than of what already landed: what is a partner bringing
 			// us THIS quarter. It was on one of the two deal reports and not
@@ -377,20 +382,18 @@ var prebuiltReports = map[string]reportSpec{
 		//
 		// Priced through the SAME expressions pipeline-current uses, so the two
 		// reports cannot value one deal differently.
-		measures: map[string]string{
+		measures: baseMoneyMeasures(map[string]string{
 			fieldAmountMinor:         colAmountMinor,
 			fieldWeightedAmountMinor: weightedAmountMinorExpr,
-			fieldAmountBaseMinor:     pipelineBaseValueExpr,
-			fieldWeightedBaseMinor:   pipelineWeightedBaseExpr,
-		},
+		}),
 		nativeMeasures: nativeMoney(fieldAmountMinor, fieldWeightedAmountMinor),
 		filters: map[string]string{
-			fieldOwnerID:        colOwnerID,
-			fieldStageID:        colStageID,
-			fieldPipelineID:     colPipelineID,
-			"forecast_category": forecastCategoryExpr,
-			fieldCurrency:       colCurrency,
-			fieldProjectID:      colProjectID,
+			fieldOwnerID:          colOwnerID,
+			fieldStageID:          colStageID,
+			fieldPipelineID:       colPipelineID,
+			fieldForecastCategory: forecastCategoryExpr,
+			fieldCurrency:         colCurrency,
+			fieldProjectID:        colProjectID,
 			// Narrowing to ONE partner, the dial the deals screen now offers.
 			// partner_sourced is deliberately absent here and present on
 			// deals-by-stage: that report's filters mirror the board's dials,
@@ -403,7 +406,7 @@ var prebuiltReports = map[string]reportSpec{
 		// per row when the caller cannot open it, so grouping by it must not
 		// name one they could not have seen.
 		referenceScopes: map[string]string{colPartnerCompanyID: tableCompany},
-		defaultBy:       moneyDefaultBy("forecast_category"),
+		defaultBy:       moneyDefaultBy(fieldForecastCategory),
 		defaultAggs: []reportAggregate{
 			{Fn: aggFnCount, As: aliasDeals},
 			{Fn: aggFnSum, Field: fieldAmountMinor, As: "unweighted_minor"},

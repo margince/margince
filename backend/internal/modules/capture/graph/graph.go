@@ -130,7 +130,11 @@ func AuthRequestFrom(code, redirectURI string) (connector.AuthRequest, error) {
 // Descriptor is the connector's static metadata — the shared Microsoft shape,
 // named "graph".
 func (c *Connector) Descriptor() connector.Descriptor {
-	return graphconn.Descriptor(connectorName)
+	d := graphconn.Descriptor(connectorName)
+	// Declared here and not in graphconn: the calendar connector shares that
+	// descriptor and reads no mail, so it anchors nothing.
+	d.FirstSyncWindow = anchorWindow
+	return d
 }
 
 // Authenticate exchanges the authorization code for a refresh token, resolves
@@ -195,7 +199,18 @@ func (c *Connector) GrantedScopes(auth connector.Auth) ([]string, error) {
 // honors (ErrDeltaGone, HTTP 410) degrades to the same bounded re-anchor
 // rather than a full re-scan. The advanced deltaLink is returned as the new
 // cursor; the registry persists it only on a fully-successful Sync.
+// Sync bounds a first pull at its own window. The registry calls SyncFrom with
+// a point it held instead, so a retry of a first sync reads where the first
+// attempt did.
 func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connector.Cursor, sink connector.Sink) (connector.Cursor, error) {
+	return c.SyncFrom(ctx, auth, cursor, c.now().Add(-anchorWindow), sink)
+}
+
+// SyncFrom is Sync with the first pull's lower bound supplied.
+func (c *Connector) SyncFrom(
+	ctx context.Context, auth connector.Auth, cursor connector.Cursor,
+	from time.Time, sink connector.Sink,
+) (connector.Cursor, error) {
 	var st graphconn.AuthState
 	if err := json.Unmarshal(auth, &st); err != nil {
 		return nil, fmt.Errorf("graph: malformed auth state: %w", err)
@@ -234,11 +249,11 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 	// pass reaches it first is the one whose attestation sticks and the second is
 	// a no-op. Inbox-first left exactly those messages permanently unattested,
 	// which is the T1 evidence this change exists to collect.
-	nextSent, err := c.pullFolder(ctx, access, folderSent, start.SentDeltaLink, sink, owner, true)
+	nextSent, err := c.pullFolder(ctx, access, folderSent, start.SentDeltaLink, from, sink, owner, true)
 	if err != nil {
 		return nil, err
 	}
-	nextInbox, err := c.pullFolder(ctx, access, folderInbox, start.DeltaLink, sink, owner, false)
+	nextInbox, err := c.pullFolder(ctx, access, folderInbox, start.DeltaLink, from, sink, owner, false)
 	if err != nil {
 		return nil, err
 	}
@@ -256,10 +271,10 @@ func (c *Connector) Sync(ctx context.Context, auth connector.Auth, cursor connec
 // amount of header forgery can imitate (ADR-0072 §1's T1 evidence). It is the
 // same attestation the backfill makes from ParentFolderID.
 func (c *Connector) pullFolder(
-	ctx context.Context, access, folder, from string,
+	ctx context.Context, access, folder, cursor string, anchorFrom time.Time,
 	sink connector.Sink, owner string, sentByOwner bool,
 ) (string, error) {
-	ids, removed, next, err := c.selectMessages(ctx, access, folder, from)
+	ids, removed, next, err := c.selectMessages(ctx, access, folder, cursor, anchorFrom)
 	if err != nil {
 		return "", err
 	}
@@ -288,7 +303,7 @@ func (c *Connector) pullFolder(
 		}
 	}
 	if next == "" {
-		next = from // provider closed the round without a new link; keep the prior watermark
+		next = cursor // provider closed the round without a new link; keep the prior watermark
 	}
 	return next, nil
 }
@@ -300,14 +315,16 @@ func (c *Connector) pullFolder(
 // An ANCHOR round reports no removals, and that is right rather than a gap: it
 // establishes a cursor rather than replaying history, so it has no prior state
 // to say anything was deleted from.
-func (c *Connector) selectMessages(ctx context.Context, access, folder, start string) (ids []MessageRef, removed []string, next string, err error) {
+func (c *Connector) selectMessages(
+	ctx context.Context, access, folder, start string, anchorFrom time.Time,
+) (ids []MessageRef, removed []string, next string, err error) {
 	if start == "" {
-		anchored, link, anchorErr := c.api.DeltaInit(ctx, access, folder, c.now().Add(-anchorWindow))
+		anchored, link, anchorErr := c.api.DeltaInit(ctx, access, folder, anchorFrom)
 		return anchored, nil, link, anchorErr
 	}
 	ids, removed, next, err = c.api.Delta(ctx, access, start)
 	if errors.Is(err, ErrDeltaGone) {
-		anchored, link, anchorErr := c.api.DeltaInit(ctx, access, folder, c.now().Add(-anchorWindow))
+		anchored, link, anchorErr := c.api.DeltaInit(ctx, access, folder, anchorFrom)
 		return anchored, nil, link, anchorErr
 	}
 	if err != nil {

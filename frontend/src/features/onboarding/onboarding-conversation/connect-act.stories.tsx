@@ -82,8 +82,13 @@ const meta: Meta<typeof ConnectAct> = {
 export default meta;
 type Story = StoryObj<typeof ConnectAct>;
 
-/** Nothing connected yet: the mail gate, and LinkedIn offered beside it. */
+/** Nothing connected yet: the account to pick, and LinkedIn below it. */
 export const AwaitingConsent: Story = { render: act(state("cn.consent")) };
+
+export const AwaitingConsentDark: Story = {
+  render: act(state("cn.consent")),
+  globals: { theme: "dark" },
+};
 
 /** The German act — the copy that has to hold two different KINDS of offer on
  *  one surface without making them look alike. */
@@ -125,6 +130,26 @@ export const ReturnedRefused: Story = {
 };
 
 /**
+ * Back from a chained consent whose calendar leg was refused. The calendar
+ * says it was not connected, and claims nothing about a mailbox the roster
+ * does not show.
+ */
+export const ReturnedCalendarRefused: Story = {
+  render: act(state("cn.consent"), {
+    outcome: "denied",
+    returningProvider: "graphcal",
+  }),
+};
+
+export const ReturnedCalendarRefusedDark: Story = {
+  render: act(state("cn.consent"), {
+    outcome: "denied",
+    returningProvider: "graphcal",
+  }),
+  globals: { theme: "dark" },
+};
+
+/**
  * A stale return URL: an outcome replayed with no live attempt behind it. The
  * act must not report a connection it has no evidence for, which is why the
  * route segments are treated as claims rather than as facts.
@@ -137,11 +162,10 @@ export const StaleReturn: Story = {
 };
 
 /**
- * No Microsoft app registered for this company. The card cannot be opened
- * because the connect behind it would be refused, so it says what is missing
- * and where it is fixed rather than leaving the reader to find that out by
- * clicking. Google and IMAP are unaffected, which is the point: this is one
- * vendor's configuration, not a broken screen.
+ * No Microsoft app registered for this company. The account says it waits for
+ * an administrator and the others say they are open now. Picking it shows who
+ * fixes it rather than a connect that would be refused. Google and IMAP are
+ * unaffected: this is one vendor's configuration, not a broken screen.
  */
 export const MicrosoftAppMissing: Story = {
   render: act(state("cn.consent"), {}, undefined, [
@@ -152,9 +176,9 @@ export const MicrosoftAppMissing: Story = {
 };
 
 /**
- * A Microsoft app IS registered and its secret will not open. A different
- * sentence from the one above, and deliberately so: telling this operator that
- * no app exists sends them to register a second one.
+ * A Microsoft app is registered and its secret will not open. The same badge
+ * as above, and a different panel once picked: telling this operator that no
+ * app exists sends them to register a second one.
  */
 export const MicrosoftAppUnusable: Story = {
   render: act(state("cn.consent"), {}, undefined, [
@@ -165,8 +189,8 @@ export const MicrosoftAppUnusable: Story = {
 };
 
 /**
- * A deployment that does not serve Microsoft at all. Nobody's setting, so the
- * card offers no link to a form that would have nothing in it.
+ * A deployment that does not serve Microsoft at all: nobody's setting, and
+ * said as such.
  */
 export const MicrosoftUnsupported: Story = {
   render: act(state("cn.consent"), {}, undefined, [
@@ -176,9 +200,133 @@ export const MicrosoftUnsupported: Story = {
   ]),
 };
 
-/** At 390px the two offers stack, and the one that gates has to stay legibly
- *  the primary of the pair. */
+/** At 390px the accounts stack, and the ask's Connect stays the one primary. */
 export const Phone: Story = {
   tags: ["uat-phone"],
   render: act(state("cn.consent")),
+};
+
+// A mailbox already live, as the roster reports it: the account panel, the
+// posture, the import and the footer that starts it.
+// A calendar row carries the write grant bookings need unless a story drops it.
+const mailbox = (
+  provider: string,
+  backfill: Record<string, unknown>,
+  scopes: string[] = provider === "gcal"
+    ? ["https://www.googleapis.com/auth/calendar.events"]
+    : ["read"],
+) => ({
+  id: provider,
+  provider,
+  status: "connected",
+  scopes,
+  account_label: "anna@example.com",
+  backfill,
+});
+
+function connected(
+  rows: Record<string, unknown>[],
+  route: { outcome?: string; returningProvider?: string } = {},
+) {
+  return () => {
+    installFetchStub({
+      "GET /me": meRoute({ channel_connection: ["read", "create"] }),
+      "GET /connectors": () =>
+        jsonResponse({ data: rows, providers: ALL_READY }),
+      "GET /capture/settings": () =>
+        jsonResponse({ shared_posture_allowed: false }),
+      "POST /connectors/gmail/backfill/preview": () =>
+        jsonResponse({
+          window: "6m",
+          after_date: "2026-04-02",
+          estimated_messages: 4820,
+          estimated_cost_minor: 310,
+          currency: "USD",
+          computed_at: "2026-10-02T09:00:00Z",
+        }),
+    });
+    return (
+      <StoryProviders>
+        <ConnectAct
+          state={state("cn.consent")}
+          dispatch={() => {}}
+          persist={async () => true}
+          outcome={route.outcome}
+          returningProvider={route.returningProvider}
+        />
+      </StoryProviders>
+    );
+  };
+}
+
+const GOOGLE_BOTH = [
+  mailbox("gmail", { state: "none" }),
+  mailbox("gcal", { state: "none" }),
+];
+
+/** Google mail and calendar live: one primary, "Import 6 months and continue". */
+export const ConnectedGoogle: Story = { render: connected(GOOGLE_BOTH) };
+
+export const ConnectedGoogleDark: Story = {
+  render: connected(GOOGLE_BOTH),
+  globals: { theme: "dark" },
+};
+
+/** The calendar skipped or refused: its row offers the calendar alone. */
+export const ConnectedMailOnly: Story = {
+  render: connected([mailbox("gmail", { state: "none" })]),
+};
+
+export const ConnectedMailOnlyDark: Story = {
+  render: connected([mailbox("gmail", { state: "none" })]),
+  globals: { theme: "dark" },
+};
+
+const GOOGLE_READ_ONLY = [
+  mailbox("gmail", { state: "none" }),
+  mailbox("gcal", { state: "none" }, ["read"]),
+];
+
+/** A calendar granted for reading only: Read-only badge and Reconnect, as on
+ *  Connections and Meetings, since bookings cannot land on it. */
+export const ConnectedCalendarReadOnly: Story = {
+  render: connected(GOOGLE_READ_ONLY),
+};
+
+export const ConnectedCalendarReadOnlyDark: Story = {
+  render: connected(GOOGLE_READ_ONLY),
+  globals: { theme: "dark" },
+};
+
+/** A chained press whose calendar leg was refused: the mailbox stays, the
+ *  refusal is named, and the calendar row asks for it again on its own. */
+export const ConnectedCalendarRefused: Story = {
+  render: connected([mailbox("gmail", { state: "none" })], {
+    outcome: "denied",
+    returningProvider: "gcal",
+  }),
+};
+
+export const ConnectedCalendarRefusedDark: Story = {
+  render: connected([mailbox("gmail", { state: "none" })], {
+    outcome: "denied",
+    returningProvider: "gcal",
+  }),
+  globals: { theme: "dark" },
+};
+
+/** Back on the step with the import already running: Continue is the way on. */
+export const ConnectedImporting: Story = {
+  render: connected([
+    mailbox("gmail", {
+      state: "running",
+      estimated_messages: 4820,
+      counts: { messages_scanned: 1200, captured: 310 },
+    }),
+  ]),
+};
+
+/** Another mail host: no calendar row and no import, only Continue. */
+export const ConnectedImap: Story = {
+  render: connected([mailbox("imap", {})]),
 };

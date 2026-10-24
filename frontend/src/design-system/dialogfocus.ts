@@ -91,7 +91,10 @@ function keepTabInside(event: KeyboardEvent, dialog: HTMLElement) {
   // behind took focus while the dialog was open, and from there a plain Tab
   // would keep walking that page rather than coming back.
   const outside = !dialog.contains(active);
-  const leavingBackwards = event.shiftKey && (active === first || outside);
+  // The box itself (the first focus when nothing else may take it) sits before
+  // `first`, so Shift+Tab from it would leave unless it wraps too.
+  const leavingBackwards =
+    event.shiftKey && (active === first || active === dialog || outside);
   const leavingForwards = !event.shiftKey && (active === last || outside);
   if (!leavingBackwards && !leavingForwards) {
     return;

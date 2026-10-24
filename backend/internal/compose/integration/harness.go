@@ -288,7 +288,7 @@ func (e *Env) AgentCtx() context.Context {
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:test", SeatType: principal.SeatFull,
-		PassportID: e.AgentPassport,
+		PassportID: e.AgentPassport, OnBehalfOf: e.Rep1,
 	})
 }
 
@@ -354,7 +354,7 @@ func (e *Env) AgentCtxWithPassport(passportID ids.UUID) context.Context {
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:test", SeatType: principal.SeatFull,
-		PassportID: passportID,
+		PassportID: passportID, OnBehalfOf: e.Rep1,
 	})
 }
 

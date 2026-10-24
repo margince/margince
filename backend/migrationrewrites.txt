@@ -2,5 +2,23 @@
 # migration filename | table names, separated by commas | why these rows are small and bounded
 # An anonymous DO block uses * because its procedural body executes during startup.
 1792562859_an_admin_can_describe_a_second_legal_entity.up.sql | *, audit_log, role | the procedural body is the trigger that keeps the default entity; audit_log gets one row for the one default entity, and role updates the fixed set of system roles
+1792629448_every_request_names_who_decides_it.up.sql | *, approval, audit_log | only PENDING approvals are touched, and a pending request lives at most its expiry window (72h default), so the set is the live inbox, not history
+1792641896_every_request_names_who_decides_it_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1792655143_a_rep_overrules_a_refusal_instead_of_asking.up.sql | *, approval, audit_log, communication_review | only PENDING communication_review cards and reviews awaiting one are touched; a card lives at most its expiry window, so the set is the live queue
+1792655143_a_rep_overrules_a_refusal_instead_of_asking.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1792670893_a_review_is_never_waiting_on_a_card.up.sql | *, audit_log, communication_review | only reviews still reading awaiting_decision are touched, and the migration that retired the ask already moved every live one, so the set is empty or a handful
+1792670894_a_review_is_never_waiting_on_a_card_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1792672839_the_unread_period_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1792679518_a_colleague_can_take_over_a_promise_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1792734530_an_approval_names_the_conversation_that_staged_it_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1792738779_the_slim_outcome_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1792745038_a_reader_can_stop_following_a_contact.down.sql | relationship_nudge_dismissal | only permanent stops are rewritten, at most one row per reader and contact, each chosen by hand, so the set is small
+1792776166_a_mail_says_how_much_of_its_text_was_read_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1792779054_a_vendor_verdict_waits_for_a_colleague.up.sql | company_domain_disposition | only domains a site read settled as a mail or hosting vendor are moved, one row each; a workspace corresponds with few such vendors, so the set is a handful of rows
+1792779054_a_vendor_verdict_waits_for_a_colleague.down.sql | company_domain_disposition | only the open vendor questions this migration created are moved back, the same handful of rows
+1792779055_a_vendor_verdict_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1792781565_a_settlement_names_the_evidence_it_read.up.sql | * | the procedural bodies are trigger functions that take advisory locks and write no row; the migration adds two empty columns and changes no existing row
+1792842045_an_introduction_can_be_recorded_after_the_fact.down.sql | intro_request | only recorded introductions are deleted, each typed by hand by a colleague, so the set is a handful of rows per contact
+1792842046_a_recorded_introduction_check_is_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1792721001_a_service_member_may_land_deals.up.sql | role | one UPDATE of the single service_ingest system role, which exists only once a service member was declared
 1792721001_a_service_member_may_land_deals.down.sql | role | one UPDATE of the single service_ingest system role, which exists only once a service member was declared

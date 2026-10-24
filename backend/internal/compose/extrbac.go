@@ -81,10 +81,9 @@ func RegisterRbacObjects(objects []identity.RbacObject) error {
 // extensionRbacObjects collects the distinct RBAC objects the composed verb set
 // declares, in the verbs' own (already deterministic) order.
 //
-// crm-demo, the reference extension, declares ext_crm_demo_note on its three
-// record operations; de and crm-hello own no records and declare none, so
-// a composed set without crm-demo returns the empty set and this seam does
-// nothing — which is the state every other installation is in.
+// A unit declares an object on the operations that gate on it, as openchannel
+// does on its endpoint. de owns no records and declares none, so a composed set
+// of such units returns the empty set and this seam does nothing.
 //
 // Registration is only half of what an object is for. It is what lets a role
 // document grant the object and /me report the holder's grant; the ENFORCEMENT

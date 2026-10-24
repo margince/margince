@@ -320,6 +320,11 @@
   flex: none;
   align-self: center;
 }
+/* A verb's short tile word (`IconAction word`, `VerbWord`): drawn only where
+   a verb bar lays the verbs out as tiles (recordview.css). */
+.verb-word {
+  display: none;
+}
 /*
  * The press. Until now nothing in this design system had one: `grep :active`
  * over the whole tree returned a single hit, in the shell. A control that

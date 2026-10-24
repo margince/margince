@@ -1,10 +1,14 @@
-import { useCallback, useId, useState } from "react";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from "react";
 import type { components } from "../../api/schema";
 import { SendPermission } from "../../components/sendpermission";
-import { ConfirmModal } from "../../design-system/confirmmodal";
-import { ErrorLine } from "../../design-system/errorline";
-import { viewerZone } from "../../format/timezone";
-import { useLocale, useT } from "../../i18n";
+import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { Transport } from "../../lib/contacttransports";
 import { useVoiceProfile } from "../../lib/voice-profile";
@@ -13,20 +17,19 @@ import {
   useComposeThread,
   useConversationNames,
 } from "./composeanchor";
-import { useCarriageBlocks } from "./composeattachments";
-import type { ComposeFields } from "./composefields";
+import {
+  AttachAction,
+  AttachedFiles,
+  useCarriageBlocks,
+} from "./composeattachments";
+import { ComposeBlockers } from "./composeblockers";
+import { type ComposeDock, ComposeDockContext } from "./composedockcontext";
 import { useComposeFields } from "./composefields";
 import { useComposeRecords } from "./composefiling";
 import { useRecipientOffer } from "./composerecipientoffer";
 import type { RelinkKind } from "./composerelink";
 import { type SavedDraftFields, useSavedDraft } from "./composesaveddraft";
-import {
-  momentLabel,
-  momentOf,
-  ScheduleDialog,
-  ScheduleMenu,
-} from "./composeschedule";
-import type { ComposeSend } from "./composesend";
+import { ScheduleDialog } from "./composeschedule";
 import { useComposeSend } from "./composesend";
 import {
   useAnswerTarget,
@@ -34,17 +37,17 @@ import {
   useTargetFiles,
   useTransportDial,
 } from "./composetarget";
+import { ThreadBar } from "./composethreadbar";
 import { useVoiceDraft } from "./composevoicedraft";
+import { replySubject } from "./replysubject";
 import type { EditSeed } from "./schedulededit";
-import { SendRefusal } from "./sendrefusal";
 import "./compose.css";
 import { ComposeHead } from "./compose.head";
 import {
-  ComposeActionsLead,
   ComposeBody,
-  ComposeConversation,
-  ComposeWhy,
-  MailSendNotices,
+  ComposeFoot,
+  ComposeFrame,
+  EarlierMessages,
 } from "./compose.parts";
 
 // The composer reviews replies, first messages and relinks before submitting.
@@ -77,86 +80,32 @@ function sendWording(
   return { title: "compose.sendConfirmTitle", body: "compose.sendBody" };
 }
 
-// The foot: what the engine and the server said about sending, then what
-// pressing the button will do.
-export function ComposeFoot({
-  isChannelReply,
-  fields,
-  send,
-  discardError,
-  contactId,
-  bodyKey,
-}: Readonly<{
-  isChannelReply: boolean;
-  fields: ComposeFields;
-  send: ComposeSend;
-  discardError: string | null | undefined;
-  contactId?: string;
-  bodyKey: MessageKey;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const scheduled = momentOf(fields.sendAt);
-  return (
-    <>
-      {!isChannelReply && (
-        <>
-          <MailSendNotices
-            to={fields.to}
-            cc={fields.cc}
-            context={send.claimedContext}
-          />
-          {/* No override is offered: the engine grants nothing on what a
-              sender types about their own send. */}
-          <SendPermission
-            preview={send.permission.preview}
-            asking={send.permission.asking}
-            unanswered={send.permission.unanswered}
-          />
-        </>
-      )}
-      {fields.sendUnavailable && <p>{t("compose.sendUnavailable")}</p>}
-      {/* A failed rejection leaves the judgment open over the same words. */}
-      {discardError && <ErrorLine>{discardError}</ErrorLine>}
-      <SendRefusal
-        refusal={send.refusal}
-        contactId={contactId}
-        review={send.sendReview}
-      />
-      <p>{t(bodyKey)}</p>
-      {/* The chosen moment in words, under the control that carries it. */}
-      {scheduled && (
-        <p className="t-caption">
-          {t("compose.willGoOut", {
-            when: momentLabel(scheduled, locale, viewerZone()),
-          })}
-        </p>
-      )}
-    </>
-  );
+// The window's name: the subject as typed, or what the message answers, or
+// whom a new one is to. A channel reply keeps the send's own title.
+function windowTitle(
+  input: Readonly<{
+    isChannelReply: boolean;
+    wordingTitle: string;
+    answering: string | undefined;
+    anchorSubject: string | null | undefined;
+    subject: string;
+    recordName: string | undefined;
+    t: ReturnType<typeof useT>;
+  }>,
+): string {
+  const { t } = input;
+  if (input.isChannelReply) return input.wordingTitle;
+  if (input.subject.trim()) return input.subject.trim();
+  if (input.answering) {
+    return replySubject(input.anchorSubject?.trim() || t("email.noSubject"));
+  }
+  return input.recordName
+    ? t("compose.newEmailTo", { name: input.recordName })
+    : t("compose.newEmail");
 }
 
-// The confirm-first composer for mail and for a captured channel. The rep's
-// own click is the approval, so this path sends no approval token. A channel
-// reply posts send-message and drops the subject, Cc and drafting.
-export function ComposeModal({
-  initialMessage,
-  activityId,
-  entityType,
-  entityId,
-  contactId,
-  followUp,
-  recordAddress,
-  kind,
-  transports = NO_TRANSPORTS,
-  initialTransportId,
-  staleThread = false,
-  intent: askedIntent,
-  edit,
-  open,
-  onClose,
-  onSent,
-}: Readonly<{
+/** What a surface hands the composer: where it writes from, and what to. */
+export type ComposeProps = Readonly<{
   // Absent means an ACCOUNT-STARTED send: a new conversation (ADR-0087).
   // Drafting, consent, refusal and provenance are shared with a reply. A
   // reply keeps threading and inherits its links. A new message files itself
@@ -215,7 +164,64 @@ export function ComposeModal({
   // close, and only then: a caller whose own reading of the record depends on
   // what was sent re-asks on this, and not on a cancel that changed nothing.
   onSent?: () => void;
-}>) {
+}>;
+
+/**
+ * The composer, as every surface opens it. Inside the app's shell it hands
+ * itself to the dock, so the message outlives the page that opened it.
+ * Anywhere else (a story, a test) it draws in place.
+ */
+export function ComposeModal(props: ComposeProps) {
+  const dock = useContext(ComposeDockContext);
+  if (!dock) {
+    return <ComposeWindow {...props} />;
+  }
+  return <DockedLauncher dock={dock} props={props} />;
+}
+
+// Opens and shuts this surface's composer in the dock. A surface that goes
+// away with the composer open leaves it docked: that is what the dock is for.
+function DockedLauncher({
+  dock,
+  props,
+}: Readonly<{ dock: ComposeDock; props: ComposeProps }>) {
+  const id = useId();
+  const latest = useRef(props);
+  useEffect(() => {
+    latest.current = props;
+  });
+  const { open } = props;
+  useEffect(() => {
+    if (open) {
+      dock.show({ id, props: latest.current });
+    } else {
+      dock.hide(id);
+    }
+  }, [open, dock, id]);
+  return null;
+}
+
+// The confirm-first composer for mail and for a captured channel. The rep's
+// own click is the approval, so this path sends no approval token. A channel
+// reply posts send-message and drops the subject, Cc and drafting.
+export function ComposeWindow({
+  initialMessage,
+  activityId,
+  entityType,
+  entityId,
+  contactId,
+  followUp,
+  recordAddress,
+  kind,
+  transports = NO_TRANSPORTS,
+  initialTransportId,
+  staleThread = false,
+  intent: askedIntent,
+  edit,
+  open,
+  onClose,
+  onSent,
+}: ComposeProps) {
   const t = useT();
   // A shut composer asks for nothing it does not share with the page behind it.
   const voiceProfile = useVoiceProfile(open);
@@ -234,7 +240,7 @@ export function ComposeModal({
     activityId,
   });
   const fileTarget = answering ?? "";
-  const attached = useTargetFiles(fileTarget);
+  const attached = useTargetFiles(fileTarget, edit?.files);
   // Warn about carriage bounds before staging can refuse the message.
   const carriageBlocks = useCarriageBlocks(
     dial.channel?.id,
@@ -244,6 +250,8 @@ export function ComposeModal({
   );
   // Whether the moment picker is up, apart from whether a moment is chosen.
   const [pickingMoment, setPickingMoment] = useState(false);
+  // The foot's place for the editor's marks, so they sit beside Send.
+  const [markRow, setMarkRow] = useState<HTMLDivElement | null>(null);
   const offer = useRecipientOffer({
     open,
     isChannelReply,
@@ -359,6 +367,15 @@ export function ComposeModal({
   };
   const scheduling = !isChannelReply && fields.sendAt !== "";
   const wording = sendWording(isChannelReply, scheduling);
+  const title = windowTitle({
+    isChannelReply,
+    wordingTitle: t(wording.title),
+    answering,
+    anchorSubject: thread.anchorActivity?.subject,
+    subject: fields.subject,
+    recordName: records.recordName,
+    t,
+  });
   return (
     <>
       <ScheduleDialog
@@ -368,102 +385,106 @@ export function ComposeModal({
         onChoose={fields.setSendAt}
         now={new Date()}
       />
-      <ConfirmModal
-        initialFocusTo={() => document.getElementById(bodyId)}
-        open={open}
-        onClose={savedDraft.requestClose}
-        title={t(wording.title)}
-        tier="confirm"
-        // A reading drawer for mail keeps the record in view beside it.
-        intent={dial.asDrawer ? "drawer-reading" : "form"}
-        confirmLabel={t(scheduling ? "compose.schedule" : "compose.send")}
-        // The button stays live with fields outstanding, so a press can name
-        // them. A rejection or a draft save in flight disables it.
-        confirmDisabled={voice.rejectionInFlight || savedDraft.saving}
-        onConfirm={send.confirm}
-        pending={sendPending}
-        error={send.sendError ?? savedDraft.error}
-        actionsLead={
-          <ComposeActionsLead
-            isChannelReply={isChannelReply}
-            permission={send.permission}
-            discardControl={voice.discardControl}
-            savedDraft={savedDraft}
-            busy={busy}
-          />
-        }
-        confirmMenu={
-          isChannelReply ? undefined : (
-            <ScheduleMenu onOpen={() => setPickingMoment(true)} />
-          )
-        }
-      >
-        {/* The form uses the full width when no conversation is available. */}
-        <div
-          ref={send.fieldsRef}
-          className={thread.splitColumns ? "compose-split" : undefined}
+      {open && (
+        <ComposeFrame
+          title={title}
+          onClose={savedDraft.requestClose}
+          closeDisabled={sendPending}
+          bodyId={bodyId}
         >
-          <ComposeConversation
-            thread={thread}
-            answering={answering}
-            viewerId={names.viewerId}
-            nameOf={names.nameOf}
-            onSelect={selectMessage}
-            disabled={busy}
-          />
-          <div className="compose-fields">
-            <ComposeHead
-              fields={fields}
-              savedDraft={savedDraft}
-              dial={dial}
-              transports={transports}
-              onTransportChange={changeTransport}
-              staleThread={staleThread}
-              colleagueSeats={colleagueMailboxesOf(
-                offer.mailboxes,
-                names.viewerId,
-              )}
+          {!isChannelReply && (
+            <ThreadBar
+              thread={thread}
+              answering={answering}
+              recordName={records.recordName}
+              viewerId={names.viewerId}
               nameOf={names.nameOf}
-              activityId={activityId}
-              records={records}
-              accountCompanyId={groundable ? entityId : undefined}
-              answeringLine={thread.answeringLine}
-              replying={Boolean(answering)}
-              flagged={send.flagged}
-              voice={voice}
-              voiceMaturity={voiceProfile.data?.maturity}
-              onToEditing={settle}
+              onSelect={selectMessage}
+              disabled={busy}
             />
-            <ComposeBody
-              bodyId={bodyId}
-              fields={fields}
-              attached={attached}
-              fileTarget={fileTarget}
-              entityType={entityType}
-              entityId={entityId}
-              signs={open && !isChannelReply}
-              channelLabel={dial.channel?.label}
-              carriageBlocks={carriageBlocks}
-              flagged={send.flagged}
-              voice={voice}
+          )}
+          <div ref={send.fieldsRef} className="compose-window">
+            <div className="compose-sheet">
+              <ComposeHead
+                fields={fields}
+                savedDraft={savedDraft}
+                dial={dial}
+                transports={transports}
+                onTransportChange={changeTransport}
+                staleThread={staleThread}
+                colleagueSeats={colleagueMailboxesOf(
+                  offer.mailboxes,
+                  names.viewerId,
+                )}
+                nameOf={names.nameOf}
+                activityId={activityId}
+                records={records}
+                accountCompanyId={groundable ? entityId : undefined}
+                flagged={send.flagged}
+                rejectionInFlight={voice.rejectionInFlight}
+                onToEditing={settle}
+              />
+              <ComposeBody
+                bodyId={bodyId}
+                fields={fields}
+                mail={!isChannelReply}
+                replying={Boolean(answering)}
+                earlier={
+                  answering && (
+                    <EarlierMessages messages={thread.conversation.messages} />
+                  )
+                }
+                voiceMaturity={voiceProfile.data?.maturity}
+                channelLabel={dial.channel?.label}
+                carriageBlocks={carriageBlocks}
+                flagged={send.flagged}
+                voice={voice}
+                marksIn={markRow}
+                attach={
+                  <AttachAction
+                    key={fileTarget}
+                    entityType={entityType}
+                    entityId={entityId}
+                    chosen={attached.files}
+                    onChange={attached.setFiles}
+                    disabled={voice.rejectionInFlight}
+                  />
+                }
+              />
+            </div>
+            <AttachedFiles
+              chosen={attached.files}
+              onChange={attached.setFiles}
+              disabled={voice.rejectionInFlight}
             />
-            <ComposeWhy
-              anchorActivity={thread.anchorActivity}
-              flagged={send.flagged}
-              context={fields.context}
-              onContextChange={fields.setContext}
-            />
-            <ComposeFoot
+            <ComposeBlockers
               isChannelReply={isChannelReply}
               fields={fields}
               send={send}
-              discardError={voice.discardControl?.error}
+              anchorActivity={thread.anchorActivity}
+              contactOf={records.contactOf}
               contactId={contactId}
               bodyKey={wording.body}
+              permission={(override) => (
+                <SendPermission {...send.permission} override={override} />
+              )}
             />
           </div>
-        </div>
-      </ConfirmModal>
+          <ComposeFoot
+            confirmLabel={t(scheduling ? "compose.schedule" : "compose.send")}
+            send={send}
+            isChannelReply={isChannelReply}
+            // The button stays live with fields outstanding, so a press can
+            // name them. A rejection or a draft save in flight holds it.
+            held={voice.rejectionInFlight || savedDraft.saving}
+            onPickMoment={() => setPickingMoment(true)}
+            sendAt={fields.sendAt}
+            savedDraft={savedDraft}
+            busy={busy}
+            marksRef={setMarkRow}
+          />
+        </ComposeFrame>
+      )}
     </>
   );
 }

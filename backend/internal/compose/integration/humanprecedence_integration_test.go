@@ -5,16 +5,16 @@
 
 package integration
 
-// The human-edit-precedence gate (interfaces.md §2.1) is per
-// FIELD, on both transports: an agent's patch applies 🟢 wherever it
-// keeps clear of human-typed values, the human-owned fields it touches
-// are split off into a 🟡 staged approval in the same request, and only
-// a human decision — consumed exactly once — releases the overwrite.
+// The human-edit-precedence gate is per FIELD, and it
+// binds automatic work: an agent with no passport behind it. Its patch applies
+// wherever it keeps clear of human-typed values. The human-owned fields it
+// touches are split off into a staged approval, and only a human decision,
+// consumed once, releases the overwrite. An agent on a colleague's passport
+// overwrites as that colleague could, with no approval.
 
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -23,82 +23,31 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/testdb"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func TestEndToEnd_humanEditPrecedenceOnAgentUpdate(t *testing.T) {
+func TestAnAgentOnAColleaguesPassportOverwritesAHumanTypedField(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	// A HUMAN types the contact's name — full_name is now human-owned per
-	// the audit trail.
-	var contact struct {
-		ID string `json:"id"`
-	}
-	if status := e.Call(t, "POST", "/v1/contacts", AnyMap{"source": "manual", "full_name": "Greta Human"}, nil, &contact); status != 201 {
-		t.Fatalf("human create → %d", status)
-	}
+	contactID, agentToken := stageContactAndAgent(t, e, "Greta Human", "precedence agent")
+	bearer := map[string]string{"Authorization": "Bearer " + agentToken}
 
-	var minted struct {
-		Token string `json:"token"`
+	var patched struct {
+		FullName       string          `json:"full_name"`
+		Title          string          `json:"title"`
+		StagedApproval json.RawMessage `json:"staged_approval"`
 	}
-	if status := e.Call(t, "POST", "/v1/passports", AnyMap{
-		"label": "precedence agent", "scopes": []string{"read", "write"},
-	}, nil, &minted); status != 201 {
-		t.Fatalf("issue passport → %d", status)
+	if status := e.Call(t, "PATCH", "/v1/contacts/"+contactID,
+		AnyMap{"full_name": "Greta Machine", "title": "CTO"}, bearer, &patched); status != 200 {
+		t.Fatalf("agent overwrite on a colleague's passport → %d, want 200", status)
 	}
-	bearer := map[string]string{"Authorization": "Bearer " + minted.Token}
-
-	// A field no human ever wrote updates 🟢 — the reversible-and-logged
-	// path stays open.
-	if status := e.Call(t, "PATCH", "/v1/contacts/"+contact.ID, AnyMap{"title": "CTO"}, bearer, nil); status != 200 {
-		t.Fatalf("agent patch of a never-human field → %d, want 200 (🟢)", status)
+	if patched.FullName != "Greta Machine" || patched.Title != "CTO" || len(patched.StagedApproval) != 0 {
+		t.Fatalf("patched = %+v, want the whole patch applied and nothing staged", patched)
 	}
-	// A field the AGENT last wrote stays 🟢 too — precedence protects
-	// contacts, not machines.
-	if status := e.Call(t, "PATCH", "/v1/contacts/"+contact.ID, AnyMap{"title": "VP Engineering"}, bearer, nil); status != 200 {
-		t.Fatalf("agent re-patch of its own field → %d, want 200 (🟢)", status)
-	}
-
-	// Overwriting the human-typed name resolves 🟡: staged, not applied.
-	var problem struct {
-		Code   string `json:"code"`
-		Detail string `json:"detail"`
-	}
-	status := e.Call(t, "PATCH", "/v1/contacts/"+contact.ID, AnyMap{"full_name": "Greta Machine"}, bearer, &problem)
-	if status != 403 || problem.Code != "approval_required" {
-		t.Fatalf("agent overwrite of a human field → %d %q, want 403 approval_required", status, problem.Code)
-	}
-	var current struct {
-		FullName string `json:"full_name"`
-	}
-	if status := e.Call(t, "GET", "/v1/contacts/"+contact.ID, nil, bearer, &current); status != 200 || current.FullName != "Greta Human" {
-		t.Fatalf("staged overwrite must not have executed: %d %q", status, current.FullName)
-	}
-	approvalID := ExtractStagedApprovalID(t, problem.Detail)
-
-	// A human decision releases it; the identical retry lands the patch.
-	if status := e.Call(t, "POST", "/v1/approvals/"+approvalID+"/approve", AnyMap{}, nil, nil); status != 200 {
-		t.Fatalf("human approve → %d", status)
-	}
-	withToken := map[string]string{"Authorization": "Bearer " + minted.Token, "X-Approval-Token": approvalID}
-	if status := e.Call(t, "PATCH", "/v1/contacts/"+contact.ID, AnyMap{"full_name": "Greta Machine"}, withToken, nil); status != 200 {
-		t.Fatalf("approved retry → %d, want the patch to execute", status)
-	}
-	if status := e.Call(t, "GET", "/v1/contacts/"+contact.ID, nil, bearer, &current); status != 200 || current.FullName != "Greta Machine" {
-		t.Fatalf("approved overwrite did not land: %d %q", status, current.FullName)
-	}
-
-	// The redemption was consumed exactly once: the identical retry with
-	// the same token changes nothing further.
-	before := current.FullName
-	if status := e.Call(t, "PATCH", "/v1/contacts/"+contact.ID, AnyMap{"full_name": "Greta Machine"}, withToken, &problem); status != 403 {
-		t.Fatalf("re-redeeming a consumed approval → %d, want 403", status)
-	}
-	if status := e.Call(t, "GET", "/v1/contacts/"+contact.ID, nil, bearer, &current); status != 200 || current.FullName != before {
-		t.Fatalf("consumed token must not write again: %d %q", status, current.FullName)
+	if n := countApprovals(t, e); n != 0 {
+		t.Errorf("%d approvals staged, want none", n)
 	}
 }
 
@@ -200,138 +149,6 @@ func mcpAgentInvoker(t *testing.T, agentToken string) func(tool, args string) (j
 	}
 }
 
-// A mixed patch splits per field (interfaces.md §2.1): the agent-safe
-// fields apply at the auto-execute tier in the same PATCH, the human-owned field is staged,
-// the 200 response names the split, and the approved replay of ONLY the
-// staged fields — the ADR-0036-bound sub-patch — lands the overwrite.
-func TestEndToEnd_perFieldSplitOnAgentRESTUpdate(t *testing.T) {
-	e := apptest.SetupApp(t)
-	e.BootstrapWorkspace(t)
-
-	contactID, agentToken := stageContactAndAgent(t, e, "Petra Human", "split agent")
-	// The human TYPES the title in an update: the per-field audit image
-	// makes title human-owned alongside the created full_name.
-	if status := e.Call(t, "PATCH", "/v1/contacts/"+contactID, AnyMap{"title": "Founder"}, nil, nil); status != 200 {
-		t.Fatalf("human title patch → %d", status)
-	}
-	bearer := map[string]string{"Authorization": "Bearer " + agentToken}
-
-	// Mixed patch: first_name is virgin ground, full_name and title are
-	// human-typed — only they must be withheld.
-	var split struct {
-		FirstName      string `json:"first_name"`
-		FullName       string `json:"full_name"`
-		StagedApproval struct {
-			ApprovalID string          `json:"approval_id"`
-			Fields     []string        `json:"fields"`
-			Replay     json.RawMessage `json:"replay"`
-			Message    string          `json:"message"`
-		} `json:"staged_approval"`
-	}
-	status := e.Call(t, "PATCH", "/v1/contacts/"+contactID, AnyMap{
-		"first_name": "Petra", "full_name": "Petra Machine", "title": "CEO",
-	}, bearer, &split)
-	if status != 200 {
-		t.Fatalf("mixed agent patch → %d, want 200 for its auto-execute half", status)
-	}
-	if split.FirstName != "Petra" || split.FullName != "Petra Human" {
-		t.Fatalf("auto-execute half wrong: first_name %q full_name %q — want the new first name and the untouched human name", split.FirstName, split.FullName)
-	}
-	if split.StagedApproval.ApprovalID == "" || len(split.StagedApproval.Fields) != 2 ||
-		split.StagedApproval.Fields[0] != "full_name" || split.StagedApproval.Fields[1] != "title" {
-		t.Fatalf("staged_approval = %+v, want exactly the two human-owned fields named", split.StagedApproval)
-	}
-
-	// A human approves; the agent replays ONLY the staged fields with the
-	// token — the sub-patch is what the approval is bound to.
-	if status := e.Call(t, "POST", "/v1/approvals/"+split.StagedApproval.ApprovalID+"/approve", AnyMap{}, nil, nil); status != 200 {
-		t.Fatalf("human approve → %d", status)
-	}
-	withToken := map[string]string{"Authorization": "Bearer " + agentToken, "X-Approval-Token": split.StagedApproval.ApprovalID}
-
-	// A replay that differs from the staged sub-patch does not fit the
-	// approval (diff_hash binding) — and consumes nothing.
-	var problem struct {
-		Code string `json:"code"`
-	}
-	if status := e.Call(t, "PATCH", "/v1/contacts/"+contactID, AnyMap{"full_name": "Petra Impostor", "title": "CEO"}, withToken, &problem); status != 403 || problem.Code != "approval_token_invalid" {
-		t.Fatalf("tampered replay → %d %q, want 403 approval_token_invalid", status, problem.Code)
-	}
-
-	var replay AnyMap
-	if err := json.Unmarshal(split.StagedApproval.Replay, &replay); err != nil {
-		t.Fatalf("staged replay body is not an object: %v", err)
-	}
-	if status := e.Call(t, "PATCH", "/v1/contacts/"+contactID, replay, withToken, nil); status != 200 {
-		t.Fatalf("approved replay of the staged sub-patch → %d, want 200", status)
-	}
-	var current struct {
-		FullName  string `json:"full_name"`
-		Title     string `json:"title"`
-		FirstName string `json:"first_name"`
-	}
-	if status := e.Call(t, "GET", "/v1/contacts/"+contactID, nil, bearer, &current); status != 200 ||
-		current.FullName != "Petra Machine" || current.Title != "CEO" || current.FirstName != "Petra" {
-		t.Fatalf("post-approval record = %+v, want the released overwrite plus the earlier auto-execute write", current)
-	}
-}
-
-// A rejection writes nothing: the human-owned field stays as typed and
-// the staged approval opens no door afterwards.
-func TestEndToEnd_rejectedSplitWritesNothing(t *testing.T) {
-	e := apptest.SetupApp(t)
-	e.BootstrapWorkspace(t)
-
-	contactID, agentToken := stageContactAndAgent(t, e, "Rita Human", "rejected agent")
-	bearer := map[string]string{"Authorization": "Bearer " + agentToken}
-
-	var split struct {
-		StagedApproval struct {
-			ApprovalID string `json:"approval_id"`
-		} `json:"staged_approval"`
-	}
-	if status := e.Call(t, "PATCH", "/v1/contacts/"+contactID, AnyMap{
-		"first_name": "Rita", "full_name": "Rita Machine",
-	}, bearer, &split); status != 200 || split.StagedApproval.ApprovalID == "" {
-		t.Fatalf("mixed patch → %d %+v, want 200 with a staged approval", status, split)
-	}
-	if status := e.Call(t, "POST", "/v1/approvals/"+split.StagedApproval.ApprovalID+"/reject", AnyMap{"reason": "keep my spelling"}, nil, nil); status != 200 {
-		t.Fatalf("human reject → %d", status)
-	}
-
-	withToken := map[string]string{"Authorization": "Bearer " + agentToken, "X-Approval-Token": split.StagedApproval.ApprovalID}
-	var problem struct {
-		Code string `json:"code"`
-	}
-	if status := e.Call(t, "PATCH", "/v1/contacts/"+contactID, AnyMap{"full_name": "Rita Machine"}, withToken, &problem); status != 403 || problem.Code != "approval_token_invalid" {
-		t.Fatalf("replaying a rejected staging → %d %q, want 403 approval_token_invalid", status, problem.Code)
-	}
-	var current struct {
-		FullName  string `json:"full_name"`
-		FirstName string `json:"first_name"`
-	}
-	if status := e.Call(t, "GET", "/v1/contacts/"+contactID, nil, bearer, &current); status != 200 ||
-		current.FullName != "Rita Human" || current.FirstName != "Rita" {
-		t.Fatalf("post-rejection record = %+v, want the human name intact and only the auto-execute write applied", current)
-	}
-}
-
-// replayWithApprovalID turns a staged replay body into the redeeming MCP
-// call: the same arguments plus the approval reference.
-func replayWithApprovalID(t *testing.T, replay json.RawMessage, approvalID string) string {
-	t.Helper()
-	var call map[string]json.RawMessage
-	if err := json.Unmarshal(replay, &call); err != nil {
-		t.Fatalf("staged replay body is not an object: %v", err)
-	}
-	call["approval_id"] = json.RawMessage(fmt.Sprintf("%q", approvalID))
-	out, err := json.Marshal(call)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return string(out)
-}
-
 // contactNameAndTitle reads a contact back through the governed tool
 // surface and returns the two fields the split scenarios assert on.
 func contactNameAndTitle(t *testing.T, invoke func(tool, args string) (json.RawMessage, error), contactID string) (fullName, title string) {
@@ -352,92 +169,88 @@ func contactNameAndTitle(t *testing.T, invoke func(tool, args string) (json.RawM
 	return rec.Fields.FullName, rec.Fields.Title
 }
 
-// The SAME split fires on the MCP transport — one spelling, two
-// surfaces: an auto-execute-only tool patch runs to completion, a mixed patch
-// applies its auto-execute half and stages the human-owned residue, and the
-// approved replay (staged fields + approval_id) redeems exactly once.
-func TestEndToEnd_perFieldSplitOnMCPUpdate(t *testing.T) {
+// Automatic work with no passport applies the fields nobody typed. It is refused
+// the ones a human last wrote: it may not stage an approval, so nothing waits.
+func TestAutomaticWorkIsRefusedTheFieldsAHumanTyped(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	contactID, agentToken := stageContactAndAgent(t, e, "Mona Human", "mcp split agent")
-	invoke := mcpAgentInvoker(t, agentToken)
+	contactID, _ := stageContactAndAgent(t, e, "Mona Human", "automatic split agent")
+	invoke := automaticInvoker(t, e)
 
-	// Auto-execute-only: a field no human wrote updates without any staging.
 	out, err := invoke("update_record", fmt.Sprintf(
 		`{"record_type":"contact","id":%q,"fields":{"title":"CTO"}}`, contactID,
 	))
 	if err != nil {
-		t.Fatalf("auto-execute tool patch → %v", err)
+		t.Fatalf("a patch of fields nobody typed → %v, want it applied", err)
 	}
 	if strings.Contains(string(out), "staged_approval") {
-		t.Fatalf("auto-execute tool patch staged something: %s", out)
+		t.Fatalf("a patch of fields nobody typed staged something: %s", out)
 	}
 
-	// Mixed: title is agent-owned now, full_name is the human's.
-	out, err = invoke("update_record", fmt.Sprintf(
+	_, err = invoke("update_record", fmt.Sprintf(
 		`{"record_type":"contact","id":%q,"fields":{"full_name":"Mona Machine","title":"VP Engineering"}}`, contactID,
 	))
-	if err != nil {
-		t.Fatalf("mixed tool patch must succeed for its auto-execute half: %v", err)
-	}
-	var result struct {
-		Fields struct {
-			FullName string `json:"full_name"`
-			Title    string `json:"title"`
-		} `json:"fields"`
-		StagedApproval struct {
-			ApprovalID string          `json:"approval_id"`
-			Fields     []string        `json:"fields"`
-			Replay     json.RawMessage `json:"replay"`
-		} `json:"staged_approval"`
-	}
-	if err := json.Unmarshal(ToolPayload(t, out), &result); err != nil {
-		t.Fatal(err)
-	}
-	if result.Fields.FullName != "Mona Human" || result.Fields.Title != "VP Engineering" {
-		t.Fatalf("mixed result record = %+v, want the auto-execute half applied and the human name untouched", result.Fields)
-	}
-	if result.StagedApproval.ApprovalID == "" || len(result.StagedApproval.Fields) != 1 || result.StagedApproval.Fields[0] != "full_name" {
-		t.Fatalf("staged_approval = %+v, want exactly full_name staged", result.StagedApproval)
-	}
-
-	// Before approval the replay is refused and writes nothing. It is refused as
-	// STILL REQUIRING the approval rather than as an invalid token: the id is the
-	// live one this call was staged under, and calling it invalid is what sends an
-	// agent back to stage the same question again (approvals/redeem.go).
-	replay := replayWithApprovalID(t, result.StagedApproval.Replay, result.StagedApproval.ApprovalID)
-	_, replayErr := invoke("update_record", replay)
-	if !errors.Is(replayErr, apperrors.ErrRequiresApproval) {
-		t.Fatalf("replay before approval → %v, want ErrRequiresApproval", replayErr)
-	}
-	if errors.Is(replayErr, apperrors.ErrApprovalTokenInvalid) {
-		t.Fatalf("replay before approval → %v, must not read as an invalid token", replayErr)
-	}
-
-	// A human approves; the replay redeems and lands exactly the field.
-	if status := e.Call(t, "POST", "/v1/approvals/"+result.StagedApproval.ApprovalID+"/approve", AnyMap{}, nil, nil); status != 200 {
-		t.Fatalf("human approve → %d", status)
-	}
-	if _, err := invoke("update_record", replay); err != nil {
-		t.Fatalf("approved replay → %v", err)
+	if !isPassportlessStagingRefusal(err) {
+		t.Fatalf("a patch touching a human-typed name → %v, want the refusal that automatic work cannot stage", err)
 	}
 	fullName, title := contactNameAndTitle(t, invoke, contactID)
-	if fullName != "Mona Machine" || title != "VP Engineering" {
-		t.Fatalf("post-approval record = %q/%q, want the released overwrite", fullName, title)
+	if fullName != "Mona Human" || title != "VP Engineering" {
+		t.Errorf("after the refusal the contact reads %q / %q, want the human name kept and the title applied", fullName, title)
 	}
+	if n := countApprovals(t, e); n != 0 {
+		t.Errorf("automatic work left %d approvals, want none", n)
+	}
+}
 
-	// Exactly-once: the second replay finds the approval consumed.
-	if _, err := invoke("update_record", replay); !errors.Is(err, apperrors.ErrApprovalTokenInvalid) {
-		t.Fatalf("second replay → %v, want ErrApprovalTokenInvalid (consumed)", err)
+// automaticWork is an agent with no passport behind it, acting for the
+// signed-in colleague. It is refused a confirm-first call and a write over a
+// human-typed value.
+func automaticWork(t *testing.T, e *apptest.AppEnv) context.Context {
+	t.Helper()
+	var ws ids.UUID
+	if err := e.Owner.QueryRow(t.Context(), `SELECT id FROM workspace LIMIT 1`).Scan(&ws); err != nil {
+		t.Fatalf("reading the workspace: %v", err)
 	}
-	// The redeemed write moved ownership: full_name's latest audited
-	// writer is now the AGENT, so its next patch of the field is plain
-	// auto-execute — precedence protects contacts, not machines.
-	out, err = invoke("update_record", fmt.Sprintf(
-		`{"record_type":"contact","id":%q,"fields":{"full_name":"Mona Machine II"}}`, contactID,
-	))
-	if err != nil || strings.Contains(string(out), "staged_approval") {
-		t.Fatalf("agent re-patch of its own field → %v %s, want a plain auto-execute update", err, out)
+	colleague, err := ids.Parse(sessionUserID(t, e))
+	if err != nil {
+		t.Fatalf("reading the signed-in colleague: %v", err)
 	}
+	ctx := principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), ws), ids.NewV7())
+	return principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:automatic", OnBehalfOf: colleague,
+		Scopes: principal.NewScopeSet(principal.ScopeRead, principal.ScopeWrite),
+	})
+}
+
+// automaticInvoker is mcpAgentInvoker for automatic work: the composed tool
+// registry, called in-process by an agent with no passport.
+func automaticInvoker(t *testing.T, e *apptest.AppEnv) func(tool, args string) (json.RawMessage, error) {
+	t.Helper()
+	pool, err := testdb.OwnPool(context.Background(), apptest.AppDSN(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(pool.Close)
+	registry := compose.NewRegistry(pool, compose.SendPath{})
+	return func(tool, args string) (json.RawMessage, error) {
+		return registry.Invoke(automaticWork(t, e), tool, json.RawMessage(args))
+	}
+}
+
+// countApprovals is how many approvals the workspace holds, in any state.
+func countApprovals(t *testing.T, e *apptest.AppEnv) int {
+	t.Helper()
+	var n int
+	if err := e.Owner.QueryRow(t.Context(), `SELECT count(*) FROM approval`).Scan(&n); err != nil {
+		t.Fatalf("counting approvals: %v", err)
+	}
+	return n
+}
+
+// isPassportlessStagingRefusal reports the staging engine's refusal of an agent
+// with no passport. The engine answers it with a plain error, so its words are
+// matched.
+func isPassportlessStagingRefusal(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "an agent stages on its passport")
 }

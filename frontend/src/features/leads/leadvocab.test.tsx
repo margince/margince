@@ -15,8 +15,8 @@ import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { LeadHandlingCard } from "./leadvocab";
+import { LeadOriginsCard } from "./leadvocab.origins";
 import { LeadDisqualifyReasonsCard } from "./leadvocab.reasons";
-import { LeadSourcesCard } from "./leadvocab.sources";
 
 // Settings › Data model: the lead vocabularies and the lead-handling posture.
 // Every role reads them; the custom_field write verbs decide who may change
@@ -92,15 +92,14 @@ function backend(
       status = 409;
     } else if (method === "DELETE") {
       status = 204;
-    } else if (url.includes("/lead-sources") && method === "GET") {
+    } else if (url.includes("/lead-origins") && method === "GET") {
       body = {
         data: options.rows ?? [
           source("manual", "Created manually", { system: true, lead_count: 3 }),
           source("trade_show", "Trade show", { intent: "high" }),
         ],
-        discovered: [{ key: "connector:apollo", lead_count: 7 }],
       };
-    } else if (url.includes("/lead-sources")) {
+    } else if (url.includes("/lead-origins")) {
       body = source("trade_show", "Messe");
     } else if (url.includes("/lead-disqualify-reasons") && method === "GET") {
       body = {
@@ -161,15 +160,15 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("LeadSourcesCard", () => {
-  it("names each source without its key, and counts its leads", async () => {
+describe("LeadOriginsCard", () => {
+  it("names each origin without its key, and counts its leads", async () => {
     vi.stubGlobal("fetch", backend(ADMIN));
     render(
       <Providers>
-        <LeadSourcesCard />
+        <LeadOriginsCard />
       </Providers>,
     );
-    const manual = await screen.findByTestId("lead-source-manual");
+    const manual = await screen.findByTestId("lead-origin-manual");
     expect(within(manual).getByText("Created manually")).toBeTruthy();
     expect(within(manual).queryByText("manual")).toBeNull();
     expect(within(manual).getByText("3")).toBeTruthy();
@@ -186,10 +185,10 @@ describe("LeadSourcesCard", () => {
     vi.stubGlobal("fetch", backend(ADMIN));
     render(
       <Providers>
-        <LeadSourcesCard />
+        <LeadOriginsCard />
       </Providers>,
     );
-    const manual = await screen.findByTestId("lead-source-manual");
+    const manual = await screen.findByTestId("lead-origin-manual");
     const cells = [...manual.querySelectorAll("td")];
     expect(cells[0]?.getAttribute("data-fold")).toBe("title");
     expect(cells.at(-1)?.getAttribute("data-fold")).toBe("end");
@@ -205,7 +204,7 @@ describe("LeadSourcesCard", () => {
     vi.stubGlobal("fetch", backend(ADMIN, calls));
     render(
       <Providers>
-        <LeadSourcesCard />
+        <LeadOriginsCard />
       </Providers>,
     );
     await openMenu(user, "Trade show");
@@ -218,7 +217,7 @@ describe("LeadSourcesCard", () => {
     await user.type(field, "Messe{Enter}");
     await waitFor(() =>
       expect(
-        wrote(calls, "PATCH", "/lead-sources/src-trade_show", {
+        wrote(calls, "PATCH", "/lead-origins/src-trade_show", {
           label: "Messe",
         }),
       ).toBe(true),
@@ -232,7 +231,7 @@ describe("LeadSourcesCard", () => {
     vi.stubGlobal("fetch", backend(ADMIN, calls));
     render(
       <Providers>
-        <LeadSourcesCard />
+        <LeadOriginsCard />
       </Providers>,
     );
     await user.click(
@@ -244,25 +243,25 @@ describe("LeadSourcesCard", () => {
     );
     await waitFor(() => {
       expect(
-        wrote(calls, "PATCH", "/lead-sources/src-trade_show", {
+        wrote(calls, "PATCH", "/lead-origins/src-trade_show", {
           intent: "low",
         }),
       ).toBe(true);
       expect(
-        wrote(calls, "PATCH", "/lead-sources/src-trade_show", {
+        wrote(calls, "PATCH", "/lead-origins/src-trade_show", {
           active: false,
         }),
       ).toBe(true);
     });
   });
 
-  it("removes an unused source only after the confirmation", async () => {
+  it("removes an unused origin only after the confirmation", async () => {
     const user = userEvent.setup();
     const calls: Call[] = [];
     vi.stubGlobal("fetch", backend(ADMIN, calls));
     render(
       <Providers>
-        <LeadSourcesCard />
+        <LeadOriginsCard />
       </Providers>,
     );
     await openMenu(user, "Trade show");
@@ -275,14 +274,14 @@ describe("LeadSourcesCard", () => {
         calls.some(
           (c) =>
             c.method === "DELETE" &&
-            c.url.endsWith("/lead-sources/src-trade_show"),
+            c.url.endsWith("/lead-origins/src-trade_show"),
         ),
       ).toBe(true),
     );
     // The row and its menu go, so focus lands on the card's own verb.
     await waitFor(() =>
       expect(
-        screen.getByRole("button", { name: en["leadSources.addOpen"] }),
+        screen.getByRole("button", { name: en["leadOrigins.addOpen"] }),
       ).toHaveFocus(),
     );
   });
@@ -293,7 +292,7 @@ describe("LeadSourcesCard", () => {
     vi.stubGlobal("fetch", backend(ADMIN, [], { rows }));
     render(
       <Providers>
-        <LeadSourcesCard />
+        <LeadOriginsCard />
       </Providers>,
     );
     await openMenu(user, "Webinar");
@@ -305,7 +304,7 @@ describe("LeadSourcesCard", () => {
     );
     await waitFor(() =>
       expect(
-        screen.getByRole("button", { name: en["leadSources.addOpen"] }),
+        screen.getByRole("button", { name: en["leadOrigins.addOpen"] }),
       ).toHaveFocus(),
     );
     await openMenu(user, "Fair");
@@ -334,7 +333,7 @@ describe("LeadSourcesCard", () => {
     );
     render(
       <Providers>
-        <LeadSourcesCard />
+        <LeadOriginsCard />
       </Providers>,
     );
     await openMenu(user, "Webinar");
@@ -345,7 +344,7 @@ describe("LeadSourcesCard", () => {
       }),
     );
     await waitFor(() =>
-      expect(screen.getByText(en["leadSources.title"])).toHaveFocus(),
+      expect(screen.getByText(en["leadOrigins.title"])).toHaveFocus(),
     );
   });
 
@@ -354,93 +353,64 @@ describe("LeadSourcesCard", () => {
     vi.stubGlobal("fetch", backend(ADMIN));
     render(
       <Providers>
-        <LeadSourcesCard />
+        <LeadOriginsCard />
       </Providers>,
     );
     await openMenu(user, "Created manually");
     const remove = screen.getByRole("button", { name: "Remove" });
     expect(remove).toBeDisabled();
-    const reason = screen.getByText(en["leadSources.builtInKept"]);
+    const reason = screen.getByText(en["leadOrigins.builtInKept"]);
     expect(remove.getAttribute("aria-describedby")).toContain(reason.id);
   });
 
-  it("adds a source through the header verb's dialog and adopts a discovered value", async () => {
+  it("adds an origin through the header verb's dialog", async () => {
     const user = userEvent.setup();
     const calls: Call[] = [];
     vi.stubGlobal("fetch", backend(ADMIN, calls));
     render(
       <Providers>
-        <LeadSourcesCard />
+        <LeadOriginsCard />
       </Providers>,
     );
-    await user.click(await screen.findByRole("button", { name: "New source" }));
+    await user.click(await screen.findByRole("button", { name: "New origin" }));
     const dialog = within(screen.getByRole("dialog"));
-    await user.type(dialog.getByTestId("lead-source-new-label"), "Webinar");
-    await user.click(dialog.getByRole("button", { name: "Add source" }));
+    await user.type(dialog.getByTestId("lead-origin-new-label"), "Webinar");
+    await user.click(dialog.getByRole("button", { name: "Add origin" }));
     await waitFor(() =>
       expect(
-        wrote(calls, "POST", "/lead-sources", {
+        wrote(calls, "POST", "/lead-origins", {
           label: "Webinar",
           intent: "neutral",
         }),
       ).toBe(true),
     );
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
-    const found = screen.getByTestId("lead-source-discovered-connector:apollo");
-    expect(within(found).getByText("connector:apollo")).toBeTruthy();
-    await user.click(
-      within(found).getByRole("button", { name: "Add to list" }),
-    );
-    await waitFor(() =>
-      expect(
-        calls.some(
-          (c) =>
-            c.method === "POST" &&
-            (c.body as { key?: string }).key === "connector:apollo",
-        ),
-      ).toBe(true),
-    );
   });
 
-  it("says a duplicate source name on the field and keeps the dialog open", async () => {
+  it("says a duplicate origin name on the field and keeps the dialog open", async () => {
     const user = userEvent.setup();
     vi.stubGlobal("fetch", backend(ADMIN, [], { refuseWrite: true }));
     render(
       <Providers>
-        <LeadSourcesCard />
+        <LeadOriginsCard />
       </Providers>,
     );
     await user.click(
-      await screen.findByRole("button", { name: en["leadSources.addOpen"] }),
+      await screen.findByRole("button", { name: en["leadOrigins.addOpen"] }),
     );
     const dialog = within(screen.getByRole("dialog"));
-    const field = dialog.getByTestId("lead-source-new-label");
+    const field = dialog.getByTestId("lead-origin-new-label");
     await user.type(field, "Trade show{Enter}");
-    expect(await dialog.findByText(en["leadSources.duplicate"])).toBeTruthy();
+    expect(await dialog.findByText(en["leadOrigins.duplicate"])).toBeTruthy();
     expect(field.getAttribute("aria-invalid")).toBe("true");
     expect(dialog.queryByText(CONFLICT.detail)).toBeNull();
-  });
-
-  it("names the discovered value each Add to list adopts", async () => {
-    vi.stubGlobal("fetch", backend(ADMIN));
-    render(
-      <Providers>
-        <LeadSourcesCard />
-      </Providers>,
-    );
-    const found = await screen.findByTestId(
-      "lead-source-discovered-connector:apollo",
-    );
-    expect(
-      within(found).getByRole("button", { name: en["leadSources.adopt"] }),
-    ).toHaveAccessibleDescription(/connector:apollo/);
   });
 
   it("leaves every control inert for a reader, and leaves the why to the page", async () => {
     vi.stubGlobal("fetch", backend(READER));
     render(
       <Providers>
-        <LeadSourcesCard />
+        <LeadOriginsCard />
       </Providers>,
     );
     const toggle = await screen.findByRole("switch", {
@@ -450,14 +420,13 @@ describe("LeadSourcesCard", () => {
     expect(screen.queryByText(en["leadSources.removeOnlyTitle"])).toBeNull();
     expect(screen.queryByText(en["leadSources.addOnlyTitle"])).toBeNull();
     expect(
-      screen.queryByRole("button", { name: en["leadSources.addOpen"] }),
+      screen.queryByRole("button", { name: en["leadOrigins.addOpen"] }),
     ).toBeNull();
     expect(
       screen.queryByRole("button", {
         name: en["table.rowActions"].replace("{name}", "Trade show"),
       }),
     ).toBeNull();
-    // The discovered table has no verb for a reader either.
     expect(
       screen.queryByRole("columnheader", {
         name: en["leadSources.colActions"],
@@ -469,11 +438,11 @@ describe("LeadSourcesCard", () => {
     vi.stubGlobal("fetch", backend(ADDER));
     render(
       <Providers>
-        <LeadSourcesCard />
+        <LeadOriginsCard />
       </Providers>,
     );
     expect(
-      await screen.findByRole("button", { name: en["leadSources.addOpen"] }),
+      await screen.findByRole("button", { name: en["leadOrigins.addOpen"] }),
     ).toBeTruthy();
     expect(
       screen.getByRole("switch", { name: "Trade show is active" }),
@@ -486,7 +455,7 @@ describe("LeadSourcesCard", () => {
     vi.stubGlobal("fetch", backend(REMOVER));
     render(
       <Providers>
-        <LeadSourcesCard />
+        <LeadOriginsCard />
       </Providers>,
     );
     expect(
@@ -622,7 +591,7 @@ const IN_USE = [
 ];
 
 it.each([
-  [LeadSourcesCard, "1 lead uses this source.", "2 leads use this source."],
+  [LeadOriginsCard, "1 lead uses this origin.", "2 leads use this origin."],
   [
     LeadDisqualifyReasonsCard,
     "1 lead has this reason.",
@@ -744,7 +713,7 @@ describe("a refused write names the card's notice on the control that sent it", 
     vi.stubGlobal("fetch", backend(ADMIN, [], { refuseWrite: true }));
     render(
       <Providers>
-        <LeadSourcesCard />
+        <LeadOriginsCard />
       </Providers>,
     );
     const intent = await screen.findByRole("combobox", {
@@ -761,60 +730,6 @@ describe("a refused write names the card's notice on the control that sent it", 
     expect(
       screen.getByRole("combobox", { name: "Intent of Created manually" }),
     ).not.toHaveAttribute("aria-describedby");
-  });
-
-  it("adds the notice to a refused Add to list after the value it names", async () => {
-    const user = userEvent.setup();
-    vi.stubGlobal("fetch", backend(ADMIN, [], { refuseWrite: true }));
-    render(
-      <Providers>
-        <LeadSourcesCard />
-      </Providers>,
-    );
-    const found = await screen.findByTestId(
-      "lead-source-discovered-connector:apollo",
-    );
-    const adopt = within(found).getByRole("button", {
-      name: en["leadSources.adopt"],
-    });
-    await user.click(adopt);
-    await screen.findByText(en["leadSources.notSaved"]);
-    expect(adopt).toHaveAccessibleDescription(
-      expect.stringMatching(
-        new RegExp(`connector:apollo.*${en["leadSources.notSaved"]}`),
-      ),
-    );
-    expect(
-      screen.getByRole("switch", { name: "Trade show is active" }),
-    ).not.toHaveAttribute("aria-describedby");
-  });
-
-  it("follows the latest refused press when two writes have failed", async () => {
-    vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(new Date("2026-08-01T09:00:00Z"));
-    const user = userEvent.setup();
-    vi.stubGlobal("fetch", backend(ADMIN, [], { refuseWrite: true }));
-    render(
-      <Providers>
-        <LeadSourcesCard />
-      </Providers>,
-    );
-    const found = await screen.findByTestId(
-      "lead-source-discovered-connector:apollo",
-    );
-    const adopt = within(found).getByRole("button", {
-      name: en["leadSources.adopt"],
-    });
-    await user.click(adopt);
-    await waitFor(() => expect(adopt).toHaveAccessibleDescription(notSaved));
-    vi.setSystemTime(new Date("2026-08-01T09:00:01Z"));
-    const intent = screen.getByRole("combobox", {
-      name: "Intent of Trade show",
-    });
-    await user.click(intent);
-    await user.click(screen.getByRole("option", { name: "Low intent" }));
-    await waitFor(() => expect(intent).toHaveAccessibleDescription(notSaved));
-    expect(adopt).not.toHaveAccessibleDescription(notSaved);
   });
 
   it("describes the refused reason switch alone", async () => {

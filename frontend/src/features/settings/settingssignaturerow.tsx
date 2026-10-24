@@ -102,7 +102,7 @@ export function SignatureSettingRow({ toast }: Readonly<{ toast: Toast }>) {
         intent="form"
         unsaved={dirty}
       >
-        <Heading size="large" className="t-h3 modal-title" id={titleId}>
+        <Heading size="large" className="t-h2 modal-title" id={titleId}>
           {t("settings.signature")}
         </Heading>
         {/* A real form: nothing is written until Save is pressed. */}

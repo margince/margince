@@ -279,6 +279,7 @@ var catalog = map[string]struct {
 	"intro_request.created":   {contactStreamEntity, 1},
 	"intro_request.decided":   {contactStreamEntity, 1},
 	"intro_request.completed": {contactStreamEntity, 1},
+	"intro_request.recorded":  {contactStreamEntity, 1},
 	"intro_request.replied":   {contactStreamEntity, 1},
 	"intro_request.closed":    {contactStreamEntity, 1},
 
@@ -310,6 +311,7 @@ var catalog = map[string]struct {
 	"user.invited":              {identityStreamEntity, 1},
 	"user.activated":            {identityStreamEntity, 1},
 	"user.password_link_issued": {identityStreamEntity, 1},
+	"user.mfa_removed":          {identityStreamEntity, 1},
 	"user.deactivated":          {identityStreamEntity, 1},
 	"user.reactivated":          {identityStreamEntity, 1},
 	"role.changed":              {identityStreamEntity, 1},

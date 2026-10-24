@@ -206,7 +206,8 @@ when the other is already done, so the pair cannot loop. Opening the task again 
 dismissing a claim leaves the task alone: a kept promise that was reopened was still kept. The write runs
 as the human behind the event, so it cannot settle a claim or a task that human may not change.
 
-A confirmed email request becomes an undated task through a separate hourly pass, `owedclassify.go`. Its
+A confirmed email request becomes a task through a separate hourly pass, `owedclassify.go`. The task is
+undated unless the request states a deadline after a word such as "Deadline" or "by". Its
 rules are on [customer-requests.md](customer-requests.md).
 
 ## The weekly job

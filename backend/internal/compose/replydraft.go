@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -63,8 +64,10 @@ type replyActivityData struct {
 	Body    string `json:"body,omitempty"`
 	// OccurredAt is the anchor's own date, RFC 3339. The band alone spans 8 to
 	// 90 days, and a model given only its name wrote "a few weeks" for ten.
-	OccurredAt   string `json:"occurred_at,omitempty"`
-	Intent       string `json:"intent,omitempty"`
+	OccurredAt string `json:"occurred_at,omitempty"`
+	Intent     string `json:"intent,omitempty"`
+	// RewriteOf is the draft on the composer's screen; empty is a first draft.
+	RewriteOf    string `json:"rewrite_of,omitempty"`
 	Conversation string `json:"conversation,omitempty"`
 	// Thread identifies inbound evidence for grounding and consent semantics.
 	// Outbound follow-ups get their subject header independently.
@@ -124,19 +127,19 @@ func WithReplyDraft(brain completer) Option {
 }
 
 func (d replyDrafter) DraftEmail(ctx context.Context, anchor ids.UUID, intent string) (string, string, error) {
-	result, err := d.DraftEmailWithProvenance(ctx, anchor, intent)
+	result, err := d.DraftEmailWithProvenance(ctx, anchor, draftfloor.Steering{Intent: strings.TrimSpace(intent)})
 	return result.Subject, result.Body, err
 }
 
 // DraftEmailWithProvenance drafts in the actor's Voice DNA when a ready
 // profile exists, with the deterministic anti-AI floor on top; without one,
 // the plain model draft is unchanged (clean fallback per drafting.md).
-func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.UUID, intent string) (activities.DraftResult, error) {
+func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.UUID, steering draftfloor.Steering) (activities.DraftResult, error) {
 	activity, err := d.store.GetActivityContent(ctx, ids.From[ids.ActivityKind](anchor), storekit.LiveOnly)
 	if err != nil {
 		return activities.DraftResult{}, err
 	}
-	conversation, err := d.replyConversation(ctx, activity)
+	turns, err := d.replyConversation(ctx, activity)
 	if err != nil {
 		return activities.DraftResult{}, err
 	}
@@ -157,7 +160,9 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 		Stored:  activityLanguage(activity),
 		Body:    body,
 		Subject: topic,
-		Purpose: intent,
+		Thread:  draftcore.LanguageEvidence(turns),
+		Rewrite: steering.RewriteOf,
+		Purpose: steering.Intent,
 	}, state)
 	recipient, surname := d.recipientName(ctx, ids.From[ids.ActivityKind](anchor))
 
@@ -182,8 +187,9 @@ func (d replyDrafter) DraftEmailWithProvenance(ctx context.Context, anchor ids.U
 		Subject:           textcut.Runes(topic, replyActivityMaxRunes),
 		Body:              textcut.Runes(body, replyActivityMaxRunes),
 		OccurredAt:        activity.OccurredAt.UTC().Format(time.RFC3339),
-		Intent:            textcut.Runes(strings.TrimSpace(intent), replyActivityMaxRunes),
-		Conversation:      conversation,
+		Intent:            textcut.Runes(steering.Intent, replyActivityMaxRunes),
+		RewriteOf:         textcut.Runes(steering.RewriteOf, replyActivityMaxRunes),
+		Conversation:      replyConversationText(turns),
 	}
 
 	voice := d.loadVoice(ctx)

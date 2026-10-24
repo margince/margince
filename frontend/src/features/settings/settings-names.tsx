@@ -1,200 +1,271 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { api } from "../../api/client";
-import { Button, Field, TextInput } from "../../design-system/atoms";
+import { Field, TextInput } from "../../design-system/atoms";
 import { describedByIds } from "../../design-system/describedby";
+import { useSaveDraft, useSavePage } from "../../design-system/savepage";
 import { SettingRow } from "../../design-system/settingrow";
 import type { Toast } from "../../design-system/toast";
+import { formatNumber } from "../../format/format";
 import { greetingNameOf } from "../../format/greetingname";
-import { useT } from "../../i18n";
+import { type Locale, useLocale, useT } from "../../i18n";
 import { isImeCommit } from "../../lib/imecommit";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 
-// The two names on the Account card: the one colleagues see you by and the one
-// they greet you by. Both are the caller's own and read back from `/me`.
+// The two names on the Profile card: the one colleagues see you by and the one
+// they greet you by. They commit together through the page's save bar.
 
-/**
- * The name colleagues see you by.
- *
- * The saved answer is read back from `/me` rather than kept here, so the shell's
- * account chip and the roster agree with this row the moment it lands.
- */
-export function DisplayNameSettingRow({ toast }: Readonly<{ toast: Toast }>) {
-  const t = useT();
-  const me = useMe();
-  const queryClient = useQueryClient();
-  return (
-    <NameSettingRow
-      toast={toast}
-      stored={me.data?.user.display_name ?? ""}
-      label={t("settings.displayName")}
-      description={t("settings.displayNameHelp")}
-      saveLabel={t("settings.displayNameSave")}
-      maxRunes={255}
-      emptyAllowed={false}
-      save={async (next) => {
-        const data = unwrap(
-          await api.PUT("/me/display-name", {
-            body: { display_name: next },
-          }),
-          t,
-        );
-        void queryClient.invalidateQueries({
-          queryKey: ["scheduling-profile"],
-        });
-        return data?.display_name ?? null;
-      }}
-    />
-  );
+const DISPLAY_MAX_RUNES = 255;
+const GREETING_MAX_RUNES = 100;
+
+type NameDraft = Readonly<{
+  shown: string;
+  set: (next: string) => void;
+  /** Why this value cannot be sent, or undefined when it can. */
+  invalid: string | undefined;
+}>;
+
+export type AccountNames = Readonly<{
+  display: NameDraft;
+  greeting: NameDraft;
+  greetingFallback: string | undefined;
+}>;
+
+type NamesPatch = Readonly<{ display?: string; greeting?: string }>;
+type NameField = "display" | "greeting";
+
+// Characters, which is what the contract's `maxLength` means and what the
+// server counts; `String.length` counts UTF-16 units instead.
+function runeCount(text: string): number {
+  return [...text].length;
 }
 
 /**
- * The name colleagues greet you by, when the first word of the display name is
- * not it. Empty is a real answer: it clears the choice, and greetings go back
- * to that first word.
+ * The drafts of both names, handed to the page's save bar. A null draft means
+ * "not edited", so a `/me` refetch never overwrites what is being typed.
  */
-export function GreetingNameSettingRow({ toast }: Readonly<{ toast: Toast }>) {
+export function useAccountNames(toast: Toast): AccountNames {
   const t = useT();
+  const { locale } = useLocale();
   const me = useMe();
-  return (
-    <NameSettingRow
-      toast={toast}
-      stored={me.data?.user.greeting_name ?? ""}
-      label={t("settings.greetingName")}
-      description={t("settings.greetingNameHelp")}
-      saveLabel={t("settings.greetingNameSave")}
-      maxRunes={100}
-      emptyAllowed
-      // What greetings fall back to while this is empty.
-      placeholder={
-        greetingNameOf({ display_name: me.data?.user.display_name }) ??
-        undefined
-      }
-      save={async (next) => {
-        const data = unwrap(
-          await api.PUT("/me/greeting-name", {
-            body: { greeting_name: next === "" ? null : next },
-          }),
-          t,
-        );
-        return data?.greeting_name ?? "";
-      }}
-    />
-  );
-}
-
-/**
- * One editable name on the Account card. `save` sends the trimmed text and
- * answers the name as stored, which the row keeps visible if the `/me` refetch
- * is slow or fails.
- */
-function NameSettingRow({
-  toast,
-  stored,
-  label,
-  description,
-  saveLabel,
-  maxRunes,
-  emptyAllowed,
-  placeholder,
-  save: send,
-}: Readonly<{
-  toast: Toast;
-  stored: string;
-  label: string;
-  description: string;
-  saveLabel: string;
-  maxRunes: number;
-  emptyAllowed: boolean;
-  placeholder?: string;
-  save: (next: string) => Promise<string | null>;
-}>) {
-  const t = useT();
   const queryClient = useQueryClient();
-  // null means "not editing" — the row shows the stored name until the reader
-  // types, so a `/me` refetch cannot overwrite what they are in the middle of.
-  const [draft, setDraft] = useState<string | null>(null);
-  const input = useRef<HTMLInputElement>(null);
-  const actions = useRef<HTMLDivElement>(null);
-  const shown = draft ?? stored;
+  const storedDisplay = me.data?.user.display_name ?? "";
+  const storedGreeting = me.data?.user.greeting_name ?? "";
+  const [displayDraft, setDisplay] = useState<string | null>(null);
+  const [greetingDraft, setGreeting] = useState<string | null>(null);
+  // Trimmed before comparing, or a trailing space reads as a change the server
+  // then answers is none.
+  const display = (displayDraft ?? storedDisplay).trim();
+  const greeting = (greetingDraft ?? storedGreeting).trim();
+  const displayChanged = display !== storedDisplay;
+  const greetingChanged = greeting !== storedGreeting;
+
+  const { refusedText, attempt, setRefusal } = useNameRefusal();
   const save = useMutation({
-    mutationFn: send,
-    onSuccess: (saved) => {
-      setDraft(saved);
+    mutationFn: async (patch: NamesPatch) => {
+      setRefusal(null);
+      await sendNames(patch, attempt, t);
+    },
+    onSuccess: async () => {
       toast.show(t("settings.saved"));
-      void queryClient.invalidateQueries({ queryKey: ["me"] });
+      // Awaited before the drafts drop, so the fields never flash the old names.
+      await queryClient.invalidateQueries({ queryKey: ["me"] });
+      void queryClient.invalidateQueries({ queryKey: ["scheduling-profile"] });
+      setDisplay(null);
+      setGreeting(null);
     },
   });
-  // Trimmed for the comparison as well as for the send, or a name with a
-  // trailing space reads as a change and the server answers that it is not one.
-  const trimmed = shown.trim();
-  const dirty = trimmed !== stored;
-  // Counted in CHARACTERS, which is what the contract's `maxLength` means and
-  // what the server checks with `utf8.RuneCountInString`. `String.length` would
-  // count UTF-16 units and refuse a name the server admits.
-  const tooLong = [...trimmed].length > maxRunes;
-  const refusal = save.error ? problemMessageOf(save.error, t) : undefined;
-  const savable = dirty && (emptyAllowed || trimmed !== "") && !tooLong;
-  // The Save button leaves once the name lands. Focus left on it, or dropped
-  // to the page, goes back to the field; focus the reader moved stays put.
-  const commit = () =>
-    save.mutate(trimmed, {
-      onSettled: () => {
-        const active = document.activeElement;
-        if (active === document.body || actions.current?.contains(active)) {
-          input.current?.focus();
-        }
+
+  const displayInvalid =
+    display === ""
+      ? t("record.fieldRequired")
+      : tooLong(display, DISPLAY_MAX_RUNES, t, locale);
+  const greetingInvalid = tooLong(greeting, GREETING_MAX_RUNES, t, locale);
+  useSaveDraft({
+    dirty: displayChanged || greetingChanged,
+    // The field already says what is wrong; the bar holds Save until it is fixed.
+    invalid:
+      (displayChanged && displayInvalid !== undefined) ||
+      (greetingChanged && greetingInvalid !== undefined),
+    save: () =>
+      save.mutateAsync({
+        display: displayChanged ? display : undefined,
+        greeting: greetingChanged ? greeting : undefined,
+      }),
+    discard: () => {
+      save.reset();
+      setRefusal(null);
+      setDisplay(null);
+      setGreeting(null);
+    },
+  });
+
+  return {
+    display: {
+      shown: displayDraft ?? storedDisplay,
+      set: (next) => {
+        setRefusal(null);
+        setDisplay(next);
       },
-    });
+      invalid: shownInvalid(
+        displayChanged,
+        displayInvalid,
+        refusedText("display"),
+      ),
+    },
+    greeting: {
+      shown: greetingDraft ?? storedGreeting,
+      set: (next) => {
+        setRefusal(null);
+        setGreeting(next);
+      },
+      invalid: shownInvalid(
+        greetingChanged,
+        greetingInvalid,
+        refusedText("greeting"),
+      ),
+    },
+    // What greetings fall back to while the greeting name is empty.
+    greetingFallback:
+      greetingNameOf({ display_name: me.data?.user.display_name }) ?? undefined,
+  };
+}
+
+// The field the server refused, so its sentence stands under that field and the
+// other one is not blamed. The bar still carries the one summary error.
+function useNameRefusal() {
+  const t = useT();
+  const [refusal, setRefusal] = useState<{
+    field: NameField;
+    error: unknown;
+  } | null>(null);
+  const attempt = async (field: NameField, write: () => Promise<unknown>) => {
+    try {
+      await write();
+    } catch (error) {
+      setRefusal({ field, error });
+      throw error;
+    }
+  };
+  const refusedText = (field: NameField) =>
+    refusal?.field === field ? problemMessageOf(refusal.error, t) : undefined;
+  return { refusedText, attempt, setRefusal };
+}
+
+// A draft's own fault shows only once it is edited; a server refusal stays.
+function shownInvalid(
+  changed: boolean,
+  own: string | undefined,
+  refused: string | undefined,
+) {
+  return (changed ? own : undefined) ?? refused;
+}
+
+async function sendNames(
+  patch: NamesPatch,
+  attempt: (field: NameField, write: () => Promise<unknown>) => Promise<void>,
+  t: ReturnType<typeof useT>,
+) {
+  if (patch.display !== undefined) {
+    const display_name = patch.display;
+    await attempt("display", async () =>
+      unwrap(await api.PUT("/me/display-name", { body: { display_name } }), t),
+    );
+  }
+  if (patch.greeting !== undefined) {
+    const greeting_name = patch.greeting === "" ? null : patch.greeting;
+    await attempt("greeting", async () =>
+      unwrap(
+        await api.PUT("/me/greeting-name", { body: { greeting_name } }),
+        t,
+      ),
+    );
+  }
+}
+
+function tooLong(
+  text: string,
+  max: number,
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+): string | undefined {
+  return runeCount(text) > max
+    ? t("settings.nameTooLong", { max: formatNumber(max, locale) })
+    : undefined;
+}
+
+/** Both name rows, editing the drafts `useAccountNames` holds. */
+export function NameSettingRows({ names }: Readonly<{ names: AccountNames }>) {
+  const t = useT();
+  return (
+    <>
+      <NameSettingRow
+        label={t("settings.displayName")}
+        description={t("settings.displayNameHelp")}
+        draft={names.display}
+      />
+      <NameSettingRow
+        label={t("settings.greetingName")}
+        description={t("settings.greetingNameHelp")}
+        draft={names.greeting}
+        placeholder={names.greetingFallback}
+      />
+    </>
+  );
+}
+
+function NameSettingRow({
+  label,
+  description,
+  draft,
+  placeholder,
+}: Readonly<{
+  label: string;
+  description: string;
+  draft: NameDraft;
+  placeholder?: string;
+}>) {
+  const page = useSavePage();
   return (
     <SettingRow
       label={label}
       description={description}
       control={(row) => (
-        // Save appears once the name moves, so a settled row is the field alone.
-        <div className="form-stack settingrow-measure">
-          <Field label={label} labelHidden error={refusal}>
-            {(field) => (
-              <TextInput
-                {...field}
-                ref={input}
-                aria-labelledby={row["aria-labelledby"]}
-                aria-describedby={describedByIds(
-                  field["aria-describedby"],
-                  row["aria-describedby"],
-                )}
-                value={shown}
-                placeholder={placeholder}
-                // No `maxLength`: UTF-16 units, not the runes `tooLong` counts.
-                onChange={(event) => setDraft(event.target.value)}
-                onKeyDown={(event) => {
-                  // An Enter that ends an IME composition picks the word.
-                  if (
-                    event.key === "Enter" &&
-                    !isImeCommit(event) &&
-                    savable &&
-                    !save.isPending
-                  ) {
-                    commit();
-                  }
-                }}
-              />
-            )}
-          </Field>
-          {dirty && (
-            <div className="form-actions" ref={actions}>
-              <Button
-                variant="primary"
-                disabled={!savable}
-                pending={save.isPending}
-                onClick={commit}
-              >
-                {saveLabel}
-              </Button>
-            </div>
+        <Field
+          label={label}
+          labelHidden
+          error={draft.invalid}
+          className="settingrow-measure"
+        >
+          {(field) => (
+            <TextInput
+              {...field}
+              aria-labelledby={row["aria-labelledby"]}
+              aria-describedby={describedByIds(
+                field["aria-describedby"],
+                row["aria-describedby"],
+              )}
+              value={draft.shown}
+              placeholder={placeholder}
+              // No `maxLength`: it counts UTF-16 units, not characters.
+              onChange={(event) => draft.set(event.target.value)}
+              onKeyDown={(event) => {
+                // Enter commits a changed name, as a rename does elsewhere. The
+                // Enter that ends an IME composition picks the word instead.
+                if (
+                  event.key === "Enter" &&
+                  !isImeCommit(event) &&
+                  page?.dirty &&
+                  !page.invalid &&
+                  !page.pending
+                ) {
+                  void page.save();
+                }
+              }}
+            />
           )}
-        </div>
+        </Field>
       )}
     />
   );

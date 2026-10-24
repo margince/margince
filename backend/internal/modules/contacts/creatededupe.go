@@ -63,7 +63,7 @@ func manualDedupeContact(ctx context.Context, tx pgx.Tx, in CreateContactInput) 
 	if err := lockPhoneLane(ctx, tx, phones); err != nil {
 		return ContactResolution{}, err
 	}
-	if err := lockNameLane(ctx, tx, in.FullName); err != nil {
+	if err := lockContactLanes(ctx, tx, emails, in.FullName); err != nil {
 		return ContactResolution{}, err
 	}
 	// QueueNameCollisions, because this caller creates rather than routes. A
@@ -94,16 +94,26 @@ func manualDedupeContact(ctx context.Context, tx pgx.Tx, in CreateContactInput) 
 // "LUCY VO" take different locks and race each other, which is the pair most
 // likely to be typed twice.
 //
-// Taken AFTER the phone lane and never interleaved with it: two lanes locked in
-// one fixed global order cannot deadlock, and phone-then-name is that order.
+// Taken after the phone and address-base lanes and never interleaved with them:
+// lanes locked in one fixed global order cannot deadlock.
 // An empty name takes no lock — it can match nobody, since fuzzyContact refuses a
 // nameless candidate before it scores.
+//
+// The digraph key is locked too, in sorted order. A "Björn" create holds
+// "bjoern" through it, the plain key a "Bjoern" create takes, so the two
+// serialize.
 func lockNameLane(ctx context.Context, tx pgx.Tx, fullName string) error {
-	key := NormalizeContactName(fullName)
-	if key == "" {
-		return nil
+	keys := []string{NormalizeContactName(fullName), digraphNameKey(fullName)}
+	slices.Sort(keys)
+	for _, key := range slices.Compact(keys) {
+		if key == "" {
+			continue
+		}
+		if err := storekit.LockWriteIdentity(ctx, tx, "contact_full_name", key); err != nil {
+			return err
+		}
 	}
-	return storekit.LockWriteIdentity(ctx, tx, "contact_full_name", key)
+	return nil
 }
 
 // phoneLaneKeys is the request's numbers in the form the phone lane
@@ -176,46 +186,71 @@ func manualDedupeCompany(ctx context.Context, tx pgx.Tx, in CreateCompanyInput) 
 	})
 }
 
-// recordIfReview leaves the review trail a manual contact create owes —
-// the fuzzy pair, and the shared phone the exact tier routed on. A
-// no-match writes nothing, because there is no second record to compare.
-func (m ContactResolution) recordIfReview(ctx context.Context, tx pgx.Tx, createdID ids.ContactID, createdName, source, by string) error {
-	switch m.Decision {
+// recordIfReview leaves the review trail a manual contact create owes: every
+// pair the review lanes named, and the shared phone the exact tier routed on.
+// A no-match writes nothing, because there is no second record to compare. It
+// answers how many pairs are new on the queue.
+func (m ContactResolution) recordIfReview(ctx context.Context, tx pgx.Tx, createdID ids.ContactID, createdName, source, by string) (int, error) {
+	if m.Decision == DecisionExactCollision {
+		filed, err := m.recordSharedPhone(ctx, tx, createdID, source, by)
+		return countFiled(0, filed), err
+	}
+	var count int
+	for _, review := range m.Reviews {
+		filed, err := review.record(ctx, tx, createdID, createdName, source, by)
+		if err != nil {
+			return count, err
+		}
+		count = countFiled(count, filed)
+	}
+	return count, nil
+}
+
+// countFiled adds one to count for a pair the queue did not hold before.
+func countFiled(count int, filed bool) int {
+	if filed {
+		return count + 1
+	}
+	return count
+}
+
+// record files one review pair with the evidence its lane met on.
+func (r ReviewMatch) record(ctx context.Context, tx pgx.Tx, createdID ids.ContactID, createdName, source, by string) (bool, error) {
+	switch r.Decision {
 	case DecisionFuzzyReview:
 		var incumbent string
-		if err := tx.QueryRow(ctx, `SELECT full_name FROM contact WHERE id = $1`, m.ContactID).Scan(&incumbent); err != nil {
-			return fmt.Errorf("reading contact near-match incumbent: %w", err)
+		if err := tx.QueryRow(ctx, `SELECT full_name FROM contact WHERE id = $1`, r.ContactID).Scan(&incumbent); err != nil {
+			return false, fmt.Errorf("reading contact near-match incumbent: %w", err)
 		}
-		return recordNearMatch(ctx, tx, entityContact, createdID.UUID, m.ContactID.UUID, m.Confidence,
-			nearMatchEvidence(fieldFullName, createdName, incumbent, m.Confidence), source, by)
+		return recordNearMatch(ctx, tx, entityContact, createdID.UUID, r.ContactID.UUID, r.Confidence,
+			nearMatchEvidence(fieldFullName, createdName, incumbent, r.Confidence), source, by)
 	case DecisionNameCollisionReview:
-		// One contact, a second business card, a different address: the case a
-		// rep actually hits, and the one the fuzzy tier cannot reach because a
-		// create carries no employer for its company term to agree with.
-		//
 		// The incumbent's name is read back rather than reused from the request
 		// so the evidence shows the two SPELLINGS a human will compare. They are
-		// equal after folding — that is what the lane matched on — but not
-		// necessarily equal on screen, and "Lucy Vo" beside "LUCY VO" is a
-		// reviewer's first clue about where the second record came from.
+		// equal after folding, but "Lucy Vo" beside "LUCY VO" is a reviewer's
+		// first clue about where the second record came from.
 		var incumbent string
-		if err := tx.QueryRow(ctx, `SELECT full_name FROM contact WHERE id = $1`, m.ContactID).Scan(&incumbent); err != nil {
-			return fmt.Errorf("reading the contact this name collides with: %w", err)
+		if err := tx.QueryRow(ctx, `SELECT full_name FROM contact WHERE id = $1`, r.ContactID).Scan(&incumbent); err != nil {
+			return false, fmt.Errorf("reading the contact this name collides with: %w", err)
 		}
 		// The queue row only. No dedupe_near_match ledger line, because that
 		// ledger records the fuzzy tier's own scoring and this lane did not
-		// score: it compared two normalized strings. A line carrying a
-		// confidence would invite a reader to tune a threshold that had no part
-		// in the decision.
-		if _, err := recordDedupeCandidate(ctx, tx, entityContact, createdID.UUID, m.ContactID.UUID,
-			m.Confidence, nameCollisionEvidence(createdName, incumbent, m.Confidence), source, by); err != nil {
-			return fmt.Errorf("record contact name-collision candidate: %w", err)
+		// score: it compared two normalized strings.
+		filed, err := recordDedupeCandidate(ctx, tx, entityContact, createdID.UUID, r.ContactID.UUID,
+			r.Confidence, nameCollisionEvidence(createdName, incumbent, r.Confidence), source, by)
+		if err != nil {
+			return false, fmt.Errorf("record contact name-collision candidate: %w", err)
 		}
-		return nil
-	case DecisionExactCollision:
-		return m.recordSharedPhone(ctx, tx, createdID, source, by)
+		return filed, nil
+	case DecisionAddressVariantReview:
+		filed, err := recordDedupeCandidate(ctx, tx, entityContact, createdID.UUID, r.ContactID.UUID,
+			0, addressVariantEvidence(r.CandidateEmail, r.IncumbentEmail), source, by)
+		if err != nil {
+			return false, fmt.Errorf("record contact address-variant candidate: %w", err)
+		}
+		return filed, nil
 	default:
-		return nil
+		return false, nil
 	}
 }
 
@@ -245,13 +280,13 @@ func nameCollisionEvidence(created, incumbent string, confidence float64) []map[
 // matched on numbers this create has just inserted, so an empty answer
 // would mean the ladder and the child-row write disagree about what was
 // stored, and a review pair with no evidence is worse than a loud failure.
-func (m ContactResolution) recordSharedPhone(ctx context.Context, tx pgx.Tx, createdID ids.ContactID, source, by string) error {
+func (m ContactResolution) recordSharedPhone(ctx context.Context, tx pgx.Tx, createdID ids.ContactID, source, by string) (bool, error) {
 	if m.MatchedLane != lanePhone {
 		// The package comment above is the argument that this cannot
 		// happen; if a lane ever does reach here it has no create-path
 		// policy, and inventing one silently is how a 409 contract or a
 		// merge rule gets bypassed unnoticed.
-		return fmt.Errorf("contacts: manual contact create routed on the %q exact lane, which has no create-path policy", m.MatchedLane)
+		return false, fmt.Errorf("contacts: manual contact create routed on the %q exact lane, which has no create-path policy", m.MatchedLane)
 	}
 	var shared string
 	if err := tx.QueryRow(ctx, `
@@ -262,7 +297,7 @@ func (m ContactResolution) recordSharedPhone(ctx context.Context, tx pgx.Tx, cre
 		   AND created.archived_at IS NULL AND incumbent.archived_at IS NULL
 		 ORDER BY created.phone
 		 LIMIT 1`, createdID, m.ContactID).Scan(&shared); err != nil {
-		return fmt.Errorf("reading the phone number both records hold: %w", err)
+		return false, fmt.Errorf("reading the phone number both records hold: %w", err)
 	}
 	// "collide" at its limit: the fuzzy tier uses it for two values that
 	// resemble each other, and an exact key hit is the same statement with
@@ -276,26 +311,44 @@ func (m ContactResolution) recordSharedPhone(ctx context.Context, tx pgx.Tx, cre
 		evidenceSignalKey: evidenceSignalCollide,
 		evidenceScoreKey:  identityConflictConfidence,
 	}}
-	if _, err := recordDedupeCandidate(ctx, tx, entityContact, createdID.UUID, m.ContactID.UUID,
-		identityConflictConfidence, evidence, source, by); err != nil {
-		return fmt.Errorf("record contact shared-phone candidate: %w", err)
+	filed, err := recordDedupeCandidate(ctx, tx, entityContact, createdID.UUID, m.ContactID.UUID,
+		identityConflictConfidence, evidence, source, by)
+	if err != nil {
+		return false, fmt.Errorf("record contact shared-phone candidate: %w", err)
 	}
-	return nil
+	return filed, nil
 }
 
-// The evidence names the axis the score actually came from. Two records can
-// collide on their registered names while their display names differ, and
-// rendering that as a display-name collision would show a reviewer a
-// comparison nobody made.
-func (m CompanyMatch) recordIfReview(ctx context.Context, tx pgx.Tx, createdID ids.CompanyID, source, by string) error {
+// recordIfReview files every company the ladder ranked against the created
+// one, and answers how many pairs are new on the queue. A pair the queue has
+// already seen, merged or dismissed, is a no-op in recordDedupeCandidate, so
+// one dismissal never masks a duplicate ranked behind it.
+func (m CompanyMatch) recordIfReview(ctx context.Context, tx pgx.Tx, createdID ids.CompanyID, source, by string) (int, error) {
 	if m.Decision != DecisionFuzzyReview {
-		return nil
+		return 0, nil
 	}
-	// fuzzyCompany only returns this decision with a non-empty Ranked, so
-	// the winner is always there to read.
-	best := m.Ranked[0]
-	return recordNearMatch(ctx, tx, entityCompany, createdID.UUID, m.CompanyID.UUID, m.Confidence,
-		nearMatchEvidence(best.MatchedField, best.CandidateValue, best.IncumbentValue, m.Confidence), source, by)
+	var count int
+	for _, rival := range m.Ranked {
+		filed, err := rival.record(ctx, tx, createdID, source, by)
+		if err != nil {
+			return count, err
+		}
+		count = countFiled(count, filed)
+	}
+	return count, nil
+}
+
+// record files one ranked rival. The evidence names the axis the score came
+// from. Two records can collide on their registered names while their display
+// names differ, and a reviewer must see the comparison that was made.
+func (r CompanyCandidateScore) record(ctx context.Context, tx pgx.Tx, createdID ids.CompanyID, source, by string) (bool, error) {
+	evidence := nearMatchEvidence(r.MatchedField, r.CandidateValue, r.IncumbentValue, r.Confidence)
+	if r.Confidence == 0 {
+		// A lane that compared keys and scored nothing, such as the subdomain
+		// lane, files the queue row and no score line.
+		return recordDedupeCandidate(ctx, tx, entityCompany, createdID.UUID, r.CompanyID.UUID, 0, evidence, source, by)
+	}
+	return recordNearMatch(ctx, tx, entityCompany, createdID.UUID, r.CompanyID.UUID, r.Confidence, evidence, source, by)
 }
 
 // nearMatchEvidence is the detection-time snapshot the review queue
@@ -317,13 +370,13 @@ func nearMatchEvidence(field, created, incumbent string, confidence float64) []m
 // Appending a line per re-detection would grow the ledger without recording
 // anything new — the rename re-check runs on every rename, so a pair a human
 // left open would otherwise gain a line forever.
-func recordNearMatch(ctx context.Context, tx pgx.Tx, entityType string, createdID, matchedID ids.UUID, confidence float64, evidence []map[string]any, source, by string) error {
+func recordNearMatch(ctx context.Context, tx pgx.Tx, entityType string, createdID, matchedID ids.UUID, confidence float64, evidence []map[string]any, source, by string) (bool, error) {
 	recorded, err := recordDedupeCandidate(ctx, tx, entityType, createdID, matchedID, confidence, evidence, source, by)
 	if err != nil {
-		return fmt.Errorf("record %s near-match candidate: %w", entityType, err)
+		return false, fmt.Errorf("record %s near-match candidate: %w", entityType, err)
 	}
 	if !recorded {
-		return nil
+		return false, nil
 	}
 	if _, err := storekit.LogSystem(ctx, tx, "dedupe_near_match", map[string]any{
 		"entity_type": entityType,
@@ -331,7 +384,7 @@ func recordNearMatch(ctx context.Context, tx pgx.Tx, entityType string, createdI
 		"matched_id":  matchedID.String(),
 		"confidence":  confidence,
 	}); err != nil {
-		return fmt.Errorf("record %s near-match: %w", entityType, err)
+		return false, fmt.Errorf("record %s near-match: %w", entityType, err)
 	}
-	return nil
+	return true, nil
 }

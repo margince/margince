@@ -10,7 +10,9 @@
    copied between sheets is the drift the token ladders exist to stop. */
 .record-card {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  /* The name keeps a floor of its own: an aside that is long in a translation
+     (a role word in Vietnamese) shortens itself, never the name beside it. */
+  grid-template-columns: minmax(calc(var(--space-16) * 2), 1fr) minmax(0, auto);
   align-items: start;
   column-gap: var(--space-3);
   row-gap: var(--space-1);

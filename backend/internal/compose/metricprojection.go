@@ -92,11 +92,15 @@ func projectReportingMetric(def crmcontracts.ReportingMetricDefinition, frame cr
 		out.Coverage.Status = coverage.Status
 	case reportingClosedWinRate:
 		projectClosedRate(&out, cohort)
-	case reportingStageAge:
+	case reportingStageAge, reportingLeadFirstResponse:
 		out.Value = metricPercentile(cohort, .5)
 		if out.Value == nil {
 			out.Coverage.Status = reportingInsufficientSample
 		}
+	case reportingLeadsPromoted:
+		projectShare(&out, cohort, func(fact reporting.Fact) bool { return fact.Row.Value != nil && *fact.Row.Value == 1 })
+	case reportingPartnerActivity:
+		projectShare(&out, cohort, func(fact reporting.Fact) bool { return fact.GroupKey == partnerActiveGroup })
 	}
 	if def.SupportsTarget {
 		out.TargetActual, _, _ = metricSum(metricFacts(facts, def.Id, reportingTarget))
@@ -121,6 +125,19 @@ func projectClosedRate(out *crmcontracts.ReportingMetric, facts []reporting.Fact
 	out.Denominator = &count
 	ratio := won / count * 100
 	out.Value = &ratio
+}
+
+// projectShare reports a count with the population it was counted from. The
+// value is how many facts qualify, and the denominator is every fact read.
+func projectShare(out *crmcontracts.ReportingMetric, facts []reporting.Fact, qualifies func(reporting.Fact) bool) {
+	qualifying := 0.0
+	for _, fact := range facts {
+		if qualifies(fact) {
+			qualifying++
+		}
+	}
+	count := float64(len(facts))
+	out.Value, out.Numerator, out.Denominator = &qualifying, &qualifying, &count
 }
 
 func metricPercentile(facts []reporting.Fact, fraction float64) *float64 {
@@ -193,6 +210,8 @@ func populateReportingChart(out *reporting.Evaluation, chart crmcontracts.Report
 		chart = reportingWeekly(out, chart)
 	case "forecast_support":
 		chart = reportingForecastChart(out, chart)
+	case reportingBreakdown:
+		chart = reportingBreakdownChart(out, chart, metric)
 	case reportingPipelineMovement:
 		chart.Coverage = crmcontracts.ReportingCoverage{Status: reportingUnavailable}
 		reason := reporting.ExplanationCopy(out.Result.Context).Say(reportingWords.Collecting)

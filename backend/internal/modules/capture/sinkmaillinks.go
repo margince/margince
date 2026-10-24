@@ -50,11 +50,10 @@ import (
 )
 
 // postCommitLinkReservation is how many link seats this arm leaves for the
-// writers that run after the capture transaction: the counterparty ensure and
-// the project ladder, one each (sink.go). Neither reads this budget, so the
-// room has to be kept for them here or the activity's 25-link ceiling is
-// breached by exactly the messages that filled it.
-const postCommitLinkReservation = 2
+// writers after the capture transaction (sink.go). They are the counterparty
+// ensure, the project ladder and the deal rule, one each. None reads this budget. So
+// the room is kept here, or the 25-link ceiling refuses their links.
+const postCommitLinkReservation = 3
 
 // linkResolvedMailParticipants files a captured message under every participant
 // the workspace already has a live contact for.

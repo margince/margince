@@ -57,7 +57,7 @@ func TestStaleCommercialPreviewRefusesEveryDecisionEntryPoint(t *testing.T) {
 				}
 			}
 			attempt := notices.EmailAttempt{ApprovalID: &id, Notice: notices.Notice{Kind: notices.KindApprovalPending}}
-			if _, send, err := refreshApprovalNotice(e.Admin(), e.Pool, attempt, time.Date(2026, 9, 15, 8, 0, 0, 0, time.UTC)); err != nil || send {
+			if _, _, send, err := refreshApprovalNotice(e.Admin(), e.Pool, attempt, time.Date(2026, 9, 15, 8, 0, 0, 0, time.UTC), forSingleEmail); err != nil || send {
 				t.Fatalf("stale decision mail: send=%v, %v", send, err)
 			}
 			if door != "bundle" && !errors.Is(err, apperrors.ErrVersionSkew) {

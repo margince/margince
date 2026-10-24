@@ -78,8 +78,8 @@ func subjectScope(in StageInput, p principal.Principal, args *[]any) string {
 	// Persisted import ownership also covers worker rows with no on_behalf_of.
 	// The production staging test holds this JSON key against the shared DTO.
 	if approvalsubject.PayloadOwned(in.Kind) {
-		*args = append(*args, approvalsubject.Owner(in.ProposedChange).String())
-		return fmt.Sprintf(" AND proposed_change->>'owner_id' = $%d", len(*args))
+		*args = append(*args, approvalsubject.Owner(in.Kind, in.ProposedChange).String())
+		return fmt.Sprintf(" AND %s = $%d", approvalsubject.OwnerSQL(in.Kind), len(*args))
 	}
 	*args = append(*args, nullUUID(p.OnBehalfOf))
 	return fmt.Sprintf(" AND on_behalf_of IS NOT DISTINCT FROM $%d", len(*args))

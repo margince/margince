@@ -49,12 +49,12 @@ type ArcMoment struct {
 }
 
 // clusterThreads groups threads into moments by the silences between them.
-func clusterThreads(threads []thread) []ArcMoment {
+func clusterThreads(threads []thread, loc *time.Location) []ArcMoment {
 	var moments []ArcMoment
 	for _, current := range threads {
 		if len(moments) > 0 {
 			open := &moments[len(moments)-1]
-			if elapsed.Days(open.To, current.First) <= arcGapDays {
+			if elapsed.Days(open.To, current.First, loc) <= arcGapDays {
 				open.Threads = append(open.Threads, current)
 				if current.Last.After(open.To) {
 					open.To = current.Last
@@ -75,7 +75,7 @@ func rankMoments(moments []ArcMoment, in Input) []ArcMoment {
 	sources := claimSourceIDs(in)
 	scored := make([]ArcMoment, 0, len(moments))
 	for _, moment := range moments {
-		moment.Score = scoreMoment(moment, sources, in.Now)
+		moment.Score = scoreMoment(moment, sources, in.Now, in.Zone)
 		moment.Title = titleOf(moment)
 		scored = append(scored, moment)
 	}
@@ -117,7 +117,7 @@ func claimSourceIDs(in Input) map[string]bool {
 // is the exact failure the ranking exists to prevent, so the signals are asked
 // as questions about the moment — was something agreed here, did we meet, is
 // this on the deal, did they reply — and each answers once.
-func scoreMoment(moment ArcMoment, claimSources map[string]bool, now time.Time) int {
+func scoreMoment(moment ArcMoment, claimSources map[string]bool, now time.Time, loc *time.Location) int {
 	var agreed, met, onDeal, twoWay bool
 	for _, current := range moment.Threads {
 		for _, id := range current.IDs {
@@ -147,7 +147,7 @@ func scoreMoment(moment ArcMoment, claimSources map[string]bool, now time.Time) 
 		// They wrote back. A thread nobody answered is us talking.
 		score++
 	}
-	switch days := elapsed.Days(moment.To, now); {
+	switch days := elapsed.Days(moment.To, now, loc); {
 	case days <= 30:
 		score += 3
 	case days <= 90:
@@ -200,7 +200,7 @@ func accountArc(in Input) []ArcMoment {
 	if len(in.History) == 0 {
 		return nil
 	}
-	moments := rankMoments(clusterThreads(threadsOf(in.History)), in)
+	moments := rankMoments(clusterThreads(threadsOf(in.History), in.Zone), in)
 	kept := make([]ArcMoment, 0, len(moments))
 	for _, moment := range moments {
 		if readableIDs(moment) == nil {

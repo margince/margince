@@ -7,10 +7,10 @@ import { providerName } from "../../format/connectorprovider";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import type { Locale } from "../../i18n/locale";
+import { approvalKindLabel } from "../../lib/approvalkindlabel";
 import { ENTITY, isEntityKind } from "../../lib/entity";
 import { routeHash } from "../../lib/router";
 import { approvalHref } from "../automations/approvaldrawer";
-import { approvalKindLabel } from "../automations/approvalkind";
 import { MagicApproval } from "./magic.approval";
 import {
   magicByKey,
@@ -340,8 +340,14 @@ function LineSubject({
   }
   // A done change about records OPENS, to every record it touched, what
   // changed on each and an undo per record; inside, each links to its page.
-  // Retention names no record, and another lane's line changed nothing.
-  const opens = line.lane === "done" && line.entity !== undefined && since;
+  // Retention names no record, and another lane's line changed nothing. A
+  // decision line's id is an approval's, which the audit records read does
+  // not know, so it links to its record instead.
+  const opens =
+    line.lane === "done" &&
+    line.entity !== undefined &&
+    line.approval_kind === undefined &&
+    since;
   const href = many ? undefined : recordHref(line);
   return (
     <span className="magic-line-subject">

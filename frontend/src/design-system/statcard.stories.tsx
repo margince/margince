@@ -216,3 +216,46 @@ export const IconSource: Story = {
     </div>
   ),
 };
+
+/** A figure that counts something names it on hover and keyboard focus: a tile
+ *  with a door keeps its press for the door, one without opens the card. */
+export const ReadingsThatNameWhatTheyCount: Story = {
+  render: () => (
+    <div style={row}>
+      <StatCard
+        label="Open deals"
+        value="€244k"
+        detail="4 open"
+        onOpen={() => undefined}
+        peek={{
+          head: "Open deals on this account",
+          items: [
+            {
+              key: "a",
+              title: "Expansion Phase 2",
+              sub: "Proposal",
+              right: "€95k",
+            },
+            {
+              key: "b",
+              title: "Facade retrofit",
+              sub: "Proposal",
+              right: "€42k",
+            },
+          ],
+        }}
+      />
+      <StatCard
+        label="Unanswered"
+        value="2 emails"
+        detail="Re: ROI discussion"
+        peek={{
+          head: "Emails waiting for your reply",
+          items: [
+            { key: "a", title: "Re: ROI discussion", sub: "Received · 19 Oct" },
+          ],
+        }}
+      />
+    </div>
+  ),
+};

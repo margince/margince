@@ -155,14 +155,33 @@ it("lets go of the dialog when the write rejects instead of holding it busy", as
   ).toBeNull();
 });
 
+// What the deal's win-evidence read answers: the contract state, or a failure.
+type Evidence = boolean | "unreadable";
+
+// Answers the dialog's reads: the deal's open tasks (none) and its win
+// evidence. A read held back by `hold` stays pending until it is released.
+function stubReads(evidence: Evidence, hold?: Promise<void>) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: Request | string | URL) => {
+      const url = input instanceof Request ? input.url : String(input);
+      if (!url.includes("/win-evidence")) {
+        return Response.json({ data: [], page: { has_more: false } });
+      }
+      await hold;
+      return evidence === "unreadable"
+        ? Response.json({ code: "internal" }, { status: 500 })
+        : Response.json({ has_signed_contract: evidence });
+    }),
+  );
+}
+
 function openOn(
   toStage: components["schemas"]["Stage"],
   onConfirm: (input: unknown) => Promise<unknown>,
+  evidence: Evidence = true,
 ) {
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async () => Response.json({ data: [], page: { has_more: false } })),
-  );
+  stubReads(evidence);
   render(
     <QueryClientProvider client={new QueryClient()}>
       <LocaleProvider initial="en">
@@ -256,4 +275,120 @@ it("says a win marked Other needs details, and sends them on Enter", async () =>
       wonWithoutContractDetail: "Signed on a napkin",
     }),
   );
+});
+
+it("asks how a win happened before Confirm when the deal has no signed contract", async () => {
+  const user = userEvent.setup();
+  const onConfirm = vi.fn(async () => undefined);
+  openOn(WON, onConfirm, false);
+
+  const how = await screen.findByRole("combobox", { name: "How was it won?" });
+  expect(confirmRefusal()).toBe("Pick how the deal was won.");
+  await pickOption(user, how, "On a purchase order");
+  expect(confirmRefusal()).toBeNull();
+
+  await user.click(screen.getByRole("button", { name: "Confirm" }));
+  expect(onConfirm).toHaveBeenCalledTimes(1);
+  expect(onConfirm).toHaveBeenCalledWith(
+    expect.objectContaining({ wonWithoutContractReason: "purchase_order" }),
+  );
+});
+
+it("drops the answer when a contract was filed while the dialog sat open", async () => {
+  const user = userEvent.setup();
+  const onConfirm = vi.fn(async () => undefined);
+  openOn(WON, onConfirm, false);
+
+  const how = await screen.findByRole("combobox", { name: "How was it won?" });
+  await pickOption(user, how, "Verbally, in person or by phone");
+  stubReads(true);
+  await user.click(screen.getByRole("button", { name: "Confirm" }));
+
+  await waitFor(() => expect(onConfirm).toHaveBeenCalledTimes(1));
+  expect(onConfirm).toHaveBeenCalledWith(
+    expect.not.objectContaining({
+      wonWithoutContractReason: expect.anything(),
+    }),
+  );
+});
+
+it("keeps a win with a signed contract to one click with nothing asked", async () => {
+  const user = userEvent.setup();
+  const onConfirm = vi.fn(async () => undefined);
+  openOn(WON, onConfirm, true);
+
+  await waitFor(() => expect(confirmRefusal()).toBeNull());
+  expect(
+    screen.queryByRole("combobox", { name: "How was it won?" }),
+  ).toBeNull();
+  await user.click(screen.getByRole("button", { name: "Confirm" }));
+  expect(onConfirm).toHaveBeenCalledTimes(1);
+  expect(onConfirm).toHaveBeenCalledWith(
+    expect.not.objectContaining({
+      wonWithoutContractReason: expect.anything(),
+    }),
+  );
+});
+
+it("holds Confirm while it checks whether the deal has a signed contract", async () => {
+  let release: () => void = () => {};
+  stubReads(
+    false,
+    new Promise<void>((resolve) => {
+      release = resolve;
+    }),
+  );
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <LocaleProvider initial="en">
+        <ConfirmAdvanceModal
+          pending={{ dealId: "deal-a", version: 3, toStage: WON }}
+          onClose={() => {}}
+          onConfirm={async () => undefined}
+        />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  await waitFor(() =>
+    expect(confirmRefusal()).toBe("Checking the deal’s contract…"),
+  );
+  expect(
+    screen.queryByRole("combobox", { name: "How was it won?" }),
+  ).toBeNull();
+
+  await act(async () => release());
+  await screen.findByRole("combobox", { name: "How was it won?" });
+});
+
+it("falls back to asking after a refusal when the contract check cannot be read", async () => {
+  const user = userEvent.setup();
+  const onConfirm = vi
+    .fn<(input: unknown) => Promise<unknown>>()
+    .mockRejectedValueOnce(WIN_EVIDENCE_REFUSAL)
+    .mockResolvedValue(undefined);
+  openOn(WON, onConfirm, "unreadable");
+
+  await waitFor(() => expect(confirmRefusal()).toBeNull());
+  await user.click(screen.getByRole("button", { name: "Confirm" }));
+  await screen.findByRole("combobox", { name: "How was it won?" });
+});
+
+it("does not look for a contract when the deal is going to a lost stage", async () => {
+  openOn(
+    LOST,
+    vi.fn(async () => undefined),
+    false,
+  );
+  await waitFor(() =>
+    expect(confirmRefusal()).toBe("Enter why the deal was lost."),
+  );
+  expect(
+    screen.queryByRole("combobox", { name: "How was it won?" }),
+  ).toBeNull();
+  const reads = vi
+    .mocked(fetch)
+    .mock.calls.map(([input]) =>
+      input instanceof Request ? input.url : String(input),
+    );
+  expect(reads.some((url) => url.includes("/win-evidence"))).toBe(false);
 });

@@ -96,8 +96,8 @@ regexes = ['''_SHA256\s*=\s*.?[a-f0-9]{64}''']
 # `linkedinStatus: LinkedinStatus` — a TypeScript prop and its type. The
 # linkedin-client-id rule matches the type name, not a client id.
 [[allowlists]]
-description = "The LinkedinStatus type name in the connect scene"
+description = "The LinkedinStatus type name in the connect step's also-worth-doing card"
 targetRules = ["linkedin-client-id"]
 condition = "AND"
-paths = ['''frontend/src/features/onboarding/onboarding-conversation/connect-scene\.tsx$''']
+paths = ['''frontend/src/features/onboarding/onboarding-conversation/connect-also\.tsx$''']
 regexes = ['''^LinkedinStatus$''']

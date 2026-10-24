@@ -17,6 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -217,13 +218,22 @@ func (s commsStager) RecordPendingReview(ctx context.Context, err error, intentI
 	if recordErr != nil || review.ID.IsZero() {
 		return pending.cause
 	}
+	actions := actionsForRefusal(ctx, review)
+	var overrulable []consent.OverrulableRecipient
+	if slices.Contains(actions, "overrule") {
+		// A failed check offers nothing rather than failing the refusal the
+		// rep needs to read, as a failed review record does above.
+		found, err := s.authority.OverrulableBy(ctx, review)
+		if err != nil || len(found) == 0 {
+			actions = nil
+		} else {
+			overrulable = found
+		}
+	}
 	return &consent.SendRefusedError{
 		ReviewID: review.ID, Cause: pending.cause,
-		// DECIDED HERE, because this is where the principal is known. Routing a
-		// decision is human-only and bound to the review's own initiator, so
-		// naming it for an agent would promise a move it cannot make — and an
-		// agent that tries and is refused was sent there by us.
-		Actions: actionsForRefusal(ctx, review),
+		// Decided here, because this is where the principal is known.
+		Actions: actions, Overrulable: overrulable,
 	}
 }
 
@@ -315,40 +325,26 @@ func anyEnforcedDenial(denied []commsauthz.Decision) bool {
 	return false
 }
 
-// actionsForRefusal names what THIS caller may do about a refusal.
-//
-// One action today and a list on purpose: the shape is what a caller reads, and
-// a second action arriving later should not change it. An empty list is a real
-// answer — the caller may do nothing but stop and report, and the reference
-// still travels so a human reading their transcript can pick the review up.
+// actionsForRefusal names what this caller may do about a refusal. An empty
+// list is a real answer: the caller may only stop and report, and the review
+// reference still travels.
 func actionsForRefusal(ctx context.Context, review consent.Review) []string {
-	// The review must have a message to decide about. One refused without an
-	// intent — a channel reply, whose shape the held row cannot carry — is not
-	// routable, and offering the route would send the caller into a refusal.
+	// Both moves resume the held message, so a refusal with none (a channel
+	// reply) offers neither.
 	if review.IntentID.IsZero() {
 		return nil
 	}
-	// A HUMAN, and the one whose message it was. Both doors below are
-	// human-only (agents and connectors are refused), so an agent acting for
-	// somebody is told nothing rather than told wrong.
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman {
 		return nil
 	}
-	// A HOLDER OF THE GRANT IS OFFERED THE SEND, not the ask.
-	//
-	// Directing a send and asking somebody to are answers to the same question
-	// — "this was refused, now what" — and which one a human is shown is
-	// decided by what they may actually do. Offering a rep who holds the
-	// authority the chance to ask a colleague would be telling them to go
-	// around themselves; offering one who does not the direct send would be a
-	// button that fails when pressed.
-	//
-	// ONE OR THE OTHER, never both. A human holding the grant can still route
-	// a review from the review itself if they want a second opinion, which is a
-	// deliberate act rather than a choice a refusal should press on them.
+	// A holder of the grant directs the send; anyone else overrules a refusal
+	// the engine lets a rep overrule, with their own reason.
 	if auth.Require(ctx, consent.EntityCommunicationException, principal.ActionCreate) == nil {
 		return []string{"direct_send"}
 	}
-	return []string{"request_decision"}
+	if len(review.Overrulable()) == 0 {
+		return nil
+	}
+	return []string{"overrule"}
 }

@@ -29,10 +29,36 @@ function writeRefusal(writer: LeadWriter) {
   return writer.patch.error ?? writer.claim.error;
 }
 
-// The band under the strip: what the lead has to say about itself as a whole —
-// a write it refused, the sentence that says it is closed, and the way back out
-// of a disqualification. Where the lead STANDS is not here: the ladder is at
-// the foot of the head, under the facts (RecordView's `standing`).
+// The one sentence this page says about the lead taking no changes, with the
+// closure it names. Both terminal states archive the row, so keying this off
+// archived_at alone told every promoted lead it had been disqualified; the
+// status says which. A live lead that is somebody else's prints the writer's
+// own sentence instead.
+//
+// Every control the closure refuses points at the element that carries it by
+// id. A screen reader reaches it from each of them without the sentence being
+// printed beside all six.
+export function terminalSentence(
+  lead: Lead,
+  writer: LeadWriter,
+  t: ReturnType<typeof useT>,
+): string | undefined {
+  if (!writer.readOnlyReason) {
+    return undefined;
+  }
+  if (!lead.archived_at) {
+    return writer.readOnlyReason;
+  }
+  return lead.status === "promoted"
+    ? t("lead.terminalPromoted")
+    : t("lead.terminalDisqualified");
+}
+
+// The band under the strip: a write the lead refused, and the sentence that
+// says a live lead is not this reader's to change. A closed lead says so in
+// the verdict of How it stands, so its sentence stays hidden (the actions
+// carry it for assistive technology). The way back out of a disqualification
+// is in More.
 //
 // RecordView draws the band's element and its two intervals for anything it is
 // handed, so this answers `undefined` rather than a fragment that renders
@@ -42,24 +68,18 @@ export function leadBand({
   lead,
   writer,
   reasonId,
-  id,
   t,
 }: Readonly<{
   lead: Lead;
   writer: LeadWriter;
   reasonId: string;
-  id: string;
   t: ReturnType<typeof useT>;
 }>): ReactNode | undefined {
-  // The way back, beside the sentence that says the lead is closed. Offered
-  // only on a disqualification a reader may WRITE: the promoted closure is the
-  // demote's to reverse, and a reader who cannot change this lead cannot
-  // reopen it either.
-  const reopenable =
-    Boolean(lead.archived_at) &&
-    lead.status === "disqualified" &&
-    lead.writable !== false;
-  if (!writeRefusal(writer) && !writer.readOnlyReason && !reopenable) {
+  const refusal = writeRefusal(writer);
+  const sentence = lead.archived_at
+    ? undefined
+    : terminalSentence(lead, writer, t);
+  if (!refusal && !sentence) {
     return undefined;
   }
   return (
@@ -68,26 +88,8 @@ export function leadBand({
           REFUSES is stated where both are visible. In the ladder panel this
           reached only the Overview tab, and a rail write refused while the
           reader was on History said nothing at all. */}
-      <WriteRefused titleKey="lead.writeRefused" error={writeRefusal(writer)} />
-      {/* Stated ONCE for the page. Every control the closure refuses points at
-          this element by id, so a screen reader reaches it from each of them
-          without the sentence being printed beside all six. */}
-      {writer.readOnlyReason && (
-        <p id={reasonId}>
-          {/* Which closure, not merely THAT it is closed. Both terminal states
-              archive the row, so keying this off archived_at alone told every
-              promoted lead it had been disqualified — invisible until ADR-0119
-              stopped the page redirecting away before anyone could read it. A
-              live lead that is somebody else's prints the writer's own sentence
-              instead. */}
-          {lead.archived_at
-            ? lead.status === "promoted"
-              ? t("lead.terminalPromoted")
-              : t("lead.terminalDisqualified")
-            : writer.readOnlyReason}
-        </p>
-      )}
-      {reopenable && <ReopenAction id={id} />}
+      <WriteRefused titleKey="lead.writeRefused" error={refusal} />
+      {sentence && <p id={reasonId}>{sentence}</p>}
     </>
   );
 }
@@ -106,8 +108,9 @@ export function leadBand({
  * reopening restores a status the trail already holds, and there is nothing a
  * caller could say that the server does not read for itself.
  */
-function ReopenAction({ id }: Readonly<{ id: string }>) {
+export function ReopenAction({ lead }: Readonly<{ lead: Lead }>) {
   const t = useT();
+  const id = lead.id;
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const reopen = useMutation({
@@ -130,6 +133,16 @@ function ReopenAction({ id }: Readonly<{ id: string }>) {
     setOpen(false);
     reopen.reset();
   };
+  // The way back is offered only on a disqualification a reader may write. The
+  // promoted closure is the demote's to reverse, and a reader who cannot
+  // change this lead cannot reopen it either.
+  if (
+    !lead.archived_at ||
+    lead.status !== "disqualified" ||
+    lead.writable === false
+  ) {
+    return null;
+  }
   return (
     <>
       <Button onClick={() => setOpen(true)}>{t("lead.reopen")}</Button>

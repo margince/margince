@@ -181,9 +181,11 @@ func legacyCommitmentsOwed(ctx context.Context, tx pgx.Tx) ([]legacyCommitment, 
 var threadReaderQuery = conversationCTE(" AND a.thread_key = $1") + `
 		SELECT c.one_company::uuid, CASE WHEN c.shared THEN NULL ELSE c.private_owner::uuid END
 		  FROM conversation c
-		 WHERE ` + threadReachesOneAccount + `
+		 WHERE ` + threadHasAHumanSender + `
+		   AND ` + threadReachesOneAccount + `
 		   AND ` + threadIsOneBodyOfWork + `
 		   AND ` + threadIsFullyOpen + `
+		   AND ` + threadIsFullyRead + `
 		   AND ` + threadHasANamedReader
 
 // legacyThread is the cited message and the five before it on its thread. A

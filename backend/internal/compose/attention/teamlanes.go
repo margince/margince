@@ -27,6 +27,13 @@ type Teammates interface {
 	LiveTeammatesOfCaller(ctx context.Context) ([]TeamMember, bool, error)
 }
 
+// FormerTeammates lists the colleagues who left and still sit on a live team
+// with the reader. A team view keeps their open work, marked as needing a new
+// owner; unbound, that work is dropped as it was.
+type FormerTeammates interface {
+	FormerTeammatesOfCaller(ctx context.Context) ([]ids.UUID, error)
+}
+
 // TeamMember is one human seat on a team the caller may read.
 type TeamMember struct {
 	UserID      ids.UUID

@@ -10,35 +10,132 @@ import { useT } from "../i18n";
 import { isImeCommit } from "../lib/imecommit";
 import { problemMessageOf } from "../lib/problem";
 import { BusyMark, Button, Field, Textarea, TextInput } from "./atoms";
+import { DateInput, type DateInputProps, isoOrBlank } from "./dateinput";
+import { panelsOpenedFrom } from "./dialogfocus";
 import "./inlinechoice.css";
 
-// Free-text editing follows the same save/refusal contract as choices.
-// description, edited where it is read rather than inside a form that also
-// asks about legal names and size bands.
-//
-// It keeps the same rules as InlineChoice above — a viewer who may not edit
-// sees the value with no hover affordance, a failed save keeps the typed
-// text and shows the refusal beside the field, Escape reverts — and adds the
-// two a text field needs that a chooser does not: an explicit MOMENT of
-// commit (a chooser commits the instant something is picked; typing has no
-// such moment, so Enter or losing focus stands in for it), and something to
-// press when the value is empty, since there is no text to click on.
-// One control, two elements. The edit session's rules — focus on open, Escape
-// reverts, blur commits, `readOnly` while saving — are identical for a line and
-// for a paragraph, so they are written once above and this only decides which
-// element receives them. Written as a forwarding component rather than a
-// ternary at the call site so the whole prop set cannot drift between the two
-// branches, which is exactly how one of them would quietly lose `aria-invalid`.
+// Edits a value where it is read, under InlineChoice's save and refusal rules.
+// Typing has no moment of choice, so Enter or leaving the field commits it.
+// One forwarding control holds the line, the day and the paragraph, so their
+// shared props cannot drift apart and lose `aria-invalid` on one branch.
 const InlineTextControl = forwardRef<
   HTMLInputElement & HTMLTextAreaElement,
-  { multiline?: boolean } & ComponentPropsWithoutRef<"input"> &
-    ComponentPropsWithoutRef<"textarea">
->(function InlineTextControl({ multiline, ...props }, ref) {
+  Readonly<{
+    multiline?: boolean;
+    value: string;
+    onDraft: (next: string) => void;
+    onSettle: (next: string) => void;
+    onLeave: (typed?: string) => void;
+  }> &
+    Omit<
+      ComponentPropsWithoutRef<"input"> & ComponentPropsWithoutRef<"textarea">,
+      "value" | "defaultValue" | "onChange" | "onBlur" | "min" | "max"
+    >
+>(function InlineTextControl(
+  { multiline, type, onDraft, onSettle, onLeave, ...props },
+  ref,
+) {
   if (multiline) {
-    return <Textarea ref={ref} rows={4} {...props} />;
+    return (
+      <Textarea
+        ref={ref}
+        rows={4}
+        {...props}
+        onChange={(event) => onDraft(event.target.value)}
+        onBlur={() => onLeave()}
+      />
+    );
   }
-  return <TextInput ref={ref} {...props} />;
+  if (type === "date") {
+    return (
+      <InlineDate
+        ref={ref}
+        {...props}
+        onDraft={onDraft}
+        onSettle={onSettle}
+        onLeave={onLeave}
+      />
+    );
+  }
+  return (
+    <TextInput
+      ref={ref}
+      type={type}
+      {...props}
+      onChange={(event) => onDraft(event.target.value)}
+      onBlur={() => onLeave()}
+    />
+  );
 });
+
+// Every day DateInput reports is settled, so it saves at once. A day settled by
+// the blur that moves to the calendar button is only drafted.
+function InlineDate({
+  value,
+  onDraft,
+  onSettle,
+  onLeave,
+  onKeyDown,
+  ...box
+}: Readonly<{
+  value: string;
+  onDraft: (next: string) => void;
+  onSettle: (next: string) => void;
+  onLeave: (typed?: string) => void;
+}> &
+  Omit<DateInputProps, "value" | "onChange" | "onBlur">) {
+  const shell = useRef<HTMLSpanElement>(null);
+  const blurring = useRef(false);
+  const settled = useRef<string | null>(null);
+  // While the calendar is open: a press in it that focuses nothing blurs to null.
+  const stays = (next: Element | null) =>
+    shell.current?.contains(next) || panelsOpenedFrom(shell.current).length > 0;
+  return (
+    // biome-ignore lint/a11y/noStaticElementInteractions: not a control — it hears focus leave the text box and calendar button inside it
+    <span
+      ref={shell}
+      className="inlinetext-date"
+      onKeyDownCapture={() => {
+        settled.current = null;
+      }}
+      onBlurCapture={() => {
+        settled.current = null;
+        blurring.current = true;
+      }}
+      onBlur={(event) => {
+        const next = settled.current;
+        blurring.current = false;
+        settled.current = null;
+        if (!stays(event.relatedTarget)) {
+          onLeave(next ?? undefined);
+        } else if (next !== null) {
+          onDraft(next);
+        }
+      }}
+    >
+      <DateInput
+        {...box}
+        value={isoOrBlank(value)}
+        onChange={(event) => {
+          settled.current = event.target.value;
+          if (!blurring.current) {
+            onSettle(event.target.value);
+          }
+        }}
+        onKeyDown={(event) => {
+          if (event.key !== "Enter" || isImeCommit(event)) {
+            onKeyDown?.(event);
+            return;
+          }
+          event.preventDefault();
+          if (settled.current === null) {
+            onSettle(value);
+          }
+        }}
+      />
+    </span>
+  );
+}
 
 // The field for a reader who cannot edit it. `placeholder` is written for
 // someone about to press it ("Add legal name"): shown plain to a viewer who
@@ -181,6 +278,11 @@ export function InlineText({
   // deliberately does NOT set it: the reader is already somewhere else, and
   // dragging focus back here would undo the move they just made.
   const restoreFocus = useRef(false);
+  // Not a dependency below: a parent that re-renders on dirty would take focus back.
+  const editingHeard = useRef(onEditingChange);
+  useEffect(() => {
+    editingHeard.current = onEditingChange;
+  }, [onEditingChange]);
 
   // The click that opened this asked to TYPE here, so the caret belongs in the
   // field without a second click. It is also what makes every exit rule below
@@ -189,7 +291,7 @@ export function InlineText({
   // them — the box would then sit open until it was clicked into, including
   // after the reader had moved on to another field.
   useEffect(() => {
-    onEditingChange?.(editing);
+    editingHeard.current?.(editing);
     if (editing) {
       field.current?.focus();
       return;
@@ -198,7 +300,7 @@ export function InlineText({
       restoreFocus.current = false;
       trigger.current?.focus();
     }
-  }, [editing, onEditingChange]);
+  }, [editing]);
 
   if (!canEdit || !editing) {
     const shown = (value && display) || value || suggested || placeholder;
@@ -254,7 +356,7 @@ export function InlineText({
   // `byKeyboard` is what tells the two exits apart: an Enter press ends the
   // edit without moving the reader anywhere, so focus goes back to the value
   // they were on; a blur means they have already moved, and is left alone.
-  const commit = async (byKeyboard = false) => {
+  const commit = async (byKeyboard = false, typed = draft) => {
     // A commit already in flight owns the next state transition; a second
     // one racing in behind it (Enter, then the blur disabling the input for
     // `saving` fires synchronously) would double-send the same edit.
@@ -262,11 +364,12 @@ export function InlineText({
       return;
     }
     if (field.current && !field.current.checkValidity()) {
-      setFailure(field.current.validationMessage);
+      // Not for a day: DateInput draws its own refusal under the box.
+      setFailure(type === "date" ? null : field.current.validationMessage);
       field.current.focus();
       return;
     }
-    const next = multiline ? draft : draft.trim();
+    const next = multiline ? typed : typed.trim();
     // Saving what is already stored writes an audit row for a change that did
     // not happen. Blur fires on every exit now, so this guard is what keeps
     // "clicked in, typed nothing, clicked out" silent.
@@ -316,7 +419,11 @@ export function InlineText({
             // needs. `aria-busy` carries the reason.
             readOnly={saving}
             aria-busy={saving || undefined}
-            onChange={(event) => setDraft(event.target.value)}
+            onDraft={setDraft}
+            onSettle={(settled) => {
+              setDraft(settled);
+              void commit(true, settled);
+            }}
             onKeyDown={(event) => {
               // In a paragraph Enter is a newline and the commit moves to
               // Cmd/Ctrl+Enter; in a line Enter is still the commit.
@@ -335,12 +442,15 @@ export function InlineText({
                 setEditing(false);
               }
             }}
-            onBlur={() => {
+            onLeave={(typed) => {
               if (cancelling.current) {
                 cancelling.current = false;
                 return;
               }
-              void commit();
+              if (typed !== undefined) {
+                setDraft(typed);
+              }
+              void commit(false, typed);
             }}
           />
           {saving && <BusyMark />}

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { formatDate, formatNumber, formatTimeOfDay } from "../format/format";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import { Avatar, Button } from "./atoms";
-import { EmailWords } from "./emailentry";
+import { attachmentCount, EmailFiles, EmailWords } from "./emailentry";
 import { Eyebrow } from "./eyebrow";
 import { type ContactOn, withWhom } from "./participants";
 import { ProvenanceTag } from "./trust";
@@ -12,8 +12,8 @@ import "./composed.css";
 
 import {
   CommitmentReviewFlag,
-  conversationDirection,
   directionClass,
+  entryMove,
   groupCountLabel,
   MoveFlag,
   TIMELINE_ICON,
@@ -40,6 +40,16 @@ function otherSideOf(entry: TimelineEntry): string | undefined {
     return undefined;
   }
   return entry.emailSummary?.counterparty?.trim() || entry.counterparts;
+}
+
+// The server's summary of every member that has one, for the files the whole
+// conversation carried. A chat member has none and adds nothing.
+function memberSummaries(
+  entries: readonly TimelineEntry[],
+): NonNullable<TimelineEntry["emailSummary"]>[] {
+  return entries.flatMap((entry) =>
+    entry.emailSummary ? [entry.emailSummary] : [],
+  );
 }
 
 // The same contacts one at a time, for a set and for a face. The adapter's
@@ -232,6 +242,9 @@ function ThreadMessage({
           <b className="tl-msg-who">{lead.actor}</b>
           {lead.verb && <span>{lead.verb}</span>}
           {visibility && <VisibilityBadge state={visibility} />}
+          {entry.emailSummary && (
+            <EmailFiles summaries={[entry.emailSummary]} />
+          )}
           <CommitmentReviewFlag
             count={entry.withheld ? 0 : entry.commitmentReviewCount}
           />
@@ -297,6 +310,15 @@ export function ThreadRow({
   const shown = allOpen
     ? group.entries
     : group.entries.slice(0, THREAD_OPEN_MEMBERS);
+  // The card's total is for files the messages in view do not already say.
+  // When one message carries them all and it is on screen, its own mark is the
+  // total. A second one would count the same files twice.
+  const carriers = group.entries.filter(
+    (entry) => entry.emailSummary && attachmentCount(entry.emailSummary) > 0,
+  );
+  const [carrier] = carriers;
+  const filesAreOnOneShownMessage =
+    carriers.length === 1 && carrier !== undefined && shown.includes(carrier);
   // The subject, from a member whose words the reader may read. A withheld
   // member's title is the kind it was, not the subject it had. A thread
   // every member of which is withheld says so where its subject would go.
@@ -321,7 +343,7 @@ export function ThreadRow({
             {/* Whose move the conversation waits on, read off its newest
                 message. It goes on the card that stands for it, never on the
                 members inside. */}
-            {conversationDirection(newest) && <MoveFlag entry={newest} />}
+            {entryMove(newest) && <MoveFlag entry={newest} />}
             <CommitmentReviewFlag
               count={group.entries.reduce(
                 (count, entry) =>
@@ -368,6 +390,9 @@ export function ThreadRow({
                       count: formatNumber(folded, locale),
                     })}
               </Button>
+            )}
+            {!filesAreOnOneShownMessage && (
+              <EmailFiles summaries={memberSummaries(group.entries)} />
             )}
             <ProvenanceTag provenance={newest.provenance} />
             {/* A thread cut by the page edge can be completed when the page

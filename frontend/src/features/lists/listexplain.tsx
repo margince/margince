@@ -7,7 +7,12 @@
 // same way in a member table's filter columns, so the two never disagree.
 
 import { Check, CircleHelp, X } from "lucide-react";
-import { calendarDaysBetween, formatNumber } from "../../format/format";
+import { isRealCalendarDay } from "../../format/calendarday";
+import {
+  calendarDaysBetween,
+  displayDay,
+  formatNumber,
+} from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import {
   type FilterVocabulary,
@@ -17,9 +22,11 @@ import {
 import type {
   ListClauseVerdict,
   ListExplanation,
+  ListLinkedValue,
   ListRecordType,
 } from "../../lib/lists.queries";
 import { useMemberNames } from "../../lib/membernames";
+import { useRecordZone } from "../../lib/recordzone";
 import type { FilterOp } from "../../lib/segmentpredicate";
 import { clauseWords, moneyText, useSentenceWords } from "./filtersentence";
 
@@ -115,10 +122,9 @@ function Verdict({
           ? t("lists.why.hidden")
           : t("lists.why.value", {
               value:
-                node.value == null
-                  ? t("lists.why.empty")
-                  : (node.value_label ??
-                    valueText(node.field ?? "", node.value)),
+                node.linked === undefined
+                  ? scalarValueText(node, valueText, t)
+                  : linkedText(node.linked, t),
             })}
       </span>
       {clause.note !== undefined && (
@@ -126,6 +132,36 @@ function Verdict({
       )}
     </p>
   );
+}
+
+function scalarValueText(
+  node: ListClauseVerdict,
+  valueText: (name: string, raw: string) => string,
+  t: ReturnType<typeof useT>,
+): string {
+  return node.value == null
+    ? t("lists.why.empty")
+    : (node.value_label ?? valueText(node.field ?? "", node.value));
+}
+
+/**
+ * What a link field holds on a record.
+ * It shows the names of the rows it links, a hidden entry as the hidden word,
+ * and an empty link as empty. The member table reads a link cell through this
+ * too, so the two screens agree.
+ */
+export function linkedText(
+  linked: readonly ListLinkedValue[],
+  t: ReturnType<typeof useT>,
+): string {
+  if (linked.length === 0) {
+    return t("lists.why.empty");
+  }
+  return linked
+    .map((one) =>
+      one.hidden ? t("lists.why.hidden") : (one.label ?? one.value),
+    )
+    .join(", ");
 }
 
 /**
@@ -144,13 +180,14 @@ export function useFieldValueText(
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
+  const zone = useRecordZone();
   const vocabulary = useFilterVocabulary(entityType, enabled);
   const users = useMemberNames(enabled ? userIds : []);
   return (name: string, raw: string): string => {
     const field = vocabularyField(vocabulary.data, name);
     switch (field?.type) {
       case "date":
-        return dayText(raw, plural, t, locale) ?? raw;
+        return dayText(raw, plural, t, locale, zone) ?? raw;
       case "boolean":
         return raw === "true" ? t("filters.yes") : t("filters.no");
       case "currency":
@@ -189,12 +226,13 @@ function dayText(
   plural: ReturnType<typeof usePlural>,
   t: ReturnType<typeof useT>,
   locale: Locale,
+  zone: string,
 ): string | undefined {
-  const day = new Date(`${raw.slice(0, 10)}T00:00:00Z`);
-  if (Number.isNaN(day.getTime())) {
+  const named = raw.slice(0, 10);
+  if (!isRealCalendarDay(named)) {
     return undefined;
   }
-  const days = calendarDaysBetween(day, new Date());
+  const days = calendarDaysBetween(displayDay(named, zone), new Date(), zone);
   if (days === 0) {
     return t("lists.why.today");
   }

@@ -13,7 +13,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { EmailDetail } from "./emaildetail";
-import { EmailEntry, EmailWords } from "./emailentry";
+import { EmailEntry, EmailFiles, EmailWords } from "./emailentry";
 import { EmailReference } from "./emailreference";
 
 // The row, the citation and the drawer, held to the promises the arrangement
@@ -146,6 +146,54 @@ describe("EmailWords", () => {
   });
 });
 
+describe("EmailFiles", () => {
+  it("sums what several messages carried, in words", () => {
+    wrap(
+      <EmailFiles
+        summaries={[
+          READABLE,
+          { ...READABLE, attachment_count: 1 },
+          { ...READABLE, attachment_count: 0 },
+        ]}
+      />,
+    );
+    expect(screen.getByText("3 attachments")).toBeVisible();
+  });
+
+  // The reason the count is read through the row's own rule: WITHHELD still
+  // carries attachment_count on the wire. A thread card that summed the field
+  // would print files for a message the reader is not told exists.
+  it("counts nothing for a message the reader may not open", () => {
+    expect(WITHHELD.attachment_count).toBeGreaterThan(0);
+    const { container } = wrap(<EmailFiles summaries={[WITHHELD]} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("names the files only when every one of them has a name", () => {
+    const staged = (filenames: string[]): EmailSummary => ({
+      ...READABLE,
+      attachment_count: 0,
+      delivery: {
+        state: "sent",
+        files: filenames.map((filename) => ({ filename })),
+      },
+    });
+    wrap(
+      <EmailFiles
+        summaries={[
+          staged(["contract.pdf"]),
+          { ...READABLE, attachment_count: 1 },
+        ]}
+      />,
+    );
+    // One file is only counted, so a partial list never reads as the whole.
+    expect(screen.getByText("2 attachments")).not.toHaveAttribute("title");
+    cleanup();
+    wrap(<EmailFiles summaries={[staged(["contract.pdf", "annex.pdf"])]} />);
+    expect(screen.getByTitle("contract.pdf, annex.pdf")).toBeVisible();
+  });
+});
+
 describe("EmailEntry", () => {
   it("says who wrote, what about, and whose move it is", () => {
     wrap(
@@ -162,7 +210,7 @@ describe("EmailEntry", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Needs reply")).toBeInTheDocument();
     // The count is the file's own, not a guess from the body.
-    expect(screen.getByText("2")).toBeInTheDocument();
+    expect(screen.getByText("2 attachments")).toBeInTheDocument();
   });
 
   it("keeps a withheld row visible and says nothing in it", () => {
@@ -396,7 +444,7 @@ describe("EmailEntry", () => {
         whyNotOpenable="noDetail"
       />,
     );
-    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.getByText("3 attachments")).toBeInTheDocument();
     expect(
       screen.getByTitle("contract.pdf, annex.pdf, terms.pdf"),
     ).toBeVisible();
@@ -458,6 +506,13 @@ describe("EmailReference", () => {
   });
 });
 
+// The envelope opens from the "to …" line under the sender.
+async function openEnvelope() {
+  await userEvent.click(
+    await screen.findByRole("button", { name: /^(to |Details)/ }),
+  );
+}
+
 describe("EmailDetail", () => {
   it("asks for the message only when it is opened", async () => {
     const fetchSpy = jsonOnce(PRESENTATION);
@@ -508,10 +563,13 @@ describe("EmailDetail", () => {
       />,
     );
 
-    const when = await screen.findByText("1 Sep 09:12");
+    await openEnvelope();
     // In the envelope block, not trailing the body: the assertion is WHERE, so
     // finding the text anywhere on the page would pass over the bug.
-    expect(when.closest(".emaildetail__parties")).not.toBeNull();
+    const when = await screen.findAllByText("1 Sep 09:12");
+    expect(
+      when.some((node) => node.closest(".emaildetail__parties") !== null),
+    ).toBe(true);
   });
 
   // A party the response could not name is DROPPED, not joined in as an empty
@@ -540,7 +598,11 @@ describe("EmailDetail", () => {
     // The line is read WITHOUT its label, because the gap the bug leaves is
     // between the label and the first name — an assertion over the whole
     // element's text has the word "To" in front of the comma and never sees it.
-    const line = await screen.findByText(/andreas@buyer.test/);
+    await openEnvelope();
+    const line = (await screen.findAllByText(/andreas@buyer.test/)).find(
+      (node) => node.classList.contains("emaildetail__party"),
+    );
+    if (!line) throw new Error("no To line on the envelope");
     const label = line.querySelector(".emaildetail__partyLabel");
     const names = (line.textContent ?? "").slice(
       (label?.textContent ?? "").length,
@@ -622,6 +684,7 @@ describe("EmailDetail", () => {
     );
     // An empty list would read as "nobody was blind-copied", which is a
     // different fact from "you may not see who was".
+    await openEnvelope();
     await screen.findByText(/blind-copied and are not shown\./);
   });
 

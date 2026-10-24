@@ -64,9 +64,8 @@ type AudienceMember = components["schemas"]["AudienceMember"];
 //
 // It owns the two open states so the timeline mapper stays presentational.
 //
-// `extra` is how a surface adds a verb only it can serve — the contact page's
-// meeting brief opens a drawer this file cannot see. It renders before Relink
-// so the row's own subject-matter verbs lead and the corrective ones follow.
+// `extra` holds the contact page's meeting brief and Call; it renders before
+// Relink, so the row's own verbs lead.
 export function TimelineActions({
   activity,
   entityType,

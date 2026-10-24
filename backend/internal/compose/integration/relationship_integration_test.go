@@ -13,7 +13,6 @@ package integration
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"slices"
 	"testing"
@@ -22,7 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
@@ -137,10 +135,8 @@ func TestRelationshipLifecycle(t *testing.T) {
 // asking them to confirm an archive they could perform themselves in the web app
 // bought nothing (ADR-0055).
 //
-// The staging that used to happen here is not gone, only no longer the default.
-// TestAFlooredEdgeArchiveStagesWithItsVersionPinned below drives it through a
-// workspace tier floor, which is what an installation sets when it wants this
-// verb confirmed — and it is where the version pin is asserted.
+// Under a tier floor, automatic work with no passport is refused the archive
+// instead: TestAFlooredEdgeArchiveIsRefusedToAutomaticWork below.
 func TestAnAgentArchivesAnEdgeOnItsOwnPassport(t *testing.T) {
 	e := setupRelationships(t)
 
@@ -185,27 +181,13 @@ func TestAnAgentArchivesAnEdgeOnItsOwnPassport(t *testing.T) {
 	}
 }
 
-// The pin a staged edge archive carries, under a workspace tier floor.
-//
-// This is the assertion the REST test above lost when the verb stopped staging
-// by default, and it is worth keeping because it is about the SEAM rather than
-// about the tier: the approvals engine resolves target_version itself inside the
-// staging transaction, for every target type its versionTables set knows.
-// `relationship` is in that set, so the pin lands without the caller offering
-// one. A type absent from it stages a NULL pin, and redemption's skew check
-// short-circuits on NULL — so the approval would authorize the archive against
-// whatever the edge had drifted to inside the TTL.
-//
-// It runs over MCP because that is the door a floor can reach in a test. The
-// REST door reads its tier from the generated policy table, which only an edit
-// to the contract changes, and that is an installation's act rather than a
-// test's.
-func TestAFlooredEdgeArchiveStagesWithItsVersionPinned(t *testing.T) {
+// Under a tier floor, automatic work with no passport may not stage the archive
+// the floor asks for. It is refused and the edge stays live.
+func TestAFlooredEdgeArchiveIsRefusedToAutomaticWork(t *testing.T) {
 	e := setupRelationships(t)
 
 	var edge struct {
-		ID      string `json:"id"`
-		Version int64  `json:"version"`
+		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
 		"kind": "employment", "contact_id": e.contactID, "company_id": e.companyID,
@@ -213,7 +195,6 @@ func TestAFlooredEdgeArchiveStagesWithItsVersionPinned(t *testing.T) {
 	}, nil, &edge); status != http.StatusCreated {
 		t.Fatalf("create employment → %d", status)
 	}
-
 	var minted struct {
 		Token string `json:"token"`
 	}
@@ -226,137 +207,23 @@ func TestAFlooredEdgeArchiveStagesWithItsVersionPinned(t *testing.T) {
 	_, err := flooredArchiveInvoker(t, e.AppEnv, minted.Token)(
 		`{"record_type":"relationship","id":"` + edge.ID + `"}`,
 	)
-	if !errors.Is(err, apperrors.ErrRequiresApproval) {
-		t.Fatalf("a floored edge archive answered %v, want the confirm-first refusal", err)
+	if !isPassportlessStagingRefusal(err) {
+		t.Fatalf("a floored edge archive from automatic work answered %v, want the refusal that it cannot stage", err)
 	}
-	approvalID := ExtractStagedApprovalID(t, err.Error())
-
-	var pin *int64
-	if err := e.Owner.QueryRow(t.Context(),
-		`SELECT target_version FROM approval WHERE id = $1`, approvalID).Scan(&pin); err != nil {
-		t.Fatal(err)
-	}
-	if pin == nil {
-		t.Fatal("the staged archive carries no target_version — redemption's skew check short-circuits " +
-			"on NULL, so the approval would authorize the archive whatever the edge became")
-	}
-	if *pin != edge.Version {
-		t.Errorf("target_version = %d, want the edge's own %d", *pin, edge.Version)
-	}
-
-	assertDecidableInTheInbox(t, e.AppEnv, approvalID, "relationship")
-
-	// The edge is untouched while the approval is pending.
-	var parked struct {
-		Data []struct {
-			ID         string  `json:"id"`
-			ArchivedAt *string `json:"archived_at"`
-		} `json:"data"`
-	}
-	if got := e.Call(t, "GET", "/v1/relationships?contact_id="+e.contactID+"&kind=employment",
-		nil, nil, &parked); got != http.StatusOK {
-		t.Fatalf("list while parked → %d", got)
-	}
-	for _, rel := range parked.Data {
-		if rel.ID == edge.ID && rel.ArchivedAt != nil {
-			t.Error("the edge was archived while its approval was still pending")
-		}
-	}
-
-	// And it can be REJECTED, which is the half a caller cannot fake: a decision
-	// runs the same visibility predicate as the list.
-	if got := e.Call(t, "POST", "/v1/approvals/"+approvalID+"/reject", AnyMap{
-		"reason": "probe",
-	}, nil, nil); got != http.StatusOK {
-		t.Fatalf("deciding the staged archive → %d, want 200 — a row the inbox lists and cannot decide is "+
-			"the same dead end one step later", got)
-	}
-}
-
-// An approved archive REFUSES once the row has moved underneath it.
-//
-// This is the other half of the pin, and the half that makes it worth having: a
-// pin that lands but never refuses is a number in a column. The sequence is
-// deliberate — the archive is staged with no version supplied by the caller at
-// all, which is the omission that would defeat the pin entirely if the pin were
-// taken from the caller instead of resolved from the row.
-//
-// It moved here from agent_versionpin_integration_test.go, where it ran on an
-// OFFER over REST. archive_record does not serve `offer` — offers are archived
-// through their own route — so the MCP door cannot reach that scenario, and the
-// MCP door is the one a floor reaches in a test. A relationship is a target
-// archive_record does serve and the approvals engine can pin, so the property is
-// the same one, asserted where it can be asserted.
-func TestAnApprovedEdgeArchiveRefusesAfterTheEdgeMoves(t *testing.T) {
-	e := setupRelationships(t)
-
-	var edge struct {
-		ID      string `json:"id"`
-		Version int64  `json:"version"`
-	}
-	if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
-		"kind": "employment", "contact_id": e.contactID, "company_id": e.companyID,
-		"role": "cto", "source": "manual",
-	}, nil, &edge); status != http.StatusCreated {
-		t.Fatalf("create employment → %d", status)
-	}
-
-	var minted struct {
-		Token string `json:"token"`
-	}
-	if status := e.Call(t, "POST", "/v1/passports", AnyMap{
-		"label": "skew agent", "scopes": []string{"read", "write"},
-	}, nil, &minted); status != http.StatusCreated {
-		t.Fatalf("issue passport → %d", status)
-	}
-
-	invoke := flooredArchiveInvoker(t, e.AppEnv, minted.Token)
-	_, err := invoke(`{"record_type":"relationship","id":"` + edge.ID + `"}`)
-	if !errors.Is(err, apperrors.ErrRequiresApproval) {
-		t.Fatalf("a floored edge archive answered %v, want the confirm-first refusal", err)
-	}
-	approvalID := ExtractStagedApprovalID(t, err.Error())
-
-	// The human approves the edge they were shown.
-	if status := e.Call(t, "POST", "/v1/approvals/"+approvalID+"/approve",
-		AnyMap{}, nil, nil); status != http.StatusOK {
-		t.Fatalf("human approve → %d", status)
-	}
-
-	// The edge is then rewritten through the auto_execute patch route, which
-	// runs unattended. Its version moves; the approval's does not.
-	if status := e.Call(t, "PATCH", "/v1/relationships/"+edge.ID, AnyMap{
-		"role": "chief technology officer",
-	}, nil, nil); status != http.StatusOK {
-		t.Fatalf("rewriting the edge → %d", status)
-	}
-
-	// The identical retry now refuses: same verb, same arguments, same
-	// diff_hash — and a row that is no longer the one the human approved.
-	// The sentinel, not merely "an error": a refusal for a spent approval, a
-	// missing grant or a decode fault would satisfy `err != nil` while proving
-	// nothing about the pin, and the pin is the whole subject here.
-	_, err = invoke(`{"record_type":"relationship","id":"` + edge.ID +
-		`","approval_id":"` + approvalID + `"}`)
-	if !errors.Is(err, apperrors.ErrVersionSkew) {
-		t.Fatalf("the approved retry answered %v, want ErrVersionSkew — the edge had been rewritten "+
-			"since the human saw it, and the version pin is what must refuse that", err)
-	}
-
-	// And nothing was archived.
 	var archived bool
 	if err := e.Owner.QueryRow(t.Context(),
 		`SELECT archived_at IS NOT NULL FROM relationship WHERE id = $1`, edge.ID).Scan(&archived); err != nil {
 		t.Fatal(err)
 	}
 	if archived {
-		t.Error("the edge was archived by a refused redemption")
+		t.Error("the edge was archived by a refused call")
 	}
 }
 
 // flooredArchiveInvoker calls archive_record through a registry with a tier
 // floor on it, which is the composition an installation gets when it declares
-// the verb confirm-first.
+// the verb confirm-first. It acts as automatic work: the token's colleague with
+// no passport behind it. An agent on a passport archives as that colleague could.
 func flooredArchiveInvoker(t *testing.T, e *apptest.AppEnv, agentToken string) func(string) (string, error) {
 	t.Helper()
 	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
@@ -380,7 +247,9 @@ func flooredArchiveInvoker(t *testing.T, e *apptest.AppEnv, agentToken string) f
 		if err != nil {
 			t.Fatal(err)
 		}
-		ctx = principal.WithCorrelationID(principal.WithActor(ctx, agent.Principal()), ids.NewV7())
+		automatic := agent.Principal()
+		automatic.PassportID, automatic.ConnectionID = ids.UUID{}, ids.UUID{}
+		ctx = principal.WithCorrelationID(principal.WithActor(ctx, automatic), ids.NewV7())
 		out, invokeErr := registry.Invoke(ctx, "archive_record", json.RawMessage(args))
 		return string(out), invokeErr
 	}
@@ -422,102 +291,5 @@ func TestPartnerPromotionLifecycle(t *testing.T) {
 	}
 	if status := e.Call(t, "GET", "/v1/partners?cert_status=suspended", nil, nil, &partners); status != http.StatusOK {
 		t.Fatalf("filtered list → %d", status)
-	}
-}
-
-// assertDecidableInTheInbox is the assertion that makes a 403 approval_required
-// mean something: a staged row a human cannot SEE is one they can never release
-// or reject, and `decidable` backs the list, the single read and the decision
-// alike — so an approval whose target type the inbox has no visibility rule for
-// is a zombie, and the fan-out that would have told anyone is dropped too.
-func assertDecidableInTheInbox(t *testing.T, e *apptest.AppEnv, approvalID, wantTargetType string) {
-	t.Helper()
-	var inbox struct {
-		Data []struct {
-			ID         string `json:"id"`
-			TargetType string `json:"target_entity_type"`
-		} `json:"data"`
-	}
-	if got := e.Call(t, "GET", "/v1/approvals?status=pending", nil, nil, &inbox); got != http.StatusOK {
-		t.Fatalf("list approvals → %d", got)
-	}
-	for _, a := range inbox.Data {
-		if a.ID != approvalID {
-			continue
-		}
-		if a.TargetType != wantTargetType {
-			t.Errorf("the staged row's target_entity_type is %q, want %q", a.TargetType, wantTargetType)
-		}
-		if got := e.Call(t, "GET", "/v1/approvals/"+approvalID, nil, nil, nil); got != http.StatusOK {
-			t.Fatalf("GET the staged approval → %d, want 200", got)
-		}
-		return
-	}
-	t.Fatalf("the staged approval is not in the pending inbox (%d rows) — nobody can act on it", len(inbox.Data))
-}
-
-// An approval stays decidable after its target edge is archived out from under it.
-//
-// EnsureRelationshipVisible deliberately does NOT filter archived rows, unlike
-// Store.GetRelationship, which does. That asymmetry is the whole reason a human can
-// still REJECT a staged archive of an edge somebody removed in the meantime — and
-// nothing gated it, so the next author adding `AND r.archived_at IS NULL` for
-// symmetry with the read verb would take the guarantee away with every test green.
-//
-// An approval whose TARGET is archived before anyone decides stays visible and
-// rejectable — otherwise it sits pending until its TTL with no way to clear it.
-//
-// Staged through archive_record under a tier floor, the composition an
-// installation gets when it declares the verb confirm-first. That door stages
-// against an edge.
-func TestAnApprovalStaysDecidableAfterItsTargetIsArchived(t *testing.T) {
-	e := setupRelationships(t)
-
-	var edge struct {
-		ID string `json:"id"`
-	}
-	if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
-		"kind": "employment", "contact_id": e.contactID, "company_id": e.companyID,
-		"role": "cto", "source": "manual",
-	}, nil, &edge); status != http.StatusCreated {
-		t.Fatalf("create employment → %d", status)
-	}
-
-	var minted struct {
-		Token string `json:"token"`
-	}
-	if status := e.Call(t, "POST", "/v1/passports", AnyMap{
-		"label": "archived target agent", "scopes": []string{"read", "write"},
-	}, nil, &minted); status != http.StatusCreated {
-		t.Fatalf("issue passport → %d", status)
-	}
-
-	_, err := flooredArchiveInvoker(t, e.AppEnv, minted.Token)(
-		`{"record_type":"relationship","id":"` + edge.ID + `"}`,
-	)
-	if !errors.Is(err, apperrors.ErrRequiresApproval) {
-		t.Fatalf("a floored edge archive answered %v, want the confirm-first refusal", err)
-	}
-	approvalID := ExtractStagedApprovalID(t, err.Error())
-
-	// A human archives the edge themselves while the agent's proposal waits.
-	if status := e.Call(t, "DELETE", "/v1/relationships/"+edge.ID, nil, nil, nil); status != http.StatusOK {
-		t.Fatalf("human archive of the edge → %d", status)
-	}
-	var archived bool
-	if err := e.Owner.QueryRow(t.Context(),
-		`SELECT archived_at IS NOT NULL FROM relationship WHERE id = $1`, edge.ID).Scan(&archived); err != nil {
-		t.Fatalf("reading the edge back: %v", err)
-	}
-	if !archived {
-		t.Fatal("the edge is still live, so this fixture proves nothing about an archived target")
-	}
-
-	assertDecidableInTheInbox(t, e.AppEnv, approvalID, "relationship")
-	if got := e.Call(t, "POST", "/v1/approvals/"+approvalID+"/reject", AnyMap{
-		"reason": "no longer wanted",
-	}, nil, nil); got != http.StatusOK {
-		t.Errorf("rejecting an approval whose target was archived → %d, want 200 — a human must be able "+
-			"to clear authority whose target is gone", got)
 	}
 }

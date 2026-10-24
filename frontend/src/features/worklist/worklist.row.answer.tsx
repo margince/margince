@@ -2,18 +2,18 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type ReactNode, useRef, useState } from "react";
+import {
+  useAutomationRetry,
+  useClaimSettle,
+  useTaskUpdate,
+} from "../../components/taskactions";
+import { useCompleteTask } from "../../components/taskcomplete";
+import { completeFailureKey } from "../../components/taskwritefollowup";
 import { Button } from "../../design-system/atoms";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { ApprovalDecisionDrawer } from "../automations/approvaldrawer";
 import { hasMoveControl, MoveButton } from "../records/movebutton";
-import {
-  useAutomationRetry,
-  useClaimSettle,
-  useTaskUpdate,
-} from "./taskactions";
-import { useCompleteTask } from "./taskcomplete";
-import { completeFailureKey } from "./taskwritefollowup";
 import {
   FailedApprovalAnswer,
   NoticeAcknowledge,

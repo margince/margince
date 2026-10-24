@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // contactReachesActivity is the reachability predicate every contact-360 section
@@ -105,7 +106,11 @@ func (s *Service) activitiesSection(ctx context.Context, tx pgx.Tx, contactID id
 	if err := requireRead(ctx, "activity"); err != nil {
 		return err
 	}
-	rows, hasMore, err := s.readActivities(ctx, tx, contactID, opts, "", byRecency)
+	extra := ""
+	if opts.WrittenByHumanOnly {
+		extra = " AND " + relstrength.WrittenByHumanSQL("a")
+	}
+	rows, hasMore, err := s.readActivities(ctx, tx, contactID, opts, extra, byRecency)
 	if err != nil {
 		return err
 	}
@@ -319,6 +324,7 @@ func (s *Service) lastTouchSection(ctx context.Context, tx pgx.Tx, contactID ids
 	out.LastInboundAt = touch.InboundAt
 	out.LastOutboundAt = touch.OutboundAt
 	out.LastLiveInboundAt = touch.LiveInboundAt
+	out.LastContactAt = touch.ContactAt
 	return nil
 }
 

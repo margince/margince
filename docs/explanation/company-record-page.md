@@ -52,7 +52,14 @@ disagreeing:
 
 `contacts` · `strength` · `deals` · `projects` · `activities` · `last_touch` ·
 `state_strip` · `health` · `next_steps` · `next_meeting` · `tags` ·
-`list_memberships` · `pending_approvals` · `since_last_visit` · `suggestions`
+`list_memberships` · `pending_approvals` · `since_last_visit` · `suggestions` ·
+`commitments`
+
+`commitments` fills `open_commitments`: the promises read out of conversations that are still open,
+ours and theirs, in the order the other owed-work lists use. A promise we made names nobody, because
+nothing on file says who owns it. Claims carry no project, so a project-narrowed page lists them for the
+whole account. The moment card reads our side from the same read. The company brief and the "what is
+open" answer take these rows as their `open_commitments`, together with the tasks' `assignee_name`.
 
 They run in a fixed order, so two reads of the same account give the same `sections_omitted` list. Any
 error that is not a permission refusal fails the whole read. A section that failed for a real reason must
@@ -227,18 +234,14 @@ long list sees dismissed advice come back.
 
 ## What needs you, and the one answer it gives
 
-The needs list has three sources: the moment leads it, the suggestions follow, and the moves made by hand
-come last. The reader takes the top of it as the verdict. The moment fires on **owed promises only**; all
-else comes through the suggestions, or the scan's findings. Two rules stop the list disagreeing with
-itself, each held where it sees what the other cannot:
+The moment fires on **owed promises only**, and leads the page in the Next bar above the needs list,
+so the list never repeats it. The list has two sources: the suggestions (or the scan's findings) first,
+then the moves made by hand. One rule stops the page disagreeing with itself:
 
 - **The quiet card claims only what it read.** It says *"Nothing is owed to this account"*, never
   "nothing needs you today". The second would be a claim about work it did not look at, in the payload
   that holds the rows that say the opposite. Every client reads it, the tool surface too, so the bound sits
   on the server.
-- **A quiet card is no row beside others** (`momentIsARow`). Only the client can apply this, because the
-  scan's findings come on their own read. The row goes only where the list holds something, and what it
-  holds *is* the answer.
 
 The 360 is also a **live read**: every 60 seconds while the tab has focus. A page read once when it
 opens goes stale without any sign, and a stale "what needs you" looks like a current one. It is a poll on

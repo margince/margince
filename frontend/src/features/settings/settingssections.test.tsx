@@ -8,8 +8,8 @@ import { describe, expect, it } from "vitest";
 import { translate } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { companyContextShown } from "../../lib/companycontextreach";
+import { SETTINGS_PAGES, type SettingsPageId } from "../../lib/settingscatalog";
 import * as stories from "./settings.stories";
-import { SETTINGS_PAGES, type SettingsPageId } from "./settingscatalog";
 import { COMPANY_CONTEXT_OFF } from "./settingspages.fixtures";
 import { settingsPageSections } from "./settingssearch";
 
@@ -25,12 +25,14 @@ type NotOffered = Readonly<{
 const DRAWN_NOT_OFFERED: Partial<
   Record<SettingsPageId, readonly NotOffered[]>
 > = {
-  connections: [
-    { key: "connectors.emptyLabel", why: "empty-state" },
-    { key: "connectors.telegramEmptyLabel", why: "empty-state" },
-  ],
   "capture-activity": [{ key: "captureActivity.scope.label", why: "grant" }],
-  "model-calls": [{ key: "aicalls.col.task", why: "record-filter" }],
+  "model-calls": [
+    { key: "aicalls.filter.search", why: "record-filter" },
+    { key: "aicalls.filter.window", why: "record-filter" },
+    { key: "aicalls.col.outcome", why: "record-filter" },
+    { key: "aicalls.col.model", why: "record-filter" },
+    { key: "aicalls.col.feature", why: "record-filter" },
+  ],
   audit: [
     { key: "settings.auditActor", why: "record-filter" },
     { key: "settings.auditEntity", why: "record-filter" },
@@ -134,10 +136,10 @@ describe("each settings page's sections are the names it draws", () => {
 
   // An empty state or a grant cannot be checked from one render. Each entry
   // hides a name from search, so a new one takes an edit here.
-  it("pins the unchecked exceptions to three", () => {
+  it("pins the unchecked exceptions to one", () => {
     const unchecked = Object.values(DRAWN_NOT_OFFERED)
       .flatMap((entries) => entries ?? [])
       .filter(({ why }) => why !== "record-filter");
-    expect(unchecked).toHaveLength(3);
+    expect(unchecked).toHaveLength(1);
   });
 });

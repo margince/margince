@@ -29,14 +29,15 @@ import (
 )
 
 type channelConsentEnv struct {
-	owner      *pgx.Conn
-	store      *Store
-	ctx        context.Context
-	ws, user   ids.UUID
-	newsletter ids.PurposeID
-	doiNews    ids.PurposeID
-	contact    ids.ContactID
-	account    string
+	owner       *pgx.Conn
+	store       *Store
+	storeNoLane *Store
+	ctx         context.Context
+	ws, user    ids.UUID
+	newsletter  ids.PurposeID
+	doiNews     ids.PurposeID
+	contact     ids.ContactID
+	account     string
 }
 
 func setupChannelConsent(t *testing.T) *channelConsentEnv {
@@ -117,7 +118,15 @@ func setupChannelConsent(t *testing.T) *channelConsentEnv {
 	// The pool outlives the test now, so a goroutine still holding a connection
 	// would go on writing into the database the NEXT test just reset.
 	testdb.AssertPoolsQuiesced(t)
-	e.store = NewStore(database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws)))
+	// With a lane, because the mint refuses without one. An installation that
+	// issues these links can mail them, and a case about what a link does once
+	// opened would otherwise never get one.
+	bound := database.BindTo(pool, ids.From[ids.WorkspaceKind](e.ws))
+	e.store = NewStore(bound).
+		WithConfirmationLane(&recordingStager{}, &recordingVault{}, "https://crm.example.test")
+	// The same database with no lane, for the cases about an installation that
+	// cannot mail what it would mint.
+	e.storeNoLane = NewStore(bound)
 
 	opCtx := principal.WithWorkspaceID(context.Background(), e.ws)
 	opCtx = principal.WithCorrelationID(opCtx, ids.NewV7())

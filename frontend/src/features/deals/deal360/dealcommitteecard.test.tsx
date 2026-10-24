@@ -4,49 +4,23 @@
 
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../../api/schema";
-import { LocaleProvider } from "../../../i18n";
+import { LocaleProvider, translate } from "../../../i18n";
 import { en } from "../../../i18n/en";
 import { meFixture } from "../../../testing/mefixture";
 import { DealCommitteeCard } from "./dealcommitteecard";
 
-// The card joins two reads of ONE set of edges: the stakeholder rows carry the
-// verbs, the coverage read carries who has answered. What is asserted here is
-// the join — that engagement lands on the row for the same contact, and that a
-// row the coverage read does not cover claims nothing about it. A card that
-// guessed there would report a silence nobody measured.
+// The card draws the coverage read. Each seat shows its role and whether we
+// are in touch, each gap gets a row, and one line counts both. Nothing is
+// claimed that the read did not say. A gap is named by its rule, never by a
+// role nobody measured.
 
 type DealCoverage = components["schemas"]["DealCoverage"];
 
 const DEAL = "01a02e25-a5ac-7099-8099-581cbf001a99";
-const TALKING = "01a02be9-2293-75d2-9dd2-3027d9b63dc2";
-const QUIET = "01a02be9-4471-7a10-8a10-6f2b1cc4e0d1";
-const UNCOVERED = "01a02be9-9c02-7bb4-8bb4-11e4a7d3f550";
-
-const NAMES: Record<string, string> = {
-  [TALKING]: "Mai Trần",
-  [QUIET]: "Bảo Nguyễn",
-  [UNCOVERED]: "Linh Phạm",
-};
-
-function edge(contactId: string, role: string) {
-  return {
-    id: `rel-${contactId}`,
-    kind: "deal_stakeholder",
-    deal_id: DEAL,
-    contact_id: contactId,
-    role,
-    is_current_primary: false,
-    source: "manual",
-    captured_by: "human:u-1",
-    version: 1,
-    created_at: "2026-01-01T00:00:00Z",
-    updated_at: "2026-01-01T00:00:00Z",
-  };
-}
+const OWNER = "01a02be9-0000-7000-8000-00000000aa01";
 
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -55,70 +29,49 @@ function json(body: unknown, status = 200) {
   });
 }
 
-type Patch = { role: unknown; ifMatch: string | null };
-
 function stubFetch(
-  edges: unknown[],
-  deleted: string[] = [],
-  patched: Patch[] = [],
-  refuseDelete = false,
+  grants: readonly ("read" | "create")[] = ["read", "create"],
 ) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (request: Request) => {
-      const { url, method } = request;
-      if (method === "DELETE") {
-        deleted.push(url.slice(url.lastIndexOf("/") + 1));
-        if (refuseDelete) {
-          return json({ title: "Nope", detail: "Nope" }, 409);
-        }
-        return json({}, 204);
+      if (request.url.endsWith("/v1/me")) {
+        return json(meFixture({ allow: { relationship: grants } }));
       }
-      if (method === "PATCH") {
-        const body = await request.json();
-        patched.push({
-          role: body.role,
-          ifMatch: request.headers.get("If-Match"),
-        });
-        return json({ ...edge(TALKING, String(body.role)), version: 2 });
-      }
-      if (url.endsWith("/v1/me")) {
-        return json(
-          meFixture({
-            allow: { relationship: ["read", "create", "update", "delete"] },
-          }),
-        );
-      }
-      if (url.includes("/relationships")) {
-        return json({ data: edges, page: { next_cursor: null } });
-      }
-      // EntityRef resolves each far end by id, which is what puts a name on a
-      // row rather than the id the edge carries.
-      const named = Object.keys(NAMES).find((id) => url.includes(id));
-      if (named) {
-        return json({ id: named, full_name: NAMES[named] });
+      if (request.url.includes("/users/names")) {
+        return json({ data: [{ id: OWNER, display_name: "Lena Fischer" }] });
       }
       return json({ data: [], page: { next_cursor: null } });
     }),
   );
 }
 
-const coverage = (seats: DealCoverage["stakeholders"]): DealCoverage => ({
+const coverage = (over: Partial<DealCoverage> = {}): DealCoverage => ({
   deal_id: DEAL,
-  stakeholders: seats,
+  stakeholders: [
+    {
+      contact_id: "c-1",
+      contact_name: "Mai Trần",
+      role: "champion",
+      engaged: true,
+    },
+    {
+      contact_id: "c-2",
+      contact_name: "Bảo Nguyễn",
+      role: "economic_buyer",
+      engaged: false,
+    },
+  ],
   our_side: [],
   risks: [],
   sections_omitted: [],
+  ...over,
 });
 
 function draw(
-  edges: unknown[],
-  view?: DealCoverage,
-  deleted: string[] = [],
-  patched: Patch[] = [],
-  refuseDelete = false,
+  view: DealCoverage | undefined,
+  state: Partial<{ withheld: boolean; pending: boolean }> = {},
 ) {
-  stubFetch(edges, deleted, patched, refuseDelete);
   render(
     <QueryClientProvider
       client={
@@ -128,24 +81,24 @@ function draw(
       <LocaleProvider initial="en">
         <DealCommitteeCard
           dealId={DEAL}
+          ownerId={OWNER}
           coverage={view}
-          withheld={false}
-          pending={false}
+          withheld={state.withheld ?? false}
+          pending={state.pending ?? false}
+          roleLabel={(role) => ROLE_WORDS[role] ?? role}
         />
       </LocaleProvider>
     </QueryClientProvider>,
   );
 }
 
-/** The block a seat's facts are read from, found by the contact's own name. */
-async function seatOf(name: string) {
-  const link = await screen.findByRole("link", { name });
-  const block = link.closest(".panel-row");
-  if (!block) {
-    throw new Error(`the seat for ${name} is not drawn as a row of its own`);
-  }
-  return within(block as HTMLElement);
-}
+const ROLE_WORDS: Record<string, string> = {
+  champion: en["co.roleLabel.champion"],
+  economic_buyer: en["co.roleLabel.economic_buyer"],
+  blocker: en["co.roleLabel.blocker"],
+  influencer: en["co.roleLabel.influencer"],
+  user: en["co.roleLabel.user"],
+};
 
 afterEach(() => {
   cleanup();
@@ -153,222 +106,78 @@ afterEach(() => {
 });
 
 describe("the deal's committee card", () => {
-  it("puts each seat's engagement on that seat's own row", async () => {
-    draw(
-      [edge(TALKING, "economic_buyer"), edge(QUIET, "evaluator")],
-      coverage([
-        { contact_id: TALKING, role: "economic_buyer", engaged: true },
-        { contact_id: QUIET, role: "evaluator", engaged: false },
-      ]),
-    );
-
+  it("names each seat with its role, and an engaged one as engaged", async () => {
+    stubFetch();
+    draw(coverage());
+    expect(await screen.findByText("Mai Trần")).toBeInTheDocument();
     expect(
-      (await seatOf("Mai Trần")).getByText(en["coverage.engaged"]),
+      screen.getByText(
+        translate("en", "deal.committee.seatSub", {
+          role: translate("en", "co.roleLabel.champion"),
+          engagement: translate("en", "deal.committee.legendEngaged"),
+        }),
+      ),
     ).toBeInTheDocument();
     expect(
-      (await seatOf("Bảo Nguyễn")).getByText(en["coverage.quiet"]),
+      screen.getByText(translate("en", "co.roleLabel.economic_buyer")),
     ).toBeInTheDocument();
   });
 
-  it("claims nothing about a seat the coverage read did not cover", async () => {
-    // The two reads can disagree — a seat added since the coverage view was
-    // built, or a view the reader is refused. Printing "quiet" there would
-    // report a silence nobody measured, which is the one wrong answer
-    // available: it reads exactly like a stakeholder who has not replied.
+  it("names a gap by the rule that found it, not by a role", async () => {
+    stubFetch();
     draw(
-      [edge(TALKING, "economic_buyer"), edge(UNCOVERED, "user")],
-      coverage([
-        { contact_id: TALKING, role: "economic_buyer", engaged: true },
-      ]),
-    );
-
-    const uncovered = await seatOf("Linh Phạm");
-    expect(uncovered.queryByText(en["coverage.quiet"])).toBeNull();
-    expect(uncovered.queryByText(en["coverage.engaged"])).toBeNull();
-    // The seat is still a seat: the row and its other facts stand.
-    expect(uncovered.getByText("user")).toBeInTheDocument();
-  });
-
-  // Remove is a hard DELETE with no restore path, so the card asks first. The
-  // three cases below are the three answers a reader can give it, and the two
-  // that must send nothing are the point: a seat taken off a deal by a stray
-  // click is a stakeholder the next reader does not know was ever there.
-  it("asks before it takes a seat off the deal, and sends nothing yet", async () => {
-    const deleted: string[] = [];
-    draw(
-      [edge(TALKING, "economic_buyer")],
-      coverage([
-        { contact_id: TALKING, role: "economic_buyer", engaged: true },
-      ]),
-      deleted,
-    );
-
-    await userEvent.click(await screen.findByTestId("remove-relationship"));
-
-    expect(await screen.findByRole("dialog")).toBeInTheDocument();
-    expect(deleted).toEqual([]);
-  });
-
-  it("takes the seat off once the reader confirms it", async () => {
-    const deleted: string[] = [];
-    draw(
-      [edge(TALKING, "economic_buyer")],
-      coverage([
-        { contact_id: TALKING, role: "economic_buyer", engaged: true },
-      ]),
-      deleted,
-    );
-
-    await userEvent.click(await screen.findByTestId("remove-relationship"));
-    await userEvent.click(
-      within(await screen.findByRole("dialog")).getByRole("button", {
-        name: en["rel.remove"],
+      coverage({
+        risks: [{ kind: "coverage_gap", summary: "no engaged champion" }],
       }),
     );
-
-    expect(deleted).toEqual([`rel-${TALKING}`]);
+    expect(
+      await screen.findByText(translate("en", "coverage.risk.coverage_gap")),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(translate("en", "deal.committee.gap.coverageGap")),
+    ).toBeInTheDocument();
   });
 
-  it("leaves the seat where it is when the reader backs out", async () => {
-    const deleted: string[] = [];
+  it("counts who is named and engaged in the card's foot, in warning ink while a gap stands", async () => {
+    stubFetch();
     draw(
-      [edge(TALKING, "economic_buyer")],
-      coverage([
-        { contact_id: TALKING, role: "economic_buyer", engaged: true },
-      ]),
-      deleted,
-    );
-
-    await userEvent.click(await screen.findByTestId("remove-relationship"));
-    await userEvent.click(
-      within(await screen.findByRole("dialog")).getByRole("button", {
-        name: en["create.cancel"],
+      coverage({
+        risks: [{ kind: "single_threaded_theirs", summary: "one thread" }],
       }),
     );
+    const foot = await screen.findByText(
+      translate("en", "deal.committee.foot", { named: "2", engaged: "1" }),
+    );
+    expect(foot).toHaveClass("overviewcard-foot-warn");
+  });
 
-    expect(deleted).toEqual([]);
-    expect(await screen.findByRole("link", { name: "Mai Trần" })).toBeVisible();
+  it("puts our owner on our side of the picture", async () => {
+    stubFetch();
+    draw(coverage());
+    expect(await screen.findByText("Lena Fischer")).toBeInTheDocument();
+  });
+
+  it("says nobody is named once the read has answered with no one", async () => {
+    stubFetch();
+    draw(coverage({ stakeholders: [] }));
+    expect(
+      await screen.findByText(translate("en", "deal.standing.committee.none")),
+    ).toBeInTheDocument();
+  });
+
+  it("says the seats are withheld rather than that nobody is named", async () => {
+    stubFetch();
+    draw(coverage({ stakeholders: [] }), { withheld: true });
+    await screen.findByText(translate("en", "deal.committee.card"));
+    expect(
+      screen.queryByText(translate("en", "deal.standing.committee.none")),
+    ).toBeNull();
   });
 
   it("offers no way to add a seat to a reader whose role holds no grant", async () => {
-    // The verb is WITHHELD rather than refused: a reader with no
-    // relationship:create grant is told nothing about this deal by its absence,
-    // where a refused control would name a rule that is not about the record.
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (request: Request) => {
-        if (request.url.endsWith("/v1/me")) {
-          return json(meFixture({ allow: { relationship: ["read"] } }));
-        }
-        if (request.url.includes("/relationships")) {
-          return json({ data: [], page: { next_cursor: null } });
-        }
-        return json({ data: [], page: { next_cursor: null } });
-      }),
-    );
-    render(
-      <QueryClientProvider
-        client={
-          new QueryClient({ defaultOptions: { queries: { retry: false } } })
-        }
-      >
-        <LocaleProvider initial="en">
-          <DealCommitteeCard
-            dealId={DEAL}
-            coverage={coverage([])}
-            withheld={false}
-            pending={false}
-          />
-        </LocaleProvider>
-      </QueryClientProvider>,
-    );
-
-    expect(
-      await screen.findByText(en["rel.dealStakeholdersEmpty"]),
-    ).toBeInTheDocument();
-    expect(
-      screen.queryByRole("button", { name: en["rel.addStakeholder"] }),
-    ).toBeNull();
-  });
-
-  it("sends a changed role against the row it was read from", async () => {
-    // The edit PATCHes with If-Match carrying the version the row was drawn
-    // with, so a seat somebody else moved in the meantime refuses the write
-    // rather than quietly overwriting their answer with a stale one.
-    const patched: Patch[] = [];
-    draw(
-      [edge(TALKING, "economic_buyer")],
-      coverage([
-        { contact_id: TALKING, role: "economic_buyer", engaged: true },
-      ]),
-      [],
-      patched,
-    );
-
-    await userEvent.click(
-      await screen.findByRole("button", { name: en["record.edit"] }),
-    );
-    const form = within(await screen.findByRole("dialog"));
-    const role = form.getByLabelText(en["rel.role"]);
-    await userEvent.clear(role);
-    await userEvent.type(role, "champion");
-    await userEvent.click(
-      form.getByRole("button", { name: en["record.save"] }),
-    );
-
-    expect(patched).toEqual([{ role: "champion", ifMatch: "1" }]);
-  });
-
-  it("carries no refusal from one seat's remove into the next seat's", async () => {
-    // Backing out closes the question AND forgets the answer. A refused remove
-    // left its sentence on the mutation, so the next seat's dialog opened
-    // naming a failure for a write nobody had attempted on it.
-    draw(
-      [edge(TALKING, "economic_buyer"), edge(QUIET, "evaluator")],
-      coverage([
-        { contact_id: TALKING, role: "economic_buyer", engaged: true },
-        { contact_id: QUIET, role: "evaluator", engaged: false },
-      ]),
-      [],
-      [],
-      true,
-    );
-
-    const removes = await screen.findAllByTestId("remove-relationship");
-    await userEvent.click(removes[0]);
-    await userEvent.click(
-      within(await screen.findByRole("dialog")).getByRole("button", {
-        name: en["rel.remove"],
-      }),
-    );
-    const refusal = await within(await screen.findByRole("dialog")).findByText(
-      /Nope/,
-    );
-    expect(refusal).toBeInTheDocument();
-
-    await userEvent.click(
-      within(await screen.findByRole("dialog")).getByRole("button", {
-        name: en["create.cancel"],
-      }),
-    );
-    await userEvent.click(removes[1]);
-
-    expect(
-      within(await screen.findByRole("dialog")).queryByText(/Nope/),
-    ).toBeNull();
-  });
-
-  it("says the committee is empty once, not twice", async () => {
-    // The picture and the rows both know the committee is empty, and both used
-    // to say so. The rows keep the sentence, because they carry the verb that
-    // ends the emptiness.
-    draw([], coverage([]));
-
-    expect(
-      await screen.findByText(en["rel.dealStakeholdersEmpty"]),
-    ).toBeInTheDocument();
-    expect(screen.getAllByText(en["rel.dealStakeholdersEmpty"])).toHaveLength(
-      1,
-    );
+    stubFetch(["read"]);
+    draw(coverage());
+    await screen.findByText("Mai Trần");
+    expect(screen.queryByTestId("add-relationship")).toBeNull();
   });
 });

@@ -8,16 +8,15 @@ import {
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
-import { DealProjectChip, StartDeliveryPrompt } from "./dealproject";
+import { DealProjectLine, StartDeliveryPrompt } from "./dealproject";
 
 // The delivery half of a deal: which project it feeds, and the one offer a won
 // deal gets when its company has exactly one open project to feed.
 //
-// The three chip states are three different facts and they are easy to draw
-// alike: a project the reader can open, no project at all, and a project that
-// exists but is not theirs to see. The last one is why the chip slot survives a
-// null id — drawing nothing would have said "no project", which is a claim about
-// the deal rather than about the reader's grants.
+// The project line has three states. A project the reader can open, no
+// project at all, and one that exists but is not theirs to see. The last is
+// why the line survives a null id. Drawing nothing would say "no project",
+// a claim about the deal rather than about the reader's grants.
 
 const meta: Meta = {
   title: "Records/Deal 360/Project",
@@ -58,39 +57,39 @@ function deal(over: Partial<Deal>): Deal {
   };
 }
 
-function Chip({ deal: subject }: Readonly<{ deal: Deal }>) {
+function Line({ deal: subject }: Readonly<{ deal: Deal }>) {
   installFetchStub({
     "GET /projects/pr-1": () => jsonResponse(project),
   });
   return (
     <StoryProviders>
-      <DealProjectChip deal={subject} />
+      <DealProjectLine deal={subject} />
     </StoryProviders>
   );
 }
 
-export const ChipLinked: Story = {
-  render: () => <Chip deal={deal({ project_id: "pr-1" })} />,
+export const LineLinked: Story = {
+  render: () => <Line deal={deal({ project_id: "pr-1" })} />,
 };
 
-// A withheld project: the id is null and `masked_fields` names it, so the chip
+// A withheld project: the id is null and `masked_fields` names it. The line
 // stays and carries the mask rather than disappearing into the same blank a
 // deal with no project draws.
-export const ChipWithheld: Story = {
+export const LineWithheld: Story = {
   render: () => (
-    <Chip deal={deal({ project_id: null, masked_fields: ["project_id"] })} />
+    <Line deal={deal({ project_id: null, masked_fields: ["project_id"] })} />
   ),
 };
 
 // Nothing to draw, which is the correct rendering and an unexplained empty
 // canvas — so the story says which of the two blanks this is.
-export const ChipAbsent: Story = {
+export const LineAbsent: Story = {
   render: () => (
     <div>
       <p className="t-caption">
-        No project on this deal — the chip renders nothing.
+        No project on this deal — the line renders nothing.
       </p>
-      <Chip deal={deal({})} />
+      <Line deal={deal({})} />
     </div>
   ),
 };

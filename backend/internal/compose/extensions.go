@@ -52,6 +52,10 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 	if err != nil {
 		return err
 	}
+	rbacDefaults, err := extensionRbacDefaults(verbs)
+	if err != nil {
+		return err
+	}
 	// Still the validate phase: joining a unit's Go job behavior to its
 	// contract-declared kinds can refuse the set (an undeclared job, a
 	// confirm-first tier, an outbound scope), and it must do so before a
@@ -87,6 +91,9 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 	// leaves the packs applied and the boot aborting, and an aborting boot
 	// serves nothing either way.
 	if err := RegisterRbacObjects(rbacObjects); err != nil {
+		return err
+	}
+	if err := registerRbacDefaults(rbacDefaults); err != nil {
 		return err
 	}
 	// The composed job kinds join the declaration table before any runner is
@@ -275,7 +282,7 @@ func validateExtensionSet(exts []extension.Extension) error {
 		if err := reserveInboundMounts(e, inboundMounts); err != nil {
 			return err
 		}
-		if err := preflightEntries(e); err != nil {
+		if err := preflightSurfaces(e); err != nil {
 			return err
 		}
 		if err := preflightSettings(e); err != nil {

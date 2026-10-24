@@ -235,14 +235,15 @@ it("offers no verb on a message that has already gone", async () => {
 
 it("names the zone a moment was picked in when it is not the reader's", async () => {
   mount([{ ...WAITING, scheduled_tz: OTHER_ZONE }]);
-  expect(await screen.findByText(new RegExp(`in ${OTHER_ZONE}`))).toBeTruthy();
+  const named = await screen.findByText(/^in .+ Time · UTC[+-]\d/);
+  expect(named.textContent).not.toContain(OTHER_ZONE);
 });
 
 // A row under a day heading is read on the reader's calendar. In another zone
 // the same instant can sit on a different date, so the row keeps its date.
 it("keeps the date on a row picked in another zone", async () => {
   mount([{ ...WAITING, scheduled_tz: OTHER_ZONE }]);
-  const moment = await screen.findByText(new RegExp(`in ${OTHER_ZONE}`));
+  const moment = await screen.findByText(/^in .+ Time · UTC[+-]\d/);
   expect(moment.parentElement?.textContent).toMatch(/\d{2}\/\d{2}\/\d{4}/);
 });
 

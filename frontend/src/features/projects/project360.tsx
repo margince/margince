@@ -2,80 +2,82 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
+import { CheckSquare, FileText } from "lucide-react";
 import { useId, useState } from "react";
 import { api } from "../../api/client";
 import { ifMatch, requireVersion } from "../../api/version";
 import { ArchiveAction } from "../../components/archive";
-import { CustomFieldsPanel } from "../../components/customfields.card";
 import {
   type ObjectCustomFields,
   useObjectCustomFields,
 } from "../../components/customfields.form";
 import { EditAction } from "../../components/edit";
-import { usePageAside } from "../../components/pageaside";
-import { OverflowMenu } from "../../design-system/atoms";
+import { LogActivityAction } from "../../components/logactivity.action";
+import { RecordTeam } from "../../components/recordteam";
+import {
+  snoozedDueAt,
+  TaskCompleteCheck,
+  TaskQuickActions,
+  useTaskUpdate,
+} from "../../components/taskactions";
+import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
+import { VerbWord } from "../../design-system/iconaction";
 import { QueryGate } from "../../design-system/querystates";
 import { RecordView } from "../../design-system/recordview";
-import { useLocale, useT } from "../../i18n";
+import { useT } from "../../i18n";
 import { taskWriteKeys } from "../../lib/activitykeys";
-import { useCan } from "../../lib/capability";
+import { useActivity } from "../../lib/activityread";
+import { useCan, useCanWrite } from "../../lib/capability";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { navigate } from "../../lib/router";
+import { useMe } from "../../lib/session";
 import { NewDealAction } from "../companies/companyactions";
-import { RecordEmailVerb } from "../records/recordemail";
 import { useOwnerPicker } from "../records/recordreferences";
-import { RecordTeam } from "../records/recordteam";
 import { ShareAction } from "../records/share";
-import { useTaskUpdate } from "../worklist/taskactions";
 import { TaskDetailModal } from "../worklist/taskdetailmodal";
+import { project360Key } from "./project360.key";
 import { useProjectVerbRefusal } from "./project360.refusal";
 import { ProjectCompanies } from "./projectcompanies";
-import { ProjectIdentityFacts } from "./projectheaderfacts";
-import { ProjectHealth } from "./projecthealth";
+import {
+  ProjectDetails,
+  ProjectSharedPill,
+  ProjectSubtitle,
+} from "./projectdetails";
+import { ProjectDocuments } from "./projectdocuments";
+import { ProjectDrawer } from "./projectdrawer";
 import type { ProjectHealthAssessment } from "./projecthealth.queries";
 import { ProjectHealthModal } from "./projecthealthmodal";
+import { ProjectNext } from "./projectnext";
 import { AssignProjectOwnerAction } from "./projectowner";
-import { AdvanceProjectModal, PhaseStepper } from "./projectphase";
-import {
-  PROJECT_ACTIVITY_ANCHOR,
-  PROJECT_COMMITMENTS_ANCHOR,
-  PROJECT_DEALS_ANCHOR,
-  RollupsStrip,
-} from "./projectreadings";
-import { PhaseBadge, ProjectKeyChip } from "./projects";
+import { AdvanceProjectModal } from "./projectphase";
+import { ProjectKeyChip } from "./projects";
 import {
   mapProjectUpdate,
+  PHASE_LABEL,
   type Project,
   type ProjectPhase,
   projectEditRecord,
   projectFields,
 } from "./projects.form";
-import {
-  CommitmentsCard,
-  PhaseHistoryCard,
-  type Project360,
-  ProjectContractsCard,
-  ProjectDealsCard,
-  ProjectDocumentsCard,
-  StakeholdersCard,
-} from "./projectsections";
+import { type Project360, StakeholdersCard } from "./projectsections";
+import { nextCommitment } from "./projectstanding";
+import { ProjectStanding } from "./projectstandingcard";
 import { ProjectTabs } from "./projecttabs";
 import "./projects.css";
-import { useProjectChronology } from "./project360.chronology";
+import { ProjectHistory } from "./project360.chronology";
+import { ProjectCards } from "./projectcards";
 
-// The project page: one composite read (GET /projects/{id}/360) drawn in the
-// company page's three zones — what the project IS on the left (its phase
-// history, its contacts, its paper), what is HAPPENING in the middle (deals,
-// open commitments), and the chronology underneath. `sections_omitted` is
-// what keeps every card honest: a section the reader's role cannot read says
-// so instead of drawing an empty list.
+// The project page: one composite read (GET /projects/{id}/360) drawn as two
+// cards. On the left, what the project is; on the right, the next task, how it
+// stands, and the cards it rests on. What the design leaves off the page (the
+// full history, the files, the companies and contacts on it) opens in a drawer.
+// `sections_omitted` marks what a card cannot show: a section the reader's role
+// cannot read says so instead of drawing an empty list.
 
 export function useProject360(id: string) {
   return useQuery({
-    // Under the ["project", id] prefix the edit and archive actions
-    // invalidate, so a saved name reaches the page without a second key.
-    queryKey: ["project", id, "360"],
+    queryKey: project360Key(id),
     queryFn: async () => {
       return unwrap(
         await api.GET("/projects/{id}/360", {
@@ -98,325 +100,399 @@ export function ProjectScreen({ id }: Readonly<{ id: string }>) {
   );
 }
 
+// The drawers the page opens; "tasks" is the history narrowed to tasks.
+type ProjectDrawerKind = "history" | "tasks" | "documents" | "contacts";
+
 function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
+  const t = useT();
   const recordZone = useRecordZone();
-  const { locale } = useLocale();
-  const details = usePageAside();
   const project = view.project;
   const readOnlyReasonId = useId();
   const [moveTo, setMoveTo] = useState<ProjectPhase | null>(null);
-  const chronology = useProjectChronology(view);
-  // Every write affordance on this page answers ONE question, asked once: an
+  const [drawer, setDrawer] = useState<ProjectDrawerKind | null>(null);
+  // Every write affordance on this page answers one question, asked once. An
   // archived project takes no changes, and one this caller cannot write takes
-  // none from them. The verbs, the stepper and the rail cards used to ask only
-  // the first half, which offered a reader a phase move and a stakeholder edit
-  // the save would refuse.
-  //
-  // One answer and one rendered sentence, so the page cannot disagree with
-  // itself about whether the record is writable, and every disabled control
-  // describes itself by pointing at the same explanation.
+  // none from them. One answer and one rendered sentence, so every disabled
+  // control describes itself by pointing at the same explanation.
   const readOnlyReason = useProjectVerbRefusal(project);
   const readOnly = Boolean(readOnlyReason);
-  // The commitments card's task detail, owned HERE rather than by the card:
-  // one modal per page, so two cards cannot both put a dialog on the screen.
-  // The same arrangement the account page uses for its own step rows.
+  // The task detail and the health dialog are owned here rather than by the
+  // cards. One modal per page, so two cards cannot both put one on screen.
   const [openTask, setOpenTask] = useState<string | null>(null);
-  // The health card's dialog, owned here for the same reason the task detail
-  // is: one modal per page. "new" records a reading; a row corrects that one.
   const [healthEdit, setHealthEdit] = useState<
     ProjectHealthAssessment | "new" | null
   >(null);
   const taskUpdate = useTaskUpdate(taskWriteKeys("project", project.id));
-  // The TASK's own permission, not the project's. They are different questions
-  // with different answers: the modal's verbs PATCH /activities/{id}, which
-  // asks activity:update and the activity's own row authority — author,
-  // assignee, host, or a writable linked record. Deriving this from the
-  // project's writability would offer verbs the server refuses to a reader who
-  // may write the project and not its activities, and hide valid ones from a
-  // task's own author whenever the project is read-only.
+  // The task's own permission, not the project's. The task verbs PATCH
+  // /activities/{id}, which asks activity:update and the activity's own row
+  // authority, whatever the reader may do to the project.
   const canUpdateTask = useCan("activity", "update");
-  // Read here and handed down: the schema request then runs BESIDE the
-  // project's rather than after it.
+  // Read here as well as in the details. The schema request then runs beside
+  // the project's rather than after it, and both share its one cache entry.
   const cf = useObjectCustomFields("project");
-  // Sheet, rung and facts are one change, argued in projectheaderfacts.tsx.
+  const nextVerbs = useNextTaskVerbs(view, taskUpdate, canUpdateTask);
   return (
-    <div className="record-sheet">
-      <RecordView
-        // WHO is on this work comes first, then the paperwork. The column used
-        // to open with the phase history — a log of moves the stepper above
-        // already shows the current state of — so a reader scanning for "whose
-        // project is this" read a changelog first. The three record-keeping
-        // cards below answer questions a reader comes looking for on purpose;
-        // the two above answer the one they arrive with.
-        // The details pane beside the work: the same pane, fold and memory of
-        // it as every other record page.
-        // The cards stand straight in the pane: `RecordView` gives the aside
-        // column the rail's own rhythm, and a wrapper of ours inside it was a
-        // second answer to how far apart a record's rail cards sit.
-        aside={
-          <>
-            <ProjectCompanies
-              projectId={project.id}
-              companies={project.companies}
-              readOnly={readOnly}
-            />
-            <RecordTeam
-              recordType="project"
-              recordId={project.id}
-              readOnly={readOnly}
-            />
-            <StakeholdersCard
-              view={view}
-              projectId={project.id}
-              readOnly={readOnly}
-            />
-            <ProjectContractsCard view={view} />
-            <ProjectDocumentsCard view={view} />
-            <PhaseHistoryCard view={view} />
-            <CustomFieldsPanel object="project" record={project} />
-          </>
-        }
-        asideOpen={details.open}
-        name={project.name}
-        identity={project.id}
-        scale="compact"
-        badges={<ProjectIdentityFacts view={view} locale={locale} />}
-        zone={recordZone}
-        // The phase and the key read beside the name, not at the far end of
-        // the header among the verbs: both are tags ON the record — where it
-        // stands and what a human calls it in a subject line — and a reader
-        // looking at the name was finding them across the page, above the
-        // buttons that act on it.
-        nameBadge={
-          <>
-            <PhaseBadge phase={project.phase} />
-            {project.key && <ProjectKeyChip projectKey={project.key} />}
-          </>
-        }
-        actions={
+    <RecordView
+      aside={<ProjectDetails view={view} />}
+      name={project.name}
+      identity={project.id}
+      zone={recordZone}
+      nameBadge={<ProjectSubtitle view={view} />}
+      pulse={
+        <>
+          {/* Neutral here: the phase is a fact about the project, and How
+              it stands carries the reading of how it is going. */}
+          <Badge>{t(PHASE_LABEL[project.phase])}</Badge>
+          {project.key && <ProjectKeyChip projectKey={project.key} dense />}
+          <ProjectSharedPill projectId={project.id} />
+        </>
+      }
+      actions={
+        <>
+          <ProjectLogVerbs
+            projectId={project.id}
+            refusedReasonId={readOnly ? readOnlyReasonId : undefined}
+          />
           <ProjectActions
             project={project}
             refusedReasonId={readOnly ? readOnlyReasonId : undefined}
             cf={cf}
+            health={view.health?.current}
+            onOpen={setDrawer}
+            onHealth={setHealthEdit}
           />
+        </>
+      }
+      tabs={<ProjectTabs />}
+      band={
+        // One sentence and nothing else: why this record takes no changes, so
+        // every control it refuses points at it.
+        readOnlyReason ? (
+          <p id={readOnlyReasonId}>{readOnlyReason}</p>
+        ) : undefined
+      }
+    >
+      <ProjectNext view={view} onOpenTask={setOpenTask} {...nextVerbs} />
+      <ProjectStanding
+        view={view}
+        refusedReasonId={readOnly ? readOnlyReasonId : undefined}
+        onMove={setMoveTo}
+        onOpenDocuments={() => setDrawer("documents")}
+      />
+      <ProjectCards
+        view={view}
+        newDeal={
+          // New Deal from here binds the deal to this project. Binding is held
+          // to project write authority rather than deal permission alone.
+          // Winning the deal later advances the project's phase without
+          // re-checking, so `EnsureAttachable` proves the authority at the
+          // moment of attaching.
+          !readOnly &&
+          project.company_id && (
+            <NewDealAction
+              companyId={project.company_id}
+              companyName={view.company?.name ?? project.name}
+              projectId={project.id}
+              link
+            />
+          )
         }
-        // In the header row, where a reader looks for a record's verbs — as the
-        // company, contact and lead pages already put them. Without it the row
-        // fell to the full-width strip UNDER the header, so the one record page
-        // with no primary action was also the one whose verbs were somewhere
-        // else.
-        actionsInline
-        // Where the project stands, at the foot of its head — the same row a
-        // deal's stage ladder and a lead's stepper stand in. It is the question a
-        // reader arrives with, so it is answered before the body rather than as
-        // the first card inside it.
-        standing={
-          <PhaseStepper
-            phase={project.phase}
-            refusedReasonId={readOnly ? readOnlyReasonId : undefined}
-            pending={false}
-            onMove={setMoveTo}
-          />
+        tick={
+          canUpdateTask
+            ? (activityId) => (
+                <CommitmentTick activityId={activityId} update={taskUpdate} />
+              )
+            : undefined
         }
-        tabs={<ProjectTabs />}
-        band={
-          // ONE sentence and nothing else: why this record takes no changes, so
-          // every control it refuses points at it. Absent while the project is
-          // writable, where a reserved gap reads as a record with nothing said.
-          readOnlyReason ? (
-            <p id={readOnlyReasonId}>{readOnlyReason}</p>
-          ) : undefined
-        }
-        {...chronology}
-        timelineAnchorId={PROJECT_ACTIVITY_ANCHOR}
+        onOpenTask={setOpenTask}
+        onOpenTasks={() => setDrawer("tasks")}
+        onOpenDocuments={() => setDrawer("documents")}
+      />
+      <AdvanceProjectModal
+        projectId={project.id}
+        version={project.version}
+        to={moveTo}
+        onClose={() => setMoveTo(null)}
+      />
+      <ProjectHealthModal
+        open={healthEdit !== null}
+        onClose={() => setHealthEdit(null)}
+        projectId={project.id}
+        correcting={healthEdit && healthEdit !== "new" ? healthEdit : undefined}
+      />
+      <ProjectDrawer
+        open={drawer === "history" || drawer === "tasks"}
+        title={t("record.fullHistory")}
+        onClose={() => setDrawer(null)}
       >
-        {/* The record's work column, at the record's own step. The readings open
-            it: they are read as cards and so stand BESIDE the details pane, as on
-            every other record, rather than in a band across both columns that the
-            pane would reflow. The phase is not one of them — it says where the
-            whole project stands, so it rides the head (`standing` above), which
-            is full width already and above the pane. */}
-        <div className="record-stack">
-          <RollupsStrip view={view} />
-          <ProjectHealth
+        <ProjectHistory
+          view={view}
+          kind={drawer === "tasks" ? "task" : undefined}
+        />
+      </ProjectDrawer>
+      <ProjectDrawer
+        open={drawer === "documents"}
+        title={t("project.documents.title")}
+        onClose={() => setDrawer(null)}
+      >
+        <ProjectDocuments view={view} />
+      </ProjectDrawer>
+      <ProjectDrawer
+        open={drawer === "contacts"}
+        title={t("project.more.contacts")}
+        onClose={() => setDrawer(null)}
+      >
+        <div className="project-drawer-stack">
+          <ProjectCompanies
+            projectId={project.id}
+            companies={project.companies}
+            readOnly={readOnly}
+          />
+          <RecordTeam
+            recordType="project"
+            recordId={project.id}
+            readOnly={readOnly}
+          />
+          <StakeholdersCard
+            view={view}
             projectId={project.id}
             readOnly={readOnly}
-            onRecord={() => setHealthEdit("new")}
-            onCorrect={setHealthEdit}
           />
-          <div id={PROJECT_DEALS_ANCHOR}>
-            <ProjectDealsCard
-              view={view}
-              actions={
-                // New Deal from HERE binds the deal to this project, and binding is
-                // held to project WRITE authority rather than deal permission
-                // alone: winning the deal later advances the project's phase
-                // without re-checking, so `EnsureAttachable` proves the authority
-                // at the moment of attaching. A caller who may read this project
-                // but not write it can still work deals — just not born into it.
-                !readOnly &&
-                project.company_id && (
-                  <NewDealAction
-                    companyId={project.company_id}
-                    companyName={project.name}
-                    projectId={project.id}
-                  />
-                )
-              }
-            />
-          </div>
-          <div id={PROJECT_COMMITMENTS_ANCHOR}>
-            <CommitmentsCard view={view} onOpenTask={setOpenTask} />
-          </div>
         </div>
-        <AdvanceProjectModal
-          projectId={project.id}
-          version={project.version}
-          to={moveTo}
-          onClose={() => setMoveTo(null)}
+      </ProjectDrawer>
+      {openTask && (
+        <TaskDetailModal
+          activityId={openTask}
+          readOnly={!canUpdateTask}
+          onClose={() => setOpenTask(null)}
+          update={taskUpdate}
         />
-        <ProjectHealthModal
-          open={healthEdit !== null}
-          onClose={() => setHealthEdit(null)}
-          projectId={project.id}
-          correcting={
-            healthEdit && healthEdit !== "new" ? healthEdit : undefined
-          }
-        />
-        {openTask && (
-          <TaskDetailModal
-            activityId={openTask}
-            readOnly={!canUpdateTask}
-            onClose={() => setOpenTask(null)}
-            update={taskUpdate}
-          />
-        )}
-      </RecordView>
-    </div>
+      )}
+    </RecordView>
   );
 }
 
 /**
- * Edit, archive, assign an owner and share — the record's rare verbs, beside
- * its identity.
- *
- * Edit in the row and the rest behind the overflow, as on the deal page. A
- * project has no primary action, so a labelled Archive left the DESTRUCTIVE
- * verb as the loudest control on the page: it draws in the danger colour, and
- * with nothing green beside it the eye went there first.
+ * Log and Task: one drawer, opened on the kind the verb asked for. A verb a
+ * reader may not use still shows, pointing at the sentence that says why.
  */
+function ProjectLogVerbs({
+  projectId,
+  refusedReasonId,
+}: Readonly<{ projectId: string; refusedReasonId?: string }>) {
+  const t = useT();
+  const [drawer, setDrawer] = useState<"log" | "task" | null>(null);
+  // useCanWrite, not useCan: both verbs POST, and a read seat is refused
+  // before RBAC is consulted. A guard that has not answered refuses nothing.
+  const me = useMe();
+  const canLog = useCanWrite("activity", "create");
+  const grantKnown = me.data?.authorization !== undefined;
+  const refusedId = useId();
+  const refused =
+    refusedReasonId ?? (grantKnown && !canLog ? refusedId : undefined);
+  return (
+    <>
+      {!refusedReasonId && grantKnown && !canLog && (
+        <p className="t-caption" id={refusedId}>
+          {t("record.logActivityRefused")}
+        </p>
+      )}
+      <Button
+        disabled={!grantKnown}
+        reasonId={refused}
+        title={t("log.title")}
+        onClick={() => setDrawer("log")}
+      >
+        <FileText aria-hidden="true" />
+        <VerbWord word={t("record.verb.log")} label={t("log.title")} />
+      </Button>
+      <Button
+        disabled={!grantKnown}
+        reasonId={refused}
+        title={t("log.addTask")}
+        onClick={() => setDrawer("task")}
+      >
+        <CheckSquare aria-hidden="true" />
+        <VerbWord word={t("record.verb.task")} label={t("log.addTask")} />
+      </Button>
+      {drawer && (
+        <LogActivityAction
+          entityType="project"
+          entityId={projectId}
+          askedKind={drawer === "task" ? "task" : undefined}
+          openOnMount
+          onClose={() => setDrawer(null)}
+        />
+      )}
+    </>
+  );
+}
 
-// Archived comes first because it is the reason a reader can act on, by
-// restoring the record.
-//
-// Unlike a company, an UNOWNED project is refused rather than left open. The
-// company page keeps its controls on an ownerless record because the claim door
-// is what makes it writable, and shutting the controls would shut the way out.
-// A project has no such door — `ClaimRecord` refuses the type outright — and
-// `writeAuthorityPredicate` treats an ownerless row as nobody's to change. So
-// here `writable` is the whole answer, and second-guessing it would offer
-// controls the save refuses with nothing a reader could do about it.
+// A commitment carries no row version, and a task write must name one. So
+// the verbs read their task whole first and offer themselves once they have.
+function useNextTaskVerbs(
+  view: Project360,
+  update: ReturnType<typeof useTaskUpdate>,
+  enabled: boolean,
+) {
+  const zone = useRecordZone();
+  const next = nextCommitment(view);
+  const task = useActivity(next?.activityId, enabled).data;
+  if (!next || !task) {
+    return {};
+  }
+  const nextDue = snoozedDueAt(next.dueAt, zone);
+  return {
+    // No due date here: the bar draws its own Snooze beside Done.
+    action: (
+      <TaskQuickActions
+        activityId={next.activityId}
+        version={task.version}
+        dueAt={null}
+        update={update}
+      />
+    ),
+    snooze: nextDue
+      ? {
+          onSnooze: () =>
+            update.mutate({
+              id: next.activityId,
+              version: task.version,
+              body: { due_at: nextDue },
+            }),
+          pending: update.isPending && update.variables?.id === next.activityId,
+        }
+      : undefined,
+  };
+}
 
-// refusedReasonId is the id of the sentence the BAND renders, passed in rather
-// than minted here: every verb but Email lives inside the OverflowMenu, and a
-// sentence minted in that panel would not exist until the menu was first
-// opened — so until somebody pressed the trigger, each refused item would
-// describe itself by an id naming no element at all.
+function CommitmentTick({
+  activityId,
+  update,
+}: Readonly<{
+  activityId: string;
+  update: ReturnType<typeof useTaskUpdate>;
+}>) {
+  const task = useActivity(activityId).data;
+  if (!task) {
+    return null;
+  }
+  return (
+    <TaskCompleteCheck
+      activityId={activityId}
+      version={task.version}
+      update={update}
+    />
+  );
+}
+
+// The record's rare verbs, behind the overflow. Archived leads the refusal,
+// since restoring is the step a reader can take. An unowned project is
+// refused: `ClaimRecord` refuses the type and `writeAuthorityPredicate` reads
+// an ownerless row as nobody's. refusedReasonId comes from the band, because a
+// sentence minted in the menu panel would not exist until the menu opened.
 function ProjectActions({
   project,
   refusedReasonId,
   cf,
+  health,
+  onOpen,
+  onHealth,
 }: Readonly<{
   project: Project;
   refusedReasonId?: string;
   cf: ObjectCustomFields;
+  // The reading that stands, which Correct reading corrects.
+  health?: ProjectHealthAssessment;
+  onOpen: (drawer: ProjectDrawerKind) => void;
+  onHealth: (edit: ProjectHealthAssessment | "new") => void;
 }>) {
   const t = useT();
   const owner = useOwnerPicker(project.owner_id);
   return (
-    <>
-      {/* A project's mail is a NEW conversation with somebody on the account
-          behind it: the composer offers that roster in To and files the send
-          under this project, which is the filing a message written from here
-          can only mean. No `recordAddress` — a project is not a contact and has
-          no address of its own to open with, so the reader picks from the
-          account's contacts rather than the page guessing which of them a
-          project-wide message is to. */}
-      <RecordEmailVerb
-        entityType="project"
-        entityId={project.id}
+    <OverflowMenu label={t("record.moreActions")} word={t("record.verb.more")}>
+      {/* Worded: a bare pencil among sentences names nothing to a reader. */}
+      <EditAction<Project>
+        labelled
+        disabledReasonId={refusedReasonId}
+        label={t("project.edit")}
+        savedMessage={(saved) => t("record.saveDone", { name: saved.name })}
+        fields={[
+          ...projectFields(t, {
+            owner,
+            mode: "edit",
+          }),
+          ...cf.formFields,
+        ]}
+        record={{ ...projectEditRecord(project), ...cf.recordSlice(project) }}
+        update={async (values, _rows, opened) => {
+          return unwrap(
+            await api.PATCH("/projects/{id}", {
+              params: {
+                path: { id: project.id },
+                ...ifMatch(requireVersion(opened?.version)),
+              },
+              // Diffed against what the form opened on. No cf_ column is clearable, so a
+              // snapshot diff would send every untouched empty one as a clear and the
+              // save would be refused.
+              body: {
+                ...mapProjectUpdate(values),
+                ...cf.toPatch(values, opened ?? {}),
+              },
+            }),
+          );
+        }}
+        invalidate="projects"
+        recordKey="project"
+      />
+      <ShareAction
+        recordType="project"
+        recordId={project.id}
         disabledReasonId={refusedReasonId}
       />
-      <OverflowMenu label={t("record.moreActions")}>
-        {/* Worded — a bare pencil among sentences names nothing to a reader. */}
-        <EditAction<Project>
-          labelled
-          disabledReasonId={refusedReasonId}
-          label={t("project.edit")}
-          savedMessage={(saved) => t("record.saveDone", { name: saved.name })}
-          fields={[
-            ...projectFields(t, {
-              owner,
-              currentOwner: project.owner_id ?? null,
-              mode: "edit",
+      <AssignProjectOwnerAction
+        project={project}
+        disabledReasonId={refusedReasonId}
+      />
+      <Button onClick={() => onOpen("contacts")}>
+        {t("project.more.contacts")}
+      </Button>
+      {/* How it stands draws the reading; these are the ways to change it. */}
+      <Button reasonId={refusedReasonId} onClick={() => onHealth("new")}>
+        {t("projectHealth.record")}
+      </Button>
+      {health && (
+        <Button reasonId={refusedReasonId} onClick={() => onHealth(health)}>
+          {t("projectHealth.correct")}
+        </Button>
+      )}
+      <Button onClick={() => onOpen("history")}>
+        {t("record.fullHistory")}
+      </Button>
+      {/* Last, and set apart by the panel's own seam (atoms.css): the one
+          verb a reader cannot walk back does not sit in the routine run. */}
+      <ArchiveAction
+        disabledReasonId={refusedReasonId}
+        label={t("project.archive")}
+        confirmText={t("project.archiveConfirm")}
+        archivedMessage={t("record.archiveDone", { name: project.name })}
+        archive={async () => {
+          // Archive answers 204: the archived record is the one the page
+          // already holds, so its id is what the shared choreography gets.
+          unwrap(
+            await api.DELETE("/projects/{id}", {
+              params: {
+                path: { id: project.id },
+                ...ifMatch(requireVersion(project.version)),
+              },
             }),
-            ...cf.formFields,
-          ]}
-          record={{ ...projectEditRecord(project), ...cf.recordSlice(project) }}
-          update={async (values, _rows, opened) => {
-            return unwrap(
-              await api.PATCH("/projects/{id}", {
-                params: {
-                  path: { id: project.id },
-                  ...ifMatch(requireVersion(opened?.version)),
-                },
-                // Diffed against what the form opened on. No cf_ column is clearable, so a
-                // snapshot diff would send every untouched empty one as a clear and the
-                // save would be refused.
-                body: {
-                  ...mapProjectUpdate(values),
-                  ...cf.toPatch(values, opened ?? {}),
-                },
-              }),
-            );
-          }}
-          invalidate="projects"
-          recordKey="project"
-        />
-        <ShareAction
-          recordType="project"
-          recordId={project.id}
-          disabledReasonId={refusedReasonId}
-        />
-        <AssignProjectOwnerAction
-          project={project}
-          disabledReasonId={refusedReasonId}
-        />
-        {/* Last, and set apart by the panel's own seam (atoms.css): the one
-            verb a reader cannot walk back does not sit in the routine run. */}
-        <ArchiveAction
-          disabledReasonId={refusedReasonId}
-          label={t("project.archive")}
-          confirmText={t("project.archiveConfirm")}
-          archivedMessage={t("record.archiveDone", { name: project.name })}
-          archive={async () => {
-            // Archive answers 204: the archived record is the one the page
-            // already holds, so its id is what the shared choreography gets.
-            unwrap(
-              await api.DELETE("/projects/{id}", {
-                params: {
-                  path: { id: project.id },
-                  ...ifMatch(requireVersion(project.version)),
-                },
-              }),
-            );
-            return { id: project.id };
-          }}
-          invalidate="projects"
-          recordKey="project"
-          onArchived={() => navigate({ screen: "projects" })}
-        />
-      </OverflowMenu>
-    </>
+          );
+          return { id: project.id };
+        }}
+        invalidate="projects"
+        recordKey="project"
+        onArchived={() => navigate({ screen: "projects" })}
+      />
+    </OverflowMenu>
   );
 }

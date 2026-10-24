@@ -7,6 +7,7 @@ import { NumberSettingRow } from "../design-system/numbersetting";
 import { Panel, PanelGroupHead } from "../design-system/panel";
 import { PanelNotices } from "../design-system/panelnotices";
 import { QueryGate } from "../design-system/querystates";
+import { useSavePage } from "../design-system/savepage";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { useToast } from "../design-system/toast";
@@ -115,6 +116,11 @@ export function CaptureSettingsCard() {
   const canManage = useCanWrite("capture_settings", "update");
   const query = useCaptureSettings();
   const update = useUpdateCaptureSettings();
+  // In a page the bar shows a refused number, so the card would say it twice.
+  const inPage = useSavePage() !== null;
+  const refusedNumber = READ_ROWS.some(
+    (row) => update.variables?.[row.property] !== undefined,
+  );
   const locked = !canManage || update.isPending;
   const adminOnly = canManage ? undefined : t("captureSettings.adminOnly");
   const reasonFor = (
@@ -189,8 +195,12 @@ export function CaptureSettingsCard() {
                   refusal={t(`captureReading.${row.copy}.refusal`)}
                   disabled={locked}
                   reason={reasonFor(settings, row.property)}
-                  describedBy={refusedFor(row.property)}
-                  onCommit={(next) => update.mutate({ [row.property]: next })}
+                  describedBy={inPage ? undefined : refusedFor(row.property)}
+                  onCommit={(next) =>
+                    inPage
+                      ? update.mutateAsync({ [row.property]: next })
+                      : update.mutate({ [row.property]: next })
+                  }
                 />
               ))}
             </SettingList>
@@ -199,7 +209,7 @@ export function CaptureSettingsCard() {
       </QueryGate>
       <PanelNotices
         refused={
-          update.isError
+          update.isError && !(inPage && refusedNumber)
             ? {
                 title: t("captureSettings.updateFailed"),
                 error: update.error,
@@ -212,8 +222,13 @@ export function CaptureSettingsCard() {
   );
 }
 
-// How often a connected mailbox is checked for new mail, mirrored as
-// READ_LIMITS is.
+// How often a connected mailbox is checked for new mail, and how many held
+// threads one privacy-review run looks at, mirrored as READ_LIMITS is. Both
+// sit on the mail card, which draws them from here.
 export const MAIL_SYNC_BOUNDS = {
   mail_sync_interval_seconds: { min: 30, max: 3_600 },
+} as const;
+
+export const MAIL_REVIEW_BOUNDS = {
+  confidentiality_pass_cap: { min: 1, max: 200 },
 } as const;

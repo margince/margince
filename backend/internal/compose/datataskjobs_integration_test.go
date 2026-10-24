@@ -44,7 +44,8 @@ func TestTwoCorrectionReconcilersShareOneRiverJob(t *testing.T) {
 	if got := e.WsCount(t, `SELECT count(*) FROM river_job WHERE kind='data_task_run'`); got != 1 {
 		t.Fatalf("executor jobs=%d", got)
 	}
-	if got := e.WsCount(t, `SELECT count(*) FROM data_task_run`); got != registeredDataTaskSteps(dataTaskCatalog(e.Pool, func() time.Time { return clocktest.Now(t) })) {
+	steps := registeredDataTaskSteps(dataTaskCatalog(e.Pool, func() time.Time { return clocktest.Now(t) }))
+	if got := e.WsCount(t, `SELECT count(*) FROM data_task_run`); got != steps {
 		t.Fatalf("seeded steps=%d", got)
 	}
 	workers := []*dataTaskRunWorker{{pool: e.Pool, pace: time.Second}, {pool: e.Pool, pace: time.Second}}
@@ -54,7 +55,8 @@ func TestTwoCorrectionReconcilersShareOneRiverJob(t *testing.T) {
 	for range contexts {
 		snoozeOf(t, <-results)
 	}
-	for range 4 {
+	// Each run commits one batch, and on an empty tree one batch finishes a step.
+	for range steps {
 		if err := workers[0].Work(contexts[0], nil); err != nil {
 			snoozeOf(t, err)
 		}

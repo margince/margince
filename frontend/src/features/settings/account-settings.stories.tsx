@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
 import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -21,7 +22,10 @@ function story(roles: string[], routes: RouteMap = {}) {
     return (
       <StoryProviders>
         <div className="settings-stack">
-          <AccountSettings />
+          <SavePageProvider>
+            <AccountSettings />
+            <PageSaveBar />
+          </SavePageProvider>
         </div>
       </StoryProviders>
     );
@@ -36,10 +40,10 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-// Profile, security, and language and appearance, each under its own title.
+// Profile, sign-in, language, this browser and scheduled emails, each under its own title.
 export const Admin: Story = { render: story(["admin"]) };
 
-// A rep sees the same three panels: every row here is the reader's own.
+// A rep sees the same panels: every row here is the reader's own.
 export const Rep: Story = { render: story(["rep"]) };
 
 export const AdminDark: Story = {
@@ -53,7 +57,7 @@ export const RepPhone: Story = {
   render: story(["rep"]),
 };
 
-// A refused save keeps the page in the picked language and says the save failed.
+// A refused save keeps the page in the current language and says so on the save bar.
 export const LanguageRefused: Story = {
   render: story(["rep"], {
     "PUT /me/locale": () =>
@@ -71,6 +75,7 @@ export const LanguageRefused: Story = {
       await page.findByRole("combobox", { name: "Language" }),
     );
     await userEvent.click(await page.findByRole("option", { name: "Deutsch" }));
+    await userEvent.click(await page.findByRole("button", { name: "Save" }));
     await page.findByRole("alert");
   },
 };

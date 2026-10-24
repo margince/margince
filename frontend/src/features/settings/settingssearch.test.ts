@@ -4,12 +4,12 @@
 import { describe, expect, it } from "vitest";
 import { translate } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import type { SettingName } from "./configurationentries";
 import {
   SETTINGS_PAGES,
   type SettingsPage,
   type SettingsPageId,
-} from "./settingscatalog";
+} from "../../lib/settingscatalog";
+import type { SettingName } from "./configurationentries";
 import { settingsSearch } from "./settingssearch";
 
 const t = (key: MessageKey) => translate("en", key);

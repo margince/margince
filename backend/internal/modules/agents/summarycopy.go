@@ -72,7 +72,7 @@ var summaryByLang = map[textlang.Lang]summaryCopy{
 		logHead:             "Log a %s",
 		settingFields:       ", setting %s",
 		moreFields:          "+%d more",
-		overwriteHuman:      "Update %s %s: overwrite human-edited %s",
+		overwriteHuman:      "Update %s %s: overwrite %s, edited by hand",
 		merge:               "Merge %s %s into %s",
 		enrich:              "Read %s from %s and propose enrichment of %s",
 		ownDomain:           "its own domain",

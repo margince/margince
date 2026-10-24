@@ -365,6 +365,9 @@ func (p *CompanyNamePromoter) stageCompanyNameReview(ctx context.Context, cand c
 		Summary:        fmt.Sprintf(approvalSummaryCopyOver(ctx, p.pool).companyRename, cand.DisplayName, verdict.Name),
 		JoinPending:    true,
 	})
+	if errors.Is(err, approvals.ErrNoDecider) {
+		return nil
+	}
 	return err
 }
 

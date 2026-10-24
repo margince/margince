@@ -109,3 +109,13 @@ func prepareFollowUpSource(ctx context.Context, tx pgx.Tx, in *LogActivityInput)
 	}
 	return nil
 }
+
+// prepareLoggedActivity settles the input before anything reads it: the text a
+// row of its kind stores, its follow-up source and its duration.
+func prepareLoggedActivity(ctx context.Context, tx pgx.Tx, in *LogActivityInput) error {
+	maskTextOfKind(crmcontracts.ActivityKind(in.Kind), &in.Subject, &in.Body)
+	if err := prepareFollowUpSource(ctx, tx, in); err != nil {
+		return err
+	}
+	return validateActivityDuration(in.DurationSeconds)
+}

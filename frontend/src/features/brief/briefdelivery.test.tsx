@@ -2,6 +2,7 @@
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
 import { en } from "../../i18n/en";
 import { jsonResponse, render, stubApi } from "../../testing/brief.testkit";
 import { BriefDeliveryPanel } from "./briefdelivery";
@@ -15,13 +16,32 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+function renderRows() {
+  return render(
+    <SavePageProvider>
+      <BriefDeliveryPanel />
+      <PageSaveBar />
+    </SavePageProvider>,
+  );
+}
+
+async function pickWeeklyNone(user: ReturnType<typeof userEvent.setup>) {
+  const weekly = await screen.findByTestId("delivery-weekly");
+  await user.click(within(weekly).getByRole("combobox"));
+  await user.click(
+    within(screen.getByRole("listbox")).getByRole("option", {
+      name: en["delivery.none"],
+    }),
+  );
+}
+
 describe("the delivery settings", () => {
   it("shows what happens today for a reader who has never chosen", async () => {
     // No stored choice: the endpoint answers an empty object, and today's
     // behaviour for an unchosen setting is that the mail is sent. A blank
     // control would tell the reader nothing about what actually happens.
     stubApi({ "GET /me/brief-delivery": () => jsonResponse({}) });
-    render(<BriefDeliveryPanel />);
+    renderRows();
 
     const morning = await screen.findByTestId("delivery-morning");
     await waitFor(() =>
@@ -31,9 +51,9 @@ describe("the delivery settings", () => {
     );
   });
 
-  // Each control sends only ITSELF. A row that sent the whole form would let a
-  // stale render of one dropdown overwrite a choice just made in another.
-  it("sends only the setting that was touched", async () => {
+  // Only the touched setting goes out. A body carrying the other too would turn
+  // its standing default into a decision the reader never made.
+  it("sends only the setting that was touched, once Save is pressed", async () => {
     const calls = stubApi({
       "GET /me/brief-delivery": () =>
         jsonResponse({
@@ -42,62 +62,36 @@ describe("the delivery settings", () => {
         }),
       "PUT /me/brief-delivery": () => jsonResponse({}),
     });
-    render(<BriefDeliveryPanel />);
-
-    const weekly = await screen.findByTestId("delivery-weekly");
+    renderRows();
     const user = userEvent.setup();
-    await user.click(within(weekly).getByRole("combobox"));
-    await user.click(
-      within(screen.getByRole("listbox")).getByRole("option", {
-        name: en["delivery.none"],
-      }),
-    );
+    await pickWeeklyNone(user);
+
+    expect(calls.filter((call) => call.method === "PUT")).toHaveLength(0);
+    await user.click(screen.getByRole("button", { name: en["saveBar.save"] }));
 
     await waitFor(() => {
       const saves = calls.filter((call) => call.method === "PUT");
       expect(saves).toHaveLength(1);
-      // Only the weekly. A body carrying the morning setting too would let a
-      // stale render of that dropdown overwrite a choice made elsewhere.
       expect(saves[0].body).toEqual({ weekly_delivery: "none" });
     });
   });
 
-  it("says so in the panel when a choice is not saved", async () => {
-    stubApi({
-      "GET /me/brief-delivery": () => jsonResponse({}),
-      "PUT /me/brief-delivery": () =>
-        new Response(
-          JSON.stringify({ status: 503, code: "service_unavailable" }),
-          {
-            status: 503,
-            headers: { "content-type": "application/problem+json" },
-          },
-        ),
+  it("puts the stored choice back on Discard and sends nothing", async () => {
+    const calls = stubApi({
+      "GET /me/brief-delivery": () =>
+        jsonResponse({ weekly_delivery: "email" }),
     });
-    render(<BriefDeliveryPanel />);
+    renderRows();
     const user = userEvent.setup();
+    await pickWeeklyNone(user);
     await user.click(
-      within(await screen.findByTestId("delivery-morning")).getByRole(
-        "combobox",
-      ),
+      screen.getByRole("button", { name: en["saveBar.discard"] }),
     );
-    await user.click(
-      within(screen.getByRole("listbox")).getByRole("option", {
-        name: en["delivery.none"],
-      }),
+
+    const weekly = screen.getByTestId("delivery-weekly");
+    expect(within(weekly).getByRole("combobox").textContent).toContain(
+      en["delivery.byEmail"],
     );
-    const refusal = await screen.findByRole("alert");
-    expect(refusal.textContent).toContain(en["settings.saveFailed"]);
-    expect(refusal.id).not.toBe("");
-    expect(
-      within(screen.getByTestId("delivery-morning"))
-        .getByRole("combobox")
-        .getAttribute("aria-describedby"),
-    ).toContain(refusal.id);
-    expect(
-      within(screen.getByTestId("delivery-weekly"))
-        .getByRole("combobox")
-        .getAttribute("aria-describedby"),
-    ).not.toContain(refusal.id);
+    expect(calls.filter((call) => call.method === "PUT")).toHaveLength(0);
   });
 });

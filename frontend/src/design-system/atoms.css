@@ -1924,9 +1924,8 @@ span.error-line {
    VALUE takes a tone: a row of coloured boxes reads as a dashboard, and the
    reader is meant to see three facts rather than a traffic light.
    The interval between a reading's three lines — what it is, the figure, what
-   the figure rests on — is the CARD's, not the row's. ReadingsGrid used to open
-   it up to --space-2 for its own cards while a strip's kept --space-1, which is
-   one reading drawn two ways on two pages of the same record.
+   the figure rests on — is the CARD's, not the row's, so one reading draws one
+   way on every row that holds it.
    Each line carries its OWN interval below it rather than one flex `gap` over
    all of them, because the three are not equal: a name sits close to the figure
    it names, and the figure stands further off the basis under it. */
@@ -1993,6 +1992,18 @@ span.error-line {
 }
 [data-density="compact"] .stat-card-foot {
   padding-top: var(--space-1);
+}
+/* A plate's name and its badge share one row; the name wraps inside it, never
+   under the badge. */
+[data-density="plate"] .stat-card-label {
+  flex-wrap: nowrap;
+}
+/* The plate's figure: body size at the medium weight, so four figures and
+   their labels sit in one band at the foot of a card (statstrip.css). */
+[data-density="plate"] .stat-card-value {
+  font: var(--fontBodyLarge);
+  font-weight: var(--fontWeightMedium);
+  font-variant-numeric: tabular-nums;
 }
 
 /* Nothing left to declare between two adjacent StatCards. A free-standing card

@@ -177,16 +177,11 @@ func (s *Store) SaveSchedulingProfile(ctx context.Context, profile crmcontracts.
 	if err != nil {
 		return profile, err
 	}
-	var name string
-	err = s.tx(ctx, func(tx pgx.Tx) error {
-		var err error
-		name, err = schedulingAccountName(ctx, tx, host)
-		return err
-	})
+	stored, err := s.hostSchedulingProfile(ctx, host)
 	if err != nil {
 		return profile, err
 	}
-	profile.HostName = &name
+	profile.HostName = stored.HostName
 	profile.CompanyName, profile.LogoUrl = nil, nil
 	if err := validateSchedulingProfile(profile); err != nil {
 		return profile, err
@@ -195,13 +190,7 @@ func (s *Store) SaveSchedulingProfile(ctx context.Context, profile crmcontracts.
 		if err := s.publicOriginUsable(); err != nil {
 			return profile, err
 		}
-		if s.calendar == nil {
-			return profile, apperrors.ErrPermissionDenied
-		}
-		if err := s.checkCalendarConnected(ctx, host, string(profile.Provider)); err != nil {
-			return profile, err
-		}
-		if err := s.validateBookingCalendars(ctx, host, &profile); err != nil {
+		if err := s.checkBookingCalendar(ctx, host, stored, &profile); err != nil {
 			return profile, err
 		}
 	}
@@ -211,6 +200,36 @@ func (s *Store) SaveSchedulingProfile(ctx context.Context, profile crmcontracts.
 	}
 	saved, err := s.hostSchedulingProfile(ctx, host)
 	return s.brandSchedulingProfile(ctx, saved), err
+}
+
+// checkBookingCalendar asks the provider only when a live page gains a calendar
+// it has not been checked against: switched on, or pointed somewhere new. A
+// lapsed grant otherwise blocks a notice or buffer edit the calendar never sees.
+func (s *Store) checkBookingCalendar(ctx context.Context, host ids.UserID, stored crmcontracts.SchedulingProfile, profile *crmcontracts.SchedulingProfile) error {
+	if stored.Enabled && !bookingCalendarChanged(stored, *profile) {
+		return nil
+	}
+	if s.calendar == nil {
+		return apperrors.ErrPermissionDenied
+	}
+	if err := s.checkCalendarConnected(ctx, host, string(profile.Provider)); err != nil {
+		return err
+	}
+	return s.validateBookingCalendars(ctx, host, profile)
+}
+
+// bookingCalendarChanged compares what the provider check vouches for. An
+// absent blocking list and an empty one block the same nothing.
+func bookingCalendarChanged(stored, next crmcontracts.SchedulingProfile) bool {
+	return stored.Provider != next.Provider || stored.CalendarId != next.CalendarId ||
+		!slices.Equal(blockingCalendars(stored), blockingCalendars(next))
+}
+
+func blockingCalendars(p crmcontracts.SchedulingProfile) []string {
+	if p.BlockingCalendars == nil {
+		return nil
+	}
+	return *p.BlockingCalendars
 }
 
 func (s *Store) validateBookingCalendars(ctx context.Context, host ids.UserID, profile *crmcontracts.SchedulingProfile) error {

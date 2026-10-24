@@ -111,7 +111,7 @@ func stampCaptureParticipants(
 		channelUserID = strings.TrimSpace(counterparty.ChannelIdentity.ChannelUserID)
 	}
 	if address != "" || channelUserID != "" {
-		if err := insertParticipant(ctx, tx, activityID, theirRole, nil, nil, address, channelUserID); err != nil {
+		if err := insertCounterpartyParticipant(ctx, tx, activityID, theirRole, kind, counterparty, address, channelUserID, ownerUserID); err != nil {
 			return fmt.Errorf("capture: stamping the counterparty as a participant: %w", err)
 		}
 	}
@@ -372,12 +372,22 @@ func StampFurtherParticipants(
 	// carrying both would file under whoever holds the ADDRESS while the row
 	// kept somebody else's account — one row naming two contacts, and an erasure
 	// keyed on either of them reaching a record about the other.
+	return insertFurtherParticipants(ctx, tx, kind, partyListIsAttested, []any{activityID, addresses, roles, partyListIsAttested, names, accounts, channelProvider})
+}
+
+// insertFurtherParticipants writes the parties StampFurtherParticipants
+// collected, with args holding the statement's first seven arguments.
+func insertFurtherParticipants(ctx context.Context, tx pgx.Tx, kind string, partyListIsAttested bool, args []any) error {
+	seatMatch, err := calendarSeatMatch(ctx, tx, kind, partyListIsAttested, &args)
+	if err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO activity_participant (activity_id, user_id, contact_id, address, channel_user_id, role, display_name)
 		SELECT $1, u.id, pe.contact_id, NULLIF(inp.address, ''), NULLIF(inp.account, ''), inp.role, inp.display_name
 		  FROM unnest($2::text[], $3::text[], $5::text[], $6::text[]) AS inp(address, role, display_name, account)
 		  LEFT JOIN app_user u
-		         ON $4 AND inp.address <> '' AND lower(u.email) = inp.address
+		         ON $4 AND inp.address <> '' AND `+seatMatch+`
 		  LEFT JOIN LATERAL (
 		       SELECT coalesce(
 		           (SELECT c.contact_id
@@ -392,7 +402,7 @@ func StampFurtherParticipants(
 		             ORDER BY p.contact_id
 		             LIMIT 1)) AS contact_id) pe ON u.id IS NULL
 		ON CONFLICT DO NOTHING`,
-		activityID, addresses, roles, partyListIsAttested, names, accounts, channelProvider); err != nil {
+		args...); err != nil {
 		return fmt.Errorf("capture: stamping the further participants of an interaction: %w", err)
 	}
 	return nil

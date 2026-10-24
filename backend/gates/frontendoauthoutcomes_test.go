@@ -34,16 +34,23 @@ import (
 )
 
 const (
-	outcomeOwner      = "internal/compose/connectors_outcome.go"
-	outcomeScreenGlob = "../frontend/src/features/capture/connectors*.tsx"
-	outcomePanelsMap  = "../frontend/src/features/onboarding/onboarding-connect-panels.tsx"
+	outcomeOwner     = "internal/compose/connectors_outcome.go"
+	outcomePanelsMap = "../frontend/src/features/onboarding/onboarding-connect-panels.tsx"
 )
+
+// The table sits beside the connections card or in components/, where the
+// meeting screens share it; both places are read.
+var outcomeScreenGlobs = []string{
+	"../frontend/src/features/capture/connectors*.tsx",
+	"../frontend/src/components/connectors*.tsx",
+}
 
 // outcomeConst matches the declarations that DEFINE the vocabulary.
 var outcomeConst = regexp.MustCompile(`(?m)^\s*outcome[A-Za-z]+\s*=\s*"([a-z_]+)"`)
 
-// settingsOutcomeKey matches one entry of the SPA's outcome→copy record.
-var settingsOutcomeKey = regexp.MustCompile(`(?m)^\s*([a-z_]+):\s*\{\s*key:\s*"connectors\.`)
+// settingsOutcomeKey matches one entry of the SPA's outcome→copy record, as a
+// bare key or a `{ key }` object, so a change of value shape stays in view.
+var settingsOutcomeKey = regexp.MustCompile(`(?m)^\s*([a-z_]+):\s*(?:\{\s*key:\s*)?"connectors\.oauth`)
 
 func serverOutcomes(t *testing.T) []string {
 	t.Helper()
@@ -73,9 +80,13 @@ func serverOutcomes(t *testing.T) []string {
 // way this gate must not break.
 func renderedOutcomes(t *testing.T) (outcomes []string, read string) {
 	t.Helper()
-	paths, err := filepath.Glob(outcomeScreenGlob)
-	if err != nil {
-		t.Fatalf("globbing the connections screens: %v", err)
+	var paths []string
+	for _, glob := range outcomeScreenGlobs {
+		found, err := filepath.Glob(glob)
+		if err != nil {
+			t.Fatalf("globbing the connections screens: %v", err)
+		}
+		paths = append(paths, found...)
 	}
 	var owners []string
 	for _, path := range paths {
@@ -95,7 +106,7 @@ func renderedOutcomes(t *testing.T) (outcomes []string, read string) {
 	// read means the table moved out of reach of the glob or changed shape, and
 	// this gate now proves nothing.
 	if len(outcomes) == 0 {
-		t.Fatalf("found no outcome entries in %s — the detection has gone blind", outcomeScreenGlob)
+		t.Fatalf("found no outcome entries in %s — the detection has gone blind", strings.Join(outcomeScreenGlobs, ", "))
 	}
 	slices.Sort(outcomes)
 	return slices.Compact(outcomes), strings.Join(owners, ", ")

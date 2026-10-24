@@ -81,6 +81,7 @@ var tableOwners = map[string]string{
 	"lead_score_history":     "internal/modules/contacts",
 	"lead_manual_signal":     "internal/modules/contacts",
 	"lead_source":            "internal/modules/contacts",
+	"lead_origin":            "internal/modules/contacts",
 	"lead_disqualify_reason": "internal/modules/contacts",
 	// A prospect passed from an SDR to an account executive: the row carrying
 	// its current state, the append-only transitions behind it, and the
@@ -100,6 +101,7 @@ var tableOwners = map[string]string{
 	// every night.
 	"contact_signature_enrich_state": "internal/modules/contacts",
 	"company_fact":                   "internal/modules/contacts",
+	"company_fact_revision":          "internal/modules/contacts",
 	"company_geocode_state":          "internal/modules/contacts",
 	"geocode_cache":                  "internal/modules/contacts",
 	// What a technical lookup last read for one company, per public source,
@@ -116,7 +118,8 @@ var tableOwners = map[string]string{
 	"company_domain_question_reader": "internal/modules/contacts",
 	"site_read":                      "internal/modules/contacts",
 	// DH-DDL-1: the pair verdicts live with the ONE dedupe implementation.
-	"dedupe_candidate": "internal/modules/contacts",
+	"dedupe_candidate":  "internal/modules/contacts",
+	"dedupe_scan_state": "internal/modules/contacts",
 	// deals (incl. the E03 offer engine: rate-card + versioned offers)
 	"commission_entry":          "internal/modules/commissions",
 	"contract":                  "internal/modules/contracts",
@@ -145,7 +148,6 @@ var tableOwners = map[string]string{
 	"deal_room_engagement":  "internal/modules/dealrooms",
 	// Kept apart from deal_stage_history rather than folded into it: readers
 	// outside this module count that table's rows as stage movements.
-	"deal_forecast_history": "internal/modules/deals",
 	// The nightly close-date pass and the eligible set it froze at the start of
 	// one. Deals-owned rather than folded into assurance's run tables: a module
 	// never writes a sibling's, and the two sweeps answer to different rules.
@@ -206,7 +208,8 @@ var tableOwners = map[string]string{
 	"activity_calendar_method_backfill": "internal/modules/activities",
 	// The waiting horizon the worker pass measured, one row for the installation.
 	// The queue's own predicates are what read it, and they live in this module.
-	"activity_waiting_horizon": "internal/modules/activities",
+	"activity_waiting_horizon":   "internal/modules/activities",
+	"activity_clock_refold_mark": "internal/modules/activities",
 	// The external identities one message answers to — its RFC Message-ID, its
 	// calendar occurrence. It hangs off `activity` and decides which row a
 	// second provider's copy of a message resolves to, so it belongs to the

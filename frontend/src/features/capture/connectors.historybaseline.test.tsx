@@ -2,7 +2,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
-  fireEvent,
   render as rtlRender,
   screen,
   waitFor,
@@ -67,15 +66,41 @@ it("saves the chosen date in the reader's own zone", async () => {
     name: en["connectors.historyBaseline.save"],
   });
   expect(save.hasAttribute("disabled")).toBe(true);
-  fireEvent.change(
+  await user.type(
     screen.getByLabelText(en["connectors.historyBaseline.label"]),
-    { target: { value: "2026-03-01" } },
+    "01/03/2026",
   );
   await user.click(save);
 
   await waitFor(() =>
     expect(sent).toEqual([{ date: "2026-03-01", timezone: viewerZone() }]),
   );
+});
+
+it("sends nothing while the box holds text it cannot read", async () => {
+  const sent = captureBaselineWrites();
+  const user = userEvent.setup();
+  render(
+    <HistoryBaselineRow
+      conn={connection({
+        history_baseline: {
+          date: "2026-03-01",
+          timezone: "Europe/Berlin",
+          set_at: "2026-03-02T09:00:00Z",
+        },
+      })}
+    />,
+  );
+  const box = screen.getByLabelText(en["connectors.historyBaseline.label"]);
+
+  await user.clear(box);
+  await user.type(box, "99/99/9999");
+  await user.click(
+    screen.getByRole("button", { name: en["connectors.historyBaseline.save"] }),
+  );
+
+  expect(await screen.findByText("Enter a date as DD/MM/YYYY.")).toBeTruthy();
+  expect(sent).toEqual([]);
 });
 
 it("states the stored date and zone, and clears it as null", async () => {
@@ -93,13 +118,34 @@ it("states the stored date and zone, and clears it as null", async () => {
     />,
   );
 
-  expect(screen.getByText(/Europe\/Berlin/)).toBeTruthy();
+  expect(
+    screen.getByText(/Central European Standard Time · UTC\+1/),
+  ).toBeTruthy();
+  expect(screen.queryByText(/Europe\/Berlin/)).toBeNull();
   await user.click(
     screen.getByRole("button", {
       name: en["connectors.historyBaseline.clear"],
     }),
   );
   await waitFor(() => expect(sent).toEqual([{ date: null }]));
+});
+
+it("names the offset in force at midday of a daylight-change baseline", () => {
+  render(
+    <HistoryBaselineRow
+      conn={connection({
+        history_baseline: {
+          date: "2026-03-29",
+          timezone: "Europe/Berlin",
+          set_at: "2026-03-30T09:00:00Z",
+        },
+      })}
+    />,
+  );
+
+  expect(
+    screen.getByText(/Central European Summer Time · UTC\+2/),
+  ).toBeTruthy();
 });
 
 it("offers no clear verb when no date is set", () => {

@@ -36,8 +36,11 @@
   min-inline-size: 9rem;
 }
 
+/* Wraps, because a date box never narrows below its day: the To field drops
+ * under From when both cannot fit. */
 .timeline-filters-range {
   display: inline-flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: var(--space-1);
 }

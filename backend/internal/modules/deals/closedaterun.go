@@ -209,7 +209,7 @@ func (c *CloseDateCorrector) nextMembers(
 	// — a number for a reader, not a predicate for the query.
 	rows, err := tx.Query(ctx, `
 		SELECT m.deal_id, m.deal_created_at,
-		       d.id, d.name, d.created_at, d.last_activity_at, d.wait_until,
+		       d.id, d.name, d.created_at, d.last_activity_at, d.wait_until, `+MeetingAheadSQL("d")+`,
 		       d.expected_close_date, d.close_date_provisional, d.forecast_category,
 		       d.pipeline_id, d.owner_id, s.win_probability,
 		       (SELECT count(*) FROM stage s2
@@ -239,7 +239,7 @@ func (c *CloseDateCorrector) nextMembers(
 		var pipelineID *ids.PipelineID
 		var winProbability, remainingOpen *int
 		if err := rows.Scan(&m.dealID, &m.createdAt,
-			&dealID, &name, &createdAt, &cand.lastActivityAt, &cand.waitUntil,
+			&dealID, &name, &createdAt, &cand.lastActivityAt, &cand.waitUntil, &cand.meetingAhead,
 			&cand.expectedClose, &provisional, &cand.forecastCat,
 			&pipelineID, &cand.ownerID, &winProbability, &remainingOpen); err != nil {
 			return nil, nil, err

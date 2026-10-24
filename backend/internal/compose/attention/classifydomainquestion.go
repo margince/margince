@@ -18,12 +18,14 @@ import (
 // the row on a screen nobody chose, silently.
 const sourceDomainQuestion = crmcontracts.AttentionItemSource("domain_question")
 
-// The two verbs an open domain question offers, which are the whole answer a
+// The verbs an open domain question offers, which are the whole answer a
 // human owes it. Named because the renderer advertises them and the census
-// checks them against what the client performs.
+// checks them against what the client performs. Only a vendor question offers
+// keep_as_vendor, which agrees with the triage instead of creating a company.
 const (
-	verbKeep    = crmcontracts.AttentionItemActions("keep")
-	verbDiscard = crmcontracts.AttentionItemActions("discard")
+	verbKeep         = crmcontracts.AttentionItemActions("keep")
+	verbKeepAsVendor = crmcontracts.AttentionItemActions("keep_as_vendor")
+	verbDiscard      = crmcontracts.AttentionItemActions("discard")
 )
 
 // domainQuestionItem draws one open question.
@@ -42,13 +44,22 @@ func domainQuestionItem(q DomainQuestion) crmcontracts.AttentionItem {
 	asked := q.AskedAt
 	reasonCode := q.ReasonCode
 	actions := []crmcontracts.AttentionItemActions{verbKeep, verbDiscard, crmcontracts.AttentionItemActionsReopen}
-	if q.ReasonCode == contacts.PendingForwardedIdentity {
+	var note *string
+	switch q.ReasonCode {
+	case contacts.PendingForwardedIdentity:
 		actions = []crmcontracts.AttentionItemActions{verbDiscard, crmcontracts.AttentionItemActionsReopen}
+	case contacts.PendingVendorVerdict:
+		// No reopen: it would read the same front page and ask the same question.
+		actions = []crmcontracts.AttentionItemActions{verbKeep, verbKeepAsVendor, verbDiscard}
+		if q.Note != "" {
+			note = &q.Note
+		}
 	}
 	return crmcontracts.AttentionItem{
 		Id:               q.Domain,
 		Source:           sourceDomainQuestion,
 		DomainReasonCode: &reasonCode,
+		DomainNote:       note,
 		Title:            &domain,
 		Detail:           &reason,
 		OccurredAt:       &asked,

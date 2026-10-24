@@ -61,7 +61,11 @@ To change a proposal before it runs, open it with **Decide** and choose **Edit**
 Also called: amend, modify, correct an agent draft.
 
 ### How do I reject a proposal?
-To turn a proposal down, open it with **Decide** and choose **Reject**. In the app this is one press with no reason form. Nothing is applied and no record changes. Rejecting needs the same authority as approving it, and it is recorded the same way.
+To turn a proposal down, open it with **Decide** and choose **Reject**. The app asks for no reason. Nothing is applied and no record changes. Rejecting needs the same authority as approving it, and it is recorded the same way.
+
+For 8 seconds you then see **Rejected** and **Undo**, and nothing is sent yet. **Undo** puts the proposal back. When the 8 seconds end, your answer is sent. Leaving the page, switching to another tab or app, or answering another proposal sends it at once. While the mouse is over **Undo**, or the keyboard is on it, the 8 seconds stop.
+
+This wait is for one proposal. A proposal in a bundle opens with the rest of its bundle. There you answer each one, and nothing is sent until you choose **Send staged decisions**.
 Also called: decline, deny, dismiss an agent action.
 
 ### What happens if an approval expires?
@@ -78,7 +82,29 @@ Also called: approval failed, approved but nothing happened, retry an approval.
 
 ### Who approves agent actions?
 An agent action in Margince is approved by the colleague the agent acts for, or by a colleague who could have made the same change. You only see approvals whose target you can see and whose effect you could carry out. No agent may approve a proposal staged for somebody else, or a send it proposed itself. An administrator has no override past their own permissions.
+
+Two kinds are the exception. Only the colleague who made a promise read from mail or a meeting may answer it. Only the colleague whose mailbox a new sender wrote to may answer **Add contact from mail**.
 Also called: approver, who signs off, permission to approve.
+
+### Who is told about an approval?
+Margince tells one colleague about each approval: the one it is for. That is the colleague an agent acts for, or the colleague who asked for the change, or else the owner of the record it changes. Other colleagues who may decide it can still answer it from their approvals list, but get no notice and no email. When a deal changes owner, its waiting approvals move to the new owner. Margince proposes nothing about a record nobody owns.
+
+A promise read from mail or a meeting and **Add contact from mail** are the exception. Only the colleague who made the promise, or whose mailbox the sender wrote to, is told, and only they may answer it. If they cannot be asked, nobody is.
+
+The email names the record as its heading and says what is proposed. For a change to a record, it lists each field with its value now and the value after the change, up to eight fields. It also says why you are asked. It leaves out any value you may not see.
+
+The email goes out about three minutes after the approval is staged. Approvals waiting for you from those few minutes arrive together in one email, one section each. An approval you already answered in Margince is left out. No email goes out for an approval your own connected AI tool raised while you work with it, because the conversation shows it to you. It still waits in your approvals list and your digest.
+Also called: approval email, decision needed, who gets notified, approval notice.
+
+### Who is asked about a promise read from mail or a meeting?
+A promise one of your colleagues made goes only to that colleague, as their task or as a request they confirm. Nobody else can see, answer or be told about it. A colleague who was invited and has not signed in yet counts: the task or request waits for them, and a request waits 30 days.
+
+When Margince cannot give the promise to the colleague who made it, it asks nobody. That happens when nobody is named, the colleague has left, or the promise is in mail only another colleague may read. The promise then stays on the contact's record.
+
+To keep such a promise yourself, press **I’ll take this** beside it on the contact's record. It becomes your task, and the record shows that you took it and when. Only one colleague can take a promise. If someone was first, Margince names them. Opening or reading a promise never takes it. Mail private to another colleague is theirs alone to take.
+
+The email for such a request names the deal or company and the mail or meeting it came from. It also names who made the promise, quotes their words, and says why you are asked.
+Also called: commitment, promise task, promised by, who owns this promise, take over a promise.
 
 ### How do I stop Margince making automatic changes?
 To make Margince ask before changing close dates, company names or lifecycle stages, open **Settings → AI access**, then **For developers**, then **Agent rules**. Turn off the matching switch under **Automatic changes**. The switches apply to your work only. A kind you switch off comes back to your Worklist as an approval.
@@ -137,8 +163,11 @@ for which actions wait by default.
 
 **Messages**
 - Send an email · Send an email to an account · Send a message
-- Review a drafted email · Decide a refused email · Release a stopped message
+- Review a drafted email · Release a stopped message
 - Book a meeting
+
+**Review refused email** shows only on older approvals in your history. Margince no longer
+raises it.
 
 **Filing**
 - Refile an activity · Refile a conversation · Refile several activities
@@ -194,6 +223,16 @@ original.
 **Reject.** Nothing is applied and no record changes. The app asks for no
 reason. When an agent rejects with a reason, the reason is kept in the audit
 log.
+
+For 8 seconds after you choose **Reject**, you see **Rejected** and **Undo**,
+and nothing is sent yet. When the 8 seconds end, your answer is sent. Leaving
+the page, switching to another tab or app, or answering another proposal sends
+it at once. While the mouse is over **Undo**, or the keyboard is on it, the 8
+seconds stop.
+
+This wait is for one proposal. A proposal in a bundle opens with the rest of
+its bundle. There you answer each one, and nothing is sent until you choose
+**Send staged decisions**.
 
 Rejecting needs the same authority as approving, and it is recorded the same
 way.

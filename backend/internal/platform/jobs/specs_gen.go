@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "299ce67b6a9b6376b279b8522a295deda69cfe3f0089b740a32b36f632f5c92f"
+const JobContractHash = "d1f10f53bffd0494a4723809e1de82b55154c183382d20a3a4c697c6bd917110"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -377,6 +377,16 @@ var specs = map[string]Spec{
 		OptsOwner: OptsCaller,
 		Cadence:   Cadence{Fixed: 1 * time.Hour},
 	},
+	"dedupe_recheck": {
+		Kind:      "dedupe_recheck",
+		GoType:    "DedupeRecheckArgs",
+		Role:      Worker,
+		Fleet:     true,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 10 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 24 * time.Hour},
+	},
 	"document_extract": {
 		Kind:         "document_extract",
 		GoType:       "DocumentExtractArgs",
@@ -720,6 +730,16 @@ var specs = map[string]Spec{
 		Timeout:   TimeoutPolicy{Fixed: 10 * time.Minute},
 		OptsOwner: OptsCaller,
 		Cadence:   Cadence{Fixed: 24 * time.Hour},
+	},
+	"past_activity_clock_refold": {
+		Kind:        "past_activity_clock_refold",
+		GoType:      "PastActivityClockRefoldArgs",
+		Role:        Worker,
+		Queue:       "default",
+		Timeout:     TimeoutPolicy{Fixed: 5 * time.Minute},
+		MaxAttempts: 1,
+		OptsOwner:   OptsArgs,
+		Cadence:     Cadence{Fixed: 10 * time.Minute},
 	},
 	"privacy_retention": {
 		Kind:        "privacy_retention",

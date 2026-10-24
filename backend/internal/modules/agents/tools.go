@@ -253,7 +253,7 @@ func (t createRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	}
 	return marshalResult(createdRecord{
 		wireRecord:          rec,
-		DuplicateCandidates: t.reportDuplicates(ctx, args.RecordType, ref.ID),
+		DuplicateCandidates: t.reportCreateDuplicates(ctx, args.RecordType, args.Fields, ref.ID),
 		TagOffer:            t.offerTag(ctx, args.RecordType, args.OfferTag),
 	}, nil)
 }
@@ -380,7 +380,7 @@ func (t logActivity) Spec() mcp.ToolSpec {
 			"attendee_user_ids":{"type":"array","maxItems":25,"items":{"type":"string","format":"uuid"},
 				"description":"Meeting or call only: the workspace members who attended besides you, ids from the colleague roster. The meeting then counts toward each one's relationship with every linked contact. An id that is not an active member is refused."},
 			"source_activity_id":{"type":"string","format":"uuid","description":` + followUpSourceDescription + `},
-			"follow_up_task":` + string(schemaFor[crmcontracts.ActivityFollowUpTask]()) + `,
+			"follow_up_task":` + string(argumentSchemaFor[crmcontracts.ActivityFollowUpTask](timestampRule)) + `,
 			"source_system":{"type":"string"},"source_id":{"type":"string"}},
 			"patternProperties":{"^cf_[a-z0-9_]+$":{"description":"An activity custom field, by its cf_ key from describe_vocabulary. A key no active activity field names is refused."}},
 			"additionalProperties":false}`),

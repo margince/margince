@@ -8,13 +8,9 @@ import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
-import { CompanyDetails } from "./companydetails";
-import {
-  CompanyActionBadges,
-  CompanyRelationshipBadges,
-} from "./companyheader";
-import { CompanyIdentityFacts } from "./companyheaderfacts";
-import { CompanyLifecycleControl, CompanyNameLine } from "./companylifecycle";
+import { CompanyActionBadges, CompanyOwnerControl } from "./companyheader";
+import { CompanyHeadLines } from "./companyheaderfacts";
+import { CompanyLifecycleControl } from "./companylifecycle";
 import { CompanyMarks } from "./companymarks";
 
 // Who wrote the record and the record's own verbs are pinned in
@@ -143,19 +139,15 @@ function renderInApp(ui: ReactNode) {
   );
 }
 
-// The owner control's mount. It sits in the record's facts box beside the
-// name rather than mid-sentence in the identity meta line — one component,
-// one mount, so the three roster states below are asserted where a reader
-// actually meets them.
+// The owner control, as the details' Ownership row mounts it.
 function renderFacts() {
-  renderInApp(<CompanyIdentityFacts company={COMPANY} />);
+  renderInApp(<CompanyOwnerControl company={COMPANY} />);
 }
 
-// Who OWNS the record, in its facts box and off the same roster read. The owner
-// has three states and the header used to have two: it read the owner through
-// the generic record reference, which paints the id whenever it has no name in
-// hand — so every company page opened with a uuid in its header and swapped it
-// for a name a moment later.
+// Who owns the record, off the roster read. The owner has three states.
+// Reading the owner through the generic record reference would paint the id
+// whenever it has no name in hand. Every company page would then open with a
+// uuid in its header and swap it for a name a moment later.
 describe("who owns this record", () => {
   it("names the owner the roster can resolve", async () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
@@ -274,7 +266,7 @@ describe("claiming an unowned account", () => {
   it("claims the account when the reader picks themselves", async () => {
     const calls = stubClaim();
     const user = userEvent.setup();
-    renderInApp(<CompanyIdentityFacts company={UNOWNED} />);
+    renderInApp(<CompanyOwnerControl company={UNOWNED} />);
 
     await user.click(
       await screen.findByRole("button", { name: "Change Owner" }),
@@ -300,7 +292,7 @@ describe("claiming an unowned account", () => {
   it("offers a reader who cannot write the row only themselves", async () => {
     stubClaim(READER, TEAM);
     const user = userEvent.setup();
-    renderInApp(<CompanyIdentityFacts company={UNOWNED} />);
+    renderInApp(<CompanyOwnerControl company={UNOWNED} />);
 
     await user.click(
       await screen.findByRole("button", { name: "Change Owner" }),
@@ -315,7 +307,7 @@ describe("claiming an unowned account", () => {
     stubClaim(READER, TEAM);
     const user = userEvent.setup();
     renderInApp(
-      <CompanyIdentityFacts company={{ ...UNOWNED, writable: true }} />,
+      <CompanyOwnerControl company={{ ...UNOWNED, writable: true }} />,
     );
 
     await user.click(
@@ -330,31 +322,10 @@ describe("claiming an unowned account", () => {
     stubClaim({
       authorization: meFixture({ allow: { company: ["read"] } }).authorization,
     });
-    renderInApp(<CompanyIdentityFacts company={UNOWNED} />);
+    renderInApp(<CompanyOwnerControl company={UNOWNED} />);
 
     expect(await screen.findByText(en["field.unset"])).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Change Owner" })).toBeNull();
-  });
-});
-
-// The edit form prefills the same owner off the same roster read, so it made
-// the same claim one control over: a reader who opened the form to check what
-// the header said was told "no longer in the user list" a second time, by a
-// read that had excluded nobody.
-describe("the owner in Details", () => {
-  it("keeps the current owner when the roster failed", async () => {
-    stubRosterRefused();
-    const user = userEvent.setup();
-    renderInApp(<CompanyDetails company={COMPANY} />);
-    await user.click(
-      await screen.findByRole("button", { name: "Change Owner" }),
-    );
-    expect(screen.getByRole("combobox").textContent).toContain(
-      en["ref.nameLoadFailed"],
-    );
-    expect(
-      screen.queryByText("Current owner (no longer in the user list)"),
-    ).toBeNull();
   });
 });
 
@@ -402,49 +373,22 @@ describe("an archived account's verbs", () => {
   });
 });
 
-// The header draws two vocabularies that overlap on `customer`: where the
-// account STANDS (lifecycle, the editable badge beside the name) and what it IS
-// to us (relationship types). A customer account carries the value in both, and
-// the strip printed "Customer" twice from two fields that happened to agree —
-// one fact rendered as a second reading confirming the first.
-//
-// The readings row that used to guard this compared the two itself and has since
-// been removed; the guard was local to it and never covered the header. So it is
-// pinned here, on the badges themselves — the ones beside the record's NAME,
-// which is where a tag on the record belongs and the only place they are drawn.
-describe("an account whose lifecycle and relationship agree", () => {
-  it("says the word once, and keeps every relationship the lifecycle is not already saying", async () => {
+// The design draws no relationship badge beside the name. The lifecycle chip is
+// the one pill that says where the account stands, and the relationship types
+// are a Profile tab field.
+describe("the marks under an account's name", () => {
+  it("draws the lifecycle and no relationship badge, whatever the types", async () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
     renderInApp(
-      <CompanyRelationshipBadges
+      <CompanyMarks
         company={{ ...COMPANY, relationship_types: ["customer", "partner"] }}
       />,
     );
 
-    // These badges are what this component draws; the lifecycle badge is the
-    // other mount, so a duplicate here is one "Customer" too many on its own.
-    expect(await screen.findByText(en["company.relType.partner"])).toBeTruthy();
-    expect(screen.queryByText(en["company.relType.customer"])).toBeNull();
-  });
-
-  it("still draws a relationship the lifecycle disagrees with", async () => {
-    stub([{ id: "u-owner", display_name: "Mira Voss" }]);
-    renderInApp(
-      <CompanyRelationshipBadges
-        company={{
-          ...COMPANY,
-          lifecycle: "prospect",
-          relationship_types: ["customer"],
-        }}
-      />,
-    );
-
-    // An account can be worked as a prospect and be a customer of something
-    // else already — dropping the badge because the two words differ would hide
-    // a true reading rather than a repeated one.
     expect(
-      await screen.findByText(en["company.relType.customer"]),
+      await screen.findByText(en["company.lifecycle.customer"]),
     ).toBeTruthy();
+    expect(screen.queryByText(en["company.relType.partner"])).toBeNull();
   });
 });
 
@@ -517,21 +461,12 @@ describe("the shape of the header's verbs", () => {
 
 it("names an owner for readers who cannot edit the company", async () => {
   stub([{ id: "u-owner", display_name: "Mira Voss" }]);
-  renderInApp(<CompanyDetails company={{ ...COMPANY, writable: false }} />);
+  renderInApp(
+    <CompanyOwnerControl company={{ ...COMPANY, writable: false }} />,
+  );
   expect(await screen.findByText("Mira Voss")).toBeTruthy();
   expect(screen.queryByRole("button", { name: "Change Owner" })).toBeNull();
 });
-it("does not offer to clear a company's lifecycle", async () => {
-  stub([]);
-  const user = userEvent.setup();
-  renderInApp(<CompanyDetails company={COMPANY} />);
-  await user.click(
-    await screen.findByRole("button", { name: "Change Lifecycle" }),
-  );
-  await user.click(screen.getByRole("combobox"));
-  expect(screen.queryByRole("option", { name: "Not set" })).toBeNull();
-});
-
 // The stage beside the account's name. A real control, not the inline value
 // the Details grid carries: the header's is the design system's dropdown worn
 // as a filled button, and these pin that it is one, that it writes through
@@ -734,35 +669,28 @@ describe("the lifecycle control beside the name", () => {
   });
 });
 
-// The name's own line carries the name and its stage only; what the account
-// is and the way in lead the marks row under it.
-describe("the header's two lines", () => {
-  const withSite: Company = { ...COMPANY, industry: "Automotive" };
+// Under the name: one line per fact, then the pills, led by where the
+// account stands.
+describe("the head's lines and pills", () => {
+  const withSite: Company = {
+    ...COMPANY,
+    industry: "automotive",
+    website_url: "https://brandt.example",
+  };
 
-  it("keeps the subtitle off the name's line", async () => {
+  it("puts what the account is and its site on lines of their own", () => {
     stub([]);
-    const { container } = render(
-      <QueryClientProvider client={new QueryClient()}>
-        <LocaleProvider initial="en">
-          <CompanyNameLine company={withSite} />
-        </LocaleProvider>
-      </QueryClientProvider>,
-    );
-    await screen.findByRole("combobox", { name: "Lifecycle" });
-    expect(container.querySelector(".record-sub-inline")).toBeNull();
+    renderInApp(<CompanyHeadLines company={withSite} />);
+    expect(screen.getByText("Automotive").tagName).toBe("SPAN");
+    expect(screen.getByText("brandt.example").closest("a")).toBeTruthy();
   });
 
-  it("reads what the account is on the marks row", () => {
+  it("leads the pills with the lifecycle control", async () => {
     stub([]);
-    const { container } = render(
-      <QueryClientProvider client={new QueryClient()}>
-        <LocaleProvider initial="en">
-          <CompanyMarks company={withSite} />
-        </LocaleProvider>
-      </QueryClientProvider>,
-    );
-    expect(container.querySelector(".record-sub-inline")?.textContent).toBe(
-      "Automotive",
-    );
+    renderInApp(<CompanyMarks company={withSite} />);
+    expect(
+      await screen.findByRole("combobox", { name: "Lifecycle" }),
+    ).toBeTruthy();
+    expect(screen.queryByText("Automotive")).toBeNull();
   });
 });

@@ -3,7 +3,6 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
-import { Panel } from "../../design-system/panel";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import {
   LIVE_ID,
@@ -20,7 +19,6 @@ import {
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
-import { ListsSection } from "../companies/companyraillists";
 import { RecordListsPanel } from "./recordlists";
 
 // The lists one record is on, on its own page, and the check that says why it
@@ -88,20 +86,6 @@ export const CheckedAListItIsNotOn: Story = {
       await within(document.body).findByRole("option", { name: liveList.name }),
     );
     await expect(await canvas.findByText("Now: Logistics")).toBeVisible();
-  },
-};
-
-// The same block as a slice of the company rail.
-export const InTheCompanyRail: Story = {
-  render: () => {
-    stub([{ ...shortlist, health: "ok" }, liveList]);
-    return (
-      <StoryProviders>
-        <Panel>
-          <ListsSection companyId={MEMBER_ID} />
-        </Panel>
-      </StoryProviders>
-    );
   },
 };
 

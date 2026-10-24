@@ -10,7 +10,6 @@ import (
 	"slices"
 	"strings"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
@@ -55,8 +54,7 @@ const fieldDomain = "domain"
 const fieldTitle = "title"
 
 // leadStatusNew is where an imported prospect starts: the unworked state a
-// human moves it out of, which is the whole point of landing machine-sourced
-// rows as leads rather than as contacts.
+// human moves it out of.
 const leadStatusNew = "new"
 
 // leadTargetStatus is the lead's status column. A file may place a lead only
@@ -65,11 +63,9 @@ const leadTargetStatus = "status"
 
 // The fields a CSV import may target, per object. Each one round-trips: the
 // writer can both create and update it. A create-only target would stop
-// honouring the file on the second upload.
-//
-// The caller picks `lead` or `contact` per run. Neither skips the identity ladder.
+// honouring the file on the second upload. The caller picks `lead` or `contact` per run.
 var csvTargets = map[string][]string{
-	migration.ObjectLead: {fieldFullName, fieldEmail, fieldPhone, fieldTitle, companyNameField, fieldLinkedIn, leadTargetStatus, csvTargetAuthor, csvTargetOwner, csvTargetTags},
+	migration.ObjectLead: {fieldFullName, fieldEmail, fieldPhone, fieldTitle, companyNameField, fieldLinkedIn, leadTargetStatus, leadTargetOrigin, leadTargetOriginDetail, csvTargetAuthor, csvTargetOwner, csvTargetTags},
 	// `domain` is what actually identifies a company. Its absence is why a
 	// spreadsheet's website column had nowhere to go, and why company dedupe
 	// falls back to matching names — which two real companies may legitimately
@@ -228,6 +224,7 @@ func changedFields(encoded []byte, mapped map[string]string, typed map[string]an
 		return nil, fmt.Errorf("import: reading the stored record: %w", err)
 	}
 
+	mapped = withNamePartsAsFullName(mapped)
 	changed := make(map[string]string, len(mapped))
 	for field, incoming := range mapped {
 		// A deal's company is a column of the deal: its row carries the id its
@@ -244,6 +241,9 @@ func changedFields(encoded []byte, mapped map[string]string, typed map[string]an
 		// An empty box changes nothing, so it is never an update. A lead's
 		// status would otherwise read as moved to nothing on every re-import.
 		if field == leadTargetStatus && incoming == "" {
+			continue
+		}
+		if leadOriginKeptOnReimport(current, field, incoming) {
 			continue
 		}
 		want := canonicalFor(field, incoming)
@@ -326,6 +326,8 @@ func storedValue(current map[string]json.RawMessage, field string) json.RawMessa
 func canonicalFor(field, value string) string {
 	trimmed := strings.TrimSpace(value)
 	switch field {
+	case fieldIndustry:
+		return canonicalIndustry(trimmed)
 	case fieldEmail:
 		return correspondence.Fold(trimmed)
 	case fieldDomain:
@@ -376,6 +378,7 @@ func leadCreateFrom(fields map[string]string, typed map[string]any, sourceSystem
 	in.LinkedInURL = checkedString(fields, typed, fieldLinkedIn)
 	in.Title = importString(fields, fieldTitle)
 	in.CompanyName = importString(fields, "company_name")
+	in.OriginHint, in.OriginDetail = originFrom(fields)
 	in.CustomFields = customFieldsFrom(fields, typed)
 	return in
 }
@@ -383,6 +386,7 @@ func leadCreateFrom(fields map[string]string, typed map[string]any, sourceSystem
 // leadUpdateFrom builds the patch for the fields that actually differ.
 func leadUpdateFrom(changed map[string]string, typed map[string]any) contacts.UpdateLeadInput {
 	var status *string
+	originHint, originNote := originFrom(changed)
 	if text, ok := typed[leadTargetStatus].(string); ok {
 		if _, given := changed[leadTargetStatus]; given {
 			status = &text
@@ -396,64 +400,11 @@ func leadUpdateFrom(changed map[string]string, typed map[string]any) contacts.Up
 		LinkedInURL:  checkedString(changed, typed, fieldLinkedIn),
 		Title:        importString(changed, fieldTitle),
 		CompanyName:  importString(changed, "company_name"),
+		OriginHint:   originHint,
+		OriginDetail: originNote,
 		OwnerID:      ownerFrom(changed, typed),
 		CustomFields: customFieldsFrom(changed, typed),
 	}
-}
-
-func addressMergedOnto(current []byte, mapped *crmcontracts.Address) (*crmcontracts.Address, bool, error) {
-	if mapped == nil {
-		return nil, false, nil
-	}
-	var record struct {
-		Address *crmcontracts.Address `json:"address"`
-	}
-	if err := json.Unmarshal(current, &record); err != nil {
-		return nil, false, fmt.Errorf("import: reading the stored address: %w", err)
-	}
-	if record.Address == nil {
-		return mapped, true, nil
-	}
-	merged := *record.Address
-	if mapped.Line1 != nil {
-		merged.Line1 = mapped.Line1
-	}
-	if mapped.Line2 != nil {
-		merged.Line2 = mapped.Line2
-	}
-	if mapped.City != nil {
-		merged.City = mapped.City
-	}
-	if mapped.Region != nil {
-		merged.Region = mapped.Region
-	}
-	if mapped.PostalCode != nil {
-		merged.PostalCode = mapped.PostalCode
-	}
-	if mapped.Country != nil {
-		merged.Country = mapped.Country
-	}
-	return &merged, true, nil
-}
-
-// addressFrom collects the mapped `address.*` columns into the one nested
-// value both the create and the patch input take. Absent when the file mapped
-// none, so a company with no address column is not handed an empty address —
-// which the update path would read as an instruction to clear one.
-func addressFrom(fields map[string]string) *crmcontracts.Address {
-	addr := crmcontracts.Address{
-		Line1:      importString(fields, "address.line1"),
-		Line2:      importString(fields, "address.line2"),
-		City:       importString(fields, "address.city"),
-		Region:     importString(fields, "address.region"),
-		PostalCode: importString(fields, "address.postal_code"),
-		Country:    importString(fields, fieldAddressCountry),
-	}
-	if addr.Line1 == nil && addr.Line2 == nil && addr.City == nil &&
-		addr.Region == nil && addr.PostalCode == nil && addr.Country == nil {
-		return nil
-	}
-	return &addr
 }
 
 // checkedString is a core cell in the spelling checkRow gave it, or the

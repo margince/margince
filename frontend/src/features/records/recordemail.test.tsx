@@ -75,9 +75,9 @@ describe("the record's email box", () => {
             entityType="deal"
             entityId={CONTACT}
             strings={{
-              title: "dealmail.title",
-              reply: "dealmail.reply",
-              send: "dealmail.send",
+              title: "compose.writeEmail",
+              reply: "worklist.verb.draft_reply_now",
+              send: "compose.sendConfirmTitle",
             }}
           />
         </LocaleProvider>

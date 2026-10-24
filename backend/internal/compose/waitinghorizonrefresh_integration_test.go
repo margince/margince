@@ -23,9 +23,9 @@ import (
 func TestTheRefreshPassLeavesColleaguesMailOutOfTheSpread(t *testing.T) {
 	e := integration.Setup(t)
 	e.WsExec(t, `INSERT INTO workspace_email_domain (domain, source, verified) VALUES ('colleagues.test', 'admin', true)`)
-	// Customers wait forty days for an answer, so the horizon is 120 days. The
-	// colleagues' mail is answered within a minute and outnumbers it: counted,
-	// the slow percentile falls to minutes and the horizon to the fourteen-day floor.
+	// Customers wait forty days for an answer, so the horizon reaches its
+	// 30-day ceiling. The colleagues' mail is answered within a minute and
+	// outnumbers it: counted, the horizon falls to the fourteen-day floor.
 	e.WsExec(t, `
 		CREATE TEMP TABLE horizon_seed AS
 		  SELECT gen_random_uuid() id, g, g <= 40 AS customer,
@@ -56,7 +56,7 @@ func TestTheRefreshPassLeavesColleaguesMailOutOfTheSpread(t *testing.T) {
 	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT horizon_days FROM activity_waiting_horizon`).Scan(&days)
 	})
-	if err != nil || days != 120 {
-		t.Fatalf("the stored horizon is (%d, %v), want 120 from the customers' forty-day answers alone", days, err)
+	if err != nil || days != 30 {
+		t.Fatalf("the stored horizon is (%d, %v), want the 30-day ceiling from the customers' answers alone", days, err)
 	}
 }

@@ -118,6 +118,8 @@ function stubBackend(opts: {
     if (method === "POST" && url.includes("/reports/deals-by-stage")) {
       return jsonResponse({
         report: "deals-by-stage",
+        base_currency: "EUR",
+        as_of: "2026-10-01",
         plan: {},
         columns: [],
         rows: opts.stageTotalsRows ?? [],
@@ -261,8 +263,8 @@ describe("a saved view over the deals board", () => {
             stage_id: "s1",
             currency: "EUR",
             deals: 7,
-            raw_minor: 700_000,
-            weighted_minor: 140_000,
+            base_minor: 700_000,
+            weighted_base_minor: 140_000,
           },
         ],
       }),
@@ -271,7 +273,7 @@ describe("a saved view over the deals board", () => {
 
     expect(await screen.findByText("2 deals")).toBeTruthy();
     expect(screen.getByText("7 deals")).toBeTruthy();
-    expect(screen.getByText("€7,000.00")).toBeTruthy();
+    expect(screen.getByText("≈ €7,000.00")).toBeTruthy();
 
     // Archived deals are reachable from the board, not only from the table: a
     // deal archived by mistake could otherwise only be restored by leaving.
@@ -280,6 +282,13 @@ describe("a saved view over the deals board", () => {
     await waitFor(() =>
       expect(dealUrls.at(-1)?.includes("include_archived=true")).toBe(true),
     );
+    expect(screen.queryByText("≈ €7,000.00")).toBeNull();
+    expect(screen.queryByText("7 deals")).toBeNull();
+    expect(
+      screen.getByText(
+        "Loaded deals only. Totals are unavailable while archived deals are included.",
+      ),
+    ).toBeTruthy();
   });
 
   // A filter narrowed to one deal is when the count is read most closely. The

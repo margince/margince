@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { navigate, routeHash } from "../../lib/router";
+import { IMPORT_RUN_SUBPAGE, settingsHref } from "../../lib/settingsrouting";
 import {
   currentParams,
   hashWithParams,
   replaceParams,
   useUrlParams,
 } from "../../lib/urlstate";
-import { IMPORT_RUN_SUBPAGE, settingsHref } from "../settings/settingsrouting";
 
 const RUN_PARAM = "run";
 

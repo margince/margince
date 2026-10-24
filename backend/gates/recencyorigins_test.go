@@ -47,9 +47,9 @@ var systemOrigins = []string{"system_remediation", "system_notice"}
 // an entry that has gone stale, so a ratification outlives its statement by one
 // test run rather than forever.
 var ratifiedOriginLiterals = gatekit.Waive(map[string]string{
-	"internal/platform/auth/engagementorigin.go": "The one spelling itself. This is the file " +
-		"every other reader is required to call instead of naming an origin, so it is the " +
-		"single place the literals are correct.",
+	"internal/shared/kernel/relstrength/writtenbyhuman.go": "The one spelling itself, which " +
+		"auth.OriginIsEngagement renders. Every other reader is required to call one of the two " +
+		"instead of naming an origin, so it is the single place the literals are correct.",
 	"internal/modules/activities/activity.go": "The vocabulary's own declaration — the Origin* " +
 		"constants an activity is written with. Naming a value is not filtering on it.",
 })

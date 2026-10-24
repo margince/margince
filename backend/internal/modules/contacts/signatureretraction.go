@@ -13,7 +13,9 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -51,18 +53,34 @@ import (
 // What survives is a field nobody has taken over: written by the signature pass,
 // never restored, never corrected. That is the only kind this is entitled to.
 func RetractSignatureFieldsTx(ctx context.Context, tx pgx.Tx, activityID ids.UUID) error {
-	if _, err := tx.Exec(ctx, `
-		DELETE FROM contact_profile_field f
-		 WHERE f.source_ref = $1 AND f.source = $2
-		   AND NOT EXISTS (
-		     SELECT 1 FROM ai_feedback
-		      WHERE subject_type = 'contact' AND subject_id = f.contact_id
-		        AND claim_kind = 'profile_field' AND verdict = 'corrected'
-		        AND claim_key = encode(sha256(('profile_field:' || f.field)::bytea), 'hex'))`,
-		"activity:"+activityID.String(), enrichSource); err != nil {
-		return fmt.Errorf("contacts: retracting the narrowed message's signature fields: %w", err)
+	rows, err := tx.Query(ctx, `
+		SELECT id FROM contact_profile_field WHERE source_ref = $1 AND source = $2`,
+		"activity:"+activityID.String(), enrichSource)
+	if err != nil {
+		return fmt.Errorf("contacts: finding the narrowed message's signature fields: %w", err)
 	}
-	return nil
+	fields, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return fmt.Errorf("contacts: finding the narrowed message's signature fields: %w", err)
+	}
+	_, err = takeBackSignatureFieldsTx(ctx, tx, fields, "the mail it was read from was narrowed",
+		func(ctx context.Context, tx pgx.Tx) (bool, error) { return sourceStillNarrowedTx(ctx, tx, activityID) })
+	return err
+}
+
+// sourceStillNarrowedTx asks, under a share lock taken after the contacts, the
+// order the signature writer takes them in, whether the message is still
+// limited. A widening that committed since leaves the fields standing.
+func sourceStillNarrowedTx(ctx context.Context, tx pgx.Tx, activityID ids.UUID) (bool, error) {
+	var audience string
+	err := tx.QueryRow(ctx, `SELECT audience FROM activity WHERE id = $1 FOR SHARE`, activityID).Scan(&audience)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return true, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("contacts: reading the narrowed message's audience: %w", err)
+	}
+	return audience != "workspace", nil
 }
 
 // RetractMisattributedSignatureFields takes back the fields an earlier pass
@@ -89,51 +107,21 @@ func (s *Store) RetractMisattributedSignatureFields(ctx context.Context) (int64,
 	}
 	var removed int64
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// The MIRRORED column goes back to what the row it is undoing replaced,
-		// which is what makes this a retraction rather than a deletion. A field
-		// with a contact column (today: title) is displayed off that column, so
-		// dropping only the sidecar row would take the evidence away and leave
-		// the wrong title on the page — the visible half of the defect, kept.
-		// superseded_value is the undo buffer applyObservedField fills, so it
-		// holds whatever stood there before the signature overwrote it, and
-		// NULL when nothing did.
 		rows, err := tx.Query(ctx, `
-			WITH wrong AS (
-			    SELECT f.id, f.contact_id, f.field, f.value, f.superseded_value
-			      FROM contact_profile_field f
-			      JOIN activity a ON a.id = `+sourceRefActivityID+`
-			     WHERE f.source = $1
-			       AND NOT `+SenderPredicate("f.contact_id", "a")+`
-			       AND NOT EXISTS (
-			         SELECT 1 FROM ai_feedback
-			          WHERE subject_type = 'contact' AND subject_id = f.contact_id
-			            AND claim_kind = 'profile_field' AND verdict = 'corrected'
-			            AND claim_key = encode(sha256(('profile_field:' || f.field)::bytea), 'hex'))
-			), restored AS (
-			    -- COMPARE AND SWAP, on the value the sidecar says this pass
-			    -- wrote. A blind restore would undo an edit made AFTER the bad
-			    -- enrichment: the machine writes "Partner", a human corrects it
-			    -- to "CTO" through UpdateContact — which touches the column and
-			    -- not this table — and a sweep that wrote superseded_value back
-			    -- would take their answer away. Matching on f.value first means
-			    -- a column somebody else has since moved is left exactly where
-			    -- they put it, and the stale sidecar row is still withdrawn.
-			    UPDATE contact p SET title = w.superseded_value
-			      FROM wrong w
-			     WHERE p.id = w.contact_id AND w.field = $2 AND p.archived_at IS NULL
-			       AND p.title IS NOT DISTINCT FROM w.value
-			)
-			DELETE FROM contact_profile_field f USING wrong w WHERE f.id = w.id
-			 RETURNING f.contact_id, f.field`,
-			enrichSource, fieldTitle)
+			SELECT f.id FROM contact_profile_field f
+			  JOIN activity a ON a.id = `+sourceRefActivityID+`
+			 WHERE f.source = $1 AND NOT `+SenderPredicate("f.contact_id", "a"), enrichSource)
 		if err != nil {
-			return fmt.Errorf("contacts: retracting misattributed signature fields: %w", err)
+			return fmt.Errorf("contacts: finding misattributed signature fields: %w", err)
 		}
-		touched, err := auditRetractions(ctx, tx, rows)
+		wrong, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 		if err != nil {
+			return fmt.Errorf("contacts: finding misattributed signature fields: %w", err)
+		}
+		if removed, err = RetractSignatureFieldsByIDTx(ctx, tx, wrong,
+			"signature read off a message this contact did not send"); err != nil {
 			return err
 		}
-		removed = touched
 		// The watermark is cleared whether or not a field was deleted, and that
 		// is the whole point of doing it separately. A misattributed message
 		// that yielded NO field still advanced the cursor past itself, so a
@@ -156,6 +144,194 @@ func (s *Store) RetractMisattributedSignatureFields(ctx context.Context) (int64,
 	return removed, err
 }
 
+// RetractSignatureFieldsByIDTx takes back the named signature fields. It
+// removes the value each put on the contact and the evidence row. Each contact
+// gets one audit row and one contact.updated event, with the reason.
+//
+// Only rows the pass wrote and no human corrected are taken back (the
+// predicates RetractSignatureFieldsTx explains). A value a human has since
+// changed stays, and only its evidence goes. The count it returns is logged.
+func RetractSignatureFieldsByIDTx(ctx context.Context, tx pgx.Tx, fields []ids.UUID, reason string) (int64, error) {
+	return takeBackSignatureFieldsTx(ctx, tx, fields, reason, nil)
+}
+
+// takeBackSignatureFieldsTx is RetractSignatureFieldsByIDTx with an optional
+// question asked once the contacts are held: owed false takes nothing back.
+//
+// The contacts are locked first, in id order, then the evidence rows. That is
+// the signature writer's order (applySignature), so the two wait instead of
+// deadlocking.
+func takeBackSignatureFieldsTx(ctx context.Context, tx pgx.Tx, fields []ids.UUID, reason string,
+	owed func(context.Context, pgx.Tx) (bool, error),
+) (int64, error) {
+	if len(fields) == 0 {
+		return 0, nil
+	}
+	if err := auth.Require(ctx, "contact", principal.ActionUpdate); err != nil {
+		return 0, err
+	}
+	if _, err := tx.Exec(ctx, `
+		SELECT c.id FROM contact c
+		 WHERE c.id IN (SELECT contact_id FROM contact_profile_field WHERE id = ANY($1))
+		 ORDER BY c.id
+		 FOR UPDATE OF c`, fields); err != nil {
+		return 0, fmt.Errorf("contacts: holding the contacts whose signature fields are taken back: %w", err)
+	}
+	if owed != nil {
+		if due, err := owed(ctx, tx); err != nil || !due {
+			return 0, err
+		}
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT f.id, f.contact_id, f.field, f.value, f.superseded_value
+		  FROM contact_profile_field f
+		 WHERE f.id = ANY($1) AND f.source = $2
+		   AND NOT EXISTS (
+		     SELECT 1 FROM ai_feedback
+		      WHERE subject_type = 'contact' AND subject_id = f.contact_id
+		        AND claim_kind = 'profile_field' AND verdict = 'corrected'
+		        AND claim_key = encode(sha256(('profile_field:' || f.field)::bytea), 'hex'))
+		 ORDER BY f.id
+		 FOR UPDATE OF f`, fields, enrichSource)
+	if err != nil {
+		return 0, fmt.Errorf("contacts: reading the signature fields to take back: %w", err)
+	}
+	wrong, err := pgx.CollectRows(rows, pgx.RowToStructByPos[retractedField])
+	if err != nil {
+		return 0, fmt.Errorf("contacts: reading the signature fields to take back: %w", err)
+	}
+	removing, err := withdrawValues(ctx, tx, wrong)
+	if err != nil {
+		return 0, err
+	}
+	deleted, err := tx.Query(ctx, `
+		DELETE FROM contact_profile_field WHERE id = ANY($1) RETURNING contact_id, field`, removing)
+	if err != nil {
+		return 0, fmt.Errorf("contacts: removing the signature evidence: %w", err)
+	}
+	return auditRetractions(ctx, tx, deleted, reason)
+}
+
+// withdrawValues takes each field's value off its contact and returns the
+// evidence rows to remove. The display goes back only when every name part
+// did. A part a human typed since means the display is theirs too.
+func withdrawValues(ctx context.Context, tx pgx.Tx, wrong []retractedField) ([]ids.UUID, error) {
+	removing := make([]ids.UUID, 0, len(wrong))
+	nameRestored := map[ids.ContactID]bool{}
+	for _, field := range wrong {
+		restored, err := field.withdrawValue(ctx, tx)
+		if err != nil {
+			return nil, err
+		}
+		if observedNameFields[field.Field] {
+			previous, seen := nameRestored[field.ContactID]
+			nameRestored[field.ContactID] = restored && (previous || !seen)
+		}
+		removing = append(removing, field.ID)
+	}
+	for contactID, restored := range nameRestored {
+		if !restored {
+			continue
+		}
+		if err := restoreSignatureDisplayTx(ctx, tx, contactID); err != nil {
+			return nil, err
+		}
+	}
+	return removing, nil
+}
+
+// retractedField is one evidence row being taken back, and what it put on the
+// record.
+type retractedField struct {
+	ID         ids.UUID
+	ContactID  ids.ContactID
+	Field      string
+	Value      string
+	Superseded *string
+}
+
+// withdrawValue takes the field's value off the contact, as a compare and swap
+// on that value. It reports whether the record still carried it. A human who
+// typed "CTO" over the pass's "Partner" keeps "CTO".
+//
+// A mirrored column (title, first and last name) goes back to what the read
+// replaced (superseded_value, NULL when nothing). A phone is a row of its own:
+// the one this read added is archived, and the number it replaced comes back.
+func (f retractedField) withdrawValue(ctx context.Context, tx pgx.Tx) (bool, error) {
+	if f.Field == fieldPhone {
+		return true, withdrawSignatureNumber(ctx, tx, f.ContactID, f.Value)
+	}
+	column, mirrored := observedFieldColumn(f.Field)
+	if !mirrored {
+		return true, nil
+	}
+	col := pgx.Identifier{column}.Sanitize()
+	tag, err := tx.Exec(ctx, `
+		UPDATE contact SET `+col+` = $3
+		 WHERE id = $1 AND archived_at IS NULL AND `+col+` IS NOT DISTINCT FROM $2`,
+		f.ContactID, f.Value, f.Superseded)
+	if err != nil {
+		return false, fmt.Errorf("contacts: putting back the %s a signature replaced: %w", f.Field, err)
+	}
+	return tag.RowsAffected() > 0, nil
+}
+
+// restoreSignatureDisplayTx puts back the display name followSignatureDisplay
+// replaced. It acts only while the newest display change is the pass's own and
+// the contact still shows it. A display anybody changed since stays.
+func restoreSignatureDisplayTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) error {
+	var current string
+	var previous *string
+	err := tx.QueryRow(ctx, `
+		SELECT c.full_name, last.before->>'full_name'
+		  FROM contact c
+		  JOIN LATERAL (
+		       SELECT before, after, actor_id FROM audit_log
+		        WHERE entity_type = 'contact' AND entity_id = c.id AND after ? 'full_name'
+		        ORDER BY occurred_at DESC, id DESC
+		        LIMIT 1) last ON true
+		 WHERE c.id = $1 AND c.archived_at IS NULL
+		   AND last.actor_id = $2 AND last.after->>'full_name' = c.full_name`,
+		contactID, enrichCapturedBy).Scan(&current, &previous)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("contacts: reading the display a signature replaced: %w", err)
+	}
+	if previous == nil || strings.TrimSpace(*previous) == "" {
+		return nil
+	}
+	_, err = rewriteFullNameTx(ctx, tx, contactID, current, *previous)
+	return err
+}
+
+// withdrawSignatureNumber archives the live number a signature read added, and
+// revives the number it replaced. A number a human has since saved by hand
+// carries their source and stays.
+func withdrawSignatureNumber(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, phone string) error {
+	rows, err := tx.Query(ctx, `
+		UPDATE contact_phone SET archived_at = now()
+		 WHERE contact_id = $1 AND phone = $2 AND source = $3 AND archived_at IS NULL
+		RETURNING superseded_phone_id`, contactID, phone, enrichSource)
+	if err != nil {
+		return fmt.Errorf("contacts: archiving the number a signature read added: %w", err)
+	}
+	replaced, err := pgx.CollectRows(rows, pgx.RowTo[*ids.UUID])
+	if err != nil {
+		return fmt.Errorf("contacts: archiving the number a signature read added: %w", err)
+	}
+	for _, id := range replaced {
+		if id == nil {
+			continue
+		}
+		if _, err := revivePhoneTx(ctx, tx, contactID, *id); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // sourceRefActivityID is the activity a profile field's source_ref names, as a
 // uuid, so the retraction joins activity through its primary key.
 //
@@ -173,7 +349,7 @@ func (s *Store) RetractMisattributedSignatureFields(ctx context.Context) (int64,
 const sourceRefActivityID = `CASE WHEN f.source_ref ~ '^activity:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
 			           THEN substr(f.source_ref, 10)::uuid END`
 
-// auditRetractions writes the write shape for each contact the sweep touched.
+// auditRetractions writes the write shape for each contact a retraction touched.
 //
 // A field this pass wrote landed with an audit row and a contact.updated event;
 // taking it back is the same size of change to the same record, and a repair
@@ -184,7 +360,7 @@ const sourceRefActivityID = `CASE WHEN f.source_ref ~ '^activity:[0-9a-f]{8}-[0-
 // NAMED, NOT QUOTED, like the writer it undoes: the values came out of somebody
 // else's message, and audit_log outlives the erasure of the record they came
 // from.
-func auditRetractions(ctx context.Context, tx pgx.Tx, rows pgx.Rows) (int64, error) {
+func auditRetractions(ctx context.Context, tx pgx.Tx, rows pgx.Rows, reason string) (int64, error) {
 	byContact := map[ids.ContactID][]string{}
 	var order []ids.ContactID
 	var removed int64
@@ -212,7 +388,7 @@ func auditRetractions(ctx context.Context, tx pgx.Tx, rows pgx.Rows) (int64, err
 			map[string]any{
 				auditKeySource: enrichSource,
 				auditKeyFields: fields,
-				fieldKeyReason: "signature read off a message this contact did not send",
+				fieldKeyReason: reason,
 			})
 		if err != nil {
 			return 0, err

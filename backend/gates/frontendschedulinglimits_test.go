@@ -17,13 +17,13 @@ import (
 	"testing"
 )
 
-const meetingSettingsSections = "../frontend/src/features/booking/meeting-settings-sections.tsx"
+const meetingSettingsSections = "../frontend/src/features/booking/meeting-link-drawer.tsx"
 
 func TestTheMeetingSettingsScreenStopsTextAtTheContractsLengths(t *testing.T) {
 	t.Parallel()
 	source, err := os.ReadFile(meetingSettingsSections)
 	if err != nil {
-		t.Fatalf("reading the meeting settings screen: %v", err)
+		t.Fatalf("reading the meeting link drawer: %v", err)
 	}
 	doc := loadContract(t)
 	schema, ok := resolveSchemaRef(doc, "#/components/schemas/SchedulingProfile")

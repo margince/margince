@@ -44,6 +44,8 @@ const (
 // A ceiling and no floor: the held-out mail brings questions but none of the
 // facts that answer them, and a word floor over a factless reply is filled
 // with invented reasons. Each built-voice call states its own length.
+//
+// Carries no draftrules.Shared; exemptFromSharedRules says why and when that ends.
 const voiceEvalDraftSystem = voiceDraftOpening + "\n" +
 	"Length: at most two or three short paragraphs, under 140 words — as long as the answers need, never padded to a length.\n" +
 	voiceDraftFactsAndShape
@@ -222,8 +224,8 @@ type voiceEvalDraft struct {
 // times, and a model asked the byte-identical question three times has every
 // reason to answer it identically three times.
 //
-//promptlang:exempt an eval harness reproducing one member's writing voice from their own samples; the sample decides the language and a rule of ours would measure the wrong thing
-//promptvoice:exempt an eval harness measuring how closely drafts match one member's own writing samples; imposing our register would measure the wrong thing.
+//promptlang:exempt an eval harness reproducing one member's writing voice from their own samples; the sample decides the language and a rule of ours would measure the wrong thing; lapses if the eval scores correspondence rules or supplies a recipient and conversation state
+//promptvoice:exempt an eval harness measuring how closely drafts match one member's own writing samples; imposing our register would measure the wrong thing; lapses if the eval scores correspondence rules or supplies a recipient and conversation state.
 func voiceEvalDraftRequest(personality string, artifact ai.VoiceArtifact, sample ai.VoiceSample, repeat int) model.Request {
 	// One fence per call, so the profile block and the excerpt are bounded by
 	// the marker THIS call's system prompt names.

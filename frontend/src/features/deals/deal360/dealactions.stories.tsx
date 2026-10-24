@@ -11,11 +11,10 @@ import {
 } from "../../../testing/story-utils";
 import { DealActions } from "./dealactions";
 
-// The verbs a deal's header offers: mail first, a hairline, then what the
-// reader RECORDS about the deal, and everything rarer behind the overflow. The
-// two things worth looking at are the seam — the row has to read as two groups
-// rather than one toolbar — and the refusals, which point every verb at the
-// page's one sentence instead of printing it four times.
+// The verbs a deal's header offers: mail first, then what the reader RECORDS
+// about the deal, and everything rarer behind the overflow. Worth looking at
+// are the refusals, which point every verb at the page's one sentence instead
+// of printing it four times.
 
 type Deal = components["schemas"]["Deal"];
 type Stage = components["schemas"]["Stage"];
@@ -78,12 +77,15 @@ const actions = (
   installFetchStub({ "GET /me": meRoute(grants) });
   return (
     <StoryProviders>
-      <div className="record-actions">
-        <DealActions
-          deal={deal(over)}
-          openStages={STAGES}
-          refusedReasonId={refusedReasonId}
-        />
+      <div style={{ maxWidth: "18.75rem" }}>
+        <div className="record-split-verbs">
+          <DealActions
+            deal={deal(over)}
+            openStages={STAGES}
+            refusedReasonId={refusedReasonId}
+            onEditDetails={() => undefined}
+          />
+        </div>
       </div>
       {refusedReasonId && (
         <p id={refusedReasonId}>This deal is not yours to change.</p>
@@ -92,7 +94,7 @@ const actions = (
   );
 };
 
-/** An open deal a rep may write to: every verb live, the seam between groups. */
+/** An open deal a rep may write to: every verb live. */
 export const Open: Story = { render: () => actions() };
 
 /**

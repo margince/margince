@@ -73,7 +73,8 @@ func (s *Store) PreviewLeadCreationForActor(ctx context.Context, in CreateLeadIn
 		if err := admitLeadCreate(ctx, tx, in); err != nil {
 			return err
 		}
-		if err := ensureHumanSourceAllowed(ctx, tx, in.Source); err != nil {
+		in, err = admitLeadOrigin(ctx, tx, in)
+		if err != nil {
 			return err
 		}
 		if err := storekit.RefuseUnknownSeat(ctx, tx, in.Author); err != nil {
@@ -95,12 +96,12 @@ func (s *Store) PreviewLeadCreationForActor(ctx context.Context, in CreateLeadIn
 }
 
 func initialLeadScore(ctx context.Context, tx pgx.Tx, in CreateLeadInput) (LeadScoring, error) {
-	intents, err := loadSourceIntents(ctx, tx)
+	intents, err := LoadOriginIntents(ctx, tx)
 	if err != nil {
 		return LeadScoring{}, err
 	}
 	// New leads have no behavioral signals to age.
-	return ScoreLeadDetail(deref(in.Title), intents.Of(in.Source), nil, time.Time{}), nil
+	return ScoreLeadDetail(deref(in.Title), intents.Of(in.Origin), nil, time.Time{}), nil
 }
 
 func (s *Store) previewCreatedLeadMatch(ctx context.Context, tx pgx.Tx, in CreateLeadInput, active []fieldcatalog.Column) (*crmcontracts.Lead, error) {

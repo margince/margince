@@ -1,0 +1,106 @@
+/* HowItStands: a Panel washed in its verdict's tone from the top-left, the
+   verdict over its readings, the timeline, and the figures edge to edge at
+   its foot. The tone arrives as --standing-wash and --standing-ink from
+   readingtone.ts. */
+
+.standing-sheet > .standing-sheet-pane {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: var(--space-6) var(--space-6) var(--space-5);
+  background:
+    radial-gradient(560px 320px at 0 0, var(--standing-wash), transparent 70%),
+    var(--bgElevated);
+}
+.standing-sheet-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+/* A plain line in the body face; scoped under the head so it outranks the
+   heading's own size rule. */
+.standing-sheet-head > .standing-sheet-title {
+  flex: 1;
+  min-inline-size: 0;
+  font: var(--fontBody);
+  color: var(--textSecondary);
+}
+.standing-sheet {
+  container-type: inline-size;
+}
+/* The verdict takes what the readings leave; the readings keep one width,
+   so a sub-line runs to two lines at most. Too narrow for both, the readings drop
+   under the verdict. */
+.standing-sheet-hero {
+  --standing-dims-inline: 280px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-6);
+}
+.standing-sheet-verdict {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+.standing-sheet-word {
+  font: var(--fontDisplayMedium);
+  color: var(--standing-ink);
+  text-wrap: balance;
+}
+.standing-sheet-sentence {
+  margin: 0;
+  max-inline-size: 32ch;
+  font: var(--fontHeadingMedium);
+  font-weight: var(--fontWeightRegular);
+  color: var(--textPrimary);
+  text-wrap: pretty;
+}
+/* The ring and the dimension rows, side by side. */
+.standing-sheet-readings {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  min-inline-size: 0;
+}
+.standing-sheet-readings > .standing-dims {
+  flex: none;
+  inline-size: var(--standing-dims-inline);
+  max-inline-size: 100%;
+}
+@container (max-width: 760px) {
+  .standing-sheet-hero-ring {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-5);
+  }
+  /* Under the verdict the readings have the card's width, so the rows take
+     all of it rather than stopping at their own. */
+  .standing-sheet-hero-ring > .standing-sheet-readings > .standing-dims {
+    flex: 1 1 auto;
+    inline-size: auto;
+  }
+}
+@container (max-width: 600px) {
+  .standing-sheet-hero {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-5);
+  }
+  .standing-sheet-readings > .standing-dims {
+    flex: 1 1 auto;
+    inline-size: auto;
+  }
+}
+@container (max-width: 440px) {
+  .standing-sheet-readings {
+    flex-wrap: wrap;
+  }
+}
+/* The figures run to the card's edges and its foot: the pane gives up its
+   bottom padding, so the strip needs no margin past the stack's gap. */
+.standing-sheet > .standing-sheet-pane-plated {
+  padding-bottom: 0;
+}
+.standing-sheet-figures {
+  margin-inline: calc(-1 * var(--space-6));
+}

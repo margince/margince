@@ -32,17 +32,18 @@ type leadCorrespondence struct{ store *activities.Store }
 // ForLead reads what has been said to this lead, newest first.
 //
 // Bounded to what the draft actually reads. contactdraft.FoldRecent keeps the
-// newest few and the newest inbound message's opening; asking for a page far
-// larger than that would carry a lead's whole history across the seam for the
-// drafter to throw away.
+// newest few and the newest inbound message's opening. A larger page would
+// carry the lead's history across the seam for nothing. Only rows a human wrote, filtered before the limit,
+// so notices cannot be quoted as the lead's words or push theirs out.
 func (c leadCorrespondence) ForLead(ctx context.Context, id ids.LeadID) ([]crmcontracts.Activity, error) {
 	entityType := leadLinkType
 	entityID := ids.UUID(id.UUID)
 	limit := contactdraft.DraftInputActivities
 	rows, _, err := c.store.ListActivities(ctx, activities.ListActivitiesInput{
-		EntityType: &entityType,
-		EntityID:   &entityID,
-		Limit:      &limit,
+		EntityType:     &entityType,
+		EntityID:       &entityID,
+		Limit:          &limit,
+		WrittenByHuman: true,
 	})
 	if err != nil {
 		return nil, err

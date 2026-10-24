@@ -506,6 +506,41 @@ describe("onboarding gate", () => {
     },
   );
 
+  // Sign out lives on Settings > Account, so a reader stuck mid-journey can
+  // still leave; the rest of settings waits for the journey to finish.
+  it("lets a non-admin mid-journey reach Settings > Account and Sign out", async () => {
+    // Routing is under test; wait for the real lazy module before timing UI queries.
+    await import("./features/settings/settings");
+    window.location.hash = "#/settings/account";
+    stubCompany(
+      403,
+      { row: wizardRow("voice"), status: 200 },
+      {
+        roles: ["rep"],
+      },
+    );
+    mount();
+    expect(
+      await screen.findByRole("button", { name: "Sign out" }),
+    ).toBeTruthy();
+    expect(window.location.hash).toBe("#/settings/account");
+  });
+
+  it("still sends a non-admin mid-journey away from any other settings page", async () => {
+    window.location.hash = "#/settings/notifications";
+    stubCompany(
+      403,
+      { row: wizardRow("voice"), status: 200 },
+      {
+        roles: ["rep"],
+      },
+    );
+    mount();
+    await waitFor(() =>
+      expect(window.location.hash).toBe("#/onboarding/company"),
+    );
+  });
+
   // ops holds automation:update, so its journey names the configured model:
   // the model read follows the grant, not the admin role.
   it("walks an ops seat with no row through the member journey, model named", async () => {

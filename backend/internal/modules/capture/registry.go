@@ -272,7 +272,14 @@ func (r *Registry) SyncOnce(ctx context.Context, connectionID ids.UUID) error {
 		registry: r, connectionID: connectionID, generation: generation,
 		readRef: credentialRef, log: slog.Default(),
 	})
-	next, syncErr := syncer.Sync(runCtx, auth, connector.Cursor(cursor), r.sink)
+	// Where a first pull starts, held so a retry reads the same point. A
+	// connector with no bounded first pull answers the zero time and takes
+	// the plain Sync below.
+	from, err := r.syncStart(ctx, connectionID, generation, c.Descriptor(), connector.Cursor(cursor), r.now())
+	if err != nil {
+		return err
+	}
+	next, syncErr := syncFrom(runCtx, syncer, auth, connector.Cursor(cursor), from, r.sink)
 	if syncErr != nil {
 		// A transient failure never kills the connection (ADR-0063): the
 		// state machine classifies, backs off, degrades to a daily probe at
@@ -323,6 +330,14 @@ func (r *Registry) commitSyncCursor(ctx context.Context, connectionID ids.UUID, 
 		if tag.RowsAffected() == 0 {
 			superseded = true
 			return nil
+		}
+		// In the same transaction as the watermark. A cursor stored with the
+		// anchor still held leaves a stale lower bound, which a later
+		// re-anchor would read as a point somebody chose.
+		if len(cur) > 0 {
+			if err := releaseSyncAnchor(ctx, tx, connectionID, generation); err != nil {
+				return err
+			}
 		}
 		return nil
 	})
@@ -391,9 +406,9 @@ func seedDomainOfAddressTx(ctx context.Context, tx pgx.Tx, address string) error
 	if err := lockOwnDomain(ctx, tx, domain); err != nil {
 		return err
 	}
-	// Recorded unverified, always. Whether the domain is OURS is not a fact
-	// about this mailbox and is not frozen here — it is derived at read time
-	// from what the own company currently claims (trustedOwnDomainsTx). Writing
+	// Recorded unverified, always. Whether the domain is OURS is derived at
+	// read time from what the own company currently claims
+	// (TrustedOwnDomainsTx). Writing
 	// the answer down would mean a domain that stopped being ours went on
 	// suppressing mail forever.
 	if _, err := tx.Exec(ctx, `
@@ -433,30 +448,10 @@ func (r *Registry) resolveCredential(ctx context.Context, credentialRef *string,
 // a runtime property), full seat (capture is a write path by nature —
 // the human's ability to grant it is what the scope check consumed).
 func (r *Registry) connectorContext(ctx context.Context, name string, grantedBy ids.UserID) (context.Context, error) {
-	wsID, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return nil, errors.New("capture: sync outside workspace context")
-	}
-	// The authz resolver and the principal seam are untyped (ids.UUID);
-	// widen the typed granting-human id at each of those edges.
-	rbac, err := r.authority.EffectiveRBAC(ctx, wsID, grantedBy.UUID)
-	if err != nil {
-		return nil, fmt.Errorf("capture: granting human no longer resolves — the grant dies with them: %w", err)
-	}
-	seat, err := r.authority.SeatType(ctx, wsID, grantedBy.UUID)
+	runCtx, err := connectorActing(ctx, r.authority, name, grantedBy)
 	if err != nil {
 		return nil, err
 	}
-	p := principal.Principal{
-		Type:        principal.PrincipalConnector,
-		ID:          connectorPrincipalID(name),
-		UserID:      grantedBy.UUID,
-		OnBehalfOf:  grantedBy.UUID,
-		TeamIDs:     rbac.TeamIDs,
-		SeatType:    seat,
-		Permissions: rbac.Permissions,
-	}
-	runCtx := principal.WithActor(ctx, p)
 	return principal.WithCorrelationID(runCtx, ids.NewV7()), nil
 }
 

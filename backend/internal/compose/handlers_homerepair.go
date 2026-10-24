@@ -113,6 +113,7 @@ func homeRepairReviewWire(review datatask.ReviewRequest) (crmcontracts.HomeRepai
 	if review.PreviewToken != "" {
 		out.PreviewToken = &review.PreviewToken
 	}
+	revalidate := 0
 	for _, task := range scope.Tasks {
 		item := crmcontracts.HomeRepairTask{Id: openapi_types.UUID(task.ID), Version: task.Version, Action: crmcontracts.HomeRepairTaskAction(task.Action), Reason: task.Reason}
 		if task.BeforeVerdict != "" {
@@ -141,9 +142,14 @@ func homeRepairReviewWire(review datatask.ReviewRequest) (crmcontracts.HomeRepai
 			out.Counts.Review++
 		case repairLeaveCurrent:
 			out.Counts.Keep++
+		case repairRevalidateSettlement:
+			revalidate++
 		default:
 			return crmcontracts.HomeRepairReview{}, apperrors.ErrInvalidArgument
 		}
+	}
+	if revalidate > 0 {
+		out.Counts.Revalidate = &revalidate
 	}
 	return out, nil
 }

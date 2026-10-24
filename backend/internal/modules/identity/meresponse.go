@@ -27,6 +27,7 @@ import (
 // alongside would be a row of anonymous booleans at each call site.
 func (h Handlers) meResponse(ctx context.Context, id Identity) crmcontracts.MeResponse {
 	adminPasswordLink := h.canIssuePasswordLink(ctx, id)
+	confirmRequests := h.canRequestConfirmation(ctx, id)
 	reportingAvailable := true
 	roles := id.Roles
 	if roles == nil {
@@ -53,12 +54,13 @@ func (h Handlers) meResponse(ctx context.Context, id Identity) crmcontracts.MeRe
 			// margince/margince#26.
 			Timezone: optionalString(id.Timezone),
 		},
-		Roles:              roles,
-		Teams:              teams,
-		WorkspaceName:      id.WorkspaceName,
-		NonProduction:      h.nonProduction,
-		DataResetAvailable: &h.dataResetAvailable,
-		AdminPasswordLink:  adminPasswordLink,
+		Roles:                   roles,
+		Teams:                   teams,
+		WorkspaceName:           id.WorkspaceName,
+		NonProduction:           h.nonProduction,
+		DataResetAvailable:      &h.dataResetAvailable,
+		AdminPasswordLink:       adminPasswordLink,
+		ConfirmRequestsSendable: &confirmRequests,
 		Authorization: &crmcontracts.Authorization{
 			SeatType: contractSeatType(id.SeatType),
 			Objects:  contractObjectGrants(id.Permissions.Objects),

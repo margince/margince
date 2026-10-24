@@ -40,6 +40,8 @@ export const MAGIC_SENTENCE_KEYS = [
   "magic.action.approval_capture_counterparty",
   "magic.action.approval_pending",
   "magic.action.approval_summary",
+  "magic.action.decided_summary",
+  "magic.action.decided_kind",
   "magic.action.capture_reauth_required",
   "magic.action.capture_connection_error",
   "magic.action.capture_sync_failing",

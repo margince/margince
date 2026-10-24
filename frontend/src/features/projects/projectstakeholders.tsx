@@ -33,6 +33,7 @@ import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { projectRoleLabel } from "../records/record360";
+import { project360Key } from "./project360.key";
 
 type SetProjectStakeholderRequest =
   components["schemas"]["SetProjectStakeholderRequest"];
@@ -63,7 +64,7 @@ function invalidateProject(
   queryClient: ReturnType<typeof useQueryClient>,
   projectId: string,
 ) {
-  queryClient.invalidateQueries({ queryKey: ["project", projectId, "360"] });
+  queryClient.invalidateQueries({ queryKey: project360Key(projectId) });
 }
 
 async function searchContacts(query: string): Promise<RecordPickerCandidate[]> {

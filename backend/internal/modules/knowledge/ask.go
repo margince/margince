@@ -293,6 +293,7 @@ func readinessIn(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, identity str
 		Id:             corpus.Id,
 		Name:           corpus.Name,
 		TopicStatement: corpus.TopicStatement,
+		Shipped:        corpus.Shipped,
 	}
 	var done int
 	if err := tx.QueryRow(ctx,

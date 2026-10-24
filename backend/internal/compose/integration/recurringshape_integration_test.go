@@ -92,7 +92,7 @@ func TestTheOfferLineBillingShapeAdmitsOnlyThreeClassifications(t *testing.T) {
 	deal := e.SeedDeal(t, "Recurring shape probe", pipeline, open, &e.Rep1)
 	e.WsExec(t,
 		`INSERT INTO offer (deal_id, offer_number, currency, source, captured_by)
-		 VALUES ($1, 'OF-SHAPE-1', 'EUR', 'manual', 'test')`, deal)
+		 VALUES ($1, 'A-1', 'EUR', 'manual', 'test')`, deal)
 
 	const base = "offer_id, position, description, quantity, unit_price_minor"
 

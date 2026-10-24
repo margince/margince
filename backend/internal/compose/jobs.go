@@ -422,6 +422,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		addTechnicalEnrichJobs(reg, pool, cfg),
 		addProviderRunJobs(reg, pool, cfg),
 		addEmploymentImportJobs(reg, pool, cfg),
+		addDedupeRecheckJobs(reg, pool, cfg),
 		addAgentSchedulerJobs(reg, pool, cfg),
 		addSignalJobs(reg, pool, cfg, log),
 		addDealScoutJobs(reg, pool, cfg, log),
@@ -433,11 +434,17 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		// The composed extension jobs, if any. Empty on every vanilla process:
 		// the ext_ kinds and their ticks do not exist there at all.
 		addExtensionJobs(reg, pool, log),
+		placedSchedules(cfg),
+	)
 
-		// The schedules this file places. Each carries its own gate — the
-		// cadence, the configuration it needs, and what an absent dependency
-		// costs it — so every one of them is named here whether or not this
-		// boot ends up placing it.
+	return reg, periodic
+}
+
+// placedSchedules are the schedules this file places. Each carries its own gate:
+// the cadence, the configuration it needs, and what an absent dependency costs.
+// So every one is named here, whether or not this boot places it.
+func placedSchedules(cfg JobRunnerConfig) []*river.PeriodicJob {
+	return slices.Concat(
 		periodicFor(cfg, AssuranceSweepArgs{}),
 		periodicFor(cfg, CloseDateSweepArgs{}),
 		periodicFor(cfg, FollowUpReconcileArgs{}),
@@ -456,6 +463,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		periodicFor(cfg, MailDraftRetentionArgs{}),
 		periodicFor(cfg, WaitingHorizonRefreshArgs{}),
 		periodicFor(cfg, ApprovalExpiryArgs{}),
+		periodicFor(cfg, PastActivityClockRefoldArgs{}),
 		periodicFor(cfg, ApprovalNoticeReconcileArgs{}),
 		periodicFor(cfg, IntroExpiryArgs{}),
 		periodicFor(cfg, ApprovalAutoApplyArgs{}),
@@ -477,6 +485,4 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		periodicFor(cfg, GraphWatchArgs{}),
 		periodicFor(cfg, AuthzDisagreementArgs{}),
 	)
-
-	return reg, periodic
 }

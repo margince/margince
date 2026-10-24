@@ -8,10 +8,10 @@ import { throwProblem } from "./problem";
 // settings card — reads it through here, so they cannot disagree about what
 // the list holds or which entries are still choosable.
 //
-// Deliberately NOT the lead-source vocabulary in leadsources.ts. That one also
-// carries connector/import provenance and the lead scorer's intent weights;
-// this one is business channels only. The two answer different questions and a
-// shared hook would make it easy to ask the wrong one.
+// This is a separate list from the lead origins in leadorigins.ts. A lead origin
+// says where a lead came from and carries the scorer's intent weights. This one
+// is the channel a deal is attributed to, with no weight. A shared hook would
+// make it easy to ask the wrong one.
 
 export type AcquisitionSource = components["schemas"]["AcquisitionSource"];
 

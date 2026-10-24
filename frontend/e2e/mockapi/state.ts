@@ -47,6 +47,8 @@ export type MockApiOptions = Readonly<{
   // One run in flight on the agent feed. Without it the rail is at rest in
   // every spec and its live line is never drawn.
   agentRunning?: true;
+  // The day's queue holds the two tasks on the called contact instead.
+  callTasks?: true;
 }>;
 
 export type LoggedActivity = {
@@ -85,6 +87,7 @@ function captureSettings(): components["schemas"]["CaptureSettings"] {
     auto_enrich_daily_cap: 500,
     site_read: { max_pages: 60, max_mib: 32, wall_seconds: 240 },
     mail_sync_interval_seconds: 120,
+    confidentiality_pass_cap: 40,
   };
 }
 
@@ -172,6 +175,16 @@ export function createMockState(options: MockApiOptions = {}) {
     brief: {
       ...briefRun,
       items: briefRun.items.map((item) => ({ ...item })),
+    },
+    // Nobody has chosen hours yet, so the card offers the default.
+    workingHours: {
+      chosen: false,
+      working_hours: {
+        start_time: "09:00",
+        end_time: "17:00",
+        days: [1, 2, 3, 4, 5],
+        timezone: "Europe/Berlin",
+      },
     },
     captureSettings: captureSettings(),
     captureConnections: captureConnections(),

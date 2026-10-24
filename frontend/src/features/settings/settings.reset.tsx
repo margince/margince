@@ -1,9 +1,14 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { operations } from "../../api/schema";
-import { Button, TextInput } from "../../design-system/atoms";
+import { Button } from "../../design-system/atoms";
+import { Callout } from "../../design-system/callout";
 import { ConfirmModal } from "../../design-system/confirmmodal";
+import {
+  ConfirmPhraseBox,
+  phraseMatches,
+} from "../../design-system/confirmphrase";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { formatNumber } from "../../format/format";
@@ -18,18 +23,13 @@ import { useMe } from "../../lib/session";
 type ResetSummary =
   operations["resetData"]["responses"][200]["content"]["application/json"];
 
-// The danger-zone reset action wipes the installation back to its first-boot
-// state. It needs two conditions of different kinds. The grant
-// `system_reset:delete` says this reader may wipe an installation that permits
-// wiping. The server-driven `data_reset_available` flag on /me says whether this
-// one does; its compiled default is false in every posture.
-//
-// The flag is not VITE_UI_PREVIEW_RESET, which is the unrelated password-reset
-// link. The server gates the endpoint on the same flag and answers 404 without it.
-//
-// The company's name is not on MeResponse, so this never compares it client-side.
-// A non-empty input enables the confirm button, and the server judges the match
-// (a mismatch comes back as a 422, shown verbatim in the dialog).
+// The danger-zone reset wipes the installation back to its first-boot state.
+// It needs the grant `system_reset:delete` and the server-driven
+// `data_reset_available` flag on /me. The flag defaults to false in every
+// posture, and the endpoint answers 404 without it. It is not
+// VITE_UI_PREVIEW_RESET, the unrelated password-reset link.
+// The confirm sends me.workspace_name, not the typed text, so a stray space
+// cannot become a 422. A rename in another tab still ends in one.
 export function ResetDataCard() {
   const t = useT();
   const { locale } = useLocale();
@@ -46,20 +46,21 @@ export function ResetDataCard() {
   const workspaceName = me.data?.workspace_name ?? "";
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
+  const phraseInput = useRef<HTMLInputElement>(null);
   // What the last reset cleared. It is null until one has run, so the danger
   // zone stays quiet on first render instead of implying a result nobody triggered.
   const [summary, setSummary] = useState<ResetSummary | null>(null);
   const queryClient = useQueryClient();
 
   const reset = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (confirmation: string) => {
       // The summary always describes the latest attempt, never a prior one.
       // A retry's error cannot leave a previous success on screen, and an
       // in-flight retry shows no summary.
       setSummary(null);
       return unwrap(
         await api.POST("/admin/reset-data", {
-          body: { confirmation: typed },
+          body: { confirmation },
         }),
       );
     },
@@ -78,12 +79,8 @@ export function ResetDataCard() {
   }
 
   return (
-    <Panel
-      title={t("settings.dangerZone")}
-      // The one card that announces its own danger: the red border is what
-      // separates a destructive surface from the ordinary settings around it.
-      className="settings-danger"
-    >
+    // A neutral panel: the danger is the danger Button and the typed confirm.
+    <Panel title={t("settings.dangerZone")}>
       <SettingList bleed="settings">
         {/* This button and the dialog's confirm share the screen, so each is
             named for its own act. */}
@@ -98,21 +95,24 @@ export function ResetDataCard() {
         />
       </SettingList>
       {summary && (
-        <PanelBody>
-          <p className="t-caption settings-danger-result" role="status">
-            {t("settings.resetDataResult", {
+        <PanelBody className="form-stack">
+          <Callout
+            tone="success"
+            kind="outcome"
+            title={t("settings.resetDataResult", {
               tables: formatNumber(summary.tables_cleared, locale),
               jobs: formatNumber(summary.jobs_deleted, locale),
               streams: formatNumber(summary.streams_purged, locale),
               keys: formatNumber(summary.cache_keys_deleted, locale),
               objects: formatNumber(summary.objects_deleted, locale),
             })}
-          </p>
+          />
           {summary.drain_timed_out && (
-            // ds:ignore a warning in --warningText, not a refusal
-            <p className="settings-danger-warning" role="alert">
-              {t("settings.resetDataDrainWarning")}
-            </p>
+            <Callout
+              tone="warning"
+              live="alert"
+              title={t("settings.resetDataDrainWarning")}
+            />
           )}
         </PanelBody>
       )}
@@ -129,23 +129,21 @@ export function ResetDataCard() {
         // The typed confirmation gates whether the reset may start. The input
         // stays editable while it runs. Clearing it mid-write must not re-arm
         // the gate on a control that is already going.
-        confirmDisabled={!reset.isPending && typed.trim() === ""}
-        onConfirm={() => reset.mutate()}
+        confirmDisabled={
+          !reset.isPending && !phraseMatches(typed, workspaceName)
+        }
+        onConfirm={() => reset.mutate(workspaceName)}
         pending={reset.isPending}
         error={reset.error ? problemMessageOf(reset.error, t) : null}
+        initialFocusTo={() => phraseInput.current}
       >
         <p>{t("settings.resetDataConfirmBody")}</p>
-        {workspaceName ? (
-          <p>
-            {t("settings.resetDataConfirmName")}{" "}
-            {/* userSelect:all lets one click select the whole name to copy */}
-            <code style={{ userSelect: "all" }}>{workspaceName}</code>
-          </p>
-        ) : null}
-        <TextInput
-          aria-label={t("settings.resetDataConfirmLabel")}
+        <ConfirmPhraseBox
+          prompt={t("settings.resetDataConfirmName")}
+          phrase={workspaceName}
           value={typed}
-          onChange={(event) => setTyped(event.target.value)}
+          onChange={setTyped}
+          inputRef={phraseInput}
         />
       </ConfirmModal>
     </Panel>

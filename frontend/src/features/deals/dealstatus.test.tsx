@@ -13,6 +13,7 @@ import {
 } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import { DealStatusCardPanel } from "./dealstatus";
 
 // What Deal360 owes a reader, in the order it owes it.
@@ -146,7 +147,7 @@ function renderCard() {
       }
     >
       <LocaleProvider initial="en">
-        <DealStatusCardPanel dealId={DEAL} dealName="PIM rollout Phase 2" />
+        <DealStatusCardPanel deal={{ id: DEAL, name: "PIM rollout Phase 2" }} />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -199,7 +200,9 @@ describe("Deal360 leads with the call", () => {
     // An `activity` citation has no detail route, so it renders as a flat
     // label rather than a button — the point is that the receipt is THERE,
     // under the sentence it belongs to, not that it is clickable.
-    const cites = document.querySelectorAll(".r360-verdict .co-brief-cites");
+    const cites = document.querySelectorAll(
+      ".standing-sheet-sentence .co-brief-cites",
+    );
     expect(cites.length).toBeGreaterThan(0);
     expect(cites[0].textContent).not.toBe("");
   });
@@ -234,24 +237,43 @@ describe("Deal360 leads with the call", () => {
     // that showed nothing would report a deal with no verdict at all.
     serve({ standing: "stalled_pending_legal" });
     renderCard();
-    const chip = await screen.findByText("stalled_pending_legal");
-    expect(chip).toBeVisible();
-    // And it must NOT wear the healthy colour. `live` and "I cannot read this
-    // word" were one tone, so a fifth standing from a newer server painted the
-    // loudest element on the card in the all-clear green.
-    expect(chip.className).toContain("r360-standing-unknown");
-    expect(chip.className).not.toContain("r360-standing-calm");
+    const word = await screen.findByText("stalled_pending_legal");
+    expect(word).toBeVisible();
+    // And it must not wear the healthy colour. A fifth standing from a newer
+    // server would paint the loudest element on the card in all-clear green.
+    // That reports an unreadable word as good news.
+    expect(washOf(word)).toBe("transparent");
   });
 
-  it("paints a live deal calm rather than unknown", async () => {
+  it("washes a live deal in the success tone rather than unknown", async () => {
     // The mirror of the case above: without it, a tone lookup that returned
-    // "unknown" for EVERYTHING would satisfy that assertion perfectly.
+    // neutral for everything would satisfy that assertion perfectly.
     serve({ standing: "live" });
     renderCard();
-    const chip = await screen.findByText("Live");
-    expect(chip.className).toContain("r360-standing-calm");
+    expect(washOf(await screen.findByText("Live"))).toBe("var(--successBg)");
+  });
+
+  it("claims Margince as the source only when a model wrote the call", async () => {
+    serve({ standing: "live", writer: "deterministic" });
+    renderCard();
+    await screen.findByText("Live");
+    expect(screen.getByText(en["standing.sources.records"])).toBeVisible();
+    expect(screen.queryByText(/Margince ·/)).toBeNull();
+  });
+
+  it("counts the records the model's call cites", async () => {
+    serveCited();
+    renderCard();
+    expect(await screen.findByText("Margince · 1 source")).toBeVisible();
   });
 });
+
+function washOf(word: HTMLElement): string {
+  const sheet = word.closest(".standing-sheet");
+  return sheet instanceof HTMLElement
+    ? sheet.style.getPropertyValue("--standing-wash")
+    : "";
+}
 
 describe("Deal360's signal chips state their trigger", () => {
   it("shows the number that tripped the rule, not just its name", async () => {
@@ -361,7 +383,7 @@ it("background reads explicitly refuse model work", async () => {
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider>
-        <DealStatusCardPanel dealId={DEAL} dealName="Scheduling" />
+        <DealStatusCardPanel deal={{ id: DEAL, name: "Scheduling" }} />
       </LocaleProvider>
     </QueryClientProvider>,
   );

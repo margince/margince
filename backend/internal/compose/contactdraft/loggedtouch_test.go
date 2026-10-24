@@ -11,6 +11,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/draftcore"
 	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
@@ -84,10 +85,10 @@ func TestALoggedMeetingsTextIsFolded(t *testing.T) {
 // A note's text is bounded, so a long meeting log does not fill the prompt.
 func TestANotesTextIsBounded(t *testing.T) {
 	recent := FoldRecent([]crmcontracts.Activity{
-		logged(crmcontracts.ActivityKindNote, draftedAt, strings.Repeat("slot ", draftInputRecordRunes)),
+		logged(crmcontracts.ActivityKindNote, draftedAt, strings.Repeat("slot ", draftcore.TurnTextRunes)),
 	}, draftedAt)
-	if got := len([]rune(recent[0].Record)); got > draftInputRecordRunes {
-		t.Errorf("the note's record is %d runes, bounded at %d", got, draftInputRecordRunes)
+	if got := len([]rune(recent[0].Record)); got > draftcore.TurnTextRunes {
+		t.Errorf("the note's record is %d runes, bounded at %d", got, draftcore.TurnTextRunes)
 	}
 }
 

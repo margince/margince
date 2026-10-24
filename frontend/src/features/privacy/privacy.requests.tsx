@@ -7,12 +7,12 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import {
   EntityRef,
-  RosterPartialNote,
   rosterOwnerName,
   useRoster,
   useRosterPartial,
+  useRosterPartialHint,
 } from "../../components/entityref";
-import { Badge, Button, Field, Textarea } from "../../design-system/atoms";
+import { Button, Field, Textarea } from "../../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { DrawerBody, DrawerHead } from "../../design-system/drawerbands";
 import { ErrorLine } from "../../design-system/errorline";
@@ -20,6 +20,7 @@ import { type Fact, FactList } from "../../design-system/factlist";
 import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
 import { Select, type SelectOption } from "../../design-system/select";
+import { StatusBadge } from "../../design-system/statusbadge";
 import { formatDate } from "../../format/format";
 import { ruleText } from "../../format/jurisdiction";
 import { viewerZone } from "../../format/timezone";
@@ -29,8 +30,8 @@ import { useCanWrite } from "../../lib/capability";
 import { useMemberName } from "../../lib/membernames";
 import {
   DSR_KIND_LABEL,
+  DSR_STATUS_KIND,
   DSR_STATUS_LABEL,
-  DSR_STATUS_TONE,
   type DsrStatus,
   isIllegalTransition,
   isOverdue,
@@ -120,7 +121,7 @@ export function DsrTable({
         <span className="dsr-due">
           <span>{formatDate(dsr.due_at, locale, tz)}</span>
           {isOverdue(dsr.due_at, dsr.status, nowMs) && (
-            <Badge tone="danger">{t("privacy.overdue")}</Badge>
+            <StatusBadge kind="failure" label={t("privacy.overdue")} />
           )}
         </span>
       ),
@@ -151,7 +152,11 @@ export function DsrTable({
 function DsrStatusBadge({ status }: Readonly<{ status: DsrStatus }>) {
   const t = useT();
   return (
-    <Badge tone={DSR_STATUS_TONE[status]}>{t(DSR_STATUS_LABEL[status])}</Badge>
+    <StatusBadge
+      kind={DSR_STATUS_KIND[status]}
+      label={t(DSR_STATUS_LABEL[status])}
+      live={status === "in_progress"}
+    />
   );
 }
 
@@ -351,7 +356,7 @@ function DsrFacts({
         <span className="dsr-due">
           <span>{formatDate(dsr.due_at, locale, tz)}</span>
           {isOverdue(dsr.due_at, dsr.status, nowMs) && (
-            <Badge tone="danger">{t("privacy.overdue")}</Badge>
+            <StatusBadge kind="failure" label={t("privacy.overdue")} />
           )}
         </span>
       ),
@@ -400,29 +405,26 @@ function DsrAssignee({
 }>) {
   const t = useT();
   const roster = useRoster("user", true);
-  const partial = useRosterPartial("user", true);
+  const partialHint = useRosterPartialHint(useRosterPartial("user", true));
   // An agent seat cannot hold the row scope a subject request needs.
   const assignable = (roster.data ?? []).flatMap((entry) =>
     "display_name" in entry && !entry.is_agent ? [entry] : [],
   );
   const current = useUnofferedAssignee(dsr.assignee_id, assignable, t);
   return (
-    <div className="field">
-      <Field label={t("privacy.assignee")}>
-        {(control) => (
-          <Select
-            {...control}
-            options={assigneeOptions(assignable, current, t)}
-            value={dsr.assignee_id ?? ""}
-            disabled={pending}
-            onChange={(next) => {
-              if (next !== (dsr.assignee_id ?? "")) onAssign(next || null);
-            }}
-          />
-        )}
-      </Field>
-      <RosterPartialNote partial={partial} />
-    </div>
+    <Field label={t("privacy.assignee")} hint={partialHint}>
+      {(control) => (
+        <Select
+          {...control}
+          options={assigneeOptions(assignable, current, t)}
+          value={dsr.assignee_id ?? ""}
+          disabled={pending}
+          onChange={(next) => {
+            if (next !== (dsr.assignee_id ?? "")) onAssign(next || null);
+          }}
+        />
+      )}
+    </Field>
   );
 }
 

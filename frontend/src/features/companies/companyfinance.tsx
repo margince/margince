@@ -1,6 +1,7 @@
 import { Landmark } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { useFinanceSummary } from "../../components/financesummary";
 import { Eyebrow } from "../../design-system/eyebrow";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { Sparkline } from "../../design-system/readings";
@@ -16,12 +17,12 @@ import { useRecordZone } from "../../lib/recordzone";
 import { BillingContactsPanel } from "../projects/billingcontacts";
 import { RecentInvoices } from "./financeinvoices";
 import { OverdueLead } from "./financeoverdue";
-import { useFinanceSummary } from "./financesummary";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:
 // it works today only because the company record page pulls that stylesheet in
 // for its own sake, so this file renders unstyled anywhere else.
 import "./company360.css";
+import "./companytabs.css";
 
 // The finance card: does this customer actually pay us, and on time?
 //
@@ -168,8 +169,8 @@ export function CompanyFinanceCard({
     cardState === "stale" ||
     cardState === "partial";
   return (
-    <div className="co-overview-stack">
-      <Panel title={title} {...chromeOf(summary, present, t)}>
+    <div className="co-tab-stack">
+      <Panel title={title} {...chromeOf(summary, present)}>
         <PanelBody>
           <SurfaceState
             loadingLabel={title}
@@ -186,6 +187,7 @@ export function CompanyFinanceCard({
           </SurfaceState>
         </PanelBody>
       </Panel>
+      {present && <RecentInvoices summary={summary} />}
       {/* OUTSIDE the SurfaceState above, deliberately. Who to send the invoice
           to is the installation's own record and has nothing to do with whether
           an accounting source is connected, mapped or still syncing — and an
@@ -200,29 +202,18 @@ export function CompanyFinanceCard({
   );
 }
 
-// The three slots the panel's chrome fills, decided together because all three
-// hang on the same question: does this panel have real figures to qualify?
-//
 // Where the figures came from and how fresh they are belongs beside the
-// panel's NAME rather than under its last row — it qualifies every number in
-// the panel, and a reader who has scrolled past the invoice table has stopped
-// looking for it. The footer carries what the table could not fit. No slot
-// offers to connect a source: nothing in the product writes a finance
-// connection, so such a button would be a door with nothing behind it.
+// panel's name rather than under its last row. It qualifies every number in
+// the panel. No slot offers to connect a source. Nothing in the
+// product writes a finance connection, so such a button would be a door with
+// nothing behind it.
 function chromeOf(
   summary: FinanceSummary,
   present: boolean,
-  t: ReturnType<typeof useT>,
-): { titleAction?: ReactNode; footer?: ReactNode } {
-  if (!present) {
-    return {};
-  }
-  return {
-    titleAction: <FinanceProvenance summary={summary} />,
-    footer: summary.truncated ? (
-      <span className="t-caption">{t("finance.moreInvoices")}</span>
-    ) : undefined,
-  };
+): { titleAction?: ReactNode } {
+  return present
+    ? { titleAction: <FinanceProvenance summary={summary} /> }
+    : {};
 }
 
 // What the card says when it has no figures. Two different sentences, because
@@ -254,7 +245,6 @@ function FinanceBody({ summary }: Readonly<{ summary: FinanceSummary }>) {
         </div>
       </div>
       <CoveragePeriod summary={summary} />
-      <RecentInvoices summary={summary} />
     </>
   );
 }

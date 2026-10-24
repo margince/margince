@@ -5,7 +5,7 @@ import { AlertTriangle, Mail, Paperclip } from "lucide-react";
 
 import type { components } from "../api/schema";
 import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { translatePlural, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { VisibilityBadge } from "./visibility";
 import "./emailentry.css";
@@ -30,6 +30,22 @@ const MOVE_LABEL: Record<string, MessageKey> = {
   needs_reply: "email.move.needsReply",
   waiting_for_them: "email.move.waitingForThem",
 };
+
+/**
+ * The label for whose move a message is waiting on, from the server's own
+ * reading of it, or undefined when it waits on nobody. The message row, the
+ * thread card and the detail view all draw their chip from this, so they
+ * cannot disagree about one message. A withheld message claims no move.
+ */
+export function moveLabel(
+  summary: Pick<EmailSummary, "move"> | undefined,
+  withheld: boolean,
+): MessageKey | undefined {
+  if (withheld || !summary) {
+    return undefined;
+  }
+  return MOVE_LABEL[summary.move];
+}
 
 // The row's direction line, as one whole sentence.
 //
@@ -118,6 +134,21 @@ function troubleReason(delivery: EmailSummary["delivery"]): string | null {
   return delivery.reason?.trim() || null;
 }
 
+/**
+ * How many files a message carried, preferring the snapshot the send froze over
+ * the live attachment list. Archiving or superseding a document later changes
+ * what the library holds. It must change nothing about what the timeline says
+ * went out with a message that already left. The live count still answers for
+ * an inbound message and for one that was only logged, neither of which was
+ * ever staged. A message the reader may not open carries none.
+ */
+export function attachmentCount(summary: EmailSummary): number {
+  if (summary.display_status === "withheld") {
+    return 0;
+  }
+  return summary.delivery?.files?.length ?? summary.attachment_count;
+}
+
 // What the row draws, decided in one place.
 //
 // Every field the withheld status governs is settled here TOGETHER, from the
@@ -154,14 +185,7 @@ function rowFields(summary: EmailSummary, t: ReturnType<typeof useT>) {
       : summary.subject?.trim() || t("email.noSubject"),
     who: direction ?? t("email.aMessage"),
     preview: withheld ? null : summary.preview,
-    move: withheld || summary.move === "none" ? null : MOVE_LABEL[summary.move],
-    // What the message CARRIED, preferring the snapshot the send froze over
-    // the live attachment list. Archiving or superseding a document later
-    // changes what the library holds and must change nothing about what the
-    // timeline says went out with a message that already left. The live count
-    // still answers for an inbound message and for one that was only logged,
-    // neither of which was ever staged.
-    attachments: withheld ? 0 : (staged?.length ?? summary.attachment_count),
+    move: moveLabel(summary, withheld) ?? null,
   };
 }
 
@@ -215,6 +239,45 @@ export function EmailWords({ summary }: Readonly<{ summary: EmailSummary }>) {
   return <span className="emailentry__words">{preview}</span>;
 }
 
+/**
+ * EmailFiles is what messages CARRIED, as one paperclip and a count: for a row,
+ * and summed for a thread card that stands for several messages.
+ *
+ * It lives beside `rowFields`. The withheld rule (a message the reader may
+ * not open carries zero) and the frozen send snapshot are then read in one
+ * place. A thread card counting `attachment_count` itself would show files on a message
+ * whose existence the reader is not told.
+ */
+export function EmailFiles({
+  summaries,
+}: Readonly<{ summaries: readonly EmailSummary[] }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const rows = summaries.map((summary) => rowFields(summary, t));
+  const count = summaries.reduce(
+    (total, summary) => total + attachmentCount(summary),
+    0,
+  );
+  if (count === 0) {
+    return null;
+  }
+  const names = rows.flatMap((row) => row.stagedNames ?? []);
+  return (
+    <span
+      className="emailentry__files"
+      // The names, for a reader who wants to know which files without opening
+      // the message. Only when every file is named: a live count knows how
+      // many and not what, and a partial list would read as the whole.
+      title={names.length === count ? names.join(", ") : undefined}
+    >
+      <Paperclip aria-hidden="true" />
+      {translatePlural(locale, "email.detail.attachments", count, {
+        count: formatNumber(count, locale),
+      })}
+    </span>
+  );
+}
+
 export function EmailEntry({
   summary,
   timestamp,
@@ -243,7 +306,6 @@ export function EmailEntry({
     | { onOpen: undefined; whyNotOpenable: NoOpenReason }
     | { whyNotOpenable: NoOpenReason }>) {
   const t = useT();
-  const { locale } = useLocale();
   const row = rowFields(summary, t);
 
   const content = (
@@ -272,18 +334,7 @@ export function EmailEntry({
             it was sent and never re-derives one. */}
         <VisibilityBadge state={summary.display_status} />
         {row.move && <span>{t(row.move)}</span>}
-        {row.attachments > 0 && (
-          <span
-            className="emailentry__files"
-            // The names, for a reader who wants to know WHICH files without
-            // opening the message. Only when the row has the snapshot: a live
-            // count knows how many and not what.
-            title={row.stagedNames?.join(", ") ?? undefined}
-          >
-            <Paperclip aria-hidden="true" />
-            {formatNumber(row.attachments, locale)}
-          </span>
-        )}
+        <EmailFiles summaries={[summary]} />
       </span>
       {/* Why it did not arrive. The lead line above already says that it did
           not; this is the part a rep can act on, and it is the message the

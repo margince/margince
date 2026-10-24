@@ -13,17 +13,22 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// Mailbox delivery and record ownership do not establish a duty to reply.
-func directMailRecipientSQL(activity, addresses string) string {
-	return storekit.DirectMailRecipientSQL(activity, addresses)
-}
-
+// personalMailResponsibilitySQL keeps the inbound mail this seat answers for:
+// the mail addressed to it and to no other seat (soleDirectSeatSQL). With no
+// seat named it keeps every mail somebody answers for, so mail nobody owns
+// never becomes shared or unassigned work. It runs before WaitingScanCap.
 func personalMailResponsibilitySQL(owner *ids.UUID, identities string, arg func(any) int) string {
 	if owner == nil {
-		return scopeUnbounded
+		return "(a.kind <> 'email' OR " + soleDirectSeatSQL(identities) + " IS NOT NULL)"
 	}
-	addresses := mailSeatAddressesSQL(identities, fmt.Sprintf("$%d::uuid", arg(*owner)))
-	return "(a.kind = 'email' AND " + directMailRecipientSQL("a", addresses) + ")"
+	return fmt.Sprintf("(a.kind = 'email' AND %s = $%d::uuid)", soleDirectSeatSQL(identities), arg(*owner))
+}
+
+// soleDirectSeatSQL decides who answers an inbound mail `a`
+// (storekit.SoleDirectMailSeatSQL). The waiting queue and the reminder writer
+// both read it.
+func soleDirectSeatSQL(identities string) string {
+	return storekit.SoleDirectMailSeatSQL("a", identities)
 }
 
 func mailSeatAddressesSQL(identities, seat string) string {
@@ -31,8 +36,7 @@ func mailSeatAddressesSQL(identities, seat string) string {
 }
 
 func directMailSeatsSQL(identities string) string {
-	return "ARRAY(SELECT mail_seat.key::uuid FROM jsonb_each(" + identities + ") mail_seat WHERE " +
-		directMailRecipientSQL("a", "ARRAY(SELECT jsonb_array_elements_text(mail_seat.value))") + ")"
+	return storekit.DirectMailSeatsSQL("a", identities)
 }
 
 func (s *Store) mailSeatIdentitiesSQL(ctx context.Context, tx pgx.Tx, bind func(any) int) (string, error) {
@@ -72,4 +76,10 @@ func waitingReplyForOwner(row WaitingReply, owner *ids.UUID) WaitingReply {
 		row.OwnerID = row.DirectRecipients[0]
 	}
 	return row
+}
+
+// ambiguouslyAddressed is a mail addressed to more than one seat. It stays on
+// its record and is nobody's waiting work: soleDirectSeatSQL names no one.
+func ambiguouslyAddressed(row WaitingReply) bool {
+	return row.Kind == kindEmail && len(row.DirectRecipients) > 1
 }

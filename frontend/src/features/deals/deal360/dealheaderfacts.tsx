@@ -1,46 +1,47 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The deal head's subtitle and facts strip, the same shapes companyheaderfacts.tsx
-// and contactpage.tsx's own ContactSubtitle/ContactFacts draw for their records.
-//
-// It replaces DealIdentityLine, which read the identical facts as one running,
-// dot-joined sentence under the name. A reader compared a deal's value against
-// the one beside it by re-parsing a sentence each time; a strip of named cells
-// is what every other record page already answered that with.
+// The deal head's subtitle, the deal's own rows in its details, and the close
+// date in words for the Close reading.
 
 import type { ReactNode } from "react";
 import type { components } from "../../../api/schema";
-import { EntityRef, rosterOwnerName } from "../../../components/entityref";
+import { EntityRef } from "../../../components/entityref";
+import { FieldRow } from "../../../design-system/fieldgrid";
 import { Popover } from "../../../design-system/popover";
 import { provenanceOf } from "../../../design-system/provenanceof";
 import { FieldGuard } from "../../../design-system/rbac";
-import { Fact, RecordFacts } from "../../../design-system/recordfacts";
 import { ProvenanceTag } from "../../../design-system/trust";
 import { calendarDaysUntil } from "../../../format/daysuntil";
 import {
+  formatDate,
+  formatDateAbbrev,
   formatDayMonth,
-  formatMoney,
+  formatMoneyOrAbsent,
   formatNumber,
 } from "../../../format/format";
-import { type Locale, translatePlural, useT } from "../../../i18n";
+import {
+  type Locale,
+  type Translator,
+  translatePlural,
+  useT,
+} from "../../../i18n";
 import type { MessageKey } from "../../../i18n/en";
-import { useMemberName } from "../../../lib/membernames";
 import { useRecordZone } from "../../../lib/recordzone";
 import { useViewerId } from "../../../lib/session";
 import { useInstallationSettings } from "../../../lib/uploadlimit";
+import { closeDayOf } from "../closeday";
 import {
   LostReasonFact,
   type WonWithoutContract,
   WonWithoutContractFact,
 } from "../dealwinreason";
-import { FxLine } from "./dealcockpit";
 
 type Deal = components["schemas"]["Deal"];
 
-// What the head reads off a deal. Every field is optional because every one
-// of them is a fact a deal can lack or a reader can be refused — the same
-// contract DealIdentityLine kept.
+// What the details rows and the close words read off a deal. Every field is
+// optional because every one is a fact a deal can lack or a reader can be
+// refused.
 export type DealIdentity = Partial<
   Pick<
     Deal,
@@ -48,6 +49,7 @@ export type DealIdentity = Partial<
     | "currency"
     | "stage_id"
     | "expected_close_date"
+    | "closed_at"
     | "close_date_provisional"
     | "forecast_category"
     | "wait_until"
@@ -86,7 +88,7 @@ export function DealSubtitle({
   const masked = deal.masked_fields ?? [];
   if (masked.includes("company_id")) {
     return (
-      <div className="record-sub record-sub-inline">
+      <div>
         {t("create.relatedCompany")} <FieldGuard mode="masked" />
       </div>
     );
@@ -95,95 +97,54 @@ export function DealSubtitle({
     return null;
   }
   return (
-    <div className="record-sub record-sub-inline">
+    <div>
       <EntityRef kind="company" id={deal.company_id} />
     </div>
   );
 }
 
 /**
- * DealIdentityFacts is the head's facts strip: what the deal is worth, where
- * it sits on the board, when it is due, whose deal it is, which account it
- * is on and how it reached Margince — the same six a rep asked for on every
- * other record's head. A partner and how a contract-less deal was won follow
- * when the deal carries either; they used to stand on the identity line for
- * the same reason DealDetails argues for the partner alone — a fact a
- * commission is computed from has to be visible on the record it came from.
+ * DealRecordRows are the deal's facts the edit form beside them does not
+ * carry, as rows of the details grid. They are the stage it stands on and the value
+ * in the money the installation reports in. They also say how a closed deal
+ * closed and how the record reached Margince and when.
  */
-export function DealIdentityFacts({
+export function DealRecordRows({
   deal,
   stages,
   locale,
 }: Readonly<{
-  deal: DealIdentity;
-  // The stages the page already sorted for the board, not a second read.
+  deal: DealIdentity & Partial<Pick<Deal, "created_at">>;
+  // The stages the page already sorted for the ladder, not a second read.
   stages: readonly { id: string; name: string }[];
   locale: Locale;
 }>): ReactNode {
   const t = useT();
   const zone = useRecordZone();
   const viewerId = useViewerId();
-  // The installation's own reporting currency, read here rather than handed
-  // down: only this cell converts, and an unnamed base is not a euro base.
+  // The installation's own reporting currency: an unnamed base is not a euro
+  // base.
   const baseCurrency = useInstallationSettings().data?.base_currency ?? null;
-  // Named by id: an unowned deal carries no id and asks nothing.
-  const ownerName = useMemberName(deal.owner_id);
-  const masked = deal.masked_fields ?? [];
-  // An em dash rather than the stage id: a deal whose stage was archived out
-  // from under it has no row to name, and printing a UUID where a stage name
-  // goes reads as a fault.
+  // A stage archived out from under the deal has no name, and a UUID where a
+  // stage name goes reads as a fault.
   const stage = stages.find((candidate) => candidate.id === deal.stage_id);
   return (
-    <RecordFacts>
-      <Fact label={t("deals.amount")}>
-        {/* A masked amount NAMES the field, like every other refusal on this
-            strip: a lone lock among named cells says only that something
-            here is hidden, and "no value recorded" and "you may not see the
-            value" are different statements about a deal. */}
-        {masked.includes("amount_minor") ? (
-          <FieldGuard mode="masked" />
-        ) : (
-          <span className="deal-fact-close">
-            {dealAmount(deal, locale)}
-            {/* What the figure is worth in the money the installation
-                reports in, where the deal is written in another. A rate is
-                frozen at close on a won or lost deal, so the line names the
-                day it was taken: a converted figure with no date is a number
-                nobody can check. */}
-            {deal.fx_rate_to_base && (
-              <FxLine
-                amountMinor={deal.amount_minor ?? null}
-                baseCurrency={baseCurrency}
-                fxRateToBase={deal.fx_rate_to_base}
-                fxRateDate={deal.fx_rate_date ?? null}
-                locale={locale}
-              />
-            )}
-          </span>
+    <>
+      <FieldRow label={t("deals.stage")}>{stage?.name ?? "—"}</FieldRow>
+      {deal.fx_rate_to_base &&
+        !deal.masked_fields?.includes("amount_minor") && (
+          <FieldRow label={t("deal.standing.baseValue")}>
+            <FxLine
+              amountMinor={deal.amount_minor ?? null}
+              baseCurrency={baseCurrency}
+              fxRateToBase={deal.fx_rate_to_base}
+              fxRateDate={deal.fx_rate_date ?? null}
+              locale={locale}
+            />
+          </FieldRow>
         )}
-      </Fact>
-      <Fact label={t("deals.stage")}>{stage?.name ?? "—"}</Fact>
-      {/* Always, date or none: when a deal lands is one of the facts a reader
-          checks first, and a cell that disappears while nobody has said reads
-          as a deal with no question outstanding. */}
-      <Fact label={t("deal.strip.close")}>
-        <CloseReading deal={deal} locale={locale} zone={zone} />
-      </Fact>
-      <Fact label={t("list.owner")}>
-        {rosterOwnerName(deal.owner_id, ownerName, t, t("co.pulse.unowned"))}
-      </Fact>
-      {masked.includes("company_id") ? (
-        <Fact label={t("create.relatedCompany")}>
-          <FieldGuard mode="masked" />
-        </Fact>
-      ) : (
-        deal.company_id && (
-          <Fact label={t("create.relatedCompany")}>
-            <EntityRef kind="company" id={deal.company_id} />
-          </Fact>
-        )
-      )}
-      <Fact label={t("history.field.source")}>
+      <ClosingRow deal={deal} />
+      <FieldRow label={t("history.field.source")}>
         <Popover
           label={
             <ProvenanceTag
@@ -199,105 +160,81 @@ export function DealIdentityFacts({
         >
           <p className="t-body">{deal.source || t("trust.sourceUnknown")}</p>
         </Popover>
-      </Fact>
-      {masked.includes("partner_company_id") ? (
-        // No attribution word here: what the partner did is withheld WITH
-        // the partner, so naming one would decide what a partner nobody
-        // could see is owed.
-        <Fact label={t("deal.partnerCompany")}>
-          <FieldGuard mode="masked" />
-        </Fact>
-      ) : (
-        deal.partner_company_id && (
-          <Fact label={t("deal.partnerCompany")}>
-            {/* Sourced and influenced are paid differently, so the cell says
-                which one rather than a neutral company name that hides the
-                distinction the commission turns on. */}
-            {t(
-              deal.partner_attribution === "influenced"
-                ? "deal.partnerInfluenced"
-                : "deal.partnerSourced",
-            )}{" "}
-            <EntityRef kind="company" id={deal.partner_company_id} />
-          </Fact>
-        )
+      </FieldRow>
+      {deal.created_at && (
+        <FieldRow label={t("list.created")}>
+          {formatDateAbbrev(deal.created_at, locale, zone)}
+        </FieldRow>
       )}
-      <ClosingFacts deal={deal} />
-    </RecordFacts>
+    </>
   );
 }
 
 // How a closed deal closed: a win with no contract behind it says how it was
 // won, a loss says why.
-function ClosingFacts({ deal }: Readonly<{ deal: DealIdentity }>): ReactNode {
+function ClosingRow({ deal }: Readonly<{ deal: DealIdentity }>): ReactNode {
   const t = useT();
   if (deal.status === "won" && deal.won_without_contract_reason) {
     return (
-      <Fact label={t("deals.winReason")}>
+      <FieldRow label={t("deals.winReason")}>
         <WonWithoutContractFact deal={deal} />
-      </Fact>
+      </FieldRow>
     );
   }
   if (deal.status === "lost" && deal.lost_reason) {
     return (
-      <Fact label={t("deals.lostReason")}>
+      <FieldRow label={t("deals.lostReason")}>
         <LostReasonFact reason={deal.lost_reason} />
-      </Fact>
+      </FieldRow>
     );
   }
   return null;
 }
 
-// The value, or an em dash when the deal carries none. The masked case is the
-// caller's, because a refusal on this strip is written as the field's name
-// beside the guard rather than the guard alone.
-function dealAmount(deal: DealIdentity, locale: Locale): ReactNode {
-  if (deal.amount_minor == null || !deal.currency) {
-    return "—";
-  }
-  return formatMoney(deal.amount_minor, deal.currency, locale);
-}
+/** The close date in words: the day, how far off it is, and what qualifies
+ *  it. Shared by the head's cell and the deal's Close reading. */
+export type CloseWords = Readonly<{
+  date?: string;
+  parts: readonly string[];
+  // Days until the date, counted only on an open deal.
+  daysLeft?: number;
+  warn: boolean;
+}>;
 
 /**
- * When the deal is expected to close, and how much that date is worth
- * believing.
+ * The words for when the deal closes: the day it closed once it is won or lost,
+ * the day it is expected to otherwise.
  *
- * `close_date_provisional` is why the qualifier line exists: it means the
- * nightly run replaced a date that had aged into the past and nobody has
- * confirmed the replacement, and a machine's guess drawn exactly like a date
- * agreed with the buyer is the quiet kind of wrong.
+ * Counted in the record's zone, the one the date is drawn in, so the date and
+ * the count cannot name different days. A won or lost deal's date is when it
+ * closed, so only an open deal gets a count.
  */
-function CloseReading({
-  deal,
-  locale,
-  zone,
-}: Readonly<{ deal: DealIdentity; locale: Locale; zone: string }>) {
-  const t = useT();
-  if (!deal.expected_close_date) {
-    return (
-      <span className="deal-fact-unset">{t("deal.strip.close.none")}</span>
-    );
+export function closeWords(
+  deal: DealIdentity,
+  locale: Locale,
+  zone: string,
+  t: Translator,
+): CloseWords {
+  const closeDay = closeDayOf(deal);
+  if (!closeDay) {
+    return { parts: [], warn: false };
   }
-  // Counted in the record's zone, the one `formatDayMonth` draws the date in
-  // just below, so the date and the count beside it cannot name different days.
-  // Through the reader's own plural rule, so a deal closing tomorrow does not
-  // read "in 1 days".
-  const days = calendarDaysUntil(deal.expected_close_date, zone);
-  // A won or lost deal's date is when it closed, so it is neither late nor
-  // upcoming. Only an open deal gets a count.
   const closed = deal.status === "won" || deal.status === "lost";
+  const daysLeft = closed ? undefined : calendarDaysUntil(closeDay, zone);
   const parts: string[] = [];
-  if (!closed) {
+  if (daysLeft !== undefined) {
     parts.push(
-      days < 0
-        ? translatePlural(locale, "deal.strip.close.overdue", -days, {
-            days: formatNumber(-days, locale),
+      daysLeft < 0
+        ? translatePlural(locale, "deal.strip.close.overdue", -daysLeft, {
+            days: formatNumber(-daysLeft, locale),
           })
-        : translatePlural(locale, "deal.strip.close.inDays", days, {
-            days: formatNumber(days, locale),
+        : translatePlural(locale, "deal.strip.close.inDays", daysLeft, {
+            days: formatNumber(daysLeft, locale),
           }),
     );
   }
+  // A date the nightly run moved and nobody confirmed is a machine's guess,
+  // and must not read like a date agreed with the buyer.
   if (deal.close_date_provisional) {
     parts.push(t("deal.strip.close.provisional"));
   }
@@ -311,20 +248,14 @@ function CloseReading({
       }),
     );
   }
-  return (
-    <span className="deal-fact-close">
-      <span
-        className={
-          deal.close_date_provisional || (!closed && days < 0)
-            ? "deal-fact-close-warn"
-            : undefined
-        }
-      >
-        {formatDayMonth(deal.expected_close_date, locale, zone)}
-      </span>
-      <span className="t-caption">{parts.join(" · ")}</span>
-    </span>
-  );
+  return {
+    date: formatDayMonth(closeDay, locale, zone),
+    parts,
+    daysLeft,
+    warn:
+      Boolean(deal.close_date_provisional) ||
+      (daysLeft !== undefined && daysLeft < 0),
+  };
 }
 
 // The forecast words, in the reader's language. An unmapped value renders as
@@ -337,9 +268,49 @@ const FORECAST_LABELS: Record<string, MessageKey> = {
   omitted: "deal.forecast.omitted",
 };
 
-function forecastLabel(value: string, t: (key: MessageKey) => string): string {
+export function forecastLabel(
+  value: string,
+  t: (key: MessageKey) => string,
+): string {
   const key = Object.hasOwn(FORECAST_LABELS, value)
     ? FORECAST_LABELS[value]
     : undefined;
   return key === undefined ? value.replaceAll("_", " ") : t(key);
+}
+
+// The amount, converted into the installation's base currency at the frozen
+// rate, with the day the rate was taken. A converted figure with no date is a
+// number nobody can check.
+export function FxLine({
+  amountMinor,
+  baseCurrency,
+  fxRateToBase,
+  fxRateDate,
+  locale,
+}: Readonly<{
+  amountMinor: number | null;
+  // The installation's own base currency, from its settings. Not a constant:
+  // an installation whose base is not the euro was reading a euro sign over a
+  // figure converted into something else. A converted figure must not make
+  // that error. Null while the settings read is in flight or refused, because
+  // an unnamed base is not a euro base.
+  baseCurrency: string | null;
+  fxRateToBase: string;
+  fxRateDate: string | null;
+  locale: Locale;
+}>) {
+  const t = useT();
+  const recordZone = useRecordZone();
+  // A deal carrying a rate but no amount converts to nothing, not to zero.
+  const baseMinor =
+    amountMinor == null ? null : Math.round(amountMinor * Number(fxRateToBase));
+  return (
+    <p className="t-caption">
+      {t("deal.fxBase", {
+        value: formatMoneyOrAbsent(baseMinor, baseCurrency, locale),
+        rate: fxRateToBase,
+        date: fxRateDate ? formatDate(fxRateDate, locale, recordZone) : "—",
+      })}
+    </p>
+  );
 }

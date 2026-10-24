@@ -6,6 +6,7 @@
 package compose
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -38,6 +39,11 @@ func TestWaitingDirectionUsesExistingRelationshipAndRelevanceFacts(t *testing.T)
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			e := integration.Setup(t)
+			// Addressed to one seat, so somebody answers for the request.
+			var adminAddress string
+			if err := integration.OwnerConn(t).QueryRow(context.Background(), "SELECT email FROM app_user WHERE id=$1", e.AdminUser).Scan(&adminAddress); err != nil {
+				t.Fatal(err)
+			}
 			at := time.Date(2026, 9, 8, 12, 0, 0, 0, time.UTC)
 			company := e.SeedCompany(t, "Example counterpart", &e.Rep1)
 			if tc.relationships != nil {
@@ -75,7 +81,7 @@ func TestWaitingDirectionUsesExistingRelationshipAndRelevanceFacts(t *testing.T)
 			subject, body, direction := "Please confirm the schedule", "Please confirm the schedule.", "inbound"
 			message, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 				Kind: "email", Subject: &subject, Body: &body, Direction: &direction, OccurredAt: &at,
-				Source: "manual", ThreadKey: "schedule@example.test", Links: links,
+				Source: "manual", ThreadKey: "schedule@example.test", Links: links, EmailTo: []string{adminAddress},
 			})
 			if err != nil {
 				t.Fatal(err)

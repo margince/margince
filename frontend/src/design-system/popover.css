@@ -73,6 +73,14 @@
   box-shadow: var(--shadow-pop);
 }
 
+/* Wider than a reading's aside, for rows of a title and a verb. Capped by the
+   viewport so it never runs under the window's edge. */
+.popover-panel.popover-panel-wide {
+  inline-size: min(25rem, calc(100vw - 2 * var(--pageGutter)));
+  max-inline-size: none;
+  padding: var(--space-4);
+}
+
 /* A popover trigger that wears the evidence mark (`.evmark-trigger`,
    evidencemark.css): a figure that explains itself when pressed says so with
    the same dotted underline and help cursor as every other "where does this

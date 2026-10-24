@@ -302,3 +302,13 @@ export function useHoldsOperatorSeat(): boolean {
   const roles = useMe().data?.roles ?? [];
   return roles.includes("admin") || roles.includes("ops");
 }
+
+/**
+ * Whether a directory-group grant hands out the `admin` role, which asks for a
+ * typed confirmation before it is saved. It names the role being GRANTED, not
+ * the reader's authority: the server's assignable-roles ceiling still decides
+ * who may grant it. Retired when AssignableRole says what a role may do.
+ */
+export function grantsAdminRole(roleKey: string): boolean {
+  return roleKey === "admin";
+}

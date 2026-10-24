@@ -5,25 +5,24 @@ import { CalendarPlus, CheckSquare, FileText } from "lucide-react";
 import { useId, useRef } from "react";
 import type { components } from "../../api/schema";
 import { ExtensionEntries } from "../../components/extensionentries";
+import { LogActivityAction } from "../../components/logactivity.action";
 import { searchCompanyContacts } from "../../components/meetingattendees";
 import { Button } from "../../design-system/atoms";
+import { VerbWord } from "../../design-system/iconaction";
 import { ListPopover } from "../../design-system/listpopover";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import { ComposeModal } from "../mail/compose";
-import { LogActivityAction } from "../records/logactivity";
 import { EmailVerb } from "../records/recordemail";
 
-// The account header's verbs, in the shape every record page draws them:
-// writing first, then a hairline, then the pair that record what already
-// happened, then the overflow menu (CompanyActionBadges, companyheader.tsx).
-// Replaces CompanyPrimaryActions' own row, which drew the same three verbs as
-// a labelled toolbar rather than the icon-first strip contactactions.tsx
-// already carries for every other record.
+// The account header's verbs, in the design's order. First the two that reach
+// the account (write, meet) and a hairline. Then the two that record (log,
+// task) and a hairline. Then the overflow menu (CompanyActionBadges).
+// No Call: neither the account nor its contacts carry a phone on this page.
 //
-// Named apart from companyactions.tsx, which is the account's OWN verbs (a
+// Named apart from companyactions.tsx, which is the account's own verbs (a
 // new deal, a new project born on it) rather than the header's.
 
 type Company = components["schemas"]["Company"];
@@ -96,21 +95,6 @@ export function CompanyHeaderActions({
         onOpen={onComposerOpen}
         disabledReasonId={archived}
       />
-      <span className="record-actions-sep" aria-hidden="true" />
-      <Button
-        disabled={logPending}
-        reasonId={logRefused}
-        onClick={() => onDrawer("log")}
-      >
-        <FileText aria-hidden="true" /> {t("log.title")}
-      </Button>
-      <Button
-        disabled={logPending}
-        reasonId={logRefused}
-        onClick={() => onDrawer("task")}
-      >
-        <CheckSquare aria-hidden="true" /> {t("log.addTask")}
-      </Button>
       <CompanyBookMeeting
         companyId={company.id}
         allowed={logGrantKnown && canLog && !archived}
@@ -122,6 +106,24 @@ export function CompanyHeaderActions({
           {t("scheduling.bookRefused")}
         </p>
       )}
+      <Button
+        disabled={logPending}
+        reasonId={logRefused}
+        title={t("log.title")}
+        onClick={() => onDrawer("log")}
+      >
+        <FileText aria-hidden="true" />
+        <VerbWord word={t("record.verb.log")} label={t("log.title")} />
+      </Button>
+      <Button
+        disabled={logPending}
+        reasonId={logRefused}
+        title={t("log.addTask")}
+        onClick={() => onDrawer("task")}
+      >
+        <CheckSquare aria-hidden="true" />
+        <VerbWord word={t("record.verb.task")} label={t("log.addTask")} />
+      </Button>
       <ExtensionEntries
         slot="record_header.company"
         record={{ type: "company", id: company.id }}
@@ -157,12 +159,21 @@ function CompanyBookMeeting({
   const t = useT();
   const face = (
     <>
-      <CalendarPlus aria-hidden="true" /> {t("scheduling.bookContact")}
+      <CalendarPlus aria-hidden="true" />
+      <VerbWord
+        word={t("record.verb.meet")}
+        label={t("scheduling.bookContact")}
+      />
     </>
   );
   if (!allowed) {
     return (
-      <Button variant="ghost" disabled={pending} reasonId={reasonId}>
+      <Button
+        variant="ghost"
+        disabled={pending}
+        reasonId={reasonId}
+        title={t("scheduling.bookContact")}
+      >
         {face}
       </Button>
     );

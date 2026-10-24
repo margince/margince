@@ -8,13 +8,13 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { navigate, parseHash, useRoute } from "../../lib/router";
-import { meFixture } from "../../testing/mefixture";
-import { tabContent } from "../settings/settings";
 import {
   IMPORT_RUN_SUBPAGE,
   settingsHref,
   settingsRouteTarget,
-} from "../settings/settingsrouting";
+} from "../../lib/settingsrouting";
+import { meFixture } from "../../testing/mefixture";
+import { tabContent } from "../settings/settings";
 import { ImportCard } from "./import";
 import {
   dryRun,

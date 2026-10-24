@@ -30,6 +30,9 @@ func connectorCtx(e *integration.Env) context.Context {
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalConnector, ID: "connector:test",
+		// A connector syncs for the human who connected it, and that human is
+		// who its proposals are for.
+		OnBehalfOf: e.AdminUser,
 		// A connector carries the GRANTING HUMAN's live permissions, never a
 		// narrower set of its own — registry.connectorContext builds the
 		// principal from rbac.Permissions, and every seeded role has read on

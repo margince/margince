@@ -435,6 +435,10 @@ type Extension struct {
 	// Settings are the values an admin can change for the unit, drawn by the
 	// core on the unit's card of the Extensions page. See Setting.
 	Settings []Setting
+
+	// Panels are the unit's components drawn inline on core pages, such as a
+	// deal page's side column. See Panel.
+	Panels []Panel
 }
 
 // MigrationsDir is the one spelling of the subdirectory a unit's

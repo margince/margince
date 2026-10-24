@@ -133,6 +133,10 @@ type Descriptor struct {
 	RiskTier mcp.RiskTier // capture/read = auto_execute; any outbound = confirmation_required
 	Tools    []mcp.ToolSpec
 	Produces []datasource.EntityType
+	// FirstSyncWindow bounds a first pull, before any cursor exists; zero
+	// reads from the beginning. Declared here because the registry holds the
+	// anchor across a failed attempt and cannot hold an unknown window.
+	FirstSyncWindow time.Duration
 }
 
 // AuthRequest carries whatever the provider handshake needs (OAuth code,

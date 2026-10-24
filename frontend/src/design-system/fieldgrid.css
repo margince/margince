@@ -135,6 +135,18 @@
 .fieldgrid-value .evmark:not(.fieldgrid-handle > .evmark) {
   margin-inline-start: var(--space-1);
 }
+/* A number split over two lines reads as two numbers: its kind drops instead,
+   and only a number wider than the whole column breaks. */
+.fieldgrid-handle > .callaction-number {
+  min-inline-size: fit-content;
+}
+/* A number's chat links take their own line under the number and its kind, so
+   the kind sits in one place on every row. */
+.fieldgrid-handle > .callaction-chats {
+  order: 1;
+  flex-basis: 100%;
+  margin-inline-start: 0;
+}
 /* Only the address gives way: the column's inherited `anywhere` would
    otherwise break a squeezed kind or mark at every letter ("W/or/k"). */
 .fieldgrid-handle > .t-caption,

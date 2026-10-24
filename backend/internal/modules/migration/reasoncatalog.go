@@ -43,6 +43,7 @@ const (
 	ReasonFieldInactive              ReasonCode = "field_inactive"
 	ReasonValueUnreadable            ReasonCode = "value_unreadable"
 	ReasonPhoneNeedsCountry          ReasonCode = "phone_needs_country"
+	ReasonAddressNotSplit            ReasonCode = "address_not_split"
 	ReasonValueRefused               ReasonCode = "value_refused"
 	ReasonOptionNotAllowed           ReasonCode = "option_not_allowed"
 	ReasonOptionNotInList            ReasonCode = "option_not_in_list"
@@ -54,6 +55,7 @@ const (
 	ReasonNotADate                   ReasonCode = "not_a_date"
 	ReasonCannotWriteType            ReasonCode = "cannot_write_type"
 	ReasonNotAnEmail                 ReasonCode = "not_an_email"
+	ReasonEmailNamesNoContact        ReasonCode = "email_names_no_contact"
 	ReasonNotADomain                 ReasonCode = "not_a_domain"
 	ReasonDescriptionTooLong         ReasonCode = "description_too_long"
 	ReasonSizeBandInvalid            ReasonCode = "size_band_invalid"
@@ -264,6 +266,11 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 		textlang.German:     "{value:q} kann nicht gelesen werden.",
 		textlang.Vietnamese: "Không đọc được {value:q}.",
 	}},
+	ReasonAddressNotSplit: {params: nil, text: map[textlang.Lang]string{
+		textlang.English:    "Address could not be split into street, postal code and city, so it stays in the first address line.",
+		textlang.German:     "Die Adresse ließ sich nicht in Straße, Postleitzahl und Ort aufteilen, daher bleibt sie in der ersten Adresszeile.",
+		textlang.Vietnamese: "Không tách được địa chỉ thành đường, mã bưu chính và thành phố nên địa chỉ vẫn nằm ở dòng địa chỉ đầu tiên.",
+	}},
 	ReasonPhoneNeedsCountry: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "“{value}” needs its country code, like +49 30 1234567.",
 		textlang.German:     "{value:q} braucht die Landesvorwahl, zum Beispiel +49 30 1234567.",
@@ -323,6 +330,11 @@ var reasonCatalog = withUndoReasons(withActivityReasons(withDealReasons(map[Reas
 		textlang.English:    "“{value}” is not an email address that can be written.",
 		textlang.German:     "{value:q} ist keine E-Mail-Adresse, die gespeichert werden kann.",
 		textlang.Vietnamese: "{value:q} không phải địa chỉ email có thể ghi.",
+	}},
+	ReasonEmailNamesNoContact: {params: []string{paramValue}, text: map[textlang.Lang]string{
+		textlang.English:    "“{value}” belongs to a sending system, not a human, so it does not become a contact.",
+		textlang.German:     "{value:q} gehört zu einem Versandsystem, nicht zu einem Menschen, und wird darum kein Kontakt.",
+		textlang.Vietnamese: "{value:q} thuộc về một hệ thống gửi thư, không phải của một cá nhân, nên không trở thành liên hệ.",
 	}},
 	ReasonNotADomain: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "“{value}” is not a domain that can be written.",

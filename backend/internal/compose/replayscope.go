@@ -233,6 +233,7 @@ var replayableOperations = map[string]replayTarget{
 		objectNote:  "one route over three record types: the undo was gated per record on the caller's grant and write authority when it ran",
 		moduleProbe: probeBulkBatch, idPath: "batch_id",
 	},
+	"POST /v1/users/{id}/handover":         {object: "user_admin", rowNote: "the response is counts, not a record: each moved row was gated on the caller's write authority when it ran, and a replay hands back the numbers alone"},
 	"POST /v1/projects/transfer-ownership": {object: tableProject, rowNote: "the response is a count, not a record: the handover's rows were each gated on the caller's write authority when it ran, and a replay hands back the number alone"},
 	"POST /v1/leads":                       {object: tableLead, table: tableLead, idPath: "id"},
 	"PATCH /v1/leads/{id}":                 {object: tableLead, table: tableLead, idPath: "id"},
@@ -386,6 +387,8 @@ var replayableOperations = map[string]replayTarget{
 	// The two administered lead vocabularies are gated like the field catalog
 	// they extend — auth.Require on "custom_field" in every store entry point —
 	// and their rows are workspace-shared config with no owner column.
+	"POST /v1/lead-origins":              {object: objectCustomField, rowNote: noOwnerCatalog},
+	"PATCH /v1/lead-origins/{id}":        {object: objectCustomField, rowNote: noOwnerCatalog},
 	"POST /v1/lead-sources":              {object: objectCustomField, rowNote: noOwnerCatalog},
 	"PATCH /v1/lead-sources/{id}":        {object: objectCustomField, rowNote: noOwnerCatalog},
 	"POST /v1/acquisition-sources":       {object: objectCustomField, rowNote: noOwnerCatalog},

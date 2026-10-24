@@ -344,7 +344,11 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 	if !auth.Allows(ctx, w.object, principal.ActionUpdate) {
 		return skippedFor(cannotEditWhy(w.object)), nil
 	}
-	if err := w.apply(ctx, id, changed, typed, current, w.provenanceOf(row.ExternalID)); err != nil {
+	// A reviewed plan lands the row inside one shared transaction, so a refused
+	// write is rolled back to here before the row is skipped.
+	if err := database.WithSavepoint(ctx, func(ctx context.Context) error {
+		return w.apply(ctx, id, changed, typed, current, w.provenanceOf(row.ExternalID))
+	}); err != nil {
 		// A corrected file moving an address onto a contact who is not its owner
 		// is one bad row, not a failed run: skip it with the reason and let the
 		// rest of the file land. Unhandled, this error aborts the whole
@@ -356,6 +360,9 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 			// The company half of the same case: a corrected file moving a domain
 			// onto a company that is not its owner.
 			return skippedFor(domainClaimedWhy), nil
+		}
+		if _, ok := errors.AsType[*contacts.DuplicateLeadError](err); ok {
+			return skippedFor(naturalKeyTakenWhy), nil
 		}
 		if linkedInClaimed(err) {
 			return skippedFor(linkedInClaimedWhy), nil
@@ -395,7 +402,7 @@ func (w *csvWriters) apply(
 	case migration.ObjectCompany:
 		in := companyUpdateFrom(changed, typed)
 		in.IfVersion = w.reviewedVersion(id)
-		merged, given, err := addressMergedOnto(current, in.Address)
+		merged, given, err := addressMergedOnto(current, in.Address, changed)
 		if err != nil {
 			return err
 		}
@@ -414,7 +421,7 @@ func (w *csvWriters) apply(
 		_, err = w.contacts.UpdateCompany(ctx, ids.From[ids.CompanyKind](id), in)
 		return err
 	case migration.ObjectContact:
-		return w.applyContact(ctx, id, contactUpdateFrom(changed, typed), current, source)
+		return w.applyContact(ctx, id, contactUpdateFrom(changed, typed), changed, current, source)
 	default:
 		return fmt.Errorf("import: %q is not an importable object", w.object)
 	}

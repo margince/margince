@@ -17,9 +17,8 @@ import (
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
-// RecordComposition writes the two boot-time facts that follow from the
-// composed extension set: the inventory of the set itself, and the channel
-// vocabulary its units declare.
+// RecordComposition writes the boot facts of the composed set: its inventory,
+// the channel vocabulary its units declare and their starting role grants.
 //
 // One function because the ordering between them is not a caller's to choose —
 // the reconcile reads ComposedExtensions() and refuses a unit that shadows a
@@ -39,6 +38,9 @@ func RecordComposition(
 	}
 	if err := ReconcileChannelProviders(ctx, pool); err != nil {
 		return fmt.Errorf("compose: registering this binary's channel vocabulary: %w", err)
+	}
+	if err := FillExtensionRbacDefaults(ctx, pool, log); err != nil {
+		return fmt.Errorf("compose: filling the units' default role grants: %w", err)
 	}
 	return nil
 }

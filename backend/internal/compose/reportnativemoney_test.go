@@ -26,17 +26,11 @@ import (
 // convertedDespiteTheName are the measures whose name says `_minor` and whose
 // EXPRESSION already converts to the installation's base currency.
 //
-// The naming convention is the check, not the rule, and this is what that
-// distinction is for: these two fold deals through OpenDealBaseValueSQL over
-// the base-currency token, so a total spanning currencies is already
-// well-defined and grouping by currency would split an answer that needs no
-// splitting. Their default plan groups by phase alone, correctly.
-//
-// Both frontend rules read the declared native set rather than the suffix, so
-// the name misleads a reader here and nothing else.
+// Both measures compose the shared base valuation. Their names retain the
+// minor-unit suffix, but their totals do not need a currency grouping.
 var convertedDespiteTheName = gatekit.Waive(map[string]string{
 	"projects-by-phase.open_deal_value_minor": "openDealValueBaseExpr converts through " +
-		"deals.OpenDealBaseValueSQL over the base-currency token; the name predates the conversion",
+		"deals.BaseValueSQL over the base-currency token; the name predates the conversion",
 	"projects-by-phase.won_deal_value_minor": "wonDealValueBaseExpr, the same fold on the won side",
 })
 

@@ -125,6 +125,7 @@ components:
         - intro_request.created
         - intro_request.decided
         - intro_request.completed
+        - intro_request.recorded
         - intro_request.replied
         - intro_request.closed
         - consent.changed
@@ -153,6 +154,7 @@ components:
         - user.invited
         - user.activated
         - user.password_link_issued
+        - user.mfa_removed
         - user.deactivated
         - user.reactivated
         - role.changed
@@ -1624,7 +1626,7 @@ components:
       x-version: 1
       description: >-
         Payload for conversation_claim.changed. A claim was corrected, renewed,
-        dismissed or erased. A downstream reader holding the old claim needs
+        taken over, dismissed or erased. A downstream reader holding the old claim needs
         to refresh it, or remove it when the status is erased.
       required:
         - claim_id
@@ -1791,8 +1793,9 @@ components:
       x-entity-type: lead_source
       x-version: 1
       description: >-
-        Payload for lead_source.changed. A lead source was added, edited or
-        removed (contacts/leadsource.go). It rides the lead stream because
+        Deprecated: the lead source list no longer feeds the score, and a
+        separate breaking change retires it. Payload for lead_source.changed.
+        A lead source was added, edited or removed (contacts/leadsource.go). It rides the lead stream because
         every lead carries a source value. A subscriber that renders or groups
         by source re-reads the catalog on this event. The payload carries
         `key` and not `label`. The key is what leads carry and what a
@@ -1966,7 +1969,11 @@ components:
         escalation_target:
           type: string
           format: uuid
-          description: The user the escalation task is assigned to (absent when nobody owns the lead).
+          description: >-
+            The seat the scan chose for the escalation: the lead's owner while that owner can be
+            handed work, else the intake seat. Delivery asks again, so the task and notice can
+            go to the intake seat instead, or to nobody. Absent when no seat was chosen, so it
+            can differ from `owner_id`.
       additionalProperties: false
 
     PublicEventLeadUpdated:
@@ -2247,13 +2254,17 @@ components:
           $ref: '#/components/schemas/PublicEventActivityRelinkedRef'
         direction:
           type: string
-          enum: [outbound]
+          enum: [outbound, inbound]
           x-enum-varnames:
             - DirectionBecameOutbound
+            - DirectionBecameInbound
           description: >-
-            Set when capture learned that a message stored as received was the
-            seat's own sent mail (absent otherwise). The counterparty changes
-            with it; a subscriber that must know re-reads the row.
+            `outbound` when capture learned that a message stored as received
+            was the seat's own sent mail. `inbound` when a copy read as a
+            colleague's sent mail is received mail again, because that
+            colleague's address is not at an own domain. Absent otherwise. The
+            counterparty changes with it; a subscriber that must know re-reads
+            the row.
         project_filing_undone:
           type: boolean
           description: >-
@@ -2712,10 +2723,15 @@ components:
           type: string
           format: date-time
           description: >-
-            When the contact comes back to the lane. Present on `dismissed` and
-            absent on `restored`, which carries no moment because a restore
-            takes effect now. It is never absent on a dismissal: a dismissal
-            with no end is the shape this feature refuses to have.
+            When the contact comes back to the lane. Present on a dated
+            `dismissed` and absent on `restored`, which carries no moment
+            because a restore takes effect now. Absent on a permanent stop,
+            which `permanent` says.
+        permanent:
+          type: boolean
+          description: >-
+            True when the reader stopped following the contact with no end
+            date. Only on `dismissed`; the reader resumes it with `restored`.
       additionalProperties: false
 
     PublicEventIntroRequestCreated:
@@ -2799,6 +2815,29 @@ components:
               IntroRequestCompletedIntroduced,
               IntroRequestCompletedNameDropped,
             ]
+      additionalProperties: false
+
+    PublicEventIntroRequestRecorded:
+      type: object
+      x-event-type: intro_request.recorded
+      x-entity-type: contact
+      x-version: 1
+      description: >-
+        Payload for intro_request.recorded, a colleague recorded an introduction
+        that already happened outside Margince. It is not intro_request.completed.
+        That event means an ask was marked done, and its consumers must not see
+        a row that never had an ask. `introducer_user_id` made the
+        introduction and `introduced_user_id` was introduced.
+      required:
+        - intro_request_id
+        - contact_id
+        - introducer_user_id
+        - introduced_user_id
+      properties:
+        intro_request_id: { type: string, format: uuid }
+        contact_id: { type: string, format: uuid }
+        introducer_user_id: { type: string, format: uuid }
+        introduced_user_id: { type: string, format: uuid }
       additionalProperties: false
 
     PublicEventIntroRequestReplied:
@@ -3375,6 +3414,19 @@ components:
             every rejection, and false on a confirmation whose contact already
             carried one — a value on a record is somebody's statement and is
             never overwritten.
+        title_written:
+          type: boolean
+          description: >-
+            Whether the decision put the export's position on the contact as
+            its title. True only when the member ticked "Use as title" and the
+            title changed. False on every automatic confirmation.
+        employer_written:
+          type: boolean
+          description: >-
+            Whether the decision made the company the import placed the
+            connection at the contact's current employer. True only when the
+            member ticked "Use as employer". False on every automatic
+            confirmation.
       additionalProperties: false
 
     PublicEventLinkedinNetworkImported:
@@ -3976,6 +4028,36 @@ components:
           type: string
           format: date-time
           description: When the single-use token stops being redeemable.
+      additionalProperties: false
+
+    PublicEventUserMfaRemoved:
+      type: object
+      x-event-type: user.mfa_removed
+      x-entity-type: user
+      x-version: 1
+      description: >-
+        Payload for user.mfa_removed. An admin removed a member's confirmed
+        second factor. Every session the member held ended with it. The
+        password alone opens the account until the member sets a factor up
+        again. So `by` and `user_id` are both required: this event records who
+        weakened which sign-in.
+      required:
+        - user_id
+        - by
+        - sessions_ended
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          description: The member whose second factor was removed.
+        by:
+          type: string
+          format: uuid
+          description: The admin who removed it.
+        sessions_ended:
+          type: integer
+          minimum: 0
+          description: How many live sessions of the member the removal ended.
       additionalProperties: false
 
     PublicEventUserDeactivated:

@@ -53,6 +53,7 @@ func newCounterpartyStore(pool *pgxpool.Pool) *contacts.Store {
 		WithConsumerMail(capture.MatcherTx).
 		WithAudienceRecompute(activities.RecomputeAudienceTx).
 		WithVatCheckEnqueue(boundVatCheckEnqueue()).
+		WithGeocodeEnqueue(boundGeocodeEnqueue).
 		// A captured contact can take a lead over (promoteheld.go), and a
 		// promotion carries the lead's stops and consent links or refuses —
 		// wired as the server's store wires them (serverassembly.go).

@@ -248,3 +248,113 @@
   flex-wrap: wrap;
   row-gap: var(--space-1);
 }
+
+/* THE BARS SHAPE (`variant="bars"`): the ladder inside How it stands. A
+   summary line, then one 6px bar per open stage with its name and its time
+   under it. Nothing scrolls: the bars share the width. */
+.stage-ladder.is-bars {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  gap: var(--space-3);
+}
+.stage-ladder-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-4);
+}
+.stage-ladder-position {
+  white-space: nowrap;
+}
+.stage-ladder-name {
+  font: var(--fontHeadingSmall);
+  color: var(--textPrimary);
+}
+.stage-ladder.is-bars .stage-ladder-exits {
+  margin-inline-start: auto;
+  gap: var(--space-2);
+}
+.stage-ladder.is-bars .stage-ladder-step.is-terminal {
+  margin-left: 0;
+}
+/* A way out not yet taken is dashed: a door, not a rung. */
+.stage-ladder-exit.btn {
+  padding-inline: var(--space-3);
+  border: 1px dashed var(--borderStrong);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  box-shadow: none;
+}
+.stage-ladder-exit-label {
+  color: var(--textSecondary);
+}
+.stage-ladder-bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(var(--stage-ladder-count), minmax(0, 1fr));
+  gap: var(--space-1);
+}
+.stage-ladder-bar {
+  min-inline-size: 0;
+}
+.stage-ladder-bar-step,
+.stage-ladder-bar-step.btn {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-2);
+  inline-size: 100%;
+  min-inline-size: 0;
+  padding: var(--space-1) 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  box-shadow: none;
+  text-align: start;
+  font: var(--fontBodySmall);
+}
+.stage-ladder-bar-step.btn:hover:not(:disabled) {
+  background: var(--bgHover);
+}
+.stage-ladder-bar-step.btn:disabled {
+  opacity: 1;
+}
+.stage-ladder-track-bar {
+  display: block;
+  block-size: 6px;
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--borderSubtle);
+}
+.stage-ladder-bar.is-done .stage-ladder-track-bar {
+  background: color-mix(in srgb, var(--accent) 40%, var(--bgElevated));
+}
+.stage-ladder-bar-step.is-here .stage-ladder-track-bar {
+  background: var(--stage-ladder-here);
+}
+.stage-ladder-label {
+  color: var(--textSecondary);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.stage-ladder-bar.is-done .stage-ladder-label,
+.stage-ladder-bar-step.is-here .stage-ladder-label {
+  color: var(--textPrimary);
+}
+.stage-ladder-bar-step.is-here .stage-ladder-label {
+  font-weight: var(--fontWeightMedium);
+}
+.stage-ladder-sub {
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.stage-ladder.is-bars .stage-ladder-hint {
+  text-align: start;
+}

@@ -55,8 +55,7 @@ const business = (
   </Panel>
 );
 
-// A work column with a rail of context on the RIGHT — the Brief screen's shape
-// and the company record's.
+// A work column with a rail of context on the right: the Brief screen's shape.
 export const Aside: Story = {
   args: {
     shape: "aside",
@@ -66,8 +65,8 @@ export const Aside: Story = {
   },
 };
 
-// The rail on the LEFT: what the subject IS, read before what is happening to
-// it — the contact record's shape.
+// The rail on the left: what the subject is, read before what is happening to
+// it.
 export const Rail: Story = {
   args: {
     shape: "rail",

@@ -97,7 +97,7 @@ const NOTHING: Lists = { senders: 0, waiting: 0, held: 0, reach: 0 };
 const SOME: Lists = { senders: 24, waiting: 2, held: 3, reach: 1 };
 
 const meta = {
-  title: "Settings/You/Connections/Connection outcomes",
+  title: "Settings/You/Capture activity/Connection outcomes",
   component: ConnectionOutcomesCard,
 } satisfies Meta<typeof ConnectionOutcomesCard>;
 export default meta;

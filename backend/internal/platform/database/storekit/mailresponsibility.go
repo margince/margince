@@ -141,6 +141,20 @@ func DirectMailRecipientSQL(activity, addresses string) string {
 	return strings.ReplaceAll(strings.ReplaceAll(clause, "a.", activity+"."), "ADDRESS_LIST", addresses)
 }
 
+// DirectMailSeatsSQL lists every seat the mail's parsed To line names.
+func DirectMailSeatsSQL(activity, identities string) string {
+	return "ARRAY(SELECT mail_seat.key::uuid FROM jsonb_each(" + identities + ") mail_seat WHERE " +
+		DirectMailRecipientSQL(activity, "ARRAY(SELECT jsonb_array_elements_text(mail_seat.value))") + ")"
+}
+
+// SoleDirectMailSeatSQL decides who answers an inbound mail: the seat in its
+// To line when it is the only seat there, else NULL. Two addressed seats make
+// no automatic duty for either, and no shared one.
+func SoleDirectMailSeatSQL(activity, identities string) string {
+	seats := DirectMailSeatsSQL(activity, identities)
+	return "(CASE WHEN cardinality(" + seats + ") = 1 THEN (" + seats + ")[1] END)"
+}
+
 // MailSeatAddressesSQL selects one seat's unambiguous addresses from a bound identity map.
 func MailSeatAddressesSQL(identities, seat string) string {
 	return "ARRAY(SELECT jsonb_array_elements_text(COALESCE(" + identities + " -> (" + seat + ")::text, '[]'::jsonb)))"

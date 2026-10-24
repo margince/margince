@@ -171,33 +171,25 @@ func TestApplyAndRemoveTagLeaveTheSameOnEitherDoor(t *testing.T) {
 	d.restStatus(t, "DELETE", "/v1/tags/"+viaTool+"/apply", AnyMap{"entity_type": "contact", "entity_id": viaTool}, http.StatusNotFound)
 }
 
-// Folding one tag into another is confirm-first for an agent. Each door stages
-// one approval of the same kind and runs nothing until a human approves.
-func TestMergeTagsStagesTheSameApprovalOnEitherDoor(t *testing.T) {
+// Folding one tag into another runs at once on a colleague's passport, as the
+// colleague could in the app. Both doors leave the same rows and stage nothing.
+func TestMergeTagsOnAColleaguesPassportRunsTheSameOnEitherDoor(t *testing.T) {
 	d := newTwoDoors(t, "tag-merge-doors", "read", "write")
 	into := createdID(t, d.e, "/v1/tags", AnyMap{"name": "Conference 2026", "color": "sky"})
 	viaREST := createdID(t, d.e, "/v1/tags", AnyMap{"name": "Conf 26 rest", "color": "sky"})
 	viaTool := createdID(t, d.e, "/v1/tags", AnyMap{"name": "Conf 26 tool", "color": "sky"})
 
-	var refusal fileRefusal
-	if status := d.e.Call(t, "POST", "/v1/tags/"+viaREST+"/merge", AnyMap{"into_tag_id": into}, d.bearer, &refusal); status != http.StatusForbidden || refusal.Code != "approval_required" {
-		t.Fatalf("a merge over REST → %d %q, want 403 approval_required", status, refusal.Code)
-	}
-	d.toolRefused(t, "merge_tags", map[string]any{"tag_id": viaTool, "into_tag_id": into})
-	card := d.sameStaged(t, "merge", viaREST, viaTool, "Conf 26 rest", "Conf 26 tool")
-	if card.Kind != "merge_tags" || card.Status != "pending" {
-		t.Errorf("the staged approval is %+v, want a pending merge_tags one", card)
-	}
-
-	// Once a human approves, the retry carrying the approval runs the merge, and
-	// the two doors leave the same rows.
-	approvalREST, approvalTool := d.stagedApprovalOn(t, viaREST), d.stagedApprovalOn(t, viaTool)
-	d.approveAsHuman(t, approvalREST)
-	d.approveAsHuman(t, approvalTool)
 	var merged json.RawMessage
-	if status := d.e.Call(t, "POST", "/v1/tags/"+viaREST+"/merge", AnyMap{"into_tag_id": into}, d.withApproval(approvalREST), &merged); status != http.StatusOK {
-		t.Fatalf("the approved merge over REST → %d %s", status, merged)
+	if status := d.e.Call(t, "POST", "/v1/tags/"+viaREST+"/merge", AnyMap{"into_tag_id": into}, d.bearer, &merged); status != http.StatusOK {
+		t.Fatalf("a merge over REST → %d %s, want it run", status, merged)
 	}
-	d.tool(t, "merge_tags", map[string]any{"tag_id": viaTool, "into_tag_id": into, "approval_id": approvalTool})
+	d.tool(t, "merge_tags", map[string]any{"tag_id": viaTool, "into_tag_id": into})
 	d.sameEffect(t, "merge", viaREST, viaTool, "name", "summary")
+	var staged int
+	if err := d.e.Owner.QueryRow(t.Context(), `SELECT count(*) FROM approval`).Scan(&staged); err != nil {
+		t.Fatalf("counting approvals: %v", err)
+	}
+	if staged != 0 {
+		t.Errorf("the two merges staged %d approvals, want none", staged)
+	}
 }

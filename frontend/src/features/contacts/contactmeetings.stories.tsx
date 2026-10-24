@@ -79,9 +79,10 @@ export const WaitingOnReplyPhone: Story = {
   tags: ["uat-phone"],
 };
 
-// A contact with a week in motion: the next meeting booked through Margince
-// with its Meet link and a prep moment, a second one after it, two held and
-// one the contact missed, and two invitations still unanswered.
+// A contact with a week in motion. The next meeting is booked through Margince
+// with its Meet link and a prep moment, and a second one follows it. Two are
+// held (with the colleague who hosted them), one was missed by the contact,
+// and two invitations are still unanswered.
 type Activity = components["schemas"]["Activity"];
 function meeting(
   id: string,
@@ -127,13 +128,18 @@ const meetings: Activity[] = [
     "2026-09-24T08:00:00Z",
     "Weekly call: rollout planning",
     "held",
-    { duration_seconds: 3600, invitation_status: "confirmed" },
+    {
+      duration_seconds: 3600,
+      invitation_status: "confirmed",
+      host_user_id: "u-host",
+    },
   ),
   meeting(
     "0198f011-bbbb-7000-8000-000000000004",
     "2026-09-17T07:00:00Z",
     "Discovery call: scheduling tool",
     "held",
+    { host_user_id: "u-host" },
   ),
   meeting(
     "0198f011-bbbb-7000-8000-000000000005",
@@ -221,6 +227,10 @@ export const Booked: Story = {
               }),
         [`GET /scheduling/invitations/${nextMeetingId}`]: () =>
           jsonResponse(nextInvitation),
+        "GET /users/names": () =>
+          jsonResponse({
+            data: [{ id: "u-host", display_name: "Lena Fischer" }],
+          }),
       };
     }),
   ],

@@ -225,6 +225,8 @@ var awaitingRepliesSQL = `
 	   AND a.direction = 'outbound'
 	   AND a.archived_at IS NULL
 	   AND NOT ` + ImportedHistorySQL + `
+	   -- An invitation or the product's own mail asks nobody a question.
+	   AND ` + relstrength.WrittenByHumanSQL("a") + `
 	   AND a.occurred_at <= $%[1]d::timestamptz - make_interval(days => $%[5]d::int)
 	   AND a.occurred_at >= $%[1]d::timestamptz - make_interval(days => $%[5]d::int + %[6]d)
 	   AND %[2]s
@@ -241,6 +243,7 @@ var awaitingRepliesSQL = `
 	   AND NOT EXISTS (SELECT 1 FROM activity later
 	                    WHERE later.archived_at IS NULL
 	                      AND %[7]s
+	                      AND ` + relstrength.WrittenByHumanSQL("later") + `
 	                      AND a.thread_key IS NOT NULL AND a.thread_key <> ''
 	                      AND later.thread_key = a.thread_key
 	                      AND later.kind = a.kind

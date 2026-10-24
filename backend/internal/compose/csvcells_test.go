@@ -145,3 +145,43 @@ func TestADescriptionOverTheColumnsLengthIsAProblemOfItsCell(t *testing.T) {
 		t.Fatalf("problem = %+v, want the description refused with its length", problem)
 	}
 }
+
+// The contacts store refuses a sending system's address, so the dry run skips
+// the row with the same reason the commit gives. A lead may still hold one.
+func TestAContactRowWithASendingSystemsAddressIsSkipped(t *testing.T) {
+	fields := map[string]string{fieldFullName: "Signing-Noreply", fieldEmail: "signing-noreply@example.com"}
+	_, problem := checkRow(migration.ObjectContact, fields, importCatalog{})
+	if problem == nil || problem.Target != fieldEmail || problem.Why.Code != migration.ReasonEmailNamesNoContact {
+		t.Fatalf("problem = %+v, want the email refused as %s", problem, migration.ReasonEmailNamesNoContact)
+	}
+	if _, problem := checkRow(migration.ObjectLead, fields, importCatalog{}); problem != nil {
+		t.Fatalf("lead problem = %+v, want none: only the contacts store refuses the address", problem)
+	}
+	fields[fieldEmail] = "anna.notify.weber@example.com"
+	if _, problem := checkRow(migration.ObjectContact, fields, importCatalog{}); problem != nil {
+		t.Fatalf("problem = %+v, want none for a human whose name holds a marker word", problem)
+	}
+}
+
+// A row that states both name parts takes its full name from them. The store
+// never sees a full name that disagrees with the parts beside it.
+func TestAnImportRowsNamePartsSetItsFullName(t *testing.T) {
+	fields := map[string]string{fieldFullName: "Signing-Noreply", "first_name": "Contact", "last_name": "A"}
+	if got := contactCreateFrom(fields, nil, "csv", "src").FullName; got != "Contact A" {
+		t.Errorf("created full name = %q, want %q", got, "Contact A")
+	}
+	// The update compares the row as its parts name it, so a full name that
+	// disagrees with unchanged parts is not sent on its own.
+	current := []byte(`{"full_name":"Contact A","first_name":"Contact","last_name":"A"}`)
+	if changed, err := changedFields(current, fields, nil); err != nil || len(changed) != 0 {
+		t.Errorf("changed = %v (err %v), want nothing: the parts still name Contact A", changed, err)
+	}
+	renamed := map[string]string{"first_name": "Ada", "last_name": "Lovelace"}
+	if changed, err := changedFields(current, renamed, nil); err != nil || changed[fieldFullName] != "Ada Lovelace" {
+		t.Errorf("changed = %v (err %v), want the full name to follow new parts", changed, err)
+	}
+	delete(fields, "last_name")
+	if got := contactCreateFrom(fields, nil, "csv", "src").FullName; got != "Signing-Noreply" {
+		t.Errorf("full name with one part = %q, want the row's own full name", got)
+	}
+}

@@ -45,7 +45,7 @@ func seedSignatureFill(t *testing.T, e *integration.Env) (ids.UUID, ids.UUID) {
 		[]contacts.SignatureField{
 			field("title", "CTO"), field("phone", "+49 30 1234567"), field("company_name", "Acme GmbH"),
 			field("linkedin", "https://www.linkedin.com/in/bob-contact"),
-		}); err != nil {
+		}, true); err != nil {
 		t.Fatalf("the mail reader filling the contact: %v", err)
 	}
 	var fill ids.UUID
@@ -264,7 +264,7 @@ func TestUndoingASignatureThatOnlyConfirmedANumberLeavesTheNumber(t *testing.T) 
 		t.Fatal(err)
 	}
 	if _, err := e.Contacts.ApplySignatureFields(machineCtx(e), ids.From[ids.ContactKind](contact), later,
-		[]contacts.SignatureField{{Name: "phone", Value: "+49 30 1234567", Evidence: "+49 30 1234567", Confidence: 0.9}}); err != nil {
+		[]contacts.SignatureField{{Name: "phone", Value: "+49 30 1234567", Evidence: "+49 30 1234567", Confidence: 0.9}}, true); err != nil {
 		t.Fatalf("the later signature repeating the number: %v", err)
 	}
 	confirm := fillEntryOf(t, e, contact, "capture_enrich")
@@ -385,7 +385,7 @@ func TestUndoingASignatureLeavesATitleItOnlyConfirmed(t *testing.T) {
 		[]contacts.SignatureField{
 			{Name: "title", Value: "CTO", Evidence: "CTO", Confidence: 0.9},
 			{Name: "company_name", Value: "Acme GmbH", Evidence: "Acme GmbH", Confidence: 0.9},
-		}); err != nil {
+		}, true); err != nil {
 		t.Fatalf("the signature: %v", err)
 	}
 	fill := fillEntryOf(t, e, contact, "capture_enrich")
@@ -486,7 +486,7 @@ func TestUndoingALegacySignatureLeavesATitleTheRecordAlreadyHad(t *testing.T) {
 		[]contacts.SignatureField{
 			{Name: "title", Value: "CTO", Evidence: "CTO", Confidence: 0.9},
 			{Name: "company_name", Value: "Acme GmbH", Evidence: "Acme GmbH", Confidence: 0.9},
-		}); err != nil {
+		}, true); err != nil {
 		t.Fatal(err)
 	}
 	// The same statement as the shape it was audited in before: title named as

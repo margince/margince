@@ -176,3 +176,111 @@ export const LongPipeline: Story = {
     />
   ),
 };
+
+/**
+ * The bars shape inside How it stands: a deal drifting at its third of seven
+ * stages, each stage with the days it held. The current bar takes the
+ * verdict's warning tone, and "Move to" names the stage after it.
+ */
+export const BarsMidPipeline: Story = {
+  render: () => (
+    <StageLadder
+      label="Stage"
+      variant="bars"
+      tone="warning"
+      steps={[
+        {
+          key: "pd",
+          label: "Potential Deal",
+          done: true,
+          sub: "12 d",
+          onPick: noop,
+        },
+        {
+          key: "dq",
+          label: "Deal Qualification",
+          done: true,
+          sub: "9 d",
+          onPick: noop,
+        },
+        {
+          key: "sd",
+          label: "Solution Discovery",
+          current: true,
+          sub: "6 d · now",
+          onPick: noop,
+        },
+        { key: "cs", label: "Conversion Strategy", onPick: noop },
+        { key: "ps", label: "Proposal Sent", onPick: noop },
+        { key: "ng", label: "Negotiation", onPick: noop },
+        { key: "cr", label: "Contract Review", onPick: noop },
+        { key: "won", label: "Closed Won", terminal: true, onPick: noop },
+        { key: "lost", label: "Closed Lost", terminal: true, onPick: noop },
+      ]}
+    />
+  ),
+};
+
+/**
+ * A lead at its last open rung: no "Move to", and the two ways out offered as
+ * dashed pills.
+ */
+export const BarsLastRung: Story = {
+  render: () => (
+    <StageLadder
+      label="Status"
+      variant="bars"
+      steps={[
+        { key: "new", label: "New", done: true, sub: "2 Aug", onPick: noop },
+        {
+          key: "contacted",
+          label: "Contacted",
+          done: true,
+          sub: "4 Aug",
+          onPick: noop,
+        },
+        {
+          key: "engaged",
+          label: "Engaged",
+          current: true,
+          sub: "9 Aug · now",
+          onPick: noop,
+        },
+        { key: "promoted", label: "Qualified", terminal: true, onPick: noop },
+        {
+          key: "disqualified",
+          label: "Disqualified",
+          terminal: true,
+          onPick: noop,
+        },
+      ]}
+    />
+  ),
+};
+
+/**
+ * A closed project: the way out it took is a chip, and no open stage is
+ * current, so the summary names no position. No dates were recorded, so no
+ * stage carries a sub line.
+ */
+export const BarsClosedWithoutDates: Story = {
+  render: () => (
+    <StageLadder
+      label="Phase"
+      variant="bars"
+      tone="neutral"
+      steps={[
+        { key: "initiative", label: "Initiative", done: true, onPick: noop },
+        { key: "pursuing", label: "Pursuing", done: true, onPick: noop },
+        { key: "delivering", label: "Delivering", done: true, onPick: noop },
+        {
+          key: "closed",
+          label: "Closed",
+          terminal: true,
+          current: true,
+          onPick: noop,
+        },
+      ]}
+    />
+  ),
+};

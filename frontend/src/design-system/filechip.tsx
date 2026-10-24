@@ -1,5 +1,5 @@
 import { File, FileText, Image, type LucideIcon } from "lucide-react";
-import type { MouseEvent } from "react";
+import { opensElsewhere } from "../lib/linkclick";
 import { useFilePreview } from "./filepreview";
 import "./filechip.css";
 
@@ -111,13 +111,6 @@ function WithheldFileChip({
       <span className="file-chip-note">{withheld}</span>
     </span>
   );
-}
-
-// Whether the reader asked for this file somewhere OTHER than here: a new tab,
-// a new window, a saved copy. Cancelling the navigation under any of those
-// takes away a move the browser offers on every link in the product.
-function opensElsewhere(event: MouseEvent<HTMLAnchorElement>): boolean {
-  return event.metaKey || event.ctrlKey || event.shiftKey || event.altKey;
 }
 
 // What a filename says about the file: the mark the card draws, and the media

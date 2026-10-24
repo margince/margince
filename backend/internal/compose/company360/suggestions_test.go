@@ -45,7 +45,7 @@ func TestStaleThreadFiresOnOurUnansweredMessage(t *testing.T) {
 	companyID := testCompanyID(t)
 	newest := sentAgo(10, crmcontracts.ActivityDirectionOutbound)
 
-	got := englishSuggestions.staleThread(companyID, suggestNow, newest)
+	got := englishSuggestions.staleThread(companyID, suggestNow, time.UTC, newest)
 	if got == nil {
 		t.Fatal("no suggestion for a 10-day-old unanswered outbound message")
 	}
@@ -66,7 +66,7 @@ func TestStaleThreadFiresOnOurUnansweredMessage(t *testing.T) {
 // contact who is waiting for their reply would be worse than silence.
 func TestStaleThreadStaysSilentWhenTheyAnsweredLast(t *testing.T) {
 	companyID := testCompanyID(t)
-	if got := englishSuggestions.staleThread(companyID, suggestNow, sentAgo(10, crmcontracts.ActivityDirectionInbound)); got != nil {
+	if got := englishSuggestions.staleThread(companyID, suggestNow, time.UTC, sentAgo(10, crmcontracts.ActivityDirectionInbound)); got != nil {
 		t.Fatalf("suggestion %+v for a thread waiting on US", got)
 	}
 }
@@ -87,10 +87,10 @@ func TestStaleThreadFiresAtTheReplyWindowAndNotBefore(t *testing.T) {
 		t.Errorf("the reply window is %d days, not a week — if that is intended, say so "+
 			"here and in the reason a rep reads", noReplyDays)
 	}
-	if got := englishSuggestions.staleThread(companyID, suggestNow, sentAgo(noReplyDays-1, crmcontracts.ActivityDirectionOutbound)); got != nil {
+	if got := englishSuggestions.staleThread(companyID, suggestNow, time.UTC, sentAgo(noReplyDays-1, crmcontracts.ActivityDirectionOutbound)); got != nil {
 		t.Errorf("suggestion %+v one day inside the reply window", got)
 	}
-	got := englishSuggestions.staleThread(companyID, suggestNow, sentAgo(noReplyDays, crmcontracts.ActivityDirectionOutbound))
+	got := englishSuggestions.staleThread(companyID, suggestNow, time.UTC, sentAgo(noReplyDays, crmcontracts.ActivityDirectionOutbound))
 	if got == nil {
 		t.Fatalf("no suggestion at exactly %d days, the window's own edge", noReplyDays)
 	}
@@ -107,7 +107,7 @@ func TestStaleThreadFiresAtTheReplyWindowAndNotBefore(t *testing.T) {
 func TestStaleThreadStaysSilentWithoutADirection(t *testing.T) {
 	companyID := testCompanyID(t)
 	newest := lastMessage{ID: ids.NewV7(), At: suggestNow.AddDate(0, 0, -30)}
-	if got := englishSuggestions.staleThread(companyID, suggestNow, newest); got != nil {
+	if got := englishSuggestions.staleThread(companyID, suggestNow, time.UTC, newest); got != nil {
 		t.Fatalf("suggestion %+v for a message with no recorded direction", got)
 	}
 }
@@ -281,8 +281,8 @@ func TestCandidateSuggestionsRunOnlyTheRulesTheGrantsSupport(t *testing.T) {
 	companyID := testCompanyID(t)
 	timelineOnly := suggestionInputs{
 		timeline:  true,
-		hasNewest: true,
-		newest:    sentAgo(10, crmcontracts.ActivityDirectionOutbound),
+		hasNewest: true, loc: time.UTC,
+		newest: sentAgo(10, crmcontracts.ActivityDirectionOutbound),
 		// Present but unreadable: a pipeline the caller has no grant for must not
 		// reach the rules even if the struct carries one.
 		open: pipeline{OpenCount: 3, Stalled: []stalledDeal{idle("Renewal")}},

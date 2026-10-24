@@ -9,7 +9,7 @@ import { useState } from "react";
 import type { components } from "../api/schema";
 import { Button, Field, TextInput } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { DateInput, type ISODate, isISODate } from "../design-system/dateinput";
+import { DateInput, type ISODate } from "../design-system/dateinput";
 import { Select } from "../design-system/select";
 import { endOfDayInZone, viewerZone } from "../format/timezone";
 import { useT } from "../i18n";
@@ -73,9 +73,7 @@ export function TaskVerb({
             <DateInput
               {...control}
               value={due}
-              onChange={(event) =>
-                setDue(isISODate(event.target.value) ? event.target.value : "")
-              }
+              onChange={(event) => setDue(event.target.value)}
             />
           )}
         </Field>

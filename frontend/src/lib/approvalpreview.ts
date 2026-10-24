@@ -27,7 +27,6 @@ const PREVIEW_EFFECT_LABELS: Record<string, MessageKey> = {
   create_activity_record: "approval.import.createActivity",
   import_close_deal: "approval.import.closeDeal",
   rearm_held_message: "approval.scheduled.rearm",
-  direct_refused_message: "approval.scheduled.direct",
   apply_company_read: "approval.read.effect",
   queue_vat_check: "approval.read.vat_check",
   merge_records_release_source: "approval.preview.mergeRecords",
@@ -276,6 +275,7 @@ const PREVIEW_CONFLICT_LABELS: Record<string, MessageKey> = {
   ...LIFECYCLE_CONFLICT_LABELS,
   sender_signature_private: "approval.preview.signaturePrivate",
   import_scope_unavailable: "approval.preview.importScopeUnavailable",
+  email_names_no_one: "approval.preview.machineAddress",
 };
 
 export function commercialPreviewDisplay(

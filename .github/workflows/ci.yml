@@ -231,7 +231,6 @@ jobs:
               - 'pnpm-lock.yaml'
               - 'renovate.json'
               - 'README.md'
-              - 'CHANGELOG.md'
               - 'CLA.md'
               - 'LICENSING.md'
               - 'CODE_OF_CONDUCT.md'
@@ -538,6 +537,14 @@ jobs:
       - name: Backend static gate (make check-static)
         working-directory: .
         run: make check-static
+      # A test read outside its module that skips the tree digest merges green
+      # and breaks cache-warm's save hours later. Here it fails the PR that
+      # adds it. On this job because it finishes minutes before
+      # deterministic-gates, so the census's uncached pass adds no wall clock.
+      - name: Census the test cache's inputs (make test-input-census)
+        if: ${{ !cancelled() }}
+        working-directory: .
+        run: make test-input-census
 
   # The composed-build lane (ADR-0120): materialize the walking-skeleton
   # reference extension into extensions/, compose, and run the backend

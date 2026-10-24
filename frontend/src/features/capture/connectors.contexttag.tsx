@@ -1,6 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
+import { useSaveDraft } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
 import { SettingRow } from "../../design-system/settingrow";
 import { useT } from "../../i18n";
@@ -30,6 +32,21 @@ export function ConnectorContextTagRow({
   const save = useSetConnectorContextTag(conn.provider);
   const words = vocabulary.data?.tags ?? [];
   const chosen = conn.context_tag;
+  // The empty string is "files nothing"; null is "not touched".
+  const [draft, setDraft] = useState<string | null>(null);
+  const stored = chosen?.id ?? "";
+  const shown = draft ?? stored;
+  useSaveDraft({
+    dirty: shown !== stored,
+    save: async () => {
+      await save.mutateAsync(shown === "" ? null : shown);
+      setDraft(null);
+    },
+    discard: () => {
+      save.reset();
+      setDraft(null);
+    },
+  });
 
   // No vocabulary, or none this reader may see. A dial whose only option is
   // "none" asks a question with one answer — and unlike the import's, this row
@@ -56,9 +73,9 @@ export function ConnectorContextTagRow({
       control={
         <Select
           aria-label={t("connectors.contextTag.label")}
-          value={chosen?.id ?? ""}
+          value={shown}
           disabled={save.isPending}
-          onChange={(next) => save.mutate(next === "" ? null : next)}
+          onChange={setDraft}
           options={[
             { value: "", label: t("connectors.contextTag.none") },
             ...words.map((word) => ({ value: word.id, label: word.name })),
@@ -84,8 +101,8 @@ function useSetConnectorContextTag(provider: CaptureConnection["provider"]) {
         }),
       );
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["connectors"] });
-    },
+    // Awaited, so the row never flashes the old word once the draft drops.
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["connectors"] }),
   });
 }

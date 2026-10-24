@@ -15,7 +15,6 @@ import {
 import { Button } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { FieldGuard } from "../../design-system/rbac";
-import { Chip } from "../../design-system/readings";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { dealRecordKeys } from "../../lib/activitykeys";
@@ -23,6 +22,7 @@ import { ENTITY } from "../../lib/entity";
 import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
 import { navigate, routeHash } from "../../lib/router";
 import type { Project } from "../projects/projects.form";
+import "./deal360/deal360.css";
 
 // Where a deal meets its project: the picker on the deal form (with the
 // inline "new project" it can grow), the chip on the deal page, and the one
@@ -166,7 +166,6 @@ export function dealProjectFields(
       ? projectOwnerField(t, owner, {
           key: NEW_PROJECT_OWNER,
           label: "deal.newProjectOwner",
-          currentOwner: null,
           mode: "create",
         }).map((field) => ({ ...field, showWhen: startsProject }))
       : []),
@@ -205,40 +204,35 @@ export async function resolveDealProject(
   return data.id;
 }
 
-/** The deal's project as a linked chip, or nothing when it has none. */
-// A deal shows its project as a CHIP rather than as the ProjectLinks section
-// every other record draws, and deliberately so: a deal carries at most one
-// project, names it on the form that creates it, and changes it on the form
-// that edits it. A section offering "attach" beside a field that already sets
-// the same pointer would be two controls writing one column — the duplication
-// ProjectLinks exists to end, reintroduced from the other side.
-//
-// If a deal ever carries several projects, this becomes a ProjectLinks with
-// allowsMany and the form field goes.
-export function DealProjectChip({ deal }: Readonly<{ deal: Deal }>) {
+/** The deal's project as one line under its name, or nothing when it has none. */
+// A deal names its one project here rather than in the ProjectLinks section
+// every other record draws. The deal's form already sets that pointer, and a
+// section offering "attach" beside it would be two controls writing one column.
+export function DealProjectLine({ deal }: Readonly<{ deal: Deal }>) {
   const t = useT();
   const { name } = useEntityName("project", deal.project_id);
-  // A withheld project arrives as a null `project_id` with the field named in
-  // `masked_fields`, and drawing nothing at all would say this deal has no
-  // project — the same reading a deal that genuinely has none gets. The chip
-  // slot stays, carrying the mask, so the reader is told there IS a project and
-  // that it is not theirs to see. Not a link: there is no id to send them to.
+  // A withheld project keeps its line and carries the mask: drawing nothing
+  // would read as a deal with no project.
   if (deal.masked_fields?.includes("project_id")) {
     return (
-      <Chip icon={Briefcase}>
-        <FieldGuard mode="masked" />
-      </Chip>
+      <div className="deal-project-line">
+        {t("deal.project")} <FieldGuard mode="masked" />
+      </div>
     );
   }
   if (!deal.project_id) {
     return null;
   }
-  const href = routeHash(ENTITY.project.route(deal.project_id));
   return (
-    <a className="chip chip-link" href={href} data-testid="deal-project">
-      <Briefcase size={14} aria-hidden="true" />
-      <span>{name ?? t("deal.projectUnnamed")}</span>
-    </a>
+    <div className="deal-project-line">
+      {t("deal.project")}{" "}
+      <a
+        href={routeHash(ENTITY.project.route(deal.project_id))}
+        data-testid="deal-project"
+      >
+        {name ?? t("deal.projectUnnamed")}
+      </a>
+    </div>
   );
 }
 

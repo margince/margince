@@ -96,26 +96,42 @@ export function DealRoomAccess({
   );
 }
 
-// What this contact has actually done in the room, under the line that says
-// whether they have been here. A seat that has taken nothing says nothing:
-// "0 documents" reads as a judgement about the buyer, and the honest state
-// early in a room's life is simply that there is nothing to report yet.
-function ReadingSoFar({ participant }: Readonly<{ participant: Participant }>) {
+// What this contact has taken out of the room, as the end of the seat's line.
+// A seat that has taken nothing says nothing. "0 documents" reads as a
+// judgement about the buyer, and early in a room there is simply nothing yet.
+function useReadingSoFar(participant: Participant): string {
   const plural = usePlural();
   const { locale } = useLocale();
   const downloads = participant.download_count ?? 0;
   if (downloads === 0) {
-    return null;
+    return "";
   }
   const titles = participant.documents_downloaded ?? [];
-  return (
-    <p className="t-caption">
-      {plural("access.downloads", downloads, {
-        count: formatNumber(downloads, locale),
-      })}
-      {titles.length > 0 ? ` · ${titles.join(", ")}` : ""}
-    </p>
-  );
+  const count = plural("access.downloads", downloads, {
+    count: formatNumber(downloads, locale),
+  });
+  return titles.length > 0
+    ? ` · ${count}: ${titles.join(", ")}`
+    : ` · ${count}`;
+}
+
+// Where the seat stands, as the badge at the row's end. A link asked for is
+// the one a rep has to act on, so it reads before signed in.
+function SeatBadge({
+  participant,
+  revoked,
+}: Readonly<{ participant: Participant; revoked: boolean }>) {
+  const t = useT();
+  if (revoked) {
+    return <Badge>{t("access.state.revokedBadge")}</Badge>;
+  }
+  if (participant.link_requested_at) {
+    return <Badge tone="warning">{t("access.state.linkRequestedBadge")}</Badge>;
+  }
+  if (participant.has_signed_in) {
+    return <Badge tone="success">{t("access.state.signedInBadge")}</Badge>;
+  }
+  return <Badge>{t("access.state.invitedBadge")}</Badge>;
 }
 
 function ParticipantRow({
@@ -132,6 +148,7 @@ function ParticipantRow({
   const revoked =
     participant.revoked_at !== null && participant.revoked_at !== undefined;
   const capability = CAPABILITIES.find((c) => c === participant.capability);
+  const readingSoFar = useReadingSoFar(participant);
   return (
     <PanelRow
       className={revoked ? "access-row access-row-revoked" : "access-row"}
@@ -154,8 +171,8 @@ function ParticipantRow({
           {participant.last_seen_at
             ? ` · ${t("access.lastSeen", { when: formatDateAbbrev(participant.last_seen_at, locale, recordZone) })}`
             : ""}
+          {readingSoFar}
         </p>
-        <ReadingSoFar participant={participant} />
         {participant.link_requested_at && !revoked ? (
           <p className="t-caption access-row-request">
             <Link2 aria-hidden />
@@ -170,7 +187,7 @@ function ParticipantRow({
         ) : null}
       </div>
       <div className="access-row-side">
-        {revoked ? <Badge>{t("access.state.revokedBadge")}</Badge> : null}
+        <SeatBadge participant={participant} revoked={revoked} />
         {mayManage && !revoked ? (
           <OverflowMenu
             label={t("table.rowActions", { name: participant.full_name })}

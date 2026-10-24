@@ -3,6 +3,13 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { translate } from "../../i18n";
 import type { RbacObject } from "../../lib/capability";
+import {
+  SETTINGS_GROUPS,
+  SETTINGS_PAGES,
+  type SettingsGroupId,
+  type SettingsPageId,
+  visibleSettingsPages,
+} from "../../lib/settingscatalog";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
   expectNavSettlesTo,
@@ -16,13 +23,6 @@ import {
   UNGATED_IDS,
 } from "../../testing/settings.testkit";
 import { navGroupNames } from "../../testing/shellharness";
-import {
-  SETTINGS_GROUPS,
-  SETTINGS_PAGES,
-  type SettingsGroupId,
-  type SettingsPageId,
-  visibleSettingsPages,
-} from "./settingscatalog";
 import { SETTINGS_HOME_ID } from "./settingsnav";
 
 // WHICH pages the settings level offers a principal, as a whole list.

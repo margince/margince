@@ -62,7 +62,7 @@ export function AgentConnectionsCard() {
                 undefined,
               )}
               onCommit={(next) =>
-                update.mutate({ oauth_access_token_ttl_minutes: next })
+                update.mutateAsync({ oauth_access_token_ttl_minutes: next })
               }
             />
           </SettingList>

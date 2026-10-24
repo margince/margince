@@ -7,49 +7,47 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { en } from "../../i18n/en";
 import type { InstallOutcome } from "../../lib/pwa";
-import { InstallPanel } from "./thisdevice";
+import { InstallSettingRow } from "./thisdevice";
 
 const INSTALL = { name: en["settings.installAppAction"] };
 
-function panel() {
-  return screen.queryByRole("region", { name: en["settings.deviceCard"] });
-}
-
 describe("the install row, by install state", () => {
   it("offers Install where the browser kept its offer", () => {
-    render(<InstallPanel install={{ kind: "available", prompt: vi.fn() }} />);
-    expect(panel()).not.toBeNull();
+    render(
+      <InstallSettingRow install={{ kind: "available", prompt: vi.fn() }} />,
+    );
+    expect(screen.getByText(en["settings.installApp"])).toBeTruthy();
     expect(screen.getByText(en["settings.installAppHelp"])).toBeTruthy();
     expect(screen.getByRole("button", INSTALL)).toBeTruthy();
   });
 
   it("points a reader who turned the offer down at the browser, with nothing to press", () => {
-    render(<InstallPanel install={{ kind: "dismissed" }} />);
+    render(<InstallSettingRow install={{ kind: "dismissed" }} />);
     expect(screen.getByText(en["settings.installAppDismissed"])).toBeTruthy();
     expect(screen.queryByRole("button", INSTALL)).toBeNull();
   });
 
   it("tells an iPhone or iPad reader how to add it, with nothing to press", () => {
-    render(<InstallPanel install={{ kind: "manual-ios" }} />);
+    render(<InstallSettingRow install={{ kind: "manual-ios" }} />);
     expect(screen.getByText(en["settings.installAppManual"])).toBeTruthy();
     expect(screen.queryByRole("button", INSTALL)).toBeNull();
   });
 
   it("states that it is installed, with nothing to press", () => {
-    render(<InstallPanel install={{ kind: "installed" }} />);
+    render(<InstallSettingRow install={{ kind: "installed" }} />);
     expect(screen.getByText(en["settings.installAppInstalled"])).toBeTruthy();
     expect(screen.queryByRole("button", INSTALL)).toBeNull();
   });
 
-  it("is absent, panel and all, where the browser cannot install", () => {
+  it("is absent where the browser cannot install", () => {
     const { container } = render(
-      <InstallPanel install={{ kind: "unavailable" }} />,
+      <InstallSettingRow install={{ kind: "unavailable" }} />,
     );
     expect(container.childElementCount).toBe(0);
   });
 
   it("takes no focus when it opens already dismissed", () => {
-    render(<InstallPanel install={{ kind: "dismissed" }} />);
+    render(<InstallSettingRow install={{ kind: "dismissed" }} />);
     expect(document.activeElement).toBe(document.body);
   });
 });
@@ -91,9 +89,12 @@ afterEach(() => {
 async function page() {
   vi.resetModules();
   const pwa = await import("../../lib/pwa");
-  const { ThisDevicePanel } = await import("./thisdevice");
+  const { InstallSettingRow } = await import("./thisdevice");
   listening.push(pwa.listenForInstall());
-  return ThisDevicePanel;
+  // The row wired to the live install store, as the account page wires it.
+  return function ThisDevicePanel() {
+    return <InstallSettingRow install={pwa.useInstallState()} />;
+  };
 }
 
 describe("installing from the row", () => {

@@ -115,9 +115,10 @@ func (w *csvWriters) predictLanding(ctx context.Context, row migration.Row, type
 // predictCreatePath is what the commit will do with a row no previous run of
 // this importer landed.
 //
-// Two questions, in this order and the order matters. First, whether a contact's
-// address is already spoken for: uq_contact_email_dedupe is estate-wide, so the
-// store refuses that row whoever holds the address, and a preview promising a
+// Two kinds of question, in this order and the order matters. First, whether a
+// key the store refuses is already spoken for: a contact's or lead's address, a
+// company's domain, a lead's or company's LinkedIn URL. Each key is estate-wide,
+// so the store refuses that row whoever holds it, and a preview promising a
 // create would simply be wrong. It runs BEFORE the collision check and is not a
 // disclosure decision — the outcome is identical for an incumbent the caller can
 // see and one they cannot, which is what stops the commit's answer being an
@@ -142,6 +143,13 @@ func (w *csvWriters) predictCreatePath(ctx context.Context, row migration.Row, t
 	}
 	if claimed {
 		return predictUnwritable, contactEmailClaimedWhy, nil
+	}
+	takenLead, err := w.leadEmailAlreadyHeld(ctx, row)
+	if err != nil {
+		return predictCreate, migration.Reason{}, err
+	}
+	if takenLead {
+		return predictUnwritable, naturalKeyTakenWhy, nil
 	}
 	takenDomain, err := w.companyDomainAlreadyHeld(ctx, row)
 	if err != nil {

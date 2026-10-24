@@ -21,9 +21,9 @@ import { useMe } from "../../lib/session";
 import { bandTone } from "../ai/aiusage";
 import "./embedreindex.css";
 import { useNow } from "../../format/now";
-import { available } from "./settingscapability";
-import { holds } from "./settingscatalog";
-import { settingsHref } from "./settingsrouting";
+import { available } from "../../lib/settingscapability";
+import { holds } from "../../lib/settingscatalog";
+import { settingsHref } from "../../lib/settingsrouting";
 
 // The v6 B2 embedding-reindex surface (ADR-0068 design §5.6-swap). The
 // status read is admin/ops-only server-side now (migration 0115:

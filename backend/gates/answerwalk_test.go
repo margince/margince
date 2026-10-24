@@ -12,10 +12,12 @@ package gates
 // question it asks.
 
 import (
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
 	"io/fs"
+	"maps"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -32,16 +34,32 @@ const answerWalkOwner = "internal/modules/activities/answered.go:threadAnswerArm
 // answerWalksAdmitted are the thread walks that ask something other than
 // "was this inbound answered", keyed by file and declaration.
 var answerWalksAdmitted = gatekit.Waive(map[string]string{
-	"internal/modules/activities/answered.go:owedSQL":                 "The owed predicate checks whether a newer inbound exists and delegates all reply evidence to answeredSQL in the same owner. Expanding shared fragments exposes that delegated read; no second answer predicate is defined here.",
 	"internal/modules/activities/awaitingreply.go:awaitingRepliesSQL": "the mirror question: whether a message the READER sent is still the last word on its thread, so the reader is reminded to follow up. It asks about our outbound, never whether an inbound was answered, and decides no needs-reply badge",
 	answerWalkOwner: "the thread arm of the one answer: every surface that shows needs-reply, a waiting row, request review or the response time reads it through answeredSQL or firstAnswerAtSQL",
-	"internal/modules/activities/waitingsql.go:waitingRepliesSQL":           "the Engaged column asks whether we wrote on the thread BEFORE the message arrived, to rank the row; it is reported, never used to hide one",
-	"internal/modules/activities/ourownoutbound.go:ourOutboundInThisThread": "the settlement pass and the owed-verdict prior message find OUR attested message to one correspondent, to stamp what a request was judged through or to show the model what we last wrote. A reply settles no request by itself, so this decides no badge and no lane row; the settlement's answers off the thread come from answered.go's own arms",
-	"internal/compose/requestsettle.go:conversationRows":                    "reads the request and the messages after it, both directions, bound to one attested correspondent, as the settlement model's evidence, or the one such message a verdict is recorded through; it answers nothing itself",
-	"internal/modules/capture/sinkreply.go:emitReply":                       "capture's reply formula: an inbound on a thread we wrote on is a reply for the engagement score, whichever came first; a question about the counterparty, not about whether this message is owed",
-	"internal/modules/capture/correspondencegate.go:wroteOnTwoThreadsTx":    "counts the separate threads we wrote to one address on, as evidence of a relationship for the first-time-sender gate; it reads no inbound and answers nothing",
-	"internal/modules/capture/correspondencegate.go:wroteBackTx":            "the first-time-sender gate asks whether the workspace has a conversation with this address on this thread at all, deliberately unordered in time so a post-dated Date header cannot defeat it; not whether one message was answered",
-	"internal/modules/capture/replyevidence.go:ownerAnswered":               "the reverse question: whether the address answered US, on a thread we wrote on, as the evidence that publishes a contact kept private while our mail went unanswered; it decides no badge and no lane row",
+	"internal/modules/activities/waitingsql.go:waitingRepliesSQL":                    "the Engaged column asks whether we wrote on the thread BEFORE the message arrived, to rank the row; it is reported, never used to hide one",
+	"internal/modules/activities/ourownoutbound.go:ourOutboundInThisThread":          "the settlement pass and the owed-verdict prior message find OUR attested message to one correspondent, to stamp what a request was judged through or to show the model what we last wrote. A reply settles no request by itself, so this decides no badge and no lane row; the settlement's answers off the thread come from answered.go's own arms",
+	"internal/compose/requestsettle.go:conversationRows":                             "reads the request and the messages after it, both directions, bound to one attested correspondent, as the settlement model's evidence, or the one such message a verdict is recorded through; it answers nothing itself",
+	"internal/modules/activities/promisefollowup.go:PromiseFollowUpsTx":              "the Done? cue on a promise we made: our later mail on the promise's thread to the contact it was made to. It asks about a promise, never whether an inbound was answered, and settles nothing; the reader decides",
+	"internal/modules/capture/sinkreply.go:emitReply":                                "capture's reply formula: an inbound on a thread we wrote on is a reply for the engagement score, whichever came first; a question about the counterparty, not about whether this message is owed",
+	"internal/modules/capture/correspondencegate.go:wroteOnTwoThreadsTx":             "counts the separate threads we wrote to one address on, as evidence of a relationship for the first-time-sender gate; it reads no inbound and answers nothing",
+	"internal/modules/capture/correspondencegate.go:wroteBackTx":                     "the first-time-sender gate asks whether the workspace has a conversation with this address on this thread at all, deliberately unordered in time so a post-dated Date header cannot defeat it; not whether one message was answered",
+	"internal/modules/activities/owedreview.go:owedReviewReadTx":                     "the owed-verdict review shows the reader our attested last message to one correspondent, composed from ourOutboundInThisThread; it decides no badge and no lane row",
+	"internal/modules/activities/owedverdict.go:priorOutboundVisibleJoin":            "the owed verdict's prior message, our attested mail to one correspondent through ourOutboundInThisThread, shown to the model as what we last wrote; it decides no badge",
+	"internal/modules/activities/owedverdict.go:priorOutboundFrom":                   "the FROM and WHERE of the owed verdict's prior message: our newest attested mail to one correspondent before the candidate, through ourOutboundInThisThread. It finds the message to show or test, never whether the inbound was answered (TestARequestIsNotJudgedAgainstOurLastMessageReadOnlyInPart reads through it)",
+	"internal/modules/activities/owedverdict.go:priorContextComplete":                "whether that prior message, found by priorOutboundFrom, was read in full; a candidate whose prior message was not is not judged. It asks about the prior message's text, never whether the inbound was answered (TestARequestIsNotJudgedAgainstOurLastMessageReadOnlyInPart: refused when read in part, offered when read in full)",
+	"internal/modules/activities/requestsettlement.go:newestAnswer":                  "the settlement pass reads its own evidence query (settlementAnswersSQL) for the newest candidate answer to stamp; whether an inbound was answered stays answered.go's",
+	"internal/modules/activities/requestsettlement.go:repliedRequestsSQL":            "selects requests that have settlement evidence through settlementAnswersSQL, to stamp what a request was judged through; it decides no needs-reply badge",
+	"internal/modules/activities/requestsettlement.go:settlementAnswersSQL":          "the settlement evidence: our attested reply to the request's correspondent (ourOutboundInThisThread) or an authenticated off-thread answer, to stamp what a request was judged through; a reply settles no request by itself",
+	"internal/modules/activities/whichdealanswer.go:answerWhichDealTx":               "a colleague's deal answer files the rest of one conversation on the chosen deal; it reads our attested mail and authenticated inbound mail in the thread to decide which rows may follow, never whether an inbound was answered",
+	"internal/modules/capture/replyevidence.go:OwnerWasAnsweredTx":                   "the entry point of ownerAnswered's reverse question: whether the address answered us on a thread we wrote on; it decides no badge and no lane row",
+	"internal/modules/capture/sinkdealdecide.go:threadDeals":                         "the deal rule follows a deal our own attested mail in the thread is filed under, and only when the mail's company owns that deal; it asks which deal a message is about, never whether an inbound was answered",
+	"internal/modules/capture/replyevidence.go:ownerAnswered":                        "the reverse question: whether the address answered US, on a thread we wrote on, as the evidence that publishes a contact kept private while our mail went unanswered; it decides no badge and no lane row",
+	"internal/modules/activities/requestsettlementevidence.go:settlementEvidenceSQL": "names the request and its settlement answers (settlementAnswersSQL) as id:version pairs, so a verdict records what it read; it decides no needs-reply badge",
+	"internal/modules/activities/requestsettlementevidence.go:evidenceUnchanged":     "locks the settlement answers (settlementAnswersSQL) and compares them with what the verdict read; it decides no needs-reply badge",
+	"internal/modules/activities/requestsettlementlock.go:lostSettlementBasisSQL":    "finds settled verdicts with no settlement answer left (settlementAnswersSQL), to withdraw them as unsure; it decides no needs-reply badge",
+	"internal/modules/activities/requestsettlementlock.go:withdrawLostSettlement":    "rechecks one verdict through lostSettlementBasisSQL under the verdict's locks before withdrawing it; it decides no needs-reply badge",
+	"internal/modules/activities/requestsettlementlock.go:holdSettlementEvidenceTx":  "locks the request's settlement answers (settlementAnswersSQL) before its conversation keys, so a verdict and a writer take locks in one order; it decides no needs-reply badge",
+	"internal/modules/activities/requestsettlementrepair.go:settlementRepairItemTx":  "the reviewed repair asks whether a legacy settled request still has a settlement answer (settlementAnswersSQL) to judge; it decides no needs-reply badge",
 })
 
 // Both patterns read a statement lower-cased with its whitespace folded, so
@@ -73,10 +91,36 @@ var foldSpace = regexp.MustCompile(`\s+`)
 // answerWalkSites names every declaration in the source whose SQL joins an
 // outbound row to a thread, as "path:declaration".
 func answerWalkSites(path string, file *ast.File) []string {
+	return answerWalkSitesIn(path, file, packageFragments(map[string]*ast.File{path: file}))
+}
+
+// fragment is a package-level SQL helper and the file it is declared in.
+type fragment struct {
+	body ast.Node
+	path string
+}
+
+// packageFragments maps every receiver-less function of one package to its
+// body, across all its files. A walk assembled from a helper in a sibling
+// file is still one walk.
+func packageFragments(files map[string]*ast.File) map[string]fragment {
+	out := map[string]fragment{}
+	for path, file := range files {
+		for _, candidate := range file.Decls {
+			if fn, ok := candidate.(*ast.FuncDecl); ok && fn.Recv == nil {
+				out[fn.Name.Name] = fragment{body: fn.Body, path: path}
+			}
+		}
+	}
+	return out
+}
+
+// answerWalkSitesIn is answerWalkSites with the package's helpers.
+func answerWalkSitesIn(path string, file *ast.File, fragments map[string]fragment) []string {
 	var sites []string
 	for _, decl := range file.Decls {
 		name := declarationName(decl)
-		if slices.ContainsFunc(answerWalkStatements(file, decl), walksForOutbound) {
+		if slices.ContainsFunc(answerWalkStatements(decl, fragments), walksForOutbound) {
 			sites = append(sites, path+":"+name)
 		}
 	}
@@ -84,14 +128,11 @@ func answerWalkSites(path string, file *ast.File) []string {
 }
 
 // A shared fragment can hold the thread match while its caller adds direction.
-func answerWalkStatements(file *ast.File, decl ast.Decl) []string {
+// A helper in a sibling file, or one that is itself a walk, is expanded too.
+// So a caller composing it with more SQL is seen. Calling the answer owner's
+// file is the delegation the census asks for, so it is not expanded.
+func answerWalkStatements(decl ast.Decl, fragments map[string]fragment) []string {
 	statements := gatekit.SQLStatementsOf(decl)
-	fragments := map[string]ast.Node{}
-	for _, candidate := range file.Decls {
-		if fn, ok := candidate.(*ast.FuncDecl); ok && fn.Recv == nil {
-			fragments[fn.Name.Name] = fn.Body
-		}
-	}
 	ast.Inspect(decl, func(node ast.Node) bool {
 		joined, ok := node.(*ast.BinaryExpr)
 		if !ok || joined.Op != token.ADD {
@@ -99,34 +140,89 @@ func answerWalkStatements(file *ast.File, decl ast.Decl) []string {
 		}
 		parts := gatekit.SQLStatementsOf(joined)
 		seen := map[string]bool{}
-		var include func(ast.Node)
-		include = func(root ast.Node) {
+		var include func(ast.Node, string)
+		include = func(root ast.Node, pkg string) {
 			ast.Inspect(root, func(n ast.Node) bool {
 				call, ok := n.(*ast.CallExpr)
 				if !ok {
 					return true
 				}
-				name, ok := call.Fun.(*ast.Ident)
-				if !ok || seen[name.Name] || fragments[name.Name] == nil {
+				key, callee := fragmentKey(call, pkg)
+				if key == "" || seen[key] {
 					return true
 				}
-				seen[name.Name] = true
-				body := fragments[name.Name]
+				helper, known := fragments[key]
+				if !known {
+					return true
+				}
+				seen[key] = true
+				body := helper.body
 				bodySQL := gatekit.SQLStatementsOf(body)
-				if slices.ContainsFunc(bodySQL, walksForOutbound) {
+				if helper.path == answerWalkOwnerFile {
 					return true
 				}
 				parts = append(parts, bodySQL...)
-				include(body)
+				include(body, callee)
 				return true
 			})
 		}
-		include(joined)
+		include(joined, "")
 		statements = append(statements, strings.Join(parts, " "))
 		return true
 	})
 	return statements
 }
+
+// fragmentKey names the helper a call reaches: a bare name inside pkg, or a
+// shared kernel package's function as "pkg.Name". It answers the package the
+// helper's own bare calls resolve in.
+func fragmentKey(call *ast.CallExpr, pkg string) (key, callee string) {
+	switch fun := call.Fun.(type) {
+	case *ast.Ident:
+		if pkg != "" {
+			return pkg + "." + fun.Name, pkg
+		}
+		return fun.Name, ""
+	case *ast.SelectorExpr:
+		if x, ok := fun.X.(*ast.Ident); ok {
+			return x.Name + "." + fun.Sel.Name, x.Name
+		}
+	}
+	return "", ""
+}
+
+// kernelFragments are the shared kernel's SQL helpers, keyed "pkg.Name". A
+// module composes a walk from them as it does from its own helpers, so the
+// census expands them too.
+func kernelFragments(t *testing.T) map[string]fragment {
+	t.Helper()
+	out := map[string]fragment{}
+	err := filepath.WalkDir(filepath.Join("internal", "shared", "kernel"), func(path string, entry fs.DirEntry, err error) error {
+		if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return err
+		}
+		file, err := gatekit.ParseFile(path, 0)
+		if err != nil {
+			return err
+		}
+		for _, candidate := range file.Decls {
+			if fn, ok := candidate.(*ast.FuncDecl); ok && fn.Recv == nil {
+				out[file.Name.Name+"."+fn.Name.Name] = fragment{body: fn.Body, path: filepath.ToSlash(path)}
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("reading the shared kernel's helpers: %v", err)
+	}
+	if len(out) == 0 {
+		t.Fatal("no shared kernel helper was read, so a walk composed from one would go unseen")
+	}
+	return out
+}
+
+// answerWalkOwnerFile is the file whose helpers are the one answer.
+const answerWalkOwnerFile = "internal/modules/activities/answered.go"
 
 // walksForOutbound reports a statement that pins rows to a thread and asks
 // for our own sent message. It does not require the two to name the same
@@ -141,11 +237,13 @@ func TestOnlyTheAnswerPredicateWalksAThreadForOurReply(t *testing.T) {
 	t.Parallel()
 	defer answerWalksAdmitted.AssertAllMatched(t)
 	var found []string
+	kernel := kernelFragments(t)
 	for _, root := range []string{"internal", "extensions", "cmd"} {
 		walkRoot := root
 		if root == "extensions" {
 			walkRoot = filepath.Join("..", "extensions")
 		}
+		packages := map[string]map[string]*ast.File{}
 		err := filepath.WalkDir(walkRoot, func(path string, entry fs.DirEntry, err error) error {
 			if err != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") ||
 				strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") {
@@ -155,9 +253,20 @@ func TestOnlyTheAnswerPredicateWalksAThreadForOurReply(t *testing.T) {
 			if err != nil {
 				return err
 			}
-			found = append(found, answerWalkSites(filepath.ToSlash(path), file)...)
+			dir := filepath.Dir(path)
+			if packages[dir] == nil {
+				packages[dir] = map[string]*ast.File{}
+			}
+			packages[dir][filepath.ToSlash(path)] = file
 			return nil
 		})
+		for _, files := range packages {
+			fragments := packageFragments(files)
+			maps.Copy(fragments, kernel)
+			for path, file := range files {
+				found = append(found, answerWalkSitesIn(path, file, fragments)...)
+			}
+		}
 		if err != nil {
 			t.Fatalf("walking %s: %v", walkRoot, err)
 		}
@@ -218,6 +327,43 @@ func TestTheAnswerWalkCensusFindsAPlantedBypass(t *testing.T) {
 		if len(answerWalkSites(name+".go", file)) == 0 {
 			t.Errorf("the census missed a planted %s walk", name)
 		}
+	}
+	// A walk assembled from a helper in a sibling file is one walk too. So is
+	// a caller composing a helper that is itself a walk.
+	for name, pair := range map[string][2]string{
+		"sibling fragment": {
+			"package p\nfunc thread() string { return `r.thread_key = a.thread_key` }\n",
+			"package p\nfunc f() string { return thread() + ` AND r.direction = 'outbound'` }\n",
+		},
+		"composed": {
+			"package p\nfunc ours() string { return `r.thread_key = a.thread_key AND r.direction = 'outbound'` }\n",
+			"package p\nfunc f() string { return `SELECT 1 WHERE ` + ours() + ` AND r.restricted_at IS NULL` }\n",
+		},
+	} {
+		files := map[string]*ast.File{}
+		for i, source := range pair {
+			path := fmt.Sprintf("%s%d.go", name, i)
+			file, err := parser.ParseFile(gatekit.SourceFileSet(), path, source, 0)
+			if err != nil {
+				t.Fatalf("parsing the planted %s walk: %v", name, err)
+			}
+			files[path] = file
+		}
+		caller := name + "1.go"
+		if len(answerWalkSitesIn(caller, files[caller], packageFragments(files))) == 0 {
+			t.Errorf("the census missed a planted %s walk", name)
+		}
+	}
+	// A walk composed from the shared kernel's conversation helpers is a walk.
+	kernelComposed := "package p\nfunc f() string { return correspondence.ConversationSQL(\"r\", \"a\") + ` AND ` + correspondence.OurOutboundSQL(\"r\") }\n"
+	composedFile, err := parser.ParseFile(gatekit.SourceFileSet(), "kernel.go", kernelComposed, 0)
+	if err != nil {
+		t.Fatalf("parsing the planted kernel walk: %v", err)
+	}
+	fragments := packageFragments(map[string]*ast.File{"kernel.go": composedFile})
+	maps.Copy(fragments, kernelFragments(t))
+	if len(answerWalkSitesIn("kernel.go", composedFile, fragments)) == 0 {
+		t.Error("the census missed a walk composed from the shared kernel's helpers")
 	}
 	inboundOnly := "package p\nconst q = `SELECT 1 FROM activity n WHERE n.thread_key = a.thread_key " +
 		"AND n.direction = 'inbound'`\n"

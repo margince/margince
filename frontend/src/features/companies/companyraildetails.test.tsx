@@ -8,20 +8,13 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
-import { DetailsGrid } from "./companyraildetails";
+import { CompanyRail } from "./companyrail";
 
-// The address is six rows of one fact, and a crawled record fills none of them:
-// a team page names no registered address. Drawn inline, the panel opened with
-// six consecutive invitations to type and pushed the account's actual facts
-// below the fold — so the parts sit behind a disclosure that is closed exactly
-// when there is nothing in them.
-//
-// Both cases assert on the browser's own state (`details.open`, and jest-dom's
-// `toBeVisible`, which is the one matcher that knows a closed `<details>` hides
-// its content): the six labels stay in the DOM either way, and dom-testing-
-// library's role queries return them whether the disclosure is open or shut, so
-// an absence assertion phrased as a missing node would pass on markup that
-// shows the reader all six.
+// The company's register facts in its details. One is the VAT number the
+// design draws in Registration (an "Add…" invitation while empty). The other
+// is the postal address, edited as one six-part form. The registered address
+// is a Profile tab field (companyprofiledetails.test.tsx), never a row of this
+// column.
 
 type Company = components["schemas"]["Company"];
 type ProfileField = components["schemas"]["CompanyProfileField"];
@@ -38,7 +31,7 @@ const COMPANY: Company = {
   display_name: "Brandt Automotive GmbH",
   lifecycle: "customer",
   owner_id: "u-1",
-  industry: "Automotive",
+  industry: "automotive",
   captured_by: "human:u-author",
   source: "manual",
   version: 1,
@@ -46,9 +39,8 @@ const COMPANY: Company = {
   updated_at: "2026-06-01T08:00:00Z",
 };
 
-// The same record with one address part filled — the state that keeps the
-// disclosure open. Typed, so a part name the wire stops carrying fails here
-// rather than quietly asserting on a field the grid no longer reads.
+// The same record with one address part filled. Typed, so a part name the wire
+// stops carrying fails here rather than asserting on a field nobody reads.
 const COMPANY_WITH_CITY: Company = { ...COMPANY, address: { city: "Berlin" } };
 
 // The six part labels, in the order the grid draws them.
@@ -161,7 +153,7 @@ function renderGrid(company: Company) {
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <DetailsGrid company={company} />
+        <CompanyRail company={company} loading={false} />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -187,15 +179,15 @@ async function renderSettledGrid(
 // state one it had missed — and most sites print no imprint at all, so the
 // field a contact most often knows was the field they could never record.
 describe("the legal identity a contact can state", () => {
-  it("invites a VAT number and a registry address on a record carrying neither", async () => {
+  it("invites a VAT number and draws no registry address row, folded or not", async () => {
+    const user = userEvent.setup();
     await renderSettledGrid(COMPANY);
 
-    // Visible, not merely present: these sit in the identity grid beside the
-    // legal name, never inside the address disclosure, which is closed here.
-    expect(screen.getByText("Add VAT ID")).toBeVisible();
-    expect(screen.getByText("Add registered address")).toBeVisible();
-    expect(screen.getByText("Register / VAT ID")).toBeVisible();
-    expect(screen.getByText("Registered address")).toBeVisible();
+    expect(screen.getByText("VAT ID")).toBeVisible();
+    expect(screen.getByText("Add…")).toBeVisible();
+
+    await user.click(screen.getByRole("button", { name: /Show \d+ empty/ }));
+    expect(screen.queryByText("Registered address")).toBeNull();
   });
 
   // The defect the whole move is about: this verdict used to live on another
@@ -219,7 +211,7 @@ describe("the legal identity a contact can state", () => {
 
     // In the same row as the number, which is the entire point.
     const mark = await screen.findByRole("button", { name: "VAT ID: Valid" });
-    const row = screen.getByText("DE811907980").closest(".fieldgrid-value");
+    const row = screen.getByText("DE811907980").closest(".factlist-value");
     expect(row).toContainElement(mark);
   });
 
@@ -289,68 +281,35 @@ describe("the legal identity a contact can state", () => {
 
     // The industry row edits (it reads the company, which HAS answered);
     // the sidecar rows do not, because their own read has not.
-    expect(
-      screen.queryByRole("button", { name: "Change Register / VAT ID" }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Change VAT ID" })).toBeNull();
 
     releaseFields?.(
       json({ data: [profileField("register_vat", "DE811907980")] }),
     );
     expect(
-      await screen.findByRole("button", { name: "Change Register / VAT ID" }),
+      await screen.findByRole("button", { name: "Change VAT ID" }),
     ).toBeTruthy();
   });
 
-  it("carries no verdict on the registry address, which no register answers for", async () => {
-    // BOTH sidecar fields, and the VAT one answered: the mark draws nothing
-    // until its read settles, so a fixture with only the address would find no
-    // mark whether or not the field guard exists. Waiting for the VAT mark to
-    // appear is what makes the address's own absence a settled fact.
-    await renderSettledGrid(
-      COMPANY,
-      [
-        profileField("register_vat", "DE811907980"),
-        profileField("registered_address", "Kaiserdamm 1, 14057 Berlin"),
-      ],
-      {
-        vatCheck: () =>
-          json({
-            company_id: "o-1",
-            vat_number: "DE811907980",
-            status: "valid",
-            checked_at: "2026-08-14T09:12:00Z",
-          }),
-      },
-    );
-    await screen.findByRole("button", { name: "VAT ID: Valid" });
-
-    // Exactly one mark on the panel, and it is not the address's.
-    expect(screen.getAllByRole("button", { name: /VAT ID:/ })).toHaveLength(1);
-    const addressRow = screen
-      .getByText("Kaiserdamm 1, 14057 Berlin")
-      .closest(".fieldgrid-value");
-    expect(addressRow?.querySelector('[class*="vatmark"]')).toBeNull();
-  });
-
-  it("reads back the values the crawl already found", async () => {
+  it("reads back the VAT number the crawl already found", async () => {
     await renderSettledGrid(COMPANY, [
       profileField("register_vat", "DE811907980"),
       profileField("registered_address", "Kaiserdamm 1, 14057 Berlin"),
     ]);
 
     expect(await screen.findByText("DE811907980")).toBeVisible();
-    expect(screen.getByText("Kaiserdamm 1, 14057 Berlin")).toBeVisible();
-    expect(screen.queryByText("Add VAT ID")).toBeNull();
+    expect(screen.queryByText("Add…")).toBeNull();
+    // The registered address is on the Profile tab, so the column stays the
+    // design's three groups however much the crawl found.
+    expect(screen.queryByText("Kaiserdamm 1, 14057 Berlin")).toBeNull();
   });
 
   it("states a typed VAT number through the profile-field correction", async () => {
     const user = userEvent.setup();
     const calls = await renderSettledGrid(COMPANY);
 
-    await user.click(
-      screen.getByRole("button", { name: "Change Register / VAT ID" }),
-    );
-    await user.type(screen.getByLabelText("Register / VAT ID"), "DE811907980");
+    await user.click(screen.getByRole("button", { name: "Change VAT ID" }));
+    await user.type(screen.getByLabelText("VAT ID"), "DE811907980");
     await user.keyboard("{Enter}");
 
     // The endpoint matters as much as the value: this is the write that queues
@@ -378,11 +337,9 @@ describe("the legal identity a contact can state", () => {
     ]);
     await screen.findByText("DE111111111");
 
-    await user.click(
-      screen.getByRole("button", { name: "Change Register / VAT ID" }),
-    );
-    await user.clear(screen.getByLabelText("Register / VAT ID"));
-    await user.type(screen.getByLabelText("Register / VAT ID"), "DE811907980");
+    await user.click(screen.getByRole("button", { name: "Change VAT ID" }));
+    await user.clear(screen.getByLabelText("VAT ID"));
+    await user.type(screen.getByLabelText("VAT ID"), "DE811907980");
     await user.keyboard("{Enter}");
 
     // Two contacts correcting the same number: unpinned, the second silently
@@ -422,10 +379,8 @@ describe("the legal identity a contact can state", () => {
     );
     await screen.findByText("DE811907980");
 
-    await user.click(
-      screen.getByRole("button", { name: "Change Register / VAT ID" }),
-    );
-    await user.clear(screen.getByLabelText("Register / VAT ID"));
+    await user.click(screen.getByRole("button", { name: "Change VAT ID" }));
+    await user.clear(screen.getByLabelText("VAT ID"));
     await user.keyboard("{Enter}");
 
     expect(
@@ -433,7 +388,7 @@ describe("the legal identity a contact can state", () => {
     ).toBeVisible();
     // The refused write left the claim standing, so the draft is still there to
     // correct rather than the row having gone blank under the reader.
-    expect(screen.getByLabelText("Register / VAT ID")).toBeVisible();
+    expect(screen.getByLabelText("VAT ID")).toBeVisible();
   });
 
   it.each([
@@ -447,14 +402,10 @@ describe("the legal identity a contact can state", () => {
       const reads = () => calls.filter((one) => one.pathname === "/v1/me");
       const before = reads().length;
 
-      await user.click(
-        screen.getByRole("button", { name: "Change Register / VAT ID" }),
-      );
-      await user.type(screen.getByLabelText("Register / VAT ID"), "DE1");
+      await user.click(screen.getByRole("button", { name: "Change VAT ID" }));
+      await user.type(screen.getByLabelText("VAT ID"), "DE1");
       await user.keyboard("{Enter}");
-      await waitFor(() =>
-        expect(screen.queryByLabelText("Register / VAT ID")).toBeNull(),
-      );
+      await waitFor(() => expect(screen.queryByLabelText("VAT ID")).toBeNull());
 
       expect(reads().length > before).toBe(refetched);
     },
@@ -465,6 +416,7 @@ describe("the grouped postal address", () => {
   it("keeps the six parts behind one editor even when the address is empty", async () => {
     const user = userEvent.setup();
     await renderSettledGrid(COMPANY);
+    await user.click(screen.getByRole("button", { name: /Show \d+ empty/ }));
     await user.click(screen.getByRole("button", { name: "Change Address" }));
     for (const label of PART_LABELS)
       expect(screen.getByLabelText(new RegExp(label))).toBeVisible();

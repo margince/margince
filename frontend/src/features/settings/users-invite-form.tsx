@@ -11,13 +11,14 @@ import {
   useRoster,
   useRosterPartial,
 } from "../../components/entityref";
-import { Button, Checkbox, Field, TextInput } from "../../design-system/atoms";
-import { Callout } from "../../design-system/callout";
+import { Button, Field, TextInput } from "../../design-system/atoms";
+import { ChoiceList } from "../../design-system/choicelist";
+import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import { useHoldsAdminRole } from "../../lib/capability";
-import { problemMessageOf, unwrap } from "../../lib/problem";
+import { unwrap } from "../../lib/problem";
 import { roleOptions, useAssignableRoles } from "../../lib/roles.queries";
 import { AccessPreviewPanel } from "./users-access";
 import "./users-admin.css";
@@ -85,7 +86,7 @@ export function InviteUserForm({
   // Only an admin puts a member on a team (identity/teams.go), so only an
   // admin is asked which teams the new member joins.
   const placesOnTeams = useHoldsAdminRole();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<Error | null>(null);
   const teams = useRoster("team", placesOnTeams);
   const teamsPartial = useRosterPartial("team", placesOnTeams);
 
@@ -126,7 +127,7 @@ export function InviteUserForm({
       setError(null);
       onInvited({ id: newUserId, name: invitedName });
     },
-    onError: (e: Error) => setError(problemMessageOf(e, t)),
+    onError: (e: Error) => setError(e),
   });
 
   const canInvite =
@@ -138,7 +139,7 @@ export function InviteUserForm({
   return (
     <>
       {titleId !== undefined && (
-        <Heading size="large" className="t-h3 modal-title" id={titleId}>
+        <Heading size="large" className="t-h2 modal-title" id={titleId}>
           {t("users.inviteTitle")}
         </Heading>
       )}
@@ -213,47 +214,30 @@ export function InviteUserForm({
             {/* The teams the member joins on arrival. A team-scoped role with no
               team edits only its own records, and the preview below says so
               before the invite goes out. */}
-            <fieldset className="users-invite-teams">
-              <legend className="t-name">{t("users.teamsLabel")}</legend>
-              {(teams.data ?? []).flatMap((entry) =>
-                "name" in entry ? (
-                  <Checkbox
-                    key={entry.id}
-                    className="t-body"
-                    label={entry.name}
-                    checked={teamIds.includes(entry.id)}
-                    onChange={(event) =>
-                      setTeamIds((current) =>
-                        event.target.checked
-                          ? [...current, entry.id]
-                          : current.filter((id) => id !== entry.id),
-                      )
-                    }
-                  />
-                ) : (
-                  []
-                ),
+            <ChoiceList
+              multiple
+              legend={t("users.teamsLabel")}
+              choices={(teams.data ?? []).flatMap((entry) =>
+                "name" in entry ? { value: entry.id, label: entry.name } : [],
               )}
-              {/* "No teams yet" is a claim about the workspace, so only a roster
-                read to its end may make it: a walk that stopped early would have
-                an admin invite contacts into no team at all on the strength of
-                pages nothing read. */}
-              {teams.data?.length === 0 && !teamsPartial && (
-                <p>{t("users.noTeamsYet")}</p>
-              )}
-              <RosterPartialNote partial={teamsPartial} />
-            </fieldset>
+              value={teamIds}
+              onChange={setTeamIds}
+            />
+            {/* "No teams yet" is a claim about the workspace, so only a roster
+              read to its end may make it: a walk that stopped early would have
+              an admin invite contacts into no team at all on the strength of
+              pages nothing read. */}
+            {teams.data?.length === 0 && !teamsPartial && (
+              <p>{t("users.noTeamsYet")}</p>
+            )}
+            <RosterPartialNote partial={teamsPartial} />
           </>
         )}
         {offersRole && <AccessPreviewPanel role={role} teamIds={teamIds} />}
         {/* ABOVE the submit row, where the sibling dialogs in this family put a
           refusal: under the button it reads as a footnote to the form rather
           than as the answer to the press. */}
-        {error && (
-          <Callout tone="danger" kind="outcome" title={t("users.inviteFailed")}>
-            {error}
-          </Callout>
-        )}
+        <ErrorLine error={error} />
       </form>
       {/* Outside a dialog (the onboarding team step) `.form-actions` aligns
           the row; inside one `.modal .actions` does. */}

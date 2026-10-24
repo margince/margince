@@ -46,6 +46,19 @@ It counts and never shows the messages: "{total} interactions in 90 days · {inb
 
 Where the map is not complete, it says so: "{count} more not shown.", "Some colleagues are not shown."
 
+### When does the Worklist suggest a quiet contact?
+
+When a contact has gone quiet, the Worklist suggests that you get back in touch. These rows carry
+their own badge, **Quiet relationship**.
+
+- Only the contact's owner gets the suggestion. Writing to the contact, or being copied on a mail
+  to them, does not make it yours.
+- A contact with no owner, or whose owner has left, is in nobody's Mine. It shows under Unassigned.
+- After 180 days with no exchange, the contact leaves the Worklist. Its own page still shows how
+  long it has been quiet.
+- **Not now** hides the contact for a month. It is your choice only, and **Undo** brings the
+  contact back.
+
 ### How do I import my LinkedIn connections?
 To import your LinkedIn network, open **Settings**, then **Connections**, and use the **LinkedIn connections** card.
 1. On LinkedIn, open **Settings**, then **Data privacy**, then **Get a copy of your data**, and ask for the archive.
@@ -84,9 +97,16 @@ Matching runs as soon as the upload ends.
 | Two contacts with that name at that employer | Nothing: choosing one would be a guess |
 | A name alone, with no employer that matches | Nothing |
 
-A **LinkedIn match** approval shows **Name on LinkedIn** and **Company on LinkedIn** beside the contact it may be. It waits with your other approvals; see [Approvals](approvals.md). A colleague who can already see that contact can decide it too, and the link still goes on your network.
+A **LinkedIn match** approval shows **Name on LinkedIn**, **Company on LinkedIn** and **Position on LinkedIn** beside the contact it may be. It also shows the contact's **Job title in CRM**. It waits with your other approvals; see [Approvals](approvals.md). A colleague who can already see that contact can decide it too, and the link still goes on your network.
 
 When you accept a match, the connection's own LinkedIn profile goes on the contact. A contact that already has a LinkedIn profile keeps it.
+
+The approval can also offer two boxes:
+
+- **Use as job title** puts the position on LinkedIn on the contact as their job title.
+- **Use … as employer** makes the company Margince placed the connection at the contact's current employer. It shows only when that company is already in Margince, you can see it, and your role may both add and change a relationship.
+
+A box is ticked when the contact has nothing in that field yet. When the contact has a value, the box is unticked. Tick it and the LinkedIn value replaces the old one, which stays in the record's history. If someone changes the job title or the employer while the approval waits, accepting with that box ticked is refused, so their change stays. A later import never changes the contact again.
 
 **A refusal lasts.** Once you reject a match, Margince never asks about that pair again, even after a new import.
 
@@ -253,6 +273,12 @@ Every result of company research comes as a **staged proposal** in your approval
 Nobody named on the company's website is added. Someone found that way may only become a record once Margince can tell them it has their details. It must also record that it told them (the notice that GDPR Article 14 asks for). Until that exists, a read suggests no one, and such a proposal left from an earlier read cannot be accepted. You can still decline it to clear it.
 
 Every field shows **the passage it was read from**, word for word, or it is left out. A value the page does not clearly state is not filled in.
+
+### The address a read finds
+
+An accepted read fills the company's address only while every part is still empty. Margince puts each part in its own address field. Address filters then find the company, and it can be placed on a map.
+
+An address Margince cannot split stays whole under **Registered address** in the company profile. It leaves the address fields empty.
 
 ### Other readings
 

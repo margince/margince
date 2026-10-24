@@ -1,11 +1,11 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useId } from "react";
+import { useEffect } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useCaptureSettings } from "../../components/capture-settings";
-import { Select } from "../../design-system/select";
-import { useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
+import { type Choice, ChoiceList } from "../../design-system/choicelist";
+import { ErrorLine } from "../../design-system/errorline";
+import { useT } from "../../i18n/index";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 
 // The posture question, asked while a mailbox is being connected.
@@ -72,7 +72,8 @@ function useSetConnectPosture(provider: Provider) {
 }
 
 /**
- * Who may read this mailbox's mail, chosen before its history is read.
+ * Who may read this mailbox's mail, chosen before its history is read, and
+ * saved on the choice: there is no form to submit around it.
  *
  * `classified` is preselected because it is what the server already wrote; the
  * control reports the connection's own value rather than a local default, so a
@@ -94,68 +95,54 @@ export function ConnectPostureStep({
   const t = useT();
   const settings = useCaptureSettings();
   const save = useSetConnectPosture(provider);
-  const labelId = useId();
-  const helpId = useId();
-  // The server's answer, always — never a local echo of the last successful
-  // save. A save invalidates the connectors query, so the prop is what comes
-  // back; holding a local copy beside it would keep showing this session's
-  // choice after another session, a reconnect or a later refusal changed the
-  // real value. Optimism is wrong here for the same reason: the one option
-  // that can be refused (shared, 422 without the workspace opt-in) is the one
-  // whose refusal a reader must see.
+  // The server's answer, always, never a local echo of the last save. The one
+  // option that can be refused (shared, 422 without the workspace opt-in) must
+  // show its refusal, so optimism is wrong here.
   const current = posture ?? "classified";
 
   useEffect(() => {
     onPendingChange?.(save.isPending);
   }, [save.isPending, onPendingChange]);
   const sharedAllowed = settings.data?.shared_posture_allowed ?? false;
+  const choices: Choice<MailPosture>[] = [
+    {
+      value: "classified",
+      label: t("connectors.mailPosture.classified"),
+      description: t("connectors.mailPosture.help.classified"),
+    },
+    {
+      value: "held",
+      label: t("connectors.mailPosture.held"),
+      description: t("connectors.mailPosture.help.held"),
+    },
+    {
+      value: "shared",
+      label: t("connectors.mailPosture.shared"),
+      description: sharedAllowed
+        ? t("connectors.mailPosture.help.shared")
+        : `${t("connectors.mailPosture.help.shared")} ${t("connectors.mailPosture.sharedNeedsAdmin")}`,
+      // Present and refused rather than absent, for the reason the Settings
+      // row gives: a missing option tells a reader their product has two.
+      disabled: !sharedAllowed,
+    },
+  ];
 
   return (
     <div className="form-stack">
-      {/* A visible label rather than an aria-label: the question is one a
-          reader has to READ to answer, and Settings gives it the same words
-          through SettingRow. */}
-      <p id={labelId}>{t("connectors.mailPosture.label")}</p>
-      <Select
-        aria-labelledby={labelId}
-        aria-describedby={helpId}
+      <ChoiceList
+        legend={t("connectors.mailPosture.label")}
+        hideLegend
+        choices={choices}
         value={current}
         disabled={save.isPending}
-        onChange={(next) => {
-          const chosen = next as MailPosture;
+        onChange={(chosen) =>
           save.mutate({
             posture: chosen,
             applyToHistory: postureRank[chosen] > postureRank[current],
-          });
-        }}
-        options={[
-          {
-            value: "classified",
-            label: t("connectors.mailPosture.classified"),
-          },
-          { value: "held", label: t("connectors.mailPosture.held") },
-          {
-            value: "shared",
-            label: t("connectors.mailPosture.shared"),
-            // Present and refused rather than absent, for the reason the
-            // Settings row gives: a missing option tells a reader their
-            // product has two postures.
-            disabled: !sharedAllowed,
-          },
-        ]}
+          })
+        }
       />
-      <p className="t-caption" id={helpId}>
-        {t(`connectors.mailPosture.help.${current}` as MessageKey)}
-        {sharedAllowed
-          ? ""
-          : ` ${t("connectors.mailPosture.sharedNeedsAdmin")}`}
-      </p>
-      {save.isError && (
-        // ds:ignore a bordered banner box shared with the read-failure banners, not a line
-        <p className="readfail warning" role="alert">
-          {problemMessageOf(save.error, t)}
-        </p>
-      )}
+      {save.isError && <ErrorLine>{problemMessageOf(save.error, t)}</ErrorLine>}
     </div>
   );
 }

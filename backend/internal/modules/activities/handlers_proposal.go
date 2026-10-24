@@ -67,6 +67,7 @@ func publicProfile(profile crmcontracts.SchedulingProfile, requested *bool) crmc
 	}
 	if app, ok := videoApp(profile.Provider); ok && videoCallFor(profile, requested) {
 		out.VideoApp = &app
+		out.Location = ""
 	}
 	return out
 }
@@ -97,7 +98,9 @@ func (h Handlers) GetPublicMeetingProposal(w http.ResponseWriter, r *http.Reques
 	profile = h.store.brandSchedulingProfile(r.Context(), profile)
 	out := crmcontracts.PublicMeetingProposal{Profile: publicProfile(profile, row.Request.VideoCall), Description: row.Request.Description, ExpiresAt: row.Expires, Used: row.Used != nil, Options: row.Request.Options}
 	out.Profile.Title = row.Request.Subject
-	out.Profile.Location = row.Request.Location
+	if out.Profile.VideoApp == nil {
+		out.Profile.Location = row.Request.Location
+	}
 	out.Profile.DurationMinutes = row.Request.DurationMinutes
 	out.Profile.Enabled = row.Used == nil
 	if row.Invitation != nil {

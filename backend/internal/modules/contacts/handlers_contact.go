@@ -5,6 +5,7 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 	"net/http"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // MergeContact serves POST /contacts/{id}/merge — merge this contact (A, the path id)
@@ -252,6 +254,11 @@ func (h Handlers) QuickCaptureContact(w http.ResponseWriter, r *http.Request, _ 
 	}
 
 	captured, err := h.store.QuickCapture(r.Context(), in)
+	if refused, ok := errors.AsType[*values.ParseError](err); ok && refused.Code == MachineAddressCode {
+		// This request names its one address `email`, not `emails`.
+		httperr.Write(w, r, httperr.Validation("email", refused.Code, refused.Message))
+		return
+	}
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -353,12 +360,60 @@ func (h Handlers) DismissRelationshipNudge(w http.ResponseWriter, r *http.Reques
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	if err := h.store.DismissRelationshipNudge(
-		r.Context(), pathID[ids.ContactKind](id), req.Days); err != nil {
+	span := nudgeSpanOf(req.Days, req.Permanent)
+	if err := h.store.DismissRelationshipNudges(
+		r.Context(), []ids.ContactID{pathID[ids.ContactKind](id)}, span); err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// DismissRelationshipNudges sets every listed contact aside for the calling
+// reader, all or none: the Worklist band's "Dismiss all".
+func (h Handlers) DismissRelationshipNudges(w http.ResponseWriter, r *http.Request) {
+	var req crmcontracts.DismissRelationshipNudgesRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	contactIDs := make([]ids.ContactID, 0, len(req.ContactIds))
+	for _, id := range req.ContactIds {
+		contactIDs = append(contactIDs, ids.From[ids.ContactKind](ids.UUID(id)))
+	}
+	if err := h.store.DismissRelationshipNudges(
+		r.Context(), contactIDs, nudgeSpanOf(req.Days, req.Permanent)); err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// nudgeSpanOf reads the wire's two optional fields; an absent days is zero,
+// which the store refuses unless the stop is permanent.
+func nudgeSpanOf(days *int, permanent *bool) NudgeSpan {
+	span := NudgeSpan{Permanent: permanent != nil && *permanent}
+	if days != nil {
+		span.Days = *days
+	}
+	return span
+}
+
+// GetRelationshipNudge answers the calling reader's own choice for the contact.
+func (h Handlers) GetRelationshipNudge(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	state, err := h.store.RelationshipNudgeState(r.Context(), pathID[ids.ContactKind](id))
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	out := crmcontracts.RelationshipNudgeState{State: crmcontracts.RelationshipNudgeStateStateFollowing}
+	switch {
+	case state.Stopped:
+		out.State = crmcontracts.RelationshipNudgeStateStateStopped
+	case state.Until != nil:
+		out.State = crmcontracts.RelationshipNudgeStateStateSetAside
+		out.DismissedUntil = state.Until
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
 // RestoreRelationshipNudge puts a set-aside contact back on the reader's lane.

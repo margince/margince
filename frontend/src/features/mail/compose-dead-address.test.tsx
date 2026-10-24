@@ -272,7 +272,8 @@ describe("ComposeModal dead recipients", () => {
     );
 
     const user = userEvent.setup();
-    await user.click(await screen.findByLabelText("Cc"));
+    await user.click(await screen.findByRole("button", { name: "Cc and Bcc" }));
+    await user.click(screen.getByLabelText("Cc"));
     // A different case as well, since that is how the same address arrives
     // twice without looking like it.
     await user.paste("Anna@Dead.Example");

@@ -21,8 +21,9 @@ next reader something false about your finding.
 ## Priority
 
 **Priority** says how serious the problem is; the milestone holds the schedule. Do not lower a real
-bug because it is not work for this week. Use the milestone, or `status: deferred` when no
-milestone fits it yet:
+bug because it is not work for this week. Use the milestone of the month the work is planned
+for ([cut-a-release.md](../how-to/cut-a-release.md#plan-the-work-by-month)). Work that is not for
+this month goes in the next month's milestone, and keeps its real priority:
 
 | Label | It fits when |
 |---|---|
@@ -46,7 +47,7 @@ to the code it is wrong about. There is no documentation area.
 ## Status
 
 **Status**, when it applies, marks an issue nobody *else* should pick up. Nobody can work on
-it, or it is not work for now by agreement, or someone already has it. To leave it off puts the
+it, or someone already has it. To leave it off puts the
 issue in the queue of someone:
 
 - `status: in progress`: someone is working on it right now. It goes on together with the
@@ -63,13 +64,6 @@ issue in the queue of someone:
 - `status: needs-decision`: nobody can work on it until a human decides, whether the call is technical or
   a product call. Say what the options are and which one you think is best. An issue that only
   asks "what should we do?" gives the human who decides nothing to decide from.
-- `status: deferred`: we know the work and agree on it, and it is not on the schedule: a later release, and nobody
-  knows which one yet. It keeps its real priority, because to defer sets a schedule, and the
-  priority says how serious it is. To mark a real bug down to `priority: low` makes the issue
-  list wrong about what is wrong with the product. Drop the label when the work gets a milestone.
-
-  Say in the issue what it waits for, so the reader who filters it back in knows what changed.
-
 ## Claim
 
 This is the one kind of label that goes on a **pull request**, not an issue. It says who is
@@ -88,6 +82,15 @@ issue to label.
 
   It is a `claim:` label because a status sits on an issue. The thing claimed here is a break on
   `main` that no issue names.
+
+## Release
+
+This label says what the next release waits for. A milestone is a month, and says when the work is
+planned. It does not say what a release needs.
+
+- `release: blocker`: the next plain tag waits until this issue is closed. `release-tag.yml` refuses
+  the tag while an open issue carries it. The label names no version: an issue still open when a
+  release ships blocks the one after it. The maintainer who plans the release sets it.
 
 ## Provenance
 

@@ -323,7 +323,8 @@ func (s *Store) scheduleSend(
 		return ScheduledSend{}, errNoSchedulingUser
 	}
 
-	payload, err := json.Marshal(freezePayload(in))
+	row := freshScheduledRow(origin, in, sched, actor.UserID)
+	payload, err := json.Marshal(row.frozen)
 	if err != nil {
 		return ScheduledSend{}, fmt.Errorf("scheduled send: freezing the message: %w", err)
 	}
@@ -335,8 +336,6 @@ func (s *Store) scheduleSend(
 	if err != nil {
 		return ScheduledSend{}, err
 	}
-
-	row := freshScheduledRow(origin, in, sched, actor.UserID)
 
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		prov := provenanceOf(actor)
@@ -445,6 +444,7 @@ func nullableAnchor(o SendOrigin) *ids.UUID {
 // preview refuses a message naming no records.
 func freshScheduledRow(origin SendOrigin, in SendEmailInput, sched SendSchedule, scheduledBy ids.UUID) ScheduledSend {
 	return ScheduledSend{
+		frozen:           freezePayload(in),
 		ID:               ids.NewV7(),
 		Status:           ScheduledStatusScheduled,
 		ScheduledAt:      sched.At.UTC(),

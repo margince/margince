@@ -4,13 +4,14 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import { en } from "../../i18n/en";
+import { settingsReach } from "../../lib/settingscatalog";
 import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
+  type RouteMap,
   StoryProviders,
 } from "../../testing/story-utils";
-import { settingsReach } from "./settingscatalog";
 import { SettingsBoundary, SettingsHome } from "./settingshome";
 
 // The settings address with NO page segment, and the two things it answers when
@@ -35,6 +36,45 @@ import { SettingsBoundary, SettingsHome } from "./settingshome";
 /** No composed unit in the catalog: a story installs no extension tier. */
 const NO_UNITS = {};
 
+// The reads behind the "Your setup" card: Gmail connected, the calendar skipped,
+// no writing voice, the booking link off. `finished` turns every step done.
+function setupReads(finished: boolean): RouteMap {
+  const row = (provider: "gmail" | "gcal") => ({
+    id: `00000000-0000-4000-8000-${provider.padStart(12, "0")}`,
+    provider,
+    status: "connected",
+    scopes:
+      provider === "gcal"
+        ? ["https://www.googleapis.com/auth/calendar.events"]
+        : [],
+    account_label: "ada@example.test",
+  });
+  return {
+    "GET /connectors": () =>
+      jsonResponse({
+        data: finished ? [row("gmail"), row("gcal")] : [row("gmail")],
+        providers: ["gmail", "graph", "imap"].map((provider) => ({
+          provider,
+          reason: "ready",
+        })),
+      }),
+    "GET /voice-profiles": () =>
+      jsonResponse({ data: finished ? [{ profile_version: 1 }] : [] }),
+    "GET /scheduling/profile": () =>
+      jsonResponse({
+        enabled: finished,
+        provider: finished ? "gcal" : "",
+        calendar_id: finished ? "primary" : "",
+        duration_minutes: 30,
+        notice_minutes: 240,
+        horizon_days: 30,
+        buffer_minutes: 0,
+        title: "Intro call",
+        location: "",
+      }),
+  };
+}
+
 /**
  * One principal, serving both halves of the screen.
  *
@@ -46,6 +86,7 @@ const NO_UNITS = {};
 function home(
   spec: Parameters<typeof meFixture>[0],
   session: "answered" | "pending" = "answered",
+  finished = false,
 ) {
   return () => {
     const snapshot = meFixture(spec);
@@ -54,6 +95,7 @@ function home(
         session === "answered"
           ? jsonResponse(snapshot)
           : new Promise<Response>(() => {}),
+      ...setupReads(finished),
     });
     return (
       <StoryProviders>
@@ -148,6 +190,14 @@ export const Phone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
   render: home(LEAD),
+};
+
+// Every setup step done: the card folds to one success note, steps a press away.
+export const SetupComplete: Story = { render: home(LEAD, "answered", true) };
+
+export const SetupCompleteDark: Story = {
+  globals: { theme: "dark" },
+  render: home(LEAD, "answered", true),
 };
 
 // The floor: a seat holding no object grant at all. The personal pages are the

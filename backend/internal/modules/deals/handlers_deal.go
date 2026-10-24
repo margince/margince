@@ -180,6 +180,26 @@ func (h Handlers) AdvanceDeal(w http.ResponseWriter, r *http.Request, id crmcont
 	httperr.WriteJSON(w, http.StatusOK, deal)
 }
 
+// CorrectDealCloseDay moves a closed deal's close day. The store refuses an
+// agent; the contract's human-only mark refuses it at the gate first.
+func (h Handlers) CorrectDealCloseDay(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.CorrectDealCloseDayParams) {
+	ifVersion, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
+	var req crmcontracts.CorrectDealCloseDayRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	deal, err := h.store.CorrectCloseDay(r.Context(), pathID[ids.DealKind](id),
+		CorrectCloseDayInput{ClosedOn: req.ClosedOn.Time, IfVersion: ifVersion})
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, deal)
+}
+
 // ArchiveDeal retires one deal and the edges hanging off it, honouring
 // If-Match where the caller named a version.
 func (h Handlers) ArchiveDeal(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.ArchiveDealParams) {

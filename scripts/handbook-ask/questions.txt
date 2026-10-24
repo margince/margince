@@ -92,6 +92,8 @@ who in my company knows this person
 where are the settings
 how do I change my password
 how do I change the language
+how do I change my time zone
+where do I set the reporting timezone
 how do I set up my writing voice
 how do I import contacts from a spreadsheet
 
@@ -139,6 +141,10 @@ where can I see what the AI changed
 
 # everyday list, edit and follow-up work
 how do I log a phone call with a client
+what does the Call icon on a contact do
+how do I call a customer back from a logged call
+how do I email or call the contact on a task
+why is there no Call button on my task
 set a reminder to follow up with a customer
 how can I see all deals I own
 change the owner of a deal
@@ -216,3 +222,9 @@ my webhook failed, how do I resend it
 how do I verify a webhook signature
 how do I customise the webhook body
 can I only get a message when a deal is won
+how do I change the company reporting time zone
+how do I mark a meeting as held
+how do I record that a customer did not show up to a meeting
+what happens after I press Call on a contact
+how do I open a WhatsApp chat with a contact
+how do I turn off the Telegram or Zalo links on phone numbers

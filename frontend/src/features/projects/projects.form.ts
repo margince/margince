@@ -2,13 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
+import { searchCompanyTargets } from "../../components/companyform";
 import type { CreateField } from "../../components/create";
 import {
   type ProjectOwnerPicker,
   projectOwnerField,
 } from "../../components/projectownerfield";
 import type { MessageKey } from "../../i18n/en";
-import { searchCompanyTargets } from "../companies/companyform";
 
 // The project form's vocabulary and transport, with no React in it: what the
 // create and edit dialogs ask, and
@@ -35,7 +35,6 @@ export function projectFields(
   t: (key: MessageKey) => string,
   opts: Readonly<{
     owner: ProjectOwnerPicker;
-    currentOwner: string | null;
     mode: "create" | "edit";
   }>,
 ): CreateField[] {
@@ -55,7 +54,6 @@ export function projectFields(
       : []),
     ...projectOwnerField(t, opts.owner, {
       key: "owner_id",
-      currentOwner: opts.currentOwner,
       mode: opts.mode,
     }),
     { key: "description", label: "project.description", type: "textarea" },

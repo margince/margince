@@ -79,6 +79,18 @@ The most likely reasons: the thread is **Held until classified** and nothing has
 Only the mailbox owner can open it up, by choosing **Share with the company** on the message. Ask them; an administrator cannot open it for you.
 Also called: email not visible, cannot read email, content for participants only.
 
+### Can I read a mail I sent when only a colleague's mailbox captured it?
+Yes, that one mail. You wrote to a customer and copied a colleague, and Margince
+has only your colleague's copy. You can open that copy because you sent it. You
+cannot open the other mail on that thread, or the customer's record, unless your
+colleague shares them. A promise you made in that mail comes to you as your own
+task or request, and your colleague can read that task too.
+
+This works only when your sign-in address is at one of your company's own
+domains. The mail server that received the mail must also have confirmed that it
+came from that domain.
+Also called: my own sent mail, mail I sent to a customer, copied colleague.
+
 ## Why this one is held
 
 A held Margince message carries a reason, so you can see why it is held:
@@ -186,12 +198,12 @@ It holds mail from then on, and lifting it opens nothing again: "Lifting applies
 to new mail. Mail already held stays held."
 
 ### How do I share an email thread with my team?
-To share an email thread in Margince, open the captured message from a timeline and choose **Share with the company** beside its visibility mark. Or use **Share with the team** in **Settings → Connections → Held threads**.
+To share an email thread in Margince, open the captured message from a timeline and choose **Share with the company** beside its visibility mark. Or use **Share with the team** in **Settings → Capture activity → Held threads**.
 1. On a contact, company or deal timeline, open the email.
 2. Beside the mark under the subject, press **Share with the company**. It "Applies to the whole thread."
 3. To go back, press **Make private**.
 
-Or press **Share with the team** on the thread under **Settings → Connections → Held threads**.
+Or press **Share with the team** on the thread under **Settings → Capture activity → Held threads**.
 Only the mailbox owner can share. If a colleague also holds it, you see how many other seats still do.
 Also called: release an email, unhide a thread, make an email public.
 
@@ -246,6 +258,6 @@ never shows mail from another seat's own mailbox.
 | This mailbox's posture | Settings → Connections → Mail visibility |
 | The company-wide floor | Settings → Capture rules → Mail sharing and sync |
 | Hold mail with one contact or company | Private correspondence, on the contact's or company's page |
-| Share one thread | The message itself, or Settings → Connections → Held threads |
+| Share one thread | The message itself, or Settings → Capture activity → Held threads |
 | One logged message's audience | Change visibility, on its row |
 | Who can see the *record* | The contact or company header |

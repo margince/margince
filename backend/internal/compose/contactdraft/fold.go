@@ -16,10 +16,10 @@ import (
 	"github.com/margince/margince/backend/internal/compose/contactcontext"
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -66,16 +66,13 @@ func instant(at *time.Time) time.Time {
 	return *at
 }
 
-// CorrespondenceText is the counterparty's own writing this draft answers,
-// newest first, for detecting what language the correspondence is in.
-//
-// Subjects and bodies both, because a subject line rarely carries enough words
-// to clear the detector's floor on its own.
-func CorrespondenceText(view crmcontracts.Contact360) string {
+// languageEvidence is what the language of this contact's correspondence is
+// read from; see draftcore.LanguageEvidence for the order.
+func languageEvidence(view crmcontracts.Contact360, now time.Time) []string {
 	if view.Activities == nil {
-		return ""
+		return nil
 	}
-	return CorrespondenceTextOf(view.Activities.Data)
+	return draftcore.LanguageEvidenceOf(view.Activities.Data, now)
 }
 
 func recipientOf(view crmcontracts.Contact360) RecipientIn {
@@ -118,11 +115,10 @@ func greetingName(contact crmcontracts.Contact) string {
 	if contact.FirstName != nil && strings.TrimSpace(*contact.FirstName) != "" {
 		return strings.TrimSpace(*contact.FirstName)
 	}
-	full := strings.TrimSpace(contact.FullName)
-	if cut, _, found := strings.Cut(full, " "); found && cut != "" {
-		return cut
+	if first, _, ok := contacts.SplitStoredName(contact.FullName); ok {
+		return first
 	}
-	return full
+	return strings.Join(strings.Fields(contact.FullName), " ")
 }
 
 // surname is what a formal greeting takes: the record's own last name, or what
@@ -140,10 +136,8 @@ func surname(contact crmcontracts.Contact) string {
 	if contact.LastName != nil && strings.TrimSpace(*contact.LastName) != "" {
 		return strings.TrimSpace(*contact.LastName)
 	}
-	if _, rest, found := strings.Cut(strings.TrimSpace(contact.FullName), " "); found {
-		return strings.TrimSpace(rest)
-	}
-	return ""
+	_, last, _ := contacts.SplitStoredName(contact.FullName)
+	return last
 }
 
 // currentEmployer names where this contact works now. The 360 sorts the
@@ -246,15 +240,6 @@ func foldClaims(in *Input, view crmcontracts.Contact360, now time.Time) {
 	}
 }
 
-// snippetOf is the opening of a message, bounded and tidied.
-//
-// The work lives in textlang.MessageOpening, beside the header vocabulary it
-// needs: this snippet and the account drafter's ask the same question of the
-// same stored bodies, and a second copy here is how the answers would drift.
-func snippetOf(body string) string {
-	return textlang.MessageOpening(body, draftInputSnippetRunes)
-}
-
 // isOverdueOurs reports whether this claim is a promise WE made, still open,
 // and past its date.
 //
@@ -315,72 +300,33 @@ func hoistOverdueOurs(claims []crmcontracts.ConversationClaim, now time.Time) []
 func FoldRecent(activities []crmcontracts.Activity, now time.Time) []ActIn {
 	var out []ActIn
 	readInbound := false
-	for _, activity := range activities {
-		if len(out) == DraftInputActivities {
-			break
-		}
+	for _, turn := range draftcore.Conversation(activities, nil, now, DraftInputActivities) {
 		folded := ActIn{
-			ID:      activity.Id.String(),
-			Kind:    string(activity.Kind),
-			At:      activity.OccurredAt.UTC().Format(time.RFC3339),
-			Inbound: activity.Direction != nil && *activity.Direction == crmcontracts.ActivityDirectionInbound,
+			ID:      turn.ID,
+			Kind:    string(turn.Kind),
+			At:      turn.At.UTC().Format(time.RFC3339),
+			Inbound: turn.Direction == string(crmcontracts.ActivityDirectionInbound),
+			Subject: turn.Subject,
 		}
-		if activity.Subject != nil {
-			folded.Subject = *activity.Subject
-		}
-		// A meeting that was canceled, missed or is still ahead records no
-		// contact, and taking one of the window's slots would push out one
-		// that did.
-		if draftcore.IsLoggedKind(activity.Kind) {
-			if !draftcore.IsLoggedTouch(activity, now) {
-				continue
+		switch {
+		case turn.Logged:
+			folded.Record = turn.Text
+		case turn.Kind != crmcontracts.ActivityKindEmail:
+		case folded.Inbound:
+			// Only the newest inbound counts: a second one invites the draft to
+			// answer two conversations at once. The flag is set even when the
+			// body is empty. An empty body then reads as "nothing to quote"
+			// and never falls through to an older message.
+			if !readInbound {
+				readInbound = true
+				folded.Snippet = turn.Text
 			}
-			if activity.Body != nil {
-				folded.Record = textlang.MessageOpening(*activity.Body, draftInputRecordRunes)
-			}
-			out = append(out, folded)
-			continue
-		}
-		// The newest INBOUND message, and only that one. Our own outbound is
-		// text this side already wrote, and a second inbound invites the draft
-		// to answer two conversations at once.
-		//
-		// The flag is set on the newest inbound whether or not it yielded text,
-		// so an empty body reads as "nothing to quote" rather than falling
-		// through to an OLDER message the prompt would then present as the
-		// current one.
-		if folded.Inbound && !readInbound {
-			readInbound = true
-			if activity.Body != nil {
-				folded.Snippet = snippetOf(*activity.Body)
-			}
+		case turn.Direction == string(crmcontracts.ActivityDirectionOutbound):
+			folded.Said = turn.Text
 		}
 		out = append(out, folded)
 	}
 	return out
-}
-
-// CorrespondenceTextOf is the counterparty's own writing, newest first, for
-// detecting what language a correspondence is in.
-//
-// The slice-taking twin of CorrespondenceText above, for the same reason
-// FoldRecent is exported: a lead's language is read off a lead's activities by
-// the same rule, and the rule is "subjects and bodies both, bounded the same
-// way" rather than anything about a Contact360.
-func CorrespondenceTextOf(activities []crmcontracts.Activity) string {
-	var text strings.Builder
-	for i, activity := range activities {
-		if i == DraftInputActivities {
-			break
-		}
-		if activity.Subject != nil {
-			text.WriteString(*activity.Subject + "\n")
-		}
-		if activity.Body != nil {
-			text.WriteString(*activity.Body + "\n\n")
-		}
-	}
-	return text.String()
 }
 
 // omittedNames renders the withheld sections as plain strings for the writer.
@@ -401,8 +347,30 @@ func (in Input) Threaded() bool {
 	return ok && mail.Inbound
 }
 
+// ContinuesThread reports whether the record has an email thread this draft
+// continues, whoever wrote last.
+func (in Input) ContinuesThread() bool {
+	_, ok := in.ThreadSubject()
+	return ok
+}
+
+// ThreadSubject is the subject of the newest email on the record, whoever sent
+// it. A draft that continues that thread keeps its subject; Threaded asks the
+// narrower question of whether the newest email is theirs.
+func (in Input) ThreadSubject() (string, bool) {
+	mail, ok := in.threadMail()
+	return mail.Subject, ok
+}
+
 // threadMail is the thread a draft answers: draftcore.ThreadMail on Recent.
-func (in Input) threadMail() (ActIn, bool) { return draftcore.ThreadMail(in.Recent) }
+// A draft that follows up a named activity is about that activity, not about
+// whichever email is newest, so it continues no thread.
+func (in Input) threadMail() (ActIn, bool) {
+	if in.About != nil {
+		return ActIn{}, false
+	}
+	return draftcore.ThreadMail(in.Recent)
+}
 
 // Booked is whether this contact has a meeting on file. foldMeeting only
 // carries one this contact actually attends, so a non-nil Meeting is a real

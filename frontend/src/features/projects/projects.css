@@ -74,18 +74,23 @@
   border-radius: var(--r-sm);
 }
 
-/* How long the project has spent in each phase, as label → duration pairs
-   above the transition rows. */
-.project-durations {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+/* The project page's Overview cards: two stacked columns where the feed is
+   wide enough, so a short card never leaves a hole beside a tall one. */
+.project-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+  gap: var(--gapCards);
+  align-items: start;
+}
+.project-cards-column {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--gapCards);
 }
-.project-durations li {
+
+/* The panels of the companies-and-contacts drawer, one under the other. */
+.project-drawer-stack {
   display: flex;
-  justify-content: space-between;
-  gap: var(--space-2);
+  flex-direction: column;
+  gap: var(--gapCards);
 }

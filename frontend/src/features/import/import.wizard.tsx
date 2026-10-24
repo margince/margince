@@ -12,7 +12,7 @@ import { RecordBack } from "../../design-system/recordview";
 import { StageLadder } from "../../design-system/stageladder";
 import { useLocale, useT } from "../../i18n";
 import { routeHash } from "../../lib/router";
-import { settingsHref } from "../settings/settingsrouting";
+import { settingsHref } from "../../lib/settingsrouting";
 import { FilesStep, ImportDropzone } from "./import.files";
 import { ImportRefusal } from "./import.notices";
 import { ImportPresetTarget } from "./import.preset";

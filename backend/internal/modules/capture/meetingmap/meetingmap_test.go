@@ -143,10 +143,9 @@ func TestACancellationOutranksThePartyRules(t *testing.T) {
 	}
 }
 
-// The owner is excluded from the participant rows because capture stamps them
-// from the CONNECTION, which carries their user_id — the column the interaction
-// graph joins on. A row built from this header would carry only an address.
-func TestTheOwnerIsNotAParticipantAndOrganizerOutranksAttending(t *testing.T) {
+// The owner keeps the provider's role for them, the evidence that they take
+// part. A calendar holding a copy of somebody else's meeting lists no owner.
+func TestTheOwnerKeepsTheProvidersRoleAndOrganizerOutranksAttending(t *testing.T) {
 	m := Classify(Event{
 		ID: "evt-2", Subject: "Review",
 		Organizer: Actor{Email: "host@acme.test"},
@@ -158,8 +157,14 @@ func TestTheOwnerIsNotAParticipantAndOrganizerOutranksAttending(t *testing.T) {
 	for _, p := range m.Participants().Participants {
 		roles[p.Email] = p.Role
 	}
-	if _, ok := roles[owner]; ok {
-		t.Error("the owner appears among the participant rows")
+	if roles[owner] != connector.ParticipantRoleAttendee {
+		t.Errorf("owner role = %q, want the provider's attendee role", roles[owner])
+	}
+	copied := Classify(Event{ID: "evt-3", Organizer: Actor{Email: "host@acme.test"}}, owner)
+	for _, p := range copied.Participants().Participants {
+		if p.Email == owner {
+			t.Error("a calendar copy the owner is not invited to lists the owner as a party")
+		}
 	}
 	if roles["host@acme.test"] != connector.ParticipantRoleOrganizer {
 		t.Errorf("host role = %q, want organizer to outrank attending", roles["host@acme.test"])
@@ -272,5 +277,28 @@ func TestAnEventTooLongToStoreCarriesNoDuration(t *testing.T) {
 				t.Errorf("DurationSeconds = %v, want %v", got, tc.want)
 			}
 		})
+	}
+}
+
+// A dial-in passcode and a key in an invitation are masked before the cut, so a
+// key the cut would split is found whole.
+func TestTheBodyIsStoredWithItsCredentialsMasked(t *testing.T) {
+	key := "-----BEGIN PRIVATE KEY-----\n" + strings.Repeat("KEYMATERIAL", 40) + "\n-----END PRIVATE KEY-----"
+	m := Classify(Event{
+		ID: "evt-5", Subject: "Dial-in",
+		Description: "Passcode: 993311\n" + strings.Repeat("a", MaxBodyLen-200) + key,
+		Organizer:   Actor{Email: owner},
+		Attendees:   []Actor{{Email: "client@acme.test"}},
+	}, owner)
+	fields := activityFields(t, m.ToRecord("graphcal", nil))
+	body := fields.Body
+	if !fields.CredentialsMasked {
+		t.Error("the record does not say masking changed its body")
+	}
+	if !strings.Contains(body, "Passcode: [masked]") || strings.Contains(body, "993311") {
+		t.Errorf("body = %.120q…, want the passcode masked behind its label", body)
+	}
+	if strings.Contains(body, "KEYMATERIAL") {
+		t.Errorf("the stored body keeps the half of the key the cut left: %q", body[len(body)-80:])
 	}
 }

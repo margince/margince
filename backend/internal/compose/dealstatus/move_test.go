@@ -55,7 +55,7 @@ func seat(role, name string) Seat {
 func TestAnOpenTaskIsReusedInsteadOfDuplicated(t *testing.T) {
 	taskID := ids.NewV7()
 	f := facts{
-		deal: openDeal(), now: testNow,
+		deal: openDeal(), now: testNow, loc: time.UTC,
 		timeline:  []crmcontracts.Activity{act(crmcontracts.ActivityKindEmail, testNow.AddDate(0, 0, -12))},
 		openTasks: []activities.OpenTask{{ID: taskID, Subject: "Agree the next step"}},
 	}
@@ -70,7 +70,7 @@ func TestAnOpenTaskIsReusedInsteadOfDuplicated(t *testing.T) {
 
 func TestABookedMeetingOutranksEverythingElse(t *testing.T) {
 	f := facts{
-		deal: openDeal(), now: testNow,
+		deal: openDeal(), now: testNow, loc: time.UTC,
 		nextMeeting: booked(testNow.AddDate(0, 0, 3)),
 		timeline:    []crmcontracts.Activity{inboundMail(testNow.AddDate(0, 0, -3))},
 	}
@@ -80,7 +80,7 @@ func TestABookedMeetingOutranksEverythingElse(t *testing.T) {
 }
 
 func TestAnOutstandingRequestOffersAnEvidenceLinkedTask(t *testing.T) {
-	f := facts{deal: openDeal(), now: testNow, requests: []crmcontracts.Activity{inboundMail(testNow.AddDate(0, 0, -3))}}
+	f := facts{deal: openDeal(), now: testNow, loc: time.UTC, requests: []crmcontracts.Activity{inboundMail(testNow.AddDate(0, 0, -3))}}
 	mv := decideMove(f)
 	if mv.Action != ActionCreateTask {
 		t.Fatalf("action = %q, want a task accepting the request", mv.Action)
@@ -96,7 +96,7 @@ func TestTheMoveAndReplyToNameTheSameMail(t *testing.T) {
 			request := inboundMail(testNow.AddDate(0, 0, -200))
 			deal := openDeal()
 			deal.Status = status
-			f := facts{deal: deal, now: testNow, timeline: []crmcontracts.Activity{act(crmcontracts.ActivityKindNote, testNow)}, requests: []crmcontracts.Activity{request, inboundMail(testNow.AddDate(0, 0, -201))}}
+			f := facts{deal: deal, now: testNow, loc: time.UTC, timeline: []crmcontracts.Activity{act(crmcontracts.ActivityKindNote, testNow)}, requests: []crmcontracts.Activity{request, inboundMail(testNow.AddDate(0, 0, -201))}}
 			mv := decideMove(f)
 			card := composeDeterministic(f, mv)
 			if mv.Action != ActionCreateTask || mv.Arguments == nil || (*mv.Arguments)["request_activity_id"] != request.Id || card.ReplyTo == nil || *card.ReplyTo != request.Id {
@@ -118,7 +118,7 @@ func TestLastContactIgnoresWhatIsOnlyScheduled(t *testing.T) {
 	// are plans rather than contact. Counting one as contact prints "the last
 	// contact was 3 days ago" about a meeting that has not happened.
 	f := facts{
-		deal: openDeal(), now: testNow,
+		deal: openDeal(), now: testNow, loc: time.UTC,
 		timeline: []crmcontracts.Activity{
 			act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, 20)),
 			act(crmcontracts.ActivityKindEmail, testNow.AddDate(0, 0, -6)),
@@ -140,7 +140,7 @@ func TestACanceledOrNoShowMeetingIsNotTheLastContact(t *testing.T) {
 		called := act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, -2))
 		called.MeetingStatus = &status
 		mail := act(crmcontracts.ActivityKindEmail, testNow.AddDate(0, 0, -6))
-		f := facts{deal: openDeal(), now: testNow, timeline: []crmcontracts.Activity{called, mail}}
+		f := facts{deal: openDeal(), now: testNow, loc: time.UTC, timeline: []crmcontracts.Activity{called, mail}}
 		if last, ok := lastContact(f); !ok || last.Kind != crmcontracts.ActivityKindEmail {
 			t.Errorf("last contact = %v (found %v), want the mail: a %s meeting is no contact", last.Kind, ok, status)
 		}
@@ -150,7 +150,7 @@ func TestACanceledOrNoShowMeetingIsNotTheLastContact(t *testing.T) {
 func TestACreateTaskArgumentIsAReadyTaskBody(t *testing.T) {
 	// The click sends these arguments as the task's body, unedited. A missing
 	// link or source is a task the server refuses after the reader clicked.
-	mv := decideMove(facts{deal: openDeal(), now: testNow})
+	mv := decideMove(facts{deal: openDeal(), now: testNow, loc: time.UTC})
 	if mv.Action != ActionCreateTask || mv.Arguments == nil {
 		t.Fatalf("move = %+v, want a create_task carrying a body", mv)
 	}
@@ -173,7 +173,7 @@ func TestACreateTaskArgumentIsAReadyTaskBody(t *testing.T) {
 func TestAClosedDealGetsNoMove(t *testing.T) {
 	deal := openDeal()
 	deal.Status = crmcontracts.DealStatusWon
-	if mv := decideMove(facts{deal: deal, now: testNow}); mv.Action != ActionNone {
+	if mv := decideMove(facts{deal: deal, now: testNow, loc: time.UTC}); mv.Action != ActionNone {
 		t.Fatalf("action = %q, want none: a won deal has no next step", mv.Action)
 	}
 }
@@ -185,7 +185,7 @@ func TestAWithheldRowIsNeverNamedAsTheOperand(t *testing.T) {
 	state := crmcontracts.ActivityContentStateWithheld
 	withheldMail.ContentState = &state
 	withheldMail.Subject = nil
-	f := facts{deal: openDeal(), now: testNow, requests: []crmcontracts.Activity{withheldMail}}
+	f := facts{deal: openDeal(), now: testNow, loc: time.UTC, requests: []crmcontracts.Activity{withheldMail}}
 	if _, ok := unansweredInbound(f); ok {
 		t.Fatal("a withheld mail was offered as the one to answer")
 	}
@@ -197,7 +197,7 @@ func TestAWithheldRowIsNeverNamedAsTheOperand(t *testing.T) {
 // who to write to, and the count a reader can check it against.
 
 func TestTheFirstMoveOnAnUncontactedDealNamesWhoToOpenWith(t *testing.T) {
-	f := facts{deal: openDeal(), now: testNow, seats: []Seat{
+	f := facts{deal: openDeal(), now: testNow, loc: time.UTC, seats: []Seat{
 		{Role: "blocker", Name: "Patrick Ganzmann"},
 		{Role: "champion", Name: "Roland Martinez"},
 		{Role: "economic_buyer", Name: "Philipp Königs"},
@@ -223,7 +223,7 @@ func TestTheFirstMoveOnAnUncontactedDealNamesWhoToOpenWith(t *testing.T) {
 func TestTheFirstMoveNeverOpensWithTheBlocker(t *testing.T) {
 	// A deal whose ONLY named seat is the contact most likely to refuse it. No
 	// advice is the right answer; naming them would be worse than silence.
-	f := facts{deal: openDeal(), now: testNow, seats: []Seat{
+	f := facts{deal: openDeal(), now: testNow, loc: time.UTC, seats: []Seat{
 		{Role: "blocker", Name: "Patrick Ganzmann"},
 	}}
 
@@ -240,7 +240,7 @@ func TestTheFirstMoveNeverOpensWithTheBlocker(t *testing.T) {
 func TestTheFirstMoveTakesTheBestAvailableRole(t *testing.T) {
 	// No champion: the economic buyer is the next best answer, not a fallback
 	// to "agree the next step".
-	f := facts{deal: openDeal(), now: testNow, seats: []Seat{
+	f := facts{deal: openDeal(), now: testNow, loc: time.UTC, seats: []Seat{
 		{Role: "influencer", Name: "Ines Eschbacher"},
 		{Role: "economic_buyer", Name: "Philipp Königs"},
 	}}
@@ -258,7 +258,7 @@ func TestTheFirstMoveTakesTheBestAvailableRole(t *testing.T) {
 func TestASeatTheReaderMayNotNameStillCarriesItsRole(t *testing.T) {
 	// The reader holds deal:read without contact:read, so the seam supplies the
 	// seats unnamed. The role is not the secret and the advice still works.
-	f := facts{deal: openDeal(), now: testNow, seats: []Seat{{Role: "champion"}}}
+	f := facts{deal: openDeal(), now: testNow, loc: time.UTC, seats: []Seat{{Role: "champion"}}}
 
 	mv := decideMove(f)
 
@@ -276,6 +276,7 @@ func TestAContactedDealKeepsItsOwnMove(t *testing.T) {
 	f := facts{
 		deal:     openDeal(),
 		now:      testNow,
+		loc:      time.UTC,
 		timeline: []crmcontracts.Activity{inboundMail(testNow.Add(-24 * time.Hour))},
 		seats:    []Seat{{Role: "champion", Name: "Roland Martinez"}},
 	}
@@ -294,7 +295,7 @@ func TestAContactedDealKeepsItsOwnMove(t *testing.T) {
 func TestAQuietContactedDealNamesTheChampionToMeet(t *testing.T) {
 	champion := seat("champion", "Annabelle Malherbe")
 	f := facts{
-		deal: openDeal(), now: testNow,
+		deal: openDeal(), now: testNow, loc: time.UTC,
 		timeline: []crmcontracts.Activity{act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, -23))},
 		seats:    []Seat{{Role: "blocker", Name: "Nadine Pichelot"}, champion},
 	}
@@ -331,7 +332,7 @@ func TestTheMeetingRequestTakesTheBestAvailableRole(t *testing.T) {
 	// No champion on the deal. The economic buyer is the next best answer, and
 	// the influencer beside them is not.
 	f := facts{
-		deal: openDeal(), now: testNow,
+		deal: openDeal(), now: testNow, loc: time.UTC,
 		timeline: []crmcontracts.Activity{act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, -30))},
 		seats:    []Seat{seat("influencer", "Ines Eschbacher"), seat("economic_buyer", "Philipp Königs")},
 	}
@@ -347,7 +348,7 @@ func TestTheMeetingRequestNeverNamesTheBlocker(t *testing.T) {
 	// The same refusal the opening move makes: the contact most likely to
 	// refuse the deal is not who to send a rep to meet.
 	f := facts{
-		deal: openDeal(), now: testNow,
+		deal: openDeal(), now: testNow, loc: time.UTC,
 		timeline: []crmcontracts.Activity{act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, -30))},
 		seats:    []Seat{seat("blocker", "Nadine Pichelot")},
 	}
@@ -379,7 +380,7 @@ func TestASeatTheReaderMayNotFileAgainstIsNamedByRoleOnly(t *testing.T) {
 	champion := seat("champion", "Annabelle Malherbe")
 	champion.Attachable = false
 	f := facts{
-		deal: openDeal(), now: testNow,
+		deal: openDeal(), now: testNow, loc: time.UTC,
 		timeline: []crmcontracts.Activity{act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, -23))},
 		seats:    []Seat{champion},
 	}
@@ -412,7 +413,7 @@ func TestAFreshMoveNamesItsContactToTheCacheAndTheAudience(t *testing.T) {
 	// check pass because it had found nothing to check.
 	champion := seat("champion", "Annabelle Malherbe")
 	f := facts{
-		deal: openDeal(), now: testNow,
+		deal: openDeal(), now: testNow, loc: time.UTC,
 		timeline: []crmcontracts.Activity{act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, -23))},
 		seats:    []Seat{champion},
 	}
@@ -446,7 +447,7 @@ func TestTheCacheKeyMovesWhenTheContactDoes(t *testing.T) {
 		champion := seat("champion", "Alex Weber")
 		champion.ContactID = contactID
 		return facts{
-			deal: openDeal(), now: testNow,
+			deal: openDeal(), now: testNow, loc: time.UTC,
 			timeline: []crmcontracts.Activity{act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, -23))},
 			seats:    []Seat{champion},
 		}
@@ -471,7 +472,7 @@ func TestAMeetingBookedBeyondTheHorizonOutranksOpeningOutreach(t *testing.T) {
 	// has written to yet must not be told to open outreach as though nothing
 	// had been arranged.
 	f := facts{
-		deal: openDeal(), now: testNow,
+		deal: openDeal(), now: testNow, loc: time.UTC,
 		nextMeeting: booked(testNow.AddDate(0, 0, 20)),
 		seats:       []Seat{seat("champion", "Roland Martinez")},
 	}
@@ -492,7 +493,7 @@ func TestAHousekeepingTaskDoesNotDecideTheMove(t *testing.T) {
 	// the rules to that contract: a card whose only "work" was the product's
 	// own reminder must still say what a colleague should do.
 	f := facts{
-		deal: openDeal(), now: testNow,
+		deal: openDeal(), now: testNow, loc: time.UTC,
 		timeline: []crmcontracts.Activity{act(crmcontracts.ActivityKindMeeting, testNow.AddDate(0, 0, -23))},
 		seats:    []Seat{seat("champion", "Annabelle Malherbe")},
 	}
@@ -506,7 +507,7 @@ func TestAHousekeepingTaskDoesNotDecideTheMove(t *testing.T) {
 func TestADealWithNoSeatsSaysNothingItCannotKnow(t *testing.T) {
 	// Nobody is named, so there is nobody to open with. The card falls back to
 	// its old sentence rather than inventing a contact.
-	f := facts{deal: openDeal(), now: testNow}
+	f := facts{deal: openDeal(), now: testNow, loc: time.UTC}
 
 	mv := decideMove(f)
 
@@ -523,7 +524,7 @@ func TestADealWithNoSeatsSaysNothingItCannotKnow(t *testing.T) {
 // becomes `"arguments": null` when it is marshalled. A client that reads the
 // field as an object gets null where it indexes.
 func TestAMoveWithNoOperandShipsAnEmptyObjectNotNull(t *testing.T) {
-	f := facts{deal: openDeal(), now: testNow, seats: []Seat{
+	f := facts{deal: openDeal(), now: testNow, loc: time.UTC, seats: []Seat{
 		{Role: "champion", Name: "Roland Martinez"},
 	}}
 
@@ -541,7 +542,7 @@ func TestAMoveWithNoOperandShipsAnEmptyObjectNotNull(t *testing.T) {
 
 func TestRemindersAndNotesDoNotCountAsCustomerContact(t *testing.T) {
 	request := inboundMail(testNow.AddDate(0, 0, -200))
-	f := facts{deal: openDeal(), now: testNow, timeline: []crmcontracts.Activity{
+	f := facts{deal: openDeal(), now: testNow, loc: time.UTC, timeline: []crmcontracts.Activity{
 		act(crmcontracts.ActivityKindTask, testNow), act(crmcontracts.ActivityKindNote, testNow), request,
 	}}
 	last, ok := lastContact(f)
@@ -554,7 +555,7 @@ func TestACoveredRequestDoesNotOfferAnotherReadersPrivateTask(t *testing.T) {
 	request := inboundMail(testNow.Add(-time.Hour))
 	covered := true
 	request.EmailSummary = &crmcontracts.EmailSummary{RequestHasReminder: &covered}
-	f := facts{deal: openDeal(), now: testNow, requests: []crmcontracts.Activity{request}}
+	f := facts{deal: openDeal(), now: testNow, loc: time.UTC, requests: []crmcontracts.Activity{request}}
 	mv := decideMove(f)
 	if mv.Action != ActionDraftEmail {
 		t.Fatalf("covered request offered %s", mv.Action)

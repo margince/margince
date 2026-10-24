@@ -8,6 +8,8 @@ import type { components } from "../../api/schema";
 import { AccountMenu } from "../../app/account";
 import { pickOption } from "../../design-system/select-testing";
 import { LOCALES, localeNameKey, translate } from "../../i18n";
+import { SETTINGS_PAGES, type SettingsPageId } from "../../lib/settingscatalog";
+import { settingsHref } from "../../lib/settingsrouting";
 import { allowance } from "../../testing/ai-admin.testkit";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
@@ -22,8 +24,6 @@ import {
 import { SIGN_OFF_QUERY } from "../mail/composesignoff";
 import { SettingsScreen, tabContent } from "./settings";
 import { AuditLogCard } from "./settings-audit";
-import { SETTINGS_PAGES, type SettingsPageId } from "./settingscatalog";
-import { settingsHref } from "./settingsrouting";
 
 // What a principal is SERVED once an entry opens: the identity and locale
 // surfaces on Account, the rows that read as WITHHELD rather than absent, and
@@ -43,21 +43,17 @@ import { settingsHref } from "./settingsrouting";
 
 type MeResponse = components["schemas"]["MeResponse"];
 
-/** The Save beside one name field: the Account card carries one per row. */
-function saveBeside(field: HTMLElement): HTMLElement {
-  const control = field.closest(".settingrow-control");
-  if (!(control instanceof HTMLElement)) {
-    throw new Error("the field is not inside a setting row");
-  }
-  return within(control).getByRole("button", { name: "Save" });
+// The page's save bar Save, which exists only while a name differs from what
+// was saved.
+function profileSave(): HTMLElement | null {
+  const bar = screen.queryByRole("region", { name: "Unsaved changes" });
+  return bar && within(bar).queryByRole("button", { name: "Save" });
 }
 
-function noSaveBeside(field: HTMLElement): boolean {
-  const control = field.closest(".settingrow-control");
-  if (!(control instanceof HTMLElement)) {
-    throw new Error("the field is not inside a setting row");
-  }
-  return within(control).queryByRole("button", { name: "Save" }) === null;
+function pressProfileSave(): HTMLElement {
+  const save = profileSave();
+  if (save === null) throw new Error("the page offers no Save");
+  return save;
 }
 
 beforeEach(() => {
@@ -125,17 +121,11 @@ describe("SettingsScreen RBAC surfaces", () => {
     render(<SettingsScreen route={settingsHref("account")} />);
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
 
-    expect(
-      screen.getByRole("heading", { name: "Language and appearance" }),
-    ).toBeTruthy();
     expect(screen.getByRole("combobox", { name: "Language" })).toBeTruthy();
-    // Opened, because a Margince `Select` renders its options in a listbox on
-    // click rather than as children of the control.
-    const user = userEvent.setup();
-    await user.click(screen.getByRole("combobox", { name: "Appearance" }));
+    // A segmented choice, so every option is on screen without opening it.
     expect(
-      within(screen.getByRole("listbox"))
-        .getAllByRole("option")
+      within(screen.getByRole("group", { name: "Appearance" }))
+        .getAllByRole("button")
         .map((option) => option.textContent),
     ).toEqual(["Light", "Dark", "System"]);
   });
@@ -146,7 +136,7 @@ describe("SettingsScreen RBAC surfaces", () => {
   // never notifies anybody — the menu would sit there stale, which is the exact
   // failure "one state" is supposed to rule out. So the real account menu is
   // mounted beside the settings screen, and the assertion is that it followed.
-  it("shares its answer with the account menu", async () => {
+  it("shares its saved answer with the account menu", async () => {
     const user = userEvent.setup();
     render(
       <>
@@ -156,11 +146,14 @@ describe("SettingsScreen RBAC surfaces", () => {
     );
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
 
-    await pickOption(
-      user,
-      screen.getByRole("combobox", { name: "Appearance" }),
-      "Dark",
+    await user.click(
+      within(screen.getByRole("group", { name: "Appearance" })).getByRole(
+        "button",
+        { name: "Dark" },
+      ),
     );
+    await user.click(pressProfileSave());
+    await waitFor(() => expect(profileSave()).toBeNull());
 
     // The menu's own radio, read through the menu rather than through the store
     // underneath it. `setThemeChoice` publishes to `useSyncExternalStore`
@@ -170,35 +163,44 @@ describe("SettingsScreen RBAC surfaces", () => {
     expect(screen.getByRole("radio", { name: "Dark" })).toBeChecked();
   });
 
-  // Each panel holds the rows its title names, so a reader scanning titles
-  // finds the row. A row that drifted to another panel fails here.
-  it("groups the account into profile, security, and language panels", async () => {
+  // One card per job: who colleagues see, how you sign in, the language that
+  // follows the account, and what only this browser remembers. Each row is
+  // asserted inside its own card, because a row that slid into a neighbour would
+  // still pass a page-wide query.
+  it("puts each account setting in the card for its job", async () => {
     render(<SettingsScreen route={settingsHref("account")} />);
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
 
-    const panel = (title: string) => {
+    function card(title: string): HTMLElement {
       const section = screen
         .getByRole("heading", { name: title })
         .closest("section");
       if (!(section instanceof HTMLElement)) {
-        throw new Error(`the ${title} panel is not a section`);
+        throw new Error(`the ${title} card is not a section`);
       }
-      return within(section);
-    };
-    const profile = panel("Profile");
-    expect(profile.getByText("ada@acme.test")).toBeTruthy();
-    expect(profile.getByRole("textbox", { name: "Display name" })).toBeTruthy();
+      return section;
+    }
+    const profile = card("Profile");
+    expect(within(profile).getByText("ada@acme.test")).toBeTruthy();
     expect(
-      profile.getByRole("button", { name: "Edit signature" }),
+      within(profile).getByRole("textbox", { name: "Display name" }),
     ).toBeTruthy();
-    const security = panel("Security");
     expect(
-      security.getByRole("button", { name: "Change password" }),
+      within(profile).getByRole("button", { name: /signature/ }),
     ).toBeTruthy();
-    expect(security.getByRole("button", { name: "Sign out" })).toBeTruthy();
-    const language = panel("Language and appearance");
-    expect(language.getByRole("combobox", { name: "Language" })).toBeTruthy();
-    expect(language.getByRole("combobox", { name: "Appearance" })).toBeTruthy();
+    const signIn = card("Sign-in");
+    expect(
+      within(signIn).getByRole("button", { name: "Change password" }),
+    ).toBeTruthy();
+    expect(
+      within(signIn).getByRole("button", { name: "Sign out" }),
+    ).toBeTruthy();
+    expect(
+      within(card("Language")).getByRole("combobox", { name: "Language" }),
+    ).toBeTruthy();
+    expect(
+      within(card("This browser")).getByRole("group", { name: "Appearance" }),
+    ).toBeTruthy();
   });
 
   // THE DRAFT IS DISCARDED ON THE NEXT OPENING, not on the way out.
@@ -214,12 +216,12 @@ describe("SettingsScreen RBAC surfaces", () => {
     render(<SettingsScreen route={settingsHref("account")} />);
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
 
-    await user.click(screen.getByRole("button", { name: "Edit signature" }));
+    await user.click(screen.getByRole("button", { name: /signature/ }));
     const draft = await screen.findByRole("textbox", { name: "Sign-off" });
     await user.type(draft, "half a sign-off nobody meant to keep");
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
-    await user.click(screen.getByRole("button", { name: "Edit signature" }));
+    await user.click(screen.getByRole("button", { name: /signature/ }));
     const reopened = await screen.findByRole("textbox", {
       name: "Sign-off",
     });
@@ -292,7 +294,7 @@ describe("SettingsScreen RBAC surfaces", () => {
     const field = screen.getByRole("textbox", { name: "Display name" });
     await user.clear(field);
     await user.type(field, "  Ada Lovelace  ");
-    await user.click(saveBeside(field));
+    await user.click(pressProfileSave());
 
     // Trimmed on the way out, so a trailing space is not a change the server
     // has to refuse. Asserted through the WIRE, because a row that renders the
@@ -304,7 +306,7 @@ describe("SettingsScreen RBAC surfaces", () => {
     });
   });
 
-  it("shows a refused name as the field's own error, still described by its help", async () => {
+  it("shows a refused name on the save bar and under its field, keeping the draft", async () => {
     const user = userEvent.setup();
     const backend = settingsBackend();
     vi.stubGlobal(
@@ -335,36 +337,53 @@ describe("SettingsScreen RBAC surfaces", () => {
     const field = screen.getByRole("textbox", { name: "Display name" });
     await user.clear(field);
     await user.type(field, "Ada Lovelace");
-    await user.click(saveBeside(field));
+    await user.click(pressProfileSave());
 
-    const refusal = await screen.findByRole("alert");
-    expect(refusal).toHaveTextContent("Display name is too long.");
-    expect(refusal).toHaveClass("field-error");
-    expect(field).toHaveAttribute("aria-invalid", "true");
-    const describedBy = field.getAttribute("aria-describedby")?.split(" ");
-    expect(describedBy).toContain(refusal.id);
-    expect(describedBy).toHaveLength(2);
+    // The bar carries the summary; the refused field names its own refusal.
+    const lines = await screen.findAllByText("Display name is too long.");
+    expect(lines).toHaveLength(2);
+    const named = (field.getAttribute("aria-describedby") ?? "").split(" ");
+    expect(lines.some((line) => named.includes(line.id))).toBe(true);
     expect(field).toHaveValue("Ada Lovelace");
+    expect(profileSave()).not.toBeNull();
   });
 
-  // The control for the case above: Save is withheld until the name actually
-  // moves. Without it, a row that always offered Save would pass the case above
-  // and quietly write on every render.
-  it("offers no save until the name changes", async () => {
+  // Save and Discard exist only while a name differs from what was saved, and
+  // Discard puts the saved name back.
+  it("offers Save and Discard only while a name changed", async () => {
     const user = userEvent.setup();
+    const sent: unknown[] = [];
+    vi.stubGlobal("fetch", greetingBackend(null, sent));
     render(<SettingsScreen route={settingsHref("account")} />);
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
 
     const field = screen.getByRole("textbox", { name: "Display name" });
-    expect(noSaveBeside(field)).toBe(true);
+    if (!(field instanceof HTMLInputElement)) throw new Error("not an input");
+    const stored = field.value;
+    expect(profileSave()).toBeNull();
 
-    // A name of only whitespace is not a name, so it does not enable it either.
+    await user.type(field, "x");
+    expect(profileSave()).not.toBeNull();
+    await user.click(screen.getByRole("button", { name: "Discard" }));
+    expect(field).toHaveValue(stored);
+    expect(profileSave()).toBeNull();
+  });
+
+  // A name of only whitespace is not a name: the field says so, and the bar's
+  // Save is held, so nothing is sent.
+  it("refuses an empty display name on the field, sending nothing", async () => {
+    const user = userEvent.setup();
+    const sent: unknown[] = [];
+    vi.stubGlobal("fetch", greetingBackend(null, sent));
+    render(<SettingsScreen route={settingsHref("account")} />);
+    await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
+
+    const field = screen.getByRole("textbox", { name: "Display name" });
     await user.clear(field);
     await user.type(field, "   ");
-    expect(saveBeside(field)).toHaveProperty("disabled", true);
-
-    await user.type(field, "Ada");
-    expect(saveBeside(field)).toHaveProperty("disabled", false);
+    expect(field).toHaveAttribute("aria-invalid", "true");
+    await user.click(pressProfileSave());
+    expect(sent).toHaveLength(0);
   });
 
   // The greeting name: what a colleague's drafted greeting opens with. Empty
@@ -401,9 +420,9 @@ describe("SettingsScreen RBAC surfaces", () => {
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
 
     const field = screen.getByRole("textbox", { name: "Greeting name" });
-    expect(noSaveBeside(field)).toBe(true);
+    expect(profileSave()).toBeNull();
     await user.type(field, "  Ada  ");
-    await user.click(saveBeside(field));
+    await user.click(pressProfileSave());
     await waitFor(() => expect(sent).toHaveLength(1));
     expect(sent[0]).toEqual({ greeting_name: "Ada" });
   });
@@ -431,12 +450,12 @@ describe("SettingsScreen RBAC surfaces", () => {
     const field = await screen.findByDisplayValue("Sofia");
 
     await user.clear(field);
-    await user.click(saveBeside(field));
+    await user.click(pressProfileSave());
     await waitFor(() => expect(sent).toHaveLength(1));
     expect(sent[0]).toEqual({ greeting_name: null });
   });
 
-  it("switches the language from the Account tab, through the design-system select", async () => {
+  it("switches the language from the Account tab once the page is saved", async () => {
     const user = userEvent.setup();
     render(<SettingsScreen route={settingsHref("account")} />);
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
@@ -446,10 +465,15 @@ describe("SettingsScreen RBAC surfaces", () => {
       screen.getByRole("combobox", { name: "Language" }),
       "Deutsch",
     );
+    // A pick is a draft: the page stays in its language until Save.
+    expect(screen.getByRole("heading", { name: "Sign-in" })).toBeTruthy();
+    await user.click(pressProfileSave());
     // The choice reaches the chrome around the control, not just the control's
     // own face — which is the whole point of changing a language here.
-    expect(screen.getByRole("combobox", { name: "Sprache" })).toBeTruthy();
-    expect(screen.getByRole("combobox", { name: "Darstellung" })).toBeTruthy();
+    expect(
+      await screen.findByRole("combobox", { name: "Sprache" }),
+    ).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Anmeldung" })).toBeTruthy();
   });
 
   // WCAG 2.2 AA 3.1.2. This is the one picker in the product where every option
@@ -904,7 +928,7 @@ describe("installation-wide cards live off the personal pages", () => {
 
   it("puts the vendor OAuth apps on an installation page, not beside a contact's own connections", () => {
     const hosts = SETTINGS_PAGES.filter((page) =>
-      pageRenders(page.id, "OAuthAppCards"),
+      pageRenders(page.id, "OAuthAppsCard"),
     );
     expect(hosts).toHaveLength(1);
     expect(hosts[0]?.scope).toBe("installation");

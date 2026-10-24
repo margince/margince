@@ -85,7 +85,7 @@ export function FollowUpSettingsCard() {
                   undefined,
                 )}
                 onCommit={(days) =>
-                  update.mutate({ follow_up_after_days: days })
+                  update.mutateAsync({ follow_up_after_days: days })
                 }
               />
             </SettingList>

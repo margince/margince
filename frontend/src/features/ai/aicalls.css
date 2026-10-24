@@ -1,64 +1,82 @@
 /* SPDX-License-Identifier: BUSL-1.1
  * SPDX-FileCopyrightText: 2026 Gradion */
 
-/* The expanded call's detail card. Every block in it is a bare element under
- * the preflight reset, so the interval rides on the card, at `.form-stack`'s
- * own step, whichever of its payload branches renders. */
-.aicalls-detail {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-}
+/* Settings, AI call log: the trace table and the call drawer. */
 
-.aicalls-time {
+/* A time and a price are short and read as one token each. */
+.aicalls-nowrap {
+  white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
 
-/* A broker's model id is one unbreakable string, and it is what would widen the
- * table past its card. */
-.aicalls-model {
+/* A broker's model id and an unknown error key are unbroken strings, and they
+   are what would widen the table past its card. */
+.aicalls-model,
+.aicalls-outcome {
   overflow-wrap: anywhere;
 }
+
+/* The filter bar's task field takes its natural width up to a cap. */
 .aicalls-task {
   inline-size: min(100%, 20rem);
 }
 
-/* Seven columns share the settings column, so inner cells give up a third of
-   their padding; the outer ones keep the pane's. */
-.aicalls-card > .table-scroll > .table > * > tr > :is(th, td) {
-  padding-inline: var(--space-2);
+/* The drawer: the call's badges and time on one line, prev/next at its end. */
+.aicalls-drawer-meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
 }
 
-/* Folded, every call keeps one shape: how long ago and the model on line two,
-   the figures on line three. The exact moment stays in the time's title. */
-@container table-fold (width < 36rem) {
-  .aicalls-card .aicalls-time {
-    position: absolute;
-    inline-size: 1px;
-    block-size: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-  .aicalls-card td:has(> .aicalls-model-line) {
-    flex: 1 1 0%;
-  }
-  .aicalls-card td:is(:has(> time), :has(> .aicalls-model-line)) {
-    align-self: baseline;
-  }
-  /* One run of text, so a long rung wraps under the model, not past it. */
-  .aicalls-model-line > .cell-stack {
-    display: inline;
-  }
-  .aicalls-model-line > .cell-stack > * {
-    margin-inline-end: var(--space-2);
-  }
-  .aicalls-card td:has(.aicalls-figure) {
-    order: 5;
-  }
-  .aicalls-card tr:not(.datatable-detail)::before {
-    content: "";
-    flex-basis: 100%;
-    order: 4;
-  }
+.aicalls-drawer-nav {
+  display: inline-flex;
+  gap: var(--gapActions);
+  margin-inline-start: auto;
+}
+
+.aicalls-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding-top: var(--space-4);
+}
+
+.aicalls-attempts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* The sentence takes the line beside its number and wraps inside itself, so a
+   narrow drawer never leaves the number alone on a line above it. */
+.aicalls-attempt {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.aicalls-attempt-text {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.aicalls-payload {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.aicalls-payload-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+/* A payload scrolls inside its own block, so a long prompt never pushes the
+   attempts and the identifiers out of the drawer's first screen. */
+.aicalls-code {
+  max-height: 22rem;
 }

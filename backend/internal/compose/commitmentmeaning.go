@@ -14,16 +14,17 @@ import (
 )
 
 const (
-	commitmentStateOpen     = "open"
-	commitmentPrecisionDay  = "day"
-	commitmentPrecisionNone = "none"
-	commitmentStateField    = "state"
-	commitmentMeaningField  = "commitment"
+	commitmentStateOpen      = "open"
+	commitmentPrecisionDay   = "day"
+	commitmentPrecisionRange = "range"
+	commitmentPrecisionNone  = "none"
+	commitmentStateField     = "state"
+	commitmentMeaningField   = "commitment"
 )
 
 var (
 	commitmentMeaningStates      = []string{commitmentStateOpen, "completed", "conditional", "optional", "request", "unclear"}
-	commitmentDeadlinePrecisions = []string{commitmentPrecisionDay, "range", commitmentPrecisionNone}
+	commitmentDeadlinePrecisions = []string{commitmentPrecisionDay, commitmentPrecisionRange, commitmentPrecisionNone}
 )
 
 var commitmentRangeOnly = regexp.MustCompile(`(?i)^(?:(?:by|during|sometime|in|bis|im|trong)\s+)?(?:(?:next|this|the coming)\s+(?:week|month|quarter|year)|nächste[nrsm]?\s+(?:woche|monat|quartal|jahr)|diese[nrsm]?\s+(?:woche|monat|quartal|jahr)|(?:tuần|tháng|quý|năm)\s+(?:tới|sau|này))$`)

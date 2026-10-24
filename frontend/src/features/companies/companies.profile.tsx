@@ -1,11 +1,19 @@
 import type { ReactNode } from "react";
-import type { OpenReceipt } from "../records/record360";
+import type { OpenReceipt } from "../../components/citations";
+import { RecordCustomFields } from "../../components/recordcustomfields";
+import { DisclosureGroup } from "../../design-system/disclosure";
+import { Panel } from "../../design-system/panel";
 import { RelationshipsTab } from "../records/relationshiprows";
-import type { Company } from "./companies";
+import type { Company, Company360View } from "./companies";
 import { HierarchyRollupPanel } from "./companies.hierarchy";
+import { AssistantPanel } from "./companyassistant";
 import { DeepReadPanel } from "./companydeepread";
+import { GrowthFitPanel } from "./companygrowthfit";
+import { CompanyHoldSection } from "./companyhold";
 import { CompanyProfileForm } from "./companyprofiletab";
 import { TechnicalProfilePanel } from "./companytechnical";
+import { CompanyTriageSection } from "./companytriage";
+import { hasWorkInFlight } from "./companywork";
 
 export { profileFieldLabel } from "../../format/companyprofilelabels";
 
@@ -13,16 +21,12 @@ export { profileFieldLabel } from "../../format/companyprofilelabels";
 // summary is not enough. It holds the account in its own words and ours, its
 // filed fields, its facts, who it is connected to and the one-off tools.
 //
-// None of it comes from the 360: each card runs its own read. So a failed
-// composite read hides what the 360 answered, never the profile, facts or
-// relationships.
+// Most cards run their own read, so a failed composite read hides what the
+// 360 answered, never the profile, facts or relationships.
 export function CompanyProfileTab({
   active,
   company,
-  // Whether the 360 is already leading with the research offer. It renders in
-  // one place. An account with nothing on file meets it at the top of its 360,
-  // and every other account finds it here. Both would start the same crawl.
-  offerOnOverview,
+  view,
   onOpenHistory,
   refusedReasonId,
   nameOf,
@@ -32,55 +36,22 @@ export function CompanyProfileTab({
 }: Readonly<{
   active: boolean;
   company: Company;
-  offerOnOverview: boolean;
+  // The 360 the page holds: the growth-fit reading asks whether anything is
+  // in flight, and the ask scopes a question to one of the projects.
+  view?: Company360View;
   onOpenHistory: () => void;
-  // See ReferenceDisclosures: the page's one read-only sentence, by id.
-  refusedReasonId?: string;
-  // The dossier's own props: the overview's copy and this tab's leading one
-  // read the same names and open through the same receipt.
-  nameOf?: (entityType: string, entityId: string) => string | undefined;
-  onOpenRecord?: (entityType: string, entityId: string) => void;
-  onOpenReceipt: OpenReceipt;
-  onOpenEmail?: (activityId: string) => void;
-}>) {
-  if (!active) {
-    return null;
-  }
-  return (
-    <ReferenceDisclosures
-      company={company}
-      offerOnOverview={offerOnOverview}
-      onOpenHistory={onOpenHistory}
-      refusedReasonId={refusedReasonId}
-      nameOf={nameOf}
-      onOpenRecord={onOpenRecord}
-      onOpenReceipt={onOpenReceipt}
-      onOpenEmail={onOpenEmail}
-    />
-  );
-}
-
-function ReferenceDisclosures({
-  company,
-  offerOnOverview,
-  onOpenHistory,
-  refusedReasonId,
-  nameOf,
-  onOpenRecord,
-  onOpenReceipt,
-  onOpenEmail,
-}: Readonly<{
-  company: Company;
-  offerOnOverview: boolean;
-  onOpenHistory: () => void;
-  // The page's one sentence about why this account takes no changes, while
-  // it does not: an edge is written through the account's own write gate.
+  // The page's one read-only sentence, by id: an edge is written through the
+  // account's own write gate.
   refusedReasonId?: string;
   nameOf?: (entityType: string, entityId: string) => string | undefined;
   onOpenRecord?: (entityType: string, entityId: string) => void;
   onOpenReceipt: OpenReceipt;
   onOpenEmail?: (activityId: string) => void;
 }>): ReactNode {
+  if (!active) {
+    return null;
+  }
+  const live = !company.archived_at;
   return (
     <CompanyProfileForm
       company={company}
@@ -91,25 +62,43 @@ function ReferenceDisclosures({
       onOpenEmail={onOpenEmail}
       tools={
         <>
-          {/* Each of these names itself, so they stand in the profile's own
-              stack, not a titled panel inside a titled panel. Documents have
-              their own tab and stay off this one, so a reader never has two
-              lists to reconcile. */}
+          {/* Is this an account to sell to at all: the question an account
+              with nothing in flight is asking. */}
+          {live && view && !hasWorkInFlight(view) && (
+            <GrowthFitPanel
+              companyId={company.id}
+              onOpenRecord={onOpenRecord}
+              onOpenReceipt={onOpenReceipt}
+              onOpenEmail={onOpenEmail}
+            />
+          )}
+          {live && (
+            <AssistantPanel
+              companyId={company.id}
+              onOpenRecord={onOpenRecord}
+              onOpenReceipt={onOpenReceipt}
+              onOpenEmail={onOpenEmail}
+              projects={view?.projects}
+            />
+          )}
           <RelationshipsTab
             scope={{ company_id: company.id }}
             refusedReasonId={refusedReasonId}
           />
-
           <HierarchyRollupPanel companyId={company.id} />
-          {/* Only where the Brief is not already offering it. An account with
-              nothing on file meets the offer at the top of its own column. Two
-              offers to research the same company read as none. */}
-          {!offerOnOverview && <DeepReadPanel companyId={company.id} />}
-          {/* What the company runs, beside what it says. It is read from
-              public records the company never wrote for us: DNS, certificates,
-              the markup of its homepage. It sits under the site read above,
-              because that read is what queues it. */}
+          <RecordCustomFields kind="company" record={company} />
+          <DeepReadPanel companyId={company.id} />
+          {/* What the company runs, read from public records it never wrote
+              for us. Under the site read, because that read queues it. */}
           <TechnicalProfilePanel companyId={company.id} />
+          {/* Both are about the account's mail domain rather than the work
+              on it. */}
+          <Panel>
+            <DisclosureGroup>
+              <CompanyHoldSection company={company} />
+              <CompanyTriageSection companyId={company.id} />
+            </DisclosureGroup>
+          </Panel>
         </>
       }
     />

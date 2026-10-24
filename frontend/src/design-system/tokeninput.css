@@ -13,7 +13,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-1);
+  gap: var(--space-1) var(--space-2);
   /* Overrides .input's single-line height: the whole point is wrapping. */
   height: auto;
   min-height: var(--inputHeight);
@@ -71,12 +71,14 @@
   box-shadow: var(--focus-glow-danger);
 }
 
+/* A pill: the value inset from its rounded start, the remove mark's own
+   24px box closing the end, so the two need no gap of their own. */
 .token {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-1);
-  padding: 0 var(--space-1);
-  border-radius: var(--r-sm);
+  padding-inline: var(--space-2) 0;
+  border-radius: var(--r-full);
+  corner-shape: round;
   background: var(--bgChip);
   color: var(--textPrimary);
   /* One step down from the field's own type: a token is a value inside a

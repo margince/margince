@@ -1,3 +1,5 @@
+import type { components } from "../../api/schema";
+
 /**
  * The cached surfaces whose text is written by a model in the installation's
  * base language.
@@ -20,5 +22,14 @@ export const LANGUAGE_DEPENDENT_QUERY_PREFIXES = [
   ["meetingBrief"],
   ["contactBrief"],
   ["deal-status"],
+  ["deal-room-brief"],
   ["brief"],
 ] as const;
+
+type Patch = components["schemas"]["UpdateInstallationSettingsRequest"];
+
+/** What these texts are written in: the language, and the zone they count days in. */
+export const SETTINGS_IN_SERVER_TEXT = [
+  "base_language",
+  "timezone",
+] as const satisfies readonly (keyof Patch)[];

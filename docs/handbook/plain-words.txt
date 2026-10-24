@@ -1159,7 +1159,6 @@ storage
 store
 straight
 strength
-stricter
 strictest
 stuck
 style
@@ -1299,7 +1298,6 @@ upload
 urgent
 usable
 usage
-usd
 use
 user
 user's

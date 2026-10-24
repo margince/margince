@@ -21,8 +21,10 @@ package integration
 // answers "still yours" for a tombstone.
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
@@ -160,6 +162,12 @@ func seedLiveOffer(t *testing.T, e *Env, deal ids.UUID) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	e.WsExec(t, `INSERT INTO offer (id, deal_id, offer_number, currency, source, captured_by)
-		VALUES ($1, $2, $3, 'EUR', 'manual', 'human:fixture')`, id, deal, "AN-"+id.String())
+		VALUES ($1, $2, $3, 'EUR', 'manual', 'human:fixture')`, id, deal, fixtureOfferNumber(id))
 	return id
+}
+
+// fixtureOfferNumber is an offer number in the minted shape, unique to the
+// row it names. It stays inside the range the mint reads as an int.
+func fixtureOfferNumber(id ids.UUID) string {
+	return fmt.Sprintf("A-%d", binary.BigEndian.Uint32(id[12:])%1_000_000_000)
 }

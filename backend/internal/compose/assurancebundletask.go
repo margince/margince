@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // bundleTaskSubject is what a rep reads on their list.
@@ -64,7 +65,7 @@ func taskStillOpenTx(ctx context.Context, tx pgx.Tx, task ids.UUID) (bool, error
 }
 
 // bundleTaskSource names this writer in the activity's natural key.
-var bundleTaskSource = "assurance"
+var bundleTaskSource = provenance.AssuranceTaskSource
 
 // mintBundleTask writes the task a subject's findings hang from.
 //

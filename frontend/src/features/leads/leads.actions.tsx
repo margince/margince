@@ -1,21 +1,50 @@
-import { ArrowUpRight, CheckSquare, FileText } from "lucide-react";
+import {
+  CalendarDays,
+  Check,
+  CheckSquare,
+  FileText,
+  Phone,
+} from "lucide-react";
 import { type ReactNode, useEffect, useId, useState } from "react";
 import { AddToShortlistAction } from "../../components/addtoshortlist";
 import { EntityRef } from "../../components/entityref";
+import { LogActivityAction } from "../../components/logactivity.action";
 import { Button, OverflowMenu } from "../../design-system/atoms";
+import { IconAction, VerbWord } from "../../design-system/iconaction";
 import { leadIdentityName } from "../../format/leadname";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import { useMe } from "../../lib/session";
 import { useUrlParams } from "../../lib/urlstate";
-import { LogActivityAction } from "../records/logactivity";
 import { RecordEmailVerb } from "../records/recordemail";
 import { ShareAction } from "../records/share";
+import { ReopenAction, terminalSentence } from "./leadband";
+import { LeadFillFromContact } from "./leadfillfromcontact";
 import { promoteEligible } from "./leadpresentation";
-import type { Lead } from "./leads";
+import type { Lead, LeadWriter } from "./leads";
 import { ACTION_PARAM, CALL_ACTION } from "./leads.address";
 import { DisqualifyDialog } from "./leads.disqualify";
+import { DemoteAction } from "./leads.promotion";
 import { QualifyDialog } from "./leads.qualify";
+
+// A closed lead says so in the verdict of How it stands. This is the sentence
+// its refused controls point at, kept for assistive technology rather than
+// drawn a second time.
+function ClosedReason({
+  lead,
+  writer,
+  id,
+}: Readonly<{ lead: Lead; writer: LeadWriter; id: string }>) {
+  const t = useT();
+  const sentence = lead.archived_at
+    ? terminalSentence(lead, writer, t)
+    : undefined;
+  return sentence ? (
+    <p id={id} className="sr-only">
+      {sentence}
+    </p>
+  ) : null;
+}
 
 // The lead's identity row and its verbs. It stands apart from LeadScreen to
 // keep that render inside the complexity budget. A header is a unit of its own:
@@ -23,6 +52,7 @@ import { QualifyDialog } from "./leads.qualify";
 export function LeadActions({
   lead,
   id,
+  writer,
   onQualify,
   onDisqualify,
   onLogged,
@@ -33,6 +63,8 @@ export function LeadActions({
 }: Readonly<{
   lead: Lead;
   id: string;
+  // Fill from a contact saves through the page's one lead write.
+  writer: LeadWriter;
   onQualify: () => void;
   onDisqualify: () => void;
   // Fires once the Log activity/Add task drawer logs something. The page then
@@ -76,18 +108,19 @@ export function LeadActions({
   // link is one somebody can paste, and Back returns to the screen it named.
   const [params] = useUrlParams();
   const askedToLogCall = params.get(ACTION_PARAM) === CALL_ACTION;
-  const [drawer, setDrawer] = useState<"log" | "task" | null>(
-    askedToLogCall ? "log" : null,
+  const [drawer, setDrawer] = useState<"log" | "call" | "meet" | "task" | null>(
+    askedToLogCall ? "call" : null,
   );
   // A link pressed on the record the reader is already on changes only the
   // address, with no remount. So the initializer above never runs again.
   useEffect(() => {
     if (askedToLogCall) {
-      setDrawer("log");
+      setDrawer("call");
     }
   }, [askedToLogCall]);
   return (
     <>
+      <ClosedReason lead={lead} writer={writer} id={terminalReasonId} />
       {/* Promote is the page's one primary action and it leads, in the header
           where a reader looks for the verb (ADR-0108). Ineligibility is stated
           on the control itself: a disabled button whose reason is elsewhere is
@@ -102,11 +135,9 @@ export function LeadActions({
           }
           onClick={onQualify}
         >
-          {/* The glyph is the promotion itself: a lead leaving this page
-              upward, for the contact and deal it becomes. No `size`: the
-              button owns its icon's geometry, and a call site that names one
-              is a second author of it. */}
-          <ArrowUpRight aria-hidden="true" /> {t("lead.promote")}
+          {/* No `size`: the button owns its icon's geometry, and a call site
+              that names one is a second author of it. */}
+          <Check aria-hidden="true" /> {t("lead.promote")}
         </Button>
       )}
       {/* The shared Email verb every record header carries. Its open state is
@@ -119,9 +150,24 @@ export function LeadActions({
         open={emailOpen}
         onOpenChange={onEmailOpenChange}
       />
-      {/* A hairline between reaching the record and recording what happened
-          to it: two groups of verbs, not one toolbar. */}
-      <span className="record-actions-sep" aria-hidden="true" />
+      {/* A lead has no phone screen or calendar of its own, so Call and
+          Meet record what happened, the drawer opened on that kind. */}
+      <IconAction
+        label={t("contact.action.call")}
+        word={t("record.verb.call")}
+        icon={<Phone aria-hidden="true" />}
+        disabled={logPending}
+        reasonId={logRefused}
+        onClick={() => setDrawer("call")}
+      />
+      <IconAction
+        label={t("contact.action.meetings")}
+        word={t("record.verb.meet")}
+        icon={<CalendarDays aria-hidden="true" />}
+        disabled={logPending}
+        reasonId={logRefused}
+        onClick={() => setDrawer("meet")}
+      />
       {!archived && logGrantKnown && !canLog && (
         <p id={logRefusedId}>{t("record.logActivityRefused")}</p>
       )}
@@ -133,23 +179,27 @@ export function LeadActions({
       <Button
         disabled={logPending}
         reasonId={logRefused}
+        title={t("log.title")}
         onClick={() => setDrawer("log")}
       >
-        <FileText aria-hidden="true" /> {t("log.title")}
+        <FileText aria-hidden="true" />
+        <VerbWord word={t("record.verb.log")} label={t("log.title")} />
       </Button>
       <Button
         disabled={logPending}
         reasonId={logRefused}
+        title={t("log.addTask")}
         onClick={() => setDrawer("task")}
       >
-        <CheckSquare aria-hidden="true" /> {t("log.addTask")}
+        <CheckSquare aria-hidden="true" />
+        <VerbWord word={t("record.verb.task")} label={t("log.addTask")} />
       </Button>
       {drawer && (
         <LogActivityAction
           entityType="lead"
           entityId={id}
           askedKind={
-            drawer === "task" ? "task" : askedToLogCall ? "call" : undefined
+            drawer === "task" || drawer === "call" ? drawer : undefined
           }
           openOnMount
           onLogged={onLogged}
@@ -168,7 +218,16 @@ export function LeadActions({
           (disqualified and promoted) reach this page, and the band above
           names which. The sentence is passed in because a reason minted
           in the panel would not exist until the menu was first opened. */}
-      <OverflowMenu label={t("record.moreActions")}>
+      <OverflowMenu
+        label={t("record.moreActions")}
+        word={t("record.verb.more")}
+      >
+        {/* The ways back out of a closure, offered by the closure that was
+            taken: a promotion is the demote's to reverse, a disqualification
+            the reopen's. Neither is on a live lead. */}
+        {lead.promoted_contact_id && <DemoteAction id={lead.id} />}
+        <ReopenAction lead={lead} />
+        <LeadFillFromContact writer={writer} reasonId={refusedReasonId} />
         <ShareAction
           recordType="lead"
           recordId={lead.id}

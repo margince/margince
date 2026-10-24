@@ -15,7 +15,8 @@
 // relationship_nudge_dismissal, sdr_handoff, sdr_handoff_event,
 // sdr_handoff_reason.
 // Also owned: company_domain_disposition, company_domain_question_reader,
-// company_offered_value.
+// company_offered_value, lead_origin.
+// dedupe_scan_state is where the nightly duplicate scan stopped (dedupescan.go).
 // It also owns legal_entity and legal_entity_member. A legal entity is a company
 // the installation trades as. It lives beside the anchor company, because the
 // default entity reads its identity from it. legal_entity_member is which entity
@@ -31,15 +32,14 @@
 // company_vat_check is what the EU register answered about a company's
 // VAT ID and the consultation number proving we asked: the profile field
 // holds the number a page stated, this holds whether it is real.
-// lead_source and lead_disqualify_reason are the two administered lead
-// vocabularies: the pick lists behind "where did this come from" and "why
-// was it dropped", and the weighting the scorer reads.
-// relationship_nudge_dismissal is a lapsed contact ONE reader has set aside,
-// and it is its own table rather than a disposition because a nudge is not an
-// activity: the decay lane's row carries the contact's id, so there is no
-// activity to hang the judgement on. Never permanent — the moment it lifts is
-// NOT NULL, so a dismissal that silently deleted somebody from a rep's
-// attention has no value to store.
+// lead_origin and lead_disqualify_reason are the two administered lead
+// vocabularies. The first says where a lead came from and carries the intent the
+// scorer weighs. The second says why a lead was dropped. lead_source is the
+// deprecated list of how a row reached Margince, and nothing scores by it.
+// relationship_nudge_dismissal is a lapsed contact one reader has set aside.
+// It is its own table, not a disposition, because the decay lane's row
+// carries a contact's id and no activity. A NULL moment is a permanent stop,
+// which the reader resumes by deleting the row.
 // lead_score_history is the retained series behind "Explain This Score"
 // (ADR-0105): the breakdown is written with the score and read back
 // verbatim, because a decomposition recomputed at read time explains a

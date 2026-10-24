@@ -139,6 +139,26 @@ it("renders domain maintenance reasons in the reader's language", () => {
   }
 });
 
+it("shows the site triage's own sentence under a vendor question's reason", () => {
+  const sentence = "Classified as a mail or hosting vendor: sells hosting.";
+  const vendor = {
+    ...task,
+    source: "domain_question" as const,
+    domain_reason_code: "vendor_verdict",
+    domain_note: sentence,
+    detail: "Stored fallback prose",
+  };
+  const label = translate("en", "blockedDomains.source.vendorVerdict");
+  expect(
+    noticeDetail(vendor, viewer, (key, values) => translate("en", key, values)),
+  ).toBe(`${label} ${sentence}`);
+  expect(
+    noticeDetail({ ...vendor, domain_note: undefined }, viewer, (key, values) =>
+      translate("en", key, values),
+    ),
+  ).toBe(label);
+});
+
 it("names shared recipients without claiming nobody owns their reply", () => {
   const shared = {
     ...task,

@@ -74,8 +74,13 @@ func contactUpdateFrom(changed map[string]string, typed map[string]any) contacts
 	return in
 }
 
-// contactFullName is the name ladder contactCreateFrom documents.
+// contactFullName is the name ladder contactCreateFrom documents. A row that
+// states both name parts takes its full name from them. An import has no author
+// to ask which name was meant, so the parts decide.
 func contactFullName(fields map[string]string) string {
+	if joined := joinedNameParts(fields); joined != "" {
+		return joined
+	}
 	if name := strings.TrimSpace(fields[fieldFullName]); name != "" {
 		return name
 	}
@@ -84,6 +89,28 @@ func contactFullName(fields map[string]string) string {
 		return joined
 	}
 	return strings.TrimSpace(fields[fieldEmail])
+}
+
+// withNamePartsAsFullName gives a row that states both name parts those parts
+// as its full name, whether or not it maps a full name column. The update
+// comparison reads it, so a disagreeing full name is never sent on its own.
+func withNamePartsAsFullName(fields map[string]string) map[string]string {
+	joined := joinedNameParts(fields)
+	if joined == "" || fields[fieldFullName] == joined {
+		return fields
+	}
+	out := maps.Clone(fields)
+	out[fieldFullName] = joined
+	return out
+}
+
+// joinedNameParts is "first last" when the row states both parts, else "".
+func joinedNameParts(fields map[string]string) string {
+	first, last := strings.TrimSpace(fields["first_name"]), strings.TrimSpace(fields["last_name"])
+	if first == "" || last == "" {
+		return ""
+	}
+	return first + " " + last
 }
 
 // contactEmailsFrom reads the single email column a spreadsheet carries into the

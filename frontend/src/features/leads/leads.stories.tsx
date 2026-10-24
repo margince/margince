@@ -14,6 +14,7 @@ import { LeadBoard, StatusBadge } from "./leadpresentation";
 import { LeadScreen } from "./leads";
 import { LeadsScreen } from "./leads.list";
 import { LeadManualSignals } from "./leadsignals";
+import { SIGNAL_CATALOG } from "./leadsignals.fixture";
 
 // LeadsScreen (list, accent-tinted "segregated" surface) and LeadScreen (its
 // own 360 — never contact.html, per the §3.5 segregation gap) both read
@@ -49,6 +50,7 @@ const lead = {
 export const LeadsList: Story = {
   render: () => {
     installFetchStub({
+      "GET /lead-signal-catalog": () => jsonResponse(SIGNAL_CATALOG),
       "GET /me": meRoute({ lead: ["read", "update"] }),
       "GET /leads": () =>
         jsonResponse({
@@ -68,6 +70,7 @@ export const LeadsList: Story = {
 export const LeadOverview: Story = {
   render: () => {
     installFetchStub({
+      "GET /lead-signal-catalog": () => jsonResponse(SIGNAL_CATALOG),
       "GET /leads/l-1": () => jsonResponse(lead),
       "GET /me": () =>
         jsonResponse({
@@ -91,6 +94,7 @@ export const LeadOverview: Story = {
 export const LeadScoringZero: Story = {
   render: () => {
     installFetchStub({
+      "GET /lead-signal-catalog": () => jsonResponse(SIGNAL_CATALOG),
       "GET /leads/l-1": () =>
         jsonResponse({ ...lead, score: 0, title: "Boss", source: "manual" }),
       "GET /leads/l-1/score": () =>
@@ -115,6 +119,7 @@ export const LeadScoringZero: Story = {
 export const LeadScoreExplained: Story = {
   render: () => {
     installFetchStub({
+      "GET /lead-signal-catalog": () => jsonResponse(SIGNAL_CATALOG),
       "GET /leads/l-1": () => jsonResponse(lead),
       "GET /leads/l-1/score": () =>
         jsonResponse({
@@ -148,11 +153,152 @@ export const LeadScoreExplained: Story = {
   },
 };
 
+// An engaged lead as the design draws it. It shows How it stands with its
+// dated ladder, the score's readings, the timeline to a booked meeting, and
+// the cards under it. Dates are set from the moment the story opens, because
+// the page reads "ahead" and "days since" against its own clock.
+const day = 86_400_000;
+const daysFromNow = (days: number) =>
+  new Date(Date.now() + days * day).toISOString();
+
+export const LeadEngagedMeetingBooked: Story = {
+  render: () => {
+    const engaged = {
+      ...lead,
+      full_name: "Jonas Weber",
+      title: "Head of Operations",
+      company_name: "Weber Logistik",
+      email: "jonas@weber.example",
+      status: "engaged" as const,
+      status_set_by: "system" as const,
+      source: "webform",
+      created_at: daysFromNow(-11),
+      first_response_at: daysFromNow(-10.9),
+      last_activity_at: daysFromNow(-4),
+      open_task_count: 1,
+      qualification_evidence: {
+        trigger: "inbound_reply" as const,
+        occurred_at: daysFromNow(-4),
+      },
+    };
+    const email = (
+      id: string,
+      at: string,
+      direction: string,
+      body: string,
+    ) => ({
+      id,
+      kind: "email",
+      direction,
+      subject: "Fleet tracking",
+      body,
+      occurred_at: at,
+      is_done: true,
+      source: "capture",
+      captured_by: "system",
+      created_at: at,
+      updated_at: at,
+    });
+    installFetchStub({
+      "GET /lead-signal-catalog": () => jsonResponse(SIGNAL_CATALOG),
+      "GET /leads/l-1": () => jsonResponse(engaged),
+      "GET /activities": () =>
+        jsonResponse({
+          data: [
+            {
+              ...email("m-1", daysFromNow(2), "outbound", ""),
+              kind: "meeting",
+              subject: "Depot walkthrough",
+              meeting_status: "booked",
+              is_done: false,
+            },
+            email(
+              "e-3",
+              daysFromNow(-4),
+              "inbound",
+              "Thursday works. Can you show us how the depot view works?",
+            ),
+            email("e-2", daysFromNow(-10.9), "outbound", "Thanks for writing."),
+            email(
+              "e-1",
+              daysFromNow(-11),
+              "inbound",
+              "We run 120 vans across three depots and want live tracking before winter.",
+            ),
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      "GET /field-history": () =>
+        jsonResponse({
+          data: [
+            {
+              id: "f-2",
+              entity_type: "lead",
+              entity_id: "l-1",
+              field: "status",
+              new_value: "engaged",
+              changed_at: daysFromNow(-4),
+              actor_type: "system",
+              actor_id: "system",
+            },
+            {
+              id: "f-1",
+              entity_type: "lead",
+              entity_id: "l-1",
+              field: "status",
+              new_value: "contacted",
+              changed_at: daysFromNow(-10.9),
+              actor_type: "system",
+              actor_id: "system",
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      "GET /leads/l-1/promote-preview": () =>
+        jsonResponse({ outcome: "create", contact_withheld: false }),
+      "GET /leads/l-1/score": () =>
+        jsonResponse({
+          score: 72,
+          explained: true,
+          current: {
+            score: 72,
+            score_computed: 72,
+            raw_sum: 72.4,
+            rounded_sum: 72,
+            computed_at: daysFromNow(-1),
+            factors: [
+              {
+                factor: "reply",
+                points: 39.4,
+                base_points: 45,
+                source_activity_ids: ["e-3"],
+              },
+              { factor: "decision_maker_title", points: 15 },
+              { factor: "high_intent_source", points: 18 },
+            ],
+          },
+        }),
+      "GET /me": () =>
+        jsonResponse({
+          user: { id: "u-9", display_name: "Me" },
+          roles: ["rep"],
+          teams: [],
+        }),
+    });
+    return (
+      <StoryProviders>
+        <LeadScreen id="l-1" />
+      </StoryProviders>
+    );
+  },
+};
+
 // A disqualified lead keeps its controls, DISABLED with the reason — hiding
 // them hid the fact the reader needed (STATE-4a).
 export const LeadDisqualified: Story = {
   render: () => {
     installFetchStub({
+      "GET /lead-signal-catalog": () => jsonResponse(SIGNAL_CATALOG),
       "GET /leads/l-1": () =>
         jsonResponse({
           ...lead,
@@ -183,6 +329,7 @@ export const LeadDisqualified: Story = {
 export const LeadPromotedAfterMerge: Story = {
   render: () => {
     installFetchStub({
+      "GET /lead-signal-catalog": () => jsonResponse(SIGNAL_CATALOG),
       "GET /leads/l-1": () =>
         jsonResponse({
           ...lead,
@@ -231,6 +378,9 @@ export const LeadPromotedDemoting: Story = {
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(
+      await body.findByRole("button", { name: "More actions" }),
+    );
+    await userEvent.click(
       await body.findByRole("button", { name: "Reverse qualification" }),
     );
     await body.findByRole("dialog");
@@ -246,6 +396,7 @@ export const LeadPromotedDemoting: Story = {
 export const LeadsBoard: Story = {
   render: () => {
     installFetchStub({
+      "GET /lead-signal-catalog": () => jsonResponse(SIGNAL_CATALOG),
       "GET /leads": () =>
         jsonResponse({
           data: [
@@ -308,6 +459,7 @@ export const LeadPresentationComponents: Story = {
 export const ManualQualificationEvidence: Story = {
   render: () => {
     installFetchStub({
+      "GET /lead-signal-catalog": () => jsonResponse(SIGNAL_CATALOG),
       "GET /leads/l-1/manual-signals": () =>
         jsonResponse({
           data: [
@@ -355,6 +507,7 @@ export const SharedRecordViews: Story = {
 export const LeadArrivedToLogACall: Story = {
   render: () => {
     installFetchStub({
+      "GET /lead-signal-catalog": () => jsonResponse(SIGNAL_CATALOG),
       "GET /leads/l-1": () => jsonResponse(lead),
       "GET /me": () =>
         jsonResponse({

@@ -4,6 +4,8 @@
 package mailmap
 
 import (
+	"errors"
+	"io"
 	"strings"
 
 	"golang.org/x/net/html"
@@ -237,10 +239,11 @@ func (a *anchorState) flush(w *textWriter) {
 	w.write(linkText(a.text.String(), a.href))
 }
 
-// htmlToText renders an HTML mail body as the text a contact would read: entity
-// references decoded, blocks separated by real line breaks, list items marked,
-// and the contents of style and script left out.
-func htmlToText(src string) string {
+// renderHTML renders an HTML mail body as the text a contact would read. Entity
+// references are decoded, blocks become line breaks, list items are marked, and
+// style and script are left out. cut reports that the render stopped at
+// maxRenderedLen, or at a token past the buffer cap, before the document ended.
+func renderHTML(src string) (text string, cut bool) {
 	r := &renderer{w: &textWriter{}, a: &anchorState{}}
 	z := html.NewTokenizer(strings.NewReader(src))
 	// The loop's budget is checked between tokens, which bounds a document made
@@ -256,7 +259,7 @@ func htmlToText(src string) string {
 			// so this is the end of the document: EOF, or a token past the
 			// buffer cap. Both end the walk with what was read up to here,
 			// which is the readable part of the message.
-			return r.finish()
+			return r.finish(), !errors.Is(z.Err(), io.EOF)
 		case html.TextToken:
 			r.text(string(z.Text()))
 		case html.StartTagToken, html.SelfClosingTagToken:
@@ -266,7 +269,7 @@ func htmlToText(src string) string {
 			r.endTag(atom.Lookup(name))
 		}
 	}
-	return r.finish()
+	return r.finish(), true
 }
 
 // renderer is the walk's state: what has been written, the anchor being built,

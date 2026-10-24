@@ -74,6 +74,10 @@ var selfOnlyKinds = map[string]bool{
 // carry no third party's data and no rep's mailbox, so a proposal recording
 // nobody is not a disclosure — it is a deal nobody owns, and it stays shared.
 //
+// A promise read out of a conversation is not here. Its payload names the one
+// colleague it is for (approvalsubject.CommitmentAskedOf). A proposal that
+// names nobody is withheld from everybody rather than shared.
+//
 // Both entries are the overnight sweeps' output about ONE rep's deal. A manager
 // holding activity:create saw every rep's, which is not oversight: it is one
 // contact's day appearing on somebody else's queue, where answering it takes the
@@ -82,9 +86,6 @@ var decidedByTheSeatStagedFor = map[string]bool{
 	// The nightly reconciliation's "this conversation left no next step" card,
 	// staged for the deal's owner.
 	kindDealFollowUp: true,
-	// A promise read out of a conversation, staged for the colleague who made
-	// it, or for the reader of the conversation when nobody could be named.
-	kindCommitmentTask: true,
 	// Retired; its decided cards stay with the seat they were staged for.
 	kindTranscriptProposal: true,
 }

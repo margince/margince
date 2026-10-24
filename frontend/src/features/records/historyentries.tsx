@@ -16,6 +16,7 @@ import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { EntityKind } from "../../lib/entity";
 import { historyFieldLabel } from "../../lib/historyfieldlabels";
+import { historyLine } from "../../lib/historyline";
 import { undoRefusalKey, VERSION_SKEW_CODE } from "../../lib/historyundo";
 import { problemCodeOf, problemMessageOf, unwrap } from "../../lib/problem";
 import { useRecordRestore } from "../../lib/recordrestore";
@@ -29,7 +30,6 @@ import {
 import { HistoryEdgeDetail } from "./historyedge";
 import { HistoryFieldDiff } from "./historyfielddiff";
 import { LeftBehindNotice, useLeftBehind } from "./historyleftbehind";
-import { historyLine } from "./historyline";
 import { isMergeReference, MergedRecordName } from "./historymergedref";
 import { historyRows } from "./historyreversal";
 import { actorName, ReversalPairRow } from "./historyreversalrow";

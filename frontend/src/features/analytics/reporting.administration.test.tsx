@@ -12,6 +12,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
+import { en } from "../../i18n/en";
 import { REPORTING_FIXTURE_ZONE } from "../../testing/reporting.fixtures";
 import {
   installFetchStub,
@@ -51,6 +52,8 @@ it("creates a monetary commitment in minor units and refuses an incomplete targe
   const dialog = within(await screen.findByRole("dialog"));
   expect(dialog.getByRole("button", { name: "Set target" })).toBeDisabled();
   await dialog.findByRole("combobox", { name: "Metrics" });
+  // Sales won filters by pipeline, so its target may be held to one.
+  expect(dialog.getByRole("combobox", { name: "Pipeline" })).toBeEnabled();
   fireEvent.change(dialog.getByLabelText(/Year/), {
     target: { value: "2026" },
   });
@@ -101,7 +104,8 @@ it("revises a count target without rescaling it or changing its identity", async
   await user.click(within(row).getByRole("button", { name: "Revise target" }));
   const dialog = within(await screen.findByRole("dialog"));
   expect(dialog.getByLabelText(/Year/)).toBeDisabled();
-  expect(dialog.getByRole("combobox", { name: "Pipeline" })).toBeDisabled();
+  // Meetings count every pipeline, so the editor offers none.
+  expect(dialog.queryByRole("combobox", { name: "Pipeline" })).toBeNull();
   expect(dialog.getByRole("spinbutton", { name: /^Target/ })).toHaveValue(40);
   fireEvent.change(dialog.getByRole("spinbutton", { name: /^Target/ }), {
     target: { value: "45" },
@@ -481,4 +485,31 @@ it("saves a new schedule paused without claiming it will run", async () => {
       expect.objectContaining({ enabled: false }),
     ),
   );
+});
+
+it("tells a seat that cannot set targets who does, and offers no way to add one", async () => {
+  installFetchStub(reportingStoryRoutes(undefined, true));
+  render(
+    <StoryProviders>
+      <ReportingTargets />
+    </StoryProviders>,
+  );
+  expect(
+    await screen.findByText(en["reporting.noTargetsYet"]),
+  ).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Set target" })).toBeNull();
+});
+
+it("leaves a seat that sets targets the plain empty list and its verb", async () => {
+  installFetchStub(reportingStoryRoutes());
+  render(
+    <StoryProviders>
+      <ReportingTargets />
+    </StoryProviders>,
+  );
+  expect(await screen.findByText(en["common.empty"])).toBeInTheDocument();
+  expect(screen.queryByText(en["reporting.noTargetsYet"])).toBeNull();
+  expect(
+    screen.getByRole("button", { name: "Set target" }),
+  ).toBeInTheDocument();
 });

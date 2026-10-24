@@ -2,8 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import type { Locale } from "../../i18n";
+import { de } from "../../i18n/de";
 import {
   approvalRowSubject as approval,
   ApprovalRowStory as Row,
@@ -143,6 +145,22 @@ export const Expiring: Story = {
 // A decided row is read-only: the history of what was decided, with no verbs.
 export const Decided: Story = {
   render: () => <Row subject={approval({ status: "approved" })} decided />,
+};
+
+export const RejectHeld: Story = {
+  render: () => <Row subject={approval({})} locale="de" />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: de["decision.reject"] }),
+    );
+    await expect(
+      await canvas.findByText(de["decision.status.rejected"]),
+    ).toHaveFocus();
+    await expect(
+      canvas.getByRole("button", { name: de["common.undo"] }),
+    ).toBeVisible();
+  },
 };
 
 // The world moved under the proposal. The honest offer is to re-stage, not to
@@ -799,4 +817,107 @@ export const TemplateCreationGerman: Story = {
 };
 export const TemplateCreationVietnamese: Story = {
   render: () => <Row subject={templateCreationApproval()} locale="vi" />,
+};
+
+// A LinkedIn match offers the export's position as the job title and the company
+// the import placed the connection at as the employer. A box is staged ticked
+// only when the contact has nothing there yet.
+const LINKEDIN_COMPANY = "33333333-3333-4333-8333-333333333333";
+const LINKEDIN_CONTACT = "44444444-4444-4444-8444-444444444444";
+
+function linkedInApproval(change: Record<string, unknown>): Approval {
+  return approval({
+    kind: "linkedin_match",
+    proposed_by: "system:linkedin",
+    summary: "Andreas Müller at Acme GmbH looks like Andreas Muller",
+    target_entity_type: "contact",
+    target_entity_id: LINKEDIN_CONTACT,
+    proposed_change: {
+      connection_id: "55555555-5555-4555-8555-555555555555",
+      contact_id: LINKEDIN_CONTACT,
+      connection_name: "Andreas Müller",
+      connection_company: "Acme GmbH",
+      connection_position: "Head of Sales",
+      contact_name: "Andreas Muller",
+      employer_company_id: LINKEDIN_COMPANY,
+      ...change,
+    },
+  });
+}
+
+function linkedInRoutes(employer?: string) {
+  return {
+    [`GET /companies/${LINKEDIN_COMPANY}`]: () =>
+      jsonResponse({ id: LINKEDIN_COMPANY, display_name: "Acme GmbH" }),
+    [`GET /contacts/${LINKEDIN_CONTACT}`]: () =>
+      jsonResponse({
+        id: LINKEDIN_CONTACT,
+        full_name: "Andreas Muller",
+        ...(employer
+          ? {
+              employer: {
+                company_id: "66666666-6666-4666-8666-666666666666",
+                company_name: employer,
+              },
+            }
+          : {}),
+      }),
+  };
+}
+
+const linkedInGrants = {
+  relationship: ["create", "update"],
+  company: ["read"],
+  contact: ["read", "update"],
+} as const;
+
+export const LinkedInMatchEmptyContact: Story = {
+  render: () => (
+    <Row
+      subject={linkedInApproval({ use_as_title: true, use_as_employer: true })}
+      allow={linkedInGrants}
+      routes={linkedInRoutes()}
+    />
+  ),
+};
+
+export const LinkedInMatchContactHasValues: Story = {
+  render: () => (
+    <Row
+      subject={linkedInApproval({
+        contact_title: "Sales",
+        employer_relationship_id: "77777777-7777-4777-8777-777777777777",
+        use_as_title: false,
+        use_as_employer: false,
+      })}
+      allow={linkedInGrants}
+      routes={linkedInRoutes("Old Employer GmbH")}
+    />
+  ),
+};
+
+export const LinkedInMatchContactHasValuesGerman: Story = {
+  render: () => (
+    <Row
+      subject={linkedInApproval({
+        contact_title: "Vertrieb",
+        employer_relationship_id: "77777777-7777-4777-8777-777777777777",
+        use_as_title: false,
+        use_as_employer: false,
+      })}
+      locale="de"
+      allow={linkedInGrants}
+      routes={linkedInRoutes("Old Employer GmbH")}
+    />
+  ),
+};
+
+export const LinkedInMatchWithoutEmploymentGrant: Story = {
+  render: () => (
+    <Row
+      subject={linkedInApproval({ use_as_title: true, use_as_employer: true })}
+      allow={{ company: ["read"], contact: ["read", "update"] }}
+      routes={linkedInRoutes()}
+    />
+  ),
 };

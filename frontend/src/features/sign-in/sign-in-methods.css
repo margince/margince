@@ -1,4 +1,21 @@
-/* The group role grants panel: what the design system leaves to the screen. */
+/* Layout for the sign-in methods card and the group roles editor inside it.
+   The design system draws the controls; what is left here is the stack of the
+   editor and the status line saying whether a button is on the sign-in screen. */
+
+.group-grants {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Its own line under the row's description: the badge, then any reason. */
+.signinmethods-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
 
 /* One width for every row's role, so the column reads straight down. On a
    folded row it sits on the caption line and keeps a control's type there. */

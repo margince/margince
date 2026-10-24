@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { SignatureHtml } from "../../components/signaturehtml";
 import type { DecisionApproval } from "../../design-system/decisioncard";
-import { EmailAttachments } from "../../design-system/emaildetail";
+import { EmailAttachments } from "../../design-system/emailmessage";
 import { EmailText } from "../../design-system/emailtext";
 import { SourceEvidence } from "../../design-system/sourceevidence";
 import { SurfaceState } from "../../design-system/surfacestate";

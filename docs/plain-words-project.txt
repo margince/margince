@@ -320,7 +320,6 @@ complete
 complex
 component
 compose
-composite
 compute
 condition
 conditional

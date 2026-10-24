@@ -167,7 +167,9 @@ Commands that only read (`git status`, `diff`, `log`) can run in the sandbox.
    not reach the integration lane. For a backend Go change, also run `make test-it DIR=<pkg>` for
    each integration package it touches. CI runs the whole lane on every non-draft PR that changes
    `backend/`; `make check-all` runs it locally.
-3. Push and open a PR.
+3. Push and open a PR. The release notes print its title. Use `feat(scope): …`, `fix(scope): …` or
+   `perf(scope): …` for what a user or operator notices. Add `!` (`fix(api)!: …`) when it breaks a
+   setting, an API client or an upgrade; such a title lists under **Breaking**.
 4. CI, CodeRabbit and SonarCloud must all pass. Deal with review findings; do not dismiss them.
 5. Merge only when all checks are green: `gh pr merge <n> --squash`, then remove the branch.
 

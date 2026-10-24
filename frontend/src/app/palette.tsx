@@ -13,13 +13,13 @@ import { liveDialogs, useDialogFocus } from "../design-system/dialogfocus";
 import { usePresence } from "../design-system/presence";
 import { SCHEDULED_SCREEN } from "../features/mail/scheduledqueue";
 import { useVisibleSettingsPages } from "../features/settings/settingsnav";
-import { settingsHref } from "../features/settings/settingsrouting";
 import { settingsPageKeywords } from "../features/settings/settingssearch";
 import { holdsEveryWord, searchWords } from "../format/collate";
 import { useLocale, useT } from "../i18n";
 import { useCompanyContextShown } from "../lib/companycontextreach";
 import { isImeCommit } from "../lib/imecommit";
 import { navigate, type Route } from "../lib/router";
+import { settingsHref } from "../lib/settingsrouting";
 import { openAsk, type UrlParams } from "../lib/urlstate";
 import {
   CUSTOM_SCREEN,
@@ -27,6 +27,7 @@ import {
   resolveCustomLabel,
 } from "./custom";
 import { CREATE_ID, NAV } from "./nav";
+import { PaletteAnswer, usePaletteAsk } from "./paletteanswer";
 import {
   settingsCommandId,
   useConfigurationCommand,
@@ -255,23 +256,23 @@ export function CommandPalette({
       }
     : null;
 
-  // Asking leads, always. The palette answers two different questions — where
-  // do I go, and what does this company know — and only the first has a list of
-  // destinations to scan. A reader who came to ASK had to type something and
-  // then hunt past every screen whose name happened to match it, so the row sat
-  // last on the one journey it exists for. It carries the query when there is
-  // one and opens an empty box when there is not; either way it goes nowhere.
-  const rows = [...filtered, ...(seeAll ? [seeAll] : []), ...search.commands];
+  const handbook = usePaletteAsk(query, open, filtered.length);
+  const rows = [
+    ...(handbook.row ? [handbook.row] : []),
+    ...filtered,
+    ...(seeAll ? [seeAll] : []),
+    ...search.commands,
+  ];
   const clamp = (index: number) =>
     Math.max(0, Math.min(index, rows.length - 1));
   const selected = picked ?? defaultSelection(rows, filtered.length, query);
 
   const run = (command: Command) => {
-    onClose();
     if (command.id === "ask-ai") {
-      openAsk(query.trim());
+      handbook.ask();
       return;
     }
+    onClose();
     if (command.route) {
       navigate(command.route, command.dials);
     }
@@ -349,6 +350,14 @@ export function CommandPalette({
               beside the search box are. */}
           <Kbd>{"esc"}</Kbd>
         </div>
+        {handbook.shown ? (
+          <PaletteAnswer
+            pending={handbook.mutation.isPending}
+            error={handbook.mutation.error}
+            result={handbook.mutation.data}
+            onLeave={onClose}
+          />
+        ) : null}
         <div className="palette-list">
           {/* A failed search says so and keeps the builtin commands beside it.
               Neither an EmptyState nor `danger`: the list is not empty, and the
@@ -368,15 +377,10 @@ export function CommandPalette({
               when one query replaces another under it — a reader typing through
               a slow search should see one steady bar, not one that blinks out
               and returns per letter. */}
-          {/* Asking, always, and deliberately NOT one of the options below.
-              The palette answers two questions — where do I go, and what does
-              this company know — and only the first has a list to scan. Pinned
-              into that list it took the first row, which is the row Enter
-              presses, so a reader typing a screen name would have asked about
-              it instead of going there. Here it is reachable on sight and by
-              Tab, and it carries whatever is typed into the box rather than
-              asking it: a question matched mid-word is one still being
-              written. */}
+          {/* The drawer that asks one set of the reader's choosing, outside the
+              rows so Enter on a screen name never opens it. It carries what is
+              typed into the box rather than asking it. A question the box can
+              read as one gets its own "Ask Margince" row below instead. */}
           <button
             type="button"
             className="palette-ask t-body"
@@ -416,8 +420,9 @@ export function CommandPalette({
 
 // Where Enter lands before the reader picks a row. A destination the words
 // matched keeps it: typing "pipeline" means going to Deals. A record found by
-// search does not, because half a name is still a search: Enter takes the
-// see-all row, which then leads the list, unless the words name a record whole.
+// search does not, because half a name is still a search. Enter then takes the
+// first row, unless the words name a record whole. That row is the ask row for
+// a question, and see-all for anything else.
 function defaultSelection(
   rows: readonly Command[],
   destinations: number,

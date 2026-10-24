@@ -34,16 +34,8 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
-
-// meetingParticipantLimit caps the attendee list. A meeting with more names
-// than this is a webinar, and the page's job here is to say who is in the room
-// well enough to prepare — not to be the attendee list, which the activity's
-// own record already is.
-const meetingParticipantLimit = 8
 
 // nextMeetingSection reads the soonest meeting on the account that has not
 // started yet, together with the attendees this caller may read.
@@ -52,11 +44,11 @@ const meetingParticipantLimit = 8
 // happens. Ordering by anything else would put a long-booked meeting behind one
 // entered this morning for next month.
 //
-// ONE query, not two. The 360 is a composite with a fixed query budget
-// (TestCompany360CostDoesNotGrowWithTheAccount), and a section that reads
-// the row and then reads its children is how a composite starts costing more
-// per account than per page. The attendees come back as JSON from a lateral
-// sub-select, carrying their own row-scope predicate.
+// One query, not two. The 360 has a fixed query budget
+// (TestCompany360CostDoesNotGrowWithTheAccount). A section that reads the row
+// and then its children costs more per account than per page. The deal and
+// the attendees come back as columns
+// from activities.MeetingRoomColumns, carrying their own grants and row scope.
 func nextMeetingSection(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, opts AssembleOptions,
 ) (*crmcontracts.Company360NextMeeting, error) {
@@ -71,69 +63,22 @@ func nextMeetingSection(
 	if activityScope == "" {
 		activityScope = scopeAll
 	}
-	dealVisible, err := linkScope(ctx, "dl", arg)
+	// The room through the one owner Contact360 and the activity detail read,
+	// so the company page names the same attendees for the same meeting.
+	room, err := activities.MeetingRoomColumns(ctx, arg)
 	if err != nil {
 		return nil, err
 	}
-	// WHO is in the room is a fact about CONTACTS, and the meeting's own grant
-	// does not open it. A caller holding activity but not contact may learn a
-	// meeting is booked — that is an activity fact — and may not be handed the
-	// attendees' names, so the list comes back empty for them rather than the
-	// section disappearing whole.
-	//
-	// auth.Require, not the row scope below: ScopeClauseFor narrows a set the
-	// OBJECT grant has already opened and returns no predicate at all for an
-	// unbounded actor, so a scope clause on its own admits everybody.
-	namesReadable := true
-	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
-		if !errors.Is(err, apperrors.ErrPermissionDenied) {
-			return nil, err
-		}
-		namesReadable = false
-	}
-	// Row-scoped per CONTACT, not per meeting: the meeting is visible through any
-	// of its links, so a rep who reaches it through their own contact must not
-	// be handed the names of a colleague's contacts who were also in the room.
-	//
-	// DISTINCT because uq_activity_participant is unique on (activity, ROLE,
-	// contact): one contact legitimately holds several roles on one meeting — a
-	// captured email makes its sender `from` and `attendee`, a reply adds `to` —
-	// and each is its own row. The question here is who is in the room, and the
-	// answer for a contact is once.
-	// Built only when the names are readable: `scopeClause` APPENDS its
-	// operands to `args` as it goes, so a clause built and then thrown away
-	// leaves its arguments behind and the statement's placeholder count no
-	// longer matches what pgx is handed.
-	contactVisible := scopeNone
-	if namesReadable {
-		contactVisible, err = scopeClause(ctx, "contact", "p", arg)
-		if err != nil {
-			return nil, err
-		}
-	}
 
 	var (
-		meeting  crmcontracts.Company360NextMeeting
-		id       ids.UUID
-		dealID   *ids.UUID
-		occurred *time.Time
+		meeting   crmcontracts.Company360NextMeeting
+		id        ids.UUID
+		dealID    *ids.UUID
+		attendees []byte
+		occurred  *time.Time
 	)
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
-		SELECT a.id, a.occurred_at, coalesce(a.subject, ''),
-		       (SELECT dl.deal_id FROM activity_link dl
-		         WHERE dl.activity_id = a.id AND dl.entity_type = 'deal' AND %[3]s
-		         ORDER BY dl.id LIMIT 1),
-		       coalesce((
-		         SELECT jsonb_agg(jsonb_build_object(
-		                  'contact_id', att.id, 'display_name', att.full_name)
-		                ORDER BY att.full_name, att.id)
-		           FROM (SELECT DISTINCT p.id, p.full_name
-		                   FROM activity_participant ap
-		                   JOIN contact p ON p.id = ap.contact_id
-		                  WHERE ap.activity_id = a.id AND p.archived_at IS NULL AND %[5]s
-		                  ORDER BY p.full_name, p.id
-		                  LIMIT %[6]d) att
-		       ), '[]'::jsonb)
+		SELECT a.id, a.occurred_at, coalesce(a.subject, ''), %[3]s
 		FROM activity a
 		WHERE a.kind = 'meeting' AND a.archived_at IS NULL
 		  -- A canceled meeting is still a future row. Offering it as the next
@@ -142,13 +87,13 @@ func nextMeetingSection(
 		  -- booking nobody has tracked a status on, which is a real meeting.
 		  AND (a.meeting_status IS NULL OR a.meeting_status = 'booked')
 		  AND a.occurred_at > $%[4]d
-		  AND %[1]s AND %[2]s%[7]s
+		  AND %[1]s AND %[2]s%[5]s
 		ORDER BY a.occurred_at, a.id
 		LIMIT 1`,
-		activityScope, activities.CompanyLinkedActivityExists(companyPos), dealVisible, nowPos,
-		contactVisible, meetingParticipantLimit, opts.projectScope(arg)),
+		activityScope, activities.CompanyLinkedActivityExists(companyPos), room, nowPos,
+		opts.projectScope(arg)),
 		args...,
-	).Scan(&id, &occurred, &meeting.Subject, &dealID, &meeting.Participants)
+	).Scan(&id, &occurred, &meeting.Subject, &dealID, &attendees)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Nothing scheduled. The caller holds the grant, so this is the account's
 		// own state and the page says so.
@@ -157,8 +102,18 @@ func nextMeetingSection(
 	if err != nil {
 		return nil, fmt.Errorf("company360: reading the next meeting: %w", err)
 	}
+	scanned, err := activities.ScanMeetingRoom(dealID, attendees)
+	if err != nil {
+		return nil, err
+	}
 	meeting.ActivityId = openapi_types.UUID(id)
 	meeting.StartsAt = *occurred
-	meeting.LinkedDealId = uuidPtr(dealID)
+	meeting.LinkedDealId = uuidPtr(scanned.LinkedDealID)
+	meeting.Participants = make([]crmcontracts.Company360MeetingParticipant, 0, len(scanned.Attendees))
+	for _, attendee := range scanned.Attendees {
+		meeting.Participants = append(meeting.Participants, crmcontracts.Company360MeetingParticipant{
+			ContactId: attendee.ContactId, DisplayName: attendee.FullName,
+		})
+	}
 	return &meeting, nil
 }

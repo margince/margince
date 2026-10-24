@@ -2,10 +2,17 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
-import { type Dispatch, type SetStateAction, useEffect, useRef } from "react";
+import {
+  type Dispatch,
+  type SetStateAction,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useRoster } from "../../components/entityref";
+import { useSettledValue } from "../../design-system/debouncedsearch";
 import { formatDateTime } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { type Locale, useLocale, useT } from "../../i18n";
@@ -60,8 +67,8 @@ export function useThreadProject(
     projectId: (query.data?.links ?? []).find(
       (link) => link.entity_type === "project",
     )?.entity_id,
-    // An unanswered or failed read is not "no project". Falling through to
-    // the deal's project would contradict the server, which re-reads the anchor.
+    // An unanswered or failed read is not "no project". The composer waits
+    // rather than suggest a filing it may take back.
     settled: !activityId || (!query.isPending && !query.isError),
   };
 }
@@ -215,11 +222,24 @@ export function useComposeThread({
     Boolean(answering) && anchorActivity === undefined && !anchorRead.failed;
   // Mail is the transport that can open a conversation, so it alone offers.
   const offeringThreads = !isChannelReply;
+  // Asked on a reply too: the rail keeps the other conversations beside the
+  // one being answered, so the draft can move to one of them.
   const recent = useRecentConversations(
     entityType,
     entityId,
-    open && offeringThreads && !answering,
+    open && offeringThreads,
     { nameOf, t, locale },
+  );
+  // A search reads its own list. The bar's count, and whether threads are
+  // offered at all, stay those of the record.
+  const [search, setSearch] = useState("");
+  const searched = useSettledValue(search).trim();
+  const found = useRecentConversations(
+    entityType,
+    entityId,
+    open && offeringThreads && searched !== "",
+    { nameOf, t, locale },
+    searched,
   );
   useReplySubject(answering, anchorActivity, setSubject);
   const showConversation = conversationShown({
@@ -229,22 +249,25 @@ export function useComposeThread({
     anchorUnresolved,
     conversation,
   });
-  // The ways in, when the reader has not taken one. A pending or failed read
-  // keeps the column, so the record never looks as though it had no history.
-  const showChoices =
+  // A pending or failed read keeps the rail, so the record never looks as
+  // though it had no history. So does older mail not read yet.
+  const offered =
     offeringThreads &&
-    !answering &&
-    (recent.pending || recent.failed || recent.conversations.length > 0);
+    (recent.pending ||
+      recent.failed ||
+      recent.more ||
+      recent.conversations.length > 0);
   return {
     anchorRead,
     anchorActivity,
     conversation,
     anchorUnresolved,
     recent,
+    listed: searched ? found : recent,
+    search,
+    setSearch,
     answeringLine: answeringLineOf(answering, anchorRead, t, locale),
-    showConversation,
-    showChoices,
-    splitColumns: showConversation || showChoices,
+    splitColumns: showConversation || offered,
   };
 }
 

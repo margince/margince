@@ -195,7 +195,7 @@ func (said momentCopy) inboundEvidence(page *crmcontracts.Contact360, inbound ti
 // outboundEvidence is the same lookup for the message WE sent.
 func (said momentCopy) outboundEvidence(page *crmcontracts.Contact360, outbound time.Time) []crmcontracts.ContactMomentEvidence {
 	return []crmcontracts.ContactMomentEvidence{
-		directionEvidence(page, outbound, said.Say(momentWords.YourMessage)),
+		directionEvidence(page, outbound, said.Say(momentWords.LastSentMessage)),
 	}
 }
 

@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
@@ -32,7 +33,12 @@ function render(ui: ReactNode) {
         new QueryClient({ defaultOptions: { queries: { retry: false } } })
       }
     >
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
+      <LocaleProvider initial="en">
+        <SavePageProvider>
+          {ui}
+          <PageSaveBar />
+        </SavePageProvider>
+      </LocaleProvider>
     </QueryClientProvider>,
   );
 }
@@ -79,7 +85,7 @@ it("offers the words the vocabulary carries, and none of its own", async () => {
   ]);
 });
 
-it("clears the choice as null, which is the contract's word for files nothing", async () => {
+it("clears the choice as null on Save, which is the contract's word for files nothing", async () => {
   const sent: unknown[] = [];
   installFetchStub({
     "GET /tags": () => jsonResponse(vocabulary),
@@ -108,10 +114,47 @@ it("clears the choice as null, which is the contract's word for files nothing", 
       name: en["connectors.contextTag.none"],
     }),
   );
+  expect(sent).toEqual([]);
+  await userEvent.click(
+    screen.getByRole("button", { name: en["saveBar.save"] }),
+  );
   // An empty string is what a <select> yields and NOT what the contract takes:
   // tag_id is a uuid or null, so an empty string would be refused as malformed
   // rather than read as "no word".
   await waitFor(() => expect(sent).toEqual([{ tag_id: null }]));
+});
+
+it("puts the stored word back on Discard and sends nothing", async () => {
+  const sent: unknown[] = [];
+  installFetchStub({
+    "GET /tags": () => jsonResponse(vocabulary),
+    "PUT /connectors/gmail/context-tag": (body: unknown) => {
+      sent.push(body);
+      return jsonResponse({});
+    },
+  });
+  render(
+    <ConnectorContextTagRow
+      conn={connection({
+        context_tag: { id: "t-nord", name: "Nord inbox", archived: false },
+      })}
+    />,
+  );
+  const select = await screen.findByRole("combobox", {
+    name: en["connectors.contextTag.label"],
+  });
+  await userEvent.click(select);
+  await userEvent.click(
+    within(screen.getByRole("listbox")).getByRole("option", {
+      name: "Sued inbox",
+    }),
+  );
+  await userEvent.click(
+    screen.getByRole("button", { name: en["saveBar.discard"] }),
+  );
+
+  expect(select.textContent).toContain("Nord inbox");
+  expect(sent).toEqual([]);
 });
 
 // A word retired after it was chosen leaves the connector filing nothing. The

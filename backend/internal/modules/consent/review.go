@@ -48,10 +48,6 @@ const (
 	// ReviewNeedsRepair is a refusal no evidence can answer, because something
 	// about the message or the address is wrong.
 	ReviewNeedsRepair = "needs_repair"
-	// ReviewAwaitingDecision is a refusal the rep has handed to somebody who
-	// may override it. It is the rep's work no longer, and a surface should say
-	// so rather than showing them a form they have already filled in.
-	ReviewAwaitingDecision = "awaiting_decision"
 	// ReviewResolved is work somebody finished.
 	ReviewResolved = "resolved"
 	// ReviewSuperseded is a review replaced by a fresher attempt at the same
@@ -92,9 +88,6 @@ type Review struct {
 	InitiatedBy ids.UUID
 	Refusals    []RefusedRecipient
 	ReasonCode  string
-	// ApprovalID is the card a routed review was handed to. Zero on a review
-	// nobody has asked about, which is most of them.
-	ApprovalID ids.UUID
 }
 
 // OpenReviewTx records one refusal, inside the transaction that refused.
@@ -220,13 +213,12 @@ func (s *Store) ReviewForReader(ctx context.Context, id ids.UUID) (Review, error
 		err := tx.QueryRow(ctx, `
 			SELECT id, state, kind, coalesce(delivery_intent_id, '00000000-0000-0000-0000-000000000000'::uuid),
 			       refusals, reason_code,
-			       coalesce(approval_id, '00000000-0000-0000-0000-000000000000'::uuid),
 			       coalesce(initiated_by, '00000000-0000-0000-0000-000000000000'::uuid)
 			  FROM communication_review
 			 WHERE id = $1
 			   AND (($2::uuid IS NOT NULL AND initiated_by = $2) OR $3)`, id, zeroSeatAsNull(seat), decider).
 			Scan(&out.ID, &out.State, &out.Kind, &out.IntentID, &payload, &out.ReasonCode,
-				&out.ApprovalID, &out.InitiatedBy)
+				&out.InitiatedBy)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
@@ -380,10 +372,12 @@ type SendRefusedError struct {
 	Cause    error
 	// Actions is what THIS caller may do about the refusal, decided where the
 	// refusal is recorded because that is where the principal is known. Empty
-	// for a caller with nothing to do but stop and report, which is the honest
-	// answer for an agent: routing a decision is human-only and bound to the
-	// review's initiator.
+	// for a caller with nothing to do but stop and report, which is the answer
+	// for an agent: both moves are human-only.
 	Actions []string
+	// Overrulable names the contact and category of each vouch the overrule
+	// action needs. Empty unless Actions offers it.
+	Overrulable []OverrulableRecipient
 }
 
 func (e *SendRefusedError) Error() string {
@@ -461,37 +455,27 @@ func zeroSeatAsNull(seat ids.UUID) *ids.UUID {
 }
 
 // FaultReference implements apperrors.ReferencedFault: the review this refusal
-// opened, as a field rather than as a sentence.
-//
-// STILL NO FieldFault, and the distinction matters. A field fault says "you
-// sent a bad input" and answers 422; this refusal is neither — the caller's
-// input was fine and the engine refused on consent grounds, which is the 409
-// every client and every test already recognises. Implementing FieldFault here
-// once flipped the whole send surface from 409 to 422.
-//
-// What a reference adds is orthogonal to that: the status and the code are
-// unchanged, and the id appears beside them where a machine can read it. The
-// tool surface is why — an agent handed a sentence can do nothing, and the same
-// refusal naming its review can hand the question to a human.
+// opened, what this caller may do, and what an overrule must cover, as fields.
+// It adds no FieldFault: the refusal stays the 409 every client recognises,
+// not a 422 about the caller's input.
 func (e *SendRefusedError) FaultReference() map[string]any {
 	if e.ReviewID.IsZero() {
 		return nil
 	}
-	return map[string]any{
-		FieldReviewID: e.ReviewID.String(),
-		// WHAT THIS CALLER MAY DO, not what the route exists for.
-		//
-		// Routing a decision is human-only and bound to the review's own
-		// initiator, so naming it unconditionally would promise an agent a move
-		// it cannot make — and an agent that tries and is refused has been sent
-		// somewhere by us rather than by its own mistake. Worse than saying
-		// nothing.
-		//
-		// An empty list is the honest answer for a caller with nothing to do
-		// but stop and report: the reference still travels, and a human
-		// reading the agent's transcript can pick the review up.
+	reference := map[string]any{
+		fieldReviewID: e.ReviewID.String(),
+		// Both moves are human-only; an agent gets an empty list and the
+		// reference, which a human reading its transcript can pick up.
 		"available_actions": e.Actions,
 	}
+	if len(e.Overrulable) > 0 {
+		overrulable := make([]map[string]string, 0, len(e.Overrulable))
+		for _, o := range e.Overrulable {
+			overrulable = append(overrulable, map[string]string{"contact_id": o.ContactID.String(), "category": o.Category})
+		}
+		reference["overrulable"] = overrulable
+	}
+	return reference
 }
 
 // Unreferenced answers the refusal without the reference, which is what decides

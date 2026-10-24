@@ -305,10 +305,11 @@ type relinkActivityResolver struct {
 	language baselanguage.Resolver
 }
 
-// Subject names the ACTIVITY the approval binds to — the row that changes —
-// and pins its version, with the destination carried into the summary: moving
-// a captured email onto THIS deal and onto that one are different decisions
-// wearing one shape.
+// Subject names the ACTIVITY the approval binds to, the row that changes, and
+// pins its version. The destination is in the summary too, because moving an
+// email onto this deal or onto that one are different decisions. It stays an
+// id: this card's decider is judged on the activity, so the destination's name
+// may not be theirs to read.
 func (r *relinkActivityResolver) Subject(ctx context.Context, cmd RelinkActivityCommand) (StageInfo, error) {
 	rec, err := r.activity.row(ctx, cmd.ActivityID)
 	if err != nil {
@@ -319,7 +320,7 @@ func (r *relinkActivityResolver) Subject(ctx context.Context, cmd RelinkActivity
 		TargetType:    string(datasource.EntityActivity),
 		TargetID:      cmd.ActivityID,
 		TargetVersion: &rec.Version,
-		Summary:       fmt.Sprintf(said.relinkActivity, cmd.ActivityID, said.noun(cmd.EntityType), cmd.EntityID),
+		Summary:       fmt.Sprintf(said.relinkActivity, recordLabel(rec), said.noun(cmd.EntityType), cmd.EntityID),
 	}, nil
 }
 

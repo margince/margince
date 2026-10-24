@@ -28,7 +28,7 @@ func (s *Service) Stage(ctx context.Context, in StageInput) (ids.ApprovalID, err
 	if err != nil {
 		return ids.ApprovalID{}, err
 	}
-	if err := stagerIsAttributable(ctx); err != nil {
+	if err := stagerIsAttributable(ctx, in); err != nil {
 		return ids.ApprovalID{}, err
 	}
 	var id ids.ApprovalID
@@ -53,7 +53,7 @@ func (s *Service) StageOrJoinPendingInTx(ctx context.Context, tx pgx.Tx, in Stag
 	if err != nil {
 		return ids.ApprovalID{}, err
 	}
-	if err := stagerIsAttributable(ctx); err != nil {
+	if err := stagerIsAttributable(ctx, in); err != nil {
 		return ids.ApprovalID{}, err
 	}
 	return s.stageOrJoinPendingInTx(ctx, tx, in)
@@ -355,7 +355,7 @@ func (s *Service) StageInTx(ctx context.Context, tx pgx.Tx, in StageInput) (ids.
 		return ids.ApprovalID{}, errors.New(
 			"crmapprovals: StageInTx always creates a row — use StageOrJoinPendingInTx to join or supersede")
 	}
-	if err := stagerIsAttributable(ctx); err != nil {
+	if err := stagerIsAttributable(ctx, in); err != nil {
 		return ids.ApprovalID{}, err
 	}
 	return s.insertProposalInTx(ctx, tx, in)
@@ -388,6 +388,10 @@ func (s *Service) insertProposalInTx(ctx context.Context, tx pgx.Tx, in StageInp
 	if coPinned {
 		coTargetVersion = &coVersion
 	}
+	decider, err := resolveDecider(ctx, tx, p, in)
+	if err != nil {
+		return ids.ApprovalID{}, err
+	}
 	id := ids.New[ids.ApprovalKind]()
 	evidence, err := marshalEvidence(in.Evidence)
 	if err != nil {
@@ -410,16 +414,18 @@ func (s *Service) insertProposalInTx(ctx context.Context, tx pgx.Tx, in StageInp
 			                       target_entity_type, target_entity_id, target_version,
 			                       co_target_entity_type, co_target_entity_id, co_target_version,
 			                       target_label, summary, proposed_change, diff_hash, expires_at,
-			                       bundle_id, evidence)
+			                       bundle_id, evidence, requested_decider_id, requested_decider_source,
+			                       staged_in_conversation_of)
 			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16,
-			         now() + $17::interval, $18, $19)
+			         now() + $17::interval, $18, $19, $20, $21, $22)
 			 RETURNING expires_at`,
 		id, in.Kind, p.ID, nullUUID(p.OnBehalfOf), nullUUID(p.PassportID), nullUUID(p.ConnectionID),
 		nullStr(in.TargetType), nullUUID(in.TargetID), in.TargetVersion,
 		nullStr(in.CoTargetType), nullUUID(in.CoTargetID), coTargetVersion,
 		stagedTargetLabel(ctx, tx, in),
 		nullStr(in.Summary), in.ProposedChange, in.DiffHash, ttlFor(in.Kind, in.TTL).String(),
-		nullUUID(in.BundleID), evidence).Scan(&expiresAt); err != nil {
+		nullUUID(in.BundleID), evidence, decider.member, string(decider.source),
+		nullUUID(conversationOf(ctx, p))).Scan(&expiresAt); err != nil {
 		return ids.ApprovalID{}, err
 	}
 	expiresAt = expiresAt.UTC()

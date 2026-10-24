@@ -423,4 +423,5 @@ projection, which has its own rules for how it stays current; see
 - [ai-runtime.md](ai-runtime.md): where the model for the embed lane comes from.
 - [write-backbone.md](write-backbone.md): the outbox the indexer consumes.
 - [relationship-graph.md](relationship-graph.md).
+- [search-box-ask.md](search-box-ask.md): how the same box answers a how-to question.
 - [../reference/configuration.md](../reference/configuration.md).

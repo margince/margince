@@ -43,6 +43,11 @@ func (h Handlers) NameSeats(w http.ResponseWriter, r *http.Request, params crmco
 		httperr.Write(w, r, err)
 		return
 	}
+	departed, err := h.svc.DepartedAmong(r.Context(), seats)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
 	// Walked in the order asked rather than ranged over the map: Go randomises
 	// map order, so ranging would answer one request two ways.
 	data := make([]crmcontracts.SeatName, 0, len(named))
@@ -51,7 +56,7 @@ func (h Handlers) NameSeats(w http.ResponseWriter, r *http.Request, params crmco
 		if !resolved {
 			continue
 		}
-		data = append(data, crmcontracts.SeatName{Id: id, DisplayName: name})
+		data = append(data, crmcontracts.SeatName{Id: id, DisplayName: name, Departed: departed[ids.UUID(id)]})
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.SeatNameListResponse{Data: data})
 }

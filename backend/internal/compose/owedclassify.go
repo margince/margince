@@ -28,12 +28,14 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/owedverdict"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/schema"
@@ -107,11 +109,16 @@ func NewOwedClassifier(pool *pgxpool.Pool, brain completer, now func() time.Time
 	return &OwedClassifier{
 		pool: pool,
 		store: activities.NewStore(db).WithOwnDomains(
-			ownDomainReader{store: capture.NewOwnDomainStore(db)}),
+			ownDomainReader{store: capture.NewOwnDomainStore(db)}).WithRecordZone(installationZoneTx),
 		brain: brain,
 		log:   log,
 		now:   now,
 	}
+}
+
+// installationZoneTx is the zone the installation's calendar days end in.
+func installationZoneTx(ctx context.Context, tx pgx.Tx) (*time.Location, error) {
+	return identity.ZoneAppliedTx(ctx, tx)
 }
 
 // owedCandidate is one backlog row as the prompt sees it.

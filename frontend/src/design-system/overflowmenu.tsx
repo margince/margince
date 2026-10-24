@@ -49,10 +49,13 @@ function isSetting(item: Element): boolean {
 // stays under its button wherever that button has moved to.
 export function OverflowMenu({
   label,
+  word,
   keepMounted = false,
   children,
 }: Readonly<{
   label: string;
+  /** The trigger's short word, drawn under the glyph in a record's verb bar. */
+  word?: string;
   /**
    * Mount the children immediately rather than on the first open.
    *
@@ -164,6 +167,11 @@ export function OverflowMenu({
         }}
       >
         <MoreHorizontal aria-hidden="true" />
+        {word && (
+          <span className="verb-word" aria-hidden="true">
+            {word}
+          </span>
+        )}
       </Button>
       {/* Hidden, never unmounted once mounted: the items own their dialogs, and
           `hidden` takes them out of the tab order. When they first mount is

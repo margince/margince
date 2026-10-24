@@ -15,7 +15,7 @@ import { ConnectionOutcomesCard } from "../capture/connection-outcomes";
 
 // Which accounts a member's imported network reaches. The figures ARE the
 // answer: how many connections resolved to each account, and how many of those
-// are already contacts — the gap between the two is what the import was for.
+// are already contacts. The gap between the two is what the import was for.
 
 type LinkedInReach = components["schemas"]["LinkedInReachResponse"];
 
@@ -71,7 +71,7 @@ async function renderReach(
   );
   if (body.accounts.length > 0) {
     await user.click(
-      await screen.findByRole("button", { name: "View Network reach" }),
+      await screen.findByRole("button", { name: "View LinkedIn network" }),
     );
   }
 }
@@ -141,6 +141,6 @@ it("says why nothing is reached when every connection is off file", async () => 
     ),
   ).toBeInTheDocument();
   expect(
-    screen.queryByRole("button", { name: "View Network reach" }),
+    screen.queryByRole("button", { name: "View LinkedIn network" }),
   ).toBeNull();
 });

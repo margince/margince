@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
+import { PenLine } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
@@ -10,7 +11,7 @@ import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { routeHash } from "../../lib/router";
 import { useMe } from "../../lib/session";
-import { settingsHref } from "../settings/settingsrouting";
+import { settingsHref } from "../../lib/settingsrouting";
 
 type SignOff = components["schemas"]["EmailSignOff"];
 type SignatureDraft = components["schemas"]["EmailSignatureDraft"];
@@ -38,16 +39,44 @@ export function SignOffPreview({
   const t = useT();
   const { signOff, stale, failed } = useSignOff(body, subject);
   if (failed) {
-    return <p className="t-caption">{t("compose.signOffFailed")}</p>;
+    return (
+      <p className="t-caption compose-signoff">{t("compose.signOffFailed")}</p>
+    );
   }
   if (!signOff?.text || signOff.kind === "none") {
     return null;
   }
   // While the words have moved on and the answer has not, the block is drawn
   // as updating: the closing's language may be about to change.
+  const className = stale ? "compose-signoff is-stale" : "compose-signoff";
+  // A closing is one line of the product's own words, said in a sentence with
+  // the way to replace it. A signature is the sender's own block, shown whole.
+  if (signOff.kind === "closing") {
+    return (
+      <section
+        className={className}
+        aria-label={t("compose.signOff")}
+        aria-busy={stale}
+      >
+        <PenLine aria-hidden="true" />
+        <p className="t-caption">
+          {t("compose.signsOffAs", {
+            closing: signOff.text
+              .trim()
+              .split(/\s*\n\s*/)
+              .join(" "),
+          })}{" "}
+          {t("compose.signOffClosing")}
+        </p>
+        <a href={routeHash(settingsHref("account"))}>
+          {t("compose.signOffSet")}
+        </a>
+      </section>
+    );
+  }
   return (
     <section
-      className={stale ? "compose-signoff is-stale" : "compose-signoff"}
+      className={`${className} is-signature`}
       aria-label={t("compose.signOff")}
       aria-busy={stale}
     >
@@ -56,14 +85,6 @@ export function SignOffPreview({
         <SignatureHtml html={signOff.html} title={t("compose.signOff")} />
       ) : (
         <p className="compose-signoff-text">{signOff.text}</p>
-      )}
-      {signOff.kind === "closing" && (
-        <p className="t-caption">
-          {t("compose.signOffClosing")}{" "}
-          <a href={routeHash(settingsHref("account"))}>
-            {t("compose.signOffSet")}
-          </a>
-        </p>
       )}
     </section>
   );

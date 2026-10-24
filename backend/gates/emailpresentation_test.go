@@ -95,6 +95,9 @@ const (
 var emailRenderers = map[string]bool{
 	"design-system/emailentry.tsx":  true,
 	"design-system/emaildetail.tsx": true,
+	// The parts of one message EmailDetail and SourceEmailPanel both draw:
+	// the envelope and the files, split out so the thread view shares them.
+	"design-system/emailmessage.tsx": true,
 	// The message a task was read out of, drawn IN the task instead of behind
 	// a second drawer over the first. It is a renderer, not a passthrough: it
 	// shows the subject, the date and the body (through EmailText, the same
@@ -113,21 +116,26 @@ var emailRenderers = map[string]bool{
 // These are the ones that never mount anything: builders, mappers and the
 // surfaces whose only act is to suppress their own title in favour of the row.
 var emailPassthroughs = gatekit.Waive(map[string]string{
-	"design-system/activitytimeline.tsx":             "maps an Activity onto a TimelineEntry, email_summary included, for timeline.tsx to draw; it builds the entry and renders nothing",
-	"design-system/timelineentry.tsx":                "declares the TimelineEntry shape, its emailSummary field included, and small row parts that read no message; timeline.tsx and timelinethread.tsx draw the message",
-	"lib/openemail.ts":                               "the drawer controller: it reads emailSummary only to decide an entry HAS a message to open, and holds no part of one",
-	"features/records/recordchronology.tsx":          "wires onOpenEmail onto the entries it hands to the timeline; the rendering is timeline.tsx's",
-	"features/records/record360/spine.tsx":           "declares the SpineSource shape, an exchange's email_summary included, and draws no message; spine.exchanges.tsx reads the summary and renders it through EmailReference",
-	"features/records/record360/citations.chips.tsx": "emailOf hands a citation's email summary on to citations.list.tsx, which draws it through EmailReference; this file builds chips and renders no message",
-	"features/worklist/worklist.row.tsx":             "same branch as the focus card, for the list row",
-	"features/contacts/contactmemory.rows.ts":        "maps a memory row onto the card's row model, the email summary included, for contactmemory.tsx to draw through EmailEntry; its subject and preview fill only the filter text and the fallback row",
-	"features/brief/brief.focus.tsx":                 "draws no part of the message: the moment it arrived, for the card's label row, and its audience status as one more fact about whose row it is — the same access reading emailaccesseditor.tsx takes. No subject, no body, no party, no attachment: the ranked column beside the card names its rows from the row's own `title` and `contact` (itemTitle, aboutRecord), never off the message. The message itself is handed to WorklistRow, which draws it through EmailEntry",
-	"testing/brief.fixtures.ts":                      "builds the rows a story and a test hand to the Brief; it constructs an EmailSummary and renders nothing",
-	"features/capture/emailaccesseditor.tsx":         "draws the ACCESS block and no part of the message: who may read it, the named members, and the control to change that. No subject, no body, no party, no attachment. It takes the whole presentation because the audience write needs the id and version off it",
-	"features/mail/emailrecords.tsx":                 "draws WHICH RECORDS the message is filed against and no part of the message: each link is an EntityRef naming a contact, an account or a deal. No subject, no body, no party, no attachment. It takes the whole presentation because the drawer hands it one",
-	"features/mail/emailreply.tsx":                   "draws no part of the message at all: it reads can_reply and links to decide whether the drawer may offer the verb and which record a reply files under, and mounts ChannelReplyAction, which is the product's one reply affordance",
-	"app/palettesearch.ts":                           "builds the palette's rows from search hits. For a message it carries the subject and the formatted date onto the row's `cite`, which paletterow.tsx draws through EmailReference; it renders nothing itself",
-	"app/searchkinds.ts":                             "answers WHERE a search hit goes. It reads email_summary for one thing — an activity carrying one is a message, and a message has a destination — and returns a Route. No markup at all: the file is .ts and holds no component",
+	"design-system/activitytimeline.tsx":           "maps an Activity onto a TimelineEntry, email_summary included, for timeline.tsx to draw; it builds the entry and renders nothing",
+	"design-system/timelineentry.tsx":              "declares the TimelineEntry shape, its emailSummary field included, and small row parts that read no message; timeline.tsx and timelinethread.tsx draw the message",
+	"lib/openemail.ts":                             "the drawer controller: it reads emailSummary only to decide an entry HAS a message to open, and holds no part of one",
+	"features/records/recordchronology.tsx":        "wires onOpenEmail onto the entries it hands to the timeline; the rendering is timeline.tsx's",
+	"components/citations.chips.tsx":               "emailOf hands a citation's email summary on to citations.list.tsx, which draws it through EmailReference; this file builds chips and renders no message",
+	"features/worklist/worklist.row.tsx":           "same branch as the focus card, for the list row",
+	"features/contacts/contactmemory.rows.ts":      "maps a memory row onto the card's row model, the email summary included, for contactmemory.tsx to draw through EmailEntry; its subject and preview fill only the filter text and the fallback row",
+	"features/brief/brief.focus.tsx":               "draws no part of the message: the moment it arrived, for the card's label row, and its audience status as one more fact about whose row it is — the same access reading emailaccesseditor.tsx takes. No subject, no body, no party, no attachment: the ranked column beside the card names its rows from the row's own `title` and `contact` (itemTitle, aboutRecord), never off the message. The message itself is handed to WorklistRow, which draws it through EmailEntry",
+	"testing/brief.fixtures.ts":                    "builds the rows a story and a test hand to the Brief; it constructs an EmailSummary and renders nothing",
+	"features/companies/companyoverviewlatest.tsx": "one row of the company overview's Latest card: the headline as the link that opens the drawer, who it was with and the day, and the needs-reply badge. No preview, body, attachment or access mark: the row is a line in a list in time order, and the drawer it opens is EmailDetail",
+	"features/contacts/contactstanding.peeks.ts":   "builds the rows of the contact page's hover cards. It reads a message's direction, subject and move to list the exchanges behind a count, and renders nothing: PeekCard draws the rows",
+	"features/contacts/contactstandingfigures.ts":  "counts the messages waiting for a reply for the contact's figures. It reads only the message's move and renders nothing",
+	"lib/standingmarks.ts":                         "builds the timeline's activity marks. It reads a message's direction, subject and counterparty to title a mark and renders nothing: StandingTimeline draws the chip and its card",
+	"features/capture/emailaccesseditor.tsx":       "draws the ACCESS block and no part of the message: who may read it, the named members, and the control to change that. No subject, no body, no party, no attachment. It takes the whole presentation because the audience write needs the id and version off it",
+	"features/mail/composethread.tsx":              "maps the record's recent mail onto the composer's Conversation model, the newest message's email_summary included, for composethreadbar.tsx to draw through EmailEntry; it holds the reads and renders nothing",
+	"features/mail/compose.parts.tsx":              "quotes the thread's earlier messages under a reply as read-only text the send never carries. It reads the summary's counterparty only to say who wrote each one; the thread itself is offered through EmailEntry in composethreadbar.tsx",
+	"features/mail/emailrecords.tsx":               "draws WHICH RECORDS the message is filed against and no part of the message: each link is an EntityRef naming a contact, an account or a deal. No subject, no body, no party, no attachment. It takes the whole presentation because the drawer hands it one",
+	"features/mail/emailreply.tsx":                 "draws no part of the message at all: it reads can_reply and links to decide whether the drawer may offer the verb and which record a reply files under, and mounts ChannelReplyAction, which is the product's one reply affordance",
+	"app/palettesearch.ts":                         "builds the palette's rows from search hits. For a message it carries the subject and the formatted date onto the row's `cite`, which paletterow.tsx draws through EmailReference; it renders nothing itself",
+	"app/searchkinds.ts":                           "answers WHERE a search hit goes. It reads email_summary for one thing — an activity carrying one is a message, and a message has a destination — and returns a Route. No markup at all: the file is .ts and holds no component",
 })
 
 // entrySchemas reads the schemas the contract marks as an email.
@@ -393,14 +401,14 @@ func returnsMarkup(body string) bool {
 var emailAccess = regexp.MustCompile(
 	`\b(email_summary|emailSummary|email_reference|emailReference)\b`)
 
-// The canonical set. Widening it is a deliberate act rather than a
-// convenience: a further reading of a message appearing quietly is what this
-// gate exists to stop, so a component belongs here only when it draws a shape
-// the others cannot carry. EmailWords is the words alone, for a host that has
-// already drawn the lead and the time — EmailEntry there would draw both a
-// second time, and EmailReference carries no preview by design.
+// The canonical set. A further reading of a message appearing unnoticed is
+// what this gate exists to stop. A component belongs here only when it draws a
+// shape the others cannot carry. EmailWords is the words alone, for a host that
+// has already drawn the lead and the time (EmailEntry would draw both twice).
+// EmailReference carries no preview by design. EmailFiles is the attachment
+// chip EmailEntry draws, for a host that draws the rest.
 func mountsCanonical(text string) bool {
-	for _, component := range []string{"EmailEntry", "EmailReference", "EmailDetail", "EmailWords"} {
+	for _, component := range []string{"EmailEntry", "EmailReference", "EmailDetail", "EmailWords", "EmailFiles"} {
 		if strings.Contains(text, "<"+component) {
 			return true
 		}

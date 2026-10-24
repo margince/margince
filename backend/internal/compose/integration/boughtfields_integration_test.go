@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
@@ -272,5 +273,112 @@ func TestDeletingBoughtDataUnmarksWhatItClearedAndKeepsWhatItCouldNot(t *testing
 	}
 	if got := boughtTargets(e.Admin(), t, store, unreachable); len(got) != 0 {
 		t.Errorf("an erased contact still names bought values: %v", got)
+	}
+}
+
+// TestRevertingABoughtCurrentEmployerPromotesTheOtherAndRecordsBoth: the bought
+// employer held the current flag, and one other employment is current. After
+// the revert the other one holds the flag, and both edges have an audit row.
+func TestRevertingABoughtCurrentEmployerPromotesTheOtherAndRecordsBoth(t *testing.T) {
+	e := Setup(t)
+	subject, store := boughtSubject(t, e)
+	bought := employmentMark(t, boughtTargets(e.Admin(), t, store, subject))
+	var boughtWasPrimary bool
+	queryAsOwner(t, e, `SELECT is_current_primary FROM relationship WHERE id = $1`, &boughtWasPrimary, bought)
+	if !boughtWasPrimary {
+		t.Fatal("the bought employer does not hold the current flag, so this case tests nothing")
+	}
+	other, err := store.CreateCompany(e.Admin(), contacts.CreateCompanyInput{DisplayName: "Typed Employer", Source: "manual"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	contact, company, notPrimary := ids.From[ids.ContactKind](subject), ids.From[ids.CompanyKind](ids.UUID(other.Id)), false
+	typed, err := store.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
+		Kind: "employment", ContactID: &contact, CompanyID: &company, IsCurrentPrimary: &notPrimary, Source: "manual",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	eventsNaming := `SELECT count(*) FROM event_outbox WHERE envelope::text LIKE '%' || $1::text || '%'`
+	var eventsBefore, eventsAfter int
+	queryAsOwner(t, e, eventsNaming, &eventsBefore, bought)
+
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := contacts.RevertProviderFills(e.Admin(), tx, "surfe", subject)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	var typedIsPrimary bool
+	queryAsOwner(t, e, `SELECT is_current_primary FROM relationship WHERE id = $1`, &typedIsPrimary, typed.ID)
+	if !typedIsPrimary {
+		t.Error("the revert retired the current employer and left the one remaining employment unflagged")
+	}
+	var archiveRows, promotionRows int
+	queryAsOwner(t, e, `SELECT count(*) FROM audit_log
+		WHERE entity_type = 'relationship' AND entity_id = $1 AND action = 'archive'`, &archiveRows, bought)
+	if archiveRows != 1 {
+		t.Errorf("the retired bought employment has %d archive rows, want 1", archiveRows)
+	}
+	queryAsOwner(t, e, `SELECT count(*) FROM audit_log
+		WHERE entity_type = 'relationship' AND entity_id = $1 AND action = 'update'
+		  AND before @> '{"is_current_primary": false}' AND after @> '{"is_current_primary": true}'`, &promotionRows, typed.ID)
+	if promotionRows != 1 {
+		t.Errorf("the promoted employment has %d rows recording the flag it gained, want 1", promotionRows)
+	}
+	queryAsOwner(t, e, eventsNaming, &eventsAfter, bought)
+	if eventsAfter != eventsBefore+1 {
+		t.Errorf("%d events name the retired bought employment, want %d", eventsAfter, eventsBefore+1)
+	}
+}
+
+// TestRevertingTwoBoughtCurrentEmployersPromotesTheOneTypedIn: whichever of the
+// two bought edges the revert retires first, the typed one ends current.
+func TestRevertingTwoBoughtCurrentEmployersPromotesTheOneTypedIn(t *testing.T) {
+	e := Setup(t)
+	subject, store := boughtSubject(t, e)
+	if _, err := store.CreateCompany(e.Admin(), contacts.CreateCompanyInput{
+		DisplayName: "Side Employer", Source: "manual",
+		Domains: []contacts.CompanyDomainInput{{Domain: "side-employer.example", IsPrimary: true}},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	applyPurchase(t, e, subject, "surfe", []provider.Claim{{Key: provider.ClaimJobHistory, Value: []byte(
+		`[{"company_name":"Side Employer","company_domain":"side-employer.example","job_title":"Advisor","employment_status":"current"}]`)}})
+	if _, err := store.ApplyEmploymentImport(e.Admin(), ids.From[ids.ContactKind](subject),
+		crmcontracts.EmploymentImportRequest{}); err != nil {
+		t.Fatal(err)
+	}
+	var boughtCurrent int
+	queryAsOwner(t, e, `SELECT count(*) FROM relationship WHERE contact_id = $1 AND kind = 'employment'
+		AND archived_at IS NULL AND `+employment.IsCurrentSQL("ended_at"), &boughtCurrent, subject)
+	if boughtCurrent != 2 {
+		t.Fatalf("the purchases left %d current employments, want 2, so this case tests nothing", boughtCurrent)
+	}
+	other, err := store.CreateCompany(e.Admin(), contacts.CreateCompanyInput{DisplayName: "Typed Employer", Source: "manual"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	contact, company, notPrimary := ids.From[ids.ContactKind](subject), ids.From[ids.CompanyKind](ids.UUID(other.Id)), false
+	typed, err := store.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{
+		Kind: "employment", ContactID: &contact, CompanyID: &company, IsCurrentPrimary: &notPrimary, Source: "manual",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := contacts.RevertProviderFills(e.Admin(), tx, "surfe", subject)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	var typedIsPrimary bool
+	queryAsOwner(t, e, `SELECT is_current_primary FROM relationship WHERE id = $1`, &typedIsPrimary, typed.ID)
+	if !typedIsPrimary {
+		t.Error("both bought employers went and the one remaining employment is not current")
 	}
 }

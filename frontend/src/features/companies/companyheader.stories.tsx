@@ -13,8 +13,7 @@ import {
 } from "../../testing/story-utils";
 import { CompanyActionBadges } from "./companyheader";
 import { CompanyHeaderActions } from "./companyheaderactions";
-import { CompanyIdentityFacts } from "./companyheaderfacts";
-import { CompanyNameLine } from "./companylifecycle";
+import { CompanyHeadLines } from "./companyheaderfacts";
 import { CompanyMarks } from "./companymarks";
 
 // The account header's own pieces (RecordView's nameBadge/pulse/badges/
@@ -46,7 +45,7 @@ const company: Company = {
   // as NOT writable, so the stage would draw as a read-only badge throughout.
   writable: true,
   visibility: "workspace",
-  industry: "Automotive",
+  industry: "automotive",
   size_band: "51-200",
   description: "Retrofits commercial fleets for zero-emission depots.",
   domains: [
@@ -144,12 +143,11 @@ function Header({
             gap: "var(--space-3)",
           }}
         >
-          <CompanyNameLine company={record} />
+          <CompanyHeadLines company={record} view={view} loading={loading} />
         </div>
         <div style={{ marginTop: "var(--space-2)" }}>
           <CompanyMarks company={record} />
         </div>
-        <CompanyIdentityFacts company={record} view={view} loading={loading} />
         <div
           style={{
             marginTop: "var(--space-2)",
@@ -166,7 +164,6 @@ function Header({
           />
           <CompanyActionBadges
             company={record}
-            view={view}
             onOpenHistory={() => {}}
             onSetUpPartner={() => {}}
           />
@@ -205,13 +202,9 @@ export const AuthorNamed: Story = {
   ),
 };
 
-// The ordinary shape of a customer: `customer` in the lifecycle AND in the
-// relationship types, plus a second relationship that is separately true. The
-// header says "Customer" ONCE — the lifecycle button beside the name —
-// and draws "Partner" beside it. The relationship whose word the lifecycle is
-// already printing does not draw again; the one it is not still does, because an
-// account can be a partner and a customer and hiding the second would make a
-// true reading look untrue.
+// A customer that is also a partner: the head draws the lifecycle button and
+// no relationship badge, since the design has none. The relationship types
+// are a field on the Profile tab.
 export const CustomerAndPartner: Story = {
   render: () => (
     <Header

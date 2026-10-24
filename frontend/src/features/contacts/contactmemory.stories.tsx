@@ -117,10 +117,38 @@ const olderNotes: Activity[] = [
   occurred_at: `2026-08-${25 - index}T09:00:00Z`,
 }));
 
-function view(activities: readonly Activity[]): Contact360 {
+const reachable: components["schemas"]["Contact"] = {
+  ...contact,
+  phones: [
+    {
+      id: "3f7c1a90-0000-4000-8000-0000000000f1",
+      phone: "+49 151 7654321",
+      phone_type: "mobile",
+      is_primary: true,
+      position: 0,
+      ...CAPTURED,
+    },
+  ],
+};
+
+// Inbound and not called back, so the row carries its Unanswered pill beside
+// Call: the widest the right slot gets.
+const call: Activity = {
+  id: "01a05500-0000-7000-8000-00000000ee04",
+  kind: "call",
+  subject: "Asked whether the retrofit slot can move to October",
+  direction: "inbound",
+  content_state: "available",
+  occurred_at: "2026-08-28T15:30:00Z",
+  version: 1,
+  is_done: false,
+  ...CAPTURED,
+};
+
+function view(activities: readonly Activity[], record = contact): Contact360 {
   return {
     as_of: AT,
-    contact,
+    contact: record,
     sections_omitted: [],
     last_outbound_at: "2026-08-30T07:00:00Z",
     activities: { data: [...activities], page },
@@ -130,11 +158,15 @@ function view(activities: readonly Activity[]): Contact360 {
 // The card sits in the record's right-hand pair, so it is drawn at that measure
 // rather than at the page's: the strip and the title share a narrow column, and
 // how much room the cuts have is the thing worth looking at here.
-function card(activities: readonly Activity[]) {
+function card(activities: readonly Activity[], record = contact) {
   return () => (
     <StoryProviders>
       <div style={{ maxWidth: 560 }}>
-        <ContactMemory view={view(activities)} onOpenEmail={() => {}} />
+        <ContactMemory
+          view={view(activities, record)}
+          onOpenEmail={() => {}}
+          onFullHistory={() => {}}
+        />
       </div>
     </StoryProviders>
   );
@@ -150,6 +182,15 @@ type Story = StoryObj<typeof ContactMemory>;
 
 /** Three kinds under the strip: a retained email, a meeting and a note. */
 export const WithRows: Story = { render: card([email, meeting, note]) };
+
+/** A logged call on a contact with a phone offers Call, beside its pill. */
+export const WithCall: Story = { render: card([call, email], reachable) };
+
+export const WithCallPhone: Story = {
+  ...WithCall,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+};
 
 /**
  * More than the glance holds. Three conversations are drawn and the footer

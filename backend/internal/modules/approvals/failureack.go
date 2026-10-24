@@ -78,7 +78,9 @@ func (s *Service) OwnFailedDecisions(ctx context.Context, limit int) ([]FailedDe
 					return err
 				}
 			}
-			out = append(out, FailedDecision{Approval: wire(a, now), Retryable: retryable})
+			shown := []crmcontracts.Approval{wire(a, now)}
+			withoutOwnersRecords(ctx, shown)
+			out = append(out, FailedDecision{Approval: shown[0], Retryable: retryable})
 		}
 		return nil
 	})

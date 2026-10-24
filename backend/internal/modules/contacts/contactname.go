@@ -25,6 +25,7 @@ import (
 	"unicode"
 
 	"github.com/margince/margince/backend/internal/platform/mailrole"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
@@ -161,9 +162,7 @@ func parseLocalPart(email string) ParsedName {
 	}
 	// Plus-addressing is a routing tag the mailbox owner appended, never part
 	// of their name: `anna.weber+crm@` is Anna Weber.
-	if base, _, found := strings.Cut(local, "+"); found && base != "" {
-		local = base
-	}
+	local = correspondence.LocalPartBase(local)
 	if hasRoleToken(local) {
 		return ParsedName{Full: local}
 	}

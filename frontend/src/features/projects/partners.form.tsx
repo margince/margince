@@ -10,7 +10,9 @@ import {
   SectionHeader,
   TextInput,
 } from "../../design-system/atoms";
+import { DateInput, isoOrBlank } from "../../design-system/dateinput";
 import { ErrorLine } from "../../design-system/errorline";
+import { refuseUnreadableField } from "../../design-system/formvalidity";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { FieldGuard } from "../../design-system/rbac";
@@ -139,7 +141,9 @@ function PartnerForm({
     <form
       onSubmit={(event) => {
         event.preventDefault();
-        mutation.mutate(partner);
+        if (!refuseUnreadableField(event.currentTarget)) {
+          mutation.mutate(partner);
+        }
       }}
       className="form-stack"
     >
@@ -229,10 +233,9 @@ function PartnerForm({
       </Field>
       <Field label={t("partner.nextStepDue")}>
         {(control) => (
-          <TextInput
+          <DateInput
             {...control}
-            type="date"
-            value={values.next_step_due_at}
+            value={isoOrBlank(values.next_step_due_at)}
             onChange={(event) =>
               setValues({ ...values, next_step_due_at: event.target.value })
             }

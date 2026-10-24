@@ -526,164 +526,10 @@
   color: var(--textPrimary);
 }
 
-/* `margin-bottom` owns the interval below the identity, one full step, on
-   EVERY record: the head is a register of its own and what opens the record's
-   rhythm is the strip or the band under it, not the name. One value, not one
-   per head — a head that draws an identity row and one that draws a name alone
-   are the same statement at different lengths, and keying the interval on what
-   the head happens to contain left the strip a hair under the name on a lead
-   and a full step under it on a company. `.record-head` is drawn by
-   `RecordHead` and nothing else, so this rule reaches every record page and no
-   other surface. */
 /* The way back over the head: one line of its own, a small step above the
    identity it leads into. */
 .record-back {
   margin-bottom: var(--space-3);
-}
-
-.record-head {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  margin-bottom: var(--space-5);
-  /* The verbs drop to their own row rather than squeezing the identity out of
-     the header. The controls column does not shrink, so on a narrow work
-     column every verb it gains takes its width from the name beside it — far
-     enough and the record's own name is nothing at all, which is a header that
-     has stopped naming its record. */
-  flex-wrap: wrap;
-}
-/* The company header carries a description, a chip row and a pulse line under
- * the name, which makes the identity block several times taller than the mark
- * beside it. Centring then floats the avatar to the middle of that stack,
- * beside the chips rather than beside the name it belongs to. */
-.record-head-wide {
-  align-items: flex-start;
-  /* The name's rung answers to THIS row's width rather than the window's, so
-     the row has to be measurable. It is the record page's own width — the
-     details pane sits below it and does not narrow it, the nav rail does. */
-  container-type: inline-size;
-}
-.record-head-wide .record-controls {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
-  flex-shrink: 0;
-}
-/* Inside the header the verbs are a right-aligned row at the top, not the
- * full-width strip they are on every other record. */
-.record-head-wide .record-controls .record-actions {
-  margin: 0;
-  justify-content: flex-end;
-}
-/* min-width: 0 is what keeps a long name inside the header: a flex item's
-   floor is otherwise its min-content width, so the name would set the
-   identity block's width and push the controls column off the row. */
-.record-head .record-id {
-  /* A floor, not just a share: `min-width: 0` alone lets the identity collapse
-     to zero beside a column that refuses to shrink. Below this it takes a row
-     of its own instead, which is the wrap above. */
-  flex: 1 1 16rem;
-  min-width: 0;
-}
-/* The name and its one standing badge, on the SAME baseline — the badge
-   reads as part of naming the record, not as one more fact under it. */
-/* Centred against the name, not sat on its baseline: the badge is a tag ON
-   the record rather than a word in the same sentence, and a baseline shared
-   with 22px display type drops it low enough to read as a footnote. */
-.record-name-row {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-  /* The floor the h1's own ellipsis needs to mean anything. A flex item's
-     minimum is its min-content, and a name set `nowrap` has no break in it —
-     so without this the row's minimum is the whole name, the identity block
-     inherits it, and the verbs beside it are pushed to a row of their own
-     rather than the name being cut. It is the name that gives way: the verbs
-     are the same four whatever the record is called. */
-  min-width: 0;
-}
-/* One line, cut with an ellipsis. A name long enough to wrap would push the
-   record's standing, its verbs and the whole page below it down the screen,
-   and the reader came for the record rather than for its full legal name —
-   which the Details rail spells out in a place that does wrap. Shrinkable
-   (min-width: 0) but not grown: at its natural width a short name keeps the
-   standing badge beside it on the same row. */
-.record-head h1 {
-  font-family: var(--fontFamilyHeading);
-  color: var(--textPrimary);
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-/* The compact head's second register: a caption line on the name's own row
-   (the role and the company), the pills under it, and the facts strip as a
-   full row across the head under a rule. The strip is the `badges` slot,
-   drawn after the verbs so the verbs keep the name's line; `order` here is
-   the one place the head's reading order and its drawn order differ, and it
-   is the facts that step back, not the verbs. */
-.record-head-compact .record-name-row {
-  align-items: baseline;
-  gap: var(--space-3);
-}
-.record-sub-inline {
-  min-width: 0;
-}
-.record-head-compact .record-pulse {
-  margin-top: var(--space-2);
-}
-.record-head-compact .record-badges {
-  flex-basis: 100%;
-  order: 1;
-  margin-top: var(--space-1);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--borderSubtle);
-}
-
-/* The record as one sheet: head, strip and columns on one raised surface
-   with a hairline round it, so the record reads as a document on the page
-   ground rather than as loose cards on it. */
-.record-sheet {
-  background: var(--bgElevated);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-lg);
-  padding: var(--space-5) var(--space-6);
-}
-
-/* The strip stays in reach as the record scrolls: stuck to the top of the
-   scroll pane, on the sheet's own ground so the cards pass under it rather
-   than through it, closed by the hairline the tabs already draw. The toggle
-   for the details pane rides with it, so a reader deep in the activity can
-   still change what stands beside the work. Nothing else in the head sticks:
-   the name is in the breadcrumb above, and the verbs a reader needs mid-page
-   are on the rows themselves. */
-.record-sheet .record-tabs {
-  position: sticky;
-  /* Flush under the top bar: the scroll pane pads the page's top gap above
-     its content, and a strip stuck at the pane's edge left that gap open with
-     the cards scrolling through it. */
-  top: calc(-1 * var(--pageGapTop));
-  z-index: 2;
-  background: var(--bgElevated);
-  /* Out to the sheet's edges, so the stuck strip runs the sheet's full width
-     rather than sitting inside its padding with the cards visible beside it.
-     The intervals under and around it are padding INSIDE the stuck block
-     rather than the margin the strip carries elsewhere: a margin is
-     transparent, and the cards scrolled through it. */
-  margin-inline: calc(-1 * var(--space-6));
-  padding: 0 var(--space-6);
-  /* The same step the work column keeps between its cards, so the first card
-     stands off the strip exactly as the second stands off the first. */
-  margin-bottom: var(--space-6);
-  /* A hairline, not a shadow: the strip is part of the sheet's plane, and the
-     line under it is the seam the cards scroll beneath. */
-  border-block-end: 1px solid var(--borderSubtle);
-}
-.record-sheet .record-tabs .recordtabs {
-  margin-block-end: 0;
 }
 
 /* The head's facts strip: caption over value, cells laid along the row and
@@ -709,272 +555,16 @@
   margin: 0;
 }
 
-/* A hairline between two groups of verbs: reaching the record, and recording
-   what happened to it. */
-.record-actions-sep {
-  inline-size: 1px;
-  align-self: stretch;
-  margin-inline: var(--space-1);
-  background: var(--borderSubtle);
-}
-/* One quiet line under the name, at the same size as the facts beside it. Set
-   larger it competed with the name above and read as a second title; the facts
-   row under it carries what a reader actually scans for. */
-.record-head-wide .record-sub {
-  max-width: 62ch;
-}
-.record-badges {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-.record-head .record-pulse {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-top: 4px;
-}
-/* A wide header's pulse is a STACK, not a row: the record page puts two blocks
-   here — what the account is, then the figures it stands on — and side by side
-   they read as one run-on line that wraps at a width nobody chose. Down the
-   page they read as what they are, two lines under a name. */
-.record-head-wide .record-pulse {
-  flex-direction: column;
-  align-items: stretch;
-  gap: var(--space-1);
-  margin-top: var(--space-2);
-}
-.record-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-  margin: var(--space-3) 0 var(--space-4);
-}
-
-/* A record's verbs wear the house rung EXPLICITLY, rather than by letting the
-   row stretch them: stretch makes every button's height a function of the
-   tallest one beside it, which is how the icon-only square came to be 32 wide
-   and 40 tall once already. Stated on the row because the rung belongs to the
-   row and not to each button — the ellipsis and the panel switch sit among the
-   account's other verbs and are one more of the same. */
-.record-actions :is(.btn, .overflow-menu > .btn) {
-  min-block-size: var(--controlHeight);
-}
-.record-actions :is(.btn-icon, .overflow-menu > .btn-icon) {
-  inline-size: var(--controlHeight);
-  block-size: var(--controlHeight);
-}
-
-/* `actionsInline`: the verbs sit on the SAME baseline as the identity block
-   rather than in their own row underneath it — pushed to the header's far
-   end by the auto margin, the same row the mockup draws.
-
-   THE GROUP FOLDS. A company carries more verbs than a 1280px column holds, so
-   a group that refused to shrink would keep each verb at its own width by
-   taking the width out of the page: it stands past the column's right edge and
-   the whole record can be dragged sideways after it. Giving way lets the
-   group's own wrap take the verbs onto a second rung inside the header, which
-   is the rule the product reads by — what is too wide folds or scrolls inside
-   itself, and the page never moves. */
-.record-actions-inline {
-  margin: 0 0 0 auto;
-  min-inline-size: 0;
-  /* And a folded line stays at the header's end, where the verbs are: the auto
-     margin only places the group, so once the group is as wide as the header
-     the second rung would start under the record's name instead. The same
-     spelling the controls column's row takes above. */
-  justify-content: flex-end;
-}
-/* A VERB does not fold. The group giving way is the answer to a narrow header;
-   a button giving way instead would set its own label two words to a line. */
-.record-actions-inline > :is(.btn, .btn-icon, .overflow-menu) {
-  flex-shrink: 0;
-}
-
-/* A refused verb explains itself in a SENTENCE, in the column Button renders
-   for it (`.btn-with-reason`). An action row does not shrink, so a caption left
-   at its natural width would set the row's width and push the record's name off
-   the header line. Capping the measure wraps the explanation under the button it
-   belongs to, which is where a reader looks for it anyway. */
-.record-actions .btn-with-reason {
-  max-inline-size: 22ch;
-}
-/* The caption hangs BELOW its button, so a row centred on its tallest item
-   lifts every explained verb above its neighbours and the row reads as two
-   rungs. Once any verb carries a caption the row aligns to its top edge: the
-   buttons share one line and the sentences hang under them. */
-.record-actions:has(.btn-with-reason) {
-  align-items: flex-start;
-}
-/* A caption the CALLER puts in the row, rather than one `Button` hangs under a
-   verb, is a sentence about the whole row. It takes its own line inside it, for
-   the reason above: at a sentence's natural width it set the group's width, and
-   a group that wide wrapped the verbs off the identity's line — leaving the
-   record's name alone across the header with its verbs on a row of their own.
-
-   A GROUP HOLDING PROSE IS AS WIDE AS ITS VERBS, not as wide as the prose.
-   Its own line is not enough for that: a wrapping flex row is still MEASURED
-   at the sum of its items, so the sentence's natural width went into the
-   group's flex basis even though the sentence was then drawn under the verbs
-   — and every pixel of it came out of the name beside the group, which grows
-   into what the group leaves. An archived account's header cut its name to
-   three words with a hand's width of empty row between them and the verbs:
-   the width the sentence had claimed and was not standing in.
-   `contain: inline-size` keeps the sentence out of the measurement — the
-   group's basis is its verbs — while `flex-basis: 100%` still resolves against
-   the laid-out group, so the sentence takes the verbs' width and wraps within
-   it, which is what a sentence is for. */
-.record-actions > .t-caption {
-  flex-basis: 100%;
-  contain: inline-size;
-  order: 1;
-  margin: 0;
-  text-align: end;
-}
-
-/* On a phone the record's verbs stick to the bottom of the viewport (plan
- * §10.3). A rep scrolling an account's story is several screens from the
- * header by the time they decide to write; an action row that scrolled away
- * with the header means scrolling back up to act on what they just read.
- *
- * Sticky rather than fixed: it participates in the layout, so it cannot cover
- * the last row of content the way a fixed bar does. */
-/* The record's verbs follow the reader down the page on a phone (plan §10.3).
-   A rep scrolling an account's story is several screens from the header by the
-   time they decide to write, and an action row that scrolled away with the
-   header means scrolling back up to act on what they just read.
-
-   The app's own navigation is already fixed at the bottom of a phone viewport
-   (shell.css: bottom 8px, z-index 30), so this bar stops ABOVE it. Sitting at
-   bottom:0 would put every record verb underneath the nav — present in the
-   DOM, unreachable by thumb. */
-@media (max-width: 720px) {
-  /* A phone has no room for a second column beside the name, so the header
-     stacks and the standing block sits under it at full width. Without this
-     the controls keep a narrow right-hand column and the lifecycle control
-     wraps to one word per line. */
-  .record-head-wide {
-    flex-wrap: wrap;
-  }
-  .record-head-wide .record-controls {
-    flex-basis: 100%;
-    align-items: flex-start;
-  }
-  .record-actions {
-    position: sticky;
-    /* The shell publishes this: the phone-nav clearance at the widths where it
-       draws the fixed bottom bar, the plain ledge everywhere else. This sheet
-       used to name the clearance itself behind its own 720px query, and so
-       stood off a nav that is gone above 700px. */
-    bottom: var(--stickyBottomInset);
-    /* Above the page's own content and below the app nav, so neither covers
-       the other. The modal overlay (50) still wins over both: an action bar
-       across an open dialog would trap a rep behind a button they cannot
-       reach. */
-    z-index: 2;
-    margin: 12px 0 0;
-    padding: var(--space-2) var(--padCard);
-    background: var(--bgPage);
-    border-top: 1px solid var(--borderSubtle);
-  }
-  /* Inside the header the verbs are a right-aligned row of their own, which
-     on a phone would leave the sticky bar half a screen wide and pinned to
-     the bottom of the HEADER rather than the viewport. Full width, left to
-     right, like the bar on every other record. */
-  .record-head-wide .record-controls .record-actions {
-    width: 100%;
-    justify-content: flex-start;
-  }
-  /* Same fold as the controls column above: the header already wraps at
-     this width (record-head-wide, above), so the inline actions drop to
-     their own full-width line rather than staying pinned to the header's
-     far end with nothing beside them. */
-  .record-actions-inline {
-    flex-basis: 100%;
-    margin-left: 0;
-  }
-  /* The bar floats over the end of the page while scrolling, so the record
-     reserves room for it AND for the nav below it — without this the last row
-     of the timeline sits permanently underneath and cannot be scrolled to. */
-  .record-zones {
-    padding-bottom: calc(var(--stickyBottomInset) + var(--space-6));
-  }
-}
-
-/* A pointer-driven page keeps the verbs where they were: the sticky bar exists
- * for a thumb, and on a desktop it would only shrink the reading area. */
-@media (min-width: 721px) {
-  .record-actions {
-    position: static;
-  }
-}
-
-/* The slot the tab strip sits in, directly under the identity on every record.
-   It has no rule of its own and wants none: the interval BELOW the strip
-   belongs to `.recordtabs` (design-system/recordtabs.css), which carries it to
-   every surface that draws the strip and not only to a record; the interval
-   above is the head's `margin-bottom`. A wrapper that also spelled the gap
-   would be a second answer to it, and the one a later author edited would be
-   the one with no effect, since the two collapse to whichever is larger.
-
-   The wrapper exists for what it does NOT do: it must not scroll. The strip
-   inside scrolls sideways on a narrow screen rather than wrapping, and it
-   breaks out past the reading column by half the work column's slack — a
-   scroller around it turned that overhang into scroll room, and the Details
-   control at the row's end taking focus dragged the whole row sideways by
-   it. */
-
-/* The full-width band between the strip and the columns: what describes the
-   WHOLE record — its readings, its stepper, the sentence that refuses an edit.
-   It spans both columns because it FRAMES them — inside the work column it
-   would sit beside the rail as one more card, its cells squeezed to a third of
-   the page. Its own gap is the one that sets the rhythm between its readings,
-   so it is stated here rather than left to whatever margins its children
-   happen to carry.
-
-   `margin-top` owns the interval ABOVE the band and `margin-bottom` the one
-   below it, one full step each, so the band is its own register rather than
-   sitting against what it follows. `.arrive-stack` is a block container, so
-   the top margin collapses with the strip's bottom margin into that one step
-   instead of doubling it — and the same value stands on a record that has no
-   strip, where the band follows the head. */
+/* What describes the WHOLE record, over the feed: its readings, its stepper,
+   the sentence that refuses an edit. Its own gap sets the rhythm between its
+   readings, and its margins are one full step each side, so it is a register
+   of its own rather than sitting against the tab strip or the first panel. */
 .record-band {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
   margin-top: var(--space-5);
   margin-bottom: var(--space-5);
-}
-
-/* Where the record stands, on its own row at the foot of the head — under the
-   facts and the verbs, above the tab strip. `flex-basis: 100%` is what takes
-   that row: the head is a wrapping flex, so a full-basis child wraps to a line
-   of its own rather than competing with the name for width.
-   
-   A plate rather than a run of controls on the head's own ground: the ladder
-   reads as an element inside a card, and the same ladder floating bare read as
-   chrome nobody had finished. Not `PanelPlate`, which is the recessed plate for
-   what IS and says so — a ladder is the controls that change it.
-   
-   No bottom margin: the head's own `margin-bottom` is the one interval between
-   the identity and the strip, and a second one here would widen it. */
-.record-standing {
-  flex-basis: 100%;
-  /* Last in the head whichever head this is. The compact head lifts its facts
-     strip to `order: 1`, so DOM order alone put the ladder ABOVE the facts it
-     stands under. */
-  order: 2;
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
-  padding: var(--space-3) var(--padCard);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-lg);
-  background: var(--bgElevated);
-  box-shadow: var(--shadow-rest);
 }
 
 /* One vertical stack of full-width panels, which is what a record's work
@@ -1005,25 +595,13 @@
   margin-block-start: var(--space-6);
 }
 
-/* The columns of context beside the work, at a tighter step than the stack
-   above: a rail card is a glance and a work-column card is something you read.
-   `RecordView` puts these classes on the columns themselves, so the rhythm
-   belongs with the component that names them — every record page draws these
-   two columns, and a screen stylesheet spelling them again is one record's
-   answer to a question the shell already answers for all of them. */
-.record-rail,
+/* The details card's sections, at a tighter step than the stack above: a
+   detail is a glance and a feed card is something you read. */
 .record-aside {
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
 }
-
-/* The record page's zones — the grid itself is `PageZones` (pagezones.css),
-   which the record page composes rather than owns: the ratios and the two folds
-   are a page shape, not a record's. `.record-zones` is what the record adds ON
-   TOP of that grid, and today that is exactly one thing — the phone bottom
-   clearance in the 720px block above, so the sticky action bar cannot cover the
-   last row of the timeline. */
 
 /* The dials above the chronology: the cuts, then the narrowing. Its own
    interval, and the one that separates the block from the heading over it and
@@ -1175,6 +753,8 @@
   grid-row: 1;
   justify-self: end;
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: var(--space-2);
 }
 
@@ -1219,6 +799,19 @@
   grid-column: 1;
 }
 
+/* The kind line alone floors its column, so its status badge stays whole.
+   The lines under it are contained, so a long word cannot push the verbs off. */
+@container chronology (width > 38rem) {
+  .timeline .tl-body:has(> .tl-head:first-child):has(> .tl-actions) {
+    grid-template-columns: minmax(min-content, 1fr) auto;
+  }
+  .timeline
+    .tl-body:has(> .tl-head:first-child):has(> .tl-actions)
+    > :not(.tl-head, .tl-actions) {
+    contain: inline-size;
+  }
+}
+
 /* The verbs' `auto` track wins over the head beside it, so in a narrow list
    the head drew at zero width. Below 38rem the verbs drop under the entry. */
 @container chronology (max-width: 38rem) {
@@ -1230,7 +823,7 @@
     grid-row: auto;
     order: 1;
     justify-self: start;
-    flex-wrap: wrap;
+    justify-content: flex-start;
   }
 }
 
@@ -1537,7 +1130,7 @@
   outline-offset: -2px;
 }
 
-/* One responsibility row in the Responsible panel (features/records/recordteam.tsx).
+/* One responsibility row in the Responsible panel (components/recordteam.tsx).
  *
  * The row is the reader's unit: a role label over the colleague or team that
  * holds it, with the verbs for that one responsibility stacked under the

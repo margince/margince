@@ -39,9 +39,6 @@ import (
 const (
 	// confidentialityClaimSize is how many threads one pass leases at a time.
 	confidentialityClaimSize = 8
-	// confidentialityCatchUpCap bounds one pass so a large backlog drains over
-	// several cycles rather than holding one workspace's budget for all of it.
-	confidentialityCatchUpCap = 40
 	// confidentialityActor is the principal every write of this engine is
 	// attributed to. The `agent:` prefix is the contract's grammar, not a
 	// description of the process.
@@ -93,17 +90,16 @@ func (e *ConfidentialityVerdictEngine) workspaceCtx(ctx context.Context) context
 	return principal.SystemActing(ctx, confidentialityActor)
 }
 
-// RunWorkspace drains up to maxVerdicts threads in the workspace already bound
-// in ctx. A budget stop ends the pass cleanly: what was decided is committed,
-// and the rest stays claimable for the next cycle.
+// RunWorkspace judges up to maxVerdicts threads in the workspace already bound
+// in ctx, or up to the admin's pass cap when maxVerdicts is not positive. Every
+// thread the model is asked about counts, answered or not, so a failing model
+// cannot make the cap a suggestion. A budget stop ends the pass cleanly: what
+// was decided is committed, and the rest stays claimable for the next cycle.
 func (e *ConfidentialityVerdictEngine) RunWorkspace(ctx context.Context, maxVerdicts int) error {
 	if !e.CanJudge() {
 		// No model bound. Every thread stays held, which is the answer this
 		// deployment gets until an admin binds a lane.
 		return nil
-	}
-	if maxVerdicts <= 0 {
-		maxVerdicts = confidentialityCatchUpCap
 	}
 	if _, ok := principal.WorkspaceID(ctx); !ok {
 		// Exported, so a caller other than the worker can reach it: refuse
@@ -111,22 +107,32 @@ func (e *ConfidentialityVerdictEngine) RunWorkspace(ctx context.Context, maxVerd
 		return errors.New("confidentiality: a verdict pass requires a workspace-bound context")
 	}
 	wsCtx := e.workspaceCtx(ctx)
-	resolved := 0
-	for resolved < maxVerdicts {
-		batch, err := e.threads.ClaimDue(wsCtx, confidentialityClaimSize)
+	if maxVerdicts <= 0 {
+		passCap, err := e.threads.PassCap(wsCtx)
+		if err != nil {
+			return err
+		}
+		maxVerdicts = passCap
+	}
+	judged := 0
+	for judged < maxVerdicts {
+		// A claim never takes more than the pass has left. An admin's cap need
+		// not be a multiple of the claim size, and a batch judged past it would
+		// make the cap a suggestion.
+		batch, err := e.threads.ClaimDue(wsCtx, min(confidentialityClaimSize, maxVerdicts-judged))
 		if err != nil {
 			return fmt.Errorf("confidentiality: claiming the thread backlog: %w", err)
 		}
 		if len(batch) == 0 {
 			return nil
 		}
-		n, err := e.judgeClaimed(wsCtx, batch)
-		resolved += n
+		reached, err := e.judgeClaimed(wsCtx, batch)
+		judged += reached
 		if ai.IsDeferral(err) {
 			// The refund is judgeClaimed's, because it is what knows where it
 			// stopped. Releasing from here would hand back the whole batch,
 			// including the thread already deferred and refunded inside.
-			e.log.InfoContext(wsCtx, "confidentiality verdict: work deferred, stopping the pass", "resolved", resolved)
+			e.log.InfoContext(wsCtx, "confidentiality verdict: work deferred, stopping the pass", "judged", judged)
 			return nil
 		}
 		if err != nil {
@@ -138,7 +144,8 @@ func (e *ConfidentialityVerdictEngine) RunWorkspace(ctx context.Context, maxVerd
 
 // judgeClaimed judges each claimed thread on its OWN model call, and applies
 // each answer on its own transaction. The transaction IS the checkpoint, so a
-// budget stop or a crash keeps whatever was already decided.
+// budget stop or a crash keeps whatever was already decided. It returns how
+// many threads it asked the model about, which is what the pass cap counts.
 // A budget stop refunds the threads it never REACHED, and only those. The
 // thread it stopped on is deferred and refunded below, and releasing it a
 // second time attempts a refund that the first Defer's cleared claimed_by
@@ -162,21 +169,21 @@ func (e *ConfidentialityVerdictEngine) judgeClaimed(
 			}
 		}
 	}
-	applied := 0
+	reached := 0
 	for i, row := range claimed {
-		n, err := e.judgeOne(ctx, row)
-		applied += n
+		reached++
+		err := e.judgeOne(ctx, row)
 		if err != nil {
 			deferred := ai.IsDeferral(err)
 			backoff := deferralBackoff(err)
 			if deferErr := e.threads.Defer(ctx, row, backoff,
 				"the confidentiality verdict could not be completed", deferred); deferErr != nil {
 				releaseUnreached(claimed[i+1:], backoff)
-				return applied, deferErr
+				return reached, deferErr
 			}
 			if deferred {
 				releaseUnreached(claimed[i+1:], backoff)
-				return applied, err
+				return reached, err
 			}
 			// Any other fault is a property of THIS thread, whose text an
 			// outsider writes, so the attempt is charged: refunding it would
@@ -188,7 +195,7 @@ func (e *ConfidentialityVerdictEngine) judgeClaimed(
 			continue
 		}
 	}
-	return applied, nil
+	return reached, nil
 }
 
 // judgeOne asks about ONE thread and applies what comes back.
@@ -196,20 +203,20 @@ func (e *ConfidentialityVerdictEngine) judgeClaimed(
 // An OPENING answer below the floor is not believed: the thread resolves to
 // `unsure`, which holds. A HOLDING answer needs no floor, because requiring
 // confidence to hold would publish exactly the threads the model found hardest.
-func (e *ConfidentialityVerdictEngine) judgeOne(ctx context.Context, row capture.PendingThread) (int, error) {
+func (e *ConfidentialityVerdictEngine) judgeOne(ctx context.Context, row capture.PendingThread) error {
 	results, err := e.ask(ctx, row)
 	if err != nil {
-		return 0, err
+		return err
 	}
 	if len(results) != 1 {
-		return 0, fmt.Errorf("confidentiality: expected one answer for thread %s", row.ID)
+		return fmt.Errorf("confidentiality: expected one answer for thread %s", row.ID)
 	}
 	answer := results[0]
 	status, known := statusForConfidentiality(answer.Verdict)
 	if !known {
 		// Unreachable through the validator, and spelled anyway: an unknown
 		// kind must never fall through to an opening status.
-		return 0, fmt.Errorf("confidentiality: unknown kind for thread %s", row.ID)
+		return fmt.Errorf("confidentiality: unknown kind for thread %s", row.ID)
 	}
 	kind := answer.Verdict
 	if status == capture.VerdictCleared && float64(answer.Confidence) < confidentialityFloor {
@@ -231,8 +238,7 @@ func (e *ConfidentialityVerdictEngine) judgeOne(ctx context.Context, row capture
 // be an answer nobody could see the effect of.
 func (e *ConfidentialityVerdictEngine) apply(
 	ctx context.Context, row capture.PendingThread, status, kind string, confidence float64,
-) (int, error) {
-	applied := 0
+) error {
 	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
 		seen, err := threadAddressesTx(ctx, tx, row)
 		if err != nil {
@@ -245,7 +251,6 @@ func (e *ConfidentialityVerdictEngine) apply(
 			// each other is the one thing the claim exists to prevent.
 			return err
 		}
-		applied = 1
 		// The verdict has to reach the ROW the derivation reads. activity's
 		// audience is derived across every seat's capture_import contribution,
 		// so a thread ledger updated on its own is an answer with no effect:
@@ -277,9 +282,9 @@ func (e *ConfidentialityVerdictEngine) apply(
 		// The thread key is workspace-internal and already in this workspace's
 		// own timeline; the model's answer is not, so the error names what was
 		// attempted without echoing content.
-		return 0, fmt.Errorf("confidentiality: applying %s to a thread: %w", status, err)
+		return fmt.Errorf("confidentiality: applying %s to a thread: %w", status, err)
 	}
-	return applied, nil
+	return nil
 }
 
 // threadAddressesTx collects the exact addresses this verdict SAW.

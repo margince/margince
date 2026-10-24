@@ -31,7 +31,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/captureorigin"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -59,8 +58,8 @@ const (
 	// close enough to be sure. The card is not written; the candidate is
 	// named so a human can open it.
 	VCardNeedsReview VCardOutcome = "needs_review"
-	// VCardSkipped means the card could not be written: it states no name, or
-	// it matches a contact this caller may not write.
+	// VCardSkipped means the card could not be written: no name, a sending
+	// system's address, or a match this caller may not write.
 	VCardSkipped VCardOutcome = "skipped"
 )
 
@@ -144,6 +143,10 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 		result.Reason = "the card states no name"
 		return result, nil
 	}
+	if cardNamesASendingSystem(entry) {
+		result.Outcome, result.Reason = VCardSkipped, vcardMachineAddress
+		return result, nil
+	}
 
 	// The ladder's report about THIS card, raised after the transaction below.
 	var split *LaneConflict
@@ -160,8 +163,17 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 		// records this card holds no subject lock on, and taking one here
 		// would order this writer against the eraser the wrong way round.
 		split = decision.Conflict
-		switch decision.Decision {
-		case DecisionExactCollision:
+		// The review match this caller may be shown, or none. A hidden match
+		// leaves the card's outcome as it would be without that record. The
+		// create below still files the pair, through the create's own writer.
+		var shown *ReviewMatch
+		if decision.Decision.queuesReview() {
+			if shown, err = firstVisibleReview(ctx, tx, decision); err != nil {
+				return err
+			}
+		}
+		switch {
+		case decision.Decision == DecisionExactCollision:
 			// The card names somebody who exists, so the caller's authority
 			// over THAT ROW decides whether this card may touch it — the
 			// contact:create grant that let them start the import says nothing
@@ -171,7 +183,7 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 			// quietly leaves one card out is an import nobody can audit, and
 			// the reader can act on "you may not write this one".
 			return s.updateMatchedByCard(ctx, tx, decision.ContactID, entry, source, &result)
-		case DecisionFuzzyReview, DecisionNameCollisionReview:
+		case shown != nil:
 			// Named, not merged, and not created either: creating beside a
 			// near-match is how a file of forty cards quietly doubles a
 			// contact list.
@@ -196,14 +208,7 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 				return nil
 			}
 			result.Outcome = VCardNeedsReview
-			if err := auth.EnsureVisible(ctx, tx, entityContact, decision.ContactID.UUID); err != nil {
-				if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
-					result.Reason = "this card resembles an existing contact"
-					return nil
-				}
-				return fmt.Errorf("probing visibility of the candidate: %w", err)
-			}
-			result.ContactID = &decision.ContactID
+			result.ContactID = &shown.ContactID
 			return nil
 		default:
 			return s.createFromCard(ctx, tx, entry, source, &result)
@@ -269,8 +274,9 @@ func ValidateVCardContacts(entry VCardEntry) error {
 
 func contactFromVCard(entry VCardEntry) CreateContactInput {
 	contact := CreateContactInput{
-		FullName: strings.TrimSpace(entry.FullName),
-		Source:   vcardSource,
+		FullName:      strings.TrimSpace(entry.FullName),
+		Source:        vcardSource,
+		auditEvidence: map[string]any{auditKeySource: vcardSource},
 	}
 	if title := strings.TrimSpace(entry.Title); title != "" {
 		contact.Title = &title
@@ -290,12 +296,9 @@ func contactFromVCard(entry VCardEntry) CreateContactInput {
 			contact.Social = map[string]any{profileURLField: normalized}
 		}
 	}
-	// The card's postal address, as the one line it was reduced to. Parsing a
-	// field and then dropping it is the quieter defect: a reader who sees an
-	// address on the card they just imported expects to find it on the record.
-	if street := strings.TrimSpace(entry.Address); street != "" {
-		contact.Address = &crmcontracts.Address{Line1: &street}
-	}
+	// Parsing a field and then dropping it is the quieter defect. A reader who
+	// sees an address on the card expects to find it on the record.
+	contact.Address = vcardRecordAddress(entry)
 	for i, email := range entry.Emails {
 		contact.Emails = append(contact.Emails, ContactEmailInput{
 			Email:     strings.ToLower(strings.TrimSpace(email.Value)),

@@ -17,33 +17,6 @@
    --------------------------------------------------------------------------- */
 /* A company is a record of its own, so its name in the header is a link and
    reads as one: no button chrome, the page's own link colour. */
-/* The brief, when the standing chip scrolls to it, stops under the stuck
-   strip rather than behind it: the top bar and the strip together. */
-.pe-brief-anchor {
-  scroll-margin-top: calc(var(--topbarH) + 4.5rem);
-}
-
-/* The standing chip is a button that looks like the badge it holds: no
-   chrome of its own, the focus ring on the pill. */
-.pe-standing-chip {
-  display: inline-flex;
-  padding: 0;
-  border: 0;
-  background: none;
-  cursor: pointer;
-  border-radius: var(--r-full);
-  corner-shape: round;
-}
-.pe-standing-chip:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: 2px;
-}
-/* One sentence behind a reading, at a reading measure. */
-.pe-brief-gloss {
-  margin: 0;
-  max-width: 32ch;
-}
-
 .pe-meta-link {
   display: inline-flex;
   align-items: center;
@@ -78,11 +51,6 @@
   align-items: start;
 }
 
-.pe-today-headline {
-  margin: 0 0 var(--space-4);
-  color: var(--textPrimary);
-}
-
 /* Sources and freshness ride the panel's own footer band, quiet: they qualify
    the whole reading rather than any one line of it. */
 .pe-today-foot {
@@ -91,123 +59,9 @@
   gap: var(--space-2);
 }
 
-@media (max-width: 900px) {
-  .pe-today-lead {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-/* ---------------------------------------------------------------------------
-   Cards. The contact page's panels are the design system's `Panel` — the
-   record page's titled-card shape, which is why there is no `.pe-card` here.
-   What remains is the anatomy INSIDE a panel that is the contact's own.
-   --------------------------------------------------------------------------- */
-
-/* A row of labelled facts — "what matters", the consent card. It is a
-   `PanelRow`, so the hairline, the hover and the panel's own gutters come from
-   there; what is the contact's own is the fixed label column, which lines the
-   values up down the card while a value that wraps pushes only its own row
-   taller. */
-.pe-row {
-  display: grid;
-  grid-template-columns: 120px minmax(0, 1fr) auto;
-  gap: var(--space-3);
-  align-items: center;
-}
-
-.pe-row-value {
-  color: var(--textPrimary);
-  min-width: 0;
-}
-
-/* The profile row's two halves: the address as a value somebody can correct,
-   and the verb that visits it. They wrap as a pair rather than the link being
-   pushed onto a line of its own, where it would read as a row of its own. */
-.pe-linkedin {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  flex-wrap: wrap;
-  min-width: 0;
-}
-
-/* The prose card (the relationship brief): sentences, not rows. */
+/* A card's prose: sentences, not rows. */
 .pe-prose {
   margin: 0 0 var(--space-3);
-}
-
-/* The sources under the brief (where its sentences were read from) as one
-   quiet line: a caption naming the row, then each source as a plain link,
-   above a hairline that closes the prose. Drawn as chips with envelopes and
-   dates they were the loudest thing in the card; the sentences are the
-   reading, and the sources are the footnote a reader follows when they doubt
-   one. */
-/* The brief's readings: four cells in a row, caption over value, on the same
-   grid step the rest of the card keeps. They fold to two columns before the
-   values start breaking mid-word. */
-.pe-brief-readings {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: var(--space-3) var(--space-4);
-  margin: var(--space-4) 0 0;
-}
-.pe-brief-reading {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-  min-width: 0;
-}
-.pe-brief-reading dd {
-  margin: 0;
-  font-weight: var(--fontWeightMedium);
-  color: var(--textPrimary);
-}
-/* A reading that opens on hover says so: the dotted rule under the value is
-   the one mark for "there is more behind this word", the same one the
-   glossary terms in the product wear. The panel is prose, so the trigger
-   keeps the value's own ink. */
-.pe-brief-reading .popover-trigger {
-  text-decoration: underline dotted;
-  text-decoration-color: var(--borderStrong);
-  text-underline-offset: 0.2em;
-  font: inherit;
-  color: inherit;
-}
-.pe-brief-reading .popover-panel .emailentry {
-  min-width: 22rem;
-}
-/* The trend's glyph sits before its word, in the trend's tone. */
-.pe-brief-reading dd:has(> .pe-brief-trend) {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-}
-.pe-brief-trend-warming {
-  color: var(--successText);
-}
-.pe-brief-trend-cooling {
-  color: var(--warningText);
-}
-.pe-brief-trend-none {
-  color: var(--textSecondary);
-}
-/* The verdict leads the row and wears its tone at the heading rung: it is
-   the one word a reader glances for, and the four readings after it are
-   what it was read from. The selectors carry the `dd` so they outweigh the
-   value rule above, which names the element too. */
-.pe-brief-reading dd.pe-brief-reading-verdict {
-  font: var(--fontHeadingSmall);
-}
-.pe-brief-reading dd.pe-brief-reading-success {
-  color: var(--successText);
-}
-.pe-brief-reading dd.pe-brief-reading-danger {
-  color: var(--dangerText);
-}
-@media (max-width: 720px) {
-  .pe-brief-readings {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 .pe-chiprow {
@@ -227,78 +81,13 @@
   margin-inline-end: calc(var(--space-2) - var(--space-4));
 }
 
-/* The three-column state band under the brief's prose: a hairline reads as a
-   band closing the prose above it, rather than more prose running on. */
-.pe-brief-state {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: var(--space-5);
-  border-top: 1px solid var(--borderSubtle);
-}
-
-.pe-brief-label {
-  margin-top: 0;
-  margin-bottom: var(--space-1);
-}
-
-.pe-brief-line {
-  margin: 0;
-}
-
-@media (max-width: 900px) {
-  .pe-brief-state {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-/* ---------------------------------------------------------------------------
-   The deal card and its buying committee (§5.8).
-   --------------------------------------------------------------------------- */
-.pe-deal-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-.pe-deal-title {
-  color: var(--textPrimary);
-}
-
-.pe-deal-figures {
-  margin: var(--space-1) 0 var(--space-4);
-}
-
-.pe-committee-label {
-  margin-bottom: var(--space-2);
-  padding-top: var(--space-3);
-  border-top: 1px solid var(--borderSubtle);
-}
-
-.pe-committee-row {
+/* What the conversations were read to say, on the Research tab: the reading
+   over the words it came from, and its dismissal at the end of the row. */
+.pe-loop {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: var(--space-3);
-  align-items: center;
-  padding: var(--space-2) 0;
-}
-
-.pe-committee-contact {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-width: 0;
-}
-
-/* ---------------------------------------------------------------------------
-   Commitments and open loops (§5.9): ours, theirs, questions — one list,
-   status on the right.
-   --------------------------------------------------------------------------- */
-.pe-loop {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: var(--space-3);
-  align-items: center;
+  align-items: start;
 }
 
 .pe-loop-body {
@@ -310,15 +99,6 @@
 .pe-loop-quote {
   display: block;
   color: var(--textSecondary);
-}
-
-.pe-loop-due {
-  color: var(--warningText);
-  white-space: nowrap;
-}
-
-.pe-loop-overdue {
-  color: var(--dangerText);
 }
 
 /* ---------------------------------------------------------------------------
@@ -341,37 +121,6 @@
   border-radius: var(--r-full);
   corner-shape: round;
   white-space: nowrap;
-}
-
-.pe-memory-title {
-  display: block;
-  color: var(--textPrimary);
-}
-
-.pe-memory-summary {
-  display: block;
-  margin-top: 2px; /* ds:ignore optical, below the 4px scale's floor */
-}
-
-/* ---------------------------------------------------------------------------
-   The right rail (§5.11): one panel whose sections a hairline parts. It never
-   becomes a grid: a rail that re-columns is a second body, not a margin.
-   --------------------------------------------------------------------------- */
-/* A row's overflow menu is positioned against the row, so it opens INSIDE the
-   panel's box — and the panel clips its own overflow to keep full-bleed rows
-   inside its rounded corners. The menu would be sliced by that edge, so the
-   rail's panel lets its children out; its rows draw no fill at the corners
-   that would spill in return. */
-.pe-rail > .panel {
-  overflow: visible;
-}
-
-/* One question per panel, in the page's own rhythm: the gap is the account
-   rail's, so a rep who reads both records reads the same column. */
-.pe-rail {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
 }
 
 /* A rail row is one action or one reading: label left, value right. */
@@ -398,45 +147,11 @@
   min-width: 0;
 }
 
-.pe-rail-value {
-  color: var(--textPrimary);
-  text-align: right;
-  white-space: nowrap;
-}
-
 .pe-rail-value-good {
   color: var(--successText);
 }
 
-.pe-rail-value-warning {
-  color: var(--warningText);
-}
-
-/* The pulse card's overall reading sits under a rule: it summarizes the rows
-   above it rather than joining them. */
-
-/* Who knows them: a contact, their strength, and the proof under it. */
-.pe-colleagues {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-}
-.pe-colleague {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-2) 0;
-}
-
-/* Name over proof, not name beside proof: they are two spans in one column,
-   so the name needs to be a block or the two run together. */
-.pe-colleague-name {
-  display: block;
-  color: var(--textPrimary);
-}
-
+/* The proof under a name: its own line, so the two do not run together. */
 .pe-colleague-proof {
   display: block;
 }
@@ -447,60 +162,6 @@
 .pe-employment-role {
   display: block;
   margin-top: var(--space-1);
-}
-
-/* Signals: a coloured dot the row's tone comes from, then the finding. */
-.pe-signal {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  gap: var(--space-3);
-  align-items: start;
-  padding: var(--space-2) 0;
-}
-
-.pe-dot {
-  width: 8px;
-  height: 8px;
-  margin-top: 5px; /* ds:ignore optical centring of an 8px dot on a 13px line */
-  border-radius: 50%;
-  corner-shape: round;
-  background: var(--borderStrong);
-}
-
-.pe-dot-good {
-  background: var(--success);
-}
-
-.pe-dot-warning {
-  background: var(--warning);
-}
-
-.pe-dot-bad {
-  background: var(--danger);
-}
-
-/* A footer link that leaves the card — "View all activity". */
-.pe-rail-more {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
-  color: var(--accentText);
-}
-
-/* ---------------------------------------------------------------------------
-   The drawers: composer, research, meeting brief (concept §6.2–6.4).
-
-   All three are the design system's WIDE drawer. What is here is only their
-   own content rhythm — the frame, the sticky header and the sticky footer come
-   from the drawer variant itself.
-   --------------------------------------------------------------------------- */
-/* A block's heading INSIDE a drawer, under the dialog's own title. It carries
-   the panel heading's weight without the design system's `SectionHeader`,
-   which draws an h2 — the level the dialog title already occupies. */
-.pe-section-title {
-  margin: 0 0 var(--space-3);
-  color: var(--textPrimary);
 }
 
 .pe-drawer-title {
@@ -522,77 +183,11 @@
   color: var(--textPrimary);
 }
 
-/* The consent verdict leads the composer: a rep about to write needs to know
-   whether they may send BEFORE they spend words on it. */
-.pe-consent-line {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-top: var(--space-3);
-  color: var(--successText);
-}
-
-.pe-consent-line-blocked {
-  color: var(--warningText);
-}
-
-/* The way out of a refused send. It sits under the verdict rather than beside
-   it: the verdict says what is true and this says what to do about it, and a
-   reader needs them in that order. */
-.pe-consent-wayout {
-  margin: var(--space-2) 0 0;
-  padding: var(--space-2) var(--space-3);
-  border-left: 2px solid var(--danger);
-  background: var(--dangerBg);
-}
-
-.pe-consent-moves {
-  margin: var(--space-1) 0 0;
-  padding-left: var(--space-4);
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-/* The steering field and the button that uses it, on one line: typing what the
-   mail should be about and asking for it are one action, and splitting them
-   down the drawer would read as two unrelated controls. */
-.pe-draft-row {
-  display: flex;
-  gap: var(--space-2);
-  align-items: center;
-}
-
-.pe-draft-row > :first-child {
-  flex: 1;
-}
-
-/* "Why this draft": the reasoning is a SIBLING of the body, never part of it.
-   A body that explained itself is a body the rep has to edit before sending. */
-.pe-why {
-  margin-top: var(--space-5);
-  padding: var(--space-4);
-  background: var(--bgInset);
-  border-radius: var(--r-sm);
-}
-
-.pe-why-list {
-  margin: 0;
-  padding-left: var(--space-5);
-}
-
 .pe-disclosure {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   margin: var(--space-4) 0 0;
-}
-
-.pe-confirm-note {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  color: var(--warningText);
 }
 
 .pe-drawer-actions {
@@ -651,10 +246,6 @@
   margin-top: var(--space-3);
 }
 
-.pe-brief-section {
-  margin-bottom: var(--space-5);
-}
-
 /* The bought-data panel's heading: the vendor's mark beside its name. Aligned
    on the text baseline rather than centred, so the logo sits with the word
    instead of floating above a heading that wraps on a narrow column. */
@@ -700,6 +291,12 @@
   gap: var(--space-3);
   padding-block: var(--space-3);
 }
+.pe-meetings-verbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--gapActions);
+}
 
 /* One meeting: its day as a small calendar page, what it is and when beside
    it, and its verbs at the far end. Every panel on the tab draws its meetings
@@ -711,11 +308,17 @@
   gap: var(--space-2) var(--space-4);
 }
 
-/* The next meeting leads: a larger page in the accent tint, and its verbs
-   under what it is rather than beside it. */
+/* The next meeting leads, on an inset plate: a larger page in the accent
+   tint, what it is beside it, and its verbs at the far end. */
 .pe-meeting-lead {
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: start;
+  padding: var(--space-4);
+  border-radius: var(--r-md);
+  background: var(--bgInset);
+}
+.pe-meeting-lead .pe-meeting-actions {
+  justify-content: flex-end;
 }
 
 /* Weekday over day over month, centred rather than left-set: a date read as a
@@ -914,6 +517,9 @@
   .pe-meeting-lead {
     grid-template-columns: minmax(0, 1fr);
   }
+  .pe-meeting-lead .pe-meeting-actions {
+    justify-content: flex-start;
+  }
   .pe-meeting-lead .pe-meeting-date {
     flex-direction: row;
     align-items: baseline;
@@ -926,61 +532,67 @@
     font: var(--fontBodySmall);
     font-weight: var(--fontWeightBold);
   }
-  .pe-meetings-toolbar .action-row > * {
+  .pe-meetings-verbs > * {
     flex: 1 1 100%;
   }
-  .pe-meetings-toolbar .action-row .btn {
-    flex: 1 1 auto;
-  }
 }
 
-/* One deal on the Deals tab, in the employer card's own family
-   (`.company-card`): a bordered plate rather than a bare row, because this
-   card now carries more than a title and a stage: the money, the stage, the
-   close date and the company, fetched per card. */
-.pe-deal-card {
-  position: relative;
+/* The strength ring with the newest change of band under it. */
+.pe-standing-hero {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
-  padding: var(--padCard);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-md);
-  background: var(--bgElevated);
-}
-.pe-deal-card:hover {
-  background: var(--bgHover);
-}
-.pe-deal-card + .pe-deal-card {
-  margin-top: var(--space-2);
-}
-
-.pe-deal-card-title {
-  min-width: 0;
-  font-weight: var(--fontWeightMedium);
-}
-
-/* The stretched-link pattern `.company-card` already uses: the title's own
-   link grows to cover the whole card, so the seat and the figures beside it
-   are reachable from anywhere on the plate rather than from one line of text. */
-.pe-deal-card-title > .pe-meta-link::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-}
-
-.pe-deal-card-meta {
-  min-width: 0;
-}
-
-.pe-deal-card-committee {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
-}
-
-.pe-deal-card-committee-row {
-  display: flex;
   align-items: center;
   gap: var(--space-2);
+  max-inline-size: 140px;
+}
+.pe-standing-caption {
+  margin: 0;
+  text-align: center;
+  color: var(--textSecondary);
+}
+
+/* The Overview's cards under How it stands: two columns while each keeps
+   300px, one below that. */
+.pe-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  align-items: start;
+  gap: var(--space-4);
+}
+.pe-overview-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-inline-size: 0;
+}
+
+/* The left column's value inks: a consent the guard allows, and a fact that
+   needs a hand (a blocked purpose, an owner the roster no longer names). */
+.pe-detail-good {
+  color: var(--successText);
+}
+.pe-detail-warn {
+  color: var(--warningText);
+}
+
+/* The lists the contact is on: grey chips, each pressing through to its list. */
+.pe-list-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* An overview card's link, and a row title that opens its record: the link
+   ink without the padding a link button carries elsewhere. */
+.pe-card-link.btn.btn-link {
+  min-block-size: 0;
+  padding: 0;
+  font: var(--fontBodySmall);
+}
+.pe-card-open.btn.btn-link {
+  min-block-size: 0;
+  padding: 0;
+  color: var(--textPrimary);
+  font: inherit;
+  text-align: start;
 }

@@ -1,0 +1,18 @@
+/* The setup checklist behind the top bar's ghost trigger. Width, padding and
+   the steps' action column come from Popover and Checklist. */
+
+.setup-reminder-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+.setup-reminder-title {
+  margin: 0;
+}
+
+.setup-reminder-foot {
+  display: flex;
+  justify-content: flex-start;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--borderSubtle);
+}

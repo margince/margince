@@ -1,11 +1,11 @@
 import { Badge } from "../design-system/atoms";
-import { settingsHref } from "../features/settings/settingsrouting";
 import { formatNumber, INTL_LOCALE } from "../format/format";
 import { useNow } from "../format/now";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import { useAgentTierMap } from "../lib/autonomy";
 import type { LicensePosture } from "../lib/license-posture";
 import { routeHash } from "../lib/router";
+import { settingsHref } from "../lib/settingsrouting";
 import { modelText } from "./agentrail.model";
 import { RailLine } from "./agentrail-line";
 import type { AiActivityItem, AiCall, AiPosture } from "./agentrail-reads";

@@ -1088,6 +1088,25 @@ kinds:
       pass did not reach is still due then. A backing-off row would only
       suppress that tick.
 
+  past_activity_clock_refold:
+    role: worker
+    go_type: PastActivityClockRefoldArgs
+    queue: default
+    timeout: 5m
+    max_attempts: 1
+    opts_owner: args
+    cadence: 10m
+    reason: >-
+      The last-activity clocks count only what has happened, and no row changes
+      when a booked meeting's start passes, so no trigger moves the clock of
+      the records it is filed under. Ten minutes keeps a contact's "last
+      contacted" close behind the meeting; the stalled flag and deal health
+      read a meeting the clock has not reached on their own, so nothing waits
+      on this pass to be right.
+
+      One attempt: the pass resumes from a stored mark, so the next tick
+      refolds whatever this one did not reach, however long the worker was down.
+
   approval_auto_apply:
     role: worker
     go_type: ApprovalAutoApplyArgs
@@ -1535,6 +1554,21 @@ kinds:
       uploaded file again releases it, so the stored-object reaper deletes the
       bytes. Each rule selects its runs by status over an index, so on an idle
       installation a pass finds nothing.
+
+  dedupe_recheck:
+    role: worker
+    fleet: true
+    go_type: DedupeRecheckArgs
+    queue: default
+    timeout: 10m
+    opts_owner: caller
+    cadence: 24h
+    reason: >-
+      Closes open duplicate pairs the filing rule no longer files, so a rule
+      that grew stricter also empties the queue it built before. Then it files
+      the pairs the companies and contacts changed since its last pass make, so
+      records an import wrote together are compared too. Run at boot as well,
+      so a deploy that changes the rule cleans the old queue the same day.
 
   employment_import_sweep:
     role: worker

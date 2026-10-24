@@ -3,6 +3,7 @@ import { Field } from "../../design-system/atoms";
 import { Select } from "../../design-system/select";
 import { currencyOptions } from "../../format/currencychoices";
 import { useT } from "../../i18n";
+import { useLeadingCurrencies } from "../../lib/leadingcurrencies";
 
 type Offer = components["schemas"]["Offer"];
 
@@ -29,6 +30,7 @@ export function OfferCurrencyField({
   onChange: (currency: string) => void;
 }>) {
   const t = useT();
+  const leading = useLeadingCurrencies();
   // Counted from the lines themselves rather than from the offer's totals, and
   // only where a line states a NON-ZERO price. A line's price is never absent —
   // the column is NOT NULL — so stating 0 is the only way it says "no price",
@@ -51,7 +53,7 @@ export function OfferCurrencyField({
           disabled={priced > 0}
           value={value}
           onChange={onChange}
-          options={currencyOptions(value)}
+          options={currencyOptions(leading, value)}
         />
       )}
     </Field>

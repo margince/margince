@@ -192,6 +192,12 @@ export const SeveralContacts: Story = {
         "A document whose title is long enough to have to wrap rather than truncate",
       ],
     }),
+    participant({
+      id: "part-4",
+      full_name: "Sabine Kral",
+      email: "s.kral@brandt-automotive.example",
+      link_requested_at: "2026-08-30T08:00:00Z",
+    }),
   ]),
 };
 

@@ -149,7 +149,11 @@ export const WithAside: Story = {
           href="#/contacts/p-3"
           position="Geschäftsführer Einkauf und Logistik"
           email="maximilian.von.hohenlohe@nordwind-logistik.de"
-          aside={<Badge tone="accent">Champion</Badge>}
+          aside={
+            <Badge tone="accent" wrap>
+              Champion
+            </Badge>
+          }
         />
       </li>
     </ul>

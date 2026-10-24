@@ -116,6 +116,9 @@ list of next steps.
 **Snooze 1 day** adds a day to the task's own due date, so a task with no date does not show it. If
 it fails: "Task was not completed. Retry." Also called: tick off, mark done, close a task.
 
+### What can I do from a task?
+A task linked to one contact offers **Email** and **Open contact**. It offers **Call** only when a logged call made the task and the contact has a phone number, not for a typed task. A done or read-only task offers the same steps. **Email** is refused with a reason when the contact has no email address or is archived. **Call** dials and opens **Log activity** on **Call** under the task, which does not complete the task; an archived contact gets no **Call**. The **First** card on **Home** offers **Call** and **Email** the same way, with no **Open contact**.
+
 ### How do I plan my week?
 To plan your week in Margince, open **Home**, switch the view to **Weekly** and add items under
 **This week’s commitments**.
@@ -200,7 +203,8 @@ by who made it.
   reading, if you may change the contact.
 - A promise a named colleague made becomes their task. When Margince reads it clearly, it writes the
   task at once. If not, the colleague gets an **Add commitment task** proposal.
-- A promise nobody can be named for goes as a proposal to the user whose call or mail it was.
+- A promise nobody can be given stays on the contact with nobody asked. Press **I’ll take this** to
+  make it your task. The contact then shows who took it and when.
 - A promise in private mail stays with the owner of that mail. Its task is visible to its holder alone.
 - In an email, only the words the sender wrote count, not text quoted from earlier mail.
 - The task has a due date only when the conversation named a day. If not, it waits in today's list
@@ -212,20 +216,19 @@ by who made it.
 
 When Margince reads old mail, it checks newer messages before it creates work. Work already done and offers to help create no new task. Neither does work that depends on something which has not happened yet.
 A request alone does not mean someone agreed to do it. **Commitment review** on the source shows why no task was made.
-Words such as "next week" stay in the source without setting a due day.
+Words such as "next week" set no due day; "this week" sets the last day the promiser works that week.
 
-An old promise without a current deadline stays in the source, rather than becoming a new overdue task.
 A future deadline can keep an old promise current. If later context has not been read, Margince does not create the task.
 
-Open the source and open **Commitment review** to see why a reading created no task.
 Check the quoted words and any later replies before adding a follow-up from the linked record.
 A reply alone does not show that a promise was kept. Tasks you edited, reopened or pinned remain yours.
+When you later write to that contact on the promise's thread, the card asks **You may have done this** with **Done** and **Not yet**.
 
 Also called: action items, follow-ups from a meeting, commitments in an email.
 
 ### What happens to a request in an email?
-When a customer email asks you for something and nobody answered, Margince files a task for you with
-**No due date**.
+When a customer email asks you for something and nobody answered, Margince files a task for you.
+It is due on a day the email names, such as "Deadline: 27 October", and has **No due date** if it names none.
 - It needs a clear request. A note that only tells you something, or one Margince cannot judge,
   stays in review and does not claim to be urgent.
 - The task takes the place of the email in your Worklist, and its source opens the email. If you can
@@ -325,8 +328,6 @@ Each says what it did ("Back on your list tomorrow.", "Back on your list when th
 offers **Undo**. The undo reaches as far as the choice did. Clearing your own snooze never lets back
 in a thread a colleague ruled out for the whole company.
 
-A reply that came in *before* you snoozed does not end the snooze.
-
 ### "List changed"
 
 The Worklist holds still while you work through it. Something may come in, or someone may deal with
@@ -339,10 +340,9 @@ Refresh updates the totals when work arrives or leaves the list.
 The Worklist footer and **To review** panel count items, not cards: 8 possible duplicates are one card.
 
 - **"{shown} of {considered} items shown"**: a share, plus "{cards} cards on screen" for a group.
-- **"Read limit reached for {kinds}"**, such as "Approvals (200+)": no share, because nobody knows
-  the total. **Load more** cannot read past a source limit. **Source read limits** names each
-  source and its scope. Review available work, then refresh. Ask an admin to check the source
-  limit if needed work is still missing.
+- "{kinds} may have more items than this list shows", such as "Approvals (200+)": no share,
+  because nobody knows the total. Each load checks a fixed number per category; **Load more** stops
+  there. A filter with no counts says "Some categories may have more items than this list shows."
 - **"{count} sources did not load"**: the list may not be complete, even after the last page.
 
 **Worklist incomplete** names sources that did not load; an empty list says **"No items in the sources that loaded."**

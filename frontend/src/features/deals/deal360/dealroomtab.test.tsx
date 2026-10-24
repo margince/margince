@@ -9,14 +9,13 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../../api/schema";
-import { LocaleProvider } from "../../../i18n";
+import { LocaleProvider, translate } from "../../../i18n";
 import { jsonResponse, stubWithSession } from "../../../testing/story-utils";
 import { DealRoomTab } from "./dealroomtab";
 
-// The deal record's own door into the Deal Room: the tab draws the room's
-// reading and editable text, and the rail draws who may enter it — the same
-// sections the room's own page draws (dealroompage.test.tsx), without that
-// page's identity band or verbs.
+// The deal record's own door into the Deal Room. It draws the room's band,
+// what it still lacks, its brief, the documents, the conversation and who may
+// enter. The room's settings open in a dialog.
 
 type DealRoom = components["schemas"]["DealRoom"];
 
@@ -50,23 +49,38 @@ function room(over: Partial<DealRoom> = {}): DealRoom {
   } as DealRoom;
 }
 
+function roomRoutes(state: DealRoom["state"] = "live") {
+  return {
+    "GET /deal-rooms": () =>
+      jsonResponse({ data: [room({ state })], page: { next_cursor: null } }),
+    "GET /deal-rooms/room-1/participants": () =>
+      jsonResponse({ data: [], page: {} }),
+    "GET /deal-rooms/room-1/documents": () =>
+      jsonResponse({ data: [], page: { next_cursor: null } }),
+    "GET /deal-rooms/room-1/threads": () =>
+      jsonResponse({ data: [], page: { next_cursor: null } }),
+    "GET /deal-rooms/room-1/brief": () =>
+      jsonResponse({
+        room_id: "room-1",
+        generated_at: "2026-10-22T09:00:00Z",
+        generated_by: "deterministic",
+        sentences: [],
+      }),
+  };
+}
+
 describe("DealRoomTab", () => {
-  it("draws the room's editable text when the deal already has one", async () => {
-    stubWithSession(
-      {
-        "GET /deal-rooms": () =>
-          jsonResponse({ data: [room()], page: { next_cursor: null } }),
-        "GET /deal-rooms/room-1/participants": () =>
-          jsonResponse({ data: [], page: {} }),
-        "GET /deal-rooms/room-1/threads": () =>
-          jsonResponse({ data: [], page: { next_cursor: null } }),
-      },
-      { deal_room: ["read", "update"] },
-    );
+  it("draws the room's band once the deal has one", async () => {
+    stubWithSession(roomRoutes(), { deal_room: ["read", "update"] });
     withProviders(<DealRoomTab dealId="deal-1" dealName="Acme Expansion" />);
 
     expect(
-      await screen.findByDisplayValue("Acme Expansion — Deal Room"),
+      await screen.findByRole("heading", {
+        name: "Acme Expansion — Deal Room",
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(translate("en", "roomtab.welcomeEmpty")),
     ).toBeInTheDocument();
   });
 
@@ -111,23 +125,50 @@ describe("the tab carries the room's own access list", () => {
     );
     withProviders(<DealRoomTab dealId="deal-1" dealName="BaymeOps" />);
 
-    expect(await screen.findByText("Access")).toBeInTheDocument();
+    expect(
+      await screen.findByText(translate("en", "access.title")),
+    ).toBeInTheDocument();
   });
 });
 
-// Pause, resume, close and the end date are the room's own verbs and live on
-// its own page; the tab is where a rep arrives, so the tab is the way there.
-describe("the tab leads to the room's own page", () => {
-  function roomRoutes(state: DealRoom["state"] = "live") {
-    return {
-      "GET /deal-rooms": () =>
-        jsonResponse({ data: [room({ state })], page: { next_cursor: null } }),
-      "GET /deal-rooms/room-1/participants": () =>
-        jsonResponse({ data: [], page: {} }),
-    };
-  }
+describe("Manage room opens the room's settings", () => {
+  it("saves the text first and the access verb last", async () => {
+    const calls: string[] = [];
+    stubWithSession(
+      {
+        ...roomRoutes(),
+        "PATCH /deal-rooms/room-1": (body) => {
+          calls.push(`PATCH ${JSON.stringify(body)}`);
+          return jsonResponse(room({ title: "Rollout", version: 2 }));
+        },
+        "POST /deal-rooms/room-1/pause": () => {
+          calls.push("POST pause");
+          return jsonResponse(room({ state: "paused", version: 3 }));
+        },
+      },
+      { deal_room: ["read", "update"] },
+    );
+    const user = userEvent.setup();
+    withProviders(<DealRoomTab dealId="deal-1" dealName="Acme Expansion" />);
 
-  it("takes a reader who may manage the room to its page", async () => {
+    await user.click(
+      await screen.findByRole("button", { name: "Manage room" }),
+    );
+    const title = await screen.findByLabelText(/Room title/);
+    await user.clear(title);
+    await user.type(title, "Rollout");
+    await user.click(screen.getByRole("radio", { name: /Paused/ }));
+    await user.click(screen.getByRole("button", { name: "Save changes" }));
+
+    await waitFor(() =>
+      expect(calls).toEqual([
+        'PATCH {"title":"Rollout","welcome_message":null}',
+        "POST pause",
+      ]),
+    );
+  });
+
+  it("warns before a room is closed", async () => {
     stubWithSession(roomRoutes(), { deal_room: ["read", "update"] });
     const user = userEvent.setup();
     withProviders(<DealRoomTab dealId="deal-1" dealName="Acme Expansion" />);
@@ -135,30 +176,126 @@ describe("the tab leads to the room's own page", () => {
     await user.click(
       await screen.findByRole("button", { name: "Manage room" }),
     );
-
-    await waitFor(() =>
-      expect(window.location.hash).toBe("#/deals/deal-1/room"),
-    );
-  });
-
-  // Once closed, the tab stops offering revoke and new links; the page still
-  // does, so the way there has to outlive the room's last live day.
-  it("keeps the way there once the room is closed", async () => {
-    stubWithSession(roomRoutes("closed"), { deal_room: ["read", "update"] });
-    withProviders(<DealRoomTab dealId="deal-1" dealName="Acme Expansion" />);
+    await user.click(await screen.findByRole("radio", { name: /Closed/ }));
 
     expect(
-      await screen.findByRole("button", { name: "Manage room" }),
+      screen.getByText(translate("en", "roompage.closeBody")),
     ).toBeInTheDocument();
   });
 
-  it("offers a reader who may not manage the room no way to its verbs", async () => {
+  it("resumes a paused room from its notice", async () => {
+    const resumed = vi.fn(() => jsonResponse(room({ version: 2 })));
+    stubWithSession(
+      { ...roomRoutes("paused"), "POST /deal-rooms/room-1/resume": resumed },
+      { deal_room: ["read", "update"] },
+    );
+    const user = userEvent.setup();
+    withProviders(<DealRoomTab dealId="deal-1" dealName="Acme Expansion" />);
+
+    await user.click(await screen.findByRole("button", { name: "Resume" }));
+
+    await waitFor(() => expect(resumed).toHaveBeenCalledTimes(1));
+  });
+
+  it("offers a reader who may not manage the room no way to its settings", async () => {
     stubWithSession(roomRoutes(), { deal_room: ["read"] });
     withProviders(<DealRoomTab dealId="deal-1" dealName="Acme Expansion" />);
 
     expect(
-      await screen.findByDisplayValue("Acme Expansion — Deal Room"),
+      await screen.findByRole("heading", {
+        name: "Acme Expansion — Deal Room",
+      }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Manage room" })).toBeNull();
+  });
+});
+
+describe("the tab says what the room still lacks", () => {
+  it("counts the setup steps the room's records have done", async () => {
+    stubWithSession(
+      {
+        ...roomRoutes(),
+        "GET /deal-rooms": () =>
+          jsonResponse({
+            data: [room({ welcome_message: "Hello" })],
+            page: { next_cursor: null },
+          }),
+      },
+      { deal_room: ["read", "update"] },
+    );
+    withProviders(<DealRoomTab dealId="deal-1" dealName="Acme Expansion" />);
+
+    expect(
+      await screen.findByText(translate("en", "roomtab.setup.title")),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        translate("en", "checklist.count", { done: "1", total: "4" }),
+      ),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("the room brief", () => {
+  it("draws each sentence with what it was written from", async () => {
+    stubWithSession(
+      {
+        ...roomRoutes(),
+        "GET /deal-rooms/room-1/participants": () =>
+          jsonResponse({
+            data: [
+              {
+                id: "p-1",
+                room_id: "room-1",
+                full_name: "Lena Vogt",
+                email: "lena.vogt@example.com",
+                capability: "comment",
+                delivery_state: "delivered",
+                has_signed_in: true,
+                source: "manual",
+                created_at: "2026-08-22T09:10:00Z",
+                updated_at: "2026-08-24T14:02:00Z",
+              },
+            ],
+            page: {},
+          }),
+        "GET /deal-rooms/room-1/brief": () =>
+          jsonResponse({
+            room_id: "room-1",
+            generated_at: "2026-10-22T09:00:00Z",
+            generated_by: "deterministic",
+            sentences: [
+              {
+                text: "Lena Vogt asked for a new link.",
+                nature: "fact",
+                evidence: [{ entity_type: "participant", entity_id: "p-1" }],
+              },
+            ],
+          }),
+      },
+      { deal_room: ["read", "update"] },
+    );
+    withProviders(<DealRoomTab dealId="deal-1" dealName="Acme Expansion" />);
+
+    expect(
+      await screen.findByText("Lena Vogt asked for a new link."),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        translate("en", "roomtab.brief.from", { sources: "Lena Vogt" }),
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("draws nothing for a room with nothing to say", async () => {
+    stubWithSession(roomRoutes(), { deal_room: ["read", "update"] });
+    withProviders(<DealRoomTab dealId="deal-1" dealName="Acme Expansion" />);
+
+    await screen.findByRole("heading", { name: "Acme Expansion — Deal Room" });
+    await waitFor(() =>
+      expect(
+        screen.queryByText(translate("en", "roomtab.brief.title")),
+      ).toBeNull(),
+    );
   });
 });

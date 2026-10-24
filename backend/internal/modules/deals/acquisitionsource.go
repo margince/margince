@@ -6,15 +6,12 @@ package deals
 // Acquisition sources are the administered business channels a deal can be
 // attributed to (deal_acquisition_source): referral, inbound, partner, event.
 //
-// DELIBERATELY NOT the lead-source vocabulary, though the two look alike.
-// `lead_source` answers how a RECORD reached Margince — it carries connector
-// families (`connector:apollo:…`), import and crawl values, and a scoring
-// intent the lead scorer reads. This answers how an OPPORTUNITY reached the
-// business, which is a different question with different values: a deal typed
-// in by hand can be a referral, and an imported one can be outbound. Sharing
-// one table would force every reader to know which of the two questions a row
-// was answering, and the scorer would start weighting deal channels it was
-// never calibrated on.
+// This is a separate list from lead_origin, though the two look alike. A lead's
+// origin says where a lead came from and carries the intent the lead scorer
+// reads. This one says how a deal reached the business. A deal typed in by hand
+// can be a referral, and an imported one can be outbound. One shared table would
+// make every reader ask which question a row answers. The scorer would also
+// start weighting deal channels it was never calibrated on.
 
 import (
 	"context"

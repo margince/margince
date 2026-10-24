@@ -8,12 +8,9 @@ import type { ReactNode } from "react";
 import { expect, vi } from "vitest";
 import { SettingsRail } from "../app/shell";
 import { SettingsScreen, settingsAddress } from "../features/settings/settings";
-import {
-  SETTINGS_PAGES,
-  type SettingsPageId,
-} from "../features/settings/settingscatalog";
 import { LocaleProvider, translate } from "../i18n";
 import type { RbacObject } from "../lib/capability";
+import { SETTINGS_PAGES, type SettingsPageId } from "../lib/settingscatalog";
 import { type GrantSpec, meFixture } from "./mefixture";
 import { ReviewActionsProvider } from "./reviewactions";
 

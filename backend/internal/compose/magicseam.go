@@ -47,7 +47,30 @@ func newMagicService(
 	}, now).
 		WithTroubledRuns(automation.NewAutomationStore(db)).
 		WithPendingDecisions(magicPendingDecisions{svc: staged}).
-		WithSourceHealth(magicSourceHealth{registry: captureHealthRegistry(db)})
+		WithSourceHealth(magicSourceHealth{registry: captureHealthRegistry(db)}).
+		WithDecidedReceipts(magicDecidedReceipts{
+			receipts: attentionReceipts{svc: staged, deals: deals.NewStore(db, DealsInstallation())},
+		})
+}
+
+// magicDecidedReceipts hands the done lane the receipts the worklist reads,
+// by their canonical ids. The two surfaces then show one population.
+type magicDecidedReceipts struct{ receipts attentionReceipts }
+
+func (m magicDecidedReceipts) DecidedSince(ctx context.Context, since time.Time, limit int) ([]magic.DecidedReceipt, bool, error) {
+	recent, more, err := m.receipts.RecentWithMore(ctx, since, limit)
+	if err != nil {
+		return nil, false, err
+	}
+	out := make([]magic.DecidedReceipt, 0, len(recent))
+	for _, receipt := range recent {
+		out = append(out, magic.DecidedReceipt{
+			ID: receipt.ID, Kind: receipt.Kind, Summary: receipt.Summary, OccurredAt: receipt.OccurredAt,
+			TargetType: receipt.TargetType, TargetID: receipt.TargetID, TargetLabel: receipt.TargetLabel,
+			Approval: receipt.Kind != deals.CloseDateCorrectionKind,
+		})
+	}
+	return out, more, nil
 }
 
 // Home uses the owning inbox policy for both authority and explicit responsibility.

@@ -98,6 +98,7 @@ const AI_CALL: AiCallSummary = {
   degraded: false,
   has_payload: false,
   decision_attempted: false,
+  outcome: "answered",
 };
 
 /** A month with one priced line and one the server could not price. */

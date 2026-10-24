@@ -1,28 +1,26 @@
 import type { Dispatch } from "react";
 import { useEffect, useState } from "react";
 import { ErrorLine } from "../../../design-system/errorline";
+import { vendorOf } from "../../../format/connectorprovider";
 import { ordinalNumber } from "../../../format/format";
-import { useT } from "../../../i18n";
-import { problemMessageOf } from "../../../lib/problem";
-import { navigateReplacing } from "../../../lib/router";
-import { useSaveLinkedInAccount } from "../../../lib/use-linkedin-account";
+import { useT } from "../../../i18n/index";
 import {
   forgetOvernightChoice,
   rememberedOvernightChoice,
   rememberOvernightChoice,
   useSetAgentGrant,
-} from "../../automations/overnight-grant";
+} from "../../../lib/overnight-grant";
+import { problemMessageOf } from "../../../lib/problem";
+import { navigateReplacing } from "../../../lib/router";
+import { useSaveLinkedInAccount } from "../../../lib/use-linkedin-account";
 import { EMPTY_DRAFT } from "../onboarding";
 import {
   clearOAuthAttempt,
-  ImapConnectPanel,
-  OAuthConnectPanel,
-  type OAuthProvider,
   OAuthReturnPanel,
   peekOAuthAttempt,
 } from "../onboarding-connect-panels";
-import type { MailProvider } from "./connect-scene";
 import { ConnectScene } from "./connect-scene";
+import type { MailProvider } from "./connect-vendor";
 import type {
   ConversationEvent,
   ConversationState,
@@ -32,21 +30,12 @@ import { railStops } from "./rail";
 import type { WizardPersistInput } from "./use-wizard-state";
 import { ConversationWorkbench } from "./workbench";
 
-// The connect act: per-purpose consent as a conversation turn, provider
-// cards that open their OWN dialog on the artifact surface (never an inline
-// panel growing under the card, never a chip in the rail), and the way on.
-// The way on is the surface's alone: a dialog that has connected a mailbox
-// closes back onto the cards, so the reader is never carried out of the step
-// by the first thing they connected, with LinkedIn still waiting beside it.
-// Leaving is a server fact before it is a UI fact: how the step was left
-// (a mailbox connected, or none) must land before the act moves on; a
-// failed write is said out loud and retryable.
-//
-// The four step-level consent guarantees, and each provider's own
-// disclosure, live entirely on `ConnectScene` and inside its dialogs now —
-// the rail keeps only the two lines that are genuinely its own: what this
-// step is for, and that connecting is optional per-provider even though a
-// mailbox is required.
+// The connect act: the work account picked once and asked for inline, mail
+// and calendar in one press, and the way on. A connected mailbox leaves the
+// reader on the step, LinkedIn still waiting beside it.
+// Leaving is a server fact before it is a UI fact. How the step was left
+// (a mailbox connected, or none) must land before the act moves on. A failed
+// write is said out loud and retryable.
 
 type ConnectActProps = Readonly<{
   state: ConversationState;
@@ -58,32 +47,31 @@ type ConnectActProps = Readonly<{
   returningProvider?: string;
 }>;
 
-// `outcome` and `returningProvider` are ROUTE segments — a stale bookmark or
-// a reload of an old return URL replays them with no live attempt behind
-// them. `peekOAuthAttempt` is the one thing that DOES prove this tab started
-// the trip (see onboarding-connect-panels.tsx), so the reader only lands
-// back inside the dialog it left from when the mark actually matches; a
-// mismatch or an unmarked outcome falls back to the plain inline result
-// instead of implying a return this tab never made.
-function attemptedProvider(
+// `outcome` and `returningProvider` are route segments: a stale bookmark or a
+// reload of an old return URL replays them with no live attempt behind them.
+// Only `peekOAuthAttempt` proves this tab started the trip. So the account a
+// refused trip was for comes back picked only when the mark and the route name
+// the same vendor. A mail-and-calendar trip marks the mailbox and lands on the
+// calendar, which is the same account.
+function returnedVendor(
   outcome: string | undefined,
   returningProvider: string | undefined,
 ): MailProvider | null {
-  if (outcome === undefined) {
+  // A granted mailbox needs no ask reopened; the return says what came back.
+  if (outcome === undefined || outcome === "ok") {
     return null;
   }
-  const marked = peekOAuthAttempt();
+  const marked = vendorOf(peekOAuthAttempt() ?? undefined);
   if (marked === null) {
     return null;
   }
-  if (returningProvider !== undefined && returningProvider !== marked) {
+  if (
+    returningProvider !== undefined &&
+    vendorOf(returningProvider) !== marked
+  ) {
     return null;
   }
-  const byMarked: Record<OAuthProvider, MailProvider> = {
-    gmail: "google",
-    graph: "microsoft",
-  };
-  return byMarked[marked];
+  return marked;
 }
 
 export function ConnectAct({
@@ -94,64 +82,39 @@ export function ConnectAct({
   returningProvider,
 }: ConnectActProps) {
   const t = useT();
-  // Which dialog is open. On an ordinary visit this starts null; on the real
-  // page load a redirect lands on, it opens straight to the provider this
-  // tab's own attempt marks — the reader lands back inside the same chrome
-  // they left, rather than a bare surface with the result buried inline.
-  const [provider, setProvider] = useState<MailProvider | null>(() =>
-    attemptedProvider(outcome, returningProvider),
-  );
-  // Whether the OPEN dialog is showing that reopened result rather than a
-  // fresh ask — cleared the moment the reader closes it or picks a
-  // different provider, so a retry after a denied/failed return is a real
-  // ask again, not a replay of the same result forever.
-  const [resultFor, setResultFor] = useState<MailProvider | null>(() =>
-    attemptedProvider(outcome, returningProvider),
+  // The account whose ask is open. On the page load a proven redirect lands on,
+  // it is the account that trip was for. A refused consent can then be asked
+  // again from where the reader left.
+  const [vendor, setVendor] = useState<MailProvider | null>(() =>
+    returnedVendor(outcome, returningProvider),
   );
   const [finishing, setFinishing] = useState(false);
   const [finishFailed, setFinishFailed] = useState(false);
-  // The overnight answer could not be recorded. The step still completes — see
-  // finish() — so this is a notice, not a blocker.
+  // The overnight answer could not be recorded. The step still completes (see
+  // finish()), so this is a notice, not a blocker.
   const [overnightFailed, setOvernightFailed] = useState(false);
-  // Whether the open dialog's own credential POST (OAuth's authorize call,
-  // IMAP's connect) is still in flight, told to us by the panel itself. A
-  // success landing after the reader already backed out via the dialog's X,
-  // Escape, or backdrop would leave a mailbox connected against a "no" the
-  // panel already promised, so `closeDialog` below refuses to act while true.
-  const [dialogBusy, setDialogBusy] = useState(false);
+  // Whether the open ask's own credential POST is still in flight. The scene
+  // holds every other way off the ask while it is.
+  const [askBusy, setAskBusy] = useState(false);
   // The consent return's result has been closed: it renders nowhere after
-  // that, dialog or inline, whatever the address still says.
+  // that, whatever the address still says.
   const [resultSettled, setResultSettled] = useState(false);
   const linkedin = useSaveLinkedInAccount();
 
   // Spends the mark once this mount has read it, so reloading the same
-  // return URL finds nothing and correctly falls back to the plain inline
-  // result instead of reopening the dialog a second time.
+  // return URL reads as the stale link it then is.
   useEffect(() => {
     if (outcome !== undefined) {
       clearOAuthAttempt();
     }
   }, [outcome]);
 
-  const openAsk = (key: MailProvider) => {
-    setResultFor(null);
-    setProvider(key);
-  };
-  const closeDialog = () => {
-    if (dialogBusy) {
-      return;
-    }
-    setProvider(null);
-    setResultFor(null);
-  };
-  // A dialog whose mailbox question is answered — a consent returned, an IMAP
-  // host connected — closes onto the surface, whose roster now shows the card
-  // as connected. The outcome in the address goes with it: left there, the
-  // settled result would render again inline the moment the dialog closed,
-  // and a reload would reopen a trip this tab already finished.
-  const settleDialog = () => {
-    setProvider(null);
-    setResultFor(null);
+  // A result whose mailbox question is answered (a consent returned, an IMAP
+  // host connected) closes onto the step. Its roster now shows the account as
+  // connected. The outcome in the address goes with it. Left there, a reload
+  // would show a trip this tab already finished.
+  const settleResult = () => {
+    setVendor(null);
     setResultSettled(true);
     if (outcome !== undefined) {
       navigateReplacing({ screen: "onboarding", id: "company" });
@@ -268,13 +231,11 @@ export function ConnectAct({
     >
       {
         <ConnectScene
-          provider={provider}
-          onPick={openAsk}
-          onDialogClose={closeDialog}
-          // True only for the ONE dialog this mount reopened from a proven
-          // attempt (see `attemptedProvider`): its content is the settled
-          // result, not a fresh ask, so the dialog's own chrome must say so.
-          dialogShowsResult={provider !== null && provider === resultFor}
+          vendor={vendor}
+          onVendorChange={setVendor}
+          askBusy={askBusy}
+          onAskBusyChange={setAskBusy}
+          onImapDone={settleResult}
           onFinish={(skipped) => void finish(skipped)}
           finishing={finishing}
           wantsOvernight={wantsOvernight}
@@ -287,52 +248,15 @@ export function ConnectAct({
           linkedinError={
             linkedin.isError ? problemMessageOf(linkedin.error, t) : null
           }
-          // The ask, still open: rendered INSIDE the dialog ConnectScene
-          // wraps around `provider`. A real OAuth "allow" leaves the page
-          // entirely (`location.assign`), so the dialog does not try to
-          // stay open across that redirect — it simply closes on `onDismiss`
-          // if the reader backs out first.
-          dialogPanel={
-            <>
-              {provider === "google" && (
-                <OAuthConnectPanel
-                  provider="gmail"
-                  onDismiss={closeDialog}
-                  onPendingChange={setDialogBusy}
-                />
-              )}
-              {provider === "microsoft" && (
-                <OAuthConnectPanel
-                  provider="graph"
-                  onDismiss={closeDialog}
-                  onPendingChange={setDialogBusy}
-                />
-              )}
-              {provider === "imap" && (
-                <ImapConnectPanel
-                  onDone={settleDialog}
-                  onDismiss={closeDialog}
-                  onPendingChange={setDialogBusy}
-                />
-              )}
-            </>
-          }
-          // The ask is settled: a redirect already returned. This is a
-          // finding plus one more real decision (the backfill window), not a
-          // fresh consent round — `ConnectScene` shows it in the dialog the
-          // reader left from when a proven attempt says so, and inline on
-          // the surface otherwise (a stale or bookmarked return link, which
-          // is real information but not a return this tab can vouch for).
+          // A redirect already returned: what it could not do, shown inline whether or
+          // not this tab can vouch for the trip. A stale link still reports what the
+          // roster says.
           returnPanel={
             outcome !== undefined && !resultSettled ? (
-              // How far back the first import reaches is `OnboardingBackread`'s
-              // own question, rendered inside this panel once a mailbox is
-              // confirmed live — the one history-read decision on this
-              // surface, not a second one stacked beside it.
               <OAuthReturnPanel
                 outcome={outcome}
                 provider={returningProvider}
-                onDone={settleDialog}
+                onDone={settleResult}
               />
             ) : null
           }

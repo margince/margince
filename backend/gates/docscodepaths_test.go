@@ -232,12 +232,10 @@ func prosePages(t *testing.T) []string {
 		if f.symlink || !strings.HasSuffix(f.path, ".md") {
 			continue
 		}
-		// Two archives, and in both a dangling path is the POINT rather than a
-		// defect: docs/evidence/ records what a review checked about code since
-		// removed, banner-marked as historical on every page, and CHANGELOG.md
-		// describes each change against the tree AS IT WAS. Correcting either to
-		// today's paths would destroy the record it exists to keep.
-		if strings.HasPrefix(f.path, "docs/evidence/") || f.path == "CHANGELOG.md" {
+		// docs/evidence/ records what a review checked about code since removed,
+		// so a path there may name a file that is gone. Each page carries a
+		// banner that marks it historical.
+		if strings.HasPrefix(f.path, "docs/evidence/") {
 			continue
 		}
 		// Derived, not listed: everything under docs/, every rulebook wherever a

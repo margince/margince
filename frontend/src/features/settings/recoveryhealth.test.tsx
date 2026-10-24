@@ -66,8 +66,10 @@ it("shows the last drill's measured windows against the published targets", asyn
 
   render(<RecoveryHealthCard />);
 
-  // A pass is the normal reading, so it is said in words without a badge.
-  expect((await screen.findByText("Passed")).closest(".badge")).toBeNull();
+  // A status is always a badge, and a pass is a done one.
+  expect((await screen.findByText("Passed")).closest(".badge")).toHaveClass(
+    "badge-success",
+  );
   expect(screen.getByText("2 h 15 min")).toBeInTheDocument();
   expect(screen.getByText("within the 4 h target")).toBeInTheDocument();
   expect(screen.getByText("0 h 40 min")).toBeInTheDocument();

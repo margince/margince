@@ -17,16 +17,23 @@
 
 import { useMutation } from "@tanstack/react-query";
 import { api } from "../api/client";
-import type { components } from "../api/schema";
+import type { components, operations } from "../api/schema";
 import { ifMatch } from "../api/version";
-import type { EntityKind } from "./entity";
+import { isEntityKind } from "./entity";
 import { unwrap } from "./problem";
+
+export type RestoreKind =
+  operations["restoreRecordChange"]["parameters"]["path"]["entity_type"];
+
+export function isRestoreKind(kind: string): kind is RestoreKind {
+  return kind === "activity" || isEntityKind(kind);
+}
 
 // The variables one press carries. A mutationFn takes what it needs rather
 // than closing over render state: the click belongs to the committed render,
 // so what it passes cannot be older than the control that carried it.
 export type RestorePress = Readonly<{
-  kind: EntityKind;
+  kind: RestoreKind;
   id: string;
   auditId: string;
   version: number;
@@ -38,7 +45,7 @@ export type RestorePress = Readonly<{
 // travels in the press. A caller holding no version must not offer the control
 // at all: last-write-wins is not a choice an undo may make on somebody else's
 // later edit.
-export function useRecordRestore(handlers: {
+export function useRecordRestore(handlers?: {
   onSuccess: (entry: components["schemas"]["AuditHistoryEntry"]) => void;
   onError: (error: unknown) => void;
 }) {
@@ -56,7 +63,7 @@ export function useRecordRestore(handlers: {
         ),
       );
     },
-    onSuccess: handlers.onSuccess,
-    onError: handlers.onError,
+    onSuccess: handlers?.onSuccess,
+    onError: handlers?.onError,
   });
 }

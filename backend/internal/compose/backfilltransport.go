@@ -21,10 +21,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	openapi_types "github.com/oapi-codegen/runtime/types"
-	"github.com/riverqueue/river"
 
 	"github.com/margince/margince/backend/internal/compose/costestimate"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -73,6 +71,7 @@ func WithCaptureBackfill(inserter *jobs.Runner) Option {
 			inserter: inserter,
 			log:      s.log,
 		}
+		s.importer = s.importOnConnect()
 	}
 }
 
@@ -319,34 +318,10 @@ func (h backfillHandlers) StartConnectorBackfill(w http.ResponseWriter, r *http.
 		})
 		return
 	}
-	// The job is inserted inside the run's transaction, so an unreachable queue
-	// leaves no queued row for the live-run index to make permanent. enqueueErr
-	// is kept out of the closure's return path so the failure keeps its own
-	// status and copy instead of the generic connector-fault mapping.
-	var enqueueErr error
-	// Continue a run that stopped on an error unless the caller asked to start
-	// over: re-reading a mailbox from the newest message repeats hours of
-	// provider calls for messages already captured.
-	start := h.registry.StartBackfill
-	if req.StartOver != nil && *req.StartOver {
-		start = h.registry.StartBackfillOver
-	}
-	run, err := start(r.Context(), string(provider), userID, months, estimate,
-		func(ctx context.Context, tx pgx.Tx, backfillID ids.UUID) error {
-			enqueueErr = h.inserter.EnqueueTx(ctx, tx, CaptureBackfillArgs{
-				Workspace: ws, BackfillID: backfillID.String(),
-			}, &river.InsertOpts{
-				// ONE attempt: api/jobs.yaml's fault block for capture_backfill
-				// says the backfill ROW owns the outcome, ending the run and
-				// recording the fault class against its own give-up cap. A
-				// River retry would re-page a run the engine already ended.
-				MaxAttempts: rowOwnedMaxAttempts,
-				UniqueOpts:  river.UniqueOpts{ByArgs: true, ByState: activeSweepStates},
-			})
-			return enqueueErr
-		})
-	if enqueueErr != nil {
-		h.log.ErrorContext(r.Context(), "backfill: enqueue", "err", enqueueErr)
+	startOver := req.StartOver != nil && *req.StartOver
+	run, err := h.begin(r.Context(), ws, string(provider), userID, months, estimate, startOver)
+	if errors.Is(err, errBackfillEnqueue) {
+		h.log.ErrorContext(r.Context(), "backfill: enqueue", "err", err)
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusInternalServerError, Code: "backfill_enqueue_failed",
 			Detail: "The backfill could not be scheduled, so nothing was started. Try again.",

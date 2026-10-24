@@ -172,11 +172,6 @@ func (h Handlers) RestoreTagApplication(w http.ResponseWriter, r *http.Request, 
 // still the right answer if they ever stop: an empty field list would read as
 // "this type has nothing to filter on", which is a different and false statement.
 func (h Handlers) GetFilterVocabulary(w http.ResponseWriter, r *http.Request, params crmcontracts.GetFilterVocabularyParams) {
-	if !params.Resource.Valid() {
-		httperr.Write(w, r, httperr.Validation("resource", "invalid_enum",
-			"resource must be one of contact, company, deal, lead, project"))
-		return
-	}
 	resource := string(params.Resource)
 	fields, ok, err := h.store.FilterVocabulary(r.Context(), resource)
 	if err != nil {

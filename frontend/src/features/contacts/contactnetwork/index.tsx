@@ -27,6 +27,8 @@ import { availabilityLabel, RoutesPanel, useOwnRoute } from "../contactroutes";
 import { IntroAsksPanel } from "../introasks";
 import { IntroDrawer } from "../introdrawer";
 import { type IntroRequest, useIntroRequests } from "../introrequests";
+import { RecordIntroductionButton } from "../recordintroduction";
+import { CaptureGapsNotice } from "./capturegaps";
 import { DecisionStrip } from "./decision";
 import { EdgeDetail } from "./edgedetail";
 import { LeadPanel } from "./leadpanel";
@@ -144,6 +146,8 @@ export function ContactNetworkTab({
         open={read.open}
       />
 
+      <CaptureGapsNotice contactId={contactId} />
+
       {/* With nothing to draw on the left — one route, nothing withheld —
           the side cards take the row, because a column of two cards beside
           an empty one reads as a page that failed to load its left half. */}
@@ -185,7 +189,6 @@ export function ContactNetworkTab({
         >
           <RelayPanel ask={read.open} />
           <IntroAsksPanel contactId={contactId} contactName={read.targetName} />
-          {view && <MomentsPanel view={view} />}
         </aside>
       </div>
 
@@ -224,6 +227,14 @@ export function ContactNetworkTab({
           ) : null
         }
       />
+
+      <RecordIntroductionButton
+        contactId={contactId}
+        contactName={read.targetName}
+      />
+
+      {/* What moved lately closes the tab, under the picture it changed. */}
+      {view && <MomentsPanel view={view} />}
 
       {asking ? (
         <IntroDrawer

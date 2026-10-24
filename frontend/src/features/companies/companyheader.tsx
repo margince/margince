@@ -5,9 +5,14 @@ import type { components } from "../../api/schema";
 import { ifMatch, requireVersion } from "../../api/version";
 import { AddToShortlistAction } from "../../components/addtoshortlist";
 import { ArchiveAction } from "../../components/archive";
+import { mayOwnRecords } from "../../components/assigneepicker";
+import {
+  patchCompanyField,
+  searchCompanyTargets,
+} from "../../components/companyform";
 import { rosterOwnerName, useRoster } from "../../components/entityref";
 import { MergeAction } from "../../components/merge";
-import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
+import { Button, OverflowMenu } from "../../design-system/atoms";
 import { InlineChoice } from "../../design-system/inlinechoice";
 import { useT } from "../../i18n";
 import {
@@ -21,25 +26,17 @@ import { unwrap } from "../../lib/problem";
 import { navigate } from "../../lib/router";
 import { useViewerId } from "../../lib/session";
 import { ShareAction } from "../records/share";
-import { DecisionsChip } from "./companyapprovals";
-import { patchCompanyField, searchCompanyTargets } from "./companyform";
-import { RELATIONSHIP_TYPE_LABELS, relationshipBadges } from "./companylookups";
 import { CompanyRejectAction } from "./companyreject";
 
-// The account header's editable pieces: the owner, changed in place
-// (InlineChoice) rather than through an edit modal, the write path the
-// lifecycle control (companylifecycle.tsx) shares, what the account IS
-// (CompanyRelationshipBadges) and the record's own menu (CompanyActionBadges).
+// The account header's editable pieces. They are the owner, changed in place
+// (InlineChoice) rather than through an edit modal, and the write path the
+// lifecycle control (companylifecycle.tsx) shares. The record's own menu
+// (CompanyActionBadges) is the third.
 // The subtitle and facts strip live in companyheaderfacts.tsx and the header's
 // other verbs in companyheaderactions.tsx, so this file holds only the pieces
 // that write.
-//
-// Split out of companies.tsx because that file had grown past 2,700 lines
-// carrying the list screen, the enrichment tools, the evidence cards and this
-// at once, and the V2 work adds to every one of them.
 
 type Company = components["schemas"]["Company"];
-type Company360View = components["schemas"]["Company360"];
 type UpdateCompanyRequest = components["schemas"]["UpdateCompanyRequest"];
 
 // patchCompanyField sends one field through the ordinary company PATCH,
@@ -159,7 +156,7 @@ export function CompanyOwnerControl({
   const roster = useRoster("user", true);
   const ownerName = useMemberName(company.owner_id);
   const owners = (roster.data ?? []).flatMap((entry) =>
-    "display_name" in entry
+    "display_name" in entry && mayOwnRecords(entry)
       ? [{ value: entry.id, label: entry.display_name }]
       : [],
   );
@@ -254,58 +251,15 @@ export function useCompanyVerbRefusal(company: Company): string | undefined {
   });
 }
 
-// Which relationship types the LIFECYCLE already speaks for.
-//
-// The two fields answer different questions — what a company IS to us, and
-// where it STANDS with us — but they overlap on one word. An account whose
-// lifecycle is `former_customer` still carries the `customer` relationship
-// type, because that is what it was; printing both put "Former customer" and
-// "Customer" side by side on one header, which is not two facts but one fact
-// and its own contradiction.
-//
-// A map rather than a string comparison: `customer` and `former_customer`
-// render different words, so matching on the rendered label caught the
-// duplicate and missed the contradiction — which is the worse of the two,
-// because a reader can see a repeat for what it is.
-/**
- * What the company IS to us, beside its name.
- *
- * A tag ON the record, so it belongs with the record's name rather than among
- * the verbs — set among the buttons it read as a control that does nothing,
- * and it was the one thing in that row a reader could not press.
- *
- * A type the lifecycle beside it already speaks for is dropped by
- * `relationshipBadges`, so the header states a relationship once and in its
- * current tense.
- */
-export function CompanyRelationshipBadges({
-  company,
-}: Readonly<{ company: Company }>) {
-  const t = useT();
-  return (
-    <>
-      {relationshipBadges(company, t).map((relType) => (
-        <Badge key={relType} tone="accent">
-          {t(RELATIONSHIP_TYPE_LABELS[relType])}
-        </Badge>
-      ))}
-    </>
-  );
-}
-
 export function CompanyActionBadges({
   company,
-  view,
   onOpenHistory,
   onSetUpPartner,
-  onOpenDecisions,
   archivedReasonId,
 }: Readonly<{
   company: Company;
-  view?: Company360View;
   onOpenHistory: () => void;
   onSetUpPartner: () => void;
-  onOpenDecisions?: () => void;
   // Stated by the caller for the whole strip; see companyheaderactions.tsx's
   // CompanyHeaderActions, which reads the same reason for the row beside
   // this menu.
@@ -332,7 +286,10 @@ export function CompanyActionBadges({
           to say: an archived account's verbs are refused rather than dropped,
           and the sentence refusing them travels with them. Only a panel with
           no items at all would be worth hiding. */}
-      <OverflowMenu label={t("record.moreActions")}>
+      <OverflowMenu
+        label={t("record.moreActions")}
+        word={t("record.verb.more")}
+      >
         {refusedReason && !archivedReasonId && (
           <p id={ownReasonId}>{refusedReason}</p>
         )}
@@ -384,13 +341,6 @@ export function CompanyActionBadges({
           <Button reasonId={refusedByState} onClick={onSetUpPartner}>
             {t("company.partnerSetUp")}
           </Button>
-        )}
-        {/* The account's own waiting decisions. It reads as a count in the
-              header, which is a state, and this is the verb that answers it —
-              so it sits with the other rare verbs rather than as a chip beside
-              the account's name. Absent when nothing waits. */}
-        {onOpenDecisions && (
-          <DecisionsChip view={view} onOpen={onOpenDecisions} />
         )}
         {/* Beside Archive because it IS an archive, and separate from it
             because archiving alone does not settle the question: this record

@@ -114,7 +114,7 @@ it("sets the moment aside, and the Undo puts it back", async () => {
 
   await screen.findByText(MOMENT.headline);
   await user.click(
-    screen.getByRole("button", { name: en["co.suggest.dismiss"] }),
+    screen.getByRole("button", { name: en["standing.next.snooze"] }),
   );
 
   await waitFor(() => expect(screen.queryByText(MOMENT.headline)).toBeNull());

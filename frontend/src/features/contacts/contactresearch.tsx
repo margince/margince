@@ -4,7 +4,12 @@ import { SurfaceState, sectionState } from "../../design-system/surfacestate";
 import { useT } from "../../i18n";
 import { RecordListsPanel } from "../records/recordlists";
 import { omitted } from "./contact360";
+import { ContactBillingRoles } from "./contactbillingroles";
+import { ContactClaimReadings } from "./contactcards";
+import { ContactConfirmCallout } from "./contactconfirm";
+import { ContactConsentPanel } from "./contactconsentpanel";
 import { EnrichedFields } from "./contactcorrections";
+import { ContactDetails } from "./contactdetails";
 import { ContactProviderSection } from "./contactprovider";
 import { ContactHoldSection } from "./contactrail";
 import "./contact360.css";
@@ -13,12 +18,14 @@ import "./contact360.css";
 // the canonical record rather than folded into it, and the record-keeping a
 // rep does not need on the overview. Two kinds of research sit here: a bought
 // provider snapshot and the enrichment evidence this app's own capture read
-// off a page or a signature. The enrichment rows are the SAME panel that
-// takes a verdict on each value (EnrichedFields), so the tab is where a
-// reader both checks a reading and corrects it; a second, read-only spelling
-// of the same list stood here before, and the two drifted. Under them, the
-// correspondence hold and the tags: filing, which the overview used to carry
-// in its rail.
+// off a page or a signature. The enrichment rows are the same panel that
+// takes a verdict on each value (EnrichedFields). So a reader both checks a
+// reading and corrects it here. A second, read-only spelling
+// of the same list stood here before, and the two drifted. Under them sits
+// the record-keeping the left column does not draw. It holds the details to
+// confirm, consent with its proof and billing roles. It also holds every
+// field with its inline edit, tags, source, custom fields, the correspondence
+// hold and the lists.
 
 type Contact360 = components["schemas"]["Contact360"];
 
@@ -49,17 +56,20 @@ export function ContactResearchTab({
   // this says it once.
   if (view && providerHasNothing && fieldsState === "empty") {
     return (
-      <Panel title={t("tab.research")}>
-        <PanelBody>
-          <SurfaceState
-            state="empty"
-            emptyLabel={t("contact.research.empty")}
-            loadingLabel={t("tab.research")}
-          >
-            {null}
-          </SurfaceState>
-        </PanelBody>
-      </Panel>
+      <div className="record-stack">
+        <Panel title={t("tab.research")}>
+          <PanelBody>
+            <SurfaceState
+              state="empty"
+              emptyLabel={t("contact.research.empty")}
+              loadingLabel={t("tab.research")}
+            >
+              {null}
+            </SurfaceState>
+          </PanelBody>
+        </Panel>
+        <ContactRecordKeepingStack view={view} />
+      </div>
     );
   }
 
@@ -103,10 +113,24 @@ export function ContactResearchTab({
           </PanelBody>
         </Panel>
       )}
-      {view && <ContactHoldSection view={view} />}
-      {view && (
-        <RecordListsPanel entityType="contact" entityId={view.contact.id} />
-      )}
+      {view && <ContactRecordKeepingStack view={view} />}
     </div>
+  );
+}
+
+function ContactRecordKeepingStack({ view }: Readonly<{ view: Contact360 }>) {
+  return (
+    <>
+      <ContactClaimReadings view={view} />
+      <ContactConfirmCallout view={view} />
+      <ContactConsentPanel view={view} />
+      <ContactBillingRoles companies={view.billing_roles} />
+      <ContactDetails
+        contact={view.contact}
+        profiles={view.provider_profiles}
+      />
+      <ContactHoldSection view={view} />
+      <RecordListsPanel entityType="contact" entityId={view.contact.id} />
+    </>
   );
 }

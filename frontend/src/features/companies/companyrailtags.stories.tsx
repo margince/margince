@@ -3,12 +3,12 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
+import { TagsPanel } from "../../components/tagspanel";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
-import { TagsPanel } from "../lists/tagspanel";
 
 // The tags panel draws four states, and three of them look alike from the
 // code: ready, empty and withheld all answer 200 with a list. What separates

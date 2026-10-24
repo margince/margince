@@ -6,10 +6,10 @@ import {
   ProviderHealthBadge,
   type ProviderHealthEntry,
 } from "../../components/ai-provider-health-notice";
-import { Badge } from "../../design-system/atoms";
 import { CellStack } from "../../design-system/cellstack";
 import { DataTable } from "../../design-system/datatable";
 import { RowOpen } from "../../design-system/rowopen";
+import { StatusBadge } from "../../design-system/statusbadge";
 import { forReader } from "../../format/collate";
 import { useLocale, useT } from "../../i18n";
 import { ProviderCallsLine } from "./ai-call-figures";
@@ -18,8 +18,8 @@ import {
   type ProviderState,
   type ProviderUsage,
   providerState,
+  STATE_KIND,
   STATE_LABEL,
-  STATE_TONE,
 } from "./ai-provider-sheet";
 import { TierChips } from "./ai-terms";
 
@@ -138,7 +138,10 @@ function StateBadges({ row }: Readonly<{ row: Row }>) {
   return (
     <span className="ai-provider-badges">
       {row.state === "active" ? null : (
-        <Badge tone={STATE_TONE[row.state]}>{t(STATE_LABEL[row.state])}</Badge>
+        <StatusBadge
+          kind={STATE_KIND[row.state]}
+          label={t(STATE_LABEL[row.state])}
+        />
       )}
       {row.health && <ProviderHealthBadge health={row.health.health} />}
     </span>

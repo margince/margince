@@ -11,13 +11,8 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { AiCallsCard } from "./aicalls";
-import { CallDetailPanel } from "./aicalls-detail";
 
-// The card is gated on ai_diagnostics:read, so /me decides which of its two
-// branches renders. Left unrouted, the fetch stub answers with an empty list
-// page, useMe rejects that as malformed, and every grant fails closed — which
-// is how the List and Empty stories below both used to draw the same probe
-// error under two names that promised the trace table.
+// The card is gated on ai_diagnostics:read, so /me decides which branch renders.
 const OPERATOR: GrantSpec = { ai_diagnostics: ["read"] };
 
 const summary = {
@@ -27,22 +22,73 @@ const summary = {
   task: "capture_classify",
   tier: "cheap_cloud",
   provider: "gemini",
-  model_id: "configured",
-  served_model: "served",
+  model_id: "gemini-2.5-flash",
+  served_model: "gemini-2.5-flash",
   calls_attempted: 2,
-  tokens_in: 100,
-  tokens_out: 20,
+  tokens_in: 1840,
+  tokens_out: 212,
   reasoning_tokens: 0,
   cached_tokens: 0,
   latency_ms: 900,
   cache_hit: false,
-  degraded: true,
-  error_sentinel: "provider_unavailable",
+  degraded: false,
+  error_sentinel: null,
   has_payload: true,
   decision_attempted: false,
+  outcome: "fallback",
+  estimated_cost_microusd: 3612,
 };
+
+// One call per outcome bucket, so the outcome dial has every bucket to find.
+const calls = [
+  summary,
+  {
+    ...summary,
+    id: "call-2",
+    occurred_at: "2026-07-20T09:58:00Z",
+    task: "enrich",
+    tier: "premium",
+    provider: "anthropic",
+    model_id: "claude-sonnet",
+    served_model: "claude-sonnet",
+    calls_attempted: 1,
+    tokens_in: 5210,
+    tokens_out: 940,
+    latency_ms: 3120,
+    outcome: "answered",
+    estimated_cost_microusd: 29_730,
+  },
+  {
+    ...summary,
+    id: "call-3",
+    occurred_at: "2026-07-20T09:51:00Z",
+    task: "weekly_review",
+    calls_attempted: 1,
+    tokens_out: 0,
+    latency_ms: 210,
+    error_sentinel: "provider_quota",
+    outcome: "failed",
+    estimated_cost_microusd: 0,
+  },
+  {
+    ...summary,
+    id: "call-4",
+    occurred_at: "2026-07-20T09:40:00Z",
+    task: "owed_verdict",
+    calls_attempted: 1,
+    latency_ms: 1405,
+    error_sentinel: "output_withheld",
+    outcome: "declined",
+    // No rate on the sheet for this model: the row says so rather than $0.
+    estimated_cost_microusd: undefined,
+  },
+];
+
 const detail = {
   ...summary,
+  logical_call_id: "0b4e1f6a-6d7a-4c1e-9f0a-2b2a4f3c9d10",
+  correlation_id: "6a9c2d1e-8b5f-4f1a-a2c3-7d8e9f0a1b2c",
+  config_hash: "c0ffee12",
   served_identity_source: "response",
   context_scopes: ["identity"],
   context_fingerprint: "abc",
@@ -52,7 +98,11 @@ const detail = {
       is_terminal: false,
       kind: "completion",
       attempt_reason: "",
-      tokens_in: 100,
+      tier: "local_small",
+      provider: "ollama",
+      model_id: "llama-3.2",
+      error_sentinel: "provider_error",
+      tokens_in: 1840,
       tokens_out: 0,
       latency_ms: 400,
       occurred_at: summary.occurred_at,
@@ -61,23 +111,29 @@ const detail = {
       attempt: 2,
       is_terminal: true,
       kind: "completion",
-      attempt_reason: "retry_on_5xx",
-      tokens_in: 100,
-      tokens_out: 20,
+      attempt_reason: "provider_error",
+      tier: "cheap_cloud",
+      provider: "gemini",
+      model_id: "gemini-2.5-flash",
+      tokens_in: 1840,
+      tokens_out: 212,
       latency_ms: 900,
       occurred_at: summary.occurred_at,
     },
   ],
   payload_captured: true,
-  payload: { request: { system: "safe", messages: [] }, response: "ok" },
+  payload: {
+    request: {
+      system: "Classify the captured email into one of the listed kinds.",
+      messages: [{ role: "user", content: "Subject: Renewal quote for Q3" }],
+    },
+    response: '{"kind":"quote_request","confidence":0.91}',
+  },
 };
 
-// Calls as a real installation writes them: a broker-served model, whose id is
-// one long unbreakable string, on the tasks with the longest names.
 const brokered = [
   {
     ...summary,
-    id: "call-2",
     task: "capture_counterparty_verdict",
     tier: "premium",
     provider: "openai_compatible",
@@ -85,13 +141,12 @@ const brokered = [
     tokens_in: 1250344,
     tokens_out: 84213,
     latency_ms: 12873,
-    degraded: false,
-    error_sentinel: "",
     decision_attempted: true,
+    estimated_cost_microusd: 412_870,
   },
   {
     ...summary,
-    id: "call-3",
+    id: "call-5",
     task: "stage_evidence_extract",
     tier: "cheap_cloud",
     provider: "openai_compatible",
@@ -99,79 +154,61 @@ const brokered = [
     tokens_in: 48211,
     tokens_out: 3120,
     latency_ms: 2210,
-    degraded: false,
-    error_sentinel: "",
-  },
-];
-
-// One row per outcome the column draws: none for a first-time answer, a
-// warning for a call that limped, danger for no answer.
-const outcomes = [
-  {
-    ...summary,
-    id: "call-ok",
-    task: "weekly_review",
-    task_display_name: "Weekly review narrative",
-    tier: "premium",
-    calls_attempted: 1,
-    degraded: false,
-    error_sentinel: null,
-    cache_hit: true,
-  },
-  {
-    ...summary,
-    id: "call-retried",
-    task_display_name: "Message classification",
-    degraded: false,
-    error_sentinel: null,
-  },
-  { ...summary, id: "call-degraded", error_sentinel: null },
-  {
-    ...summary,
-    id: "call-rejected",
-    task: "owed_verdict",
-    task_display_name: "Unanswered-message triage",
-    calls_attempted: 3,
-    degraded: false,
-    error_sentinel: "output_rejected",
-  },
-  {
-    ...summary,
-    id: "call-decided",
-    kind: "decision",
-    tier: "decide",
-    provider: "jev_compatible",
-    served_model: "typesafe/jev-1.13",
-    calls_attempted: 1,
-    degraded: false,
-    error_sentinel: null,
-    decision_attempted: true,
+    outcome: "answered",
   },
 ];
 
 function list(
   data: unknown[],
-  capture = true,
-  allow: GrantSpec = OPERATOR,
-  trace: unknown = detail,
+  options: Readonly<{
+    capture?: boolean;
+    allow?: GrantSpec;
+    more?: boolean;
+    callDetail?: unknown;
+    /** Replaces the trace's answer: a read that never lands, or one that fails. */
+    trace?: () => Response | Promise<Response>;
+  }> = {},
 ) {
+  const { capture = true, allow = OPERATOR, more = false } = options;
   return () => {
+    // The dials live in the address, which the preview keeps between stories;
+    // without this a search typed in one story would filter the next.
+    globalThis.location.hash = "";
     installFetchStub({
       "GET /me": () => jsonResponse(meFixture({ allow })),
-      "GET /ai/calls": () =>
-        jsonResponse({
-          data,
-          page: { has_more: false },
-          payload_capture_enabled: capture,
-          tasks: ["capture_classify"],
-          task_options: [
-            {
-              task: "capture_classify",
-              display_name: "Message classification",
-            },
-          ],
-        }),
-      "GET /ai/calls/call-1": () => jsonResponse(trace),
+      "GET /ai/calls":
+        options.trace ??
+        (() =>
+          jsonResponse({
+            data,
+            page: more
+              ? { has_more: true, next_cursor: "page-2" }
+              : { has_more: false },
+            payload_capture_enabled: capture,
+            tasks: [
+              "capture_classify",
+              "enrich",
+              "owed_verdict",
+              "weekly_review",
+            ],
+            task_options: [
+              {
+                task: "capture_classify",
+                display_name: "Message classification",
+              },
+              { task: "enrich" },
+              {
+                task: "owed_verdict",
+                display_name: "Unanswered-message triage",
+              },
+              {
+                task: "weekly_review",
+                display_name: "Weekly review narrative",
+              },
+            ],
+            models: ["claude-sonnet", "gemini-2.5-flash"],
+          })),
+      "GET /ai/calls/call-1": () => jsonResponse(options.callDetail ?? detail),
     });
     return (
       <StoryProviders>
@@ -187,18 +224,23 @@ const meta: Meta<typeof AiCallsCard> = {
 };
 export default meta;
 type Story = StoryObj<typeof AiCallsCard>;
-export const List: Story = { render: list([summary]) };
-export const Outcomes: Story = { render: list(outcomes) };
-export const OutcomesDark: Story = {
+
+export const List: Story = { render: list(calls) };
+export const ListDark: Story = {
   globals: { theme: "dark" },
-  render: list(outcomes),
-};
-export const OutcomesPhone: Story = {
-  globals: { viewport: { value: "phone" } },
-  tags: ["uat-phone"],
-  render: list(outcomes),
+  render: list(calls),
 };
 export const Empty: Story = { render: list([]) };
+export const Withheld: Story = { render: list(calls, { allow: {} }) };
+export const ListPaged: Story = { render: list(calls, { more: true }) };
+export const Loading: Story = {
+  render: list(calls, { trace: () => new Promise<Response>(() => {}) }),
+};
+export const Failed: Story = {
+  render: list(calls, {
+    trace: () => jsonResponse({ title: "Upstream is down", status: 500 }, 500),
+  }),
+};
 
 // Reached from a figure that narrows the trace by vendor: the bar says what the
 // cut covers and offers the way back.
@@ -210,164 +252,92 @@ export const FilteredByProvider: Story = {
       globalThis.location.hash = prior;
     };
   },
-  render: list([summary]),
+  render: () => {
+    const view = list(calls)();
+    globalThis.location.hash = "#/settings/model-calls?provider=openai";
+    return view;
+  },
   play: async ({ canvasElement }) => {
     await within(canvasElement).findByRole("button", {
-      name: "Show all calls",
+      name: "Clear filters",
     });
   },
 };
 
-// No ai_diagnostics grant: the trace keeps its place and says it is withheld. An
-// absent card would read as "this installation made no model calls".
-export const Withheld: Story = { render: list([summary], true, {}) };
-
-// A page that has a next one, which is the only state that draws the pager.
-export const ListPaged: Story = {
-  render: () => {
-    installFetchStub({
-      "GET /me": () => jsonResponse(meFixture({ allow: OPERATOR })),
-      "GET /ai/calls": () =>
-        jsonResponse({
-          data: [summary],
-          page: { has_more: true, next_cursor: "page-2" },
-          payload_capture_enabled: true,
-          tasks: ["capture_classify"],
-          task_options: [
-            {
-              task: "capture_classify",
-              display_name: "Message classification",
-            },
-          ],
-        }),
-      "GET /ai/calls/call-1": () => jsonResponse(detail),
-    });
-    return (
-      <StoryProviders>
-        <AiCallsCard />
-      </StoryProviders>
-    );
-  },
-};
-
-export const PayloadOff: Story = {
-  render: () => {
-    installFetchStub({
-      "GET /ai/calls/call-1": () =>
-        jsonResponse({ ...detail, payload_captured: false, payload: null }),
-    });
-    return (
-      <StoryProviders>
-        <CallDetailPanel id="call-1" captureEnabled={false} />
-      </StoryProviders>
-    );
-  },
-};
-export const WithPayload: Story = {
-  render: () => {
-    installFetchStub({ "GET /ai/calls/call-1": () => jsonResponse(detail) });
-    return (
-      <StoryProviders>
-        <CallDetailPanel id="call-1" captureEnabled />
-      </StoryProviders>
-    );
-  },
-};
-
-// The disclosure button opens the attempt trail under its own row, so the trace
-// stays readable as one thing rather than two surfaces side by side. Shared by
-// the stories below, which all need the row OPEN to show what they are about.
-const openAttemptTrail: NonNullable<Story["play"]> = async ({
-  canvasElement,
-}) => {
-  const canvas = within(canvasElement);
-  const disclosure = await canvas.findByRole("button", {
-    name: (label) =>
-      label.startsWith(
-        `Show attempts for ${translate("en", "aiTask.name.capture_classify")} at `,
-      ),
-  });
-  await userEvent.click(disclosure);
-  await canvas.findByRole("heading", { name: "Attempts" });
-};
-
-// The detail panel IN the table, which is the only place a reader meets it.
-export const RowExpanded: Story = {
-  render: list([summary]),
-  play: openAttemptTrail,
-};
-
-// A press anywhere on the row opens it as the chevron does.
-export const RowPressed: Story = {
-  render: list([summary]),
+// The server found nothing for the search, so the answer is about the filters,
+// not the installation, and the way back sits beside it.
+export const FilteredEmpty: Story = {
+  render: list([]),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await canvas.findByRole("button", { name: /Show attempts/ });
-    await userEvent.click(
-      canvas.getByText(translate("en", "aiTask.name.capture_classify")),
+    await userEvent.type(
+      await canvas.findByRole("searchbox", { name: "Search calls" }),
+      "no such call",
     );
-    await canvas.findByRole("heading", { name: "Attempts" });
+    await canvas.findByText("No calls match these filters.");
   },
 };
 
-export const RowExpandedPhone: Story = {
-  globals: { viewport: { value: "phone" } },
-  tags: ["uat-phone"],
-  render: list([summary]),
-  play: openAttemptTrail,
-};
+async function openFirstCall(canvasElement: HTMLElement, expected: RegExp) {
+  await userEvent.click(
+    await within(canvasElement).findByRole("button", {
+      name: new RegExp(
+        `Open the ${translate("en", "aiTask.name.capture_classify")} call`,
+      ),
+    }),
+  );
+  // The drawer is portalled out of the canvas, so it is found on the page.
+  await within(canvasElement.ownerDocument.body).findByText(expected);
+}
 
-// A binding that names no model, as the offline fake does: the served line
-// says what answered and leaves the configured model out.
-export const RowExpandedNoConfiguredModel: Story = {
-  render: list([{ ...summary, model_id: "" }], true, OPERATOR, {
-    ...detail,
-    model_id: "",
-  }),
-  play: openAttemptTrail,
+export const DrawerOpen: Story = {
+  render: list(calls),
+  play: ({ canvasElement }) => openFirstCall(canvasElement, /Response payload/),
 };
-
-// The same expanded row in dark. Two badge tones are all that separates a call
-// that limped from one that failed — `degraded` (warning) and the error sentinel
-// (danger) — so a tint that stops carrying that distinction against a dark card
-// takes the task column's meaning with it. The trail is open because the
-// attempt table brings a second danger badge onto a nested surface, where a
-// translucent tone composites over a different ground than on the card face.
-export const RowExpandedDark: Story = {
+export const DrawerOpenDark: Story = {
+  ...DrawerOpen,
   globals: { theme: "dark" },
-  render: list([summary]),
-  play: openAttemptTrail,
 };
 
-// At 390px the trace folds each call onto two lines. The task, its outcome and
-// its toggle come first; the moment, model, tokens and latency sit under them.
+export const DrawerPayloadOff: Story = {
+  render: list(calls, {
+    capture: false,
+    callDetail: { ...detail, payload_captured: false, payload: null },
+  }),
+  play: ({ canvasElement }) =>
+    openFirstCall(canvasElement, /Payload capture is off/),
+};
+
 export const ListPhone: Story = {
   globals: { viewport: { value: "phone" } },
   tags: ["uat-phone"],
-  render: list([summary]),
+  render: list(calls),
 };
 
-// The card at the width Settings gives it — a page column beside the settings
-// navigation, not the viewport — with the long model ids a broker serves. Every
-// column has to be reachable here without a sideways scroll: an overlay
-// scrollbar draws nothing, so a table wider than its card simply looks cut off.
+// The settings column is 720 wide. Five columns and a broker's unbroken model
+// ids still fit it, with no sideways scroll and every badge inside the card.
 export const BrokerModelsAtSettingsWidth: Story = {
   render: () => {
     const Card = list(brokered);
     return (
-      <div style={{ maxWidth: 820 }} data-testid="settings-width">
+      <div style={{ maxWidth: 720 }} data-testid="settings-width">
         <Card />
       </div>
     );
   },
-  // The assertion that would have shown the clipping: the scroll box holds its
-  // table, so nothing is waiting off to the right.
   play: async ({ canvasElement }) => {
     await within(canvasElement).findByText(/mistral-small-2603/);
     const scroller = canvasElement.querySelector(".table-scroll");
-    expect(scroller?.scrollWidth).toBeLessThanOrEqual(
+    await expect(scroller?.scrollWidth).toBeLessThanOrEqual(
       scroller?.clientWidth ?? 0,
     );
+    const card = canvasElement.querySelector(".panel");
+    const edge = card?.getBoundingClientRect().right ?? 0;
+    for (const badge of canvasElement.querySelectorAll(".panel .badge")) {
+      await expect(badge.getBoundingClientRect().right).toBeLessThanOrEqual(
+        edge,
+      );
+    }
   },
 };
 

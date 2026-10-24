@@ -124,7 +124,7 @@ export function useVoiceDraft({
     entityId,
     onUnavailable: (reason) => fields.setDraftUnavailable(reason),
     onDrafted: (result, ask) => {
-      fillFromDraft(result, {
+      const written = fillFromDraft(result, {
         subject: fields.subject,
         body,
         toEmpty: fields.to.length === 0,
@@ -138,6 +138,8 @@ export function useVoiceDraft({
         setReasoning: account.setReasoning,
         setScope: account.setScope,
       });
+      // The rep's words stood in the way, so say the new draft was dropped.
+      fields.setDraftKept(!written);
       revealDraftedBody();
     },
     resetUnavailable: () => {
@@ -211,6 +213,7 @@ export function useVoiceDraft({
     epoch: draftEpoch.current,
     body,
     html,
+    servedBody: fields.servedBody,
     grounding: { ...account.grounding, projectId },
     ...(instruction === undefined ? {} : { instruction }),
   });

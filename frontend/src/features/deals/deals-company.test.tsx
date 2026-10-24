@@ -11,7 +11,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
-import { LocaleProvider } from "../../i18n";
+import { LocaleProvider, translate } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
 import { RecordShell } from "../../testing/recordshell.testkit";
 import type { CompanyNaming } from "./dealcompanymarks";
@@ -143,6 +143,8 @@ function stubBackend(opts: {
     if (method === "POST" && url.includes("/reports/")) {
       return jsonResponse({
         report: "deals-by-stage",
+        base_currency: "EUR",
+        as_of: "2026-10-01",
         plan: {},
         columns: [],
         rows: [],
@@ -608,6 +610,13 @@ describe("a deal's edit form over a withheld reference", () => {
     );
     render(<DealScreen id={single.id} />);
     await screen.findByRole("heading", { name: single.name, level: 1 });
+    // The fields are written in the drawer the page's More menu opens.
+    await user.click(await screen.findByRole("button", { name: /more/i }));
+    await user.click(
+      await screen.findByRole("button", {
+        name: translate("en", "deal.editDetails"),
+      }),
+    );
     if (!single.masked_fields?.length)
       await user.click(
         await screen.findByRole("button", { name: "Change Company" }),
@@ -736,10 +745,9 @@ describe("the deals table", () => {
 describe("a deal's fact line", () => {
   beforeEach(() => localStorage.setItem("margince.workspaceSlug", "acme"));
 
-  // A bare mask on a strip of named cells says only "something is hidden".
-  // Each withheld fact names the field it withholds. The header's own strip,
-  // because the same masked field is ALSO guarded in the details pane's edit
-  // form, and a query over the whole page would find both.
+  // A bare mask says only "something is hidden", so the line under the
+  // deal's name names the field it withholds. The head's own line, because
+  // the same masked field is also guarded in the details' edit form.
   it("names which of the facts is withheld", async () => {
     const single = deal({
       company_id: null,
@@ -749,7 +757,11 @@ describe("a deal's fact line", () => {
     render(<DealScreen id="d1" />);
 
     const masks = await screen.findAllByRole("img", { name: MASK });
-    const mask = masks.find((candidate) => candidate.closest(".record-facts"));
-    expect(mask?.closest(".record-fact")?.textContent).toContain("Company");
+    const mask = masks.find((candidate) =>
+      candidate.closest(".record-split-head"),
+    );
+    expect(mask?.closest(".record-split-lines")?.textContent).toContain(
+      "Company",
+    );
   });
 });

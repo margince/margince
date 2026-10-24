@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { Panel } from "../../design-system/panel";
+import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
 import { SettingList } from "../../design-system/settingrow";
 import { useToast } from "../../design-system/toast";
 import { meFixture } from "../../testing/mefixture";
@@ -12,18 +13,15 @@ import {
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
-import {
-  DisplayNameSettingRow,
-  GreetingNameSettingRow,
-} from "./settings-names";
+import { NameSettingRows, useAccountNames } from "./settings-names";
 
 function NameRows() {
   const toast = useToast();
+  const names = useAccountNames(toast);
   return (
     <Panel>
       <SettingList bleed="settings">
-        <DisplayNameSettingRow toast={toast} />
-        <GreetingNameSettingRow toast={toast} />
+        <NameSettingRows names={names} />
       </SettingList>
     </Panel>
   );
@@ -33,7 +31,10 @@ function render() {
   installFetchStub({ "GET /me": () => jsonResponse(meFixture({})) });
   return (
     <StoryProviders>
-      <NameRows />
+      <SavePageProvider>
+        <NameRows />
+        <PageSaveBar />
+      </SavePageProvider>
     </StoryProviders>
   );
 }
@@ -46,10 +47,10 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-// Settled: each row is its field alone, with no Save waiting.
+// Settled: each row is its field alone, and the page shows no save bar.
 export const Settled: Story = { render };
 
-// Edited: Save appears under the field that moved, and only there.
+// Edited: the page's save bar appears once a name moves.
 export const Edited: Story = {
   render,
   play: async ({ canvasElement }) => {

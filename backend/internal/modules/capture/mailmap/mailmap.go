@@ -12,7 +12,6 @@
 package mailmap
 
 import (
-	"bytes"
 	"fmt"
 	"slices"
 	"strings"
@@ -21,14 +20,19 @@ import (
 	"github.com/emersion/go-message/mail"
 
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
+	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-// maxBodyLen caps the stored email body — the timeline needs a legible
-// excerpt, not the full multi-megabyte thread with quoted history.
-const maxBodyLen = 8000
+// maxBodyLen caps the stored email body. It holds an ordinary long mail whole,
+// quoted history included, so automatic work can read all of it. A body cut
+// here is stored as partial. A multi-megabyte thread is still cut.
+const maxBodyLen = 64 * 1024
+
+// legacyMaxBodyLen is the cap bodies stored before maxBodyLen grew were cut
+// at. A stored body cut there lost text, and is assessed as partial.
+const legacyMaxBodyLen = 8000
 
 // Message is the pure result of reading one RFC822 message against the
 // mailbox owner — everything the mapping needs, with no provider handle.
@@ -89,6 +93,8 @@ type Message struct {
 	// files were dropped never reads as a message with no files (DOC-AC-12).
 	parts     []Part
 	partDrops []PartDrop
+	// bodyCompleteness is how much of the message's text this parser decoded.
+	bodyCompleteness capture.BodyCompleteness
 	// openRecipients holds the To and Cc addresses, the owner's own included, and
 	// linkHosts where the body's links lead: the evidence capture.MailEnvelope carries.
 	openRecipients   []string
@@ -126,11 +132,11 @@ func (m Message) ThreadKey() string { return m.threadKey }
 // Parse reads the headers and the text body of one message and classifies
 // its direction relative to the mailbox owner.
 func Parse(raw []byte, owner string) (Message, error) {
-	reader, err := mail.CreateReader(bytes.NewReader(raw))
-	if !usablePart(err) {
+	root, err := readEntity(raw)
+	if err != nil {
 		return Message{}, fmt.Errorf("mailmap: parsing message: %w", err)
 	}
-	header := reader.Header
+	header := mail.Header{Header: root.Header}
 
 	messageID, _ := header.MessageID()
 	subject := headerText(header, "Subject")
@@ -158,7 +164,7 @@ func Parse(raw []byte, owner string) (Message, error) {
 	from := firstAddress(fromList)
 	to := firstAddress(toList)
 
-	walked := extractText(reader)
+	walked := extractText(root)
 	body, parts, drops, calendar := walked.text, walked.parts, walked.drops, walked.calendar
 	hasCalendarPart := calendar.present
 
@@ -225,6 +231,7 @@ func Parse(raw []byte, owner string) (Message, error) {
 		listMail:         viaGroup || header.Get("List-Id") != "" || header.Get("List-Unsubscribe") != "",
 		parts:            parts,
 		partDrops:        drops,
+		bodyCompleteness: walked.completeness,
 	}, nil
 }
 
@@ -399,27 +406,26 @@ func (m Message) ID() string { return m.messageID }
 // The counterparty (From/To) is folded into a compact header on the body —
 // the activity schema has no dedicated participant column, and the timeline
 // needs to show who the mail was with.
+//
+// Subject and body carry credentials masked; Raw keeps the original.
 func (m Message) ToRecord(connectorName string, raw []byte) connector.NormalizedRecord {
 	source := connectorName + ":" + m.messageID
-	header := fmt.Sprintf("From: %s\nTo: %s", orDash(m.from), orDash(m.to))
-	body := header
-	if m.body != "" {
-		body = header + "\n\n" + m.body
-	}
-	body = textcut.BytesMarked(body, maxBodyLen, "…")
+	body, stored := m.storedBody()
 
 	return connector.NormalizedRecord{
 		EntityType: datasource.EntityActivity,
 		NaturalKey: connector.NaturalKey{SourceSystem: connector.EmailSourceSystem, SourceID: m.messageID},
 		Fields: capture.ActivityFields{
-			Kind:            "email",
-			Subject:         m.subject,
-			Body:            body,
-			OccurredAt:      m.occurredAt,
-			Direction:       m.direction,
-			HasCalendarPart: m.hasCalendarPart,
-			CalendarMethod:  m.calendarMethod,
-			Envelope:        m.envelope(),
+			Kind:              "email",
+			Subject:           credentialmask.MaskText(m.subject),
+			Body:              body,
+			OccurredAt:        m.occurredAt,
+			Direction:         m.direction,
+			HasCalendarPart:   m.hasCalendarPart,
+			CalendarMethod:    m.calendarMethod,
+			BodyCompleteness:  stored,
+			CredentialsMasked: m.masksCredentials(),
+			Envelope:          m.envelope(),
 		},
 		Source:               source,
 		CapturedBy:           "connector:" + connectorName,

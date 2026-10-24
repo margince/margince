@@ -150,6 +150,7 @@ const recordFieldsDescription = "The crm.yaml body for the record_type. The fiel
 	"description, is what says what a write may name. An extra key must be cf_<slug> for a " +
 	"custom field; any other key is refused BY NAME " +
 	"and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. " +
+	"An rfc3339 value carries Z or the offset the user gave. " +
 	"Any field holding a sentence — a description, a summary, a note — is written in whoami's " +
 	"prose_language, whatever language this conversation is in."
 
@@ -216,13 +217,52 @@ func rejectUnknownFields(shapes writeShapes, recordType string, fields json.RawM
 	}
 }
 
+// The example is UTC: a model copies an example's offset, and a fixed one
+// filed day-only entries at noon in a zone nobody named. The rule also sits
+// on required arguments, so it never says to leave a value out.
+const timestampRule = "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an hour or offset."
+
 // timestampNote is appended to every date-time argument the tool surface
 // takes. "format": "date-time" is RFC 3339, which REQUIRES a zone offset — but
 // a model reading the bare format keyword writes a local wall-clock time, and
 // the decoder then refuses a value that looks correct. Two failed calls were
 // spent on exactly that before the reason was visible, so the requirement is
 // stated where it is read rather than left implied by a keyword.
-const timestampNote = `,"description":"RFC 3339 WITH a zone offset (…T16:35:00+07:00 or …Z); a bare local time is refused."`
+const timestampNote = `,"description":"` + timestampRule + `"`
+
+// windowRule is the rule for a time the model must choose, such as a search
+// window or a slot to book. The model picks that hour, so only the offset is
+// fixed.
+const windowRule = "RFC 3339 WITH Z or the user's offset (…T14:35:00Z); never invent an offset."
+
+const windowNote = `,"description":"` + windowRule + `"`
+
+// pastDayNeedsATime is the activity-write sentence for a day named without
+// an hour: the server stores the call's own moment for an omitted occurred_at.
+const pastDayNeedsATime = " No occurred_at means now; for a past day with no time, ask."
+
+// argumentSchemaFor is schemaFor for a tool ARGUMENT. Every date-time member
+// it derives carries `rule`, like a hand-written one. A result schema has no
+// use for it.
+func argumentSchemaFor[T any](rule string) json.RawMessage {
+	return describedSchema[T]("", rule)
+}
+
+func noteTimestamps(node *jsonSchema, rule string) {
+	if node == nil {
+		return
+	}
+	if node.Format == "date-time" && node.Description == "" {
+		node.Description = rule
+	}
+	for _, member := range node.Properties {
+		noteTimestamps(member, rule)
+	}
+	noteTimestamps(node.Items, rule)
+	if node.AdditionalProperties != nil {
+		noteTimestamps(node.AdditionalProperties.Schema, rule)
+	}
+}
 
 // proseLanguageNote is the description on every argument that stores a
 // sentence a colleague will later read.

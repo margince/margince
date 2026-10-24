@@ -2,9 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type ComponentProps, useState } from "react";
+import { TaskDetailDialog } from "../../components/taskactions";
 import { useRecordZone } from "../../lib/recordzone";
 import { OpenActivityDrawer } from "../voice-knowledge/activitydrawer";
-import { TaskDetailDialog } from "./taskactions";
 
 export function TaskDetailModal(
   props: Omit<ComponentProps<typeof TaskDetailDialog>, "onOpenSource">,

@@ -21,6 +21,7 @@ package introductions
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -36,6 +37,9 @@ import (
 const (
 	mergedDuplicateReason = "the contact was merged into a record that already had this ask open"
 	mergedSelfRouteReason = "the contact was merged into the one this route ran through"
+	// mergedRecordedDuplicateReason is shown in the merge preview for the recorded
+	// introduction the merge archives, the newer of two for one pair.
+	mergedRecordedDuplicateReason = "the contact was merged into a record that already had this introduction recorded"
 )
 
 // CarryIntrosTx implements contacts.IntroCarrier.
@@ -49,6 +53,16 @@ func (s *Store) CarryIntrosTx(ctx context.Context, tx pgx.Tx, from, to ids.Conta
 	}
 	if err := s.closeMergedDuplicates(ctx, tx, from, to); err != nil {
 		return err
+	}
+	archived, archivedAt, err := s.archiveMergedRecordedDuplicates(ctx, tx, from, to)
+	if err != nil {
+		return err
+	}
+	for _, id := range archived {
+		if _, err := storekit.Audit(ctx, tx, "update", "intro_request", id,
+			map[string]any{fieldArchivedAt: nil}, map[string]any{fieldArchivedAt: archivedAt}); err != nil {
+			return err
+		}
 	}
 	rows, err := tx.Query(ctx, `
 		WITH prior AS (
@@ -94,6 +108,7 @@ func (s *Store) CarryIntrosTx(ctx context.Context, tx pgx.Tx, from, to ids.Conta
 const (
 	fieldContactID        = "contact_id"
 	fieldThroughContactID = "through_contact_id"
+	fieldArchivedAt       = "archived_at"
 )
 
 // closeMergedDuplicates cancels every open ask naming the retired contact that
@@ -143,6 +158,30 @@ func (s *Store) closeMergedDuplicates(ctx context.Context, tx pgx.Tx, from, to i
 		}
 	}
 	return nil
+}
+
+// archiveMergedRecordedDuplicates archives the newer of two recorded
+// introductions the merge would put on one pair. It answers which and when, so
+// the caller audits them with the re-home. closeMergedDuplicates has already
+// locked every row of both contacts.
+func (s *Store) archiveMergedRecordedDuplicates(
+	ctx context.Context, tx pgx.Tx, from, to ids.ContactID,
+) ([]ids.UUID, time.Time, error) {
+	archivedAt := s.now().UTC()
+	rows, err := tx.Query(ctx, `
+		UPDATE intro_request r
+		   SET archived_at = @archived_at, version = r.version + 1, updated_at = now()
+		 WHERE r.id IN (`+introCarryRecordedLosers+`)
+		RETURNING r.id`,
+		pgx.NamedArgs{"source": from, "target": to, "archived_at": archivedAt})
+	if err != nil {
+		return nil, time.Time{}, fmt.Errorf("introductions: archiving recorded introductions the merge made duplicates: %w", err)
+	}
+	archived, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return nil, time.Time{}, fmt.Errorf("introductions: archiving recorded introductions the merge made duplicates: %w", err)
+	}
+	return archived, archivedAt, nil
 }
 
 // auditMergeClosedAsk lands the write shape a cancellation lands: the status

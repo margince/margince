@@ -37,11 +37,15 @@ const CONTROLLER_SPEAKS_PREFIX = "privacynotice.";
 // The onboarding conversation, where an agent literally speaks in a bubble.
 const AGENT_SPEAKS_PREFIX = "ob.conv.";
 
-// A consent statement is the reader's sentence, not the product's.
+// A consent statement, and a promise the reader makes by pressing it, are the
+// reader's sentences, not the product's.
 const SPOKEN_BY_THE_READER = new Set<string>([
+  "commitment.takeOver",
   "directSend.acknowledge",
   "book.consentWording",
   "prefs.wordingGeneric",
+  // The sentence an admin types to confirm a risky change.
+  "confirmPhrase.risk",
 ]);
 const SPOKEN_BY_THE_READER_PREFIX = "prefs.wording.";
 
@@ -73,6 +77,7 @@ const RETIRED_WORDS = [
 // Keys where a retired word keeps a sense the table does not retire.
 const RETIRED_WORD_KEPT = new Map<string, string>([
   ["firstRun.platform.google", "Google Workspace is a product name"],
+  ["oauthApp.google.for", "Google Workspace is a product name"],
   ["company.lifecycle.opportunity", "a lifecycle stage, not the deal record"],
   ["signal.kind.new_opportunity", "a signal naming an opening, not a deal"],
   ["worklist.signal.opportunity", "a signal naming an opening, not a deal"],

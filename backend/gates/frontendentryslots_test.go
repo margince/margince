@@ -5,7 +5,8 @@
 
 package gates
 
-// A unit's entry names a slot and a glyph, and two sides must agree on both.
+// A unit's entry names a slot and a glyph, and a panel names a slot, and two
+// sides must agree on each.
 // The boot and the generator accept what pkg/extension lists; the SPA renders
 // what its own lists hold. A slot only Go knows is an entry that passes every
 // check and never shows. A glyph only Go knows is an entry without its icon.
@@ -23,6 +24,7 @@ import (
 const (
 	frontendEntrySlots = "../frontend/src/lib/extensionentries.ts"
 	frontendEntryIcons = "../frontend/src/components/extensionentries.tsx"
+	frontendPanelSlots = "../frontend/src/features/deals/extensionpanels.slots.ts"
 )
 
 // tsKey reads object keys in either spelling an object literal admits, bare or
@@ -47,7 +49,7 @@ func TestTheFrontendEntrySlotsMatchTheGoOnes(t *testing.T) {
 // mounted set is read from every `<ExtensionEntries` element under src/.
 func TestEverySlotGoAcceptsIsMountedOnAScreen(t *testing.T) {
 	t.Parallel()
-	mounted, err := mountedEntrySlots("../frontend/src")
+	mounted, err := mountedSlots("../frontend/src", entriesElement)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -56,6 +58,35 @@ func TestEverySlotGoAcceptsIsMountedOnAScreen(t *testing.T) {
 		inGo = append(inGo, string(slot))
 	}
 	compareSets(t, "mounted entry slot", inGo, mounted)
+}
+
+func TestTheFrontendPanelSlotsMatchTheGoOnes(t *testing.T) {
+	t.Parallel()
+	literal := tsLiteral(t, frontendPanelSlots, "export const EXTENSION_PANEL_SLOTS = [", "] as const;")
+	var inTS []string
+	for _, m := range tsQuoted.FindAllStringSubmatch(literal, -1) {
+		inTS = append(inTS, m[1])
+	}
+	compareSets(t, "panel slot", goPanelSlots(), inTS)
+}
+
+// A panel slot shows only where a page mounts it, read from every
+// `<ExtensionPanels` element under src/.
+func TestEveryPanelSlotGoAcceptsIsMountedOnAPage(t *testing.T) {
+	t.Parallel()
+	mounted, err := mountedSlots("../frontend/src", panelsElement)
+	if err != nil {
+		t.Fatal(err)
+	}
+	compareSets(t, "mounted panel slot", goPanelSlots(), mounted)
+}
+
+func goPanelSlots() []string {
+	var inGo []string
+	for _, slot := range extension.PanelSlots() {
+		inGo = append(inGo, string(slot))
+	}
+	return inGo
 }
 
 func TestTheFrontendEntryIconsMatchTheGoOnes(t *testing.T) {

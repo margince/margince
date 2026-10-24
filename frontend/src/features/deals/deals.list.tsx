@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { api } from "../../api/client";
 import { usePageName } from "../../app/pagemeta";
+import { searchCompanyTargets } from "../../components/companyform";
 import { CreateAction } from "../../components/create";
 import {
   type ObjectCustomFields,
@@ -20,11 +21,17 @@ import { currencyOptions } from "../../format/currencychoices";
 import { formatNumber } from "../../format/format";
 import { translatePlural, useLocale, useT } from "../../i18n";
 import { useAcquisitionSources } from "../../lib/acquisitionsources.queries";
+import {
+  totalsRefusedBecause,
+  totalsWithheldBecause,
+  useDeals,
+  useStageTotals,
+} from "../../lib/deals.queries";
+import { useLeadingCurrencies } from "../../lib/leadingcurrencies";
 import { usePipelines } from "../../lib/pipelines.queries";
 import { throwProblem, unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { useViewerId } from "../../lib/session";
-import { searchCompanyTargets } from "../companies/companyform";
 import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
 import { LegalReviewQueueLink } from "../privacy/legalreviews";
 import { useOwnerPicker } from "../records/recordreferences";
@@ -59,12 +66,6 @@ import {
   savableDealQuery,
   useDealScreenDials,
 } from "./deals.listtools";
-import {
-  totalsRefusedBecause,
-  totalsWithheldBecause,
-  useDeals,
-  useStageTotals,
-} from "./deals.queries";
 import { mapDealCreate } from "./deals.write";
 
 // The create form, with the one question it has to ask the server: which
@@ -89,6 +90,7 @@ function DealCreateAction({
   startOpen: boolean;
 }>) {
   const t = useT();
+  const leading = useLeadingCurrencies();
   // The picker asks the server for one company's projects, so it is keyed on
   // the company the open form names. A create form has no record to take it
   // from, and only the server knows which projects a company is on. The form
@@ -119,6 +121,7 @@ function DealCreateAction({
           ...mapDealCreate(
             { ...values, project_id: projectId ?? "" },
             pipeline.id,
+            leading[0],
           ),
           ...cf.toBody(values),
         },
@@ -150,7 +153,7 @@ function DealCreateAction({
           label: "create.currency",
           type: "select",
           required: true,
-          options: currencyOptions(),
+          options: currencyOptions(leading),
         },
         {
           key: "stage_id",

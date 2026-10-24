@@ -39,6 +39,7 @@ func (a *assembly) readTimeline() error {
 		EntityID:        &companyUUID,
 		Limit:           &limit,
 		WithinProjectID: a.opts.ProjectID,
+		WrittenByHuman:  a.opts.WrittenByHumanOnly,
 		Columns:         a.activityColumns,
 	})
 	if err != nil {

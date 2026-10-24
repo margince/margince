@@ -55,8 +55,8 @@ function problemDetail(
   problem: unknown,
   t?: (key: MessageKey) => string,
 ): string | null {
-  const code = problemCode(problem);
-  const copyKey = PROBLEM_CODE_COPY.get(code ?? "");
+  const copyKey =
+    PROBLEM_CODE_COPY.get(problemCode(problem) ?? "") ?? fieldCopyKey(problem);
   if (t && copyKey) return t(copyKey);
   if (isRecord(problem)) {
     // A field present but blank puts no words on the screen, like an absent one.
@@ -67,6 +67,16 @@ function problemDetail(
     return detail ?? title;
   }
   return null;
+}
+
+// A module's own refusal reaches the wire as a `validation_error` with its code
+// only on the field fault, so the top-level code never names it.
+function fieldCopyKey(problem: unknown): MessageKey | undefined {
+  for (const fault of problemFieldErrors(problem)) {
+    const key = PROBLEM_CODE_COPY.get(fault.code);
+    if (key) return key;
+  }
+  return undefined;
 }
 
 function readableField(value: unknown): string | null {

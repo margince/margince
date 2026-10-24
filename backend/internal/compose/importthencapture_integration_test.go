@@ -203,7 +203,7 @@ func TestAnErasureRacingTheTakeOverSkipsInsteadOfStalling(t *testing.T) {
 	}
 	racing := func(
 		ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
-		subject, body, wasCapturedBy, capturedBy string,
+		subject, body, wasCapturedBy, capturedBy string, senderIsMachine bool,
 	) error {
 		// The erasure wins the race, in this same transaction so the take-over
 		// below sees exactly what a concurrent commit would have left it.
@@ -213,7 +213,7 @@ func TestAnErasureRacingTheTakeOverSkipsInsteadOfStalling(t *testing.T) {
 			return err
 		}
 		return activities.TakeOverAssertedActivityTx(
-			ctx, tx, activityID, subject, body, wasCapturedBy, capturedBy)
+			ctx, tx, activityID, subject, body, wasCapturedBy, capturedBy, senderIsMachine)
 	}
 	sink := capture.NewSink(e.DB()).
 		WithAssertedTakeOver(racing).

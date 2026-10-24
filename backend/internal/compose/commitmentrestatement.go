@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -57,6 +58,18 @@ func (x *SignalExtractor) withRestatedCommitment(ctx context.Context, tx pgx.Tx,
 	message, found := citedMessage(thread, id)
 	if !found {
 		return Commitment{}, false, nil
+	}
+	if promisedOnAnothersPrivateThread(commitment) {
+		// A renewal is shown with its message's words, and the task is withheld
+		// from a holder who cannot open that message. One they cannot open
+		// renews nothing for them.
+		may, err := auth.SeatMayHoldPrivateWorkTx(ctx, tx, id, commitment.PrivateTo, *commitment.Seat)
+		if err != nil {
+			return Commitment{}, false, err
+		}
+		if !may {
+			return commitment, true, nil
+		}
 	}
 	commitment.AdmissionSourceID = &id
 	commitment.RenewedAt = &message.At

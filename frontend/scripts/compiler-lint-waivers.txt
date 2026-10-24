@@ -38,7 +38,6 @@
 1 react-hooks/set-state-in-effect src/design-system/listsurface.tsx
 1 react-hooks/set-state-in-effect src/design-system/motion.ts
 1 react-hooks/set-state-in-effect src/design-system/presence.ts
-3 react-hooks/refs src/design-system/recordview.tsx
 1 react-hooks/set-state-in-effect src/design-system/relationshipmap.tsx
 3 react-hooks/refs src/design-system/rowtags.tsx
 1 react-hooks/set-state-in-effect src/design-system/scrollregion.ts
@@ -62,7 +61,7 @@
 1 react-hooks/set-state-in-effect src/features/companies/company-context.tsx
 3 react-hooks/refs src/features/companies/companyheaderactions.tsx
 1 react-hooks/set-state-in-effect src/features/companies/companyvatmark.tsx
-7 react-hooks/refs src/features/mail/compose.tsx
+6 react-hooks/refs src/features/mail/compose.tsx
 1 react-hooks/set-state-in-effect src/features/mail/composefiling.ts
 4 react-hooks/refs src/features/mail/composerecipientoffer.ts
 1 react-hooks/set-state-in-effect src/features/mail/composesaveddraft.tsx
@@ -91,7 +90,7 @@
 1 react-hooks/set-state-in-effect src/features/leads/leads.actions.tsx
 1 react-hooks/set-state-in-effect src/features/leads/leads.score.tsx
 1 react-hooks/refs src/features/leads/leadvocab.reasons.tsx
-1 react-hooks/refs src/features/leads/leadvocab.sources.tsx
+1 react-hooks/refs src/features/leads/leadvocab.origins.tsx
 3 react-hooks/refs src/features/lists/listlibrary.tsx
 5 react-hooks/refs src/features/lists/listpage.tsx
 2 react-hooks/refs src/features/onboarding/onboarding-conversation/company-act-state.ts
@@ -104,17 +103,16 @@
 1 react-hooks/refs src/features/onboarding/onboarding-conversation/voice-scenes.build.tsx
 2 react-hooks/refs src/features/onboarding/onboarding-gate.ticker.tsx
 1 react-hooks/set-state-in-effect src/features/onboarding/onboarding-ignition.tsx
-2 react-hooks/refs src/features/mail/openemaildrawer.tsx
 1 react-hooks/set-state-in-effect src/features/settings/preferences.tsx
 1 react-hooks/refs src/features/privacy/privacy.caselink.ts
 1 react-hooks/refs src/features/projects/projecthealthmodal.tsx
 1 react-hooks/set-state-in-effect src/features/projects/projecthealthmodal.tsx
 1 react-hooks/set-state-in-effect src/features/settings/rate-manual.tsx
 1 react-hooks/set-state-in-effect src/features/records/recordaccess.tsx
-1 react-hooks/refs src/features/records/recordteamassign.tsx
-1 react-hooks/set-state-in-effect src/features/records/recordteamassign.tsx
+1 react-hooks/refs src/components/recordteamassign.tsx
+1 react-hooks/set-state-in-effect src/components/recordteamassign.tsx
 1 react-hooks/set-state-in-effect src/features/records/relationships.tsx
-3 react-hooks/refs src/features/lists/tagspanel.tsx
+3 react-hooks/refs src/components/tagspanel.tsx
 1 react-hooks/set-state-in-effect src/features/ai/vertex-model-probe.ts
 1 react-hooks/refs src/features/voice-knowledge/voice-samples.tsx
 3 react-hooks/refs src/features/worklist/worklist.row.compact.tsx

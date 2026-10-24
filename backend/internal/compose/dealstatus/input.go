@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
+	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -299,9 +300,11 @@ func threadIn(th crmcontracts.DealRoomThread) ThreadIn {
 // assembled input, the prompt version, the reader, and the DAY.
 //
 // The day is in the key because the card says "the last contact was 4 days
-// ago" — prose rendered from the clock at write time, over facts that have not
-// moved. Without it a card written on Monday still says "4 days ago" on
-// Friday, and the fingerprint has no reason to notice. A day's granularity is
+// ago". That prose is rendered from the clock at write time, over facts that
+// have not moved. It is the day in the installation zone, the zone those day counts are
+// reckoned in. The key turns over at the reader's midnight and not UTC's.
+// Without it a card written on Monday still says "4 days ago" on Friday, and
+// the fingerprint has no reason to notice. A day's granularity is
 // exactly what those sentences resolve to; anything finer would rewrite a
 // quiet deal for nothing.
 //
@@ -316,17 +319,19 @@ func threadIn(th crmcontracts.DealRoomThread) ThreadIn {
 // this the cache would serve the English card to a reader whose installation
 // has just been told to write German, indefinitely, until some unrelated fact
 // moved. The setting would appear to have done nothing.
-func Fingerprint(in StatusInput, userID ids.UUID, routingVersion string, day time.Time, lang string) (string, error) {
+func Fingerprint(in StatusInput, userID ids.UUID, routingVersion string, now time.Time, loc *time.Location, lang string) (string, error) {
 	encoded, err := json.Marshal(struct {
 		In       StatusInput `json:"in"`
 		Prompt   string      `json:"prompt"`
 		Routing  string      `json:"routing"`
 		Reader   string      `json:"reader"`
 		Day      string      `json:"day"`
+		Zone     string      `json:"zone"`
 		Language string      `json:"language"`
 	}{
 		In: in, Prompt: projectionVersion + "\x00" + promptVersion, Routing: routingVersion,
-		Reader: userID.String(), Day: day.UTC().Format("2006-01-02"),
+		Reader: userID.String(), Day: elapsed.CalendarDay(now, loc).Format("2006-01-02"),
+		Zone:     loc.String(),
 		Language: lang,
 	})
 	if err != nil {

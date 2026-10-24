@@ -254,6 +254,25 @@ describe("extension routes (vanilla registry)", () => {
 describe("locale switch", () => {
   it("mounts in English (A100) and flips the chrome to German on switch", async () => {
     await import("./features/settings/settings");
+    // The seat keeps the language before the page switches, so the write must
+    // be answered; every other read stays the session-only stub.
+    const sessionOnly = sessionOnlyFetch();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: Request | string | URL) => {
+        const request = input instanceof Request ? input : undefined;
+        if (
+          request?.method === "PUT" &&
+          request.url.endsWith("/v1/me/locale")
+        ) {
+          return new Response(JSON.stringify({ locale: "de" }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        return sessionOnly(input);
+      }),
+    );
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -282,6 +301,11 @@ describe("locale switch", () => {
       ),
       "Deutsch",
     );
+    // The language is drafted until the page's save bar writes it.
+    await userEvent
+      .setup()
+      .click(await screen.findByRole("button", { name: "Save" }));
+    await screen.findByRole("combobox", { name: "Sprache" });
 
     window.location.hash = "#/home";
     await waitFor(() =>

@@ -1,162 +1,129 @@
-/* The reply and the conversation it answers, side by side inside the drawer.
- *
- * The split is a grid rather than two floated columns because the two halves
- * scroll independently and must not decide each other's height: a long thread
- * would otherwise stretch the form's column and push Send below the fold. */
-.compose-split {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
-  gap: var(--space-5);
-  /* The drawer is a flex column, so this has to CLAIM the height between the
-     title and the actions — without the grow it sizes to its content and the
-     drawer ends in a band of empty white with the send buttons stranded in the
-     middle of the screen. `min-block-size: 0` is what then lets each column
-     shrink below its own content and scroll instead of pushing the actions off
-     the bottom. */
-  flex: 1 1 auto;
-  min-block-size: 0;
-}
+/* Which thread the message goes into: the bar under the window's title, and
+ * the list it opens. Tokens only (ds-purity). */
 
-/* The thread and form scroll separately; neither can squeeze the editor. */
-.compose-split > .compose-fields {
-  min-block-size: 0;
-  overflow-y: auto;
-}
-
-.compose-thread {
-  display: flex;
-  flex-direction: column;
-  min-block-size: 0;
-  /* The conversation is what the reply is drawn FROM, so it reads as the
-     recessed half: the form is where the work happens. A rule rather than a
-     fill, because a tinted column beside a white one reads as disabled. */
-  border-inline-end: 1px solid var(--borderSubtle);
-  padding-inline-end: var(--space-5);
-}
-
-.compose-thread-head {
+/* The bar: one press target across the window, on the page ground so it reads
+   as the window's own band rather than a field. Marked in the accent tint
+   while the draft answers a thread. */
+.compose-threadbar-wrap {
   flex: none;
-  padding-block-end: var(--space-3);
+  border-bottom: 1px solid var(--borderSubtle);
 }
-
-/* The pane scrolls, the form scrolls, the drawer does not. min-block-size: 0
-   is what lets a grid child shrink below its content and scroll at all. */
-.compose-thread-scroll {
-  flex: 1 1 auto;
-  min-block-size: 0;
-  overflow-y: auto;
-}
-
-/* Each scroller here is the containing block for what it holds: a `.sr-only`
-   resolved against `.modal` instead escapes this clip and scrolls the drawer. */
-.compose-split > .compose-fields,
-.compose-thread-scroll {
-  position: relative;
-}
-
-/* The thread is one conversation rather than a record's whole chronology, so
-   the date gutter that keeps an account's timeline in a straight column buys
-   nothing here and costs a third of the measure. */
-.compose-thread-list {
-  padding-inline-start: 0;
-}
-
-/* The dialog's body stack is what the two columns are decided by, and the
-   height they share out. */
-.form-stack:has(> .compose-split) {
-  container: compose / inline-size;
-  flex: 1 1 auto;
-  min-block-size: 0;
-}
-
-.compose-fold {
+.compose-threadbar.popover-trigger {
   display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  min-block-size: 0;
+  align-items: center;
+  gap: var(--space-2);
+  inline-size: 100%;
+  padding: var(--space-2) var(--space-4);
+  background: var(--bgPage);
+  color: var(--textPrimary);
 }
-.compose-fold > .compose-fold-toggle {
-  align-self: flex-start;
+.compose-threadbar.popover-trigger:hover {
+  background: var(--bgHover);
 }
-.compose-fold-column {
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 auto;
-  min-block-size: 0;
-}
-.compose-fold-column > .compose-thread {
-  flex: 1 1 auto;
-}
-
-/* Where both columns cannot be read, the conversation folds above the draft
-   behind its toggle, its scroll short enough to keep the draft in view. */
-@container compose (min-width: 46rem) {
-  .compose-fold > .compose-fold-toggle {
-    display: none;
-  }
-}
-@container compose (width < 46rem) {
-  .compose-split {
-    grid-template-columns: minmax(0, 1fr);
-    /* The fold takes what it needs and the draft the rest; stretched, the two
-       rows would split the height and leave a band of nothing under the fold. */
-    grid-template-rows: auto minmax(0, 1fr);
-  }
-  .compose-fold {
-    border-block-end: 1px solid var(--borderSubtle);
-    padding-block-end: var(--space-3);
-  }
-  .compose-fold[data-open="false"] > .compose-fold-column {
-    display: none;
-  }
-  .compose-thread {
-    border-inline-end: 0;
-    padding-inline-end: 0;
-  }
-  .compose-thread-scroll {
-    max-block-size: 14rem;
-  }
-}
-
-/* The head is a row now: the heading, and the way back out of a conversation
-   the reader picked. */
-.compose-thread-head {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-
-/* The design system's button, worn as a text link: the head's baseline row has
-   no room for a boxed control, and the way back is a small move rather than a
-   verb. Focus, refusal and pending semantics stay the shared ones. */
-.compose-thread-leave {
+.compose-threadbar > svg {
   flex: none;
+  inline-size: 14px;
+  block-size: 14px;
+  color: var(--textSecondary);
+}
+.compose-threadbar-text {
+  flex: 1;
   min-inline-size: 0;
-  block-size: auto;
-  padding: 0;
-  border-color: transparent;
-  background: none;
-  color: var(--accentText);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.compose-thread-leave:hover {
-  background: none;
-  text-decoration: underline;
+.compose-threadbar-text > strong {
+  font-weight: var(--fontWeightBold);
+}
+.compose-threadbar-count {
+  margin-inline-start: var(--space-2);
+  color: var(--textSecondary);
+}
+.compose-threadbar-action {
+  flex: none;
+  color: var(--accentText);
+  font-weight: var(--fontWeightBold);
 }
 
-/* The ways in. Each is one press target across its whole width — the subject
-   and what places it are one answer, not two things to aim at. */
-.compose-choices {
+/* The list the bar opens: the way out to a new thread, then the threads. */
+/* Wide enough for a subject to read whole: the panel's own 20rem cap is for
+   asides, and this is a list to choose from. */
+.popover-panel.compose-threadmenu {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  inline-size: min(32rem, calc(100vw - var(--space-5) * 2));
+  max-inline-size: none;
+  overflow: hidden;
+}
+.compose-threadmenu > * {
+  margin: 0;
+}
+/* The way out to a new thread, as the list's first row; tinted while the draft
+   starts one. */
+.compose-threadmenu-new {
+  justify-content: flex-start;
+  inline-size: 100%;
+  font-weight: var(--fontWeightMedium);
+}
+.compose-threadmenu-new[aria-pressed="true"] {
+  background: var(--bgInset);
+}
+/* The list's name, as a quiet label over the rows rather than a title. */
+.compose-threadmenu-title {
+  padding-inline: var(--space-3);
+  font: var(--fontBodySmall);
+  font-weight: var(--fontWeightMedium);
+  color: var(--textSecondary);
+}
+.compose-threadlist {
   display: flex;
   flex-direction: column;
   gap: var(--space-1);
   list-style: none;
   margin: 0;
   padding: 0;
+  /* A record with a hundred threads scrolls here, under the search, rather
+     than growing the menu past the window. It is the menu's one scroller. */
+  flex: 0 1 auto;
+  min-block-size: 0;
+  max-block-size: 20rem;
+  overflow-y: auto;
+  /* The rows' screen-reader text is placed absolutely. Held here, it scrolls
+     with its row instead of stretching the menu below the list. */
+  position: relative;
+}
+.compose-threadmenu-more {
+  align-self: flex-start;
+  color: var(--accentText);
+}
+.compose-threadrow[data-selected="true"] {
+  border-radius: var(--r-sm);
+  background: var(--bgInset);
+}
+/* The marked thread's other messages, set in under it. */
+.compose-threadlist-others {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding-inline-start: var(--space-4);
+}
+.compose-threadlist-others > .compose-message {
+  display: block;
+  padding: 0;
 }
 
-/* The design system's button, laid out as a two-line row: stacked, start-aligned
-   and as wide as the list, where the shared shape is one centred line. */
+/* A thread is one conversation rather than a record's whole chronology, so
+   the date gutter that keeps an account's timeline in a column buys nothing
+   here and costs a third of the measure. */
+.compose-thread-list {
+  padding-inline-start: 0;
+}
+
+/* A thread read without its summary: the design system's button laid out as
+   a two-line row, stacked and as wide as the list. */
 .compose-choice {
   display: flex;
   flex-direction: column;
@@ -167,14 +134,8 @@
   text-align: start;
   background: none;
   border-color: transparent;
-  border-radius: var(--r-sm);
   padding: var(--space-2) var(--space-3);
 }
-.compose-choice:hover {
-  background: var(--bgHover);
-  border-color: var(--borderSubtle);
-}
-
 .compose-choice-subject {
   color: var(--textPrimary);
 }
@@ -183,10 +144,54 @@
   display: flex;
   align-items: center;
   gap: var(--gapActions);
-  padding: 0 var(--space-3) var(--space-3);
+  padding: 0 var(--space-3) var(--space-2);
 }
 
-.compose-thread-list > .compose-message {
-  display: block;
-  padding: 0;
+/* In the thread menu a thread reads as one compact row: its subject with the
+   time at the end, its newest words under it with what it waits on. Who it
+   was with is the menu's own heading, so the row leaves it out. */
+.compose-threadmenu .emailentry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-1) var(--space-3); /* ds:ignore the thread menu's two-line row */
+  padding: var(--space-2) var(--space-3); /* ds:ignore the thread menu's two-line row */
+}
+.compose-threadmenu .emailentry__lead {
+  display: contents;
+}
+.compose-threadmenu .emailentry__lead > svg,
+.compose-threadmenu .emailentry__who,
+.compose-threadmenu .emailentry__marks > .visibility {
+  display: none;
+}
+.compose-threadmenu .emailentry__subject {
+  grid-row: 1;
+  grid-column: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: var(--fontWeightMedium);
+}
+.compose-threadmenu .emailentry__when {
+  grid-row: 1;
+  grid-column: 2;
+  margin: 0;
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
+.compose-threadmenu .emailentry__preview {
+  grid-row: 2;
+  grid-column: 1;
+  min-inline-size: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
+.compose-threadmenu .emailentry__marks {
+  grid-row: 2;
+  grid-column: 2;
+  justify-content: flex-end;
 }

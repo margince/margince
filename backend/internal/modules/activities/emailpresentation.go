@@ -94,6 +94,7 @@ func readEmailPresentation(ctx context.Context, tx pgx.Tx, id ids.ActivityID, th
 	if withheld {
 		return withheldPresentation(out, activity), nil
 	}
+	out.BodyCompleteness = activity.BodyCompleteness
 
 	parties, err := readEmailParties(ctx, tx, id)
 	if err != nil {

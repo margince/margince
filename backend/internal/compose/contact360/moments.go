@@ -49,7 +49,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -106,7 +105,13 @@ func (s *Service) momentsSection(ctx context.Context, tx pgx.Tx, contactID ids.C
 	}
 	said := momentCopyFor(string(identity.BaseLanguageForRecord(ctx, tx)))
 	said.zone = zone
-	moment := said.deriveMomentPast(ctx, now, out, dismissed)
+	// A reader who may not read activity sees no mail to cite, so their
+	// promise cards stay as they are.
+	followUps, err := promiseFollowUps(ctx, tx, contactID, now, out)
+	if err != nil && !errors.Is(err, apperrors.ErrPermissionDenied) {
+		return err
+	}
+	moment := said.deriveMomentPast(ctx, now, out, dismissed, said.proposer(ctx, out, followUps, dismissed))
 	momentaction.Withhold(ctx, string(said.Lang()), &moment)
 	out.Moment = &moment
 	return nil
@@ -174,7 +179,7 @@ func (s *Service) momentDismissals(ctx context.Context, tx pgx.Tx, contactID ids
 // inputs this build does not have, and a rule that cannot fire belongs nowhere
 // on the page.
 func (said momentCopy) deriveMoment(ctx context.Context, now time.Time, page *crmcontracts.Contact360) crmcontracts.ContactMoment {
-	return said.deriveMomentPast(ctx, now, page, func(crmcontracts.ContactMoment) bool { return false })
+	return said.deriveMomentPast(ctx, now, page, func(crmcontracts.ContactMoment) bool { return false }, asAssembled)
 }
 
 // deriveMomentPast walks the same ladder and skips the rungs whose card this
@@ -193,8 +198,10 @@ func (said momentCopy) deriveMoment(ctx context.Context, now time.Time, page *cr
 func (said momentCopy) deriveMomentPast(
 	ctx context.Context, now time.Time, page *crmcontracts.Contact360,
 	dismissed func(crmcontracts.ContactMoment) bool,
+	propose func(crmcontracts.ContactMoment) crmcontracts.ContactMoment,
 ) crmcontracts.ContactMoment {
-	for _, rung := range said.ladder() {
+	for _, plain := range said.ladder() {
+		rung := proposing(plain, propose)
 		moment, ok := rung(ctx, now, page)
 		if !ok || !dismissed(moment) {
 			if ok {
@@ -312,7 +319,7 @@ func (said momentCopy) reEngagedMoment(_ context.Context, now time.Time, page *c
 	if page.LastOutboundAt == nil {
 		return crmcontracts.ContactMoment{}, false
 	}
-	sinceWeWrote := elapsed.Days(*page.LastOutboundAt, inbound)
+	sinceWeWrote := elapsed.Days(*page.LastOutboundAt, inbound, said.zone)
 	if sinceWeWrote < reEngagedQuietDays {
 		return crmcontracts.ContactMoment{}, false
 	}
@@ -364,13 +371,13 @@ func (said momentCopy) goneQuietMoment(_ context.Context, now time.Time, page *c
 		// They answered. Silence is not the story.
 		return crmcontracts.ContactMoment{}, false
 	}
-	waiting := elapsed.Days(outbound, now)
+	waiting := elapsed.Days(outbound, now, said.zone)
 	if waiting < goneQuietAfterDays {
 		return crmcontracts.ContactMoment{}, false
 	}
 	quietFor := waiting
 	if page.LastInboundAt != nil {
-		quietFor = elapsed.Days(*page.LastInboundAt, now)
+		quietFor = elapsed.Days(*page.LastInboundAt, now, said.zone)
 	}
 	evidence := said.outboundEvidence(page, outbound)
 	return crmcontracts.ContactMoment{
@@ -472,9 +479,5 @@ func (said momentCopy) nothingNeededMoment(_ context.Context, now time.Time, pag
 }
 
 func recordZone(ctx context.Context, tx pgx.Tx) (*time.Location, error) {
-	name, err := identity.TimezoneAppliedTx(ctx, tx)
-	if err != nil {
-		return nil, err
-	}
-	return storekit.LoadZone(name)
+	return identity.ZoneAppliedTx(ctx, tx)
 }

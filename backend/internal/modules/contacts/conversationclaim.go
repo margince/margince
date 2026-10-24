@@ -200,9 +200,10 @@ func (s *Store) readClaims(
 		SELECT c.id, c.kind, c.body, c.source_activity_id, c.source_quote,
 		       a.subject, a.occurred_at, c.status, c.due_at,
  (c.needs_review OR (c.kind IN ('commitment_ours','commitment_theirs') AND NOT `+admission+`)),
-		       c.corrected_at, c.task_activity_id
+		       c.corrected_at, c.task_activity_id, c.taken_by_user_id, taker.display_name, c.taken_at
 		FROM conversation_claim c
 		JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
+		LEFT JOIN app_user taker ON taker.id = c.taken_by_user_id
 		WHERE c.contact_id = $%d AND c.archived_at IS NULL AND (%s) AND %s AND (%s)
 		ORDER BY %s
 		LIMIT %d`, contactPos, scope, filed, extra, order, limit), args...)
@@ -215,12 +216,12 @@ func (s *Store) readClaims(
 	for rows.Next() {
 		var claim crmcontracts.ConversationClaim
 		var id, activityID ids.UUID
-		var taskID *ids.UUID
+		var taskID, takerID *ids.UUID
 		var subject *string
 		var occurredAt time.Time
 		if err := rows.Scan(&id, &claim.Kind, &claim.Body, &activityID, &claim.SourceQuote,
 			&subject, &occurredAt, &claim.Status, &claim.DueAt, &claim.NeedsReview,
-			&claim.CorrectedAt, &taskID); err != nil {
+			&claim.CorrectedAt, &taskID, &takerID, &claim.TakenByName, &claim.TakenAt); err != nil {
 			return nil, fmt.Errorf("scan a conversation claim: %w", err)
 		}
 		claim.Id = openapi_types.UUID(id)
@@ -230,6 +231,10 @@ func (s *Store) readClaims(
 		if taskID != nil {
 			task := openapi_types.UUID(*taskID)
 			claim.TaskActivityId = &task
+		}
+		if takerID != nil {
+			taker := openapi_types.UUID(*takerID)
+			claim.TakenByUserId = &taker
 		}
 		out = append(out, claim)
 	}

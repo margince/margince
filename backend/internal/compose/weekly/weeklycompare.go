@@ -86,12 +86,15 @@ func countWeekMoney(
 		}
 		created += amount
 	}
-	won, lost, err := closedInWeek(ctx, tx, userID, start, end)
+	won, lost, err := closedInWeek(ctx, tx, userID, start, end, base)
 	if err != nil {
 		return Money{}, err
 	}
+	if won == nil || lost == nil {
+		return Money{}, nil
+	}
 	return Money{
-		CreatedMinor: created, WonMinor: won, LostMinor: lost,
+		CreatedMinor: created, WonMinor: *won, LostMinor: *lost,
 		Currency: base, Known: true,
 	}, nil
 }
@@ -171,40 +174,44 @@ func openedInWeek(
 
 // closedInWeek sums the deals won and lost in the week.
 //
-// amount_minor_base is right HERE and wrong for the opened figure above: a
-// closed deal froze its own rate at close (deal_closed_fx guarantees one for
-// every closed deal that has an amount), and that frozen rate is the honest
-// figure for money that has already moved. An amountless deal's null is skipped
-// by SUM — an honest zero, not an invented rate.
+// Closed deal values preserve their frozen amount. Legacy rows without a
+// frozen value use the same as-of valuation as the other deal readers.
 func closedInWeek(
-	ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.Time,
-) (won, lost int64, err error) {
+	ctx context.Context, tx pgx.Tx, userID ids.UUID, start, end time.Time, base string,
+) (won, lost *int64, err error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	startPos, endPos, userPos := arg(start), arg(end), arg(userID)
 	scope, err := auth.ScopeClauseFor(ctx, "deal", "d", arg)
 	if err != nil {
-		return 0, 0, err
+		return nil, nil, err
 	}
 	scope = orUnbounded(scope)
 	// Both halves of the closed figure sum the converted amount, so both take
 	// the mask: a withheld number reappears whole in a total, and won-and-lost
 	// is the total a review is read for.
-	amountSQL, err := auth.MaskedColumnSQL(ctx, "deal", "amount_minor", "d", "amount_minor_base", arg)
+	amountSQL, err := auth.MaskedExpressionSQL(ctx, "deal", "amount_minor", "d",
+		deals.BaseValueSQL(fmt.Sprintf("$%d", arg(end)), fmt.Sprintf("$%d", arg(base)), "d"), arg)
 	if err != nil {
-		return 0, 0, err
+		return nil, nil, err
 	}
+	nativeAmount, err := auth.MaskedExpressionSQL(ctx, "deal", "amount_minor", "d", "d.amount_minor", arg)
+	if err != nil {
+		return nil, nil, err
+	}
+	coverage := deals.UnpricedValueCountSQL(amountSQL, nativeAmount, "TRUE")
+	value := "CASE WHEN (" + coverage + ") > 0 THEN NULL ELSE " + deals.FinalizeBaseTotalSQL("sum("+amountSQL+")", coverage) + " END"
 	err = tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT
-		  (SELECT coalesce(sum(%[5]s), 0)::bigint FROM deal d
+		  (SELECT %[5]s FROM deal d
 		    WHERE d.status = 'won' AND d.owner_id = $%[3]d
 		      AND d.closed_at >= $%[1]d AND d.closed_at < $%[2]d AND (%[4]s)),
-		  (SELECT coalesce(sum(%[5]s), 0)::bigint FROM deal d
+		  (SELECT %[5]s FROM deal d
 		    WHERE d.status = 'lost' AND d.owner_id = $%[3]d
 		      AND d.closed_at >= $%[1]d AND d.closed_at < $%[2]d AND (%[4]s))`,
-		startPos, endPos, userPos, scope, amountSQL), args...).Scan(&won, &lost)
+		startPos, endPos, userPos, scope, value), args...).Scan(&won, &lost)
 	if err != nil {
-		return 0, 0, fmt.Errorf("weekly: summing the week's closed deals: %w", err)
+		return nil, nil, fmt.Errorf("weekly: summing the week's closed deals: %w", err)
 	}
 	return won, lost, nil
 }

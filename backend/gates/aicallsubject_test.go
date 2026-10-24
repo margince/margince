@@ -66,7 +66,7 @@ var namesItsSubject = map[string]subjectClaim{
 		"internal/compose/replydraftvoice.go",
 		"the message being answered, named once so the critic retry cites what the first draft did",
 	},
-	"internal/compose/captureenrich.go:enrichOne": {
+	"internal/compose/captureenrich.go:readSignature": {
 		"internal/compose/captureenrich.go",
 		"the contact whose signature block is being read",
 	},
@@ -85,6 +85,7 @@ var namesItsSubject = map[string]subjectClaim{
 	"internal/compose/companybrief/write.go:writeWithModel":             {"internal/compose/companybrief/service.go", "the company the brief describes"},
 	"internal/compose/companybrief/ask.go:answerWithModel":              {"internal/compose/companybrief/service.go", "the company the question is about"},
 	"internal/compose/contactbrief/write.go:writeWithModel":             {"internal/compose/contactbrief/service.go", "the contact the brief is written for"},
+	"internal/compose/roombrief/write.go:writeWithModel":                {"internal/compose/roombrief/service.go", "the Deal Room the brief is written for"},
 	"internal/compose/companydossier/write.go:writeWithModel":           {"internal/compose/companydossier/service.go", "the company the dossier describes"},
 	"internal/compose/companydossier/growthfitwrite.go:assessWithModel": {"internal/compose/companydossier/service.go", "the same company, assessed"},
 	"internal/compose/meetingbrief/model.go:writeWithModel":             {"internal/compose/meetingbrief/service.go", "the meeting the brief prepares"},

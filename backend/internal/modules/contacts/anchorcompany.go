@@ -73,6 +73,7 @@ const (
 	actionUpdate       = "update"
 	auditKeyFields     = "fields"
 	auditKeySource     = "source"
+	auditKeyStatus     = "status"
 	auditKeyCapturedBy = "captured_by"
 	auditKeySourceURL  = "source_url"
 	// auditKeySourceRef names WHICH source: the activity a signature came
@@ -314,6 +315,9 @@ func (s *Store) SaveCompany(ctx context.Context, in SaveCompanyInput) (Company, 
 		if err := storekit.EmitEvent(ctx, tx, auditID, companyID.UUID, payload); err != nil {
 			return fmt.Errorf("emit %s: %w", payload.EventType(), err)
 		}
+		if err := s.locateLandedAddress(ctx, tx, companyID, after); err != nil {
+			return err
+		}
 		if err := s.followAnchorSaveTx(ctx, tx, target); err != nil {
 			return err
 		}
@@ -468,7 +472,7 @@ func createAnchorCompany(ctx context.Context, tx pgx.Tx, displayName, by string)
 	if err != nil {
 		return ids.CompanyID{}, err
 	}
-	if err := match.recordIfReview(ctx, tx, companyID, activitySourceManual, by); err != nil {
+	if _, err := match.recordIfReview(ctx, tx, companyID, activitySourceManual, by); err != nil {
 		return ids.CompanyID{}, err
 	}
 	return companyID, nil

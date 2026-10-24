@@ -9,9 +9,9 @@ import {
   jsonResponse,
   StoryProviders,
 } from "../testing/story-utils";
-import { Card } from "./atoms";
+import { Button, Card } from "./atoms";
 import { EmailDetail } from "./emaildetail";
-import { EmailEntry } from "./emailentry";
+import { EmailEntry, EmailFiles } from "./emailentry";
 import { EmailReference } from "./emailreference";
 import { Panel, PanelBody } from "./panel";
 
@@ -99,6 +99,21 @@ export const NoPreview: Story = {
   args: { summary: { ...BASE, preview: undefined, move: "waiting_for_them" } },
 };
 
+/** The paperclip mark alone: one message, then several summed. */
+export const Files: StoryObj = {
+  render: () => (
+    <div style={{ display: "grid", gap: "var(--space-2)" }}>
+      <EmailFiles summaries={[{ ...BASE, attachment_count: 1 }]} />
+      <EmailFiles
+        summaries={[
+          { ...BASE, attachment_count: 2 },
+          { ...BASE, attachment_count: 3 },
+        ]}
+      />
+    </div>
+  ),
+};
+
 /** A long subject truncates rather than pushing the timestamp off the line. */
 export const LongSubject: Story = {
   args: {
@@ -162,8 +177,8 @@ export const Reference: StoryObj = {
 };
 
 /**
- * The drawer a row opens: the message whole, its recipients, and the sign-off
- * folded behind a control rather than dropped.
+ * The drawer a row opens: the thread oldest first. The opened message is
+ * whole, the earlier one folded to its row, and the verbs sit in the foot.
  */
 export const Detail: StoryObj = {
   render: () => {
@@ -185,6 +200,72 @@ export const Detail: StoryObj = {
             bcc_withheld: true,
             attachments: [],
             links: [],
+            thread: {
+              members: [
+                {
+                  ...BASE,
+                  activity_id: "22222222-2222-4222-8222-222222222222",
+                  occurred_at: "2026-08-28T15:40:00Z",
+                  direction: "outbound",
+                  subject: "Angebot Q4",
+                  preview: "Anbei das Angebot für das vierte Quartal.",
+                  move: "none",
+                },
+              ],
+              next_cursor: null,
+            },
+            access: {
+              content_state: "available",
+              display_status: "team",
+              can_change: false,
+              change_mode: "none",
+            },
+            can_reply: true,
+            can_relink: false,
+            version: 3,
+          }),
+    });
+    return (
+      <StoryProviders>
+        <EmailDetail
+          activityId={BASE.activity_id}
+          onClose={() => {}}
+          formatWhen={() => "1 Sep 09:12"}
+          renderActions={() => (
+            <>
+              <Button variant="primary">Reply</Button>
+              <Button variant="ghost">Forward</Button>
+            </>
+          )}
+        />
+      </StoryProviders>
+    );
+  },
+};
+
+/** A mail whose text the server could not decode: only the From and To lines. */
+export const DetailTextUnreadable: StoryObj = {
+  render: () => {
+    installFetchStub({
+      "GET /activities/11111111-1111-4111-8111-111111111111/email-presentation":
+        () =>
+          jsonResponse({
+            id: BASE.activity_id,
+            lifecycle: "delivered",
+            occurred_at: BASE.occurred_at,
+            summary: { ...BASE, preview: null },
+            body: "From: ana@brandt.example\nTo: lars@margince.example",
+            body_completeness: "unreadable",
+            from: [
+              { address: "ana@brandt.example", display_name: "Ana Sommer" },
+            ],
+            to: [{ address: "lars@margince.example", display_name: "Lars J." }],
+            cc: [],
+            bcc: [],
+            bcc_withheld: false,
+            attachments: [],
+            links: [],
+            thread: { members: [], next_cursor: null },
             access: {
               content_state: "available",
               display_status: "team",

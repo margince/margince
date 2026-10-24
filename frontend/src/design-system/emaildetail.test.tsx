@@ -101,6 +101,14 @@ function stubRead(body: unknown) {
   );
 }
 
+// The envelope (From, To, Sent, Bcc) opens from the "to …" line under the
+// sender, as a mail client's does.
+async function openEnvelope() {
+  fireEvent.click(
+    await screen.findByRole("button", { name: /^(to |Details)/ }),
+  );
+}
+
 function draw(node: ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -255,8 +263,9 @@ describe("the drawer's participants", () => {
       }),
     );
     draw(open());
+    await openEnvelope();
 
-    const contact = await screen.findByText("Ana Sommer");
+    const contact = await screen.findByRole("link", { name: "Ana Sommer" });
     expect(contact.getAttribute("href")).toBe(`#/contacts/${ANA}`);
     // BESIDE the message, not over it: the reader is part-way through a mail
     // in a drawer over the record they were working on, and following the
@@ -342,10 +351,9 @@ describe("the drawer's filing line", () => {
   });
 });
 
-// The verb that answers the message, in the header where a reader meets it
-// before the body rather than after one.
-describe("the drawer's reply", () => {
-  it("draws the host's verb beside the way out", async () => {
+// The verbs for the conversation, in the foot where the reading ends.
+describe("the drawer's actions", () => {
+  it("draws the host's verbs in the foot", async () => {
     stubRead(presentation());
     draw(
       <EmailDetail
@@ -356,31 +364,30 @@ describe("the drawer's reply", () => {
         // native button here would place a shape in the header that no
         // production caller can produce, and the claim is about where the
         // header puts the verb it is given.
-        renderReply={() => <Button>Reply</Button>}
+        renderActions={() => <Button>Reply</Button>}
       />,
     );
 
     const verb = await screen.findByRole("button", { name: "Reply" });
-    // In the header's action cluster, which is what puts it within reach of a
-    // message that runs past a screen.
-    expect(verb.closest(".emaildetail__actions")).not.toBeNull();
+    // In the foot band, which stays in view while the thread scrolls.
+    expect(verb.closest(".emaildetail__foot")).not.toBeNull();
   });
 
   it("asks for no verb before the message has arrived", () => {
     // The host decides from the presentation — `can_reply` is the server's
     // answer — so there is nothing to ask until the read lands.
     stubRead(presentation());
-    const renderReply = vi.fn(() => null);
+    const renderActions = vi.fn(() => null);
     draw(
       <EmailDetail
         activityId={ACTIVITY}
         onClose={() => {}}
         formatWhen={(iso) => iso}
-        renderReply={renderReply}
+        renderActions={renderActions}
       />,
     );
 
-    expect(renderReply).not.toHaveBeenCalled();
+    expect(renderActions).not.toHaveBeenCalled();
   });
 });
 
@@ -462,5 +469,95 @@ describe("reopening the drawer after access was withdrawn", () => {
       expect(screen.getByText("This section did not load.")).toBeTruthy(),
     );
     expect(screen.queryByText("The signed contract")).toBeNull();
+  });
+});
+
+// A mail whose text the server could not decode still has a body: the From and
+// To lines. The drawer says the rest is missing, so the mail does not read as
+// complete.
+describe("a mail whose text could not be read", () => {
+  it("says so above the body", async () => {
+    stubRead(
+      presentation({
+        body: "From: dana@acme.test\nTo: me@ours.test",
+        body_completeness: "unreadable",
+      }),
+    );
+    draw(open());
+
+    expect(
+      await screen.findByText("The text of this mail could not be read."),
+    ).toBeTruthy();
+    expect(
+      screen.getByText("Open it in your mail program to see it."),
+    ).toBeTruthy();
+  });
+
+  it("says when only part of the text was read", async () => {
+    stubRead(presentation({ body_completeness: "partial" }));
+    draw(open());
+
+    expect(
+      await screen.findByText(
+        "Part of the text of this mail could not be read.",
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText("Attached, as agreed.")).toBeTruthy();
+  });
+
+  it("says when the text is a forwarded original's", async () => {
+    stubRead(presentation({ body_completeness: "forwarded" }));
+    draw(open());
+
+    expect(
+      await screen.findByText(
+        "The text below is the forwarded mail, not words the sender wrote.",
+      ),
+    ).toBeTruthy();
+  });
+
+  it("says when the text has not been checked yet", async () => {
+    stubRead(
+      presentation({
+        body: "From: dana@acme.test\nTo: me@ours.test",
+        body_completeness: "unassessed",
+      }),
+    );
+    draw(open());
+
+    expect(
+      await screen.findByText(
+        "Margince has not yet checked whether it read all of this mail’s text.",
+      ),
+    ).toBeTruthy();
+  });
+
+  // A hostile fixture: the server sends no completeness on a withheld mail,
+  // so the drawer's own check is what must refuse it.
+  it("says nothing of a withheld mail's text", async () => {
+    stubRead(
+      presentation({
+        body_completeness: "unassessed",
+        access: {
+          ...presentation().access,
+          content_state: "withheld",
+          display_status: "withheld",
+        },
+      }),
+    );
+    draw(open());
+
+    await waitFor(() =>
+      expect(screen.getByText("Not shared with you")).toBeTruthy(),
+    );
+    expect(document.body.textContent).not.toContain("not yet checked");
+  });
+
+  it("says nothing for a mail that was read", async () => {
+    stubRead(presentation({ body_completeness: "complete" }));
+    draw(open());
+
+    await screen.findByText("Attached, as agreed.");
+    expect(screen.queryByText(/could not be read/)).toBeNull();
   });
 });

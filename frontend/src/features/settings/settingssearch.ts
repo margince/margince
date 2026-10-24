@@ -8,14 +8,14 @@ import {
 } from "../../format/collate";
 import type { MessageKey } from "../../i18n/en";
 import {
-  matchesConfigurationFilter,
-  type SettingName,
-} from "./configurationentries";
-import {
   groupHeadingKey,
   type SettingsPage,
   type SettingsPageId,
-} from "./settingscatalog";
+} from "../../lib/settingscatalog";
+import {
+  matchesConfigurationFilter,
+  type SettingName,
+} from "./configurationentries";
 import {
   COMPANY_CONTEXT_SECTIONS,
   SETTINGS_SECTIONS,

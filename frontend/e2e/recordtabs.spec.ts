@@ -134,15 +134,12 @@ test.describe("the record tab strip", () => {
     }
   }
 
-  // And the first tab opens where the record's own column does.
+  // And the first tab opens where the cards under it do.
   //
-  // The rules cross the whole work column; the TABS belong to the document under
-  // them, so the row insets itself by one gutter and the first tab lands under
-  // the record's name. Both halves ride on the same breakout, which is why this
-  // is measured against the reading column's content edge rather than against
-  // the strip that carries it: when the breakout is misplaced the strip and the
-  // row move together, and the first tab opens outside the column — clipped by
-  // whatever draws the column's edge, which is how the defect was seen.
+  // The tabs belong to the document on the sheet. The strip insets itself by
+  // the same padding the feed does, so the first tab lands over the left edge
+  // of every card below it. A strip that drew its own inset would open the tabs
+  // off that line, or outside the sheet that clips them.
   for (const record of RECORDS) {
     test(`opens its first tab at the record column's own edge on a ${record.name}`, async ({
       page,
@@ -154,12 +151,8 @@ test.describe("the record tab strip", () => {
         .locator(".recordtabs-tab")
         .first()
         .boundingBox();
-      // On a record drawn on a sheet the column's own edge is the sheet's
-      // content edge: the tabs belong to the document on the sheet, inset by
-      // its padding like every card under them.
-      const sheet = page.locator(".record-sheet");
-      const column = (await sheet.count()) > 0 ? sheet : page.locator(".wrap");
-      const columnStart = await column.first().evaluate((column) => {
+      const column = page.locator(".record-split-feed");
+      const columnStart = await column.evaluate((column) => {
         const box = column.getBoundingClientRect();
         const style = getComputedStyle(column);
         return (

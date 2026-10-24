@@ -25,9 +25,9 @@ import {
   type SettingsReach,
   settingsReach,
   visibleSettingsPages,
-} from "./settingscatalog";
+} from "../../lib/settingscatalog";
+import { settingsRouteTarget } from "../../lib/settingsrouting";
 import { PAGE_ICONS } from "./settingsnavicons";
-import { settingsRouteTarget } from "./settingsrouting";
 import { SettingsSearchBox } from "./settingssearchbox";
 
 // The entry register: one section nav entry per settings SUBJECT. Only surfaces

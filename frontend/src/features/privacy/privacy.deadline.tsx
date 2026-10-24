@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import { Field } from "../../design-system/atoms";
+import { Field, PendingBody } from "../../design-system/atoms";
 import { DateInput, type ISODate } from "../../design-system/dateinput";
 import { ErrorLine } from "../../design-system/errorline";
+import { FactList } from "../../design-system/factlist";
 import { formatDate } from "../../format/format";
 import { ruleText } from "../../format/jurisdiction";
 import { endOfDayInZone, startOfDayInZone } from "../../format/timezone";
@@ -125,29 +126,28 @@ export function DsrDeadlineFields({
           <DateInput
             {...control}
             value={draft.receivedOn}
-            onChange={(event) =>
-              onChange({ receivedOn: asDay(event.target.value) })
-            }
+            onChange={(event) => onChange({ receivedOn: event.target.value })}
           />
         )}
       </Field>
-      <div className="field">
-        <span className="t-label">{t("privacy.deadline.computed")}</span>
-        {computed ? (
-          <>
-            <strong>{formatDate(computed.due_at, locale, zone)}</strong>
-            <p className="t-caption">
-              {t("privacy.deadline.computedHint", {
+      {computed ? (
+        <FactList
+          facts={[
+            {
+              key: "computed",
+              term: t("privacy.deadline.computed"),
+              value: formatDate(computed.due_at, locale, zone),
+              note: t("privacy.deadline.computedHint", {
                 rule: ruleText(computed.rule, t),
-              })}
-            </p>
-          </>
-        ) : query.isPending ? (
-          <p className="t-caption">{t("privacy.deadline.loading")}</p>
-        ) : (
-          <ErrorLine error={query.error} />
-        )}
-      </div>
+              }),
+            },
+          ]}
+        />
+      ) : query.isPending ? (
+        <PendingBody label={t("privacy.deadline.loading")} lines={1} visible />
+      ) : (
+        <ErrorLine error={query.error} />
+      )}
       <Field
         label={t("privacy.earlierDue")}
         hint={tooLate ? undefined : t("privacy.earlierDueHint")}
@@ -163,21 +163,10 @@ export function DsrDeadlineFields({
           <DateInput
             {...control}
             value={draft.earlierDue}
-            onChange={(event) =>
-              onChange({ earlierDue: asDay(event.target.value) })
-            }
+            onChange={(event) => onChange({ earlierDue: event.target.value })}
           />
         )}
       </Field>
     </>
   );
-}
-
-// A date input reports "" or YYYY-MM-DD, nothing else.
-function isDay(value: string): value is ISODate {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value);
-}
-
-function asDay(value: string): ISODate | "" {
-  return isDay(value) ? value : "";
 }

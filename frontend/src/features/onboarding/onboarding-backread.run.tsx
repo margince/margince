@@ -1,15 +1,29 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
+import { Meter } from "../../design-system/readings";
+import { StatCard } from "../../design-system/statcard";
+import { StatStrip } from "../../design-system/statstrip";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { isLiveRun } from "../../lib/backfill-run";
 import { errorClassKey } from "../../lib/connector-status";
-import type { BackfillCounts, BackfillStatus } from "./onboarding-backread";
+import "./onboarding-backread.css";
+
+// A started import as onboarding draws it: progress, what it found, and how it
+// ended. Leaving is the step footer's. This view offers only the run's own
+// verbs: stop a live run, or pick a window again over a stopped one.
+
+type BackfillStatus = components["schemas"]["BackfillStatus"];
+type BackfillCounts = NonNullable<BackfillStatus["counts"]>;
 
 // Declaration order is render order. Every entry names a persisted count on the
-// wire and the copy for it. The list is the whole of what the wire carries.
+// wire and the copy for it, and the list is the whole of what the wire carries.
 const TALLIES: readonly { key: keyof BackfillCounts; label: MessageKey }[] = [
   { key: "messages_scanned", label: "ob.backread.tallyMessages" },
   { key: "captured", label: "ob.backread.tallyCaptured" },
@@ -19,8 +33,8 @@ const TALLIES: readonly { key: keyof BackfillCounts; label: MessageKey }[] = [
 ];
 
 // Heading per state: a live read and a finished one each get one. A failed or
-// cancelled read leads with its sentence, because "The backread stopped" is
-// prose, and as a heading it would shout the failure.
+// cancelled read leads with its sentence: "The backread stopped" is prose, and
+// a heading would shout the failure.
 function headingKey(state: BackfillStatus["state"]): MessageKey | null {
   if (isLiveRun(state)) return "ob.backread.running";
   return state === "done" ? "ob.backread.doneHeading" : null;
@@ -30,23 +44,17 @@ export function BackreadRun({
   run,
   cancelling,
   cancelProblem,
-  held,
   onCancel,
   onRestart,
-  onDone,
 }: Readonly<{
   run: BackfillStatus;
   cancelling: boolean;
   cancelProblem: string | null;
-  /** A decision about this mailbox is still being written; the exit waits
-   *  for it, for the reason the setup's does. */
-  held?: boolean;
   onCancel: () => void;
   /** Put the window pick back in front of the reader. Offered on every read
    *  this view draws that is not live: stopping one is a decision about that
    *  read, never about the mailbox. */
   onRestart: () => void;
-  onDone: () => void;
 }>) {
   const t = useT();
   const heading = headingKey(run.state);
@@ -68,9 +76,6 @@ export function BackreadRun({
         </ErrorLine>
       )}
       <div className="ob-backread-acts">
-        <Button variant="primary" disabled={held} onClick={() => onDone()}>
-          {live ? t("ob.backread.explore") : t("ob.conv.connect.dialogDone")}
-        </Button>
         {live ? (
           <Button disabled={cancelling} onClick={onCancel}>
             {t("ob.backread.cancel")}
@@ -83,15 +88,14 @@ export function BackreadRun({
   );
 }
 
-// The progress line, and a bar only when the server gave a denominator. The
-// counts are stated in text and the bar only draws them. So it is aria-hidden,
-// not a second, rounder version of the same number.
+// The progress line, and a bar only when the server gave a denominator to
+// divide by. The same Meter as the Settings import, so both bars read alike.
 function BackreadProgress({ run }: Readonly<{ run: BackfillStatus }>) {
   const t = useT();
   const { locale } = useLocale();
   const scanned = run.counts?.messages_scanned;
   if (scanned === undefined) {
-    // Nothing has been counted yet. The queued sentence carries the state, and
+    // Nothing has been counted yet: the queued sentence carries the state, and
     // "0 messages so far" would claim a measurement nobody took.
     return null;
   }
@@ -112,9 +116,12 @@ function BackreadProgress({ run }: Readonly<{ run: BackfillStatus }>) {
             })}
       </p>
       {hasTotal && (
-        <div className="ob-backread-bar" aria-hidden="true">
-          <span style={{ width: `${Math.min(1, scanned / total) * 100}%` }} />
-        </div>
+        <Meter
+          value={Math.min(scanned, total)}
+          max={total}
+          label={t("backfill.progressLabel")}
+          flat
+        />
       )}
     </div>
   );
@@ -144,16 +151,16 @@ function BackreadTallies({
   }
 
   return (
-    <dl className="ob-backread-tallies">
+    <StatStrip density="compact">
       {present.map((tally) => (
-        <div className="ob-backread-tally" key={tally.key}>
-          <dt className="ob-backread-tally-label">{t(tally.label)}</dt>
-          <dd className="ob-backread-tally-value">
-            {formatNumber(tally.count, locale)}
-          </dd>
-        </div>
+        <StatCard
+          key={tally.key}
+          label={t(tally.label)}
+          value={formatNumber(tally.count, locale)}
+          narrow="row"
+        />
       ))}
-    </dl>
+    </StatStrip>
   );
 }
 
@@ -178,11 +185,10 @@ function BackreadOutcome({ run }: Readonly<{ run: BackfillStatus }>) {
         </ErrorLine>
       );
     case "cancelled": {
-      // "Nothing was written" is only true of a cancel that landed before any
-      // page finished. Once at least one row is `captured`, the read is
-      // partial, not empty. Saying otherwise would be false about the reader's
-      // data. The captured rows already wait in the inbox for review, whether
-      // or not the run kept going.
+      // "Nothing was written" is only true of a cancel that landed before any page
+      // finished. Once one row is `captured`, the read is partial, not empty. Those
+      // rows already sit in the inbox waiting on review, whether or not the run
+      // kept going.
       const captured = run.counts?.captured ?? 0;
       return (
         <p>

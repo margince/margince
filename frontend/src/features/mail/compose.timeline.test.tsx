@@ -222,7 +222,7 @@ describe("TimelineActions", () => {
     stubRoutes();
     render(<TimelineActions activity={note} entityType="deal" entityId="d1" />);
     await userEvent.click(screen.getByRole("button", { name: "Reply" }));
-    expect(await screen.findByText("Send email")).toBeTruthy();
+    expect(await screen.findByRole("dialog")).toBeTruthy();
   });
 
   it("opens the composer when Reply is clicked", async () => {
@@ -231,8 +231,8 @@ describe("TimelineActions", () => {
       <TimelineActions activity={email} entityType="deal" entityId="d1" />,
     );
     await userEvent.click(screen.getByRole("button", { name: "Reply" }));
-    // The ConfirmModal titled "Send email" mounts only once Reply opens it.
-    expect(await screen.findByText("Send email")).toBeTruthy();
+    // The composer mounts only once Reply opens it, headed as a reply.
+    expect(await screen.findByRole("dialog", { name: /^Re: / })).toBeTruthy();
   });
 
   it("offers no reply when the contact is unreachable", async () => {

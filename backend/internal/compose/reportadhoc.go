@@ -12,6 +12,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -100,3 +101,5 @@ func adHocSpec(entity datasource.EntityType) (reportSpec, bool) {
 	}
 	return spec, true
 }
+
+var errUnknownEntity = errors.New("compose: entity outside the schema descriptors")

@@ -35,7 +35,7 @@ func TestHistoricalTaskSurvivesMissingParticipantsAndReassignment(t *testing.T) 
 		var err error
 		task, err = writeCommitmentTask(ctx, tx, e.Activities, e.Contacts, commitmentTask{
 			Extractor: transcriptProposalActor, Locator: locator, Summary: "Send revised pricing", Body: quote,
-			SourceActivityID: e.activity.UUID, Assignee: e.Rep2,
+			SourceActivityID: e.activity.UUID, Assignee: e.Rep2, Origin: activities.OriginAgent,
 		})
 		return err
 	}); err != nil {
@@ -88,14 +88,13 @@ func TestCustomerPromiseDoesNotBecomeOurTaskWhenAttributionIsLost(t *testing.T) 
 	}
 }
 
-func TestRejectingOurTaskDoesNotRejectTheCustomersPromise(t *testing.T) {
+// An unattributed promise asks nobody, and once it is found to be the
+// customer's it is filed on them as theirs.
+func TestAnUnattributedPromiseLaterFoundToBeTheCustomersIsFiledOnThem(t *testing.T) {
 	e := setupTranscript(t)
 	first := e.read(t, cannedBrain{reply: ownedReply(t, "Priya Raman", 0.95)})
-	if len(first.ProposalIDs) != 1 {
-		t.Fatal("expected an unresolved task proposal")
-	}
-	if _, err := e.svc.Decide(e.ctx, ids.From[ids.ApprovalKind](first.ProposalIDs[0]), false, new("This is the customer's promise")); err != nil {
-		t.Fatal(err)
+	if len(first.ProposalIDs) != 0 || e.taskCount(t) != 0 {
+		t.Fatal("an unattributed promise became our work")
 	}
 	contact, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{FullName: "Priya Raman"})
 	if err != nil {
@@ -107,6 +106,6 @@ func TestRejectingOurTaskDoesNotRejectTheCustomersPromise(t *testing.T) {
 		t.Fatal("customer attribution recreated our work")
 	}
 	if got := e.WsCount(t, `SELECT count(*) FROM conversation_claim WHERE kind='commitment_theirs' AND contact_id=$1`, ids.UUID(contact.Id)); got != 1 {
-		t.Fatalf("rejected task suppressed the customer's promise: claims=%d", got)
+		t.Fatalf("the customer's promise is filed %d times, want once", got)
 	}
 }

@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { CalendarDays, CheckSquare, FileText, Phone } from "lucide-react";
+import { CalendarDays, CheckSquare, FileText } from "lucide-react";
 import type { ReactNode } from "react";
 import { useId } from "react";
 import { AddToShortlistAction } from "../../components/addtoshortlist";
 import { ExtensionEntries } from "../../components/extensionentries";
 import { Button, OverflowMenu } from "../../design-system/atoms";
-import { IconAction } from "../../design-system/iconaction";
+import { CallAction } from "../../design-system/callaction";
+import { IconAction, VerbWord } from "../../design-system/iconaction";
+import { primaryPhone } from "../../format/contacturi";
 import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
 import type { Transport, TransportSource } from "../../lib/contacttransports";
@@ -55,6 +57,36 @@ function writeRefusal(
   return undefined;
 }
 
+/** Why the Email verb may not be pressed, for the page's footnote. */
+export function useWriteRefusal(view: TransportSource): string | undefined {
+  const t = useT();
+  return writeRefusal({ transports: useTransports(view) }, t);
+}
+
+/**
+ * Whether this reader may write activities (log, task, book), asked once for
+ * the page. The verbs point at `sentenceId`, and the page states the refusal
+ * under that id in the left card's footnote. A grant `/me` has not answered
+ * yet refuses nothing; the verbs are only briefly quiet (`pending`).
+ */
+export function useActivityGate(): Readonly<{
+  refusedId: string | undefined;
+  pending: boolean;
+  sentenceId: string;
+}> {
+  // useCanWrite, not useCan: Log and Add task issue the same POST, and a read
+  // seat is refused before RBAC is consulted.
+  const me = useMe();
+  const canLog = useCanWrite("activity", "create");
+  const sentenceId = useId();
+  const known = me.data?.authorization !== undefined;
+  return {
+    refusedId: known && !canLog ? sentenceId : undefined,
+    pending: !known,
+    sentenceId,
+  };
+}
+
 // The header's verbs, in the order every record page carries them: writing
 // first, then the record's other doors. None of them is filled — the move
 // worth doing is the one the call names, and that one carries the colour.
@@ -65,6 +97,8 @@ export function ContactActions({
   onResearch,
   onLogActivity,
   onAddTask,
+  activity,
+  writeRefusalId,
   refusedReasonId,
 }: Readonly<{
   view: TransportSource;
@@ -73,6 +107,12 @@ export function ContactActions({
   onResearch: () => void;
   onLogActivity: () => void;
   onAddTask: () => void;
+  // The page's gate, whose refusal the page states. A host that passes none
+  // (the archived page, whose own sentence refuses every verb) gets its own.
+  activity?: ReturnType<typeof useActivityGate>;
+  // Where the page states why Email is refused, when it does. Absent, the
+  // verb states it under itself.
+  writeRefusalId?: string;
   // The page's one sentence about why this contact takes no changes, while
   // it does not. The verbs that write the RECORD — edit, merge, archive and
   // the grant Share asserts — are the ones refused by it; logging and mail
@@ -80,26 +120,13 @@ export function ContactActions({
   refusedReasonId?: string;
 }>): ReactNode {
   const t = useT();
-  // useCanWrite, not useCan: both this verb and Add task below issue the same
-  // POST, and a read seat is refused before RBAC is consulted. The buttons
-  // stay on the page and say why they will not press, so a reader can tell
-  // "not mine to do" from "this build has no such button".
-  const me = useMe();
-  const canLog = useCanWrite("activity", "create");
-  // Named once and pointed at by both buttons — Button's own contract for a
-  // surface where several controls are refused by ONE fact: printing the
-  // sentence beside each button says it as many times as there are buttons.
-  const logRefusedId = useId();
-  // A guard that has not answered yet refuses nothing: claiming a refusal
-  // `/me` has not decided is worse than a control that is briefly quiet —
-  // the same rule writeRefusal states for the identical shape, above.
-  const logGrantKnown = me.data?.authorization !== undefined;
+  const ownGate = useActivityGate();
+  const gate = activity ?? ownGate;
   // An archived contact takes no activity either, and the page's one sentence
   // says so for every verb here.
   const archived = view.contact.archived_at ? refusedReasonId : undefined;
-  const logRefused =
-    archived ?? (logGrantKnown && !canLog ? logRefusedId : undefined);
-  const logPending = !archived && !logGrantKnown;
+  const logRefused = archived ?? gate.refusedId;
+  const logPending = !archived && gate.pending;
   // The transports the composer would offer, read here so the button NAMES
   // what pressing it does. The same reachability the drawer resolves: a label
   // computed from anything else is a promise the composer then breaks.
@@ -115,35 +142,32 @@ export function ContactActions({
       <EmailVerb
         label={write.label}
         icon={<WriteIcon size={15} aria-hidden="true" />}
-        reason={archived ? undefined : refusal}
-        reasonId={archived}
+        reason={archived || writeRefusalId ? undefined : refusal}
+        reasonId={archived ?? (refusal ? writeRefusalId : undefined)}
         onClick={onWrite}
+        word={t("record.verb.email")}
       />
       {/* Square, because a phone and a calendar are verbs a reader already
           knows from the glyph — and five labelled buttons in a row is a header
           that reads as a toolbar, with the one action the page is FOR no more
           prominent than the rest of them. `IconAction` owes each one its name
           on hover as well as to a screen reader. */}
-      <IconAction
+      <CallAction
+        appearance="icon"
+        number={primaryPhone(view.contact.phones)?.phone}
+        record={{ entityType: "contact", entityId: contactId }}
         label={t("contact.action.call")}
-        icon={<Phone aria-hidden="true" />}
+        word={t("record.verb.call")}
+        reason={t("contact.action.noPhone")}
         reasonId={archived}
-        onClick={() => openContactTab(contactId, "timeline")}
       />
       <IconAction
         label={t("contact.action.meetings")}
+        word={t("record.verb.meet")}
         icon={<CalendarDays aria-hidden="true" />}
         reasonId={archived}
         onClick={() => openContactTab(contactId, "meetings")}
       />
-      {/* A hairline between reaching the record and recording what happened
-          to it: two groups of verbs, not one toolbar. */}
-      <span className="record-actions-sep" aria-hidden="true" />
-      {logRefused === logRefusedId && (
-        <p className="t-caption" id={logRefusedId}>
-          {t("record.logActivityRefused")}
-        </p>
-      )}
       {/* A CRM a rep cannot write a meeting into is a CRM that only reads.
           This is the standing way in; the moment card offers the same form
           when its rung decides logging is the thing to do next. */}
@@ -151,16 +175,27 @@ export function ContactActions({
         disabled={logPending}
         reasonId={logRefused}
         onClick={onLogActivity}
+        title={t("log.title")}
       >
-        <FileText aria-hidden="true" /> {t("log.title")}
+        <FileText aria-hidden="true" />
+        <VerbWord word={t("record.verb.log")} label={t("log.title")} />
       </Button>
       {/* Keeps its words. A tick box is the glyph for COMPLETING a task, so
           squaring this one would name the opposite of what it does. Files the
           task against THIS record — the same form Log activity opens, started
           on its task kind, rather than a navigation to the Worklist, which has
           no way to add one. */}
-      <Button disabled={logPending} reasonId={logRefused} onClick={onAddTask}>
-        <CheckSquare aria-hidden="true" /> {t("contact.action.addTask")}
+      <Button
+        disabled={logPending}
+        reasonId={logRefused}
+        onClick={onAddTask}
+        title={t("contact.action.addTask")}
+      >
+        <CheckSquare aria-hidden="true" />
+        <VerbWord
+          word={t("record.verb.task")}
+          label={t("contact.action.addTask")}
+        />
       </Button>
       <ExtensionEntries
         slot="record_header.contact"
@@ -177,7 +212,10 @@ export function ContactActions({
           Research is here because a magnifier reads as "search" and this verb
           is not search, and the timeline gets the honest name the product
           already uses for it everywhere else. */}
-      <OverflowMenu label={t("record.moreActions")}>
+      <OverflowMenu
+        label={t("record.moreActions")}
+        word={t("record.verb.more")}
+      >
         <ContactRecordActions
           contact={view.contact}
           disabledReasonId={refusedReasonId}

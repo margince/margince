@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // OwedReviewCandidate binds the model input to a complete source snapshot.
@@ -26,7 +27,10 @@ type OwedReviewCandidate struct {
 	Snapshot        string
 	Pristine        bool
 	ContextReadable bool
-	PriorID         *ids.UUID
+	// EvidenceComplete says the source and our newest prior message were read
+	// in full, the test every automatic request decision reads by.
+	EvidenceComplete bool
+	PriorID          *ids.UUID
 }
 
 // OwedReviewPageTx keeps classification review inside the reader's content scope.
@@ -75,7 +79,8 @@ func owedReviewReadTx(ctx context.Context, tx pgx.Tx, after ids.UUID, exact *ids
  AND human.actor_type='human' AND human.occurred_at>=a.owed_verdict_at),
  NOT EXISTS(SELECT 1 FROM activity prior WHERE `+ourOutboundInThisThread("prior", "a")+`
  AND (prior.occurred_at,prior.id)<(a.occurred_at,a.id)
- AND (prior.audience<>'workspace' OR prior.restricted_at IS NOT NULL OR NOT (`+priorScope+`)))
+ AND (prior.audience<>'workspace' OR prior.restricted_at IS NOT NULL OR NOT (`+priorScope+`))),
+ `+provenance.MailBodyCompleteSQL("a")+` AND `+priorContextComplete+`
  FROM activity a LEFT JOIN activity_participant p ON p.activity_id=a.id %s
  WHERE a.direction='inbound' AND a.kind IN ('email','message') AND a.owed_verdict IS NOT NULL
  AND a.owed_verdict_at IS NOT NULL AND a.archived_at IS NULL AND a.audience='workspace' AND a.restricted_at IS NULL
@@ -89,7 +94,7 @@ func owedReviewReadTx(ctx context.Context, tx pgx.Tx, after ids.UUID, exact *ids
 	}
 	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (OwedReviewCandidate, error) {
 		var item OwedReviewCandidate
-		candidate, err := scanOwedCandidate(row, &item.PriorID, &item.Version, &item.Verdict, &item.Ruleset, &item.JudgedAt, &item.Snapshot, &item.Pristine, &item.ContextReadable)
+		candidate, err := scanOwedCandidate(row, &item.PriorID, &item.Version, &item.Verdict, &item.Ruleset, &item.JudgedAt, &item.Snapshot, &item.Pristine, &item.ContextReadable, &item.EvidenceComplete)
 		item.Candidate = candidate
 		return item, err
 	})
@@ -123,6 +128,11 @@ func ApplyReviewedOwedVerdictTx(ctx context.Context, tx pgx.Tx, expected OwedRev
 	}
 	if current.Verdict == verdict {
 		return false, nil
+	}
+	// The correction was predicted from the source's text. It stands only while
+	// that text and the context it was read in were read in full.
+	if !current.EvidenceComplete {
+		return false, apperrors.ErrConflict
 	}
 	return setOwedVerdictTx(ctx, tx, current.Candidate.ID, verdict, ruleset, time.Time{}, map[string]any{"reviewed_classification": true, "repair_reason": reason, "repair_rule": ruleset, "repair_run": runID})
 }

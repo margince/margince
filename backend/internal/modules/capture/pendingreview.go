@@ -22,6 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // LinkProposal points an `unsure` row at the review-queue offer staged for it,
@@ -102,6 +103,11 @@ func (s *PendingStore) AwaitingReview(ctx context.Context, limit int) ([]Pending
 			     SELECT 1 FROM activity a
 			      WHERE a.id = p.activity_id AND a.audience = 'workspace'
 			        AND a.restricted_at IS NULL)
+			   -- Only a mailbox owner who can be asked: the offer is theirs
+			   -- alone, and staging refuses it for anybody else.
+			   AND EXISTS (
+			     SELECT 1 FROM app_user u
+			      WHERE u.id = p.owner_id AND `+workforce.AskableMemberSQL("u")+`)
 			   AND NOT EXISTS (
 			     SELECT 1 FROM approval a
 			      WHERE a.id = p.proposal_id

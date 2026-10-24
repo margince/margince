@@ -5,13 +5,15 @@ import { vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
+import { CompanyOverviewCards } from "./companyoverviewcards";
 import { CompanyRail } from "./companyrail";
+import type { CompanyTab } from "./companytab";
 
 export type Company360 = components["schemas"]["Company360"];
 
-// The rail's own display rules. A section the caller's role withheld says so,
-// instead of an empty state that would read as "there is none". A field the
-// record does not carry still draws its row: an unfilled field is a fact.
+// The details' and the Overview cards' display rules. A section the caller's
+// role withheld says so, instead of an empty state that reads as "there is
+// none". A field the record does not carry folds behind "Show N empty fields".
 
 export const company = {
   // Absent reads as not writable, which is the fail-closed default a real
@@ -23,7 +25,7 @@ export const company = {
   legal_name: "Brandt Automotive GmbH",
   lifecycle: "customer" as const,
   owner_id: "u-1",
-  industry: "Automotive",
+  industry: "automotive" as const,
   size_band: "51-200" as const,
   linkedin_url: "https://linkedin.com/company/brandt",
   address: { city: "Munich", country: "DE" },
@@ -44,10 +46,6 @@ export const company = {
 };
 
 export const emptyPage = { has_more: false, next_cursor: null };
-
-// A no-op by default. A case that checks where a header link sends the reader
-// passes its own spy.
-export const onTab = () => {};
 
 // The 360 this suite reads: every section present and empty, so a case names
 // only the one it is about. Typed as the contract declares it, never cast.
@@ -90,16 +88,34 @@ export function render(ui: ReactNode): RenderResult {
 
 export type RailProps = ComponentProps<typeof CompanyRail>;
 
-// Every site below wants the same rail: a writable view, not loading, and a
-// no-op tab switch. `overrides` supplies whatever the test varies.
+// Every site below wants the same rail: a writable view, not loading.
+// `overrides` supplies whatever the test varies.
 export function renderRail(overrides: Partial<RailProps> = {}): RenderResult {
+  const drawn = overrides.view ?? view();
   return render(
     <CompanyRail
-      companyId="o-1"
-      view={view()}
+      company={drawn.company}
+      view={drawn}
       loading={false}
-      onTab={onTab}
       {...overrides}
+    />,
+  );
+}
+
+// The Overview's four cards, read off the same 360.
+export function renderCards({
+  view: drawn = view(),
+  onTab = () => {},
+}: Readonly<{
+  view?: Company360;
+  onTab?: (tab: CompanyTab) => void;
+}> = {}): RenderResult {
+  return render(
+    <CompanyOverviewCards
+      view={drawn}
+      onOpenTab={onTab}
+      onOpenTask={() => {}}
+      onOpenEmail={() => {}}
     />,
   );
 }

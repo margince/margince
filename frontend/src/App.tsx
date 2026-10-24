@@ -10,12 +10,14 @@ import { isPublicBookingId } from "./app/bookingroute";
 import { AuthSplash } from "./app/bootsplash";
 import { ConfinedAccountScreen, useProbeAnswer } from "./app/confinement";
 import { DateFormatsProvider } from "./app/dateformats";
+import { passesOnboardingGate } from "./app/onboarding-gate";
 import {
   CommandPalette,
   useBuiltinCommands,
   usePaletteHotkey,
 } from "./app/palette";
 import { Shell, useRoute } from "./app/shell";
+import { CallLogHost } from "./components/calllog.host";
 import { useJourneyProgress } from "./features/onboarding/onboarding-journey";
 import {
   ReleaseSkewScreen,
@@ -47,12 +49,6 @@ const PUBLIC_SCREENS: ReadonlySet<Screen> = new Set([
   "preferences",
   "unsubscribe",
   "room",
-]);
-
-// OAuth consent keeps its cookie-bound, single-use nonce through onboarding.
-const ONBOARDING_GATE_EXEMPT_SCREENS: ReadonlySet<Screen> = new Set([
-  "onboarding",
-  "oauth-consent",
 ]);
 
 export function App() {
@@ -204,17 +200,18 @@ function AuthedApp({
   // 401 and say nothing about the installation.
   const recordZone = useConfiguredRecordZone(authed);
 
-  // route.screen is a dependency on purpose: the gate must hold on every
-  // navigation, not only on first load — otherwise the palette or a typed hash
-  // walks straight past onboarding. ONBOARDING_GATE_EXEMPT_SCREENS is exempt
-  // or this effect would fight its own destination (onboarding) or destroy a
-  // request that cannot survive the rewrite (oauth-consent).
+  // The route is a dependency so the gate holds on every navigation. Otherwise
+  // the palette or a typed hash walks past onboarding.
+  // passesOnboardingGate's screens are exempt, or this effect would fight its
+  // own destination (onboarding) or destroy a request that cannot survive the
+  // rewrite (oauth-consent).
+  const { screen: gateScreen, id: gateId, id2: gateId2 } = route;
   useEffect(() => {
     if (
       authed &&
       described !== undefined &&
       (!described || progress.unfinished) &&
-      !ONBOARDING_GATE_EXEMPT_SCREENS.has(route.screen)
+      !passesOnboardingGate({ screen: gateScreen, id: gateId, id2: gateId2 })
     ) {
       // Replacing, not pushing: this is a redirect, and the address it sends
       // the reader away from answers by sending them here again. Pushed, Back
@@ -222,7 +219,7 @@ function AuthedApp({
       // onboarding by the one key that exists for getting out of things.
       navigateReplacing({ screen: "onboarding", id: "company" });
     }
-  }, [authed, described, progress.unfinished, route.screen]);
+  }, [authed, described, progress.unfinished, gateScreen, gateId, gateId2]);
 
   const { refusal, confinement } = useProbeAnswer(me);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -304,9 +301,11 @@ function AuthedApp({
         {/* An address pressed on any screen writes from here: the composer is
           the product's, not the reader's mail client's. */}
         <WriteToHost>
-          <AuthedShell onOpenSearch={() => setPaletteOpen(true)}>
-            <ScreenView screen={route.screen} id={route.id} id2={route.id2} />
-          </AuthedShell>
+          <CallLogHost>
+            <AuthedShell onOpenSearch={() => setPaletteOpen(true)}>
+              <ScreenView screen={route.screen} id={route.id} id2={route.id2} />
+            </AuthedShell>
+          </CallLogHost>
         </WriteToHost>
         <CommandPalette
           open={paletteOpen}

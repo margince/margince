@@ -518,6 +518,16 @@
           "maximum": 20000,
           "default": 500
         },
+        "confidentiality_pass_cap": {
+          "description": "Held mail threads one review pass may judge; the rest wait for the next pass.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 200,
+          "default": 40
+        },
         "freemail_extra": {
           "description": "Ignored, with a warning at boot; the consumer-mail list is edited under Settings.",
           "type": [
@@ -787,7 +797,7 @@
           ]
         },
         "unassigned_escalation_user_id": {
-          "description": "The user id of the colleague who answers for a lead nobody owns once it misses its target; empty means nobody, and a boot value that names no active colleague reaches nobody and logs a warning.",
+          "description": "The user id of the colleague who answers for a lead nobody owns, or whose owner has left, once it misses its target; empty means nobody, and a boot value that names no active colleague reaches nobody and logs a warning.",
           "type": [
             "string",
             "null"
@@ -1181,6 +1191,30 @@
             "null"
           ],
           "default": "en"
+        },
+        "call_telegram": {
+          "description": "Show a Telegram chat link next to a contact's phone number that starts with a country code.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": true
+        },
+        "call_whatsapp": {
+          "description": "Show a WhatsApp chat link next to a contact's phone number that starts with a country code.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": true
+        },
+        "call_zalo": {
+          "description": "Show a Zalo chat link next to a contact's phone number that starts with a country code.",
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "default": true
         },
         "close_date_sweep_interval_seconds": {
           "description": "Seconds between the close-date sweeps.",

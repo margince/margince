@@ -1,6 +1,17 @@
 import { api } from "../../api/client";
 import { usePageName } from "../../app/pagemeta";
 import { useBulkSelection } from "../../components/bulkverbs";
+import {
+  companyCreateFields,
+  createCompany,
+  RELATIONSHIP_TYPE_OPTIONS,
+} from "../../components/companyform";
+import {
+  LIFECYCLE_LABELS,
+  LIFECYCLE_OPTIONS,
+  RELATIONSHIP_TYPE_LABELS,
+  SIZE_BAND_OPTIONS,
+} from "../../components/companylookups";
 import { CreateAction } from "../../components/create";
 import { useObjectCustomFields } from "../../components/customfields.form";
 import {
@@ -31,18 +42,7 @@ import { useViewerId } from "../../lib/session";
 import { listQueryParams } from "../../lib/tagfilter";
 import { SaveViewAction, useSavedViewTabs } from "../lists/savedviews";
 import type { Company } from "./companies";
-import {
-  companyCreateFields,
-  createCompany,
-  RELATIONSHIP_TYPE_OPTIONS,
-} from "./companyform";
 import { displayHost } from "./companyheader";
-import {
-  LIFECYCLE_LABELS,
-  LIFECYCLE_OPTIONS,
-  RELATIONSHIP_TYPE_LABELS,
-  SIZE_BAND_OPTIONS,
-} from "./companylookups";
 
 async function fetchCompaniesPage(
   query: ListQuery,
@@ -136,7 +136,7 @@ export function CompaniesScreen() {
                 createCompany(values, rows, cf.toBody(values), t, key)
               }
               resolveExisting={(_code, id) => ({ screen: "companies", id })}
-              fields={[...companyCreateFields, ...cf.formFields]}
+              fields={[...companyCreateFields(t, locale), ...cf.formFields]}
             />
           </>
         }
@@ -151,7 +151,9 @@ export function CompaniesScreen() {
                   name={company.display_name}
                   src={company.logo_url}
                 />
-                <strong>{company.display_name}</strong>
+                <strong title={company.display_name}>
+                  {company.display_name}
+                </strong>
                 {company.archived_at && (
                   <Badge tone="warning">{t("record.archived")}</Badge>
                 )}

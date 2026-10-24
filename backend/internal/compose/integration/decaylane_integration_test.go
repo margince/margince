@@ -110,11 +110,13 @@ func TestQuietCandidatesCarryOnlyContactsInsideRowScope(t *testing.T) {
 	seedLapsedPair(t, e, e.Rep1, theirs, "their private thread")
 
 	rep := e.As(e.Rep1, []ids.UUID{e.Team1}, graphPerms)
-	var quiet []search.InteractionEdge
+	now := time.Now().UTC()
+	var quiet []search.QuietContact
 	err := database.WithWorkspaceTx(rep, e.Pool, func(tx pgx.Tx) error {
 		var err error
-		quiet, err = search.QuietEdgesForUser(
-			rep, tx, time.Now().UTC().AddDate(0, 0, -relstrength.QuietDays), 10, nil)
+		quiet, err = search.QuietContacts(rep, tx, search.QuietRead{
+			QuietBefore: now.AddDate(0, 0, -relstrength.QuietDays), TouchedAfter: now.AddDate(0, 0, -180), Limit: 10,
+		})
 		return err
 	})
 	if err != nil {
@@ -123,8 +125,8 @@ func TestQuietCandidatesCarryOnlyContactsInsideRowScope(t *testing.T) {
 	if len(quiet) != 1 {
 		t.Fatalf("candidates = %d, want only the readable lapsed contact", len(quiet))
 	}
-	if quiet[0].ContactID != mine {
-		t.Errorf("candidate is %s, want the caller's own contact %s", quiet[0].ContactID, mine)
+	if quiet[0].Edge.ContactID != mine {
+		t.Errorf("candidate is %s, want the caller's own contact %s", quiet[0].Edge.ContactID, mine)
 	}
 }
 
@@ -143,10 +145,12 @@ func TestBatchedChangesAdmitOnlyReadableContacts(t *testing.T) {
 	store := contacts.NewStore(e.DB())
 	var changed []contacts.ContactChanges
 	err := database.WithWorkspaceTx(rep, e.Pool, func(tx pgx.Tx) error {
-		var err error
-		changed, err = store.RelationshipChangesForContacts(rep, tx,
-			[]ids.ContactID{ids.From[ids.ContactKind](mine), ids.From[ids.ContactKind](theirs)},
-			time.Now().UTC())
+		candidates := []ids.ContactID{ids.From[ids.ContactKind](mine), ids.From[ids.ContactKind](theirs)}
+		touches, zone, err := contactTouches(rep, tx, candidates...)
+		if err != nil {
+			return err
+		}
+		changed, err = store.RelationshipChangesForContacts(rep, tx, candidates, time.Now().UTC(), touches, zone)
 		return err
 	})
 	if err != nil {
@@ -201,14 +205,15 @@ func TestADismissedContactDoesNotSpendACandidateSlot(t *testing.T) {
 	}
 
 	now := time.Now().UTC()
-	var quiet []search.InteractionEdge
+	var quiet []search.QuietContact
 	err := database.WithWorkspaceTx(rep, e.Pool, func(tx pgx.Tx) error {
 		var err error
-		quiet, err = search.QuietEdgesForUser(
-			rep, tx, now.AddDate(0, 0, -relstrength.QuietDays), 1,
-			func(arg func(any) int) (string, error) {
+		quiet, err = search.QuietContacts(rep, tx, search.QuietRead{
+			QuietBefore: now.AddDate(0, 0, -relstrength.QuietDays), TouchedAfter: now.AddDate(0, 0, -180), Limit: 1,
+			Exclude: func(arg func(any) int) (string, error) {
 				return contacts.NotDismissedClause(rep, "e", now, arg)
-			})
+			},
+		})
 		return err
 	})
 	if err != nil {
@@ -218,8 +223,8 @@ func TestADismissedContactDoesNotSpendACandidateSlot(t *testing.T) {
 	if len(quiet) != 1 {
 		t.Fatalf("candidates = %d, want the one live lapse the budget has room for", len(quiet))
 	}
-	if quiet[0].ContactID != standing {
+	if quiet[0].Edge.ContactID != standing {
 		t.Errorf("the candidate is %s, want %s — the dismissed contact spent the slot",
-			quiet[0].ContactID, standing)
+			quiet[0].Edge.ContactID, standing)
 	}
 }

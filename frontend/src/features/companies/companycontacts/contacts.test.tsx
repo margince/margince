@@ -14,6 +14,8 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, expect, test } from "vitest";
 import { LocaleProvider } from "../../../i18n";
+import { de } from "../../../i18n/de";
+import { en } from "../../../i18n/en";
 import { CompanyContactsList } from "./contacts";
 import { contactsFixture, stubContacts } from "./contacts.fixtures";
 
@@ -132,3 +134,26 @@ test("does not let a pasted cursor or limit override the paging it computed", as
   expect(calls.at(-1)).not.toContain("cursor=garbage");
   expect(calls.at(-1)).not.toContain("limit=1&");
 });
+
+test.each([
+  ["en", en],
+  ["de", de],
+] as const)(
+  "a contact nobody has written to reads no interactions yet, never dormant (%s)",
+  async (locale, catalog) => {
+    stubContacts(contactsFixture());
+    render(<CompanyContactsList companyId="o-1" />, locale);
+
+    // The bucket `none` means no qualifying interaction at all. The contact page
+    // says so, and this tab must say it in the same words.
+    const row = (await screen.findByText("Philipp Königs")).closest("tr");
+    expect(row).not.toBeNull();
+    expect(
+      within(row as HTMLElement).getAllByText(
+        catalog["standing.ring.noInteractions"],
+      ).length,
+    ).toBeGreaterThan(0);
+    expect(within(row as HTMLElement).queryByText("Dormant")).toBeNull();
+    expect(within(row as HTMLElement).queryByText("Ruhend")).toBeNull();
+  },
+);

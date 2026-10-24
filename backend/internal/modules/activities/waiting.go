@@ -116,20 +116,11 @@ type WaitingReply struct {
 	// unresolved. REPORTED, never used to exclude, for Engaged's reason — the
 	// caller demotes what it cannot prove.
 	AddressedElsewhere bool
-	// OwnerID is who owes this reply, resolved from the record the thread is
-	// filed under. Zero when no record on it names an owner.
-	//
-	// PRECEDENCE, first owner found: deal, lead, contact, company — the order of
-	// how specific the claim is. A contact outranks their company because the
-	// company owner answers for the account, not for every conversation in it.
-	//
-	// A separate question from the record ids above, which answer "what is this
-	// about" while this answers "who owes the reply"; the two may differ.
-	//
-	// Resolved through the SAME visibility-gated links, so an owner appears only
-	// where the reader may see the record naming them.
+	// OwnerID is the sole verified direct recipient for email. A linked
+	// record's owner does not establish responsibility for a reply. Zero means
+	// non-email or no sole direct recipient.
 	OwnerID ids.UUID
-	// OwnerKnown distinguishes a readable unassigned record from a withheld owner.
+	// OwnerKnown is true after recipient resolution, including no duty.
 	OwnerKnown bool
 	// SenderWasStranger, BccOnly and ForeignLink are what capture judged about
 	// the mail (strangerMailSQL); false where it judged nothing. BccOnly is
@@ -349,15 +340,8 @@ func (s *Store) scanWaitingReplies(ctx context.Context, asOf time.Time, before W
 			return err
 		}
 		defer rows.Close()
-		waiting = []WaitingReply{}
-		for rows.Next() {
-			row, err := scanWaitingRecipients(rows)
-			if err != nil {
-				return err
-			}
-			waiting = append(waiting, waitingReplyForOwner(row, owner))
-		}
-		return rows.Err()
+		waiting, err = collectWaiting(rows, owner)
+		return err
 	})
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading who is waiting for a reply: %w", err)
@@ -485,4 +469,21 @@ func scanWaitingReply(record pgx.Row) (WaitingReply, error) {
 		row.OwnerID = ids.Nil
 	}
 	return row, err
+}
+
+// collectWaiting reads the scanned waits for this owner, leaving out a mail
+// addressed to more than one seat, which is nobody's automatic duty.
+func collectWaiting(rows pgx.Rows, owner *ids.UUID) ([]WaitingReply, error) {
+	waiting := []WaitingReply{}
+	for rows.Next() {
+		row, err := scanWaitingRecipients(rows)
+		if err != nil {
+			return nil, err
+		}
+		if ambiguouslyAddressed(row) {
+			continue
+		}
+		waiting = append(waiting, waitingReplyForOwner(row, owner))
+	}
+	return waiting, rows.Err()
 }

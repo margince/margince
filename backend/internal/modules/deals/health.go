@@ -74,15 +74,18 @@ type DealHealthWeights struct {
 // DealHealthEvidence links every factor to the records it was computed
 // from — the clickable "why" behind each number.
 type DealHealthEvidence struct {
-	// MostRecentActivityID backs the recency factor; nil when the deal
-	// has never seen an activity (recency 0.0 by definition).
+	// MostRecentActivityID is the newest activity behind the past clock; nil
+	// when the deal has none (recency 0.0 unless MeetingAhead).
 	// note: the health evidence ids (activity/contact refs below) are
 	// operational explainability pointers gathered through the generic
 	// collectIDs helper, not typed entity handles — they stay ids.UUID.
 	MostRecentActivityID *ids.UUID
-	// LastActivityAt is the moment the recency factor was read from; nil
-	// with MostRecentActivityID.
+	// LastActivityAt is the past clock the recency factor bands; nil with
+	// MostRecentActivityID.
 	LastActivityAt *time.Time
+	// MeetingAhead is a booked meeting the clock has not reached, which
+	// scores recency 1.0 and keeps the deal off stalled.
+	MeetingAhead bool
 
 	// StageVelocity: where the deal sits and how its pace compares.
 	CurrentStageID      ids.StageID
@@ -118,6 +121,7 @@ type dealHealthInputs struct {
 	createdAt      time.Time
 	lastActivityAt *time.Time
 	waitUntil      *time.Time
+	meetingAhead   bool
 	stageID        ids.StageID
 
 	// stageEnteredAt is the latest history entry into the current stage,
@@ -148,9 +152,9 @@ func healthFromInputs(in dealHealthInputs, now time.Time) DealHealth {
 	}
 	age := daysBetween(in.stageEnteredAt, now)
 
-	stalled := IsStalled(in.status, in.createdAt, in.lastActivityAt, in.waitUntil, now)
+	stalled := IsStalled(in.status, in.createdAt, in.lastActivityAt, in.waitUntil, in.meetingAhead, now)
 	factors := DealHealthFactors{
-		ActivityRecency: recencyScore(in.lastActivityAt, now),
+		ActivityRecency: recencyScore(in.lastActivityAt, in.meetingAhead, now),
 		StageVelocity:   velocityScore(age, expected),
 		Engagement:      math.Min(1.0, float64(len(in.engagedStakeholderIDs))/engageNorm),
 		Commitments:     commitmentScore(stalled, len(in.overdueTaskIDs)),
@@ -180,14 +184,18 @@ func healthFromInputs(in dealHealthInputs, now time.Time) DealHealth {
 			OverdueTaskIDs:        in.overdueTaskIDs,
 			Stalled:               stalled,
 			LastActivityAt:        in.lastActivityAt,
+			MeetingAhead:          in.meetingAhead,
 		},
 	}
 }
 
-// recencyScore is the §10.5 recency band over last_activity_at: an
-// absolute-duration day count on UTC instants (like IsStalled), never a
-// calendar-day count.
-func recencyScore(lastActivityAt *time.Time, now time.Time) float64 {
+// recencyScore bands the past clock: an absolute-duration day count on UTC
+// instants (like IsStalled), never a calendar-day count. A booked meeting
+// ahead counts as today's contact.
+func recencyScore(lastActivityAt *time.Time, meetingAhead bool, now time.Time) float64 {
+	if meetingAhead {
+		return 1.0
+	}
 	if lastActivityAt == nil {
 		return 0.0
 	}
@@ -293,21 +301,27 @@ func healthInputs(ctx context.Context, tx pgx.Tx, now time.Time, in *dealHealthI
 	// staleness the message disproves — a contradiction a reader can see and
 	// nothing can explain.
 	//
-	// The subquery's filters must match last_activity_of_deal exactly, or the
-	// evidence points at a row the timestamp does not count even when nothing
-	// raced.
+	// The subquery's meeting, origin, audience and time filters are the ones
+	// last_activity_of_deal reads, so the evidence names a row the clock counts.
+	// It also hides a follow-up task whose source is restricted, which the
+	// clock does not. The meeting-ahead column is read here for the same reason.
 	var pipelineID ids.PipelineID
 	var recent *ids.UUID
+	args := []any{in.dealID}
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	nowPos := arg(now)
 	err := tx.QueryRow(ctx, `
 		SELECT d.status, d.created_at, d.last_activity_at, d.wait_until, d.stage_id, d.pipeline_id,
 		       (SELECT a.id FROM activity a
 		          JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = d.id
-		         WHERE a.archived_at IS NULL AND `+relstrength.NotCalledOffSQL("a")+`
+		         WHERE a.archived_at IS NULL AND `+relstrength.LastActivityCountsSQL("a", storekit.SQLf("$%d::timestamptz", nowPos))+`
 		           `+auth.OriginIsEngagement("a")+auth.AudienceWorkspaceOnly("a")+`
 		         ORDER BY a.occurred_at DESC, a.id DESC
-		         LIMIT 1)
-		FROM deal d WHERE d.id = $1 AND d.archived_at IS NULL`, in.dealID).
-		Scan(&in.status, &in.createdAt, &in.lastActivityAt, &in.waitUntil, &in.stageID, &pipelineID, &recent)
+		         LIMIT 1),
+		       `+MeetingAheadSQL("d")+`
+		FROM deal d WHERE d.id = $1 AND d.archived_at IS NULL`, args...).
+		Scan(&in.status, &in.createdAt, &in.lastActivityAt, &in.waitUntil, &in.stageID, &pipelineID, &recent,
+			&in.meetingAhead)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return apperrors.ErrNotFound
 	}

@@ -80,6 +80,7 @@ export const AUDIENCE_REASON_LABEL: Record<string, MessageKey> = {
   verdict: "compose.reason.verdict",
   counterparty: "compose.reason.counterparty",
   explicitly_confidential: "compose.reason.explicitlyConfidential",
+  members_only: "compose.reason.membersOnly",
   no_counterparty: "compose.reason.noCounterparty",
 };
 

@@ -51,6 +51,9 @@ type PendingLinkedInMatch struct {
 	ConnectionCompany string
 	ContactID         ids.UUID
 	ContactName       string
+	// Fields is what the card shows beside the match, with each box at its
+	// staged default.
+	Fields LinkedInMatchFields
 }
 
 // PendingLinkedInMatches lists the caller's suggested matches.
@@ -119,23 +122,28 @@ func (s *Store) suggestedMatches(ctx context.Context, forContact ids.UUID) ([]Pe
 		// NULL is every contact, so one query serves both entry points without a
 		// second copy of the row-scope join to keep in step with this one.
 		contactPos := arg(optionalContact(forContact))
+		offer, err := linkedInOfferColumns(ctx, arg)
+		if err != nil {
+			return err
+		}
 		rows, err := tx.Query(ctx, storekit.SQLf(`
-			SELECT c.id, c.owner_user_id, c.full_name, coalesce(c.company_name, ''), p.id, p.full_name
+			SELECT c.id, c.owner_user_id, c.full_name, coalesce(c.company_name, ''), p.id, p.full_name %s
 			  FROM linkedin_connection c
-			  JOIN contact p ON p.id = c.matched_contact_id AND p.archived_at IS NULL AND (%s)
+			  JOIN contact p ON p.id = c.matched_contact_id AND p.archived_at IS NULL AND (%s) %s
 			 WHERE c.owner_user_id = $%d
 			   AND c.match_status = 'suggested'
 			   AND c.tombstoned_at IS NULL
 			   AND ($%d::uuid IS NULL OR c.matched_contact_id = $%d::uuid)
-			 ORDER BY c.full_name, c.id`, visible, ownerPos, contactPos, contactPos), args...)
+			 ORDER BY c.full_name, c.id`, offer, visible, linkedInCurrentEmploymentJoin, ownerPos, contactPos, contactPos), args...)
 		if err != nil {
 			return fmt.Errorf("contacts: reading the LinkedIn matches awaiting a decision: %w", err)
 		}
 		defer rows.Close()
 		for rows.Next() {
 			var m PendingLinkedInMatch
-			if err := rows.Scan(&m.ConnectionID, &m.OwnerUserID, &m.ConnectionName, &m.ConnectionCompany,
-				&m.ContactID, &m.ContactName); err != nil {
+			m.Fields, err = scanLinkedInOffer(rows.Scan, &m.ConnectionID, &m.OwnerUserID, &m.ConnectionName,
+				&m.ConnectionCompany, &m.ContactID, &m.ContactName)
+			if err != nil {
 				return err
 			}
 			out = append(out, m)
@@ -158,12 +166,13 @@ func (s *Store) ApplyLinkedInMatch(ctx context.Context, connectionID, ownerID, c
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		return applyLinkedInMatchInTx(ctx, tx, connectionID, ownerID, contactID)
+		return s.applyLinkedInMatchInTx(ctx, tx,
+			LinkedInMatchApply{ConnectionID: connectionID, OwnerUserID: ownerID, ContactID: contactID})
 	})
 }
 
 // ApplyLinkedInMatchTx is ApplyLinkedInMatch inside a transaction the CALLER
-// owns, for the accept effect.
+// owns, for the accept effect, with the boxes the human ticked on the card.
 //
 // It exists so redeeming the approval and applying it are ONE transaction. They
 // were two: the redemption committed, and a failure in the apply left the
@@ -175,8 +184,8 @@ func (s *Store) ApplyLinkedInMatch(ctx context.Context, connectionID, ownerID, c
 // The object gate is the caller's to apply, as it is for every other Tx-shaped
 // entry point here: the approvals service checks the decider's authority before
 // any effect runs, and ApplyLinkedInMatch applies it above for the direct path.
-func ApplyLinkedInMatchTx(ctx context.Context, tx pgx.Tx, connectionID, ownerID, contactID ids.UUID) error {
-	return applyLinkedInMatchInTx(ctx, tx, connectionID, ownerID, contactID)
+func (s *Store) ApplyLinkedInMatchTx(ctx context.Context, tx pgx.Tx, in LinkedInMatchApply) error {
+	return s.applyLinkedInMatchInTx(ctx, tx, in)
 }
 
 // applyLinkedInMatchInTx is the write both entry points land on.
@@ -188,7 +197,8 @@ func ApplyLinkedInMatchTx(ctx context.Context, tx pgx.Tx, connectionID, ownerID,
 // a decided row answers 409. Reading the owner off the row is what staging does
 // anyway, so a legacy payload gets exactly the behaviour it had, and a new one
 // gets the guard. The fallback goes when no pending proposal predates the field.
-func applyLinkedInMatchInTx(ctx context.Context, tx pgx.Tx, connectionID, ownerID, contactID ids.UUID) error {
+func (s *Store) applyLinkedInMatchInTx(ctx context.Context, tx pgx.Tx, in LinkedInMatchApply) error {
+	connectionID, ownerID, contactID := in.ConnectionID, in.OwnerUserID, in.ContactID
 	if ownerID == ids.Nil {
 		if err := tx.QueryRow(ctx,
 			`SELECT owner_user_id FROM linkedin_connection WHERE id = $1 AND tombstoned_at IS NULL`,
@@ -200,6 +210,9 @@ func applyLinkedInMatchInTx(ctx context.Context, tx pgx.Tx, connectionID, ownerI
 		}
 	}
 	if err := auth.HoldWritableLive(ctx, tx, entityContact, contactID); err != nil {
+		return err
+	}
+	if err := checkLinkedInMatchFields(ctx, tx, in); err != nil {
 		return err
 	}
 	// And HELD, before the connection row below. contact_social is a declared
@@ -252,7 +265,11 @@ func applyLinkedInMatchInTx(ctx context.Context, tx pgx.Tx, connectionID, ownerI
 	if err != nil {
 		return fmt.Errorf("contacts: applying an approved LinkedIn match: %w", err)
 	}
-	return confirmMatchWriteTail(ctx, tx, connectionID, ownerID, contactID, wasStatus, wasContact)
+	written, err := s.writeLinkedInMatchFields(ctx, tx, in)
+	if err != nil {
+		return err
+	}
+	return confirmMatchWriteTail(ctx, tx, connectionID, ownerID, contactID, wasStatus, wasContact, written)
 }
 
 // confirmMatchWriteTail is the write a confirmation releases, whichever path
@@ -267,13 +284,25 @@ func applyLinkedInMatchInTx(ctx context.Context, tx pgx.Tx, connectionID, ownerI
 // suggestion for a human apply. The caller must already HOLD the contact — the
 // handle write takes no lock of its own, and that hold is what stops a handle
 // landing after an Art. 17 erasure cleared it.
-func confirmMatchWriteTail(ctx context.Context, tx pgx.Tx, connectionID, ownerID, contactID ids.UUID, wasStatus string, wasContact *ids.UUID) error {
+//
+// fields says what the ticked boxes already wrote. The decision event goes out
+// after them.
+func confirmMatchWriteTail(
+	ctx context.Context, tx pgx.Tx, connectionID, ownerID, contactID ids.UUID,
+	wasStatus string, wasContact *ids.UUID, fields linkedInFieldsWritten,
+) error {
 	wrote, err := writeLinkedInHandle(ctx, tx, connectionID, contactID)
 	if err != nil {
 		return err
 	}
 	return auditLinkedInMatch(ctx, tx, connectionID, ownerID, contactID,
-		matchImages(wasStatus, wasContact, matchConfirmed, &contactID), wrote)
+		matchImages(wasStatus, wasContact, matchConfirmed, &contactID), linkedInMatchOutcome{url: wrote, fields: fields})
+}
+
+// linkedInMatchOutcome is what one confirmation wrote to the contact.
+type linkedInMatchOutcome struct {
+	url    bool
+	fields linkedInFieldsWritten
 }
 
 // matchImagePair is the connection's own columns on either side of a confirmed
@@ -322,12 +351,15 @@ const (
 // records the link; a handle that reached the contact is a second mutation of a
 // second entity and takes its own audit and its own contact.updated, so a trace
 // consumer resolves each event to an audit of the entity it describes.
-func auditLinkedInMatch(ctx context.Context, tx pgx.Tx, connectionID, ownerID, contactID ids.UUID, images matchImagePair, wroteURL bool) error {
+func auditLinkedInMatch(ctx context.Context, tx pgx.Tx, connectionID, ownerID, contactID ids.UUID, images matchImagePair, wrote linkedInMatchOutcome) error {
+	wroteURL := wrote.url
 	// Whether the profile URL reached the contact is context ABOUT this
 	// decision, not a column on the connection, so it rides the evidence
 	// column rather than the images field history projects.
 	auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "linkedin_connection", connectionID,
-		images.before, images.after, map[string]any{"profile_url_written": wroteURL})
+		images.before, images.after, map[string]any{
+			"profile_url_written": wroteURL, "title_written": wrote.fields.title, "employer_written": wrote.fields.employer,
+		})
 	if err != nil {
 		return err
 	}
@@ -346,7 +378,9 @@ func auditLinkedInMatch(ctx context.Context, tx pgx.Tx, connectionID, ownerID, c
 	// the same member the statement was predicated on rather than a second
 	// read's answer.
 	if err := storekit.EmitEvent(ctx, tx, auditID, ownerID,
-		crmcontracts.PublicEventLinkedinMatchDecided{ProfileUrlWritten: wroteURL}); err != nil {
+		crmcontracts.PublicEventLinkedinMatchDecided{
+			ProfileUrlWritten: wroteURL, TitleWritten: &wrote.fields.title, EmployerWritten: &wrote.fields.employer,
+		}); err != nil {
 		return err
 	}
 	if !wroteURL {

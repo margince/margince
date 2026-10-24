@@ -80,5 +80,5 @@ func (e *DecisionSpentError) Error() string { return e.Why }
 // FieldFault carries the refusal to every surface rather than the HTTP one
 // alone, and names the review because that is what the caller would open.
 func (e *DecisionSpentError) FieldFault() (field, code, message string) {
-	return FieldReviewID, "decision_not_spendable", e.Why
+	return fieldReviewID, "decision_not_spendable", e.Why
 }

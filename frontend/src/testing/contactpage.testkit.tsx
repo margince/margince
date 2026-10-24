@@ -41,6 +41,7 @@ export const view: Contact360 = {
     // may not write, and the controls correctly disappear.
     writable: true,
     version: 1,
+    primary_email: "dana@brandt.example",
     emails: [
       {
         id: "pe-1",

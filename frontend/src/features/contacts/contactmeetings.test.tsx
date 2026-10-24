@@ -420,6 +420,43 @@ it("says what became of a meeting only where it is not the ordinary answer", asy
   ).toBeNull();
 });
 
+it("names the colleague who hosted a held meeting", async () => {
+  mount(() => [], {
+    "GET /activities": () =>
+      meetingsPage([
+        meeting({
+          id: "m-held",
+          subject: "Site visit",
+          occurred_at: "2026-09-24T08:00:00Z",
+          meeting_status: "held",
+          host_user_id: "u-host",
+        }),
+      ]),
+    "GET /users/names": () =>
+      jsonResponse({ data: [{ id: "u-host", display_name: "Lena Fischer" }] }),
+  });
+  const held = await screen.findByRole("region", { name: "Held" });
+  expect(await within(held).findByText("Lena Fischer")).toBeTruthy();
+  expect(within(held).getAllByRole("columnheader")).toHaveLength(4);
+});
+
+it("draws no host column for held meetings nobody hosted", async () => {
+  mount(() => [], {
+    "GET /activities": () =>
+      meetingsPage([
+        meeting({
+          id: "m-held",
+          subject: "Site visit",
+          occurred_at: "2026-09-24T08:00:00Z",
+          meeting_status: "held",
+        }),
+      ]),
+  });
+  const held = await screen.findByRole("region", { name: "Held" });
+  await within(held).findByText("Site visit");
+  expect(within(held).getAllByRole("columnheader")).toHaveLength(3);
+});
+
 it("reads older meetings when the reader asks for them", async () => {
   const user = userEvent.setup();
   const pages = [

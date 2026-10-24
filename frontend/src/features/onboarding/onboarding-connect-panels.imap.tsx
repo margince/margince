@@ -1,48 +1,42 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import {
-  ArrowRight,
-  Circle,
-  CircleCheck,
-  Mail,
-  ShieldCheck,
-} from "lucide-react";
+import { Mail, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { api } from "../../api/client";
 import { CaptureNotice } from "../../components/capture-notice";
-import { Button, Disclosure, Field } from "../../design-system/atoms";
+import {
+  Button,
+  Disclosure,
+  Field,
+  TextInput,
+} from "../../design-system/atoms";
+import { Callout } from "../../design-system/callout";
 import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
 import { imapErrorMessage } from "../capture/imap-connect-form";
-import { ConnectPostureStep } from "./connect-posture";
 
-// The failure banner the connect panels share.
-export function ConnectWarn({ title, body }: { title: string; body: string }) {
+/** A leg that did not land. A refusal the reader gave is theirs to answer
+ *  again (amber); anything else broke (red). */
+export function ReturnWarn({
+  title,
+  body,
+  tone = "danger",
+}: Readonly<{ title: string; body: string; tone?: "warning" | "danger" }>) {
   return (
-    // The measure and the centring belong to the stylesheet. An inline `margin`
-    // shorthand also resets the banner's top margin, so the failure block would
-    // have nothing above it.
-    <div className="readfail warning ob-connect-warning">
-      <span className="rfi">
-        <Circle aria-hidden />
-      </span>
-      <div>
-        <div className="rft">{title}</div>
-        {/* ds:ignore the body under the read-failure banner's title */}
-        <p className="rfp">{body}</p>
-      </div>
-    </div>
+    <Callout tone={tone} kind="outcome" title={title}>
+      <p>{body}</p>
+    </Callout>
   );
 }
 
-// IMAP is a standing connection. It mirrors the typed POST of the Settings form
-// (imap-connect-form.tsx): the same `{imap:{...}}` shape and two error
-// sentences. So onboarding and Settings agree on what "connect" means here.
-// The connect call returns before any mail is read, so there is no capture
-// count to show. Only a live row (last_synced_at) fills in once the sweep runs.
+// IMAP: a standing connection, mirroring the typed POST of the Settings inline
+// form (imap-connect-form.tsx). It uses the same nested `{imap:{...}}` shape
+// and IMAP error sentences, so onboarding and Settings cannot drift apart.
+// The connect call returns before any mail is read. There is no capture count
+// to show, only a live row (last_synced_at) that fills in minutes later.
 const IMAP_DEFAULT_PORT = "993";
 
-// `onDismiss` closes the dialog without connecting. See `OAuthConnectPanel`
-// for why that is a distinct action from skipping the whole required step.
+// `onDismiss` puts the form away without connecting: the reader changed their
+// mind about this provider, not about the step, which the surface skips.
 export function ImapConnectPanel({
   onDone,
   onDismiss,
@@ -52,16 +46,12 @@ export function ImapConnectPanel({
    * connect surface, never from here (see `OAuthReturnPanel`). */
   onDone: () => void;
   onDismiss: () => void;
-  /** See `OAuthConnectPanel`'s own `onPendingChange` for what this reports
-   * and why the caller needs it. */
+  /** Told whenever the connect POST's in-flight state changes, so the caller
+   * can hold its own ways off this form (another vendor, the skip) too. */
   onPendingChange?: (pending: boolean) => void;
 }>) {
   const t = useT();
   const qc = useQueryClient();
-  // This panel's own flag. The OAuth arm (`OAuthConnectPanel`) has a different
-  // lifetime, and one shared flag would couple two flows that never run
-  // together.
-  const [postureSaving, setPostureSaving] = useState(false);
   const [host, setHostVal] = useState("imap.gmail.com");
   const [port, setPort] = useState(IMAP_DEFAULT_PORT);
   const [email, setEmail] = useState("");
@@ -90,11 +80,12 @@ export function ImapConnectPanel({
         }),
       );
     },
-    onSuccess: () => {
-      // The Settings connected-inboxes card shares this query key. A connect
-      // made in onboarding must show there at once, not only on that card's
-      // next mount.
-      void qc.invalidateQueries({ queryKey: ["connectors"] });
+    // The mailbox is live once the shared roster says so. The step's account panel
+    // and Settings read that key. The form closes only after it has been read
+    // again, onto a step that already shows the mailbox.
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["connectors"] });
+      onDone();
     },
     onError: () => {
       // The secret is never retained after a failed submit, matching the
@@ -118,135 +109,98 @@ export function ImapConnectPanel({
     parsedMax >= 1 &&
     parsedMax <= 200;
 
-  if (connect.data?.connection) {
-    return (
-      <div className="connect-result">
-        <div className="cr-h">
-          <CircleCheck aria-hidden /> {t("ob.s4.capturedTitle")}
-        </div>
-        <p className="ob-sub">{t("ob.s4.capturedBody")}</p>
-        {/* The same question the OAuth arm asks, in the same place: after the
-            grant, before the reader leaves for the CRM. The connect stores the
-            credentials; the first window of mail is read afterwards by the
-            standing sync, and the row is due the moment it exists. So this is
-            the last screen on which the answer can still precede the mail. */}
-        <ConnectPostureStep
-          provider={connect.data.connection.provider}
-          posture={connect.data.connection.mail_posture ?? undefined}
-          onPendingChange={setPostureSaving}
-        />
-        <Button
-          variant="primary"
-          // Closing mid-write leaves the answer in flight with no surface left
-          // to show a refusal.
-          disabled={postureSaving}
-          onClick={onDone}
-        >
-          {t("ob.conv.connect.dialogDone")} <ArrowRight aria-hidden />
-        </Button>
-      </div>
-    );
-  }
-
   return (
     <>
-      <div className="form-stack">
-        <div className="imap-form">
-          <Field label={t("ob.s4.imapHost")}>
-            {(control) => (
-              <input
-                {...control}
-                className="input"
-                value={host}
-                placeholder={t("ob.s4.imapHostPlaceholder")}
-                onChange={(e) => setHostVal(e.target.value)}
-              />
-            )}
-          </Field>
-          <Field label={t("ob.s4.imapPort")}>
-            {(control) => (
-              <input
-                {...control}
-                className="input"
-                type="number"
-                min={1}
-                max={65535}
-                value={port}
-                onChange={(e) => setPort(e.target.value)}
-              />
-            )}
-          </Field>
-          <Field className="full" label={t("ob.s4.imapEmail")}>
-            {(control) => (
-              <input
-                {...control}
-                className="input"
-                type="email"
-                autoComplete="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            )}
-          </Field>
-          <Field className="full" label={t("ob.s4.imapPassword")}>
-            {(control) => (
-              <input
-                {...control}
-                className="input"
-                type="password"
-                autoComplete="off"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            )}
-          </Field>
-          <Field label={t("ob.s4.imapMailbox")}>
-            {(control) => (
-              <input
-                {...control}
-                className="input"
-                value={mailbox}
-                onChange={(e) => setMailbox(e.target.value)}
-              />
-            )}
-          </Field>
-          <Field label={t("ob.s4.imapMax")}>
-            {(control) => (
-              <input
-                {...control}
-                className="input"
-                type="number"
-                min={1}
-                max={200}
-                value={max}
-                onChange={(e) => setMax(e.target.value)}
-              />
-            )}
-          </Field>
-        </div>
-
-        <Disclosure summary={t("ob.s4.accessToggle")}>
-          <p className="spoken-hint t-caption">
-            <ShieldCheck aria-hidden /> {t("ob.s4.imapHint")}
-          </p>
-        </Disclosure>
-
-        {connect.isError && (
-          <ConnectWarn
-            title={t("ob.s4.connectFailed")}
-            body={imapErrorMessage(connect.error, t)}
-          />
-        )}
-
-        {/* Same words as the OAuth panel, and in the same place: the last thing
-          read before the mailbox is connected. */}
-        <CaptureNotice />
+      <div className="imap-form">
+        <Field label={t("ob.s4.imapHost")}>
+          {(control) => (
+            <TextInput
+              {...control}
+              value={host}
+              placeholder={t("ob.s4.imapHostPlaceholder")}
+              onChange={(e) => setHostVal(e.target.value)}
+            />
+          )}
+        </Field>
+        <Field label={t("ob.s4.imapPort")}>
+          {(control) => (
+            <TextInput
+              {...control}
+              type="number"
+              min={1}
+              max={65535}
+              value={port}
+              onChange={(e) => setPort(e.target.value)}
+            />
+          )}
+        </Field>
+        <Field className="full" label={t("ob.s4.imapEmail")}>
+          {(control) => (
+            <TextInput
+              {...control}
+              type="email"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          )}
+        </Field>
+        <Field className="full" label={t("ob.s4.imapPassword")}>
+          {(control) => (
+            <TextInput
+              {...control}
+              type="password"
+              autoComplete="off"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          )}
+        </Field>
+        <Field label={t("ob.s4.imapMailbox")}>
+          {(control) => (
+            <TextInput
+              {...control}
+              value={mailbox}
+              onChange={(e) => setMailbox(e.target.value)}
+            />
+          )}
+        </Field>
+        <Field label={t("ob.s4.imapMax")}>
+          {(control) => (
+            <TextInput
+              {...control}
+              type="number"
+              min={1}
+              max={200}
+              value={max}
+              onChange={(e) => setMax(e.target.value)}
+            />
+          )}
+        </Field>
       </div>
 
-      <div className="actions">
+      <Disclosure summary={t("ob.s4.accessToggle")}>
+        <p className="spoken-hint t-caption">
+          <ShieldCheck aria-hidden /> {t("ob.s4.imapHint")}
+        </p>
+      </Disclosure>
+
+      {connect.isError && (
+        <ReturnWarn
+          title={t("ob.s4.connectFailed")}
+          body={imapErrorMessage(connect.error, t)}
+        />
+      )}
+
+      {/* Same words as the OAuth panel, and in the same place: the last thing
+          read before the mailbox is connected. */}
+      <CaptureNotice />
+
+      <div className="ob-connect-actions">
         <Button
-          // See `OAuthConnectPanel`'s own `onDismiss` for why the in-flight
-          // POST has to finish before this becomes a real choice again.
+          variant="ghost"
+          // Dismissal is a decision not to connect, so it waits for the POST it would
+          // abandon: a success landing after it contradicts it.
           disabled={connect.isPending}
           onClick={onDismiss}
         >
@@ -254,18 +208,11 @@ export function ImapConnectPanel({
         </Button>
         <Button
           variant="primary"
-          disabled={!ready || connect.isPending}
+          pending={connect.isPending}
+          disabled={!ready}
           onClick={() => connect.mutate()}
         >
-          {connect.isPending ? (
-            <>
-              <span className="ob-spinner" /> {t("ob.s4.connecting")}
-            </>
-          ) : (
-            <>
-              <Mail aria-hidden /> {t("ob.s4.imapConnect")}
-            </>
-          )}
+          <Mail aria-hidden /> {t("ob.s4.imapConnect")}
         </Button>
       </div>
     </>

@@ -6,6 +6,7 @@ package meetingbrief
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy/langcopytest"
 )
@@ -17,15 +18,15 @@ func TestMeetingHistoryWordsKeepNamesAndRelativeDays(t *testing.T) {
 		for _, days := range []int{0, 1, 3} {
 			touched := at(10 - days)
 			attendee := AttendeeIn{FullName: "Original Name", Title: "Original Title", DealRole: "economic_buyer", LastTouch: &touched}
-			line := said.attendeeLine(attendee, at(10))
+			line := said.attendeeLine(attendee, at(10), time.UTC)
 			if !strings.Contains(line, attendee.FullName) || !strings.Contains(line, attendee.Title) {
 				t.Fatalf("%s lost attendee facts: %s", language, line)
 			}
 			if language != "en" && strings.Contains(line, "economic buyer") {
 				t.Fatalf("%s did not reuse localized role: %s", language, line)
 			}
-			prior := said.priorMeetingLine(PriorMeetingIn{Subject: "Original Subject", StartsAt: touched}, at(10))
-			touch := lastTouchLine(Input{Language: language, LastTouchAt: &touched, Now: at(10)})
+			prior := said.priorMeetingLine(PriorMeetingIn{Subject: "Original Subject", StartsAt: touched}, at(10), time.UTC)
+			touch := lastTouchLine(Input{Language: language, LastTouchAt: &touched, Now: at(10), Zone: time.UTC})
 			if !strings.Contains(prior, "Original Subject") {
 				t.Fatalf("%s lost subject: %s", language, prior)
 			}
@@ -36,7 +37,7 @@ func TestMeetingHistoryWordsKeepNamesAndRelativeDays(t *testing.T) {
 				t.Fatalf("singular: %s", line)
 			}
 		}
-		first := said.attendeeLine(AttendeeIn{FullName: "Original Name"}, at(10))
+		first := said.attendeeLine(AttendeeIn{FullName: "Original Name"}, at(10), time.UTC)
 		if first == "" || lastTouchLine(Input{Language: language}) == "" {
 			t.Fatalf("%s lost first contact", language)
 		}

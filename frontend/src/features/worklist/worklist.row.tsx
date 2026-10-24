@@ -21,6 +21,7 @@ import {
   subjectHref,
   whenText,
 } from "./worklist.copy";
+import { DepartedOwnerCaption } from "./worklist.departedowner";
 import { PutDownByThumb } from "./worklist.dispositions";
 import { WaitingEmailLine } from "./worklist.emailtitle";
 import { conditionOf, eyebrowKeyFor, kindClass } from "./worklist.eyebrow";
@@ -284,6 +285,7 @@ export function WorklistRow({
             />
           )}
           {responsibility && <p className="t-caption">{responsibility}</p>}
+          <DepartedOwnerCaption owner={item.owner} />
           <PromiseRecipients recipients={item.promise_recipients} />
         </div>
         {/* Every verb on one right-aligned line, the row's menu last. Under the

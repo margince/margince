@@ -26,47 +26,54 @@ import (
 )
 
 // What the minted Bearer is once the handshake is done: a passport with real
-// authority on the governed surfaces, and nothing more. Its 🟡 refusals stage
-// an approval it redeems once, by the approval's id. Its authority dies on the
+// authority on the governed surfaces, and nothing more. A call that still waits
+// stages an approval it redeems once, by the approval's id. Its authority dies on the
 // next call after revocation, asserted on the hosted MCP transport.
 
 func TestAnApprovedCallRedeemsOnceByItsApprovalID(t *testing.T) {
 	o := setupOAuth(t)
 
-	code := o.authorize(t, nil)
+	code := o.authorize(t, url.Values{"scope": {"read enrich"}})
 	_, body := o.exchange(t, url.Values{"code": {code}})
 	agentBearer := map[string]string{"Authorization": "Bearer " + body["access_token"].(string)}
 
-	// An overwrite of a field a human last wrote is one of the calls that still
-	// asks a human first.
-	var contact struct {
+	// Reading a company's site still asks a human first, even on the passport
+	// of the colleague who connected: the model picks the address it reads.
+	var company struct {
 		ID string `json:"id"`
 	}
-	if status := o.Call(t, "POST", "/v1/contacts", integration.AnyMap{
-		"source": "manual", "full_name": "Jo Human",
-	}, nil, &contact); status != http.StatusCreated {
-		t.Fatalf("human contact create → %d", status)
+	if status := o.Call(t, "POST", "/v1/companies", integration.AnyMap{
+		"source": "manual", "display_name": "Redeem Once GmbH",
+		"domains": []integration.AnyMap{{"domain": "example.com", "is_primary": true}},
+	}, nil, &company); status != http.StatusCreated {
+		t.Fatalf("company create → %d", status)
 	}
-	overwrite := integration.AnyMap{"full_name": "Jo Machine"}
+	enrich := "/v1/companies/" + company.ID + "/enrich"
 	var problem struct {
 		Detail string `json:"detail"`
 	}
-	if status := o.Call(t, "PATCH", "/v1/contacts/"+contact.ID, overwrite, agentBearer, &problem); status != http.StatusForbidden {
-		t.Fatalf("agent overwrite of a human-written name → %d, want staged 403", status)
+	if status := o.Call(t, "POST", enrich, nil, agentBearer, &problem); status != http.StatusForbidden {
+		t.Fatalf("agent enrich → %d, want staged 403", status)
 	}
 	approvalID := integration.ExtractStagedApprovalID(t, problem.Detail)
 	if status := o.Call(t, "POST", "/v1/approvals/"+approvalID+"/approve", integration.AnyMap{}, nil, nil); status != http.StatusOK {
 		t.Fatalf("approve → %d", status)
 	}
 
+	// The approved call passes the gate. What enrich then does is its own
+	// business, so only a refusal from the gate would fail this.
 	redeeming := map[string]string{"Authorization": agentBearer["Authorization"], "X-Approval-Token": approvalID}
-	if status := o.Call(t, "PATCH", "/v1/contacts/"+contact.ID, overwrite, redeeming, nil); status != http.StatusOK {
-		t.Fatalf("the approved call repeated with its approval id → %d, want 200", status)
+	var redeemed struct {
+		Code string `json:"code"`
+	}
+	status := o.Call(t, "POST", enrich, nil, redeeming, &redeemed)
+	if redeemed.Code == "approval_required" || redeemed.Code == "approval_token_invalid" {
+		t.Fatalf("the approved call repeated with its approval id → %d %q, want it past the gate", status, redeemed.Code)
 	}
 	var replay struct {
 		Code string `json:"code"`
 	}
-	if status := o.Call(t, "PATCH", "/v1/contacts/"+contact.ID, overwrite, redeeming, &replay); status != http.StatusForbidden || replay.Code != "approval_token_invalid" {
+	if status := o.Call(t, "POST", enrich, nil, redeeming, &replay); status != http.StatusForbidden || replay.Code != "approval_token_invalid" {
 		t.Errorf("a second redemption → %d %q, want 403 approval_token_invalid", status, replay.Code)
 	}
 }

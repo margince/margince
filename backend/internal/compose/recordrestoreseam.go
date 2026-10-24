@@ -12,15 +12,18 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strconv"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -48,7 +51,7 @@ func NewRestoreSeam(pool *pgxpool.Pool, provider *Provider, corrections *deals.S
 		visible:     recordIsVisibleToCaller,
 		edges:       edges,
 		corrections: corrections,
-		inverses:    recordInverses{provider: provider, contacts: edges, deals: dealStore},
+		inverses:    recordInverses{provider: provider, contacts: edges, deals: dealStore, activities: activities.NewStore(InstallationDB(pool))},
 		evaluator: Evaluator{
 			Archived:      recordIsArchived,
 			Writable:      recordIsWritableByCaller,
@@ -57,6 +60,7 @@ func NewRestoreSeam(pool *pgxpool.Pool, provider *Provider, corrections *deals.S
 			Unwritable:    valuesNoLongerWritable,
 			EdgeFacts:     edges.EdgeFactsForReverse,
 			EdgeWritable:  edgeIsWritableByCaller(edges),
+			MaskedText:    maskedTextTheRecordKeepsTyped,
 		},
 	}
 }
@@ -76,6 +80,28 @@ func recordIsArchived(ctx context.Context, tx pgx.Tx, entityType string, id ids.
 		return false, err
 	}
 	return archived, nil
+}
+
+// maskedTextTheRecordKeepsTyped names the patch keys holding masked text on a
+// record that stores text as its member typed it. A mail is stored masked, so
+// putting its masked text back writes what the row held.
+func maskedTextTheRecordKeepsTyped(ctx context.Context, tx pgx.Tx, row AuditRow, patch map[string]json.RawMessage) ([]string, error) {
+	var masked []string
+	for key, value := range patch {
+		var text string
+		if json.Unmarshal(value, &text) == nil && storekit.HoldsMaskedText(row.EntityType, text) {
+			masked = append(masked, key)
+		}
+	}
+	if len(masked) == 0 || row.EntityType != entityTypeActivity {
+		return nil, nil
+	}
+	keeps, err := activities.KeepsTypedTextTx(ctx, tx, row.EntityID)
+	if err != nil || !keeps {
+		return nil, err
+	}
+	sort.Strings(masked)
+	return masked, nil
 }
 
 // recordVersionUnmoved refuses a decision taken from a screen the record has
@@ -115,7 +141,13 @@ func recordVersion(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUI
 // reversal path takes it before it reads the audit row at all: anything that
 // returns a record is a read, and a refusal that distinguishes a hidden record
 // from an absent one has disclosed the record.
+//
+// The object grant comes first. Row scope alone admits a seat that may read
+// no record of this type, and a refusal reason tells it the change exists.
 func recordIsVisibleToCaller(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID) error {
+	if err := requireReadGrant(ctx, entityType); err != nil {
+		return err
+	}
 	if entityType == entityTypeActivity {
 		return auth.EnsureActivityContentVisible(ctx, tx, id)
 	}
@@ -133,7 +165,10 @@ func recordIsVisibleToCaller(ctx context.Context, tx pgx.Tx, entityType string, 
 // which is a button that says the caller may not edit a record they can.
 func recordIsWritableByCaller(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID) error {
 	if entityType == entityTypeActivity {
-		return auth.EnsureActivityWritable(ctx, tx, id)
+		if err := auth.EnsureActivityContentVisible(ctx, tx, id); err != nil {
+			return err
+		}
+		return auth.EnsureActivityWritableIn(ctx, tx, id, false)
 	}
 	return auth.EnsureWritable(ctx, tx, entityType, id)
 }
@@ -307,9 +342,9 @@ func (s *Server) wireReversal(pool *pgxpool.Pool) {
 	})
 }
 
-// requireUpdateGrant asks the object grant the record's own update asks. One
-// literal per type, because the grant census resolves only literals and
-// constants.
+// requireUpdateGrant and requireReadGrant ask one object grant on one of the
+// six record types. One literal per type and verb, because the grant census
+// resolves only literals and constants.
 func requireUpdateGrant(ctx context.Context, entityType string) error {
 	switch entityType {
 	case entityTypeContact:
@@ -326,4 +361,22 @@ func requireUpdateGrant(ctx context.Context, entityType string) error {
 		return auth.Require(ctx, entityTypeProject, principal.ActionUpdate)
 	}
 	return fmt.Errorf("compose: %q is not a record type this path writes", entityType)
+}
+
+func requireReadGrant(ctx context.Context, entityType string) error {
+	switch entityType {
+	case entityTypeContact:
+		return auth.Require(ctx, entityTypeContact, principal.ActionRead)
+	case entityTypeCompany:
+		return auth.Require(ctx, entityTypeCompany, principal.ActionRead)
+	case entityTypeDeal:
+		return auth.Require(ctx, entityTypeDeal, principal.ActionRead)
+	case entityTypeActivity:
+		return auth.Require(ctx, entityTypeActivity, principal.ActionRead)
+	case entityTypeLead:
+		return auth.Require(ctx, entityTypeLead, principal.ActionRead)
+	case entityTypeProject:
+		return auth.Require(ctx, entityTypeProject, principal.ActionRead)
+	}
+	return fmt.Errorf("compose: %q is not a record type this path reads", entityType)
 }

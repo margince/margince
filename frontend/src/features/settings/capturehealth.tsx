@@ -236,6 +236,34 @@ function mailboxColumns(
           : t("captureHealth.oldestWaited", { age });
       },
     },
+    {
+      key: "unread",
+      header: t("captureHealth.col.unread"),
+      // Dates and not a duration. The owner's next move is to ask the backfill
+      // for this period, and a span of days is not something to type into it.
+      render: (box) =>
+        box.unread_period
+          ? t("captureHealth.unreadPeriod", {
+              from: formatDateTime(
+                box.unread_period.from,
+                locale,
+                viewerZone(),
+              ),
+              to: formatDateTime(box.unread_period.to, locale, viewerZone()),
+            })
+          : "",
+      folded: (box) =>
+        box.unread_period
+          ? t("captureHealth.unreadPeriodFolded", {
+              from: formatDateTime(
+                box.unread_period.from,
+                locale,
+                viewerZone(),
+              ),
+              to: formatDateTime(box.unread_period.to, locale, viewerZone()),
+            })
+          : undefined,
+    },
   ];
 }
 

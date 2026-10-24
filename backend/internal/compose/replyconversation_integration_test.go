@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -51,7 +52,7 @@ func TestReplyDraftUsesTheSelectedMessageAndReadableThreadContext(t *testing.T) 
 	}
 	brain := &replyBrainStub{response: model.Response{Text: `{"subject":"Wrong target","body":"Could we confirm the proposal?"}`}}
 	drafter := newReplyDrafter(e.Pool, brain, slog.New(slog.DiscardHandler))
-	result, err := drafter.DraftEmailWithProvenance(ctx, ids.UUID(anchor.Id), "Ask for confirmation")
+	result, err := drafter.DraftEmailWithProvenance(ctx, ids.UUID(anchor.Id), draftfloor.Steering{Intent: "Ask for confirmation"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,6 +75,43 @@ func TestReplyDraftUsesTheSelectedMessageAndReadableThreadContext(t *testing.T) 
 	// the band's name.
 	if !strings.Contains(content, `"occurred_at":"2026-09-01T09:00:00Z"`) {
 		t.Fatalf("the selected message's date never reached the model: %s", content)
+	}
+}
+
+func TestAReplyRewriteCarriesTheDraftOnScreenIntoThePrompt(t *testing.T) {
+	e := integration.Setup(t)
+	anchor := logReplyMessage(e.Admin(), t, e, "pricing", "Pricing", "Selected proposal", 0)
+	brain := &replyBrainStub{response: model.Response{Text: `{"subject":"Pricing","body":"Shorter."}`}}
+	drafter := newReplyDrafter(e.Pool, brain, slog.New(slog.DiscardHandler))
+	steering := draftfloor.Steering{Intent: "shorter", RewriteOf: "Hallo Marek, bitte bestätigen Sie die Lieferung."}
+	if _, err := drafter.DraftEmailWithProvenance(e.Admin(), ids.UUID(anchor.Id), steering); err != nil {
+		t.Fatal(err)
+	}
+	content := brain.request.Messages[0].Content
+	if !strings.Contains(content, `"rewrite_of":"Hallo Marek, bitte bestätigen Sie die Lieferung."`) {
+		t.Fatalf("the draft on screen never reached the model: %s", content)
+	}
+	if !strings.Contains(brain.request.System, "rewrite_of, when present") {
+		t.Fatalf("the reply prompt does not say what rewrite_of means: %s", brain.request.System)
+	}
+	if !strings.Contains(content, `"output_language":"de"`) && !strings.Contains(content, `"language":"de"`) {
+		t.Fatalf("a rewrite lost the language of the draft it revises: %s", content)
+	}
+}
+
+func TestAShortReplyToAnEnglishThreadIsDraftedInEnglishWhateverTheAppLanguage(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	logReplyMessage(ctx, t, e, "pilot", "Pilot", "Thanks for the update, we plan to review the proposal with our team next week and come back to you.", 0)
+	anchor := logReplyMessage(ctx, t, e, "pilot", "Pilot", "ok", time.Hour)
+	brain := &replyBrainStub{response: model.Response{Text: `{"subject":"Pilot","body":"Great."}`}}
+	drafter := newReplyDrafter(e.Pool, brain, slog.New(slog.DiscardHandler))
+	drafter.envelope = draftfloor.NewResolver().WithUserLanguage(func(context.Context) string { return "vi" })
+	if _, err := drafter.DraftEmailWithProvenance(ctx, ids.UUID(anchor.Id), draftfloor.Steering{}); err != nil {
+		t.Fatal(err)
+	}
+	if content := brain.request.Messages[0].Content; !strings.Contains(content, `"output_language":"en"`) {
+		t.Fatalf("the thread's English lost to the app language: %s", content)
 	}
 }
 

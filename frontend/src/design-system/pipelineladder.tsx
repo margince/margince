@@ -225,7 +225,10 @@ const REASON_KEYS: Partial<Record<string, MessageKey>> = {
   "material_events.no_single_account": "pipeline.reason.no_single_account",
   "material_events.two_bodies_of_work": "pipeline.reason.two_bodies_of_work",
   "material_events.thread_not_all_open": "pipeline.reason.thread_not_all_open",
+  "material_events.thread_not_all_read": "pipeline.reason.thread_not_all_read",
   "material_events.no_named_reader": "pipeline.reason.no_named_reader",
+  "material_events.from_sending_systems":
+    "pipeline.reason.from_sending_systems",
 };
 
 // stageName prefers this build's own catalog and falls back to the server's.

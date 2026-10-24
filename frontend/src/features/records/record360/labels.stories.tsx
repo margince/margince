@@ -4,8 +4,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Badge } from "../../../design-system/atoms";
 import { useT } from "../../../i18n";
+import { signalKindLabel, signalTone } from "../../../lib/recordlabels";
 import { StoryProviders } from "../../../testing/story-utils";
-import { signalKindLabel, signalTone } from "./labels";
 
 // Every signal kind, in the reader's words.
 //

@@ -205,6 +205,16 @@ const ACCEPTED = new Map<string, string>([
     "a button drawn as the FIELD the palette opens with, so it wears the " +
       "field's height too (app/topbar.css says so where it is drawn)",
   ],
+  [
+    ".record-split-verbs .btn:not(.btn-primary)",
+    "a verb tile in the record's verb bar stacks a glyph over its word, so it " +
+      "is a two-line box that takes an equal share of the bar's width",
+  ],
+  [
+    ".standing-timeline-mark",
+    "a glyph chip on the How it stands line: it marks one logged item among " +
+      "others a few pixels apart, so it is a mark on an axis and not a verb in a row",
+  ],
   // Text, not boxes. The link variant and the affordances that sit inside a
   // running line: a 32px box there sets the height of the line around it.
   [

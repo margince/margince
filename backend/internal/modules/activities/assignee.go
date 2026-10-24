@@ -38,8 +38,9 @@ import (
 // had not, so a task could be MINTED onto an agent seat and only fail to move
 // afterwards.
 func ensureAssigneeCanHoldWork(ctx context.Context, tx pgx.Tx, assigneeID *ids.UserID) error {
-	return ensureSeatHoldsWork(ctx, tx, assigneeID,
-		`SELECT is_agent FROM app_user WHERE id = $1 AND `+workforce.LiveMemberSQL(""))
+	_, err := seatHoldingWork(ctx, tx, assigneeID,
+		`SELECT is_agent, status FROM app_user WHERE id = $1 AND `+workforce.LiveMemberSQL(""))
+	return err
 }
 
 // ensureNewTaskAssignee is ensureAssigneeCanHoldWork for a task being CREATED,
@@ -49,56 +50,82 @@ func ensureAssigneeCanHoldWork(ctx context.Context, tx pgx.Tx, assigneeID *ids.U
 // same rule a new lead's owner follows. Moving an EXISTING task keeps asking
 // ensureAssigneeCanHoldWork, so nothing is re-routed to a seat nobody answers.
 func ensureNewTaskAssignee(ctx context.Context, tx pgx.Tx, assigneeID *ids.UserID) error {
-	return ensureSeatHoldsWork(ctx, tx, assigneeID,
-		`SELECT is_agent FROM app_user WHERE id = $1 AND `+workforce.ActivatableMemberSQL(""))
+	_, err := newTaskSeat(ctx, tx, assigneeID)
+	return err
 }
 
-// ensureSeatHoldsWork runs one of the two seat questions above.
-func ensureSeatHoldsWork(ctx context.Context, tx pgx.Tx, assigneeID *ids.UserID, seatSQL string) error {
+// newTaskSeat is ensureNewTaskAssignee that also says whether the seat has
+// signed in yet.
+func newTaskSeat(ctx context.Context, tx pgx.Tx, assigneeID *ids.UserID) (string, error) {
+	return seatHoldingWork(ctx, tx, assigneeID,
+		`SELECT is_agent, status FROM app_user WHERE id = $1 AND `+workforce.ActivatableMemberSQL(""))
+}
+
+// seatHoldingWork runs one of the two seat questions above and returns the
+// seat's status.
+func seatHoldingWork(ctx context.Context, tx pgx.Tx, assigneeID *ids.UserID, seatSQL string) (string, error) {
 	if assigneeID == nil {
-		return nil
+		return "", nil
 	}
 	var isAgent bool
-	err := tx.QueryRow(ctx, seatSQL, *assigneeID).Scan(&isAgent)
+	var status string
+	err := tx.QueryRow(ctx, seatSQL, *assigneeID).Scan(&isAgent, &status)
 	if errors.Is(err, pgx.ErrNoRows) {
 		// A seat that is not there, not active, or archived is answered the way
 		// it always was: not found, indistinguishable from a guessed id.
-		return apperrors.ErrNotFound
+		return "", apperrors.ErrNotFound
 	}
 	if err != nil {
-		return err
+		return "", err
 	}
 	if isAgent {
-		return &AgentAssigneeError{}
+		return "", &AgentAssigneeError{}
 	}
-	return nil
+	return status, nil
 }
 
-// SeatCanHoldAutomaticWork reports whether an automatic writer may give this seat a
-// task, by ASKING the check the writer itself applies.
+// SeatWorkState is whether a seat may be given a new task, and whether it has
+// signed in yet.
+type SeatWorkState int
+
+const (
+	// SeatCannotHoldWork is a seat that is missing, deactivated, archived or an agent.
+	SeatCannotHoldWork SeatWorkState = iota
+	// SeatActive is a colleague who has signed in.
+	SeatActive
+	// SeatInvited is a colleague who has not signed in yet; their work waits.
+	SeatInvited
+)
+
+// NewTaskSeatState answers, for a writer about to create a task, the question
+// creating a task by hand asks of its assignee: an invited colleague counts.
 //
-// Asking rather than writing and recovering: a refused write aborts the caller's
-// transaction, so a writer that tried and fell back would be continuing inside a
-// transaction Postgres has already given up on. A caller that must choose between
-// writing a task and proposing one has to know before it writes.
-//
-// The same call the writer makes, not a second query agreeing with it — a copy here
-// would answer "yes" to a seat the write then refuses, which is the failure this
-// exists to prevent.
-func SeatCanHoldAutomaticWork(ctx context.Context, tx pgx.Tx, seat ids.UserID) (bool, error) {
-	err := ensureAssigneeCanHoldWork(ctx, tx, &seat)
-	switch {
-	case err == nil:
-		return true, nil
-	case errors.Is(err, apperrors.ErrNotFound):
-		// Not there, not active, or archived — the writer's own answer, and not an
-		// error for a caller who is deciding rather than asserting.
-		return false, nil
+// Asking rather than writing and recovering. A refused write aborts the
+// caller's transaction, and a writer that fell back would continue inside a
+// transaction Postgres has given up on. It is the create door's own call, so it
+// cannot answer "yes" to a seat the write then refuses.
+func NewTaskSeatState(ctx context.Context, tx pgx.Tx, seat ids.UserID) (SeatWorkState, error) {
+	status, err := newTaskSeat(ctx, tx, &seat)
+	if err == nil {
+		if status == "invited" {
+			return SeatInvited, nil
+		}
+		return SeatActive, nil
+	}
+	if errors.Is(err, apperrors.ErrNotFound) {
+		return SeatCannotHoldWork, nil
 	}
 	if _, ok := errors.AsType[*AgentAssigneeError](err); ok {
-		return false, nil
+		return SeatCannotHoldWork, nil
 	}
-	return false, err
+	return SeatCannotHoldWork, err
+}
+
+// SeatCanHoldAutomaticWork is NewTaskSeatState as a yes or no, for the card's
+// "assignee inactive" state.
+func SeatCanHoldAutomaticWork(ctx context.Context, tx pgx.Tx, seat ids.UserID) (bool, error) {
+	state, err := NewTaskSeatState(ctx, tx, seat)
+	return state != SeatCannotHoldWork, err
 }
 
 // AgentAssigneeError refuses work aimed at an agent seat.

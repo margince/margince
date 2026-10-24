@@ -26,17 +26,23 @@ function Harness({
   onReorder,
   busy,
   without,
+  plus,
 }: Readonly<{
   onReorder?: (keys: string[]) => void;
   busy?: boolean;
   // A row the page took away, as another control on it can.
   without?: string;
+  // A row the page added, as another control on it can.
+  plus?: Row;
 }>) {
   const [rows, setRows] = useState(ROWS);
   return (
     <SortableList
       label="Rows"
-      items={rows.filter((row) => row.key !== without)}
+      items={[
+        ...rows.filter((row) => row.key !== without),
+        ...(plus ? [plus] : []),
+      ]}
       busy={busy}
       labels={labels}
       onReorder={
@@ -155,6 +161,21 @@ describe("SortableList", () => {
     fireEvent.pointerUp(globalThis.window, { pointerId: 1 });
     expect(onReorder).not.toHaveBeenCalled();
     expect(screen.queryByText(/^Bravo is /)).toBeNull();
+  });
+
+  it("drops a drag that lands after a row was swapped for another", () => {
+    const onReorder = vi.fn();
+    const { rerender } = render(<Harness onReorder={onReorder} />);
+    dragBravoToTheEnd();
+    rerender(
+      <Harness
+        onReorder={onReorder}
+        without="a"
+        plus={{ key: "d", name: "Delta" }}
+      />,
+    );
+    fireEvent.pointerUp(globalThis.window, { pointerId: 1 });
+    expect(onReorder).not.toHaveBeenCalled();
   });
 
   it("draws no grip for a reader who may not reorder", () => {

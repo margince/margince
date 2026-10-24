@@ -143,7 +143,7 @@ func TestContactMergePreviewProtectsAndPreservesSignatureEvidence(t *testing.T) 
 		}
 		latest = ids.UUID(message.Id)
 		result, err := e.Contacts.ApplySignatureFields(ctx, ids.From[ids.ContactKind](contactIDs[0]), latest,
-			[]contacts.SignatureField{{Name: "title", Value: statement.title, Evidence: body, Confidence: statement.confidence}})
+			[]contacts.SignatureField{{Name: "title", Value: statement.title, Evidence: body, Confidence: statement.confidence}}, true)
 		if err != nil || result.Applied != 1 {
 			t.Fatalf("signature: %+v, %v", result, err)
 		}

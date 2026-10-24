@@ -47,6 +47,16 @@ func dressedDeal(t *testing.T, e *integration.Env) ids.UUID {
 		        4200000, 'EUR', now()::date + 30, true, 'commit')`,
 		pipeline, open, e.Rep1)
 
+	// A required criterion the stage declares and nothing has shown met, which
+	// is what UnmetExitCriteria counts. Unmet by ABSENCE of evidence here; the
+	// refuted and not-met cases are asserted in the rule's own suite.
+	if _, err := owner.Exec(ctx, `
+		INSERT INTO stage_exit_criterion (stage_id, key, label, kind, "position")
+		VALUES ($1, 'buyer_confirmed', 'The buyer confirmed', 'buyer_confirmed', 0)`,
+		open); err != nil {
+		t.Fatalf("seeding a stage exit criterion: %v", err)
+	}
+
 	inbound := integration.SeedIDRow(t, owner, `
 		INSERT INTO activity (id, kind, subject, occurred_at, direction, source, captured_by)
 		VALUES ($1, 'email', 'they wrote', now() - interval '2 days', 'inbound', 'manual', 'test')`)
@@ -59,7 +69,7 @@ func dressedDeal(t *testing.T, e *integration.Env) ids.UUID {
 
 	if _, err := owner.Exec(ctx, `
 		INSERT INTO offer (deal_id, offer_number, status, currency, net_minor, gross_minor, source, captured_by)
-		VALUES ($1, 'O-1', 'sent', 'EUR', 4300000, 4300000, 'manual', 'test')`, deal); err != nil {
+		VALUES ($1, 'A-1', 'sent', 'EUR', 4300000, 4300000, 'manual', 'test')`, deal); err != nil {
 		t.Fatalf("seeding the sent offer: %v", err)
 	}
 	// A second, newer offer in another currency must NOT become the total: a
@@ -67,7 +77,7 @@ func dressedDeal(t *testing.T, e *integration.Env) ids.UUID {
 	// exchange rate.
 	if _, err := owner.Exec(ctx, `
 		INSERT INTO offer (deal_id, offer_number, status, currency, net_minor, gross_minor, source, captured_by, updated_at)
-		VALUES ($1, 'O-2', 'sent', 'USD', 9900000, 9900000, 'manual', 'test', now() + interval '1 minute')`,
+		VALUES ($1, 'A-2', 'sent', 'USD', 9900000, 9900000, 'manual', 'test', now() + interval '1 minute')`,
 		deal); err != nil {
 		t.Fatalf("seeding the foreign-currency offer: %v", err)
 	}

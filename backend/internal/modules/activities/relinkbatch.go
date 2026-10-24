@@ -63,6 +63,12 @@ type RelinkActivityInput struct {
 	// activities and one version cannot speak for them, so the batch doors
 	// refuse a pin rather than applying it to whichever row happens to match.
 	IfVersion *int64
+	// unfiledOnly makes the write conditional on the activity having no link
+	// of this type, checked under the row lock. Automatic filing uses it; an
+	// ordinary relink adds beside what is there.
+	unfiledOnly bool
+	// evidence is the reason an automatic writer records in the audit row.
+	evidence map[string]any
 }
 
 // RelinkActivity is the single-relink door: admits the request, then commits
@@ -75,9 +81,15 @@ func (s *Store) RelinkActivity(ctx context.Context, id ids.ActivityID, in Relink
 	}
 	var out crmcontracts.Activity
 	err = s.tx(ctx, func(tx pgx.Tx) error {
-		_, held, err := relinkAdmittedRow(ctx, tx, id, in, column)
+		wrote, held, err := relinkAdmittedRow(ctx, tx, id, in, column)
 		if err != nil {
 			return err
+		}
+		// A colleague filing a questioned mail on a deal answers the question.
+		if wrote && in.EntityType == linkEntityDeal {
+			if err := s.answerWhichDealTx(ctx, tx, id, in.EntityID); err != nil {
+				return err
+			}
 		}
 		// held, not a bare storekit.LiveOnly: a no-op relink (the target was
 		// already linked) never reaches relinkActivityRow's own write, so a
@@ -176,6 +188,11 @@ func relinkActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Rel
 	if err := relinkMeetsItsPin(ctx, tx, id, in.IfVersion, held); err != nil {
 		return false, held, err
 	}
+	if in.unfiledOnly {
+		if filed, err := hasLinkOfType(ctx, tx, id, in.EntityType); err != nil || filed {
+			return false, held, err
+		}
+	}
 	var displaced []ids.UUID
 	if in.ReplaceExistingOfType {
 		var err error
@@ -227,9 +244,9 @@ func finalizeRelinkedActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID,
 			return err
 		}
 	}
-	auditID, err := storekit.Audit(ctx, tx, "activity_relink", "activity", id.UUID, nil, map[string]any{
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "activity_relink", "activity", id.UUID, nil, map[string]any{
 		"entity_type": in.EntityType, "entity_id": in.EntityID, "replaced": in.ReplaceExistingOfType,
-	})
+	}, in.evidence)
 	if err != nil {
 		return err
 	}
@@ -359,6 +376,9 @@ func (s *Store) RelinkThread(ctx context.Context, threadKey string, in RelinkAct
 				return err
 			case written:
 				out.Relinked++
+				if err := s.answerOnDealFiling(ctx, tx, id, in); err != nil {
+					return err
+				}
 			}
 		}
 		return nil
@@ -420,11 +440,24 @@ func (s *Store) RelinkActivities(ctx context.Context, activityIDs []ids.UUID, in
 			}
 			if written {
 				out.Relinked++
+				if err := s.answerOnDealFiling(ctx, tx, ids.From[ids.ActivityKind](raw), in); err != nil {
+					return err
+				}
 			}
 		}
 		return nil
 	})
 	return out, err
+}
+
+// answerOnDealFiling lets each row a batch door files on a deal answer its
+// conversation's question, as the single door's row does. The first of a
+// conversation's rows settles its question, and the rest find none open.
+func (s *Store) answerOnDealFiling(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in RelinkActivityInput) error {
+	if in.EntityType != linkEntityDeal {
+		return nil
+	}
+	return s.answerWhichDealTx(ctx, tx, id, in.EntityID)
 }
 
 func validateRelinkCount(count int) error {

@@ -9,6 +9,7 @@ package compose
 // per-setting validation, the base-currency freeze and the audit-only write.
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -40,6 +41,10 @@ type installationSettingsHandlers struct {
 	// environment — is still listed: the app card on the same screen is where
 	// it is made to work, and the login screen withholds it until then.
 	configuredProviders []identity.OIDCProviderConfig
+	// signInScreen is what the login screen draws right now, the identity
+	// module's own answer, set by the option that mounts the providers. Nil on
+	// a deployment that composed none.
+	signInScreen func(context.Context) []identity.OIDCProviderConfig
 	// maxUploadBytes is the deployment's attachment ceiling (OPS-CFG-12),
 	// published so an upload surface enforces the number THIS installation
 	// applies rather than one compiled into the client.
@@ -66,10 +71,10 @@ func (h installationSettingsHandlers) GetInstallationSettings(w http.ResponseWri
 
 // GetAuthenticationPolicy answers the sign-in half on its own grant.
 //
-// The values are identical to the `sign_in_providers` field of the aggregate;
-// what differs is who may read them. Every role reads the installation's name,
-// timezone and currency, and who may sign in is not that — so it answers to
-// `authentication_policy`, which the store checks before it reads the entry.
+// Apart from `sign_in_screen`, the values are identical to the aggregate's
+// `sign_in_providers`; what differs is who may read them. Every role reads the
+// installation's name, timezone and currency, but not who may sign in.
+// So this answers to `authentication_policy`, which the store checks first.
 func (h installationSettingsHandlers) GetAuthenticationPolicy(w http.ResponseWriter, r *http.Request) {
 	if h.store == nil {
 		httperr.NotImplemented(w, r, "GetAuthenticationPolicy")
@@ -100,7 +105,21 @@ func (h installationSettingsHandlers) GetAuthenticationPolicy(w http.ResponseWri
 		RequireSso:       policy.RequireSSO,
 		RequireMfa:       policy.RequireMFA,
 		OidcGroupRoleMap: groupRoleMap,
+		SignInScreen:     h.signInScreenKeys(r.Context()),
 	})
+}
+
+// signInScreenKeys rides the policy read and not the aggregate. Resolving it
+// reads stored sign-in clients, which a rep reading the currency must not cause. Empty, never null, when nothing is drawn.
+func (h installationSettingsHandlers) signInScreenKeys(ctx context.Context) []string {
+	keys := make([]string, 0)
+	if h.signInScreen == nil {
+		return keys
+	}
+	for _, p := range h.signInScreen(ctx) {
+		keys = append(keys, p.Key)
+	}
+	return keys
 }
 
 func (h installationSettingsHandlers) UpdateInstallationSettings(w http.ResponseWriter, r *http.Request) {
@@ -124,7 +143,8 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 		BaseCurrency: req.BaseCurrency,
 		// The entry refuses a code no compiled-in pack answers; the store runs
 		// the floor carry in the same transaction.
-		Country: req.Country,
+		Country:      req.Country,
+		CallWhatsApp: req.CallWhatsapp, CallTelegram: req.CallTelegram, CallZalo: req.CallZalo,
 	}
 	if req.DateFormat != nil {
 		value := string(*req.DateFormat)
@@ -240,6 +260,9 @@ func (h installationSettingsHandlers) toContract(s identity.InstallationSettings
 			s.ForecastForwardMeasure),
 		OauthAccessTokenTtlMinutes: s.OAuthAccessTokenTTLMinutes,
 		BaseCurrencyLocked:         s.BaseCurrencyLocked,
+		CallWhatsapp:               s.CallWhatsApp,
+		CallTelegram:               s.CallTelegram,
+		CallZalo:                   s.CallZalo,
 		MaxUploadBytes:             h.maxUploadBytes,
 		SignInProviders:            h.signInProviders(s.EnabledOidcProviders),
 		Operations:                 crmcontracts.OperationSettings(s.Operations),

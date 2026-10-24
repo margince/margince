@@ -1,52 +1,44 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The lead page's head, in the same three registers the contact page reads in
-// (contactpage.tsx): an inline subtitle on the name's own line, a pills row
-// under it, and a facts strip across the head. A rep who has read one record
-// type finds the same shapes on the other, rather than a lead-only layout that
-// happens to hold the same facts.
+// The lead page's head, in the registers the contact page reads in: one fact
+// per line under the name, then a pills row. Who holds the lead, and how it
+// reached its status, are the details' Ownership rows.
 
+import { useQuery } from "@tanstack/react-query";
+import { ChevronDown } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
 import type { components } from "../../api/schema";
+import { mayOwnRecords } from "../../components/assigneepicker";
 import {
   EntityRef,
   RosterPartialNote,
   useRoster,
   useRosterPartial,
 } from "../../components/entityref";
+import { fetchGrants } from "../../components/share.parts";
 import { Badge, Button } from "../../design-system/atoms";
-import { ContactLink } from "../../design-system/contactlink";
 import { ErrorLine } from "../../design-system/errorline";
 import { IdentityLine } from "../../design-system/identityline";
-import { Fact, RecordFacts } from "../../design-system/recordfacts";
 import { Select } from "../../design-system/select";
-import { formatDateAbbrev, formatNumber } from "../../format/format";
-import { viewerZone } from "../../format/timezone";
-import { useLocale, useT } from "../../i18n";
+import { useT } from "../../i18n";
 import { useCanWrite } from "../../lib/capability";
-import { sourceLabelFor } from "../../lib/leadsources";
+import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import { leadStatusLabel } from "./leadpresentation";
-import { scoreReasonLabel } from "./leadreadings";
 import type { LeadWriter } from "./leads";
 
 type Lead = components["schemas"]["Lead"];
 
-// The name's own line: what this lead does, and where, exactly the register
-// the contact page's title-and-company subtitle reads in (contactpage.tsx's
-// ContactSubtitle). A lead carries no company FK, company_name is free text,
-// so unlike the contact's it is never a link.
+// Under the name, one fact per line: what this lead does, and where. A lead
+// carries no company FK, company_name is free text, so unlike the contact's
+// it is never a link.
 export function LeadSubtitle({ lead }: Readonly<{ lead: Lead }>): ReactNode {
-  if (!lead.title && !lead.company_name) {
-    return null;
-  }
   return (
-    <div className="record-sub record-sub-inline">
-      {lead.title}
-      {lead.title && lead.company_name ? " · " : ""}
-      {lead.company_name}
-    </div>
+    <>
+      {lead.title && <span>{lead.title}</span>}
+      {lead.company_name && <span>{lead.company_name}</span>}
+    </>
   );
 }
 
@@ -75,9 +67,41 @@ function statusPillTone(
   }
 }
 
-// The pills under the name: that this is a lead, and where it stands on the
-// ladder. Nothing else rides here: the owner moved to the facts strip below,
-// where a reader acts on it, and the address followed it.
+// Who else may open the lead, read off its grants: "Shared" once one exists,
+// "Not shared" before. A reader the grants are not shown to gets no pill,
+// rather than a guess. Pressing it opens the share screen.
+function LeadSharePill({ lead }: Readonly<{ lead: Lead }>): ReactNode {
+  const t = useT();
+  const grants = useQuery({
+    queryKey: ["record-grants", "lead", lead.id],
+    queryFn: () => fetchGrants("lead", lead.id),
+  });
+  if (!grants.isSuccess) {
+    return null;
+  }
+  const label =
+    (grants.data?.length ?? 0) > 0
+      ? t("visibility.workspace")
+      : t("record.details.notShared");
+  // A lead nobody may change cannot be shared further, the same refusal the
+  // menu's Share verb states. So its pill is a fact and not a door.
+  if (lead.archived_at || lead.writable === false) {
+    return <Badge>{label}</Badge>;
+  }
+  return (
+    <button
+      type="button"
+      className="lead-share-pill"
+      onClick={() => navigate({ screen: "share", id: "lead", id2: lead.id })}
+    >
+      <Badge>{label}</Badge>
+      <ChevronDown aria-hidden="true" />
+    </button>
+  );
+}
+
+// The pills under the name: that this is a lead, where it stands on the
+// ladder, and who else may open it.
 export function LeadPulse({ lead }: Readonly<{ lead: Lead }>): ReactNode {
   const t = useT();
   const label = leadStatusLabel(lead.status);
@@ -85,10 +109,13 @@ export function LeadPulse({ lead }: Readonly<{ lead: Lead }>): ReactNode {
   // space between, never stretched across the head.
   return (
     <IdentityLine separator="space">
-      <Badge tone="accent">{t("lead.marker")}</Badge>
+      {/* Plain, not a state colour: that this is a lead is a kind, not a
+          reading. */}
+      <Badge>{t("lead.marker")}</Badge>
       <Badge tone={statusPillTone(lead.status)}>
         {label ? t(label) : lead.status}
       </Badge>
+      <LeadSharePill lead={lead} />
     </IdentityLine>
   );
 }
@@ -163,16 +190,16 @@ function AssigneePicker({
   );
 }
 
-// Ownership: who holds the lead, and reassignment to any workspace user. The
-// owner reads as a NAME: EntityRef resolves it by id and falls back to the id
-// only once that read has settled without one, so a reader is never handed a
-// bare uuid while a name is still on its way.
-// Reassignment is a plain owner change (UC-E13-04): the server audits it and
-// keeps whatever routing decision it overrides, so the only thing this
-// control owes the reader is an honest list of who they can hand it to.
+// Ownership: who holds the lead, and reassignment to any workspace user.
+// The owner reads as a name. EntityRef resolves it by id and falls back to the
+// id only once that read has settled without one. So a reader is never handed
+// a bare uuid while a name is still on its way.
+// Reassignment is a plain owner change. The server audits it and keeps
+// whatever routing decision it overrides. So the only thing this control owes
+// the reader is the list of who they can hand it to.
 //
-// No caption of its own: it is drawn inside the facts strip's Owner cell,
-// whose own Eyebrow already says what this value is.
+// No caption of its own: it is drawn inside the Ownership section's Owner
+// row, whose label already says what this value is.
 function LeadOwner({
   lead,
   meId,
@@ -198,7 +225,7 @@ function LeadOwner({
   // yourself is the common case on a small team, and it is now an option in
   // this one control rather than a button of its own (ADR-0108 §5).
   const candidates = (roster.data ?? [])
-    .filter((entry) => !("is_agent" in entry) || !entry.is_agent)
+    .filter(mayOwnRecords)
     .filter((entry) => entry.id !== lead.owner_id)
     .sort((a, b) => {
       if (a.id === meId) return -1;
@@ -208,7 +235,7 @@ function LeadOwner({
 
   return (
     <div className="lead-stack">
-      <div className="lead-line">
+      <div className="lead-line lead-owner-line">
         {lead.owner_id ? (
           lead.owner_id === meId ? (
             <span>{t("lead.ownerYou")}</span>
@@ -253,13 +280,12 @@ function LeadOwner({
   );
 }
 
-// The lead's owner, in the facts strip where a reader looks for it beside the
-// record's other summary values.
+// The lead's owner, with the control that hands it on.
 //
 // Its own component rather than inline in the header's props, because what
 // makes it pressable is three separate questions and they belong beside each
 // other rather than spread through a JSX attribute list.
-function LeadOwnerControl({
+export function LeadOwnerControl({
   lead,
   writer,
   terminalReasonId,
@@ -307,58 +333,25 @@ function LeadOwnerControl({
   );
 }
 
-// The facts strip across the head: how to reach this lead, where it came
-// from, and who holds it, the same register the contact page's own strip
-// reads in (contactpage.tsx's ContactFacts), so a rep moving between record
-// types keeps meeting the same row of cells. Owner keeps its Assign control
-// live in the cell: the strip is a place a reader ACTS on this one value, not
-// only reads it.
-export function LeadFacts({
-  lead,
-  id,
-  writer,
-  terminalReasonId,
-}: Readonly<{
-  lead: Lead;
-  id: string;
-  writer: LeadWriter;
-  terminalReasonId: string;
-}>): ReactNode {
-  const t = useT();
-  const { locale } = useLocale();
-  return (
-    <RecordFacts>
-      {lead.email && (
-        <Fact label={t("history.field.email")}>
-          <ContactLink
-            kind="email"
-            value={lead.email}
-            record={{ entityType: "lead", entityId: id }}
-            readOnly={Boolean(lead.archived_at)}
-            className="link-button lead-email"
-            textClassName="lead-email"
-          />
-        </Fact>
-      )}
-      {lead.company_name && (
-        <Fact label={t("create.companyName")}>{lead.company_name}</Fact>
-      )}
-      <Fact label={t("lead.ownerLabel")}>
-        <LeadOwnerControl
-          lead={lead}
-          writer={writer}
-          terminalReasonId={terminalReasonId}
-        />
-      </Fact>
-      <Fact label={t("lead.score")}>
-        {formatNumber(lead.score, locale)} · {scoreReasonLabel(lead, t)}
-      </Fact>
-      <Fact label={t("list.created")}>
-        {formatDateAbbrev(lead.created_at, locale, viewerZone())}
-      </Fact>
-      <Fact label={t("history.field.source")}>
-        {sourceLabelFor(lead, undefined, t)}
-      </Fact>
-    </RecordFacts>
-  );
+// What moved a system-set Engaged, in the few words the status row has.
+const SET_BY_TRIGGER = {
+  inbound_reply: "lead.ladder.setByReply",
+  meeting_booked: "lead.ladder.setByBooking",
+  meeting_held: "lead.ladder.setByMeeting",
+} as const;
+
+// How the system or a user put the lead on its rung, after the rung's name.
+export function statusSetBy(lead: Lead, t: ReturnType<typeof useT>): string {
+  const key = leadStatusLabel(lead.status);
+  const label = key ? t(key) : lead.status;
+  if (lead.status_set_by === "human") {
+    return t("lead.ladder.byHand", { label });
+  }
+  if (lead.status_set_by !== "system") {
+    return label;
+  }
+  const trigger = lead.qualification_evidence?.trigger;
+  return trigger && lead.status === "engaged"
+    ? t(SET_BY_TRIGGER[trigger], { label })
+    : t("lead.ladder.automatic", { label });
 }

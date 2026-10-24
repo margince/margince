@@ -165,9 +165,12 @@ func recordFirstResponseTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, at
 			return err
 		}
 		var current *time.Time
-		if err := tx.QueryRow(ctx, `SELECT first_response_at FROM lead WHERE id = $1`, leadID).Scan(&current); err != nil {
+		var created time.Time
+		if err := tx.QueryRow(ctx, `SELECT first_response_at, created_at FROM lead WHERE id = $1`, leadID).Scan(&current, &created); err != nil {
 			return err
 		}
+		// A backdated activity can predate the lead it answers.
+		at = firstResponseStamp(at, created)
 		// The FIRST response is the earliest one, not the first one this
 		// subscriber happened to process: the bus is at-least-once and
 		// unordered, so a 09:00 reply may arrive after a 10:00 one. A later
@@ -283,6 +286,13 @@ func leadTouchesFor(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, deadline 
 	return out, rows.Err()
 }
 
+// IntakeSeat is the seat that answers for a breach nobody else can be given.
+// It reads (id, true) when one is configured and can still work the queue.
+// The scan and the delivery of its event share it.
+func IntakeSeat(ctx context.Context, tx pgx.Tx) (ids.UUID, bool, error) {
+	return unassignedEscalationTarget(ctx, tx, config.Bound())
+}
+
 // unassignedEscalationTarget reads the configured intake seat: (id, true) for a
 // seat that can still work the queue, else (zero, false). A seat that is set
 // but is no active colleague also logs a warning. The read is the ungated machinery
@@ -323,6 +333,6 @@ func warnSeatAnswersNobody(ctx context.Context, cfg *config.Config) {
 	if origin, locked := cfg.Locked(UnassignedEscalationUserID.Key()); locked {
 		source = origin.String()
 	}
-	slog.WarnContext(ctx, "contacts: the unassigned escalation seat is not an active colleague, so a breach on an unowned lead escalates to nobody",
+	slog.WarnContext(ctx, "contacts: the unassigned escalation seat is not an active colleague, so a breach on a lead with no owner, or whose owner has left, escalates to nobody",
 		"setting", UnassignedEscalationUserID.Key(), "origin", source)
 }

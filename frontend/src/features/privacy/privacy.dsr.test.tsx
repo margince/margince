@@ -1,14 +1,9 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import {
-  cleanup,
-  fireEvent,
-  screen,
-  waitFor,
-  within,
-} from "@testing-library/react";
+import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { en } from "../../i18n/en";
 import { RequestsPanel } from "../settings/settings.privacy";
 import {
   choose,
@@ -207,11 +202,10 @@ describe("opening a DSR (G-2)", () => {
       "anna@acme.test",
     );
     await screen.findByText(/GDPR, one calendar month/);
-    // type="date" only accepts a programmatic value change in jsdom (same
-    // limitation tasks.test.tsx works around for its own due-date field).
-    fireEvent.change(screen.getByLabelText(/earlier deadline/i), {
-      target: { value: "2026-07-15" },
-    });
+    await userEvent.type(
+      screen.getByRole("textbox", { name: /earlier deadline/i }),
+      "15/07/2026",
+    );
     await userEvent.click(
       screen.getByRole("button", { name: /open request/i }),
     );
@@ -232,6 +226,11 @@ describe("opening a DSR (G-2)", () => {
 });
 
 describe("fulfilling an erasure", () => {
+  // The whole label, so a dialog that stops showing the word fails here.
+  function erasePhraseInput() {
+    return screen.getByLabelText(`${en["privacy.typeErasePrompt"]} ERASE`);
+  }
+
   it("holds the confirm until ERASE is typed", async () => {
     stubRoutes();
     render(<RequestsPanel />);
@@ -248,8 +247,21 @@ describe("fulfilling an erasure", () => {
       name: /erase and suppress/i,
     });
     expect(confirm).toBeDisabled();
-    await userEvent.type(screen.getByLabelText(/type erase/i), "ERASE");
+    await waitFor(() => expect(erasePhraseInput()).toHaveFocus());
+    // Case-sensitive, like every typed confirmation: the word is shown in bold.
+    await userEvent.type(erasePhraseInput(), "erase");
+    expect(confirm).toBeDisabled();
+    await userEvent.clear(erasePhraseInput());
+    await userEvent.type(erasePhraseInput(), " ERASE ");
     expect(confirm).toBeEnabled();
+    // The record's drawer stays open under the confirm, so scope to the confirm.
+    const confirmDialog = confirm.closest("[role='dialog']");
+    if (!(confirmDialog instanceof HTMLElement)) {
+      throw new Error("the erase confirm is not inside a dialog");
+    }
+    expect(within(confirmDialog).getByRole("status")).toHaveTextContent(
+      en["confirmPhrase.matches"],
+    );
   });
 
   // gobd.html: retention wins for the statutory window (Art. 17(3)(b)). The
@@ -278,12 +290,13 @@ describe("fulfilling an erasure", () => {
     await userEvent.type(screen.getByLabelText(/resolution/i), "verified");
     const row = await findDsrRow("8f3a-contact-uuid");
     await userEvent.click(within(row).getByRole("button", { name: /fulfil/i }));
-    await userEvent.type(screen.getByLabelText(/type erase/i), "ERASE");
-    await userEvent.click(
-      screen.getByRole("button", { name: /erase and suppress/i }),
-    );
+    await userEvent.type(erasePhraseInput(), "ERASE");
+    const confirm = screen.getByRole("button", { name: /erase and suppress/i });
+    await userEvent.click(confirm);
     expect(await screen.findByText(/legal hold/i)).toBeInTheDocument();
     expect(screen.getByText(/no override/i)).toBeInTheDocument();
+    // The phrase still matches, and the hold keeps the confirm shut anyway.
+    expect(confirm).toBeDisabled();
   });
 
   // Unlike the legal hold above, a stale-transition 422 is not a lawful
@@ -320,7 +333,7 @@ describe("fulfilling an erasure", () => {
     await userEvent.type(screen.getByLabelText(/resolution/i), "verified");
     const row = await findDsrRow("8f3a-contact-uuid");
     await userEvent.click(within(row).getByRole("button", { name: /fulfil/i }));
-    await userEvent.type(screen.getByLabelText(/type erase/i), "ERASE");
+    await userEvent.type(erasePhraseInput(), "ERASE");
     const confirm = screen.getByRole("button", { name: /erase and suppress/i });
     await userEvent.click(confirm);
 
@@ -360,7 +373,7 @@ describe("fulfilling an erasure", () => {
     await userEvent.type(screen.getByLabelText(/resolution/i), "verified");
     const row = await findDsrRow("8f3a-contact-uuid");
     await userEvent.click(within(row).getByRole("button", { name: /fulfil/i }));
-    await userEvent.type(screen.getByLabelText(/type erase/i), "ERASE");
+    await userEvent.type(erasePhraseInput(), "ERASE");
     await userEvent.click(
       screen.getByRole("button", { name: /erase and suppress/i }),
     );
@@ -408,7 +421,7 @@ describe("fulfilling an erasure", () => {
     const row = await findDsrRow("8f3a-contact-uuid");
     const opener = within(row).getByRole("button", { name: /fulfil/i });
     await userEvent.click(opener);
-    await userEvent.type(screen.getByLabelText(/type erase/i), "ERASE");
+    await userEvent.type(erasePhraseInput(), "ERASE");
     await userEvent.click(
       screen.getByRole("button", { name: /erase and suppress/i }),
     );

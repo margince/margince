@@ -45,18 +45,27 @@ type connectState struct {
 	// landingURL, never a URL — it rides the signed payload so it cannot be
 	// tampered with after the redirect leaves us.
 	ReturnTo string
+	// Then is the calendar provider whose consent follows this one, so one
+	// click connects mail and calendar. Empty ends the chain at this callback.
+	Then string
+	// WindowMonths is the past-email window asked for at connect. A mail leg
+	// imports it once its grant lands. A calendar leg carries it only when the
+	// mail leg did not start it, so its landing can offer the start.
+	WindowMonths int
 }
 
 // wireState is the JSON form actually signed — ids.UUID as strings, plus the
 // expiry, so the payload is self-describing and version-tolerant.
 type wireState struct {
-	Workspace string `json:"ws"`
-	User      string `json:"u"`
-	Provider  string `json:"p"`
-	Nonce     string `json:"n"`
-	ReturnTo  string `json:"rt,omitempty"`
-	Version   int    `json:"v,omitempty"`
-	Exp       int64  `json:"exp"` // unix seconds
+	Workspace    string `json:"ws"`
+	User         string `json:"u"`
+	Provider     string `json:"p"`
+	Nonce        string `json:"n"`
+	ReturnTo     string `json:"rt,omitempty"`
+	Then         string `json:"th,omitempty"`
+	WindowMonths int    `json:"iw,omitempty"`
+	Version      int    `json:"v,omitempty"`
+	Exp          int64  `json:"exp"` // unix seconds
 }
 
 // stateSigner mints and verifies signed state tokens with an HMAC key.
@@ -84,13 +93,15 @@ func (s stateSigner) usable() bool { return len(s.key) >= minStateKeyLen }
 // tuple until exp.
 func (s stateSigner) sign(st connectState, exp time.Time) string {
 	payload, _ := json.Marshal(wireState{ //nolint:errchkjson // string/int-only struct never errors
-		Workspace: st.Workspace.String(),
-		User:      st.User.String(),
-		Provider:  st.Provider,
-		Nonce:     st.Nonce,
-		ReturnTo:  st.ReturnTo,
-		Version:   st.Version,
-		Exp:       exp.Unix(),
+		Workspace:    st.Workspace.String(),
+		User:         st.User.String(),
+		Provider:     st.Provider,
+		Nonce:        st.Nonce,
+		ReturnTo:     st.ReturnTo,
+		Then:         st.Then,
+		WindowMonths: st.WindowMonths,
+		Version:      st.Version,
+		Exp:          exp.Unix(),
 	})
 	enc := base64.RawURLEncoding.EncodeToString(payload)
 	return enc + "." + base64.RawURLEncoding.EncodeToString(s.mac(enc))
@@ -132,6 +143,7 @@ func (s stateSigner) verify(token string, now time.Time) (connectState, error) {
 	return connectState{
 		Workspace: ws, User: user, Provider: w.Provider,
 		Nonce: w.Nonce, ReturnTo: w.ReturnTo, Version: w.Version,
+		Then: w.Then, WindowMonths: w.WindowMonths,
 	}, nil
 }
 

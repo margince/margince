@@ -1,0 +1,33 @@
+/* RecordDetails: flat groups under the record's head. A group is a small
+   grey label over a flat `FactList`; nothing is boxed but the footnote. */
+
+.recorddetails {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+  min-inline-size: 0;
+}
+.recorddetails-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-inline-size: 0;
+}
+/* Scoped under the group so it outranks the heading's own size rule. */
+.recorddetails-group > .recorddetails-label.heading {
+  margin-block-end: var(--space-1);
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
+.recorddetails-toggle {
+  align-self: flex-start;
+}
+.recorddetails-note {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--r-control);
+  background: var(--bgInset);
+  font: var(--fontBodySmall);
+  color: var(--textPrimary);
+  text-wrap: pretty;
+}

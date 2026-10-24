@@ -159,3 +159,64 @@ describe("a long pipeline", () => {
     expect(screen.queryByRole("region")).toBeNull();
   });
 });
+
+describe("the bars shape", () => {
+  afterEach(cleanup);
+
+  const bars = (onNext = () => undefined): StageStep[] => [
+    {
+      key: "a",
+      label: "New",
+      done: true,
+      sub: "2 Aug",
+      onPick: () => undefined,
+    },
+    {
+      key: "b",
+      label: "Contacted",
+      current: true,
+      sub: "4 Aug · now",
+      onPick: () => undefined,
+    },
+    { key: "c", label: "Engaged", onPick: onNext },
+    { key: "won", label: "Qualified", terminal: true, onPick: () => undefined },
+  ];
+
+  it("says where the record stands and offers the next stage", () => {
+    const onNext = vi.fn();
+    render(<StageLadder label="Status" variant="bars" steps={bars(onNext)} />);
+    expect(screen.getByText("Stage 2 of 3")).toBeInTheDocument();
+    screen.getByRole("button", { name: /Move to Engaged/ }).click();
+    expect(onNext).toHaveBeenCalledOnce();
+  });
+
+  it("draws the current stage as a marker with its sub line, not a button", () => {
+    render(<StageLadder label="Status" variant="bars" steps={bars()} />);
+    const here = document.querySelector('[aria-current="step"]');
+    expect(here).toHaveTextContent("Contacted4 Aug · now");
+    expect(here?.tagName).toBe("SPAN");
+    expect(screen.getByText("2 Aug")).toBeInTheDocument();
+  });
+
+  it("offers no next move from the last open stage", () => {
+    const last = bars().map((step) => ({
+      ...step,
+      current: step.key === "c",
+    }));
+    render(<StageLadder label="Status" variant="bars" steps={last} />);
+    expect(screen.queryByRole("button", { name: /Move to/ })).toBeNull();
+  });
+
+  it("names a way out the record took as a chip, and no position", () => {
+    const closed = bars().map((step) => ({
+      ...step,
+      current: step.key === "won",
+    }));
+    render(<StageLadder label="Status" variant="bars" steps={closed} />);
+    const chip = within(
+      screen.getByRole("group", { name: "Status" }),
+    ).getByText("Qualified");
+    expect(chip.closest('[aria-current="step"]')).not.toBeNull();
+    expect(screen.queryByText(/Stage \d of/)).toBeNull();
+  });
+});

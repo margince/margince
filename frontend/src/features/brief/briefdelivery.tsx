@@ -4,13 +4,14 @@
 // the email that points to them, so they sit with the reader's own notifications.
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useId } from "react";
+import { useId, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { PendingBody } from "../../design-system/atoms";
 import { describedByIds } from "../../design-system/describedby";
 import { Panel } from "../../design-system/panel";
 import { PanelNotices } from "../../design-system/panelnotices";
+import { useSaveDraft } from "../../design-system/savepage";
 import { Select } from "../../design-system/select";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { useT } from "../../i18n";
@@ -39,7 +40,7 @@ export function BriefDeliveryPanel() {
  * a blank: the server distinguishes "never chose" from "chose none", and the
  * screen's job is to show what happens today, which for an unchosen setting is
  * whatever the installation does. Sending is that default, so the control shows
- * it — and touching the control is what turns a default into a decision.
+ * it, and saving a pick is what turns a default into a decision.
  */
 function BriefDeliveryRows() {
   const t = useT();
@@ -52,30 +53,56 @@ function BriefDeliveryRows() {
       return data ?? {};
     },
   });
-  // Each control sends only ITSELF. The endpoint is a patch, so a row that sent
-  // the whole form would let a stale render of one dropdown overwrite a choice
-  // the reader had just made in another.
+  // Only the picked keys: the endpoint is a patch, and a key left at its
+  // default must stay "never chose" rather than become a decision.
+  const [draft, setDraft] = useState<BriefDelivery>({});
   const save = useMutation({
     mutationFn: async (patch: BriefDelivery) => {
       unwrap(await api.PUT("/me/brief-delivery", { body: patch }));
     },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({
+    onSuccess: async () => {
+      // Awaited before the draft drops, so the rows never flash the old choice.
+      await queryClient.invalidateQueries({
         queryKey: ["me", "brief-delivery"],
       });
+      setDraft({});
+    },
+  });
+
+  const stored = settings.data ?? {};
+  const shown: BriefDelivery = { ...stored, ...draft };
+  const changed = Object.fromEntries(
+    Object.entries(draft).filter(
+      ([key, value]) => value !== stored[key as keyof BriefDelivery],
+    ),
+  );
+  useSaveDraft({
+    dirty: Object.keys(changed).length > 0,
+    save: () => save.mutateAsync(changed),
+    discard: () => {
+      save.reset();
+      setDraft({});
     },
   });
 
   const chosen = (value: Choice | undefined): Choice => value ?? "email";
-  const describedBy = (own: string | undefined, setting: keyof BriefDelivery) =>
-    describedByIds(
-      own,
-      save.isError && save.variables?.[setting] !== undefined && refusalId,
-    );
+  // The refused write's keys name themselves. The bar holds the one summary, and
+  // each control that was in the write points at the notice under the list.
+  const refusedBy = (setting: keyof BriefDelivery) =>
+    save.isError && save.variables?.[setting] !== undefined
+      ? refusalId
+      : undefined;
   const options = CHOICES.map((choice) => ({
     value: choice,
     label: t(choice === "email" ? "delivery.byEmail" : "delivery.none"),
   }));
+  // Narrowed through the same list the options are built from, so nothing is
+  // drafted that the control was never offering.
+  const pick =
+    (key: "morning_brief_delivery" | "weekly_delivery") => (next: string) => {
+      const picked = CHOICES.find((option) => option === next);
+      if (picked) setDraft((held) => ({ ...held, [key]: picked }));
+    };
 
   if (settings.isPending)
     return <PendingBody label={t("delivery.panelTitle")} />;
@@ -96,21 +123,13 @@ function BriefDeliveryRows() {
           control={(control) => (
             <Select
               {...control}
-              disabled={save.isPending}
-              aria-describedby={describedBy(
+              aria-describedby={describedByIds(
                 control["aria-describedby"],
-                "morning_brief_delivery",
+                refusedBy("morning_brief_delivery"),
               )}
               className="settingrow-measure"
-              value={chosen(settings.data?.morning_brief_delivery)}
-              onChange={(next) => {
-                // Narrowed through the same list the options are built from, so
-                // nothing is acted on that the control was never offering.
-                const picked = CHOICES.find((option) => option === next);
-                if (picked) {
-                  save.mutate({ morning_brief_delivery: picked });
-                }
-              }}
+              value={chosen(shown.morning_brief_delivery)}
+              onChange={pick("morning_brief_delivery")}
               options={options}
             />
           )}
@@ -122,32 +141,21 @@ function BriefDeliveryRows() {
           control={(control) => (
             <Select
               {...control}
-              disabled={save.isPending}
-              aria-describedby={describedBy(
+              aria-describedby={describedByIds(
                 control["aria-describedby"],
-                "weekly_delivery",
+                refusedBy("weekly_delivery"),
               )}
               className="settingrow-measure"
-              value={chosen(settings.data?.weekly_delivery)}
-              onChange={(next) => {
-                const picked = CHOICES.find((option) => option === next);
-                if (picked) {
-                  save.mutate({ weekly_delivery: picked });
-                }
-              }}
+              value={chosen(shown.weekly_delivery)}
+              onChange={pick("weekly_delivery")}
               options={options}
             />
           )}
         />
         <RoutineDeliveryRows
-          settings={settings.data}
-          disabled={save.isPending}
-          refusalFor={(field) =>
-            save.isError && save.variables?.[field] !== undefined
-              ? refusalId
-              : undefined
-          }
-          save={(patch) => save.mutate(patch)}
+          settings={shown}
+          refusalFor={refusedBy}
+          save={(patch) => setDraft((held) => ({ ...held, ...patch }))}
         />
       </SettingList>
       <PanelNotices

@@ -3,7 +3,10 @@
 
 package compose
 
-import "github.com/margince/margince/backend/internal/modules/activities"
+import (
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+)
 
 // THE RULE the signal extractor reads conversations by, spelled once.
 //
@@ -51,6 +54,9 @@ var conversationHead = `
 			            AND b.archived_at IS NULL AND b.captured_by LIKE 'connector:%'
 			       ))::uuid AS oldest_id,
 			       count(DISTINCT a.id) AS message_count,
+			       -- A thread with no message from a human sender has nothing to read
+			       -- for what it says about an account.
+			       bool_or(NOT a.sender_is_machine) AS has_human_sender,
 			       min(ro.company_id::text) AS one_company,
 			       count(DISTINCT ro.company_id) AS company_count,
 			       -- The same question one level down. A thread is read as one
@@ -121,9 +127,21 @@ var conversationHead = `
 			       NOT EXISTS (SELECT 1 FROM activity t
 			                    WHERE t.thread_key = a.thread_key AND t.kind = 'email'
 			                      AND t.archived_at IS NULL
-			                      AND t.audience <> 'workspace') AS every_message_open
+			                      AND t.audience <> 'workspace') AS every_message_open,
+			       -- Every message read in full. A message not read in full may be
+			       -- the withdrawal of an older one, so a window without it is not
+			       -- the current conversation. Tested before the cap, so blocked
+			       -- threads take no slot; a later assessment lifts the block.
+			       NOT EXISTS (SELECT 1 FROM activity t
+			                    WHERE t.thread_key = a.thread_key AND t.kind = 'email'
+			                      AND t.archived_at IS NULL
+			                      AND NOT ` + provenance.MailBodyCompleteSQL("t") + `) AS every_message_read
 			  FROM activity a
-			  LEFT JOIN (` + activities.CompanyReachSet() + `) ro ON ro.activity_id = a.id
+			  -- A sending system's message reaches no company: a contact holding
+			  -- its address (an old import) must not pull the notice onto their
+			  -- company.
+			  LEFT JOIN (` + activities.CompanyReachSet() + `) ro
+			    ON ro.activity_id = a.id AND NOT a.sender_is_machine
 			  -- Safe to widen the row set: every aggregate above is DISTINCT,
 			  -- bool_and or min, so a message repeated once per project link
 			  -- contributes the same value it did.
@@ -152,10 +170,16 @@ const conversationTail = `
 		)
 `
 
-// The arms of the offer, each with the reason it is an arm. A member reading the
-// trace sees one of these as the answer, so the wording of the comment and the
-// wording of the rung's reason are about the same fact.
+// The arms of the offer, each with the reason it is an arm.
+// A member reading the trace sees one of these as the answer.
+// The comment and the rung's reason state the same fact.
 const (
+	// At least one message from a human sender. A thread whose every message comes
+	// from a sending system (a file-share notice, a comment notification) is
+	// not read. It gets no model call and no signal, because a finding on it
+	// would land on the notification tool's company.
+	threadHasAHumanSender = `c.has_human_sender`
+
 	// Exactly one account across the whole thread. A conversation touching two
 	// would have its events filed against whichever the join happened to pick,
 	// and a signal on the wrong account is worse than no signal.
@@ -170,6 +194,10 @@ const (
 	// summarised while one of its messages is withheld from that summary's
 	// audience is a partial account presented as a whole one.
 	threadIsFullyOpen = `c.every_message_open`
+
+	// Every message on the thread read in full, so the window is the whole
+	// current conversation and not an older subset of it.
+	threadIsFullyRead = `c.every_message_read`
 
 	// A conversation nobody else may read, whose reader cannot be named, is not
 	// offered at all. Reading it would produce a finding with no owner to answer
@@ -228,9 +256,11 @@ var dueThreadsQuery = conversationCTE("") + `		SELECT c.thread_key, c.one_compan
 		       NULLIF(s.last_activity_at, '-infinity'), s.scanned_from, s.scanned_from_id
 		  FROM conversation c
 		  LEFT JOIN signal_thread_scan s ON s.thread_key = c.thread_key
-		 WHERE ` + threadReachesOneAccount + `
+		 WHERE ` + threadHasAHumanSender + `
+		   AND ` + threadReachesOneAccount + `
 		   AND ` + threadIsOneBodyOfWork + `
 		   AND ` + threadIsFullyOpen + `
+		   AND ` + threadIsFullyRead + `
 		   AND ` + threadHasANamedReader + `
 		   AND ` + threadHasSettled + `
 		   AND NOT ` + threadIsParked + `
@@ -250,9 +280,11 @@ var dueThreadsQuery = conversationCTE("") + `		SELECT c.thread_key, c.one_compan
 // to the queue's — the arms carry their own $N and a renumbering would mean two
 // spellings of each.
 var threadOfferQuery = conversationCTE(" AND a.thread_key = $5") + `
-		SELECT ` + threadReachesOneAccount + `,
+		SELECT ` + threadHasAHumanSender + `,
+		       ` + threadReachesOneAccount + `,
 		       ` + threadIsOneBodyOfWork + `,
 		       ` + threadIsFullyOpen + `,
+		       ` + threadIsFullyRead + `,
 		       ` + threadHasANamedReader + `,
 		       ` + threadHasSettled + `,
 		       ` + threadIsParked + `,

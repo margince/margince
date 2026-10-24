@@ -4,13 +4,13 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import { en } from "../../i18n/en";
+import { SETTINGS_PAGES } from "../../lib/settingscatalog";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { SETTINGS_PAGES } from "./settingscatalog";
 import { SettingsSearchBox } from "./settingssearchbox";
 import "../../app/shell.css";
 

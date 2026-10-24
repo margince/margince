@@ -18,13 +18,14 @@ The 44 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 ## activity_meeting_attendee_repair
 
-3 columns · primary key `(activity_id)` · referenced by 0 foreign keys
+4 columns · primary key `(activity_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `activity_id` | `uuid` | yes | Points at `activity.id`. |
 | `outcome` | `text` | yes | One of `attendees`, `none`, `capped`, `capped_seats`, `unreadable`. |
 | `repaired_at` | `timestamp with time zone`, default `now()` | yes |  |
+| `rule_version` | `integer`, default `1` | yes |  |
 
 **Points at**
 

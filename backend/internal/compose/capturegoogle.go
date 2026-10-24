@@ -284,6 +284,9 @@ func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 			// struct, so an omitted resolver is one the next reader cannot see
 			// missing.
 			microsoftCredentials: s.microsoftAppResolver,
+			// Re-derived because this literal replaces the struct: a backfill wired
+			// before this option would otherwise leave the connect import unstarted.
+			importer: s.importOnConnect(),
 		}
 		// The send pre-flight reads the registry the connect flow just wrote to
 		// — the same one, not a second construction: a mailbox the user connects

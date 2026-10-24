@@ -340,11 +340,20 @@ func (s *Store) recordGeocodeAfter(
 	})
 }
 
+const (
+	columnAddressLine1      = "address_line1"
+	columnAddressLine2      = "address_line2"
+	columnAddressCity       = "address_city"
+	columnAddressRegion     = "address_region"
+	columnAddressPostalCode = "address_postal_code"
+	columnAddressCountry    = "address_country"
+)
+
 // companyAddressColumns is the set an address change touches. Named once
 // so a caller asking "did the address move" cannot ask about five of six.
 var companyAddressColumns = []string{
-	"address_line1", "address_line2", "address_city",
-	"address_region", "address_postal_code", "address_country",
+	columnAddressLine1, columnAddressLine2, columnAddressCity,
+	columnAddressRegion, columnAddressPostalCode, columnAddressCountry,
 }
 
 // movedAddress reports whether the patch actually assigned an address column.
@@ -383,6 +392,19 @@ func namesAPlace(address *crmcontracts.Address) bool {
 		return false
 	}
 	return locatable(address.Line1, address.City, address.PostalCode)
+}
+
+// locateLandedAddress queues the lookup for an address an apply just wrote.
+// changed is the apply's changed-columns image, so the audit row and the
+// lookup answer "did the address move" from one source.
+func (s *Store) locateLandedAddress(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, changed map[string]any) error {
+	if line, moved := changed[fieldRegisteredAddress]; !moved || line == nil {
+		return nil
+	}
+	if err := s.enqueueGeocode(ctx, tx, companyID); err != nil {
+		return fmt.Errorf("locating a company's new address: %w", err)
+	}
+	return nil
 }
 
 func (s *Store) enqueueGeocode(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) error {

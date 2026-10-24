@@ -26,9 +26,9 @@ This offers open stages only, and skips deals already on that stage. You cannot 
 ### How do I mark a deal as won?
 To mark a deal as won in Margince, move it to a stage whose **Stage type** is **Won**. In the pipeline you start with, that is the stage called Won. There is no separate Won button.
 1. Open the deal and click the Won stage on its **Stage** ladder. Or drag the card to the Won column on **Board**.
-2. The dialog says "This closes the deal as won. Nothing changes until you confirm." Press **Confirm**.
-3. With a signed contract attached, the deal closes. Without one, the dialog comes back asking **How was it won?**.
-4. Pick an answer and press **Confirm** again. **Other** also needs **Details**.
+2. The dialog says "This closes the deal as won. Nothing changes until you confirm."
+3. Without a signed contract, the dialog asks **How was it won?** on opening. **Confirm** waits for your answer. **Other** also needs **Details**.
+4. Press **Confirm**. The deal closes.
 
 Also called: close won, close a deal as won, win an opportunity.
 
@@ -51,7 +51,7 @@ To reopen a won or lost deal in Margince, open it and choose **More actions** â†
 Reopening clears the close date and the exchange rate fixed at close, and the dialog does not say so. It needs permission to change the deal, and you cannot reopen an archived deal. Also called: undo a close, reopen a lost deal.
 
 ### How do I bring back a deal that went cold?
-A deal that went cold is still open unless someone closed it. Margince marks an open deal **stalled** after more than 60 days with no activity, and real activity brings it back.
+A deal that went cold is still open unless someone closed it. Margince marks an open deal **stalled** after more than 60 days with no activity, and real activity brings it back. A meeting booked for later keeps the deal off stalled until it starts or is called off.
 1. On **Deals**, turn on the **Stalled only** filter to find them.
 2. Open the deal and send a mail, or use **Log activity** for a call, meeting or note.
 3. If the buyer asked you to wait, edit the deal and set **Wait until** to a later date. The mark stays hidden until then.
@@ -162,9 +162,8 @@ It must also have a file attached that is not archived, filed under Contract or
 Legal, in the Current or Final state. A contract record with no file on it, or
 only archived files, is not enough.
 
-**Or** there is not. You will not see the question until you press Confirm.
-When you press Confirm without a signed contract, the dialog comes back with a
-question:
+**Or** there is not. The dialog checks the deal when it opens, and with no
+signed contract it shows a question and holds **Confirm** until you answer it:
 
 > **How was it won?** No signed contract is attached. Record how the deal was
 > won; the answer is kept on the deal and counted in reports.
@@ -263,8 +262,8 @@ dismissed deal back.
 ## Where a deal came from
 
 A deal carries an **acquisition source**: the business channel it came from. It
-is a different field from a lead source. A lead source records how a record
-reached Margince; an acquisition source records which channel won the business.
+is a different field from a lead origin. A lead origin records where a lead
+came from; an acquisition source records which channel won the business.
 
 The list is for an administrator, at **Settings â†’ Acquisition sources**. A name
 you add makes a key that never changes after that, so renaming it later keeps

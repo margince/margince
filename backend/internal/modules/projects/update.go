@@ -24,9 +24,8 @@ import (
 
 // UpdateProjectInput is one project partial update: every field optional.
 type UpdateProjectInput struct {
-	// Clear names the wire fields to set to NULL. A JSON null cannot say so —
-	// it decodes to a nil pointer and reads as "not supplied" — so the
-	// reversal path names them here instead.
+	// Clear names the wire fields to set to NULL. A JSON null decodes to a nil
+	// pointer, so the handler lists the null keys here.
 	Clear []string
 	// Trail names what the audit trail calls this write; zero is an update.
 	Trail         storekit.AuditTrail

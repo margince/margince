@@ -5,7 +5,7 @@
  *  - the scope region and the progress line hold their own height, so an
  *    arriving estimate or an incremented count never moves the button someone
  *    is about to press;
- *  - every number sets tabular figures, so a tally counting upward changes its
+ *  - every number sets tabular figures, so a count moving upward changes its
  *    digits without changing its width.
  *
  * Copy never lives here (conformance gate) and no colour is a literal: literals
@@ -14,8 +14,8 @@
  * The step sizes itself against ITS OWN width rather than the window's: it
  * renders inside one pane of a two-column workbench, so a wide window can hand
  * it 380px while a narrow one, where the panes have already stacked, hands it
- * the full screen. Viewport breakpoints fire exactly backwards from that —
- * they would tighten the tallies where they have most room — so
+ * the full screen. Viewport breakpoints fire exactly backwards from that (they
+ * would tighten the step where it has most room), so
  * `container-type: inline-size` makes the pane the thing measured.
  */
 
@@ -24,8 +24,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  width: min(460px, 100%);
-  margin: 0 auto;
+  width: 100%;
   text-align: left;
 }
 
@@ -35,18 +34,10 @@
 
 /* ---- the scope before the spend ---------------------------------------- */
 
-/* Reserves the estimate's own two lines: the panel is laid out before the
-   preview answers, and the answer must not push the actions down the page. It
-   is never empty while it waits — the counting line stands where the number
-   will land, so the arriving estimate replaces a sentence rather than a gap. */
+/* The box is the Settings import's `.backfill-estimate`. Here it reserves the
+   estimate's two lines, so an arriving answer never pushes the actions down. */
 .ob-backread-scope {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-1);
   min-height: 44px;
-  padding: var(--space-3);
-  border-radius: var(--r-sm);
-  background: var(--bgInset);
 }
 
 .ob-backread-estimate {
@@ -76,57 +67,7 @@
   color: var(--textPrimary);
 }
 
-/* The bar draws the number stated above it and carries nothing of its own, so
-   it is aria-hidden in the markup. */
-.ob-backread-bar {
-  height: 4px;
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--bgChip);
-  overflow: hidden;
-}
-
-/* Determinate progress of a read still running: the info family, which is what
-   "work still in flight" is for. The brand accent made a wait look like the
-   page's primary action. */
-.ob-backread-bar > span {
-  display: block;
-  height: 100%;
-  border-radius: var(--r-full);
-  corner-shape: round;
-  background: var(--info);
-  transition: width 0.18s ease;
-}
-
-.ob-backread-tallies {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
-  gap: var(--space-2);
-}
-
-/* Value above label on screen, label first in the DOM: a description list read
-   aloud as "contacts found, 47" means something, "47, contacts found" does not. */
-.ob-backread-tally {
-  display: flex;
-  flex-direction: column-reverse;
-  gap: var(--space-1);
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-sm);
-  background: var(--bgElevated);
-}
-
-.ob-backread-tally-value {
-  font-family: var(--fontFamilyBody);
-  font-variant-numeric: tabular-nums;
-  color: var(--textPrimary);
-}
-
-.ob-backread-tally-label {
-  font-family: var(--fontFamilyBody);
-}
-
-/* ---- leaving ----------------------------------------------------------- */
+/* ---- the run's own verbs ----------------------------------------------- */
 
 .ob-backread-acts {
   display: flex;
@@ -136,38 +77,12 @@
 }
 
 /* ---- narrow panes ------------------------------------------------------ */
-/* Widths are the PANE's, not the window's — see the container note at the top
+/* Widths are the PANE's, not the window's: see the container note at the top
    of the file. */
 
-/* Two tallies of ~96px leave an uppercase label ("contacts found") three lines
-   under a one-line number, which is a tile that is mostly label. One column
-   instead, and a lone column of tiles is really a list: the label takes the
-   left of the line and its number the right, where a reader scanning a column
-   of figures looks for it. The DOM keeps label-then-value either way, so what
-   is read aloud is unchanged. */
-@container (max-width: 340px) {
-  .ob-backread-tallies {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .ob-backread-tally {
-    flex-direction: row;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: var(--space-2);
-    padding: var(--space-2);
-  }
-}
-
-/* At narrow widths the closing actions each need a row to keep their labels. */
+/* At narrow widths the run's verbs each need a row to keep their labels. */
 @container (max-width: 280px) {
   .ob-backread-acts > * {
     flex: 1 1 100%;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .ob-backread-bar > span {
-    transition: none;
   }
 }

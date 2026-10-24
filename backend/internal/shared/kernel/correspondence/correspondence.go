@@ -40,3 +40,26 @@ func LockIdentity(address string) string {
 func Fold(address string) string {
 	return strings.ToLower(strings.TrimSpace(address))
 }
+
+// LocalPartBase is a local part without its plus-addressing tag: the mailbox
+// owner appends `+tag` to route mail, so `anna+crm` and `anna` are one mailbox.
+// A local part with nothing in front of the `+` has no base and is kept whole.
+func LocalPartBase(local string) string {
+	if base, _, found := strings.Cut(local, "+"); found && base != "" {
+		return base
+	}
+	return local
+}
+
+// BaseAddress is the folded address with its local part cut to LocalPartBase,
+// and reports whether a tag was removed. The local part ends at the first `@`,
+// which is where the duplicate check's SQL expression ends it too.
+func BaseAddress(address string) (string, bool) {
+	folded := Fold(address)
+	local, domain, found := strings.Cut(folded, "@")
+	if !found {
+		return folded, false
+	}
+	base := LocalPartBase(local)
+	return base + "@" + domain, base != local
+}

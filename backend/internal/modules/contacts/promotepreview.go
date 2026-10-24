@@ -159,5 +159,7 @@ func (s *Store) leadContactCandidate(ctx context.Context, tx pgx.Tx, lead crmcon
 	if err != nil {
 		return ContactCandidate{}, err
 	}
-	return ContactCandidate{FullName: name, Emails: emails, ConsumerMail: consumerMail}, nil
+	// QueueNameCollisions, because a promotion creates. Exact adoption stays
+	// the exact lane's alone: a review match never lands the lead on a contact.
+	return ContactCandidate{FullName: name, Emails: emails, ConsumerMail: consumerMail, QueueNameCollisions: true}, nil
 }

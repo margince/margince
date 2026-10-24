@@ -1,15 +1,12 @@
 import { type ComponentProps, lazy, type ReactNode, Suspense } from "react";
-import { QueryGate } from "./design-system/querystates";
-import { ApprovalDetailModal } from "./features/automations/approvaleditor";
-import { CompanyDealPicker } from "./features/deals/companydealpicker";
-import {
-  DealSuggestionCard,
-  suggestedName,
-} from "./features/deals/dealsuggestion";
+import { CompanyDealPicker } from "./components/companydealpicker";
+import { DealSuggestionCard, suggestedName } from "./components/dealsuggestion";
 import {
   useDealSuggestion,
   useDealSuggestions,
-} from "./features/deals/dealsuggestions.queries";
+} from "./components/dealsuggestions.queries";
+import { QueryGate } from "./design-system/querystates";
+import { ApprovalDetailModal } from "./features/automations/approvaleditor";
 import { OpenActivityDrawer } from "./features/voice-knowledge/activitydrawer";
 import { useT } from "./i18n";
 import { type ReviewActions, ReviewActionsContext } from "./lib/reviewactions";

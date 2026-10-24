@@ -63,6 +63,7 @@ export const populated: View = {
     version: 7,
     social: { linkedin: "https://linkedin.com/in/danabuyer" },
     address: { city: "Munich", country: "DE" },
+    primary_email: "dana@brandt.example",
     emails: [
       {
         id: "pe-1",
@@ -247,6 +248,7 @@ export const channelReached: View = {
   contact: {
     ...populated.contact,
     emails: [],
+    primary_email: null,
     phones: [],
     reachability: [
       {

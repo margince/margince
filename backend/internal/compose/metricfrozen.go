@@ -32,7 +32,7 @@ func (metricEvaluator) ProjectFrozen(before crmcontracts.ReportingEvaluation, fa
 	out.Result.Context.MemberIds = []openapi_types.UUID{}
 	for _, fact := range facts {
 		owner := openapi_types.UUID(fact.OwnerID)
-		if !fact.OwnerID.IsZero() && !slices.Contains(out.Result.Context.MemberIds, owner) {
+		if !fact.OwnerID.IsZero() && !fact.OwnerWithheld && !slices.Contains(out.Result.Context.MemberIds, owner) {
 			out.Result.Context.MemberIds = append(out.Result.Context.MemberIds, owner)
 		}
 	}

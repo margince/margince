@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { en } from "../../i18n/en";
 import type { GrantSpec } from "../../testing/mefixture";
@@ -123,9 +123,11 @@ export const RowAction: Story = {
       }),
     );
     const dialog = await within(document.body).findByRole("dialog");
-    await expect(
-      await within(dialog).findByRole("link", { name: /price-list-2026\.pdf/ }),
-    ).toBeVisible();
+    const file = await within(dialog).findByRole("link", {
+      name: /price-list-2026\.pdf/,
+    });
+    // The modal fades in, so the file is visible only once it has.
+    await waitFor(() => expect(file).toBeVisible());
   },
 };
 export const RowActionDark: Story = {

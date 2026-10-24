@@ -52,7 +52,7 @@ func stageMeetingPromise(
 		e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, project_id) VALUES ($1, 'project', $2)`,
 			e.activity, project)
 	}
-	read := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9)})
+	read := e.read(t, cannedBrain{reply: groundedReply(t, 3, 0.9, e.Rep1)})
 	if len(read.ProposalIDs) != 1 {
 		t.Fatalf("want one staged proposal, got %d (%v)", len(read.ProposalIDs), read.StatusDetail)
 	}

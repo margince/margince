@@ -10,6 +10,7 @@ import { Popover } from "../../design-system/popover";
 import { provenanceOf } from "../../design-system/provenanceof";
 import { Fact, RecordFacts } from "../../design-system/recordfacts";
 import { ProvenanceTag } from "../../design-system/trust";
+import { primaryPhone } from "../../format/contacturi";
 import { formatDateAbbrev } from "../../format/format";
 import { linkedinUrl } from "../../format/weburl";
 import { useLocale, useT } from "../../i18n";
@@ -45,10 +46,9 @@ export function ContactFacts({
   const t = useT();
   const { locale } = useLocale();
   const zone = useRecordZone();
-  const viewerId = useViewerId();
   const ownerName = useMemberName(contact.owner_id);
-  const email = contact.emails?.[0]?.email;
-  const phone = contact.phones?.[0]?.phone;
+  const email = contact.primary_email;
+  const phone = primaryPhone(contact.phones)?.phone;
   return (
     <RecordFacts>
       {email && (
@@ -66,7 +66,12 @@ export function ContactFacts({
       )}
       {phone && (
         <Fact label={t("create.phone")}>
-          <ContactLink kind="phone" value={phone} className="pe-meta-link">
+          <ContactLink
+            kind="phone"
+            value={phone}
+            record={{ entityType: "contact", entityId: contact.id }}
+            className="pe-meta-link"
+          >
             {phone}
           </ContactLink>
         </Fact>
@@ -95,26 +100,36 @@ export function ContactFacts({
       <Fact label={t("list.created")}>
         {formatDateAbbrev(contact.created_at, locale, zone)}
       </Fact>
-      {/* The provenance pill names the KIND of source (the sparkle, the
-          words); the popover behind it answers WHICH one, which for a mailbox
-          capture is a message id no reader should have to scan past. */}
       <Fact label={t("history.field.source")}>
-        <Popover
-          label={
-            <ProvenanceTag
-              provenance={provenanceOf(
-                contact.captured_by,
-                viewerId,
-                contact.author,
-                contact.source,
-                contact.imported_from,
-              )}
-            />
-          }
-        >
-          <p className="t-body">{contact.source || t("trust.sourceUnknown")}</p>
-        </Popover>
+        <ContactSource contact={contact} />
       </Fact>
     </RecordFacts>
+  );
+}
+
+/**
+ * Who wrote the contact, as a provenance pill. The pill names the kind of
+ * source. The popover behind it answers which one, which for a mailbox capture
+ * is a message id no reader should have to scan past.
+ */
+export function ContactSource({ contact }: Readonly<{ contact: Contact }>) {
+  const t = useT();
+  const viewerId = useViewerId();
+  return (
+    <Popover
+      label={
+        <ProvenanceTag
+          provenance={provenanceOf(
+            contact.captured_by,
+            viewerId,
+            contact.author,
+            contact.source,
+            contact.imported_from,
+          )}
+        />
+      }
+    >
+      <p className="t-body">{contact.source || t("trust.sourceUnknown")}</p>
+    </Popover>
   );
 }

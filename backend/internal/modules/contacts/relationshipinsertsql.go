@@ -19,8 +19,7 @@ func demoteForRelationshipCreate(ctx context.Context, tx pgx.Tx, in CreateRelati
 	var args []any
 	arg := func(v any) string { args = append(args, v); return storekit.SQLf("$%d", len(args)) }
 	contact, ended, status, precision := arg(*in.ContactID), arg(in.EndedAt), arg(in.EmploymentStatus), arg(in.EndedPrecision)
-	_, err := tx.Exec(ctx, storekit.SQLf(`UPDATE relationship SET is_current_primary=false WHERE contact_id=%s AND %s AND %s`, contact, employment.CurrentPrimarySlotSQL(""), employment.IsCurrentSQL(ended+"::date", status+"::text", precision+"::text")), args...)
-	return err
+	return flipCurrentPrimary(ctx, tx, storekit.SQLf(`UPDATE relationship SET is_current_primary=false WHERE contact_id=%s AND %s AND %s`, contact, employment.CurrentPrimarySlotSQL(""), employment.IsCurrentSQL(ended+"::date", status+"::text", precision+"::text")), args...)
 }
 
 func insertRelationshipRow(ctx context.Context, tx pgx.Tx, in CreateRelationshipInput, capturedBy string) (relationshipRow, error) {

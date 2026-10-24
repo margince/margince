@@ -124,7 +124,11 @@ function PreferenceReview({
         {(result) => (
           <>
             {result.data.map((approval) => (
-              <ApprovalRow key={approval.id} approval={approval} />
+              <ApprovalRow
+                key={approval.id}
+                approval={approval}
+                decided={approval.status !== "pending"}
+              />
             ))}
             {result.page?.has_more && result.page.next_cursor && (
               <Button

@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -19,7 +20,10 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/reporting"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 //craft:ignore naked-any pgx binds heterogeneous scalar types at the SQL boundary.
@@ -67,6 +71,11 @@ func reportingContext(ctx context.Context, tx pgx.Tx, selection crmcontracts.Rep
 	if err != nil {
 		return out, err
 	}
+	holds, err := scopeHoldsDeals(ctx, tx, reportingRequested(out.Scope), unownedIsExcluded)
+	if err != nil {
+		return out, err
+	}
+	out.ScopeHoldsDeals = &holds
 	if err := reportingPipeline(ctx, tx, selection.PipelineId); err != nil {
 		return out, err
 	}
@@ -99,6 +108,10 @@ func reportingContext(ctx context.Context, tx pgx.Tx, selection crmcontracts.Rep
 		return out, err
 	}
 	out.PopulationFingerprint, err = reportingPopulationFingerprint(out.Scope, reportingMemberStrings(out))
+	if err != nil {
+		return out, err
+	}
+	out.MemberIds, err = measurableMemberIDs(ctx, tx, out.MemberIds)
 	return out, err
 }
 
@@ -128,4 +141,27 @@ func newReportingService(pool *pgxpool.Pool, now func() time.Time) *reporting.Se
 	return reporting.NewService(db, metricEvaluator{forecast: newForecastStore(db)}, reportingAuthority{users: identity.NewService(pool)}, reportingCalendar, now).
 		WithBaseLanguage(identity.BaseLanguageForRecord).
 		WithQuestions(reportingQuestions{floor: analyticsquery.DefaultFloor, names: newAttentionNames(db)})
+}
+
+// measurableMemberIDs narrows a scope's members to the owners the reader may
+// measure one by one, so owner targets and owner lists name no one else.
+func measurableMemberIDs(ctx context.Context, tx pgx.Tx, scopeMembers []openapi_types.UUID) ([]openapi_types.UUID, error) {
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return nil, apperrors.ErrPermissionDenied
+	}
+	if auth.Unbounded(actor) || actor.Permissions.RowScope == principal.RowScopeAll {
+		return scopeMembers, nil
+	}
+	measurable, err := (reportingAuthority{}).Members(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]openapi_types.UUID, 0, len(scopeMembers))
+	for _, id := range scopeMembers {
+		if slices.Contains(measurable, ids.UUID(id)) {
+			out = append(out, id)
+		}
+	}
+	return out, nil
 }

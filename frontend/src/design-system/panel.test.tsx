@@ -820,9 +820,8 @@ describe("panel.css is the only sheet that shapes the head band", () => {
     expect(
       swept.filter(
         (path) =>
-          path.endsWith(
-            join("features", "companies", "company", "glance.css"),
-          ) || path.endsWith(join("features", "contacts", "contact360.css")),
+          path.endsWith(join("features", "deals", "deal360", "deal360.css")) ||
+          path.endsWith(join("features", "contacts", "contact360.css")),
       ),
     ).toHaveLength(2);
 

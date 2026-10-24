@@ -526,3 +526,30 @@ func TestARoutedArgumentNamesTheActionsThatTakeIt(t *testing.T) {
 		t.Errorf("x = %q, want no action named for an argument every action takes", got)
 	}
 }
+
+// A colleague's agent is offered a router's waiting action as one that runs. The
+// router itself runs at once when all its actions now agree.
+func TestARoutersActionsAreOfferedAtTheTierAColleaguesAgentIsAdmittedOn(t *testing.T) {
+	r := NewRegistry(&recordingStageApprovals{}, auth.NewGate(fullSeatAuthority{}))
+	r.Register(&argsTool{spec: targetSpec("fake_a", principal.ScopeWrite, mcp.TierAutoExecute)})
+	r.Register(unlistedStaging{&stagingTool{target: ids.NewV7()}})
+	r.Register(fakeRouter{name: "mixed", targets: map[string]string{"a": "fake_a", "send": "send_it"}})
+
+	var mixed mcp.ToolSpec
+	for _, spec := range r.Offered(passportCtx()) {
+		if spec.Name == "mixed" {
+			mixed = spec
+		}
+	}
+	if mixed.Tier != mcp.TierAutoExecute {
+		t.Errorf("the router is offered at tier %v, want auto-execute", mixed.Tier)
+	}
+	for _, action := range mixed.Actions {
+		if action.Tier != mcp.TierAutoExecute {
+			t.Errorf("action %s is offered at tier %v, want auto-execute", action.Action, action.Tier)
+		}
+	}
+	if len(mixed.Actions) != 2 {
+		t.Fatalf("the router offers %d actions, want 2", len(mixed.Actions))
+	}
+}

@@ -123,6 +123,7 @@ export function stubBackend(
   deals: Deal[],
   opts: {
     onAdvance?: (body: unknown, ifMatch: string | null) => void;
+    onCloseDay?: (body: unknown, ifMatch: string | null) => void;
     // Makes the stub enforce the server's win-evidence rule. A win naming
     // neither a contract nor a reason is refused 422, as the real server does.
     // Off by default, so every existing test keeps the deal that wins on the
@@ -131,6 +132,12 @@ export function stubBackend(
     // `true` refuses every deal. A list of ids refuses only those, so a test
     // can say "this deal has a contract and that one does not".
     demandsWinEvidence?: boolean | readonly string[];
+    // What the win dialog's contract read answers. Left out, it tells the
+    // truth about `demandsWinEvidence`, so the question comes before Confirm.
+    // "signed" says there is a contract whatever the server later demands,
+    // which is the contract archived while the dialog sat open. "unreadable"
+    // fails the read.
+    winEvidenceRead?: "signed" | "unreadable";
     single?: Deal;
     onPatch?: (body: unknown, ifMatch: string | null) => void;
     onDelete?: () => void;
@@ -139,6 +146,8 @@ export function stubBackend(
     pipelines?: components["schemas"]["Pipeline"][];
     agentTools?: components["schemas"]["AgentTool"][];
     stageTotalsRows?: Record<string, unknown>[];
+    stageTotalsAsOf?: string;
+    stageTotalsTimezone?: string;
     // Answers the totals report with this status and a problem body instead.
     stageTotalsStatus?: number;
     onStageTotalsBody?: (body: unknown) => void;
@@ -148,11 +157,25 @@ export function stubBackend(
     nextPage?: Deal[];
   } = {},
 ) {
+  const demandsEvidence = (dealId: string) =>
+    Array.isArray(opts.demandsWinEvidence)
+      ? opts.demandsWinEvidence.includes(dealId)
+      : Boolean(opts.demandsWinEvidence);
   // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: a stub of every read and write the deal screens make; its branches are the route table
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = input instanceof Request ? input : null;
     const url = String(request ? request.url : input);
     const method = request ? request.method : (init?.method ?? "GET");
+    if (method === "GET" && url.includes("/win-evidence")) {
+      if (opts.winEvidenceRead === "unreadable") {
+        return jsonResponse({ code: "internal" }, 500);
+      }
+      const dealId = url.split("/deals/")[1]?.split("/")[0] ?? "";
+      return jsonResponse({
+        has_signed_contract:
+          opts.winEvidenceRead === "signed" || !demandsEvidence(dealId),
+      });
+    }
     if (method === "GET" && url.includes("/users")) {
       return jsonResponse({
         data: [
@@ -234,6 +257,9 @@ export function stubBackend(
       }
       return jsonResponse({
         report: "deals-by-stage",
+        base_currency: "EUR",
+        as_of: opts.stageTotalsAsOf ?? "2026-10-01",
+        timezone: opts.stageTotalsTimezone,
         plan: {},
         columns: [],
         rows: opts.stageTotalsRows ?? [],
@@ -248,17 +274,21 @@ export function stubBackend(
           : { batch_id: "b-1", changed: 1, skipped: [] },
       );
     }
+    if (method === "POST" && url.includes("/close-day")) {
+      const body = request
+        ? await request.json()
+        : JSON.parse(String(init?.body));
+      opts.onCloseDay?.(body, request?.headers.get("If-Match") ?? null);
+      return jsonResponse(opts.single ?? deals[0]);
+    }
     if (method === "POST" && url.includes("/advance")) {
       const body = request
         ? await request.json()
         : JSON.parse(String(init?.body));
       opts.onAdvance?.(body, request?.headers.get("If-Match") ?? null);
       const advancedId = url.split("/deals/")[1]?.split("/")[0] ?? "";
-      const demands = Array.isArray(opts.demandsWinEvidence)
-        ? opts.demandsWinEvidence.includes(advancedId)
-        : Boolean(opts.demandsWinEvidence);
       if (
-        demands &&
+        demandsEvidence(advancedId) &&
         body.status === "won" &&
         !body.won_without_contract_reason
       ) {

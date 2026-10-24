@@ -11,14 +11,14 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { TodayOnThisAccount } from "./companytoday";
+import { CompanyNextBar } from "./companynextbar";
 
-// The leading card's own promise: whenever it names something the reader
-// owes, it also offers the verb that answers it — even where the moment's own
-// recommended action names no destination for `onOpenRecord` to open. Both
-// tests below fire on exactly that shape: a moment the server sent with no
-// destination, and a different fact of the account's own (a named task, a
-// reply we owe) that the page can back with a control it already holds.
+// The Next bar's own promise: whenever it names something the reader owes, it
+// also offers the verb that answers it. That holds even where the moment's own
+// recommended action names no destination for `onOpenRecord` to open.
+// Both tests below fire on that shape. One is a moment the server sent with
+// no destination. The other is a fact of the account's own (a named task, a
+// reply we owe). The page backs it with a control it already holds.
 
 afterEach(cleanup);
 
@@ -37,9 +37,9 @@ const BASE: Company360 = {
   sections_omitted: [],
 };
 
-// A moment whose own recommended action names no destination — the ordinary
-// shape for a rule that fires on a promise rather than on one specific
-// record — so the leading card falls to the page's own verb.
+// A moment whose own recommended action names no destination. A rule that
+// fires on a promise, not on one record, sends this shape. The bar then falls
+// to the page's own verb.
 const MOMENT_NO_DESTINATION: NonNullable<Company360["moment"]> = {
   claim_key: "moment:open_promise",
   evidence_fingerprint: "fp-1",
@@ -69,11 +69,9 @@ function show(
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <TodayOnThisAccount
-          companyId="o-1"
+        <CompanyNextBar
           view={view}
-          loading={false}
-          failed={false}
+          onOpenTasks={() => {}}
           onOpenTask={opts.onOpenTask}
           onDraftTo={opts.onDraftTo}
           onLogActivity={opts.onLogActivity}
@@ -83,21 +81,16 @@ function show(
   );
 }
 
-// Scoped to the moment's own row: the account may draw a second "Draft" verb
-// of its own (manualMoveRows' generic "write to them" row), and a query
-// against the whole page cannot tell the leading card's verb from that one.
-// Found by the headline it leads with, because the moment is drawn by the
-// same `FoundMove` as every other move in the list and the class alone no
-// longer tells them apart.
+// Scoped to the bar's own row, found by the headline it leads with.
 function leadingCard(headline: string) {
-  const card = screen.getByText(headline).closest(".co-move");
+  const card = screen.getByText(headline).closest(".next-bar-row");
   if (!(card instanceof HTMLElement)) {
-    throw new Error("the leading card did not render");
+    throw new Error("the Next bar did not render");
   }
   return within(card);
 }
 
-describe("the leading card's own fallback verb", () => {
+describe("the Next bar's own fallback verb", () => {
   it("opens the named task when one is already on the account's list", () => {
     const opened = vi.fn();
     show(
@@ -123,9 +116,6 @@ describe("the leading card's own fallback verb", () => {
     );
     fireEvent.click(verb);
     expect(opened).toHaveBeenCalledWith("a-9");
-    // The secondary verb rides beside it once the caller offers a place to
-    // log one — the same shape the contact page's moment column draws.
-    expect(screen.getByRole("button", { name: en["log.title"] })).toBeTruthy();
   });
 
   it("drafts a reply to the strongest contact when we owe one and no task is named", () => {

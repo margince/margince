@@ -6,27 +6,10 @@ import type { Locale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { TodoRow, WrittenBy } from "../records/record360";
 import { type AccountScan, scanHasSettled, scanIsLive } from "./accountscan";
-import {
-  ENGAGEMENT_LABELS,
-  ENGAGEMENT_TONE,
-  type nextCommitmentLine,
-} from "./company360";
+import type { nextCommitmentLine } from "./company360";
 import type { Company360 } from "./companytoday";
 import { byStrengthThenId } from "./companytodayverbs";
 import "./company360.css";
-
-// The lead reading: whose move it is, under the call and in its own weight. It
-// is the one thing a reader must know before the moves under it mean anything.
-type TodayLead = {
-  headline: string;
-  // How long it has stood that way, beside the state and quieter than it. A
-  // state with no duration is a status; with one it is a fact a rep can act
-  // on.
-  note?: string;
-  // Colours the state where it is bad news: an account gone quiet, a move
-  // that has been ours for weeks.
-  tone?: "warning" | "danger";
-};
 
 // The band under the rows: what the brief as a whole is counting down to, and
 // what the advice could not show. Undefined when there is neither: Panel
@@ -119,15 +102,6 @@ export function scanFoot({
         <span className="co-row-meta">{scan.degrade_reason}</span>
       )}
     </span>
-  );
-}
-
-export function leadSentence(lead: TodayLead): ReactNode {
-  return (
-    <>
-      <span>{lead.headline}</span>
-      {lead.note && <span className="today-lead-note t-sub">{lead.note}</span>}
-    </>
   );
 }
 
@@ -225,43 +199,3 @@ export const TODAY_SOURCES: ReadonlyArray<{
   { section: "activities", label: "today.source.activities" },
   { section: "suggestions", label: "today.source.suggestions" },
 ];
-
-export function whoseMove({
-  view,
-  t,
-  locale,
-}: Readonly<{
-  view: Company360;
-  t: ReturnType<typeof useT>;
-  locale: Locale;
-}>): TodayLead | null {
-  const engagement = view.state_strip?.engagement;
-  if (!engagement) {
-    return null;
-  }
-  return {
-    headline: t(ENGAGEMENT_LABELS[engagement.state]),
-    note: silenceNote(view, locale, t),
-    tone: ENGAGEMENT_TONE[engagement.state],
-  };
-}
-
-function silenceNote(
-  view: Company360,
-  locale: Locale,
-  t: ReturnType<typeof useT>,
-): string | undefined {
-  const engagement = view.state_strip?.engagement;
-  const sent = engagement?.last_outbound_at;
-  if (!sent || engagement.state !== "waiting_on_them") {
-    return undefined;
-  }
-  const days = Math.floor(
-    (Date.parse(view.as_of) - Date.parse(sent)) / MS_PER_DAY,
-  );
-  return days > 0
-    ? t("today.silence.days", { count: formatNumber(days, locale) })
-    : undefined;
-}
-
-const MS_PER_DAY = 24 * 60 * 60 * 1000;

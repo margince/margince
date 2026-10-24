@@ -310,9 +310,6 @@ func (s *Store) refuseAnExchangeTooOldToCount(ctx context.Context, occurredAt ti
 // statement, in the words the rep needs.
 func whyThisReviewIsNotOpenToIt(state string) string {
 	switch state {
-	case ReviewAwaitingDecision:
-		return "somebody else is deciding this message, so adding evidence now would change the " +
-			"question under them; wait for their answer or withdraw the ask"
 	case ReviewCancelled:
 		return "this message was cancelled, so there is nothing left to send"
 	case ReviewResolved:

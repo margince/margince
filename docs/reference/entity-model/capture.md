@@ -100,7 +100,7 @@ The 24 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_backfill
 
-25 columns · primary key `(id)` · referenced by 1 foreign key
+25 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -178,7 +178,7 @@ The 24 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_connection
 
-24 columns · primary key `(id)` · referenced by 2 foreign keys
+27 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -200,7 +200,10 @@ The 24 tables owned by `capture`, as the migrations build them. [Back to the ent
 | `share_acknowledged_at` | `timestamp with time zone` |  |  |
 | `signature_enrich_enabled` | `boolean` |  | This mailbox's own answer to reading contact details out of its mail, or null to follow the tenant default (`CaptureSettings.signature_enrich`). |
 | `status` | `text`, default `'disconnected'::text` | yes | Connection state; `reauth_required` when the stored token expired/was revoked upstream. |
+| `sync_anchor` | `timestamp with time zone` |  |  |
 | `sync_cursor` | `jsonb` |  | Opaque provider watermark (Gmail historyId / IMAP UID / Graph delta) for incremental capture; read-only. |
+| `unread_from` | `timestamp with time zone` |  |  |
+| `unread_to` | `timestamp with time zone` |  |  |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
 | `watch_expires_at` | `timestamp with time zone` |  | Push/delta subscription renewal deadline (Gmail Pub/Sub / Graph change-notification), or null. |
 | `watch_ref` | `text` |  |  |
@@ -221,6 +224,7 @@ The 24 tables owned by `capture`, as the migrations build them. [Back to the ent
 - `capture_connection_provider_check`: `CHECK ((provider = ANY (ARRAY['gmail', 'gcal', 'imap', 'graph', 'graphcal', 'whatsapp', 'telegram', 'offline_demo', 'test_mailbox'])))`
 - `capture_connection_status_check`: `CHECK ((status = ANY (ARRAY['connected', 'disconnected', 'error', 'reauth_required'])))`
 - `capture_connection_unique`: `UNIQUE (user_id, provider)`
+- `capture_connection_unread_period_whole`: `CHECK ((((unread_from IS NULL) AND (unread_to IS NULL)) OR ((unread_from IS NOT NULL) AND (unread_to IS NOT NULL) AND (unread_from < unread_to))))`
 
 **Indexes**
 
@@ -456,13 +460,14 @@ The 24 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## capture_pending_counterparty
 
-21 columns · primary key `(id)` · referenced by 0 foreign keys
+22 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `activity_id` | `uuid` | yes | Points at `activity.id`. |
 | `attempts` | `integer`, default `0` | yes |  |
+| `backfill_id` | `uuid` |  | Points at `capture_backfill.id`. |
 | `claimed_by` | `uuid` |  |  |
 | `claimed_until` | `timestamp with time zone` |  |  |
 | `confidence` | `numeric` |  |  |
@@ -487,6 +492,7 @@ The 24 tables owned by `capture`, as the migrations build them. [Back to the ent
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `activity_id` | `activity` | deleting the parent deletes this row |
+| `backfill_id` | `capture_backfill` | deleting the parent keeps this row and clears the link |
 | `owner_id` | `app_user` | deleting the parent deletes this row |
 | `proposal_id` | `approval` | deleting the parent keeps this row and clears the link |
 
@@ -498,6 +504,7 @@ The 24 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 **Indexes**
 
+- `capture_pending_counterparty_backfill_idx`: `btree (backfill_id) WHERE (backfill_id IS NOT NULL)`
 - `capture_pending_counterparty_pkey`: `unique, btree (id)`
 - `idx_capture_pending_counterparty_activity`: `btree (activity_id)`
 - `idx_capture_pending_counterparty_due`: `btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL)`
@@ -751,11 +758,12 @@ The 24 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 ## raw_capture
 
-6 columns · primary key `(id)` · referenced by 1 foreign key
+7 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
+| `parts_slim_outcome` | `text` |  | One of `slimmed`, `no_proved_parts`, `unreadable_spelling`, `unrewritable_original`, `nothing_came_out`, `unencodable_result` and 1 more. |
 | `parts_slimmed_at` | `timestamp with time zone` |  |  |
 | `payload` | `jsonb` | yes |  |
 | `received_at` | `timestamp with time zone`, default `now()` | yes |  |
@@ -764,6 +772,7 @@ The 24 tables owned by `capture`, as the migrations build them. [Back to the ent
 
 **Rules**
 
+- `raw_capture_parts_slim_outcome_known`: `CHECK (((parts_slim_outcome IS NULL) OR (parts_slim_outcome = ANY (ARRAY['slimmed', 'no_proved_parts', 'unreadable_spelling', 'unrewritable_original', 'nothing_came_out', 'unencodable_result', 'no_bytes_saved']))))`
 - `raw_capture_source_unique`: `UNIQUE (source_system, source_id)`
 
 **Indexes**

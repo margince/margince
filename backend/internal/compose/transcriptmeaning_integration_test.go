@@ -32,7 +32,7 @@ func TestTranscriptReadingDistinguishesNonActionsFromInvalidMeaning(t *testing.T
 			if _, err := e.Activities.UpdateActivity(e.ctx, e.activity, activities.UpdateActivityInput{Body: &tc.body, OccurredAt: &at}); err != nil {
 				t.Fatal(err)
 			}
-			reply, err := json.Marshal(map[string]any{"proposals": []proposedStep{{Summary: "Send the scope", Owner: "Mira", SourceLines: []int{1}, Confidence: 1, Meaning: tc.meaning}}})
+			reply, err := json.Marshal(map[string]any{"proposals": []proposedStep{{Summary: "Send the scope", Owner: "Mira", PromiserRef: "seat:" + e.Rep1.String(), SourceLines: []int{1}, Confidence: 1, Meaning: tc.meaning}}})
 			if err != nil {
 				t.Fatal(err)
 			}

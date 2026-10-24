@@ -118,4 +118,48 @@ describe("a done line standing for many records", () => {
       expect(opened).toContain("since=");
     });
   });
+
+  it("never opens a decision line through the audit records read", async () => {
+    stubOpenedLine();
+    vi.mocked(fetch).mockImplementation(async (input) => {
+      const path = String(input instanceof Request ? input.url : input).split(
+        "?",
+      )[0];
+      if (path.endsWith("/magic")) {
+        return jsonResponse(
+          receipt({
+            done: [
+              line({
+                id: LINE,
+                approval_kind: "send_email",
+                summary: {
+                  key: "magic.action.decided_summary",
+                  values: { summary: "Sent it" },
+                },
+                entity: {
+                  type: "deal",
+                  id: "00000000-0000-7000-8000-0000000000d1",
+                  label: "PIM Rollout",
+                },
+                undo: undefined,
+              }),
+            ],
+          }),
+        );
+      }
+      return jsonResponse({ data: [] });
+    });
+    renderMagic();
+    const subject = await screen.findByRole("link", { name: "PIM Rollout" });
+    expect(subject.getAttribute("href")).toContain(
+      "00000000-0000-7000-8000-0000000000d1",
+    );
+    expect(screen.queryByRole("button", { name: "PIM Rollout" })).toBeNull();
+    const asked = vi
+      .mocked(fetch)
+      .mock.calls.map(([input]) =>
+        String(input instanceof Request ? input.url : input),
+      );
+    expect(asked.some((url) => url.includes("/magic/lines/"))).toBe(false);
+  });
 });

@@ -13,6 +13,7 @@ import { LocaleProvider } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
 import { RecordShell } from "../../testing/recordshell.testkit";
 import { WriteToHost } from "../settings/writetohost";
+import { SIGNAL_CATALOG } from "./leadsignals.fixture";
 
 // Edit, Share and Disqualify live behind the header's overflow trigger, whose
 // panel mounts on the first open. So a test wanting one opens the menu first.
@@ -22,17 +23,18 @@ export async function openLeadActions(
   await user.click(await screen.findByRole("button", { name: "More actions" }));
 }
 
-// The six shipped lead sources GET /lead-sources serves on a fresh install.
-export const SHIPPED_LEAD_SOURCES = {
+// The seven shipped lead origins GET /lead-origins serves on a fresh install.
+export const SHIPPED_LEAD_ORIGINS = {
   data: [
-    ["manual", "Created manually", "neutral"],
-    ["inbound", "Inbound", "high"],
-    ["webform", "Web form", "high"],
+    ["event", "Event", "neutral"],
+    ["linkedin", "LinkedIn", "neutral"],
     ["referral", "Referral", "high"],
-    ["import", "Import", "low"],
-    ["crawl", "Web research", "low"],
+    ["partner", "Partner", "high"],
+    ["website", "Website", "high"],
+    ["cold_outreach", "Cold outreach", "low"],
+    ["other", "Other", "neutral"],
   ].map(([key, label, intent], i) => ({
-    id: `src-${key}`,
+    id: `origin-${key}`,
     key,
     label,
     intent,
@@ -44,7 +46,6 @@ export const SHIPPED_LEAD_SOURCES = {
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
   })),
-  discovered: [],
 };
 
 export function jsonResponse(body: unknown, status = 200) {
@@ -125,10 +126,13 @@ export function stubFetch(
     if (request.method === "GET" && request.url.endsWith("/v1/connectors")) {
       return jsonResponse({ data: [] });
     }
+    if (new URL(request.url).pathname.endsWith("/lead-signal-catalog")) {
+      return jsonResponse(SIGNAL_CATALOG);
+    }
     // The administered vocabularies, as a fresh installation ships them:
     // the screens read their labels and pick lists off these.
-    if (request.method === "GET" && request.url.endsWith("/v1/lead-sources")) {
-      return jsonResponse(SHIPPED_LEAD_SOURCES);
+    if (request.method === "GET" && request.url.endsWith("/v1/lead-origins")) {
+      return jsonResponse(SHIPPED_LEAD_ORIGINS);
     }
     if (
       request.method === "GET" &&
@@ -222,11 +226,14 @@ export function stubFetchWithMe(
           sections: [],
         });
       }
+      if (new URL(request.url).pathname.endsWith("/lead-signal-catalog")) {
+        return jsonResponse(SIGNAL_CATALOG);
+      }
       if (
         request.method === "GET" &&
-        request.url.endsWith("/v1/lead-sources")
+        request.url.endsWith("/v1/lead-origins")
       ) {
-        return jsonResponse(SHIPPED_LEAD_SOURCES);
+        return jsonResponse(SHIPPED_LEAD_ORIGINS);
       }
       if (
         request.method === "GET" &&

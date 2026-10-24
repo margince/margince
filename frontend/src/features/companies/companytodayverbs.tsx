@@ -10,9 +10,11 @@
 import { CheckSquare, FileText, Send } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
+import { useClaimSettle } from "../../components/taskactions";
 import { Button } from "../../design-system/atoms";
+import { ErrorLine } from "../../design-system/errorline";
 import { stable } from "../../format/collate";
-import type { useT } from "../../i18n";
+import { useT } from "../../i18n";
 import {
   basisAddsARecord,
   citationOpensRecord,
@@ -56,7 +58,7 @@ function MomentVerb({
 }>) {
   return (
     <span className="today-verb">
-      <Button variant={primary ? "ai" : "ghost"} onClick={onAct}>
+      <Button variant={primary ? "primary" : "ghost"} onClick={onAct}>
         {icon}
         {label}
       </Button>
@@ -90,10 +92,8 @@ export function momentVerb({
     return fallback;
   }
   const { entity_type: type, entity_id: id } = destination;
-  // Indigo marks the verb the agent RECOMMENDS: the moment proposed this
-  // move, whatever the press then does — open a record, start a draft. The
-  // accent is the brand asking, and it would claim the move as the reader's
-  // own rather than the one Margince found.
+  // The accent, not indigo: the moment is picked from a fixed rule ladder and
+  // never written by a model. Indigo would claim that an agent wrote it.
   return (
     <MomentVerb primary label={label} onAct={() => onOpenRecord(type, id)} />
   );
@@ -203,4 +203,42 @@ export function momentDefer(
   return moment.rule === "nothing_needed"
     ? undefined
     : deferOf(moment.evidence_fingerprint);
+}
+
+// Done on a "Done?" card settles the promise the card names. The server only
+// asks this over a claim on the account page; it never settles one itself.
+export function MayBeDoneVerb({
+  moment,
+  companyId,
+}: Readonly<{
+  moment: NonNullable<Company360["moment"]>;
+  companyId: string;
+}>) {
+  const t = useT();
+  const settle = useClaimSettle([["company360", companyId]]);
+  const question = moment.may_be_done;
+  const done = moment.recommended_action;
+  if (question?.promise_type !== "claim") {
+    return null;
+  }
+  return (
+    <span className="today-verb">
+      <Button
+        variant="primary"
+        disabled={settle.isPending}
+        reason={
+          done.state === "blocked"
+            ? (done.blocked_reason ?? t("contact.rail.blocked"))
+            : undefined
+        }
+        onClick={() =>
+          settle.mutate({ id: question.promise_id, outcome: "done" })
+        }
+      >
+        <CheckSquare aria-hidden="true" />
+        {done.label}
+      </Button>
+      {settle.error && <ErrorLine error={settle.error} inline />}
+    </span>
+  );
 }

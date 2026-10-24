@@ -33,6 +33,16 @@ func TestNewDeclaresTheFixtureUnit(t *testing.T) {
 	}
 }
 
+func TestTheFixtureDeclaresAValidDealPanel(t *testing.T) {
+	e := New()
+	if len(e.Panels) != 1 || e.Panels[0].Slot != extension.SlotDealPanel {
+		t.Fatalf("panels = %+v, want one on the deal page", e.Panels)
+	}
+	if err := e.Panels[0].Validate(e.Name); err != nil {
+		t.Fatalf("panel: %v", err)
+	}
+}
+
 // dealReader answers one scripted Deals().Get and records what it was asked.
 type dealReader struct {
 	extension.Deals

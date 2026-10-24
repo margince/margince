@@ -8,10 +8,10 @@ sign-in and the app.
 Start at [What Margince is](what-margince-is.md) and read on. Each page stands on
 its own, so you can also come straight to the one you need.
 
-To ask this handbook a question inside Margince, press ⌘K (Ctrl+K) to open the
-command palette and choose **Ask your documents**. The **Margince handbook** is
-the document set it answers from, unless an administrator chose another; then
-pick **Margince handbook** in **Document set**.
+To ask this handbook a question inside Margince, type it into the top bar's
+**Search or ask Margince** field and press Enter. The answer comes from the
+**Margince handbook** first, then from your company's default document set. The
+handbook is in English, so questions in English work best.
 
 ## Common questions
 
@@ -111,6 +111,9 @@ Records, deals and mail in Margince, by page:
   voice. The purpose picker and the consent check. What a send refuses and what
   it only warns about, and scheduling one for later. What the recipient
   controls from their own preference page.
+- [When a mail cannot be read](when-a-mail-cannot-be-read.md): what the email
+  says when its text could not be read in full, and what Margince then leaves
+  alone.
 - [Who can see an email](who-can-see-an-email.md): record visibility against a
   message's own audience. The nine reasons one is held, and which a verdict can
   clear. The three mailbox postures, the company floor, and how to share a
@@ -163,9 +166,9 @@ Records, deals and mail in Margince, by page:
   states mean, and moving, cancelling or retrying a meeting. Reminders, what
   counts as busy, and what a guest sees.
 - [Your own settings](your-own-settings.md): changing your password, display
-  name, language and theme. Your email signature, the hours others can book,
-  and your writing voice. Your agent passports and your mailbox connections.
-  What the last 24 hours of your mail turned into.
+  name, language and theme. Your email signature, your meetings and booking
+  link, and your writing voice. Your agent passports and your mailbox
+  connections. What the last 24 hours of your mail turned into.
 - [Configuration](configuration.md): the read-only list of every setting, its
   value and where the value comes from, and how to change a locked one.
 - [Settings](settings.md): how to open Settings, every settings page and which

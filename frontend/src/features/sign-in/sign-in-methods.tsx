@@ -2,27 +2,36 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { Lock } from "lucide-react";
+import { useRef, useState } from "react";
 import { api } from "../../api/client";
-import { EmptyState } from "../../design-system/atoms";
-import { Callout } from "../../design-system/callout";
+import type { components } from "../../api/schema";
+import { Badge, EmptyState } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
+import {
+  ConfirmPhraseBox,
+  phraseMatches,
+} from "../../design-system/confirmphrase";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
+import { PanelNotices } from "../../design-system/panelnotices";
+import { providerBrandName } from "../../design-system/provider-mark";
 import { QueryGate } from "../../design-system/querystates";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
+import { StatusBadge } from "../../design-system/statusbadge";
 import { Switch } from "../../design-system/switch";
 import { lockFor } from "../../format/settinglocks";
 import { useT } from "../../i18n";
 import { useCan, useCanWrite } from "../../lib/capability";
+import { useCompanyPhrase } from "../../lib/company-phrase";
+import { isVendor, useOAuthApp, type Vendor } from "../../lib/oauth-app";
 import { problemMessageOf, throwProblem } from "../../lib/problem";
-import { useInstallationSettings } from "../../lib/uploadlimit";
-import { useOAuthApp, type Vendor } from "../automations/oauth-app";
-import { GroupRoleGrants } from "./group-role-grants";
-import { useMyMfa } from "./mfa.queries";
 import {
   AUTHENTICATION_POLICY_KEY,
   useSaveSignInPolicy,
-} from "./sign-in-policy";
+} from "../../lib/sign-in-policy";
+import { useInstallationSettings } from "../../lib/uploadlimit";
+import { GroupRoleGrants } from "./group-role-grants";
+import { useMyMfa } from "./mfa.queries";
 import "./sign-in-methods.css";
 
 /**
@@ -50,22 +59,7 @@ function useAuthenticationPolicy() {
   });
 }
 
-function isVendor(key: string): key is Vendor {
-  return key === "google" || key === "microsoft";
-}
-
-// A switched-on provider stays off the sign-in screen until its OAuth app
-// exists. Only a switched-on row asks; an unreadable app keeps the plain hint.
-function ProviderHint({ provider }: Readonly<{ provider: Vendor }>) {
-  const t = useT();
-  const app = useOAuthApp(provider);
-  if (app.isPending) {
-    return null;
-  }
-  return app.data?.configured === false
-    ? t("signInMethods.providerNoApp")
-    : t("signInMethods.providerHint");
-}
+type SignInProvider = components["schemas"]["SignInProvider"];
 
 /**
  * Which sign-in methods this installation allows. An admin narrows what the
@@ -92,6 +86,13 @@ export function SignInMethodsCard() {
   const providersLock = lockFor(locks, "identity.enabled_oidc_providers", t);
   const save = useSaveSignInPolicy();
   const [confirmingMfa, setConfirmingMfa] = useState(false);
+  // The provider whose switch-off waits on the typed confirmation.
+  const [turningOff, setTurningOff] = useState<SignInProvider | null>(null);
+  // The confirm dialogs say their own refusal while they are open.
+  const refused =
+    settings.isSuccess && save.error && !confirmingMfa && turningOff === null
+      ? { title: t("signInMethods.saveFailed"), error: save.error }
+      : undefined;
   // Asked only while the confirm is open: it decides one line of that dialog.
   const ownMfa = useMyMfa(confirmingMfa);
   // An answer that failed is no proof the admin holds a factor, so it warns.
@@ -102,21 +103,13 @@ export function SignInMethodsCard() {
       <Panel title={t("signInMethods.title")}>
         <PanelBody>
           <PanelIntro>{t("signInMethods.sub")}</PanelIntro>
-          {settings.isSuccess && save.error && !confirmingMfa && (
-            <Callout
-              tone="danger"
-              kind="outcome"
-              title={t("signInMethods.saveFailed")}
-            >
-              {problemMessageOf(save.error, t)}
-            </Callout>
-          )}
         </PanelBody>
         <QueryGate query={settings} pendingLabel={t("signInMethods.title")}>
           {(current) => {
             // Defaulted although required: a body missing it would otherwise
             // take the whole settings page down.
             const providers = current.sign_in_providers ?? [];
+            const onScreen = current.sign_in_screen ?? [];
             const enabledKeys = providers
               .filter((provider) => provider.enabled)
               .map((provider) => provider.key);
@@ -126,16 +119,9 @@ export function SignInMethodsCard() {
                   <SettingRow
                     label={t("signInMethods.password")}
                     description={t("signInMethods.passwordAlways")}
-                    control={(control) => (
-                      <Switch
-                        label={t("signInMethods.password")}
-                        labelHidden
-                        checked
-                        describedBy={control["aria-describedby"]}
-                        disabled
-                        onChange={() => undefined}
-                      />
-                    )}
+                    control={
+                      <Badge icon={Lock}>{t("signInMethods.alwaysOn")}</Badge>
+                    }
                   />
                   <SettingRow
                     label={t("signInMethods.requireMfa")}
@@ -165,13 +151,15 @@ export function SignInMethodsCard() {
                       key={provider.key}
                       label={provider.label}
                       description={
-                        isVendor(provider.key) &&
-                        provider.enabled &&
-                        canReadApps ? (
-                          <ProviderHint provider={provider.key} />
-                        ) : (
-                          t("signInMethods.providerHint")
-                        )
+                        <>
+                          {isVendor(provider.key) &&
+                            t(`signInMethods.desc.${provider.key}`)}
+                          <ScreenLine
+                            provider={provider}
+                            onScreen={onScreen.includes(provider.key)}
+                            canReadApps={canReadApps}
+                          />
+                        </>
                       }
                       control={(control) => (
                         <Switch
@@ -189,16 +177,20 @@ export function SignInMethodsCard() {
                               : undefined
                           }
                           // The setting replaces the list, so one key alone
-                          // would turn the rest off.
-                          onChange={(next) =>
-                            save.mutate({
-                              enabled_oidc_providers: next
-                                ? [...enabledKeys, provider.key]
-                                : enabledKeys.filter(
-                                    (key) => key !== provider.key,
-                                  ),
-                            })
-                          }
+                          // would turn the rest off. Turning one off asks first.
+                          onChange={(next) => {
+                            if (next) {
+                              save.mutate({
+                                enabled_oidc_providers: [
+                                  ...enabledKeys,
+                                  provider.key,
+                                ],
+                              });
+                            } else {
+                              save.reset();
+                              setTurningOff(provider);
+                            }
+                          }}
                         />
                       )}
                     />
@@ -209,10 +201,32 @@ export function SignInMethodsCard() {
                     <EmptyState>{t("signInMethods.noneConfigured")}</EmptyState>
                   </PanelBody>
                 )}
+                {turningOff !== null && (
+                  <TurnOffConfirm
+                    provider={turningOff}
+                    pending={save.isPending}
+                    error={save.error ? problemMessageOf(save.error, t) : null}
+                    onClose={() => {
+                      setTurningOff(null);
+                      save.reset();
+                    }}
+                    onConfirm={() =>
+                      save.mutate(
+                        {
+                          enabled_oidc_providers: enabledKeys.filter(
+                            (key) => key !== turningOff.key,
+                          ),
+                        },
+                        { onSuccess: () => setTurningOff(null) },
+                      )
+                    }
+                  />
+                )}
               </>
             );
           }}
         </QueryGate>
+        <PanelNotices refused={refused} />
       </Panel>
       <ConfirmModal
         open={confirmingMfa}
@@ -245,5 +259,138 @@ export function SignInMethodsCard() {
         />
       )}
     </>
+  );
+}
+
+// Whether the button is on the sign-in screen right now. The verdict is the
+// server's; only the reason a chosen provider is missing is worked out here.
+function ScreenLine({
+  provider,
+  onScreen,
+  canReadApps,
+}: Readonly<{
+  provider: SignInProvider;
+  onScreen: boolean;
+  canReadApps: boolean;
+}>) {
+  const t = useT();
+  if (onScreen) {
+    return (
+      <span className="signinmethods-status">
+        <StatusBadge kind="done" label={t("signInMethods.onScreen")} />
+      </span>
+    );
+  }
+  if (!provider.enabled) {
+    return (
+      <span className="signinmethods-status">
+        <StatusBadge
+          kind="neutral"
+          label={t("signInMethods.offScreen.turnedOff")}
+        />
+      </span>
+    );
+  }
+  return isVendor(provider.key) && canReadApps ? (
+    <VendorMissingLine vendor={provider.key} />
+  ) : (
+    <MissingLine
+      reason={t("signInMethods.offScreenReason.unusable", {
+        vendor: provider.label,
+      })}
+    />
+  );
+}
+
+// The reason comes from the app the page already reads. A reason the server
+// adds later falls through to "cannot be used right now", not a guess.
+function VendorMissingLine({ vendor }: Readonly<{ vendor: Vendor }>) {
+  const t = useT();
+  const app = useOAuthApp(vendor).data;
+  if (app === undefined) {
+    return null;
+  }
+  const name = providerBrandName(vendor) ?? vendor;
+  if (app.source === "none") {
+    return (
+      <MissingLine
+        reason={t("signInMethods.offScreenReason.noApp", { vendor: name })}
+      />
+    );
+  }
+  if (vendor === "microsoft" && !app.tenant) {
+    return (
+      <MissingLine reason={t("signInMethods.offScreenReason.noDirectory")} />
+    );
+  }
+  return (
+    <MissingLine
+      reason={t("signInMethods.offScreenReason.unusable", { vendor: name })}
+    />
+  );
+}
+
+function MissingLine({ reason }: Readonly<{ reason: string }>) {
+  const t = useT();
+  return (
+    <span className="signinmethods-status">
+      <StatusBadge kind="attention" label={t("signInMethods.offScreen")} />
+      <span>{reason}</span>
+    </span>
+  );
+}
+
+// Typed, because everyone who signs in this way loses that way in at once.
+// Turning a provider back on is one flip and asks nothing.
+function TurnOffConfirm({
+  provider,
+  pending,
+  error,
+  onClose,
+  onConfirm,
+}: Readonly<{
+  provider: SignInProvider;
+  pending: boolean;
+  error: string | null;
+  onClose: () => void;
+  onConfirm: () => void;
+}>) {
+  const t = useT();
+  const company = useCompanyPhrase();
+  const [typed, setTyped] = useState("");
+  const phraseInput = useRef<HTMLInputElement>(null);
+  const phrase = t("confirmPhrase.risk");
+  const vendor = providerBrandName(provider.key) ?? provider.label;
+  return (
+    <ConfirmModal
+      open
+      onClose={onClose}
+      title={t("signInMethods.turnOffTitle", { provider: provider.label })}
+      confirmLabel={t("signInMethods.turnOffConfirm", { vendor })}
+      cancelLabel={t("signInMethods.keepOn")}
+      confirmVariant="danger"
+      confirmDisabled={!phraseMatches(typed, phrase)}
+      pending={pending}
+      error={error}
+      initialFocusTo={() => phraseInput.current}
+      onConfirm={onConfirm}
+    >
+      <p>{t("signInMethods.turnOffBody", { vendor, company })}</p>
+      <ConfirmPhraseBox
+        title={t("signInMethods.impactTitle")}
+        impact={[
+          t("signInMethods.impact.fallback", { vendor }),
+          t("signInMethods.impact.inProgress", { vendor }),
+          t("signInMethods.impact.groups", { vendor }),
+          t("signInMethods.impact.connectors", { vendor }),
+        ]}
+        prompt={t("confirmPhrase.riskPrompt")}
+        phrase={phrase}
+        value={typed}
+        onChange={setTyped}
+        inputRef={phraseInput}
+        disabled={pending}
+      />
+    </ConfirmModal>
   );
 }

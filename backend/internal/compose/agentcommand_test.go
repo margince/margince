@@ -297,11 +297,15 @@ func (confirmFirstFileTool) Handle(context.Context, json.RawMessage) (json.RawMe
 }
 
 // A file that would have to wait for an approval is refused, not staged, on
-// both doors, and with one status and code on both.
+// both doors, and with one status and code on both. Only automatic work (an
+// agent with no passport) still waits.
 func TestAFileThatMustWaitIsRefusedAlikeOnEitherDoor(t *testing.T) {
 	registry := agents.NewRegistry(stubApprovals{}, auth.NewGate(fullSeat{}))
 	registry.Register(confirmFirstFileTool{})
-	_, viaTool := registry.Invoke(agentHolding(t.Context(), principal.ScopeWrite), "confirm_first_file", json.RawMessage(`{}`))
+	automatic := agentHolding(t.Context(), principal.ScopeWrite)
+	actor, _ := principal.Actor(automatic)
+	actor.PassportID = ids.UUID{}
+	_, viaTool := registry.Invoke(principal.WithActor(automatic, actor), "confirm_first_file", json.RawMessage(`{}`))
 	_, viaREST := uploadAttachmentCommand(agentPolicy{}, restCommandDeps{}, nil, nil)
 	for door, err := range map[string]error{"the tool door": viaTool, "the REST gate": viaREST} {
 		if !errors.Is(err, agents.ErrFileCannotWait) {

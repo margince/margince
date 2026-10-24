@@ -185,10 +185,8 @@ it("tells a captured file from an upload and says where it came from", async () 
   render(<DealFiles deal={dealOf()} />);
 
   expect(await screen.findByText("MSA-redline.docx")).toBeInTheDocument();
-  expect(
-    screen.getByText(/Attachment of a message from laura@buyer.example/),
-  ).toBeInTheDocument();
-  expect(screen.getByText(/Uploaded/)).toBeInTheDocument();
+  expect(screen.getByText("From laura@buyer.example")).toBeInTheDocument();
+  expect(screen.getByText("Uploaded here")).toBeInTheDocument();
 });
 
 it("hides a captured file at once through the deal's own hide route, never the file", async () => {

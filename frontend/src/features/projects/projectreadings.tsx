@@ -1,144 +1,184 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import type { components } from "../../api/schema";
 import { StatCard } from "../../design-system/atoms";
 import { StatStrip } from "../../design-system/statstrip";
-import { SurfaceState } from "../../design-system/surfacestate";
-import {
-  formatDateAbbrev,
-  formatMoney,
-  formatNumber,
-} from "../../format/format";
-import { formatMoneyOrWord } from "../../format/moneyword";
-import { type Locale, type Translator, useLocale, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
+import { formatMoneyOrAbsent, formatNumber } from "../../format/format";
+import { useLocale, usePlural, useT } from "../../i18n";
 import { useRecordZone } from "../../lib/recordzone";
 import { reveal } from "../../lib/reveal";
 import { type Project360, stateOf } from "./projectsections";
+import { commitmentsReading, phaseTimes } from "./projectstanding";
+import { commitmentsPeek, documentsPeek } from "./projectstanding.peeks";
+import { phaseName } from "./projectstanding.words";
 
-// The project page's band under its header: the readings plate and the one
-// line about how well its correspondence is filed. Apart from the section
-// cards because they are read ACROSS, once, rather than down a column.
+// The figures at the foot of How it stands: time in the current phase, the
+// open commitments and the files on the project. A cell whose source has a
+// card or a drawer on the page opens it.
 
-// Where a reading's own door leads. This page has no tabs — every section is
-// already on it — so the door is a scroll to the card the figure was computed
-// from rather than a route. Named here and consumed by `project360.tsx`, which
-// owns the layout, so the two cannot drift apart into an id nothing carries.
+// Where a card's door leads: a scroll to the card, named here and placed by
+// `projectcards.tsx`, so the two cannot drift apart.
 export const PROJECT_DEALS_ANCHOR = "project-deals";
 export const PROJECT_COMMITMENTS_ANCHOR = "project-commitments";
-// The record's own story, which `RecordView` draws under the work column: the
-// activity readings are counted FROM it, so their door is a scroll to it.
-export const PROJECT_ACTIVITY_ANCHOR = "project-activity";
+export const PROJECT_CONTRACTS_ANCHOR = "project-contracts";
 
-// A money rollup as a READING: the figure where the deals carry one, and what
-// their absence means where they do not. The word belongs to the slot, because
-// "no deal open" and "none won yet" are different facts about a project and a
-// dash states neither.
-function dealValue(
-  value: components["schemas"]["Money"],
-  absent: MessageKey,
-  t: Translator,
-  locale: Locale,
-): string {
-  return formatMoneyOrWord(
-    value.amount_minor,
-    value.currency,
-    locale,
-    t(absent),
-    formatMoney,
+export function ProjectFigures({
+  view,
+  onOpenDocuments,
+}: Readonly<{ view: Project360; onOpenDocuments?: () => void }>) {
+  return (
+    <StatStrip density="plate" testId="project-figures">
+      <PhaseTimeCell view={view} />
+      <DealValueCell view={view} kind="open" />
+      <DealValueCell view={view} kind="won" />
+      <OpenCommitmentsCell view={view} />
+      <DocumentsCell view={view} onOpen={onOpenDocuments} />
+    </StatStrip>
   );
 }
 
-/**
- * The header figures: what the deals on this project are worth, what is
- * still owed, and how much has been filed. Present only when the server
- * could compute all of them — it withholds the whole strip rather than half
- * of it, because a strip showing deals and no work reads as a project with
- * no work.
- */
-export function RollupsStrip({ view }: Readonly<{ view: Project360 }>) {
+function DealValueCell({
+  view,
+  kind,
+}: Readonly<{ view: Project360; kind: "open" | "won" }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const rollups = view.rollups;
-  const state = stateOf(view, "rollups", Boolean(rollups), rollups ? 1 : 0);
-  if (state !== "ready" || !rollups) {
+  const totals = view.rollups;
+  const money =
+    kind === "open" ? totals?.open_deal_value : totals?.won_deal_value;
+  const unpriced =
+    kind === "open" ? totals?.open_deals_unpriced : totals?.won_deals_unpriced;
+  return (
+    <StatCard
+      label={t(
+        kind === "open" ? "project.openDealValue" : "project.wonDealValue",
+      )}
+      value={
+        totals
+          ? formatMoneyOrAbsent(money?.amount_minor, money?.currency, locale)
+          : t("state.withheld")
+      }
+      detail={
+        unpriced
+          ? plural("brief.readings.unpricedCount", unpriced, {
+              count: formatNumber(unpriced, locale),
+            })
+          : undefined
+      }
+      onOpen={totals ? reveal(PROJECT_DEALS_ANCHOR) : undefined}
+    />
+  );
+}
+
+function PhaseTimeCell({ view }: Readonly<{ view: Project360 }>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const label = t("project.standing.phaseTime");
+  if (!view.phase_history) {
+    return <StatCard label={label} value={t("state.withheld")} />;
+  }
+  const phase = view.project.phase;
+  const days = phaseTimes(view).get(phase)?.days ?? 0;
+  return (
+    <StatCard
+      label={label}
+      value={plural("standing.days", days, {
+        count: formatNumber(days, locale),
+      })}
+      detail={t("project.standing.inPhase", { phase: phaseName(phase, t) })}
+    />
+  );
+}
+
+function OpenCommitmentsCell({ view }: Readonly<{ view: Project360 }>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const label = t("record.commitments");
+  const zone = useRecordZone();
+  const reading = commitmentsReading(view);
+  if (!reading) {
+    return <StatCard label={label} value={t("state.withheld")} />;
+  }
+  const open = reveal(PROJECT_COMMITMENTS_ANCHOR);
+  const overdue = formatNumber(reading.overdue, locale);
+  return (
+    <StatCard
+      label={label}
+      value={
+        reading.open > 0
+          ? plural("standing.open", reading.open, {
+              count: formatNumber(reading.open, locale),
+            })
+          : t("project.standing.noneOpen")
+      }
+      tone={reading.overdue > 0 ? "danger" : undefined}
+      detail={
+        reading.overdue > 0
+          ? plural(
+              reading.overdueIsFloor
+                ? "project.standing.overdueFloor"
+                : "standing.overdue",
+              reading.overdue,
+              { count: overdue },
+            )
+          : undefined
+      }
+      peek={commitmentsPeek(view, { t, plural, locale, zone }, open)}
+      onOpen={open}
+    />
+  );
+}
+
+// The newest file leads as the detail, so the cell says what the count is of.
+function DocumentsCell({
+  view,
+  onOpen,
+}: Readonly<{ view: Project360; onOpen?: () => void }>) {
+  const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const label = t("project.documents.title");
+  const zone = useRecordZone();
+  const documents = view.documents?.data ?? [];
+  const state = stateOf(
+    view,
+    "documents",
+    Boolean(view.documents),
+    documents.length,
+  );
+  if (state === "unavailable") {
     return (
-      <SurfaceState
-        state={state}
-        emptyLabel={t("project.rollups.empty")}
-        // What the plate is waiting for, not what its first slot is called: a
-        // reading's LABEL standing in for a loading line said "Open deals" at
-        // a reader who was waiting for all four.
-        loadingLabel={t("reading.loading")}
-      >
-        {null}
-      </SurfaceState>
+      <StatCard
+        label={label}
+        value={t("project.standing.documentsUnavailable")}
+      />
     );
   }
-  // Every slot declares the NARROW shape, and every slot on the row must:
-  // below the strip's two-up width a `row` slot folds to one full-width line
-  // (statstrip.css). The fold is the PLATE's — `.stat-strip:has(...)` — so a
-  // row where only some cards carry it draws a bordered box among a column of
-  // borderless ones.
+  if (documents.length === 0) {
+    return (
+      <StatCard
+        label={label}
+        value={t("project.standing.noDocuments")}
+        onOpen={onOpen}
+      />
+    );
+  }
+  const newest = documents[0];
+  const count = { count: formatNumber(documents.length, locale) };
   return (
-    <StatStrip testId="project-rollups">
-      <StatCard
-        narrow="row"
-        label={t("project.rollups.openValue")}
-        value={dealValue(
-          rollups.open_deal_value,
-          "project.rollups.noneOpen",
-          t,
-          locale,
-        )}
-        onOpen={reveal(PROJECT_DEALS_ANCHOR)}
-      />
-      <StatCard
-        narrow="row"
-        label={t("project.rollups.wonValue")}
-        value={dealValue(
-          rollups.won_deal_value,
-          "project.rollups.noneWon",
-          t,
-          locale,
-        )}
-        onOpen={reveal(PROJECT_DEALS_ANCHOR)}
-      />
-      <StatCard
-        narrow="row"
-        label={t("project.rollups.openCommitments")}
-        value={formatNumber(rollups.open_commitments, locale)}
-        onOpen={reveal(PROJECT_COMMITMENTS_ANCHOR)}
-      />
-      {/* ONE reading of the activity feed, not two. How much is filed and
-          when the last of it landed are the same feed answered twice, they
-          opened the same anchor, and neither said what the other could not —
-          so the count is the reading and the date qualifies it. */}
-      <StatCard
-        narrow="row"
-        label={t("project.rollups.activityCount")}
-        value={
-          rollups.activity_count > 0
-            ? t("project.rollups.activityFiled", {
-                count: formatNumber(rollups.activity_count, locale),
-              })
-            : t("project.rollups.never")
-        }
-        detail={
-          rollups.last_activity_at
-            ? t("project.rollups.activityLast", {
-                date: formatDateAbbrev(
-                  rollups.last_activity_at,
-                  locale,
-                  recordZone,
-                ),
-              })
-            : undefined
-        }
-        onOpen={reveal(PROJECT_ACTIVITY_ANCHOR)}
-      />
-    </StatStrip>
+    <StatCard
+      label={label}
+      value={
+        view.documents?.page.has_more
+          ? plural("project.standing.documentsFloor", documents.length, count)
+          : formatNumber(documents.length, locale)
+      }
+      detail={newest?.title || newest?.filename}
+      peek={documentsPeek(view, { t, plural, locale, zone })}
+      onOpen={onOpen}
+    />
   );
 }

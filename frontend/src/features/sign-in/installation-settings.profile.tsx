@@ -72,7 +72,7 @@ export function fiscalYearStartSummary(
   if (!Number.isInteger(month) || month < 1 || month > 12) {
     return String(month);
   }
-  return `${monthName(month, locale)} — ${fiscalYearLabel(month, exampleYear)}`;
+  return `${monthName(month, locale)} (${fiscalYearLabel(month, exampleYear)})`;
 }
 
 // The one form the three rows lead to: one dialog, one submit. The patch sends

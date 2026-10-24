@@ -40,6 +40,7 @@ const NOTES: ExtensionDescriptor = {
   name: "notes",
   title: "",
   secretScope: "workspace",
+  panels: [],
   verbs: [
     {
       operationId: "notesList",
@@ -139,6 +140,7 @@ describe("placing a unit by its declared secret scope", () => {
     name: "dispact-connector",
     title: "extDispactConnector.title",
     secretScope: "user",
+    panels: [],
     verbs: [],
     entries: [],
   };
@@ -147,6 +149,7 @@ describe("placing a unit by its declared secret scope", () => {
     name: "yogi",
     title: "",
     secretScope: "",
+    panels: [],
     verbs: [],
     entries: [],
   };
@@ -191,6 +194,7 @@ describe("naming a unit", () => {
     name: "dispact-connector",
     title: "extDispactConnector.title",
     secretScope: "user",
+    panels: [],
     verbs: [],
     entries: [],
   };

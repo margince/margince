@@ -90,23 +90,41 @@ describe("SettingsScreen connections and integrations tabs", () => {
     );
     renderSettings("connections");
     // Every surface here reads a per-user seam: the connector list is scoped to
-    // the calling human server-side, and the LinkedIn reads go through /me.
+    // the calling human server-side, and the LinkedIn panel reads /me.
     expect(
       await screen.findByRole("heading", {
-        name: "Connected mailboxes and calendars",
+        name: "Mail and calendar",
       }),
     ).toBeTruthy();
     expect(
-      screen.getByRole("heading", { name: "LinkedIn connections" }),
+      screen.getByRole("heading", { name: "LinkedIn network" }),
     ).toBeTruthy();
-    expect(
-      screen.getByRole("heading", { name: "What your connections found" }),
-    ).toBeTruthy();
-    // And nothing workspace-wide: a key everybody spends from and the
-    // subscriptions everybody's writes fire.
-    for (const heading of ["Contact data", "Webhooks"]) {
+    // And nothing workspace-wide: a key everybody spends from, the
+    // subscriptions everybody's writes fire and the company's one bot.
+    for (const heading of ["Contact data", "Webhooks", "Telegram bot"]) {
       expect(screen.queryByRole("heading", { name: heading })).toBeNull();
     }
+    // What the mailbox did with mail is Capture activity's, and the address in
+    // outgoing links is a System health reading: neither is a connection.
+    for (const heading of [
+      "What your connections found",
+      "Links in outgoing mail",
+    ]) {
+      expect(screen.queryByRole("heading", { name: heading })).toBeNull();
+    }
+  });
+
+  it("renders what the connections found on Capture activity", async () => {
+    vi.stubGlobal("fetch", wiringSettingsBackend({ roles: ["admin"] }));
+    renderSettings("capture-activity");
+    expect(
+      await screen.findByRole("heading", {
+        name: "What your connections found",
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("heading", { name: "Mail and calendar" }),
+    ).toBeNull();
   });
 
   it("renders the installation's wiring on Integrations and none of the personal connections", async () => {
@@ -119,11 +137,8 @@ describe("SettingsScreen connections and integrations tabs", () => {
       await screen.findByRole("heading", { name: "Contact data" }),
     ).toBeTruthy();
     expect(screen.getByRole("heading", { name: "Webhooks" })).toBeTruthy();
-    for (const heading of [
-      "Connected mailboxes and calendars",
-      "LinkedIn connections",
-      "What your connections found",
-    ]) {
+    expect(screen.getByRole("heading", { name: "Telegram bot" })).toBeTruthy();
+    for (const heading of ["Mail and calendar", "LinkedIn network"]) {
       expect(screen.queryByRole("heading", { name: heading })).toBeNull();
     }
   });

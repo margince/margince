@@ -97,7 +97,12 @@ const chatMessage: components["schemas"]["Activity"] = {
 // A contact captured over a chat channel: no address, one conversation.
 const chatOnly: Contact360 = {
   ...view,
-  contact: { ...view.contact, emails: [], reachability: reachableOnZalo },
+  contact: {
+    ...view.contact,
+    emails: [],
+    primary_email: null,
+    reachability: reachableOnZalo,
+  },
   activities: { data: [chatMessage], page: { has_more: false } },
 };
 
@@ -115,7 +120,7 @@ const mailAndChat: Contact360 = {
 // mail thread on the record is not a way to reach them; an address is.
 const unreachable: Contact360 = {
   ...view,
-  contact: { ...view.contact, emails: [] },
+  contact: { ...view.contact, emails: [], primary_email: null },
 };
 
 // A guard that refuses mail. Consent is decided per purpose, so this is one
@@ -156,16 +161,26 @@ describe("the contact record's tabs", () => {
     },
   );
 
-  it("sends the header's Call verb to the tab that holds the conversation", async () => {
+  it("sends the header's Full history to the tab that holds the conversation", async () => {
     // The tab ids are URL segments and `navigate` takes them as a bare string,
     // so a rename can leave a verb pointing at an id nothing serves — the
     // router then falls back to Overview and says nothing about it.
     const user = userEvent.setup();
     mount("overview");
-    // The header's verb, not the rail's: the rail offers its own Call, and
-    // the two land in different places on purpose.
     const header = await recordHeader();
-    await user.click(within(header).getByRole("button", { name: "Call" }));
+    const more = within(header).getByRole("button", {
+      name: en["record.moreActions"],
+    });
+    await user.click(more);
+    const menu = document.getElementById(
+      more.getAttribute("aria-controls") ?? "",
+    );
+    if (menu === null) throw new Error("More opened no panel");
+    await user.click(
+      within(menu).getByRole("button", {
+        name: en["record.fullHistory"],
+      }),
+    );
     expect(window.location.hash).toBe("#/contacts/p-1/timeline");
   });
 });
@@ -189,7 +204,7 @@ describe("the Data & tools tab's added capabilities", () => {
       ],
     };
     mount("research", withEnrichment);
-    expect(await screen.findByText("Enriched details")).toBeTruthy();
+    expect(await screen.findByText("Captured details")).toBeTruthy();
     expect(screen.getByText("Head of Procurement")).toBeTruthy();
     // The heading and the value alone don't prove the page reaches the
     // control the ticket was about — the confirm/correct buttons themselves
@@ -209,6 +224,7 @@ describe("a moment action that opens the composer", () => {
   // The steering field's own value, read off the element rather than through a
   // matcher: this file carries no jest-dom, and narrowing beats asserting.
   async function intentValue(): Promise<string> {
+    await screen.findByRole("button", { name: /^Draft (reply|email)$/ });
     const field = await screen.findByRole("textbox", {
       name: /Purpose of the email|Purpose of the reply/,
     });
@@ -245,14 +261,14 @@ describe("a moment action that opens the composer", () => {
     await user.click(within(header).getByRole("button", { name: "Email" }));
 
     expect(
-      await screen.findByRole("dialog", { name: /Send email/ }),
+      await screen.findByRole("dialog", { name: /New email/ }),
     ).toBeTruthy();
     // The steer field is here, and EMPTY: pressing the generic verb must not
     // inherit the reason the last rung left behind.
     expect(await intentValue()).toBe("");
   });
 
-  it("opens the same drawer from the address in the header, never a mail client", async () => {
+  it("opens the same drawer from the address in the details, never a mail client", async () => {
     // A third door, the same room. The address is a button into this page's
     // own composer: a `mailto:` would have handed the address to the reader's
     // mail client and the product would never have seen the message, and the
@@ -261,15 +277,15 @@ describe("a moment action that opens the composer", () => {
     const user = userEvent.setup();
     mount("overview", { ...view, moment: quietMoment }, [mailAllowed]);
 
-    const header = await recordHeader();
-    const address = await within(header).findByRole("button", {
+    const details = await recordDetails();
+    const address = await within(details).findByRole("button", {
       name: "dana@brandt.example",
     });
     expect(address.hasAttribute("href")).toBe(false);
     await user.click(address);
 
     expect(
-      await screen.findByRole("dialog", { name: /Send email/ }),
+      await screen.findByRole("dialog", { name: /New email/ }),
     ).toBeTruthy();
     expect(screen.getAllByRole("dialog").length).toBe(1);
   });
@@ -282,13 +298,13 @@ describe("a moment action that opens the composer", () => {
       "GET /connectors": () => jsonResponse({ data: [] }),
     });
 
-    const header = await recordHeader();
-    const address = await within(header).findByRole("link", {
+    const details = await recordDetails();
+    const address = await within(details).findByRole("link", {
       name: "dana@brandt.example",
     });
     expect(address.getAttribute("href")).toBe("mailto:dana@brandt.example");
     expect(
-      within(header).queryByRole("button", { name: "dana@brandt.example" }),
+      within(details).queryByRole("button", { name: "dana@brandt.example" }),
     ).toBeNull();
   });
 });
@@ -533,7 +549,9 @@ describe("which meeting the brief drawer asks about", () => {
 // The header's meta strip carries a link ICON beside the word LinkedIn, and for
 // a while carried no link — a reader who saw the chain and clicked it got
 // nothing. An affordance that looks like a link has to be one.
-describe("the contact's LinkedIn on the header", () => {
+// The profile is a detail, so it is drawn in the aside, as a link only when
+// the address really is LinkedIn's.
+describe("the contact's LinkedIn in the details", () => {
   const withLinkedin: Contact360 = {
     ...view,
     contact: {
@@ -541,12 +559,15 @@ describe("the contact's LinkedIn on the header", () => {
       social: { linkedin: "https://www.linkedin.com/in/dana-buyer" },
     },
   };
+  // The left column draws the profile's path as the link's words.
+  const openProfile = "in/dana-buyer";
 
   it("opens the profile it names", async () => {
     mount("overview", withLinkedin);
 
-    const header = await recordHeader();
-    const link = within(header).getByRole("link", { name: "LinkedIn" });
+    const link = within(await recordDetails()).getByRole("link", {
+      name: openProfile,
+    });
     expect(link.getAttribute("href")).toBe(
       "https://www.linkedin.com/in/dana-buyer",
     );
@@ -558,12 +579,13 @@ describe("the contact's LinkedIn on the header", () => {
     expect(rel).toContain("noreferrer");
   });
 
-  it("says nothing at all when no profile is recorded", async () => {
-    mount("overview");
+  it("says nothing in the head about a profile", async () => {
+    mount("overview", withLinkedin);
 
     const header = await recordHeader();
-    expect(within(header).queryByRole("link", { name: "LinkedIn" })).toBe(null);
-    expect(within(header).queryByText("LinkedIn")).toBe(null);
+    expect(within(header).queryByRole("link", { name: openProfile })).toBe(
+      null,
+    );
   });
 
   it("falls back to plain text when the recorded value is not a web address", async () => {
@@ -574,17 +596,14 @@ describe("the contact's LinkedIn on the header", () => {
       contact: { ...view.contact, social: { linkedin: "in/dana-buyer" } },
     });
 
-    const header = await recordHeader();
-    expect(
-      within(header).getByText("LinkedIn", { selector: "dd" }),
-    ).toBeTruthy();
-    expect(within(header).queryByRole("link", { name: "LinkedIn" })).toBe(null);
+    const aside = await recordDetails();
+    expect(within(aside).getByText("in/dana-buyer")).toBeTruthy();
+    expect(within(aside).queryByRole("link", { name: openProfile })).toBe(null);
   });
 
   it("refuses to put another host under the word LinkedIn", async () => {
-    // The label is a fixed word, so it is a CLAIM about the destination — and
-    // this value can be written by a crawl or a connector. An arbitrary host
-    // under that word is a phishing link wearing the product's own chrome.
+    // The row's label is a fixed word, so it is a claim about the destination.
+    // A crawl or a connector can write this value.
     mount("overview", {
       ...view,
       contact: {
@@ -593,13 +612,11 @@ describe("the contact's LinkedIn on the header", () => {
       },
     });
 
-    const header = await recordHeader();
-    // The fact is kept — this contact HAS something recorded — and the claim
-    // that it is LinkedIn is what is withheld.
-    expect(
-      within(header).getByText("LinkedIn", { selector: "dd" }),
-    ).toBeTruthy();
-    expect(within(header).queryByRole("link", { name: "LinkedIn" })).toBe(null);
+    const aside = await recordDetails();
+    const row = within(aside)
+      .getByText("https://attacker.example/login")
+      .closest(".factlist-row");
+    expect(row?.querySelector("a")).toBeNull();
   });
 
   it("accepts a regional LinkedIn subdomain", async () => {
@@ -613,13 +630,24 @@ describe("the contact's LinkedIn on the header", () => {
       },
     });
 
-    const header = await recordHeader();
-    const link = within(header).getByRole("link", { name: "LinkedIn" });
+    const link = within(await recordDetails()).getByRole("link", {
+      name: openProfile,
+    });
     expect(link.getAttribute("href")).toBe(
       "https://de.linkedin.com/in/dana-buyer",
     );
   });
 });
+
+// The details beside the feed, once the head has drawn.
+async function recordDetails(): Promise<HTMLElement> {
+  await recordHeader();
+  const aside = document.querySelector<HTMLElement>(".record-aside");
+  if (!aside) {
+    throw new Error("the record drew no details beside the feed");
+  }
+  return aside;
+}
 
 // The composer another screen sends a reader to.
 //
@@ -715,14 +743,14 @@ describe("a live contact that is not the viewer's to change", () => {
   });
 });
 
-// The rail's verdict says WHICH purpose it answers for.
+// The Research tab's consent panel says which purpose each verdict is for.
 //
-// The guard answers one verdict per purpose. The rail took the first email
-// entry and printed a bare "Allowed" against Email, so a rep read a permission
-// with no scope on it — and the composer then refused the send, correctly,
-// because the grant they had was for correspondence and the message was
-// something else. Two true statements and no way to reconcile them.
-describe("the consent rail names the purpose behind each answer", () => {
+// The guard answers one verdict per purpose. The rail once took the first email
+// entry and printed a bare "Allowed" against Email. A rep read a permission
+// with no scope on it. The composer then refused the send, correctly, because
+// the grant was for correspondence and the message was something else. Two
+// true statements and no way to reconcile them.
+describe("the consent panel names the purpose behind each answer", () => {
   const correspondence: ContactConsentGuardEntry = {
     purpose_key: "business_correspondence",
     purpose_label: "Business correspondence",
@@ -741,7 +769,7 @@ describe("the consent rail names the purpose behind each answer", () => {
   };
 
   it("answers per purpose rather than once for the whole transport", async () => {
-    mount("overview", view, [newsletter, correspondence]);
+    mount("research", view, [newsletter, correspondence]);
 
     // Both named, whichever order the server listed them in — the old reader
     // took entries[0] and would have painted Email with the newsletter's
@@ -751,7 +779,7 @@ describe("the consent rail names the purpose behind each answer", () => {
   });
 
   it("does not report a marketing purpose's verdict against correspondence", async () => {
-    mount("overview", view, [newsletter, correspondence]);
+    mount("research", view, [newsletter, correspondence]);
 
     await screen.findByText("Business correspondence");
     // The correspondence row is the allowed one; the newsletter row is not.
@@ -772,7 +800,7 @@ describe("the consent rail names the purpose behind each answer", () => {
       verdict: "blocked",
       reason: "they asked us to stop on 12 July",
     };
-    mount("overview", view, [objected, correspondence]);
+    mount("research", view, [objected, correspondence]);
 
     expect(
       await screen.findByText("they asked us to stop on 12 July"),
@@ -783,7 +811,7 @@ describe("the consent rail names the purpose behind each answer", () => {
   // could be "show the last reason", which would take the row a reply rides
   // out with it.
   it("still says why correspondence is allowed", async () => {
-    mount("overview", view, [newsletter, correspondence]);
+    mount("research", view, [newsletter, correspondence]);
 
     expect(
       await screen.findByText("she wrote to you on 1 June"),
@@ -793,14 +821,14 @@ describe("the consent rail names the purpose behind each answer", () => {
 
 // A contact somebody wrote in the system it was imported from.
 //
-// An import runs as ONE administrator, so `captured_by` names that seat on
-// every row it wrote — true, and useless as a statement about authorship. The
-// author field is the one that knows, and the facts strip has to prefer it: the
-// timeline on this same page already reads "Logged in HubSpot by …" while the
-// strip said "Typed by you", and the two sat side by side disagreeing.
+// An import runs as one administrator, so `captured_by` names that seat on
+// every row it wrote. That is true and useless as a statement about
+// authorship. The author field knows, so the details prefer it. The timeline
+// on this page already reads "Logged in HubSpot by …" while the details said
+// "Typed by you", and the two disagreed side by side.
 describe("a contact imported from somewhere else", () => {
   it("names who wrote it there, not the seat that ran the import", async () => {
-    mount("overview", {
+    mount("research", {
       ...view,
       contact: {
         ...view.contact,

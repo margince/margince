@@ -1,17 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../../api/client";
-import { PageAsideToggle, usePageAside } from "../../components/pageaside";
 import { Badge } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
-import { IdentityLine } from "../../design-system/identityline";
 import { QueryGate } from "../../design-system/querystates";
 import { RecordTabs } from "../../design-system/recordtabs";
-import { useRecordTimeline } from "../../design-system/recordtimeline";
+import {
+  type RecordTimeline,
+  useRecordTimeline,
+} from "../../design-system/recordtimeline";
 import { RecordView } from "../../design-system/recordview";
+import { dealStatusLabel } from "../../format/dealstatus";
 import { useLocale, useT } from "../../i18n";
 import { usePendingApprovals } from "../../lib/approvals.queries";
 import { useRecordWriteRefusal } from "../../lib/capability";
+import { usePipeline } from "../../lib/deals.queries";
 import { useLegalReviewAvailable } from "../../lib/legalreviews.queries";
 import { useOpenEmail } from "../../lib/openemail";
 import { unwrap } from "../../lib/problem";
@@ -20,7 +23,6 @@ import { scrollPageToTop } from "../../lib/reveal";
 import { navigate } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import { OpenEmailDrawer } from "../mail/openemaildrawer";
-import { TimelineThread } from "../records/record360";
 import { WorklistReturnLink } from "../worklist/worklist.return";
 import {
   type ClosedDeal,
@@ -33,21 +35,20 @@ import {
   type PendingAdvance,
 } from "./deal360/confirmadvance";
 import { DealActions } from "./deal360/dealactions";
-import { DealCockpit } from "./deal360/dealcockpit";
-import { DealIdentityFacts, DealSubtitle } from "./deal360/dealheaderfacts";
+import { DealSubtitle } from "./deal360/dealheaderfacts";
 import { DealHistoryTab } from "./deal360/dealhistorytab";
 import { DealLegalTab } from "./deal360/deallegaltab";
-import { DealPulse } from "./deal360/dealpulse";
 import { DealRoomTab } from "./deal360/dealroomtab";
+import { useDealTabCounts } from "./deal360/dealtabcounts";
 import { useDealCoverage } from "./deal360/usedealcoverage";
+import { DealAside } from "./dealaside";
 import { DealFiles } from "./dealfiles";
-import { DealProjectChip } from "./dealproject";
+import { DealProjectLine } from "./dealproject";
 import type { Deal, Offer, Stage } from "./deals";
 import { useAdvanceDeal } from "./deals.board";
 import { dealStatusTone } from "./deals.columns";
-import { DealContext } from "./deals.details";
+import { DealDetailsDrawer } from "./deals.details";
 import { DealOverviewPane } from "./deals.overview";
-import { usePipeline } from "./deals.queries";
 import { useDealStatusCard } from "./dealstatus";
 
 const DEAL_TABS = ["overview", "room", "files", "legal", "history"] as const;
@@ -60,6 +61,39 @@ type DealTab = (typeof DEAL_TABS)[number];
 function tabsOf(deal: Deal, legalReview: boolean): readonly DealTab[] {
   return DEAL_TABS.filter(
     (each) => each !== "legal" || (legalReview && !deal.archived_at),
+  );
+}
+
+function DealTabs({
+  deal,
+  legalReview,
+  thread,
+  value,
+  onChange,
+}: Readonly<{
+  deal: Deal;
+  legalReview: boolean;
+  // The page's own thread read, so History is counted off the rows it holds.
+  thread: RecordTimeline;
+  value: DealTab;
+  onChange: (next: DealTab) => void;
+}>) {
+  const t = useT();
+  const counts = useDealTabCounts(deal, legalReview, thread);
+  return (
+    <RecordTabs
+      options={tabsOf(deal, legalReview)}
+      value={value}
+      onChange={onChange}
+      counts={counts}
+      labels={{
+        overview: t("tab.overview"),
+        room: t("tab.dealRoom"),
+        files: t("tab.documents"),
+        legal: t("legalReview.tab"),
+        history: t("tab.history"),
+      }}
+    />
   );
 }
 
@@ -79,6 +113,29 @@ function dealBand({
     return undefined;
   }
   return <p id={reasonId}>{reason}</p>;
+}
+
+// The pills under the deal's name: whose move it is, when a buyer is owed a
+// reply, then the deal's status.
+function DealPulsePills({
+  status,
+  yourMove,
+}: Readonly<{ status: Deal["status"]; yourMove: boolean }>) {
+  const t = useT();
+  // A status this build has no word for reads as itself.
+  const statusKey = dealStatusLabel(status);
+  return (
+    <>
+      {yourMove && (
+        <Badge tone="warning" dot>
+          {t("standing.yourMove")}
+        </Badge>
+      )}
+      <Badge tone={dealStatusTone(status)}>
+        {statusKey ? t(statusKey) : status}
+      </Badge>
+    </>
+  );
 }
 
 /**
@@ -104,20 +161,23 @@ export function useDeal(id: string) {
 
 export function DealScreen({ id }: Readonly<{ id: string }>) {
   const t = useT();
-  const details = usePageAside();
   const { locale } = useLocale();
+  // The instant this page was read at, pinned once, so every "today" and
+  // "days since" on it is measured from the same moment.
+  const [asOf] = useState(() => new Date().toISOString());
   const recordZone = useRecordZone();
-  const queryClient = useQueryClient();
   // Minted here because the band that carries the sentence and the verbs that
   // point at it are two different slots of the same header.
   const readOnlyReasonId = useId();
   const [tab, setTab] = useState<DealTab>("overview");
+  const [editingDetails, setEditingDetails] = useState(false);
   const legalReview = useLegalReviewAvailable() === true;
   const [pending, setPending] = useState<PendingAdvance | null>(null);
   // The deal that just closed, while the review is on offer for it. Separate
   // from `pending`, which is the question before the close; this is the offer
   // after one landed, and the close dialog is already gone by then.
   const [closed, setClosed] = useState<ClosedDeal | null>(null);
+  const queryClient = useQueryClient();
   const advance = useAdvanceDeal();
   const dealQuery = useDeal(id);
   const pipelineQuery = usePipeline(dealQuery.data?.pipeline_id);
@@ -134,29 +194,20 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   // changes, resolved once here so the render below reads one name.
   const refusedReasonId = readOnly ? readOnlyReasonId : undefined;
   const me = useMe();
-  // The shared pending-approvals hook, not a second query on the same key. A
-  // private queryFn under ["approvals","pending"] takes over the cache entry
-  // the Inbox and the rail badge read. One that stops at the first page and
-  // keeps expired rows would cap the badge at 50 and count dead approvals.
+  // The shared pending-approvals hook, not a second query on the same key, so
+  // the Inbox and the rail badge keep one cache entry.
   const approvalsQuery = usePendingApprovals();
-  // Both already fetched by children: the status card by Deal360, coverage by
-  // the signal chips and the coverage card. Read here so the header's sentence
-  // and the readings band share those cache entries rather than adding two
-  // requests for facts the page already holds.
+  // Read here and shared through the cache. The head's "Your move" pill and
+  // How it stands read the status card. The Committee reading and the
+  // committee card read coverage. None of them asks a second time.
   //
   // The server answers neither the deal's status nor its coverage once it is
   // archived. So they are asked for only after the deal has said it is live.
   const live = dealQuery.isSuccess && !dealQuery.data.archived_at;
   const statusQuery = useDealStatusCard(id, live);
   const coverageRead = useDealCoverage(id, live);
-  // The pane's content, handed over whether or not it is showing: `asideOpen`
-  // folds the column, and its cards mount only while it is open or leaving.
-  const dealContext = (deal: Deal) => (
-    <DealContext deal={deal} meId={me.data?.user.id ?? ""} />
-  );
-  // The thread under the call reads the whole history, not what the History
-  // tab's own filter has narrowed. A filter is a view of that tab. A call that
-  // said "no reply since" because the reader hid emails there would be false.
+  // How it stands reads the whole history, not what the History tab's own
+  // filter has narrowed. A "no reply" read off a filtered view would be false.
   const threadQuery = useRecordTimeline("deal", id);
   const [openEmail, setOpenEmail] = useOpenEmail();
   const offersQuery = useQuery({
@@ -231,178 +282,130 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
             ? tab
             : "overview";
           return (
-            <div className="record-sheet">
-              <RecordView
-                back={<WorklistReturnLink />}
-                // Context first: who these contacts are, before the verbs that
-                // act on them. The seats stay out of the main column because
-                // the readings band counts them. Every record page draws this
-                // pane, fold and memory.
-                aside={dealContext(deal)}
-                asideOpen={details.open}
-                name={deal.name}
-                identity={deal.id}
-                // One rung under the record scale. The name stays the largest
-                // thing on the page. Beside a work column that opens on the
-                // reader's ask, it need not be masthead size.
-                scale="compact"
-                // The way in (which account this deal is on) sits on the
-                // name's own line. Every other record's head draws its
-                // subtitle in this inline shape.
-                nameBadge={<DealSubtitle deal={deal} />}
-                zone={recordZone}
-                actionsInline
-                // The deal's standing reads beside its name, not at the far
-                // end of the header among the verbs. A reader asking "is this
-                // still open?" looks at the name, so the answer belongs there.
-                pulse={
-                  <IdentityLine separator="space">
-                    <Badge tone={dealStatusTone(deal.status)}>
-                      {deal.status}
-                    </Badge>
-                    <DealProjectChip deal={deal} />
-                  </IdentityLine>
-                }
-                // What it is worth, where it sits, when it is due, whose deal
-                // it is, which account it is on and how it reached Margince.
-                // Named cells rather than one dot-separated sentence to parse.
-                badges={
-                  <DealIdentityFacts
-                    deal={deal}
-                    stages={stages}
-                    locale={locale}
-                  />
-                }
-                actions={
-                  <DealActions
-                    deal={deal}
-                    openStages={openStages}
-                    refusedReasonId={refusedReasonId}
-                  />
-                }
-                // Where the deal stands, at the foot of its head. A reader
-                // arrives asking which stage this is in, and the answer must
-                // come before the tabs.
-                standing={
-                  <DealCockpit
-                    deal={deal}
-                    stages={stages}
-                    advancing={advance.isPending}
-                    // A deal that takes no changes (archived, or not this
-                    // caller's to write) is not moved through the pipeline.
-                    // A control that can only fail is worse than none. A
-                    // closed deal is refused too, for another reason.
-                    // Reopening is its own action, with a dialog saying the
-                    // close date and frozen rate are cleared. A stepper
-                    // button that reopened without it would be a second
-                    // door to the same write.
-                    advanceRefused={readOnly || deal.status !== "open"}
-                    refusedReasonId={refusedReasonId}
-                    onAdvance={onAdvance}
-                  />
-                }
-                // The sentence naming why this deal takes no changes, while
-                // it does not.
-                band={dealBand({
-                  reason: readOnlyReason,
-                  reasonId: readOnlyReasonId,
-                })}
-                // The strip frames the whole record, not the work alone. It
-                // runs across both columns and the details pane opens under it.
-                // So choosing a body and choosing what stands beside it read as
-                // two controls on one page, not one nested in the other.
-                tabs={
-                  <RecordTabs
-                    options={tabsOf(deal, legalReview)}
-                    value={shownTab}
-                    onChange={(next) => {
-                      setTab(next);
-                      scrollPageToTop();
-                    }}
-                    labels={{
-                      overview: t("tab.overview"),
-                      room: t("tab.dealRoom"),
-                      files: t("tab.documents"),
-                      legal: t("legalReview.tab"),
-                      history: t("tab.history"),
-                    }}
-                    // The switch for the deal's details column, at the end of
-                    // the tab row. It chooses what the page shows beside the
-                    // work. So it stands with the controls for the work column,
-                    // never in the head among the deal's verbs.
-                    trailing={<PageAsideToggle />}
-                  />
-                }
-              >
-                {/* One stack for the whole overview: the work column draws its
-                  children with no interval of its own, so the reading and the
-                  contacts under it take the record's rhythm from here rather
-                  than from a margin one of them carries. */}
-                {shownTab === "overview" && (
-                  <div className="record-stack">
-                    <DealOverviewPane
-                      deal={deal}
-                      onOpenEmail={setOpenEmail}
-                      dealApprovals={dealApprovals}
-                      onDecide={(input) => decide.mutate(input)}
-                      offers={offersQuery.data?.data}
-                      creatingOffer={createOffer.isPending}
-                      locale={locale}
-                      onCreateOffer={(currency) => createOffer.mutate(currency)}
-                      pulse={
-                        <DealPulse
-                          card={statusQuery.data}
-                          timeline={threadQuery.activities}
-                        />
-                      }
-                      spine={
-                        <TimelineThread
-                          thread={threadQuery}
-                          commercial={{
-                            next_close_on: deal.expected_close_date,
-                          }}
-                          onOpenEmail={setOpenEmail}
-                        />
-                      }
-                      coverage={coverageRead}
-                      readOnly={readOnly}
-                      refusedReasonId={refusedReasonId}
-                    />
-                  </div>
-                )}
-                {shownTab === "room" && (
-                  <DealRoomTab dealId={deal.id} dealName={deal.name} />
-                )}
-                {shownTab === "files" && <DealFiles deal={deal} />}
-                {shownTab === "legal" && <DealLegalTab deal={deal} />}
-                {shownTab === "history" && (
-                  <DealHistoryTab deal={deal} onOpenEmail={setOpenEmail} />
-                )}
-                {/* One drawer over the deal. Both the overview's citations and
-                  the history tab's own rows open it, so a message found from
-                  either place lands in the same reader. */}
-                <OpenEmailDrawer
-                  activityId={openEmail}
-                  zone={recordZone}
-                  onClose={() => setOpenEmail(null)}
+            <RecordView
+              back={<WorklistReturnLink />}
+              aside={<DealAside deal={deal} stages={stages} />}
+              name={deal.name}
+              identity={deal.id}
+              // One fact per line under the name: the account, then the
+              // project the deal delivers into.
+              nameBadge={
+                <>
+                  <DealSubtitle deal={deal} />
+                  <DealProjectLine deal={deal} />
+                </>
+              }
+              zone={recordZone}
+              pulse={
+                <DealPulsePills
+                  status={deal.status}
+                  yourMove={Boolean(statusQuery.data?.reply_to)}
                 />
-                <ErrorLine
-                  error={advanceErrorBehind(advance.error, pending !== null)}
+              }
+              actions={
+                <DealActions
+                  deal={deal}
+                  openStages={openStages}
+                  refusedReasonId={refusedReasonId}
+                  onEditDetails={() => setEditingDetails(true)}
                 />
-                <ConfirmAdvanceModal
-                  pending={pending}
-                  onClose={() => setPending(null)}
-                  onConfirm={(input) => advance.mutateAsync(input)}
-                  onClosed={(deal, reason) =>
-                    setClosed(closedDealOf(deal, reason))
+              }
+              // The sentence naming why this deal takes no changes, while
+              // it does not.
+              band={dealBand({
+                reason: readOnlyReason,
+                reasonId: readOnlyReasonId,
+              })}
+              tabs={
+                <DealTabs
+                  deal={deal}
+                  legalReview={legalReview}
+                  thread={threadQuery}
+                  value={shownTab}
+                  onChange={(next) => {
+                    setTab(next);
+                    scrollPageToTop();
+                  }}
+                />
+              }
+            >
+              {shownTab === "overview" && (
+                <DealOverviewPane
+                  inputs={{
+                    deal,
+                    stages,
+                    asOf,
+                    activities: threadQuery.activities,
+                    offers: offersQuery.data?.data,
+                    coverage: coverageRead,
+                    card: statusQuery.data,
+                    ladder: {
+                      advancing: advance.isPending,
+                      // A deal that takes no changes is not moved through
+                      // the pipeline. A closed one is reopened by its own
+                      // action, whose dialog says what reopening clears.
+                      advanceRefused: readOnly || deal.status !== "open",
+                      refusedReasonId,
+                      onAdvance,
+                    },
+                  }}
+                  onOpenEmail={setOpenEmail}
+                  onOpenTab={(next) => {
+                    setTab(next);
+                    scrollPageToTop();
+                  }}
+                  onEditDetails={() => setEditingDetails(true)}
+                  threadComplete={
+                    threadQuery.isSuccess && !threadQuery.hasNextPage
                   }
+                  creatingOffer={createOffer.isPending}
+                  locale={locale}
+                  onCreateOffer={(currency) => createOffer.mutate(currency)}
+                  readOnly={readOnly}
+                  refusedReasonId={refusedReasonId}
+                  dealApprovals={dealApprovals}
+                  onDecide={(input) => decide.mutate(input)}
                 />
-                <CloseReviewOffer
-                  closed={closed}
-                  onDismiss={() => setClosed(null)}
-                />
-              </RecordView>
-            </div>
+              )}
+              {shownTab === "room" && (
+                <DealRoomTab dealId={deal.id} dealName={deal.name} />
+              )}
+              {shownTab === "files" && <DealFiles deal={deal} />}
+              {shownTab === "legal" && <DealLegalTab deal={deal} />}
+              {shownTab === "history" && (
+                <DealHistoryTab deal={deal} onOpenEmail={setOpenEmail} />
+              )}
+              {/* One drawer over the deal. Both the overview's citations and
+                the history tab's own rows open it, so a message found from
+                either place lands in the same reader. */}
+              <DealDetailsDrawer
+                deal={deal}
+                meId={me.data?.user.id ?? ""}
+                stages={stages}
+                open={editingDetails}
+                onClose={() => setEditingDetails(false)}
+              />
+              <OpenEmailDrawer
+                activityId={openEmail}
+                zone={recordZone}
+                onClose={() => setOpenEmail(null)}
+              />
+              <ErrorLine
+                error={advanceErrorBehind(advance.error, pending !== null)}
+              />
+              <ConfirmAdvanceModal
+                pending={pending}
+                onClose={() => setPending(null)}
+                onConfirm={(input) => advance.mutateAsync(input)}
+                onClosed={(deal, reason) =>
+                  setClosed(closedDealOf(deal, reason))
+                }
+              />
+              <CloseReviewOffer
+                closed={closed}
+                onDismiss={() => setClosed(null)}
+              />
+            </RecordView>
           );
         }}
       </QueryGate>

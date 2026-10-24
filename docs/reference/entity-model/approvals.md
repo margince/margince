@@ -6,7 +6,7 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 
 ## approval
 
-32 columns · primary key `(id)` · referenced by 4 foreign keys
+35 columns · primary key `(id)` · referenced by 4 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -32,7 +32,10 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 | `passport_id` | `uuid` |  | Points at `passport.id`. |
 | `proposed_by` | `text` | yes | agent:<id> / connector:<n> that staged this. |
 | `proposed_change` | `jsonb` | yes | The staged diff/payload that will execute on approve. |
+| `requested_decider_id` | `uuid` |  | The member explicitly asked to decide, independent of who has permission to approve. |
+| `requested_decider_source` | `text` |  |  |
 | `staged_by_connection` | `uuid` |  | Points at `oauth_grant.id`. |
+| `staged_in_conversation_of` | `uuid` |  | Points at `app_user.id`. |
 | `status` | `text`, default `'pending'::text` | yes | One of `pending`, `approved`, `rejected`, `expired`. |
 | `summary` | `text` |  | One-line description of the proposed change. |
 | `target_entity_id` | `uuid` |  |  |
@@ -50,13 +53,17 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 | `decided_by` | `app_user` | deleting the parent keeps this row and clears the link |
 | `on_behalf_of` | `app_user` | deleting the parent keeps this row and clears the link |
 | `passport_id` | `passport` | deleting the parent keeps this row and clears the link |
+| `requested_decider_id` | `app_user` | deleting the parent keeps this row and clears the link |
 | `staged_by_connection` | `oauth_grant` | deleting the parent keeps this row and clears the link |
+| `staged_in_conversation_of` | `app_user` | deleting the parent keeps this row and clears the link |
 
 **Rules**
 
 - `approval_co_target_whole`: `CHECK ((((co_target_entity_type IS NULL) AND (co_target_entity_id IS NULL) AND (co_target_version IS NULL)) OR ((co_target_entity_type IS NOT NULL) AND (co_target_entity_id IS NOT NULL) AND (co_target_version IS NOT NULL))))`
 - `approval_decided`: `CHECK ((((status = 'pending') AND (decided_at IS NULL)) OR (status = 'expired') OR ((status = ANY (ARRAY['approved', 'rejected'])) AND (decided_at IS NOT NULL))))`
 - `approval_effect_failure_is_stated`: `CHECK (((effect_failed_at IS NULL) = (effect_failure IS NULL)))`
+- `approval_pending_names_decider`: `CHECK (((status <> 'pending') OR ((requested_decider_id IS NOT NULL) AND (requested_decider_source IS NOT NULL))))`
+- `approval_requested_decider_source_check`: `CHECK ((requested_decider_source = ANY (ARRAY['payload_owner', 'on_behalf_of', 'stager', 'record_owner'])))`
 - `approval_status_check`: `CHECK ((status = ANY (ARRAY['pending', 'approved', 'rejected', 'expired'])))`
 - `approval_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 

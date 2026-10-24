@@ -1,18 +1,5 @@
 /* The deal record's own surfaces. Tokens only, like every other screen sheet. */
 
-/* The sentence at the top: whose move, and since when.
- *
- * It sits in RecordView's `pulse` slot, which is styled as a meta line —
- * right for the company page's identity facts, wrong for a headline. The
- * override is scoped to this class, so the slot keeps its own type everywhere
- * else. */
-.d360-pulse {
-  margin: var(--space-2) 0 0;
-  font-family: var(--fontFamilyHeading);
-  color: var(--textPrimary);
-  text-wrap: balance;
-}
-
 /* Outcome review — what a closed deal recorded about how it went. One block per
    review, the question above its answer, because a reader scans the questions
    to find the one they came for. */
@@ -39,6 +26,11 @@
   flex-wrap: wrap;
 }
 
+/* The brief keeps the line breaks its writer typed. */
+.d360-brief {
+  white-space: pre-wrap;
+}
+
 /* The collapsed brief. The line count stays with the render, which also
    decides whether the text is long enough to clamp at all. */
 .d360-brief-clamped {
@@ -47,19 +39,78 @@
   overflow: hidden;
 }
 
-/* A watched commitment: who and what, the words, then when and the verbs. */
-.deal-watch-row {
-  display: grid;
-  gap: var(--space-1);
-}
-
-.deal-watch-quote {
-  color: var(--textSecondary);
-}
-
-.deal-watch-meta {
+/* The deal's tags and lists, as quiet chips under their label. */
+.deal-aside-chips {
   display: flex;
   flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.deal-aside-chip {
+  display: inline-flex;
   align-items: center;
-  gap: var(--space-3);
+  height: 26px;
+  padding: 0 var(--space-3);
+  border-radius: var(--r-sm);
+  background: var(--bgChip);
+  color: var(--textPrimary);
+  font: var(--fontBodySmall);
+  text-decoration: none;
+}
+
+.deal-aside-chip:hover {
+  background: var(--bgHover);
+}
+
+/* A reference in the details reads as its value, in the accent ink. */
+.deal-aside-link {
+  color: var(--accentText);
+  text-decoration: none;
+}
+
+.deal-aside-link:hover {
+  text-decoration: underline;
+}
+
+/* The project the deal delivers into, as a quiet fact line. */
+.deal-project-line a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.deal-project-line a:hover {
+  text-decoration: underline;
+}
+
+/* The Overview's cards in the design's two columns. Each column stacks on
+   its own, so a tall card on one side leaves no gap on the other. The column
+   floor is what the committee's picture needs to name a seat without cutting
+   it, so a narrower sheet stacks the columns instead. */
+.deal-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: var(--gapCards);
+  align-items: start;
+}
+
+.deal-overview-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gapCards);
+  min-width: 0;
+}
+
+/* An offer's name opens the offer. */
+.deal-offer-open {
+  all: unset;
+  cursor: pointer;
+}
+
+.deal-offer-open:hover {
+  color: var(--accentText);
+}
+
+.deal-offer-open:focus-visible {
+  outline: var(--focus-ring);
+  border-radius: var(--r-xs);
 }

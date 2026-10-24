@@ -1,11 +1,14 @@
 import type { Locale } from "../i18n";
-import { middayInstant } from "./calendarday";
+import { calendarDay, middayInstant } from "./calendarday";
 import { INTL_LOCALE } from "./intllocale";
 import {
   dateTimePreferences,
   formatPreferredDate,
   hourCycle,
 } from "./preferences";
+import { assertIanaZone, DAY_MS } from "./timezone";
+
+export { assertIanaZone, isRenderableZone } from "./timezone";
 
 /** A month number has no viewer timezone. UTC keeps Intl's scaffolding in the same month. */
 export function monthName(month: number, locale: Locale): string {
@@ -50,37 +53,6 @@ export function fullDayName(day: Date, locale: Locale): string {
   return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
     dateStyle: "full",
   }).format(day);
-}
-
-// IANA zone names only (AC-DS-TZ4). Fixed offsets ("+01:00", "Etc/GMT-1")
-// freeze DST rules without a sign, so they throw at the edge.
-export function assertIanaZone(zone: string): void {
-  if (/^[+-]\d{2}:?\d{2}$/.test(zone) || /^(Etc\/)?GMT[+-]?\d*$/i.test(zone)) {
-    throw new Error(
-      `timezone must be an IANA name, got fixed offset "${zone}"`,
-    );
-  }
-  // Intl rejects unknown names: constructing with the zone throws a RangeError
-  // that propagates. format() forces the value to be consumed.
-  new Intl.DateTimeFormat("en-US", { timeZone: zone }).format();
-}
-
-/**
- * Whether the formatters above will accept this zone, asked without throwing.
- *
- * A page rendering a list of moments cannot let one row's zone take it down,
- * so it asks before it formats. A probe with Intl alone learns only that the
- * name resolves. `Etc/GMT-1`, `GMT` and `+01:00` resolve, then throw inside
- * `formatDate`. So this derives from the assertion, the one reading of
- * "a zone this renders".
- */
-export function isRenderableZone(zone: string): boolean {
-  try {
-    assertIanaZone(zone);
-    return true;
-  } catch {
-    return false;
-  }
 }
 
 // Calendar dates are not UTC-midnight instants: their day survives every zone.
@@ -181,6 +153,28 @@ export function formatDayMonth(
   }).format(displayDay(utcIso, zone));
 }
 
+// Not `formatDayMonth` on a card: a bare "4 Mar" is ambiguous once the date is
+// outside `now`'s year. `now` is the caller's, so the formatter stays pure.
+// A fixed numeric date format has no short form, so it always writes the year.
+export function formatDayMonthNearYear(
+  utcIso: string,
+  locale: Locale,
+  zone: string,
+  now: Date,
+): string {
+  if (dateTimePreferences().dateFormat !== "locale")
+    return formatDate(utcIso, locale, zone);
+  assertIanaZone(zone);
+  const day = displayDay(utcIso, zone);
+  const yearIn = (at: Date) => calendarDay(at, zone).slice(0, 4);
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    timeZone: zone,
+    day: "numeric",
+    month: "short",
+    ...(yearIn(day) === yearIn(now) ? {} : { year: "numeric" }),
+  }).format(day);
+}
+
 /**
  * The wall-clock time of an instant, with no date, as in "09:05".
  *
@@ -225,21 +219,30 @@ export function formatDateTime(
 }
 
 /**
- * calendarDaysBetween counts whole days between two instants by the calendar,
- * in UTC. It is the frontend spelling of the backend's shared/kernel/elapsed.Days.
+ * calendarDaysBetween counts whole days between two instants by the calendar of
+ * a named zone. It is the frontend spelling of the backend's
+ * shared/kernel/elapsed.Days. The zone is required so a caller cannot count in
+ * another calendar than the one its date is drawn in.
  *
  * Not by elapsed milliseconds: calendar days and a duration divided by 24 hours
- * agree only around midnight. The server counts calendar days, so a screen
+ * agree only around midnight. The server counts calendar days. A screen
  * counting the other way would print two numbers for one silence.
  *
- * Held by: format.calendar-days.test.ts, which pins the boundary case the
- * millisecond spelling gets wrong (23:00 to 01:00 is one day, not zero).
+ * Each instant is named with `calendarDay`. The two names are read as UTC
+ * midnights, a whole number of days apart even across a DST change.
+ *
+ * Held by two tests. format.calendar-days.test.ts pins the boundary cases:
+ * 23:00 to 01:00 is one day, not zero, and the zone moves the answer.
+ * calendar-days-zone.test.ts fails a caller that names no zone.
  */
-export function calendarDaysBetween(from: Date, to: Date): number {
-  const day = 86_400_000;
-  const fromDay = Math.floor(from.getTime() / day);
-  const toDay = Math.floor(to.getTime() / day);
-  return toDay - fromDay;
+export function calendarDaysBetween(
+  from: Date,
+  to: Date,
+  zone: string,
+): number {
+  const midnightOfNamedDay = (at: Date) =>
+    Date.parse(`${calendarDay(at, zone)}T00:00:00Z`);
+  return (midnightOfNamedDay(to) - midnightOfNamedDay(from)) / DAY_MS;
 }
 
 /**

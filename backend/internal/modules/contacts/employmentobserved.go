@@ -141,7 +141,7 @@ func foldFirstObservations(ctx context.Context, tx pgx.Tx, mergedColumn string, 
 	}
 	var moves []firstObservationMove
 	for rows.Next() {
-		move := firstObservationMove{origin: "merge"}
+		move := firstObservationMove{origin: originMerge}
 		if err := rows.Scan(&move.edge, &move.contact, &move.company, &move.before, &move.after); err != nil {
 			rows.Close()
 			return fmt.Errorf("contacts: folding the merged employment edges' first observations: %w", err)

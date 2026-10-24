@@ -22,7 +22,7 @@ type Story = StoryObj<typeof BookingPicker>;
 // The open times the guest will choose from, with the length the link books.
 function OpenTimes() {
   const hours = useWorkingHours(true);
-  const profile = useSchedulingProfile(true);
+  const profile = useSchedulingProfile();
   const [duration, setDuration] = useState(30);
   // The fixture's own week, so the story draws the same days whatever the date.
   const [from, setFrom] = useState(firstBookingSlot.start);

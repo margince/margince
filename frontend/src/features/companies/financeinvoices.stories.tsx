@@ -81,15 +81,14 @@ type Story = StoryObj<typeof RecentInvoices>;
 export const EveryStatus: Story = {
   render: () => (
     <StoryProviders>
-      <div style={{ maxWidth: 560 }}>
+      <div style={{ maxWidth: 720 }}>
         <RecentInvoices summary={summary} />
       </div>
     </StoryProviders>
   ),
 };
 
-// Dark, because the overdue row's tint and the danger badge inside it are two
-// derivations of one hue that the dark lift moves together.
+// Dark, because the badge tones are derivations the dark lift moves together.
 export const EveryStatusDark: Story = {
   globals: { theme: "dark" },
   render: EveryStatus.render,

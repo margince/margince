@@ -24,6 +24,18 @@ export function rememberListAddress(hash: string): void {
   lastListAddress.set(route.screen, hashWithParams(routeHash(route), dials));
 }
 
+/**
+ * Forget every remembered list, the way a reload does.
+ *
+ * The map above is page-load memory, and a test file is one page load for every
+ * case in it. Without this, a case that leaves a narrowed list hands the next
+ * one a parent it never visited. A record opened cold leads back to someone
+ * else's filter.
+ */
+export function forgetListAddresses(): void {
+  lastListAddress.clear();
+}
+
 /** The list a record of `screen` leads back to, narrowed as the reader left it. */
 export function listAddress(screen: Screen): string {
   return lastListAddress.get(screen) ?? routeHash({ screen });

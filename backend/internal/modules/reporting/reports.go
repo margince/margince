@@ -152,7 +152,7 @@ func (s *Service) validateRevision(ctx context.Context, tx pgx.Tx, selection *cr
 	if err := s.validateSelection(ctx, *selection); err != nil {
 		return err
 	}
-	scope, err := s.authority.Scope(ctx, tx, selection.Scope, false)
+	scope, err := s.authority.AssertedScope(ctx, tx, selection.Scope)
 	if err != nil {
 		return refusedField("selection.scope", err)
 	}

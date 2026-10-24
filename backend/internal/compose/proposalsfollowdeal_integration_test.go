@@ -18,7 +18,6 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
-	"sync"
 	"testing"
 	"time"
 
@@ -29,12 +28,12 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
-	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // reassign moves the deal's owner through the ordinary update path, as the
@@ -291,11 +290,16 @@ func (e *reconcileEnv) readTranscriptFor(
 	return id
 }
 
-// logTranscript files a meeting transcript linked to the given deals.
+// logTranscript files a meeting transcript linked to the given deals. Rep2
+// attends under a name of their own, so a reading can name them as promiser.
 func (e *reconcileEnv) logTranscript(t *testing.T, subject string, dealIDs ...ids.UUID) ids.ActivityID {
 	t.Helper()
+	e.WsExec(t, `UPDATE app_user SET display_name = 'Priya' WHERE id = $1`, e.Rep2)
 	body, source := transcriptBody, "transcript"
-	in := activities.LogActivityInput{Kind: "meeting", Subject: &subject, Body: &body, SourceSystem: &source, Source: "manual"}
+	in := activities.LogActivityInput{
+		Kind: "meeting", Subject: &subject, Body: &body, SourceSystem: &source, Source: "manual",
+		AttendeeUserIDs: []ids.UserID{ids.From[ids.UserKind](e.Rep2)},
+	}
 	for _, deal := range dealIDs {
 		in.Links = append(in.Links, activities.ActivityLinkInput{EntityType: "deal", EntityID: deal})
 	}
@@ -306,68 +310,52 @@ func (e *reconcileEnv) logTranscript(t *testing.T, subject string, dealIDs ...id
 	return ids.From[ids.ActivityKind](ids.UUID(logged.Id))
 }
 
-// oneShotBrain answers like cannedBrain and runs during() on its first call —
-// the moment the reading is out with the model and holds no lock.
-type oneShotBrain struct {
-	cannedBrain
-	once   *sync.Once
-	during func()
-}
-
-func (b oneShotBrain) Complete(ctx context.Context, req model.Request) (model.Response, error) {
-	b.once.Do(b.during)
-	return b.cannedBrain.Complete(ctx, req)
-}
-
-// A transcript card is staged for the owner of the deal it lands on, whoever
-// asked for the reading, and every card on the deal follows it — including one
-// a colleague asked for. A card about another meeting is not touched.
-func TestEveryTranscriptCardOnTheDealFollowsIt(t *testing.T) {
+// A promise from a meeting is put to the colleague who made it. Not to whoever
+// asked for the reading, not to the deal's owner, and it stays with them when
+// the deal changes hands.
+func TestAPromiseCardStaysWithItsPromiserWhenTheDealChangesHands(t *testing.T) {
 	e := setupReconcile(t)
 	deal := e.SeedDeal(t, "Meeting on this deal", e.pipeline, e.open, &e.Rep1)
-	partner := e.SeedDeal(t, "The other side's deal", e.pipeline, e.open, &e.Rep3)
-	brain := cannedBrain{reply: groundedReply(t, 3, 0.95)}
+	brain := cannedBrain{reply: groundedReply(t, 3, 0.95, e.Rep2)}
 
-	owners := e.readTranscriptFor(t, e.Rep2, e.logTranscript(t, "Rollout call", deal), brain)
-	// Two owners, so the reading stays with the colleague who asked for it:
-	// the shape of a card on the deal that names a seat other than its owner.
-	colleagues := e.readTranscriptFor(t, e.Rep2, e.logTranscript(t, "Joint call", deal, partner), brain)
-	unrelated := e.readTranscriptFor(t, e.Rep1, e.logTranscript(t, "Unrelated call"), brain)
-	wantSeat(t, "the card a colleague asked for on the owner's deal", e.seatOf(t, owners), &e.Rep1)
-	wantSeat(t, "the card on two owners' deals", e.seatOf(t, colleagues), &e.Rep2)
+	card := e.readTranscriptFor(t, e.Rep3, e.logTranscript(t, "Rollout call", deal), brain)
+	wantSeat(t, "the card", e.seatOf(t, card), &e.Rep2)
 
 	e.reassign(t, deal, e.AdminUser)
 
-	wantSeat(t, "the owner's transcript card", e.seatOf(t, owners), &e.AdminUser)
-	wantSeat(t, "the colleague's transcript card", e.seatOf(t, colleagues), &e.AdminUser)
-	wantSeat(t, "the card about another meeting", e.seatOf(t, unrelated), &e.Rep1)
-	if got := e.seatMoves(t, owners, e.AdminUser); got != 1 {
-		t.Errorf("%d audit rows record the transcript card moving, want 1", got)
-	}
+	wantSeat(t, "the card after the deal changed hands", e.seatOf(t, card), &e.Rep2)
 }
 
-// The transcript staging race: the deal changes hands while the reading is out
-// with the model. The hand-over finds nothing to move, so the reader itself has
-// to stage for the owner the deal has when it stages.
-func TestATranscriptReadWhileTheDealChangesHandsIsFiledForTheNewOwner(t *testing.T) {
+// A promise nobody can be named for asks nobody: not the colleague who asked
+// for the reading, and not the deal's owner.
+func TestAPromiseNobodyCanBeNamedForStagesNoCard(t *testing.T) {
 	e := setupReconcile(t)
-	deal := e.SeedDeal(t, "Handed over mid-reading", e.pipeline, e.open, &e.Rep1)
+	deal := e.SeedDeal(t, "Meeting on this deal", e.pipeline, e.open, &e.Rep1)
 	meeting := e.logTranscript(t, "Rollout call", deal)
-	brain := oneShotBrain{
-		reply:  groundedReply(t, 3, 0.95),
-		once:   &sync.Once{},
-		during: func() { e.reassign(t, deal, e.Rep2) },
+	requestedBy := "human:" + e.Rep3.String()
+	started, _, err := e.Activities.StartTranscriptReadQueued(e.Admin(), meeting, requestedBy, nil)
+	if err != nil {
+		t.Fatalf("starting the reading: %v", err)
 	}
-
-	card := e.readTranscriptFor(t, e.Rep1, meeting, brain)
-
-	wantSeat(t, "the card staged after the handover", e.seatOf(t, card), &e.Rep2)
+	now := clocktest.Now(t)
+	proposer := NewTranscriptProposer(e.Pool, cannedBrain{reply: groundedReply(t, 3, 0.95, ids.NewV7())},
+		e.svc, func() time.Time { return now }, slog.New(slog.NewTextHandler(os.Stderr, nil)))
+	worker := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS), requestedBy, started.ID)
+	if err := proposer.Read(worker, e.Activities, started.ID, meeting); err != nil {
+		t.Fatalf("reading the transcript: %v", err)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM approval WHERE kind = $1`, CommitmentTaskKind); n != 0 {
+		t.Fatalf("%d promise card(s) staged for a promise nobody made by name, want none", n)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE kind = 'task'`); n != 0 {
+		t.Fatalf("%d task(s) written for a promise nobody made by name, want none", n)
+	}
 }
 
-// Every writer of deal.owner_id hands the pending card on. The list is the
-// writers the deals module has: the update path (set and clear, reached by the
-// HTTP handler, the agent tools and automation through the provider, and the
-// extraction accept) and the claim.
+// Every writer of deal.owner_id hands the pending card on, and clearing the
+// owner withdraws it. The list is the writers the deals module has: the update
+// path and the claim. The update path is reached by the HTTP handler, the agent
+// tools, automation through the provider, and the extraction accept.
 func TestEveryDealOwnerWriterHandsOnThePendingProposals(t *testing.T) {
 	e := setupReconcile(t)
 	provider := deals.NewProvider(e.DB(), installseam.Deals())
@@ -397,10 +385,6 @@ func TestEveryDealOwnerWriterHandsOnThePendingProposals(t *testing.T) {
 			_, err := e.Deals.ClaimDeal(e.Admin(), ids.From[ids.DealKind](deal), nil)
 			return err
 		}, &e.AdminUser},
-		{"an admin claims an unowned deal", nil, func(deal ids.UUID) error {
-			_, err := e.Deals.ClaimDeal(e.Admin(), ids.From[ids.DealKind](deal), nil)
-			return err
-		}, &e.AdminUser},
 	}
 	for _, w := range writers {
 		t.Run(w.name, func(t *testing.T) {
@@ -416,6 +400,12 @@ func TestEveryDealOwnerWriterHandsOnThePendingProposals(t *testing.T) {
 			wantSeat(t, "the staged card", e.seatOf(t, id), w.owner)
 			if err := w.write(deal); err != nil {
 				t.Fatalf("the owner write: %v", err)
+			}
+			if w.wantTo == nil {
+				if status := e.WsScalar(t, `SELECT status FROM approval WHERE id = $1`, id); status != "expired" {
+					t.Fatalf("the card after %s is %s, want withdrawn: nobody owns the deal", w.name, status)
+				}
+				return
 			}
 			wantSeat(t, "the card after "+w.name, e.seatOf(t, id), w.wantTo)
 		})

@@ -100,13 +100,11 @@ func resolveModelPath(ctx context.Context, spec modelPathSpec, pool *pgxpool.Poo
 // or the honest-absent posture. Nothing is picked silently.
 func modelPathFor(ctx context.Context, cfg ai.RoutingConfig, spec modelPathSpec, pool *pgxpool.Pool, log *slog.Logger) (*compose.ModelPath, string, ai.PublicProfile, string, error) {
 	if !cfg.Unconfigured() {
-		// A task whose whole fallback ladder has no bound tier is not a
-		// boot error (a deployment may legitimately not run every
-		// workload), but it must be loud: log it now, not discover it
-		// from a refused call.
-		for _, w := range cfg.UnboundLadderWarnings() {
-			log.Warn(w)
-		}
+		// A deployment may legitimately not run every workload, so a task
+		// with no bound tier is no boot error. It must still be loud, so the
+		// gap is read here and not from a refused call. A ladder whose
+		// rungs reach one API is named in the same place.
+		ai.LogLadderWarnings(log, cfg)
 	}
 	// The bindings this boot may run on, best first. A list rather than a switch
 	// because the second entry is a FALLBACK from the first — reached only when
@@ -204,6 +202,7 @@ func coldStartOptions(modelPath *compose.ModelPath, routingVersion string) []com
 		// prose over records the caller can already see. It caches, so unlike
 		// the meeting brief it carries the routing version.
 		compose.WithContactBrief(modelPath.Summarize, routingVersion),
+		compose.WithDealRoomBriefWriter(modelPath.Summarize),
 		compose.WithRoleProposals(modelPath.ProposeRoles),
 		compose.WithFilterProposals(modelPath.NlSearch),
 		// The ask to a colleague rides the drafting lane: it is the same task

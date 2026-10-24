@@ -145,6 +145,9 @@ var erasureColumnBaseline = map[string][]string{
 		// One of the eight iCalendar method words RFC 5546 defines, enforced by
 		// a CHECK. Nothing the subject wrote beyond which scheduling act it was.
 		"calendar_method",
+		// One of four words, enforced by a CHECK: how much of
+		// the mail's text the parser decoded. Nothing the subject wrote.
+		"body_completeness",
 		// A digest of the product's own classifier prompt, naming which rules
 		// reached the verdict beside it. Nothing the subject wrote and nothing
 		// derived from what they wrote — the same string on every row one build
@@ -181,6 +184,8 @@ var erasureColumnBaseline = map[string][]string{
 		// outside this gate's subject.
 		"target_entity_type",
 		"co_target_entity_type",
+		// Which staging rule named the decider: one of four fixed words.
+		"requested_decider_source",
 	},
 	"comms_outbound": {
 		// The delivery's half of the decision vocabulary, read by the worker
@@ -220,6 +225,9 @@ var erasureColumnBaseline = map[string][]string{
 	},
 	"lead": {
 		"captured_by",
+		// A key of the closed lead_origin list, which names no one. The note
+		// beside it, origin_detail, is free text and the redaction clears it.
+		"origin",
 		"source",
 		"source_id",
 		"source_system",

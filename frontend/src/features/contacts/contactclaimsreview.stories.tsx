@@ -22,7 +22,7 @@ export const HistoricalFinding: Story = {
     stubWithSession({}, {});
     return (
       <StoryProviders>
-        <Panel title={en["contact.loops.title"]}>
+        <Panel title={en["record.commitments"]}>
           <ContactClaimsReview
             dismiss={() => <Button>{en["commitment.dismiss"]}</Button>}
             claims={[

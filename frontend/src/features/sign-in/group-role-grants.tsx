@@ -5,12 +5,18 @@ import { X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { Button, EmptyState, TextInput } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
+import { ConfirmModal } from "../../design-system/confirmmodal";
+import {
+  ConfirmPhraseBox,
+  phraseMatches,
+} from "../../design-system/confirmphrase";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { IconAction } from "../../design-system/iconaction";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { Select, type SelectOption } from "../../design-system/select";
 import type { FieldLock } from "../../format/settinglocks";
 import { useT } from "../../i18n";
+import { grantsAdminRole } from "../../lib/capability";
 import { problemMessageOf } from "../../lib/problem";
 import {
   type AssignableRole,
@@ -18,7 +24,7 @@ import {
   roleOptions,
   useAssignableRoles,
 } from "../../lib/roles.queries";
-import { useSaveSignInPolicy } from "./sign-in-policy";
+import { useSaveSignInPolicy } from "../../lib/sign-in-policy";
 
 // The server refuses a larger map; mirrored here so the refusal reaches the
 // admin before a request does.
@@ -66,6 +72,24 @@ function grantRefusal(
   return null;
 }
 
+// A role select is named for its group once the group is typed.
+function roleAriaLabel(group: string, t: ReturnType<typeof useT>): string {
+  return group.trim() === ""
+    ? t("groupRoles.role")
+    : t("groupRoles.roleFor", { group });
+}
+
+// Only a new admin grant asks: re-saving one the map already held changes
+// nobody's role, and the confirmation names only the groups it adds.
+function newAdminGroups(
+  map: Readonly<Record<string, string>>,
+  initial: Readonly<Record<string, string>>,
+): string[] {
+  return Object.entries(map)
+    .filter(([group, role]) => grantsAdminRole(role) && initial[group] !== role)
+    .map(([group]) => group);
+}
+
 // A duplicate group collapses in the saved map, so it counts as a change the
 // refusal then names.
 function draftChanged(
@@ -78,6 +102,38 @@ function draftChanged(
     rows.length !== Object.keys(initial).length ||
     rows.some((row) => initial[row.group] !== row.role)
   );
+}
+
+// The map waiting on the typed confirmation is held as it was when Save was
+// pressed, so the dialog confirms what the admin read.
+function useGrantCommit(
+  save: ReturnType<typeof useSaveSignInPolicy>,
+  initial: Readonly<Record<string, string>>,
+  draft: Record<string, string>,
+  handBack: { current: boolean },
+) {
+  const [confirming, setConfirming] = useState<Record<string, string> | null>(
+    null,
+  );
+  const write = (map: Record<string, string>) =>
+    save.mutate(
+      { oidc_group_role_map: map },
+      {
+        onSuccess: () => {
+          handBack.current = true;
+          setConfirming(null);
+        },
+      },
+    );
+  const commit = () => {
+    if (newAdminGroups(draft, initial).length > 0) {
+      save.reset();
+      setConfirming(draft);
+    } else {
+      write(draft);
+    }
+  };
+  return { confirming, setConfirming, write, commit };
 }
 
 /**
@@ -118,15 +174,12 @@ export function GroupRoleGrants({
   const lockReasonId = lock.disabled ? lockId : undefined;
   const draft = Object.fromEntries(rows.map((row) => [row.group, row.role]));
   const dirty = draftChanged(rows, initial);
-  const commit = () =>
-    save.mutate(
-      { oidc_group_role_map: draft },
-      {
-        onSuccess: () => {
-          handBack.current = true;
-        },
-      },
-    );
+  const { confirming, setConfirming, write, commit } = useGrantCommit(
+    save,
+    initial,
+    draft,
+    handBack,
+  );
   // Save leaves once the stored map matches the draft. Add stays disabled until
   // the save settles, so focus moves to it only after that render.
   useEffect(() => {
@@ -167,7 +220,7 @@ export function GroupRoleGrants({
       render: (row) => (
         <Select
           className="group-grants-role"
-          aria-label={t("groupRoles.role")}
+          aria-label={roleAriaLabel(row.group, t)}
           options={grantRoleOptions(row.role, t, offered)}
           value={row.role}
           aria-describedby={lockReasonId}
@@ -263,15 +316,7 @@ export function GroupRoleGrants({
             <p>{t("groupRoles.adminGrant")}</p>
           </Callout>
         )}
-        {save.error && (
-          <Callout
-            tone="danger"
-            kind="outcome"
-            title={t("signInMethods.saveFailed")}
-          >
-            {problemMessageOf(save.error, t)}
-          </Callout>
-        )}
+        <SaveRefusal error={save.error} hidden={confirming !== null} />
         {rows.length === 0 && <EmptyState>{t("groupRoles.empty")}</EmptyState>}
       </PanelBody>
       {rows.length > 0 && (
@@ -284,6 +329,88 @@ export function GroupRoleGrants({
           rowKey={(row) => String(row.id)}
         />
       )}
+      {/* Mounted only while asking, so the typed phrase never outlives it. */}
+      {confirming !== null && (
+        <AdminGrantConfirm
+          groups={newAdminGroups(confirming, initial)}
+          map={confirming}
+          pending={save.isPending}
+          error={save.error ? problemMessageOf(save.error, t) : null}
+          onClose={() => {
+            setConfirming(null);
+            save.reset();
+          }}
+          onConfirm={write}
+        />
+      )}
     </Panel>
+  );
+}
+
+// Typed, because a group mapped to Admin hands the highest role to everyone
+// the directory puts in it. That happens at their next sign-in, with nobody
+// asked again.
+function AdminGrantConfirm({
+  groups,
+  map,
+  pending,
+  error,
+  onClose,
+  onConfirm,
+}: Readonly<{
+  groups: readonly string[];
+  map: Record<string, string>;
+  pending: boolean;
+  error: string | null;
+  onClose: () => void;
+  onConfirm: (map: Record<string, string>) => void;
+}>) {
+  const t = useT();
+  const [typed, setTyped] = useState("");
+  const phraseInput = useRef<HTMLInputElement>(null);
+  const phrase = t("confirmPhrase.risk");
+  return (
+    <ConfirmModal
+      open
+      onClose={onClose}
+      title={t("groupRoles.adminConfirmTitle", { group: groups.join(", ") })}
+      confirmLabel={t("groupRoles.adminConfirm")}
+      confirmVariant="danger"
+      confirmDisabled={!phraseMatches(typed, phrase)}
+      pending={pending}
+      error={error}
+      initialFocusTo={() => phraseInput.current}
+      onConfirm={() => onConfirm(map)}
+    >
+      <ConfirmPhraseBox
+        title={t("groupRoles.adminImpactTitle")}
+        impact={[
+          t("groupRoles.adminImpact.signIn"),
+          t("groupRoles.adminImpact.reach"),
+          t("groupRoles.adminImpact.keep"),
+        ]}
+        prompt={t("confirmPhrase.riskPrompt")}
+        phrase={phrase}
+        value={typed}
+        onChange={setTyped}
+        inputRef={phraseInput}
+        disabled={pending}
+      />
+    </ConfirmModal>
+  );
+}
+
+function SaveRefusal({
+  error,
+  hidden,
+}: Readonly<{ error: Error | null; hidden: boolean }>) {
+  const t = useT();
+  if (!error || hidden) {
+    return null;
+  }
+  return (
+    <Callout tone="danger" kind="outcome" title={t("signInMethods.saveFailed")}>
+      {problemMessageOf(error, t)}
+    </Callout>
   );
 }

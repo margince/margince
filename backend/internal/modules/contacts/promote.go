@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -295,10 +296,16 @@ func promotableLead(ctx context.Context, tx pgx.Tx, id ids.LeadID, in PromoteLea
 // locked is the contact the caller locked before the lead. A match on any
 // other contact answers promoteTargetMovedError, because locking it now would
 // take the lead's lock before the contact's.
-func (s *Store) promoteTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, by string, locked ids.ContactID, merged *bool) (ids.ContactID, map[string]any, error) {
+func (s *Store) promoteTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, by string, locked ids.ContactID, lanes ContactCandidate, merged *bool) (ids.ContactID, map[string]any, error) {
 	candidate, err := s.leadContactCandidate(ctx, tx, lead)
 	if err != nil {
 		return ids.ContactID{}, nil, err
+	}
+	// The lane locks were taken for the lead as it read before its lock. A lead
+	// renamed or re-addressed in between is a moved target, and the caller
+	// starts over under the right locks.
+	if candidate.FullName != lanes.FullName || !slices.Equal(candidate.Emails, lanes.Emails) {
+		return ids.ContactID{}, nil, &promoteTargetMovedError{}
 	}
 	// The contact is created under the SAME name the ladder matched on, so a
 	// lead that resolved as a new contact is stored as the candidate that was
@@ -332,7 +339,7 @@ func (s *Store) promoteTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.
 	if err != nil {
 		return ids.ContactID{}, nil, err
 	}
-	if err := match.recordIfReview(ctx, tx, id, name, lead.Source, by); err != nil {
+	if _, err := match.recordIfReview(ctx, tx, id, name, lead.Source, by); err != nil {
 		return ids.ContactID{}, nil, err
 	}
 	return id, nil, nil

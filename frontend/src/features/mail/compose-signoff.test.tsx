@@ -136,8 +136,10 @@ describe("the sign-off under the composer's body", () => {
     renderComposer();
 
     const block = await screen.findByRole("region", { name: REGION_NAME });
-    expect(block.textContent).toContain("Best regards,\nLars Jankowfsky");
-    expect(screen.getByText(CLOSING_HINT)).toBeTruthy();
+    expect(block.textContent).toContain(
+      "Signs off as “Best regards, Lars Jankowfsky”.",
+    );
+    expect(block.textContent).toContain(CLOSING_HINT);
     expect(
       screen
         .getByRole("link", { name: "Set your signature" })

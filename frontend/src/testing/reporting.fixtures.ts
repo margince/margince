@@ -302,6 +302,9 @@ export const reportingStoryFramework: components["schemas"]["ReportingFramework"
       reason: "Fixture framework",
     },
   };
+// The filters each figure takes, as the server's catalog lists them.
+const PERIOD_FILTERS = ["scope", "period", "target_basis"];
+const DEAL_FILTERS = [...PERIOD_FILTERS, "pipeline", "close_window"];
 export const reportingStoryCatalog: components["schemas"]["ReportingCatalog"] =
   {
     metrics: [
@@ -316,6 +319,7 @@ export const reportingStoryCatalog: components["schemas"]["ReportingCatalog"] =
           temporal_basis:
             metric.id === "bookings_won" ? "event_period" : "state_at",
           supports_target: metric.id === "bookings_won",
+          allowed_filters: DEAL_FILTERS,
           definition:
             metric.id === "bookings_won"
               ? "Won deals grouped by their current owner, in the selected close interval."
@@ -331,6 +335,7 @@ export const reportingStoryCatalog: components["schemas"]["ReportingCatalog"] =
         unit: "money",
         temporal_basis: "event_period",
         supports_target: true,
+        allowed_filters: DEAL_FILTERS,
         definition:
           "First valid entry into the stage mapping effective at the transition, credited to that event’s owner and valuation.",
         blocks: ["owner_attainment", "target_progress", "metric_reading"],
@@ -341,6 +346,7 @@ export const reportingStoryCatalog: components["schemas"]["ReportingCatalog"] =
         unit: "count",
         temporal_basis: "event_period",
         supports_target: true,
+        allowed_filters: PERIOD_FILTERS,
         definition:
           "Eligible customer meetings scheduled in the interval and confirmed held by capture time, credited to the recorded host.",
         blocks: ["sdr_outcomes", "target_progress", "metric_reading"],
@@ -351,6 +357,7 @@ export const reportingStoryCatalog: components["schemas"]["ReportingCatalog"] =
         unit: "count",
         temporal_basis: "event_period",
         supports_target: true,
+        allowed_filters: PERIOD_FILTERS,
         definition:
           "Distinct opportunities credited to the originating SDR at their first accepted handoff.",
         blocks: ["sdr_outcomes", "target_progress", "metric_reading"],

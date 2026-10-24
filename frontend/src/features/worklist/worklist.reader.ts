@@ -7,7 +7,7 @@ import {
   actorAttribution,
   HUMAN_ACTOR_PREFIX,
   isAuditActorType,
-} from "../settings/audit";
+} from "../../lib/auditactor";
 import { domainReasonLabels } from "./worklist.domainreason";
 import type { WorklistItem } from "./worklist.queries";
 
@@ -43,7 +43,9 @@ export function noticeDetail(
 ): string | undefined {
   if (item.source === "domain_question" && item.domain_reason_code) {
     const label = domainReasonLabels[item.domain_reason_code];
-    return label ? t(label) : item.detail;
+    if (!label) return item.detail;
+    // A vendor question also carries the site triage's own sentence.
+    return [t(label), item.domain_note].filter(Boolean).join(" ");
   }
   if (item.source !== "notice") return item.detail;
   const origin = item.notice_origin;

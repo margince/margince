@@ -1,0 +1,101 @@
+/* ProviderRow: one connected account. A three-column grid (mark, text,
+ * actions) so every row in a list puts its name and its verb on the same x. */
+
+.provider-list {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Between rows only, like .settinglist: a rule under the last row would sit
+ * a pixel above the panel's own edge and read as a doubled border. */
+.provider-list > * + * {
+  border-top: 1px solid var(--borderSubtle);
+}
+
+.provider-row {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: var(--space-3);
+  row-gap: var(--space-3);
+  padding: var(--space-3) 0;
+}
+
+/* A row alone in a Card (a connect tile): the card already pads it, so the
+ * row's own block padding would push the mark further from the top than the sides. */
+.card > .provider-row {
+  padding-block: 0;
+}
+
+/* The tile is the row's; the brand mark inside keeps its own geometry and is
+ * only sized, through the property provider-mark.css reads. */
+.provider-row-mark {
+  --providerMarkSize: 20px;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-control);
+  background: var(--bgElevated);
+  box-shadow: var(--shadow-rest);
+  color: var(--textPrimary);
+}
+.provider-row-mark > svg {
+  width: var(--providerMarkSize);
+  height: var(--providerMarkSize);
+}
+
+.provider-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.provider-row-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.provider-row-account {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.provider-row-facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
+
+.provider-row-reason {
+  margin: 0;
+}
+
+.provider-row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--gapActions);
+}
+
+.provider-row-body {
+  grid-column: 2 / -1;
+  min-width: 0;
+}
+
+/* Narrow: a right-hand verb would leave the name three words wide, so the
+ * actions drop under the text column (the same breakpoint as settingrow.css). */
+@media (max-width: 640px) {
+  .provider-row-actions {
+    grid-column: 2;
+    justify-content: flex-start;
+  }
+}

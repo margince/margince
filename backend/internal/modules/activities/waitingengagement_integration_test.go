@@ -104,6 +104,15 @@ func (e *loadEnv) waitingFrom(t *testing.T, subject, address string, contact ids
 	return activity
 }
 
+// waitingFromToRep is waitingFrom addressed to the rep, the seat that then
+// answers for it.
+func (e *loadEnv) waitingFromToRep(t *testing.T, subject, address string, contact ids.UUID) ids.UUID {
+	t.Helper()
+	activity := e.waitingFrom(t, subject, address, contact)
+	e.directlyTo(t, activity, e.rep)
+	return activity
+}
+
 // buyer writes one contact record for a wait to hang off.
 func (e *loadEnv) buyer(t *testing.T) ids.UUID {
 	t.Helper()
@@ -132,8 +141,8 @@ func present(t *testing.T, s *Store, e *loadEnv, activity ids.UUID) (WaitingRepl
 func TestAMessageFromOurOwnDomainIsNotAWaitingCustomer(t *testing.T) {
 	e := setupLoad(t)
 	contact := e.buyer(t)
-	colleague := e.waitingFrom(t, "Outstanding invoices", "eric@ourco.test", contact)
-	customer := e.waitingFrom(t, "Question about pricing", "buyer@customer.test", contact)
+	colleague := e.waitingFromToRep(t, "Outstanding invoices", "eric@ourco.test", contact)
+	customer := e.waitingFromToRep(t, "Question about pricing", "buyer@customer.test", contact)
 
 	s := storeKnowing(e, "ourco.test")
 	if _, ok := present(t, s, e, colleague); ok {
@@ -150,9 +159,9 @@ func TestAMessageFromOurOwnDomainIsNotAWaitingCustomer(t *testing.T) {
 func TestASubdomainOfOursIsAlsoOurs(t *testing.T) {
 	e := setupLoad(t)
 	contact := e.buyer(t)
-	sub := e.waitingFrom(t, "From the Berlin office", "ops@mail.ourco.test", contact)
+	sub := e.waitingFromToRep(t, "From the Berlin office", "ops@mail.ourco.test", contact)
 	// A domain that merely ENDS with ours is somebody else's company.
-	lookalike := e.waitingFrom(t, "Not us at all", "sales@notourco.test", contact)
+	lookalike := e.waitingFromToRep(t, "Not us at all", "sales@notourco.test", contact)
 
 	s := storeKnowing(e, "ourco.test")
 	if _, ok := present(t, s, e, sub); ok {
@@ -173,8 +182,8 @@ func TestASubdomainOfOursIsAlsoOurs(t *testing.T) {
 func TestASenderCannotHideBehindOurDomainInTheirLocalPart(t *testing.T) {
 	e := setupLoad(t)
 	contact := e.buyer(t)
-	quoted := e.waitingFrom(t, "Suppress me", `"x@ourco.test"@evil.test`, contact)
-	doubled := e.waitingFrom(t, "And me", "a@ourco.test@evil.test", contact)
+	quoted := e.waitingFromToRep(t, "Suppress me", `"x@ourco.test"@evil.test`, contact)
+	doubled := e.waitingFromToRep(t, "And me", "a@ourco.test@evil.test", contact)
 
 	s := storeKnowing(e, "ourco.test")
 	if _, ok := present(t, s, e, quoted); !ok {
@@ -197,7 +206,7 @@ func TestAnOwnDomainIsNeverReadAsAPattern(t *testing.T) {
 	// A SUBDOMAIN, because that is the branch a pattern can reach: the equality
 	// branch compares whole strings and can never treat one as a pattern, so a
 	// fixture using a bare domain passes whether or not the suffix is safe.
-	customer := e.waitingFrom(t, "A real customer", "buyer@mail.ourx.test", contact)
+	customer := e.waitingFromToRep(t, "A real customer", "buyer@mail.ourx.test", contact)
 
 	// The operator typed a wildcard character, deliberately or by accident.
 	s := storeKnowing(e, "our_.test")
@@ -217,7 +226,7 @@ func TestABlankOwnDomainMatchesNothing(t *testing.T) {
 	// A subdomain again: a blank entry makes the suffix comparison ask whether
 	// the domain ends in a bare dot, which only a dotted address could satisfy.
 	// Against "customer.test" the test would pass with the guard removed.
-	customer := e.waitingFrom(t, "A real customer", "buyer@mail.customer.test", contact)
+	customer := e.waitingFromToRep(t, "A real customer", "buyer@mail.customer.test", contact)
 
 	s := storeKnowing(e, "")
 	if _, ok := present(t, s, e, customer); !ok {
@@ -233,7 +242,7 @@ func TestABlankOwnDomainMatchesNothing(t *testing.T) {
 func TestWithNoOwnDomainsNobodyIsExcluded(t *testing.T) {
 	e := setupLoad(t)
 	contact := e.buyer(t)
-	colleague := e.waitingFrom(t, "Outstanding invoices", "eric@ourco.test", contact)
+	colleague := e.waitingFromToRep(t, "Outstanding invoices", "eric@ourco.test", contact)
 
 	unbound := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	if _, ok := present(t, unbound, e, colleague); !ok {
@@ -248,7 +257,7 @@ func TestWithNoOwnDomainsNobodyIsExcluded(t *testing.T) {
 func TestAnUnengagedThreadIsReportedNotHidden(t *testing.T) {
 	e := setupLoad(t)
 	contact := e.buyer(t)
-	cold := e.waitingFrom(t, "Cold approach", "stranger@customer.test", contact)
+	cold := e.waitingFromToRep(t, "Cold approach", "stranger@customer.test", contact)
 
 	s := storeKnowing(e, "ourco.test")
 	row, ok := present(t, s, e, cold)
@@ -264,7 +273,7 @@ func TestAnUnengagedThreadIsReportedNotHidden(t *testing.T) {
 func TestAnEarlierOutboundOnTheThreadIsEngagement(t *testing.T) {
 	e := setupLoad(t)
 	contact := e.buyer(t)
-	activity := e.waitingFrom(t, "Re: the proposal", "buyer@customer.test", contact)
+	activity := e.waitingFromToRep(t, "Re: the proposal", "buyer@customer.test", contact)
 	var thread string
 	e.exec(t, `SELECT 1`)
 	if err := e.pool.QueryRow(e.as(), `SELECT thread_key FROM activity WHERE id = $1`,
@@ -295,7 +304,7 @@ func TestAnEarlierOutboundOnTheThreadIsEngagement(t *testing.T) {
 func TestALaterOutboundIsNotEngagement(t *testing.T) {
 	e := setupLoad(t)
 	contact := e.buyer(t)
-	activity := e.waitingFrom(t, "Still waiting", "buyer@customer.test", contact)
+	activity := e.waitingFromToRep(t, "Still waiting", "buyer@customer.test", contact)
 	var thread string
 	if err := e.pool.QueryRow(e.as(), `SELECT thread_key FROM activity WHERE id = $1`,
 		activity).Scan(&thread); err != nil {
@@ -332,7 +341,7 @@ func TestAMessageWrittenOnlyToAColleagueIsAddressedElsewhere(t *testing.T) {
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	activity := e.waitingFrom(t, "Connect me with your team", "buyer@customer.test", contact)
-	e.addressedTo(t, activity, e.rep, "colleague@ours.test")
+	e.addressedTo(t, activity, e.rep, seatAddress(e.other))
 
 	row, found := present(t, storeKnowing(e), e, activity)
 	if !found {
@@ -368,11 +377,8 @@ func TestAMessageNamingTheReaderIsNotAddressedElsewhere(t *testing.T) {
 	}
 }
 
-// A message with no header recipients at all counts as addressed.
-//
-// Some connectors record none, and answering "not yours" there would demote
-// every message they captured — a silent failure across a whole integration.
-func TestAMessageNamingNoRecipientIsNotAddressedElsewhere(t *testing.T) {
+// A message with no header recipients names no seat, so it is nobody's wait.
+func TestAMessageNamingNoRecipientIsNobodysWait(t *testing.T) {
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	activity := e.waitingFrom(t, "No headers here", "buyer@customer.test", contact)
@@ -380,29 +386,24 @@ func TestAMessageNamingNoRecipientIsNotAddressedElsewhere(t *testing.T) {
 	// leaves behind.
 	e.addressedTo(t, activity, e.rep)
 
-	row, found := present(t, storeKnowing(e), e, activity)
-	if !found {
-		t.Fatal("the message is not in the queue at all")
-	}
-	if row.AddressedElsewhere {
-		t.Error("a message with no named recipients reads as somebody else's, " +
-			"which demotes every message written straight to the reader")
+	// No address in To names a seat, so nobody answers for the message and
+	// it is not waiting work for anyone.
+	if row, found := present(t, storeKnowing(e), e, activity); found {
+		t.Errorf("a message naming no recipient is on the team queue: %+v", row)
 	}
 }
 
-// Unknown recipient addresses retain team visibility without assigning a seat.
-func TestAnUnresolvedRecipientStaysUnassignedOnTheTeamQueue(t *testing.T) {
+// An unknown recipient address names no seat, so the message is not team work.
+func TestAnUnresolvedRecipientIsNotTeamWork(t *testing.T) {
 	e := setupLoad(t)
 	contact := e.buyer(t)
 	activity := e.waitingFrom(t, "About the retrofit", "buyer@customer.test", contact)
 	e.addressedTo(t, activity, e.rep, "colleague@ours.test")
 
-	row, found := present(t, storeKnowing(e), e, activity)
-	if !found {
-		t.Fatal("the message is not in the queue at all")
-	}
-	if !row.AddressedElsewhere || !row.OwnerID.IsZero() {
-		t.Errorf("an unresolved recipient became personal work: %+v", row)
+	// An unresolved address in To names no seat: the message is neither
+	// personal nor shared work.
+	if row, found := present(t, storeKnowing(e), e, activity); found {
+		t.Errorf("a message with an unresolved recipient is on the team queue: %+v", row)
 	}
 }
 

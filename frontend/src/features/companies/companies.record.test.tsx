@@ -31,7 +31,9 @@ afterEach(() => {
 // openHistory switches to the tab the account's chronology lives on. The
 // timeline is not on the overview, so a test about it has to go there first.
 async function openHistory() {
-  await userEvent.click(await screen.findByRole("button", { name: "History" }));
+  await userEvent.click(
+    await screen.findByRole("button", { name: /^History/ }),
+  );
 }
 
 const employmentRel = {
@@ -256,9 +258,9 @@ describe("CompanyScreen — the account pulse line (P-4)", () => {
     // contact), not the header's: one fact, one home.
     await waitFor(() => expect(screen.getByText(/Best route/)).toBeTruthy());
     expect(screen.getByText(/of 3 contacts here/)).toBeTruthy();
-    const facts = screen.getByText(/Best route/).closest("dl");
-    if (!facts) {
-      throw new Error("the way in is not drawn among the header's facts");
+    const facts = screen.getByText(/Best route/).closest(".record-split-head");
+    if (!(facts instanceof HTMLElement)) {
+      throw new Error("the way in is not drawn among the head's lines");
     }
     expect(within(facts).queryByText(/Last contact/)).toBeNull();
     // No composite score. A MAX over contacts lets one talkative contact speak

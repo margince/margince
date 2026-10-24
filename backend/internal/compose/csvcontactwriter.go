@@ -71,12 +71,14 @@ func (w *csvWriters) createContact(ctx context.Context, row migration.Row, typed
 // applyContact writes a contact's changed fields. It merges the file's address,
 // email, phone and LinkedIn handle onto what the contact holds, because the
 // store replaces each of those wholesale.
-func (w *csvWriters) applyContact(ctx context.Context, id ids.UUID, in contacts.UpdateContactInput, current []byte, source string) error {
+func (w *csvWriters) applyContact(
+	ctx context.Context, id ids.UUID, in contacts.UpdateContactInput, changed map[string]string, current []byte, source string,
+) error {
 	in.IfVersion = w.reviewedVersion(id)
 	// Emails and phones added by an update carry the provenance the create
 	// path stamps; without it their source lands empty.
 	in.Source = source
-	merged, given, err := addressMergedOnto(current, in.Address)
+	merged, given, err := addressMergedOnto(current, in.Address, changed)
 	if err != nil {
 		return err
 	}

@@ -11,6 +11,7 @@ import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
 import { AddDocumentDialog } from "../voice-knowledge/adddocument";
+import { roomBriefKey } from "./dealroombrief.key";
 import "./dealroomdocuments.css";
 
 // The seller's verbs on a Deal Room's documents: which of the deal's files the
@@ -170,6 +171,7 @@ function useAddDocument(roomId: string) {
       queryClient.invalidateQueries({
         queryKey: ["deal-room-documents", roomId],
       });
+      queryClient.invalidateQueries({ queryKey: roomBriefKey(roomId) });
     },
   });
 }
@@ -197,6 +199,7 @@ export function useRemoveDocument(roomId: string) {
       queryClient.invalidateQueries({
         queryKey: ["deal-room-documents", roomId],
       });
+      queryClient.invalidateQueries({ queryKey: roomBriefKey(roomId) });
     },
   });
 }

@@ -10,18 +10,17 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
+import { OvernightGrantChoice } from "../../components/overnight-grant-choice";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
-import { OvernightGrantCard, OvernightGrantChoice } from "./overnight-grant";
+import { OvernightGrantCard } from "./overnight-grant";
 
 // The rep's standing overnight authority, asked in two places.
 //
-// What is worth holding is not that a checkbox renders: it is that the DEFAULT
-// is ticked, that clearing it says out loud what stops working, and that the
-// two surfaces say the SAME thing about the same authority — a rep who reads
-// the warning in onboarding and again in Settings must not be told two
-// different costs.
+// What is worth holding: the onboarding default is on, and turning it off names
+// what stops working. Onboarding never writes. Settings writes on flip and,
+// once off, says so with an Off badge instead of a warning.
 
 function render(ui: ReactNode) {
   return rtlRender(
@@ -35,8 +34,7 @@ function render(ui: ReactNode) {
   );
 }
 
-/** The checkbox owns no state — the onboarding act does — so a test has to
- * hold it for the box to be tickable at all. */
+/** The switch owns no state (the onboarding act does), so a test holds it. */
 function Harness({ initial }: Readonly<{ initial: boolean }>) {
   const [checked, setChecked] = useState(initial);
   return <OvernightGrantChoice checked={checked} onChange={setChecked} />;
@@ -47,31 +45,33 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it("arrives ticked, and says nothing alarming while it is", () => {
+it("arrives on, and says nothing alarming while it is", () => {
   installFetchStub({});
   render(<Harness initial={true} />);
   expect(
-    screen.getByRole("checkbox", { name: en["overnightGrant.label"] }),
-  ).toHaveProperty("checked", true);
-  // The warning is the cost of saying no. Showing it against a ticked box
+    screen
+      .getByRole("switch", { name: en["overnightGrant.label"] })
+      .getAttribute("aria-checked"),
+  ).toBe("true");
+  // The warning is the cost of saying no. Showing it against the default
   // would make the default look like the dangerous answer.
   expect(screen.queryByText(en["overnightGrant.danger"])).toBeNull();
 });
 
-it("names what goes empty the moment it is cleared", async () => {
+it("names what goes empty the moment it is turned off", async () => {
   installFetchStub({});
   render(<Harness initial={true} />);
   await userEvent.click(
-    screen.getByRole("checkbox", { name: en["overnightGrant.label"] }),
+    screen.getByRole("switch", { name: en["overnightGrant.label"] }),
   );
   const warning = await screen.findByText(en["overnightGrant.danger"]);
   expect(warning).toBeTruthy();
-  // Stated, never announced: a cleared box is the rep's own answer, and
-  // interrupting them with the cost of it reads their decision back as a fault.
+  // Stated, never announced: off is the rep's own answer, and interrupting
+  // them with its cost reads their decision back as a fault.
   expect(warning.closest("[role='alert']")).toBeNull();
 });
 
-it("writes nothing on its own — the onboarding step carries the answer", async () => {
+it("writes nothing on its own: the onboarding step carries the answer", async () => {
   const calls: string[] = [];
   installFetchStub({
     "PUT /me/agent-grants/morning_brief": () => {
@@ -81,14 +81,14 @@ it("writes nothing on its own — the onboarding step carries the answer", async
   });
   render(<Harness initial={true} />);
   await userEvent.click(
-    screen.getByRole("checkbox", { name: en["overnightGrant.label"] }),
+    screen.getByRole("switch", { name: en["overnightGrant.label"] }),
   );
   await userEvent.click(
-    screen.getByRole("checkbox", { name: en["overnightGrant.label"] }),
+    screen.getByRole("switch", { name: en["overnightGrant.label"] }),
   );
-  // Ticking is an INTENT the connect step submits. A box that wrote on tick
-  // would grant an authority for every reader who merely passed through the
-  // screen, since it arrives ticked.
+  // The onboarding switch holds an answer the step submits on continue. One
+  // that wrote on flip would grant for every reader passing through, since it
+  // arrives on.
   expect(calls).toEqual([]);
 });
 
@@ -115,8 +115,33 @@ it("the settings card shows the stored answer and writes when flipped", async ()
   const toggle = await screen.findByTestId("overnight-grant-toggle");
   await waitFor(() => expect(toggle.getAttribute("aria-checked")).toBe("true"));
   await userEvent.click(toggle);
-  // Unlike the checkbox, a Switch IS the action: flipping it writes.
+  // Unlike onboarding's, this switch is the action: flipping it writes.
   await waitFor(() => expect(written).toEqual([{ granted: false }]));
+});
+
+it("says a refused flip once for the card, and the switch returns to the stored answer", async () => {
+  installFetchStub({
+    "GET /me/agent-grants": () =>
+      jsonResponse({
+        data: [
+          { spec: "morning_brief", state: "granted", credential_usable: true },
+        ],
+      }),
+    "PUT /me/agent-grants/morning_brief": () =>
+      jsonResponse(
+        { title: "Unprocessable", detail: "the credential store refused" },
+        422,
+      ),
+  });
+  render(<OvernightGrantCard />);
+
+  const toggle = await screen.findByTestId("overnight-grant-toggle");
+  await waitFor(() => expect(toggle.getAttribute("aria-checked")).toBe("true"));
+  await userEvent.click(toggle);
+  expect(
+    await screen.findByText(en["overnightGrant.writeFailedTitle"]),
+  ).toBeTruthy();
+  await waitFor(() => expect(toggle.getAttribute("aria-checked")).toBe("true"));
 });
 
 it("tells the rep the agent outgrew their authority, not that it lapsed", async () => {
@@ -124,9 +149,8 @@ it("tells the rep the agent outgrew their authority, not that it lapsed", async 
     "GET /me/agent-grants": () =>
       jsonResponse({
         data: [
-          // Live authority — neither revoked nor expired — for a job this
-          // agent no longer does. The run does not fail; it degrades the
-          // unfunded tools away and prepares nothing, silently, at 2am.
+          // Live authority, neither revoked nor expired, for a job this agent
+          // no longer does. The run degrades and prepares nothing at 2am.
           {
             spec: "morning_brief",
             state: "granted",
@@ -142,7 +166,7 @@ it("tells the rep the agent outgrew their authority, not that it lapsed", async 
   // NOT the expiry notice: nothing expired, and telling the rep it did sends
   // them looking for a lapse that never happened.
   expect(screen.queryByText(en["overnightGrant.renew"])).toBeNull();
-  expect(screen.queryByText(en["overnightGrant.danger"])).toBeNull();
+  expect(screen.queryByText(en["overnightGrant.offNote"])).toBeNull();
 });
 
 it("says nothing when the authority still covers the agent", async () => {
@@ -179,17 +203,15 @@ it("tells the rep their authority died rather than that they declined", async ()
   render(<OvernightGrantCard />);
 
   expect(await screen.findByText(en["overnightGrant.renew"])).toBeTruthy();
-  // NOT the decline warning: they already answered, and showing that would put
-  // a settled question back in front of them. And not the scope notice either:
-  // a lapsed passport funds nothing, so BOTH would be true of it and a rep
-  // reading two notices cannot tell which one to act on.
-  expect(screen.queryByText(en["overnightGrant.danger"])).toBeNull();
+  // Not the off sentence. They already answered, and it would put a settled
+  // question back in front of them. Not the scope notice either. A lapsed
+  // passport funds nothing, so both would be true. A rep reading two notices
+  // cannot tell which to act on.
+  expect(screen.queryByText(en["overnightGrant.offNote"])).toBeNull();
   expect(screen.queryByText(en["overnightGrant.renewScope"])).toBeNull();
 });
 
-// A declined answer is the rep's own, so a later visit does not read it back
-// to them as a fault.
-it("says nothing alarming on a visit after the rep declined", async () => {
+it("reads a decline back quietly on Settings: an Off badge, no warning", async () => {
   installFetchStub({
     "GET /me/agent-grants": () =>
       jsonResponse({
@@ -204,9 +226,32 @@ it("says nothing alarming on a visit after the rep declined", async () => {
   });
   render(<OvernightGrantCard />);
 
-  const toggle = await screen.findByTestId("overnight-grant-toggle");
-  expect(toggle.getAttribute("aria-checked")).toBe("false");
+  expect(await screen.findByText(en["overnightGrant.offNote"])).toBeTruthy();
+  expect(screen.getByText(en["overnightGrant.off"])).toBeTruthy();
+  // The warning belongs where the answer is first given. On Settings the answer
+  // is settled, and a warning on every visit reads it back as a fault.
   expect(screen.queryByText(en["overnightGrant.danger"])).toBeNull();
+});
+
+it("drops the Off badge once the rep turns it on", async () => {
+  installFetchStub({
+    "GET /me/agent-grants": () =>
+      jsonResponse({
+        data: [
+          {
+            spec: "morning_brief",
+            state: "granted",
+            credential_usable: true,
+            credential_funds_agent: true,
+          },
+        ],
+      }),
+  });
+  render(<OvernightGrantCard />);
+
+  await screen.findByTestId("overnight-grant-toggle");
+  expect(screen.queryByText(en["overnightGrant.off"])).toBeNull();
+  expect(screen.queryByText(en["overnightGrant.offNote"])).toBeNull();
 });
 
 it("says the same thing about the same authority in both places", async () => {

@@ -20,7 +20,7 @@ A deal holds one room at a time. Without the Create permission on Deal Rooms the
 Also called: buyer portal, data room, customer portal, microsite.
 
 ### How do I share a deal room with a buyer?
-To share a Deal Room with a buyer in Margince, open the deal's **Deal Room** tab and click **Invite** in the **Access** panel.
+To share a Deal Room with a buyer in Margince, open the deal's **Deal Room** tab and click **Invite** in the **Who may enter** panel.
 1. In **Invite to Deal Room**, fill **Name** and **Email** (both required).
 2. Under **Permissions**, choose **Read-only** ("Can read the documents and comments.") or **Read and comment** ("Can also ask questions and reply.").
 3. Click **Invite**. The **Invitation link** is shown; click **Copy link** and send it to the buyer.
@@ -33,7 +33,7 @@ When nothing was sent, the screen says "The link was not mailed. Copy it and sen
 Also called: the buyer did not get the invitation email.
 
 ### How do I add documents to a deal room?
-To add a document to a Deal Room in Margince, open the deal's **Deal Room** tab and use the form under **Documents**.
+To add a document to a Deal Room in Margince, open the deal's **Deal Room** tab and use the form at the foot of **Documents**.
 1. Under **File from this deal**, choose **Pick a file**. Any file in the deal's Files area can be added, including uploads and email attachments.
 2. Choose a **Group**: Commercial, Legal, Security and privacy, or Delivery and operations.
 3. Click **Add to room**.
@@ -41,25 +41,47 @@ If the file is not on the deal yet, click **Upload a file** first. Margince file
 Also called: share a file with the buyer, upload a PDF to the room.
 
 ### How do I pause, close or set an end date on a deal room?
-To pause or close a Deal Room in Margince, open the deal's **Deal Room** tab and click **Manage room**. Use the **Room access** menu on the room's page: **Pause**, **Resume**, **Close room** or **Set end date**.
-- **Pause**: "Buyers keep their links but see a paused page until you resume."
-- **Close room**: "Buyers can still read. Nothing new can be added."
-- **Set end date**: "Access stops on that day." Leave **Access ends on** empty for no end date.
+To pause or close a Deal Room in Margince, open the deal's **Deal Room** tab and click **Manage room**.
+1. Under **Room access**, choose **Live**, **Paused** or **Closed**. Choosing **Closed** shows "Close this Deal Room?" in the dialog; nothing changes until you save.
+   - **Live**: "Buyers can read, download and comment."
+   - **Paused**: "Buyers keep their links but see a paused page until you resume."
+   - **Closed**: "Buyers can still read. Nothing new can be added."
+2. Set **Access ends on**: "Leave empty for no end date. The day is read in UTC."
+3. Click **Save changes**.
+A paused room also shows **Resume** in the notice on the tab. A closed, expired or archived room cannot be changed here: "This room has ended. Its shared content is kept as a record."
 Without permission to change Deal Rooms, **Manage room** is not shown.
 Also called: stop sharing, lock the room, expire the room.
 
+### How do I change the room's title, welcome or contact?
+To change what a buyer reads first in Margince, open the deal's **Deal Room** tab and click **Manage room**. **Your contact** is beside **Access ends on**; **Room title** and **Welcome message** are under **Title and welcome**.
+- **Room title** is the heading the buyer sees.
+- **Welcome message** is "The first paragraph a buyer reads."
+- **Your contact** is "The colleague a buyer turns to."
+Click **Save changes**. "Changes reach buyers the next time they open the room."
+Also called: rename the room, edit the welcome text, change the buyer's contact.
+
+### What does the deal room tab show?
+The **Deal Room** tab leads with the room's title, its state, its welcome and who is in it. Under that:
+- **Get the room ready** lists four steps: write a welcome, invite a buyer, add a document and start a thread. Margince ticks each one off from the room itself, and the list goes away once all four are done.
+- **Room brief** says in a few sentences what the buyers did and what is waiting on you. Each sentence names what it was written from. The line under it says **Written by Margince** when the AI wrote it. It says **Compiled from CRM records** when no AI was set up or it did not answer.
+- **Documents** stand beside the **Conversation**, which holds every thread and names the document each one is about.
+- **Who may enter** lists each buyer as **Invited**, **Signed in**, **Link requested** or **Revoked**, with the actions for their link.
+
+**Get the room ready** is not shown on a closed, expired or archived room, or without permission to change it. **Room brief** is not shown when there is nothing to report, or when it could not be read.
+Also called: room overview, deal room summary.
+
 ### How do I remove a buyer from a deal room?
-To remove a buyer from a Deal Room in Margince, open the deal's **Deal Room** tab. In the **Access** panel, open the buyer's row actions and choose **Revoke access**.
+To remove a buyer from a Deal Room in Margince, open the deal's **Deal Room** tab. In the **Who may enter** panel, open the buyer's row actions and choose **Revoke access**.
 "Their session ends and their link stops working. Their comments stay visible and attributed. Requesting a new link does not restore access."
 
 The same menu has **Issue new link** (their current link stops working) and **Change permissions**.
-Once the room is closed or expired, the tab hides this menu; click **Manage room** to reach it on the room's own page.
+Once the room is closed, expired or archived, the tab hides this menu. Click **Manage room**, then **Open the room’s page**, to reach it there.
 Also called: revoke access, kick out, remove a participant.
 
 ### How do I see which deal rooms a contact is in?
 To see the Deal Rooms a contact can still enter in Margince, open the contact and choose the **Deals** tab. The **Deal Rooms** panel lists each room with its state.
 - **Open** goes to the room's own page.
-- **Revoke access** ends that contact's seat in the room. It is the same revoke that the room's **Access** panel does.
+- **Revoke access** ends that contact's seat in the room. It is the same revoke that the room's **Who may enter** panel does.
 The panel is not shown when the contact holds no seat, or when your role cannot read Deal Rooms.
 Also called: which rooms has this buyer been invited to, remove someone who left the customer from every room.
 
@@ -93,8 +115,8 @@ the page.
 
 **Close**: "Buyers can still read the room. No document, comment or decision is
 accepted afterward." You can still revoke buyers and issue links, but only from
-the room's own page, reached with **Manage room**. The deal's tab hides those
-actions once the room is closed.
+the room's own page, reached with **Manage room** and **Open the room’s page**.
+The deal's tab hides those actions once the room is closed.
 
 Note that closing does not freeze the room. A buyer keeps
 reading the room and downloading its documents; neither side can add a document
@@ -109,8 +131,8 @@ deal closed.
 
 ### The access end date
 
-A Deal Room's end date is set with **Set end date**: "Access stops on that
-day." Setting one in the past takes effect at once. That is how you cut access
+A Deal Room's end date is set in **Access ends on**, under **Manage room**:
+access stops on that day. Setting one in the past takes effect at once. That is how you cut access
 short without ending the room.
 
 One thing to know: the date is read in **UTC**, not in your own time zone. If

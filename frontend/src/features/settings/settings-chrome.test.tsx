@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PageTitle } from "../../app/shell";
 import { translate } from "../../i18n";
 import * as router from "../../lib/router";
+import { settingsHref } from "../../lib/settingsrouting";
 import {
   labelOf,
   readOn,
@@ -16,7 +17,6 @@ import {
 import { navGroupNames } from "../../testing/shellharness";
 import { SettingsScreen } from "./settings";
 import { useSettingsSection } from "./settingsnav";
-import { settingsHref } from "./settingsrouting";
 
 // What the settings chrome draws around a page: the rail’s own shape, the
 // scope a page publishes to the shell, and the rail’s search box.

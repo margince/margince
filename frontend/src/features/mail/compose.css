@@ -1,37 +1,92 @@
-/* Composer modal layout only — the modal chrome, inputs, and picker come from
- * confirmmodal / atoms / recordpicker. Tokens only (ds-purity). */
+/* The composer's own layout inside its docked window. The window chrome,
+ * inputs and pickers come from the design system. Tokens only (ds-purity). */
 
-.compose-fields {
+/* The window's middle: the fields scroll, the band of what stands in the way
+   and the foot stay put under them. */
+.compose-window {
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
+  min-block-size: 0;
+  /* The containing block for a `.sr-only` inside, which would otherwise
+     resolve against the page and scroll it. */
+  position: relative;
 }
 
-/* Supporting fields keep their height; the message gets a usable writing floor. */
+.compose-fields {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-block-size: 0;
+  overflow-y: auto;
+  padding: var(--space-2) var(--space-4) var(--space-3);
+}
+
+/* Supporting fields keep their height; the message takes what is left. */
 .compose-fields > * {
   flex-shrink: 0;
 }
-.compose-fields > .richtext {
+
+/* The composer window's scrolling sheet: the envelope rows and strips run edge
+   to edge and sit flush on one another; what follows keeps the margin. */
+.compose-sheet {
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  flex: 1 0 auto;
-  min-block-size: clamp(22rem, 50dvh, 40rem);
-}
-.compose-fields > .richtext > .richtext-input {
-  flex: 1 1 auto;
+  gap: var(--space-2);
   min-block-size: 0;
-  scroll-margin-block-end: calc(var(--controlHeight) + var(--space-3));
+  overflow-y: auto;
+  padding: 0 var(--space-4) var(--space-3);
 }
-.compose-fields > .richtext > .richtext-foot {
+.compose-sheet > * {
   flex-shrink: 0;
 }
+.compose-sheet > .compose-address-field,
+.compose-sheet > .compose-subject,
+.compose-sheet > .compose-strip {
+  margin-inline: calc(var(--space-4) * -1);
+  margin-block-end: calc(var(--space-2) * -1);
+}
+.compose-sheet > .compose-aiband {
+  margin-block-start: var(--space-2);
+}
+.compose-sheet > .richtext {
+  flex: 1 0 auto;
+  /* A floor the fields above cannot squeeze the writing surface below. */
+  min-block-size: 10rem;
+}
+/* The words sit on the sheet itself, as a mail client's do; the window is the
+   frame, so the editor draws none of its own. */
+.compose-sheet > .richtext,
+.compose-sheet > .richtext:focus-within {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
 
-@media (max-height: 32rem) {
-  .compose-fields > .richtext {
-    flex: 0 0 auto;
-    block-size: 35dvh;
-    min-block-size: 0;
-  }
+/* The subject and the project whose tag it carries, on one ruled line. The
+   subject is a bare line of text, named by its placeholder. */
+.compose-subject {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-2);
+  border-bottom: 1px solid var(--borderSubtle);
+}
+.compose-subject > :first-child {
+  flex: 1;
+  min-inline-size: 0;
+}
+.compose-subject > :last-child:not(:first-child) {
+  flex: none;
+  inline-size: 11.875rem;
+}
+.compose-subject-field .input {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  font-weight: var(--fontWeightMedium);
 }
 
 .compose-band-body {
@@ -47,13 +102,16 @@
   gap: var(--space-1);
 }
 
-/* The four asks a rep can make of the machine's own words, under the body they
-   are about. A row, wrapping, with its name in front of it. */
+/* The asks a rep can make of the machine's own words, on the disclosure's
+   line. A fieldset for its name, without a fieldset's frame. */
 .compose-rewrite {
   display: flex;
-  flex-wrap: wrap;
+  flex: none;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  border: 0;
 }
 
 /* The caret half of the send control. It carries the confirm's own fill, so
@@ -156,9 +214,19 @@
   align-items: center;
   gap: var(--space-2);
 }
+.compose-draftbar > svg {
+  flex: none;
+  inline-size: 16px;
+  block-size: 16px;
+  color: var(--aiText);
+}
 .compose-draftbar .input {
   flex: 1 1 12rem;
   min-inline-size: 0;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  padding-inline: 0;
 }
 
 /* The AI provenance notice card: the offer surface's banner treatment, stacked to
@@ -199,18 +267,27 @@
   margin: 0;
 }
 
-/* What this message answers, above the recipient it will go to. Meta ink and
-   the small size the rest of the dialog's secondary lines use: it is context
-   for the fields below, not a field of its own. */
-.mw-answering {
-  margin: 0;
-}
-
-/* The sign-off a send appends, under the body: the server's text, kept to its
- * own line breaks and spacing, in the muted ink of something the reader does not edit. */
+/* The sign-off a send appends, under the words: the server's text, in the
+ * muted ink of something the reader does not edit. */
 .compose-signoff {
   display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  color: var(--textSecondary);
+}
+.compose-signoff > p {
+  flex: 1;
+  margin: 0;
+}
+.compose-signoff > svg {
+  flex: none;
+  inline-size: 14px;
+  block-size: 14px;
+}
+.compose-signoff.is-signature {
   flex-direction: column;
+  align-items: stretch;
   gap: var(--space-1);
 }
 
@@ -221,6 +298,207 @@
 }
 
 /* Drawn as updating while the words have moved on and the answer has not. */
-.compose-signoff.is-stale .compose-signoff-text {
+.compose-signoff.is-stale > :not(a) {
   opacity: 0.5;
+}
+
+/* The line above the words, in the agent's tint: what the reader asks the
+   model for, and what the model wrote. */
+.compose-aiband {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-1) var(--space-1) var(--space-3);
+  border: 1px solid var(--aiMed);
+  border-radius: var(--r-xs);
+  background: var(--aiLight);
+}
+.compose-aiband > p {
+  margin: 0;
+}
+/* The drafted line: the disclosure takes what is left and ends in an
+   ellipsis, its verbs keep their width at the end. */
+.compose-band-line {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--aiText);
+}
+.compose-band-line > svg {
+  flex: none;
+  inline-size: 1rem;
+  block-size: 1rem;
+}
+.compose-band-text {
+  flex: 1;
+  min-inline-size: 0;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* A reason to write, picked at the end of the refusal's strip. */
+.compose-reason {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  inline-size: 11.25rem;
+}
+
+/* What stands between the message and its send, above the foot. Nothing is
+   drawn while nothing stands in the way. */
+.compose-blockers {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  max-block-size: 45%;
+  overflow-y: auto;
+  border-top: 1px solid var(--borderSubtle);
+}
+.compose-blockers:empty {
+  display: none;
+}
+.compose-blockers > * {
+  flex-shrink: 0;
+  margin: 0;
+}
+.compose-blockers > * + * {
+  border-top: 1px solid var(--borderSubtle);
+}
+
+/* Each blocker is one strip across the window: its headline and sentence on
+   one line, and what fixes it at the end. A callout's card frame is dropped. */
+.compose-strip {
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4);
+  font: var(--fontBodySmall);
+}
+.compose-blockers .callout {
+  align-items: center;
+  gap: var(--space-2) var(--space-3); /* ds:ignore one strip in the composer's blocker band, matched to compose-strip */
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4); /* ds:ignore one strip in the composer's blocker band, matched to compose-strip */
+  border: 0;
+  border-radius: 0;
+  font: var(--fontBodySmall);
+}
+.compose-strip-ai {
+  background: var(--aiLight);
+}
+.compose-blockers .callout-warning,
+.compose-strip-warning {
+  background: var(--warningBg);
+}
+.compose-blockers .callout-danger {
+  background: var(--dangerBg);
+}
+.compose-blockers .callout-copy {
+  display: block;
+  flex-basis: 12rem;
+}
+.compose-blockers .callout-title,
+.compose-blockers .callout-text,
+.compose-blockers .callout-text > p {
+  display: inline;
+}
+.compose-blockers .callout-title {
+  margin-inline-end: var(--space-1);
+  font-weight: var(--fontWeightBold);
+}
+.compose-strip {
+  display: flex;
+}
+.compose-strip > svg {
+  flex: none;
+  inline-size: 1rem;
+  block-size: 1rem;
+  color: var(--warningText);
+}
+.compose-strip-text {
+  flex: 1;
+  min-inline-size: 0;
+  margin: 0;
+}
+.compose-strip-warning .compose-strip-text > strong {
+  color: var(--warningText);
+  font-weight: var(--fontWeightBold);
+}
+.compose-strip-field {
+  flex: none;
+  inline-size: 11.25rem;
+}
+
+/* The foot: the send where the hand ends up, what became of the draft, and
+   the way to throw it away. */
+.compose-foot {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3) var(--space-2) var(--space-4);
+  border-top: 1px solid var(--borderSubtle);
+}
+.compose-foot-row {
+  display: flex;
+  align-items: center;
+  gap: var(--gapActions);
+}
+.compose-foot-status {
+  flex: 1;
+  min-inline-size: 0;
+  text-align: end;
+}
+/* The editor's marks, drawn here beside Send rather than under the words. */
+.compose-foot-marks > .richtext-foot {
+  padding: 0;
+  background: none;
+}
+/* The schedule caret is a narrow tab on the send, not a second button. */
+.compose-foot .compose-sendmenu {
+  min-inline-size: 0;
+  padding-inline: var(--space-1);
+}
+
+/* The thread a reply answers, folded under its words. */
+.compose-earlier {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+/* The fold is drawn as a small pill in the text's margin, as a mail client's
+   is. The button around it keeps the full target but draws no box of its own,
+   so only the pill shows, and the pill's line takes the hover and pressed ink. */
+.compose-earlier .btn,
+.compose-earlier .btn:hover,
+.compose-earlier .btn[aria-pressed="true"] {
+  border-color: transparent;
+  background: none;
+}
+.compose-earlier .btn:hover .compose-earlier-pill,
+.compose-earlier .btn[aria-pressed="true"] .compose-earlier-pill {
+  border-color: var(--textSecondary);
+  color: var(--textPrimary);
+}
+.compose-earlier-pill {
+  display: inline-flex;
+  align-items: center;
+  block-size: var(--space-4);
+  padding-inline: var(--space-2);
+  border: 1px solid var(--borderStrong);
+  border-radius: var(--r-full);
+  corner-shape: round;
+}
+.compose-quoted {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+}
+.compose-quoted > blockquote {
+  margin: 0;
+  padding-inline-start: var(--space-3);
+  border-inline-start: 2px solid var(--borderStrong);
+  color: var(--textSecondary);
 }

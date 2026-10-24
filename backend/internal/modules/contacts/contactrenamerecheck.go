@@ -12,19 +12,22 @@ package contacts
 // ("Gerhard Sahner"). That edit is the moment the duplicate becomes visible —
 // the same contact already sat under another address — and nothing looked.
 //
-// Every write that changes full_name re-runs the fuzzy tier and the
-// name-collision lane and files what they find. Unlike the company re-check it
+// Every write that changes full_name or the addresses re-runs the review lanes
+// and files what they find. Unlike the company re-check it
 // also runs for a human's edit: a human correcting a name is exactly who
 // reveals the twin. It never merges and never overrules the rename; the pair
 // goes on the review queue.
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/freemail"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -37,55 +40,134 @@ func renamesAContact(currentName string, in UpdateContactInput) bool {
 	return in.FullName != nil && NormalizeContactName(*in.FullName) != NormalizeContactName(currentName)
 }
 
-// recheckIfRenamed runs the re-check when an update moved the contact's name.
+// recheckIfEdited runs the re-check when an update moved the contact's name or
+// replaced its addresses. A new address can reveal a twin too: the same mailbox
+// under a plus tag, or a subdomain of the twin's employer.
 //
-// The name-lane lock is taken here, after the row lock the update already
-// holds. That order cannot deadlock against a create: a create takes the name
-// lock and then inserts a NEW row, never waiting on an existing one, and the
-// re-check below only reads other contacts.
-func recheckIfRenamed(ctx context.Context, tx pgx.Tx, id ids.ContactID, currentName string, in UpdateContactInput) error {
-	if !renamesAContact(currentName, in) {
+// The lane locks were taken before the edit wrote anything
+// (lockEditedContactLanes), so the re-check's own locks are already held.
+func recheckIfEdited(ctx context.Context, tx pgx.Tx, id ids.ContactID, currentName string, in UpdateContactInput, emailsChanged bool) error {
+	if !renamesAContact(currentName, in) && !emailsChanged {
 		return nil
-	}
-	if err := lockNameLane(ctx, tx, *in.FullName); err != nil {
-		return err
 	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return err
 	}
-	return recheckContactNameForDuplicates(ctx, tx, id, by)
+	return recheckContactForDuplicates(ctx, tx, id, contactRenameRecheckSource, by)
 }
 
-// recheckContactNameForDuplicates scores a renamed contact against the rest of
-// the workspace and files the pair the fuzzy tier or the name-collision lane
-// names. The caller holds the name-lane lock for the new name (lockNameLane), so
-// two renames converging on one name cannot both read no incumbent and land
-// unfiled.
-//
-// The exact lanes are skipped: the contact holds its own addresses and phones,
-// so they would name itself. Its addresses still ride the candidate, because
-// the fuzzy tier's employer term reads their domains.
-func recheckContactNameForDuplicates(ctx context.Context, tx pgx.Tx, id ids.ContactID, by string) error {
-	var name string
-	var emails []string
-	err := tx.QueryRow(ctx, `
-		SELECT p.full_name,
-		       coalesce((SELECT array_agg(e.email) FROM contact_email e
-		                  WHERE e.contact_id = p.id AND e.archived_at IS NULL), '{}')
-		  FROM contact p
-		 WHERE p.id = $1 AND p.archived_at IS NULL`, id).Scan(&name, &emails)
-	if err != nil {
-		return fmt.Errorf("contacts: reading the renamed contact: %w", err)
-	}
-	if NormalizeContactName(name) == "" {
+// lockEditedContactLanes locks the contact's row, then the lanes for the
+// addresses and the name it will hold, before the edit writes an address
+// (lockorder.go). An edit that neither renames nor sends addresses takes none.
+func lockEditedContactLanes(ctx context.Context, tx pgx.Tx, id ids.ContactID, current crmcontracts.Contact, in UpdateContactInput) error {
+	if !renamesAContact(current.FullName, in) && in.Emails == nil {
 		return nil
 	}
-	match, err := fuzzyContact(ctx, tx, ContactCandidate{
-		FullName: name, Emails: emails, QueueNameCollisions: true, ExcludeID: &id,
-	})
+	if _, err := storekit.LockRow(ctx, tx, "contact", id.UUID, storekit.LiveOnly); err != nil {
+		return err
+	}
+	name := current.FullName
+	if in.FullName != nil {
+		name = *in.FullName
+	}
+	var emails []string
+	if in.Emails != nil {
+		for _, e := range in.Emails {
+			emails = append(emails, e.Email)
+		}
+	} else if current.Emails != nil {
+		for _, e := range *current.Emails {
+			emails = append(emails, string(e.Email))
+		}
+	}
+	return lockContactLanes(ctx, tx, emails, name)
+}
+
+// recheckContactForDuplicates scores an edited contact against the rest of the
+// workspace and files the pairs the review lanes name. It takes the lane locks
+// in the create's order, so an edit and a create cannot both miss each other.
+//
+// The exact lanes are skipped: the contact holds its own addresses and phones,
+// so they would name itself. A claimed address cannot arrive by an edit at all,
+// because contact_email is unique on the address.
+func recheckContactForDuplicates(ctx context.Context, tx pgx.Tx, id ids.ContactID, source, by string) error {
+	subject, found, err := readContactSubject(ctx, tx, id)
 	if err != nil {
 		return err
 	}
-	return match.recordIfReview(ctx, tx, id, name, contactRenameRecheckSource, by)
+	if !found {
+		return fmt.Errorf("contacts: reading the edited contact: %w", pgx.ErrNoRows)
+	}
+	if err := lockContactLanes(ctx, tx, subject.emails, subject.name); err != nil {
+		return err
+	}
+	_, err = subject.fileDuplicates(ctx, tx, nil, source, by)
+	return err
+}
+
+// contactSubject is what the review lanes and the phone lane read about an
+// existing contact.
+type contactSubject struct {
+	id     ids.ContactID
+	name   string
+	emails []string
+	phones []string
+}
+
+// readContactSubject reads a live contact's name, live addresses and live
+// numbers, and reports whether the contact is still live.
+func readContactSubject(ctx context.Context, tx pgx.Tx, id ids.ContactID) (contactSubject, bool, error) {
+	subject := contactSubject{id: id}
+	err := tx.QueryRow(ctx, `
+		SELECT p.full_name,
+		       coalesce((SELECT array_agg(e.email ORDER BY e.email) FROM contact_email e
+		                  WHERE e.contact_id = p.id AND e.archived_at IS NULL), '{}'),
+		       coalesce((SELECT array_agg(n.phone ORDER BY n.phone) FROM contact_phone n
+		                  WHERE n.contact_id = p.id AND n.archived_at IS NULL), '{}')
+		  FROM contact p
+		 WHERE p.id = $1 AND p.archived_at IS NULL`, id).Scan(&subject.name, &subject.emails, &subject.phones)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return contactSubject{}, false, nil
+	}
+	if err != nil {
+		return contactSubject{}, false, fmt.Errorf("contacts: reading the contact to re-check: %w", err)
+	}
+	return subject, true, nil
+}
+
+// fileDuplicates runs the review lanes and the phone lane for an existing
+// contact and files every pair they name. It answers how many are new on the
+// queue. A nil matcher is the shipped consumer-mail list. The contact's current
+// primary employer counts as evidence, so an edge write finds a same-name twin
+// at that employer (fileEmployerTwins).
+func (s contactSubject) fileDuplicates(ctx context.Context, tx pgx.Tx, consumerMail *freemail.Matcher, source, by string) (int, error) {
+	employer, _, err := readCurrentEmployer(ctx, tx, s.id.UUID)
+	if err != nil {
+		return 0, err
+	}
+	match, err := reviewContact(ctx, tx, ContactCandidate{
+		FullName: s.name, Emails: s.emails, ConsumerMail: consumerMail, QueueNameCollisions: true, ExcludeID: &s.id,
+		CurrentPrimaryCompanyID: employer,
+	})
+	if err != nil {
+		return 0, err
+	}
+	filed, err := match.recordIfReview(ctx, tx, s.id, s.name, source, by)
+	if err != nil {
+		return filed, err
+	}
+	sharing, err := exactContactByPhone(ctx, tx, s.phones, &s.id)
+	if err != nil {
+		return filed, err
+	}
+	for _, holder := range sharing {
+		shared := ContactResolution{Decision: DecisionExactCollision, ContactID: holder, MatchedLane: lanePhone}
+		count, err := shared.recordIfReview(ctx, tx, s.id, s.name, source, by)
+		if err != nil {
+			return filed, err
+		}
+		filed += count
+	}
+	return filed, nil
 }

@@ -2,39 +2,29 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { type ReactNode, useId } from "react";
-import { Radio } from "./atoms";
+import { Checkbox, Radio } from "./atoms";
 import "./choicelist.css";
 
 /**
- * One answer out of a few, with every answer READABLE AT REST.
+ * One answer out of a few, with every answer readable at rest. With `multiple`
+ * it is any number of answers, drawn as checkboxes in the same fieldset.
  *
- * It exists because the product had the `Radio` atom and no radio GROUP, so
- * every caller wrapped it by hand — each with its own stack gap, its own idea of
- * whether the question was named at all, and at least one with no `fieldset`,
- * which leaves a screen reader announcing loose radios rather than one question
- * with two answers. The invariant this holds: a set of radios IS a question, so
- * it carries a name and a group, and neither is the caller's to forget.
+ * A set of radios is a question, so it carries a name and a group (a
+ * `fieldset`) and neither is the caller's to forget. Without one, a screen
+ * reader announces loose radios rather than one question.
  *
- * When to reach for this instead of the neighbours, because the difference is
- * about the reader and not about taste:
+ * Reach for it instead of the neighbours when the reader must weigh answers:
  *
- *  - **`Select`** hides every option but one behind a click. Right for a long or
- *    boring list — a stage, a currency, a date field. Wrong for a decision the
- *    reader has to weigh, and wrong for a BINARY: a dropdown covering two
- *    choices makes somebody open a menu to find out what the alternative even
- *    was.
- *  - **`SegmentedControl`** shows a closed set at once, in a tab strip, at 12.5px
- *    and bold. Right for short labels that name a view. Wrong the moment an
- *    option is a sentence.
- *  - **`Switch`** is one thing on or off. An either/or where BOTH sides need
- *    naming is not that: "everyone except the contacts I leave out" has no
- *    off-state a reader could infer.
+ *  - `Select` hides every option but one behind a click. Right for a long list.
+ *    Wrong for a decision and for a binary.
+ *  - `SegmentedControl` shows a closed set in a tab strip. Right for short
+ *    labels that name a view. Wrong once an option is a sentence.
+ *  - `Switch` is one thing on or off. An either/or has no off-state a reader
+ *    could infer.
  *
- * `description` is part of the LABEL, not a sibling — which is deliberate, and
- * the reason `Radio` takes a node: for a tick the words are the other half of
- * the click target, so a help line rendered outside the label is a line the
- * reader cannot click and a screen reader does not read with the option it
- * belongs to. Both go in, and the type carries the hierarchy.
+ * `description` is part of the label, not a sibling, which is why `Radio`
+ * takes a node. A help line outside the label cannot be clicked, and a screen
+ * reader does not read it with the option.
  *
  * Copy never lives here: every word arrives as a prop, translated by the caller.
  */
@@ -42,8 +32,12 @@ export type Choice<Value extends string> = Readonly<{
   value: Value;
   /** The answer, written so it reads on its own. */
   label: string;
-  /** What choosing it means, when the label cannot carry it alone. */
-  description?: string;
+  /**
+   * What choosing it means, when the label cannot carry it alone. A node so a
+   * refused answer can link to what unlocks it. Keep that to one short link,
+   * since its words join the answer's accessible name.
+   */
+  description?: ReactNode;
   /**
    * A mark that identifies the answer faster than its name does, for a choice
    * between things the reader already recognises by sight: a vendor picking its
@@ -61,16 +55,25 @@ export type Choice<Value extends string> = Readonly<{
   disabled?: boolean;
 }>;
 
-export function ChoiceList<Value extends string>({
-  legend,
-  hideLegend,
-  value,
-  choices,
-  disabled,
-  layout = "stack",
-  className,
-  onChange,
-}: Readonly<{
+/**
+ * One answer (the default) or several. Several come back in CHOICE order, not
+ * press order, so a caller comparing two picks never sees the same set twice
+ * spelled differently.
+ */
+type Answer<Value extends string> =
+  | Readonly<{
+      multiple?: false;
+      /** The chosen value, or "" for a question nobody has answered yet. */
+      value: Value | "";
+      onChange: (next: Value) => void;
+    }>
+  | Readonly<{
+      multiple: true;
+      value: readonly Value[];
+      onChange: (next: Value[]) => void;
+    }>;
+
+type Question<Value extends string> = Readonly<{
   /** The question. A group of answers with nothing naming the question is a set
    * of unrelated controls to anybody not looking at the layout. */
   legend: string;
@@ -82,8 +85,6 @@ export function ChoiceList<Value extends string>({
    * heading's proximity.
    */
   hideLegend?: boolean;
-  /** The chosen value, or "" for a question nobody has answered yet. */
-  value: Value | "";
   choices: readonly Choice<Value>[];
   disabled?: boolean;
   /**
@@ -106,8 +107,19 @@ export function ChoiceList<Value extends string>({
   /** Layout the surrounding form owns — the margin its own rhythm expects. It
    * lands on the fieldset, which is the only element a caller can position. */
   className?: string;
-  onChange: (next: Value) => void;
-}>) {
+}>;
+
+export function ChoiceList<Value extends string>(
+  props: Question<Value> & Answer<Value>,
+) {
+  const {
+    legend,
+    hideLegend,
+    choices,
+    disabled,
+    layout = "stack",
+    className,
+  } = props;
   // The name groups the radios, and the group is what makes arrow keys move
   // between them rather than tab. Minted here because it is a DOM detail no
   // caller should have to think about, and two ChoiceLists on one page with the
@@ -129,30 +141,62 @@ export function ChoiceList<Value extends string>({
       <legend className={hideLegend ? "sr-only" : "choicelist-legend"}>
         {legend}
       </legend>
-      {choices.map((choice) => (
-        <Radio
-          key={choice.value}
-          className="choicelist-choice"
-          name={name}
-          value={choice.value}
-          checked={choice.value === value}
-          disabled={disabled || choice.disabled}
-          onChange={() => onChange(choice.value)}
-          label={
-            <span className="choicelist-text">
-              {choice.mark === undefined ? null : (
-                <span className="choicelist-mark" aria-hidden="true">
-                  {choice.mark}
-                </span>
-              )}
-              <span className="choicelist-label">{choice.label}</span>
-              {choice.description !== undefined && (
-                <span>{choice.description}</span>
-              )}
-            </span>
-          }
-        />
-      ))}
+      {choices.map((choice) => {
+        const shared = {
+          className: "choicelist-choice",
+          name,
+          value: choice.value,
+          disabled: disabled || choice.disabled,
+          label: <ChoiceText choice={choice} />,
+        };
+        if (props.multiple === true) {
+          const { value, onChange } = props;
+          return (
+            <Checkbox
+              key={choice.value}
+              {...shared}
+              checked={value.includes(choice.value)}
+              onChange={(event) => {
+                const ticked = event.target.checked;
+                onChange(
+                  choices
+                    .filter((c) =>
+                      c.value === choice.value
+                        ? ticked
+                        : value.includes(c.value),
+                    )
+                    .map((c) => c.value),
+                );
+              }}
+            />
+          );
+        }
+        const { value, onChange } = props;
+        return (
+          <Radio
+            key={choice.value}
+            {...shared}
+            checked={choice.value === value}
+            onChange={() => onChange(choice.value)}
+          />
+        );
+      })}
     </fieldset>
+  );
+}
+
+function ChoiceText<Value extends string>({
+  choice,
+}: Readonly<{ choice: Choice<Value> }>) {
+  return (
+    <span className="choicelist-text">
+      {choice.mark === undefined ? null : (
+        <span className="choicelist-mark" aria-hidden="true">
+          {choice.mark}
+        </span>
+      )}
+      <span className="choicelist-label">{choice.label}</span>
+      {choice.description != null && <span>{choice.description}</span>}
+    </span>
   );
 }

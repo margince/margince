@@ -230,3 +230,54 @@ func Source(record any) string {
 	}
 	return string(rendered)
 }
+
+// BriefBounds is what one brief may hold once grounded: how many sentences,
+// and how many of them may be advice. The natures are the caller's own
+// spellings, derived from its contract enum.
+type BriefBounds struct {
+	Sentences       int
+	Recommendations int
+	Natures         map[string]bool
+	Fact            string
+	Recommendation  string
+	// Refuse drops a grounded recommendation the caller will not show. Nil
+	// refuses none.
+	Refuse func(Sentence) bool
+}
+
+// KeepBrief grounds a brief's sentences and then bounds it. Grounding goes
+// first, so one ungrounded recommendation cannot spend the budget a valid one
+// needed. An unknown nature reads as fact, the strictest reading.
+func KeepBrief(sentences []Sentence, known map[Evidence]string, bounds BriefBounds) []Sentence {
+	out := make([]Sentence, 0, min(len(sentences), bounds.Sentences))
+	recommendations := 0
+	for _, sentence := range sentences {
+		if len(out) == bounds.Sentences {
+			break
+		}
+		if !bounds.Natures[sentence.Nature] {
+			sentence.Nature = bounds.Fact
+		}
+		if !Grounded(sentence, known) {
+			continue
+		}
+		if sentence.Nature == bounds.Recommendation {
+			if recommendations == bounds.Recommendations || (bounds.Refuse != nil && bounds.Refuse(sentence)) {
+				continue
+			}
+			recommendations++
+		}
+		out = append(out, sentence)
+	}
+	return Dedupe(out)
+}
+
+// Prose is a brief's sentences as one block of text, which is what a
+// certification case reads a token against.
+func Prose(sentences []Sentence) string {
+	texts := make([]string, 0, len(sentences))
+	for _, sentence := range sentences {
+		texts = append(texts, sentence.Text)
+	}
+	return strings.Join(texts, " ")
+}

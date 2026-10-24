@@ -4,6 +4,7 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import {
   Button,
+  EmptyState,
   Field,
   SegmentedControl,
   TextInput,
@@ -103,113 +104,126 @@ export function ReportingTargets() {
             )}
           </Field>
         </div>
-        <QueryGate
-          query={query}
-          pendingLabel={t("reporting.targets")}
-          empty={(result) => !result.data.length}
-        >
-          {(result) => (
-            <>
-              <DataTable
-                label={t("reporting.targets")}
-                rows={result.data}
-                rowKey={(target) => target.id}
-                columns={[
-                  {
-                    key: "scope",
-                    header: t("reporting.targetFor"),
-                    render: (target) => (
-                      <>
-                        <strong>
-                          {target.definition.scope.label ??
-                            target.definition.scope.kind}
-                        </strong>
-                        <div>{metricLabel(target.definition.metric, t)}</div>
-                        <div className="t-caption">
-                          {reportingPeriodLabel(target.interval, zone, locale)}
-                        </div>
-                        <div className="t-caption">
-                          {target.definition.pipeline_id
-                            ? (pipelines.data?.data.find(
-                                (pipeline) =>
-                                  pipeline.id === target.definition.pipeline_id,
-                              )?.name ??
-                              t(
-                                pipelines.isPending
-                                  ? "common.loading"
-                                  : "reporting.restricted",
-                              ))
-                            : t("reporting.allPipelines")}
-                          {target.definition.retired === true
-                            ? ` · ${t("reporting.retired")}`
-                            : ""}
-                        </div>
-                      </>
-                    ),
-                  },
-                  {
-                    key: "amount",
-                    header: t("reporting.target"),
-                    render: (target) => (
-                      <>
-                        <strong>
-                          {reportingAmount(
-                            target.definition.value,
-                            target.unit === "count" ? "count" : "money",
-                            target.unit,
-                            locale,
-                          )}
-                        </strong>
-                        {target.allocation_difference != null &&
-                          target.allocation_difference !== 0 && (
-                            <div className="t-caption">
-                              {t(
-                                target.allocation_difference < 0
-                                  ? "reporting.overallocated"
-                                  : "reporting.unallocated",
-                              )}
-                              :{" "}
-                              {reportingAmount(
-                                Math.abs(target.allocation_difference),
-                                target.unit === "count" ? "count" : "money",
-                                target.unit,
-                                locale,
-                              )}
-                            </div>
-                          )}
-                      </>
-                    ),
-                  },
-                  {
-                    key: "edit",
-                    header: t("reporting.revise"),
-                    render: (target) =>
-                      canUpdate ? (
-                        <Button
-                          variant="link"
-                          onClick={() => setEditing(target)}
-                        >
-                          {t("reporting.revise")}
-                        </Button>
-                      ) : null,
-                  },
-                ]}
-              />
-              {canBack && (
-                <Button variant="ghost" onClick={back}>
-                  {t("reporting.back")}
-                </Button>
-              )}
-              {result.next_cursor && (
-                <Button
-                  variant="ghost"
-                  onClick={() => setCursor(result.next_cursor)}
-                >
-                  {t("reporting.next")}
-                </Button>
-              )}
-            </>
-          )}
+        <QueryGate query={query} pendingLabel={t("reporting.targets")}>
+          {(result) =>
+            result.data.length ? (
+              <>
+                <DataTable
+                  label={t("reporting.targets")}
+                  rows={result.data}
+                  rowKey={(target) => target.id}
+                  columns={[
+                    {
+                      key: "scope",
+                      header: t("reporting.targetFor"),
+                      render: (target) => (
+                        <>
+                          <strong>
+                            {target.definition.scope.label ??
+                              target.definition.scope.kind}
+                          </strong>
+                          <div>{metricLabel(target.definition.metric, t)}</div>
+                          <div className="t-caption">
+                            {reportingPeriodLabel(
+                              target.interval,
+                              zone,
+                              locale,
+                            )}
+                          </div>
+                          <div className="t-caption">
+                            {target.definition.pipeline_id
+                              ? (pipelines.data?.data.find(
+                                  (pipeline) =>
+                                    pipeline.id ===
+                                    target.definition.pipeline_id,
+                                )?.name ??
+                                t(
+                                  pipelines.isPending
+                                    ? "common.loading"
+                                    : "reporting.restricted",
+                                ))
+                              : t("reporting.allPipelines")}
+                            {target.definition.retired === true
+                              ? ` · ${t("reporting.retired")}`
+                              : ""}
+                          </div>
+                        </>
+                      ),
+                    },
+                    {
+                      key: "amount",
+                      header: t("reporting.target"),
+                      render: (target) => (
+                        <>
+                          <strong>
+                            {reportingAmount(
+                              target.definition.value,
+                              target.unit === "count" ? "count" : "money",
+                              target.unit,
+                              locale,
+                            )}
+                          </strong>
+                          {target.allocation_difference != null &&
+                            target.allocation_difference !== 0 && (
+                              <div className="t-caption">
+                                {t(
+                                  target.allocation_difference < 0
+                                    ? "reporting.overallocated"
+                                    : "reporting.unallocated",
+                                )}
+                                :{" "}
+                                {reportingAmount(
+                                  Math.abs(target.allocation_difference),
+                                  target.unit === "count" ? "count" : "money",
+                                  target.unit,
+                                  locale,
+                                )}
+                              </div>
+                            )}
+                        </>
+                      ),
+                    },
+                    {
+                      key: "edit",
+                      header: t("reporting.revise"),
+                      render: (target) =>
+                        canUpdate ? (
+                          <Button
+                            variant="link"
+                            onClick={() => setEditing(target)}
+                          >
+                            {t("reporting.revise")}
+                          </Button>
+                        ) : null,
+                    },
+                  ]}
+                />
+                {canBack && (
+                  <Button variant="ghost" onClick={back}>
+                    {t("reporting.back")}
+                  </Button>
+                )}
+                {result.next_cursor && (
+                  <Button
+                    variant="ghost"
+                    onClick={() => setCursor(result.next_cursor)}
+                  >
+                    {t("reporting.next")}
+                  </Button>
+                )}
+              </>
+            ) : (
+              <EmptyState>
+                {t(
+                  // A seat that cannot set a target learns who does. A filter or
+                  // a later page that matched nothing says only that.
+                  !canCreate && !cursor && status === "active" && !periodFilter
+                    ? "reporting.noTargetsYet"
+                    : "common.empty",
+                )}
+              </EmptyState>
+            )
+          }
         </QueryGate>
         {editing && context.data && (
           <ReportingTargetDialog

@@ -64,10 +64,10 @@ const documentFrom = `deal_room_document d
 // without a principal because the buyer has none: the question is not whether
 // some reader is in the audience, it is whether the message is still open to
 // the workspace. A message narrowed, restricted or archived AFTER its file was
-// added drops out on the next read, which is the same re-check the rest of this
-// predicate already performs. The seller's own list
-// does not carry the predicate, so the stale entry stays visible to the one
-// contact who can remove it.
+// added drops out on the next read. The rest of this predicate re-checks the
+// same way. The seller's own list does not carry the predicate, so a seat that
+// can remove a stale entry still sees it. It carries sellerReadsTheCarrier
+// instead.
 //
 // It needs the room aliased `r` and the attachment aliased `a`, and carries no
 // principal: the public download has none. The caller-bound half — may THIS
@@ -91,6 +91,27 @@ const inTheDealsFilesArea = `a.archived_at IS NULL AND NOT a.bytes_withheld
 	           AND m.restricted_at IS NULL AND m.audience = 'workspace')))
 	AND NOT EXISTS (SELECT 1 FROM deal_document_hide h WHERE h.deal_id = r.deal_id AND h.attachment_id = a.id)`
 
+// sellerReadsTheCarrier is the caller-bound half of every seller read of a
+// room document. A file that arrived with a message is shown only to a seat
+// that may read that message. To any other seat its title and filename answer
+// as absent, as the message does. It needs the attachment aliased `a` and
+// renders an AND-prefixed clause. With no seat bound it refuses rather than
+// render a clause that answers for nobody.
+func sellerReadsTheCarrier(ctx context.Context, arg func(any) int) (string, error) {
+	if _, ok := principal.Actor(ctx); !ok {
+		return "", apperrors.ErrPermissionDenied
+	}
+	if !auth.ReadGranted(ctx, "activity") {
+		return " AND a.entity_type <> 'activity'", nil
+	}
+	content, err := auth.ActivityContentClause(ctx, "carrier", arg)
+	if err != nil {
+		return "", err
+	}
+	return ` AND (a.entity_type <> 'activity' OR EXISTS (
+	        SELECT 1 FROM activity carrier WHERE carrier.id = a.entity_id AND ` + content + `))`, nil
+}
+
 // ListDocuments returns a room's documents in group-then-position order.
 func (s *Store) ListDocuments(ctx context.Context, roomID ids.DealRoomID) ([]crmcontracts.DealRoomDocument, storekit.Page, error) {
 	if err := auth.Require(ctx, roomObject, principal.ActionRead); err != nil {
@@ -112,19 +133,19 @@ func (s *Store) ListDocuments(ctx context.Context, roomID ids.DealRoomID) ([]crm
 }
 
 func documentRows(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID) ([]crmcontracts.DealRoomDocument, error) {
-	return documentRowsWhere(ctx, tx, roomID, "")
-}
-
-func documentRowsWhere(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID, also string) ([]crmcontracts.DealRoomDocument, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	// `also` is a %s operand, never part of the format: the membership rule
-	// carries a LIKE 'image/%' that a format string would read as a verb.
+	readable, err := sellerReadsTheCarrier(ctx, arg)
+	if err != nil {
+		return nil, err
+	}
+	// The clause is a %s operand, never part of the format. An audience arm
+	// may carry a LIKE pattern, which a format string would read as a verb.
 	rows, err := tx.Query(ctx, storekit.SQLf(
 		`SELECT %s FROM %s
 		  WHERE d.room_id = $%d AND d.archived_at IS NULL%s
 		  ORDER BY d.group_key, d.position, d.created_at, d.id`,
-		documentColumns, documentFrom, arg(roomID), also), args...)
+		documentColumns, documentFrom, arg(roomID), readable), args...)
 	if err != nil {
 		return nil, fmt.Errorf("list deal room documents: %w", err)
 	}
@@ -159,9 +180,13 @@ func readDocumentIn(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID, id id
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	roomPos, docPos := arg(roomID), arg(id)
+	readable, err := sellerReadsTheCarrier(ctx, arg)
+	if err != nil {
+		return crmcontracts.DealRoomDocument{}, err
+	}
 	row := tx.QueryRow(ctx, storekit.SQLf(
-		`SELECT %s FROM %s WHERE d.room_id = $%d AND d.id = $%d`+liveOnly,
-		documentColumns, documentFrom, roomPos, docPos), args...)
+		`SELECT %s FROM %s WHERE d.room_id = $%d AND d.id = $%d%s%s`,
+		documentColumns, documentFrom, roomPos, docPos, liveOnly, readable), args...)
 	doc, err := scanDocument(row)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return crmcontracts.DealRoomDocument{}, apperrors.ErrNotFound

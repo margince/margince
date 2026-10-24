@@ -14,8 +14,8 @@ import {
 } from "../../lib/contactpage.address";
 import { ENTITY, recordRoute } from "../../lib/entity";
 import { routeHash } from "../../lib/router";
+import { settingsHref } from "../../lib/settingsrouting";
 import { caseHref } from "../privacy/privacy.caselink";
-import { settingsHref } from "../settings/settingsrouting";
 import { connectionName, connectionTitleKey } from "./worklist.connection";
 import { nonBuyerRequest } from "./worklist.eyebrow";
 import type { Worklist, WorklistItem } from "./worklist.queries";

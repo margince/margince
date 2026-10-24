@@ -33,6 +33,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // followUpStager adapts the approvals service onto the deals module's
@@ -133,13 +134,14 @@ func (s followUpStager) StageFollowUp(ctx context.Context, dealID ids.UUID, summ
 			return stageFollowUpDraft(onBehalfOf(ctx, owner), tx, s.svc, draft.summary,
 				dealID, proposal.EvidenceActivityID.UUID, draft.proposal)
 		}
-		// An unowned deal records nobody, which is what it honestly is: the
-		// proposal stays shared rather than being withheld from everyone.
-		staged := ctx
-		if !owner.IsZero() {
-			staged = onBehalfOf(ctx, owner)
+		// An unowned deal has nobody to follow it up, so nothing is staged.
+		if owner.IsZero() {
+			return nil
 		}
-		_, _, err = s.svc.StageUnlessDeclinedTx(staged, tx, task)
+		_, _, err = s.svc.StageUnlessDeclinedTx(onBehalfOf(ctx, owner), tx, task)
+		if errors.Is(err, approvals.ErrNoDecider) {
+			return nil
+		}
 		return err
 	})
 }
@@ -391,7 +393,7 @@ func followUpConfirmEffect(svc *approvals.Service, store *activities.Store) appr
 		})
 		subject := proposal.Subject
 		body := proposal.Body
-		sourceSystem := "overnight-reconcile"
+		sourceSystem := provenance.OvernightReconcileSource
 		sourceID := approvalID.String()
 		// Redemption and the write in ONE transaction. Consuming the approval
 		// first and writing after leaves the two able to disagree: the approval

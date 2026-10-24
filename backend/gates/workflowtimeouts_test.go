@@ -142,6 +142,48 @@ func TestEveryWorkflowJobCarriesATimeoutCeiling(t *testing.T) {
 // fetches every browser and would have escaped a list naming chromium.
 var unpinnedInstalls = []string{"playwright install"}
 
+// elevatedPrefix is what may stand before `timeout` without un-bounding the
+// command: `sudo`, its flags and the environment assignments it is given.
+var elevatedPrefix = regexp.MustCompile(`^sudo\s+(-\S+\s+|\w+=\S+\s+)*`)
+
+// aptMirrorSubcommands are the apt subcommands that fetch from the mirror.
+var aptMirrorSubcommands = []string{"install", "reinstall", "update", "upgrade", "dist-upgrade", "full-upgrade", "build-dep"}
+
+// dpkgFinishingFlags are the dpkg flags that unpack or finish an install.
+var dpkgFinishingFlags = []string{"--configure", "-i", "--install", "--unpack"}
+
+// aptOptionsWithValue take the next token as their value, so it is not the subcommand.
+var aptOptionsWithValue = []string{"-o", "-c", "-t"}
+
+// mutatesPackages reads one command by its tokens, because options may stand
+// between the program and its subcommand: `apt-get -y install` is an install.
+func mutatesPackages(cmd string) bool {
+	tokens := strings.Fields(elevatedPrefix.ReplaceAllString(strings.TrimSpace(cmd), ""))
+	if len(tokens) == 0 {
+		return false
+	}
+	switch tokens[0] {
+	case "dpkg":
+		return slices.ContainsFunc(tokens[1:], func(tok string) bool {
+			return slices.Contains(dpkgFinishingFlags, tok)
+		})
+	case "apt", "apt-get":
+		skip := false
+		for _, tok := range tokens[1:] {
+			switch {
+			case skip:
+				skip = false
+			case slices.Contains(aptOptionsWithValue, tok):
+				skip = true
+			case strings.HasPrefix(tok, "-"):
+			default:
+				return slices.Contains(aptMirrorSubcommands, tok)
+			}
+		}
+	}
+	return false
+}
+
 // shellSeparators cut a run into the commands it actually executes. A line is
 // not a command: `timeout 1m true; pnpm exec playwright install` bounds `true`
 // and installs unbounded, and the same holds for an unbounded fallback after
@@ -160,7 +202,7 @@ func boundedByCommand(run string) bool {
 		if !isUnpinnedInstall(cmd) {
 			continue
 		}
-		cmd = strings.TrimSpace(cmd)
+		cmd = elevatedPrefix.ReplaceAllString(strings.TrimSpace(cmd), "")
 		if !strings.HasPrefix(cmd, "timeout ") || !strings.Contains(cmd, "--kill-after") {
 			return false
 		}
@@ -172,9 +214,12 @@ func boundedByCommand(run string) bool {
 // rather than re-deriving the match, so a change to the list is judged by those
 // cases instead of by two spellings agreeing with each other.
 func isUnpinnedInstall(run string) bool {
-	return slices.ContainsFunc(unpinnedInstalls, func(cmd string) bool {
+	if slices.ContainsFunc(unpinnedInstalls, func(cmd string) bool {
 		return strings.Contains(run, cmd)
-	})
+	}) {
+		return true
+	}
+	return slices.ContainsFunc(shellSeparators.Split(run, -1), mutatesPackages)
 }
 
 // A job ceiling bounds the damage; a step ceiling says WHERE.
@@ -208,6 +253,14 @@ func TestTheBoundThatCountsDependsOnWhereTheStepRuns(t *testing.T) {
 		{"the bound is on another line", workflowStep{Run: "timeout --kill-after=30s 3m true\npnpm exec playwright install chromium"}, true, false},
 		// Same line, different command: the bound belongs to `true`.
 		{"the bound is on another command", workflowStep{Run: "timeout --kill-after=30s 1m true; pnpm exec playwright install chromium"}, true, false},
+		// sudo and its environment may stand before the bound; they do not remove it.
+		{"sudo, bounded", workflowStep{Run: "sudo DEBIAN_FRONTEND=noninteractive timeout --kill-after=30s 2m dpkg --configure -a"}, true, true},
+		{"sudo, unbounded", workflowStep{Run: "sudo DEBIAN_FRONTEND=noninteractive dpkg --configure -a"}, true, false},
+		{"apt, unbounded", workflowStep{Run: "sudo apt-get install -y libnss3"}, true, false},
+		// Options before the subcommand do not hide it.
+		{"apt, options first", workflowStep{Run: "sudo apt-get -y install libnss3"}, true, false},
+		{"apt, option with a value", workflowStep{Run: "sudo apt -o Acquire::Retries=3 update"}, true, false},
+		{"apt, bounded with options", workflowStep{Run: "sudo timeout --kill-after=30s 2m apt-get -y install libnss3"}, true, true},
 		// An unbounded fallback after a bounded attempt.
 		{"the fallback is unbounded", workflowStep{Run: "timeout --kill-after=30s 1m pnpm exec playwright install chromium || pnpm exec playwright install chromium"}, true, false},
 	} {
@@ -335,6 +388,16 @@ func TestTheInstallScanMatchesTheCommandAndNotItsNeighbours(t *testing.T) {
 		// A bare install fetches every browser, and is the spelling a list of
 		// variants would have missed.
 		{"pnpm exec playwright install", true},
+		{"sudo dpkg --configure -a", true},
+		{"sudo apt-get install -y libnss3", true},
+		{"sudo apt-get -y install libnss3", true},
+		{"sudo -E apt -y update", true},
+		{"sudo apt -o Acquire::Retries=3 upgrade", true},
+		{"apt-get --no-install-recommends -y install libnss3", true},
+		{"apt list --installed", false},
+		{"dpkg -l", false},
+		// Names apt without installing: the process-clearing step.
+		{"sudo pkill -KILL -x 'apt|apt-get|dpkg'", false},
 		{"pnpm install --frozen-lockfile --ignore-scripts", false},
 		{"make frontend-e2e", false},
 	} {

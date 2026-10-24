@@ -63,6 +63,16 @@ export const InARecordHeader: Story = {
   ),
 };
 
+// A glyph that goes somewhere rather than doing something here: a link with
+// the same square, name and tip.
+export const Link: Story = {
+  args: {
+    label: "Call",
+    icon: <Phone size={15} aria-hidden="true" />,
+    href: "tel:+493012345678",
+  },
+};
+
 // Refused, and saying why. The same contract `Button.reason` carries: the press
 // is refused by the reason alone, and the sentence reaches a screen reader
 // through `aria-describedby` rather than through a `title` a disabled control

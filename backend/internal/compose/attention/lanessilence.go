@@ -70,17 +70,24 @@ type RiskyDeal struct {
 	NoNextStep bool
 }
 
-// Decay is the reader's own relationships that have gone silent. It derives the
-// silence through the same §4 change engine the contact's own page reads, so
-// there is one quiet rule in the product rather than a second threshold here.
+// Decay is the relationships that have gone silent, routed to each contact's
+// owner. It derives the silence through the relationship-change engine the
+// contact's own page reads, so there is one quiet rule in the product. The
+// scope picks whose contacts: the reader's own, a named owner's, or those
+// with no live owner.
 type Decay interface {
-	Lapsed(ctx context.Context) ([]QuietRelationship, error)
+	// The bool is true when the scan stopped at its budget, so more eligible
+	// contacts may exist even when no row came back.
+	Lapsed(ctx context.Context, scope TaskScope, owner ids.UUID) ([]QuietRelationship, bool, error)
 }
 
 // QuietRelationship is one contact this reader has stopped talking to.
 type QuietRelationship struct {
 	ContactID ids.UUID
 	Name      string
+	// OwnerID is the contact's live owner, who the suggestion is for. Zero
+	// means nobody: the row is never anybody's personal work.
+	OwnerID ids.UUID
 	// From the derivation rather than the projection's own last_at, so the card
 	// and the contact's page agree.
 	QuietDays int

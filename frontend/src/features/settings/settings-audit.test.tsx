@@ -100,8 +100,13 @@ describe("AuditLogCard", () => {
     const bar = screen.getByLabelText("Actor").closest("fieldset");
     expect(bar).not.toBeNull();
     expect(bar).not.toContainElement(screen.getByText("Updated"));
-    expect(screen.getByLabelText("From")).toHaveAttribute("type", "date");
-    expect(screen.getByLabelText("To")).toHaveAttribute("type", "date");
+    expect(screen.getByRole("textbox", { name: "From" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "To" })).toBeInTheDocument();
+    const calendars = screen.getAllByRole("button", { name: /^Choose date/ });
+    expect(calendars).toHaveLength(2);
+    for (const calendar of calendars) {
+      expect(bar).toContainElement(calendar);
+    }
     expect(screen.queryByRole("heading")).toBeNull();
     expect(document.querySelector("details")).toBeNull();
   });

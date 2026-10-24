@@ -54,6 +54,7 @@ DECLARE
     'consent_text_version',
     'event_outbox',
     'lead_disqualify_reason',
+    'lead_origin',
     'lead_source',
     'legal_entity',
     'legal_entity_member',

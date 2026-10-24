@@ -1,6 +1,12 @@
 /** @vitest-environment happy-dom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -712,14 +718,20 @@ describe("ProviderCard across connections and deletions", () => {
       await user.click(
         screen.getByRole("button", { name: en["provider.deleteData"] }),
       );
-      await user.type(
-        screen.getByLabelText(en["provider.deleteDataConfirm.typed"]),
-        PROVIDER_NAME,
-      );
-      const confirms = screen.getAllByRole("button", {
+      const dialog = screen.getByRole("dialog");
+      const confirm = within(dialog).getByRole("button", {
         name: en["provider.deleteData"],
       });
-      await user.click(confirms[confirms.length - 1]);
+      expect(confirm).toHaveProperty("disabled", true);
+      // The label names the key to type, so the reader never has to guess it.
+      await user.type(
+        within(dialog).getByLabelText(
+          `${en["provider.deleteDataConfirm.typed"]} ${PROVIDER_NAME}`,
+        ),
+        PROVIDER_NAME,
+      );
+      expect(confirm).toHaveProperty("disabled", false);
+      await user.click(confirm);
 
       await waitFor(
         () => {

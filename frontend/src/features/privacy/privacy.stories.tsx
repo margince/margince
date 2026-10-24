@@ -10,6 +10,7 @@ import {
   waitFor,
   within,
 } from "storybook/test";
+import { en } from "../../i18n/en";
 import type { GrantSpec } from "../../testing/mefixture";
 import {
   jsonResponse,
@@ -321,7 +322,10 @@ async function armErasureConfirm(canvasElement: HTMLElement) {
   const row = await findRow("8f3a-contact-uuid");
   await userEvent.type(within(row).getByLabelText(/resolution/i), "verified");
   await userEvent.click(within(row).getByRole("button", { name: /fulfil/i }));
-  await userEvent.type(await screen.findByLabelText(/type erase/i), "ERASE");
+  await userEvent.type(
+    await screen.findByLabelText(`${en["privacy.typeErasePrompt"]} ERASE`),
+    "ERASE",
+  );
 }
 
 // The typed-ERASE confirm modal for the destructive erasure fulfil —

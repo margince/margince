@@ -1,29 +1,22 @@
 /** @vitest-environment happy-dom */
 
-// What the contact page's memory card draws for each kind it holds.
-//
-// The card shipped reading `email_summary` for its title and preview while
-// painting its own two lines with them, so a message read one way here and
-// another way on the timeline six inches above it: no access badge, no mail
-// icon, the whole body instead of a preview, and no way to open the message.
-// Nothing failed, because this file did not exist.
-//
-// Three claims, and each fails on its own. An email is the canonical row; a
-// withheld one says so and discloses nothing; every other kind keeps the two
-// lines the card has always drawn for it.
+// What the What was said card draws: the latest two conversations. Each is a
+// title over "{kind} · {who spoke} · {date}" with its reply state at the right.
+// The History tab keeps the whole ledger, its faces and its Reply.
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { telUri } from "../../format/contacturi";
 import { LocaleProvider } from "../../i18n";
-import * as router from "../../lib/router";
 import { ContactMemory } from "./contactmemory";
 
 type Contact360 = components["schemas"]["Contact360"];
 type Activity = components["schemas"]["Activity"];
 type EmailSummary = components["schemas"]["EmailSummary"];
+type Entry = components["schemas"]["ConversationMemoryEntry"];
 
 afterEach(() => {
   cleanup();
@@ -44,11 +37,8 @@ const contact: components["schemas"]["Contact"] = {
   emails: [],
 };
 
-// A retained email, as the server sends one: the summary carries the subject
-// and the preview, and the activity's own body carries the whole message. The
-// two differ on purpose — a card drawing the body where the preview belongs is
-// exactly the defect, and a fixture whose body equalled its preview could not
-// tell the two apart.
+// The summary's preview and the activity's whole body differ. The card draws
+// neither, and a fixture where they matched could not tell.
 const WHOLE_BODY =
   "Can you hold the price until Friday? " +
   "I have to take it past procurement first and they meet on Thursday.";
@@ -61,9 +51,6 @@ function emailSummary(over: Partial<EmailSummary> = {}): EmailSummary {
     subject: "Re: the renewal quote",
     preview: "Can you hold the price until Friday?",
     counterparty: "Dana Buyer",
-    // The server's own answer for which contact the phrase names. The card keys
-    // the face on this, so a fixture without it is a message whose far side
-    // resolved to nobody.
     counterparty_contact_id: "p-1",
     direction: "inbound",
     display_status: "team",
@@ -93,8 +80,6 @@ function emailRow(over: Partial<Activity> = {}): Activity {
   };
 }
 
-// A note on the same card. It has no email_summary and never had one, so it is
-// the control for "only the email branch moved".
 const noteRow: Activity = {
   id: NOTE_ID,
   kind: "note",
@@ -110,52 +95,36 @@ const noteRow: Activity = {
   is_done: false,
 };
 
-// More conversations than the glance draws, newest first, every instant fixed
-// — `make fe-clock-drift` runs the suite at +200 days, and a row dated
-// relative to today would be read as a meeting still to come and dropped.
+// Every instant fixed: `make fe-clock-drift` runs the suite at +200 days, and
+// a row dated relative to today would read as a meeting still to come.
 function notes(count: number): Activity[] {
   return Array.from({ length: count }, (_, index) => ({
     ...noteRow,
     id: `01a05500-0000-7000-8000-0000000000${10 + index}`,
     subject: `Note ${index + 1}`,
-    body: `Body ${index + 1}`,
     occurred_at: `2026-08-${20 - index}T11:00:00Z`,
   }));
 }
 
 const onePage = { has_more: false, next_cursor: null };
 
-// The link every activity on this contact's card carries.
-const filedHere: Activity["links"] = [
-  { entity_type: "contact", entity_id: contact.id },
-];
-
-// The mesh each row's face is drawn in, top to bottom.
-function facesIn(container: HTMLElement): (string | null)[] {
-  return [...container.querySelectorAll(".avatar-mesh")].map((face) =>
-    face.getAttribute("style"),
-  );
-}
-
-// The activity rows above are typed, so a fixture that drifts from the wire
-// shape fails to compile. The view around them is asserted rather than built:
-// Contact360 carries twenty-odd sections this card never reads, and spelling
-// them all would describe the page instead of the card.
-function viewWith(activities: Activity[]): Contact360 {
+function viewWith(
+  activities: Activity[],
+  over: Partial<Contact360> = {},
+): Contact360 {
   return {
     as_of: "2026-08-30T09:00:00Z",
     contact,
     sections_omitted: [],
     activities: { data: activities, page: onePage },
-  } as Contact360;
+    ...over,
+  };
 }
 
-// The card reads the transport directory for its channel labels, so it needs a
-// client. Nothing here depends on that read resolving: every claim below is
-// about an email, whose label comes from the kind.
 function renderCard(
   view: Contact360,
-  onOpenEmail?: (activityId: string) => void,
+  onOpenEmail: (activityId: string) => void = vi.fn(),
+  onFullHistory: () => void = vi.fn(),
 ) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -163,49 +132,47 @@ function renderCard(
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <ContactMemory view={view} onOpenEmail={onOpenEmail} />
+        <ContactMemory
+          view={view}
+          onOpenEmail={onOpenEmail}
+          onFullHistory={onFullHistory}
+        />
       </LocaleProvider>
     </QueryClientProvider>,
   );
 }
 
-describe("the contact page's memory card", () => {
-  it("draws a retained email as the canonical row, with its preview and not its body", () => {
+describe("the What was said card", () => {
+  it("draws an email as its subject over kind, side and day, never its words", () => {
     renderCard(viewWith([emailRow()]));
 
     expect(screen.getByText("Re: the renewal quote")).toBeTruthy();
-    expect(
-      screen.getByText("Can you hold the price until Friday?"),
-    ).toBeTruthy();
-    // The whole message belongs to the drawer. Printing it here is what the
-    // card did before, and it is what a reader saw instead of a row.
+    expect(screen.getByText("Email · they wrote · 29 Aug")).toBeTruthy();
+    expect(screen.getByText("Unanswered")).toBeTruthy();
     expect(screen.queryByText(WHOLE_BODY)).toBeNull();
-    // The access state travels with the message. Its absence was how a reader
-    // could not tell a team-wide thread from a private one.
-    expect(screen.getByText("Team")).toBeTruthy();
+    expect(
+      screen.queryByText("Can you hold the price until Friday?"),
+    ).toBeNull();
   });
 
-  it("opens the page's drawer on the message the row is about", async () => {
+  it("opens the page's drawer on the email the row is about", async () => {
     const user = userEvent.setup();
     const onOpenEmail = vi.fn();
     renderCard(viewWith([emailRow()]), onOpenEmail);
 
     await user.click(
-      screen.getByRole("button", { name: /Re: the renewal quote/ }),
+      screen.getByRole("button", { name: "Re: the renewal quote" }),
     );
 
     expect(onOpenEmail).toHaveBeenCalledWith(EMAIL_ID);
   });
 
-  it("offers no opener when the page mounts no drawer", () => {
-    renderCard(viewWith([emailRow()]));
+  it("draws a note as plain words, with no side and nothing to open", () => {
+    renderCard(viewWith([noteRow]));
 
-    // Readable, and not pressable: a row that looks openable and answers
-    // nothing teaches a reader the product is broken.
-    expect(
-      screen.queryByRole("button", { name: /Re: the renewal quote/ }),
-    ).toBeNull();
-    expect(screen.getByText("Re: the renewal quote")).toBeTruthy();
+    expect(screen.getByText("Call prep")).toBeTruthy();
+    expect(screen.getByText("Note · 28 Aug")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Call prep" })).toBeNull();
   });
 
   it("discloses nothing from a withheld message", () => {
@@ -223,165 +190,60 @@ describe("the contact page's memory card", () => {
           }),
         }),
       ]),
-      vi.fn(),
     );
 
     expect(screen.queryByText("Re: the renewal quote")).toBeNull();
-    expect(
-      screen.queryByText("Can you hold the price until Friday?"),
-    ).toBeNull();
     expect(screen.queryByText(WHOLE_BODY)).toBeNull();
-    // The row stays, saying it is limited. Drawing it as absent would leave a
-    // reader unable to tell a private conversation from one that never was.
-    expect(screen.getByText("Withheld")).toBeTruthy();
-    // A withheld message names no counterparty, so the row reads as a
-    // conversation with the record it is on rather than inventing, or
-    // leaking, who it was actually with.
-    expect(screen.getByText("Dana Buyer")).toBeTruthy();
+    // The row stays, saying it is not shared: drawn as absent, a private
+    // conversation would read as one that never was.
+    expect(screen.getByText("Not shared with you")).toBeTruthy();
   });
 
-  it("draws the row against its counterparty, not the contact", () => {
-    renderCard(
-      viewWith([
-        emailRow({
-          email_summary: emailSummary({ counterparty: "Sabine Mayer" }),
-        }),
-      ]),
-    );
-
-    // The avatar and the meta line both name who the exchange was with, not
-    // the record the card is on.
-    expect(screen.getByText("SM")).toBeTruthy();
-    expect(screen.getByText("Sabine Mayer")).toBeTruthy();
-  });
-
-  it("draws the row against the contact when the kind names no counterparty", () => {
-    renderCard(viewWith([noteRow]));
-
-    expect(screen.getByText("DB")).toBeTruthy();
-    expect(screen.getByText("Dana Buyer")).toBeTruthy();
-  });
-
-  // One contact is one colour down the card: a mail that names this contact
-  // keys its face on the record, as a note does.
-  it("draws one contact in one colour on a mail and on a note", () => {
-    const { container } = renderCard(
-      viewWith([emailRow({ links: filedHere }), noteRow]),
-    );
-
-    const [mail, note] = facesIn(container);
-    expect(mail).toBe(note);
-  });
-
-  // The phrase names whoever came first on the far side. A mail filed against
-  // this contact but sent by somebody else is that somebody's face, never a
-  // stranger's name drawn in this contact's colour.
-  it("keys a mail from somebody else on their name, not on the filed contact", () => {
-    const { container } = renderCard(
-      viewWith([
-        emailRow({
-          links: filedHere,
-          email_summary: emailSummary({
-            counterparty: "Bob Stranger",
-            counterparty_contact_id: "p-2",
-          }),
-        }),
-        noteRow,
-      ]),
-    );
-
-    const [mail, note] = facesIn(container);
-    expect(mail).not.toBe(note);
-    expect(screen.getByText("BS")).toBeTruthy();
-  });
-
-  // The server's count of the rest does not stop the phrase naming the contact.
-  it("reads the contact through the phrase's count of the others", () => {
-    const { container } = renderCard(
-      viewWith([
-        emailRow({
-          links: filedHere,
-          email_summary: emailSummary({ counterparty: "Dana Buyer +2" }),
-        }),
-        noteRow,
-      ]),
-    );
-
-    const [mail, note] = facesIn(container);
-    expect(mail).toBe(note);
-  });
-
-  // Five cuts do not fit beside the title on the one band a panel head is, so
-  // the strip stands in the card's body above the rows. Both halves matter: a
-  // strip put back in the head gives this card a taller head than every other
-  // card in the stack, and a strip moved without its wiring narrows nothing.
-  it("narrows the list from a strip under the head rather than inside it", async () => {
+  it("draws the latest two and leaves the rest to Full history", async () => {
     const user = userEvent.setup();
-    const { container } = renderCard(viewWith([emailRow(), noteRow]));
-
-    const strip = container.querySelector(".filterpills");
-    expect(strip).not.toBeNull();
-    expect(strip?.closest(".panel-head")).toBeNull();
-    expect(strip?.closest(".panel-body")).not.toBeNull();
-
-    await user.click(screen.getByRole("button", { name: "Notes" }));
-
-    expect(screen.getByText("Call prep")).toBeTruthy();
-    expect(screen.queryByText("Re: the renewal quote")).toBeNull();
-  });
-
-  // The card is one half of the record's reading and the commitments card is
-  // the other, and they are a pair because they are read together. Uncut, a
-  // contact with fifty captured exchanges pushes the other half off the
-  // screen.
-  it("draws three conversations and holds the rest behind the footer", () => {
-    renderCard(viewWith(notes(5)));
+    const onFullHistory = vi.fn();
+    renderCard(viewWith(notes(4)), vi.fn(), onFullHistory);
 
     expect(screen.getByText("Note 1")).toBeTruthy();
-    expect(screen.getByText("Note 3")).toBeTruthy();
-    expect(screen.queryByText("Note 4")).toBeNull();
-    expect(screen.queryByText("Note 5")).toBeNull();
+    expect(screen.getByText("Note 2")).toBeTruthy();
+    expect(screen.queryByText("Note 3")).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Full history" }));
+    expect(onFullHistory).toHaveBeenCalledOnce();
   });
 
-  it("leads to the record's chronology for everything it does not draw", async () => {
-    const user = userEvent.setup();
-    const navigate = vi.spyOn(router, "navigate").mockImplementation(() => {});
-    renderCard(viewWith(notes(5)));
+  it("reads the thread projection when the server has filled it", () => {
+    const entry: Entry = {
+      key: "thread-1",
+      channel: "meeting",
+      direction: "internal",
+      title: "Site visit",
+      summary: "Walked the depot.",
+      occurred_at: "2026-08-20T09:00:00Z",
+      activity_count: 1,
+      status: "awaiting_them",
+    };
+    renderCard(viewWith([emailRow()], { conversation_memory: [entry] }));
 
-    await user.click(screen.getByRole("button", { name: /Show all activity/ }));
+    expect(screen.getByText("Site visit")).toBeTruthy();
+    expect(screen.getByText("Meeting · both sides · 20 Aug")).toBeTruthy();
+    expect(screen.getByText("Waiting on them")).toBeTruthy();
+    expect(screen.queryByText("Re: the renewal quote")).toBeNull();
+  });
 
-    // The tab that holds the exchanges whole, which is also where the rail's
-    // own glance leads: one record, one ledger to be sent to.
-    expect(navigate).toHaveBeenCalledWith(
-      { screen: "contacts", id: "p-1", id2: "timeline" },
-      undefined,
+  it("says nothing was said rather than drawing an empty card", () => {
+    renderCard(viewWith([]));
+    expect(screen.getByText("No conversation captured yet.")).toBeTruthy();
+  });
+
+  it("says the conversations are hidden when both reads are withheld", () => {
+    renderCard(
+      viewWith([], {
+        activities: undefined,
+        sections_omitted: ["activities", "conversation_memory"],
+      }),
     );
-  });
-
-  // The cut is taken AFTER the filter. Taken before it, a reader who asked for
-  // email would be shown whichever of the newest three happened to be email —
-  // which on a contact with four notes and one message is nothing at all, and
-  // reads as a channel this contact has never been reached on.
-  it("draws three of what the reader asked for, not three of everything", async () => {
-    const user = userEvent.setup();
-    renderCard(viewWith([...notes(4), emailRow()]), vi.fn());
-
-    await user.click(screen.getByRole("button", { name: "Email" }));
-
-    expect(screen.getByText("Re: the renewal quote")).toBeTruthy();
-    expect(screen.queryByText("Note 1")).toBeNull();
-  });
-
-  it("leaves every other kind reading as it did", () => {
-    renderCard(viewWith([noteRow]), vi.fn());
-
-    expect(screen.getByText("Call prep")).toBeTruthy();
-    // A note's own words, in full: the card's two lines are still the reading
-    // for everything that is not an email.
-    expect(
-      screen.getByText("Wants the fleet numbers before we talk pricing."),
-    ).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /Call prep/ })).toBeNull();
+    expect(screen.getByText("Hidden for your role")).toBeTruthy();
   });
 });
 
@@ -414,39 +276,95 @@ it("groups replies by conversation without clearing another request from the sam
       move: "needs_reply",
     }),
   });
-  renderCard(viewWith([reply, question, request]), vi.fn());
+  renderCard(viewWith([reply, question, request]));
   expect(screen.getAllByText("Competitor question")).toHaveLength(1);
-  expect(screen.getByText("2 messages")).toBeTruthy();
   expect(screen.getByText("Please send the report")).toBeTruthy();
-  expect(screen.queryByText("Replied")).toBeNull();
+  expect(screen.getByText("Unanswered")).toBeTruthy();
 });
 
-// The card's way to the Timeline tab sits outside the tab strip, and a record
-// opened from the Worklist drawer must keep its way back across it.
-describe("leaving the card for the Timeline tab", () => {
-  afterEach(() => {
-    window.location.hash = "";
-  });
+type ContactPhone = components["schemas"]["ContactPhone"];
 
-  it("keeps the Worklist's way back on the address", async () => {
-    const user = userEvent.setup();
-    window.location.hash = "#/contacts/p-1?filter=tasks&from=worklist";
-    renderCard(viewWith(notes(1)));
+const OFFICE = "+49 30 1234567";
+const MOBILE = "+49 151 7654321";
 
-    await user.click(screen.getByRole("button", { name: /Show all activity/ }));
+function phone(id: string, number: string, isPrimary: boolean): ContactPhone {
+  return {
+    id,
+    phone: number,
+    phone_type: "work",
+    is_primary: isPrimary,
+    position: 0,
+    source: "manual",
+    captured_by: "human:u-1",
+  };
+}
 
-    expect(window.location.hash).toBe(
-      "#/contacts/p-1/timeline?filter=tasks&from=worklist",
+// The primary number comes second, so a card that dialled the first number
+// listed would fail here.
+const reachable = {
+  ...contact,
+  phones: [phone("ph-0", OFFICE, false), phone("ph-1", MOBILE, true)],
+};
+
+const callRow: Activity = {
+  ...noteRow,
+  id: "01a05500-0000-7000-8000-00000000ee03",
+  kind: "call",
+  subject: "Called about the renewal",
+  direction: "outbound",
+};
+
+const callEntry: Entry = {
+  key: "thread-call",
+  channel: "call",
+  direction: "outbound",
+  title: "Called about the renewal",
+  summary: "Walked through the quote.",
+  occurred_at: "2026-08-28T11:00:00Z",
+  activity_count: 1,
+};
+
+describe("Call on a logged call", () => {
+  it("dials the primary number from a thread projection call", () => {
+    renderCard(
+      viewWith([], { contact: reachable, conversation_memory: [callEntry] }),
     );
+
+    expect(
+      screen.getByRole("link", { name: "Call" }).getAttribute("href"),
+    ).toBe(telUri(MOBILE));
   });
 
-  it("adds nothing for a contact opened any other way", async () => {
-    const user = userEvent.setup();
-    window.location.hash = "#/contacts/p-1";
-    renderCard(viewWith(notes(1)));
+  it("dials the primary number from a timeline call", () => {
+    renderCard(viewWith([callRow], { contact: reachable }));
 
-    await user.click(screen.getByRole("button", { name: /Show all activity/ }));
+    expect(
+      screen.getByRole("link", { name: "Call" }).getAttribute("href"),
+    ).toBe(telUri(MOBILE));
+  });
 
-    expect(window.location.hash).toBe("#/contacts/p-1/timeline");
+  it("offers no Call on a note", () => {
+    renderCard(viewWith([noteRow], { contact: reachable }));
+
+    expect(screen.getByText("Call prep")).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "Call" })).toBeNull();
+  });
+
+  it("offers no Call when the contact has no phone", () => {
+    renderCard(viewWith([callRow]));
+
+    expect(screen.getByText("Called about the renewal")).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "Call" })).toBeNull();
+  });
+
+  it("offers no Call on an archived contact", () => {
+    renderCard(
+      viewWith([callRow], {
+        contact: { ...reachable, archived_at: "2026-08-29T09:00:00Z" },
+      }),
+    );
+
+    expect(screen.getByText("Called about the renewal")).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "Call" })).toBeNull();
   });
 });

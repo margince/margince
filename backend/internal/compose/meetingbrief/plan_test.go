@@ -6,6 +6,7 @@ package meetingbrief
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/compose/claims"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -48,7 +49,7 @@ func TestUnknownsComeOnlyFromAbsence(t *testing.T) {
 		}
 	}
 
-	bare := Input{ActivityID: meetingID, Subject: "Sync", Now: at(10), StartsAt: at(12)}
+	bare := Input{ActivityID: meetingID, Subject: "Sync", Now: at(10), Zone: time.UTC, StartsAt: at(12)}
 	got := map[crmcontracts.MeetingPlanUnknownKind]bool{}
 	for _, unknown := range planOf(bare).Unknowns {
 		got[unknown.Kind] = true
@@ -69,7 +70,7 @@ func TestUnknownsComeOnlyFromAbsence(t *testing.T) {
 // Every unknown carries the question that closes it, or it is a complaint
 // rather than preparation.
 func TestEveryUnknownCarriesItsQuestion(t *testing.T) {
-	bare := Input{ActivityID: meetingID, Now: at(10), StartsAt: at(12)}
+	bare := Input{ActivityID: meetingID, Now: at(10), Zone: time.UTC, StartsAt: at(12)}
 	for _, unknown := range planOf(bare).Unknowns {
 		if strings.TrimSpace(unknown.Question) == "" {
 			t.Errorf("the %q gap carries no question to close it", unknown.Kind)
@@ -100,7 +101,7 @@ func TestAQuestionNamesSomethingOnlyThisAccountProduced(t *testing.T) {
 // With no company and no attendee there is nothing to anchor a templated
 // question on, and printing one anyway is the failure above.
 func TestNoAnchorMeansNoTemplatedQuestion(t *testing.T) {
-	bare := Input{ActivityID: meetingID, Now: at(10), StartsAt: at(12)}
+	bare := Input{ActivityID: meetingID, Now: at(10), Zone: time.UTC, StartsAt: at(12)}
 	if got := planOf(bare).Questions; len(got) != 0 {
 		t.Errorf("questions = %d, want 0 — nothing in the record to make one specific", len(got))
 	}
@@ -114,7 +115,7 @@ func TestReadinessReportsWhatSurvived(t *testing.T) {
 		// all come from it, so this is an outline and says so.
 		t.Errorf("readiness = %q, want outline for a one-claim meeting", got)
 	}
-	bare := Input{ActivityID: meetingID, Now: at(10), StartsAt: at(12)}
+	bare := Input{ActivityID: meetingID, Now: at(10), Zone: time.UTC, StartsAt: at(12)}
 	if got := planOf(bare).Readiness; got != crmcontracts.MeetingPlanReadinessMeetingPlanReadinessOutline {
 		t.Errorf("readiness = %q, want outline for an empty record", got)
 	}

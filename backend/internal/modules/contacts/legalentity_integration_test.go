@@ -332,7 +332,8 @@ func TestTheDefaultEntityReadsTheAnchorCompany(t *testing.T) {
 		t.Fatalf("resolve: %v", err)
 	}
 	if identity.DisplayName != "Acme" || identity.VatID == nil || *identity.VatID != "DE123456789" ||
-		identity.Address.Line1 == nil || *identity.Address.Line1 != "Torstraße 1, 10119 Berlin" || identity.AnchorCompanyID.IsZero() {
+		pointerValue(identity.Address.Line1) != "Torstraße 1" || pointerValue(identity.Address.PostalCode) != "10119" ||
+		pointerValue(identity.Address.City) != "Berlin" || identity.AnchorCompanyID.IsZero() {
 		t.Errorf("the default entity resolves to %+v, want the anchor's name, address and VAT ID", identity)
 	}
 	_, err := e.store.UpdateLegalEntity(admin, identity.ID, LegalEntityInput{DisplayName: new("Other")}, nil)

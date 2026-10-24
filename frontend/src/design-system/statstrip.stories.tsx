@@ -398,3 +398,44 @@ export const CompactLongNamesPhone: Story = {
     }
   },
 };
+
+// The plate at the foot of How it stands: one ground, hairlines between the
+// cells, a smaller figure. Each cell opens where its figure was read from.
+export const Plate: Story = {
+  render: () => (
+    <StatStrip density="plate">
+      <StatCard
+        label="Open deals"
+        value="2"
+        detail="€60,000 · Fleet retrofit, Phase two"
+        onOpen={() => undefined}
+      />
+      <StatCard
+        label="Last two-way"
+        value="1 Aug"
+        tone="warning"
+        detail="12 days ago"
+        onOpen={() => undefined}
+      />
+      <StatCard label="Revenue · 12 mo" value="€64,200" detail="Net invoiced" />
+      <StatCard
+        label="Overdue"
+        value="€0"
+        tone="success"
+        detail="1 invoice open, due 1 Sep"
+      />
+    </StatStrip>
+  ),
+};
+
+// The plate on a new record: every figure says what it lacks in words, in the
+// plain ink, never a zero it did not count.
+export const PlateEmpty: Story = {
+  render: () => (
+    <StatStrip density="plate">
+      <StatCard label="Open deals" value="None yet" />
+      <StatCard label="Last two-way" value="No contact yet" />
+      <StatCard label="Revenue · 12 mo" value="Not connected" />
+    </StatStrip>
+  ),
+};

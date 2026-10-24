@@ -17,7 +17,7 @@ import {
 import { CellStack } from "../../design-system/cellstack";
 import { useClipboardCopy } from "../../design-system/clipboardcopy";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
-import { DateInput, isISODate } from "../../design-system/dateinput";
+import { DateInput, isoOrBlank } from "../../design-system/dateinput";
 import { useSettledValue } from "../../design-system/debouncedsearch";
 import { FilterBar } from "../../design-system/filterbar";
 import { IconAction } from "../../design-system/iconaction";
@@ -31,6 +31,7 @@ import { useNow } from "../../format/now";
 import { formatRelativeTime } from "../../format/relativetime";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { actorAttribution } from "../../lib/auditactor";
 import { useCan } from "../../lib/capability";
 import { ENTITY, isEntityKind } from "../../lib/entity";
 import { unwrap } from "../../lib/problem";
@@ -40,7 +41,6 @@ import {
   ACTOR_ICON,
   AUDIT_ACTION_VALUES,
   actionLabel,
-  actorAttribution,
   entityLabel,
 } from "./audit";
 import { AuditDetail } from "./settings-audit.detail";
@@ -110,7 +110,7 @@ function AuditLogFilterBar({
       {(field) => (
         <DateInput
           {...field}
-          value={isISODate(filters[key]) ? filters[key] : ""}
+          value={isoOrBlank(filters[key])}
           onChange={(event) => set(key)(event.target.value)}
         />
       )}

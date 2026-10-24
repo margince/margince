@@ -114,6 +114,7 @@ export function RecordPicker({
   onPick,
   selected,
   disabled = false,
+  initialTerm = "",
   id,
   "aria-describedby": describedBy,
   "aria-invalid": invalid,
@@ -128,10 +129,13 @@ export function RecordPicker({
   // list and the typed query stay on screen, which is what the user needs to
   // see if the write comes back refused.
   disabled?: boolean;
+  // The search the picker opens with, when the caller already knows the
+  // likely name. Read once: the user's typing owns the term after that.
+  initialTerm?: string;
 }> &
   RecordPickerName) {
   const t = useT();
-  const [term, setTerm] = useState("");
+  const [term, setTerm] = useState(initialTerm);
   const {
     candidates,
     answered,

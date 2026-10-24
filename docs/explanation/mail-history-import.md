@@ -216,7 +216,7 @@ total.
 | the count and page fetch at the provider end | `internal/modules/capture/gmail/backfill.go`, `.../graph/backfill.go` |
 | the cost estimate code | `internal/compose/costestimate/` |
 | HTTP surface | `internal/compose/backfilltransport.go` |
-| the consent screen | `frontend/src/features/import/backfill.tsx` |
+| the consent screen | `frontend/src/features/capture/backfill.tsx` |
 
 ## Where to go next
 

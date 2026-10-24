@@ -82,7 +82,8 @@ func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *a
 	svc.WithPrecheck(counterpartyProposalKind, counterpartyPrecheck(store))
 	svc.WithEffect(companyNameProposalKind, companyNameAcceptEffect(svc, store))
 	svc.WithEffect(captureCollisionKind, captureCollisionAcceptEffect(svc, store))
-	svc.WithEffect(linkedInMatchKind, linkedInMatchAcceptEffect(svc))
+	svc.WithEffect(linkedInMatchKind, linkedInMatchAcceptEffect(svc, store))
+	svc.WithPrecheck(linkedInMatchKind, linkedInMatchPrecheck(store))
 	// Both halves, like the held message above and for the same reason: the
 	// subject of this card is a row that is already sitting in a state, and a
 	// card whose buttons only dismissed it would report a decision the record
@@ -109,7 +110,7 @@ func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *a
 	svc.WithPrecheck(deals.FollowUpReconcileKind, followUpPrecheck())
 	commitmentTasks := activities.NewStore(InstallationDB(pool))
 	svc.WithEffect(CommitmentTaskKind, commitmentTaskEffect(svc, commitmentTasks, contacts.NewStore(InstallationDB(pool))))
-	svc.WithPrecheck(CommitmentTaskKind, commitmentTaskPrecheck(commitmentTasks))
+	svc.WithPrecheck(CommitmentTaskKind, commitmentTaskPrecheck(InstallationDB(pool), commitmentTasks))
 	svc.WithEffect(deals.StageProgressionKind, stageProgressionEffect(svc,
 		deals.NewStore(InstallationDB(pool), DealsInstallation())))
 	svc.WithPrecheck(deals.StageProgressionKind, stageProgressionPrecheck())

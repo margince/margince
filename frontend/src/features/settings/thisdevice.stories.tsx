@@ -3,10 +3,11 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { SettingList } from "../../design-system/settingrow";
 import { en } from "../../i18n/en";
 import type { InstallState } from "../../lib/pwa";
 import { StoryProviders } from "../../testing/story-utils";
-import { InstallPanel } from "./thisdevice";
+import { InstallSettingRow } from "./thisdevice";
 
 const AVAILABLE: InstallState = {
   kind: "available",
@@ -16,17 +17,19 @@ const AVAILABLE: InstallState = {
 function story(install: InstallState) {
   return () => (
     <StoryProviders>
-      <InstallPanel install={install} />
+      <SettingList>
+        <InstallSettingRow install={install} />
+      </SettingList>
     </StoryProviders>
   );
 }
 
-const meta: Meta<typeof InstallPanel> = {
-  title: "Settings/You/Account/This device",
-  component: InstallPanel,
+const meta: Meta<typeof InstallSettingRow> = {
+  title: "Settings/You/Account/This browser",
+  component: InstallSettingRow,
 };
 export default meta;
-type Story = StoryObj<typeof InstallPanel>;
+type Story = StoryObj<typeof InstallSettingRow>;
 
 // Chromium kept its install offer for the page to present.
 export const Available: Story = { render: story(AVAILABLE) };

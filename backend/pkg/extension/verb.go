@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -103,6 +104,11 @@ type Verb struct {
 	// action would have to be enforced with a guessed verb.
 	RbacAction RbacAction
 
+	// RbacDefaults is the starting grant each system role gets on RbacObject,
+	// filled in once where a role document has no entry for it. Custom roles
+	// never get one. It is declared beside the object it grants on.
+	RbacDefaults []RbacDefault
+
 	// HumanOnly is the extension spelling of a contract's x-agent-access:
 	// human-only — an operation with no x-mcp-tool. It still declares Tool
 	// (the registry dispatch key REST invokes it by) and still owes RBAC on
@@ -142,6 +148,53 @@ func (a RbacAction) Validate() error {
 	return fmt.Errorf("RBAC action %q is not one of the four object verbs (create, read, update, delete)", string(a))
 }
 
+// RbacDefault is one system role's starting grant on a verb's RBAC object.
+// Role is a role key; whether it names a system role is the identity module's
+// to say, because it owns the role set.
+type RbacDefault struct {
+	Role    string
+	Actions []RbacAction
+}
+
+// validateRbacDefaults refuses a default no role document could carry. The role
+// key itself is checked where the role set is in hand (compose's preflight).
+func (v Verb) validateRbacDefaults() error {
+	if len(v.RbacDefaults) == 0 {
+		return nil
+	}
+	if v.RbacObject == "" {
+		return fmt.Errorf("operation %s declares default grants but no RBAC object — a default is a grant on the object the operation gates on, and there is none here", v.OperationID)
+	}
+	seen := map[string]bool{}
+	for _, d := range v.RbacDefaults {
+		if d.Role == "" {
+			return fmt.Errorf("operation %s declares a default grant for no role", v.OperationID)
+		}
+		if !slices.Contains(SystemRoleKeys, d.Role) {
+			return fmt.Errorf("operation %s declares a default grant for role %q, which is not a system role (%s). A custom role starts with no grant",
+				v.OperationID, d.Role, strings.Join(SystemRoleKeys, ", "))
+		}
+		if seen[d.Role] {
+			return fmt.Errorf("operation %s lists role %q twice in its default grants", v.OperationID, d.Role)
+		}
+		seen[d.Role] = true
+		if len(d.Actions) == 0 {
+			return fmt.Errorf("operation %s gives role %q no action in its default grants — leave the role out to grant it nothing", v.OperationID, d.Role)
+		}
+		acted := map[RbacAction]bool{}
+		for _, a := range d.Actions {
+			if err := a.Validate(); err != nil {
+				return fmt.Errorf("operation %s, default grant for %q: %w", v.OperationID, d.Role, err)
+			}
+			if acted[a] {
+				return fmt.Errorf("operation %s lists action %q twice in the default grant for %q", v.OperationID, string(a), d.Role)
+			}
+			acted[a] = true
+		}
+	}
+	return nil
+}
+
 // APIBasePath is the prefix the contract's `servers` url already carries
 // (https://…/v1), spelled once. A contract path is written relative to it —
 // core writes /me, an extension writes /ext/<unit>/… — and a server that mounts
@@ -174,7 +227,10 @@ func (v Verb) Validate() error {
 	if err := v.validateSurface(); err != nil {
 		return err
 	}
-	return v.validateGovernance()
+	if err := v.validateGovernance(); err != nil {
+		return err
+	}
+	return v.validateRbacDefaults()
 }
 
 // validateSurface checks WHERE the operation lives: which unit declares it,

@@ -1,8 +1,11 @@
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
+import { RecordStory } from "../../design-system/recordstory";
 import {
+  type ActivityKind,
   hasTimelineFilters,
+  NO_TIMELINE_FILTERS,
+  type TimelineFilters,
   useRecordTimeline,
-  useTimelineFilters,
 } from "../../design-system/recordtimeline";
 import { SurfaceState, sectionState } from "../../design-system/surfacestate";
 import { TimelineFilterBar } from "../../design-system/timelinefilterbar";
@@ -30,12 +33,38 @@ type ChronologySlots = Readonly<{
 }>;
 
 /**
- * The chronology zone, with the same filter the company page offers. All draws
+ * The project's full history, drawn in the drawer the More menu and the
+ * Commitments card open. `kind` starts the list narrowed, so "All tasks"
+ * opens on the tasks.
+ */
+export function ProjectHistory({
+  view,
+  kind,
+}: Readonly<{ view: Project360; kind?: ActivityKind }>) {
+  const recordZone = useRecordZone();
+  const story = useProjectChronology(view, kind);
+  return (
+    <RecordStory
+      timeline={story.timeline ?? []}
+      timelineGroups={story.timelineGroups}
+      timelineHeader={story.timelineHeader}
+      timelineFooter={story.timelineFooter}
+      timelineNotice={story.timelineNotice}
+      zone={recordZone}
+    />
+  );
+}
+
+/**
+ * The chronology, with the same filter the company page offers. All draws
  * the activities the 360 already carries (capped, with `has_more` beside
  * them), and Changes the field-history feed. Drawing the 360's own page keeps
  * the list in step with the rollup figures read in the same transaction.
  */
-export function useProjectChronology(view: Project360): ChronologySlots {
+function useProjectChronology(
+  view: Project360,
+  kind: ActivityKind | undefined,
+): ChronologySlots {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
@@ -47,7 +76,10 @@ export function useProjectChronology(view: Project360): ChronologySlots {
     Boolean(activities),
     activities?.data.length ?? 0,
   );
-  const [filters, setFilters] = useTimelineFilters(view.project.id);
+  // The drawer mounts per opening, so its narrowing starts fresh each time.
+  const [filters, setFilters] = useState<TimelineFilters>(
+    kind ? { kind } : NO_TIMELINE_FILTERS,
+  );
   // The 360's own page seeds the list; older pages and every narrowed read
   // come from the activity list itself.
   const timeline = useRecordTimeline("project", view.project.id, {

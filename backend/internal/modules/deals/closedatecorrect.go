@@ -106,8 +106,8 @@ func forecastDowngrade(category string) string {
 // derived from stage velocity rather than from the calendar — so it frequently
 // recomputes the date the deal already has. storekit.Patch records an assignment
 // without comparing it, so an unconditional Set would put that date in the audit
-// diff and in deal_forecast_history on every pass, and a reconstruction would
-// read a forecast moving nightly while standing still.
+// diff on every pass. A reconstruction would read a forecast moving nightly
+// while standing still.
 func setCloseDate(p *storekit.Patch, before *time.Time, proposed time.Time) {
 	if before != nil && before.Equal(proposed) {
 		return

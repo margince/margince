@@ -7,9 +7,9 @@ import {
   StoryProviders,
 } from "../../testing/story-utils";
 import { MoveButton } from "../records/movebutton";
-import { ConsentAndChannels } from "./contactconsentpanel";
 import { ContactOverview } from "./contactoverview";
 import { ContactPageV2 } from "./contactpage";
+import { ContactRail } from "./contactrail";
 import "./contact360.css";
 
 const meta: Meta = {
@@ -67,17 +67,6 @@ const sparse: View = {
     },
   },
 };
-const brief: components["schemas"]["ContactBrief"] = {
-  contact_id: "p-1",
-  generated_at: sparse.as_of,
-  generated_by: "deterministic",
-  sentences: [
-    {
-      text: "Giacomo is an operations manager. His contact was added from an import; there are no captured conversations yet.",
-      evidence: [{ entity_type: "contact", entity_id: "p-1" }],
-    },
-  ],
-};
 function install(view: View, failed = false) {
   installFetchStub({
     "GET /me": meRoute({
@@ -85,10 +74,6 @@ function install(view: View, failed = false) {
       activity: ["read", "create"],
     }),
     "GET /contacts/p-1/360": () => jsonResponse(view),
-    "GET /contacts/p-1/brief": () =>
-      failed
-        ? jsonResponse({ title: "Unavailable", status: 503 }, 503)
-        : jsonResponse(brief),
     "GET /contacts/p-1/consent/guard": () =>
       failed
         ? jsonResponse({ title: "Unavailable", status: 503 }, 503)
@@ -169,12 +154,9 @@ export const ProfileOnly: Story = {
       <StoryProviders>
         <ContactOverview
           view={sparse}
-          brief={undefined}
-          briefLoading={false}
-          briefFailed={false}
-          onRetryBrief={() => undefined}
           onAction={() => undefined}
           onOpenEmail={() => undefined}
+          onOpenTab={() => undefined}
         />
       </StoryProviders>
     );
@@ -207,12 +189,9 @@ export const OpenTask: Story = {
       <StoryProviders>
         <ContactOverview
           view={view}
-          brief={brief}
-          briefLoading={false}
-          briefFailed={false}
-          onRetryBrief={() => undefined}
           onAction={() => undefined}
           onOpenEmail={() => undefined}
+          onOpenTab={() => undefined}
         />
       </StoryProviders>
     );
@@ -228,12 +207,25 @@ export const FreshContactDark: Story = {
   globals: { theme: "dark" },
 };
 
+// The left column while the consent guard is out, and after it failed.
+function ColumnWhileGuard(
+  state: Readonly<{ loading: boolean; failed: boolean }>,
+) {
+  return (
+    <ContactRail
+      view={sparse}
+      consent={{ guard: undefined, onRetry: () => undefined, ...state }}
+      writeRefusalId="write-refused"
+    />
+  );
+}
+
 export const PermissionsLoading: Story = {
   render: () => {
     install(sparse);
     return (
       <StoryProviders>
-        <ConsentAndChannels view={sparse} guard={undefined} loading />
+        <ColumnWhileGuard loading failed={false} />
       </StoryProviders>
     );
   },
@@ -243,12 +235,7 @@ export const PermissionsFailed: Story = {
     install(sparse);
     return (
       <StoryProviders>
-        <ConsentAndChannels
-          view={sparse}
-          guard={undefined}
-          failed
-          onRetry={() => undefined}
-        />
+        <ColumnWhileGuard loading={false} failed />
       </StoryProviders>
     );
   },
@@ -289,12 +276,94 @@ export const RestrictedOverview: Story = {
       <StoryProviders>
         <ContactOverview
           view={view}
-          brief={brief}
-          briefLoading={false}
-          briefFailed={false}
-          onRetryBrief={() => undefined}
           onAction={() => undefined}
           onOpenEmail={() => undefined}
+          onOpenTab={() => undefined}
+        />
+      </StoryProviders>
+    );
+  },
+};
+// A relationship with something on it. A promise slipped, a strong band has a
+// change behind it, a colleague is in touch and a meeting is booked ahead.
+const promised: View = {
+  ...sparse,
+  as_of: "2026-08-13T09:00:00Z",
+  last_inbound_at: "2026-08-01T09:00:00Z",
+  last_outbound_at: "2026-07-20T09:00:00Z",
+  strength: {
+    score: 64,
+    bucket: "strong",
+    factors: {
+      recency: 0.75,
+      frequency: 0.6,
+      reciprocity: 0.8,
+      direction: 0.5,
+    },
+    inbound_90d: 4,
+    outbound_90d: 6,
+  },
+  relationship_changes: [
+    {
+      kind: "warmed",
+      at: "2026-07-20T09:00:00Z",
+      from_bucket: "moderate",
+      to_bucket: "strong",
+    },
+  ],
+  network: {
+    colleagues: [
+      {
+        user_id: "u-2",
+        display_name: "Lena Fischer",
+        strength_bucket: "strong",
+        interactions_90d: 5,
+      },
+    ],
+  },
+  claims: [
+    {
+      id: "c-1",
+      kind: "commitment_ours",
+      body: "Send the updated retrofit quote",
+      source_activity_id: "a-1",
+      source_quote: "We will send the updated quote by the 8th.",
+      status: "open",
+      needs_review: false,
+      due_at: "2026-06-08T09:00:00Z",
+    },
+  ],
+  next_meeting: {
+    activity_id: "m-2",
+    starts_at: "2026-08-20T09:00:00Z",
+    subject: "Walkthrough",
+  },
+  moment: {
+    rule: "overdue_promise",
+    headline: "Send Giacomo the updated retrofit quote",
+    why_now: "Promised on the 3 Jun kickoff call, for a date 66 days ago.",
+    confidence: "observed_fact",
+    claim_key: "promise:c-1",
+    evidence_fingerprint: "c-1",
+    evidence: [{ type: "activity", id: "a-1", label: "Kickoff call" }],
+    recommended_action: {
+      kind: "draft_reply",
+      label: "Write the quote email",
+      state: "available",
+      destination: { surface: "composer" },
+    },
+  },
+};
+export const PromiseOverdue: Story = {
+  render: () => {
+    install(promised);
+    return (
+      <StoryProviders>
+        <ContactOverview
+          view={promised}
+          onAction={() => undefined}
+          onOpenEmail={() => undefined}
+          onOpenTab={() => undefined}
         />
       </StoryProviders>
     );

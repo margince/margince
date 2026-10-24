@@ -54,7 +54,7 @@ func TestADeclaredImporterNamesTheAuthorOnEveryRecordWire(t *testing.T) {
 	landed["activity"] = ids.UUID(activity.Id).String()
 	status, lead := postLead(importer, t, e, crmcontracts.CreateLeadRequest{
 		FullName: new("Imported Lead"), SourceSystem: &system, SourceId: new("leads:950"),
-		Source: "hubspot_import", SourceAuthorId: &seat, SourceAuthorName: &name,
+		Source: new("hubspot_import"), SourceAuthorId: &seat, SourceAuthorName: &name,
 	})
 	if status != http.StatusCreated {
 		t.Fatalf("the lead answered %d, want 201", status)
@@ -132,7 +132,7 @@ func TestErasingTheSubjectClearsTheAuthorTheImporterWrote(t *testing.T) {
 	leadEmail := address
 	if status, _ := postLead(importer, t, e, crmcontracts.CreateLeadRequest{
 		FullName: new("Erased Subject"), Email: &leadEmail, SourceSystem: &system, SourceId: new("leads:960"),
-		Source: "hubspot_import", SourceAuthorName: &name,
+		Source: new("hubspot_import"), SourceAuthorName: &name,
 	}); status != http.StatusCreated {
 		t.Fatalf("the lead twin answered %d, want 201", status)
 	}

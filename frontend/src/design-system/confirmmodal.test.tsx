@@ -126,6 +126,25 @@ describe("ConfirmModal", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
+  it("names the way back when the caller gives it a name", async () => {
+    const onClose = vi.fn();
+    rtlRender(
+      <ConfirmModal
+        open
+        onClose={onClose}
+        title="Turn off Continue with Google?"
+        confirmLabel="Turn off Google sign-in"
+        cancelLabel="Keep it on"
+        onConfirm={vi.fn()}
+      >
+        <p>Body copy</p>
+      </ConfirmModal>,
+    );
+    expect(screen.queryByText("Cancel")).toBeNull();
+    await userEvent.click(screen.getByText("Keep it on"));
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
   it("announces the error message when error is set", () => {
     rtlRender(
       <ConfirmModal

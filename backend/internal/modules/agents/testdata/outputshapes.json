@@ -10256,10 +10256,31 @@
                       "format": "date-time"
                     },
                     "changed_by": {
-                      "type": "string"
-                    },
-                    "changed_by_name": {
-                      "type": "string"
+                      "type": "object",
+                      "properties": {
+                        "actor_id": {
+                          "type": "string"
+                        },
+                        "actor_name": {
+                          "type": "string"
+                        },
+                        "actor_type": {
+                          "type": "string"
+                        },
+                        "agent_client": {
+                          "type": "string"
+                        },
+                        "on_behalf_of_name": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "actor_id",
+                        "actor_name",
+                        "actor_type",
+                        "agent_client",
+                        "on_behalf_of_name"
+                      ]
                     },
                     "from_phase": {
                       "type": "string"
@@ -10273,8 +10294,6 @@
                   },
                   "required": [
                     "changed_at",
-                    "changed_by",
-                    "changed_by_name",
                     "from_phase",
                     "reason",
                     "to_phase"
@@ -10358,16 +10377,20 @@
               "open_deal_value_minor": {
                 "type": "integer"
               },
+              "open_deals_unpriced": {
+                "type": "integer"
+              },
               "won_deal_value_minor": {
+                "type": "integer"
+              },
+              "won_deals_unpriced": {
                 "type": "integer"
               }
             },
             "required": [
               "activity_count",
               "currency",
-              "open_commitments",
-              "open_deal_value_minor",
-              "won_deal_value_minor"
+              "open_commitments"
             ]
           },
           "sections_omitted": {
@@ -13097,6 +13120,34 @@
       "data": {
         "type": "object",
         "properties": {
+          "capture_gaps": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "display_name": {
+                  "type": "string"
+                },
+                "invited": {
+                  "type": "boolean"
+                },
+                "last_on_thread_at": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "user_id": {
+                  "type": "string",
+                  "format": "uuid"
+                }
+              },
+              "required": [
+                "display_name",
+                "invited",
+                "last_on_thread_at",
+                "user_id"
+              ]
+            }
+          },
           "colleagues": {
             "type": "array",
             "items": {
@@ -13136,6 +13187,7 @@
           }
         },
         "required": [
+          "capture_gaps",
           "colleagues",
           "contact_id"
         ]

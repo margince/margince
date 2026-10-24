@@ -9,6 +9,27 @@ import (
 	"time"
 )
 
+// Defines values for ActivityAutomaticKind.
+const (
+	Calendar      ActivityAutomaticKind = "calendar"
+	Product       ActivityAutomaticKind = "product"
+	SendingSystem ActivityAutomaticKind = "sending_system"
+)
+
+// Valid indicates whether the value is a known member of the ActivityAutomaticKind enum.
+func (e ActivityAutomaticKind) Valid() bool {
+	switch e {
+	case Calendar:
+		return true
+	case Product:
+		return true
+	case SendingSystem:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ActivityCaptureLabel.
 const (
 	ActivityCaptureLabelCommitment ActivityCaptureLabel = "commitment"
@@ -261,6 +282,123 @@ func (e ActivityReferenceKind) Valid() bool {
 	case Note:
 		return true
 	case Task:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for BodyCompleteness.
+const (
+	Complete   BodyCompleteness = "complete"
+	Forwarded  BodyCompleteness = "forwarded"
+	Partial    BodyCompleteness = "partial"
+	Unassessed BodyCompleteness = "unassessed"
+	Unreadable BodyCompleteness = "unreadable"
+)
+
+// Valid indicates whether the value is a known member of the BodyCompleteness enum.
+func (e BodyCompleteness) Valid() bool {
+	switch e {
+	case Complete:
+		return true
+	case Forwarded:
+		return true
+	case Partial:
+		return true
+	case Unassessed:
+		return true
+	case Unreadable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CompanyIndustry.
+const (
+	AerospaceDefense          CompanyIndustry = "aerospace_defense"
+	Agriculture               CompanyIndustry = "agriculture"
+	Automotive                CompanyIndustry = "automotive"
+	ChemicalsMaterials        CompanyIndustry = "chemicals_materials"
+	Construction              CompanyIndustry = "construction"
+	ConsumerGoodsRetail       CompanyIndustry = "consumer_goods_retail"
+	Education                 CompanyIndustry = "education"
+	EnergyUtilities           CompanyIndustry = "energy_utilities"
+	EntertainmentMedia        CompanyIndustry = "entertainment_media"
+	FinancialServices         CompanyIndustry = "financial_services"
+	FoodBeverage              CompanyIndustry = "food_beverage"
+	GovernmentPublicSector    CompanyIndustry = "government_public_sector"
+	Healthcare                CompanyIndustry = "healthcare"
+	HospitalityTourism        CompanyIndustry = "hospitality_tourism"
+	Insurance                 CompanyIndustry = "insurance"
+	ItServices                CompanyIndustry = "it_services"
+	LegalProfessionalServices CompanyIndustry = "legal_professional_services"
+	LogisticsTransport        CompanyIndustry = "logistics_transport"
+	Manufacturing             CompanyIndustry = "manufacturing"
+	MarketingAdvertising      CompanyIndustry = "marketing_advertising"
+	MiningMetals              CompanyIndustry = "mining_metals"
+	Nonprofit                 CompanyIndustry = "nonprofit"
+	PharmaBiotech             CompanyIndustry = "pharma_biotech"
+	RealEstate                CompanyIndustry = "real_estate"
+	Software                  CompanyIndustry = "software"
+	Telecommunications        CompanyIndustry = "telecommunications"
+)
+
+// Valid indicates whether the value is a known member of the CompanyIndustry enum.
+func (e CompanyIndustry) Valid() bool {
+	switch e {
+	case AerospaceDefense:
+		return true
+	case Agriculture:
+		return true
+	case Automotive:
+		return true
+	case ChemicalsMaterials:
+		return true
+	case Construction:
+		return true
+	case ConsumerGoodsRetail:
+		return true
+	case Education:
+		return true
+	case EnergyUtilities:
+		return true
+	case EntertainmentMedia:
+		return true
+	case FinancialServices:
+		return true
+	case FoodBeverage:
+		return true
+	case GovernmentPublicSector:
+		return true
+	case Healthcare:
+		return true
+	case HospitalityTourism:
+		return true
+	case Insurance:
+		return true
+	case ItServices:
+		return true
+	case LegalProfessionalServices:
+		return true
+	case LogisticsTransport:
+		return true
+	case Manufacturing:
+		return true
+	case MarketingAdvertising:
+		return true
+	case MiningMetals:
+		return true
+	case Nonprofit:
+		return true
+	case PharmaBiotech:
+		return true
+	case RealEstate:
+		return true
+	case Software:
+		return true
+	case Telecommunications:
 		return true
 	default:
 		return false
@@ -1215,17 +1353,23 @@ type Activity struct {
 	// AssigneeId Task only.
 	AssigneeId *string `json:"assignee_id,omitempty"`
 
-	// Audience Who may read this activity's CONTENT once the row is discoverable at all. `workspace` — everyone who can discover it (the default); `participants` — the humans on it (the capturing mailbox owner, anyone stamped as a participant by seat); `selected` — the participants plus the users and teams named through PATCH /activities/{id}/audience. Set only through that endpoint, by a human with write authority over the activity.
+	// Audience Who may read this activity's CONTENT once the row is discoverable at all. `workspace` — everyone who can discover it (the default); `participants` — the humans on it (the capturing mailbox owner, anyone stamped as a participant by seat); `selected` — the participants plus the users and teams named through PATCH /activities/{id}/audience. Set only through that endpoint, by a human with write authority over the activity. The colleague who sent a mail that only another member's mailbox captured may read that one copy, when their login address is at one of the workspace's own domains.
 	Audience *ActivityAudience `json:"audience,omitempty"`
 
-	// AudienceReason Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the workspace turned mail sharing off), `no_record` (the message is filed under no record), `pending_verdict` (nothing has judged the message yet), `manual` (a human said so). Null on a row nothing derived. WITHHELD with the content — the reason describes what the message is about, so a colleague who may not read a held message does not learn why it is held either; it is absent whenever `content_state` is `withheld`.
+	// AudienceReason Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the workspace turned mail sharing off), `no_record` (the message is filed under no record), `no_counterparty` (the message named nobody a record could be filed under), `pending_verdict` (nothing has judged the message yet), `verdict` (a classifier held the thread), `counterparty` (the importing seat holds mail with one of its parties), `explicitly_confidential` (the subject marks it confidential), `members_only` (every party is a member of the workspace; no verdict opens it, the mailbox owner sharing the thread does), `manual` (a human said so). A classifier's own kind, such as `legal`, may stand in for `verdict`. Null on a row nothing derived. WITHHELD with the content — the reason describes what the message is about, so a colleague who may not read a held message does not learn why it is held either; it is absent whenever `content_state` is `withheld`.
 	AudienceReason *string `json:"audience_reason,omitempty"`
 
 	// Author Who wrote this where it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a message captured from a mailbox or typed here has no author but the one `captured_by` already names.
 	// WITHHELD WITH THE CONTENT. It is absent whenever `content_state` is `withheld`, alongside the subject and the body — a free-text name that arrived with imported text is content about a human, which is why the Art. 17 redaction clears it with the words rather than keeping it as a marker. A reader who may not read a held message does not learn who wrote it either.
 	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who wrote it years earlier in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague wrote a decade of everybody else's correspondence.
 	Author *SourceAuthor `json:"author,omitempty"`
-	Body   *string       `json:"body,omitempty"`
+
+	// AutomaticKind What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, and `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
+	AutomaticKind *ActivityAutomaticKind `json:"automatic_kind,omitempty"`
+	Body          *string                `json:"body,omitempty"`
+
+	// BodyCompleteness How much of a mail's text Margince could decode. Absent when the content is withheld or the body was erased.
+	BodyCompleteness *BodyCompleteness `json:"body_completeness,omitempty"`
 
 	// BulkMailAttested This message carried an RFC 2369 List-Unsubscribe header, so the SENDER declared it bulk. Per message, never per sender: the same address sends a newsletter and a reply, and treating the sender as bulk would bury the reply.
 	BulkMailAttested *bool `json:"bulk_mail_attested,omitempty"`
@@ -1316,6 +1460,9 @@ type Activity struct {
 	Version              *RowVersion            `json:"version,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
+
+// ActivityAutomaticKind What sent this activity when no human wrote it, or null when a human did. `product` is mail or work the product wrote itself, `calendar` a mail carrying an invitation, a response or a cancellation, and `sending_system` mail from a sending system such as a file-share notice, a notification or a delivery report. Such a row is never counted as an exchange, a last contact or a direction of the relationship.
+type ActivityAutomaticKind string
 
 // ActivityCaptureLabel What this message turned out to be, from the batched capture classification. Null means unclassified, which is a backlog state and not a verdict of "ordinary".
 type ActivityCaptureLabel string
@@ -1412,6 +1559,16 @@ type Address struct {
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
 
+// BodyCompleteness How much of a mail's text Margince could decode. `complete`: all of it. `partial`: a text
+// part was not read in full (it broke while decoding, or it ran past the size limit), so
+// the body may lack text. `unreadable`: none of it, so the body holds only the From and To
+// lines Margince adds. `forwarded`: the mail said nothing of its own, and the body is the
+// text of the original it forwarded, not the sender's own words. `unassessed`: a mail
+// stored before this was recorded and not yet checked against its stored original, or one
+// with no original to check. Automatic work (promises, requests and their settlement, and
+// the events read from a conversation) is read only from a `complete` mail body.
+type BodyCompleteness string
+
 // CommitmentAdmission A recorded decision about whether a promise creates current work. Re-reading replaces this decision without changing human-owned work.
 type CommitmentAdmission struct {
 	CurrentWork bool      `json:"current_work"`
@@ -1454,6 +1611,9 @@ type Company struct {
 	Address    *Address   `json:"address,omitempty"`
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
+	// AssessAgainstEntityId The legal entity whose offering the growth fit judges this company against. Null means the main offering.
+	AssessAgainstEntityId *string `json:"assess_against_entity_id,omitempty"`
+
 	// Author Who created this company in the system it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a company somebody entered here has no author but the one `captured_by` already names.
 	// It does not replace `captured_by`, and a reader needs both. `captured_by` is who recorded the row in THIS installation — the authenticated principal, server-stamped, the value every trust decision reads. `author` is who created it in the system it was migrated out of. On an imported row those are different colleagues, and showing only the first is how a migration comes to claim one colleague entered a decade of everybody else's records.
 	Author *SourceAuthor `json:"author,omitempty"`
@@ -1478,7 +1638,9 @@ type Company struct {
 
 	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
 	ImportedFrom *string `json:"imported_from,omitempty"`
-	Industry     *string `json:"industry,omitempty"`
+
+	// Industry One of the fixed industry codes, or null. The server maps imported, read and typed text onto a code; text that names no code stores none.
+	Industry *CompanyIndustry `json:"industry,omitempty"`
 
 	// IsAnchor True only for this installation's own company.
 	// It is one ordinary company, reachable by id everywhere, but the surfaces that answer
@@ -1486,7 +1648,7 @@ type Company struct {
 	// cannot be archived or merged. A caller that offers company actions should tell it apart.
 	IsAnchor *bool `json:"is_anchor,omitempty"`
 
-	// LastActivityAt When something last happened with this account: the newest `occurred_at` of a workspace-audience activity linked to it, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first such activity. Sortable (DM-VOCAB-2).
+	// LastActivityAt When something last happened with this account: the newest `occurred_at` at or before now of a workspace-audience activity linked to it, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. It is maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first such activity. Sortable (DM-VOCAB-2).
 	// A message limited to its participants does NOT move this date, even for a reader who may read that message. The value is one number every reader sees, so it can only count what every reader may see.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
@@ -1553,6 +1715,9 @@ type Company struct {
 	Writable             *bool                  `json:"writable,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
+
+// CompanyIndustry One of the fixed industry codes, or null. The server maps imported, read and typed text onto a code; text that names no code stores none.
+type CompanyIndustry string
 
 // CompanyLifecycle Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it.
 type CompanyLifecycle string
@@ -1645,7 +1810,7 @@ type CreateActivityRequest struct {
 	MeetingStatus *CreateActivityRequestMeetingStatus `json:"meeting_status,omitempty"`
 	OccurredAt    *time.Time                          `json:"occurred_at,omitempty"`
 
-	// Participants The message's own address headers, for mail this installation never captured. Email only — any other kind returns `422 code: field_not_valid_for_kind` — and `direction` is required alongside it, because the counterparty is derived from the two together: an inbound message is with its sender, an outbound one with the first recipient who is not the sending mailbox.
+	// Participants The message's own address headers, for mail this installation never captured. Email only — any other kind returns `422 code: field_not_valid_for_kind` — and `direction` is required alongside it, because the counterparty is derived from the two together: an inbound message is with its sender, an outbound one with the first recipient who is not the sending mailbox. An inbound message whose `from` is the mail system itself (postmaster, mailer-daemon, a bounce address) is a delivery report and returns `422` on `participants.from`.
 	Participants *struct {
 		Cc   *[]string `json:"cc,omitempty"`
 		From *string   `json:"from,omitempty"`
@@ -1744,7 +1909,7 @@ type Deal struct {
 	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
 	ImportedFrom *string `json:"imported_from,omitempty"`
 
-	// LastActivityAt Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.
+	// LastActivityAt The newest `occurred_at` at or before now of a workspace-audience activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. Counts workspace-audience activities only, so a deal whose only recent mail is limited to its participants reads as stalled.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
 	// LastEmail The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
@@ -1781,7 +1946,7 @@ type Deal struct {
 	// StageId The deal's current stage; must belong to pipeline_id.
 	StageId *string `json:"stage_id"`
 
-	// Stalled Derived — no activity past the threshold (absolute duration).
+	// Stalled Derived — no activity past the threshold (absolute duration). A booked workspace-audience meeting ahead keeps the deal off stalled until it starts or is called off.
 	Stalled   *bool      `json:"stalled,omitempty"`
 	Status    DealStatus `json:"status"`
 	Tags      *[]RowTag  `json:"tags,omitempty"`
@@ -2355,12 +2520,28 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "author")
 	}
 
+	if raw, found := object["automatic_kind"]; found {
+		err = json.Unmarshal(raw, &a.AutomaticKind)
+		if err != nil {
+			return fmt.Errorf("error reading 'automatic_kind': %w", err)
+		}
+		delete(object, "automatic_kind")
+	}
+
 	if raw, found := object["body"]; found {
 		err = json.Unmarshal(raw, &a.Body)
 		if err != nil {
 			return fmt.Errorf("error reading 'body': %w", err)
 		}
 		delete(object, "body")
+	}
+
+	if raw, found := object["body_completeness"]; found {
+		err = json.Unmarshal(raw, &a.BodyCompleteness)
+		if err != nil {
+			return fmt.Errorf("error reading 'body_completeness': %w", err)
+		}
+		delete(object, "body_completeness")
 	}
 
 	if raw, found := object["bulk_mail_attested"]; found {
@@ -2681,10 +2862,24 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.AutomaticKind != nil {
+		object["automatic_kind"], err = json.Marshal(a.AutomaticKind)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'automatic_kind': %w", err)
+		}
+	}
+
 	if a.Body != nil {
 		object["body"], err = json.Marshal(a.Body)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'body': %w", err)
+		}
+	}
+
+	if a.BodyCompleteness != nil {
+		object["body_completeness"], err = json.Marshal(a.BodyCompleteness)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'body_completeness': %w", err)
 		}
 	}
 
@@ -3098,6 +3293,14 @@ func (a *Company) UnmarshalJSON(b []byte) error {
 		delete(object, "archived_at")
 	}
 
+	if raw, found := object["assess_against_entity_id"]; found {
+		err = json.Unmarshal(raw, &a.AssessAgainstEntityId)
+		if err != nil {
+			return fmt.Errorf("error reading 'assess_against_entity_id': %w", err)
+		}
+		delete(object, "assess_against_entity_id")
+	}
+
 	if raw, found := object["author"]; found {
 		err = json.Unmarshal(raw, &a.Author)
 		if err != nil {
@@ -3400,6 +3603,13 @@ func (a Company) MarshalJSON() ([]byte, error) {
 		object["archived_at"], err = json.Marshal(a.ArchivedAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'archived_at': %w", err)
+		}
+	}
+
+	if a.AssessAgainstEntityId != nil {
+		object["assess_against_entity_id"], err = json.Marshal(a.AssessAgainstEntityId)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'assess_against_entity_id': %w", err)
 		}
 	}
 

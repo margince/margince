@@ -160,7 +160,7 @@ it("captures the saved revision with an idempotency key and exposes report editi
   expect(window.location.hash).toContain("report");
 });
 
-it("creates a pipeline-specific fiscal-quarter count target and pages the target list", async () => {
+it("creates a fiscal-quarter count target on every pipeline and pages the target list", async () => {
   const user = userEvent.setup({ delay: null });
   const write = vi.fn(() => jsonResponse(reportingTargets[2]));
   installFetchStub({
@@ -193,11 +193,8 @@ it("creates a pipeline-specific fiscal-quarter count target and pages the target
     await dialog.findByRole("combobox", { name: "Metrics" }),
     "Meetings held",
   );
-  await pickOption(
-    user,
-    dialog.getByRole("combobox", { name: "Pipeline" }),
-    "Sales",
-  );
+  // A count of meetings takes no pipeline filter, so none is offered.
+  expect(dialog.queryByRole("combobox", { name: "Pipeline" })).toBeNull();
   await pickOption(
     user,
     dialog.getByRole("combobox", { name: "Target period" }),
@@ -222,9 +219,11 @@ it("creates a pipeline-specific fiscal-quarter count target and pages the target
         metric: "meetings_held",
         value: 120,
         period_kind: "fiscal_quarter",
-        pipeline_id: "sales",
       }),
     ),
+  );
+  expect(write).not.toHaveBeenCalledWith(
+    expect.objectContaining({ pipeline_id: expect.anything() }),
   );
 });
 

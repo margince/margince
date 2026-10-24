@@ -74,9 +74,10 @@ func stageBundleRows(t *testing.T, e *apptest.AppEnv, companyID string, members 
 		kind, payload := "deepread", deepReadPayload(companyID, readID.String())
 		if _, err := e.Owner.Exec(ctx, `
 			INSERT INTO approval (kind, proposed_by, on_behalf_of, target_entity_type,
-			                      target_entity_id, summary, proposed_change, diff_hash, expires_at, bundle_id)
+			                      target_entity_id, summary, proposed_change, diff_hash, expires_at, bundle_id,
+			                      requested_decider_id, requested_decider_source)
 			VALUES ($1, 'agent:site-read', $2, 'company', $3, $4, $5::jsonb, $6,
-			        now() + interval '1 day', $7)`,
+			        now() + interval '1 day', $7, $2, 'on_behalf_of')`,
 			kind, adminID, companyID, "Staged by the site read", payload,
 			ids.NewV7().String(), bundle); err != nil {
 			t.Fatalf("staging member %d (%s): %v", i, kind, err)

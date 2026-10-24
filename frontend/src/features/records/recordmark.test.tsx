@@ -68,7 +68,7 @@ function meshKeyedOn(key: string): string {
 const headMesh = () =>
   meshBeside(
     screen.getByRole("heading", { level: 1 }).textContent ?? "",
-    ".record-head",
+    ".record-split-head",
   );
 
 const noMore = { next_cursor: null, has_more: false };
@@ -120,7 +120,8 @@ describe("a record's mark", () => {
       },
     );
     render(<CompanyScreen id={company.id} />);
-    await screen.findByRole("link", { name: danaCarded.full_name });
+    // The best route in names her too, so the card is one of several links.
+    await screen.findAllByRole("link", { name: danaCarded.full_name });
     expect(meshBeside(danaCarded.full_name, ".record-card")).toBe(
       meshKeyedOn(dana.contact_id),
     );

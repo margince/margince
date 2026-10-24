@@ -7,6 +7,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { QueryStates } from "../../design-system/querystates";
 import { useT } from "../../i18n";
 import { unwrap } from "../../lib/problem";
+import { roomBriefKey } from "./dealroombrief.key";
 import {
   AddDocument,
   DOCUMENT_GROUPS,
@@ -47,25 +48,40 @@ function RemoveButton({
   );
 }
 
-export function DealRoomConversation({
-  room,
-  refusal,
-}: Readonly<{ room: DealRoom; refusal: string | undefined }>) {
-  const t = useT();
-  const queryClient = useQueryClient();
-  const threads = useQuery({
-    queryKey: ["deal-room-threads", room.id],
+/** The room's threads, the one read the board and the tab's head share. */
+export function useRoomThreads(roomId: string) {
+  return useQuery({
+    queryKey: ["deal-room-threads", roomId],
     queryFn: async () => {
       return unwrap(
         await api.GET("/deal-rooms/{id}/threads", {
-          params: { path: { id: room.id } },
+          params: { path: { id: roomId } },
         }),
       );
     },
   });
+}
+
+export function DealRoomConversation({
+  room,
+  refusal,
+  layout,
+}: Readonly<{
+  room: DealRoom;
+  refusal: string | undefined;
+  layout?: "stacked" | "deck";
+}>) {
+  const t = useT();
+  const queryClient = useQueryClient();
+  const threads = useRoomThreads(room.id);
   const docs = useRoomDocuments(room.id);
   const refresh = () =>
-    queryClient.invalidateQueries({ queryKey: ["deal-room-threads", room.id] });
+    Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: ["deal-room-threads", room.id],
+      }),
+      queryClient.invalidateQueries({ queryKey: roomBriefKey(room.id) }),
+    ]);
   const open = useMutation({
     mutationKey: ["deal-room-thread-open"],
     mutationFn: async (input: {
@@ -136,7 +152,10 @@ export function DealRoomConversation({
       >
         {threads.data && docs.data ? (
           <DocumentBoard
-            title={t("room.docs.title")}
+            layout={layout}
+            title={t(
+              layout === "deck" ? "roomtab.documents" : "room.docs.title",
+            )}
             groups={DOCUMENT_GROUPS.map((g) => ({
               key: g.key,
               label: t(g.labelKey),

@@ -198,10 +198,16 @@ func relationshipPatchFromImage(image map[string]any) (UpdateRelationshipInput, 
 // or a merge writes. No relationship patch sets them, so an entry that moved
 // one cannot be put back, and saying it was would be false.
 func EdgeFieldsNoPatchRestores(image map[string]any) []string {
-	if _, held := image[fieldFirstObservedAt]; held {
-		return []string{fieldFirstObservedAt}
+	var held []string
+	for _, field := range []string{
+		fieldFirstObservedAt, endContactColumn, endCompanyColumn,
+		endCounterpartyCompanyColumn, endCounterpartyContactColumn,
+	} {
+		if _, present := image[field]; present {
+			held = append(held, field)
+		}
 	}
-	return nil
+	return held
 }
 
 // The three decodes an edge image needs. An image arrives as jsonb, so a date is

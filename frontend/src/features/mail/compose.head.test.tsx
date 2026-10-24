@@ -217,21 +217,24 @@ describe("the recipient lines", () => {
   });
 });
 
-describe("the blind copy", () => {
-  // A blind copy is the rare half of addressing, and an always-drawn third row
-  // made every ordinary mail read as a form with an empty field in it. It is
-  // also the one field that reaches somebody the recipients cannot see, which
-  // is worth an explicit press.
-  it("is a button until it is asked for", async () => {
+describe("the copies", () => {
+  // Copies are the rare half of addressing, and always-drawn rows made every
+  // ordinary mail read as a form with empty fields in it. Bcc is also the one
+  // field that reaches somebody the recipients cannot see, which is worth an
+  // explicit press.
+  it("are one link until they are asked for", async () => {
     const user = userEvent.setup();
     stubRoutes();
     render(drawer());
 
-    await screen.findByLabelText("Cc");
+    await screen.findByLabelText("To");
+    expect(screen.queryByLabelText("Cc")).toBeNull();
     expect(screen.queryByLabelText("Bcc")).toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "Bcc" }));
-    expect(await screen.findByLabelText("Bcc")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Cc and Bcc" }));
+    expect(await screen.findByLabelText("Cc")).toBeTruthy();
+    expect(screen.getByLabelText("Bcc")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Cc and Bcc" })).toBeNull();
   });
 
   it("travels on the send once the reader fills it", async () => {
@@ -239,7 +242,7 @@ describe("the blind copy", () => {
     const sent = stubRoutes();
     render(drawer());
 
-    await user.click(await screen.findByRole("button", { name: "Bcc" }));
+    await user.click(await screen.findByRole("button", { name: "Cc and Bcc" }));
     await user.type(
       screen.getByLabelText("Bcc"),
       "records@brandt.example{Enter}",
@@ -302,10 +305,9 @@ describe("what the message carries", () => {
     expect(sentMail(sent)).not.toHaveProperty("attachment_ids");
   });
 
-  // A file already on the message is not on offer: the row refuses rather than
-  // adding a second copy of one document, which is not something a message can
-  // mean — the recipient would see the same paper twice.
-  it("refuses a file the message already carries", async () => {
+  // A file already on the message shows as held, and pressing it again takes
+  // it off. A message never carries a second copy of one document.
+  it("holds a file the message carries once, and a second press takes it off", async () => {
     const user = userEvent.setup();
     stubRoutes();
     render(drawer());
@@ -316,13 +318,13 @@ describe("what the message carries", () => {
     });
     await user.click(row);
 
-    await waitFor(() =>
-      expect(
-        screen
-          .getByRole("button", { name: /^Offer_Nordwand_v3\.pdf/ })
-          .hasAttribute("disabled"),
-      ).toBe(true),
-    );
+    const held = () =>
+      screen
+        .getByRole("button", { name: /^Offer_Nordwand_v3\.pdf/ })
+        .getAttribute("aria-pressed");
+    await waitFor(() => expect(held()).toBe("true"));
+    await user.click(row);
+    await waitFor(() => expect(held()).toBe("false"));
   });
 });
 
@@ -384,12 +386,12 @@ describe("the project a message files under", () => {
 
   // Nothing connected is nothing to ask about. The fixture at the top of this
   // file carries no projects, which is the ordinary contact.
-  it("draws no picker when no project is connected", async () => {
+  it("keeps the picker shut on No project when no project is connected", async () => {
     stubRoutes();
     render(drawer());
 
     await screen.findByLabelText("To");
-    expect(screen.queryByLabelText("Project")).toBeNull();
+    expectNoProjectToOffer();
   });
 
   // A message written FROM a project is about that project. There is no other
@@ -408,7 +410,9 @@ describe("the project a message files under", () => {
 
     // The sole live project is the default, SHOWN in the picker rather than
     // sent silently.
-    expect(await screen.findByText("Scoped to NW-12")).toBeTruthy();
+    await waitFor(() =>
+      expect(screen.getByLabelText("Project").textContent).toContain("NW-12"),
+    );
   });
 
   it("sends a project's mail linked to the project", async () => {
@@ -458,7 +462,7 @@ describe("the project a message files under", () => {
 
   // A closed project is history, and a message written today is not about
   // history — so the picker stands down exactly as it does with none connected.
-  it("draws no picker for a closed project", async () => {
+  it("offers no closed project", async () => {
     fileStubs({
       "GET /projects/proj-1": () =>
         jsonResponse({ ...PROJECT, phase: "closed" }),
@@ -473,6 +477,61 @@ describe("the project a message files under", () => {
     );
 
     await screen.findByLabelText("To");
-    expect(screen.queryByLabelText("Project")).toBeNull();
+    expectNoProjectToOffer();
   });
 });
+
+// A customer's thread can be filed under the project of another of its deals.
+// Replying from a deal is about that deal, so its own project is the default.
+describe("a reply written from a deal", () => {
+  it("suggests the deal's own project over the thread's", async () => {
+    const other = { ...PROJECT, id: "proj-2", name: "Reporting", key: "RP-3" };
+    fileStubs({
+      "GET /deals/deal-1": () =>
+        jsonResponse({
+          id: "deal-1",
+          name: "Retrofit",
+          project_id: "proj-1",
+          company_id: "company-1",
+        }),
+      "GET /activities/act-1": () =>
+        jsonResponse({
+          id: "act-1",
+          kind: "email",
+          thread_key: "t-1",
+          links: [{ entity_type: "project", entity_id: "proj-2" }],
+        }),
+      "GET /projects/proj-2": () => jsonResponse(other),
+      "GET /companies/company-1/360": () =>
+        jsonResponse({
+          ...COMPANY_360,
+          projects: [PROJECT, other].map(({ id, name, key, phase }) => ({
+            project_id: id,
+            name,
+            key,
+            phase,
+          })),
+        }),
+    });
+    render(
+      <ComposeModal
+        entityType="deal"
+        entityId="deal-1"
+        activityId="act-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    await waitFor(() =>
+      expect(screen.getByLabelText("Project").textContent).toContain("NW-12"),
+    );
+  });
+});
+
+// The picker stays in its row, so the head keeps its shape, but it offers nothing.
+function expectNoProjectToOffer() {
+  const picker = screen.getByLabelText("Project");
+  expect(picker.textContent).toContain("No project");
+  expect(picker.hasAttribute("disabled")).toBe(true);
+}

@@ -8,6 +8,7 @@
 // the refusal vocabulary and the send itself. What is here is only the form.
 
 import { Mail, MessageSquare } from "lucide-react";
+import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
@@ -144,12 +145,11 @@ export function TransportRow({
 /**
  * Who the message is to.
  *
- * To and Cc stand; **Bcc is a button until it is asked for**. A blind copy is
- * the rare half of addressing and an always-drawn third row made every ordinary
- * mail read as a form with an empty field in it — while the field itself, being
- * the one that reaches somebody the recipients cannot see, is worth an explicit
- * press. It stays open once opened, and opens on its own when a caller arrives
- * holding one, because a field with a value in it may never be hidden.
+ * To stands; **Cc and Bcc are one link until they are asked for**. Copies are
+ * the rare half of addressing. Two always-drawn rows made every ordinary mail
+ * read as a form with empty fields in it. Once opened they stay open. They
+ * open on their own when either holds an address, because a field with a value
+ * in it may never be hidden.
  */
 export function AddressBlock({
   to,
@@ -158,8 +158,8 @@ export function AddressBlock({
   onCcChange,
   bcc,
   onBccChange,
-  bccOpen,
-  onOpenBcc,
+  copiesOpen,
+  onOpenCopies,
   suggestions,
   onToEditing,
   invalidTo,
@@ -173,8 +173,8 @@ export function AddressBlock({
   onCcChange: (next: string[]) => void;
   bcc: string[];
   onBccChange: (next: string[]) => void;
-  bccOpen: boolean;
-  onOpenBcc: () => void;
+  copiesOpen: boolean;
+  onOpenCopies: () => void;
   suggestions: readonly TokenSuggestion[];
   /** The reader has taken the To line over — see TokenInput's own prop. */
   onToEditing: () => void;
@@ -186,12 +186,21 @@ export function AddressBlock({
 }>) {
   const t = useT();
   const commit = (next: readonly string[]) => [...next];
+  const copies = copiesOpen || cc.length > 0 || bcc.length > 0;
   return (
     <>
       <Field
         className="compose-address-field"
         label={t("compose.to")}
         error={invalidTo ? needTo : undefined}
+        trailing={
+          copies ? undefined : (
+            // Against the field it extends, not at the dialog's margin.
+            <Button variant="link" onClick={onOpenCopies}>
+              {t("compose.copies")}
+            </Button>
+          )
+        }
       >
         {(control) => (
           <TokenInput
@@ -205,48 +214,31 @@ export function AddressBlock({
           />
         )}
       </Field>
-      <Field
-        className="compose-address-field"
-        label={t("compose.cc")}
-        trailing={
-          bccOpen ? undefined : (
-            // Quiet, and against the field rather than at the drawer's margin:
-            // it belongs to the Cc line it extends, not to the head as a whole.
-            <Button variant="ghost" onClick={onOpenBcc}>
-              {t("compose.bcc")}
-            </Button>
-          )
-        }
-      >
-        {(control) => (
-          <TokenInput
-            {...control}
-            values={cc}
-            onChange={(next) => onCcChange(commit(next))}
-            suggestions={suggestions}
-            disabled={disabled}
-          />
-        )}
-      </Field>
-      {bccOpen && (
-        // What "blind" MEANS, beside the field that does it. A rep who reads
-        // Bcc as "a quieter Cc" has told somebody about a conversation the
-        // named recipients believe is between them.
-        <Field
-          className="compose-address-field"
-          label={t("compose.bcc")}
-          hint={t("compose.bccHint")}
-        >
-          {(control) => (
-            <TokenInput
-              {...control}
-              values={bcc}
-              onChange={(next) => onBccChange(commit(next))}
-              suggestions={suggestions}
-              disabled={disabled}
-            />
-          )}
-        </Field>
+      {copies && (
+        <>
+          <Field className="compose-address-field" label={t("compose.cc")}>
+            {(control) => (
+              <TokenInput
+                {...control}
+                values={cc}
+                onChange={(next) => onCcChange(commit(next))}
+                suggestions={suggestions}
+                disabled={disabled}
+              />
+            )}
+          </Field>
+          <Field className="compose-address-field" label={t("compose.bcc")}>
+            {(control) => (
+              <TokenInput
+                {...control}
+                values={bcc}
+                onChange={(next) => onBccChange(commit(next))}
+                suggestions={suggestions}
+                disabled={disabled}
+              />
+            )}
+          </Field>
+        </>
       )}
       {/* Under the addresses, because it is about the ones standing there — and
           a warning rather than a refusal: the rep may know something the ledger
@@ -277,29 +269,36 @@ export function SubjectRow({
   invalid,
   need,
   disabled,
+  aside,
 }: Readonly<{
   subject: string;
   onChange: (next: string) => void;
   invalid: boolean;
   need: string;
   disabled?: boolean;
+  /** A control on the subject's own line (the project whose tag it carries). */
+  aside?: ReactNode;
 }>) {
   const t = useT();
   return (
-    <Field
-      className="compose-address-field"
-      label={t("compose.subject")}
-      error={invalid ? need : undefined}
-    >
-      {(control) => (
-        <TextInput
-          {...control}
-          placeholder={t("compose.subjectHint")}
-          value={subject}
-          disabled={disabled}
-          onChange={(event) => onChange(event.target.value)}
-        />
-      )}
-    </Field>
+    <div className="compose-subject">
+      <Field
+        className="compose-subject-field"
+        label={t("compose.subject")}
+        labelHidden
+        error={invalid ? need : undefined}
+      >
+        {(control) => (
+          <TextInput
+            {...control}
+            placeholder={t("compose.subject")}
+            value={subject}
+            disabled={disabled}
+            onChange={(event) => onChange(event.target.value)}
+          />
+        )}
+      </Field>
+      {aside}
+    </div>
   );
 }

@@ -123,11 +123,13 @@ func (a *assembly) readRollups() error {
 	open, won := totals.OpenMinor, totals.WonMinor
 	openCurrency, wonCurrency := totals.Currency, totals.Currency
 	a.out.Rollups = &crmcontracts.Project360Rollups{
-		OpenDealValue:   crmcontracts.Money{AmountMinor: &open, Currency: &openCurrency},
-		WonDealValue:    crmcontracts.Money{AmountMinor: &won, Currency: &wonCurrency},
-		OpenCommitments: facts.OpenCommitments,
-		LastActivityAt:  facts.LastActivityAt,
-		ActivityCount:   facts.Attributed,
+		OpenDealValue:     crmcontracts.Money{AmountMinor: open, Currency: &openCurrency},
+		WonDealValue:      crmcontracts.Money{AmountMinor: won, Currency: &wonCurrency},
+		OpenDealsUnpriced: &totals.OpenUnpriced,
+		WonDealsUnpriced:  &totals.WonUnpriced,
+		OpenCommitments:   facts.OpenCommitments,
+		LastActivityAt:    facts.LastActivityAt,
+		ActivityCount:     facts.Attributed,
 	}
 	return nil
 }

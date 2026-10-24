@@ -434,18 +434,30 @@ func compileLinkLeaf(p Predicate, field Field, arg func(any) int) (string, error
 		// every other one first; this is the switch's own guard.
 		return "", linkOperatorRefusal(p)
 	}
-	if field.LinkScope != nil {
-		bound, err := field.LinkScope(arg)
-		if err != nil {
-			return "", err
-		}
-		if bound != "" {
-			inner = "(" + inner + ") AND " + bound
-		}
+	inner, err := scopedLinkInner(field, inner, arg)
+	if err != nil {
+		return "", err
 	}
 	sql := fmt.Sprintf(field.Link, inner)
 	if negate {
 		return "NOT " + sql, nil
 	}
 	return sql, nil
+}
+
+// scopedLinkInner narrows a link comparison to the linked rows the field's
+// LinkScope admits. The leaf verdict and the linked-value reading both call it,
+// so what a clause finds and what an explanation lists are the same rows.
+func scopedLinkInner(field Field, inner string, arg func(any) int) (string, error) {
+	if field.LinkScope == nil {
+		return inner, nil
+	}
+	bound, err := field.LinkScope(arg)
+	if err != nil {
+		return "", err
+	}
+	if bound == "" {
+		return inner, nil
+	}
+	return "(" + inner + ") AND " + bound, nil
 }

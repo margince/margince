@@ -142,6 +142,34 @@ function code(path: string, source: string): string {
 // output moved with the machine it ran on would assert nothing.
 const pinnedZones: { file: string; why: string }[] = [
   {
+    file: "features/analytics/analytics.reports.stories.tsx",
+    why: "The frame line names the installation zone as Intl's long name plus offset, and only a fixed zone makes that expected text independent of the machine.",
+  },
+  {
+    file: "features/analytics/reporting.filters.test.tsx",
+    why: "The custom period marks today in the workspace zone; only a zone behind every viewer's own makes that day differ from the machine's.",
+  },
+  {
+    file: "features/companies/company360-strip.test.tsx",
+    why: "The last-contact day count follows the zone its date is drawn in; the case pins UTC+7 where a UTC count is a day off.",
+  },
+  {
+    file: "format/calendar-days-zone.test.ts",
+    why: "The gate's seeded snippets and its message name the literal zone it forbids a day count to pass.",
+  },
+  {
+    file: "format/format.calendar-days.test.ts",
+    why: "A day count is a fact about a named zone: the same two instants are different numbers of calendar days in UTC+7, UTC-5 and UTC.",
+  },
+  {
+    file: "features/companies/companynextbar.test.ts",
+    why: "The days-late count takes the zone its date is drawn in; the fixture pins UTC so the expected count does not move with the test machine.",
+  },
+  {
+    file: "features/deals/deal360/dealstanding.test.ts",
+    why: "Days in a stage are counted in the record zone; the fixture pins UTC so the expected count does not move with the test machine.",
+  },
+  {
     file: "features/capture/connectors.historybaseline.stories.tsx",
     why: "A mailbox history baseline stores the zone its owner picked the date in; the fixture carries that stored zone.",
   },
@@ -190,6 +218,10 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The next meeting's end comes from its calendar invitation, and the test names the record zone it renders that span in, so the expected span is stated rather than inherited.",
   },
   {
+    file: "features/worklist/worklist.meetingoutcome.test.tsx",
+    why: "A meeting moved to another day keeps its time of day in the record zone, so the test names two zones whose noon is not the meeting's start, east and west of UTC.",
+  },
+  {
     file: "features/booking/book.test.tsx",
     why: "The guest deliberately selects Bangkok and the test verifies that its slot labels follow that chosen zone rather than the browser default.",
   },
@@ -215,10 +247,6 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Proves a date-only provisional close keeps its day east and west of UTC.",
   },
   {
-    file: "features/projects/projectheaderfacts.test.tsx",
-    why: "The head's target-end cell prints a date and the count of mornings to it, and the case is that the two name the SAME day — which needs a record zone far enough east of UTC that they would not. It is supplied through RecordZoneProvider, the seam the product itself reads; the other cases pass UTC so the count in the assertion is the one a reader on that day sees.",
-  },
-  {
     file: "features/worklist/taskduedate.test.tsx",
     why: "The picker's day and the instant it sends are asserted across a zone boundary, so the record zone has to be a NAMED one the fixture also computes its expectation from: the case is that a deadline reads as the day it was agreed on for a colleague elsewhere, and a zone taken off the runner would make the assertion true wherever the suite happened to run. It is provided through RecordZoneProvider, the seam the product itself reads.",
   },
@@ -227,12 +255,8 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The guard's subject is dueInstant, which now TAKES the zone a deadline is resolved in — so a call to it cannot be written without naming one. UTC would prove nothing here: the case that matters is a day's last second landing before midnight on the very clock that minted it, and a zero offset makes the wire value and the wall clock identical whichever rule ran.",
   },
   {
-    file: "features/booking/working-hours.test.tsx",
+    file: "features/booking/meeting-availability.hours.test.tsx",
     why: "The stub answers /me/working-hours with the SERVER's answer, and a contact who has chosen no zone is answered with the installation's — so the fixture has to name one, exactly as settings.testkit.tsx below does. The card renders the name it is given and no case asserts a rendered instant; reading the runner's zone would make the fixture describe whichever machine ran it.",
-  },
-  {
-    file: "features/booking/working-hours.stories.tsx",
-    why: "Same fixture, same reason as the suite above: the story answers /me/working-hours the way the SERVER does, and a contact who has chosen no zone is answered with the installation's — so the fixture names one. The card draws the name it is handed and the story asserts no instant, while a zone read off the runner would make the catalog frame describe whichever machine built it.",
   },
   {
     file: "testing/settings.testkit.tsx",
@@ -464,7 +488,7 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Installation-settings fixture backing the leads screen's settings read.",
   },
   {
-    file: "features/records/logactivity.test.tsx",
+    file: "components/logactivity.test.tsx",
     why: "Reads back the calendar day an entry files under — backdated or logged at the moment — which needs both a named zone to pretend to be in and a named zone to compare the filing against.",
   },
   {

@@ -356,7 +356,6 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"lead.merged_into_id":              "gated then stamped: MergeLead puts BOTH leads through mergePair's row-scope writability probes before archiveMergedAway writes the pointer",
 	"contact.converted_from_lead_id":   "server-derived: stamped by PromoteLead",
 	"deal_stage_history.deal_id":       "server-derived: appended by CreateDeal/AdvanceDeal",
-	"deal_forecast_history.deal_id":    "server-derived: appended by UpdateDeal for the deal it has just written, and only after auth.EnsureVisible admitted that deal at the top of the same transaction — the id never comes from a request body",
 	"project_phase_history.project_id": "server-derived: appended by CreateProject/AdvanceProjectPhase from the project row they just wrote or advanced, never from a request body",
 	"brief_item.deal_id":               "server-derived: written only by the brief ranker from its own row-scoped candidate query, never from a request body",
 	// The capture disposition ledger (CAP-DDL-8): capture writes the row in
@@ -378,6 +377,7 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"partner.company_id":                   "gated: auth.EnsureLinkTarget in UpsertPartner (H1)",
 	"company_profile_field.company_id":     "server-derived: the coldstart accept executor resolves the company from the staged source URL, never from a request body",
 	"company_fact.company_id":              "child rows written only through the deepread accept effect, whose approval was staged from a visibility-checked read",
+	"company_fact_revision.company_id":     "internal counter, never named by a caller: written by the company_fact trigger for the company whose fact row changed and by the company merge for its survivor (contacts/mergerelink_company.go settleFactRevisions), and read only by the technical lookup and its Undo (contacts/technicalrestore.go), after the company's own write or visibility gate. No read returns it to a client",
 	"offer.deal_id":                        "gated: auth.EnsureLinkTarget in CreateOffer; every later offer read/write re-probes the deal (H1)",
 	"offer.buyer_company_id":               "gated: auth.EnsureLinkTarget in CreateOffer/UpdateOffer (H1)",
 	"signal.resolved_company_id":           "gated: the resolver attributes only to a caller-visible company (visibleCandidates → auth.EnsureLinkTarget)",

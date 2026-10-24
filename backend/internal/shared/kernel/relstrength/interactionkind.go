@@ -26,7 +26,7 @@ import (
 // membership question and the counting question have different answers.
 //
 // Go and SQL readers share this set so reminders cannot count as contact.
-var interactionKinds = []string{"email", "call", kindMeeting, "message"}
+var interactionKinds = []string{kindEmail, kindCall, kindMeeting, kindMessage}
 
 // participantKinds is the closed set of kinds that HAVE participants — an
 // activity where it is meaningful to ask who was there.
@@ -45,9 +45,13 @@ var interactionKinds = []string{"email", "call", kindMeeting, "message"}
 // conversation carries the contacts on it while an identical hand-logged one does
 // not — live capture stamping, hand-logged stamping, the historical backfill's
 // SQL, and the replay pass.
-var participantKinds = []string{"email", "call", kindMeeting, "message"}
+var participantKinds = []string{kindEmail, kindCall, kindMeeting, kindMessage}
 
-const kindMeeting = "meeting"
+const (
+	kindMeeting = "meeting"
+	kindCall    = "call"
+	kindMessage = "message"
+)
 
 // IsParticipantKind answers whether it is meaningful to record who was on an
 // activity of this kind. Every Go writer of activity_participant asks this one.

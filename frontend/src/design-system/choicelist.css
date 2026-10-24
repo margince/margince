@@ -83,12 +83,11 @@
   gap: var(--space-3);
   height: 100%;
   padding: var(--space-4);
-  /* The STRONG border, not the subtle one. These plates stand on a card that
-     is already `--bgInset`, so a hairline in the subtle tone disappeared into
-     the ground and only the selected plate read as a plate at all. */
+  /* The strong border, so a plate reads as one on an inset ground too. The
+     elevated fill keeps a live plate from reading as a greyed-out one. */
   border: 1px solid var(--borderStrong);
   border-radius: var(--r-md);
-  background: var(--bgInset);
+  background: var(--bgElevated);
   transition:
     border-color var(--dur-move) var(--ease-out),
     box-shadow var(--dur-move) var(--ease-out);
@@ -111,7 +110,6 @@
   display: flex;
   align-items: center;
   height: 24px;
-  margin-bottom: var(--space-1);
 }
 .choicelist-mark svg {
   width: 22px;

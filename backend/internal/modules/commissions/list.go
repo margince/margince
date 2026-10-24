@@ -150,24 +150,9 @@ func (s *Store) Summary(ctx context.Context) (crmcontracts.CommissionSummaryResp
 func summaryTx(ctx context.Context, tx pgx.Tx) (crmcontracts.CommissionSummaryResponse, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	// The same inherited scope the page carries: a total that summed rows the
-	// caller cannot open would leak their value through the aggregate.
-	scope, err := VisibleClause(ctx, "", arg)
+	where, _, err := readableWhere(ctx, arg)
 	if err != nil {
 		return crmcontracts.CommissionSummaryResponse{}, err
-	}
-	where := unboundedScope
-	if scope != "" {
-		where = scope
-	}
-	// A total over amounts the caller may not read discloses them as surely as
-	// the column would: one partner with one entry sums to that entry.
-	masked, err := maskExcludedClause(ctx, arg)
-	if err != nil {
-		return crmcontracts.CommissionSummaryResponse{}, err
-	}
-	if masked != "" {
-		where += " AND " + masked
 	}
 
 	rows, err := tx.Query(ctx, storekit.SQLf(
@@ -194,4 +179,27 @@ func summaryTx(ctx context.Context, tx pgx.Tx) (crmcontracts.CommissionSummaryRe
 		return crmcontracts.CommissionSummaryResponse{}, fmt.Errorf("read commission summary: %w", err)
 	}
 	return out, nil
+}
+
+// readableWhere is the predicate every total over the ledger reads under: the
+// entries on deals the caller may see, as the page shows. A total over rows the
+// caller cannot open would leak their value. withheld reports that a mask
+// narrowed it, since one partner with one entry sums to that entry.
+func readableWhere(ctx context.Context, arg func(any) int) (string, bool, error) {
+	scope, err := VisibleClause(ctx, "", arg)
+	if err != nil {
+		return "", false, err
+	}
+	where := unboundedScope
+	if scope != "" {
+		where = scope
+	}
+	masked, err := maskExcludedClause(ctx, arg)
+	if err != nil {
+		return "", false, err
+	}
+	if masked != "" {
+		where += " AND " + masked
+	}
+	return where, masked != "", nil
 }

@@ -81,12 +81,10 @@ export function CompanySourceCard({
       </SettingList>
       {failure !== null && (
         <PanelBody>
-          <div className="settings-panel-commit">
-            <WriteRefused
-              titleKey="settings.companyRefreshFailed"
-              message={failure}
-            />
-          </div>
+          <WriteRefused
+            titleKey="settings.companyRefreshFailed"
+            message={failure}
+          />
         </PanelBody>
       )}
     </Panel>

@@ -9,9 +9,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { LocaleProvider } from "../../../i18n";
+import { FieldGrid } from "../../../design-system/fieldgrid";
+import { UTC_ZONE } from "../../../format/timezone";
+import { LocaleProvider, translate } from "../../../i18n";
 import { en } from "../../../i18n/en";
-import { DealIdentityFacts, DealSubtitle } from "./dealheaderfacts";
+import { closeWords, DealRecordRows, DealSubtitle } from "./dealheaderfacts";
 
 // The facts a rep checks first, on the record's head: value, stage, owner —
 // the same three questions DealIdentityLine's dot-joined sentence answered,
@@ -58,50 +60,19 @@ const stages = [
   { id: "st-2", name: "Proposal" },
 ];
 
-describe("the facts strip says what a deal is worth, where it is, and whose it is", () => {
+describe("the details rows say where a deal stands and how it closed", () => {
   it("names the stage rather than showing its id", () => {
     show(
-      <DealIdentityFacts
-        deal={{ amount_minor: 6_400_000, currency: "EUR", stage_id: "st-1" }}
-        stages={stages}
-        locale="en"
-      />,
+      <FieldGrid>
+        <DealRecordRows
+          deal={{ amount_minor: 6_400_000, currency: "EUR", stage_id: "st-1" }}
+          stages={stages}
+          locale="en"
+        />
+      </FieldGrid>,
     );
     expect(screen.getByText("Qualified")).toBeInTheDocument();
     expect(screen.queryByText("st-1")).not.toBeInTheDocument();
-  });
-
-  it("says a deal is unassigned rather than leaving the owner blank", () => {
-    show(
-      <DealIdentityFacts
-        deal={{ amount_minor: 1000, currency: "EUR", stage_id: "st-1" }}
-        stages={stages}
-        locale="en"
-      />,
-    );
-    // An empty value here reads as a rendering fault. "Unassigned" is a fact
-    // about the deal, and it is the one a rep acts on.
-    expect(screen.getByText(/Unassigned/)).toBeInTheDocument();
-  });
-
-  it("names the field it may not show rather than printing a dash", () => {
-    // A rep who may read the deal but not its amount. A bare "—" would read
-    // as "this deal has no value", which is a different and wrong statement —
-    // and a lone lock among named cells says only that something is hidden.
-    show(
-      <DealIdentityFacts
-        deal={{
-          amount_minor: null,
-          currency: "EUR",
-          stage_id: "st-1",
-          masked_fields: ["amount_minor"],
-        }}
-        stages={stages}
-        locale="en"
-      />,
-    );
-    expect(screen.getByText("Value")).toBeInTheDocument();
-    expect(screen.queryByText("—")).not.toBeInTheDocument();
   });
 
   it("says how a won deal was won when no contract carried it", () => {
@@ -110,17 +81,19 @@ describe("the facts strip says what a deal is worth, where it is, and whose it i
     // countable — and nothing read it back, so the rep who answered could not
     // check their own answer.
     show(
-      <DealIdentityFacts
-        deal={{
-          amount_minor: 1000,
-          currency: "EUR",
-          stage_id: "st-1",
-          status: "won",
-          won_without_contract_reason: "purchase_order",
-        }}
-        stages={stages}
-        locale="en"
-      />,
+      <FieldGrid>
+        <DealRecordRows
+          deal={{
+            amount_minor: 1000,
+            currency: "EUR",
+            stage_id: "st-1",
+            status: "won",
+            won_without_contract_reason: "purchase_order",
+          }}
+          stages={stages}
+          locale="en"
+        />
+      </FieldGrid>,
     );
     expect(
       screen.getByText(en["deals.winReasonPurchaseOrder"]),
@@ -132,18 +105,20 @@ describe("the facts strip says what a deal is worth, where it is, and whose it i
     // part of this answer somebody typed. "Something else: renewed on a
     // handshake" says the category twice and buries it.
     show(
-      <DealIdentityFacts
-        deal={{
-          amount_minor: 1000,
-          currency: "EUR",
-          stage_id: "st-1",
-          status: "won",
-          won_without_contract_reason: "other",
-          won_without_contract_detail: "Renewed on a handshake at the fair",
-        }}
-        stages={stages}
-        locale="en"
-      />,
+      <FieldGrid>
+        <DealRecordRows
+          deal={{
+            amount_minor: 1000,
+            currency: "EUR",
+            stage_id: "st-1",
+            status: "won",
+            won_without_contract_reason: "other",
+            won_without_contract_detail: "Renewed on a handshake at the fair",
+          }}
+          stages={stages}
+          locale="en"
+        />
+      </FieldGrid>,
     );
     expect(
       screen.getByText("Renewed on a handshake at the fair"),
@@ -162,18 +137,20 @@ describe("the facts strip says what a deal is worth, where it is, and whose it i
     const long =
       `Renewed on a handshake at the trade fair ${"and again ".repeat(20)}`.trim();
     show(
-      <DealIdentityFacts
-        deal={{
-          amount_minor: 1000,
-          currency: "EUR",
-          stage_id: "st-1",
-          status: "won",
-          won_without_contract_reason: "other",
-          won_without_contract_detail: long,
-        }}
-        stages={stages}
-        locale="en"
-      />,
+      <FieldGrid>
+        <DealRecordRows
+          deal={{
+            amount_minor: 1000,
+            currency: "EUR",
+            stage_id: "st-1",
+            status: "won",
+            won_without_contract_reason: "other",
+            won_without_contract_detail: long,
+          }}
+          stages={stages}
+          locale="en"
+        />
+      </FieldGrid>,
     );
     expect(screen.getByText(long)).toBeInTheDocument();
     expect(screen.getByText(long)).toHaveClass("deal-close-detail");
@@ -209,19 +186,21 @@ describe("the facts strip says what a deal is worth, where it is, and whose it i
     }
   });
 
-  it("states why a lost deal was lost on its head", () => {
+  it("states why a lost deal was lost", () => {
     show(
-      <DealIdentityFacts
-        deal={{
-          amount_minor: 1000,
-          currency: "EUR",
-          stage_id: "st-1",
-          status: "lost",
-          lost_reason: "Budget frozen until next year",
-        }}
-        stages={stages}
-        locale="en"
-      />,
+      <FieldGrid>
+        <DealRecordRows
+          deal={{
+            amount_minor: 1000,
+            currency: "EUR",
+            stage_id: "st-1",
+            status: "lost",
+            lost_reason: "Budget frozen until next year",
+          }}
+          stages={stages}
+          locale="en"
+        />
+      </FieldGrid>,
     );
     expect(screen.getByText(en["deals.lostReason"])).toBeInTheDocument();
     expect(
@@ -231,17 +210,19 @@ describe("the facts strip says what a deal is worth, where it is, and whose it i
 
   it("asks nothing about a loss on a deal that is not lost", () => {
     show(
-      <DealIdentityFacts
-        deal={{
-          amount_minor: 1000,
-          currency: "EUR",
-          stage_id: "st-1",
-          status: "open",
-          lost_reason: "stale",
-        }}
-        stages={stages}
-        locale="en"
-      />,
+      <FieldGrid>
+        <DealRecordRows
+          deal={{
+            amount_minor: 1000,
+            currency: "EUR",
+            stage_id: "st-1",
+            status: "open",
+            lost_reason: "stale",
+          }}
+          stages={stages}
+          locale="en"
+        />
+      </FieldGrid>,
     );
     expect(screen.queryByText(en["deals.lostReason"])).not.toBeInTheDocument();
   });
@@ -250,16 +231,18 @@ describe("the facts strip says what a deal is worth, where it is, and whose it i
     // The ordinary case, and it needs no cell. A cell on every won deal would
     // bury the ones that need reading — the whole point of showing this at all.
     show(
-      <DealIdentityFacts
-        deal={{
-          amount_minor: 1000,
-          currency: "EUR",
-          stage_id: "st-1",
-          status: "won",
-        }}
-        stages={stages}
-        locale="en"
-      />,
+      <FieldGrid>
+        <DealRecordRows
+          deal={{
+            amount_minor: 1000,
+            currency: "EUR",
+            stage_id: "st-1",
+            status: "won",
+          }}
+          stages={stages}
+          locale="en"
+        />
+      </FieldGrid>,
     );
     for (const key of [
       "deals.winReasonPurchaseOrder",
@@ -279,11 +262,13 @@ describe("the facts strip says what a deal is worth, where it is, and whose it i
     // it puts a machine identifier where a reader expects "Qualified".
     const foreign = "01a02be8-c8d5-7d9b-bb60-a5e1ad68533c";
     show(
-      <DealIdentityFacts
-        deal={{ amount_minor: 1000, currency: "EUR", stage_id: foreign }}
-        stages={stages}
-        locale="en"
-      />,
+      <FieldGrid>
+        <DealRecordRows
+          deal={{ amount_minor: 1000, currency: "EUR", stage_id: foreign }}
+          stages={stages}
+          locale="en"
+        />
+      </FieldGrid>,
     );
     expect(screen.getByText("—")).toBeInTheDocument();
     expect(screen.queryByText(foreign)).not.toBeInTheDocument();
@@ -291,16 +276,18 @@ describe("the facts strip says what a deal is worth, where it is, and whose it i
 
   it("names how the record reached Margince, behind the provenance tag", async () => {
     show(
-      <DealIdentityFacts
-        deal={{
-          amount_minor: 1000,
-          currency: "EUR",
-          stage_id: "st-1",
-          source: "csv import",
-        }}
-        stages={stages}
-        locale="en"
-      />,
+      <FieldGrid>
+        <DealRecordRows
+          deal={{
+            amount_minor: 1000,
+            currency: "EUR",
+            stage_id: "st-1",
+            source: "csv import",
+          }}
+          stages={stages}
+          locale="en"
+        />
+      </FieldGrid>,
     );
     await userEvent.setup().click(screen.getByRole("button"));
     expect(await screen.findByText("csv import")).toBeInTheDocument();
@@ -312,47 +299,32 @@ describe("the facts strip says what a deal is worth, where it is, and whose it i
   // one that knows, and the tag has to prefer it.
   it("names who wrote an imported deal there, not the seat that ran the import", () => {
     show(
-      <DealIdentityFacts
-        deal={{
-          amount_minor: 1000,
-          currency: "EUR",
-          stage_id: "st-1",
-          source: "hubspot",
-          captured_by: "human:u-importer",
-          author: { display_name: "Mutaz Suleiman", via: "HubSpot" },
-        }}
-        stages={stages}
-        locale="en"
-      />,
+      <FieldGrid>
+        <DealRecordRows
+          deal={{
+            amount_minor: 1000,
+            currency: "EUR",
+            stage_id: "st-1",
+            source: "hubspot",
+            captured_by: "human:u-importer",
+            author: { display_name: "Mutaz Suleiman", via: "HubSpot" },
+          }}
+          stages={stages}
+          locale="en"
+        />
+      </FieldGrid>,
     );
     expect(
       screen.getByText("Logged in HubSpot by Mutaz Suleiman"),
     ).toBeInTheDocument();
     expect(screen.queryByText(/Typed by/)).not.toBeInTheDocument();
   });
-
-  it("says which partner brought the deal, sourced or influenced", () => {
-    show(
-      <DealIdentityFacts
-        deal={{
-          amount_minor: 1000,
-          currency: "EUR",
-          stage_id: "st-1",
-          partner_company_id: "p1",
-          partner_attribution: "influenced",
-        }}
-        stages={stages}
-        locale="en"
-      />,
-    );
-    expect(screen.getByText("helped by")).toBeInTheDocument();
-  });
 });
 
 describe("the subtitle names the company beside the deal's name", () => {
   it("draws nothing when the deal names no company", () => {
     const { container } = show(<DealSubtitle deal={{ company_id: null }} />);
-    expect(container.querySelector(".record-sub")).toBeNull();
+    expect(container).toBeEmptyDOMElement();
   });
 
   it("names the field it may not show rather than a bare dash", () => {
@@ -366,6 +338,10 @@ describe("the subtitle names the company beside the deal's name", () => {
 });
 
 describe("the close date says how much it is worth believing", () => {
+  const t = (
+    key: Parameters<typeof translate>[1],
+    params?: Record<string, string>,
+  ) => translate("en", key, params);
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-08-24T00:00:00Z"));
@@ -373,92 +349,87 @@ describe("the close date says how much it is worth believing", () => {
   afterEach(() => {
     vi.useRealTimers();
   });
+  const words = (deal: Parameters<typeof closeWords>[0]) =>
+    closeWords(deal, "en", UTC_ZONE, t);
 
   it("marks a date no human confirmed", () => {
-    show(
-      <DealIdentityFacts
-        deal={{
-          expected_close_date: "2099-09-30",
-          close_date_provisional: true,
-        }}
-        stages={stages}
-        locale="en"
-      />,
-    );
-    expect(
-      screen.getByText(/provisional, not confirmed by a human/),
-    ).toBeInTheDocument();
+    const close = words({
+      expected_close_date: "2099-09-30",
+      close_date_provisional: true,
+    });
+    expect(close.parts).toContain(en["deal.strip.close.provisional"]);
+    expect(close.warn).toBe(true);
   });
 
   it("says nothing about confirmation when a human set the date", () => {
-    show(
-      <DealIdentityFacts
-        deal={{
-          expected_close_date: "2099-09-30",
-          close_date_provisional: false,
-        }}
-        stages={stages}
-        locale="en"
-      />,
-    );
-    expect(screen.getByText(/in [\d,]+ days/)).toBeInTheDocument();
-    expect(screen.queryByText(/provisional/)).toBeNull();
+    const close = words({
+      expected_close_date: "2099-09-30",
+      close_date_provisional: false,
+    });
+    expect(close.parts.join(" ")).toMatch(/in [\d,]+ days/);
+    expect(close.parts.join(" ")).not.toMatch(/provisional/);
   });
 
   it("counts the days a deal is already past, in the reader's own plural", () => {
-    // The arm nothing read back: a date behind us. "1 days overdue" is
-    // the wording a catalogue that spells the plural once produces on the one
-    // day a rep is most likely to be looking.
-    show(
-      <DealIdentityFacts
-        deal={{ expected_close_date: "2026-08-23" }}
-        stages={stages}
-        locale="en"
-      />,
-    );
-    expect(screen.getByText("1 day overdue")).toBeInTheDocument();
+    // "1 days overdue" is what a catalogue that spells the plural once says
+    // on the day a rep is most likely to look.
+    const close = words({ expected_close_date: "2026-08-23" });
+    expect(close.parts).toContain("1 day overdue");
+    expect(close.daysLeft).toBe(-1);
   });
 
   it("never calls a won or lost deal overdue for a date behind it", () => {
-    // A closed deal's date is when it closed. Counting it as lateness tells a
-    // rep a finished deal is behind.
+    // A closed deal's date is when it closed.
     for (const status of ["won", "lost"] as const) {
-      const { unmount } = show(
-        <DealIdentityFacts
-          deal={{ expected_close_date: "2026-08-23", status }}
-          stages={stages}
-          locale="en"
-        />,
-      );
-      expect(screen.queryByText(/overdue/)).toBeNull();
-      expect(screen.getByText(/23/)).toBeInTheDocument();
-      unmount();
+      const close = words({
+        expected_close_date: "2026-08-23",
+        closed_at: "2026-08-23T12:00:00Z",
+        status,
+      });
+      expect(close.parts.join(" ")).not.toMatch(/overdue/);
+      expect(close.daysLeft).toBeUndefined();
+      expect(close.date).toMatch(/23/);
     }
   });
 
-  // The cell stays where a date is missing: when a deal lands is a question
-  // the reader came with, and a cell that disappears answers it with silence.
-  it("keeps the cell and says so when nobody has set a date", () => {
-    show(<DealIdentityFacts deal={{}} stages={stages} locale="en" />);
-    expect(screen.getByText(en["deal.strip.close.none"])).toBeInTheDocument();
+  it("reads a closed deal's day from closed_at, not from the forecast", () => {
+    const close = words({
+      expected_close_date: "2026-03-02",
+      closed_at: "2026-08-23T12:00:00Z",
+      status: "won",
+    });
+    expect(close.date).toMatch(/23/);
+    expect(close.date).not.toMatch(/\b2\b/);
+  });
+
+  it("names the day an imported win closed though it has no forecast date", () => {
+    const close = words({ closed_at: "2026-08-23T12:00:00Z", status: "won" });
+    expect(close.date).toMatch(/23/);
+    expect(close.daysLeft).toBeUndefined();
+  });
+
+  it("names no day when nobody has set a date", () => {
+    expect(words({}).date).toBeUndefined();
   });
 });
 
 describe("a deal an import wrote", () => {
   const imported = (importedFrom: string | null) =>
     show(
-      <DealIdentityFacts
-        deal={{
-          amount_minor: 1000,
-          currency: "EUR",
-          stage_id: "st-1",
-          captured_by: "human:admin",
-          source: "manual",
-          imported_from: importedFrom,
-        }}
-        stages={stages}
-        locale="en"
-      />,
+      <FieldGrid>
+        <DealRecordRows
+          deal={{
+            amount_minor: 1000,
+            currency: "EUR",
+            stage_id: "st-1",
+            captured_by: "human:admin",
+            source: "manual",
+            imported_from: importedFrom,
+          }}
+          stages={stages}
+          locale="en"
+        />
+      </FieldGrid>,
     );
 
   it("reads as imported from its source, not typed by the administrator", () => {

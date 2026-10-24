@@ -1,49 +1,35 @@
 import { CheckSquare, FileText, Search, Send, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
-import { Button, EmptyState } from "../../design-system/atoms";
+import { TaskCallAction } from "../../components/tasknextsteps";
+import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
-import { PanelBody } from "../../design-system/panel";
+import { NextBar } from "../../design-system/nextbar";
 import { formatDate, formatNumber } from "../../format/format";
 import { daysPast } from "../../format/lateness";
-import { type Locale, useLocale, useT } from "../../i18n";
-import { useMemberNames } from "../../lib/membernames";
-import { useRecordZone } from "../../lib/recordzone";
-import { MoveButton } from "../records/movebutton";
 import {
-  basisAddsARecord,
-  FoundMove,
-  MomentEvidence,
-  momentKicker,
-  TodayPanel,
-  TodoRow,
-  WithheldNotice,
-} from "../records/record360";
+  type Locale,
+  translatePlural,
+  useLocale,
+  usePlural,
+  useT,
+} from "../../i18n";
+import { useRecordZone } from "../../lib/recordzone";
+import { tasksPeek } from "../../lib/standingpeeks";
+import { MoveButton } from "../records/movebutton";
+import { basisAddsARecord } from "../records/record360";
 import { MayBeDoneVerbs, useMomentSetAside } from "./contactmaybedone";
 import "../records/record360/record360.css";
 import { openContactTab } from "../worklist/worklist.return";
 
-// WHAT NEEDS A CONTACT TODAY, as the contact page assembles it: the move the
-// server selected at the top of the panel, and the record's own open tasks
-// under it.
-//
-// The panel is drawn on every contact, whatever rung the ladder reached. A
-// quiet record and a thin relationship are ANSWERS to "what needs me", and
-// each has a sentence of its own inside the panel: the question the page
-// exists to answer is answered where it is asked, and a reader can always
-// tell a quiet day from a pane that has not loaded.
+// The one thing next on a contact, as the bar at the top of its Overview. It is the
+// move the server's ladder picked, else the record's most urgent open task.
+// The rest of the open tasks sit behind "+N tasks", which opens the queue.
 
 type Contact360 = components["schemas"]["Contact360"];
 type ContactMoment = components["schemas"]["ContactMoment"];
 type ContactMomentAction = components["schemas"]["ContactMomentAction"];
 type Activity = components["schemas"]["Activity"];
-
-export function hasContactWork(view: Contact360): boolean {
-  return (
-    actionableMoment(view.moment) ||
-    (view.next_steps?.data.some((task) => !task.is_done) ?? false)
-  );
-}
 
 function actionableMoment(moment: ContactMoment | undefined): boolean {
   return Boolean(
@@ -67,288 +53,303 @@ export function ContactToday({
   onOpenEmail?: (activityId: string) => void;
 }>) {
   const t = useT();
-  // The one move the panel leads with, where the ladder found one. A quiet or
-  // thin rung is an answer rather than an ask, so it draws no row and the
-  // panel's own sentence speaks for the day.
+  const plural = usePlural();
   const { locale } = useLocale();
+  const zone = useRecordZone();
   const move = moment && actionableMoment(moment) ? moment : undefined;
-  const tasks = useOpenTaskRows(view, move);
-  const standing = standingSentence(moment, t);
-  const omitted = new Set(view.sections_omitted ?? []);
-  return (
-    <TodayPanel
-      onOpenTasks={onOpenTasks}
-      tasksLabel={t("today.workQueue")}
-      footer={panelFoot({ moment, more: tasks.more, t, locale })}
-      notice={
-        <WithheldNotice
-          sections={[
-            ...(omitted.has("moments") ? [t("today.source.moments")] : []),
-            ...(omitted.has("next_steps") ? [t("today.source.nextSteps")] : []),
-          ]}
-        />
-      }
-    >
-      {/* Neither a move nor a quiet day. The panel's own sentence claims that
-          nothing needs the reader, and an unread reading and a relationship
-          with nothing recorded are both short of the basis for that claim, so
-          each says what it does know in the quiet line's place. */}
-      {standing && (
-        <PanelBody>
-          <EmptyState>{standing}</EmptyState>
-        </PanelBody>
-      )}
-      {move && (
-        <MomentMove
-          moment={move}
-          view={view}
-          onAction={onAction}
-          onOpenEmail={onOpenEmail}
-        />
-      )}
-      {tasks.rows}
-    </TodayPanel>
+  const named = recordsTheMoveNames(move);
+  const tasks = (view.next_steps?.data ?? []).filter(
+    (task) => !task.is_done && !named.has(task.id),
   );
+  // The tasks behind "+N tasks": a row leads to the queue, which holds them all.
+  const more = (rows: readonly Activity[]) =>
+    onOpenTasks
+      ? {
+          count: rows.length,
+          onOpen: onOpenTasks,
+          peek: tasksPeek(
+            rows.map((row) => ({
+              id: row.id,
+              subject: row.subject ?? t("task.untitled"),
+              dueAt: row.due_at,
+              overdue: row.due_at
+                ? daysPast(Date.parse(row.due_at), Date.parse(view.as_of)).late
+                : false,
+            })),
+            { t, plural, locale, zone },
+            rows.length,
+            onOpenTasks,
+          ),
+        }
+      : undefined;
+  if (move) {
+    return (
+      <MomentBar
+        moment={move}
+        view={view}
+        onAction={onAction}
+        onOpenEmail={onOpenEmail}
+        more={more(tasks)}
+      />
+    );
+  }
+  const [task, ...rest] = tasks;
+  if (task) {
+    return <TaskBar task={task} view={view} more={more(rest)} />;
+  }
+  return <AnswerBar moment={moment} view={view} onAction={onAction} />;
 }
 
-// Evidence stays beside the action it supports.
-function MomentMove({
+type More = Readonly<{ count: number; onOpen: () => void }> | undefined;
+
+// The server's `why_now` is the only reason: one moment gives one reason, and
+// the facts in it are the part a rep judges.
+function MomentBar({
   moment,
   view,
   onAction,
   onOpenEmail,
+  more,
 }: Readonly<{
   moment: ContactMoment;
   view: Contact360;
   onAction: (action: ContactMomentAction) => void;
   onOpenEmail?: (activityId: string) => void;
+  more: More;
 }>) {
   const t = useT();
-  const secondary = moment.secondary_actions ?? [];
+  const { locale } = useLocale();
   const notNow = useMomentSetAside(view.contact.id);
+  const defer = notNow.deferOf(moment);
+  const task = momentTask(moment, view);
+  const call = task && (
+    <TaskCallAction task={task} pageContact={view.contact} />
+  );
   return (
-    <FoundMove
-      suggested
-      // THIS contact's move first: the server writes the headline from the
-      // record itself ("You owe them: call Alice back about the retrofit"),
-      // and it takes the row's loudest line while the rule it fired on
-      // qualifies the byline beside it.
+    <NextBar
       title={moment.headline}
-      // The server's `why_now` is the ONLY reason, here and on the account
-      // brief: one moment gives one reason, and the facts in it ("your last
-      // message went out 131 days ago") are the part a rep judges. A sentence
-      // composed from the rule instead would be the same words for every
-      // contact on that rung.
-      why={moment.why_now}
-      kicker={momentKicker(moment, t)}
-      basis={
+      late={lateness(owedDue(moment, view), view, t, locale)}
+      sub={moment.why_now}
+      insight={
         basisAddsARecord(moment) ? (
-          <MomentEvidence
-            evidence={moment.evidence}
-            // The glyph names the KIND of record the move rests on, the same
-            // way the brief's sources and the timeline's rows name theirs.
-            kindOf={(item) =>
-              item.type === "activity"
-                ? view.activities?.data.find((row) => row.id === item.id)?.kind
-                : item.type
-            }
-            onOpen={(item) => {
-              const activity = view.activities?.data.find(
-                (row) => row.id === item.id,
-              );
-              if (activity?.kind === "email" && onOpenEmail && item.id)
-                onOpenEmail(item.id);
-              else openContactTab(view.contact.id, "timeline");
-            }}
-          />
+          <MomentSource moment={moment} view={view} onOpenEmail={onOpenEmail} />
         ) : undefined
       }
       action={
         moment.may_be_done ? (
-          <MayBeDoneVerbs
-            moment={moment}
-            question={moment.may_be_done}
-            view={view}
-          />
+          <>
+            <MayBeDoneVerbs
+              moment={moment}
+              question={moment.may_be_done}
+              view={view}
+            />
+            {call}
+          </>
         ) : (
-          // A fragment, not a column of its own: FoundMove owns the one
-          // `.today-actions` column its row draws, defer included, so a second
-          // column nested inside it laid the defer button beside these verbs
-          // in a row instead of under them.
           <>
             <ActionVerb
               action={moment.recommended_action}
               primary
               onAction={onAction}
             />
-            {/* Every other verb the moment carries, beside the one it leads with
-              rather than in a second list elsewhere on the page, which would
-              let the two disagree about what to do next. */}
-            {secondary.map((action) => (
-              <ActionVerb
-                key={action.label}
-                action={action}
-                onAction={onAction}
-              />
-            ))}
+            {call}
             {notNow.failure && <ErrorLine error={notNow.failure} inline />}
           </>
         )
       }
-      // The may-be-done card carries its own "Not yet", which is this same
-      // dismissal, so a second verb beside it would offer one act twice.
-      defer={moment.may_be_done ? undefined : notNow.deferOf(moment)}
+      // The may-be-done verbs carry their own "Not yet", which is this same
+      // dismissal, so a snooze beside them would offer one act twice.
+      snooze={
+        moment.may_be_done
+          ? undefined
+          : { onSnooze: defer.onDefer, pending: defer.pending }
+      }
+      more={more}
     />
   );
 }
 
-// What the body says where there is no move to draw. The panel's own quiet
-// line is a claim that nothing needs the reader; a reading nobody may see and
-// a relationship with nothing recorded are both short of the basis for it, so
-// each stands in its place — the first says the reading is not shown, the
-// second says what the server actually found. The quiet rung has the basis,
-// and leaves the line to the panel.
-function standingSentence(
-  moment: ContactMoment | undefined,
-  t: ReturnType<typeof useT>,
-): string | undefined {
-  if (!moment) {
-    return t("record.notShown");
-  }
-  return moment.rule === "thin_relationship" ? moment.headline : undefined;
-}
-
-// The band under the rows: what the list did not show, and how far the reading
-// reached. Both are facts about the READING rather than work, so they sit in
-// the foot; as rows they would read as two more things to do. A truncated list
-// with no count reads as "that is everything", which is the one thing a list
-// of commitments may not say.
-function panelFoot({
+// The first record the move rests on that its headline does not name, as a
+// link to it.
+function MomentSource({
   moment,
-  more,
-  t,
-  locale,
+  view,
+  onOpenEmail,
 }: Readonly<{
-  moment: ContactMoment | undefined;
-  more: number;
-  t: ReturnType<typeof useT>;
-  locale: Locale;
-}>): ReactNode | undefined {
-  const lines = [
-    ...(more > 0
-      ? [t("co.suggest.more", { count: formatNumber(more, locale) })]
-      : []),
-    // "Nothing needs you" about a relationship with almost nothing recorded is
-    // honest only with the reach of the records behind it named beside it.
-    ...(moment?.rule === "thin_relationship"
-      ? [t("contact.overview.coverage")]
-      : []),
-  ];
-  if (lines.length === 0) {
-    return undefined;
+  moment: ContactMoment;
+  view: Contact360;
+  onOpenEmail?: (activityId: string) => void;
+}>) {
+  const t = useT();
+  const item = moment.evidence.find((entry) => entry.type === "activity");
+  if (!item) {
+    return null;
   }
+  const open = () => {
+    const activity = view.activities?.data.find((row) => row.id === item.id);
+    if (activity?.kind === "email" && onOpenEmail && item.id) {
+      onOpenEmail(item.id);
+    } else {
+      openContactTab(view.contact.id, "timeline");
+    }
+  };
   return (
     <>
-      {lines.map((line) => (
-        <p key={line} className="t-caption">
-          {line}
-        </p>
-      ))}
+      <span>{t("co.suggest.basedOn")}</span>{" "}
+      <Button variant="link" className="btn-valuelabel" onClick={open}>
+        {item.label}
+      </Button>
     </>
   );
 }
 
-// The open tasks already on this contact's record, quieter than the move
-// above them: commitments the record already carries, which a reader scans.
-//
-// Rows rather than a component, because the panel counts what it is handed to
-// decide whether the day is quiet — and a component that renders nothing is
-// still one child. A withheld section yields no rows; the rail says what was
-// withheld. `more` is what the cut left out, which the foot reports.
-function useOpenTaskRows(
-  view: Contact360,
-  move: ContactMoment | undefined,
-): { rows: ReactNode[]; more: number } {
+function TaskBar({
+  task,
+  view,
+  more,
+}: Readonly<{ task: Activity; view: Contact360; more: More }>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = useRecordZone();
-  const named = recordsTheMoveNames(move);
-  const tasks = (view.next_steps?.data ?? []).filter(
-    (task) => !task.is_done && !named.has(task.id),
-  );
-  // The assignee's name by id, one request for every task on the row at
-  // once, so the row's mark is the colleague it sits with rather than an id.
-  const assigneeNames = useMemberNames(
-    tasks.flatMap((task) => (task.assignee_id ? [task.assignee_id] : [])),
-  );
-  const assigneeOf = (userId: string | null | undefined) => {
-    if (!userId) {
-      return undefined;
-    }
-    const name = assigneeNames.get(userId);
-    return name ? { name, identity: userId } : undefined;
-  };
-  const asOf = Date.parse(view.as_of);
-  return {
-    rows: tasks.slice(0, OPEN_TASKS_SHOWN).map((task) => (
-      <TodoRow
-        key={task.id}
-        who={assigneeOf(task.assignee_id)}
-        title={task.subject ?? t("task.untitled")}
-        due={taskDue(task, asOf, t, locale, zone)}
-        action={
+  return (
+    <NextBar
+      title={task.subject ?? t("task.untitled")}
+      late={lateness(task.due_at, view, t, locale)}
+      sub={
+        task.due_at
+          ? t("co.next.due", { when: formatDate(task.due_at, locale, zone) })
+          : t("co.next.undated")
+      }
+      action={
+        <>
+          <TaskCallAction task={task} pageContact={view.contact} />
           <MoveButton
             contactId={view.contact.id}
-            move={{
-              action: "open_task",
-              arguments: { activity_id: task.id },
-            }}
+            move={{ action: "open_task", arguments: { activity_id: task.id } }}
           />
+        </>
+      }
+      more={more}
+    />
+  );
+}
+
+// No move and no task. A quiet rung has the basis to say nothing is due. An
+// unread reading, a withheld source and a relationship with nothing recorded
+// do not, so each says what it does know instead.
+function AnswerBar({
+  moment,
+  view,
+  onAction,
+}: Readonly<{
+  moment: ContactMoment | undefined;
+  view: Contact360;
+  onAction: (action: ContactMomentAction) => void;
+}>) {
+  const t = useT();
+  const omitted = new Set(view.sections_omitted);
+  const withheld = [
+    ...(omitted.has("moments") ? [t("today.source.moments")] : []),
+    ...(omitted.has("next_steps") ? [t("today.source.nextSteps")] : []),
+  ];
+  if (withheld.length > 0) {
+    return (
+      <NextBar title={t("today.withheld", { sections: withheld.join(", ") })} />
+    );
+  }
+  if (!moment) {
+    return <NextBar title={t("record.notShown")} />;
+  }
+  if (moment.rule === "thin_relationship") {
+    return (
+      <NextBar
+        title={moment.headline}
+        sub={t("contact.overview.coverage")}
+        action={
+          <ActionVerb action={moment.recommended_action} onAction={onAction} />
         }
       />
-    )),
-    more: Math.max(tasks.length - OPEN_TASKS_SHOWN, 0),
+    );
+  }
+  return <NextBar />;
+}
+
+// What the move says is owed, in the order both readers below take it: the
+// promise it may already have settled, then its evidence.
+function owedRecords(moment: ContactMoment): { id: string; task: boolean }[] {
+  const promise = moment.may_be_done;
+  return [
+    ...(promise
+      ? [{ id: promise.promise_id, task: promise.promise_type === "task" }]
+      : []),
+    ...moment.evidence.flatMap((item) =>
+      item.id ? [{ id: item.id, task: item.type === "task" }] : [],
+    ),
+  ];
+}
+
+// The first listed task the move is about.
+function momentTask(
+  moment: ContactMoment,
+  view: Contact360,
+): Activity | undefined {
+  const tasks = view.next_steps?.data ?? [];
+  for (const record of owedRecords(moment)) {
+    const task = record.task
+      ? tasks.find((row) => row.id === record.id)
+      : undefined;
+    if (task) {
+      return task;
+    }
+  }
+  return undefined;
+}
+
+// The due date of what the move says is owed: a claim's or a listed task's.
+function owedDue(moment: ContactMoment, view: Contact360): string | undefined {
+  for (const { id } of owedRecords(moment)) {
+    const due =
+      view.claims?.find((claim) => claim.id === id)?.due_at ??
+      view.next_steps?.data.find((task) => task.id === id)?.due_at;
+    if (due) {
+      return due;
+    }
+  }
+  return undefined;
+}
+
+// Lateness against the read's own `as_of`, so the tag agrees with the dates
+// beside it and does not drift while a tab is left open.
+function lateness(
+  due: string | null | undefined,
+  view: Contact360,
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+): { label: string; tone: "danger" } | undefined {
+  if (!due) {
+    return undefined;
+  }
+  const { late, days } = daysPast(Date.parse(due), Date.parse(view.as_of));
+  if (!late) {
+    return undefined;
+  }
+  return {
+    label:
+      days > 0
+        ? translatePlural(locale, "contact.standing.late", days, {
+            count: formatNumber(days, locale),
+          })
+        : t("co.next.overdue"),
+    tone: "danger",
   };
 }
 
-// The records the move above the list is itself about. A task the move names
-// is the subject of that row, and listed again underneath it reads as a second
-// thing to do — the same commitment counted twice, once as the ask and once as
-// a chore.
-// Read off the evidence alone, which is where the server names a record: a
-// destination is a surface to open (composer, brief, research, record, the log
-// form) and never a second naming of the row the move is about.
+// The records the move is itself about. A task the move names is the subject
+// of the bar, and counted again under "+N tasks" it would be owed twice.
 function recordsTheMoveNames(move: ContactMoment | undefined): Set<string> {
   return new Set(
     (move?.evidence ?? []).flatMap((item) => (item.id ? [item.id] : [])),
   );
-}
-
-// How many open tasks the day's work lists before the reader is sent to the
-// full list. Three is what reads as a glance beside the move above them.
-const OPEN_TASKS_SHOWN = 3;
-
-// When a task is owed, coloured only once it is late. A task with no date says
-// so rather than leaving the slot empty, which reads as a date that failed to
-// load. Lateness is measured against the read's own `as_of`, so the row agrees
-// with the dates beside it and does not drift while a tab is left open.
-function taskDue(
-  task: Activity,
-  asOf: number,
-  t: ReturnType<typeof useT>,
-  locale: Locale,
-  zone: string,
-): { label: string; tone?: "danger" } {
-  if (!task.due_at) {
-    return { label: t("co.next.undated") };
-  }
-  const { late } = daysPast(Date.parse(task.due_at), asOf);
-  if (late) {
-    return { label: t("co.next.overdue"), tone: "danger" };
-  }
-  return {
-    label: t("co.next.due", { when: formatDate(task.due_at, locale, zone) }),
-  };
 }
 
 // One verb: the button, and under it what will happen when it is pressed.
@@ -363,12 +364,9 @@ function ActionVerb({
 }>) {
   const t = useT();
   const blocked = action.state === "blocked";
-  // Indigo marks the verb the agent RECOMMENDS, not work the agent performs:
-  // every verb in this column was proposed by the moment, and the leading one
-  // is the move it is asking for. So the lead wears the AI fill and the rest
-  // the plain outline, whatever each verb goes on to do — one colour rule for
-  // the column, read once.
-  const variant = primary ? "ai" : "ghost";
+  // The ladder is a rule, not a model, so the lead verb is the plain filled
+  // button; indigo would claim an agent wrote it.
+  const variant = primary ? "primary" : "ghost";
   return (
     <span className="today-verb">
       {/* A blocked verb hands its sentence to the Button, whose `reason`

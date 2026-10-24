@@ -22,9 +22,9 @@ import {
 } from "./source-tree";
 import { isDocsPage } from "./story-files";
 
-// Tests, stories and testkits ask for both halves on purpose, and ship in no
-// chunk, so a walk from one proves nothing about the bundle.
-const NOT_SHIPPED = /\.(test|stories)\.tsx?$|\.testkit\.tsx?$/;
+// Tests, stories and the kits only they import ask for both halves.
+// They ship in no chunk, so a walk from one proves nothing about the bundle.
+const NOT_SHIPPED = /\.(test|stories)\.tsx?$|\.(testkit|storykit)\.tsx?$/;
 
 /** Every shipped TypeScript module under `dir`, at any depth. */
 export function productionModulesUnder(dir: string): string[] {

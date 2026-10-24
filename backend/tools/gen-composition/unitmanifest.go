@@ -102,6 +102,9 @@ type unitManifest struct {
 	// core on the unit's card of the Extensions page.
 	Settings []declaredSetting `json:"settings,omitempty"`
 
+	// Panels are the places on core pages that draw the unit's own component.
+	Panels []declaredPanel `json:"panels,omitempty"`
+
 	// OAuthApps are the vendors whose consent flow the core runs for the unit
 	// (see extension.OAuthApp). Each names where an admin is sent, what the
 	// consent asks for, and the endpoint that receives the client secret.
@@ -392,16 +395,6 @@ func writeFileAtomic(dir, path string, content []byte) error {
 		return err
 	}
 	return os.Rename(tmpName, path)
-}
-
-// jobDeclarationsByUnit groups the composed job declarations by declaring
-// unit, so each manifest derivation sees its own and no other's.
-func jobDeclarationsByUnit(decls []extension.JobDeclaration) map[string][]extension.JobDeclaration {
-	byUnit := map[string][]extension.JobDeclaration{}
-	for _, d := range decls {
-		byUnit[string(d.Unit)] = append(byUnit[string(d.Unit)], d)
-	}
-	return byUnit
 }
 
 // verifyUnitManifests re-derives every unit's manifest and requires the

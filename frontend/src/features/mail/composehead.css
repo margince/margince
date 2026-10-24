@@ -15,13 +15,27 @@
   min-inline-size: 0;
 }
 
+/* One ruled row per address line: a small label in its column, the tokens
+   on a bare line beside it. */
 .compose-address-field {
   display: grid;
-  grid-template-columns: 4.5rem minmax(0, 1fr);
+  grid-template-columns: 3.5rem minmax(0, 1fr);
   align-items: center;
-  gap: var(--space-1) var(--space-2);
+  gap: 0 var(--space-2);
+  padding: var(--space-1) var(--space-3) var(--space-1) var(--space-4);
+  border-bottom: 1px solid var(--borderSubtle);
 }
 .compose-address-field > :not(label) {
   grid-column: 2;
   min-inline-size: 0;
+}
+.compose-address-field > label {
+  font: var(--fontBodySmall);
+  color: var(--textSecondary);
+}
+.compose-address-field .input,
+.compose-address-field .field-shell {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
 }

@@ -1,20 +1,28 @@
 import type { components } from "../../api/schema";
+import type { ReadingTone } from "../../design-system/readingtone";
 import { formatDateAbbrev } from "../../format/format";
+import { leadIdentityName } from "../../format/leadname";
 import type { Locale, Translator } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import type { Grounding, StandingTone } from "../records/record360";
 
 type Lead = components["schemas"]["Lead"];
 
 // Lead standing reports recorded status and responses; a missing response
 // does not establish that somebody asked us for anything.
 
-export type LeadStanding = {
-  label: string;
-  tone: StandingTone;
+export type LeadStanding = Readonly<{
+  word: string;
   // The one sentence the call rests on.
-  because: string;
-  restsOn: Grounding[];
+  sentence: string;
+  tone: ReadingTone;
+}>;
+
+type Evidence = NonNullable<Lead["qualification_evidence"]>;
+
+const EVIDENCE_SENTENCE: Record<Evidence["trigger"], MessageKey> = {
+  inbound_reply: "lead.standing.repliedOn",
+  meeting_booked: "lead.standing.meetingBookedFor",
+  meeting_held: "lead.standing.meetingHeldOn",
 };
 
 // The first-response clock as ONE fact, read by the call and by the readings
@@ -66,106 +74,73 @@ export function leadStanding(
   zone: string,
 ): LeadStanding {
   const when = (at: string) => formatDateAbbrev(at, locale, zone);
-  // Merged away is read FIRST, because it is the one ending the ladder does
-  // not record: the merge archives the loser and points it at the survivor
-  // and leaves `status` exactly where it stood. A lead merged away while it
-  // was being worked therefore still says `contacted`, and every branch below
-  // would call it open work — or, once something did call it terminal, call
-  // it disqualified, which says a human judged the prospect not worth
-  // pursuing rather than that it was the same prospect as another one.
+  // Merged away is read first: the merge archives the loser and leaves
+  // `status` where it stood, so every branch below would call it open work.
   if (lead.merged_into_id) {
     return {
-      label: t("lead.standing.merged"),
-      tone: "unknown",
-      because: t("lead.standing.mergedBecause"),
-      restsOn: [
-        {
-          key: "merged",
-          quote: t("lead.standing.rests.merged"),
-          from: t("lead.standing.rests.record"),
-        },
-      ],
+      word: t("lead.standing.merged"),
+      sentence: t("lead.standing.mergedBecause"),
+      tone: "neutral",
     };
   }
   if (lead.status === "promoted") {
     return {
-      label: t("lead.standing.qualified"),
-      tone: "calm",
-      because: lead.promoted_at
+      word: t("lead.standing.qualified"),
+      sentence: lead.promoted_at
         ? t("lead.standing.qualifiedOn", { at: when(lead.promoted_at) })
         : t("lead.standing.qualifiedUndated"),
-      restsOn: [
-        {
-          key: "promoted",
-          quote: t("lead.standing.rests.promoted"),
-          from: t("lead.standing.rests.ladder"),
-        },
-      ],
+      tone: "success",
     };
   }
   if (lead.status === "disqualified") {
+    // Neutral, not a failure colour: closing a lead is ordinary work.
     return {
-      label: t("lead.standing.closed"),
-      tone: "unknown",
-      because: lead.disqualify_reason
+      word: t("lead.standing.closed"),
+      sentence: lead.disqualify_reason
         ? t("lead.standing.closedFor", { reason: lead.disqualify_reason })
         : t("lead.standing.closedUnreasoned"),
-      restsOn: [
-        {
-          key: "closed",
-          quote: lead.disqualify_reason ?? t("lead.standing.rests.closed"),
-          from: t("lead.standing.rests.ladder"),
-        },
-      ],
+      tone: "neutral",
+    };
+  }
+  const engaged = lead.status === "engaged";
+  if (engaged) {
+    return {
+      word: lead.first_response_at
+        ? t("lead.standing.inMotion")
+        : t("lead.status.engaged"),
+      sentence: engagedSentence(lead, t, when),
+      tone: "success",
     };
   }
   if (!lead.first_response_at) {
-    return unansweredStanding(lead.status, t);
+    return {
+      word: t(`lead.status.${lead.status}`),
+      sentence: t("lead.standing.noResponse"),
+      tone: "neutral",
+    };
   }
-  // Answered. Engaged means they came back or a meeting is on the calendar;
-  // contacted means the ball is with them.
-  const engaged = lead.status === "engaged";
   return {
-    label: engaged ? t("lead.standing.inMotion") : t("lead.standing.theirMove"),
-    tone: "accent",
-    because: engaged
-      ? t("lead.standing.engagedBecause")
-      : t("lead.standing.answeredOn", { at: when(lead.first_response_at) }),
-    restsOn: [
-      {
-        key: "response",
-        quote: t("lead.sla.answeredAt", { at: when(lead.first_response_at) }),
-        from: t("lead.standing.rests.record"),
-      },
-      ...(engaged && lead.qualification_evidence?.occurred_at
-        ? [
-            {
-              key: "evidence",
-              quote: t("lead.standing.rests.engaged", {
-                at: when(lead.qualification_evidence.occurred_at),
-              }),
-              from: t("lead.standing.rests.ladder"),
-            },
-          ]
-        : []),
-    ],
+    word: t("lead.standing.theirMove"),
+    sentence: t("lead.standing.answeredOn", {
+      at: when(lead.first_response_at),
+    }),
+    tone: "success",
   };
 }
 
-function unansweredStanding(
-  status: "new" | "contacted" | "engaged",
+// The captured signal that moved the lead to Engaged, dated. A lead set to
+// Engaged by hand carries none, and keeps the general sentence.
+function engagedSentence(
+  lead: Lead,
   t: Translator,
-): LeadStanding {
-  const engaged = status === "engaged";
-  const label = t(`lead.status.${status}`);
-  return {
-    label,
-    tone: engaged ? "accent" : "unknown",
-    because: t(
-      engaged ? "lead.standing.engagedBecause" : "lead.standing.noResponse",
-    ),
-    restsOn: [
-      { key: "status", quote: label, from: t("lead.standing.rests.ladder") },
-    ],
-  };
+  when: (at: string) => string,
+): string {
+  const evidence = lead.qualification_evidence;
+  if (!evidence?.occurred_at) {
+    return t("lead.standing.engagedBecause");
+  }
+  return t(EVIDENCE_SENTENCE[evidence.trigger], {
+    name: leadIdentityName(lead) || t("lead.unnamed"),
+    at: when(evidence.occurred_at),
+  });
 }

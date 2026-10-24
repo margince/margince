@@ -164,8 +164,14 @@ func fillEmail(ctx context.Context, tx pgx.Tx, subject ids.UUID, providerName st
 	if err != nil {
 		return nothingFilled, fmt.Errorf("contacts: checking a bought address against the erasure list: %w", err)
 	}
-	if suppressed {
+	if suppressed || refuseMachineAddress(address.String()) != nil {
 		return nothingFilled, nil
+	}
+	// The base lock before the address is written. The hand-off already holds
+	// the subject's row, and a create of this address must not hold the lane
+	// while it waits on this row (lockorder.go).
+	if err := lockAddressBaseLane(ctx, tx, []string{address.String()}); err != nil {
+		return nothingFilled, err
 	}
 	rowID, landed, err := insertChildRow(ctx, tx, `
 		INSERT INTO contact_email (contact_id, email, email_type, is_primary, position, source, captured_by)

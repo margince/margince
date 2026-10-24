@@ -18,6 +18,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -67,6 +69,13 @@ func callMemberVerb(e *revocationEnv, h Handlers, caller Identity, action member
 		h.DeactivateUser(rec, req, id)
 	case actionReactivate:
 		h.ReactivateUser(rec, req, id)
+	case actionHandOver:
+		// The handover is served outside this module, behind this gate.
+		ctx := actorCtx(e.wsCtx(caller), caller)
+		if err := e.svc.db.Tx(ctx, func(tx pgx.Tx) error { return AdmitMemberHandover(ctx, tx, target) }); err != nil {
+			return http.StatusForbidden
+		}
+		return http.StatusOK
 	}
 	return rec.Code
 }
@@ -95,6 +104,8 @@ func assertOfferAgrees(t *testing.T, e *revocationEnv, h Handlers, caller Identi
 		t.Errorf("%s on %s: offered, and the handler answered %d", action, name, code)
 	case !listed && accepted && action != actionIssuePasswordLink && memberState(t, e, target) != before:
 		t.Errorf("%s on %s: withheld, and the handler changed the member (%d)", action, name, code)
+	case !listed && accepted && action == actionHandOver:
+		t.Errorf("%s on %s: withheld, and the gate admitted it", action, name)
 	case !listed && accepted && action == actionIssuePasswordLink:
 		t.Errorf("%s on %s: withheld, and the handler minted a link", action, name)
 	}
@@ -110,7 +121,7 @@ func TestTheRosterOffersADelegatedAdministratorExactlyTheVerbsTheHandlersAccept(
 
 	// Each verb gets its own caller and targets: every verb it admits changes
 	// the member, and the next verb must meet the member as the offer saw it.
-	for _, action := range []memberAction{actionChangeRole, actionIssuePasswordLink, actionDeactivate, actionReactivate} {
+	for _, action := range []memberAction{actionChangeRole, actionIssuePasswordLink, actionDeactivate, actionReactivate, actionHandOver} {
 		tag := string(action)
 		caller := e.seat(t, "delegate-"+tag, delegate)
 		deactivated := e.seat(t, "gone-"+tag, "rep")
@@ -179,7 +190,7 @@ func TestTheRosterOffersOnlyTheVerbsTheCallerHolds(t *testing.T) {
 	repCopy := e.customRole(t, "Rep copy", "rep", nil)
 	for verb, want := range map[string][]memberAction{
 		"delete": {actionDeactivate},
-		"update": {actionChangeRole, actionIssuePasswordLink},
+		"update": {actionChangeRole, actionIssuePasswordLink, actionHandOver},
 	} {
 		grant := storedGrant{Read: true, Delete: verb == "delete", Update: verb == "update"}
 		caller := e.seat(t, "holder-"+verb, e.customRole(t, "Holds "+verb, "rep", map[string]storedGrant{objectUserAdmin: grant}))
@@ -192,7 +203,7 @@ func TestTheRosterOffersOnlyTheVerbsTheCallerHolds(t *testing.T) {
 		if !slices.Equal(got, want) {
 			t.Errorf("a %s holder is offered %v on a rep, want %v", verb, got, want)
 		}
-		for _, action := range []memberAction{actionChangeRole, actionIssuePasswordLink, actionDeactivate} {
+		for _, action := range []memberAction{actionChangeRole, actionIssuePasswordLink, actionDeactivate, actionHandOver} {
 			assertOfferAgrees(t, e, h, caller, offered, action, "a rep", target.UserID, repCopy)
 		}
 	}

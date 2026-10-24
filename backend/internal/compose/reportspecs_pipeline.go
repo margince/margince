@@ -3,21 +3,12 @@
 
 package compose
 
-// What the pipeline HOLDS right now, in one currency.
-//
-// Separate from deals-by-stage rather than a correction of it, because the two
-// answer different questions and both are asked. deals-by-stage is every live
-// deal with status as a dimension — the board's own totals, where a won deal
-// still belongs to the stage it was won in. This one is the COMPOSITION of open
-// pipeline: what is still in play, per stage, added up in the money the
-// installation counts in.
-//
-// Changing deals-by-stage instead would have been the smaller diff and the
-// wrong one: its filters mirror the deals board's dials, and a board whose
-// totals silently stopped counting won deals would disagree with the cards a
-// reader can see on it.
+// Open-pipeline composition shares valuation with the all-status deal board.
+// The populations differ: won and lost deals remain on the board only.
 
 import (
+	"maps"
+
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -56,10 +47,7 @@ func pipelineCurrentSpec() reportSpec {
 		// currencies and get a number with no unit: 10,000 EUR + 10,000 USD =
 		// 20,000 of nothing, where the answer is 15,000 EUR. deals-by-stage
 		// still serves the native figures, and it groups by currency.
-		measures: map[string]string{
-			fieldAmountBaseMinor:   pipelineBaseValueExpr,
-			fieldWeightedBaseMinor: pipelineWeightedBaseExpr,
-		},
+		measures: baseMoneyMeasures(nil),
 		filters: map[string]string{
 			fieldPipelineID:       colPipelineID,
 			fieldOwnerID:          colOwnerID,
@@ -125,3 +113,13 @@ var pipelineBaseValueExpr = deals.BaseValueSQL(reportAsOfToken, reportBaseCurren
 // minor unit per deal, so a stage total would stop equalling the sum of the
 // rows a reader opens underneath it.
 var pipelineWeightedBaseExpr = "round((" + pipelineBaseValueExpr + ")::numeric * s.win_probability * 0.01)::bigint"
+
+// baseMoneyMeasures shares the valuation expressions across report populations.
+func baseMoneyMeasures(native map[string]string) map[string]string {
+	measures := map[string]string{
+		fieldAmountBaseMinor:   pipelineBaseValueExpr,
+		fieldWeightedBaseMinor: pipelineWeightedBaseExpr,
+	}
+	maps.Copy(measures, native)
+	return measures
+}

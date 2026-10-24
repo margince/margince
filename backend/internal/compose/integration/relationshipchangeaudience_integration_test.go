@@ -32,10 +32,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-
 	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
@@ -109,16 +106,7 @@ func TestALimitedReplyIsNotDerivedIntoARelationshipChange(t *testing.T) {
 // changesFor reads one contact's derived changes as one caller.
 func changesFor(ctx context.Context, t *testing.T, e *Env, contact ids.UUID, now time.Time) []relstrength.Change {
 	t.Helper()
-	var out []relstrength.Change
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		var err error
-		out, err = e.Contacts.ContactRelationshipChangesTx(ctx, tx,
-			ids.From[ids.ContactKind](contact), now, nil)
-		return err
-	}); err != nil {
-		t.Fatalf("reading relationship changes: %v", err)
-	}
-	return out
+	return changesOf(ctx, t, e, ids.From[ids.ContactKind](contact), now)
 }
 
 // backdate moves a logged activity's occurred_at, which LogActivity stamps at

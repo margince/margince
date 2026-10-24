@@ -82,6 +82,13 @@ export const STORAGE_KEYS = {
     area: "session",
     lifetime: "seat",
   },
+  // "Hide until next sign-in": local so a new tab keeps it, seat so the end of
+  // the session brings the reminder back.
+  setupReminderHidden: {
+    name: "margince.setup.reminderHidden",
+    area: "local",
+    lifetime: "seat",
+  },
 } as const satisfies Record<string, Declared>;
 
 type Registered = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];

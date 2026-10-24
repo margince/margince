@@ -17,7 +17,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | backend | The Go server code under `backend/`. |
 | Beschäftigteninformation | The German notice each employee gets before their mailbox is read (Art. 13 GDPR). |
 | BUSL | The Business Source License 1.1, the license Margince uses. |
-| changelog | The list of changes in each release, kept in `CHANGELOG.md`. |
+| changelog | A file listing the changes of each release, which this repository does not keep. |
 | CI | Continuous integration: the checks GitHub runs on every pull request. |
 | CIMD | Client ID Metadata Document: an AI tool's ID that is the URL of a file describing it. |
 | Compose | Docker Compose, which starts Postgres and Redis for local work. |
@@ -57,10 +57,15 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | MCP | Model Context Protocol: how an AI agent connects to Margince's tools. |
 | mdy | The date order month, day, year, as a setting value. |
 | Microsoft | The company behind Microsoft 365 mail and calendars. |
+| milestone | A GitHub group of issues planned for one month, named `YYYY-MM`. |
 | Node | Node.js, the JavaScript runtime the web app's tools run on. |
 | Ollama | A tool that runs language models on your own machine. |
 | OpenDocument | The open file format for text, tables and slides. |
 | OpenRouter | A service that routes model calls to many AI providers. |
+| Origin | Where a lead came from, such as a referral or an event, chosen from a list in Settings. |
+| origin | Where a lead came from, such as a referral or an event, chosen from a list in Settings. |
+| Origins | The list of places a lead can come from, kept in Settings. |
+| origins | The list of places a lead can come from, kept in Settings. |
 | PKCE | Proof Key for Code Exchange: a one-time secret that ties the end of a sign-in to its start. |
 | pnpm | The package manager for the web app. |
 | Postgres | PostgreSQL, the database Margince stores its data in. |
@@ -69,6 +74,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Redis | The in-memory store Margince uses as its event bus. |
 | REST | The style of HTTP API Margince offers next to MCP. |
 | RTF | Rich Text Format, a document format most word processors read. |
+| Shift | The key held while pressing another, as in Page Up/Down by year in `Calendar`. |
 | skill | A folder an AI tool loads to learn a task, led by a `SKILL.md` file. |
 | Slack | A team chat tool where an incoming webhook can post messages. |
 | SonarCloud | A code quality service that scans each pull request. |
@@ -80,6 +86,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Vite | The build and dev server tool for the web app. |
 | vLLM | A server that runs language models on your own machines. |
 | webhook | A message Margince sends to another tool's address when a chosen event happens. |
+| WhatsApp | A chat app; a link to it opens a chat with a phone number. |
 | Windows | Microsoft's desktop operating system. |
 | Worklist | The app's list of tasks and items that need a user's action. |
 | worktree | A second git checkout of the repository with its own branch. |

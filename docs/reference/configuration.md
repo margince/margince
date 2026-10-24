@@ -263,6 +263,7 @@ admin can also change under Settings.
 |---|---|---|---|---|---|---|
 | `capture.auto_enrich` | `MARGINCE_CAPTURE_AUTO_ENRICH` | — | `bool`, stored | `true` | api, worker | Read a new contact's company web page automatically. |
 | `capture.auto_enrich_daily_cap` | `MARGINCE_CAPTURE_AUTO_ENRICH_DAILY_CAP` | — | `int`, 1 to 20000, stored | `500` | api, worker | Automatic company web-page reads the installation may start in one UTC day. |
+| `capture.confidentiality_pass_cap` | `MARGINCE_CAPTURE_CONFIDENTIALITY_PASS_CAP` | — | `int`, 1 to 200, stored | `40` | api, worker | Held mail threads one review pass may judge; the rest wait for the next pass. |
 | `capture.freemail_extra` | `MARGINCE_CAPTURE_FREEMAIL_EXTRA` | — | `list<string>` | — | api, worker | Ignored, with a warning at boot; the consumer-mail list is edited under Settings. |
 | `capture.freemail_never` | `MARGINCE_CAPTURE_FREEMAIL_NEVER` | — | `list<string>` | — | api, worker | Ignored, with a warning at boot; the consumer-mail list is edited under Settings. |
 | `capture.mail_sharing` | `MARGINCE_CAPTURE_MAIL_SHARING` | — | `bool`, stored | `true` | api, worker | Let every colleague who can see a contact read the email captured with them; off keeps new mail to those on it. |
@@ -298,7 +299,7 @@ admin can also change under Settings.
 | `contacts.first_response_enabled` | `MARGINCE_CONTACTS_FIRST_RESPONSE_ENABLED` | — | `bool`, stored | `false` | api, worker | Track a first-response target on every lead. |
 | `contacts.first_response_target_minutes` | `MARGINCE_CONTACTS_FIRST_RESPONSE_TARGET_MINUTES` | — | `int`, 15 to 10080, stored | `240` | api, worker | Minutes a lead may wait for its first real response once its clock starts. |
 | `contacts.signature_template` | `MARGINCE_CONTACTS_SIGNATURE_TEMPLATE` | — | `string`, stored | — | api, worker | The email signature of the workspace, used in place of the own signature of each sender; empty means none. |
-| `contacts.unassigned_escalation_user_id` | `MARGINCE_CONTACTS_UNASSIGNED_ESCALATION_USER_ID` | — | `string`, stored | — | api, worker | The user id of the colleague who answers for a lead nobody owns once it misses its target; empty means nobody, and a boot value that names no active colleague reaches nobody and logs a warning. |
+| `contacts.unassigned_escalation_user_id` | `MARGINCE_CONTACTS_UNASSIGNED_ESCALATION_USER_ID` | — | `string`, stored | — | api, worker | The user id of the colleague who answers for a lead nobody owns, or whose owner has left, once it misses its target; empty means nobody, and a boot value that names no active colleague reaches nobody and logs a warning. |
 
 ### `data_tasks`
 
@@ -347,6 +348,9 @@ admin can also change under Settings.
 | `installation.agent_window_hours` | `MARGINCE_INSTALLATION_AGENT_WINDOW_HOURS` | — | `int`, 1 to 168, stored | `24` | api, worker | Hours in the window the agent limits count over; set at boot, it also keeps a length an admin saved for the next reset from taking over. |
 | `installation.agent_writes_per_window` | `MARGINCE_INSTALLATION_AGENT_WRITES_PER_WINDOW` | — | `int`, 10 to 5000, stored | `200` | api, worker | Changing calls one agent passport may make per window. |
 | `installation.base_language` | `MARGINCE_INSTALLATION_BASE_LANGUAGE` | — | `string`, stored | `en` | api, worker | The language AI writes the shared record in: en, de or vi. |
+| `installation.call_telegram` | `MARGINCE_INSTALLATION_CALL_TELEGRAM` | — | `bool`, stored | `true` | api, worker | Show a Telegram chat link next to a contact's phone number that starts with a country code. |
+| `installation.call_whatsapp` | `MARGINCE_INSTALLATION_CALL_WHATSAPP` | — | `bool`, stored | `true` | api, worker | Show a WhatsApp chat link next to a contact's phone number that starts with a country code. |
+| `installation.call_zalo` | `MARGINCE_INSTALLATION_CALL_ZALO` | — | `bool`, stored | `true` | api, worker | Show a Zalo chat link next to a contact's phone number that starts with a country code. |
 | `installation.close_date_sweep_interval_seconds` | `MARGINCE_INSTALLATION_CLOSE_DATE_SWEEP_INTERVAL_SECONDS` | — | `int`, 3600 to 604800, stored | `86400` | api, worker | Seconds between the close-date sweeps. |
 | `installation.country` | `MARGINCE_INSTALLATION_COUNTRY` | — | `string`, stored | `""` | api, worker | Where the installation is established, as a two-letter ISO 3166-1 code in small letters; empty for none. |
 | `installation.date_format` | `MARGINCE_INSTALLATION_DATE_FORMAT` | — | `string`, stored | `locale` | api, worker | How dates are written: locale, dmy, mdy or ymd. |
@@ -941,6 +945,23 @@ see whether the Google download or our transaction takes most of the time of a m
 to see how many messages needed no full download after the headers read. Use
 `rate(margince_connector_requests_total{result="rate_limited"}[5m])` to see whether the provider is
 slowing the import down.
+
+### Reading the mail review backlog
+
+A mailbox in the classified posture holds every captured message until the review pass answers its
+thread. The pass asks the model about up to `capture.confidentiality_pass_cap` threads per run, answered
+or not, and the rest wait for the next run. The job gauges cannot show a pass that runs on time and still falls
+behind, so `cmd/api` serves two more gauges beside them. They are read from the thread ledger at
+scrape time, and every api replica answers the same numbers, so read them with `max`, never `sum`:
+
+| Family | Labels | Meaning |
+|---|---|---|
+| `margince_capture_confidentiality_waiting_threads` | — | held threads the pass has not answered yet and can still claim; a seat that left the classified posture is not counted |
+| `margince_capture_confidentiality_oldest_wait_seconds` | — | how long the longest-held of them has been hidden from the team, counted from the capture of the message that opened the thread; 0 when none waits |
+
+Alert when the age stays above how often the pass runs. An admin then raises the cap under
+Settings → Capture rules, or by `PATCH /v1/capture/settings`, and the next run uses it.
+
 ## cmd/worker: the background process role
 
 **Outbound mail does not leave without this process.** Every role that takes a send stages it (the

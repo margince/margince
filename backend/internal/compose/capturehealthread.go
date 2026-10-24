@@ -141,19 +141,27 @@ func captureMailboxHealth(
 		    FROM contact p
 		   WHERE `+capture.AwaitingSenderDecisionClause("p")+`
 		   GROUP BY p.owner_id),
+		unread_periods AS (
+		  SELECT user_id, min(unread_from) AS unread_from, max(unread_to) AS unread_to
+		    FROM capture_connection
+		   WHERE unread_from IS NOT NULL
+		   GROUP BY user_id),
 		waiting_threads AS (
 		  SELECT v.user_id, count(*) AS n, min(v.created_at) AS oldest
 		    FROM capture_thread_verdict v
 		   WHERE v.status IN ('pending', 'unsure')
 		   GROUP BY v.user_id)
-		SELECT coalesce(c.user_id, t.user_id),
+		SELECT coalesce(c.user_id, t.user_id, g.user_id),
 		       u.display_name,
 		       coalesce(c.n, 0), c.oldest,
-		       coalesce(t.n, 0), t.oldest
+		       coalesce(t.n, 0), t.oldest,
+		       g.unread_from, g.unread_to
 		  FROM waiting_contacts c
 		  FULL JOIN waiting_threads t ON t.user_id = c.user_id
-		  LEFT JOIN app_user u ON u.id = coalesce(c.user_id, t.user_id)
-		 ORDER BY coalesce(c.n, 0) + coalesce(t.n, 0) DESC, coalesce(c.user_id, t.user_id)`)
+		  FULL JOIN unread_periods g ON g.user_id = coalesce(c.user_id, t.user_id)
+		  LEFT JOIN app_user u ON u.id = coalesce(c.user_id, t.user_id, g.user_id)
+		 ORDER BY coalesce(c.n, 0) + coalesce(t.n, 0) DESC,
+		          coalesce(c.user_id, t.user_id, g.user_id)`)
 	if err != nil {
 		return nil, fmt.Errorf("compose: reading what each mailbox is waiting on: %w", err)
 	}
@@ -168,8 +176,10 @@ func captureMailboxHealth(
 			name                   *string
 			contacts, threads      int
 			oldestContact, oldestT *time.Time
+			unreadFrom, unreadTo   *time.Time
 		)
-		if err := rows.Scan(&userID, &name, &contacts, &oldestContact, &threads, &oldestT); err != nil {
+		if err := rows.Scan(&userID, &name, &contacts, &oldestContact, &threads, &oldestT,
+			&unreadFrom, &unreadTo); err != nil {
 			return nil, err
 		}
 		row := crmcontracts.CaptureMailboxHealth{
@@ -180,6 +190,7 @@ func captureMailboxHealth(
 			OldestThreadAgeSeconds:   ageSeconds(now, oldestT),
 		}
 		row.DisplayName = name
+		row.UnreadPeriod = unreadPeriodOf(unreadFrom, unreadTo)
 		out = append(out, row)
 	}
 	return out, rows.Err()
@@ -218,6 +229,19 @@ func captureClassifierHealth(
 // nothing is. Absent and zero are different answers — one is an empty queue,
 // the other a queue that just filled — and a page reading zero as empty would
 // report the busiest moment as the calmest.
+// unreadPeriodOf is the gap a mailbox was never read for, or nil when there is
+// none to report.
+//
+// Both ends or neither, which the column CHECK holds. Read for it anyway. A
+// half period on the wire is one a client cannot choose a backfill window
+// from, and this is where that shape would reach it.
+func unreadPeriodOf(from, to *time.Time) *crmcontracts.CaptureUnreadPeriod {
+	if from == nil || to == nil {
+		return nil
+	}
+	return &crmcontracts.CaptureUnreadPeriod{From: from.UTC(), To: to.UTC()}
+}
+
 func ageSeconds(now time.Time, since *time.Time) *int {
 	if since == nil {
 		return nil

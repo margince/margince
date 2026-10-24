@@ -59,7 +59,7 @@ To add a new contact in Margince, open **Contacts** in the sidebar and choose **
 2. If you like, fill **First name**, **Last name**, **Title** and **LinkedIn**.
 3. Choose **Add email** for each address and set its **Type** (Work, Personal or Other); choose **Add phone** for each number.
 4. Fill any custom fields, then choose **Create**. It stays turned off until the full name is filled.
-If the contact is already in Margince, **View existing record** opens it instead.
+If the contact is already in Margince, **View existing record** opens it instead. An email that belongs to a sending system, such as `noreply@` or `receipts@`, is refused.
 Also called: create a contact, add someone to the CRM, new customer contact.
 
 ### How do I add a contact quickly, or import contacts from vCards?
@@ -98,11 +98,9 @@ Pick a company that is already there, or enter its **Confirmed company website**
 
 Also called: unresolved employer, imported job history.
 
-Emails have the types **work, personal or other**; phones **work, mobile, home or other**. One number may show two times under two types, such as a main number that is both work and mobile. Editing the list keeps the two entries apart.
+Emails have the types **work, personal or other**; phones **work, mobile, home or other**. One number may show two times under two types, such as a main number that is both work and mobile. Editing the list keeps the two entries apart. The contact header says **who can see this contact**: only its owner, or everyone in the company; a company header says the same. See [Seats, roles and who can see what](seats-roles-and-access.md).
 
-The contact header says **who can see this contact**: only its owner, or everyone in the company; a company header says the same. See [Seats, roles and who can see what](seats-roles-and-access.md).
-
-A contact's job title shows in two places. The title on the contact record is a copy, there to save you time. The one that counts is on the job link with the company. A contact can have one current main employer, or none.
+A contact's job title shows in two places. The title on the contact record is a copy, there to save you time. The one that counts is on the job link with the company. A contact can have one current main employer, or none. Margince reads a contact's job title from the signature in their newest mail, and from up to two older mails when that one states none. An older mail only fills an empty title, and mail Margince could not read in full or newsletter mail is never used.
 
 A contact also holds an owner, a consent record for each purpose, a relationship strength and when they were last active. If they started as a lead, it holds a link back to that lead.
 
@@ -117,8 +115,9 @@ Anyone the merged-away contact was shared with can open the contact you kept. Of
 Also called: combine, deduplicate, remove a duplicate.
 
 ### How do I call a contact?
-To call a contact from Margince, open the contact and click the phone number in its header or **Details** panel. It opens your phone or calling app. Margince does not make or record calls itself.
-The **Call** button in the contact header opens the **History** tab, so you can log the call after with **Log activity** → **Call**.
+To call a contact from Margince, press **Call** in its header; it dials the main number, or else the first, in your phone app. Click any number in **Details** to dial that one. Margince does not make or record calls, but it opens **Log activity** on **Call** for that contact; close it and nothing is recorded. A logged call's **Call**, the **Call** in a task and the **First** card on **Home** do the same. A seat that may not log activity only dials. A call logged this way is not linked to the task and does not complete it.
+
+**Call** is refused on an archived contact, which shows no numbers; with no number at all, "No phone number on this contact." shows. Only a number that starts with + shows **WhatsApp**, **Telegram** and **Zalo** links, in the header **Phone** field and in **Details**. Each sends the number to the app's website and opens a chat, where you start the call; it does not open **Log activity**. Telegram finds the contact only if the contact allows it. An administrator can turn each link off in [Settings](settings.md).
 Also called: phone a contact, click to call, dial.
 
 ### Can I add a photo to a contact, or change a company's logo?
@@ -132,7 +131,7 @@ A company needs a display name and a source.
 ### How do I add a company?
 To add a company (a new customer, client or account) in Margince, open **Companies** in the sidebar and choose **New company**.
 1. Enter the **Company name** (required).
-2. If you like, fill **Legal name**, **Industry** and **Company size**.
+2. If you like, fill **Legal name**, **Industry** and **Company size**. You pick **Industry** from a list.
 3. Choose **Add domain** for each domain; a domain row you add must be filled.
 4. Fill any custom fields, then choose **Create**.
 If the company is already in Margince, **View existing record** opens it instead. The website address comes from the main domain, so there is no website box.
@@ -143,8 +142,7 @@ To edit a company in Margince, open it and click the value to change in its **De
 1. If the panel is hidden, choose **Show details**.
 2. Click a value, change it, and press Enter or pick from the list. `Esc` stops.
 
-
-The fields are **Company name**, **Legal name**, **Industry**, **Company size**, **Owner**, **Lifecycle** and **Relationship type**. Then come **LinkedIn URL**, **Address**, **Domains**, **Parent company**, **Description**, custom fields, and **Register / VAT ID** under **Registration**. The website follows the main domain.
+The fields are **Company name**, **Legal name**, **Industry**, **Company size**, **Owner**, **Lifecycle** and **Relationship type**. Then come **LinkedIn URL**, **Address**, **Domains**, **Parent company**, **Description**, custom fields, and **Register / VAT ID** under **Registration**. The website follows the main domain. **Industry** is a fixed list, and an import's text that names none of it goes into the **Description**.
 Also called: rename a company, update an account.
 
 ### How do I check a company's VAT number?
@@ -198,7 +196,7 @@ To merge two duplicate companies in Margince, open the company you want to remov
 3. Choose **Merge**. Margince opens the company you kept.
 The company you merged away is archived, not deleted. You cannot merge an archived company.
 
-Anyone the merged-away company was shared with can open the company you kept. Of their two shares, the higher access stays.
+Anyone the merged-away company was shared with can open the company you kept. Of their two shares, the higher access stays. Margince lists two companies as a possible duplicate when one has a domain under the other's, such as `cloud.example.com` under `example.com`. It never merges them by itself.
 Also called: combine companies, deduplicate accounts.
 
 ### How do I stop a company coming back from email?
@@ -319,9 +317,8 @@ Not every entry can be put back, and the history says which and why before you p
   so you can look at what happened in between and decide.
 - **The record was archived.** A change cannot be put back on an archived
   record; bring a contact, company or deal back first with **Undo** on its archive entry.
-- **You cannot make that change by hand.** Some entries record changes no edit
-  can make, such as clearing a field that must not be empty. They show as
-  history only.
+- **You cannot make that change by hand.** Some entries record changes no edit can make, such as clearing a field that must not be empty. They show as history only.
+- **The earlier text held a password.** History keeps a password, an access key or a token only masked. A note still holds the text you typed, so putting the masked text back would replace it, and the change is refused. An email is always stored masked, so an email change can still be put back.
 
 If someone else edits the record between your reading the screen and pressing the button, the change is refused and nothing is written. Read the reason, look at the record again, and decide from what is there now.
 

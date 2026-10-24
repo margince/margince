@@ -59,6 +59,7 @@ const (
 	filterIndustry         = "industry"
 	filterSizeBand         = "size_band"
 	filterSource           = "source"
+	filterOrigin           = "origin"
 	filterSLAState         = "sla_state"
 	filterListID           = "list_id"
 	filterIncludeAnchor    = "include_anchor"
@@ -133,6 +134,7 @@ var leadListFilters = storekit.FilterSet[ListLeadsInput]{
 	filterCapturedByKind:  storekit.FilterWord(func(in *ListLeadsInput, v *string) { in.CapturedByKind = v }),
 	filterAiWritten:       storekit.FilterFlag(func(in *ListLeadsInput, v *bool) { in.AiWritten = v }),
 	filterSource:          storekit.FilterWord(func(in *ListLeadsInput, v *string) { in.Source = v }),
+	filterOrigin:          storekit.FilterWord(func(in *ListLeadsInput, v *string) { in.Origin = v }),
 	filterSLAState: storekit.FilterWord(func(in *ListLeadsInput, v *string) {
 		state := crmcontracts.ListLeadsParamsSlaState(*v)
 		in.SLAState = &state

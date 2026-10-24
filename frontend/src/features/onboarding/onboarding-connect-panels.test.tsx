@@ -19,11 +19,11 @@ import {
 } from "./onboarding-connect-panels";
 
 // The onboarding IMAP panel (G-10): the wizard's connect step for the one
-// credential provider must post through the typed client — the nested
-// `{imap:{...}}` shape a STANDING connect expects (Task 1) — never a raw
-// fetch to the retired transient endpoint. A standing connect answers
-// BEFORE any mail is read, so the panel must never fabricate a capture
-// count it was never given.
+// credential provider. It must post through the typed client, with the nested
+// `{imap:{...}}` shape a standing connect expects. It must never use a raw
+// fetch to the retired transient endpoint. A standing connect answers before
+// any mail is read, so the panel hands back to the step. The step's account
+// panel shows the mailbox from the roster.
 
 function render(ui: ReactNode, client?: QueryClient) {
   return rtlRender(
@@ -84,15 +84,10 @@ describe("ImapConnectPanel", () => {
       },
     });
 
-    // The panel never claims a one-shot capture summary it was never given:
-    // a standing connect answers before any mail is read.
-    expect(await screen.findByText(/mailbox connected/i)).toBeInTheDocument();
-    expect(screen.queryByText(/captured/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/contacts/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/skipped/i)).not.toBeInTheDocument();
+    await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1));
   });
 
-  it("closes (without claiming a connection) once the mailbox is live", async () => {
+  it("hands back to the step once the mailbox is live", async () => {
     installFetchStub({
       "POST /connectors/imap/connect": () =>
         jsonResponse({
@@ -110,9 +105,7 @@ describe("ImapConnectPanel", () => {
     await userEvent.click(
       screen.getByRole("button", { name: /test and connect/i }),
     );
-    await screen.findByText(/mailbox connected/i);
-    await userEvent.click(screen.getByRole("button", { name: /^done$/i }));
-    expect(onDone).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1));
   });
 
   it("surfaces a rejected IMAP login without echoing the host back", async () => {
@@ -172,35 +165,9 @@ describe("ImapConnectPanel", () => {
     await userEvent.click(
       screen.getByRole("button", { name: /test and connect/i }),
     );
-    await screen.findByText(/mailbox connected/i);
-    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["connectors"] });
-  });
-
-  it("never offers a history read for IMAP, which has no backfiller behind it", async () => {
-    const backreadCalls: string[] = [];
-    installFetchStub({
-      "POST /connectors/imap/connect": () =>
-        jsonResponse({
-          connection: {
-            id: "c1",
-            provider: "imap",
-            status: "connected",
-            scopes: [],
-          },
-        }),
-      "POST /connectors/imap/backfill/preview": () => {
-        backreadCalls.push("preview");
-        return jsonResponse({ code: "connector_unsupported" }, 422);
-      },
-    });
-    render(<ImapConnectPanel onDone={vi.fn()} onDismiss={() => {}} />);
-    await fillValidForm();
-    await userEvent.click(
-      screen.getByRole("button", { name: /test and connect/i }),
+    await waitFor(() =>
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["connectors"] }),
     );
-    await screen.findByText(/mailbox connected/i);
-    expect(screen.queryByText(/How far back should I read/)).toBeNull();
-    expect(backreadCalls).toEqual([]);
   });
 
   // "Not now" closes THIS dialog without deciding anything — it never
@@ -247,7 +214,8 @@ describe("ImapConnectPanel", () => {
         }),
     });
     const onDismiss = vi.fn();
-    render(<ImapConnectPanel onDone={vi.fn()} onDismiss={onDismiss} />);
+    const onDone = vi.fn();
+    render(<ImapConnectPanel onDone={onDone} onDismiss={onDismiss} />);
     await fillValidForm();
     await userEvent.click(
       screen.getByRole("button", { name: /test and connect/i }),
@@ -258,8 +226,8 @@ describe("ImapConnectPanel", () => {
     await userEvent.click(screen.getByRole("button", { name: "Not now" }));
     expect(onDismiss).not.toHaveBeenCalled();
 
-    // A success that lands after the (blocked) dismiss attempt replaces the
-    // form with the connected result — "Not now" has nothing left to dismiss.
+    // A success that lands after the (blocked) dismiss attempt hands back to
+    // the step, never to the dismissal.
     deferred.resolve?.(
       jsonResponse({
         connection: {
@@ -270,7 +238,7 @@ describe("ImapConnectPanel", () => {
         },
       }),
     );
-    await screen.findByText(/mailbox connected/i);
+    await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1));
     expect(onDismiss).not.toHaveBeenCalled();
   });
 
@@ -311,82 +279,19 @@ describe("ImapConnectPanel", () => {
         },
       }),
     );
-    await screen.findByText(/mailbox connected/i);
-    expect(pendingChanges.at(-1)).toBe(false);
+    await waitFor(() => expect(pendingChanges.at(-1)).toBe(false));
   });
 });
 
-// The confirmed OAuth connection hands to the backread step: the grant is not
-// the history read, and the roster row the panel already holds carries the run,
-// so a read in progress shows with no second request and no second start.
-describe("OAuthReturnPanel handing off to the backread", () => {
-  const rosterWith = (backfill?: Record<string, unknown>) => () =>
-    jsonResponse({
-      data: [
-        {
-          id: "g1",
-          provider: "gmail",
-          status: "connected",
-          scopes: ["read"],
-          ...(backfill ? { backfill } : {}),
-        },
-      ],
-    });
-
-  it("seeds a running read from the roster row rather than re-reading it", async () => {
-    const statusReads: string[] = [];
-    installFetchStub({
-      "GET /connectors": rosterWith({
-        state: "running",
-        estimated_messages: 400,
-        counts: { messages_scanned: 120 },
-      }),
-      "GET /connectors/gmail/backfill": () => {
-        statusReads.push("gmail");
-        return jsonResponse({ state: "running" });
-      },
-    });
-    render(<OAuthReturnPanel outcome="ok" onDone={vi.fn()} />);
-
-    expect(
-      await screen.findByRole("heading", { name: "Importing mailbox history" }),
-    ).toBeInTheDocument();
-    expect(screen.getByText("120 of about 400 messages")).toBeInTheDocument();
-    expect(statusReads).toEqual([]);
-    // The backread owns the exit while it runs; a second "enter" button beside
-    // it would finish the step without the read's own leave copy.
-    expect(screen.queryByRole("button", { name: /^done$/i })).toBeNull();
-  });
-
-  it("asks for the window when the mailbox has no read yet", async () => {
-    installFetchStub({
-      "GET /connectors": rosterWith({ state: "none" }),
-      "POST /connectors/gmail/backfill/preview": () =>
-        jsonResponse({
-          window: "6m",
-          estimated_messages: 4820,
-          computed_at: "2026-07-31T09:00:00Z",
-        }),
-    });
-    render(<OAuthReturnPanel outcome="ok" onDone={vi.fn()} />);
-
-    expect(
-      await screen.findByRole("heading", {
-        name: "Import period",
-      }),
-    ).toBeInTheDocument();
-    expect(
-      await screen.findByText("About 4,820 messages in this period."),
-    ).toBeInTheDocument();
-  });
-
+// A granted mail leg is confirmed from the roster. The exit back to the ask is
+// offered only once the roster has answered that nothing came back.
+describe("OAuthReturnPanel confirming a granted mailbox", () => {
   it("keeps the plain exit when no connection could be confirmed", async () => {
     installFetchStub({ "GET /connectors": () => jsonResponse({ data: [] }) });
     render(<OAuthReturnPanel outcome="ok" onDone={vi.fn()} />);
 
     await screen.findByText("The connection could not be confirmed.");
     expect(screen.getByRole("button", { name: /^done$/i })).toBeInTheDocument();
-    expect(screen.queryByText(/How far back should I read/)).toBeNull();
   });
 
   // A roster that never answered is not evidence of anything. `live` is

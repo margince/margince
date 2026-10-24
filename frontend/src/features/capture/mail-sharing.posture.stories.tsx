@@ -2,16 +2,16 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { MailSharingPlate } from "../../components/mail-sharing";
 import {
   installFetchStub,
   jsonResponse,
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
-import { MailSharingPostureRow } from "../settings/mail-sharing";
 
-// The sharing rule as stated on a member's own Connections page. The answer is
-// a sentence under the row's name. A reader who may change it gets the link.
+// The sharing rule as stated on a member's own Connections page, as the plate
+// under their accounts. A reader who may change it gets the link.
 function story(mail_sharing: boolean, allow: Parameters<typeof meRoute>[0]) {
   return () => {
     installFetchStub({
@@ -21,7 +21,7 @@ function story(mail_sharing: boolean, allow: Parameters<typeof meRoute>[0]) {
     });
     return (
       <StoryProviders>
-        <MailSharingPostureRow />
+        <MailSharingPlate />
       </StoryProviders>
     );
   };
@@ -30,12 +30,12 @@ function story(mail_sharing: boolean, allow: Parameters<typeof meRoute>[0]) {
 const MANAGER = { capture_settings: ["read", "update"] } as const;
 const READER = { capture_settings: ["read"] } as const;
 
-const meta: Meta<typeof MailSharingPostureRow> = {
+const meta: Meta<typeof MailSharingPlate> = {
   title: "Settings/You/Connections/Email sharing",
-  component: MailSharingPostureRow,
+  component: MailSharingPlate,
 };
 export default meta;
-type Story = StoryObj<typeof MailSharingPostureRow>;
+type Story = StoryObj<typeof MailSharingPlate>;
 
 export const SharedForAManager: Story = { render: story(true, MANAGER) };
 

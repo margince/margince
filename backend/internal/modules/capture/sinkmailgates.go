@@ -47,7 +47,7 @@ func (s *Sink) internalOnlyTx(ctx context.Context, tx pgx.Tx, rec connector.Norm
 	if len(rec.Addresses) == 0 {
 		return false, nil
 	}
-	own, err := trustedOwnDomainsTx(ctx, tx)
+	own, err := TrustedOwnDomainsTx(ctx, tx)
 	if err != nil {
 		return false, err
 	}

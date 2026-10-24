@@ -28,6 +28,7 @@ function call(kind: AiCall["kind"], provider: string, served: string): AiCall {
     degraded: false,
     has_payload: false,
     decision_attempted: false,
+    outcome: "answered",
   };
 }
 

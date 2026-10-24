@@ -28,13 +28,16 @@ type memberAction string
 const (
 	actionChangeRole        memberAction = "change_role"
 	actionIssuePasswordLink memberAction = "issue_password_link"
+	actionRemoveMFA         memberAction = "remove_mfa"
 	actionDeactivate        memberAction = "deactivate"
 	actionReactivate        memberAction = "reactivate"
+	actionHandOver          memberAction = "hand_over"
 )
 
 // verb is the user_admin verb the action's endpoint takes. Turning a seat off
-// and back on are one authority over one thing; a password link is a
-// credential for somebody else's account, so it rides the role-change verb.
+// and back on are one authority over one thing. A password link is a
+// credential for somebody else's account. Removing a second factor weakens
+// one. So both ride the role-change verb.
 // The endpoints spell it as a literal, which the grant-reachability scan reads;
 // TestTheRosterOffersOnlyTheVerbsTheCallerHolds holds this to them.
 func (a memberAction) verb() principal.Action {
@@ -52,6 +55,7 @@ type memberTarget struct {
 	grants            seatGrants
 	holdsArchivedRole bool
 	soleAdmin         bool
+	hasFactor         bool
 }
 
 // allowedMemberActions answers, per member, the verbs this caller would be
@@ -65,13 +69,19 @@ func (s *Service) allowedMemberActions(
 	if err != nil {
 		return nil, err
 	}
+	factors, err := confirmedFactorHolders(ctx, tx, rowIDs(rows))
+	if err != nil {
+		return nil, err
+	}
 	seatLeft, err := s.fullSeatLeft(ctx, tx)
 	if err != nil {
 		return nil, err
 	}
 	out := make(map[ids.UUID][]memberAction, len(rows))
 	for _, row := range rows {
-		target := memberTarget{row: row, grants: grants[row.ID], holdsArchivedRole: archived[row.ID]}
+		target := memberTarget{
+			row: row, grants: grants[row.ID], holdsArchivedRole: archived[row.ID], hasFactor: factors[row.ID],
+		}
 		// soleActiveAdmin answers false for anybody not holding admin, so only
 		// those rows spend the query.
 		if slices.Contains(row.Roles, roleAdmin) {
@@ -84,7 +94,7 @@ func (s *Service) allowedMemberActions(
 	return out, nil
 }
 
-// memberActionsOn is the four verbs' admission over one target, in the
+// memberActionsOn is the six verbs' admission over one target, in the
 // contract's order.
 func memberActionsOn(ctx context.Context, actor Identity, target memberTarget, seatLeft bool) []memberAction {
 	status, userID := target.row.Status, ids.UserID{UUID: target.row.ID}
@@ -96,6 +106,8 @@ func memberActionsOn(ctx context.Context, actor Identity, target memberTarget, s
 		actionIssuePasswordLink: callerOutranks(actor, target.grants, reachTakeover) == nil &&
 			!target.holdsArchivedRole &&
 			refusePasswordLinkTarget(status, target.row.IsAgent) == nil,
+		actionRemoveMFA: target.hasFactor && userID != actor.UserID && !target.holdsArchivedRole &&
+			callerOutranks(actor, target.grants, reachTakeover) == nil,
 		actionDeactivate: callerOutranks(actor, target.grants, reachDenial) == nil &&
 			!alreadyDeactivated(status) &&
 			!target.soleAdmin,
@@ -103,9 +115,13 @@ func memberActionsOn(ctx context.Context, actor Identity, target memberTarget, s
 			!target.holdsArchivedRole &&
 			refuseUnlessDeactivated(status) == nil &&
 			(target.row.SeatType != principal.SeatFull || seatLeft),
+		// AdmitMemberHandover is the handover's gate; this is its offer.
+		actionHandOver: !target.row.IsAgent && callerOutranks(actor, target.grants, reachDenial) == nil,
 	}
 	out := []memberAction{}
-	for _, action := range []memberAction{actionChangeRole, actionIssuePasswordLink, actionDeactivate, actionReactivate} {
+	for _, action := range []memberAction{
+		actionChangeRole, actionIssuePasswordLink, actionRemoveMFA, actionDeactivate, actionReactivate, actionHandOver,
+	} {
 		if admitted[action] && callerMay(ctx, actor, action) {
 			out = append(out, action)
 		}

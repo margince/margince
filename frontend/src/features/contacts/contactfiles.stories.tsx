@@ -34,6 +34,7 @@ const files: Attachment[] = [
     filename: "Lebenslauf.pdf",
     title: "CV — updated",
     category: "other",
+    doc_state: "current",
     created_at: "2026-08-01T09:00:00Z",
     entity_type: "contact",
     entity_id: "p-1",
@@ -69,7 +70,7 @@ function Files({ data }: Readonly<{ data: Attachment[] }>) {
   });
   return (
     <StoryProviders>
-      <div style={{ maxWidth: 640 }}>
+      <div style={{ maxWidth: 840 }}>
         <ContactFilesTab contactId="p-1" />
       </div>
     </StoryProviders>

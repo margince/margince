@@ -28,6 +28,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/briefevidence"
 	"github.com/margince/margince/backend/internal/compose/claims"
+	"github.com/margince/margince/backend/internal/compose/contact360"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -51,7 +52,7 @@ type (
 // composite read is injected rather than imported so this package composes one
 // seam instead of re-deriving a dozen gated reads.
 type Assembler interface {
-	Assemble(ctx context.Context, contactID ids.ContactID) (crmcontracts.Contact360, error)
+	AssembleScoped(ctx context.Context, contactID ids.ContactID, opts contact360.AssembleOptions) (crmcontracts.Contact360, error)
 }
 
 // Service writes and caches the brief.
@@ -125,7 +126,7 @@ func (s *Service) Get(ctx context.Context, contactID ids.ContactID, force bool) 
 	// The gates that matter run HERE, in the caller's own composite read: a
 	// brief can only be written from what this caller may see, and a contact
 	// they cannot read refuses before any cache is consulted.
-	view, err := s.view.Assemble(ctx, contactID)
+	view, err := s.view.AssembleScoped(ctx, contactID, contact360.AssembleOptions{WrittenByHumanOnly: true})
 	if err != nil {
 		return crmcontracts.ContactBrief{}, err
 	}

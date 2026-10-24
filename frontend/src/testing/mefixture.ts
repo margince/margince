@@ -96,6 +96,7 @@ export function meFixture({
     non_production: false,
     data_reset_available: false,
     admin_password_link: false,
+    confirm_requests_sendable: true,
     authorization: { seat_type: seat, objects, row_scope: rowScope },
     settings_availability:
       settingsAvailability === null

@@ -31,10 +31,14 @@ package integration
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"net/http"
+	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -235,6 +239,97 @@ func TestTheSettingsPatchStillChangesSignInProvidersUntilItIsSplit(t *testing.T)
 		t.Fatalf("installation_settings.update can no longer change the sign-in providers "+
 			"(%v) — if the write was split onto authentication_policy on purpose, delete "+
 			"this test and the note in the endpoint description; the split is then complete", err)
+	}
+}
+
+// signInFixture is the composed app with Google mounted, signed in as the
+// harness admin. A pair of empty strings mounts the routes with no client.
+func signInFixture(t *testing.T, clientID, clientSecret string) *apptest.AppEnv {
+	t.Helper()
+	e := apptest.SetupAppWithOptions(t, compose.WithGoogleSignIn(compose.GoogleSignInConfig{
+		ClientID: clientID, ClientSecret: clientSecret, StateKey: "0123456789012345678901234567890123",
+		RedirectBase: "https://app.example.test", PostLoginURL: "/", FailureURL: "/#/login?oidc=failed",
+	}))
+	e.BootstrapWorkspace(t)
+	return e
+}
+
+// signInScreen reads sign_in_screen off the policy endpoint. Decoded from raw
+// bytes because a nil slice marshals as null, which []string cannot tell from [].
+func signInScreen(t *testing.T, e *apptest.AppEnv) (json.RawMessage, []string) {
+	t.Helper()
+	var body map[string]json.RawMessage
+	if code := e.Call(t, http.MethodGet, "/v1/installation/authentication-policy", nil, nil, &body); code != http.StatusOK {
+		t.Fatalf("GET /installation/authentication-policy = %d, want 200", code)
+	}
+	var keys []string
+	if err := json.Unmarshal(body["sign_in_screen"], &keys); err != nil {
+		t.Fatalf("sign_in_screen %q: %v", body["sign_in_screen"], err)
+	}
+	return body["sign_in_screen"], keys
+}
+
+// loginScreenKeys is the anonymous probe's answer, the one sign_in_screen mirrors.
+func loginScreenKeys(t *testing.T, e *apptest.AppEnv) []string {
+	t.Helper()
+	var caps struct {
+		OidcProviders []struct{ Key string } `json:"oidc_providers"`
+	}
+	if code := e.Call(t, http.MethodGet, "/v1/auth/capabilities", nil, nil, &caps); code != http.StatusOK {
+		t.Fatalf("GET /auth/capabilities = %d", code)
+	}
+	keys := make([]string, 0, len(caps.OidcProviders))
+	for _, p := range caps.OidcProviders {
+		keys = append(keys, p.Key)
+	}
+	return keys
+}
+
+// Chosen is not drawn: a provider the installation offers with no client yet is
+// listed in sign_in_providers and absent from sign_in_screen. It is spelled []
+// rather than null, so the admin screen can say it is waiting for its app.
+func TestTheSignInScreenLeavesOutAChosenProviderWithNoClient(t *testing.T) {
+	e := signInFixture(t, "", "")
+
+	raw, _ := signInScreen(t, e)
+	if string(raw) != "[]" {
+		t.Fatalf("sign_in_screen = %s, want [] while no client exists", raw)
+	}
+	var policy struct {
+		SignInProviders []struct {
+			Key     string `json:"key"`
+			Enabled bool   `json:"enabled"`
+		} `json:"sign_in_providers"`
+	}
+	if code := e.Call(t, http.MethodGet, "/v1/installation/authentication-policy", nil, nil, &policy); code != http.StatusOK {
+		t.Fatalf("GET /installation/authentication-policy = %d", code)
+	}
+	if len(policy.SignInProviders) != 1 || policy.SignInProviders[0].Key != "google" || !policy.SignInProviders[0].Enabled {
+		t.Fatalf("sign_in_providers = %+v, want google chosen", policy.SignInProviders)
+	}
+}
+
+// The policy read and the login screen give one answer, before and after the
+// admin switches the provider off.
+func TestTheSignInScreenIsTheLoginScreensAnswer(t *testing.T) {
+	e := signInFixture(t, "gcid", "gsecret")
+
+	if _, keys := signInScreen(t, e); !slices.Equal(keys, []string{"google"}) {
+		t.Fatalf("sign_in_screen = %v, want [google]", keys)
+	}
+	if keys := loginScreenKeys(t, e); !slices.Equal(keys, []string{"google"}) {
+		t.Fatalf("oidc_providers = %v, want [google]", keys)
+	}
+
+	if code := e.Call(t, http.MethodPatch, "/v1/installation/settings",
+		map[string]any{"enabled_oidc_providers": []string{}}, nil, nil); code != http.StatusOK {
+		t.Fatalf("switching google off = %d", code)
+	}
+	if raw, _ := signInScreen(t, e); string(raw) != "[]" {
+		t.Errorf("sign_in_screen = %s after google was switched off, want []", raw)
+	}
+	if keys := loginScreenKeys(t, e); len(keys) != 0 {
+		t.Errorf("oidc_providers = %v after google was switched off, want none", keys)
 	}
 }
 

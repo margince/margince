@@ -56,6 +56,7 @@ type Roster = { entries: RosterEntry[]; partial: boolean };
 async function readRosterPage(
   kind: RosterKind,
   cursor: string | null,
+  everyone: boolean,
 ): Promise<{ entries: RosterEntry[]; next: string | null }> {
   // The two endpoints answer differently-typed rows, so each arm reads its own
   // — a shared call would have to assert one shape onto the other.
@@ -66,6 +67,7 @@ async function readRosterPage(
           query: {
             limit: ROSTER_PAGE_SIZE,
             ...(cursor ? { cursor } : {}),
+            ...(everyone ? { include_inactive: true } : {}),
           },
         },
       }),
@@ -82,7 +84,7 @@ async function readRosterPage(
   return { entries: data.data, next: data.page.next_cursor ?? null };
 }
 
-async function walkRoster(kind: RosterKind): Promise<Roster> {
+async function walkRoster(kind: RosterKind, everyone = false): Promise<Roster> {
   const entries: RosterEntry[] = [];
   let cursor = FIRST_PAGE;
   for (let page = 0; page < ROSTER_WALK_PAGES; page += 1) {
@@ -90,7 +92,7 @@ async function walkRoster(kind: RosterKind): Promise<Roster> {
     // inside `readRosterPage`), so react-query holds the read as an error.
     // Caught and dropped here it would come back as a SHORT list that reads as
     // complete — the one shape a caller cannot tell from a small workspace.
-    const answered = await readRosterPage(kind, cursor);
+    const answered = await readRosterPage(kind, cursor, everyone);
     entries.push(...answered.entries);
     // The CURSOR is what the walk can continue with, and `has_more` without one
     // is a list nothing can read the rest of — so both ends of the walk stop
@@ -119,6 +121,23 @@ function rosterQueryOptions(kind: RosterKind, enabled: boolean) {
 // entries AND whether they are all of them; one observer rather than two.
 export function useRosterWalk(kind: RosterKind, enabled: boolean) {
   return useQuery(rosterQueryOptions(kind, enabled));
+}
+
+/**
+ * Every member a list can be FILTERED by, including those who left.
+ *
+ * A colleague who left still owns their records until someone takes them over,
+ * and this is how a filter finds them. The server widens the walk for a member
+ * administrator only and serves everyone else the live roster. The cache entry
+ * sits under the `users` prefix, so a roster refresh reaches it too.
+ */
+export function useEveryMember(enabled: boolean) {
+  return useQuery({
+    queryKey: ["users", "everyone"],
+    queryFn: () => walkRoster("user", true),
+    enabled,
+    staleTime: 60_000,
+  });
 }
 
 /**

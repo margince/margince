@@ -1,13 +1,86 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { components } from "../api/schema";
 import { Field } from "../design-system/atoms";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
 import { useRoster, useRosterPartial, useRosterPartialHint } from "./entityref";
+import { useEveryMember } from "./roster";
 
 /** A workspace user as a picker option. */
 export type UserOption = { value: string; label: string };
+
+type RosterEntry = NonNullable<ReturnType<typeof useRoster>["data"]>[number];
+type MemberStatus = components["schemas"]["User"]["status"];
+
+/**
+ * Whether the server says the reader may make this entry a record's owner.
+ *
+ * The rule is the server's and depends on the reader's own write scope. So the
+ * roster answers it per row (`assignable`) and the client does not re-derive it.
+ * An entry without the answer (an older server) is offered, and the write
+ * decides.
+ */
+export function mayOwnRecords(entry: RosterEntry): boolean {
+  if (!("display_name" in entry) || entry.is_agent) {
+    return false;
+  }
+  return entry.assignable !== false;
+}
+
+/**
+ * The colleagues the reader may make a record's owner: an active human seat
+ * that can write, inside the reader's own write scope. Every owner picker reads
+ * this, so a picker never offers somebody the owner change then refuses.
+ */
+export function useRecordOwnerOptions(enabled = true): UserOption[] {
+  const roster = useRoster("user", enabled);
+  return (roster.data ?? []).filter(mayOwnRecords).map((entry) => ({
+    value: entry.id,
+    label: "display_name" in entry ? entry.display_name : entry.id,
+  }));
+}
+
+const STATUS_SUFFIX: Partial<
+  Record<
+    MemberStatus,
+    "list.ownerDeactivated" | "list.ownerSuspended" | "list.ownerInvited"
+  >
+> = {
+  deactivated: "list.ownerDeactivated",
+  suspended: "list.ownerSuspended",
+  invited: "list.ownerInvited",
+};
+
+/**
+ * Every member a list can be filtered by owner, those who left included and
+ * named as such. That is how a former colleague's records are found to hand on.
+ */
+export function useMemberFilterOptions(enabled: boolean) {
+  const t = useT();
+  const walk = useEveryMember(enabled);
+  const options: UserOption[] = (walk.data?.entries ?? []).flatMap((entry) => {
+    if (!("display_name" in entry) || entry.is_agent) {
+      return [];
+    }
+    const suffix = STATUS_SUFFIX[entry.status];
+    return [
+      {
+        value: entry.id,
+        label: suffix
+          ? t(suffix, { name: entry.display_name })
+          : entry.display_name,
+      },
+    ];
+  });
+  return {
+    options,
+    loading: walk.isPending,
+    failed: walk.isError,
+    partial: walk.data?.partial === true,
+  };
+}
 
 /**
  * The workspace's contacts as assignment options — everyone the roster carries

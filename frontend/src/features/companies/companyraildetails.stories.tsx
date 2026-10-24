@@ -8,15 +8,13 @@ import {
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
-import { DetailsGrid } from "./companyraildetails";
+import { CompanyRail } from "./companyrail";
 
-// The rail's own Details grid: every known field draws a row whether or not
-// the account carries a value (the docblock in companyraildetails.tsx states
-// why), and writability gates the verbs, not the values — the archived story
-// below is the only place a reader sees that second half render.
+// The company's details under its head: set fields as rows, every empty one
+// folded behind one link, and writability gating the verbs, not the values.
 
 const meta: Meta = {
-  title: "Records/Company 360/Rail/Details",
+  title: "Records/Company 360/Details",
   parameters: { layout: "padded" },
 };
 export default meta;
@@ -37,7 +35,7 @@ const company: Company = {
   legal_name: "Brandt Automotive GmbH",
   lifecycle: "customer",
   owner_id: "u-1",
-  industry: "Automotive",
+  industry: "automotive",
   size_band: "51-200",
   linkedin_url: "https://linkedin.com/company/brandt",
   address: {
@@ -110,7 +108,7 @@ function Details({
   return (
     <StoryProviders>
       <div style={{ maxWidth: 340 }}>
-        <DetailsGrid company={company} />
+        <CompanyRail company={company} loading={false} />
       </div>
     </StoryProviders>
   );
@@ -120,12 +118,8 @@ export const Editable: Story = {
   render: () => <Details company={company} />,
 };
 
-// The address a crawled record actually has: none of it. A company publishes a
-// team page, not its registered address, so the six parts are the one block on
-// this panel that is reliably empty — inline they opened it with six "Add …"
-// invitations and pushed the account's own facts down. Collapsed, they cost one
-// line that says what pressing it is for ("Add an address"), and the facts
-// above it are what the panel opens with.
+// The address a crawled record actually has: none of it. The row folds behind
+// "Show N empty fields" with the other blanks.
 export const AddressAbsent: Story = {
   render: () => (
     <Details
@@ -144,11 +138,7 @@ export const AddressAbsent: Story = {
   ),
 };
 
-// Any part set opens the block, so an address in progress reads exactly as a
-// complete one does — the collapse is for the empty case, not for a record
-// somebody has started. The four parts still missing keep their own
-// invitations, inside the open block where a reader has asked for them.
-// (Editable above is the same state with all six filled.)
+// Any part set shows the row, as "City, CC".
 export const AddressPartlyFilled: Story = {
   render: () => (
     <Details
@@ -166,20 +156,8 @@ export const Archived: Story = {
   ),
 };
 
-// The grid's own reason for existing (its docblock: "an absent field is a
-// fact about the record"), and the one thing Editable above never shows: the
-// account with nobody's hand in it yet. Every scalar text row falls back to
-// InlineText's own `data-empty="true"` invitation button (legal name,
-// industry, LinkedIn, description, every address part, the domain), and
-// SizeBandRow's InlineChoice draws its own version of the same idea: no
-// `data-empty` attribute of its own, just `render(value)` falling through to
-// `field.unset` as the button's own label, chevron included, because the
-// button is drawn whenever `canEdit` is true regardless of what `value` is.
-// The legal identity nobody has stated: no imprint was found, so the VAT and
-// registry-address rows draw their own invitations. This is the state the two
-// rows exist for — before them a rep who knew the number had nowhere to put it,
-// and the VAT consultation a written number queues was unreachable for exactly
-// the companies a contact would want to check.
+// The legal identity nobody has stated: the VAT row invites a number, and the
+// registered address waits behind the empty-fields link.
 export const LegalIdentityUnstated: Story = {
   render: () => <Details company={company} profileFields={[]} />,
 };

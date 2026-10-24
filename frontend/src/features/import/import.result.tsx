@@ -11,7 +11,7 @@ import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { problemMessageOf } from "../../lib/problem";
 import { navigate } from "../../lib/router";
-import { settingsHref } from "../settings/settingsrouting";
+import { settingsHref } from "../../lib/settingsrouting";
 import { UndoConfirm, UndoErrors } from "./import.notices";
 import {
   hasProgress,

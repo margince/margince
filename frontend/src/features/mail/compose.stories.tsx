@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { viewerZone } from "../../format/timezone";
 import type { Transport } from "../../lib/contacttransports";
 import {
   installFetchStub,
@@ -14,6 +15,7 @@ import {
 } from "../../testing/story-utils";
 import { ComposeModal } from "./compose";
 import { RelinkModal } from "./composerelink";
+import { editSeedOf } from "./schedulededit";
 
 // The composer surface (draftEmail / sendEmail / relinkActivity) rendered off
 // the same fixture shapes compose.test.tsx exercises — never a live call. The
@@ -219,9 +221,7 @@ export const Drafted: Story = {
   play: async () => {
     await composerOnScreen();
     await screen.findByDisplayValue("Re: Q3 numbers");
-    await userEvent.click(
-      screen.getByRole("button", { name: "Draft reply with AI" }),
-    );
+    await userEvent.click(screen.getByRole("button", { name: "Draft reply" }));
     await screen.findByText(DRAFT.body);
   },
 };
@@ -277,7 +277,13 @@ export const ConsentBlocked: Story = {
           // point of the refusal now — was never rendered in Storybook.
           details: {
             review_id: "01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0001",
-            available_actions: ["request_decision"],
+            available_actions: ["overrule"],
+            overrulable: [
+              {
+                contact_id: "01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0003",
+                category: "marketing",
+              },
+            ],
           },
         },
         409,
@@ -576,14 +582,14 @@ export const RecipientOffer: Story = {
   },
 };
 
-/** Bcc, once asked for: the row opens under Cc, with what "blind" means beside
- *  the field that does it. It never closes again — a field holding a value may
- *  not be hidden. */
+/** The copies, once asked for: Cc and Bcc open under To, with what "blind"
+ *  means beside the field that does it. They never close again — a field
+ *  holding a value may not be hidden. */
 export const BlindCopy: Story = {
   render: headStory(),
   play: async () => {
     await composerOnScreen();
-    await userEvent.click(screen.getByRole("button", { name: "Bcc" }));
+    await userEvent.click(screen.getByRole("button", { name: "Cc and Bcc" }));
   },
 };
 
@@ -637,4 +643,69 @@ export const HeadDark: Story = {
   play: async () => {
     await composerOnScreen();
   },
+};
+
+// Built through the edit's own seeding, from a message frozen with markup, two
+// files and a voice draft, due tomorrow.
+const SCHEDULED_EDIT = editSeedOf({
+  id: "019f7e65-fbf7-7114-b114-40af4af63ae8",
+  status: "scheduled",
+  scheduled_at: new Date(Date.now() + 86_400_000).toISOString(),
+  scheduled_tz: viewerZone(),
+  subject: "The renewal quote",
+  to: ["dana@brandt.example"],
+  body: "Hi Dana, here is the renewal quote. The terms are on the site.",
+  html_body:
+    '<p>Hi Dana, here is the <strong>renewal quote</strong>. The terms are on <a href="https://nordwand.example/terms">the site</a>.</p>',
+  attachments: [
+    {
+      id: "att-1",
+      filename: "Offer_Nordwand_v3.pdf",
+      content_type: "application/pdf",
+      byte_size: 412_000,
+    },
+    {
+      id: "att-3",
+      filename: "Retrofit_timeline.xlsx",
+      content_type: "application/vnd.ms-excel",
+      byte_size: 88_000,
+    },
+  ],
+  draft_ref: "vd-1",
+  links: [{ entity_type: "contact", entity_id: "p-1" }],
+  version: 1,
+  created_at: "2026-08-20T09:00:00Z",
+  updated_at: "2026-08-20T09:00:00Z",
+});
+
+/** A scheduled message opened to be written again: its formatting, its files
+ *  and its moment come back as they were scheduled. */
+export const EditingScheduled: Story = {
+  render: () => {
+    installFetchStub(HEAD_ROUTES);
+    return (
+      <StoryProviders>
+        <ComposeModal
+          edit={SCHEDULED_EDIT}
+          entityType="contact"
+          entityId="p-1"
+          open
+          onClose={() => {}}
+        />
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    await composerOnScreen();
+    await expect(
+      await screen.findByText("Offer_Nordwand_v3.pdf"),
+    ).toBeVisible();
+    await expect(screen.getByRole("link", { name: "the site" })).toBeVisible();
+  },
+};
+
+export const EditingScheduledPhone: Story = {
+  ...EditingScheduled,
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
 };

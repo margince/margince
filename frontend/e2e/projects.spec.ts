@@ -27,6 +27,15 @@ async function choose(
   await page.getByRole("option", { name: option }).click();
 }
 
+// One visit to a phase in the project's phase history card; each move files
+// the phase it enters as a row of its own.
+function visit(page: import("@playwright/test").Page, phase: string) {
+  return page
+    .getByRole("region", { name: "Phasenverlauf" })
+    .getByRole("listitem")
+    .filter({ hasText: phase });
+}
+
 test("a project is created, a deal is attached, the win starts delivery, the timeline fills, and the close records its reason", async ({
   page,
 }) => {
@@ -61,22 +70,28 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
     page.getByRole("heading", { level: 1, name: "Brandt ERP" }),
   ).toBeVisible();
   const phase = page.getByRole("group", { name: "Phase" });
-  // The current phase is the one step rendered as text, not as a button.
+  // The current phase is the one step rendered as text, not as a button; it
+  // also carries the days spent in it.
   const current = phase.locator('[aria-current="step"]');
-  await expect(current).toHaveText("Initiative");
-  // The phase history lives in the details column, which is open on arrival,
-  // so the birth row is on screen without a press.
+  await expect(current).toContainText("Initiative");
+  // The phase history is a card on the overview. The birth row (the first
+  // phase, filed by whoever created the project) is on screen without a press.
+  await expect(page.getByText("Phasenverlauf")).toBeVisible();
   await expect(
-    page.getByText("Gestartet in der Phase „Initiative“"),
+    page
+      .getByRole("region", { name: "Phasenverlauf" })
+      .getByText(/Lars Brandt hat das Projekt angelegt/),
   ).toBeVisible();
+  // A new project has filed no documents, and its standing says so.
   await expect(
-    page.getByText("Unter diesem Projekt ist noch nichts abgelegt", {
-      exact: false,
-    }),
+    page.locator(".standing-sheet").getByText("Keine angehängt"),
   ).toBeVisible();
 
-  // 2. Attach through the company/project group in the deal's Details pane.
+  // 2. Attach through the company/project group in the deal's Details drawer,
+  // which the head's overflow menu opens.
   await page.goto("/#/deals/d-fleet");
+  await page.getByRole("button", { name: "Weitere Aktionen" }).click();
+  await page.getByRole("button", { name: "Details bearbeiten" }).click();
   await page
     .getByRole("button", { name: "Unternehmen ändern", exact: true })
     .click();
@@ -92,6 +107,14 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   );
   await page.getByRole("button", { name: "Speichern", exact: true }).click();
   expect((await patched).postDataJSON().project_id).toBe("pr-new-1");
+  // The saved drawer stays open for more edits, so close it before the page
+  // behind it is used again. Escape while the save is in flight would ask to
+  // discard it, so wait for the group to leave its edit state first.
+  await expect(
+    page.getByRole("button", { name: "Speichern", exact: true }),
+  ).toBeHidden();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toBeHidden();
   // The deal header now carries the project as a chip linking to its page.
   await expect(page.getByTestId("deal-project")).toHaveText("Brandt ERP");
 
@@ -137,9 +160,7 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   // claim as the row being there to read, and a remount between the two puts
   // the panel back behind the overview with the row still in the document.
   const historyTab = () =>
-    page
-      .getByTestId("record-tabs")
-      .getByRole("button", { name: "Verlauf", exact: true });
+    page.getByTestId("record-tabs").getByRole("button", { name: /^Verlauf/ });
   const onDealHistory = async (read: () => Promise<unknown>) => {
     await expect(logDialog).toBeHidden();
     await expect(async () => {
@@ -161,16 +182,8 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
     .getByRole("button", { name: "Won" })
     .click();
   await expect(page.getByText("In die Phase Won verschieben?")).toBeVisible();
-  // The first confirm is refused: no contract is on the deal, so the server
-  // answers win_evidence_required and the dialog stays open asking how it was
-  // won. Only the answered second confirm is the win.
-  const refused = page.waitForResponse(
-    (response) =>
-      response.url().endsWith("/v1/deals/d-fleet/advance") &&
-      response.request().method() === "POST",
-  );
-  await page.getByRole("button", { name: "Bestätigen" }).click();
-  expect((await refused).status()).toBe(422);
+  // No contract is on the deal, so the dialog asks how it was won on opening.
+  // The one Confirm that follows is the win.
   await choose(
     page,
     dialog.getByRole("combobox", { name: "Wie wurde der Deal gewonnen?" }),
@@ -189,8 +202,8 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   // 4. The win moved the project into delivery — nobody pressed a phase.
   await page.getByTestId("deal-project").click();
   await expect(page).toHaveURL(/#\/projects\/pr-new-1$/);
-  await expect(current).toHaveText("In Umsetzung");
-  await expect(page.getByText("Initiative → In Umsetzung")).toBeVisible();
+  await expect(current).toContainText("In Umsetzung");
+  await expect(visit(page, "In Umsetzung")).toBeVisible();
   // And the deal is listed on the project with its won status.
   await expect(
     page.getByRole("button", { name: "Fleet retrofit" }),
@@ -221,7 +234,11 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   // question, and project360.test.tsx now asserts its absence twice. An e2e
   // assertion on copy the product deliberately dropped tests nothing about the
   // relink and fails for a reason that has nothing to do with it.
-  await expect(timeline.getByText("Kickoff mit Brandt IT")).toBeVisible();
+  await expect(
+    page.locator(".standing-timeline-title", {
+      hasText: "Kickoff mit Brandt IT",
+    }),
+  ).toBeVisible();
 
   // 6. Advance by hand: a non-closing move takes an optional reason and
   // lands in the history with it.
@@ -233,8 +250,8 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
     .getByTestId("project-advance-reason")
     .fill("Erweiterung wird neu verhandelt.");
   await page.getByRole("button", { name: "Wechseln" }).click();
-  await expect(current).toHaveText("Im Vertrieb");
-  await expect(page.getByText("In Umsetzung → Im Vertrieb")).toBeVisible();
+  await expect(current).toContainText("Im Vertrieb");
+  await expect(visit(page, "Im Vertrieb")).toBeVisible();
   await expect(
     page.getByText("Erweiterung wird neu verhandelt.", { exact: false }),
   ).toBeVisible();
@@ -261,11 +278,12 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   expect(body.reason).toBe(
     "Go-live abgenommen, Hypercare an den Support übergeben.",
   );
-  await expect(current).toHaveText("Abgeschlossen");
-  await expect(page.getByText("Im Vertrieb → Abgeschlossen")).toBeVisible();
+  await expect(current).toContainText("Abgeschlossen");
+  await expect(visit(page, "Abgeschlossen")).toBeVisible();
   await expect(
-    page.getByText("Go-live abgenommen, Hypercare an den Support übergeben.", {
-      exact: false,
-    }),
+    visit(page, "Abgeschlossen").getByText(
+      "Go-live abgenommen, Hypercare an den Support übergeben.",
+      { exact: false },
+    ),
   ).toBeVisible();
 });

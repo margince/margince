@@ -180,7 +180,7 @@ func lastTouchLine(in Input) string {
 	if in.LastTouchAt == nil {
 		return said.Say(touchWords.None)
 	}
-	days := elapsed.Days(*in.LastTouchAt, in.Now)
+	days := elapsed.Days(*in.LastTouchAt, in.Now, in.Zone)
 	switch {
 	case days <= 0:
 		return said.Say(touchWords.Today)
@@ -237,14 +237,14 @@ func attendeesSection(in Input) []Sentence {
 	out := make([]Sentence, 0, len(in.Attendees))
 	for _, attendee := range in.Attendees {
 		out = append(out, Sentence{
-			Text:     briefCopyFor(in.Language).attendeeLine(attendee, in.Now),
+			Text:     briefCopyFor(in.Language).attendeeLine(attendee, in.Now, in.Zone),
 			Evidence: []Evidence{{EntityType: citeContact, EntityID: attendee.ContactID}},
 		})
 	}
 	return out
 }
 
-func (said briefCopy) attendeeLine(attendee AttendeeIn, now time.Time) string {
+func (said briefCopy) attendeeLine(attendee AttendeeIn, now time.Time, loc *time.Location) string {
 	parts := []string{attendee.FullName}
 	if attendee.Title != "" {
 		parts = append(parts, attendee.Title)
@@ -261,7 +261,7 @@ func (said briefCopy) attendeeLine(attendee AttendeeIn, now time.Time) string {
 	if attendee.FirstTime || attendee.LastTouch == nil {
 		return fmt.Sprintf(said.Say(touchWords.First), line)
 	}
-	days := elapsed.Days(*attendee.LastTouch, now)
+	days := elapsed.Days(*attendee.LastTouch, now, loc)
 	if days <= 0 {
 		return fmt.Sprintf(said.Say(touchWords.SpokeToday), line)
 	}
@@ -455,7 +455,7 @@ func companyContextSection(in Input) []Sentence {
 	out := make([]Sentence, 0, len(in.PriorMeetings))
 	for _, prior := range in.PriorMeetings {
 		out = append(out, Sentence{
-			Text:     briefCopyFor(in.Language).priorMeetingLine(prior, in.Now),
+			Text:     briefCopyFor(in.Language).priorMeetingLine(prior, in.Now, in.Zone),
 			Evidence: []Evidence{{EntityType: citeActivity, EntityID: prior.ID}},
 		})
 	}

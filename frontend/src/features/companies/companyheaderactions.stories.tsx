@@ -44,16 +44,18 @@ function Row({
   installFetchStub({ "GET /me": meRoute(grants) });
   return (
     <StoryProviders>
-      {/* The header's own row class, so the verbs and any caption sit at the
-          interval and measure the record page gives them. */}
-      <div className="record-actions record-actions-inline">
-        <CompanyHeaderActions
-          company={record}
-          composerOpen={false}
-          onComposerOpen={() => undefined}
-          drawer={null}
-          onDrawer={() => undefined}
-        />
+      {/* The head's own bar class, so the verbs and any caption sit at the
+          measure the record page gives them. */}
+      <div style={{ maxWidth: "18.75rem" }}>
+        <div className="record-split-verbs">
+          <CompanyHeaderActions
+            company={record}
+            composerOpen={false}
+            onComposerOpen={() => undefined}
+            drawer={null}
+            onDrawer={() => undefined}
+          />
+        </div>
       </div>
     </StoryProviders>
   );

@@ -13,7 +13,7 @@ What each list offers:
 |---|---|---|---|---|---|
 | **Contacts** | name, or exact email | Owner, Team, Tags | All, Mine | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
 | **Companies** | name, or exact domain | Owner, Team, Company size, Tags, Lifecycle, Relationship type | All, Mine, Customers, Prospects | table only | Assign owner, Add or Remove tag, Create task, Add to Shortlist, Archive |
-| **Leads** | name, exact email or LinkedIn URL | Status, Score, Response, Source, Owner, Team, Tags | Mine, All, Unassigned, New and unassigned, New, Needs follow-up, Engaged, Hot, Overdue | both | Assign, Disqualify |
+| **Leads** | name, exact email or LinkedIn URL | Status, Score, Response, Origin, Owner, Team, Tags | Mine, All, Unassigned, New and unassigned, New, Needs follow-up, Engaged, Hot, Overdue | both | Assign, Disqualify |
 | **Deals** | no search box | Owner, Team, Stage, Company, Tags, Stalled only, Partner-sourced, Forecast, Motion, Priority, Source, Partner | Newest | both, opens on Board | Assign owner, Move to stage, Add or Remove tag, Create task, Add to Shortlist, Archive |
 | **Projects** | name or project key | Owner, Team, Phase | All, In delivery | table only | none |
 
@@ -89,8 +89,15 @@ To filter a list by tag in Margince, open **Contacts**, **Companies** or **Deals
 One tag at a time: a second tag takes the place of the first. **Any tag** takes the filter off. To see every record with a tag across all record types, open the tag's own page. Use the **Tags** panel on any record that has it.
 Also called: filter by label, show tagged records, segment by tag.
 
+### Why are some contacts tagged `machine-address`?
+Margince tags a contact `machine-address` when its email belongs to a sending system, such as `noreply@` or `receipts@`. These contacts were made before Margince refused such addresses. Filter by the tag, then keep or archive each one. Margince archives and deletes none of them itself.
+Also called: contacts made from notification mail, automatic senders.
+
 ### How do I filter by date?
 The list screens in Margince have no date filter. To put a list in date order, sort it. **Contacts**, **Companies** and **Leads** sort by **Created** and **Last activity**; **Deals** by **Expected close** and **Last signal**; **Projects** by **Last activity**.
+
+Last activity is the date of the newest email, chat message, meeting, call or note. A task never changes it, whoever made the task.
+
 On **Filters and views**, there are the date choices **is after**, **is on or after**, **is before** and **is on or before**. They show only for date custom fields your company has added. Created and expected close dates are not filter fields there.
 
 Also called: created this month, filter by created date, date range.
@@ -116,7 +123,7 @@ Also called: order by, biggest deals first, sort by amount, sort A to Z, newest 
 The columns you can sort on each Margince list are:
 - **Contacts**: Name, Email, Company, Owner, Last activity, Created.
 - **Companies**: Company, Description, Website, Contacts, Open deals, Lifecycle, Owner, Last activity, Created.
-- **Leads**: Name, Score, Status, Next step, Last activity, Source, Owner, Created.
+- **Leads**: Name, Score, Status, Next step, Last activity, Origin, Owner, Created.
 - **Deals**: Name, Company, via partner, Stage, Value, Expected close, Last signal, Status, Owner.
 - **Projects**: Project name, Company, Phase, Owner, Last activity.
 **Owner** sorts by the owner's name, with unassigned records last. You cannot sort by **Tags**, **Relationship type** or **Last email**. You can still pick a hidden column under **Sort**.
@@ -219,7 +226,7 @@ Also called: natural-language filter, AI filter, describe a segment.
 ### What can I filter on in Filters and views?
 The fields on **Filters and views** in Margince are:
 - **Contacts**: **Owner**, **Owner team**, **Tag** and custom fields.
-- **Companies** add **Industry**, **Size**, **Lifecycle**, **Relationship type**, **Domain**, and what the company runs (**Mail system**, **Hosting**, **Operated service**, **Technology**).
+- **Companies** add **Industry** (picked from the list of industries), **Size**, **Lifecycle**, **Relationship type**, **Domain**, and what the company runs (**Mail system**, **Hosting**, **Operated service**, **Technology**).
 - **Deals** add **Pipeline**, **Stage**, **Company**, **Partner**, **Project**, **Status**, **Forecast category**, **Company industry**, **Company size** and **Company lifecycle**.
 Custom fields have a **Custom field** mark. Your own company is never in a company filter.
 Also called: filter fields, which attributes can I filter.

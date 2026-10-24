@@ -3,11 +3,12 @@ import {
   type ExtensionVerbDescriptor,
   extensions,
 } from "@composition/extensions";
-import { extensionScreens } from "@composition/screens";
+import { extensionPanels, extensionScreens } from "@composition/screens";
 import type { ComponentType } from "react";
 import { readableKey } from "../format/rbacobjects";
 import { type Locale, translate } from "../i18n";
 import type { ExtensionRbacObject } from "./capability";
+import type { EntityKind } from "./entity";
 
 // What the SPA knows about the units an installation composed.
 //
@@ -84,6 +85,26 @@ export const composedExtensions: readonly ExtensionDescriptor[] = extensions;
  * through, and the two would eventually disagree about what the registry holds.
  */
 export const composedScreens: ExtensionScreenRegistry = extensionScreens;
+
+/** What a core page hands a unit's panel: the record the page shows. */
+export type ExtensionPanelProps = Readonly<{
+  record: Readonly<{ type: EntityKind; id: string }>;
+}>;
+
+/**
+ * The panels an installation composes: by unit, then by slot. Annotated here,
+ * at the registry's one import site, for the reason composedScreens is: a
+ * unit's export that is not a panel component fails this assignment.
+ */
+export type ExtensionPanelRegistry = Readonly<
+  Record<
+    string,
+    Readonly<Record<string, ComponentType<ExtensionPanelProps> | undefined>>
+  >
+>;
+
+/** The composed panel registry, annotated once. */
+export const composedPanels: ExtensionPanelRegistry = extensionPanels;
 
 /**
  * The two secret scopes a unit's settings entry can be placed by.

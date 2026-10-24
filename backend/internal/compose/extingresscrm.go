@@ -209,7 +209,7 @@ func (l crmLanding) fillCompany(ctx context.Context, id ids.UUID, f extension.Co
 	}
 	offer := map[string]*string{
 		fieldLegalName:   changedText(current.LegalName, f.LegalName),
-		fieldIndustry:    changedText(current.Industry, f.Industry),
+		fieldIndustry:    changedText(industryText(current.Industry), f.Industry),
 		descriptionField: changedText(current.Description, f.Description),
 	}
 	patch := map[string]any{}
@@ -248,6 +248,16 @@ func writable(offer map[string]*string, skipped []string, key string) *string {
 		return nil
 	}
 	return offer[key]
+}
+
+// industryText is the stored industry code as the text a unit offers, so the
+// two compare as written.
+func industryText(code *crmcontracts.CompanyIndustry) *string {
+	if code == nil {
+		return nil
+	}
+	text := string(*code)
+	return &text
 }
 
 // changedText answers the offered value only where it differs from the record.

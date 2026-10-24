@@ -105,6 +105,7 @@ function namesOf(byId: Readonly<Record<string, string>>): NameServer {
         ([id, display_name]): components["schemas"]["SeatName"] => ({
           id,
           display_name,
+          departed: false,
         }),
       ),
     });

@@ -201,12 +201,11 @@ The 19 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 ## communication_review
 
-11 columns · primary key `(id)` · referenced by 2 foreign keys
+10 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
-| `approval_id` | `uuid` |  | The card a routed review was handed to, so a decider reading this can find the decision they are being asked to make. |
 | `delivery_intent_id` | `uuid` |  | The held message this review can resume. |
 | `initiated_by` | `uuid` |  | Points at `app_user.id`. |
 | `kind` | `text`, default `'single'::text` | yes | Always `single`: the column exists for the values it may hold later. |
@@ -229,13 +228,11 @@ The 19 tables owned by `consent`, as the migrations build them. [Back to the ent
 
 - `communication_review_kind`: `CHECK ((kind = 'single'))`
 - `communication_review_resolution_shape`: `CHECK (((state = ANY (ARRAY['resolved', 'superseded', 'cancelled'])) = (resolved_at IS NOT NULL)))`
-- `communication_review_routing_shape`: `CHECK (((state <> 'awaiting_decision') OR (approval_id IS NOT NULL)))`
-- `communication_review_state`: `CHECK ((state = ANY (ARRAY['needs_context', 'needs_repair', 'awaiting_decision', 'resolved', 'superseded', 'cancelled'])))`
+- `communication_review_state`: `CHECK ((state = ANY (ARRAY['needs_context', 'needs_repair', 'resolved', 'superseded', 'cancelled'])))`
 - `communication_review_supersession_shape`: `CHECK (((state = 'superseded') = (superseded_by IS NOT NULL)))`
 
 **Indexes**
 
-- `communication_review_awaiting`: `btree (opened_at) WHERE (state = 'awaiting_decision')`
 - `communication_review_by_initiator`: `btree (initiated_by, opened_at DESC)`
 - `communication_review_one_live_per_intent`: `unique, btree (delivery_intent_id) WHERE ((delivery_intent_id IS NOT NULL) AND (resolved_at IS NULL))`
 - `communication_review_open`: `btree (opened_at) WHERE (resolved_at IS NULL)`

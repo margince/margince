@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -25,7 +26,8 @@ import (
 // receiving server must have authenticated it (fromAuthenticated), since a
 // sender types From. The row is still not attested: no provider filed it as
 // sent. It names the colleague in SentByColleague, which no correspondence
-// gate reads.
+// gate reads. The stamp also lets that colleague open this one copy
+// (auth.activityAttendanceArm).
 //
 // The counterparty is the ladder's stand-in, picked among the recipients only.
 // rec.Addresses also lists every From address, so a co-author beside the
@@ -75,10 +77,18 @@ func (s *Sink) asSentByColleagueTx(
 // address; zero when there is none. Invited and deactivated seats count. Most
 // colleagues are invited and never sign in. A departed one's mail was still
 // the workspace's mail. An archived seat does not count.
+//
+// The address must be at one of the workspace's own trusted domains. A seat can
+// be invited at any address, and the stamp lets that seat open the copy. A seat
+// at a customer's domain must never be read as the sender of its mail.
 func colleagueTx(ctx context.Context, tx pgx.Tx, address string) (ids.UUID, error) {
+	own, err := TrustedOwnDomainsTx(ctx, tx)
+	if err != nil || !own.Covers(address) {
+		return ids.Nil, err
+	}
 	_, seat := capturePrincipal(ctx)
 	var colleague ids.UUID
-	err := tx.QueryRow(ctx, `SELECT id FROM app_user
+	err = tx.QueryRow(ctx, `SELECT id FROM app_user
 		 WHERE lower(email) = $1 AND id <> $2 AND archived_at IS NULL`, foldAddress(address), seat).Scan(&colleague)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ids.Nil, nil
@@ -133,5 +143,49 @@ func inboundSenderAuthenticated(rec connector.NormalizedRecord, fields ActivityF
 	return fields.Direction == connector.DirectionInbound && fromAuthenticated(rec, rec.Counterparty.Email)
 }
 
+// senderIsMachine is the activity's sender_is_machine stamp: an inbound mail
+// whose sender is a sending system. On inbound mail the counterparty is the
+// From address; an outbound mail's sender is the mailbox owner.
+func senderIsMachine(rec connector.NormalizedRecord, fields ActivityFields) bool {
+	return mailidentity.InboundFromSendingSystem(fields.Kind, fields.Direction, rec.Counterparty.Email)
+}
+
 // gmailAuthServer is the authserv-id Gmail names in its Authentication-Results.
 const gmailAuthServer = "mx.google.com"
+
+// insertCounterpartyParticipant stamps the other end of a message. On mail the
+// owner's provider attested as sent, the owner typed that address. So the
+// colleague whose exact login it is gets bound, as StampFurtherParticipants
+// binds a Cc on such a mail. They may then read their copy even when a
+// members_only hold keeps the workspace out.
+func insertCounterpartyParticipant(
+	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, role, kind string,
+	counterparty connector.Counterparty, address, channelUserID string, owner ids.UUID,
+) error {
+	var bound *ids.UUID
+	if kind == kindEmail && counterparty.SentByOwner() && address != "" {
+		seat, err := recipientColleagueTx(ctx, tx, address, owner)
+		if err != nil {
+			return err
+		}
+		if !seat.IsZero() {
+			bound = &seat
+		}
+	}
+	return insertParticipant(ctx, tx, activityID, role, bound, nil, address, channelUserID)
+}
+
+// recipientColleagueTx is the seat, other than the owner, whose login is
+// address; zero when there is none. An archived seat does not count.
+func recipientColleagueTx(ctx context.Context, tx pgx.Tx, address string, owner ids.UUID) (ids.UUID, error) {
+	var seat ids.UUID
+	err := tx.QueryRow(ctx, `SELECT id FROM app_user WHERE lower(email) = $1 AND id <> $2 AND archived_at IS NULL`,
+		address, owner).Scan(&seat)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ids.Nil, nil
+	}
+	if err != nil {
+		return ids.Nil, fmt.Errorf("capture: reading whether a recipient is a colleague: %w", err)
+	}
+	return seat, nil
+}

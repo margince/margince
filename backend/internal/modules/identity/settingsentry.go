@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -25,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/currencylock"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -325,6 +327,7 @@ func Settings() []config.Any {
 		Name, Country, BaseLanguage, DateFormat, TimeFormat, FiscalYearStartMonth, DeadWorkBannerHours,
 		ForecastForwardMeasure, EnabledOidcProviders, RequireSSO, RequireMFA, OidcGroupRoleMap,
 		OAuthAccessTokenTTLMinutes, DynamicClientRegistration, MetadataDocumentClients,
+		CallWhatsApp, CallTelegram, CallZalo,
 	}
 	for _, s := range ScheduleSettings() {
 		out = append(out, s)
@@ -386,6 +389,16 @@ func BaseCurrencyAppliedTx(ctx context.Context, tx pgx.Tx) (string, error) {
 // default rather than erroring, so a fresh installation still writes.
 func TimezoneAppliedTx(ctx context.Context, tx pgx.Tx) (string, error) {
 	return settings.ApplyTx(ctx, tx, Timezone)
+}
+
+// ZoneAppliedTx is TimezoneAppliedTx resolved to a location. A compose read
+// uses it to get the zone a calendar day or "N days ago" is counted in.
+func ZoneAppliedTx(ctx context.Context, tx pgx.Tx) (*time.Location, error) {
+	name, err := TimezoneAppliedTx(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	return storekit.LoadZone(name)
 }
 
 // NameOf resolves the installation's display name inside a transaction the

@@ -4,7 +4,6 @@ import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
-  fireEvent,
   render as rtlRender,
   screen,
   waitFor,
@@ -128,9 +127,11 @@ describe("the deadline field", () => {
     stub();
     const user = userEvent.setup();
     await openAccessForm(user);
-    fireEvent.change(screen.getByLabelText(/earlier deadline/i), {
-      target: { value: "2026-08-20" },
-    });
+    await user.type(
+      screen.getByRole("textbox", { name: /earlier deadline/i }),
+      "20/08/2026",
+    );
+    await user.tab();
     expect(screen.getByText(/choose a date before/i)).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /open request/i }),
@@ -141,9 +142,11 @@ describe("the deadline field", () => {
     const sent = stub();
     const user = userEvent.setup();
     await openAccessForm(user);
-    fireEvent.change(screen.getByLabelText(/received on/i), {
-      target: { value: "2026-07-01" },
-    });
+    await user.type(
+      screen.getByRole("textbox", { name: /received on/i }),
+      "01/07/2026",
+    );
+    await user.tab();
     await waitFor(() =>
       expect(
         sent.some(

@@ -35,9 +35,16 @@ type UpdateLeadInput struct {
 	// LinkedInURL sets the profile URL in its normalized spelling.
 	LinkedInURL *string
 	Status      *string // only new ↔ working here; terminal states have their own paths
-	// Source corrects where the lead came from; the score follows it.
+	// Source is how the row was written. It is deprecated on the wire and no
+	// longer moves the score.
 	Source *string
-	Score  *int
+	// Origin corrects where the lead came from; the score follows it.
+	Origin       *string
+	OriginDetail *string
+	// OriginHint is raw wording only an importer sets. It fills an origin the
+	// lead does not have yet and never replaces one (settleOriginHint).
+	OriginHint string
+	Score      *int
 	// ScoreOverrideReason is the written reason for a score override; nil
 	// means the field was absent (no override change). The explicit CLEAR
 	// gesture is ClearScoreOverride, not an empty string — an empty reason
@@ -264,8 +271,12 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 			return crmcontracts.Lead{}, err
 		}
 	}
-	if in.Source != nil {
-		if err := ensureHumanSourceAllowed(ctx, tx, strings.TrimSpace(*in.Source)); err != nil {
+	in, err = settleOriginHint(ctx, tx, current, in)
+	if err != nil {
+		return crmcontracts.Lead{}, err
+	}
+	if in.Origin != nil {
+		if err := ensureAssignableOrigin(ctx, tx, strings.TrimSpace(*in.Origin), current.Origin); err != nil {
 			return crmcontracts.Lead{}, err
 		}
 	}
@@ -403,11 +414,16 @@ func buildLeadPatch(current crmcontracts.Lead, in UpdateLeadInput) (*storekit.Pa
 		}
 		p.Set(leadStatusColumn, current.Status, string(status))
 	}
-	if in.Source != nil {
-		if strings.TrimSpace(*in.Source) == "" {
-			return nil, false, &values.ParseError{Field: "source", Code: codeRequired, Message: "source must not be empty"}
+	// Margince writes how a row arrived. A client may echo the stored value
+	// back; any other value would let a caller rewrite "Added via".
+	if in.Source != nil && strings.TrimSpace(*in.Source) != current.Source {
+		return nil, false, &values.ParseError{
+			Field: "source", Code: "read_only",
+			Message: "source records how the lead reached Margince and cannot be changed; set origin to say where it came from",
 		}
-		p.Set("source", current.Source, strings.TrimSpace(*in.Source))
+	}
+	if err := setLeadOrigin(p, current, in); err != nil {
+		return nil, false, err
 	}
 	resumeRecompute, err := applyScoreOverride(p, current, in)
 	if err != nil {

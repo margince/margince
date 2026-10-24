@@ -1,0 +1,21 @@
+/* The chat links follow the number inline, and wrap under it as one group. */
+.callaction-chats {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--space-2);
+  margin-inline-start: var(--space-2);
+  font: var(--fontBodySmall);
+}
+/* 24px is WCAG 2.5.8's target floor; the gap spaces the names, not padding. */
+.callaction-chats > .link-button {
+  min-block-size: var(--space-6);
+  padding-inline: 0;
+}
+/* A phone reads a number and three app names on one line as one value. */
+@media (max-width: 640px) {
+  .callaction-chats {
+    display: flex;
+    margin-inline-start: 0;
+  }
+}

@@ -167,6 +167,14 @@ function renderTab(
       if (key === "GET /capture/exclusions") {
         return jsonResponse({ data: exclusions });
       }
+      // The held threads and senders cards share the page, quiet when empty.
+      if (
+        key === "GET /capture/held-threads" ||
+        key === "GET /capture/senders" ||
+        key === "GET /capture/contacts-awaiting-decision"
+      ) {
+        return jsonResponse({ data: [] });
+      }
       if (key === "GET /capture/activity/workspace") {
         return jsonResponse(windowBody({ data: [], funnel: {} }));
       }

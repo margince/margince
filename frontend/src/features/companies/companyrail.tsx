@@ -1,495 +1,301 @@
-import { useQuery } from "@tanstack/react-query";
-import { api } from "../../api/client";
-import type { components } from "../../api/schema";
-import {
-  contactRole,
-  contactsSlice,
-  RAIL_ROW_LIMIT,
-  SectionSummary,
-  sectionAnswered,
-} from "../../components/companyrailshared";
-import { CounterpartyHoldRow } from "../../components/counterparty-hold";
-import { Button } from "../../design-system/atoms";
-import { AvatarStack } from "../../design-system/avatarstack";
-import { Disclosure, DisclosureGroup } from "../../design-system/disclosure";
-import { OffsiteLink } from "../../design-system/offsitelink";
-import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
-import { Popover } from "../../design-system/popover";
-import { RecordCard } from "../../design-system/recordcard";
-import {
-  type SectionState,
-  SurfaceState,
-} from "../../design-system/surfacestate";
-import { formatDate, formatNumber } from "../../format/format";
-import { webUrl } from "../../format/weburl";
-import { useLocale, useT } from "../../i18n";
-import { useCanWriteRecord } from "../../lib/capability";
-import { problemCodeOf, unwrap } from "../../lib/problem";
-import { useRecordZone } from "../../lib/recordzone";
-import { routeHash } from "../../lib/router";
-import { signalKindLabel, signalTone } from "../records/record360";
-import { RecordCustomFields } from "../records/recordcustomfields";
-import { RecordTeam } from "../records/recordteam";
-import { CompanyReachCard } from "./company-reach";
-import { CompanyDetails } from "./companydetails";
-import { DealsSection } from "./companyraildeals";
-import { CompanyProfileDetails } from "./companyraildetails";
-import { ProjectsSection } from "./companyrailprojects";
-import { CompanyTriageSection } from "./companytriage";
-// The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
-// are defined in company360.css. Imported HERE rather than left to the caller:
-// it works today only because the company record page pulls that stylesheet in
-// for its own sake, so this file renders unstyled anywhere else.
-import "./company360.css";
-import { ListsSection } from "./companyraillists";
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
 
-// The record page's LEFT rail (mockup State A): the account's context,
-// beside the work rather than under it. Passed to RecordView's `rail` slot,
-// so it takes the wider of the two rail shares (page-zones-rail: 3fr/7fr)
-// rather than the narrower `aside` share a right-hand column would get.
-//
-// Drawn as separate panels, each answering one question about the account:
-// its details and tags, its registration, its team, its open deals, its
-// projects, its contacts, its hold, in the order a reader works down the
-// column, rather than the disclosures the rail used to fold into one card: a
-// hairline inside a panel reads as one story about that panel's own subject, and a
-// panel's own edge is what tells a reader they have moved on to a different
-// one. Tags file under Details rather than in their own panel: a tag is a
-// fact about the account, on the same card as the rest of them.
-//
-// Health moved to the readings row above the tabs, so it is not repeated
-// here — two copies of the same verdict is a value the reader has to
-// reconcile. "Our team on this account" and "Leads from this company" are
-// not drawn: neither has a field or an endpoint behind it yet.
-//
-// The rail is not rendered while the composer is open. That is the page's
-// decision rather than this component's: the drawer opens over the page as
-// its own overlay, and the rail standing behind it would only be two things
-// competing for the same glance.
+import type { ReactNode } from "react";
+import type { components } from "../../api/schema";
+import { mapCompanyUpdate } from "../../components/companyform";
+import {
+  LIFECYCLE_LABELS,
+  LIFECYCLE_OPTIONS,
+  SIZE_BAND_OPTIONS,
+} from "../../components/companylookups";
+import { Badge } from "../../design-system/atoms";
+import { InlineChoice } from "../../design-system/inlinechoice";
+import { InlineText } from "../../design-system/inlinetext";
+import {
+  type DetailRow,
+  type DetailSection,
+  RecordDetails,
+} from "../../design-system/recorddetails";
+import { INDUSTRY_CODES, industryOptions } from "../../format/industry";
+import { useLocale, useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
+import { useCanWriteRecord } from "../../lib/capability";
+import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
+import { CompanyContactCard } from "./companycontactcard";
+import {
+  companyWebsite,
+  displayHost,
+  useCompanyReadOnlyReason,
+} from "./companyheader";
+import {
+  type CompoundField,
+  CompoundFieldValue,
+  useCompanyFieldSave,
+} from "./companyrailedit";
+import { useOwnershipRows, useRegistrationRows } from "./companyrailgroups";
+
+// The company's details under its head: About, Ownership, Registration and
+// Lists as flat groups. Every empty field folds behind one link, and the
+// page's read-only sentence sits at the foot.
 
 type Company = components["schemas"]["Company"];
 type Company360 = components["schemas"]["Company360"];
-type Contact = components["schemas"]["Company360Contact"];
-type Signal = components["schemas"]["Signal"];
 
-export function CompanyRail({
-  companyId,
-  company,
-  view,
-  loading,
-  onTab,
-}: Readonly<{
-  companyId: string;
-  // The page's own resolved record, read regardless of how the composite
-  // read below is doing — Details draws from this whenever the composite
-  // has no company slice yet (still loading, or failed), rather than
-  // going blank on a read the page already has the answer to.
-  company?: Company;
+type RailProps = Readonly<{
+  company: Company;
   view?: Company360;
-  // The composite read `view` comes off is still in flight. Threaded to the
-  // sections that read `view` straight (Deals, Contacts, Tags) so their
-  // `sectionState` calls can tell "still loading" apart from "the read
-  // failed" — both hand a section an undefined `view`, and without this flag
-  // every one of them reads the failed state for as long as the read runs,
-  // flashing "could not be loaded" on every ordinary page open.
+  // The composite read is still in flight, so the Way in row can tell "still
+  // loading" from "nobody has a way in".
   loading: boolean;
-  // Where each panel's header link goes: Deals/Contacts switch the record's own
-  // tab strip, Details opens Profile. One callback rather than three, because
-  // every use is the same verb aimed at a different tab.
-  onTab: (tab: "deals" | "contacts" | "profile") => void;
-}>) {
-  const t = useT();
-  // The same per-row answer the company's other verbs read: an archived
-  // company, or one this seat may read but not write, takes no new
-  // responsibilities.
-  const resolved = view?.company ?? company;
-  const canWriteCompany =
-    useCanWriteRecord("company", resolved) && !resolved?.archived_at;
-  return (
-    // A plain div: the shell's own <aside> is the landmark around this, and a
-    // second labelled region inside it would give a reader two names for one
-    // column. Inside it ONE pane of named sections (DESIGN.md §6): the
-    // account's fields, its deals, its contacts, the hold, its tags — each a
-    // disclosure with its own summary, so the column reads as one object with
-    // five slices rather than five cards a reader has to assemble.
-    <div className="co-rail">
-      {/* Details lead the column: the account's own fields are the first
-            thing a reader orients by, and they draw from the page's already-
-            resolved record while the composite read below is still arriving. */}
-      {resolved && (
-        <>
-          <CompanyDetails company={resolved} />
-          <RecordCustomFields kind="company" record={resolved} />
-        </>
-      )}
-      <Panel>
-        <DisclosureGroup>
-          {resolved && (
-            <Disclosure
-              className="co-sect"
-              summary={<SectionSummary title={t("record.registration")} />}
-            >
-              <PanelBody>
-                <CompanyProfileDetails company={resolved} />
-              </PanelBody>
-            </Disclosure>
-          )}
-          <Disclosure
-            className="co-sect"
-            summary={<SectionSummary title={t("assignments.title")} />}
-          >
-            <RecordTeam
-              recordType="company"
-              recordId={companyId}
-              readOnly={!canWriteCompany}
-              bare
-            />
-          </Disclosure>
-          {/* Both summaries stand on every tab, the open one included: the
-            column is the reader's anchor while they move between tabs, and
-            each shows only the top RAIL_ROW_LIMIT rows — a summary beside a
-            tab is not a duplicate of it, a full copy would be. */}
-          {/* The server refuses an archived account's 360 and its lists. */}
-          {!resolved?.archived_at && (
-            <>
-              <DealsSection view={view} loading={loading} onTab={onTab} />
-              <ProjectsSection view={view} loading={loading} onTab={onTab} />
-              <ContactsSection view={view} loading={loading} onTab={onTab} />
-              {/* Beside the contacts, answering the same question from the
-                  other side. Those are the contacts on file here. This is who
-                  on the team can reach the ones that are not. */}
-              {resolved && <CompanyReachCard companyId={resolved.id} />}
-              <ListsSection companyId={companyId} />
-            </>
-          )}
-          <CompanyHoldSection company={resolved} />
-          {/* Beside the hold, and for the same reason: both are about the
-            account's mail DOMAIN rather than about the work on it. */}
-          <CompanyTriageSection companyId={companyId} />
-        </DisclosureGroup>
-      </Panel>
-    </div>
+  // Why this reader cannot change the account, said once as the footnote. The
+  // verbs in the head point at it by `id`.
+  refusal?: Readonly<{ id: string; text: string }>;
+}>;
+
+export function CompanyRail(props: RailProps) {
+  // The lists read answers 404 while lists are switched off, and the server
+  // refuses an archived account's lists, so it is asked for only otherwise.
+  return useListsAvailable() && !props.company.archived_at ? (
+    <ListedRail {...props} />
+  ) : (
+    <RailBody {...props} />
   );
 }
 
-// Keeping a whole account's correspondence private, from the account page.
-//
-// The account's own domain is what a hold names here — an advisory firm answers
-// from whichever address picked up the file, so the domain is the unit that
-// actually covers the relationship. Drawn only when the account HAS a domain:
-// a hold has to name something, and `website_url` is derived from the primary
-// domain row, so its absence means there is nothing to name.
-function CompanyHoldSection({
-  company,
-}: Readonly<{ company: Company | undefined }>) {
-  const t = useT();
-  const host = hostOf(company?.website_url);
-  if (!host) {
-    return null;
-  }
+function ListedRail(props: RailProps) {
+  const lists = useRecordLists("company", props.company.id);
+  const found = lists.data?.data ?? [];
   return (
-    <Disclosure
-      className="co-sect"
-      summary={<SectionSummary title={t("hold.sectionTitle")} />}
-    >
-      <PanelBody>
-        {/* The row takes an ADDRESS and derives the domain from it, which is
-            what every contact page hands it. An account has only the domain, so
-            it is handed a bare address at that domain — the same value the
-            row's own domain verb would compute. */}
-        <CounterpartyHoldRow email={`x@${host}`} />
-      </PanelBody>
-    </Disclosure>
-  );
-}
-
-// The registrable host inside a derived website URL, or nothing when the value
-// is absent or not a URL this can read. Never throws at the caller: an account
-// with an unparseable website simply offers no hold, rather than taking the
-// rail down with it.
-function hostOf(website: string | null | undefined): string | undefined {
-  if (!website) {
-    return undefined;
-  }
-  try {
-    return new URL(website).hostname.replace(/^www\./, "").toLowerCase();
-  } catch {
-    return undefined;
-  }
-}
-
-/**
- * ContactsSection is a glance at the roster: who is here, how they have
- * answered, and, where the graph read supports it, the colleagues already in
- * contact with them. The set-role and route-in verbs stay on the Contacts tab's
- * own roster rather than being rebuilt here a second time.
- */
-function ContactsSection({
-  view,
-  loading,
-  onTab,
-}: Readonly<{
-  view?: Company360;
-  loading: boolean;
-  onTab: (tab: "contacts") => void;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  // Already ranked. The server orders the contacts section by engagement, then
-  // relationship strength, then id (contacts.RankContacts) BEFORE it cuts to
-  // twenty-five, so re-sorting here would be a second spelling of that rule —
-  // and the copy that drifts, since only one of the two is what chose which
-  // twenty-five arrived.
-  const { contacts, count, state } = contactsSlice(view, loading);
-  const answered = sectionAnswered(state);
-  // Starts open while the reader has opened no other section of the rail.
-  return (
-    <Disclosure
-      className="co-sect"
-      open
-      summary={
-        <SectionSummary
-          title={t("co.rail.contacts.title")}
-          count={answered ? count : undefined}
-        />
-      }
-    >
-      {state === "ready" ? (
-        // The top of the byReach order: the rail glances at who matters most
-        // on the account, and the Contacts tab is the full roster.
-        <ul className="record-card-list">
-          {contacts.slice(0, RAIL_ROW_LIMIT).map((contact) => (
-            <li key={contact.contact_id}>
-              <ContactCard contact={contact} />
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <PanelBody>
-          <SurfaceState
-            state={state}
-            emptyLabel={t("co.rail.contacts.empty")}
-            loadingLabel={t("co.rail.contacts.title")}
-          >
-            {null}
-          </SurfaceState>
-          {/* The empty state's one verb; the foot below stands only once
-              there are rows, so an empty roster never offers the same
-              tab twice under two names. */}
-          {state === "empty" && (
-            <div className="card-actions">
-              <Button variant="ghost" onClick={() => onTab("contacts")}>
-                {t("co.rail.contacts.add")}
-              </Button>
-            </div>
-          )}
-        </PanelBody>
-      )}
-      {state === "ready" && (
-        <div className="card-actions">
-          <Button variant="ghost" onClick={() => onTab("contacts")}>
-            {count != null
-              ? t("co.rail.all", { count: formatNumber(count, locale) })
-              : t("co.rail.allUncounted")}
-          </Button>
-        </div>
-      )}
-    </Disclosure>
-  );
-}
-
-function ContactCard({ contact }: Readonly<{ contact: Contact }>) {
-  const t = useT();
-  const colleagues = contact.routes?.top ?? [];
-  return (
-    <RecordCard
-      kind="contact"
-      name={contact.full_name}
-      identity={contact.contact_id}
-      href={routeHash({ screen: "contacts", id: contact.contact_id })}
-      position={contactRole(contact)}
-      email={contact.primary_email ?? undefined}
-      aside={
-        colleagues.length > 0 && (
-          /* The rail's own wrapper: whether the stack's trigger wears a
-             pointer is this surface's decision, not the card's.
-
-             A bare monogram is a mark only its owner recognises, so the stack
-             opens to the sentence it stands for: which colleagues are already
-             in touch with this contact. Hover for a passing reader, click and
-             focus for everyone a hover never reaches; the sr-only names
-             double as the trigger's accessible name. */
-          <span className="co-contact-routes">
-            <Popover
-              onHover
-              label={
-                <>
-                  <span className="sr-only">
-                    {colleagues.map((route) => route.display_name).join(", ")}
-                  </span>
-                  <AvatarStack
-                    contacts={colleagues.map((route) => ({
-                      name: route.display_name,
-                      identity: route.user_id,
-                    }))}
-                  />
-                </>
-              }
-            >
-              <p>{t("co.rail.contacts.inTouch")}</p>
-              <ul className="co-contact-routes-list">
-                {colleagues.map((route) => (
-                  // Keyed on the id, not the name: two colleagues can share a
-                  // display name, and a name key would fold their rows.
-                  <li key={route.user_id}>{route.display_name}</li>
-                ))}
-              </ul>
-            </Popover>
-          </span>
+    <RailBody
+      {...props}
+      lists={
+        found.length > 0 && (
+          <ul className="co-aside-chips">
+            {found.map((list) => (
+              <li key={list.id}>
+                <Badge>{list.name}</Badge>
+              </li>
+            ))}
+          </ul>
         )
       }
     />
   );
 }
 
-/**
- * SourcePageLink opens the page a signal was read off, when it names one.
- *
- * The address rides `evidence` rather than a field of its own: a signal cites
- * its source, and a citation is per-claim. `source_type: "page"` is the one
- * kind that is a web address — the others point at rows inside this product,
- * which a reader reaches by other means — so it is the only one linked here.
- *
- * Renders nothing when no evidence names a page, which is the ordinary case
- * for a signal derived from the product's own records.
- */
-function SourcePageLink({ signal }: Readonly<{ signal: Signal }>) {
+function RailBody({
+  company,
+  view,
+  loading,
+  refusal,
+  lists,
+}: RailProps & Readonly<{ lists?: ReactNode }>) {
   const t = useT();
-  // Array-checked rather than `?? []`: the client validates no response body,
-  // so a server ahead of this tab could send a shape `.find` cannot walk, and
-  // the throw would take the whole account page down over one row's citation.
-  const cited = Array.isArray(signal.evidence) ? signal.evidence : [];
-  // The first citation that is actually reachable, not the first one CLAIMING
-  // to be a page: a malformed address in the first slot would otherwise hide a
-  // good one behind it, and the row would fall silently back to no link.
-  const page = cited.find(
-    (one) =>
-      one?.source_type === "page" &&
-      typeof one.source_id === "string" &&
-      webUrl(one.source_id) !== null,
-  );
-  if (!page?.source_id) {
-    return null;
+  const writable = useCanWriteRecord("company", company);
+  const reason = useCompanyReadOnlyReason(company);
+  const edit = {
+    canEdit: writable && !reason,
+    reason: reason ?? (writable ? undefined : t("record.notYoursToChange")),
+  };
+  const sections: DetailSection[] = [
+    {
+      key: "about",
+      label: t("record.details.about"),
+      rows: useAboutRows(company, view, loading, edit),
+    },
+    {
+      key: "ownership",
+      label: t("record.details.ownership"),
+      rows: useOwnershipRows(company),
+    },
+    {
+      key: "registration",
+      label: t("record.registration"),
+      rows: useRegistrationRows(company, edit),
+    },
+  ];
+  if (lists) {
+    sections.push({
+      key: "lists",
+      label: t("lists.record.title"),
+      children: lists,
+    });
   }
   return (
-    <OffsiteLink href={page.source_id} className="co-rowlink co-signal-link">
-      {t("co.signals.openSource")}
-    </OffsiteLink>
+    <RecordDetails
+      sections={sections}
+      footnote={refusal && <span id={refusal.id}>{refusal.text}</span>}
+    />
   );
 }
 
-/**
- * SignalsSection reads the account-filtered signals, same endpoint and same
- * withheld/failed handling SignalsCard used. Signals are a separately
- * governed surface, not a 360 section, so this runs its own query rather
- * than reading a slice of `view`.
- *
- * Not mounted by CompanyRail — signals moved out of the rail to sit beside the
- * account's other readings, and the company record's overview stack mounts it
- * there.
- */
-export function SignalsSection({ companyId }: Readonly<{ companyId: string }>) {
+export type Edit = Readonly<{ canEdit: boolean; reason?: string }>;
+
+function isBlank(value: string | null | undefined): boolean {
+  return !value?.trim();
+}
+
+// One details row per kind of field. Each edits in place (or in a small form,
+// for a field of several inputs) and folds while empty.
+export function useRowBuilders(company: Company, edit: Edit) {
+  const t = useT();
+  const save = useCompanyFieldSave(company);
+  // Every write goes through the form's one mapper, which trims, clears an
+  // erased value to null and leaves untouched fields out of the patch.
+  const write = (key: string) => (next: string) =>
+    save(mapCompanyUpdate({ [key]: next }, {}));
+  const text = (
+    key: "industry" | "legal_name" | "linkedin_url",
+    label: MessageKey,
+  ): DetailRow => ({
+    key,
+    term: t(label),
+    empty: isBlank(company[key]),
+    value: (
+      <InlineText
+        label={t(label)}
+        value={company[key] ?? ""}
+        placeholder={t("field.unset")}
+        canEdit={edit.canEdit}
+        readOnlyReason={edit.reason}
+        onSave={write(key)}
+      />
+    ),
+  });
+  const choice = (
+    key: "size_band" | "lifecycle" | "industry",
+    label: MessageKey,
+    options: readonly { value: string; label: string }[],
+  ): DetailRow => ({
+    key,
+    term: t(label),
+    empty: !company[key] || company[key] === "unknown",
+    value: (
+      <InlineChoice
+        label={t(label)}
+        hideLabel
+        value={company[key] ?? ""}
+        options={options}
+        render={(value) =>
+          options.find((option) => option.value === value)?.label ??
+          t("field.unset")
+        }
+        canEdit={edit.canEdit}
+        readOnlyReason={edit.reason}
+        onSave={write(key)}
+      />
+    ),
+  });
+  const compound = (
+    which: CompoundField,
+    label: string,
+    reading: ReactNode | undefined,
+  ): DetailRow => ({
+    key: which,
+    term: label,
+    empty: !reading,
+    value: (
+      <CompoundFieldValue
+        company={company}
+        which={which}
+        label={label}
+        reading={reading}
+        canEdit={edit.canEdit}
+        readOnlyReason={edit.reason}
+      />
+    ),
+  });
+  return { text, choice, compound };
+}
+
+// The fixed list in the reader's order. A value that is no code, from a row not
+// yet repaired, is offered as it is stored so the row never reads as unset.
+function useIndustryOptions(company: Company) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const query = useQuery({
-    queryKey: ["signals", "company", companyId],
-    queryFn: async () => {
-      const data = unwrap(
-        await api.GET("/signals", {
-          params: {
-            query: { company_id: companyId, status: "open", limit: 10 },
+  const options = industryOptions(t, locale);
+  const stored = company.industry;
+  return stored && !INDUSTRY_CODES.some((code) => code === stored)
+    ? [{ value: stored, label: stored }, ...options]
+    : options;
+}
+
+// The rows the design reads under About: each set one shows, each empty one
+// folds behind "Show N empty fields". The account's other fields live on the
+// Profile tab (companyprofiledetails.tsx).
+function useAboutRows(
+  company: Company,
+  view: Company360 | undefined,
+  loading: boolean,
+  edit: Edit,
+): DetailRow[] {
+  const t = useT();
+  const { choice, compound } = useRowBuilders(company, edit);
+  const industryOptions = useIndustryOptions(company);
+  const website = companyWebsite(company);
+  const wayIn = useWayIn(company, view, loading);
+  return [
+    // The head already links the site; here the value opens the domains form.
+    compound("domains", t("field.domain"), website && displayHost(website)),
+    choice("industry", "create.industry", industryOptions),
+    choice(
+      "size_band",
+      "co.aside.size",
+      SIZE_BAND_OPTIONS.map((band) => ({
+        value: band,
+        label: band.replace("-", "–"),
+      })),
+    ),
+    choice(
+      "lifecycle",
+      "company.lifecycle",
+      LIFECYCLE_OPTIONS.map((value) => ({
+        value,
+        label: t(LIFECYCLE_LABELS[value]),
+      })),
+    ),
+    compound("address", t("co.address.summary"), addressLine(company)),
+    ...(wayIn
+      ? [
+          {
+            key: "wayin",
+            term: t("co.aside.wayIn"),
+            block: true,
+            value: wayIn,
           },
-        }),
-      );
-      return data.data;
-    },
-  });
-  const signals: Signal[] = query.data ?? [];
-  const withheld =
-    query.isError && problemCodeOf(query.error) === "permission_denied";
-  let state: SectionState = "ready";
-  if (withheld) {
-    state = "withheld";
-  } else if (query.isError) {
-    state = "failed";
-  } else if (query.isPending) {
-    state = "loading";
-  } else if (signals.length === 0) {
-    state = "empty";
+        ]
+      : []),
+  ];
+}
+
+// "Munich, DE": the city and the country, the one line the design reads.
+function addressLine(company: Company): string | undefined {
+  const address = company.address;
+  const parts = [address?.city, address?.country].filter(
+    (part): part is string => Boolean(part?.trim()),
+  );
+  if (parts.length > 0) {
+    return parts.join(", ");
+  }
+  return address?.line1?.trim() || undefined;
+}
+
+// The best way in: the contact the server names as the strongest route,
+// drawn as the card the Overview's Contacts card draws.
+function useWayIn(
+  company: Company,
+  view: Company360 | undefined,
+  loading: boolean,
+): ReactNode | undefined {
+  const id = loading ? undefined : view?.strength?.contributor_contact_id;
+  const contact = id
+    ? view?.contacts?.data.find((row) => row.contact_id === id)
+    : undefined;
+  if (!contact || company.archived_at) {
+    return undefined;
   }
   return (
-    <Disclosure
-      className="co-sect"
-      open
-      summary={
-        <SectionSummary
-          title={t("co.signals.title")}
-          count={sectionAnswered(state) ? signals.length : undefined}
-        />
-      }
-    >
-      {state === "ready" ? (
-        signals.map((signal) => (
-          <PanelRow key={signal.id} className="co-signal-row">
-            <span
-              className={`co-dot${signalTone(signal.severity) ? ` co-dot-${signalTone(signal.severity)}` : ""}`}
-              aria-hidden="true"
-            />
-            <span className="co-signal-body">
-              <span className="co-signal-title">
-                {signalKindLabel(signal.kind, t)}
-              </span>
-              <span className="co-signal-summary">{signal.summary}</span>
-              {/* A signal ABOUT one of the account's projects sends the
-                  reader to that project: the summary names it, the link
-                  opens it. An account- or contact-subject signal already
-                  sits on the page it is about. */}
-              {signal.entity_type === "project" && signal.entity_id && (
-                <a
-                  className="co-rowlink co-signal-link"
-                  href={routeHash({ screen: "projects", id: signal.entity_id })}
-                >
-                  {t("co.signals.openProject")}
-                </a>
-              )}
-              {/* The page the claim was read off. A newsroom signal cites the
-                  article rather than copying it, so the headline on this row
-                  is the whole of what we hold — without the address, a reader
-                  who wants the announcement itself has nowhere to go and the
-                  citation proves nothing. */}
-              <SourcePageLink signal={signal} />
-            </span>
-            <span className="co-row-meta t-caption">
-              {formatDate(signal.detected_at, locale, recordZone)}
-            </span>
-          </PanelRow>
-        ))
-      ) : (
-        <PanelBody>
-          <SurfaceState
-            loadingLabel={t("co.signals.title")}
-            state={state}
-            emptyLabel={t("co.signals.empty")}
-            emptyDetail={t("co.signals.emptyDetail")}
-            detail={
-              state === "failed" ? { onRetry: () => void query.refetch() } : {}
-            }
-          >
-            {null}
-          </SurfaceState>
-        </PanelBody>
-      )}
-    </Disclosure>
+    <CompanyContactCard contact={contact} companyName={company.display_name} />
   );
 }

@@ -70,8 +70,10 @@ function panel(writer: WrittenBy, situation: Situation = "task") {
     return (
       <StoryProviders>
         <DealStatusCardPanel
-          dealId="demo-deal"
-          dealName={request ? "Won account" : "Demo proposal"}
+          deal={{
+            id: "demo-deal",
+            name: request ? "Won account" : "Demo proposal",
+          }}
         />
       </StoryProviders>
     );

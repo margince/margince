@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/config/configtest"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -69,4 +70,33 @@ func TestABootSetSyncIntervalPacesTheSyncAndRefusesAChange(t *testing.T) {
 		t.Fatalf("SyncOnce: %v", err)
 	}
 	pacedWithin(ctx, t, "gmail", 25*time.Minute, 30*time.Minute)
+}
+
+// A pass cap the environment sets is the cap the pass reads, and the settings
+// store refuses a different one. With no boot source the pass reads what an
+// admin saved. Not parallel: the binding is the process's own.
+func TestTheConfidentialityPassReadsTheBootSetCapBeforeASavedOne(t *testing.T) {
+	ctx, _, _, ws := newCaptureRegistryFixture(t)
+	_, pool := setupCaptureDB(t)
+	threads := capture.NewThreadVerdictStore(database.BindTo(pool, ws))
+
+	store, cfg := captureSettingsStore(t, pool)
+	configtest.Bind(t, cfg)
+	saved := 90
+	if _, err := store.Update(captureAdmin(ctx, ws), capture.SettingsPatch{ConfidentialityPassCap: &saved}); err != nil {
+		t.Fatalf("saving the cap: %v", err)
+	}
+	if got, err := threads.PassCap(ctx); err != nil || got != saved {
+		t.Fatalf("the pass reads %d (err %v), want the %d an admin saved", got, err, saved)
+	}
+
+	bootStore, bootCfg := captureSettingsStore(t, pool, "MARGINCE_CAPTURE_CONFIDENTIALITY_PASS_CAP=7")
+	configtest.Bind(t, bootCfg)
+	if got, err := threads.PassCap(ctx); err != nil || got != 7 {
+		t.Fatalf("the pass reads %d (err %v), want the 7 the environment sets", got, err)
+	}
+	other := 8
+	if _, err := bootStore.Update(captureAdmin(ctx, ws), capture.SettingsPatch{ConfidentialityPassCap: &other}); !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("a change of the boot-set cap gave %v, want a conflict", err)
+	}
 }

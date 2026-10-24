@@ -99,12 +99,13 @@ func stageProposalQuoting(t *testing.T, e *integration.Env, activityID ids.UUID,
 func stageQuotingProposal(t *testing.T, e *integration.Env, activityID ids.UUID, snippet, summary string) ids.ApprovalID {
 	t.Helper()
 	id, err := approvals.NewService(e.DB()).Stage(e.Admin(), approvals.StageInput{
-		Kind:           CommitmentTaskKind,
-		ProposedChange: json.RawMessage(`{"activity_id":"` + activityID.String() + `","summary":"` + summary + `"}`),
-		DiffHash:       "quote-" + ids.NewV7().String(),
-		TargetType:     transcriptTargetType,
-		TargetID:       activityID,
-		Summary:        summary,
+		Kind: CommitmentTaskKind,
+		ProposedChange: json.RawMessage(`{"activity_id":"` + activityID.String() + `","summary":"` + summary +
+			`","seat_id":"` + e.AdminUser.String() + `","promiser_seat_id":"` + e.AdminUser.String() + `"}`),
+		DiffHash:   "quote-" + ids.NewV7().String(),
+		TargetType: transcriptTargetType,
+		TargetID:   activityID,
+		Summary:    summary,
 		Evidence: []approvals.Evidence{{
 			Snippet:     snippet,
 			SourceType:  transcriptTargetType,

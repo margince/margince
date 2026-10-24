@@ -132,9 +132,10 @@ func TestCompany360CostDoesNotGrowWithTheAccount(t *testing.T) {
 			largeCost, smallCost)
 	}
 	// Every timeline page reads commitment admission evidence in one batch.
-	// The equality above also holds this cost flat as the account grows.
-	// Shared prose adds one language read, reused by every section.
-	const budget = 52
+	// Beyond the equality above the budget covers one language read and one
+	// zone read. It adds two commitment reads, theirs and its completeness
+	// count. It adds one read for next steps outside the caller's row scope.
+	const budget = 56
 	if tracer.languageReads != 2 {
 		t.Errorf("two assemblies read base language %d times, want once each", tracer.languageReads)
 	}

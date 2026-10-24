@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/employment"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -47,13 +48,15 @@ type LastTouchCandidate struct {
 // the engine's own output. The scan reads it to find a silence and the
 // resolver (CompleteQuietRemindersReachedBy) to find its end, so a touch that
 // would not have moved the anchor does not close the reminder either.
+// Mail from a sending system is not contact. It ends no silence.
 //
 // The three positions bind systemSource, systemCapturedBy and
 // systemCapturedByPattern; source alone is a client's to spell, so it is
 // excluded only together with captured_by.
 func genuineEngagement(alias string, sourcePos, capturedByPos, patternPos int) string {
 	return storekit.SQLf(`%[1]s.archived_at IS NULL`+
-		auth.OriginIsEngagement(alias)+auth.AudienceWorkspaceOnly(alias)+
+		auth.OriginIsEngagement(alias)+auth.AudienceWorkspaceOnly(alias)+`
+				  AND NOT %[1]s.sender_is_machine`+
 		meetingNotCalledOffSQL(alias)+`
 				  AND NOT (%[1]s.source = $%[2]d
 				           AND (%[1]s.captured_by = $%[3]d OR %[1]s.captured_by LIKE $%[4]d))`,
@@ -96,6 +99,7 @@ func lastTouchCandidateQuery(mailbox *OwnerMailbox, providersPos int) string {
 				SELECT a.id, a.occurred_at
 				FROM activity a
 				WHERE `+genuineEngagement("a", 1, 4, 5)+`
+				  AND `+relstrength.LastActivityCountsSQL("a", "now()")+`
 			), live_accounts AS (
 				SELECT o.id, o.owner_id
 				FROM company o

@@ -92,7 +92,7 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 		}
 	}
 	outbound := string(crmcontracts.ActivityDirectionOutbound)
-	activity, _, err := q.activities.LogActivityTx(ctx, tx, activities.LogActivityInput{
+	activity, _, err := q.activities.LogActivityTx(ctx, tx, activities.SentRecord(activities.LogActivityInput{
 		Kind:      string(crmcontracts.ActivityKindEmail),
 		Subject:   &subject,
 		Body:      &body,
@@ -102,7 +102,7 @@ func (q controllerMailQueue) QueueConfirmationTx(ctx context.Context, tx pgx.Tx,
 		// that contact engaging, so it stays out of every last_activity_at.
 		Origin: activities.OriginSystemNotice,
 		Links:  []activities.ActivityLinkInput{controllerMailSubject(in)},
-	})
+	}))
 	if err != nil {
 		return ids.UUID{}, fmt.Errorf("compose: filing the notice on the timeline: %w", err)
 	}

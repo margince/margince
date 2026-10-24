@@ -62,7 +62,7 @@ passing around inside the company; the German versions are the ones to sign.
 | --- | --- |
 | Does mail leave the company's systems? | The AI egress reference, which lists every AI task and whether its text can leave your installation |
 | Who decided this message was private, and when? | The message's audience reason, and the audit log |
-| What was decided about the senders who write to me? | Settings → Connections → Senders, per seat |
+| What was decided about the senders who write to me? | Settings → Capture activity → Senders, per seat |
 | Can an administrator read a held message? | No. An administrator cannot open a held message |
 | What happens when the sorting model is down? | Everything stays held |
 

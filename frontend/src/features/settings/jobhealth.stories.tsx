@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { meFixture } from "../../testing/mefixture";
+import type { components } from "../../api/schema";
+import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
   jsonResponse,
@@ -10,7 +11,11 @@ import {
 } from "../../testing/story-utils";
 import { JobHealthCard } from "./jobhealth";
 
-const CLASSIFY = {
+type JobHealth = components["schemas"]["JobHealth"];
+type JobKindHealth = components["schemas"]["JobKindHealth"];
+type JobFailure = components["schemas"]["JobFailure"];
+
+const CLASSIFY: JobKindHealth = {
   kind: "capture_classify",
   queue: "default",
   fleet_wide: false,
@@ -18,11 +23,12 @@ const CLASSIFY = {
   running: 1,
   retrying: 2,
   dead: 0,
+  dead_recent: 0,
   oldest_waiting_age_seconds: 4_500,
 };
 
 // A long name over a long key, for the width of the pinned first column.
-const CONFIDENTIALITY = {
+const CONFIDENTIALITY: JobKindHealth = {
   kind: "capture_confidentiality_verdict",
   queue: "default",
   fleet_wide: true,
@@ -30,11 +36,12 @@ const CONFIDENTIALITY = {
   running: 0,
   retrying: 0,
   dead: 0,
+  dead_recent: 0,
   oldest_waiting_age_seconds: 600,
 };
 
 // A kind this build has no name for shows its key once.
-const DISPATCHER = {
+const DISPATCHER: JobKindHealth = {
   kind: "retention_sweep_dispatch",
   queue: "periodic",
   fleet_wide: true,
@@ -42,10 +49,11 @@ const DISPATCHER = {
   running: 0,
   retrying: 0,
   dead: 0,
+  dead_recent: 0,
   oldest_waiting_age_seconds: null,
 };
 
-const FAILURE = {
+const FAILURE: JobFailure = {
   kind: "capture_classify",
   state: "retryable",
   attempt: 2,
@@ -72,12 +80,23 @@ const UNVETTED_FAILURE = {
   reason: "the job failed for a reason it could not classify",
 };
 
-// Every story serves /me too: the card gates its own fetch on the admin role,
+// The seeded matrix gives `job_health:read` to admin and ops only, so a story's
+// grant follows its roles and Withheld really draws the withheld state.
+const READS_JOB_HEALTH = ["admin", "ops"];
+
+function grantFor(roles: string[]): GrantSpec {
+  return roles.some((role) => READS_JOB_HEALTH.includes(role))
+    ? { job_health: ["read"] }
+    : {};
+}
+
+// Every story serves /me too: the card gates its own fetch on `job_health:read`,
 // so a story without a principal would only ever render the withheld state.
-function story(health: Record<string, unknown>, roles: string[] = ["admin"]) {
+function story(health: JobHealth, roles: string[] = ["admin"]) {
   return () => {
     installFetchStub({
-      "GET /me": () => jsonResponse(meFixture({ roles })),
+      "GET /me": () =>
+        jsonResponse(meFixture({ roles, allow: grantFor(roles) })),
       "GET /admin/job-health": () => jsonResponse(health),
     });
     return (
@@ -88,8 +107,9 @@ function story(health: Record<string, unknown>, roles: string[] = ["admin"]) {
   };
 }
 
-const HEALTHY = {
+const HEALTHY: JobHealth = {
   generated_at: "2026-08-13T09:30:00Z",
+  dead_window_hours: 24,
   kinds: [CLASSIFY, CONFIDENTIALITY, DISPATCHER],
   recent_failures: [FAILURE],
 };
@@ -138,12 +158,13 @@ export const UnclassifiedFailure: Story = {
 export const Idle: Story = {
   render: story({
     generated_at: "2026-08-13T09:30:00Z",
+    dead_window_hours: 24,
     kinds: [],
     recent_failures: [],
   }),
 };
 
-export const Withheld: Story = { render: story(HEALTHY, ["ops"]) };
+export const Withheld: Story = { render: story(HEALTHY, ["rep"]) };
 
 // Dead work in dark, which is the only story that has every tone on screen at
 // once: the danger Callout an operator must not scroll past, the danger `dead`

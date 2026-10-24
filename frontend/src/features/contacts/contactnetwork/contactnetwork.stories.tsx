@@ -373,6 +373,7 @@ export const AlreadyAsked: Story = {
         {
           id: "018f3a1b-0000-7000-8000-0000000000a1",
           contact_id: CONTACT,
+          origin: "asked",
           requester_user_id: "018f3a1b-0000-7000-8000-000000000001",
           introducer_user_id: SOFIA,
           introducer_display_name: "Sofia Meier",
@@ -407,6 +408,7 @@ export const NameDropped: Story = {
         {
           id: "018f3a1b-0000-7000-8000-0000000000a2",
           contact_id: CONTACT,
+          origin: "asked",
           requester_user_id: "018f3a1b-0000-7000-8000-000000000001",
           introducer_user_id: SOFIA,
           introducer_display_name: "Sofia Meier",

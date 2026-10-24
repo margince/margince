@@ -1,4 +1,5 @@
 import { ShieldAlert, ShieldQuestion } from "lucide-react";
+import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
@@ -115,6 +116,7 @@ export function SendPermission({
   unanswered = false,
   asking = false,
   onOverride,
+  override,
 }: Readonly<{
   preview: Preview | undefined;
   /**
@@ -137,6 +139,11 @@ export function SendPermission({
    * plain explanation rather than a dead control.
    */
   onOverride?: () => void;
+  /**
+   * A control that records the override where it is read, drawn in place of
+   * the button `onOverride` asks for. Same state, same rule: absent, no control.
+   */
+  override?: ReactNode;
 }>) {
   const t = useT();
   const { state, recipient } = decidingRecipient(preview, asking);
@@ -177,9 +184,10 @@ export function SendPermission({
       icon={ShieldQuestion}
       title={t("sendPermission.unproven")}
       actions={
-        onOverride ? (
+        override ??
+        (onOverride ? (
           <Button onClick={onOverride}>{t("sendPermission.sayWhy")}</Button>
-        ) : undefined
+        ) : undefined)
       }
     >
       {/* The hint says what the rep can DO, so it changes with what is on
@@ -187,7 +195,7 @@ export function SendPermission({
           the message goes as it stands. Telling a reader to "say so" beside no
           control would be the dead button in prose. */}
       {t(
-        onOverride
+        override || onOverride
           ? "sendPermission.unprovenHint"
           : "sendPermission.unprovenRefuses",
       )}

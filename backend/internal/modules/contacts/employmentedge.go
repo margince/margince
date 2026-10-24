@@ -110,7 +110,10 @@ func plantEmploymentEdge(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyIn
 	if err != nil {
 		return fmt.Errorf("contacts: insert employment edge: %w", err)
 	}
-	return auditCapturedEmployment(ctx, tx, edgeID, contactID, companyID, relationshipOriginCapture)
+	if err := auditCapturedEmployment(ctx, tx, edgeID, contactID, companyID, relationshipOriginCapture); err != nil {
+		return err
+	}
+	return fileEmployerTwins(ctx, tx, contactID, in.CapturedBy)
 }
 
 // adoptDispositionForCompany settles a domain onto the company that already
@@ -125,6 +128,8 @@ func adoptDispositionForCompany(ctx context.Context, tx pgx.Tx, domain string, c
 		UPDATE company_domain_disposition
 		   SET status = $2, source = $3, company_id = $4,
 		       evidence = 'a human put a company on this domain',
+		       -- A settled row holds no open question (pending_reason_shape).
+		       pending_reason = NULL,
 		       next_attempt_at = NULL, updated_at = now()
 		 WHERE domain = $1
 		   AND (status <> $2 OR company_id IS DISTINCT FROM $4)

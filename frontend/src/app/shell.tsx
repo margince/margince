@@ -8,6 +8,7 @@ import {
 } from "react";
 import { PageAsideProvider } from "../components/pageaside";
 import { PageHeadSlot } from "../components/pageheadaction";
+import { ComposeDockProvider } from "../features/mail/composedock";
 import { SETTINGS_SCREEN } from "../features/settings/settingsnav";
 import { useT } from "../i18n";
 import { EXTENSION_SCREEN, findExtension } from "../lib/extensions";
@@ -233,66 +234,70 @@ export function Shell({
     // — open or folded — outlives the screen that draws it: the switch and
     // the pane are the record's, the preference is the reader's.
     <PageAsideProvider>
-      <div className={collapsed ? "app" : "app railexpanded"}>
-        <SkipToContent target={scroller} />
-        {/* One rail, two suppliers of what it shows: a screen owning a level wires
+      {/* The composer docks here rather than on the page that opened it, so a
+          message being written survives the reader moving to another page. */}
+      <ComposeDockProvider>
+        <div className={collapsed ? "app" : "app railexpanded"}>
+          <SkipToContent target={scroller} />
+          {/* One rail, two suppliers of what it shows: a screen owning a level wires
           its own data in, everything else renders the destinations alone. The
           provider spans both, because the way out of a level is asked for on the
           rail that has one and answered with what the other one saw. */}
-        <NavWalkProvider value={walk}>
-          {leveled ? (
-            <SettingsRail {...railProps} />
-          ) : (
-            <WorkspaceRail {...railProps} />
-          )}
-        </NavWalkProvider>
-        <main className={mainClasses(gridded, griddedRecord)}>
-          {leveled ? (
-            <SettingsTopBar
-              route={route}
-              collapsed={collapsed}
-              onToggle={toggle}
-              onOpenSearch={onOpenSearch}
-            />
-          ) : (
-            <TopBar
-              route={route}
-              collapsed={collapsed}
-              onToggle={toggle}
-              onOpenSearch={onOpenSearch}
-            />
-          )}
-          <ConnectivityBanner />
-          <EconomyBanner />
-          <EmbedReindexBanner />
-          <LicenseBanner />
-          {/* The import's gauge, floating bottom-centre of this column for as
+          <NavWalkProvider value={walk}>
+            {leveled ? (
+              <SettingsRail {...railProps} />
+            ) : (
+              <WorkspaceRail {...railProps} />
+            )}
+          </NavWalkProvider>
+          <main className={mainClasses(gridded, griddedRecord)}>
+            {leveled ? (
+              <SettingsTopBar
+                route={route}
+                collapsed={collapsed}
+                onToggle={toggle}
+                onOpenSearch={onOpenSearch}
+              />
+            ) : (
+              <TopBar
+                route={route}
+                collapsed={collapsed}
+                onToggle={toggle}
+                onOpenSearch={onOpenSearch}
+              />
+            )}
+            <ConnectivityBanner />
+            <EconomyBanner />
+            <EmbedReindexBanner />
+            <LicenseBanner />
+            {/* The import's gauge, floating bottom-centre of this column for as
             long as mail is arriving. Inside `.main` rather than beside the
             edge below, because it is positioned against the content column
             and not the window. */}
-          <CaptureChip linked />
-          {/* Focusable only as the skip link's destination — never a tab stop of
+            <CaptureChip linked />
+            {/* Focusable only as the skip link's destination, never a tab stop of
             its own, which is what tabIndex -1 buys. A reader who takes the skip
-            lands here, PAST the strip, and the next Tab continues into the page's
+            lands here, past the strip, and the next Tab continues into the page's
             own controls. */}
-          <div className="scroll" ref={scroller} tabIndex={-1}>
-            {leveled ? (
-              <SettingsPageTitle route={route} actionSlot={setHeadSlot} />
-            ) : (
-              <PageTitle route={route} actionSlot={setHeadSlot} />
-            )}
-            <PageHeadSlot.Provider value={headSlot}>
-              {children}
-            </PageHeadSlot.Provider>
-          </div>
-        </main>
-        {/* The agent's own periphery, drawn around the WHOLE workspace rather than
+            <div className="scroll" ref={scroller} tabIndex={-1}>
+              {leveled ? (
+                <SettingsPageTitle route={route} actionSlot={setHeadSlot} />
+              ) : (
+                <PageTitle route={route} actionSlot={setHeadSlot} />
+              )}
+              <PageHeadSlot.Provider value={headSlot}>
+                {children}
+              </PageHeadSlot.Provider>
+            </div>
+          </main>
+          {/* The agent's own periphery, drawn around the whole workspace rather than
           around the content column: what it reports is true of the window a
           contact is working in, and a contour that stopped at the sidebar would
           read as a panel border. Last in the tree, because it is an overlay and
           not a column. */}
-        <AgentEdge />
-      </div>
+          <AgentEdge />
+        </div>
+      </ComposeDockProvider>
     </PageAsideProvider>
   );
 }

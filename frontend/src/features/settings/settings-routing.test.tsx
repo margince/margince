@@ -3,6 +3,8 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { translate } from "../../i18n";
 import { parseHash, routeHash } from "../../lib/router";
+import { SETTINGS_PAGES, type SettingsPageId } from "../../lib/settingscatalog";
+import { settingsHref, settingsRouteTarget } from "../../lib/settingsrouting";
 import { meFixture } from "../../testing/mefixture";
 import {
   jsonResponse,
@@ -12,8 +14,6 @@ import {
   settingsBackend,
 } from "../../testing/settings.testkit";
 import { SettingsScreen } from "./settings";
-import { SETTINGS_PAGES, type SettingsPageId } from "./settingscatalog";
-import { settingsHref, settingsRouteTarget } from "./settingsrouting";
 
 // WHERE a settings page lives, and which addresses reach it. Every page is
 // addressed flat — `#/settings/<page>` — so three things have to hold together,

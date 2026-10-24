@@ -287,16 +287,17 @@ func companyCreateInputAdmitting(req crmcontracts.CreateCompanyRequest, importer
 
 func companyUpdateInput(req crmcontracts.UpdateCompanyRequest, ifVersion *int64) UpdateCompanyInput {
 	in := UpdateCompanyInput{
-		DisplayName:     req.DisplayName,
-		LegalName:       req.LegalName,
-		Description:     req.Description,
-		Industry:        req.Industry,
-		OwnerID:         idArg[ids.UserKind](req.OwnerId),
-		ParentCompanyID: idArg[ids.CompanyKind](req.ParentCompanyId),
-		IfVersion:       ifVersion,
-		CustomFields:    req.AdditionalProperties,
-		LinkedInURL:     req.LinkedinUrl,
-		Visibility:      companyVisibilityArg(req.Visibility),
+		DisplayName:           req.DisplayName,
+		LegalName:             req.LegalName,
+		Description:           req.Description,
+		Industry:              req.Industry,
+		OwnerID:               idArg[ids.UserKind](req.OwnerId),
+		ParentCompanyID:       idArg[ids.CompanyKind](req.ParentCompanyId),
+		AssessAgainstEntityID: idArg[ids.LegalEntityKind](req.AssessAgainstEntityId),
+		IfVersion:             ifVersion,
+		CustomFields:          req.AdditionalProperties,
+		LinkedInURL:           req.LinkedinUrl,
+		Visibility:            companyVisibilityArg(req.Visibility),
 	}
 	in.Address = req.Address
 	if req.SizeBand != nil {
@@ -353,13 +354,17 @@ func leadCreateInputAdmitting(req crmcontracts.CreateLeadRequest, importer bool)
 			}
 		}
 	}
-	source, err := httperr.RequireNonBlank(fieldSource, req.Source)
-	if err != nil {
-		return CreateLeadInput{}, err
+	// A caller that names no source typed or filed the lead itself. The one
+	// default lives here because this mapper is every door's way in.
+	source := manualSource
+	if req.Source != nil {
+		var err error
+		if source, err = httperr.RequireNonBlank(fieldSource, *req.Source); err != nil {
+			return CreateLeadInput{}, err
+		}
 	}
-	req.Source = source
 	// `source` is nobody's to forge, the importer included.
-	if err := provenance.Refuse(auditKeySource, req.Source); err != nil {
+	if err := provenance.Refuse(auditKeySource, source); err != nil {
 		return CreateLeadInput{}, err
 	}
 	author, err := storekit.AdmitSourceAuthor(req.SourceAuthorId, req.SourceAuthorName, req.SourceSystem, importer)
@@ -393,7 +398,9 @@ func leadCreateInputAdmitting(req crmcontracts.CreateLeadRequest, importer bool)
 		LinkedInURL:         req.LinkedinUrl,
 		SourceSystem:        req.SourceSystem,
 		SourceID:            req.SourceId,
-		Source:              req.Source,
+		Source:              source,
+		Origin:              req.Origin,
+		OriginDetail:        req.OriginDetail,
 		Author:              author,
 		OwnerID:             idArg[ids.UserKind](req.OwnerId),
 		ProjectID:           idArg[ids.ProjectKind](req.ProjectId),
@@ -451,6 +458,8 @@ func leadUpdateInput(req LeadUpdateRequest, ifVersion *int64) UpdateLeadInput {
 		CompanyName:         req.CompanyName,
 		CandidateCompanyKey: req.CandidateCompanyKey,
 		Source:              req.Source,
+		Origin:              req.Origin,
+		OriginDetail:        req.OriginDetail,
 		Score:               req.Score,
 		ScoreOverrideReason: req.ScoreOverrideReason,
 		ClearScoreOverride:  req.scoreNull || req.reasonNull,

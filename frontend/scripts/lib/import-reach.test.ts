@@ -33,7 +33,7 @@ describe("the import walk the split gates share", () => {
     rmSync(dir, { recursive: true, force: true });
   });
 
-  it("counts every shipped module, at any depth, and no test, story or testkit", () => {
+  it("counts every shipped module, at any depth, and no test, story or kit", () => {
     for (const name of [
       "a.ts",
       "b.tsx",
@@ -43,6 +43,7 @@ describe("the import walk the split gates share", () => {
       "b.stories.tsx",
       "d.testkit.ts",
       "e.testkit.tsx",
+      "g.storykit.tsx",
       "f.css",
     ]) {
       write(name);

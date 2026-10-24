@@ -14,6 +14,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/capture/googleconn"
@@ -35,17 +36,32 @@ import (
 // whichever mailbox the roster happens to list first. It is likewise a closed
 // enum: only a provider this deployment has a registered OAuth app for ever
 // reaches here.
-func (h connectorHandlers) landingURL(outcome, returnTo, provider string) string {
+//
+// heldMonths names a past-email window asked for at connect that did not start
+// on its own. It rides as `?import={window}`, the query the route parser
+// ignores, so the landing can offer the start; zero adds nothing.
+func (h connectorHandlers) landingURL(outcome, returnTo, provider string, heldMonths int) string {
 	route := "/#/onboarding/connect/"
-	if returnTo == returnToSettings {
+	switch returnTo {
+	case returnToSettings:
 		route = "/#/settings/connections/"
+	case returnToMeetings:
+		route = "/#/settings/meetings/"
 	}
-	return strings.TrimRight(h.publicBaseURL, "/") + route + outcome + "/" + provider
+	landing := strings.TrimRight(h.publicBaseURL, "/") + route + outcome + "/" + provider
+	if window := monthsWindow(heldMonths); window != "" {
+		landing += "?" + url.Values{landingImportParam: {window}}.Encode()
+	}
+	return landing
 }
+
+// landingImportParam is the landing query key for a held import.
+const landingImportParam = "import"
 
 const (
 	returnToOnboarding = "onboarding"
 	returnToSettings   = "settings"
+	returnToMeetings   = "meetings"
 )
 
 // The OAuth-return outcomes the landing surface renders. They are a closed set

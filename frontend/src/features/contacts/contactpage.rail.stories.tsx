@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import type { components } from "../../api/schema";
 import { meFixture } from "../../testing/mefixture";
 import { ContactRail } from "./contactrail";
 import "./contact360.css";
@@ -17,8 +18,30 @@ import {
   type View,
 } from "./contactpage.fixtures";
 
-// The contact page's rail, from the page gallery (contactpage.stories.tsx).
-// Its records come from contactpage.fixtures.ts.
+// The contact page's left column, from the page gallery
+// (contactpage.stories.tsx). Its records come from contactpage.fixtures.ts.
+
+// The column with the guard already answered, as the page hands it over.
+function LeftColumn({
+  view,
+  guard,
+}: Readonly<{
+  view: View;
+  guard: components["schemas"]["ContactConsentGuard"] | undefined;
+}>) {
+  return (
+    <ContactRail
+      view={view}
+      consent={{
+        guard,
+        loading: false,
+        failed: false,
+        onRetry: () => undefined,
+      }}
+      writeRefusalId="write-refused"
+    />
+  );
+}
 
 const meta: Meta = {
   title: "Records/Contact 360/Page rail",
@@ -39,7 +62,7 @@ export const Rail: Story = {
     return (
       <StoryProviders>
         <div style={{ maxWidth: 320 }}>
-          <ContactRail
+          <LeftColumn
             view={populated}
             guard={{
               contact_id: "p-1",
@@ -110,7 +133,7 @@ export const RailEmployments: Story = {
     return (
       <StoryProviders>
         <div style={{ maxWidth: 320 }}>
-          <ContactRail view={twoEmployers} guard={undefined} />
+          <LeftColumn view={twoEmployers} guard={undefined} />
         </div>
       </StoryProviders>
     );
@@ -130,7 +153,7 @@ export const RailConsentBlocked: Story = {
     return (
       <StoryProviders>
         <div style={{ maxWidth: 320 }}>
-          <ContactRail
+          <LeftColumn
             view={populated}
             guard={{
               contact_id: "p-1",
@@ -188,7 +211,7 @@ export const RailChannelReached: Story = {
     return (
       <StoryProviders>
         <div style={{ maxWidth: 320 }}>
-          <ContactRail
+          <LeftColumn
             view={channelReached}
             guard={{
               contact_id: "p-1",
@@ -248,7 +271,7 @@ export const RailAtRisk: Story = {
     return (
       <StoryProviders>
         <div style={{ maxWidth: 320 }}>
-          <ContactRail view={dealAtRisk} guard={undefined} />
+          <LeftColumn view={dealAtRisk} guard={undefined} />
         </div>
       </StoryProviders>
     );
@@ -280,7 +303,7 @@ export const RailThin: Story = {
     return (
       <StoryProviders>
         <div style={{ maxWidth: 320 }}>
-          <ContactRail view={thinContact} guard={undefined} />
+          <LeftColumn view={thinContact} guard={undefined} />
         </div>
       </StoryProviders>
     );
@@ -301,6 +324,7 @@ const unsetFields: View = {
     social: {},
     address: undefined,
     emails: [],
+    primary_email: null,
     phones: [],
   },
 };
@@ -314,7 +338,7 @@ export const RailUnsetFields: Story = {
     return (
       <StoryProviders>
         <div style={{ maxWidth: 320 }}>
-          <ContactRail view={unsetFields} guard={undefined} />
+          <LeftColumn view={unsetFields} guard={undefined} />
         </div>
       </StoryProviders>
     );

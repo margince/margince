@@ -19,7 +19,16 @@
   flex: 1;
 }
 
+.calendar-days,
 .calendar-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* The legend and each week share one column template, so a weekday letter
+   stays over its days. */
+.calendar-week {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: var(--space-1);
@@ -46,7 +55,7 @@
   color: var(--textPrimary);
   cursor: pointer;
 }
-.calendar-day:hover:not(:disabled) {
+.calendar-day:hover:not([aria-disabled="true"]) {
   background: var(--bgHover);
 }
 .calendar-day:focus-visible {
@@ -71,8 +80,8 @@
 
 /* The chosen day: the chip ground, an ink ring and weight, so it reads apart
    from today's disc and stays neutral like every other selected state. */
-.calendar-day[aria-pressed="true"],
-.calendar-day[aria-pressed="true"]:hover:not(:disabled) {
+[aria-selected="true"] > .calendar-day,
+[aria-selected="true"] > .calendar-day:hover:not([aria-disabled="true"]) {
   background: var(--bgChip);
   box-shadow: inset 0 0 0 1px var(--textPrimary);
   color: var(--textPrimary);
@@ -81,7 +90,7 @@
 
 /* A day nothing can be chosen on: secondary ink and a line through it, so the
    refusal is read as well as seen, and no hover that would promise a press. */
-.calendar-day:disabled {
+.calendar-day[aria-disabled="true"] {
   color: var(--textSecondary);
   text-decoration: line-through;
   cursor: default;

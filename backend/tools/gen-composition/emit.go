@@ -138,6 +138,16 @@ export type ExtensionEntryDescriptor = {
   readonly object: string;
 };
 
+/**
+ * One component a unit draws inline on a core page. The slot is a plain string
+ * here; features/deals/extensionpanels.slots.ts narrows it to the slots the core draws.
+ */
+export type ExtensionPanelDescriptor = {
+  readonly slot: string;
+  readonly export: string;
+  readonly object: string;
+};
+
 /** One enabled extension unit, as the composed installation publishes it. */
 export type ExtensionDescriptor = {
   readonly name: string;
@@ -148,6 +158,7 @@ export type ExtensionDescriptor = {
   readonly title: ` + "`ext${string}.title`" + ` | "";
   readonly verbs: readonly ExtensionVerbDescriptor[];
   readonly entries: readonly ExtensionEntryDescriptor[];
+  readonly panels: readonly ExtensionPanelDescriptor[];
   /**
    * The scope the unit's declared secrets ask for, or "" when it declares
    * none. A unit spanning both scopes is refused at generation time, so this
@@ -234,6 +245,9 @@ func composedFiles(root string) (composition, error) {
 	if err := checkEntryLabels(manifests, mergedCopy); err != nil {
 		return composition{}, err
 	}
+	if err := checkPanelFrontends(manifests); err != nil {
+		return composition{}, err
+	}
 	wiring, err := canonicalGoSource("backend/extensions_gen.go", extensionsGen(units, verbs, jobDecls))
 	if err != nil {
 		return composition{}, err
@@ -243,7 +257,7 @@ func composedFiles(root string) (composition, error) {
 		"backend/go.mod":             composedGoMod(goVersion),
 		"backend/extensions_gen.go":  wiring,
 		"frontend/extensions.gen.ts": frontendGen(manifests, verbs, mergedCopy),
-		"frontend/extscreens.gen.ts": extScreensGen(units),
+		"frontend/extscreens.gen.ts": extScreensGen(units, manifestPanels(manifests)),
 		"frontend/extlocales.gen.ts": extLocalesGen(mergedCopy),
 	}
 	// The effective contracts: base + every enabled unit's fragments. With

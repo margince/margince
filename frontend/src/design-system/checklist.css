@@ -1,0 +1,131 @@
+/* Checklist: an ordered list whose numbers come from a counter, a mark per
+ * step that says done, current, open or waiting, and a trailing cell for the
+ * verb. */
+
+.checklist {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  counter-reset: checklist-step;
+}
+
+.checklist-counted {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.checklist-count {
+  margin: 0;
+}
+
+.checklist-list > * + * {
+  border-top: 1px solid var(--borderSubtle);
+}
+
+.checklist-step {
+  counter-increment: checklist-step;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) auto;
+  align-items: start;
+  column-gap: var(--space-3);
+  padding: var(--space-3) 0;
+}
+
+.checklist-mark {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 1.5px solid var(--borderControl);
+  border-radius: var(--r-full);
+  corner-shape: round;
+  background: var(--bgElevated);
+  font: var(--fontHeadingXXSmall);
+  color: var(--textSecondary);
+}
+/* A done step shows its tick instead of its number. */
+.checklist-step:not(.checklist-step-done) > .checklist-mark::before {
+  content: counter(checklist-step);
+}
+
+.checklist-step-done > .checklist-mark {
+  border-color: var(--successText);
+  background: var(--successText);
+  color: var(--textOnStatusControl);
+}
+.checklist-step-done .checklist-title {
+  color: var(--textSecondary);
+}
+
+/* The next step: accent edge on the accent tint. No outer ring, since an
+ * outline or a glow here would read as keyboard focus. */
+.checklist-step-current > .checklist-mark {
+  border-color: var(--accent);
+  background: var(--accentLight);
+  color: var(--accentText);
+}
+
+.checklist-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+/* As tall as the mark, so a one-line title sits on its centre. */
+.checklist-title {
+  display: flex;
+  align-items: center;
+  min-block-size: 24px;
+}
+
+.checklist-action {
+  display: flex;
+  align-items: center;
+  gap: var(--gapActions);
+}
+
+/* On a phone the action drops under the text, so a long title keeps the row. */
+@media (max-width: 480px) {
+  .checklist-step {
+    grid-template-columns: 24px minmax(0, 1fr);
+  }
+  .checklist-action {
+    grid-column: 2;
+    flex-wrap: wrap;
+    margin-block-start: var(--space-2);
+  }
+}
+
+/* Inline: the one-line trail of a flow, marks and titles joined by a hairline,
+ * wrapping at a phone's width rather than scrolling sideways. */
+.checklist-inline {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+.checklist-inline > .checklist-step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0;
+}
+.checklist-inline > .checklist-step:not(:last-child)::after {
+  content: "";
+  width: 24px;
+  height: 1px;
+  margin-inline-start: var(--space-1);
+  background: var(--borderStrong);
+}
+.checklist-inline .checklist-title {
+  font-weight: var(--fontWeightMedium);
+  color: var(--textSecondary);
+}
+.checklist-inline
+  :is(.checklist-step-done, .checklist-step-current)
+  .checklist-title {
+  color: var(--textPrimary);
+}

@@ -62,6 +62,12 @@ func (s *Service) precheckMember(ctx context.Context, a row, edited json.RawMess
 	if err := s.checkPreview(ctx, a, edited); err != nil {
 		return err
 	}
+	// Before the kind's own check, which reads the edit as if it were allowed.
+	if edited != nil {
+		if err := assertEditableMembers(a.Kind, a.ProposedChange, edited); err != nil {
+			return err
+		}
+	}
 	check, ok := s.prechecks[a.Kind]
 	if !ok || !serverProposed(a) {
 		return nil

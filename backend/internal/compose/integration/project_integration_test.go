@@ -14,9 +14,12 @@ package integration
 import (
 	"context"
 	"errors"
+	"net/http"
+	"strconv"
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -825,5 +828,47 @@ func TestClosingAProjectWithABlankReasonIsRefused(t *testing.T) {
 	}
 	if n := e.WsCount(t, `SELECT count(*) FROM project_phase_history WHERE project_id = $1`, p.ID); n != 1 {
 		t.Errorf("history rows = %d, want only the creation row", n)
+	}
+}
+
+// The handler turns a null key into a clear.
+func TestAProjectPatchSentOwnerNullReleasesTheProject(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	company := createdID(t, e, "/v1/companies", AnyMap{"source": "manual", "display_name": "Release Account"})
+	var created struct {
+		ID      string  `json:"id"`
+		Version int64   `json:"version"`
+		OwnerID *string `json:"owner_id"`
+	}
+	if status := e.Call(t, "POST", "/v1/projects", AnyMap{"name": "Release Engagement", "company_id": company, "source": "manual"}, nil, &created); status != http.StatusCreated {
+		t.Fatalf("create project → %d, want 201", status)
+	}
+	if created.OwnerID == nil {
+		t.Fatal("the project started unowned; a project defaults to its creator")
+	}
+
+	var released struct {
+		Version int64   `json:"version"`
+		OwnerID *string `json:"owner_id"`
+	}
+	if status := e.Call(t, "PATCH", "/v1/projects/"+created.ID, AnyMap{"owner_id": nil},
+		map[string]string{"If-Match": strconv.FormatInt(created.Version, 10)}, &released); status != http.StatusOK {
+		t.Fatalf("patching owner_id to null → %d, want 200", status)
+	}
+	if released.OwnerID != nil {
+		t.Errorf("the answer still names owner %s after null", *released.OwnerID)
+	}
+	if released.Version != created.Version+1 {
+		t.Errorf("version = %d, want %d", released.Version, created.Version+1)
+	}
+	if n := countOwned(t, e, `SELECT count(*) FROM project WHERE id = $1 AND owner_id IS NULL`, created.ID); n != 1 {
+		t.Errorf("rows with the owner cleared = %d, want 1", n)
+	}
+	const audited = `SELECT count(*) FROM audit_log
+		WHERE entity_type = 'project' AND entity_id = $1 AND action = 'update'
+		  AND before->>'owner_id' = $2 AND after->>'owner_id' IS NULL AND after ? 'owner_id'`
+	if n := countOwned(t, e, audited, created.ID, *created.OwnerID); n != 1 {
+		t.Errorf("update audit rows showing the owner go from %s to null = %d, want 1", *created.OwnerID, n)
 	}
 }

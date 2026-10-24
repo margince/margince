@@ -1,0 +1,30 @@
+/* The card a count opens: the Popover panel (popover.css) with a head that names
+   what is counted, rows from OverviewRow, and one closing line. */
+
+.peek-panel {
+  inline-size: 18rem;
+  max-inline-size: min(20rem, calc(100vw - 2 * var(--space-4)));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.peek-head {
+  margin: 0;
+  color: var(--textSecondary);
+}
+/* The rows sit in the panel's own inset, so the first hairline runs the width
+   of the card under the head and the last row needs no air below it. */
+.peek-panel .overviewrow:first-child {
+  border-block-start: 0;
+}
+.peek-door {
+  text-align: start;
+  overflow-wrap: anywhere;
+  font-weight: var(--fontWeightMedium);
+}
+.peek-foot {
+  margin: var(--space-1) 0 0;
+  padding-block-start: var(--space-2);
+  border-block-start: 1px solid var(--borderSubtle);
+  color: var(--textSecondary);
+}

@@ -61,7 +61,7 @@ export type FieldsSnapshot = Readonly<{
   to: string[];
   cc: string[];
   bcc: string[];
-  bccOpen: boolean;
+  copiesOpen: boolean;
   subject: string;
   body: string;
   html: string;
@@ -80,7 +80,7 @@ export function emptyFields(): FieldsSnapshot {
     to: [],
     cc: [],
     bcc: [],
-    bccOpen: false,
+    copiesOpen: false,
     subject: "",
     body: "",
     html: "",
@@ -93,6 +93,11 @@ export function emptyFields(): FieldsSnapshot {
     reasoning: [],
     scope: undefined,
   };
+}
+
+// Whether a seed arrives holding a copy, which opens the copy rows.
+function holdsCopies(edit: EditSeed | undefined): boolean {
+  return Boolean(edit && edit.cc.length + edit.bcc.length > 0);
 }
 
 // The message being written: its fields, the draft that filled them, and
@@ -111,16 +116,20 @@ export function useComposeFields({
 }>) {
   const [to, setTo] = useState<string[]>(edit?.to ?? []);
   const [cc, setCc] = useState<string[]>(edit?.cc ?? []);
-  // A Bcc row holding a value may not be hidden, so it stays open once opened.
+  // Copy rows holding a value may not be hidden, so they stay open once opened.
   const [bcc, setBcc] = useState<string[]>(edit?.bcc ?? []);
-  const [bccOpen, setBccOpen] = useState((edit?.bcc.length ?? 0) > 0);
+  const [copiesOpen, setCopiesOpen] = useState(() => holdsCopies(edit));
   const [subject, setSubject] = useState(
     edit?.subject ?? initialMessage?.subject ?? "",
   );
   // The plain part every gate reads, and the markup part beside it. Both
   // travel, because the wire is multipart/alternative.
   const [body, setBody] = useState(edit?.body ?? initialMessage?.body ?? "");
-  const [html, setHtml] = useState(edit?.html ?? "");
+  // A seeded message arrives as plain text, and the editor draws the markup.
+  const [html, setHtml] = useState(
+    () =>
+      edit?.html ?? (initialMessage ? paragraphsFrom(initialMessage.body) : ""),
+  );
   const [intent, setIntent] = useState(askedIntent ?? "");
   // Keyed on the caller's ask, so a second moment action replaces the reason
   // the first one seeded.
@@ -140,7 +149,9 @@ export function useComposeFields({
   const [provenance, setProvenance] = useState<DraftProvenance | null>(null);
   // The served draft the body came from, so the server can tell a sent draft
   // from a rewritten one. It may only name the text on screen.
-  const [draftRef, setDraftRef] = useState<string | null>(null);
+  const [draftRef, setDraftRef] = useState<string | null>(
+    edit?.draftRef || null,
+  );
   // The words as the model last served them; a rewrite may replace only these.
   const [servedBody, setServedBody] = useState("");
   // Two non-error outcomes kept out of react-query's error channel, so the
@@ -213,7 +224,7 @@ export function useComposeFields({
     setTo([...saved.to]);
     setCc([...saved.cc]);
     setBcc([...saved.bcc]);
-    if (saved.bcc.length > 0) setBccOpen(true);
+    if (saved.cc.length + saved.bcc.length > 0) setCopiesOpen(true);
     setSubject(saved.subject);
     setBody(saved.body);
     setHtml(saved.html);
@@ -225,7 +236,7 @@ export function useComposeFields({
     to,
     cc,
     bcc,
-    bccOpen,
+    copiesOpen,
     subject,
     body,
     html,
@@ -244,7 +255,7 @@ export function useComposeFields({
     setTo(next.to);
     setCc(next.cc);
     setBcc(next.bcc);
-    setBccOpen(next.bccOpen);
+    setCopiesOpen(next.copiesOpen);
     setSubject(next.subject);
     setBody(next.body);
     setHtml(next.html);
@@ -266,8 +277,8 @@ export function useComposeFields({
     setCc,
     bcc,
     setBcc,
-    bccOpen,
-    openBcc: () => setBccOpen(true),
+    copiesOpen,
+    openCopies: () => setCopiesOpen(true),
     subject,
     setSubject,
     body,

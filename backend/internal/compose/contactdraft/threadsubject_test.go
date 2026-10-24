@@ -108,3 +108,15 @@ func TestOnlyTheNewestEmailDecidesTheThread(t *testing.T) {
 		})
 	}
 }
+
+func TestAMeetingFollowUpContinuesNoEmailThread(t *testing.T) {
+	in := Input{
+		Recent: FoldRecent([]crmcontracts.Activity{
+			mail(crmcontracts.ActivityDirectionInbound, draftedAt.Add(-time.Hour), "Unrelated invoice"),
+		}, draftedAt),
+		About: &ActIn{Kind: string(crmcontracts.ActivityKindMeeting), Subject: "Kickoff"},
+	}
+	if subject, ok := in.ThreadSubject(); ok || in.ContinuesThread() {
+		t.Errorf("a follow-up to a named meeting took thread subject %q", subject)
+	}
+}

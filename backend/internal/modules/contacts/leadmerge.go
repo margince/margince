@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"maps"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -218,12 +217,22 @@ func carryLeadConsentToLead(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 // that can only fail on merge is worse than none. Archived, not disposed —
 // nobody judged those pairs, and the row survives as the pair-unique fact.
 func retireStaleCandidates(ctx context.Context, tx pgx.Tx, loser ids.LeadID) error {
-	if _, err := tx.Exec(ctx, `
-		UPDATE dedupe_candidate SET archived_at = $2
+	rows, err := tx.Query(ctx, `
+		SELECT id FROM dedupe_candidate
 		WHERE entity_type = 'lead' AND disposition = 'open' AND archived_at IS NULL
-		  AND (left_lead_id = $1 OR right_lead_id = $1)`,
-		loser, time.Now().UTC()); err != nil {
+		  AND (left_lead_id = $1 OR right_lead_id = $1)`, loser)
+	if err != nil {
 		return fmt.Errorf("retire stale lead candidates: %w", err)
+	}
+	stale, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return fmt.Errorf("retire stale lead candidates: %w", err)
+	}
+	for _, id := range stale {
+		if _, err := archiveDedupeCandidateTx(ctx, tx, id, archiveReasonEndpointMerged,
+			map[string]any{auditKeyEntityType: entityLead}); err != nil {
+			return err
+		}
 	}
 	return nil
 }

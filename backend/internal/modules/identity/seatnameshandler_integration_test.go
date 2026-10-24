@@ -91,6 +91,16 @@ func TestANonAdminNamesADeactivatedColleague(t *testing.T) {
 	if named[departed.UUID] != "Dana Kessler" {
 		t.Fatalf("a deactivated colleague is named; the read says %q", named[departed.UUID])
 	}
+
+	// The answer says who left, so a screen naming them can say so too.
+	body := nameSeatsBody(t, e, rep, []openapi_types.UUID{
+		openapi_types.UUID(departed.UUID), openapi_types.UUID(rep.UserID.UUID),
+	})
+	for _, row := range body.Data {
+		if want := row.Id == openapi_types.UUID(departed.UUID); row.Departed != want {
+			t.Errorf("%s departed = %v, want %v", row.DisplayName, row.Departed, want)
+		}
+	}
 }
 
 // A colleague who has not yet redeemed their invite still owns whatever was
@@ -191,8 +201,8 @@ func TestTheAnswerFollowsTheOrderAsked(t *testing.T) {
 	}
 }
 
-// The shape is the disclosure decision: a naming read hands back a name, and a
-// later "while we are here" addition of the email has to argue with this.
+// The shape is the disclosure decision. A naming read hands back a name and
+// whether the colleague left. Adding the email later has to argue with this.
 func TestTheAnswerCarriesNothingButTheName(t *testing.T) {
 	e := setupRevocationEnv(t, "seat-names-shape")
 	rep := inviteAndLogin(t, e, "rep@acme.test", "Rep One")
