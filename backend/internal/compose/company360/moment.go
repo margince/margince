@@ -36,10 +36,8 @@ import (
 	"github.com/margince/margince/backend/internal/compose/momentaction"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/owedwork"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // sectionMoments names this section in sections_omitted, so a caller told the
@@ -58,7 +56,11 @@ const momentRuleVersion = "company-moment-owed-v1"
 // a question already answered — and one that could disagree with the list the
 // reader is looking at.
 func (a *assembly) readMoment() error {
-	items, complete, err := a.svc.openPromises(a.ctx, a.tx, a.companyID, a.now, a.opts)
+	claims, complete, err := a.ourCommitments()
+	if err != nil {
+		return err
+	}
+	items, err := a.svc.promisesFrom(a.ctx, a.tx, a.companyID, a.now, a.opts, claims)
 	if err != nil {
 		return err
 	}
@@ -96,18 +98,25 @@ func (a *assembly) readMoment() error {
 func (s *Service) openPromises(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, opts AssembleOptions,
 ) ([]owedwork.Item, bool, error) {
-	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
-		return nil, false, err
-	}
-	claims, complete, err := s.contacts.OpenCommitmentsForCompany(ctx, tx, companyID.UUID, companyMomentScanCap)
+	claims, complete, err := s.ourClaims(ctx, tx, companyID)
 	if err != nil {
 		return nil, false, err
 	}
+	items, err := s.promisesFrom(ctx, tx, companyID, now, opts, claims)
+	return items, complete, err
+}
+
+// promisesFrom merges claims already read with the account's open tasks. A
+// caller that holds the claims does not read them a second time.
+func (s *Service) promisesFrom(
+	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time, opts AssembleOptions,
+	claims []contacts.CompanyCommitment,
+) ([]owedwork.Item, error) {
 	tasks, filed, err := openTaskPromises(ctx, tx, companyID, now, opts, companyMomentScanCap)
 	if err != nil {
-		return nil, false, err
+		return nil, err
 	}
-	return accountPromises(tasks, filed, claims), complete, nil
+	return accountPromises(tasks, filed, claims), nil
 }
 
 // markAttentionWithheld says the page is speaking about less than the account.

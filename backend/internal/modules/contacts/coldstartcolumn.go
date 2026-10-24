@@ -34,7 +34,11 @@ func writeCompanyColumn(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
 	// be filled again by any later read — the record would look answered while
 	// holding nothing, and no enrichment would ever correct it. The human
 	// company form clears to NULL for the same reason (setCompanyColumn).
-	tag, err := tx.Exec(ctx, write.statementFor(replaceStanding), companyID, emptyToNil(value))
+	stored, unmapped := companyColumnArgument(column, value)
+	if unmapped {
+		return false, nil
+	}
+	tag, err := tx.Exec(ctx, write.statementFor(replaceStanding), companyID, stored)
 	if err != nil {
 		return false, fmt.Errorf("replace %s: %w", column, err)
 	}
@@ -60,7 +64,11 @@ func applyUnclaimedCompanyColumn(ctx context.Context, tx pgx.Tx, companyID ids.C
 	if column == columnAddress {
 		return writeCompanyAddress(ctx, tx, companyID, value, authority)
 	}
-	tag, err := tx.Exec(ctx, write.statementFor(authority), companyID, value)
+	stored, unmapped := companyColumnArgument(column, value)
+	if unmapped {
+		return false, nil
+	}
+	tag, err := tx.Exec(ctx, write.statementFor(authority), companyID, stored)
 	if err != nil {
 		return false, fmt.Errorf("fill %s: %w", column, err)
 	}

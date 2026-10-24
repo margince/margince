@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -221,7 +222,7 @@ func FromView(
 		Commitment: foldCommitment(view),
 	}
 	if view.Company.Industry != nil {
-		in.Industry = *view.Company.Industry
+		in.Industry = contacts.IndustryWords(string(*view.Company.Industry), req.Envelope.Lang())
 	}
 	if view.Company.Description != nil {
 		in.Description = *view.Company.Description

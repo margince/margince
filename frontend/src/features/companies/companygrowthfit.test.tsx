@@ -27,9 +27,9 @@ const ABSTAINED: GrowthFit = {
   data_completeness: {
     present: 2,
     expected: 7,
-    missing: ["their industry", "how big they are"],
+    missing: ["industry", "employee_range"],
   },
-  next_step: "find out their industry and how big they are",
+  next_step: "gather_inputs",
   generated_at: "2026-08-08T09:00:00Z",
   generated_by: "deterministic",
 };
@@ -47,7 +47,7 @@ function serving(fit: GrowthFit) {
   );
 }
 
-async function show(fit: GrowthFit) {
+async function show(fit: GrowthFit, locale: "en" | "de" | "vi" = "en") {
   serving(fit);
   render(
     <QueryClientProvider
@@ -55,7 +55,7 @@ async function show(fit: GrowthFit) {
         new QueryClient({ defaultOptions: { queries: { retry: false } } })
       }
     >
-      <LocaleProvider initial="en">
+      <LocaleProvider initial={locale}>
         <GrowthFitPanel companyId="o-1" onOpenReceipt={() => {}} />
       </LocaleProvider>
     </QueryClientProvider>,
@@ -64,7 +64,7 @@ async function show(fit: GrowthFit) {
   // it is what makes the synchronous assertions below run against loaded
   // content. The panel heading is static and would match while the skeleton is
   // up.
-  await screen.findByText(/as of /i);
+  await screen.findByText(/as of |Stand |tính đến/i);
 }
 
 describe("the wait before the first assessment", () => {
@@ -123,10 +123,33 @@ describe("how well this company fits what we sell", () => {
   it("names what is missing and what to do about it", async () => {
     await show(ABSTAINED);
 
-    expect(screen.getByText(/their industry, how big they are/)).toBeTruthy();
     expect(
-      screen.getByText(/find out their industry and how big they are/),
+      screen.getByText("their industry and how big they are"),
     ).toBeTruthy();
+    expect(
+      screen.getByText(
+        /Next: find out their industry and how big they are before this fit can be judged/,
+      ),
+    ).toBeTruthy();
+  });
+
+  it("words the missing inputs and the next step in the reader's language", async () => {
+    await show(ABSTAINED, "vi");
+
+    expect(
+      screen.getByText(
+        "Tiếp theo: tìm hiểu ngành nghề và quy mô công ty, rồi mới đánh giá được mức độ phù hợp.",
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByText(/their industry/)).toBeNull();
+    expect(screen.queryByText(/gather_inputs/)).toBeNull();
+  });
+
+  it("words the missing inputs in German", async () => {
+    await show(ABSTAINED, "de");
+
+    expect(screen.getByText("ihre Branche und wie groß sie sind")).toBeTruthy();
+    expect(screen.queryByText(/employee_range/)).toBeNull();
   });
 
   it("says why a band was held back, when one was", async () => {
@@ -134,7 +157,7 @@ describe("how well this company fits what we sell", () => {
       ...ABSTAINED,
       band: "moderate",
       band_capped_reason: "we have not confirmed what this workspace sells",
-      next_step: "confirm your own company profile",
+      next_step: "confirm_offering",
       data_completeness: { present: 7, expected: 7 },
     });
 
@@ -151,7 +174,7 @@ describe("how well this company fits what we sell", () => {
       ...ABSTAINED,
       band: "strong",
       data_completeness: { present: 7, expected: 7 },
-      next_step: null,
+      next_step: undefined,
       generated_by: "model",
       positive_factors: [
         {

@@ -47,7 +47,7 @@ const strong: GrowthFit = {
   band: "strong",
   band_capped_reason: null,
   data_completeness: { present: 7, expected: 7, missing: [] },
-  next_step: null,
+  next_step: undefined,
   sub_scores: [
     {
       dimension: "industry_fit",
@@ -107,10 +107,9 @@ const weak: GrowthFit = {
   data_completeness: {
     present: 5,
     expected: 7,
-    missing: ["a confirmed decision-maker"],
+    missing: ["buying_center"],
   },
-  next_step:
-    "confirm who signs off on new vendors before investing further here",
+  next_step: "gather_inputs",
   sub_scores: [
     {
       dimension: "industry_fit",
@@ -156,9 +155,9 @@ const capped: GrowthFit = {
   data_completeness: {
     present: 4,
     expected: 7,
-    missing: ["our own offering context", "any budget signal"],
+    missing: ["icp", "buying_intents"],
   },
-  next_step: "confirm our offering fit for this segment to lift the cap",
+  next_step: "confirm_offering",
   sub_scores: [
     {
       dimension: "industry_fit",
@@ -187,9 +186,9 @@ const unknown: GrowthFit = {
   data_completeness: {
     present: 1,
     expected: 7,
-    missing: ["their industry", "how big they are", "any recent activity"],
+    missing: ["industry", "employee_range", "technology"],
   },
-  next_step: "log at least one meeting or call before this can be assessed",
+  next_step: "gather_inputs",
   generated_at: "2026-07-10T09:00:00Z",
   generated_by: "deterministic",
 };

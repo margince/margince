@@ -76,7 +76,7 @@ func TestMergingACompanyCarriesTheAuthorOfAnInheritedValue(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := asAdmin(e)
 	source, survivor := e.companyPair(ctx, t)
-	industry := "Glazing"
+	industry := "Software"
 	if _, err := e.store.UpdateCompany(ctx, source, UpdateCompanyInput{Industry: &industry}); err != nil {
 		t.Fatal(err)
 	}

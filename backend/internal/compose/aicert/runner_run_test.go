@@ -508,6 +508,18 @@ func TestThePresetReportReadsTheRecordARunWrote(t *testing.T) {
 	if len(rungs) != 1 || rungs[0].FirstState != aicert.StatusCurrent || rungs[0].FallbackState != aicert.StatusAbsent {
 		t.Fatalf("rungs = %+v, want summarize current on its first rung and absent on its fallback", rungs)
 	}
+	// The verdict beside the state, because the state alone cannot tell a
+	// current record that says not_supported from one that says certified.
+	// Nothing measured the fallback, and an absent record is not evidence that
+	// a model copes.
+	if got := rungs[0].FallbackVerdict; got != aicert.VerdictNotSupported {
+		t.Errorf("the unmeasured fallback reads %q, want %q", got, aicert.VerdictNotSupported)
+	}
+	// The case the column exists for: this record is CURRENT and grades the
+	// model not_supported. Read by state alone the rung looks healthy.
+	if got := rungs[0].FirstVerdict; got != aicert.VerdictNotSupported {
+		t.Errorf("the first rung reads %q, want the record's own %q", got, aicert.VerdictNotSupported)
+	}
 }
 
 // A fallback the judge cannot grade is named before anything is spent and again

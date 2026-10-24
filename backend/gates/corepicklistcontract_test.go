@@ -58,6 +58,7 @@ const contractDocument = "api/crm.yaml"
 // it to say where the contract admits its values.
 var picklistInContract = map[string]struct{ schema, property string }{
 	"company.lifecycle":         {"Company", "lifecycle"},
+	"company.industry":          {"Company", "industry"},
 	"company.size_band":         {"Company", "size_band"},
 	"company.relationship_type": {"Company", "relationship_types"},
 	"deal.status":               {"Deal", "status"},
@@ -70,6 +71,7 @@ var picklistInContract = map[string]struct{ schema, property string }{
 	// different set from the field it reads is exactly the drift this catches.
 	"deal.company_lifecycle": {"Company", "lifecycle"},
 	"deal.company_size_band": {"Company", "size_band"},
+	"deal.company_industry":  {"Company", "industry"},
 	// The technical leaves read `company_fact.value_key`, which is a bare
 	// string on the fact schema and cannot carry three different enums. Each
 	// names the dedicated schema that publishes ITS set instead — which is what

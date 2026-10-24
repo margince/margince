@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // zone is the installation zone every day count on the page is reckoned in,
@@ -20,4 +21,27 @@ func (a *assembly) zone() (*time.Location, error) {
 		a.loc = loc
 	}
 	return a.loc, nil
+}
+
+// installationBaseCurrency resolves the installation's reporting currency once
+// per assembly. The sections that label money each want the same answer, and
+// the 360's query budget counts every read.
+func (a *assembly) installationBaseCurrency() (string, error) {
+	if a.baseCurrencyRead {
+		return a.baseCurrency, nil
+	}
+	base, err := identity.BaseCurrencyOf(a.ctx, a.tx)
+	if err != nil {
+		return "", err
+	}
+	a.baseCurrency, a.baseCurrencyRead = base, true
+	return base, nil
+}
+
+// One assembly uses one language even if the setting changes during its reads.
+func (a *assembly) recordLanguage() textlang.Lang {
+	if a.baseLanguage == "" {
+		a.baseLanguage = identity.BaseLanguageForRecord(a.ctx, a.tx)
+	}
+	return a.baseLanguage
 }

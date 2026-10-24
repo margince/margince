@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/mailidentity"
 )
 
 // The fields an importer supplies about a message it is handing over: who it
@@ -198,6 +199,20 @@ func mailIdentityFrom(req crmcontracts.CreateActivityRequest, in *LogActivityInp
 	return meetingIdentityInto(req, in)
 }
 
+// DeliveryReportError refuses a received email whose sender is the mail system
+// itself. A bounce notice is no reply from the correspondent. Every reader of
+// inbound mail counts a row as one, so the row is refused rather than filed.
+type DeliveryReportError struct{}
+
+func (*DeliveryReportError) Error() string {
+	return "a delivery report is not correspondence and cannot be filed as received mail"
+}
+
+// FieldFault names the sender the caller has to drop, on every surface.
+func (e *DeliveryReportError) FieldFault() (field, code, message string) {
+	return fieldParticipantOf, faultInvalid, e.Error()
+}
+
 // mailParticipantsInto takes the supplied addresses, and refuses the shapes
 // that cannot yield a counterparty.
 func mailParticipantsInto(req crmcontracts.CreateActivityRequest, in *LogActivityInput) error {
@@ -214,6 +229,9 @@ func mailParticipantsInto(req crmcontracts.CreateActivityRequest, in *LogActivit
 	parts := normalizeParticipants(req.Participants)
 	if *in.Direction == directionInbound && parts.From == "" {
 		return &RequiredFieldError{Field: fieldParticipantOf}
+	}
+	if *in.Direction == directionInbound && mailidentity.IsDeliverySystemSender(parts.From) {
+		return &DeliveryReportError{}
 	}
 	in.EmailFrom = parts.From
 	in.EmailTo = parts.To

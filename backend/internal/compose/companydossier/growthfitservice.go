@@ -41,7 +41,7 @@ import (
 // half a digest cannot reach. Bumping it invalidates every cached assessment,
 // which is the point: yesterday's bands must not be served beside today's
 // (DOSS-AC-14).
-const growthFitAssemblyVersion = "growth-fit-assembly-v2"
+const growthFitAssemblyVersion = "growth-fit-assembly-v3"
 
 // growthFitPromptVersion is DERIVED from the prompt as it is SENT — boundary
 // rule included — so editing that wording bumps it whether or not anybody
@@ -64,10 +64,11 @@ var growthFitPromptVersion = ai.PromptDigest(func(fence promptfence.Fence) strin
 })
 
 // growthFitStoredVersion is the payload SHAPE this build writes and can read.
-// v2 adds the sub-scores (DOSS-AC-17): a v1 payload has none, and serving one
-// through this build would render a card with a band and no bars while looking
-// like a complete answer.
-const growthFitStoredVersion = 2
+// v2 adds the sub-scores (DOSS-AC-17). A v1 payload has none, and serving one
+// would render a card with a band and no bars that looks like a complete
+// answer. v3 carries the missing inputs and the next step as
+// codes. A v2 payload holds English sentences the client no longer words.
+const growthFitStoredVersion = 3
 
 // GrowthFitService assembles and caches one company's growth fit per reader.
 type GrowthFitService struct {
@@ -143,15 +144,15 @@ func NewGrowthFitService(pool *pgxpool.Pool, facts Facts, self SelfOffering,
 // "not enough evidence" would read as a finding that nothing does, which is the
 // opposite of what an abstention means.
 type storedGrowthFit struct {
-	Fingerprint  string                        `json:"fingerprint"`
-	Version      int                           `json:"version"`
-	GeneratedAt  time.Time                     `json:"generated_at"`
-	GeneratedBy  string                        `json:"generated_by"`
-	Band         string                        `json:"band"`
-	CappedReason string                        `json:"capped_reason"`
-	NextStep     string                        `json:"next_step"`
-	Completeness crmcontracts.DataCompleteness `json:"completeness"`
-	Claims       GrowthFitClaims               `json:"claims"`
+	Fingerprint  string                         `json:"fingerprint"`
+	Version      int                            `json:"version"`
+	GeneratedAt  time.Time                      `json:"generated_at"`
+	GeneratedBy  string                         `json:"generated_by"`
+	Band         string                         `json:"band"`
+	CappedReason string                         `json:"capped_reason"`
+	NextStep     crmcontracts.GrowthFitNextStep `json:"next_step"`
+	Completeness crmcontracts.DataCompleteness  `json:"completeness"`
+	Claims       GrowthFitClaims                `json:"claims"`
 	// StaleAt is when the completeness figure above stops being true on the
 	// clock alone. Zero means nothing it counted can age out.
 	StaleAt time.Time `json:"stale_at"`

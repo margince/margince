@@ -45,7 +45,8 @@ var (
 // difference between the three answers, so it is stated once per question and
 // nowhere else.
 var askInstruction = map[crmcontracts.CompanyQuestion]string{
-	askWhatsOpen: "Answer what is currently open on this account: the open deals with their stage and amount, and the open tasks. " +
+	askWhatsOpen: "Answer what is currently open on this account: the open deals with their stage and amount, the open tasks, and the open commitments. " +
+		"Write one sentence per open item, naming it, who holds it and when it is due. " +
 		"Do not speculate about what will close.",
 	askMeetingPrep: "Answer what the reader needs before a meeting with this account: who the known contacts are, " +
 		"where the pipeline stands, and whether anything is waiting for a reply. Do not invent an agenda.",
@@ -82,7 +83,7 @@ If what remains does not answer the question, return an empty sentences array ra
 // The answer is filed against the account and read by whoever asks the same
 // question next, so it takes the installation's language like the brief above.
 func askSystemFor(question crmcontracts.CompanyQuestion, fence promptfence.Fence, lang string) string {
-	return askSystem + "\n" + askInstruction[question] + "\n" +
+	return askSystem + "\n" + openWorkRule + "\n" + askInstruction[question] + "\n" +
 		promptlang.Rule(lang) + "\n" + fence.Rule("account summary")
 }
 
@@ -151,7 +152,15 @@ func answerWithModel(
 		// carries, so it answers instead.
 		return nil, errors.New("the answer cited nothing in the account")
 	}
-	return kept, nil
+	if question != askWhatsOpen {
+		return kept, nil
+	}
+	if missing := uncitedOpenWork(kept, in); missing != "" {
+		// A reply that names fewer open records than the input holds would
+		// read as the whole list, so the floor answers instead.
+		return nil, fmt.Errorf("the answer left out open %s", missing)
+	}
+	return withOpenWorkGap(kept, companyID, in, companyPhrasesFor(lang)), nil
 }
 
 // deterministicAnswer answers without a model, from the same input. Each
@@ -169,7 +178,7 @@ func deterministicAnswer(question crmcontracts.CompanyQuestion, companyID string
 	var answered []Sentence
 	switch question {
 	case askWhatsOpen:
-		answered = openAnswer(in, say)
+		answered = openAnswer(companyID, in, say)
 	case askMeetingPrep:
 		answered = prepAnswer(companyID, in, say)
 	case askWhatsChanged:
@@ -187,12 +196,12 @@ func deterministicAnswer(question crmcontracts.CompanyQuestion, companyID string
 
 // openAnswer lists what is open, one record per sentence.
 //
-// The count sentence comes first and states the TRUE total, then each deal and
-// each task gets its own sentence and its own citation. The count is not
-// dropped when the list is short: it carries the money — the pipeline total and
-// what the account has won — which no per-deal line states.
-func openAnswer(in Input, say spoken) []Sentence {
-	sentences := make([]Sentence, 0, 2*listedRecords+2)
+// The count sentence comes first and states the true total. Then each deal,
+// task and commitment gets its own sentence and its own citation. The count
+// stays when the list is short, because it carries the pipeline total and the
+// won figure, which no per-deal line states.
+func openAnswer(companyID string, in Input, say spoken) []Sentence {
+	sentences := make([]Sentence, 0, 3*listedRecords+3)
 	if len(in.OpenDeals) > 0 {
 		sentences = append(sentences, Sentence{Text: pipelineLine(in, say), Evidence: leadDealEvidence(in)})
 		sentences = append(sentences,
@@ -209,7 +218,139 @@ func openAnswer(in Input, say spoken) []Sentence {
 			perRecordSentences(in.OpenTasks, citeActivity, taskID,
 				func(task TaskIn) string { return openTaskLine(task, say) })...)
 	}
+	sentences = append(sentences, openCommitmentSentences(in.OpenCommitments, say)...)
+	return withOpenWorkGap(sentences, companyID, in, say)
+}
+
+// withOpenWorkGap ends the list with a sentence saying it may be shorter than
+// the work, when the read was cut or narrowed. Without it a capped list reads as
+// "that is everything" and an empty one as "nothing is open".
+func withOpenWorkGap(sentences []Sentence, companyID string, in Input, say spoken) []Sentence {
+	if !in.OpenWorkCapped && !in.OpenWorkWithheld {
+		return sentences
+	}
+	return append(sentences, Sentence{
+		Text:     say.Say(floor.OpenWorkIncomplete),
+		Evidence: []Evidence{{EntityType: citeCompany, EntityID: companyID}},
+	})
+}
+
+// openCommitmentSentences is one sentence per promise. The chip carries the
+// claim as its name. Two promises can be read from one message, and the
+// message's own subject would then name both.
+func openCommitmentSentences(commitments []CommitmentIn, say spoken) []Sentence {
+	if len(commitments) == 0 {
+		return nil
+	}
+	sentences := make([]Sentence, 0, listedRecords+1)
+	if len(commitments) > 1 {
+		sentences = append(sentences, Sentence{
+			Text:     countPhrase(len(commitments), say.Say(floor.OpenCommitmentOne), say.Say(floor.OpenCommitmentMany)) + ".",
+			Evidence: []Evidence{{EntityType: citeActivity, EntityID: commitments[0].ActivityID, Name: commitments[0].Claim}},
+		})
+	}
+	for i, commitment := range commitments {
+		if i == listedRecords {
+			break
+		}
+		sentences = append(sentences, Sentence{
+			Text:     openCommitmentLine(commitment, say),
+			Evidence: []Evidence{{EntityType: citeActivity, EntityID: commitment.ActivityID, Name: commitment.Claim}},
+		})
+	}
 	return sentences
+}
+
+func openCommitmentLine(commitment CommitmentIn, say spoken) string {
+	due := shortDate(commitment.Due, say)
+	if commitment.Side == sideTheirs {
+		holder := commitment.Holder
+		if holder == "" {
+			holder = say.Say(floor.OpenCommitmentUnnamed)
+		}
+		if due != "" {
+			return fmt.Sprintf(say.Say(floor.OpenCommitmentTheirsDue), holder, commitment.Claim, due)
+		}
+		return fmt.Sprintf(say.Say(floor.OpenCommitmentTheirs), holder, commitment.Claim)
+	}
+	if due != "" {
+		return fmt.Sprintf(say.Say(floor.OpenCommitmentOursDue), commitment.Claim, due)
+	}
+	return fmt.Sprintf(say.Say(floor.OpenCommitmentOurs), commitment.Claim)
+}
+
+// openGroup is one kind of open record and how many of its citations an
+// answer to "what is open" must carry.
+type openGroup struct {
+	// Field names the Input slice, which the test that classifies every Input
+	// field reads.
+	Field string
+	Cites []Evidence
+	Need  int
+}
+
+// requiredOpenCitations states what a complete open-work answer cites. It is
+// every record of a kind when there are at most listedRecords, otherwise
+// listedRecords of them. The floor lists that much, so it always passes
+// the check built on it. A new kind of open record has to be added here, and a
+// test fails until it is.
+func requiredOpenCitations(in Input) []openGroup {
+	deals := make([]Evidence, 0, len(in.OpenDeals))
+	for _, deal := range in.OpenDeals {
+		deals = append(deals, Evidence{EntityType: citeDeal, EntityID: deal.ID})
+	}
+	tasks := make([]Evidence, 0, len(in.OpenTasks))
+	for _, task := range in.OpenTasks {
+		tasks = append(tasks, Evidence{EntityType: citeActivity, EntityID: task.ID})
+	}
+	commitments := make([]Evidence, 0, len(in.OpenCommitments))
+	for _, commitment := range in.OpenCommitments {
+		commitments = append(commitments, Evidence{EntityType: citeActivity, EntityID: commitment.ActivityID})
+	}
+	groups := []openGroup{
+		{Field: "OpenDeals", Cites: deals},
+		{Field: "OpenTasks", Cites: tasks},
+		{Field: "OpenCommitments", Cites: commitments},
+	}
+	for i := range groups {
+		groups[i].Need = min(len(groups[i].Cites), listedRecords)
+	}
+	return groups
+}
+
+// uncitedOpenWork names the first kind of open record the sentences cite too
+// few of, or returns "" when they cite enough.
+func uncitedOpenWork(sentences []Sentence, in Input) string {
+	// Counted per sentence: two promises read from one message cite the same
+	// activity, so each needs a sentence of its own to count as listed.
+	citing := map[Evidence]int{}
+	for _, sentence := range sentences {
+		once := map[Evidence]bool{}
+		for _, cite := range sentence.Evidence {
+			key := Evidence{EntityType: cite.EntityType, EntityID: cite.EntityID}
+			if !once[key] {
+				once[key] = true
+				citing[key]++
+			}
+		}
+	}
+	for _, group := range requiredOpenCitations(in) {
+		found := 0
+		left := map[Evidence]int{}
+		for _, cite := range group.Cites {
+			if _, seen := left[cite]; !seen {
+				left[cite] = citing[cite]
+			}
+			if left[cite] > 0 {
+				left[cite]--
+				found++
+			}
+		}
+		if found < group.Need {
+			return group.Field
+		}
+	}
+	return ""
 }
 
 func prepAnswer(companyID string, in Input, say spoken) []Sentence {
@@ -304,7 +445,13 @@ func earliestDue(tasks []TaskIn) TaskIn {
 func openTaskLine(task TaskIn, say spoken) string {
 	// The subject is quoted for the same reason an activity's is: a task can be
 	// raised from mail this workspace did not write, and it must read as theirs.
-	if due := shortDate(task.Due, say); due != "" {
+	due := shortDate(task.Due, say)
+	switch {
+	case task.Holder != "" && due != "":
+		return fmt.Sprintf(say.Say(floor.OpenTaskHeldDue), task.Name, task.Holder, due)
+	case task.Holder != "":
+		return fmt.Sprintf(say.Say(floor.OpenTaskHeld), task.Name, task.Holder)
+	case due != "":
 		return fmt.Sprintf(say.Say(floor.OpenTaskDue), task.Name, due)
 	}
 	return fmt.Sprintf(say.Say(floor.OpenTaskNamed), task.Name)

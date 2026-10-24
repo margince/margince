@@ -18,7 +18,8 @@ import { prefillRowsFromRecord } from "../../components/edit.prefill";
 import { useEntityName } from "../../components/entityref";
 import { saveRecordEdit } from "../../components/recordedit";
 import { Button } from "../../design-system/atoms";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
+import type { Locale } from "../../i18n/locale";
 import { problemMessageOf } from "../../lib/problem";
 import { invalidateCompany } from "../../lib/recordwritekeys";
 
@@ -53,6 +54,7 @@ function compoundFields(
   company: Company,
   parentName: string | undefined,
   t: ReturnType<typeof useT>,
+  locale: Locale,
 ): CreateField[] {
   if (which === "address") {
     return ADDRESS_FIELDS;
@@ -77,7 +79,9 @@ function compoundFields(
       },
     ];
   }
-  return companyEditFields([], false, t).filter((field) => field.key === which);
+  return companyEditFields([], false, t, locale).filter(
+    (field) => field.key === which,
+  );
 }
 
 function fieldRecord(company: Company) {
@@ -116,6 +120,7 @@ export function CompoundFieldValue({
   readOnlyReason?: string;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const [open, setOpen] = useState(false);
   const save = useCompanyFieldSave(company);
   const parent = useEntityName("company", company.parent_company_id);
@@ -168,7 +173,13 @@ export function CompoundFieldValue({
         open={open}
         onClose={() => setOpen(false)}
         title={label}
-        fields={compoundFields(which, company, parent.name ?? undefined, t)}
+        fields={compoundFields(
+          which,
+          company,
+          parent.name ?? undefined,
+          t,
+          locale,
+        )}
         record={fieldRecord(company)}
         pending={mutation.isPending}
         error={mutation.error ? problemMessageOf(mutation.error, t) : null}
