@@ -36,14 +36,26 @@ type LeadSourceKey struct {
 	SourceID     string
 }
 
-// LiveLeadByEmail reports the live lead holding this address, if any. The
-// address is lowercased by the query to match lead_email_norm's storage
-// contract, so a caller that has not normalized still compares like for like.
+// LiveLeadClause is what makes a lead a live identity. Promotion,
+// disqualification and a lead merge all archive the lead they retire, so this
+// one column is the whole lifecycle test, and uq_lead_email_dedupe is built on it.
+func LiveLeadClause(alias string) string {
+	return alias + ".archived_at IS NULL"
+}
+
+// LeadEmailMatchClause is an exact address match against a lead. The address
+// is folded the way lead_email_norm stores it and capture stamps a participant
+// row, so a caller that has not normalized still compares like for like.
+func LeadEmailMatchClause(alias, address string) string {
+	return alias + ".email = lower(btrim(" + address + "))"
+}
+
+// LiveLeadByEmail reports the live lead holding this address, if any.
 func LiveLeadByEmail(ctx context.Context, tx pgx.Tx, email string, exclude *LeadSourceKey) (ids.LeadID, bool, error) {
 	if email == "" {
 		return ids.LeadID{}, false, nil
 	}
-	return liveLeadBy(ctx, tx, `email = lower($1)`, email, exclude, "email")
+	return liveLeadBy(ctx, tx, LeadEmailMatchClause("lead", "$1"), email, exclude, "email")
 }
 
 // LiveLeadByLinkedInURL reports the live lead holding this profile URL. The
@@ -73,7 +85,7 @@ func liveLeadBy(ctx context.Context, tx pgx.Tx, predicate, value string, exclude
 	var id ids.LeadID
 	err := tx.QueryRow(ctx, `
 		SELECT id FROM lead
-		 WHERE `+predicate+` AND archived_at IS NULL
+		 WHERE `+predicate+` AND `+LiveLeadClause("lead")+`
 		   AND ($2::text IS NULL
 		        OR source_system IS DISTINCT FROM $2
 		        OR source_id IS DISTINCT FROM $3)

@@ -379,6 +379,8 @@ export const en = {
   "approval.preview.acquiredAt": "Acquired on",
   "approval.preview.promotedLead": "Lead to promote",
   "approval.preview.sourceActivity": "History linked to this source lead",
+  "approval.preview.sourceWithheldActivities":
+    "Further history on this source lead you cannot read",
   "approval.preview.sourceConsent": "Consent on this source lead",
   "approval.preview.channelPosition": "Position in list",
   "approval.preview.emailCorrespondence":
@@ -601,6 +603,8 @@ export const en = {
   "approval.preview.promotionMoveActivity": "Activity to move to contact",
   "approval.preview.promotionDuplicateActivity":
     "Activity already on contact; remove lead link",
+  "approval.preview.promotionWithheldActivities":
+    "Further activities that move, which you cannot read",
   "approval.preview.promotionConsentBefore":
     "Contact consent before qualification",
   "approval.preview.promotionRestriction": "Restriction to carry",

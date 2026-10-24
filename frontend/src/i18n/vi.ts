@@ -395,6 +395,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.preview.acquiredAt": "Ngày thu thập",
   "approval.preview.promotedLead": "Lead sẽ chuyển đổi",
   "approval.preview.sourceActivity": "Lịch sử gắn với lead nguồn này",
+  "approval.preview.sourceWithheldActivities":
+    "Lịch sử khác của lead nguồn này mà bạn không thể đọc",
   "approval.preview.sourceConsent": "Đồng ý của lead nguồn này",
   "approval.preview.channelPosition": "Vị trí trong danh sách",
   "approval.preview.emailCorrespondence": "Địa chỉ được coi là đã có trao đổi",
@@ -615,6 +617,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.preview.promotionMoveActivity": "Hoạt động sẽ chuyển sang liên hệ",
   "approval.preview.promotionDuplicateActivity":
     "Hoạt động đã có ở liên hệ; bỏ liên kết lead",
+  "approval.preview.promotionWithheldActivities":
+    "Các hoạt động khác cũng được chuyển mà bạn không thể đọc",
   "approval.preview.promotionConsentBefore": "Sự đồng ý trước khi chuyển đổi",
   "approval.preview.promotionRestriction": "Hạn chế sẽ chuyển sang",
   "approval.preview.promotionRestrictionAuthority": "Hạn chế được ghi nhận bởi",

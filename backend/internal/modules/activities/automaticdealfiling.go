@@ -53,6 +53,19 @@ func FileOnDealIfUnfiledTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, de
 	return DealFilingAlreadyFiled, nil
 }
 
+// FileOnLeadTx is the automatic lead filing: the guarded relink write of one
+// lead link, with its audit row, the evidence given and the relink event. It
+// answers whether the link landed. A link already there, a row gone or a writer
+// refused all answer false.
+func FileOnLeadTx(ctx context.Context, tx pgx.Tx, id ids.ActivityID, lead ids.UUID, evidence map[string]any) (bool, error) {
+	in := RelinkActivityInput{EntityType: linkEntityLead, EntityID: lead, evidence: evidence}
+	wrote, _, err := relinkActivityRow(ctx, tx, id, in, linkColumn(linkEntityLead))
+	if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
+		return false, nil
+	}
+	return wrote, err
+}
+
 // RetractMachineDealTx takes one deal link off an activity, under its row
 // lock, only while no human or agent ever filed the activity on a deal. It
 // writes the audit row with the evidence given and the relink event, as the
