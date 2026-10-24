@@ -52,9 +52,25 @@ var countryByName = func() map[string]string {
 	return names
 }()
 
+// addressSplitRule says how much a split must see before it is accepted.
+type addressSplitRule uint8
+
+const (
+	// splitWhenReadable takes any street, postal code and city it can place.
+	splitWhenReadable addressSplitRule = iota
+	// splitWithStreetEvidence also needs the postal code set apart from the
+	// street, by a separator or by a house number before it. So "Highway 1234
+	// Dallas" stays whole. A split nobody reviews takes this rule.
+	splitWithStreetEvidence
+)
+
 // SplitAddressText requires a street, postal code and city without dropping
 // source text. An unplaced trailing part refuses the whole split.
 func SplitAddressText(raw string) (crmcontracts.Address, bool) {
+	return splitAddressBy(raw, splitWhenReadable)
+}
+
+func splitAddressBy(raw string, rule addressSplitRule) (crmcontracts.Address, bool) {
 	var parts []string
 	for part := range strings.SplitSeq(addressSeparators.Replace(raw), "\n") {
 		if part = strings.TrimSpace(part); part != "" {
@@ -72,6 +88,7 @@ func SplitAddressText(raw string) (crmcontracts.Address, bool) {
 	switch {
 	case len(parts) == 1:
 		out, ok = splitRunOnAddress(parts[0], country)
+		ok = ok && (rule == splitWhenReadable || anyDigit.MatchString(*out.Line1))
 	case len(parts) > 1:
 		out, ok = splitSeparatedAddress(parts)
 	}

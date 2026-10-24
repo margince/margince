@@ -35,7 +35,7 @@ func TestASplitCellBecomesTheAddressParts(t *testing.T) {
 	splitAddressCell(fields)
 	want := map[string]any{
 		"display_name": "Splitwerk GmbH", "address.line1": "Example Street 4", "address.line2": "Tower B",
-		"address.postal_code": "12345", "address.city": "Example City", "address.country": "DE",
+		"address.postal_code": "12345", "address.city": "Example City", "address.country": "DE", "address.region": "",
 	}
 	if !maps.Equal(fields, want) {
 		t.Errorf("fields = %v, want %v", fields, want)
@@ -45,5 +45,26 @@ func TestASplitCellBecomesTheAddressParts(t *testing.T) {
 	splitAddressCell(refused)
 	if !maps.Equal(refused, map[string]any{"address.line1": "Somewhere near the river"}) {
 		t.Errorf("a refused cell changed: %v", refused)
+	}
+}
+
+func TestASplitLineOneReplacesTheWholeStoredAddress(t *testing.T) {
+	cells := map[string]any{"address.line1": "Neue Straße 1, 10115 Berlin, Germany"}
+	splitAddressCell(cells)
+	changed := textFields(cells)
+	stored := []byte(`{"address":{"line1":"Old Road 2","line2":"Old Suite","region":"CA","postal_code":"94043","city":"Mountain View","country":"US"}}`)
+	merged, given, err := addressMergedOnto(stored, addressFrom(changed), changed)
+	if err != nil || !given {
+		t.Fatalf("merged = %+v (given %v, err %v)", merged, given, err)
+	}
+	got := [6]string{}
+	for i, part := range []*string{merged.Line1, merged.Line2, merged.Region, merged.PostalCode, merged.City, merged.Country} {
+		got[i] = "<nil>"
+		if part != nil {
+			got[i] = *part
+		}
+	}
+	if want := [6]string{"Neue Straße 1", "<nil>", "<nil>", "10115", "Berlin", "DE"}; got != want {
+		t.Errorf("address = %q, want %q", got, want)
 	}
 }

@@ -402,7 +402,7 @@ func (w *csvWriters) apply(
 	case migration.ObjectCompany:
 		in := companyUpdateFrom(changed, typed)
 		in.IfVersion = w.reviewedVersion(id)
-		merged, given, err := addressMergedOnto(current, in.Address)
+		merged, given, err := addressMergedOnto(current, in.Address, changed)
 		if err != nil {
 			return err
 		}
@@ -421,7 +421,7 @@ func (w *csvWriters) apply(
 		_, err = w.contacts.UpdateCompany(ctx, ids.From[ids.CompanyKind](id), in)
 		return err
 	case migration.ObjectContact:
-		return w.applyContact(ctx, id, contactUpdateFrom(changed, typed), current, source)
+		return w.applyContact(ctx, id, contactUpdateFrom(changed, typed), changed, current, source)
 	default:
 		return fmt.Errorf("import: %q is not an importable object", w.object)
 	}

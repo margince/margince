@@ -43,7 +43,7 @@ func legacyAddressCompany(t *testing.T, e *dedupeEnv, host, text string) ids.Com
 	return id
 }
 
-func repairAllAddresses(t *testing.T, e *dedupeEnv, kind AddressRepairKind, limit int) (scanned, changed int) {
+func repairAllAddresses(t *testing.T, e *dedupeEnv, limit int) (scanned, changed int) {
 	t.Helper()
 	system := principal.SystemActing(e.as(), "system:test")
 	after := ids.Nil
@@ -51,7 +51,7 @@ func repairAllAddresses(t *testing.T, e *dedupeEnv, kind AddressRepairKind, limi
 		var page AddressRepairPage
 		if err := e.store.tx(system, func(tx pgx.Tx) error {
 			var err error
-			page, err = RepairUnsplitAddressesTx(system, tx, kind, after, limit)
+			page, err = RepairUnsplitCompanyAddressesTx(system, tx, after, limit)
 			return err
 		}); err != nil {
 			t.Fatalf("repair: %v", err)
@@ -89,7 +89,7 @@ func TestTheAddressRepairSplitsAnOldLineOnceWithAnAuditAndAnEvent(t *testing.T) 
 	refused := legacyAddressCompany(t, e, "refused", unsplitAddress)
 	auditsBefore, eventsBefore := companyUpdateEvents(t, e, legacy)
 
-	scanned, changed := repairAllAddresses(t, e, CompanyAddressRepair, 1)
+	scanned, changed := repairAllAddresses(t, e, 1)
 	if scanned < 2 || changed != 1 {
 		t.Errorf("scanned %d, changed %d, want every company inspected and one split", scanned, changed)
 	}
@@ -103,7 +103,7 @@ func TestTheAddressRepairSplitsAnOldLineOnceWithAnAuditAndAnEvent(t *testing.T) 
 	if audits != auditsBefore+1 || events != eventsBefore+1 {
 		t.Errorf("audits %d→%d, events %d→%d, want one more of each", auditsBefore, audits, eventsBefore, events)
 	}
-	if _, again := repairAllAddresses(t, e, CompanyAddressRepair, 10); again != 0 {
+	if _, again := repairAllAddresses(t, e, 10); again != 0 {
 		t.Errorf("a second walk split %d addresses, want 0", again)
 	}
 	if audits, _ := companyUpdateEvents(t, e, legacy); audits != auditsBefore+1 {
@@ -132,7 +132,7 @@ func TestTheAddressRepairLeavesAnAddressSomebodyTypedOnTheRecord(t *testing.T) {
 	if err != nil {
 		t.Fatalf("creating the company: %v", err)
 	}
-	if _, changed := repairAllAddresses(t, e, CompanyAddressRepair, 50); changed != 0 {
+	if _, changed := repairAllAddresses(t, e, 50); changed != 0 {
 		t.Errorf("the repair split %d addresses, want every typed one left alone", changed)
 	}
 	if got := storedAddressParts(ctx, t, e.store, ids.From[ids.CompanyKind](ids.UUID(created.Id))); got[0] != legacyAddress || got[4] != "<nil>" {
@@ -151,6 +151,9 @@ func TestTheAddressRepairNeverReplacesAStoredPart(t *testing.T) {
 	ctx := e.as()
 	contradicted := legacyAddressCompany(t, e, "contradicted", legacyAddress)
 	kept := legacyAddressCompany(t, e, "kept", "Example Street 4, 12345 Example City")
+	// A road named by number reads as a postal code unless a house number or a
+	// separator sets the street apart.
+	highway := legacyAddressCompany(t, e, "highway", "Highway 1234 Dallas")
 	// The old replacement wrote line 1 alone, beside a city already stored.
 	beside := legacyAddressCompany(t, e, "beside", legacyAddress)
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
@@ -167,7 +170,7 @@ func TestTheAddressRepairNeverReplacesAStoredPart(t *testing.T) {
 			t.Fatalf("storing the country (test setup): %v", err)
 		}
 	}
-	repairAllAddresses(t, e, CompanyAddressRepair, 50)
+	repairAllAddresses(t, e, 50)
 	if got := storedAddressParts(ctx, t, e.store, contradicted); got[0] != legacyAddress || got[5] != "CA" {
 		t.Errorf("contradicted address = %q, want it whole with CA", got)
 	}
@@ -176,6 +179,9 @@ func TestTheAddressRepairNeverReplacesAStoredPart(t *testing.T) {
 	}
 	if got := storedAddressParts(ctx, t, e.store, beside); got[0] != legacyAddress || got[4] != "Old Town" {
 		t.Errorf("address beside a stored city = %q, want both kept", got)
+	}
+	if got := storedAddressParts(ctx, t, e.store, highway); got[0] != "Highway 1234 Dallas" || got[3] != "<nil>" {
+		t.Errorf("a run-on line with no house number = %q, want it whole", got)
 	}
 }
 
@@ -188,75 +194,17 @@ func TestTheAddressRepairEstimateCountsWhatTheWalkInspects(t *testing.T) {
 	var capped, whole int64
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		if capped, err = CountAddressRepairRows(ctx, tx, CompanyAddressRepair, 1); err != nil {
+		if capped, err = CountCompanyAddressRepairRows(ctx, tx, 1); err != nil {
 			return err
 		}
-		whole, err = CountAddressRepairRows(ctx, tx, CompanyAddressRepair, 1000)
+		whole, err = CountCompanyAddressRepairRows(ctx, tx, 1000)
 		return err
 	}); err != nil {
 		t.Fatal(err)
 	}
-	scanned, _ := repairAllAddresses(t, e, CompanyAddressRepair, 2)
+	scanned, _ := repairAllAddresses(t, e, 2)
 	if capped != 2 || whole != int64(scanned) {
 		t.Errorf("estimate capped at 1 = %d, want 2; uncapped = %d, want the %d records the walk inspected", capped, whole, scanned)
-	}
-}
-
-// A card imported before its parts were read left the whole address in line 1.
-func TestTheAddressRepairSplitsAContactLineACardLeft(t *testing.T) {
-	e := setupDedupe(t)
-	ctx := e.as()
-	line := "Example Street 4, 12345 Example City, Germany"
-	results, err := e.store.ImportVCards(ctx, []VCardEntry{{
-		FullName: "Card Contact", Address: line, PostalAddress: crmcontracts.Address{Line1: &line},
-		Emails: []VCardChannel{{Value: "card.contact@split.example.test", Kind: "work"}},
-	}})
-	if err != nil || len(results) != 1 || results[0].ContactID == nil {
-		t.Fatalf("importing the card: %+v, %v", results, err)
-	}
-	id := *results[0].ContactID
-	edited, err := e.store.ImportVCards(ctx, []VCardEntry{{
-		FullName: "Edited Card Contact", Address: line, PostalAddress: crmcontracts.Address{Line1: &line},
-		Emails: []VCardChannel{{Value: "edited.card@split.example.test", Kind: "work"}},
-	}})
-	if err != nil || len(edited) != 1 || edited[0].ContactID == nil {
-		t.Fatalf("importing the second card: %+v, %v", edited, err)
-	}
-	other := "Other Street 9"
-	for _, typed := range []*string{&other, &line} {
-		if _, err := e.store.UpdateContact(ctx, *edited[0].ContactID, UpdateContactInput{Address: &crmcontracts.Address{Line1: typed}}); err != nil {
-			t.Fatalf("editing the contact's address: %v", err)
-		}
-	}
-	if _, changed := repairAllAddresses(t, e, ContactAddressRepair, 50); changed != 1 {
-		t.Fatalf("the repair split %d contact addresses, want 1", changed)
-	}
-	got, err := e.store.GetContact(ctx, id, storekit.LiveOnly)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if parts := addressPartsOf(addressColumns(got.Address)); parts != legacyAddressParts {
-		t.Errorf("contact address = %q, want %q", parts, legacyAddressParts)
-	}
-}
-
-func TestTheAddressRepairLeavesAContactLineSomebodyTyped(t *testing.T) {
-	e := setupDedupe(t)
-	ctx := e.as()
-	line := "Example Street 4, 12345 Example City, Germany"
-	made, err := e.store.CreateContact(ctx, CreateContactInput{FullName: "Typed Contact", Source: "manual", Address: &crmcontracts.Address{Line1: &line}})
-	if err != nil {
-		t.Fatalf("creating the contact: %v", err)
-	}
-	if _, changed := repairAllAddresses(t, e, ContactAddressRepair, 50); changed != 0 {
-		t.Errorf("the repair split %d contact addresses, want the typed one left alone", changed)
-	}
-	got, err := e.store.GetContact(ctx, ids.From[ids.ContactKind](ids.UUID(made.Id)), storekit.LiveOnly)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got.Address == nil || got.Address.City != nil || *got.Address.Line1 != line {
-		t.Errorf("contact address = %+v, want the typed line as it was", got.Address)
 	}
 }
 

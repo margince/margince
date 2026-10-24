@@ -274,8 +274,9 @@ func ValidateVCardContacts(entry VCardEntry) error {
 
 func contactFromVCard(entry VCardEntry) CreateContactInput {
 	contact := CreateContactInput{
-		FullName: strings.TrimSpace(entry.FullName),
-		Source:   vcardSource,
+		FullName:      strings.TrimSpace(entry.FullName),
+		Source:        vcardSource,
+		auditEvidence: map[string]any{auditKeySource: vcardSource},
 	}
 	if title := strings.TrimSpace(entry.Title); title != "" {
 		contact.Title = &title

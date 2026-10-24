@@ -66,7 +66,10 @@ func (s *Store) updateMatchedByCard(
 	}
 	result.Outcome = VCardUpdated
 	result.ContactID = &contactID
-	return s.fillFromVCard(ctx, tx, contactID, entry)
+	if err := s.fillFromVCard(ctx, tx, contactID, entry); err != nil {
+		return err
+	}
+	return fillAddressFromCard(ctx, tx, contactID, entry)
 }
 
 // createFromCard turns a card nobody matched into a contact.

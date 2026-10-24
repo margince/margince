@@ -108,3 +108,19 @@ func addressPartsOf(a crmcontracts.Address) [6]string {
 	}
 	return out
 }
+
+func TestAnUnreviewedSplitNeedsTheStreetSetApartFromThePostalCode(t *testing.T) {
+	if _, ok := SplitAddressText("Highway 1234 Dallas"); !ok {
+		t.Fatal("the reviewed rule refused a run-on address it reads today")
+	}
+	for raw, want := range map[string]bool{
+		"Highway 1234 Dallas":                      false,
+		"Example Street 4 12345 Example City":      true,
+		"Highway\n1234 Dallas":                     true,
+		"Example Street 4\n12345 Example City\nDE": true,
+	} {
+		if _, ok := splitAddressBy(raw, splitWithStreetEvidence); ok != want {
+			t.Errorf("%q: split = %v, want %v", raw, ok, want)
+		}
+	}
+}

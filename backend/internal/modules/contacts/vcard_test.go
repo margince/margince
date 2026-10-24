@@ -87,11 +87,61 @@ func TestParseVCardsReadsTheCardsExportersWrite(t *testing.T) {
 		{
 			name: "a structured address becomes one line and its parts",
 			card: "BEGIN:VCARD\nFN:Postal Contact\nADR;TYPE=WORK:;;Hauptstr. 1;Berlin;;10115;Germany\nEND:VCARD\n",
-			// The post-office box and extended address are dropped; what
-			// remains is what a record shows.
 			want: VCardEntry{
 				FullName: "Postal Contact", Address: "Hauptstr. 1, Berlin, 10115, Germany",
 				PostalAddress: crmcontracts.Address{Line1: new("Hauptstr. 1"), City: new("Berlin"), PostalCode: new("10115"), Country: new("DE")},
+			},
+		},
+		{
+			name: "the post-office box and the extended address stay, in line 2",
+			card: "BEGIN:VCARD\nFN:Postal Contact\nADR:PO Box 7;Building C;Hauptstr. 1;Berlin;;10115;Germany\nEND:VCARD\n",
+			want: VCardEntry{
+				FullName: "Postal Contact", Address: "PO Box 7, Building C, Hauptstr. 1, Berlin, 10115, Germany",
+				PostalAddress: crmcontracts.Address{
+					Line1: new("Hauptstr. 1"), Line2: new("PO Box 7, Building C"),
+					City: new("Berlin"), PostalCode: new("10115"), Country: new("DE"),
+				},
+			},
+		},
+		{
+			name: "a Latin-1 card is read in its charset",
+			card: "BEGIN:VCARD\nVERSION:2.1\nFN;CHARSET=ISO-8859-1;ENCODING=QUOTED-PRINTABLE:J=FCrgen M=FCller\n" +
+				"ADR;CHARSET=ISO-8859-1;ENCODING=QUOTED-PRINTABLE:;;Stra=DFe 1;M=FCnchen;;80331;Deutschland\nEND:VCARD\n",
+			want: VCardEntry{
+				FullName: "Jürgen Müller", Address: "Straße 1, München, 80331, Deutschland",
+				PostalAddress: crmcontracts.Address{Line1: new("Straße 1"), City: new("München"), PostalCode: new("80331"), Country: new("DE")},
+			},
+		},
+		{
+			name: "a value that is not text in any charset the card names is dropped",
+			card: "BEGIN:VCARD\nFN:Plain Contact\nTITLE;ENCODING=QUOTED-PRINTABLE:Gesch=E4ftsf=FChrer\nEND:VCARD\n",
+			want: VCardEntry{FullName: "Plain Contact"},
+		},
+		{
+			name: "the preferred address wins, then the work address, then the first",
+			card: "BEGIN:VCARD\nFN:Many Addresses\nADR;TYPE=HOME:;;Home Road 1;Hometown;;11111;\n" +
+				"ADR;TYPE=WORK:;;Work Road 2;Worktown;;22222;\nADR;TYPE=HOME,PREF:;;Pref Road 3;Preftown;;33333;\n" +
+				"ADR;TYPE=WORK:;;Late Road 4;Latetown;;44444;\nEND:VCARD\n",
+			want: VCardEntry{
+				FullName: "Many Addresses", Address: "Pref Road 3, Preftown, 33333",
+				PostalAddress: crmcontracts.Address{Line1: new("Pref Road 3"), City: new("Preftown"), PostalCode: new("33333")},
+			},
+		},
+		{
+			name: "a work address wins over a first home address",
+			card: "BEGIN:VCARD\nFN:Two Addresses\nADR;TYPE=HOME:;;Home Road 1;Hometown;;11111;\n" +
+				"ADR;TYPE=WORK:;;Work Road 2;Worktown;;22222;\nADR;TYPE=WORK:;;Late Road 4;Latetown;;44444;\nEND:VCARD\n",
+			want: VCardEntry{
+				FullName: "Two Addresses", Address: "Work Road 2, Worktown, 22222",
+				PostalAddress: crmcontracts.Address{Line1: new("Work Road 2"), City: new("Worktown"), PostalCode: new("22222")},
+			},
+		},
+		{
+			name: "of two plain addresses the first stays",
+			card: "BEGIN:VCARD\nFN:Plain Addresses\nADR:;;First Road 1;Firsttown;;11111;\nADR:;;Second Road 2;Secondtown;;22222;\nEND:VCARD\n",
+			want: VCardEntry{
+				FullName: "Plain Addresses", Address: "First Road 1, Firsttown, 11111",
+				PostalAddress: crmcontracts.Address{Line1: new("First Road 1"), City: new("Firsttown"), PostalCode: new("11111")},
 			},
 		},
 		{
