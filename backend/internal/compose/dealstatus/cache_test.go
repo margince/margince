@@ -154,3 +154,19 @@ func TestTheKeyTurnsOverAtTheInstallationMidnight(t *testing.T) {
 		t.Error("UTC midnight has not passed and the key moved")
 	}
 }
+
+func TestTheKeyChangesWhenTheInstallationZoneChangesOnTheSameDate(t *testing.T) {
+	in := inputWithTimeline()
+	at := time.Date(2026, 10, 6, 10, 0, 0, 0, time.UTC)
+	reader := ids.NewV7()
+	key := func(loc *time.Location) string {
+		got, err := Fingerprint(in, reader, "routing-1", at, loc, string(textlang.English))
+		if err != nil {
+			t.Fatalf("fingerprint: %v", err)
+		}
+		return got
+	}
+	if key(time.UTC) == key(time.FixedZone("UTC+1", 3600)) {
+		t.Error("zone changed with the same local date and the key did not move")
+	}
+}

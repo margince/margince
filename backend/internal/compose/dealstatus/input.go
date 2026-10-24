@@ -325,10 +325,12 @@ func Fingerprint(in StatusInput, userID ids.UUID, routingVersion string, now tim
 		Routing  string      `json:"routing"`
 		Reader   string      `json:"reader"`
 		Day      string      `json:"day"`
+		Zone     string      `json:"zone"`
 		Language string      `json:"language"`
 	}{
 		In: in, Prompt: projectionVersion + "\x00" + promptVersion, Routing: routingVersion,
 		Reader: userID.String(), Day: elapsed.CalendarDay(now, loc).Format("2006-01-02"),
+		Zone:     loc.String(),
 		Language: lang,
 	})
 	if err != nil {
