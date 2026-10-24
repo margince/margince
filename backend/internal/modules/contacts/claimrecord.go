@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -153,16 +154,16 @@ func recordClaimInTx(
 	}, true, nil
 }
 
-// requireQuoteInActivity refuses a claim whose quote is not in the message it
-// cites. A quote nobody can find in what was written grounds nothing, and it
-// would read as trustworthy as one that does.
+// requireQuoteInActivity refuses a claim whose quote is not in what the sender
+// of the cited message wrote. A quote nobody can find there grounds nothing,
+// and one found only in the quoted reply is somebody else's words.
 func requireQuoteInActivity(ctx context.Context, tx pgx.Tx, in ClaimInput) error {
 	var subject, body string
 	if err := tx.QueryRow(ctx, `SELECT COALESCE(subject, ''), COALESCE(body, '') FROM activity WHERE id = $1`,
 		in.ActivityID).Scan(&subject, &body); err != nil {
 		return fmt.Errorf("read the message a claim cites: %w", err)
 	}
-	if values.Quoted(body, in.Quote) || values.Quoted(subject, in.Quote) {
+	if values.Quoted(textlang.SenderText(body), in.Quote) || values.Quoted(subject, in.Quote) {
 		return nil
 	}
 	return httperr.Validation("source_quote", "not_in_source",

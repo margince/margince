@@ -14,6 +14,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -62,5 +63,31 @@ func TestACanceledMeetingIsNotAnExchangeTheScanReads(t *testing.T) {
 	}
 	if !slices.Contains(got, heldID) {
 		t.Errorf("the scan lost the held meeting: %v", got)
+	}
+}
+
+// The scan reads a reply as what its sender wrote, so a quoted mail under it is
+// neither shown to the model nor quotable as the reply's words.
+func TestTheScanReadsOnlyWhatTheSenderWrote(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	company := e.SeedCompany(t, "Quote Scan Co", nil)
+	mail := ids.NewV7()
+	e.WsExec(t, `INSERT INTO activity (id, kind, subject, body, direction, source_system, source_id, source, captured_by)
+		VALUES ($1, 'email', 'next steps', $2, 'inbound', 'gmail', $3, 'gmail:seed', 'connector:gmail')`, mail,
+		"Works for me.\n\nFrom: Sam Seller <sam@seller.example>\nSent: Monday\n\nWe will send the contract by Friday.",
+		mail.String())
+	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, company_id) VALUES ($1, 'company', $2)`, mail, company)
+
+	var words []MessageIn
+	if err := e.DB().Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		words, err = readWords(ctx, tx, ids.From[ids.CompanyKind](company), clocktest.Now(t))
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if len(words) != 1 || words[0].Text != "Works for me." {
+		t.Fatalf("the scan read %+v, want the one reply holding only its sender's line", words)
 	}
 }

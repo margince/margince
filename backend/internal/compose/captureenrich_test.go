@@ -140,6 +140,38 @@ func TestSignatureBlockWindow(t *testing.T) {
 	})
 }
 
+func TestSignatureBlockIgnoresAnUnmarkedQuotedReply(t *testing.T) {
+	t.Parallel()
+	alex := contacts.SignatureCandidate{FullName: "Alex Buyer", Email: "contact@example.com"}
+	envelope := "From: Alex Buyer <contact@example.com>\nTo: Sam Seller <sam@example.org>\n\n"
+	quoted := "Hi Alex, see below.\n\nSam Seller\nHead of Sales\n+49 30 1111111\n+49 151 2222222"
+	for name, header := range map[string]string{
+		"outlook": "From: Sam Seller <sam@example.org>\nSent: Monday\nTo: Alex Buyer <contact@example.com>\nSubject: Next steps\n\n",
+		"gmail":   "On Mon, 2 Jun 2026 at 10:00, Sam Seller <sam@example.org> wrote:\n\n",
+		"german":  "Von: Sam Seller <sam@example.org>\nGesendet: Montag\nAn: Alex Buyer <contact@example.com>\nBetreff: Next steps\n\n",
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			block := signatureBlock(envelope + "Thanks, works for me.\n\nBest\nAlex\n\n" + header + quoted)
+			if block != "Thanks, works for me.\nBest\nAlex" {
+				t.Fatalf("window = %q, want only what Alex wrote", block)
+			}
+			if signatureNamesContact(block, alex) {
+				t.Fatalf("a window of one first name and no envelope was read as Alex's signature: %q", block)
+			}
+		})
+	}
+}
+
+func TestSignatureBlockOfAForwardHoldsNoneOfTheInnerSignature(t *testing.T) {
+	t.Parallel()
+	body := "From: Alex Buyer <contact@example.com>\nTo: Sam Seller <sam@example.org>\n\n" +
+		"FYI\n\n---------- Forwarded message ---------\nFrom: Kim Vendor <kim@example.net>\n\nKim Vendor\nCEO\n+44 20 7946 0000"
+	if got := signatureBlock(body); got != "FYI" {
+		t.Fatalf("window = %q, want the forwarder's own line only", got)
+	}
+}
+
 // The field name the shape validator rejects is MODEL output, so a sender who
 // steered the model chose it. It is logged and, on a §5.2 retry, appended back
 // into the prompt — bounded at both exits or it is a writing surface.

@@ -322,14 +322,11 @@ func restoreSupersededPhone(ctx context.Context, tx pgx.Tx, contactID ids.Contac
 	if tag.RowsAffected() == 0 {
 		return apperrors.ErrConflict
 	}
-	revived, err := tx.Exec(ctx, `
-		UPDATE contact_phone SET archived_at = NULL
-		 WHERE id = $1 AND archived_at IS NOT NULL AND contact_id = $2`,
-		supersededID, contactID)
+	revived, err := revivePhoneTx(ctx, tx, contactID, supersededID)
 	if err != nil {
-		return fmt.Errorf("contacts: bringing the replaced number back: %w", err)
+		return err
 	}
-	if revived.RowsAffected() == 0 {
+	if !revived {
 		// The row stopped being ours to revive between the read and here. The
 		// replacement is already retired, so refusing leaves the contact one
 		// number short — but the alternative is reviving nothing while
@@ -366,4 +363,27 @@ func refuseIfCorrected(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, 
 		return apperrors.ErrConflict
 	}
 	return nil
+}
+
+// revivePhoneTx brings back one archived number of this contact, and reports
+// whether it did. A number the contact holds live again already is not revived
+// a second time: nothing on the table forbids one contact holding it twice. It
+// comes back primary only while its type has no live primary, which the
+// partial unique index permits once.
+func revivePhoneTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, phoneID ids.UUID) (bool, error) {
+	tag, err := tx.Exec(ctx, `
+		UPDATE contact_phone was SET archived_at = NULL,
+		       is_primary = was.is_primary AND NOT EXISTS (
+			SELECT 1 FROM contact_phone p
+			 WHERE p.contact_id = $2 AND p.phone_type = was.phone_type AND p.is_primary
+			   AND p.archived_at IS NULL)
+		 WHERE was.id = $1 AND was.archived_at IS NOT NULL AND was.contact_id = $2
+		   AND NOT EXISTS (
+			SELECT 1 FROM contact_phone dup
+			 WHERE dup.contact_id = $2 AND dup.phone = was.phone AND dup.archived_at IS NULL)`,
+		phoneID, contactID)
+	if err != nil {
+		return false, fmt.Errorf("contacts: bringing the replaced number back: %w", err)
+	}
+	return tag.RowsAffected() > 0, nil
 }
