@@ -258,15 +258,21 @@ func TestLastMetCountsDaysInTheInstallationZone(t *testing.T) {
 		days     int
 		sentence string
 	}{
-		{"east: yesterday afternoon at 01:00 local", bangkok,
-			time.Date(2026, 10, 6, 8, 0, 0, 0, time.UTC), time.Date(2026, 10, 6, 18, 0, 0, 0, time.UTC),
-			1, "Last met them 1 days ago."},
-		{"the same pair counted in UTC", time.UTC,
-			time.Date(2026, 10, 6, 8, 0, 0, 0, time.UTC), time.Date(2026, 10, 6, 18, 0, 0, 0, time.UTC),
-			0, "Last met them today."},
-		{"west: this evening after the UTC midnight", winterNewYork,
-			time.Date(2026, 12, 5, 23, 0, 0, 0, time.UTC), time.Date(2026, 12, 6, 1, 0, 0, 0, time.UTC),
-			0, "Last met them today."},
+		{
+			name: "east: yesterday afternoon at 01:00 local", loc: bangkok,
+			met: time.Date(2026, 10, 6, 8, 0, 0, 0, time.UTC), now: time.Date(2026, 10, 6, 18, 0, 0, 0, time.UTC),
+			days: 1, sentence: "Last met them 1 days ago.",
+		},
+		{
+			name: "the same pair counted in UTC", loc: time.UTC,
+			met: time.Date(2026, 10, 6, 8, 0, 0, 0, time.UTC), now: time.Date(2026, 10, 6, 18, 0, 0, 0, time.UTC),
+			days: 0, sentence: "Last met them today.",
+		},
+		{
+			name: "west: this evening after the UTC midnight", loc: winterNewYork,
+			met: time.Date(2026, 12, 5, 23, 0, 0, 0, time.UTC), now: time.Date(2026, 12, 6, 1, 0, 0, 0, time.UTC),
+			days: 0, sentence: "Last met them today.",
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
