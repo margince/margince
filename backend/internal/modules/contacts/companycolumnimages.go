@@ -13,9 +13,11 @@ package contacts
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -27,7 +29,8 @@ import (
 // audit row gives it nothing to diff.
 func readColdStartColumnImages(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID) (map[string]any, error) {
 	var displayName string
-	var legalName, industry, addressLine1, description, sizeBand *string
+	var legalName, industry, description, sizeBand *string
+	var address crmcontracts.Address
 	// FOR UPDATE, and it is the audit that needs it: the before image and the
 	// apply that follows must describe ONE transaction's work. Read unlocked,
 	// a concurrent update landing between them lands inside this diff, and
@@ -38,21 +41,25 @@ func readColdStartColumnImages(ctx context.Context, tx pgx.Tx, companyID ids.Com
 	// the row lock second (see its own doc); a caller that reaches this row
 	// lock without it inverts the pair and deadlocks against a human rename.
 	if err := tx.QueryRow(ctx,
-		`SELECT display_name, legal_name, industry, address_line1, description, size_band
+		`SELECT display_name, legal_name, industry, description, size_band,
+		        address_line1, address_line2, address_region, address_postal_code, address_city, address_country
 		   FROM company WHERE id = $1 FOR UPDATE`,
-		companyID).Scan(&displayName, &legalName, &industry, &addressLine1, &description, &sizeBand); err != nil {
+		companyID).Scan(&displayName, &legalName, &industry, &description, &sizeBand,
+		&address.Line1, &address.Line2, &address.Region, &address.PostalCode, &address.City, &address.Country); err != nil {
 		return nil, fmt.Errorf("read company column images: %w", err)
 	}
-	// Keyed by FIELD, not by column: field history projects per field, and
-	// address_line1 is the column behind registered_address. Filed under the
-	// column name, the account's registered address showed up in history as a
-	// field the profile surface does not have.
+	// Field history uses registered_address for all six address columns.
+	// Their combined image keeps a city-only edit visible in that history.
 	out := map[string]any{fieldDisplayName: displayName}
+	var addressLine *string
+	if line := formatAddressLine(address); line != "" {
+		addressLine = &line
+	}
 	// size_band has no profile-field twin: the column IS the surface, so its
 	// own name is the field-history key.
 	for column, value := range map[string]*string{
 		fieldLegalName: legalName, fieldIndustry: industry,
-		fieldRegisteredAddress: addressLine1, fieldOfferSummary: description,
+		fieldRegisteredAddress: addressLine, fieldOfferSummary: description,
 		"size_band": sizeBand,
 	} {
 		if value == nil {
@@ -97,4 +104,20 @@ func anchorSaveImages(ctx context.Context, tx pgx.Tx, target anchorTarget) (map[
 	}
 	before, changed := storekit.ChangedColumns(target.before, after)
 	return before, changed, nil
+}
+
+// formatAddressLine spells the address columns as one line, in the order a
+// letter prints them, skipping the empty ones.
+func formatAddressLine(a crmcontracts.Address) string {
+	var parts []string
+	for _, part := range []string{
+		pointerValue(a.Line1), pointerValue(a.Line2),
+		strings.TrimSpace(pointerValue(a.PostalCode) + " " + pointerValue(a.City)),
+		pointerValue(a.Region), pointerValue(a.Country),
+	} {
+		if part != "" {
+			parts = append(parts, part)
+		}
+	}
+	return strings.Join(parts, ", ")
 }

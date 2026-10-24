@@ -376,7 +376,7 @@ func (s *Store) ApplyDeepReadTx(ctx context.Context, tx pgx.Tx, in DeepReadPropo
 	}); err != nil {
 		return fmt.Errorf("emit company.updated: %w", err)
 	}
-	return nil
+	return s.locateLandedAddress(ctx, tx, in.CompanyID, after)
 }
 
 // upsertCompanyFacts lands the category facts, refreshing an

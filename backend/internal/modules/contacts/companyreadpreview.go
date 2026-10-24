@@ -6,7 +6,6 @@ package contacts
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
@@ -88,10 +87,15 @@ func previewReadColumns(ctx context.Context, tx pgx.Tx, id ids.CompanyID, curren
 		if !backed {
 			continue
 		}
-		stored := column
 		if column == columnAddress {
-			stored = columnAddressLine1
+			rows, err := previewReadAddress(ctx, tx, id, current.Address, field)
+			if err != nil {
+				return nil, err
+			}
+			out = append(out, rows...)
+			continue
 		}
+		stored := column
 		if err := previewFieldsVisible(ctx, companyEntity, stored); err != nil {
 			return nil, err
 		}
@@ -102,15 +106,7 @@ func previewReadColumns(ctx context.Context, tx pgx.Tx, id ids.CompanyID, curren
 		if value == "" {
 			continue
 		}
-		predicate, found := companyColumnReadPredicates[column][authority]
-		if !found {
-			return nil, apperrors.ErrInvalidArgument
-		}
-		var applies bool
-		// The writer's predicate includes structured-address and current-value guards.
-		arguments := []any{id, value}
-		valueParameter := fmt.Sprintf("$%d", len(arguments))
-		err = tx.QueryRow(ctx, "SELECT EXISTS (SELECT 1 FROM company WHERE "+predicate+" AND "+valueParameter+"::text IS NOT NULL)", arguments...).Scan(&applies)
+		applies, err := companyColumnWriteApplies(ctx, tx, column, authority, []any{id, value})
 		if err != nil {
 			return nil, err
 		}

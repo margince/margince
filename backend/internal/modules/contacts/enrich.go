@@ -151,7 +151,7 @@ func (s *Store) ApplyEnrichmentTx(ctx context.Context, tx pgx.Tx, companyID ids.
 	}); err != nil {
 		return fmt.Errorf("emit company.updated: %w", err)
 	}
-	return nil
+	return s.locateLandedAddress(ctx, tx, companyID, after)
 }
 
 // UnmarshalEnrichment decodes a staged enrichment proposal — the company id plus

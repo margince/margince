@@ -274,6 +274,12 @@ Nobody named on the company's website is added. Someone found that way may only 
 
 Every field shows **the passage it was read from**, word for word, or it is left out. A value the page does not clearly state is not filled in.
 
+### The address a read finds
+
+An accepted read fills the company's address only while every part is still empty. Margince puts each part in its own address field. Address filters then find the company, and it can be placed on a map.
+
+An address Margince cannot split stays whole under **Registered address** in the company profile. It leaves the address fields empty.
+
 ### Other readings
 
 - **Dossier**: what this company *is*, written only from facts already on file,

@@ -350,7 +350,8 @@ func (s *Server) wireOnboardingSurface(pool *pgxpool.Pool) {
 	// instance, like every other contacts-backed shadow here: the company
 	// form's write shape is contacts's, the transport is compose's.
 	s.companyHandlers = companyHandlers{
-		store:   contacts.NewStore(InstallationDB(pool)).WithInstallationRenamer(installationRenamer(pool)),
+		store: contacts.NewStore(InstallationDB(pool)).WithInstallationRenamer(installationRenamer(pool)).
+			WithGeocodeEnqueue(boundGeocodeEnqueue),
 		rollout: companyContextRolloutOnboarding,
 	}
 	s.siteReadHandlers = siteReadHandlers{companyContextRollout: companyContextRolloutOnboarding}
