@@ -6,9 +6,10 @@
 package gates
 
 // The mail system's own sender names (mailer-daemon, postmaster) are spelled in
-// platform/mailidentity and nowhere else. The sender rule is read by capture, by the import write door and by the repair
-// of rows stored before the door refused them; a second spelling is a second
-// answer, and the two drift until a bounce counts as a reply on one door only.
+// platform/mailidentity and nowhere else. Capture, the import write door and the
+// repair of rows stored before the door refused them all read the sender rule.
+// A second spelling is a second answer. The two drift until a bounce counts as
+// a reply on one door only.
 
 import (
 	"go/ast"
@@ -25,7 +26,7 @@ import (
 const deliverySenderOwner = "internal/platform/mailidentity/"
 
 // deliverySenderWaiver is the one file that holds a delivery name as a literal
-// for a different question: postmaster there is a role-mailbox word for sorting
+// for a different question. Postmaster there is a role-mailbox word for sorting
 // shared mailboxes, not a sender rule.
 const deliverySenderWaiver = "internal/platform/mailrole/vocabulary.go"
 

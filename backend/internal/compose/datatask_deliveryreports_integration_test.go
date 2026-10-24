@@ -60,7 +60,7 @@ func (f reportFixture) lead(t *testing.T, name string) ids.UUID {
 
 // file writes one imported received mail through the real activities writer
 // and runs the lead workflows the outbox would run for it. A sender the write
-// door now refuses is set on the writer's input after the mapper, which is how
+// door now refuses is set on the writer's input after the mapper. That is how
 // such a row got stored before the door refused it.
 func (f reportFixture) file(t *testing.T, lead ids.UUID, sourceID, from string, sourceSystem *string) ids.UUID {
 	t.Helper()

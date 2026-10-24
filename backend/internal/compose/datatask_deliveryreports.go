@@ -19,9 +19,9 @@ import (
 )
 
 // deliveryReportsDataTask archives the delivery reports an import filed as
-// received mail before the write door refused them, and re-derives the lead
-// status, score and first-response stamp they caused from the touches that
-// remain. The sender rule is the one the write door uses.
+// received mail before the write door refused them. It then re-derives the lead
+// status, score and first-response stamp they caused from the remaining
+// touches. The sender rule is the one the write door uses.
 func deliveryReportsDataTask(pool *pgxpool.Pool, now func() time.Time) datatask.Task {
 	return datatask.Task{
 		ID: "core/1792823163_imported_delivery_reports", Version: 1,

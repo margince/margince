@@ -200,8 +200,8 @@ func mailIdentityFrom(req crmcontracts.CreateActivityRequest, in *LogActivityInp
 }
 
 // DeliveryReportError refuses a received email whose sender is the mail system
-// itself. A bounce notice is no reply from the correspondent, and every reader
-// of inbound mail counts a row as one, so the row is refused rather than filed.
+// itself. A bounce notice is no reply from the correspondent. Every reader of
+// inbound mail counts a row as one, so the row is refused rather than filed.
 type DeliveryReportError struct{}
 
 func (*DeliveryReportError) Error() string {

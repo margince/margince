@@ -73,8 +73,8 @@ func DeliveryReportsTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int
 }
 
 // ArchiveDeliveryReportTx archives one delivery report through the module's
-// archive, pinned to the version the scan read, so a mail a human edited since
-// is refused rather than archived.
+// archive, pinned to the version the scan read. A mail a human edited since is
+// refused rather than archived.
 func (s *Store) ArchiveDeliveryReportTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	version := int64(1)
 	return s.ArchiveActivityTx(ctx, tx, ids.From[ids.ActivityKind](id), &version,

@@ -27,10 +27,10 @@ var endOfTime = time.Date(9999, 1, 1, 0, 0, 0, 0, time.UTC)
 // the first-response stamp. It applies the live rules to the touches that
 // remain (leadBehavioralSignals, ladderStepFor, isFirstResponseActivity).
 //
-// This is the one deliberate step DOWN the ladder, so it is not AdvanceLeadStatus.
-// Only a step the system set is lowered: a lead a human placed keeps its status,
-// and a first-response stamp that matches no remaining touch (a human's
-// disposition wrote it) stays.
+// This is the one step DOWN the ladder, so it is not AdvanceLeadStatus.
+// Only a step the system set is lowered. A lead a human placed keeps its status.
+// A first-response stamp that matches no remaining touch (a human's disposition
+// wrote it) stays.
 func ReDeriveLeadFromRemainingTouchesTx(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, now time.Time) error {
 	if err := auth.Require(ctx, "lead", principal.ActionUpdate); err != nil {
 		return err

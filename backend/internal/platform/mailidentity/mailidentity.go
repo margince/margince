@@ -60,18 +60,18 @@ func IsMachineLocalpart(localpart string) bool {
 // a bounce, a DSN, a postmaster notice. There is no correspondent behind it, so
 // capture drops it and the import write door refuses it as received mail.
 //
-// Deliberately narrower than "looks automated". A no-reply or notifications
-// address is a real company writing to the workspace (a signed envelope, an
-// invoice, a shipping notice), and such a message keeps its place on the
-// timeline while the tier gate suppresses the contact and company derivation.
+// Narrower than "looks automated". A no-reply or notifications address is a
+// real company writing to the workspace (a signed envelope, an invoice). Such a
+// message keeps its place on the timeline. The tier gate suppresses the contact
+// and company derivation.
 func IsDeliverySystemSender(address string) bool {
 	local, _, found := strings.Cut(strings.ToLower(address), "@")
 	if !found {
 		return false
 	}
 	// BATV/prvs tags sit before any separator a fold would strip. The scheme
-	// signs the return path, which this never sees, so a relay that rewrites
-	// From with a tag has its mail dropped: a timeline row lost, nothing granted.
+	// signs the return path, which this never sees. A relay that rewrites From
+	// with a tag has its mail dropped: a timeline row lost, nothing granted.
 	if strings.HasPrefix(local, "prvs=") || strings.HasPrefix(local, "msprvs1=") {
 		return true
 	}
