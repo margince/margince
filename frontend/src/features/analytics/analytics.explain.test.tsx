@@ -51,14 +51,16 @@ async function openPipeline(user: User) {
   await user.click(await screen.findByRole("button", { name: "Pipeline" }));
 }
 
-// Every card on the Deals tab carries its own panel toggle, so the first one
-// is the stage table's: the card the rows below belong to.
+// Every card on the Deals tab carries its own panel toggle. The stage table's
+// card is the one the rows below belong to.
 async function openPanel(user: User) {
   await openPipeline(user);
-  const toggles = await screen.findAllByRole("button", {
-    name: en["explain.open"],
+  const card = await screen.findByRole("region", {
+    name: en["analytics.reportDeals"],
   });
-  await user.click(toggles[0]);
+  await user.click(
+    await within(card).findByRole("button", { name: en["explain.open"] }),
+  );
 }
 
 async function openRowDrawer(user: User) {

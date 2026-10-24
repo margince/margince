@@ -178,55 +178,61 @@ func (s *Service) ListTargets(ctx context.Context, after *ids.UUID, limit int, f
 	return out, err
 }
 
-func (s *Service) validateTarget(ctx context.Context, tx pgx.Tx, in *crmcontracts.ReportingTargetInput) (crmcontracts.ReportingWindow, string, error) {
-	empty := crmcontracts.ReportingWindow{}
+// checkedTarget is what validateTarget derived from a valid target input.
+type checkedTarget struct {
+	interval crmcontracts.ReportingWindow
+	unit     string
+	metric   crmcontracts.ReportingMetricDefinition
+}
+
+func (s *Service) validateTarget(ctx context.Context, tx pgx.Tx, in *crmcontracts.ReportingTargetInput) (checkedTarget, error) {
 	if in.Value < 0 || in.Value > values.MaxExactInteger {
-		return empty, "", refuse("value", "out_of_range", "enter a non-negative target")
+		return checkedTarget{}, refuse("value", "out_of_range", "enter a non-negative target")
 	}
 	if !values.HasVisibleText(in.Reason) {
-		return empty, "", refuse("reason", "required", "enter a revision reason")
+		return checkedTarget{}, refuse("reason", "required", "enter a revision reason")
 	}
 	if utf8.RuneCountInString(in.Reason) > 1000 {
-		return empty, "", refuse("reason", "too_long", "a revision reason holds at most 1000 characters")
+		return checkedTarget{}, refuse("reason", "too_long", "a revision reason holds at most 1000 characters")
 	}
 	catalog, err := s.evaluator.Catalog(ctx, textlang.English)
 	if err != nil {
-		return empty, "", err
+		return checkedTarget{}, err
 	}
 	index := slices.IndexFunc(catalog.Metrics, func(m crmcontracts.ReportingMetricDefinition) bool { return m.Id == in.Metric && m.SupportsTarget })
 	if index < 0 {
-		return empty, "", refuse("metric", "unsupported", "this metric does not support targets")
+		return checkedTarget{}, refuse("metric", "unsupported", "this metric does not support targets")
 	}
 	scope, err := s.authority.Scope(ctx, tx, in.Scope, true)
 	if err != nil {
-		return empty, "", refusedField("scope", err)
+		return checkedTarget{}, refusedField("scope", err)
 	}
 	in.Scope = scope
 	if err := s.authority.Pipeline(ctx, tx, (*ids.UUID)(in.PipelineId)); err != nil {
-		return empty, "", err
+		return checkedTarget{}, err
 	}
 	calendar, err := s.calendar(ctx, tx)
 	if err != nil {
-		return empty, "", err
+		return checkedTarget{}, err
 	}
 	zone, err := location(calendar)
 	if err != nil {
-		return empty, "", err
+		return checkedTarget{}, err
 	}
 	day := in.PeriodStart.Time
 	start := time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, zone)
 	interval, err := TargetWindow(crmcontracts.ReportingWindow{StartAt: start, EndAt: start.AddDate(0, 0, 1)}, string(in.PeriodKind), calendar)
 	if err != nil {
-		return empty, "", refusedField("period_kind", err)
+		return checkedTarget{}, refusedField("period_kind", err)
 	}
 	if !interval.StartAt.Equal(start) {
-		return empty, "", refuse("period_start", "not_period_start", "the target must start on the first day of its month or fiscal quarter")
+		return checkedTarget{}, refuse("period_start", "not_period_start", "the target must start on the first day of its month or fiscal quarter")
 	}
 	unit := catalog.Metrics[index].Unit
 	if unit == "money" {
 		unit = calendar.Currency
 	}
-	return interval, unit, nil
+	return checkedTarget{interval: interval, unit: unit, metric: catalog.Metrics[index]}, nil
 }
 
 // CreateTarget records an explicit allocation without inferring child targets.
@@ -236,13 +242,14 @@ func (s *Service) CreateTarget(ctx context.Context, in crmcontracts.ReportingTar
 	}
 	out := crmcontracts.ReportingTarget{Id: openapi_types.UUID(ids.NewV7()), Definition: in, Revision: 1, Version: 1, CreatedAt: s.now()}
 	err := s.store.db.Tx(ctx, func(tx pgx.Tx) error {
-		interval, unit, err := s.validateTarget(ctx, tx, &in)
+		checked, err := s.validateTarget(ctx, tx, &in)
 		if err != nil {
 			return err
 		}
-		if err := s.refuseUnfilteredPipeline(ctx, in); err != nil {
+		if err := refuseUnfilteredPipeline(checked.metric, in); err != nil {
 			return err
 		}
+		interval, unit := checked.interval, checked.unit
 		out.Definition = in
 		out.Interval = interval
 		out.Unit = unit
@@ -262,18 +269,9 @@ func (s *Service) CreateTarget(ctx context.Context, in crmcontracts.ReportingTar
 
 // refuseUnfilteredPipeline refuses a new target on a pipeline its figure ignores.
 // Only a create asks, since a stored target can never change its pipeline.
-func (s *Service) refuseUnfilteredPipeline(ctx context.Context, in crmcontracts.ReportingTargetInput) error {
-	if in.PipelineId == nil {
-		return nil
-	}
-	catalog, err := s.evaluator.Catalog(ctx, textlang.English)
-	if err != nil {
-		return err
-	}
-	for _, metric := range catalog.Metrics {
-		if metric.Id == in.Metric && (metric.AllowedFilters == nil || !slices.Contains(*metric.AllowedFilters, "pipeline")) {
-			return refuse("pipeline_id", "not_filterable", "this metric counts every pipeline; save the target without one")
-		}
+func refuseUnfilteredPipeline(metric crmcontracts.ReportingMetricDefinition, in crmcontracts.ReportingTargetInput) error {
+	if in.PipelineId != nil && (metric.AllowedFilters == nil || !slices.Contains(*metric.AllowedFilters, "pipeline")) {
+		return refuse("pipeline_id", "not_filterable", "this metric counts every pipeline; save the target without one")
 	}
 	return nil
 }
@@ -334,10 +332,11 @@ func (s *Service) UpdateTarget(ctx context.Context, id ids.UUID, version int64, 
 		if before.Version != version {
 			return apperrors.ErrVersionSkew
 		}
-		interval, unit, err := s.validateTarget(ctx, tx, &in)
+		checked, err := s.validateTarget(ctx, tx, &in)
 		if err != nil {
 			return err
 		}
+		interval, unit := checked.interval, checked.unit
 		if err := refuseIdentityChange(before, in, interval, unit); err != nil {
 			return err
 		}
