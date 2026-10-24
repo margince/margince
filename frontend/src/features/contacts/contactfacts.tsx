@@ -66,7 +66,12 @@ export function ContactFacts({
       )}
       {phone && (
         <Fact label={t("create.phone")}>
-          <ContactLink kind="phone" value={phone} className="pe-meta-link">
+          <ContactLink
+            kind="phone"
+            value={phone}
+            record={{ entityType: "contact", entityId: contact.id }}
+            className="pe-meta-link"
+          >
             {phone}
           </ContactLink>
         </Fact>

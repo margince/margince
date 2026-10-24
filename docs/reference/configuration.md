@@ -348,6 +348,9 @@ admin can also change under Settings.
 | `installation.agent_window_hours` | `MARGINCE_INSTALLATION_AGENT_WINDOW_HOURS` | — | `int`, 1 to 168, stored | `24` | api, worker | Hours in the window the agent limits count over; set at boot, it also keeps a length an admin saved for the next reset from taking over. |
 | `installation.agent_writes_per_window` | `MARGINCE_INSTALLATION_AGENT_WRITES_PER_WINDOW` | — | `int`, 10 to 5000, stored | `200` | api, worker | Changing calls one agent passport may make per window. |
 | `installation.base_language` | `MARGINCE_INSTALLATION_BASE_LANGUAGE` | — | `string`, stored | `en` | api, worker | The language AI writes the shared record in: en, de or vi. |
+| `installation.call_telegram` | `MARGINCE_INSTALLATION_CALL_TELEGRAM` | — | `bool`, stored | `true` | api, worker | Show a Telegram chat link next to a contact's phone number that starts with a country code. |
+| `installation.call_whatsapp` | `MARGINCE_INSTALLATION_CALL_WHATSAPP` | — | `bool`, stored | `true` | api, worker | Show a WhatsApp chat link next to a contact's phone number that starts with a country code. |
+| `installation.call_zalo` | `MARGINCE_INSTALLATION_CALL_ZALO` | — | `bool`, stored | `true` | api, worker | Show a Zalo chat link next to a contact's phone number that starts with a country code. |
 | `installation.close_date_sweep_interval_seconds` | `MARGINCE_INSTALLATION_CLOSE_DATE_SWEEP_INTERVAL_SECONDS` | — | `int`, 3600 to 604800, stored | `86400` | api, worker | Seconds between the close-date sweeps. |
 | `installation.country` | `MARGINCE_INSTALLATION_COUNTRY` | — | `string`, stored | `""` | api, worker | Where the installation is established, as a two-letter ISO 3166-1 code in small letters; empty for none. |
 | `installation.date_format` | `MARGINCE_INSTALLATION_DATE_FORMAT` | — | `string`, stored | `locale` | api, worker | How dates are written: locale, dmy, mdy or ymd. |

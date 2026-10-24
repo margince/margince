@@ -115,6 +115,7 @@ export function ContactTimelineTab({
               appearance="button"
               label={t("record.verb.call")}
               number={callBackNumber(row.kind, view?.contact)}
+              record={{ entityType: "contact", entityId: contactId }}
             />
           </>
         )}

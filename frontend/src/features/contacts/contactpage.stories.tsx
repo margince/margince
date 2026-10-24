@@ -14,6 +14,7 @@ import { ContactTimelineTab } from "./contacttabs";
 import { ContactToday } from "./contacttoday";
 import "./contact360.css";
 import {
+  callMessengersRoute,
   installFetchStub,
   jsonResponse,
   meRoute,
@@ -356,6 +357,7 @@ function Page({
     // closed — the embedded rail would render read-only no matter what the
     // fixture below grants, which is not what a permitted reader sees.
     "GET /me": meRoute({ contact: ["read", "update"] }),
+    "GET /installation/settings": callMessengersRoute(),
     "GET /contacts/p-1/360": () => jsonResponse(view),
     "GET /contacts/p-1/brief": () =>
       jsonResponse({

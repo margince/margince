@@ -11898,6 +11898,13 @@ export const vi = {
   "installationSettings.readOnly":
     "Chỉ quản trị viên hoặc thành viên Vận hành mới có thể thay đổi các cài đặt này.",
   "installationSettings.edit": "Sửa",
+  "installationSettings.callingTitle": "Gọi điện",
+  "installationSettings.callWhatsApp": "Trò chuyện WhatsApp",
+  "installationSettings.callTelegram": "Trò chuyện Telegram",
+  "installationSettings.callZalo": "Trò chuyện Zalo",
+  "installationSettings.callingHint":
+    "Liên kết cạnh mỗi số điện thoại có mã quốc gia sẽ mở cuộc trò chuyện trong ứng dụng đó. Ứng dụng nhận được số điện thoại.",
+  "callAction.openChat": "Mở cuộc trò chuyện trong {app}",
   "installationSettings.editField": "Sửa {field}",
   "installationSettings.save": "Lưu",
   "signInMethods.title": "Phương thức đăng nhập",

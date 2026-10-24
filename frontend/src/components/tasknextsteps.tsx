@@ -90,6 +90,7 @@ function CallVerb({
       appearance="button"
       label={t("record.verb.call")}
       number={primaryPhone(contact.phones)?.phone}
+      record={{ entityType: "contact", entityId: contact.id }}
     />
   );
 }

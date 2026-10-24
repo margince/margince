@@ -32,6 +32,8 @@ import { mostSpecificFirst, RecordLinks } from "./recordlinks";
 import "./taskactions.css";
 import { ErrorLine } from "../design-system/errorline";
 import { useActivity } from "../lib/activityread";
+import { CallStartProvider, useCallStart } from "../lib/callstart";
+import { CallLogInline, useStartedCall } from "./calllog.host";
 import { useCompleteTask } from "./taskcomplete";
 import { TaskNextSteps } from "./tasknextsteps";
 import { refetchAfterWrite } from "./taskwritefollowup";
@@ -320,6 +322,8 @@ export function TaskDetailDialog({
   const titleId = useId();
   const query = useActivity(activityId);
   const task: Activity | undefined = query.data;
+  // Logged here rather than in the shell's drawer, which would cover the task.
+  const callLog = useStartedCall(useCallStart() !== null);
   const body = useRef<HTMLDivElement>(null);
   const verbs = useRef<HTMLDivElement>(null);
   // The task's own verbs, else the box: Enter on a first-focused link or Call
@@ -342,81 +346,89 @@ export function TaskDetailDialog({
         </Heading>
       </DrawerHead>
       <DrawerBody ref={body}>
-        {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}
-        <ErrorLine error={query.error} />
-        {task && (
-          <div className="form-stack">
-            {/* Markdown, as the timeline draws the same body. */}
-            {task.body && (
-              <div className="t-body task-detail-body">
-                <Markdown source={task.body} autolink />
-              </div>
-            )}
-            <div className="t-caption task-detail-meta">
-              {/* In the same tab: the reader opened the panel to learn what the
+        <CallStartProvider start={callLog.start}>
+          {query.isPending && <PendingBody label={t("tasks.detailLoading")} />}
+          <ErrorLine error={query.error} />
+          {task && (
+            <div className="form-stack">
+              {/* Markdown, as the timeline draws the same body. */}
+              {task.body && (
+                <div className="t-body task-detail-body">
+                  <Markdown source={task.body} autolink />
+                </div>
+              )}
+              <div className="t-caption task-detail-meta">
+                {/* In the same tab: the reader opened the panel to learn what the
                   task is about, and following its record is leaving for it. */}
-              {task.links && task.links.length > 0 && (
+                {task.links && task.links.length > 0 && (
+                  <span>
+                    <RecordLinks links={mostSpecificFirst(task.links)} />
+                  </span>
+                )}
+                {task.due_at ? (
+                  <span>
+                    {t("co.next.due", {
+                      // The record's own clock, like every other date on this
+                      // surface. A deadline is a fact colleagues read back, so its
+                      // day cannot depend on where the reader sits. `dueInstant`
+                      // mints the picked day's end in this zone; the browser's
+                      // zone would show an approved 9 September as due the 10th.
+                      when: formatDate(task.due_at, locale, recordZone),
+                    })}
+                  </span>
+                ) : (
+                  <span>{t("co.next.undated")}</span>
+                )}
                 <span>
-                  <RecordLinks links={mostSpecificFirst(task.links)} />
+                  {t("tasks.logged")}{" "}
+                  {formatDateTime(task.occurred_at, locale, recordZone)}
                 </span>
-              )}
-              {task.due_at ? (
-                <span>
-                  {t("co.next.due", {
-                    // The record's own clock, like every other date on this
-                    // surface. A deadline is a fact colleagues read back, so the
-                    // day it names cannot depend on where the reader is sitting:
-                    // `dueInstant` mints the picked day's end in this same zone,
-                    // and reading it in the browser's instead is what made an
-                    // approved 9 September arrive as a task due the 10th.
-                    when: formatDate(task.due_at, locale, recordZone),
-                  })}
-                </span>
-              ) : (
-                <span>{t("co.next.undated")}</span>
-              )}
-              <span>
-                {t("tasks.logged")}{" "}
-                {formatDateTime(task.occurred_at, locale, recordZone)}
-              </span>
-              {task.is_done && (
-                <Badge tone="success">{t("tasks.isDone")}</Badge>
-              )}
-              {task.assignee_id && (
-                <EntityRef kind="user" id={task.assignee_id} />
-              )}
-              {/* A task an agent wrote says so, so a reader knows it was
+                {task.is_done && (
+                  <Badge tone="success">{t("tasks.isDone")}</Badge>
+                )}
+                {task.assignee_id && (
+                  <EntityRef kind="user" id={task.assignee_id} />
+                )}
+                {/* A task an agent wrote says so, so a reader knows it was
                   read out of a conversation rather than typed by a colleague. */}
-              {provenanceOf(task.captured_by).kind === "agent" && (
-                <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
-              )}
-            </div>
-            <TaskNextSteps
-              task={task}
-              className="form-actions task-detail-actions"
-            />
-            {!task.is_done && !readOnly && (
-              <div ref={verbs} className="form-actions task-detail-actions">
-                <TaskQuickActions
-                  activityId={task.id}
-                  version={task.version}
-                  dueAt={task.due_at}
-                  update={update}
-                  showDuePicker
-                />
+                {provenanceOf(task.captured_by).kind === "agent" && (
+                  <Badge tone="ai">{t("co.assistant.aiTag")}</Badge>
+                )}
               </div>
-            )}
-            {/* The evidence LAST, under the verbs. A task's own verbs are what
+              <TaskNextSteps
+                task={task}
+                className="form-actions task-detail-actions"
+              />
+              {!task.is_done && !readOnly && (
+                <div ref={verbs} className="form-actions task-detail-actions">
+                  <TaskQuickActions
+                    activityId={task.id}
+                    version={task.version}
+                    dueAt={task.due_at}
+                    update={update}
+                    showDuePicker
+                  />
+                </div>
+              )}
+              {callLog.call && (
+                <CallLogInline
+                  key={callLog.call.entityId}
+                  call={callLog.call}
+                  onClose={callLog.close}
+                />
+              )}
+              {/* The evidence last, under the verbs. A task's own verbs are what
                 the reader came to press, and a message long enough to scroll
                 would otherwise push them off the panel. */}
-            {task.source_activity_id && (
-              <SourceEvidence
-                activityId={task.source_activity_id}
-                onOpenTranscript={onOpenSource}
-              />
-            )}
-          </div>
-        )}
+              {task.source_activity_id && (
+                <SourceEvidence
+                  activityId={task.source_activity_id}
+                  onOpenTranscript={onOpenSource}
+                />
+              )}
+            </div>
+          )}
+        </CallStartProvider>
       </DrawerBody>
     </Modal>
   );

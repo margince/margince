@@ -44,6 +44,32 @@ export function telUri(number: string): string | null {
   return /^\+?\d{3,}$/.test(digits) ? `tel:${digits}` : null;
 }
 
+// Declared mirror of values.E164Pattern in backend/internal/shared/kernel/values/phone.go.
+const E164 = /^\+([1-9]\d{7,14})$/;
+
+/** The chat with a number in each messenger, keyed by messenger. */
+export type MessengerUris = Readonly<{
+  whatsapp: string;
+  telegram: string;
+  zalo: string;
+}>;
+
+/**
+ * messengerUris is the chat address for a number in each messenger, or null
+ * unless the number is E.164. A messenger finds a contact only by country code.
+ */
+export function messengerUris(number: string): MessengerUris | null {
+  const digits = E164.exec(number.trim().replace(NUMBER_PUNCTUATION, ""))?.[1];
+  if (digits === undefined) {
+    return null;
+  }
+  return {
+    whatsapp: `https://wa.me/${digits}`,
+    telegram: `https://t.me/+${digits}`,
+    zalo: `https://zalo.me/${digits}`,
+  };
+}
+
 // Declared mirror of contactaddress.ReachablePhoneOrder: is_primary DESC, then the server's order.
 export function primaryPhone(
   phones: readonly ContactPhone[] | undefined,

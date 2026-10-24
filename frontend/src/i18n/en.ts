@@ -12244,6 +12244,13 @@ export const en = {
   "installationSettings.readOnly":
     "Only an administrator or operations user can change these settings.",
   "installationSettings.edit": "Edit",
+  "installationSettings.callingTitle": "Calling",
+  "installationSettings.callWhatsApp": "WhatsApp chat",
+  "installationSettings.callTelegram": "Telegram chat",
+  "installationSettings.callZalo": "Zalo chat",
+  "installationSettings.callingHint":
+    "A link beside each phone number with a country code opens the chat in that app. The app receives the number.",
+  "callAction.openChat": "Open chat in {app}",
   "installationSettings.editField": "Edit {field}",
   "installationSettings.save": "Save",
   "signInMethods.title": "Sign-in methods",

@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
-import { mailbox, primaryPhone, telUri } from "./contacturi";
+import { mailbox, messengerUris, primaryPhone, telUri } from "./contacturi";
 
 type ContactPhone = components["schemas"]["ContactPhone"];
 
@@ -32,6 +32,48 @@ describe("mailbox", () => {
       "",
     ]) {
       expect(mailbox(bad), bad).toBeNull();
+    }
+  });
+});
+
+describe("messengerUris", () => {
+  it("opens the chat in each messenger with the number's digits", () => {
+    expect(messengerUris("+49 30 1234567")).toEqual({
+      whatsapp: "https://wa.me/49301234567",
+      telegram: "https://t.me/+49301234567",
+      zalo: "https://zalo.me/49301234567",
+    });
+  });
+
+  it("answers no national number, which telUri still dials", () => {
+    expect(messengerUris("030 1234567")).toBeNull();
+    expect(telUri("030 1234567")).toBe("tel:0301234567");
+  });
+
+  it("answers only the shape the server stores as E.164", () => {
+    for (const bad of [
+      "+000 1234 5678",
+      "+123",
+      "+1234567",
+      "+1234567890123456",
+    ]) {
+      expect(messengerUris(bad), bad).toBeNull();
+    }
+    expect(messengerUris("+12345678")?.whatsapp).toBe("https://wa.me/12345678");
+    expect(messengerUris("+123456789012345")?.whatsapp).toBe(
+      "https://wa.me/123456789012345",
+    );
+  });
+
+  it("lets nothing but the digits reach the address", () => {
+    for (const bad of [
+      "+49 30 1234567?text=hi",
+      "+49 30 1234567/x",
+      "+49 30 1234567%0a",
+      "+49 30 1234567#x",
+      "+49 30 12345 ext 7",
+    ]) {
+      expect(messengerUris(bad), bad).toBeNull();
     }
   });
 });

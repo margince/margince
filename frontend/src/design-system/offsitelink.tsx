@@ -31,6 +31,7 @@ export function OffsiteLink({
   href,
   children,
   className = "link-button",
+  label,
 }: Readonly<{
   href: string;
   // What the reader sees. Callers pass a shortened or humanized form of the
@@ -41,6 +42,8 @@ export function OffsiteLink({
   // affordance; a caller whose surface already styles its own anchors passes
   // its class instead.
   className?: string;
+  // What the link does, where the visible text names only the place it goes.
+  label?: string;
 }>) {
   const destination = webUrl(href);
   if (!destination) {
@@ -49,6 +52,7 @@ export function OffsiteLink({
   return (
     <a
       className={className}
+      aria-label={label}
       href={destination.toString()}
       target="_blank"
       rel="noopener noreferrer"

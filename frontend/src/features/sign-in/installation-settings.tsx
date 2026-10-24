@@ -28,6 +28,7 @@ import {
   useInstallationSettings,
 } from "../../lib/uploadlimit";
 import { LANGUAGE_DEPENDENT_QUERY_PREFIXES } from "./aicaches";
+import { CallingSettingsRows } from "./installation-settings.calling";
 import {
   fiscalYearStartSummary,
   InstallationProfileDialog,
@@ -66,7 +67,7 @@ export type EditedFact = (typeof EDITABLE_FACTS)[number];
 // Exported for the onboarding's preferences act, which writes the same sparse
 // patch from the same fields: a second mutation would be a second answer to
 // what a saved language invalidates.
-export function useUpdateInstallationSettings(onSaved: () => void) {
+export function useUpdateInstallationSettings(onSaved?: () => void) {
   const t = useT();
   const queryClient = useQueryClient();
   return useMutation({
@@ -97,7 +98,7 @@ export function useUpdateInstallationSettings(onSaved: () => void) {
       for (const prefix of LANGUAGE_DEPENDENT_QUERY_PREFIXES) {
         void queryClient.invalidateQueries({ queryKey: prefix });
       }
-      onSaved();
+      onSaved?.();
     },
     // A refused patch can still have committed nothing OR something: the
     // server applies the fields in one transaction, but a validation refusal
@@ -163,6 +164,7 @@ function InstallationSettingsForm({
     toast.show(t("settings.saved"));
     setEditing(null);
   });
+  const calling = useUpdateInstallationSettings();
   const [draft, setDraft] = useState(settings);
   const seeded = useRef(serverSignature(settings));
 
@@ -317,6 +319,12 @@ function InstallationSettingsForm({
           )}
         />
       </SettingList>
+      <CallingSettingsRows
+        settings={settings}
+        canManage={canManage}
+        denialId={denialId}
+        update={calling}
+      />
       {editing !== null && (
         <InstallationProfileDialog
           settings={settings}

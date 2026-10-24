@@ -111,6 +111,23 @@ export function meRoute(
   return () => jsonResponse(meFixture({ ...identity, allow }));
 }
 
+type CallSettings = Pick<
+  components["schemas"]["InstallationSettings"],
+  "call_whatsapp" | "call_telegram" | "call_zalo"
+>;
+
+/** `GET /installation/settings` for a phone number's chat links, all on unless overridden. */
+export function callMessengersRoute(
+  overrides: Partial<CallSettings> = {},
+): () => Response {
+  const on: CallSettings = {
+    call_whatsapp: true,
+    call_telegram: true,
+    call_zalo: true,
+  };
+  return () => jsonResponse({ ...on, ...overrides });
+}
+
 /**
  * `installFetchStub` with the session probe routed — the shape every suite that
  * mounts capability-aware chrome needs.

@@ -32,6 +32,7 @@ import {
 } from "../worklist/worklist.return";
 import {
   ContactActivityDrawer,
+  ContactCallStart,
   ContactMailDrawer,
   ContactWriteTo,
   type Drawer,
@@ -212,106 +213,112 @@ export function ContactPageV2({
           and everything on the page, the rail included, answers a pressed
           address with this page's own composer. */}
       <ContactWriteTo contactId={id} onWrite={() => openComposer("")}>
-        <RecordView
-          back={<WorklistReturnLink />}
-          // The contact's details, under the head in the left card. They hold
-          // for the contact, not the open tab, so a tab change leaves them put.
-          // The split folds them above the feed once the row has no room.
-          aside={contactDetails}
-          name={contact.full_name}
-          identity={contact.id}
-          // What they do and where under the name, then the pills. The ways
-          // to reach them are details, and live in the aside.
-          nameBadge={<ContactSubtitle view={view.data} />}
-          pulse={<ContactMarks view={view.data} />}
-          actions={
-            // refusedReasonId is the same sentence the band below states.
-            // It is one write gate for the whole header, not a narrower one per
-            // verb. Edit, merge and archive ride inside the header's menu,
-            // so they read it too.
-            <ContactActions
-              view={view.data}
-              contactId={id}
-              onWrite={() => openComposer("")}
-              onResearch={() => setDrawer("research")}
-              onLogActivity={() => setDrawer("activity_log")}
-              onAddTask={() => setDrawer("activity_task")}
-              activity={activity}
-              writeRefusalId={writeRefusalId}
-              refusedReasonId={refusedReasonId}
-            />
-          }
-          zone={recordZone}
-          // Stated once for the page, where both columns and every tab can see
-          // it. Every control the record refuses points at its reason by id.
-          band={band}
-          tabs={
-            <ContactRecordTabs
-              view={view.data}
-              value={tab}
-              onChange={openTab}
-            />
-          }
+        <ContactCallStart
+          contactId={id}
+          canLog={!activity.pending && activity.refusedId === undefined}
+          onCall={() => setDrawer("activity_call")}
         >
-          {tab === "overview" && (
-            <ContactOverview
+          <RecordView
+            back={<WorklistReturnLink />}
+            // The contact's details, under the head in the left card. They hold
+            // for the contact, not the open tab, so a tab change leaves them put.
+            // The split folds them above the feed once the row has no room.
+            aside={contactDetails}
+            name={contact.full_name}
+            identity={contact.id}
+            // What they do and where under the name, then the pills. The ways
+            // to reach them are details, and live in the aside.
+            nameBadge={<ContactSubtitle view={view.data} />}
+            pulse={<ContactMarks view={view.data} />}
+            actions={
+              // refusedReasonId is the same sentence the band below states.
+              // It is one write gate for the whole header, not a narrower one per
+              // verb. Edit, merge and archive ride inside the header's menu,
+              // so they read it too.
+              <ContactActions
+                view={view.data}
+                contactId={id}
+                onWrite={() => openComposer("")}
+                onResearch={() => setDrawer("research")}
+                onLogActivity={() => setDrawer("activity_log")}
+                onAddTask={() => setDrawer("activity_task")}
+                activity={activity}
+                writeRefusalId={writeRefusalId}
+                refusedReasonId={refusedReasonId}
+              />
+            }
+            zone={recordZone}
+            // Stated once for the page, where both columns and every tab can see
+            // it. Every control the record refuses points at its reason by id.
+            band={band}
+            tabs={
+              <ContactRecordTabs
+                view={view.data}
+                value={tab}
+                onChange={openTab}
+              />
+            }
+          >
+            {tab === "overview" && (
+              <ContactOverview
+                view={view.data}
+                onAction={runAction}
+                onOpenEmail={setOpenEmail}
+                onOpenTab={openTab}
+              />
+            )}
+
+            <ContactTabPanel
+              tab={tab}
+              contactId={id}
               view={view.data}
+              onBriefMeeting={openBrief}
               onAction={runAction}
               onOpenEmail={setOpenEmail}
-              onOpenTab={openTab}
+              refusedReasonId={refusedReasonId}
             />
-          )}
-
-          <ContactTabPanel
-            tab={tab}
-            contactId={id}
-            view={view.data}
-            onBriefMeeting={openBrief}
-            onAction={runAction}
-            onOpenEmail={setOpenEmail}
-            refusedReasonId={refusedReasonId}
-          />
-          {/* One drawer over the record. The timeline's rows and the rail's
+            {/* One drawer over the record. The timeline's rows and the rail's
           citations both open into it, so a reader who finds a message in the
           aside and one who finds it in the body land in the same place. */}
-          <OpenEmailDrawer
-            activityId={openEmail}
-            zone={recordZone}
-            onClose={() => setOpenEmail(null)}
-          />
-          <ContactMailDrawer
-            contactId={id}
-            view={view.data}
-            recordAddress={contact.primary_email ?? undefined}
-            open={composer.open}
-            intent={composer.intent}
-            threadId={composer.threadId}
-            onClose={composer.close}
-          />
-          <ContactResearchDrawer
-            contactId={id}
-            contactName={contact.full_name}
-            providerProfiles={view.data.provider_profiles}
-            open={drawer === "research"}
-            onClose={() => setDrawer(null)}
-          />
-          <ContactMeetingBrief
-            activityId={briefedMeeting}
-            open={briefedMeeting !== null}
-            onClose={() => openBrief(null)}
-            projects={liveProjects(view.data.projects)}
-            onOpenEmail={setOpenEmail}
-          />
-          <ContactActivityDrawer
-            contactId={id}
-            drawer={drawer}
-            onClose={() => setDrawer(null)}
-          />
-          {/* The work queue, over the record: the same drawer the Home page
+            <OpenEmailDrawer
+              activityId={openEmail}
+              zone={recordZone}
+              onClose={() => setOpenEmail(null)}
+            />
+            <ContactMailDrawer
+              contactId={id}
+              view={view.data}
+              recordAddress={contact.primary_email ?? undefined}
+              open={composer.open}
+              intent={composer.intent}
+              threadId={composer.threadId}
+              onClose={composer.close}
+            />
+            <ContactResearchDrawer
+              contactId={id}
+              contactName={contact.full_name}
+              providerProfiles={view.data.provider_profiles}
+              open={drawer === "research"}
+              onClose={() => setDrawer(null)}
+            />
+            <ContactMeetingBrief
+              activityId={briefedMeeting}
+              open={briefedMeeting !== null}
+              onClose={() => openBrief(null)}
+              projects={liveProjects(view.data.projects)}
+              onOpenEmail={setOpenEmail}
+            />
+            <ContactActivityDrawer
+              contactId={id}
+              drawer={drawer}
+              onClose={() => setDrawer(null)}
+            />
+            {/* The work queue, over the record: the same drawer the Home page
             opens, driven by the same address, so a link to it from here
             and from there is one link. */}
-          <BriefQueue />
-        </RecordView>
+            <BriefQueue />
+          </RecordView>
+        </ContactCallStart>
       </ContactWriteTo>
     </div>
   );

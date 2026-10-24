@@ -149,6 +149,7 @@ export const PillAndVerbPhone: Story = {
                 appearance="button"
                 number="+49 30 1234 5678"
                 label="Call"
+                record={{ entityType: "contact", entityId: "p-1" }}
               />
             </>
           }

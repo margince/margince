@@ -81,6 +81,7 @@ here: put it in the area's word list instead. A name that no plain page uses mus
 | Vite | The build and dev server tool for the web app. |
 | vLLM | A server that runs language models on your own machines. |
 | webhook | A message Margince sends to another tool's address when a chosen event happens. |
+| WhatsApp | A chat app; a link to it opens a chat with a phone number. |
 | Windows | Microsoft's desktop operating system. |
 | Worklist | The app's list of tasks and items that need a user's action. |
 | worktree | A second git checkout of the repository with its own branch. |

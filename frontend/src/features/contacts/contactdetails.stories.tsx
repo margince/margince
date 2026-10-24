@@ -3,6 +3,7 @@ import { expect, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { isLocale } from "../../i18n";
 import {
+  callMessengersRoute,
   installFetchStub,
   jsonResponse,
   meRoute,
@@ -31,6 +32,7 @@ const meta: Meta<typeof ContactDetails> = {
     installFetchStub({
       "GET /me": meRoute({ contact: ["read", "update"] }, { seat: "full" }),
       "GET /users": () => jsonResponse({ data: [] }),
+      "GET /installation/settings": callMessengersRoute(),
     }),
 };
 export default meta;

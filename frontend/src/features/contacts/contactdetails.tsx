@@ -110,7 +110,11 @@ export function useContactAboutSections(view: Contact360): DetailSection[] {
           t("create.phone"),
           phone && (
             <>
-              <ContactLink kind="phone" value={phone.phone} />
+              <ContactLink
+                kind="phone"
+                value={phone.phone}
+                record={{ entityType: "contact", entityId: contact.id }}
+              />
               <BoughtMark
                 bought={bought.get(`phone:${phone.id}`)}
                 subject={phone.phone}
@@ -253,7 +257,11 @@ export function ContactDetails({
           phones: contact.phones?.length
             ? contact.phones.map((phone) => (
                 <span key={phone.phone} className="fieldgrid-handle">
-                  <ContactLink kind="phone" value={phone.phone} />
+                  <ContactLink
+                    kind="phone"
+                    value={phone.phone}
+                    record={{ entityType: "contact", entityId: contact.id }}
+                  />
                   <span className="t-caption">
                     {t(PHONE_TYPE_LABEL[phone.phone_type ?? "work"])}
                   </span>

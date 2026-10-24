@@ -52,6 +52,9 @@ function backendFor(allow: GrantSpec, opts: BackendOptions = {}) {
     timezone: "Europe/Berlin",
     base_currency: "EUR",
     base_currency_locked: opts.locked ?? false,
+    call_whatsapp: true,
+    call_telegram: true,
+    call_zalo: true,
     ...(opts.lockedReason
       ? { base_currency_locked_reason: opts.lockedReason }
       : {}),
@@ -492,4 +495,73 @@ it("saves regional formats together and updates existing date readers", async ()
     expect(patch()).toEqual({ date_format: "dmy", time_format: "24h" }),
   );
   expect(await screen.findByText("23.09.2026")).toBeTruthy();
+});
+
+describe("the calling switches", () => {
+  it("turns one messenger off with a patch of its own key alone", async () => {
+    const user = userEvent.setup();
+    const { fetchMock, patch } = backendFor(SETTINGS_EDITOR);
+    vi.stubGlobal("fetch", fetchMock);
+    render(<InstallationSettingsCard />);
+
+    const whatsapp = await screen.findByRole("switch", {
+      name: "WhatsApp chat",
+    });
+    expect(whatsapp.getAttribute("aria-checked")).toBe("true");
+    await user.click(whatsapp);
+
+    await waitFor(() => expect(patch()).toEqual({ call_whatsapp: false }));
+    await waitFor(() =>
+      expect(whatsapp.getAttribute("aria-checked")).toBe("false"),
+    );
+    for (const name of ["Telegram chat", "Zalo chat"]) {
+      expect(
+        screen.getByRole("switch", { name }).getAttribute("aria-checked"),
+      ).toBe("true");
+    }
+  });
+
+  it("refuses every switch to a role that cannot change them, and says why", async () => {
+    const { fetchMock } = backendFor({});
+    vi.stubGlobal("fetch", fetchMock);
+    render(<InstallationSettingsCard />);
+
+    await screen.findByRole("switch", { name: "WhatsApp chat" });
+    const reason = screen.getByText(
+      "Only an administrator or operations user can change these settings.",
+    );
+    for (const name of ["WhatsApp chat", "Telegram chat", "Zalo chat"]) {
+      const control = screen.getByRole<HTMLButtonElement>("switch", { name });
+      expect(control.disabled).toBe(true);
+      expect(control.getAttribute("aria-describedby") ?? "").toContain(
+        reason.id,
+      );
+    }
+  });
+
+  it("locks the switch a boot source sets, and only that one", async () => {
+    const reason =
+      "Set by MARGINCE_INSTALLATION_CALL_ZALO (environment). Change it there.";
+    const { fetchMock } = backendFor(SETTINGS_EDITOR, {
+      locks: [
+        {
+          key: "installation.call_zalo",
+          origin: { source: "env", name: "MARGINCE_INSTALLATION_CALL_ZALO" },
+        },
+      ],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(<InstallationSettingsCard />);
+
+    const zalo = await screen.findByRole<HTMLButtonElement>("switch", {
+      name: "Zalo chat",
+    });
+    expect(zalo.disabled).toBe(true);
+    const lock = screen.getByText(reason);
+    expect(zalo.getAttribute("aria-describedby") ?? "").toContain(lock.id);
+    expect(
+      screen.getByRole<HTMLButtonElement>("switch", { name: "WhatsApp chat" })
+        .disabled,
+    ).toBe(false);
+  });
 });

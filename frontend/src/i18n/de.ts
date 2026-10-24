@@ -12230,6 +12230,13 @@ export const de = {
   "installationSettings.readOnly":
     "Nur Admins und Operations können diese Einstellungen ändern.",
   "installationSettings.edit": "Bearbeiten",
+  "installationSettings.callingTitle": "Anrufe",
+  "installationSettings.callWhatsApp": "WhatsApp-Chat",
+  "installationSettings.callTelegram": "Telegram-Chat",
+  "installationSettings.callZalo": "Zalo-Chat",
+  "installationSettings.callingHint":
+    "Ein Link neben jeder Telefonnummer mit Ländervorwahl öffnet den Chat in dieser App. Die App erhält die Nummer.",
+  "callAction.openChat": "Chat in {app} öffnen",
   "installationSettings.editField": "{field} bearbeiten",
   "installationSettings.save": "Speichern",
   "signInMethods.title": "Anmeldemethoden",

@@ -419,6 +419,15 @@ bootstrap_admin:
 #   # The language AI writes the shared record in: en, de or vi.
 #   # default: en
 #   base_language: en
+#   # Show a Telegram chat link next to a contact's phone number that starts with a country code.
+#   # default: true
+#   call_telegram: true
+#   # Show a WhatsApp chat link next to a contact's phone number that starts with a country code.
+#   # default: true
+#   call_whatsapp: true
+#   # Show a Zalo chat link next to a contact's phone number that starts with a country code.
+#   # default: true
+#   call_zalo: true
 #   # Seconds between the close-date sweeps.
 #   # default: 86400
 #   close_date_sweep_interval_seconds: 86400

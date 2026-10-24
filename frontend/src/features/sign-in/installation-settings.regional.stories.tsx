@@ -28,6 +28,9 @@ function RegionalFields({
     timezone: "Europe/Berlin",
     base_currency: "EUR",
     base_currency_locked: false,
+    call_whatsapp: true,
+    call_telegram: true,
+    call_zalo: true,
     date_format: "dmy",
     time_format: "24h",
   });

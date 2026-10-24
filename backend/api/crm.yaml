@@ -32038,7 +32038,7 @@ components:
       description: |
         The installation's identity and reporting basis (ADR-0090). Read by every role,
         changed only by admin/ops.
-      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, dead_work_banner_hours, oauth_access_token_ttl_minutes, forecast_forward_measure, base_currency_locked, max_upload_bytes, sign_in_providers, operations, agent_allowances]
+      required: [name, timezone, base_currency, base_language, fiscal_year_start_month, dead_work_banner_hours, oauth_access_token_ttl_minutes, forecast_forward_measure, base_currency_locked, max_upload_bytes, sign_in_providers, operations, agent_allowances, call_whatsapp, call_telegram, call_zalo]
       properties:
         locks: { $ref: '#/components/schemas/SettingLocks' }
         name:
@@ -32074,6 +32074,21 @@ components:
           type: string
           enum: [locale, 24h, 12h]
           description: 'Display times using the UI language, a 24-hour clock, or a 12-hour clock. Defaults to locale; never changes timezones or stored instants.'
+        call_whatsapp:
+          type: boolean
+          description: |
+            Show a WhatsApp link next to a contact's phone number that starts with a country
+            code. On by default. The link opens the chat in WhatsApp and sends the number to its website.
+        call_telegram:
+          type: boolean
+          description: |
+            Show a Telegram link next to a contact's phone number that starts with a country
+            code. On by default. The link opens the chat in Telegram and sends the number to its website.
+        call_zalo:
+          type: boolean
+          description: |
+            Show a Zalo link next to a contact's phone number that starts with a country
+            code. On by default. The link opens the chat in Zalo and sends the number to its website.
         fiscal_year_start_month:
           type: integer
           minimum: 1
@@ -32219,6 +32234,15 @@ components:
           type: string
           enum: [locale, 24h, 12h]
           description: 'Display times using the UI language, a 24-hour clock, or a 12-hour clock. Defaults to locale; never changes timezones or stored instants.'
+        call_whatsapp:
+          type: boolean
+          description: Show the WhatsApp link next to a contact's phone number. Omit to leave it unchanged.
+        call_telegram:
+          type: boolean
+          description: Show the Telegram link next to a contact's phone number. Omit to leave it unchanged.
+        call_zalo:
+          type: boolean
+          description: Show the Zalo link next to a contact's phone number. Omit to leave it unchanged.
         fiscal_year_start_month:
           type: integer
           minimum: 1

@@ -1,7 +1,15 @@
 /** @vitest-environment happy-dom */
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
+import { CallLogHost } from "../../components/calllog.host";
 import {
   type Contact360,
   mount,
@@ -264,5 +272,133 @@ describe("logging an activity", () => {
       subject: "Chase the signed order",
       links: [{ entity_type: "contact", entity_id: "p-1" }],
     });
+  });
+});
+
+// Every number on the page dials and opens the page's own Log activity drawer
+// on Call. The shell's host is mounted too, so a second form would show.
+describe("logging a call started on the page", () => {
+  const NUMBER = "+49 30 1234 5678";
+  const withPhone: Contact360 = {
+    ...view,
+    contact: {
+      ...view.contact,
+      phones: [
+        {
+          id: "ph-1",
+          phone: NUMBER,
+          phone_type: "work",
+          is_primary: true,
+          position: 0,
+          source: "manual",
+          captured_by: "human:u-1",
+        },
+      ],
+    },
+  };
+  const inShell = (page: ReactNode) => <CallLogHost>{page}</CallLogHost>;
+
+  function mountWithCalls(page: Contact360 = withPhone, extra = {}) {
+    const posted: unknown[] = [];
+    mount(
+      "overview",
+      page,
+      [],
+      {
+        "POST /activities": (body) => {
+          posted.push(body);
+          return jsonResponse({}, 201);
+        },
+        ...extra,
+      },
+      undefined,
+      inShell,
+    );
+    return posted;
+  }
+
+  // Enabled once the grant has answered, which is when a press may open a form.
+  async function readyToLog() {
+    await waitFor(async () =>
+      expect(
+        within(await recordHeader()).getByRole("button", {
+          name: /Log activity/,
+        }),
+      ).toHaveProperty("disabled", false),
+    );
+  }
+
+  it("opens one drawer on Call from the number, and files the call on this contact", async () => {
+    const user = userEvent.setup();
+    const posted = mountWithCalls();
+    await readyToLog();
+
+    const [number] = await screen.findAllByRole("link", { name: NUMBER });
+    expect(fireEvent.click(number)).toBe(true);
+    const dialog = await screen.findByRole("dialog", { name: "Log activity" });
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    expect(
+      within(dialog).getByRole("combobox", { name: "Type" }).textContent,
+    ).toContain("Call");
+    await user.type(
+      within(dialog).getByRole("textbox", { name: "Subject" }),
+      "Agreed the depot dates",
+    );
+    await user.click(within(dialog).getByRole("button", { name: "Log" }));
+
+    await waitFor(() => expect(posted).toHaveLength(1));
+    expect(posted[0]).toMatchObject({
+      kind: "call",
+      links: [{ entity_type: "contact", entity_id: "p-1" }],
+    });
+  });
+
+  it("opens the same drawer from the header's Call", async () => {
+    mountWithCalls();
+    await readyToLog();
+
+    const call = within(await recordHeader()).getByRole("link", {
+      name: "Call",
+    });
+    expect(fireEvent.click(call)).toBe(true);
+    const dialog = await screen.findByRole("dialog", { name: "Log activity" });
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    expect(
+      within(dialog).getByRole("combobox", { name: "Type" }).textContent,
+    ).toContain("Call");
+  });
+
+  it("only dials for a reader without the create grant", async () => {
+    mount(
+      "overview",
+      withPhone,
+      [],
+      {},
+      { contact: ["read", "update"] },
+      inShell,
+    );
+    await screen.findByText(
+      "You do not have permission to log activities on this record.",
+    );
+
+    const [number] = await screen.findAllByRole("link", { name: NUMBER });
+    expect(fireEvent.click(number)).toBe(true);
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("only dials an archived contact's number", async () => {
+    mountWithCalls(withPhone, {
+      "GET /contacts/p-1": () =>
+        jsonResponse({
+          ...withPhone.contact,
+          archived_at: "2026-08-14T09:00:00Z",
+        }),
+    });
+    await screen.findByText("Archived");
+
+    const number = await screen.findByRole("link", { name: NUMBER });
+    expect(fireEvent.click(number)).toBe(true);
+    expect(number.getAttribute("href")).toBe("tel:+493012345678");
+    expect(screen.queryByRole("dialog")).toBeNull();
   });
 });
