@@ -2859,6 +2859,7 @@ export const vi = {
   "co.health.reason.quiet_other":
     "Chưa có phản hồi và chưa có cuộc họp nào trong {days} ngày qua.",
   "co.health.reason.meetingBooked": "Đã đặt một cuộc họp vào {at}.",
+  "co.health.reason.lastMetToday": "Đã họp hôm nay.",
   "co.health.reason.lastMet_one": "Lần họp gần nhất cách đây {days} ngày.",
   "co.health.reason.lastMet_other": "Lần họp gần nhất cách đây {days} ngày.",
   "co.health.reason.singleThreaded":

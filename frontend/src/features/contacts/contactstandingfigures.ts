@@ -40,7 +40,11 @@ const CALLED_OFF = new Set(["canceled", "no_show"]);
 const MEETINGS_DRAWN = 3;
 
 function daysAgo(iso: string, view: Contact360, words: StandingWords) {
-  const days = calendarDaysBetween(new Date(iso), new Date(view.as_of));
+  const days = calendarDaysBetween(
+    new Date(iso),
+    new Date(view.as_of),
+    words.zone,
+  );
   if (days < 1) {
     return words.t("contact.strip.today");
   }
@@ -286,7 +290,11 @@ export function contactGap(
   if (!from) {
     return undefined;
   }
-  const days = calendarDaysBetween(new Date(from), new Date(view.as_of));
+  const days = calendarDaysBetween(
+    new Date(from),
+    new Date(view.as_of),
+    words.zone,
+  );
   if (days < 1) {
     return undefined;
   }

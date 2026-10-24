@@ -390,12 +390,13 @@ function DealNextBar({
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
+  const zone = useRecordZone();
   const notNow = useDealMoveSetAside(dealId);
   const move = card.next;
   if (!move) {
     return <NextBar more={more} />;
   }
-  const late = replyLate(card, move, timeline, asOf);
+  const late = replyLate(card, move, timeline, asOf, zone);
   // Only the message the buyer is owed an answer to opens in the email
   // drawer. A task or a meeting the move cites is not a message.
   const message = move.evidence.some(
@@ -450,13 +451,14 @@ function replyLate(
   move: DealStatusCardMove,
   timeline: readonly Activity[],
   asOf: string,
+  zone: string,
 ): number | undefined {
   const owed = move.evidence.some((row) => row.activity_id === card.reply_to);
   const waiting = owed ? waitingSince(card, timeline) : null;
   if (!waiting) {
     return undefined;
   }
-  return calendarDaysBetween(new Date(waiting.at), new Date(asOf));
+  return calendarDaysBetween(new Date(waiting.at), new Date(asOf), zone);
 }
 
 // The deal card's "Not now": set aside for this reader until the card names a

@@ -146,6 +146,26 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "The frame line names the installation zone as Intl's long name plus offset, and only a fixed zone makes that expected text independent of the machine.",
   },
   {
+    file: "features/companies/company360-strip.test.tsx",
+    why: "The last-contact day count follows the zone its date is drawn in; the case pins UTC+7 where a UTC count is a day off.",
+  },
+  {
+    file: "format/calendar-days-zone.test.ts",
+    why: "The gate's seeded snippets and its message name the literal zone it forbids a day count to pass.",
+  },
+  {
+    file: "format/format.calendar-days.test.ts",
+    why: "A day count is a fact about a named zone: the same two instants are different numbers of calendar days in UTC+7, UTC-5 and UTC.",
+  },
+  {
+    file: "features/companies/companynextbar.test.ts",
+    why: "The days-late count takes the zone its date is drawn in; the fixture pins UTC so the expected count does not move with the test machine.",
+  },
+  {
+    file: "features/deals/deal360/dealstanding.test.ts",
+    why: "Days in a stage are counted in the record zone; the fixture pins UTC so the expected count does not move with the test machine.",
+  },
+  {
     file: "features/capture/connectors.historybaseline.stories.tsx",
     why: "A mailbox history baseline stores the zone its owner picked the date in; the fixture carries that stored zone.",
   },

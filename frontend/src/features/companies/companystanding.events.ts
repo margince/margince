@@ -231,7 +231,11 @@ function silence(
   if (!from || (state !== "waiting_on_them" && state !== "waiting_on_us")) {
     return undefined;
   }
-  const days = calendarDaysBetween(new Date(from), new Date(view.as_of));
+  const days = calendarDaysBetween(
+    new Date(from),
+    new Date(view.as_of),
+    words.zone,
+  );
   if (days < 1) {
     return undefined;
   }

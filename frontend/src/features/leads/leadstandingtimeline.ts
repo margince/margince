@@ -144,7 +144,11 @@ function silence(
   yourMove: boolean,
   ctx: ReadingContext,
 ): TimelineGap | undefined {
-  const days = calendarDaysBetween(new Date(from), new Date(ctx.asOf));
+  const days = calendarDaysBetween(
+    new Date(from),
+    new Date(ctx.asOf),
+    ctx.zone,
+  );
   if (lead.archived_at || days < 1) {
     return undefined;
   }

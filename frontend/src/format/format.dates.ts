@@ -6,7 +6,7 @@ import {
   formatPreferredDate,
   hourCycle,
 } from "./preferences";
-import { assertIanaZone } from "./timezone";
+import { assertIanaZone, DAY_MS } from "./timezone";
 
 export { assertIanaZone, isRenderableZone } from "./timezone";
 
@@ -219,21 +219,30 @@ export function formatDateTime(
 }
 
 /**
- * calendarDaysBetween counts whole days between two instants by the calendar,
- * in UTC. It is the frontend spelling of the backend's shared/kernel/elapsed.Days.
+ * calendarDaysBetween counts whole days between two instants by the calendar of
+ * a named zone. It is the frontend spelling of the backend's
+ * shared/kernel/elapsed.Days, and the zone is required so a caller cannot count
+ * in a calendar other than the one the date beside the count is drawn in.
  *
  * Not by elapsed milliseconds: calendar days and a duration divided by 24 hours
  * agree only around midnight. The server counts calendar days, so a screen
  * counting the other way would print two numbers for one silence.
  *
- * Held by: format.calendar-days.test.ts, which pins the boundary case the
- * millisecond spelling gets wrong (23:00 to 01:00 is one day, not zero).
+ * Each instant is named with `calendarDay`, and the two names are read as UTC
+ * midnights, which are a whole number of days apart even across a DST change.
+ *
+ * Held by: format.calendar-days.test.ts, which pins the boundary cases
+ * (23:00 to 01:00 is one day, not zero, and the zone moves the answer), and
+ * calendar-days-zone.test.ts, which fails a caller that names no zone.
  */
-export function calendarDaysBetween(from: Date, to: Date): number {
-  const day = 86_400_000;
-  const fromDay = Math.floor(from.getTime() / day);
-  const toDay = Math.floor(to.getTime() / day);
-  return toDay - fromDay;
+export function calendarDaysBetween(
+  from: Date,
+  to: Date,
+  zone: string,
+): number {
+  const midnightOfNamedDay = (at: Date) =>
+    Date.parse(`${calendarDay(at, zone)}T00:00:00Z`);
+  return (midnightOfNamedDay(to) - midnightOfNamedDay(from)) / DAY_MS;
 }
 
 /**

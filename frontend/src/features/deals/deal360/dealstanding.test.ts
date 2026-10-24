@@ -200,7 +200,13 @@ describe("time in each stage", () => {
       deal({ created_at: "2026-06-01T00:00:00Z" }),
       true,
     );
-    const times = stageTimes({ stages, currentId: "s2", entries, asOf: AS_OF });
+    const times = stageTimes({
+      stages,
+      currentId: "s2",
+      entries,
+      asOf: AS_OF,
+      zone: "UTC",
+    });
     expect(times.get("s1")).toEqual({ days: 12, current: false });
     expect(times.get("s2")).toEqual({ days: 61, current: true });
     expect(times.has("s3")).toBe(false);
@@ -247,6 +253,7 @@ describe("time in each stage", () => {
       currentId: "s2",
       entries: new Map(),
       asOf: AS_OF,
+      zone: "UTC",
     });
     expect(times.size).toBe(0);
   });
