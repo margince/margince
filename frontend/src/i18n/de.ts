@@ -13876,7 +13876,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Eine Anfrage endet ohne Vorstellung.",
   "webhooks.event.intro_request.recorded.label": "Vorstellung erfasst",
   "webhooks.event.intro_request.recorded.when":
-    "Ein Kollege erfasst eine Vorstellung, die außerhalb von Margince stattfand.",
+    "Ein Teammitglied erfasst eine Vorstellung, die außerhalb von Margince stattfand.",
   "webhooks.eventGroup.consent_privacy": "Einwilligung und Datenschutz",
   "webhooks.event.consent.changed.label": "Einwilligung erfasst",
   "webhooks.event.consent.changed.when":
