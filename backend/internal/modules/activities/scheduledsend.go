@@ -356,7 +356,7 @@ func (s *Store) scheduleSend(
 		).Scan(&row.CreatedAt, &row.UpdatedAt); err != nil {
 			return fmt.Errorf("scheduled send: recording the intention: %w", err)
 		}
-		if err := auditScheduledSendTx(ctx, tx, "schedule", row.ID, nil, map[string]any{
+		if _, err := storekit.Audit(ctx, tx, "schedule", "scheduled_send", row.ID, nil, map[string]any{
 			FieldScheduledAt: row.ScheduledAt,
 			FieldScheduledTZ: row.ScheduledTZ,
 			"subject":        row.Subject,

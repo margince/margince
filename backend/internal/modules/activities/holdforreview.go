@@ -257,7 +257,7 @@ func holdOrReuseTx(
 	// Audited as 'hold' rather than 'schedule': the two write the same columns
 	// and mean opposite things, and an auditor reading 'schedule' on a message
 	// nothing will ever fire would be reading a lie.
-	if err := auditScheduledSendTx(ctx, tx, "hold", id, nil, map[string]any{
+	if _, err := storekit.Audit(ctx, tx, "hold", "scheduled_send", id, nil, map[string]any{
 		"held_reason": held.reason,
 		fieldSubject:  subject,
 	}); err != nil {

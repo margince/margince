@@ -271,7 +271,7 @@ func (s *Store) RescheduleInTx(ctx context.Context, tx pgx.Tx, id ids.UUID, sche
 			// the row that is there.
 			return apperrors.ErrVersionSkew
 		}
-		if err := auditScheduledSendTx(ctx, tx, "reschedule", id,
+		if _, err := storekit.Audit(ctx, tx, "reschedule", "scheduled_send", id,
 			map[string]any{FieldScheduledAt: current.ScheduledAt, FieldScheduledTZ: current.ScheduledTZ},
 			map[string]any{FieldScheduledAt: sched.At.UTC(), FieldScheduledTZ: sched.TZ}); err != nil {
 			return err
@@ -336,7 +336,7 @@ func (s *Store) CancelInTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		if tag.RowsAffected() == 0 {
 			return apperrors.ErrVersionSkew
 		}
-		if err := auditScheduledSendTx(ctx, tx, "cancel", id, nil, nil); err != nil {
+		if _, err := storekit.Audit(ctx, tx, "cancel", "scheduled_send", id, nil, nil); err != nil {
 			return err
 		}
 		// Answered, like the reschedule above: a cancelled message needs no

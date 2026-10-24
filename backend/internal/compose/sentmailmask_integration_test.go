@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
@@ -129,7 +130,8 @@ func TestControllerMailStoresItsTimelineRowMasked(t *testing.T) {
 	if err := l.e.Pool.QueryRow(l.ctx, `SELECT id FROM confirm_token WHERE contact_id = $1`, l.contact).Scan(&link); err != nil {
 		t.Fatalf("reading the confirm link: %v", err)
 	}
-	rendered, category, err := consent.RenderControllerTemplate(consent.TemplateRecordConfirmation, time.Now().Add(time.Hour), "")
+	expires := clocktest.Now(t).Add(time.Hour)
+	rendered, category, err := consent.RenderControllerTemplate(consent.TemplateRecordConfirmation, expires, "")
 	if err != nil {
 		t.Fatalf("rendering the template: %v", err)
 	}
@@ -140,7 +142,7 @@ func TestControllerMailStoresItsTimelineRowMasked(t *testing.T) {
 	if err := database.WithWorkspaceTx(l.ctx, l.e.Pool, func(tx pgx.Tx) error {
 		delivery, err := NewControllerMailQueue(l.e.Pool, inserter).QueueConfirmationTx(l.ctx, tx, consent.ConfirmationSend{
 			ContactID: ids.From[ids.ContactKind](l.contact), Recipient: "subject@example.test", Category: category,
-			LinkID: link, LinkRef: "sealed-ref", ExpiresAt: time.Now().Add(time.Hour),
+			LinkID: link, LinkRef: "sealed-ref", ExpiresAt: expires,
 			MessageID: "controller-mask@margince.test", Rendered: rendered,
 		})
 		if err != nil {

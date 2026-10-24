@@ -18,6 +18,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -321,10 +322,11 @@ func (s *Store) releaseInTx(ctx context.Context, tx pgx.Tx, id ids.UUID, activit
 	if tag.RowsAffected() == 0 {
 		return fmt.Errorf("scheduled send: %s was no longer pending when its send committed", id)
 	}
-	return auditScheduledSendTx(ctx, tx, "release", id, nil, map[string]any{
+	_, err = storekit.Audit(ctx, tx, "release", "scheduled_send", id, nil, map[string]any{
 		"activity_id": activityID,
 		"delivery_id": deliveryID,
 	})
+	return err
 }
 
 // holdInTx parks a scheduled message for a human, with the reason they need to
@@ -345,7 +347,8 @@ func (s *Store) holdInTx(ctx context.Context, tx pgx.Tx, id ids.UUID, reason str
 	if err := s.notifyHeld(ctx, tx, id, reason); err != nil {
 		return err
 	}
-	return auditScheduledSendTx(ctx, tx, "hold", id, nil, map[string]any{"reason": reason})
+	_, err = storekit.Audit(ctx, tx, "hold", "scheduled_send", id, nil, map[string]any{"reason": reason})
+	return err
 }
 
 // notifyHeld puts the stopped message in front of its rep, in the SAME
