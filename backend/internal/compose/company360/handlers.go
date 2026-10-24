@@ -172,20 +172,10 @@ func (h Handlers) ListCompanyContacts(w http.ResponseWriter, r *http.Request, id
 		Sort:   string(crmcontracts.ListCompanyContactsParamsSortRecommended),
 	}
 	if params.Status != nil {
-		if !params.Status.Valid() {
-			httperr.Write(w, r, httperr.Validation("status", "invalid_enum",
-				"status is waiting, answered, no_reply or untried"))
-			return
-		}
 		status := contacts.Engagement(*params.Status)
 		q.Status = &status
 	}
 	if params.Sort != nil {
-		if !params.Sort.Valid() {
-			httperr.Write(w, r, httperr.Validation("sort", "invalid_enum",
-				"sort is recommended, -last_interaction, -strength or name"))
-			return
-		}
 		q.Sort = string(*params.Sort)
 	}
 	page, err := h.svc.ContactPage(r.Context(), ids.From[ids.CompanyKind](ids.UUID(id)), q)

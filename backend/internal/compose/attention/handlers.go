@@ -167,11 +167,6 @@ func (h Handlers) GetWorklist(w http.ResponseWriter, r *http.Request, params crm
 		// `deals_at_risk`) would otherwise be told, in a 200, that the reader
 		// has no work — which is the one answer this surface must never give
 		// wrongly.
-		if !params.Filter.Valid() {
-			httperr.Write(w, r, httperr.Validation("filter", "unknown",
-				"that is not a kind of work this queue can narrow to"))
-			return
-		}
 		filter = string(*params.Filter)
 	}
 	limit := 0
@@ -180,11 +175,6 @@ func (h Handlers) GetWorklist(w http.ResponseWriter, r *http.Request, params crm
 	}
 	scope := ""
 	if params.Scope != nil {
-		if !params.Scope.Valid() {
-			httperr.Write(w, r, httperr.Validation("scope", "unknown",
-				"that is not a scope this queue can answer for"))
-			return
-		}
 		scope = string(*params.Scope)
 	}
 	// The generated type already refused anything that is not a uuid, so an
