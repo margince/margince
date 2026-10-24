@@ -156,10 +156,10 @@ func (g *Gate) validateRequestedFollowup(ctx context.Context, tx pgx.Tx, subject
 // recorded that they asked to hear from us, inside the window.
 //
 // A contact is asked through latestQualifyingEvent, the reader the legacy
-// correspondence verdict uses, so a recorded "requested by the subject" or an
-// in-person exchange supports a composer send and both readers give one answer. A
-// lead has no qualifying event (the table is keyed on contacts), so it keeps the
-// authorship test alone, which wroteToUsWithin spells for both subject kinds.
+// correspondence verdict uses. So a recorded "requested by the subject" or an
+// in-person exchange supports a composer send, and both readers agree. A lead
+// has no qualifying event, because the table is keyed on contacts. It keeps
+// the authorship test alone, which wroteToUsWithin spells for both kinds.
 func repliedOrWasRecorded(ctx context.Context, tx pgx.Tx, subject subjectRef, since time.Time) (bool, error) {
 	if subject.Kind != entityContact {
 		return wroteToUsWithin(ctx, tx, subject, since)
@@ -172,8 +172,8 @@ func repliedOrWasRecorded(ctx context.Context, tx pgx.Tx, subject subjectRef, si
 }
 
 // validateDealFollowup answers a follow-up on a deal the sender picked. It reads
-// the picked deal through liveDealInLinks, so "an open deal the recipient is a
-// stakeholder on" is asked the same way for the links and for the picked evidence.
+// the picked deal through liveDealInLinks. So "an open deal the recipient is a
+// stakeholder on" is asked one way for the links and for the picked deal.
 func validateDealFollowup(ctx context.Context, tx pgx.Tx, req commsauthz.Request, subject subjectRef) (resolution, error) {
 	if req.Evidence.DealID == (ids.UUID{}) {
 		return resolution{Category: commsauthz.CategoryActiveDealFollowup, Reason: commsauthz.ReasonNoEvidence}, nil

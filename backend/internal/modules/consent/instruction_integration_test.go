@@ -338,10 +338,10 @@ func TestAnErasureCanTombstoneTheWordsAndNothingElse(t *testing.T) {
 	}
 }
 
-// EVERY SENDER MAY TAKE THE EXCEPTION, BUT ONLY AN ADMIN PAST A CONTACT'S OWN
-// STOP. A rep holding the grant directs a send refused for want of marketing
-// consent, and is refused past an objection, a withdrawal, a restriction and a
-// subject request; an admin still directs past all of them.
+// Every sender may take the exception, but only an admin past a contact's own
+// stop. A rep holding the grant directs a send refused for want of marketing
+// consent. The rep is refused past an objection, a withdrawal, a restriction
+// and a subject request. An admin still directs past all of them.
 //
 // Mutation: drop the RemedyAdminException check in directableBy and the rep
 // cases below are allowed.

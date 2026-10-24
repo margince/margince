@@ -678,9 +678,9 @@ func TestALeadWhoWroteRecentlyCanBeFollowedUp(t *testing.T) {
 	}
 }
 
-// A lead's claim is put to the evidence the same way a contact's is: marketing
-// to a lead who wrote in is refused, and any other contradicted claim yields
-// but stays on the row.
+// A lead's claim is put to the evidence the same way a contact's is. Marketing
+// to a lead who wrote in is refused. Any other contradicted claim yields but
+// stays on the row.
 func TestALeadsClaimIsPutToTheEvidence(t *testing.T) {
 	cases := map[commsauthz.Category]commsauthz.Verdict{
 		commsauthz.CategoryMarketing:         commsauthz.VerdictDeny,

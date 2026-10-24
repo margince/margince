@@ -201,13 +201,18 @@ resolve it in `commsauthz.RemediesFor`.
 
 `Review.DirectableBy` is the one check. `DirectSend` and the actions a refusal offers both ask it.
 
-A contact can be written to about a thread. They must have been To or Cc on an inbound mail a
-connector captured on that thread, written by someone who is not one of our seats. One of our seats
-must also have sent a captured mail on the same thread, of the same kind and provider. Mail our own side sends,
-or a colleague's mail that capture files as outbound, never counts, so a seat cannot make this
-ground by copying the contact. The rule reads the thread key and records its basis against that
-thread. So it never becomes standing permission for the contact. It never supports a message the
-sender calls marketing. `copiedOnThisMatter` holds the whole rule.
+A contact can be written to about a thread when three things hold:
+
+- They were To or Cc on an inbound mail a connector captured on that thread.
+- Someone who is not one of our seats wrote that mail.
+- One of our seats sent a captured mail on the same thread, of the same kind and provider.
+
+Mail our own side sends never counts. Capture files a colleague's mail as outbound, so it never
+counts either. So a seat cannot make this ground by copying the contact.
+
+The rule reads the thread key and records its basis against that thread. So it never becomes
+standing permission for the contact. It never supports a message the sender calls marketing.
+`copiedOnThisMatter` holds the whole rule.
 
 ## Reaching the subject without the message that carried the link
 

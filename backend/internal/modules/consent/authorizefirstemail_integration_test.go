@@ -6,8 +6,8 @@
 package consent
 
 // A first business email to a contact known only from captured mail: what lets
-// it go, and what keeps it out. The Cc rule is scoped to one thread, a recorded
-// fact is read by the composer path, a picked deal supports a follow-up, and a
+// it go, and what keeps it out. The Cc rule is scoped to one thread. A recorded
+// fact is read by the composer path. A picked deal supports a follow-up. A
 // sender's unsupported claim is a question rather than a dead end.
 
 import (
@@ -32,8 +32,8 @@ type copiedMail struct {
 	capturedBy   string
 }
 
-// capturedMail plants a mail a connector captured: an outside sender writing to
-// one of our seats with the subject in To or Cc, unless the fields say otherwise.
+// capturedMail plants a mail a connector captured. An outside sender writes to
+// one of our seats with the subject in To or Cc.
 func (e *resolveEnv) capturedMail(t *testing.T, threadKey, subjectRole string, withOurSide bool) ids.UUID {
 	t.Helper()
 	id := e.plantCopiedMail(t, copiedMail{
@@ -63,8 +63,8 @@ func TestAForgedThreadKeyWithNoMailFromOurSeatEarnsNoCopiedStanding(t *testing.T
 	}
 }
 
-// ourSentMail plants a captured mail our seat sent on the thread, with the
-// subject only in Bcc, so it is our side's mail and never the copying mail.
+// ourSentMail plants a captured mail our seat sent on the thread. The subject
+// is only in Bcc, so it is never the copying mail.
 func (e *resolveEnv) ourSentMail(t *testing.T, threadKey string) {
 	t.Helper()
 	e.plantCopiedMail(t, copiedMail{
@@ -73,8 +73,8 @@ func (e *resolveEnv) ourSentMail(t *testing.T, threadKey string) {
 	})
 }
 
-// Our side counts only as the sender of an outbound mail: a seat in To of an
-// outbound mail or in From of an inbound one did not send it.
+// Our side counts only as the sender of an outbound mail. A seat in To of an
+// outbound mail did not send it, nor did a seat in From of an inbound one.
 func TestOurSeatCountsOnlyAsTheSenderOfAnOutboundMail(t *testing.T) {
 	cases := map[string]copiedMail{
 		"our seat only in To of an outbound mail": {direction: "outbound", ourRecipient: true},

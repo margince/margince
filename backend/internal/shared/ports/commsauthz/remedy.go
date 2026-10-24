@@ -22,8 +22,8 @@ const (
 
 // remedies declares, for every reason code, what can resolve it. An empty list
 // means nothing can. Every Reason constant has an entry, written out even when
-// empty, so a reason added without one fails TestEveryReasonDeclaresItsRemedy
-// and the commsreasonremedy gate instead of becoming a silent dead end.
+// empty. A reason added without one fails TestEveryReasonDeclaresItsRemedy
+// instead of becoming a silent dead end.
 var remedies = map[string][]Remedy{
 	ReasonNoEvidence:                     {RemedyAnswer, RemedyFact, RemedyException},
 	ReasonLegacyTransactionalUnevidenced: {RemedyAnswer, RemedyFact, RemedyException},

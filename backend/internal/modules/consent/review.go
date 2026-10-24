@@ -283,8 +283,8 @@ func stateFor(refusals []RefusedRecipient) string {
 // offers no argument — the safe direction, because the alternative is a form
 // inviting a rep to argue with a withdrawal.
 //
-// The remedy table (commsauthz.RemediesFor) is the one list of what an answer
-// can resolve: no evidence for the message, a purpose key nothing defines, or a
+// It reads the remedy table (commsauthz.RemediesFor) for what an answer
+// can resolve. Today that is no evidence, a purpose key nothing defines, and a
 // claim the record contradicts. Somebody who was on the call can answer these.
 //
 // Everything else is about the SUBJECT or the ADDRESS and no context repairs

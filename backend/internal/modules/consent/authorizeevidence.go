@@ -150,14 +150,14 @@ func wroteIntoThread(ctx context.Context, tx pgx.Tx, threadKey string, subject s
 //
 // It supports correspondence about this thread's matter only. The thread key
 // scopes the query, and recordBasis keys the basis row by the same thread. So
-// it never becomes standing permission for the contact. Being copied is not
-// authorship, which repliesToTheSubject asks for. It is the weaker ground that
-// lets a rep reply to all or follow up on the thread's subject. A marketing
+// it never becomes standing permission for the contact. repliesToTheSubject
+// asks for authorship; being copied is a weaker ground. It lets a rep reply to
+// all or follow up on the thread's subject. A marketing
 // claim against it is still denied by putClaimToEvidence. Counsel reviews the
 // rule before release, so it lives in this one function.
 //
-// The copying mail must be inbound with an author who is not one of our seats,
-// or a rep could make the evidence by copying the contact on their own mail.
+// The copying mail must be inbound with an author who is not one of our seats.
+// Otherwise a rep could make the evidence by copying the contact on own mail.
 // Capture files a colleague's mail as outbound (sent_by_colleague), so the
 // direction test covers that case too. Our seat's mail must be outbound and
 // connector-captured on the same medium and provider. A thread key alone is
@@ -271,7 +271,7 @@ func wroteToUsWithin(ctx context.Context, tx pgx.Tx, subject subjectRef, since t
 const authorIsTheSubject = `(p.role = 'from' AND ` + participantIsTheSubject + `)`
 
 // participantIsTheSubject is the identity half of authorIsTheSubject, without
-// the role: the participant row p names this recipient, by record, by bare
+// the role. The participant row p names this recipient by record, by bare
 // address or by channel account. copiedOnThisMatter reads it with the
 // recipient roles. So both roles read "this row is the recipient" from one
 // text. Same placeholders as authorIsTheSubject.
