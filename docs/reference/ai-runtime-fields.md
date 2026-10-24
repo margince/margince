@@ -31,7 +31,7 @@ Per task:
 | `company_context.scopes` | any of `identity`, `positioning`, `sales`, `offer`, `market`, `proof`, `administrative` | which bounded views of the company profile may be put in. That order is also the wire and fingerprint order, so listing the same scopes in a new order cannot change the hash. |
 | `company_context.token_budget` | positive `int` | the size the renderer bounds the block to. It must be there with any scope (at zero the scopes would reach no prompt). It is refused without a scope, since a budget on a policy that selects nothing reads as a deleted scope list. |
 | `company_context.conditional` | `true` (or left out) | put it in only when the caller asks, not always. |
-| `company_context.offering_selectable` | `true` (or left out) | the caller may name which legal entity's offering the block describes. Left out means the block always describes the main offering, whatever the request carries. Refused without a scope. |
+| `company_context.offering_selectable` | `true` (or left out) | the caller may pick whose offering the block describes. Left out means the block always describes the company profile, whatever the request carries. Refused without a scope. |
 | `cost_unit` | rule name, or left out | which rule prices this task before it runs (`per_message`, `per_contact`; `per_entity` for embed). The math stays in code. Naming the rule here lets the build prove the mapping is **whole** in both directions. Left out means not priced. |
 | `doc` | string | copied into the comment of the generated Go value. Text only: nothing may depend on it. |
 

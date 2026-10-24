@@ -20,6 +20,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
@@ -78,20 +79,20 @@ func setupOffering(t *testing.T) *offeringEnv {
 		t.Fatalf("describe the main offering: %v", err)
 	}
 	lane := &offeringLane{provider: newCompanyContextProvider(store)}
-	service := companydossier.NewGrowthFitService(e.Pool, store, offeringConfirmed(store), lane, "routing-1", time.Now)
+	service := companydossier.NewGrowthFitService(e.Pool, store, offeringConfirmed(store), lane, "routing-1", func() time.Time { return clocktest.Now(t) })
 	return &offeringEnv{Env: e, ctx: ctx, lane: lane, service: service}
 }
 
 // secondOffering creates a further legal entity. A nil icp leaves it
 // unconfirmed.
-func (o *offeringEnv) secondOffering(t *testing.T, name, summary string, icp *string) crmcontracts.LegalEntity {
+func (o *offeringEnv) secondOffering(t *testing.T, icp *string) crmcontracts.LegalEntity {
 	t.Helper()
 	entity, err := o.Contacts.CreateLegalEntity(o.ctx, contacts.LegalEntityInput{
-		DisplayName: new(name), LegalName: new(name + " GmbH"), Country: new("at"),
-		Offering: contacts.LegalEntityOffering{OfferSummary: new(summary), ICP: icp},
+		DisplayName: new("Wien"), LegalName: new("Wien GmbH"), Country: new("at"),
+		Offering: contacts.LegalEntityOffering{OfferSummary: new("Solar carports"), ICP: icp},
 	})
 	if err != nil {
-		t.Fatalf("create %s: %v", name, err)
+		t.Fatalf("create the second offering: %v", err)
 	}
 	return contacts.LegalEntityWire(entity)
 }
@@ -147,7 +148,7 @@ func entityID(e crmcontracts.LegalEntity) ids.LegalEntityID {
 
 func TestACompanyIsJudgedAgainstTheOfferingChosenForIt(t *testing.T) {
 	o := setupOffering(t)
-	wien := o.secondOffering(t, "Wien", "Solar carports", new("Car dealers with large lots"))
+	wien := o.secondOffering(t, new("Car dealers with large lots"))
 	company, cited := o.customer(t, "Autohaus Berger")
 
 	main := o.judge(t, company, cited)
@@ -179,7 +180,7 @@ func TestACompanyIsJudgedAgainstTheOfferingChosenForIt(t *testing.T) {
 
 func TestChoosingTheDefaultEntityReturnsToTheMainOffering(t *testing.T) {
 	o := setupOffering(t)
-	wien := o.secondOffering(t, "Wien", "Solar carports", new("Car dealers with large lots"))
+	wien := o.secondOffering(t, new("Car dealers with large lots"))
 	company, cited := o.customer(t, "Autohaus Berger")
 	o.choose(t, company, entityID(wien))
 	o.judge(t, company, cited)
@@ -205,7 +206,7 @@ func TestChoosingTheDefaultEntityReturnsToTheMainOffering(t *testing.T) {
 
 func TestEditingAnOfferingReJudgesOnlyTheCompaniesChosenAgainstIt(t *testing.T) {
 	o := setupOffering(t)
-	wien := o.secondOffering(t, "Wien", "Solar carports", new("Car dealers with large lots"))
+	wien := o.secondOffering(t, new("Car dealers with large lots"))
 	pointing, citedPointing := o.customer(t, "Autohaus Berger")
 	other, citedOther := o.customer(t, "Autohaus Keller")
 	o.choose(t, pointing, entityID(wien))
@@ -231,7 +232,7 @@ func TestEditingAnOfferingReJudgesOnlyTheCompaniesChosenAgainstIt(t *testing.T) 
 
 func TestAnOfferingWithoutAnIdealCustomerCapsTheBand(t *testing.T) {
 	o := setupOffering(t)
-	wien := o.secondOffering(t, "Wien", "Solar carports", nil)
+	wien := o.secondOffering(t, nil)
 	company, cited := o.customer(t, "Autohaus Berger")
 	o.choose(t, company, entityID(wien))
 

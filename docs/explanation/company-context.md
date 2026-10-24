@@ -43,24 +43,24 @@ get bounded views of this model; nothing builds its own company prompt from tabl
 
 ## A second offering
 
-A further legal entity (Settings, Legal entities) can describe what it sells. It keeps four texts on its own
-row: `offer_summary`, `icp`, `value_proposition` and `usp`. The default entity keeps none, because its offering
-is the company profile above, edited on the company form.
+A further legal entity can describe what it sells. It keeps four texts on its own row: `offer_summary`, `icp`,
+`value_proposition` and `usp`. The default entity keeps none, because its offering is the company profile above,
+edited on the company form.
 
 `GetCompanyContext` takes an `OfferingSelector`. The zero value reads the company profile. An entity id reads that
 entity's four texts and its name. Both answers carry `Confirmed` (a name, an offer summary and an `icp`, one rule
-shared with onboarding), the fingerprint, and the name of the offering. An entity that is archived, unknown or the
+shared with onboarding), the fingerprint and the name of the offering. An entity that is archived, unknown or the
 default answers not found.
 
-A company chooses its offering with `assess_against_entity_id`. Null is the main offering. Sending the default
-entity's id on the update stores null. The growth fit puts the choice on the model request, and compose honours it
-only for a task whose policy sets `offering_selectable` in `ai-tasks.yaml`. The growth fit is the only such task.
+A company picks its offering with `assess_against_entity_id`. Empty means the company profile. Sending the default
+entity's id on the update stores empty. The growth fit puts the pick on the model request. Compose follows it only
+for a task whose policy sets `offering_selectable` in `ai-tasks.yaml`, and the growth fit is the only such task.
 `summarize`, `draft_reply`, `nl_search`, `account_scan`, `agent_loop` and `offer_draft` keep reading the company
 profile.
 
-The growth fit takes its confirmation and its cache fingerprint from one read, and the entity id is part of the
-cache key. Editing an entity's text re-assesses only the companies that chose it. An entity cannot be archived while
-a company is still judged against it.
+The growth fit takes `Confirmed` and the fingerprint from one read, and the entity id is part of the cache key.
+Editing an entity's text rates again only the companies that picked it. An entity cannot be archived while a company
+is still rated against it.
 
 A second offering has no evidence facts. Its context holds the four texts only.
 

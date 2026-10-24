@@ -45,9 +45,9 @@ func (o OfferingSelector) String() string {
 	return o.EntityID.String()
 }
 
-// offeringMinimumComplete is the one definition of a described offering: a
-// name, what it sells and who it sells to. The anchor read and the entity read
-// both ask it, so onboarding and the growth fit cannot disagree.
+// offeringMinimumComplete is the definition of a described offering: a name,
+// what it sells and who it sells to. The anchor read and the entity read both
+// call it.
 func offeringMinimumComplete(displayName, offerSummary, icp string) bool {
 	return strings.TrimSpace(displayName) != "" &&
 		strings.TrimSpace(offerSummary) != "" &&
@@ -107,8 +107,10 @@ func readEntityOffering(ctx context.Context, tx pgx.Tx, id ids.LegalEntityID) (r
 		name  string
 		value *string
 	}{
-		{fieldOfferSummary, offering.OfferSummary}, {fieldICP, offering.ICP},
-		{fieldValueProposition, offering.ValueProposition}, {fieldUSP, offering.USP},
+		{fieldOfferSummary, offering.OfferSummary},
+		{fieldICP, offering.ICP},
+		{fieldValueProposition, offering.ValueProposition},
+		{fieldUSP, offering.USP},
 	} {
 		if field.value == nil {
 			continue
