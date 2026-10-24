@@ -2,7 +2,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -124,6 +130,19 @@ describe("typing", () => {
 
     await user.type(box(), "5/6/2026{Enter}");
 
+    expect(report).toHaveBeenCalledWith("2026-05-06");
+  });
+
+  it("does not settle on the Enter that confirms an input method candidate", () => {
+    const report = vi.fn();
+    render(<Due onReport={report} />);
+    fireEvent.change(box(), { target: { value: "06.05.2026" } });
+
+    fireEvent.keyDown(box(), { key: "Enter", isComposing: true });
+    fireEvent.keyDown(box(), { key: "Enter", keyCode: 229 });
+    expect(report).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(box(), { key: "Enter" });
     expect(report).toHaveBeenCalledWith("2026-05-06");
   });
 

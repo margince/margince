@@ -123,7 +123,7 @@ function InlineDate({
           }
         }}
         onKeyDown={(event) => {
-          if (event.key !== "Enter") {
+          if (event.key !== "Enter" || isImeCommit(event)) {
             onKeyDown?.(event);
             return;
           }

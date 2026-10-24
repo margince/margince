@@ -1,5 +1,11 @@
 /** @vitest-environment happy-dom */
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
@@ -297,4 +303,101 @@ it("keeps a refused day reachable by the arrows and refuses its press", async ()
 
   expect(document.activeElement?.getAttribute("data-day")).toBe("2026-08-25");
   expect(chose).not.toHaveBeenCalled();
+});
+
+it("moves the tab stop to a clicked refused day, so the next arrow lands on its neighbour", async () => {
+  const user = userEvent.setup();
+  render(
+    <Calendar
+      month={AUGUST_2026}
+      onMonthChange={() => {}}
+      selected="2026-08-24"
+      onSelect={() => {}}
+      today={TODAY}
+      locale="en"
+      refusal={(day) => (day === "2026-08-25" ? "nothing free" : undefined)}
+    />,
+  );
+  await user.click(
+    screen.getByRole("button", { name: /^Tuesday, 25 August 2026/ }),
+  );
+
+  await user.keyboard("{ArrowLeft}");
+
+  expect(document.activeElement?.getAttribute("data-day")).toBe("2026-08-24");
+});
+
+it("leaves the keys the browser owns alone", () => {
+  render(
+    <Calendar
+      month={AUGUST_2026}
+      onMonthChange={() => {}}
+      selected="2026-08-24"
+      onSelect={() => {}}
+      today={TODAY}
+      locale="en"
+    />,
+  );
+  const day = screen.getByRole("button", { name: "Monday, 24 August 2026" });
+  day.focus();
+
+  for (const chord of [
+    { altKey: true },
+    { ctrlKey: true },
+    { metaKey: true },
+  ]) {
+    const unhandled = fireEvent.keyDown(day, { key: "ArrowLeft", ...chord });
+    expect(unhandled).toBe(true);
+  }
+
+  expect(document.activeElement).toBe(day);
+});
+
+it("moves the tab stop to a clicked day outside the month, so the next arrow follows", async () => {
+  const user = userEvent.setup();
+  render(
+    <Calendar
+      month={AUGUST_2026}
+      onMonthChange={() => {}}
+      selected="2026-08-31"
+      onSelect={() => {}}
+      today={TODAY}
+      locale="en"
+    />,
+  );
+  await user.click(
+    screen.getByRole("button", { name: "Tuesday, 1 September 2026" }),
+  );
+
+  await user.keyboard("{ArrowLeft}");
+
+  expect(document.activeElement?.getAttribute("data-day")).toBe("2026-08-31");
+});
+
+it("pages the month with the stop back on the selected day, not the cursor still drawn", async () => {
+  const user = userEvent.setup();
+  function Paged() {
+    const [month, setMonth] = useState(AUGUST_2026);
+    return (
+      <Calendar
+        month={month}
+        onMonthChange={setMonth}
+        selected="2026-09-10"
+        onSelect={() => {}}
+        today={TODAY}
+        locale="en"
+      />
+    );
+  }
+  render(<Paged />);
+  screen.getByRole("button", { name: "Monday, 24 August 2026" }).focus();
+  await user.keyboard("{End}{ArrowRight}{ArrowLeft}");
+  expect(document.activeElement?.getAttribute("data-day")).toBe("2026-08-30");
+  await user.keyboard("{ArrowRight}");
+  expect(document.activeElement?.getAttribute("data-day")).toBe("2026-08-31");
+
+  await user.click(screen.getByRole("button", { name: "Next month" }));
+  await user.tab();
+
+  expect(document.activeElement?.getAttribute("data-day")).toBe("2026-09-10");
 });

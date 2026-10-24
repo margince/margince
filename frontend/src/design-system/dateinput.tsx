@@ -23,6 +23,7 @@ import {
 } from "../format/datepattern";
 import { useDateTimePreferences } from "../format/preferences";
 import { type Locale, useLocale, useT } from "../i18n";
+import { isImeCommit } from "../lib/imecommit";
 import { useAnchoredToTrigger } from "./anchored";
 import { useDismissOnOutsidePress } from "./anchoredpopup";
 import { Button } from "./button";
@@ -188,7 +189,7 @@ export function DateInput({
             onBlur?.(event);
           }}
           onKeyDown={(event) => {
-            if (event.key === "Enter") {
+            if (event.key === "Enter" && !isImeCommit(event)) {
               settleTyped();
             }
             // The first Escape takes back typed text, as InlineText's does.

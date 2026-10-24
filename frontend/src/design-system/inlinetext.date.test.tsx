@@ -156,6 +156,24 @@ describe("editing a day where it is read", () => {
     expect(onSave).toHaveBeenCalledTimes(1);
   });
 
+  it("does not save on the Enter that confirms an input method candidate", async () => {
+    const user = userEvent.setup();
+    const { onSave } = renderCloseDate();
+    await user.click(trigger());
+    await user.clear(dayBox());
+    await user.type(dayBox(), "15/04/2026");
+
+    fireEvent.keyDown(dayBox(), { key: "Enter", isComposing: true });
+
+    expect(onSave).not.toHaveBeenCalled();
+    expect(dayBox().value).toBe("15/04/2026");
+
+    fireEvent.keyDown(dayBox(), { key: "Enter" });
+
+    await waitFor(() => expect(onSave).toHaveBeenCalledWith("2026-04-15"));
+    expect(onSave).toHaveBeenCalledTimes(1);
+  });
+
   it("saves a typed day when the reader presses outside the field", async () => {
     const user = userEvent.setup();
     const { onSave } = renderCloseDate();

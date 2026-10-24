@@ -76,7 +76,11 @@ export function Calendar({
   const [cursor, setCursor] = useState<ISODay | null>(null);
   const grid = useRef<HTMLDivElement | null>(null);
   const wantsFocus = useRef(false);
-  const tabStop = tabStopOf(month, [cursor, selected, isoDay(today)]);
+  // A drawn day outside the month can hold focus by click, so it must be the stop too.
+  const shownCursor = days.some((day) => isoDay(day) === cursor)
+    ? cursor
+    : null;
+  const tabStop = shownCursor ?? tabStopOf(month, [selected, isoDay(today)]);
 
   useEffect(() => {
     if (!wantsFocus.current) {
@@ -88,7 +92,17 @@ export function Calendar({
       ?.focus();
   }, [tabStop]);
 
+  // The stop falls back to the selected day, not a stale cursor drawn in the next grid.
+  const pageMonth = (by: number) => {
+    setCursor(null);
+    onMonthChange(shiftMonth(month, by));
+  };
+
   const move = (event: KeyboardEvent, from: Date) => {
+    // These chords belong to the browser (Back, scroll), never to the grid.
+    if (event.altKey || event.ctrlKey || event.metaKey) {
+      return;
+    }
     const next = stepFrom(from, event.key, event.shiftKey, start);
     if (!next) {
       return;
@@ -97,7 +111,8 @@ export function Calendar({
     if (isoDay(next) === isoDay(from)) {
       return;
     }
-    wantsFocus.current = true;
+    // Armed only when the tab stop will change, or no effect would clear it.
+    wantsFocus.current = isoDay(next) !== tabStop;
     setCursor(isoDay(next));
     if (!sameMonth(next, month)) {
       onMonthChange(localDate(next.getFullYear(), next.getMonth(), 1));
@@ -113,14 +128,14 @@ export function Calendar({
         <Button
           iconOnly
           aria-label={t("calendar.previousMonth")}
-          onClick={() => onMonthChange(shiftMonth(month, -1))}
+          onClick={() => pageMonth(-1)}
         >
           <ChevronLeft aria-hidden="true" />
         </Button>
         <Button
           iconOnly
           aria-label={t("calendar.nextMonth")}
-          onClick={() => onMonthChange(shiftMonth(month, 1))}
+          onClick={() => pageMonth(1)}
         >
           <ChevronRight aria-hidden="true" />
         </Button>
@@ -158,6 +173,7 @@ export function Calendar({
                   refusal={refusal?.(isoDay(day))}
                   onSelect={onSelect}
                   onMove={move}
+                  onFocusDay={setCursor}
                   locale={locale}
                 />
               ))}
@@ -178,6 +194,7 @@ function CalendarDay({
   refusal,
   onSelect,
   onMove,
+  onFocusDay,
   locale,
 }: Readonly<{
   day: Date;
@@ -188,6 +205,7 @@ function CalendarDay({
   refusal: string | undefined;
   onSelect: (next: ISODay) => void;
   onMove: (event: KeyboardEvent, from: Date) => void;
+  onFocusDay: (day: ISODay) => void;
   locale: Locale;
 }>) {
   const classes = [
@@ -213,6 +231,8 @@ function CalendarDay({
         }
         // Not `disabled`: a disabled day takes no focus, so the arrows would skip it.
         aria-disabled={refusal === undefined ? undefined : true}
+        // The tab stop follows focus, so a click on one day never leaves another as the stop.
+        onFocus={() => onFocusDay(isoDay(day))}
         onKeyDown={(event) => onMove(event, day)}
         onClick={() => {
           if (refusal === undefined) {
