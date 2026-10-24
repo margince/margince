@@ -82,12 +82,13 @@ info:
   version: 1.0.0-draft
   summary: AI-native, source-available CRM core — contacts, companies, deals, pipelines, activities, leads, plus the agent/AI surface.
   description: |
-    The V1 core CRM contract. Derived from `spec/data-model.md` (the canonical
-    Postgres schema), `spec/features/01-core-objects.md` (endpoint acceptance
-    criteria), `spec/features/03-reporting-and-scoring.md`,
-    `spec/features/07-ai-native-moments.md`, and `spec/03b-ai-architecture.md`
-    (the MCP tool surface). Every component schema mirrors a table; the agent
-    MCP tool surface maps onto these same REST operations via `x-mcp-tool`.
+    The V1 core CRM contract: contacts, companies, deals, pipelines, activities
+    and leads, with the agent and AI surface beside them.
+
+    Every component schema mirrors a table, and the Postgres schema those
+    tables come from is `backend/migrations/core/` in this repository. The
+    agent MCP tool surface maps onto these same REST operations through
+    `x-mcp-tool`, so a tool and the endpoint behind it cannot drift apart.
   license:
     name: BUSL-1.1
     identifier: BUSL-1.1

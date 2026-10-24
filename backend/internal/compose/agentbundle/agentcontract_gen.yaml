@@ -5,7 +5,8 @@ info:
   version: 1.0.0-draft
   summary: AI-native, source-available CRM core — contacts, companies, deals, pipelines, activities, leads, plus the agent/AI surface.
   description: |-
-    The V1 core CRM contract.
+    The V1 core CRM contract: contacts, companies, deals, pipelines, activities
+    and leads, with the agent and AI surface beside them.
   license:
     name: BUSL-1.1
     identifier: BUSL-1.1
