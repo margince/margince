@@ -5,6 +5,7 @@ package compose
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
@@ -13,35 +14,50 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/datatask"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // membersOnlyMailDataTask holds the stored mail between members that capture
 // opened to the workspace before it placed the members_only hold. It asks the
 // test capture asks (capture.MemberAddresses), against today's members.
+//
+// Only the stored original names every party. The participant rows do not:
+// capture records no sign that the cap dropped a crowded list, and mail
+// stamped before Cc rows existed has none. So mail without an original is
+// never held, and the second step counts it as parties unknown.
 func membersOnlyMailDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792838024_members_only_mail", Version: 1,
 		Title: "Holding mail between colleagues", Requires: []string{"core/1788316744"},
-		Steps: []datatask.Step{{
-			Name: "hold_members_only_mail", Limit: 200, MinLimit: 10,
-			Audit:    datatask.AuditPolicy{PerRecord: true},
-			Estimate: estimateMembersOnlyCandidates, Batch: holdMembersOnlyMailBatch,
-		}},
+		Steps: []datatask.Step{
+			{
+				Name: "hold_members_only_mail", Limit: 200, MinLimit: 10,
+				Audit:    datatask.AuditPolicy{PerRecord: true},
+				Estimate: estimateMembersOnlyMail(true), Batch: holdMembersOnlyMailBatch,
+			},
+			{
+				Name: "count_mail_with_unknown_parties", Limit: 500, MinLimit: 10,
+				Audit:    datatask.AuditPolicy{Reason: "writes nothing: it counts the open mail no stored original names the parties of"},
+				Estimate: estimateMembersOnlyMail(false), Batch: countUnknownPartiesBatch,
+			},
+		},
 	}
 }
 
-// membersOnlyCandidate is one open captured mail and the two places its
-// parties can be read from: the stored original, and the participant rows
-// capture stamped from it.
+// membersOnlyMailFrom is the open captured mail the hold may reach, joined to
+// its stored original the way the recipient-restore task reads one.
+const membersOnlyMailFrom = `FROM activity a
+  LEFT JOIN LATERAL (
+       SELECT rc.payload FROM raw_capture rc
+        WHERE ` + storedMailOriginal + `
+        LIMIT 1) original ON ` + storedMailProvider + `
+ WHERE ` + activities.MembersOnlyHoldable
+
 type membersOnlyCandidate struct {
-	ID           ids.UUID
-	Payload      []byte
-	Counterparty *string
-	Stamped      []string
-	StampedRows  int
+	ID      ids.UUID
+	Payload []byte
 }
 
 func holdMembersOnlyMailBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
@@ -52,18 +68,8 @@ func holdMembersOnlyMailBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchI
 	if err != nil {
 		return datatask.BatchOut{}, err
 	}
-	rows, err := tx.Query(ctx, `
-		SELECT a.id, original.payload, a.counterparty_email,
-		       ARRAY(SELECT lower(p.address) FROM activity_participant p
-		              WHERE p.activity_id = a.id AND p.address IS NOT NULL),
-		       (SELECT count(*)::int FROM activity_participant p WHERE p.activity_id = a.id)
-		  FROM activity a
-		  LEFT JOIN LATERAL (
-		       SELECT rc.payload FROM raw_capture rc
-		        WHERE rc.id = a.raw_capture_id
-		           OR (a.raw_capture_id IS NULL AND rc.source_system = a.source_system AND rc.source_id = a.source_id)
-		        LIMIT 1) original ON true
-		 WHERE `+activities.MembersOnlyHoldable+` AND a.id > @after_activity
+	rows, err := tx.Query(ctx, `SELECT a.id, original.payload `+membersOnlyMailFrom+`
+		   AND original.payload IS NOT NULL AND a.id > @after_activity
 		 ORDER BY a.id LIMIT @page_size`,
 		pgx.NamedArgs{"after_activity": after, "page_size": in.Limit})
 	if err != nil {
@@ -81,7 +87,11 @@ func holdMembersOnlyMailBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchI
 	var hold []ids.ActivityID
 	for _, candidate := range candidates {
 		scanned = append(scanned, candidate.ID)
-		if parties, known := candidate.parties(); known && members.CoverEveryParty(parties) {
+		parties, err := originalParties(candidate.Payload)
+		if err != nil {
+			return datatask.BatchOut{}, err
+		}
+		if members.CoverEveryParty(parties) {
 			hold = append(hold, ids.From[ids.ActivityKind](candidate.ID))
 		}
 	}
@@ -92,33 +102,54 @@ func holdMembersOnlyMailBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchI
 	return datatask.AdvanceUUID(in, scanned, held)
 }
 
-// parties is every address the mail named. The original's headers come
-// first, Bcc included. Without a readable original the stamped rows stand in,
-// but only below the participant cap: past it capture dropped outside names,
-// and a list missing one would read as members-only. A row stamped with a seat
-// and no address is a member, so it adds nothing to test.
-func (c membersOnlyCandidate) parties() ([]string, bool) {
-	if raw, err := capture.DecodeStoredOriginal(c.Payload); err == nil {
-		if parsed, err := mailmap.Parse(raw, ""); err == nil && len(parsed.Addresses()) > 0 {
-			return parsed.Addresses(), true
-		}
+// originalParties is every address the original's headers name, Bcc included.
+// An unreadable original keeps the step pending, as the recipient restore
+// does, rather than report a judgement it could not make.
+func originalParties(payload []byte) ([]string, error) {
+	raw, err := capture.DecodeStoredOriginal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("a stored original is unreadable: %w", apperrors.ErrInvalidArgument)
 	}
-	if c.StampedRows >= connector.MaxParticipants {
-		return nil, false
+	parsed, err := mailmap.Parse(raw, "")
+	if err != nil {
+		return nil, fmt.Errorf("a stored original is unreadable: %w", apperrors.ErrInvalidArgument)
 	}
-	parties := c.Stamped
-	if c.Counterparty != nil {
-		parties = append(parties, *c.Counterparty)
-	}
-	return parties, true
+	return parsed.Addresses(), nil
 }
 
-func estimateMembersOnlyCandidates(ctx context.Context, q datatask.Querier, maximum int64) (int64, bool, error) {
-	if err := auth.Require(ctx, "data_task", principal.ActionRead); err != nil {
-		return 0, false, err
+// countUnknownPartiesBatch pages the open mail without an original, so the
+// step's scanned count is how many rows the hold could not judge.
+func countUnknownPartiesBatch(ctx context.Context, tx pgx.Tx, in datatask.BatchIn) (datatask.BatchOut, error) {
+	if err := auth.RequireSystem(ctx); err != nil {
+		return datatask.BatchOut{}, err
 	}
-	var count int64
-	err := q.QueryRow(ctx, "SELECT count(*) FROM (SELECT a.id FROM activity a WHERE "+activities.MembersOnlyHoldable+" LIMIT @estimate_cap) candidates",
-		pgx.NamedArgs{"estimate_cap": maximum + 1}).Scan(&count)
-	return min(count, maximum), count > maximum, err
+	after, err := datatask.UUIDCursor(in.Cursor)
+	if err != nil {
+		return datatask.BatchOut{}, err
+	}
+	rows, err := tx.Query(ctx, `SELECT a.id `+membersOnlyMailFrom+`
+		   AND original.payload IS NULL AND a.id > @after_activity
+		 ORDER BY a.id LIMIT @page_size`,
+		pgx.NamedArgs{"after_activity": after, "page_size": in.Limit})
+	if err != nil {
+		return datatask.BatchOut{}, err
+	}
+	unknown, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return datatask.BatchOut{}, err
+	}
+	return datatask.AdvanceUUID(in, unknown, 0)
+}
+
+func estimateMembersOnlyMail(withOriginal bool) func(context.Context, datatask.Querier, int64) (int64, bool, error) {
+	return func(ctx context.Context, q datatask.Querier, maximum int64) (int64, bool, error) {
+		if err := auth.Require(ctx, "data_task", principal.ActionRead); err != nil {
+			return 0, false, err
+		}
+		var count int64
+		err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT a.id `+membersOnlyMailFrom+`
+			   AND (original.payload IS NOT NULL) = @with_original LIMIT @estimate_cap) candidates`,
+			pgx.NamedArgs{"with_original": withOriginal, "estimate_cap": maximum + 1}).Scan(&count)
+		return min(count, maximum), count > maximum, err
+	}
 }

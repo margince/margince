@@ -8,6 +8,7 @@ package compose
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -27,16 +28,32 @@ import (
 type colleagueMailFixture struct {
 	e                                    *integration.Env
 	colleagues, unstored, shared, manual ids.UUID
-	outside                              ids.UUID
+	outside, crowd, crowdUnstored        ids.UUID
+	crowdOfOutsiders                     ids.UUID
 }
 
-func colleagueMessage(key, from, to string) []byte {
+func colleagueMessage(key, from, to, cc string) []byte {
 	return []byte(strings.Join([]string{
-		"From: " + from, "To: " + to, "Subject: " + key,
+		"From: " + from, "To: " + to, "Cc: " + cc, "Subject: " + key,
 		"Date: " + time.Now().UTC().AddDate(0, 0, -3).Format(time.RFC1123Z),
 		"Message-ID: <" + key + "@members-task.test>",
 		"Content-Type: text/plain; charset=utf-8", "", "About " + key + ".", "",
 	}, "\r\n"))
+}
+
+// addresses names count parties at a domain, seating each as a member when
+// seated is set.
+func addresses(t *testing.T, e *integration.Env, prefix, domain string, count int, seated bool) string {
+	t.Helper()
+	out := make([]string, 0, count)
+	for i := range count {
+		address := fmt.Sprintf("%s%02d@%s", prefix, i, domain)
+		if seated {
+			e.WsExec(t, `INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Colleague')`, ids.NewV7(), address)
+		}
+		out = append(out, address)
+	}
+	return strings.Join(out, ", ")
 }
 
 func newColleagueMailFixture(t *testing.T) colleagueMailFixture {
@@ -45,28 +62,51 @@ func newColleagueMailFixture(t *testing.T) colleagueMailFixture {
 	f := colleagueMailFixture{e: e}
 	self := sharedMailbox(t, e, e.Rep1)
 	colleague := "b@authz.test"
-	for key, to := range map[string]string{
-		"colleagues": colleague, "unstored": colleague, "shared": colleague, "manual": colleague,
-		"outside": "dana@client.test",
+	// 48 more seats beside Rep2: 49 colleagues, under the participant cap.
+	team := addresses(t, e, "team", "authz.test", 48, true)
+	// Past the cap capture stamps none of these, so the stored rows name
+	// only the two ends while outsiders were on the mail.
+	crowd := addresses(t, e, "crowd", "authz.test", 30, false) + ", " + addresses(t, e, "guest", "client.test", 25, false)
+	for key, to := range map[string][2]string{
+		"colleagues": {colleague, ""}, "unstored": {colleague, ""}, "shared": {colleague, ""},
+		"manual": {colleague, ""}, "outside": {"dana@client.test", ""},
+		"crowd": {colleague, team}, "crowd-unstored": {colleague, team}, "crowd-of-outsiders": {colleague, crowd},
 	} {
-		captureMailVia(t, e, e.Rep1, "gmail", colleagueMessage(key, self, to))
+		captureMailVia(t, e, e.Rep1, "gmail", colleagueMessage(key, self, to[0], to[1]))
 	}
 	f.colleagues, f.unstored = activityBySubject(t, e, "colleagues"), activityBySubject(t, e, "unstored")
 	f.shared, f.manual = activityBySubject(t, e, "shared"), activityBySubject(t, e, "manual")
-	f.outside = activityBySubject(t, e, "outside")
-	for _, id := range []ids.UUID{f.colleagues, f.unstored, f.shared, f.manual} {
+	f.outside, f.crowd = activityBySubject(t, e, "outside"), activityBySubject(t, e, "crowd")
+	f.crowdUnstored, f.crowdOfOutsiders = activityBySubject(t, e, "crowd-unstored"), activityBySubject(t, e, "crowd-of-outsiders")
+	for _, id := range []ids.UUID{f.colleagues, f.unstored, f.shared, f.manual, f.crowd, f.crowdUnstored, f.crowdOfOutsiders} {
 		e.WsExec(t, `UPDATE activity SET audience = 'workspace', audience_reason = NULL WHERE id = $1`, id)
 		e.WsExec(t, `UPDATE capture_import SET posture_at_import = 'shared', verdict_reason = NULL, verdict_reasons = NULL
 		              WHERE activity_id = $1`, id)
 	}
 	e.WsExec(t, `UPDATE activity SET audience_reason = 'manual' WHERE id = $1`, f.manual)
 	e.WsExec(t, `UPDATE capture_import SET verdict_status = 'shared_by_owner' WHERE activity_id = $1`, f.shared)
-	// Retention erased this original, so the stamped participants stand in.
-	e.WsExec(t, `WITH gone AS (UPDATE activity SET raw_capture_id = NULL WHERE id = $1
-	              RETURNING source_system, source_id)
-	              DELETE FROM raw_capture rc USING gone
-	               WHERE rc.source_system = gone.source_system AND rc.source_id = gone.source_id`, f.unstored)
+	// Retention erased these originals; only the stamped rows are left.
+	for _, id := range []ids.UUID{f.unstored, f.crowdUnstored, f.crowdOfOutsiders} {
+		e.WsExec(t, `WITH gone AS (UPDATE activity SET raw_capture_id = NULL WHERE id = $1
+		              RETURNING source_system, source_id)
+		              DELETE FROM raw_capture rc USING gone
+		               WHERE rc.source_system = gone.source_system AND rc.source_id = gone.source_id`, id)
+	}
 	return f
+}
+
+// unknownParties is what the task reported as mail it could not judge.
+func (f colleagueMailFixture) unknownParties(t *testing.T) int64 {
+	t.Helper()
+	var scanned int64
+	if err := database.WithWorkspaceTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `SELECT scanned FROM data_task_run
+			 WHERE task_id = $1 AND step = 'count_mail_with_unknown_parties'`,
+			membersOnlyMailDataTask().ID).Scan(&scanned)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	return scanned
 }
 
 func (f colleagueMailFixture) audience(t *testing.T, id ids.UUID) (string, string) {
@@ -105,22 +145,34 @@ func TestTheMembersOnlyTaskHoldsColleaguesMailOnceAndLeavesPeoplesDecisions(t *t
 	outsideBefore, _ := f.audience(t, f.outside)
 	type writes struct{ audits, events int }
 	before := map[ids.UUID]writes{}
-	for _, id := range []ids.UUID{f.colleagues, f.unstored} {
+	for _, id := range []ids.UUID{f.colleagues, f.crowd} {
 		audits, events := f.audienceWrites(t, id)
 		before[id] = writes{audits, events}
 	}
 	ctx := principal.SystemActing(f.e.Admin(), "system:datatask-test")
 	runMachineAddressTask(ctx, t, f.e, membersOnlyMailDataTask())
 
-	for name, id := range map[string]ids.UUID{"from its original": f.colleagues, "from its stamped parties": f.unstored} {
+	for name, id := range map[string]ids.UUID{"two colleagues": f.colleagues, "49 colleagues": f.crowd} {
 		if got, reason := f.audience(t, id); got != "participants" || reason != activities.ReasonMembersOnly {
-			t.Errorf("colleagues' mail judged %s is %q / %q, want participants / members_only", name, got, reason)
+			t.Errorf("mail among %s is %q / %q, want participants / members_only", name, got, reason)
 		}
 		audits, events := f.audienceWrites(t, id)
 		if audits-before[id].audits != 1 || events-before[id].events != 1 {
-			t.Errorf("holding colleagues' mail judged %s wrote %d audit row(s) and %d event(s), want 1 and 1",
+			t.Errorf("holding mail among %s wrote %d audit row(s) and %d event(s), want 1 and 1",
 				name, audits-before[id].audits, events-before[id].events)
 		}
+	}
+	for name, id := range map[string]ids.UUID{
+		"colleagues' mail without its original":                    f.unstored,
+		"49 colleagues' mail without its original":                 f.crowdUnstored,
+		"mail whose crowded list capture dropped, outsiders on it": f.crowdOfOutsiders,
+	} {
+		if got, _ := f.audience(t, id); got != "workspace" {
+			t.Errorf("%s was judged on an incomplete party list: %q", name, got)
+		}
+	}
+	if got := f.unknownParties(t); got != 3 {
+		t.Errorf("the task reports %d mail(s) with unknown parties, want the 3 without an original", got)
 	}
 	if got, reason := f.audience(t, f.manual); got != "workspace" || reason != activities.ReasonManual {
 		t.Errorf("a human's decision moved to %q / %q", got, reason)
@@ -155,7 +207,7 @@ func TestTheMembersOnlyTaskRollsBackWithItsBatch(t *testing.T) {
 			return err
 		}
 		if out.Changed != 2 {
-			t.Errorf("the batch held %d row(s), want the two colleagues' mails", out.Changed)
+			t.Errorf("the batch held %d row(s), want the two colleagues' mails with an original", out.Changed)
 		}
 		return rollback
 	})
