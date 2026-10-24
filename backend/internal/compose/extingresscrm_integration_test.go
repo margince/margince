@@ -121,7 +121,7 @@ func TestAnUndeclaredKindIsRefusedAtTheCall(t *testing.T) {
 	}
 }
 
-func TestACompanyIsCreatedThenFilledByItsOutsideIdAndNeverOverwritten(t *testing.T) {
+func TestACompanyIsCreatedThenFilledByItsOutsideIdAndKeepsWhatAUserTyped(t *testing.T) {
 	e := setupCRMIngress(t)
 	first := e.mustIngest(t, companyRecord("acct-1", extension.CompanyFields{DisplayName: "Acme"}))
 	if first.Ref.Type != "company" {

@@ -23758,6 +23758,63 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
+  /extensions/{name}/settings:
+    get:
+      tags: [Extensions]
+      operationId: getExtensionSettings
+      security: [ { cookieAuth: [] } ]   # human session only — an operator console, not an agent surface
+      x-agent-access: human-only
+      summary: Read what the core does with a unit's feed. Needs the extension_access read grant.
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema: { type: string }
+          description: The unit name, as listed by `GET /extensions`.
+      responses:
+        '200':
+          description: The unit's settings; a unit nobody has configured reads the defaults.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExtensionSettings' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Extensions]
+      operationId: updateExtensionSettings
+      security: [ { cookieAuth: [] } ]   # human session only — an operator console, not an agent surface
+      x-agent-access: human-only
+      summary: Set what the core does with a unit's feed. Admin only.
+      description: |
+        Saves the governance settings of one composed unit. `overwrites_edited_fields` says
+        whether the unit's feed may overwrite a field of a company or deal that a user last
+        edited. It is off until an admin turns it on, so the feed leaves such a field as it is
+        and names it in `Result.Withheld`. The change is audited like any installation setting.
+
+        Admin only, human session only. An unknown unit name answers 404.
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema: { type: string }
+          description: The unit name, as listed by `GET /extensions`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ExtensionSettings' }
+      responses:
+        '200':
+          description: The saved settings.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExtensionSettings' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /teams:
     get:
       tags: [Identity]
@@ -53498,6 +53555,19 @@ components:
             with no handler ticks nothing and is deliberately absent, because an operator
             reading this list is asking what runs, not what was written down. Sorted.
           items: { type: string }
+
+    ExtensionSettings:
+      type: object
+      additionalProperties: false
+      required: [overwrites_edited_fields]
+      description: The governance settings of one composed extension unit.
+      properties:
+        overwrites_edited_fields:
+          type: boolean
+          description: >-
+            True when the unit's feed may overwrite a company or deal field that a user last
+            edited. False, the default, makes the feed leave such a field as it is and name it
+            in `Result.Withheld`.
 
     ComposedExtensionRoute:
       type: object

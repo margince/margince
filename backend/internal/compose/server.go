@@ -202,6 +202,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		captureHealthHandlers: captureHealthHandlers{
 			pool: pool, now: func() time.Time { return time.Now().UTC() },
 		},
+		extensionSettingsHandlers: extensionSettingsHandlers{store: NewSettingsStore(pool)},
 		extensionIngestHealthHandlers: extensionIngestHealthHandlers{
 			pool: pool, now: func() time.Time { return time.Now().UTC() },
 		},

@@ -11518,6 +11518,11 @@ export const de = {
   "extAccess.nobodyReads":
     "Jedes Mitglied sieht für diese Erweiterung eine leere Ansicht, da keine Rolle Lesezugriff auf {object} hat. Vergib unten mindestens einer Rolle das Leserecht.",
   "extAccess.matrixName": "Rollenzugriff auf {unit}",
+  "extGovernance.overwrite": "Von Nutzern bearbeitete Felder überschreiben",
+  "extGovernance.overwriteHint":
+    "Aus: Diese Erweiterung lässt ein Firmen- oder Deal-Feld, das zuletzt ein Nutzer bearbeitet hat, unverändert und meldet es als zurückgehalten. An: Sie ersetzt das Feld.",
+  "extGovernance.readOnly": "Diese Einstellung ändert ein Admin.",
+  "extGovernance.notSaved": "Einstellung wurde nicht gespeichert.",
   "users.empty": "Noch keine Mitglieder.",
   "users.inviteTitle": "Mitglied einladen",
   "users.teamsLabel": "Teams",

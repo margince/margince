@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { unwrap } from "./problem";
@@ -12,6 +12,38 @@ import { unwrap } from "./problem";
 export type ExtensionUnit = components["schemas"]["ComposedExtension"];
 
 export const EXTENSIONS_KEY = ["extension-access", "extensions"] as const;
+
+export type ExtensionSettings = components["schemas"]["ExtensionSettings"];
+
+const settingsKey = (unit: string) =>
+  ["extension-access", "settings", unit] as const;
+
+export function useExtensionSettings(unit: string, enabled: boolean) {
+  return useQuery({
+    queryKey: settingsKey(unit),
+    enabled,
+    queryFn: async () =>
+      unwrap(
+        await api.GET("/extensions/{name}/settings", {
+          params: { path: { name: unit } },
+        }),
+      ),
+  });
+}
+
+export function useUpdateExtensionSettings(unit: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: ExtensionSettings) =>
+      unwrap(
+        await api.PUT("/extensions/{name}/settings", {
+          params: { path: { name: unit } },
+          body,
+        }),
+      ),
+    onSuccess: (saved) => queryClient.setQueryData(settingsKey(unit), saved),
+  });
+}
 
 export function useExtensions(enabled: boolean) {
   return useQuery({

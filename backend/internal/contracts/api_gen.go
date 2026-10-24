@@ -37725,6 +37725,12 @@ type ExtensionIngestRefusal struct {
 // bug from "every record fails its key".
 type ExtensionIngestRefusalRefusal string
 
+// ExtensionSettings The governance settings of one composed extension unit.
+type ExtensionSettings struct {
+	// OverwritesEditedFields True when the unit's feed may overwrite a company or deal field that a user last edited. False, the default, makes the feed leave such a field as it is and name it in `Result.Withheld`.
+	OverwritesEditedFields bool `json:"overwrites_edited_fields"`
+}
+
 // ExtensionUnitIngestHealth defines model for ExtensionUnitIngestHealth.
 type ExtensionUnitIngestHealth struct {
 	LastRefusedAt *time.Time `json:"last_refused_at,omitempty"`
@@ -61790,6 +61796,9 @@ type ResolveEntitiesJSONRequestBody = EntityResolutionRequest
 // CreateFilteredExportJSONRequestBody defines body for CreateFilteredExport for application/json ContentType.
 type CreateFilteredExportJSONRequestBody = FilteredExportRequest
 
+// UpdateExtensionSettingsJSONRequestBody defines body for UpdateExtensionSettings for application/json ContentType.
+type UpdateExtensionSettingsJSONRequestBody = ExtensionSettings
+
 // PreviewFilterJSONRequestBody defines body for PreviewFilter for application/json ContentType.
 type PreviewFilterJSONRequestBody = FilterPreviewRequest
 
@@ -74211,6 +74220,12 @@ type ServerInterface interface {
 	// List the composed extension units and what each contributes. Human-only, read-only; needs the extension_access read grant.
 	// (GET /extensions)
 	ListExtensions(w http.ResponseWriter, r *http.Request)
+	// Read what the core does with a unit's feed. Needs the extension_access read grant.
+	// (GET /extensions/{name}/settings)
+	GetExtensionSettings(w http.ResponseWriter, r *http.Request, name string)
+	// Set what the core does with a unit's feed. Admin only.
+	// (PUT /extensions/{name}/settings)
+	UpdateExtensionSettings(w http.ResponseWriter, r *http.Request, name string)
 	// Per-field change history for one record, projected from audit_log before/after diffs.
 	// (GET /field-history)
 	GetFieldHistory(w http.ResponseWriter, r *http.Request, params GetFieldHistoryParams)
@@ -78264,6 +78279,18 @@ func (_ Unimplemented) ConnectExtOauth(w http.ResponseWriter, r *http.Request, p
 // List the composed extension units and what each contributes. Human-only, read-only; needs the extension_access read grant.
 // (GET /extensions)
 func (_ Unimplemented) ListExtensions(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read what the core does with a unit's feed. Needs the extension_access read grant.
+// (GET /extensions/{name}/settings)
+func (_ Unimplemented) GetExtensionSettings(w http.ResponseWriter, r *http.Request, name string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Set what the core does with a unit's feed. Admin only.
+// (PUT /extensions/{name}/settings)
+func (_ Unimplemented) UpdateExtensionSettings(w http.ResponseWriter, r *http.Request, name string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -100864,6 +100891,70 @@ func (siw *ServerInterfaceWrapper) ListExtensions(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// GetExtensionSettings operation middleware
+func (siw *ServerInterfaceWrapper) GetExtensionSettings(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", chi.URLParam(r, "name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetExtensionSettings(w, r, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateExtensionSettings operation middleware
+func (siw *ServerInterfaceWrapper) UpdateExtensionSettings(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "name" -------------
+	var name string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "name", chi.URLParam(r, "name"), &name, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "name", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateExtensionSettings(w, r, name)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetFieldHistory operation middleware
 func (siw *ServerInterfaceWrapper) GetFieldHistory(w http.ResponseWriter, r *http.Request) {
 
@@ -119943,6 +120034,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/extensions", wrapper.ListExtensions)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/extensions/{name}/settings", wrapper.GetExtensionSettings)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/extensions/{name}/settings", wrapper.UpdateExtensionSettings)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/field-history", wrapper.GetFieldHistory)

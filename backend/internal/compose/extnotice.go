@@ -36,7 +36,7 @@ var extensionNotices = ratelimit.New("extension-notice", ratelimit.FailClosed, e
 
 // noticeRecords are the record types a notice may be about: the identity tables
 // a reader opens by id.
-var noticeRecords = map[string]bool{"contact": true, "company": true, "deal": true}
+var noticeRecords = map[string]bool{string(recordTypeContact): true, string(recordTypeCompany): true, string(recordTypeDeal): true}
 
 //nolint:ireturn // returning the published repo IS the seam: a unit holds extension.NoticeRepo, never a core type.
 func (c extensionCore) Notices() extension.NoticeRepo { return extensionNoticeDoor{core: c} }

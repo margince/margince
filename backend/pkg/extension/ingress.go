@@ -459,6 +459,12 @@ type Result struct {
 	// on the participants" are different bugs, and Reason beside it cannot be
 	// grouped on because it is prose.
 	Refusal RecordRefusal
+	// Withheld names the fields of an accepted company or deal update that the
+	// core left as they were because a user last edited them (a deal's amount
+	// and currency are withheld together). Empty when the installation lets
+	// this unit overwrite such a field. It is not the Skipped disposition,
+	// which drops the whole record.
+	Withheld []string
 	// Reason says WHY, for the dispositions that are a refusal. It carries the
 	// core's complaint about an unrepresentable record so a unit can log the
 	// same sentence it used to read off the error — and it is empty for an

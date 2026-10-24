@@ -11539,6 +11539,11 @@ export const en = {
   "extAccess.nobodyReads":
     "No role has read access to {object}, so every member sees an empty screen for this extension. Grant read to at least one role below.",
   "extAccess.matrixName": "Role access to {unit}",
+  "extGovernance.overwrite": "Overwrite fields a user edited",
+  "extGovernance.overwriteHint":
+    "Off: this extension leaves a company or deal field that a user last edited as it is, and reports it as withheld. On: it replaces that field.",
+  "extGovernance.readOnly": "An admin changes this setting.",
+  "extGovernance.notSaved": "Setting was not saved.",
   "users.empty": "No members yet.",
   "users.inviteTitle": "Invite member",
   "users.teamsLabel": "Teams",

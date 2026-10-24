@@ -16189,6 +16189,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/extensions/{name}/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read what the core does with a unit's feed. Needs the extension_access read grant. */
+        get: operations["getExtensionSettings"];
+        /**
+         * Set what the core does with a unit's feed. Admin only.
+         * @description Saves the governance settings of one composed unit. `overwrites_edited_fields` says
+         *     whether the unit's feed may overwrite a field of a company or deal that a user last
+         *     edited. It is off until an admin turns it on, so the feed leaves such a field as it is
+         *     and names it in `Result.Withheld`. The change is audited like any installation setting.
+         *
+         *     Admin only, human session only. An unknown unit name answers 404.
+         */
+        put: operations["updateExtensionSettings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/teams": {
         parameters: {
             query?: never;
@@ -38987,6 +39013,11 @@ export interface components {
             routes: components["schemas"]["ComposedExtensionRoute"][];
             /** @description The scheduled jobs this boot actually RUNS for the unit — a job the unit declared with no handler ticks nothing and is deliberately absent, because an operator reading this list is asking what runs, not what was written down. Sorted. */
             jobs: string[];
+        };
+        /** @description The governance settings of one composed extension unit. */
+        ExtensionSettings: {
+            /** @description True when the unit's feed may overwrite a company or deal field that a user last edited. False, the default, makes the feed leave such a field as it is and name it in `Result.Withheld`. */
+            overwrites_edited_fields: boolean;
         };
         /** @description One published extension operation. */
         ComposedExtensionRoute: {
@@ -73024,6 +73055,63 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    getExtensionSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The unit name, as listed by `GET /extensions`. */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The unit's settings; a unit nobody has configured reads the defaults. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExtensionSettings"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    updateExtensionSettings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The unit name, as listed by `GET /extensions`. */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ExtensionSettings"];
+            };
+        };
+        responses: {
+            /** @description The saved settings. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ExtensionSettings"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
         };
     };
     listTeams: {

@@ -1863,6 +1863,14 @@ func (stubs) ListExtensions(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListExtensions")
 }
 
+func (stubs) GetExtensionSettings(w nethttp.ResponseWriter, r *nethttp.Request, name string) {
+	httperr.NotImplemented(w, r, "GetExtensionSettings")
+}
+
+func (stubs) UpdateExtensionSettings(w nethttp.ResponseWriter, r *nethttp.Request, name string) {
+	httperr.NotImplemented(w, r, "UpdateExtensionSettings")
+}
+
 func (stubs) GetFieldHistory(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetFieldHistoryParams) {
 	httperr.NotImplemented(w, r, "GetFieldHistory")
 }

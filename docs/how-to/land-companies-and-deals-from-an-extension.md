@@ -26,9 +26,9 @@ flowchart TD
     A[Record arrives] --> B{Source declared this kind?}
     B -- no --> X[Refused: ErrIngressNotDeclared]
     B -- yes --> C{Member holds a record with this outside id and may see it?}
-    C -- yes --> D[Fill empty fields, move stage if it differs]
+    C -- yes --> D[Write the fields no user edited, move stage if it differs]
     C -- no --> E{Company asks to adopt by domain and one hand-made company has it?}
-    E -- yes --> F[Stamp the outside id, fill empty fields]
+    E -- yes --> F[Stamp the outside id, write the fields no user edited]
     E -- no --> G[Create the record]
     G -- outside id taken by a record the member cannot see --> H[Fixed conflict]
     D --> I[Move the listed activities onto the record]
@@ -37,13 +37,29 @@ flowchart TD
 ```
 
 - **The pair is unique across the workspace.** `(source_system, source_id)` is one record, whoever may see it. A clash with a record the member may not see answers the same fixed conflict (`ErrConflict`) as any other taken pair. It reveals only that the pair is taken, and never the record, its owner or its name.
-- **Updates keep what a user typed.** The core fills a field only when it is empty. It does not rename a company or change a deal's value that already has one. A setting to overwrite is not built yet.
-- **Adopt keeps the user's values too.** A hand-made company that lists the domain gets the outside id and fills only its empty fields. A company that already has an outside id from another system is a conflict, never taken over. If more than one company lists the domain, the record is a conflict and nothing is adopted. A company the member may not see does not count as a match.
+- **Updates leave what a user edited.** The core writes the optional values you send, except a field a user last edited. It reads that from the audit trail, the same rule agents follow. The company fields it checks are `LegalName`, `Industry` and `Description`. The deal fields are `AmountMinor` and `Currency`. It never checks the stage.
+- **An amount and its currency go together.** If a user edited either one, even one you did not send, the core withholds both, so the user's amount is never re-priced in another currency.
+- **The withheld fields come back.** `Result.Withheld` lists them by name, for example `industry`, or `amount_minor` and `currency` together. It is empty when nothing was withheld. The record is still accepted: this is not the `Skipped` disposition, which drops the whole record.
+- **An admin can let a unit overwrite.** With the setting on, the core writes the field and `Withheld` stays empty. The core reads the setting on each call, before it checks the fields, so a change applies to the next record.
+- **Adopt leaves the user's values too.** A hand-made company that lists the domain gets the outside id, and a field a user typed is left as it is. A company that already has an outside id from another system is a conflict, never taken over. If more than one company lists the domain, the record is a conflict and nothing is adopted. A company the member may not see does not count as a match.
 - **Stage moves.** A move is the one change a unit may make. It runs through the deal's own move, so the exit criteria and the lost-reason rule apply. A lost stage without `LostReason` is refused as `ErrInvalid`. A win has no contract in Margince, so the core files it as an imported win.
 - **Rights.** Every call is checked against the member's live rights. Create, adopt, update, move and relink each need the member's grant on that object. A member without it gets `ErrForbidden`, and nothing is written.
 - **Relink keys.** A key that matches nothing the member may read is skipped. The list cannot be used to learn which activities exist. A list over 50 keys refuses the whole record, and an empty key does too.
 
 A feed that runs as a [service member](declare-a-service-member.md) holds create, read and update on companies and deals through the `service_ingest` role. A new installation gets the deal grant when the first service member is declared. An installation that already has the role gets it from a migration. The migration adds the deal grant only where the role holds the company grant and has no deal grant yet. If an admin changed the role by hand, check that it still holds create, read and update on deals. Without that grant a deal record is refused with `ErrForbidden`.
+
+## Let a unit overwrite edited fields
+
+An admin decides this for each extension. The default is to leave edited fields as they are.
+
+| What | Value |
+|---|---|
+| Where | Settings, Extensions, the unit's card, "Overwrite fields a user edited" |
+| Read | `GET /v1/extensions/{name}/settings`, needs the `extension_access` read grant |
+| Change | `PUT /v1/extensions/{name}/settings` with `{"overwrites_edited_fields": true}`; admin only, a signed-in user only |
+| Unknown unit name | 404 |
+| Stored as | one setting, `identity.extension_overwrites_edited_fields`, a map from unit name to true or false; a unit not in the map reads false |
+| Audit | each change writes an `update` entry on `installation_settings` with the old and new map |
 
 ## Run it twice
 

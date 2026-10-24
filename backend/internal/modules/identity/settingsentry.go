@@ -16,11 +16,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"slices"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/settings"
@@ -213,10 +215,56 @@ var Country = config.DefineStored(config.Spec[string]{
 	// is inferable from the rules its own outbound mail obeys.
 }, config.Store{RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, MachineryApplied: true, SurvivesDataReset: true})
 
+// ExtensionOverwritesEditedFields holds, per composed unit name, whether that
+// unit's feed may overwrite a field a user last edited. A unit absent from
+// the map reads false: the feed leaves what a user edited and reports it.
+//
+// Machinery-applied because the ingress landing reads it under the feed's own
+// service-member authority, which holds no installation_settings grant; the
+// value shapes how the write behaves and is answered to no one.
+var ExtensionOverwritesEditedFields = settings.Define[map[string]bool](
+	"identity.extension_overwrites_edited_fields", installationSettingsObject, installationAuditVerb, map[string]bool{}, nil,
+).MachineryApplied()
+
+// ExtensionOverwritesEditedFieldsOf answers whether one unit may overwrite a
+// field a user last edited, through the settings read gate.
+func ExtensionOverwritesEditedFieldsOf(ctx context.Context, store *settings.Store, unit string) (bool, error) {
+	perUnit, err := settings.Get(ctx, store, ExtensionOverwritesEditedFields)
+	return perUnit[unit], err
+}
+
+// SetExtensionOverwritesEditedFields saves one unit's choice and keeps every
+// other unit's. An admin's act alone: it decides whether a feed may undo what
+// a colleague typed. The map is read under the write lock so two admins
+// changing two units cannot lose one change.
+func SetExtensionOverwritesEditedFields(ctx context.Context, store *settings.Store, unit string, on bool) error {
+	if err := auth.RequireAdmin(ctx); err != nil {
+		return err
+	}
+	return store.WriteTx(ctx, func(tx pgx.Tx) error {
+		if err := settings.LockForWrite(ctx, tx, ExtensionOverwritesEditedFields.Key()); err != nil {
+			return err
+		}
+		perUnit, err := settings.ApplyTx(ctx, tx, ExtensionOverwritesEditedFields)
+		if err != nil {
+			return err
+		}
+		next := maps.Clone(perUnit)
+		if next == nil {
+			next = map[string]bool{}
+		}
+		next[unit] = on
+		return settings.SetTx(ctx, store, tx, ExtensionOverwritesEditedFields, next)
+	})
+}
+
 // Definitions is identity's share of the settings registry that the
 // configuration registry does not hold.
 func Definitions() []settings.Definition {
-	return []settings.Definition{Timezone, BaseCurrency, AgentWindowNextHours, AgentWindowNextFrom, SMTPPasswordRef, LicenseTokenRef}
+	return []settings.Definition{
+		Timezone, BaseCurrency, AgentWindowNextHours, AgentWindowNextFrom, SMTPPasswordRef, LicenseTokenRef,
+		ExtensionOverwritesEditedFields,
+	}
 }
 
 // Settings is identity's contribution to the configuration registry.
