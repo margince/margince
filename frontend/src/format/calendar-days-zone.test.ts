@@ -15,7 +15,7 @@ import { filesUnder, parseSource } from "../../scripts/lib/source-tree";
 // count in UTC that tsc cannot see. One is passing the literal "UTC". The other
 // is flooring a millisecond span to days by hand (`Math.floor(x / 86_400_000)`)
 // outside the one module that owns the rule. Like zone-by-purpose.test.ts, it reads every
-// file through the parser, so a new screen is gated the day it lands.
+// file and parses every file whose text can hold a finding. A new screen is gated the day it lands.
 
 const srcRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const owner = join(srcRoot, "format", "format.dates.ts");
@@ -77,6 +77,20 @@ function sourcesUnderTest(): string[] {
   );
 }
 
+// Every finding has `Math.floor` or `calendarDaysBetween` in its raw text. A `\u`
+// escape can spell the call name, and numeric literals take many forms, so no number form is matched.
+function mayHoldFinding(text: string): boolean {
+  return (
+    text.includes("Math.floor") ||
+    text.includes("calendarDaysBetween") ||
+    text.includes("\\u")
+  );
+}
+
+function findingsIn(path: string, text: string): string[] {
+  return mayHoldFinding(text) ? zonelessDayCounts(parseSource(path, text)) : [];
+}
+
 function parsed(path: string): ts.SourceFile {
   return parseSource(path, readFileSync(path, "utf8"));
 }
@@ -92,7 +106,7 @@ describe("a day count names its zone", () => {
   it("finds no count in UTC beside a zoned date", () => {
     const findings = sourcesUnderTest()
       .filter((path) => !(relative(srcRoot, path) in elapsedSpans))
-      .flatMap((path) => zonelessDayCounts(parsed(path)));
+      .flatMap((path) => findingsIn(path, readFileSync(path, "utf8")));
     expect(findings).toEqual([]);
   });
 
@@ -109,15 +123,23 @@ describe("a day count names its zone", () => {
     ["a UTC literal", 'calendarDaysBetween(a, b, "UTC");'],
     ["a hand floor", "Math.floor(a.getTime() / 86_400_000);"],
     ["a named hand floor", "Math.floor(a / DAY_MS);"],
+    ["a separated hand floor", "Math.floor(a / 86_400_000);"],
+    ["an exponent floor", "Math.floor(a / 8.64e7);"],
+    ["a hex floor", "Math.floor(a / 0x5265C00);"],
+    ["a binary floor", "Math.floor(a / 0b101001001100101110000000000);"],
+    ["an escaped call name", "calendar\\u0044aysBetween(a, b);"],
+    ["an escaped day constant", "Math.floor(a / DAY\\u005fMS);"],
   ])("sees %s", (_name, body) => {
-    expect(zonelessDayCounts(parseSource("seed.ts", body))).toHaveLength(1);
+    expect(findingsIn("seed.ts", body)).toHaveLength(1);
+  });
+
+  it("skips text that holds no place for a finding", () => {
+    expect(mayHoldFinding("const days = 7;")).toBe(false);
   });
 
   it("passes a zoned call", () => {
-    expect(
-      zonelessDayCounts(
-        parseSource("seed.ts", "calendarDaysBetween(a, b, zone);"),
-      ),
-    ).toEqual([]);
+    expect(findingsIn("seed.ts", "calendarDaysBetween(a, b, zone);")).toEqual(
+      [],
+    );
   });
 });
