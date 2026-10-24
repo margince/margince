@@ -345,12 +345,29 @@ func TestMailRanksABoundedSampleAndRecordsRankEveryMatch(t *testing.T) {
 func TestOnlyAWholeIdentifierRaisesTheScore(t *testing.T) {
 	t.Parallel()
 	b := searchBranch{identifier: storekit.ContactEmails}
-	pos := func() int { return 4 }
+	pos := func(bool) int { return 4 }
 
 	if match := b.ownMatch("c", "q", pos); !strings.Contains(match, "LIKE") {
 		t.Errorf("the match no longer finds a fragment of an address: %s", match)
 	}
 	if score := b.ownScore("c", "1", pos); strings.Contains(score, "LIKE") {
 		t.Errorf("a fragment of an address raises the score: %s", score)
+	}
+}
+
+// A pasted address finds a company by its domain and a lead by its address, as
+// the entity lists do.
+func TestIdentifierBinderAndLeadBranch(t *testing.T) {
+	t.Parallel()
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	bind := bindIdentifier("weber@exam", arg)
+	if whole, domain := bind(false), bind(true); whole == domain || args[domain-1] != "exam" || args[whole-1] != "weber@exam" {
+		t.Errorf("binder bound %v (whole %d, domain %d)", args, whole, domain)
+	}
+	for _, b := range searchBranches {
+		if b.entity == "lead" && b.identifier != storekit.LeadEmails {
+			t.Errorf("the lead branch does not search the lead address")
+		}
 	}
 }

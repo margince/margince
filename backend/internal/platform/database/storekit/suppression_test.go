@@ -100,3 +100,12 @@ func TestAnIdentifierHasAnExactArmAndAnEscapedContainsArm(t *testing.T) {
 		t.Errorf("MatchSQL must be both arms: %s", match)
 	}
 }
+
+func TestDomainTermTakesThePartAfterTheAt(t *testing.T) {
+	t.Parallel()
+	for in, want := range map[string]string{"a@example.com": "example.com", "weber@exam": "exam", "example": "example", "a@": "a@"} {
+		if got := DomainTerm(in); got != want {
+			t.Errorf("DomainTerm(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

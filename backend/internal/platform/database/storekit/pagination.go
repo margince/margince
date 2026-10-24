@@ -5,6 +5,7 @@ package storekit
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -203,6 +204,16 @@ var (
 	CompanyDomains = Identifier{Table: "company_domain", FK: "company_id", Column: "domain"}
 	LeadEmails     = Identifier{Table: "lead", FK: "id", Column: "email"}
 )
+
+// DomainTerm is the part of a pasted address after the "@", or the query as it
+// is when there is none. A company is found by its domain, so a sender's
+// address finds the account as readily as the bare domain does.
+func DomainTerm(q string) string {
+	if _, domain, found := strings.Cut(q, "@"); found && domain != "" {
+		return domain
+	}
+	return q
+}
 
 // ExactSQL is true when a live identifier row of the record equals the query at
 // pos. The ARRAY is built once, so the primary key joins the bitmap union over
