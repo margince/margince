@@ -159,6 +159,10 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	// the week closed, which is a different question from the one the row
 	// answers.
 	"internal/compose/weekly:readDrivers": "the bridge's frozen drivers: labels written when the review was, no live record joined, the review already scoped to the acting rep — and the deals were chosen under the rep's own scope clause by the seam that froze them",
+	// The lead-move counting rule is a SQL fragment over a relation of lead ids
+	// its caller supplies. scoreLeads and the reporting catalog's reader both
+	// build that relation under auth.ScopeClauseFor for lead.
+	"internal/compose/weekly:LeadMovesSQL": "the shared lead-move rule reads only the leads its caller passes, and both callers narrow them by the lead row scope first",
 
 	// The buying-role reading's pre-write committee check. It asks whether a
 	// seat would SECOND an answer somebody has already given, and a seat the

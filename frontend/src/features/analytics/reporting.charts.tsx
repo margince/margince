@@ -42,7 +42,12 @@ export function ReportingCharts({
   // Set while the page shows the report as a role reads it.
   rolePreview?: boolean;
 }>) {
+  const t = useT();
   const charts = pageCharts(evaluation);
+  // Said once for the page: on every card it would repeat one fact many times.
+  const withheld =
+    evaluation.metrics.some((metric) => metric.coverage.withheld) ||
+    evaluation.charts.some((chart) => chart.coverage.withheld);
   const sections: readonly LaidOutSection[] = evaluation.selection.layout
     ? laidOut(evaluation.selection.layout, charts)
     : [{ items: charts.map((chart) => ({ chart, full: false })) }];
@@ -50,6 +55,7 @@ export function ReportingCharts({
     <div className="reporting-results">
       <WrittenSummary evaluation={evaluation} />
       <ResultsSummary evaluation={evaluation} onEvidence={onEvidence} />
+      {withheld && <p className="t-caption">{t("reporting.withheld")}</p>}
       {afterSummary}
       {sections.map((section) => (
         <ChartSection

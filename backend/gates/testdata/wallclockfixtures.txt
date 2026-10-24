@@ -267,6 +267,7 @@ internal/compose/recoveryhealth_integration_test.go 2
 internal/compose/relationshiphealth_integration_test.go 1
 internal/compose/report_dealsbystage_integration_test.go 1
 internal/compose/reporting_bench_test.go 1
+internal/compose/reporting_sections_integration_test.go 4
 internal/compose/requestsettleoffthread_integration_test.go 5
 internal/compose/restoredrill_integration_test.go 7
 internal/compose/retentiongraph_integration_test.go 1

@@ -107,12 +107,12 @@ func (m answerMoney) of(measure analyticsquery.Measure, row map[string]any) (uni
 		if own == "" {
 			return "", "", "mixed_currency"
 		}
-		return "minor_units", own, "ok"
+		return reportingMinorUnits, own, "ok"
 	}
 	if m.base == "" {
 		return "", "", "no_base_currency"
 	}
-	return "minor_units", m.base, "ok"
+	return reportingMinorUnits, m.base, "ok"
 }
 
 // groupLabel names a row by its group keys, a company or project by the name

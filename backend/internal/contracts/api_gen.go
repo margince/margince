@@ -15856,6 +15856,7 @@ func (e ReportScopeKind) Valid() bool {
 // Defines values for ReportingBlockKind.
 const (
 	ReportingBlockKindBookingsTrend     ReportingBlockKind = "bookings_trend"
+	ReportingBlockKindBreakdown         ReportingBlockKind = "breakdown"
 	ReportingBlockKindForecastSupport   ReportingBlockKind = "forecast_support"
 	ReportingBlockKindMetricReading     ReportingBlockKind = "metric_reading"
 	ReportingBlockKindOwnerAttainment   ReportingBlockKind = "owner_attainment"
@@ -15870,6 +15871,8 @@ const (
 func (e ReportingBlockKind) Valid() bool {
 	switch e {
 	case ReportingBlockKindBookingsTrend:
+		return true
+	case ReportingBlockKindBreakdown:
 		return true
 	case ReportingBlockKindForecastSupport:
 		return true
@@ -15913,6 +15916,7 @@ func (e ReportingCardWidth) Valid() bool {
 // Defines values for ReportingCardKind.
 const (
 	ReportingCardKindBookingsTrend     ReportingCardKind = "bookings_trend"
+	ReportingCardKindBreakdown         ReportingCardKind = "breakdown"
 	ReportingCardKindForecastSupport   ReportingCardKind = "forecast_support"
 	ReportingCardKindMetricReading     ReportingCardKind = "metric_reading"
 	ReportingCardKindOwnerAttainment   ReportingCardKind = "owner_attainment"
@@ -15928,6 +15932,8 @@ const (
 func (e ReportingCardKind) Valid() bool {
 	switch e {
 	case ReportingCardKindBookingsTrend:
+		return true
+	case ReportingCardKindBreakdown:
 		return true
 	case ReportingCardKindForecastSupport:
 		return true
@@ -16072,8 +16078,16 @@ const (
 	ReportingMetricIDBookingsWon              ReportingMetricID = "bookings_won"
 	ReportingMetricIDClosedWinRate            ReportingMetricID = "closed_win_rate"
 	ReportingMetricIDForecastLanding          ReportingMetricID = "forecast_landing"
+	ReportingMetricIDLeadFirstResponse        ReportingMetricID = "lead_first_response"
+	ReportingMetricIDLeadStatusMoves          ReportingMetricID = "lead_status_moves"
+	ReportingMetricIDLeadsCreated             ReportingMetricID = "leads_created"
+	ReportingMetricIDLeadsPromoted            ReportingMetricID = "leads_promoted"
 	ReportingMetricIDMeetingsHeld             ReportingMetricID = "meetings_held"
 	ReportingMetricIDOpenPipeline             ReportingMetricID = "open_pipeline"
+	ReportingMetricIDPartnerActivity          ReportingMetricID = "partner_activity"
+	ReportingMetricIDPartnerCommission        ReportingMetricID = "partner_commission"
+	ReportingMetricIDPartnerPipeline          ReportingMetricID = "partner_pipeline"
+	ReportingMetricIDPartnerWon               ReportingMetricID = "partner_won"
 	ReportingMetricIDQualifiedPipelineCreated ReportingMetricID = "qualified_pipeline_created"
 	ReportingMetricIDStageAge                 ReportingMetricID = "stage_age"
 )
@@ -16089,9 +16103,25 @@ func (e ReportingMetricID) Valid() bool {
 		return true
 	case ReportingMetricIDForecastLanding:
 		return true
+	case ReportingMetricIDLeadFirstResponse:
+		return true
+	case ReportingMetricIDLeadStatusMoves:
+		return true
+	case ReportingMetricIDLeadsCreated:
+		return true
+	case ReportingMetricIDLeadsPromoted:
+		return true
 	case ReportingMetricIDMeetingsHeld:
 		return true
 	case ReportingMetricIDOpenPipeline:
+		return true
+	case ReportingMetricIDPartnerActivity:
+		return true
+	case ReportingMetricIDPartnerCommission:
+		return true
+	case ReportingMetricIDPartnerPipeline:
+		return true
+	case ReportingMetricIDPartnerWon:
 		return true
 	case ReportingMetricIDQualifiedPipelineCreated:
 		return true
@@ -47891,7 +47921,9 @@ type ReportVocabulary struct {
 	Vocabulary map[string]interface{} `json:"vocabulary"`
 }
 
-// ReportingBlockKind defines model for ReportingBlockKind.
+// ReportingBlockKind `breakdown` splits one metric's figure into named groups: a lead's origin,
+// the status a lead moved to, a partner and whether it sourced or influenced
+// the deal, or whether a partner is active.
 type ReportingBlockKind string
 
 // ReportingCaptureContext defines model for ReportingCaptureContext.
@@ -47971,15 +48003,19 @@ type ReportingChart struct {
 	ContextId            string                  `json:"context_id"`
 	Coverage             ReportingCoverage       `json:"coverage"`
 	Interval             *ReportingWindow        `json:"interval,omitempty"`
-	Kind                 ReportingBlockKind      `json:"kind"`
-	Marker               *float64                `json:"marker,omitempty"`
-	Metric               ReportingMetricID       `json:"metric"`
-	Opening              *float64                `json:"opening,omitempty"`
-	OpeningSnapshotId    *openapi_types.UUID     `json:"opening_snapshot_id,omitempty"`
-	Points               []ReportingPoint        `json:"points"`
-	SnapshotId           *openapi_types.UUID     `json:"snapshot_id,omitempty"`
-	StateAt              *time.Time              `json:"state_at,omitempty"`
-	Unit                 string                  `json:"unit"`
+
+	// Kind `breakdown` splits one metric's figure into named groups: a lead's origin,
+	// the status a lead moved to, a partner and whether it sourced or influenced
+	// the deal, or whether a partner is active.
+	Kind              ReportingBlockKind  `json:"kind"`
+	Marker            *float64            `json:"marker,omitempty"`
+	Metric            ReportingMetricID   `json:"metric"`
+	Opening           *float64            `json:"opening,omitempty"`
+	OpeningSnapshotId *openapi_types.UUID `json:"opening_snapshot_id,omitempty"`
+	Points            []ReportingPoint    `json:"points"`
+	SnapshotId        *openapi_types.UUID `json:"snapshot_id,omitempty"`
+	StateAt           *time.Time          `json:"state_at,omitempty"`
+	Unit              string              `json:"unit"`
 }
 
 // ReportingComparison defines model for ReportingComparison.

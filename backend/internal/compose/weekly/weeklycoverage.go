@@ -220,7 +220,7 @@ func readFigureStarts(ctx context.Context, tx pgx.Tx, owners []ids.UUID, asOf ti
 		  (SELECT min(LEAST(m.created_at, m.occurred_at)) FROM activity m
 		    WHERE m.kind = 'meeting' AND m.archived_at IS NULL AND %[4]s AND (%[5]s)),
 		  (SELECT min(COALESCE(l.routed_at, l.created_at)) FROM lead l
-		    WHERE l.owner_id = %[1]s AND l.archived_at IS NULL AND `+nonImportedLeadSQL+` AND (%[6]s))`,
+		    WHERE l.owner_id = %[1]s AND l.archived_at IS NULL AND `+NonImportedLeadSQL+` AND (%[6]s))`,
 		owned, orUnbounded(dealScope), taskScope, meetingIsTheirsSQL(owned), meetingScope,
 		leadScope, current), args...).
 		Scan(&s.deals, &s.tasks, &s.meetings, &s.leads)
