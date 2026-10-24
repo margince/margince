@@ -327,6 +327,7 @@ describe("the timeline", () => {
           ...VIEW,
           last_inbound_at: "2026-08-01T09:00:00Z",
           last_outbound_at: "2026-07-20T09:00:00Z",
+          last_contact_at: "2026-08-01T09:00:00Z",
         },
         words,
       ),
@@ -335,6 +336,20 @@ describe("the timeline", () => {
       title: "12 days",
       sub: "no reply",
     });
+  });
+
+  it("counts the silence from a meeting, not only from the last message", () => {
+    expect(
+      contactGap(
+        {
+          ...VIEW,
+          last_inbound_at: "2026-07-20T09:00:00Z",
+          last_outbound_at: "2026-07-25T09:00:00Z",
+          last_contact_at: "2026-08-05T09:00:00Z",
+        },
+        words,
+      )?.title,
+    ).toBe("8 days");
   });
 });
 

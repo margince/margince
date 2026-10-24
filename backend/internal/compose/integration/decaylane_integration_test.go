@@ -145,10 +145,12 @@ func TestBatchedChangesAdmitOnlyReadableContacts(t *testing.T) {
 	store := contacts.NewStore(e.DB())
 	var changed []contacts.ContactChanges
 	err := database.WithWorkspaceTx(rep, e.Pool, func(tx pgx.Tx) error {
-		var err error
-		changed, err = store.RelationshipChangesForContacts(rep, tx,
-			[]ids.ContactID{ids.From[ids.ContactKind](mine), ids.From[ids.ContactKind](theirs)},
-			time.Now().UTC())
+		candidates := []ids.ContactID{ids.From[ids.ContactKind](mine), ids.From[ids.ContactKind](theirs)}
+		touches, zone, err := contactTouches(rep, tx, candidates...)
+		if err != nil {
+			return err
+		}
+		changed, err = store.RelationshipChangesForContacts(rep, tx, candidates, time.Now().UTC(), touches, zone)
 		return err
 	})
 	if err != nil {
