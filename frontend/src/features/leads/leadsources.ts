@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "../api/client";
-import type { components } from "../api/schema";
-import { LEAD_LIST_KEY } from "./leadkeys";
-import { throwProblem, unwrap } from "./problem";
+import { api } from "../../api/client";
+import type { components } from "../../api/schema";
+import { LEAD_LIST_KEY } from "../../lib/leadkeys";
+import { throwProblem, unwrap } from "../../lib/problem";
 
 // Lead handling read from the server: the reasons a lead may be closed with,
 // and whether the first-response target is tracked at all. Where a lead came

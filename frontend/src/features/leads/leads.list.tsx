@@ -32,7 +32,6 @@ import {
   originPickOptions,
   useLeadOrigins,
 } from "../../lib/leadorigins";
-import { useLeadSettings } from "../../lib/leadsources";
 import { unwrap } from "../../lib/problem";
 import { useRecordZone } from "../../lib/recordzone";
 import { useMe } from "../../lib/session";
@@ -44,6 +43,7 @@ import { LeadBulkBar } from "./leadbulk";
 import { LEAD_STATUS_FILTER_OPTIONS, LeadBoard } from "./leadpresentation";
 import { leadColumns } from "./leads.columns";
 import { leadIdentityFields } from "./leads.contactoffers";
+import { useLeadSettings } from "./leadsources";
 import "./leads.css";
 import { createLead, UNASSIGNED_OWNER } from "./leads.list.queries";
 
