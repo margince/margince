@@ -51,6 +51,10 @@ type ResolveScopeFunc func(ctx context.Context, tx pgx.Tx, requested Scope) (Sco
 // before any of it reaches the arithmetic.
 type HistoryFunc func(ctx context.Context, tx pgx.Tx, period Period, scope Scope, asOf time.Time, baseCurrency string) (ConversionHistory, error)
 
+// HoldsDealsFunc answers whether the population a reading is about holds any
+// deal at all, with the same population clause the reading's deals used.
+type HoldsDealsFunc func(ctx context.Context, tx pgx.Tx, scope Scope) (bool, error)
+
 // MeasureFunc reads which remaining-pipeline reading this installation builds
 // its landing from.
 type MeasureFunc func(ctx context.Context, tx pgx.Tx) (ForwardMeasure, error)
@@ -63,17 +67,18 @@ type Handlers struct {
 	resolve ResolveScopeFunc
 	history HistoryFunc
 	measure MeasureFunc
+	holds   HoldsDealsFunc
 	now     func() time.Time
 }
 
 // NewHandlers binds the routes to the store and its seams.
 func NewHandlers(
 	store *Store, deals DealsFunc, period PeriodFunc, resolve ResolveScopeFunc,
-	history HistoryFunc, measure MeasureFunc, now func() time.Time,
+	history HistoryFunc, measure MeasureFunc, holds HoldsDealsFunc, now func() time.Time,
 ) Handlers {
 	return Handlers{
 		store: store, deals: deals, period: period, resolve: resolve,
-		history: history, measure: measure, now: now,
+		history: history, measure: measure, holds: holds, now: now,
 	}
 }
 
@@ -125,6 +130,11 @@ func (h Handlers) GetForecast(
 		}
 		out = ReadingsToWire(period, scope, readings, baseCurrency, at)
 		out.ScopeLimited = &limited
+		holds, err := h.holds(ctx, tx, scope)
+		if err != nil {
+			return err
+		}
+		out.ScopeHoldsDeals = &holds
 		refs, err := h.store.SnapshotRefsTx(ctx, tx, period, scope, baseCurrency)
 		if err != nil {
 			return err

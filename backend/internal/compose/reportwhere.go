@@ -106,8 +106,8 @@ func buildReportWhere(
 			where = append(where, population)
 		}
 	}
-	owners, narrowed, err := ownerBreakdownClause(ctx, tx, spec,
-		requested.Kind == "" && breaksDownByOwner(spec, req.GroupBy) && !pinsOwner(spec, filterKeys), arg)
+	owners, narrowed, err := ownerBreakdownClause(ctx, tx, spec, requested,
+		narrowsOwnerBreakdown(requested, breaksDownByOwner(spec, req.GroupBy), pinsOwner(spec, filterKeys)), arg)
 	if err != nil {
 		return nil, "", err
 	}
@@ -203,9 +203,10 @@ func specNarrowings(
 			out = append(out, population)
 		}
 	}
-	// A named scope already sits inside the caller's lens, so only an
-	// unscoped breakdown by owner is narrowed further.
-	owners, narrowed, err := ownerBreakdownClause(ctx, tx, spec, breakdown && !namedScope, arg)
+	// An owner scope already sits inside the caller's lens; any other
+	// request is narrowed further when it splits the answer per owner.
+	owners, narrowed, err := ownerBreakdownClause(ctx, tx, spec, requested,
+		narrowsOwnerBreakdown(requested, breakdown, false), arg)
 	if err != nil {
 		return nil, "", err
 	}

@@ -29,18 +29,15 @@ func factVisibilityKey(fact reporting.Fact) reportingVisibilityKey {
 }
 
 func (a reportingAuthority) Visible(ctx context.Context, tx pgx.Tx, facts []reporting.Fact) ([]reporting.Fact, bool, error) {
-	members, err := a.Members(ctx, tx)
-	if err != nil {
-		return nil, false, err
-	}
-	actor, ok := principal.Actor(ctx)
-	if !ok {
+	if _, ok := principal.Actor(ctx); !ok {
 		return nil, false, apperrors.ErrPermissionDenied
 	}
-	all := auth.Unbounded(actor) || actor.Permissions.RowScope == principal.RowScopeAll
+	if err := markOwnerWithheld(ctx, tx, facts); err != nil {
+		return nil, false, err
+	}
 	groups := map[reportingVisibilityKey][]ids.UUID{}
 	for _, fact := range facts {
-		if fact.SourceType != reportingForecastProjection && (all || slices.Contains(members, fact.OwnerID)) {
+		if fact.SourceType != reportingForecastProjection {
 			key := factVisibilityKey(fact)
 			groups[key] = append(groups[key], fact.SourceID)
 		}
@@ -61,7 +58,7 @@ func (a reportingAuthority) Visible(ctx context.Context, tx pgx.Tx, facts []repo
 			projections = append(projections, fact)
 			continue
 		}
-		if (!all && !slices.Contains(members, fact.OwnerID)) || !visible[factVisibilityKey(fact)][fact.SourceID] {
+		if !visible[factVisibilityKey(fact)][fact.SourceID] {
 			withheld = true
 			continue
 		}
@@ -162,4 +159,26 @@ func reportingSourceScope(ctx context.Context, key reportingVisibilityKey, b *re
 		}
 	}
 	return clause, nil
+}
+
+// markOwnerWithheld sets OwnerWithheld on every fact whose owner is not a
+// person the reader may measure. It is the one rule live readings and frozen
+// editions share: a total counts the fact, an owner breakdown skips it. A fact
+// with no owner names no person, so nothing is withheld on it.
+func markOwnerWithheld(ctx context.Context, tx pgx.Tx, facts []reporting.Fact) error {
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return apperrors.ErrPermissionDenied
+	}
+	if auth.Unbounded(actor) || actor.Permissions.RowScope == principal.RowScopeAll {
+		return nil
+	}
+	members, err := (reportingAuthority{}).Members(ctx, tx)
+	if err != nil {
+		return err
+	}
+	for i := range facts {
+		facts[i].OwnerWithheld = !facts[i].OwnerID.IsZero() && !slices.Contains(members, facts[i].OwnerID)
+	}
+	return nil
 }

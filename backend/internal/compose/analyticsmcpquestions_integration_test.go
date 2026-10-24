@@ -15,6 +15,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"testing"
 
@@ -187,27 +188,40 @@ func proveG01OwnPipeline(t *testing.T) {
 	}
 }
 
-// G02: Show me the whole company's pipeline by owner. Refused, not narrowed:
-// a caller who asserts a wider population and is quietly given a smaller one
-// cannot tell the answer from a genuinely small pipeline.
+// G02: Show me the whole company's pipeline by owner. The company total is
+// open to every seat; the split by owner is cut to the owners the rep may
+// measure and says so, so a small answer is never mistaken for a small pipeline.
 func proveG02WorkspaceRefused(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)
 	for range 6 {
 		e.seedOpenDeal(t, "Somebody's", 20, &e.Rep3, &amount, nil)
 	}
-	// The admit arm first: the SAME question without the workspace assertion
-	// answers, so the refusal below cannot be a validation failure wearing the
-	// gate's clothes.
-	if _, err := askTool(e.ownLensRepCtx(e.Rep1), t, e,
-		`{"entity":"pipeline-current","measures":[{"fn":"count","as":"deals"}]}`); err != nil {
-		t.Fatalf("the rep's own question was refused, so the workspace refusal below proves nothing: %v", err)
-	}
-	_, err := askTool(e.ownLensRepCtx(e.Rep1), t, e,
+	total, err := askTool(e.ownLensRepCtx(e.Rep1), t, e,
 		`{"entity":"pipeline-current","measures":[{"fn":"count","as":"deals"}],"scope_kind":"workspace"}`)
+	if err != nil {
+		t.Fatalf("a rep asking for the company total was refused: %v", err)
+	}
+	if len(total.Rows) != 1 || toolRow(t, total.Rows[0])["deals"] != float64(6) {
+		t.Fatalf("the company total must count every deal, got %s", total.Rows)
+	}
+	byOwner, err := askTool(e.ownLensRepCtx(e.Rep1), t, e,
+		`{"entity":"pipeline-current","group_by":["owner_id"],"measures":[{"fn":"count","as":"deals"}],"scope_kind":"workspace"}`)
+	if err != nil {
+		t.Fatalf("the owner split was refused instead of narrowed: %v", err)
+	}
+	if byOwner.PopulationNarrowed == nil || *byOwner.PopulationNarrowed != narrowedToMeasurableOwners {
+		t.Fatalf("the owner split must announce its narrowing, got %v", byOwner.PopulationNarrowed)
+	}
+	for _, raw := range byOwner.Rows {
+		if toolRow(t, raw)["owner_id"] == e.Rep3.String() {
+			t.Fatalf("the split names an owner the rep may not measure: %s", raw)
+		}
+	}
+	_, err = askTool(e.ownLensRepCtx(e.Rep1), t, e, fmt.Sprintf(
+		`{"entity":"pipeline-current","measures":[{"fn":"count","as":"deals"}],"scope_kind":"workspace","filters":[{"field":"owner_id","op":"eq","value":%q}]}`, e.Rep3))
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Fatalf("a rep asking for the workspace got %v, want the permission sentinel — "+
-			"a 422 here would be the compiler refusing the words, not the gate refusing the population", err)
+		t.Fatalf("filtering by a colleague got %v, want the permission sentinel", err)
 	}
 }
 

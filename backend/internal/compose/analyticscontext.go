@@ -122,7 +122,9 @@ func analyticsContextFor(ctx context.Context, tx pgx.Tx, now time.Time) (crmcont
 }
 
 // allowedScopesFor enumerates what the screen may offer, in the order a control
-// should show them: the widest population first, then the narrowings.
+// should show them: the widest population first, then the narrowings. Totals
+// are offered to every seat (a team seat's own teams come first); the seat's
+// default is unchanged.
 func allowedScopesFor(
 	ctx context.Context, tx pgx.Tx, p principal.Principal,
 ) ([]crmcontracts.AnalyticsScope, error) {
@@ -139,33 +141,18 @@ func allowedScopesFor(
 	mine := crmcontracts.AnalyticsScope{Kind: crmcontracts.AnalyticsScopeKindOwner, Label: me}
 	mine.Id = ptrUUID(self)
 
-	switch lens {
-	case principal.RowScopeAll:
-		out := []crmcontracts.AnalyticsScope{
-			{Kind: crmcontracts.AnalyticsScopeKindWorkspace, Label: workspaceLabel},
-		}
-		teams, err := liveTeamsOf(ctx, tx, nil)
-		if err != nil {
-			return nil, err
-		}
-		return append(append(out, teams...), mine), nil
-
-	case principal.RowScopeTeam:
-		if len(p.TeamIDs) == 0 {
-			return []crmcontracts.AnalyticsScope{mine}, nil
-		}
-		out := []crmcontracts.AnalyticsScope{
-			{Kind: crmcontracts.AnalyticsScopeKindManagedTeams, Label: managedTeamsLabel},
-		}
-		teams, err := liveTeamsOf(ctx, tx, p.TeamIDs)
-		if err != nil {
-			return nil, err
-		}
-		return append(append(out, teams...), mine), nil
-
-	default:
-		return []crmcontracts.AnalyticsScope{mine}, nil
+	out := []crmcontracts.AnalyticsScope{}
+	if lens == principal.RowScopeTeam && len(p.TeamIDs) > 0 {
+		out = append(out, crmcontracts.AnalyticsScope{
+			Kind: crmcontracts.AnalyticsScopeKindManagedTeams, Label: managedTeamsLabel})
 	}
+	out = append(out, crmcontracts.AnalyticsScope{
+		Kind: crmcontracts.AnalyticsScopeKindWorkspace, Label: workspaceLabel})
+	teams, err := liveTeamsOf(ctx, tx, nil)
+	if err != nil {
+		return nil, err
+	}
+	return append(append(out, teams...), mine), nil
 }
 
 // liveTeamsOf names the live teams, either all of them or a given set.

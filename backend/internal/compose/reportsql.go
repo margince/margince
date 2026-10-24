@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // sqlUnnarrowed is the clause an unbounded reader's scope renders to where a
@@ -95,6 +96,8 @@ type fetchedRows struct {
 	frame    reportFrame
 	// narrowed is reportOutcome.PopulationNarrowed.
 	narrowed string
+	// holdsDeals is reportOutcome.ScopeHoldsDeals.
+	holdsDeals *bool
 	// total is how many groups matched, which is more than len(rows) when the
 	// row limit cut the answer. The drill-through beside this one keeps the
 	// same figure for the same reason (derivationfetch.go).
@@ -108,7 +111,7 @@ func (e *reportEngine) fetchRows(ctx context.Context, report string, spec report
 		if out.frame, err = readReportFrame(ctx, tx); err != nil {
 			return err
 		}
-		if err := requireNamedRecords(ctx, tx, spec, req.Filters); err != nil {
+		if err := requireNamedRecords(ctx, tx, spec, requestedReportScope(req.Scope), req.Filters); err != nil {
 			return err
 		}
 		var args []any
@@ -116,6 +119,9 @@ func (e *reportEngine) fetchRows(ctx context.Context, report string, spec report
 		var where []string
 		where, out.narrowed, err = buildReportWhere(ctx, tx, spec, req, requestedReportScope(req.Scope), arg)
 		if err != nil {
+			return err
+		}
+		if out.holdsDeals, err = reportScopeHoldsDeals(ctx, tx, spec, requestedReportScope(req.Scope)); err != nil {
 			return err
 		}
 		// Field masks exclude their rows from the whole statement — the
@@ -157,6 +163,24 @@ func (e *reportEngine) fetchRows(ctx context.Context, report string, spec report
 		return fetchedRows{}, err
 	}
 	return out, nil
+}
+
+// reportScopeHoldsDeals asks the population question for a deal report with the
+// population buildReportWhere applied: a spec that measures every readable row
+// and was given no scope covers the whole company. Nil for a report that is not
+// about deals.
+func reportScopeHoldsDeals(ctx context.Context, tx pgx.Tx, spec reportSpec, requested RequestedScope) (*bool, error) {
+	if spec.entity != datasource.EntityDeal {
+		return nil, nil
+	}
+	if spec.population == measureEveryReadableRow && requested.Kind == "" {
+		requested = RequestedScope{Kind: ScopeKindWorkspace}
+	}
+	holds, err := scopeHoldsDeals(ctx, tx, requested, unownedIsPartOfDefault)
+	if err != nil {
+		return nil, err
+	}
+	return &holds, nil
 }
 
 // reportSQL renders the aggregate query: the validated SELECT list over the

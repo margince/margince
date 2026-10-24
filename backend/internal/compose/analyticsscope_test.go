@@ -94,33 +94,9 @@ func TestAScopeOutsideTheCallersLensIsRefused(t *testing.T) {
 		wantErr   error
 	}{
 		{
-			"a rep may not measure the workspace",
-			actorWithScope(principal.RowScopeOwn),
-			RequestedScope{Kind: ScopeKindWorkspace},
-			apperrors.ErrPermissionDenied,
-		},
-		{
-			"a rep may not name a team",
-			actorWithScope(principal.RowScopeOwn),
-			RequestedScope{Kind: ScopeKindTeam, ID: &other},
-			apperrors.ErrNotFound,
-		},
-		{
 			"a rep may not name a colleague",
 			actorWithScope(principal.RowScopeOwn),
 			RequestedScope{Kind: ScopeKindOwner, ID: &other},
-			apperrors.ErrNotFound,
-		},
-		{
-			"a team manager may not measure the workspace",
-			actorWithScope(principal.RowScopeTeam, ids.NewV7()),
-			RequestedScope{Kind: ScopeKindWorkspace},
-			apperrors.ErrPermissionDenied,
-		},
-		{
-			"a team manager may not name a team they do not hold",
-			actorWithScope(principal.RowScopeTeam, ids.NewV7()),
-			RequestedScope{Kind: ScopeKindTeam, ID: &other},
 			apperrors.ErrNotFound,
 		},
 		{
@@ -174,7 +150,6 @@ func TestARefusalOverANamedSubjectDoesNotConfirmItExists(t *testing.T) {
 	ctx := principal.WithActor(context.Background(), actor)
 
 	for _, requested := range []RequestedScope{
-		{Kind: ScopeKindTeam, ID: &other},
 		{Kind: ScopeKindOwner, ID: &other},
 	} {
 		_, err := resolveAnalyticsScope(ctx, nil, actor, requested)
@@ -253,5 +228,77 @@ func TestAManagersDefaultIsNotReportedAsTheWorkspace(t *testing.T) {
 	}
 	if got.ID != nil {
 		t.Errorf("the managed-teams population names a subject: %v", got.ID)
+	}
+}
+
+// Totals are open to every seat that reads deals: the whole company and any
+// team resolve for a rep, while a named colleague still does not.
+func TestEverySeatMayMeasureTotalsForTheWorkspaceAndAnyTeam(t *testing.T) {
+	team := ids.NewV7()
+	for _, scope := range []principal.RowScope{principal.RowScopeOwn, principal.RowScopeTeam, principal.RowScopeAll} {
+		actor := actorWithScope(scope, ids.NewV7())
+		ctx := principal.WithActor(context.Background(), actor)
+		for _, requested := range []RequestedScope{
+			{Kind: ScopeKindWorkspace},
+			{Kind: ScopeKindTeam, ID: &team},
+		} {
+			got, err := resolveAnalyticsScope(ctx, nil, actor, requested)
+			if err != nil || got.Kind != requested.Kind {
+				t.Errorf("%v seat asking %s got %+v, %v", scope, requested.Kind, got, err)
+			}
+		}
+	}
+}
+
+// A standing forecast or a share is a commitment about a population, so it
+// keeps the tier rules even though the same seat may read the totals.
+func TestAssertingAboutAPopulationKeepsTheTierRules(t *testing.T) {
+	foreign := ids.NewV7()
+	cases := []struct {
+		name      string
+		actor     principal.Principal
+		requested RequestedScope
+		resolved  ResolvedScope
+		wantErr   error
+	}{
+		{"a rep may not assert about the workspace", actorWithScope(principal.RowScopeOwn),
+			RequestedScope{Kind: ScopeKindWorkspace}, ResolvedScope{Kind: ScopeKindWorkspace}, apperrors.ErrPermissionDenied},
+		{"a rep may not assert about a team", actorWithScope(principal.RowScopeOwn),
+			RequestedScope{Kind: ScopeKindTeam, ID: &foreign}, ResolvedScope{Kind: ScopeKindTeam, ID: &foreign}, apperrors.ErrNotFound},
+		{"a manager may not assert about the workspace", actorWithScope(principal.RowScopeTeam, ids.NewV7()),
+			RequestedScope{Kind: ScopeKindWorkspace}, ResolvedScope{Kind: ScopeKindWorkspace}, apperrors.ErrPermissionDenied},
+		{"a manager may not assert about a team they do not hold", actorWithScope(principal.RowScopeTeam, ids.NewV7()),
+			RequestedScope{Kind: ScopeKindTeam, ID: &foreign}, ResolvedScope{Kind: ScopeKindTeam, ID: &foreign}, apperrors.ErrNotFound},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if err := assertionLensRefusal(tc.actor, tc.requested, tc.resolved); !errors.Is(err, tc.wantErr) {
+				t.Fatalf("got %v, want %v", err, tc.wantErr)
+			}
+		})
+	}
+	admin := actorWithScope(principal.RowScopeAll)
+	if err := assertionLensRefusal(admin, RequestedScope{Kind: ScopeKindWorkspace}, ResolvedScope{Kind: ScopeKindWorkspace}); err != nil {
+		t.Errorf("an all-scope seat was refused: %v", err)
+	}
+	rep := actorWithScope(principal.RowScopeOwn)
+	if err := assertionLensRefusal(rep, RequestedScope{}, ResolvedScope{Kind: ScopeKindOwner}); err != nil {
+		t.Errorf("a rep's own default was refused: %v", err)
+	}
+}
+
+// The owner chart narrows for every request except an owner scope, which is
+// already inside the lens.
+func TestOnlyAnOwnerScopeIsExemptFromTheOwnerBreakdownNarrowing(t *testing.T) {
+	id := ids.NewV7()
+	for kind, want := range map[string]bool{
+		"": true, ScopeKindWorkspace: true, ScopeKindTeam: true, ScopeKindOwner: false,
+	} {
+		if got := narrowsOwnerBreakdown(RequestedScope{Kind: kind, ID: &id}, true, false); got != want {
+			t.Errorf("kind %q narrows=%v, want %v", kind, got, want)
+		}
+	}
+	if narrowsOwnerBreakdown(RequestedScope{}, true, true) || narrowsOwnerBreakdown(RequestedScope{}, false, false) {
+		t.Error("a pinned owner or a non-breakdown must not narrow")
 	}
 }

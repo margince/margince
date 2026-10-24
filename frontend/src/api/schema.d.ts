@@ -37668,6 +37668,8 @@ export interface components {
             framework_revision: number;
             definition_version: string;
             member_ids: string[];
+            /** @description Whether the population this answer measured holds any deal, archived ones included, computed with the same population clause as the figures. Absent when unknown (a stored edition captured before the field existed) or when the answer is not about deals. False means the scope is empty, which is different from a scope with no wins. */
+            scope_holds_deals?: boolean;
         };
         ReportingCoverage: {
             status: components["schemas"]["ReportingStatus"];
@@ -38442,6 +38444,8 @@ export interface components {
         };
         /** @description Four money readings over one period, the counts that say what they leave out, and the frame they were computed in. */
         ForecastReadings: {
+            /** @description Whether the population this answer measured holds any deal, archived ones included, computed with the same population clause as the figures. Absent when unknown (a stored edition captured before the field existed) or when the answer is not about deals. False means the scope is empty, which is different from a scope with no wins. */
+            scope_holds_deals?: boolean;
             /** Format: date */
             period_start: string;
             /**
@@ -40399,6 +40403,8 @@ export interface components {
             }[];
         };
         ReportResult: {
+            /** @description Whether the population this answer measured holds any deal, archived ones included, computed with the same population clause as the figures. Absent when unknown (a stored edition captured before the field existed) or when the answer is not about deals. False means the scope is empty, which is different from a scope with no wins. */
+            scope_holds_deals?: boolean;
             report: string;
             /**
              * Format: date-time

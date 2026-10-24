@@ -6,9 +6,11 @@ package reporting
 import (
 	"context"
 	"errors"
+	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -59,7 +61,12 @@ func (s *Service) edition(ctx context.Context, tx pgx.Tx, id ids.UUID) (crmcontr
 	if err != nil {
 		return out, nil, err
 	}
-	withheld = withheld || contextWithheld
+	ownerNarrowed := slices.ContainsFunc(visible, func(f Fact) bool { return f.OwnerWithheld })
+	rosterNarrowed, err := s.rosterNarrowed(ctx, tx, out.Evaluation.Context.MemberIds)
+	if err != nil {
+		return out, nil, err
+	}
+	withheld = withheld || contextWithheld || ownerNarrowed || rosterNarrowed
 	out.Redacted = redacted != nil
 	out.Withheld = withheld || out.Redacted
 	if out.Withheld {
@@ -193,4 +200,24 @@ func (s *Service) editionContextWithheld(ctx context.Context, tx pgx.Tx, scope c
 		return true, nil
 	}
 	return false, nil
+}
+
+// rosterNarrowed answers whether a stored roster names people the reader may
+// not measure one by one. A company or team edition is open to every seat for
+// totals, but its owner list and targets are not.
+func (s *Service) rosterNarrowed(ctx context.Context, tx pgx.Tx, roster []openapi_types.UUID) (bool, error) {
+	actor, ok := principal.Actor(ctx)
+	if !ok {
+		return false, apperrors.ErrPermissionDenied
+	}
+	if auth.Unbounded(actor) || actor.Permissions.RowScope == principal.RowScopeAll {
+		return false, nil
+	}
+	members, err := s.authority.Members(ctx, tx)
+	if err != nil {
+		return false, err
+	}
+	return slices.ContainsFunc(roster, func(id openapi_types.UUID) bool {
+		return !slices.Contains(members, ids.UUID(id))
+	}), nil
 }

@@ -85,7 +85,7 @@ func RunAnalyticsQuery(
 	// Every owner a filter names is judged before anything compiles, the same
 	// refusal run_report gives. The explanation re-runs this question first, so
 	// it is judged there too.
-	if err := requireMeasurableTypedOwners(ctx, tx, spec, q.Filters); err != nil {
+	if err := requireMeasurableTypedOwners(ctx, tx, spec, requestedFromQuery(q), q.Filters); err != nil {
 		return AnalyticsAnswer{}, err
 	}
 	var narrowed string

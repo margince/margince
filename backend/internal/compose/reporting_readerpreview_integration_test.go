@@ -74,8 +74,12 @@ func TestAReportPreviewedAsARoleReadsWhatThatRoleMay(t *testing.T) {
 		own.Metrics[0].Value == nil || *asAdmin.Metrics[0].Value != *own.Metrics[0].Value {
 		t.Errorf("as admin the report reads %+v, want the caller's own figures %+v", asAdmin.Metrics, own.Metrics)
 	}
-	if _, err := preview(admin, "rep"); err == nil {
-		t.Error("a rep's preview measured the whole company, which a rep may not")
+	asRep, err := preview(admin, "rep")
+	if err != nil {
+		t.Fatalf("a rep may read the company totals, but the preview was refused: %v", err)
+	}
+	if len(asRep.Context.MemberIds) > 1 {
+		t.Errorf("a rep's preview lists %d people, want only the ones a rep may measure", len(asRep.Context.MemberIds))
 	}
 	if _, err := preview(admin, "no-such-role"); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("an unknown role answered %v, want not found", err)

@@ -36,9 +36,24 @@ const narrowedToMeasurableOwners = "owners_you_may_measure"
 
 // ownerGated answers whether a spec's owner names pass through this gate.
 // A spec on the caller's own population is already narrowed to the owners
-// they may measure, so naming anyone else there answers nothing.
-func ownerGated(spec reportSpec) bool {
-	return spec.population == measureEveryReadableRow
+// they may measure, so naming anyone else there answers nothing. A named
+// workspace or team scope is open to every seat for totals, so it opens the
+// gate on any spec: the people inside it are not all people the seat may
+// measure.
+func ownerGated(spec reportSpec, requested RequestedScope) bool {
+	return spec.population == measureEveryReadableRow || namesTotalsScope(requested)
+}
+
+func namesTotalsScope(requested RequestedScope) bool {
+	return requested.Kind == ScopeKindWorkspace || requested.Kind == ScopeKindTeam
+}
+
+// narrowsOwnerBreakdown answers whether a breakdown by owner is cut to the
+// owners the caller may measure. Only an owner scope is already inside that
+// lens; every other request, named or not, is a population of people the seat
+// may not all measure. Headline, drill-through and typed query all ask here.
+func narrowsOwnerBreakdown(requested RequestedScope, breakdown, pinned bool) bool {
+	return breakdown && !pinned && requested.Kind != ScopeKindOwner
 }
 
 // namesOwner answers whether a vocabulary name reads the column the
@@ -62,8 +77,10 @@ func namesOwner(spec reportSpec, field string) bool {
 // handle stays openable by the caller the listing was served to.
 //
 //craft:ignore naked-any filter values are the decoded JSON plan, schemaless by design
-func requireMeasurableOwners(ctx context.Context, tx pgx.Tx, spec reportSpec, filters map[string]any) error {
-	if !ownerGated(spec) || pinsOneRecord(spec, filters) {
+func requireMeasurableOwners(
+	ctx context.Context, tx pgx.Tx, spec reportSpec, requested RequestedScope, filters map[string]any,
+) error {
+	if !ownerGated(spec, requested) || pinsOneRecord(spec, filters) {
 		return nil
 	}
 	for _, key := range slices.Sorted(maps.Keys(filters)) {
@@ -114,9 +131,9 @@ func pinsOneRecord(spec reportSpec, filters map[string]any) bool {
 // two ids the caller may name can still isolate one they may not, which is why
 // typedOwnerBreakdown narrows those comparisons as well.
 func requireMeasurableTypedOwners(
-	ctx context.Context, tx pgx.Tx, spec reportSpec, filters []analyticsquery.Filter,
+	ctx context.Context, tx pgx.Tx, spec reportSpec, requested RequestedScope, filters []analyticsquery.Filter,
 ) error {
-	if !ownerGated(spec) {
+	if !ownerGated(spec, requested) {
 		return nil
 	}
 	for _, f := range filters {
@@ -213,9 +230,9 @@ func pinsOwner(spec reportSpec, fields []string) bool {
 // resolves through the same lens as requireMeasurableOwner. An all-scope seat's
 // default is the workspace, so it renders "" and nothing is announced.
 func ownerBreakdownClause(
-	ctx context.Context, tx pgx.Tx, spec reportSpec, breakdown bool, arg func(any) int,
+	ctx context.Context, tx pgx.Tx, spec reportSpec, requested RequestedScope, breakdown bool, arg func(any) int,
 ) (clause, reason string, err error) {
-	if !ownerGated(spec) || !breakdown {
+	if !ownerGated(spec, requested) || !breakdown {
 		return "", "", nil
 	}
 	clause, err = reportPopulationClause(ctx, tx, callersOwnPopulation(), arg)
@@ -231,9 +248,11 @@ func ownerBreakdownClause(
 // plan that minted it could not.
 //
 //craft:ignore naked-any filter values are the decoded JSON plan, schemaless by design
-func requireNamedRecords(ctx context.Context, tx pgx.Tx, spec reportSpec, filters map[string]any) error {
+func requireNamedRecords(
+	ctx context.Context, tx pgx.Tx, spec reportSpec, requested RequestedScope, filters map[string]any,
+) error {
 	if err := requireFilterScopes(ctx, tx, spec, filters); err != nil {
 		return err
 	}
-	return requireMeasurableOwners(ctx, tx, spec, filters)
+	return requireMeasurableOwners(ctx, tx, spec, requested, filters)
 }

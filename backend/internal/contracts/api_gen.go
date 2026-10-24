@@ -39261,8 +39261,11 @@ type ForecastReadings struct {
 	PeriodStart openapi_types.Date `json:"period_start"`
 
 	// PricedCount How many carried an amount. The gap to eligible_count is what the money readings do not cover: an unpriced deal is real pipeline contributing zero.
-	PricedCount int                 `json:"priced_count"`
-	ScopeId     *openapi_types.UUID `json:"scope_id,omitempty"`
+	PricedCount int `json:"priced_count"`
+
+	// ScopeHoldsDeals Whether the population this answer measured holds any deal, archived ones included, computed with the same population clause as the figures. Absent when unknown (a stored edition captured before the field existed) or when the answer is not about deals. False means the scope is empty, which is different from a scope with no wins.
+	ScopeHoldsDeals *bool               `json:"scope_holds_deals,omitempty"`
+	ScopeId         *openapi_types.UUID `json:"scope_id,omitempty"`
 
 	// ScopeKind Which population these readings cover. `managed_teams` is what an omitted scope resolves to for a team manager — their teams and themselves — and is a RESULT only: it names no single subject, so no forecast can be recorded against it and no standing call is looked up for it. The write schemas keep the three nameable scopes.
 	ScopeKind ForecastReadingsScopeKind `json:"scope_kind"`
@@ -47569,6 +47572,9 @@ type ReportResult struct {
 	// Rows Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values).
 	Rows []map[string]interface{} `json:"rows"`
 
+	// ScopeHoldsDeals Whether the population this answer measured holds any deal, archived ones included, computed with the same population clause as the figures. Absent when unknown (a stored edition captured before the field existed) or when the answer is not about deals. False means the scope is empty, which is different from a scope with no wins.
+	ScopeHoldsDeals *bool `json:"scope_holds_deals,omitempty"`
+
 	// Timezone The installation's reporting zone, as an IANA name. Day and period boundaries in this result are cut in it, never in UTC and never in the reader's own zone.
 	Timezone string `json:"timezone"`
 
@@ -47745,11 +47751,14 @@ type ReportingContext struct {
 	PopulationFingerprint string               `json:"population_fingerprint"`
 
 	// ProseLanguage Base language used for generated explanations. Absent on legacy readings, which use English.
-	ProseLanguage  *string          `json:"prose_language,omitempty"`
-	Scope          ReportingScope   `json:"scope"`
-	StateAt        time.Time        `json:"state_at"`
-	TargetInterval *ReportingWindow `json:"target_interval,omitempty"`
-	Timezone       string           `json:"timezone"`
+	ProseLanguage *string        `json:"prose_language,omitempty"`
+	Scope         ReportingScope `json:"scope"`
+
+	// ScopeHoldsDeals Whether the population this answer measured holds any deal, archived ones included, computed with the same population clause as the figures. Absent when unknown (a stored edition captured before the field existed) or when the answer is not about deals. False means the scope is empty, which is different from a scope with no wins.
+	ScopeHoldsDeals *bool            `json:"scope_holds_deals,omitempty"`
+	StateAt         time.Time        `json:"state_at"`
+	TargetInterval  *ReportingWindow `json:"target_interval,omitempty"`
+	Timezone        string           `json:"timezone"`
 }
 
 // ReportingCoverage defines model for ReportingCoverage.

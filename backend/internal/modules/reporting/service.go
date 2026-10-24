@@ -32,6 +32,10 @@ type Fact struct {
 	SourceID      ids.UUID                          `json:"source_id"`
 	SourceType    string                            `json:"source_type"`
 	OwnerID       ids.UUID                          `json:"owner_id"`
+	// OwnerWithheld marks a fact whose owner the reader may not measure one by
+	// one. It still counts in totals; per-owner outputs skip it. Absent on
+	// stored contributions, which decode as false.
+	OwnerWithheld bool `json:"owner_withheld,omitempty"`
 }
 
 // Evaluation keeps calculated values and supporting facts in one result.

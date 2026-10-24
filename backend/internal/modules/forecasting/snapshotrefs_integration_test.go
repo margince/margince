@@ -182,6 +182,7 @@ func TestTheForecastEndpointListsThePeriodsSnapshots(t *testing.T) {
 			return ConversionHistory{}, nil
 		},
 		func(context.Context, pgx.Tx) (ForwardMeasure, error) { return values.MeasureCommitEvidence, nil },
+		func(context.Context, pgx.Tx, Scope) (bool, error) { return true, nil },
 		func() time.Time { return time.Date(2046, time.February, 14, 12, 0, 0, 0, time.UTC) },
 	)
 	rec := httptest.NewRecorder()
