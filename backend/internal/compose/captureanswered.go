@@ -3,7 +3,7 @@
 
 package compose
 
-// Publishing a contact once the address answers the owner who wrote to it.
+// Publishing a contact once the address answers anyone here who wrote to it.
 //
 // Two callers share one transaction body. The capture sink runs it the moment
 // a reply lands, so the contact opens with the reply; the verdict worker's pass
@@ -29,18 +29,18 @@ import (
 // only ever listed while it is owed a promotion, so the rest follow next tick.
 const answeredSweepContacts = 200
 
-// publishAnsweredTx publishes the contact when capture.OwnerWasAnsweredTx
-// holds for its owner and this address, and contacts.PromoteOnReplyTx finds it
-// narrowed only for want of an answer. The ledger's withholding is cleared with
-// it: the mail-side readers ask the ledger, not the contact.
+// publishAnsweredTx publishes the contact when capture.AddressAnsweredTx holds
+// for this address, and contacts.PromoteOnReplyTx finds it narrowed only for
+// want of an answer. The ledger's withholding is cleared with it: the mail-side
+// readers ask the ledger, not the contact.
 func publishAnsweredTx(
-	ctx context.Context, tx pgx.Tx, store *contacts.Store, contactID ids.ContactID, owner ids.UUID, email string,
+	ctx context.Context, tx pgx.Tx, store *contacts.Store, contactID ids.ContactID, email string,
 ) error {
-	answered, err := capture.OwnerWasAnsweredTx(ctx, tx, owner, email)
+	answered, err := capture.AddressAnsweredTx(ctx, tx, email)
 	if err != nil || !answered {
 		return err
 	}
-	moved, err := store.PromoteOnReplyTx(ctx, tx, contactID, owner)
+	moved, err := store.PromoteOnReplyTx(ctx, tx, contactID)
 	if err != nil || !moved {
 		return err
 	}
@@ -53,7 +53,7 @@ func publishAnsweredTx(
 }
 
 // PublishAnsweredContactsWorkspace publishes every contact in the workspace
-// whose owner has been answered, one transaction per contact.
+// whose address has answered, one transaction per contact.
 func (e *CounterpartyVerdictEngine) PublishAnsweredContactsWorkspace(ctx context.Context) error {
 	return e.inWorkspace(ctx, func(wsCtx context.Context, _ ids.UUID) error {
 		var owed []capture.AnsweredContact
@@ -71,7 +71,7 @@ func (e *CounterpartyVerdictEngine) PublishAnsweredContactsWorkspace(ctx context
 		for _, c := range owed {
 			if err := database.WithWorkspaceTx(wsCtx, e.pool, func(tx pgx.Tx) error {
 				return publishAnsweredTx(wsCtx, tx, e.contacts,
-					ids.From[ids.ContactKind](c.ContactID), c.OwnerID, c.Email)
+					ids.From[ids.ContactKind](c.ContactID), c.Email)
 			}); err != nil {
 				failed = append(failed, fmt.Errorf("verdict: publishing answered contact %s: %w", c.ContactID, err))
 			}

@@ -59,20 +59,20 @@ func promoteIfWorkspaceScoped(ctx context.Context, tx pgx.Tx, id ids.ContactID, 
 }
 
 // PromoteOnReplyTx moves an owner-scoped contact to the workspace because the
-// address has answered mail its owner sent, and reports whether it moved.
+// address has answered mail somebody here sent, and reports whether it moved.
 //
 // Only outbound_no_answer ends this way. Every other reason, and a row that
 // records none, stays its owner's: the column names what is safe to lift, so
 // a narrowing added later refuses until somebody decides otherwise.
 //
-// owner pins the row to the mailbox the reply arrived in. Capture privacy is
-// the importing seat's, and a reply one seat captured is not authority to
-// publish a contact another seat is keeping.
-func (s *Store) PromoteOnReplyTx(ctx context.Context, tx pgx.Tx, id ids.ContactID, owner ids.UUID) (bool, error) {
+// Any owner's row: the reason records that nobody had answered, and a reply to
+// a colleague makes that false. The caller re-reads the evidence
+// (capture.AddressAnsweredTx) on this transaction.
+func (s *Store) PromoteOnReplyTx(ctx context.Context, tx pgx.Tx, id ids.ContactID) (bool, error) {
 	if err := auth.Require(ctx, entityContact, principal.ActionUpdate); err != nil {
 		return false, err
 	}
-	return widenTx(ctx, tx, id, widening{lifts: []NarrowingReason{NarrowedOutboundNoAnswer}, owner: &owner})
+	return widenTx(ctx, tx, id, widening{lifts: []NarrowingReason{NarrowedOutboundNoAnswer}})
 }
 
 // fieldVisibility names the column in an audit image, so the word a reader

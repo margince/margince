@@ -138,7 +138,7 @@ func (p contactsEnsurer) EnsureCounterparty(ctx context.Context, in capture.Ensu
 // PublishAnsweredContactsWorkspace makes any promotion this one loses.
 func (p contactsEnsurer) promoteOnReply(ctx context.Context, in capture.EnsureRequest, contactID ids.ContactID) {
 	err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
-		return publishAnsweredTx(ctx, tx, p.store, contactID, in.OwnerID, in.Email)
+		return publishAnsweredTx(ctx, tx, p.store, contactID, in.Email)
 	})
 	if err != nil {
 		p.log.ErrorContext(ctx, "capture: publishing a contact on their reply failed",

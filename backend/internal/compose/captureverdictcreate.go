@@ -273,8 +273,14 @@ func (e *CounterpartyVerdictEngine) contactStaysTheOwners(
 	// direction rather than inferred: a row written before the direction was
 	// recorded says nothing, and treating an unknown direction as outbound
 	// would narrow every historical contact at once.
-	if row.Direction == connector.DirectionOutbound && !row.WroteBack {
-		return contacts.NarrowedOutboundNoAnswer, nil
+	if row.Direction != connector.DirectionOutbound {
+		return "", nil
 	}
-	return "", nil
+	// The same evidence the reply hook publishes on, so a reply counts the
+	// same whether it lands before this verdict or after it.
+	answered, err := capture.AddressAnsweredTx(ctx, tx, row.Email)
+	if err != nil || answered {
+		return "", err
+	}
+	return contacts.NarrowedOutboundNoAnswer, nil
 }
