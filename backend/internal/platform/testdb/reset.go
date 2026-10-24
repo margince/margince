@@ -132,7 +132,7 @@ const resetTables = `
 // A gate derives its corpus from the owner it protects rather than restating
 // it, so the corpus lives here beside the reset that owns it.
 const PreservedReferenceTables = `('activity_kind', 'channel_provider', 'lead_source', ` +
-	`'lead_disqualify_reason', 'sdr_handoff_reason', 'field_mask', ` +
+	`'lead_origin', 'lead_disqualify_reason', 'sdr_handoff_reason', 'field_mask', ` +
 	`'currency_minor_digits', 'deal_acquisition_source', 'record_role', ` +
 	`'maskable_field', 'report_projection_fence', ` +
 	`'activity_review_template', 'activity_own_sent_mail_repair_cutoff', 'legal_entity')`

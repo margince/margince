@@ -66,7 +66,7 @@ type RoutingConfig struct {
 // supports. The mirror is TestRoutableLeadFieldVocabularyIsSingleSourced,
 // in compose — the only place both modules are visible.
 // Held by: TestEveryRoutableLeadFieldResolvesToItsOwnFact (backend/internal/modules/contacts/leadroutingvocab_test.go)
-var RoutableLeadFields = []string{leadSourceColumn, leadCompanyColumn, candidateCompanyKey}
+var RoutableLeadFields = []string{leadSourceColumn, leadOriginColumn, leadCompanyColumn, candidateCompanyKey}
 
 // ParseRoutingConfig decodes automation params into a RoutingConfig.
 // Params were validated against the catalog schema at write time; this
@@ -98,14 +98,17 @@ type RoutingDecision struct {
 // leadRoutingFacts is the lead-local slice a rule may look at.
 type leadRoutingFacts struct {
 	Source              string
+	Origin              string
 	CompanyName         string
 	CandidateCompanyKey string
 }
 
 func (f leadRoutingFacts) field(name string) string {
 	switch name {
-	case "source":
+	case leadSourceColumn:
 		return f.Source
+	case leadOriginColumn:
+		return f.Origin
 	case leadCompanyColumn:
 		return f.CompanyName
 	case candidateCompanyKey:
@@ -186,9 +189,9 @@ func (s *Store) RouteLead(ctx context.Context, leadID ids.LeadID, cfg RoutingCon
 		var status string
 		var facts leadRoutingFacts
 		if err := tx.QueryRow(ctx, `
-			SELECT owner_id, status, source, coalesce(company_name, ''), coalesce(candidate_company_key, '')
+			SELECT owner_id, status, source, coalesce(origin, ''), coalesce(company_name, ''), coalesce(candidate_company_key, '')
 			  FROM lead WHERE id = $1`,
-			leadID).Scan(&currentOwner, &status, &facts.Source, &facts.CompanyName, &facts.CandidateCompanyKey); err != nil {
+			leadID).Scan(&currentOwner, &status, &facts.Source, &facts.Origin, &facts.CompanyName, &facts.CandidateCompanyKey); err != nil {
 			return err
 		}
 		if currentOwner != nil {

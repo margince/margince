@@ -34,7 +34,7 @@ func TestEveryDeclaredContactsFilterNarrowsSomething(t *testing.T) {
 	assertEveryFilterNarrows(t, "lead", leadListFilters, withListControls(map[string]string{
 		"min_score": "70", "owner_id": owner, "status": "working",
 		"tag_id": ids.NewV7().String(), "tag_mode": "all", "from_contact_id": ids.NewV7().String(),
-		"source": "webinar", "sla_state": "breached",
+		"source": "webinar", "origin": "referral", "sla_state": "breached",
 	}))
 }
 
@@ -63,7 +63,7 @@ func TestEachEntityIsOfferedItsOwnVocabulary(t *testing.T) {
 		}},
 		{datasource.EntityLead, []string{
 			"ai_written", "captured_by_kind", "from_contact_id", "include_archived", "list_id", "min_score",
-			"owner_id", "owner_team_id", "sla_state", "sort", "source", "status", "tag_id", "tag_mode", "unassigned",
+			"origin", "owner_id", "owner_team_id", "sla_state", "sort", "source", "status", "tag_id", "tag_mode", "unassigned",
 		}},
 	} {
 		if got := p.ListFilters(tc.entity); !slices.Equal(got, tc.want) {

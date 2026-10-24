@@ -21,13 +21,14 @@ import "testing"
 func TestEveryRoutableLeadFieldResolvesToItsOwnFact(t *testing.T) {
 	facts := leadRoutingFacts{
 		Source:              "the source",
+		Origin:              "the origin",
 		CompanyName:         "the company name",
 		CandidateCompanyKey: "the candidate company key",
 	}
 	markers := map[string]bool{
-		facts.Source: true, facts.CompanyName: true, facts.CandidateCompanyKey: true,
+		facts.Source: true, facts.Origin: true, facts.CompanyName: true, facts.CandidateCompanyKey: true,
 	}
-	if len(markers) != 3 {
+	if len(markers) != 4 {
 		t.Fatal("the markers are no longer distinct, so a mixed-up arm would read as a pass")
 	}
 	seen := map[string]string{}
@@ -59,7 +60,7 @@ func TestEveryRoutableLeadFieldResolvesToItsOwnFact(t *testing.T) {
 // fact the switch happens to fall through to. This is what makes the empty
 // string above a reliable signal instead of an accident of arm order.
 func TestAnUnroutableFieldNameResolvesToNothing(t *testing.T) {
-	facts := leadRoutingFacts{Source: "s", CompanyName: "c", CandidateCompanyKey: "k"}
+	facts := leadRoutingFacts{Source: "s", Origin: "o", CompanyName: "c", CandidateCompanyKey: "k"}
 	if got := facts.field("owner_id"); got != "" {
 		t.Errorf("leadRoutingFacts.field resolved the unroutable name %q to %q; routing is "+
 			"lead-local by design and a name outside RoutableLeadFields must reach no fact",

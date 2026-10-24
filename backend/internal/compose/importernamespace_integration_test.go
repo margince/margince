@@ -110,7 +110,7 @@ func namespacedLead() crmcontracts.CreateLeadRequest {
 	system := "mirror:hubspot"
 	return crmcontracts.CreateLeadRequest{
 		FullName: new("Imported Lead"), SourceSystem: &system,
-		SourceId: new("leads:501"), Source: "hubspot_import",
+		SourceId: new("leads:501"), Source: new("hubspot_import"),
 	}
 }
 

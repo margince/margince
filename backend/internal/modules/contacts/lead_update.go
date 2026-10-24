@@ -5,7 +5,9 @@ package contacts
 
 import (
 	"context"
+	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -35,9 +37,13 @@ type UpdateLeadInput struct {
 	// LinkedInURL sets the profile URL in its normalized spelling.
 	LinkedInURL *string
 	Status      *string // only new ↔ working here; terminal states have their own paths
-	// Source corrects where the lead came from; the score follows it.
+	// Source is how the row was written. It is deprecated on the wire and no
+	// longer moves the score.
 	Source *string
-	Score  *int
+	// Origin corrects where the lead came from; the score follows it.
+	Origin       *string
+	OriginDetail *string
+	Score        *int
 	// ScoreOverrideReason is the written reason for a score override; nil
 	// means the field was absent (no override change). The explicit CLEAR
 	// gesture is ClearScoreOverride, not an empty string — an empty reason
@@ -264,8 +270,8 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 			return crmcontracts.Lead{}, err
 		}
 	}
-	if in.Source != nil {
-		if err := ensureHumanSourceAllowed(ctx, tx, strings.TrimSpace(*in.Source)); err != nil {
+	if in.Origin != nil {
+		if err := ensureAssignableOrigin(ctx, tx, strings.TrimSpace(*in.Origin), current.Origin); err != nil {
 			return crmcontracts.Lead{}, err
 		}
 	}
@@ -409,6 +415,9 @@ func buildLeadPatch(current crmcontracts.Lead, in UpdateLeadInput) (*storekit.Pa
 		}
 		p.Set("source", current.Source, strings.TrimSpace(*in.Source))
 	}
+	if err := setLeadOrigin(p, current, in); err != nil {
+		return nil, false, err
+	}
 	resumeRecompute, err := applyScoreOverride(p, current, in)
 	if err != nil {
 		return nil, false, err
@@ -464,4 +473,26 @@ func statusSetByFor(ctx context.Context) (string, error) {
 		return string(crmcontracts.LeadStatusSetByLeadStatusSetBySystem), nil
 	}
 	return string(crmcontracts.LeadStatusSetByLeadStatusSetByHuman), nil
+}
+
+// setLeadOrigin folds the origin and its note onto the patch. A blank origin is
+// refused rather than stored: clearing is the explicit null, which reaches the
+// patch through Clear.
+func setLeadOrigin(p *storekit.Patch, current crmcontracts.Lead, in UpdateLeadInput) error {
+	if in.Origin != nil {
+		origin := strings.TrimSpace(*in.Origin)
+		if origin == "" {
+			return &values.ParseError{Field: leadOriginField, Code: codeRequired, Message: "origin must not be empty; pass null to clear it"}
+		}
+		p.Set(leadOriginField, current.Origin, origin)
+	}
+	if in.OriginDetail != nil {
+		detail := cleanOriginDetail(*in.OriginDetail, false)
+		if utf8.RuneCountInString(detail) > LeadOriginDetailMax {
+			return &values.ParseError{Field: leadOriginDetailField, Code: "too_long",
+				Message: fmt.Sprintf("origin_detail is at most %d characters", LeadOriginDetailMax)}
+		}
+		p.Set(leadOriginDetailField, current.OriginDetail, detail)
+	}
+	return nil
 }

@@ -26,23 +26,23 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// The migration's seed and the code's fixture name the same six keys with
+// The migration's seed and the code's fixture name the same seven origins with
 // the same weights: a seed edited without the fixture (or the reverse) fails
 // here rather than in a scorer that quietly scores differently on a fresh
 // installation than the unit tests say it does.
-func TestLeadSourceSeedMatchesTheScorerFixture(t *testing.T) {
+func TestLeadOriginSeedMatchesTheScorerFixture(t *testing.T) {
 	e := setupPromoteConsent(t)
-	var seeded SourceIntents
+	var seeded OriginIntents
 	if err := e.store.tx(e.ctx, func(tx pgx.Tx) (err error) {
-		seeded, err = loadSourceIntents(e.ctx, tx)
+		seeded, err = LoadOriginIntents(e.ctx, tx)
 		return err
 	}); err != nil {
 		t.Fatalf("load intents: %v", err)
 	}
-	if len(seeded) != len(defaultSourceIntents) {
-		t.Fatalf("seeded sources = %v, want exactly the fixture %v", seeded, defaultSourceIntents)
+	if len(seeded) != len(seededOriginIntents) {
+		t.Fatalf("seeded origins = %v, want exactly the fixture %v", seeded, seededOriginIntents)
 	}
-	for key, want := range defaultSourceIntents {
+	for key, want := range seededOriginIntents {
 		if got := seeded[key]; got != want {
 			t.Errorf("seeded %q = %q, want %q", key, got, want)
 		}
@@ -113,11 +113,10 @@ func TestLeadSourceCRUDRefusesWhatTheContractPromises(t *testing.T) {
 	}
 }
 
-// A human's lead follows the list: an inactive administered key is refused
-// on create and on correction, a connector value passes untouched, and a
-// corrected source rescores the lead at once. The weight comes from the
-// table, so adopting a connector family moves every lead it wrote.
-func TestLeadSourceGovernsHumanWritesAndTheScore(t *testing.T) {
+// The deprecated source list governs nothing: an inactive key is accepted on
+// create and on correction, a source value never moves the score, and the
+// list filter and the counts still read the source column as before.
+func TestLeadSourceListNoLongerGovernsWritesOrTheScore(t *testing.T) {
 	e := setupPromoteConsent(t)
 	list, err := e.store.ListLeadSources(e.ctx)
 	if err != nil {
@@ -144,30 +143,37 @@ func TestLeadSourceGovernsHumanWritesAndTheScore(t *testing.T) {
 		}
 	})
 	email := "vocab@example.test"
-	var inactiveErr *InactiveLeadSourceError
-	if _, _, err := e.store.CreateLead(e.ctx, CreateLeadInput{Email: &email, Source: "crawl"}); !errors.As(err, &inactiveErr) {
-		t.Fatalf("create with an inactive source err = %v, want InactiveLeadSourceError", err)
+	if _, _, err := e.store.CreateLead(e.ctx, CreateLeadInput{Email: &email, Source: "crawl"}); err != nil {
+		t.Fatalf("create with an inactive source err = %v, want it accepted: the list no longer governs writes", err)
 	}
-	lead, _, err := e.store.CreateLead(e.ctx, CreateLeadInput{Email: &email, Source: "connector:apollo:a-1"})
+	other0 := "second@example.test"
+	lead, _, err := e.store.CreateLead(e.ctx, CreateLeadInput{Email: &other0, Source: "connector:apollo:a-1"})
 	if err != nil {
 		t.Fatalf("create with a connector value: %v", err)
 	}
 	if lead.Score != 0 || lead.SourceLabel != nil {
 		t.Errorf("connector lead = score %d label %v, want 0 and no label until the family is adopted", lead.Score, lead.SourceLabel)
 	}
+	lowImport, _, err := e.store.CreateLead(e.ctx, CreateLeadInput{Source: "import"})
+	if err != nil {
+		t.Fatalf("create with the import source: %v", err)
+	}
+	if lowImport.Score != 0 {
+		t.Errorf("a lead written by an import scores %d, want 0: the way a row reached Margince is not scored", lowImport.Score)
+	}
 
 	leadID := ids.From[ids.LeadKind](ids.UUID(lead.Id))
 	crawlKey := "crawl"
-	if _, err := e.store.UpdateLead(e.ctx, leadID, UpdateLeadInput{Source: &crawlKey}); !errors.As(err, &inactiveErr) {
-		t.Errorf("correcting to an inactive source err = %v, want InactiveLeadSourceError", err)
+	if _, err := e.store.UpdateLead(e.ctx, leadID, UpdateLeadInput{Source: &crawlKey}); err != nil {
+		t.Errorf("correcting to an inactive source err = %v, want it accepted", err)
 	}
 	referral := "referral"
 	corrected, err := e.store.UpdateLead(e.ctx, leadID, UpdateLeadInput{Source: &referral})
 	if err != nil {
 		t.Fatalf("correct source: %v", err)
 	}
-	if corrected.Score != fitHighIntentSourcePoints || corrected.SourceLabel == nil || *corrected.SourceLabel != "Referral" {
-		t.Errorf("corrected = score %d label %v, want %d and \"Referral\"", corrected.Score, corrected.SourceLabel, fitHighIntentSourcePoints)
+	if corrected.Score != 0 || corrected.SourceLabel == nil || *corrected.SourceLabel != "Referral" {
+		t.Errorf("corrected = score %d label %v, want 0 and \"Referral\": the source is relabelled and never rescores", corrected.Score, corrected.SourceLabel)
 	}
 
 	// Adopting the connector family weights the leads that still carry it.
@@ -186,8 +192,8 @@ func TestLeadSourceGovernsHumanWritesAndTheScore(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if after.Score != fitHighIntentSourcePoints || after.ScoreReason == nil || *after.ScoreReason != "high_intent_source" {
-		t.Errorf("adopted connector lead = score %d reason %v, want %d from the family's intent", after.Score, after.ScoreReason, fitHighIntentSourcePoints)
+	if after.Score != 0 {
+		t.Errorf("adopted connector lead = score %d, want 0: the source list's intent is no longer read", after.Score)
 	}
 	list, err = e.store.ListLeadSources(e.ctx)
 	if err != nil {

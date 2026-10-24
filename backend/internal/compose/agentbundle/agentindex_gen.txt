@@ -174,6 +174,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `POST /leads/{id}/qualify` | qualifyLead | Fill a lead's empty qualification fields that its own data settles, and name the rest. | Change records | at once |
 | `POST /leads/{id}/demote` | demoteLead | The documented reverse of POST /leads/{id}/promote, deterministic and conservative: it **blocks rather than orphans**. | Change records | at once |
 | `GET /lead-sources` | listLeadSources | List lead sources, active and inactive, in display order. | Read records | at once |
+| `GET /lead-origins` | listLeadOrigins | List lead origins, active and retired, in display order. | Read records | at once |
 | `GET /lead-disqualify-reasons` | listLeadDisqualifyReasons | List disqualification reasons, active and inactive, in display order. | Read records | at once |
 
 ## Lists
