@@ -63,6 +63,37 @@ func TestAForgedThreadKeyWithNoMailFromOurSeatEarnsNoCopiedStanding(t *testing.T
 	}
 }
 
+// ourSentMail plants a captured mail our seat sent on the thread, with the
+// subject only in Bcc, so it is our side's mail and never the copying mail.
+func (e *resolveEnv) ourSentMail(t *testing.T, threadKey string) {
+	t.Helper()
+	e.plantCopiedMail(t, copiedMail{
+		threadKey: threadKey, subjectRole: "bcc", direction: "outbound",
+		ourAuthor: true, capturedBy: "connector:gmail",
+	})
+}
+
+// Our side counts only as the sender of an outbound mail: a seat in To of an
+// outbound mail or in From of an inbound one did not send it.
+func TestOurSeatCountsOnlyAsTheSenderOfAnOutboundMail(t *testing.T) {
+	cases := map[string]copiedMail{
+		"our seat only in To of an outbound mail": {direction: "outbound", ourRecipient: true},
+		"our seat in From of an inbound mail":     {direction: "inbound", ourAuthor: true},
+	}
+	for name, ours := range cases {
+		t.Run(name, func(t *testing.T) {
+			e := setupResolve(t)
+			e.capturedMail(t, "thread-shape", "cc", false)
+			ours.threadKey, ours.subjectRole, ours.capturedBy = "thread-shape", "bcc", "connector:gmail"
+			e.plantCopiedMail(t, ours)
+
+			if got := e.resolve(t, commsauthz.Request{ThreadKey: "thread-shape"}); got.Supported {
+				t.Fatalf("a mail our seat did not send counted as our side: %+v", got)
+			}
+		})
+	}
+}
+
 func (e *resolveEnv) plantCopiedMail(t *testing.T, m copiedMail) ids.UUID {
 	t.Helper()
 	ctx := context.Background()
@@ -142,6 +173,7 @@ func TestOurOwnMailCopyingTheContactIsNotEvidence(t *testing.T) {
 			e := setupResolve(t)
 			m.threadKey, m.subjectRole, m.capturedBy = "thread-ours", "cc", "connector:gmail"
 			e.plantCopiedMail(t, m)
+			e.ourSentMail(t, "thread-ours")
 
 			if got := e.resolve(t, commsauthz.Request{ThreadKey: "thread-ours"}); got.Supported {
 				t.Fatalf("our own mail copying the contact supported a first mail: %+v", got)
@@ -160,10 +192,7 @@ func TestTheCcRuleNeedsOurSideOnTheThreadAndAConnectorCapture(t *testing.T) {
 	e.plantCopiedMail(t, copiedMail{
 		threadKey: "thread-typed", subjectRole: "cc", direction: "inbound", capturedBy: "human:x",
 	})
-	e.plantCopiedMail(t, copiedMail{
-		threadKey: "thread-typed", subjectRole: "bcc", direction: "inbound",
-		ourRecipient: true, capturedBy: "connector:gmail",
-	})
+	e.ourSentMail(t, "thread-typed")
 	if got := e.resolve(t, commsauthz.Request{ThreadKey: "thread-typed"}); got.Supported {
 		t.Error("a hand-typed activity manufactured the evidence a connector capture provides")
 	}

@@ -145,8 +145,8 @@ func wroteIntoThread(ctx context.Context, tx pgx.Tx, threadKey string, subject s
 }
 
 // copiedOnThisMatter reports whether the recipient was To or Cc on a captured
-// mail an outside sender wrote onto this message's thread. Our side must be on
-// the thread too.
+// mail an outside sender wrote onto this message's thread. One of our seats must
+// also have sent a captured mail on the thread.
 //
 // It supports correspondence about this thread's matter only. The thread key
 // scopes the query, and recordBasis keys the basis row by the same thread. So
@@ -159,8 +159,8 @@ func wroteIntoThread(ctx context.Context, tx pgx.Tx, threadKey string, subject s
 // The copying mail must be inbound with an author who is not one of our seats,
 // or a rep could make the evidence by copying the contact on their own mail.
 // Capture files a colleague's mail as outbound (sent_by_colleague), so the
-// direction test covers that case too. Our side's activity must be
-// connector-captured on the same medium and provider: a thread key alone is
+// direction test covers that case too. Our seat's mail must be outbound and
+// connector-captured on the same medium and provider. A thread key alone is
 // shared across media, and a hand-typed activity says whatever its author typed.
 //
 // Named by anchor when there is one and by thread key otherwise, the same

@@ -203,7 +203,7 @@ resolve it in `commsauthz.RemediesFor`.
 
 A contact can be written to about a thread. They must have been To or Cc on an inbound mail a
 connector captured on that thread, written by someone who is not one of our seats. One of our seats
-must also be on a captured activity of the same thread, kind and provider. Mail our own side sends,
+must also have sent a captured mail on the same thread, of the same kind and provider. Mail our own side sends,
 or a colleague's mail that capture files as outbound, never counts, so a seat cannot make this
 ground by copying the contact. The rule reads the thread key and records its basis against that
 thread. So it never becomes standing permission for the contact. It never supports a message the
