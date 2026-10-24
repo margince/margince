@@ -15462,7 +15462,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "project.history.title": "Phasenverlauf",
   "project.history.empty": "Noch kein Phasenwechsel erfasst.",
   "project.history.moved": "{from} → {to}",
-  "project.history.bySystem": "System",
   "project.deals.title": "Deals",
   "project.deals.empty":
     "Noch kein Deal ist mit diesem Projekt verknüpft. Das Projekt eines Deals wird im Formular des Deals ausgewählt.",
@@ -15510,8 +15509,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "project.started": "Gestartet",
   "project.aside.closeNote": "Wer ein Projekt schließt, gibt einen Grund an.",
   "project.history.since": "Seit {date}",
-  "project.history.by": "von {name}",
-  "project.history.openedBy": "angelegt von {name}",
+  "project.history.movedBy": "{subject} hat die Phase gewechselt",
+  "project.history.openedBy": "{subject} hat das Projekt angelegt",
+  "project.history.unknown":
+    "Wer diesen Wechsel vorgenommen hat, wurde nicht erfasst",
   "project.standing.unassessed":
     "Noch hat niemand erfasst, wie die Umsetzung läuft.",
   "project.standing.assessedBy": "Bewertet am {date} von {author}.",
@@ -15534,7 +15535,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "project.standing.event.signed": "Vertrag unterschrieben",
   "project.standing.event.won": "{name} gewonnen",
   "project.standing.event.end": "Geplantes Ende",
-  "project.standing.event.by": "{date} · von {name}",
   "project.standing.event.dueLate": "fällig am {date} · verspätet",
   "project.standing.event.due": "fällig am {date}",
   "project.standing.event.lastUpdate": "{date} · letzte Aktualisierung",

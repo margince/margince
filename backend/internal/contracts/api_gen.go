@@ -14497,6 +14497,33 @@ func (e PreferenceCenterRefusedReason) Valid() bool {
 	}
 }
 
+// Defines values for PrincipalAttributionActorType.
+const (
+	PrincipalAttributionActorTypeAgent     PrincipalAttributionActorType = "agent"
+	PrincipalAttributionActorTypeBuyer     PrincipalAttributionActorType = "buyer"
+	PrincipalAttributionActorTypeConnector PrincipalAttributionActorType = "connector"
+	PrincipalAttributionActorTypeHuman     PrincipalAttributionActorType = "human"
+	PrincipalAttributionActorTypeSystem    PrincipalAttributionActorType = "system"
+)
+
+// Valid indicates whether the value is a known member of the PrincipalAttributionActorType enum.
+func (e PrincipalAttributionActorType) Valid() bool {
+	switch e {
+	case PrincipalAttributionActorTypeAgent:
+		return true
+	case PrincipalAttributionActorTypeBuyer:
+		return true
+	case PrincipalAttributionActorTypeConnector:
+		return true
+	case PrincipalAttributionActorTypeHuman:
+		return true
+	case PrincipalAttributionActorTypeSystem:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for PrivacyInformationPageKind.
 const (
 	PrivacyInformationPageKindPrivacyNotice PrivacyInformationPageKind = "privacy_notice"
@@ -45483,6 +45510,35 @@ type PreviewSendRequest struct {
 	To []openapi_types.Email `json:"to"`
 }
 
+// PrincipalAttribution Who a recorded change is attributed to, read from the audit row the change
+// wrote. The fields mean what they mean on AuditHistoryEntry, and a client
+// renders them with the same helper.
+type PrincipalAttribution struct {
+	ActorId string `json:"actor_id"`
+
+	// ActorName Resolved display name for a human actor_id; null for machine actors and for a member whose user row no longer resolves.
+	ActorName *string                       `json:"actor_name,omitempty"`
+	ActorType PrincipalAttributionActorType `json:"actor_type"`
+
+	// AgentClient The NAME of the tool a delegated change was typed through — "Claude",
+	// "Cursor" — resolved from the OAuth client behind the row's passport.
+	// Null when the passport was minted by hand in Settings, when the client
+	// row is gone, and for every write that was not delegated.
+	AgentClient *string `json:"agent_client,omitempty"`
+
+	// OnBehalfOf Granting human's user id for agent actions.
+	OnBehalfOf *openapi_types.UUID `json:"on_behalf_of,omitempty"`
+
+	// OnBehalfOfName Resolved display name for on_behalf_of.
+	OnBehalfOfName *string `json:"on_behalf_of_name,omitempty"`
+
+	// PassportId The Agent Seat Passport the change was made under; null for a write that was not delegated.
+	PassportId *openapi_types.UUID `json:"passport_id,omitempty"`
+}
+
+// PrincipalAttributionActorType defines model for PrincipalAttribution.ActorType.
+type PrincipalAttributionActorType string
+
 // PrivacyInformationPage The answer for a privacy-notice link: what the installation holds about this contact, where
 // it came from, what it is used for, and the rights the contact has over it.
 //
@@ -45828,11 +45884,12 @@ type Project360PhaseHistory struct {
 type Project360PhaseTransition struct {
 	ChangedAt time.Time `json:"changed_at"`
 
-	// ChangedBy The principal that moved the phase — its id as stamped; and the seat's display name when the id names an app user.
-	ChangedBy struct {
-		DisplayName *string `json:"display_name"`
-		Id          string  `json:"id"`
-	} `json:"changed_by"`
+	// ChangedBy Who made the move, from the audit row written in the same transaction.
+	// Absent when that row is not known: a move recorded before the link existed
+	// and not matched to one audit row, or an audit row that no longer exists.
+	// A reader says "unknown" for an absent value and never "System"; the
+	// system principal is `actor_type: system`.
+	ChangedBy *PrincipalAttribution `json:"changed_by,omitempty"`
 
 	// FromPhase Null on the birth row.
 	FromPhase *string            `json:"from_phase"`

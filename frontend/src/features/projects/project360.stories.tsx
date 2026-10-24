@@ -157,7 +157,11 @@ export const PageClosed: Story = {
             to_phase: "initiative",
             reason: null,
             changed_at: "2026-03-01T09:00:00Z",
-            changed_by: { id: "u-me", display_name: "Me" },
+            changed_by: {
+              actor_type: "human",
+              actor_id: "human:u-me",
+              actor_name: "Me",
+            },
           },
           {
             id: "ph-2",
@@ -165,7 +169,15 @@ export const PageClosed: Story = {
             to_phase: "delivering",
             reason: "Contract signed",
             changed_at: "2026-04-01T09:00:00Z",
-            changed_by: { id: "u-me", display_name: "Me" },
+            changed_by: {
+              actor_type: "agent",
+              actor_id: "agent:p-1",
+              actor_name: null,
+              on_behalf_of: "u-me",
+              on_behalf_of_name: "Me",
+              agent_client: "Claude",
+              passport_id: "p-1",
+            },
           },
           {
             id: "ph-3",
@@ -173,7 +185,7 @@ export const PageClosed: Story = {
             to_phase: "closed",
             reason: "Delivered",
             changed_at: "2026-07-01T09:00:00Z",
-            changed_by: { id: "u-me", display_name: "Me" },
+            // no changed_by: the audit link is unknown,
           },
         ],
         phase_durations: [

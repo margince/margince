@@ -9,6 +9,7 @@ import { formatDayMonth } from "../../format/format.dates";
 import type { Translator, Words } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { ProjectHealthState } from "./projecthealth.queries";
+import { phaseMoverSentence } from "./projectphasemover";
 import { isProjectPhase, PHASE_LABEL } from "./projects.form";
 import type { Project360 } from "./projectsections";
 import {
@@ -212,9 +213,7 @@ function momentSub(moment: ProjectMoment, ctx: Ctx): string {
   const date = day(moment.at, ctx);
   switch (moment.what) {
     case "opened":
-      return moment.by
-        ? ctx.t("project.standing.event.by", { date, name: moment.by })
-        : date;
+      return `${date} · ${phaseMoverSentence(moment.by, true, ctx.t)}`;
     case "signed":
       return `${date} · ${moment.title}`;
     case "update":
