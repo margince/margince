@@ -8991,6 +8991,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aiHealth.noCalls": "Keine Modellaufrufe in den letzten {hours} h.",
   "aiHealth.answering": "Antwortet",
   "aiHealth.notAnswering": "Antwortet nicht",
+  "aiHealth.laneNeedsKey":
+    "Gespeichert, aber nicht aktiv: {provider} hat keinen Schlüssel, daher antwortet weiterhin das vorherige Modell. Setze {env}.",
   "aiHealth.callCounts_one": "Aufrufe: {count}, fehlgeschlagen: {failures}",
   "aiHealth.callCounts_other": "Aufrufe: {count}, fehlgeschlagen: {failures}",
   "heldThreads.title": "Zurückgehaltene Threads",

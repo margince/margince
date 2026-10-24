@@ -9047,6 +9047,8 @@ export const en = {
   "aiHealth.noCalls": "No model calls in the last {hours}h.",
   "aiHealth.answering": "Responding",
   "aiHealth.notAnswering": "Not responding",
+  "aiHealth.laneNeedsKey":
+    "Saved, but not running: {provider} holds no key, so the previous model keeps answering. Set {env}.",
   "aiHealth.callCounts_one": "{count} call, {failures} failed",
   "aiHealth.callCounts_other": "{count} calls, {failures} failed",
   "heldThreads.title": "Held threads",

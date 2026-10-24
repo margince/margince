@@ -8745,6 +8745,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aiHealth.noCalls": "Không có lượt gọi mô hình nào trong {hours} giờ qua.",
   "aiHealth.answering": "Đang phản hồi",
   "aiHealth.notAnswering": "Không phản hồi",
+  "aiHealth.laneNeedsKey":
+    "Đã lưu nhưng chưa chạy: {provider} không có khóa, nên mô hình trước đó vẫn đang trả lời. Hãy đặt {env}.",
   "aiHealth.callCounts_one": "{count} lượt gọi, {failures} lượt bị lỗi",
   "aiHealth.callCounts_other": "{count} lượt gọi, {failures} lượt bị lỗi",
   "heldThreads.title": "Chuỗi thư đang giữ lại",
