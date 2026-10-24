@@ -73,10 +73,10 @@ var ErrNotConfigured = errors.New("geocode: geocoding is switched off")
 // off; "public" and an unset value both mean the public service.
 const OffSetting = "off"
 
-// Resolve is the ONE reading of MARGINCE_GEOCODE_BASE_URL, shared by the worker
-// (which builds a client from baseURL) and the api (which queues a lookup only
-// when on). Unset is on and means the public service, so a fresh install
-// geocodes at the paced rate; only an explicit "off" disables it.
+// Resolve is the single reading of MARGINCE_GEOCODE_BASE_URL. The worker builds
+// a client from baseURL, and the api queues a lookup only when on is true.
+// Unset means on, with the public service, so a fresh install geocodes at the
+// paced rate. Only an explicit "off" disables it.
 func Resolve(setting string) (baseURL string, on bool) {
 	switch trimmed := strings.TrimSpace(setting); trimmed {
 	case "", "public":

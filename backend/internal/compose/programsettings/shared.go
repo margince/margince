@@ -68,7 +68,7 @@ var (
 	})
 	GeocodeBaseURL = config.Define(config.Spec[string]{
 		Key: "geocode_base_url", Env: "MARGINCE_GEOCODE_BASE_URL", Flag: "geocode-base-url", Type: config.String, Roles: both,
-		Doc: "Nominatim base URL; unset or public uses the public service, off disables geocoding; give the api and the worker the same value, or a lookup is never queued.",
+		Doc: "Nominatim base URL; unset or public uses the public service, off stops the lookup of map points; give the api and the worker the same value, or a lookup is never queued.",
 	})
 )
 

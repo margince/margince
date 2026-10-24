@@ -122,10 +122,10 @@ func TestTheWorkerSaysWhoseGeocoderItUses(t *testing.T) {
 	}
 }
 
-// The api queues exactly when the worker builds a client: both read the setting
-// through geocode.Resolve, so no value can leave one role queueing lookups the
-// other never answers.
-func TestGeocoderForBuildsAClientExactlyWhenTheSettingIsNotOff(t *testing.T) {
+// The api queues when the worker builds a client. Both read the setting through
+// geocode.Resolve, so no value leaves one role queueing lookups the other
+// never answers.
+func TestGeocoderForBuildsAClientWhenTheSettingIsNotOff(t *testing.T) {
 	for setting, want := range map[string]bool{
 		"": true, "  ": true, "public": true, "https://nominatim.internal": true, "off": false, " off ": false,
 	} {

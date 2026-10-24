@@ -14985,6 +14985,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.field.created_at": "Erstellt",
   "filters.field.hosting_provider": "Hosting",
   "filters.field.last_activity_at": "Letzte Aktivität",
+  "filters.field.location": "Standort",
   "filters.field.mail_provider": "E-Mail-System",
   "filters.field.operated_service": "Betriebener Dienst",
   "filters.field.owner_team_id": "Verantwortliches Team",

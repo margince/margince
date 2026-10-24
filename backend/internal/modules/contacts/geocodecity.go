@@ -96,17 +96,13 @@ func (s *Store) LookupCity(ctx context.Context, city string) (CachedPlace, bool,
 		if err != nil {
 			return err
 		}
-		// The located terms are REQUIRED, and they are the very predicate the
-		// radius query applies (geocode.LocatedSQL). A row keeps its old point
-		// when its address changes and is stamped `stale` — "not queryable,
-		// deliberately" in geocode.go's own words — so averaging one in would
-		// measure this city from where a company USED to be. Coordinates that
-		// are merely non-NULL are not coordinates that are true.
+		// The located terms are the predicate the radius query applies
+		// (geocode.LocatedSQL). An address change stamps the row `stale` and
+		// keeps its old point, so averaging it would use the previous address.
 		//
-		// The SPREAD comes back with the centre, from the same scan: asking a
-		// second time would read a different row set under a concurrent write,
-		// and the check is only meaningful against the rows that produced this
-		// average.
+		// The spread comes back with the centre from the same scan. A second
+		// query could read a different row set under a concurrent write, and
+		// the check only means something against the rows behind this average.
 		return tx.QueryRow(ctx, `
 			SELECT avg(geocode_lat), avg(geocode_lon),
 			       max(geocode_lat) - min(geocode_lat),

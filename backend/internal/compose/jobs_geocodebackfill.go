@@ -6,18 +6,16 @@ package compose
 // The geocoding backfill: the pass that reaches companies an address write
 // never will.
 //
-// Geocoding fires when an address is WRITTEN, which is the right trigger and a
-// complete answer only for a company written after this installation had a
-// geocoder. A seeded workspace, an import that ran last month, or the first
-// boot of an installation that held its customers before geocoding became the
-// default all leave rows nothing will ever write again — invisible to the
-// trigger, and so never located. `within_radius` then answers from an empty
-// set while looking exactly like a query that works.
+// Geocoding fires when an address is written. That covers only companies
+// written after this installation had a geocoder. A seeded workspace, an
+// earlier import, or customers held before geocoding became the default leave
+// rows that nothing writes again, so they are never located. `within_radius`
+// then answers from an empty set and looks like a query that works.
 //
-// It NOMINATES, it does not decide. Each candidate goes to the same
-// geocode_company job an address write queues, and that worker re-asks
-// AddressForGeocode — so the retry ledger, the settled-address rule and the
-// attempt cap stay in one place rather than being restated here.
+// It nominates and does not decide. Each candidate goes to the same
+// geocode_company job an address write queues. That worker re-asks
+// AddressForGeocode, so the retry ledger, the settled-address rule and the
+// attempt cap stay in one place.
 
 import (
 	"context"

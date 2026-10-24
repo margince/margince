@@ -6,19 +6,15 @@ package contacts
 // The backfill: companies whose address was written before this installation
 // had a geocoder, or before geocoding existed at all.
 //
-// Geocoding fires on an address WRITE, which is the right trigger and a
-// complete answer only for a company written after the feature was on.
-// Everything already in the database is invisible to it — a seeded workspace,
-// an import that ran last month, or the first boot of an installation that
-// held its customers before geocoding became the default. None
-// of those rows will ever be written again, so none of them will ever be
-// located, and `within_radius` answers from an empty set while looking exactly
-// like a working query.
+// Geocoding fires on an address write, which covers only companies written
+// after the feature was on. A seeded workspace, an earlier import, or
+// customers held before geocoding became the default are invisible to it.
+// Nothing writes those rows again, so they are never located, and
+// `within_radius` answers from an empty set and looks like a working query.
 //
-// This does not decide anything. It finds rows that have never been asked
-// about and hands each to the same per-company job an address write queues;
-// AddressForGeocode still makes the real judgement one row at a time, so a
-// company the sweep nominates but that turns out settled costs a read and no
+// This finds rows never asked about and hands each to the same per-company
+// job an address write queues. AddressForGeocode still judges one row at a
+// time, so a nominated company that is already settled costs a read and no
 // lookup.
 
 import (

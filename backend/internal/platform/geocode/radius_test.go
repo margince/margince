@@ -11,16 +11,14 @@ import (
 
 // The bounding box must never exclude a row the circle would include.
 //
-// It is a pre-filter whose only job is to let the index narrow the candidates
-// before the exact distance runs. Too wide costs a few extra comparisons; too
-// narrow silently drops companies that ARE within the radius, and the answer
-// looks complete.
+// Too wide costs a few extra comparisons. Too narrow silently drops companies
+// within the radius, and the answer looks complete.
 func TestTheBoundingBoxNeverCutsInsideTheCircle(t *testing.T) {
 	stuttgart := Point{Lat: 48.7758, Lon: 9.1829}
 	for _, radiusKM := range []float64{1, 25, 50, 200, 1000} {
 		minLat, maxLat, minLon, maxLon := boundingBox(stuttgart, radiusKM)
-		// Sample the circle's edge all the way round. Every point exactly at
-		// the radius must fall inside the box.
+		// Sample the circle's edge all the way round. Every point at the radius
+		// must fall inside the box.
 		for degrees := 0; degrees < 360; degrees += 5 {
 			edge := destination(stuttgart, radiusKM, float64(degrees))
 			if edge.Lat < minLat || edge.Lat > maxLat {
@@ -63,10 +61,8 @@ func destination(from Point, distanceKM, bearingDegrees float64) Point {
 	lon2 := lon1 + math.Atan2(
 		math.Sin(bearing)*math.Sin(angular)*math.Cos(lat1),
 		math.Cos(angular)-math.Sin(lat1)*math.Sin(lat2))
-	// NORMALISED into [-180, 180], because that is the only form a stored
-	// coordinate takes — a geocoder answers -179.9, never 180.1. Without this
-	// the test asks the box to contain longitudes no row can hold, and reports
-	// a failure the database could never produce.
+	// Normalised into [-180, 180], the only form a stored coordinate takes.
+	// Without it the test asks the box to hold longitudes no row can have.
 	return Point{Lat: lat2 * 180 / math.Pi, Lon: normalizeLon(lon2 * 180 / math.Pi)}
 }
 
@@ -84,10 +80,9 @@ func normalizeLon(lon float64) float64 {
 // A circle spanning the antimeridian, a pole, or the whole earth must not lose
 // rows to the bounding box.
 //
-// The box is a pre-filter and the haversine decides membership — but a row the
-// box excludes never reaches the haversine. My first version walked the circle
-// only around Stuttgart, which is nowhere near an edge, so none of these were
-// covered until a review named them.
+// The haversine decides membership, but a row the box excludes never reaches
+// it. A circle around Stuttgart is far from every edge, so these cases are
+// needed.
 func TestTheBoundingBoxDoesNotLoseRowsAtTheEdgesOfTheEarth(t *testing.T) {
 	for _, c := range []struct {
 		name   string

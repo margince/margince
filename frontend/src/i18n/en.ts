@@ -14946,6 +14946,7 @@ export const en = {
   "filters.field.created_at": "Created",
   "filters.field.hosting_provider": "Hosting",
   "filters.field.last_activity_at": "Last activity",
+  "filters.field.location": "Location",
   "filters.field.mail_provider": "Mail system",
   "filters.field.operated_service": "Operated service",
   "filters.field.owner_team_id": "Owner team",

@@ -41,9 +41,8 @@ export const PREVIEW_PAGE = 25;
 
 /**
  * The fields a reader may start a new clause on. A `distance` field needs a
- * place picker the builder does not have, so it is not offered; a clause that
- * already uses one still reads, and every other consumer keeps the full
- * vocabulary.
+ * place picker the builder lacks, so it is not offered. A clause that already
+ * uses one still reads, and other consumers keep the full vocabulary.
  */
 export function offerableFields(
   fields: readonly VocabularyField[],
@@ -159,6 +158,7 @@ const FILTER_ONLY_FIELD_LABELS = new Map<string, MessageKey>([
   ["domain", "history.field.domain"],
   ["hosting_provider", "filters.field.hosting_provider"],
   ["last_activity_at", "filters.field.last_activity_at"],
+  ["location", "filters.field.location"],
   ["mail_provider", "filters.field.mail_provider"],
   ["operated_service", "filters.field.operated_service"],
   ["owner_team_id", "filters.field.owner_team_id"],

@@ -279,8 +279,7 @@ var segmentEngines = map[string]storekit.Query{
 			"hosting_provider": hostingProviderField,
 			"operated_service": operatedServiceField,
 			"technology":       technologyField,
-			// Distance from a place, answered by the same geocode.Within the
-			// query grammar's within_radius compiles through.
+			// Compiles through geocode.Within; it has no value to read back.
 			"location": {Expr: "t", Type: storekit.FieldDistance, GeoTarget: typeCompany},
 		}),
 	},

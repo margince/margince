@@ -140,8 +140,8 @@ export function ClauseRow({
   }, [arrived]);
   const chosen = fields.find((f) => f.name === field);
   const { core, custom } = groupFields(
-    // A distance clause already in the tree keeps its own field in the list so
-    // the row can name it; no other distance field is offered.
+    // A distance clause already in the tree keeps its field so the row can
+    // name it. No other distance field is offered.
     chosen?.type === "distance"
       ? [...offerableFields(fields), chosen]
       : offerableFields(fields),

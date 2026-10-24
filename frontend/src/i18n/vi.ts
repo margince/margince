@@ -14576,6 +14576,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.field.created_at": "Ngày tạo",
   "filters.field.hosting_provider": "Nhà cung cấp máy chủ",
   "filters.field.last_activity_at": "Hoạt động gần nhất",
+  "filters.field.location": "Vị trí",
   "filters.field.mail_provider": "Hệ thống thư",
   "filters.field.operated_service": "Dịch vụ vận hành",
   "filters.field.owner_team_id": "Nhóm chịu trách nhiệm",

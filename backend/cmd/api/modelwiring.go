@@ -290,19 +290,13 @@ type queueGates struct {
 }
 
 // geocodeEnqueueOptions wires the coordinate-lookup enqueue only when
-// geocode.Resolve says this installation geocodes — the same predicate
-// cmd/worker's geocoderFor gates its own client on.
+// geocode.Resolve says this installation geocodes. cmd/worker's geocoderFor
+// gates its own client on the same predicate.
 //
-// The api role only ENQUEUES: the provider lives on the worker
-// (JobRunnerConfig.Geocoder), and that split is what keeps the
-// single-requester rule enforceable — several api replicas may queue, exactly
-// one worker asks. Which is also why an off variable HERE has to stop the
-// queueing rather than being left to the worker: the worker's nil-provider
-// path does answer honestly, but what it writes is contacts.GeocodeFailed, and
-// an operator asking why geocoding does not work then reads a lookup failure
-// on every address when the truth is that no provider was ever configured for
-// the role that queued it. A wrong answer delivered confidently is worse for
-// diagnosis than an empty queue.
+// The api role only enqueues; the provider lives on the worker
+// (JobRunnerConfig.Geocoder). When geocoding is off, the api must not queue.
+// A worker without a provider would write contacts.GeocodeFailed for every
+// address, which reads as a lookup failure instead of "never configured".
 func geocodeEnqueueOptions(inserter *jobs.Runner, baseURL string) []compose.Option {
 	if _, on := geocode.Resolve(baseURL); !on {
 		return nil
