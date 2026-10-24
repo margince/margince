@@ -19223,7 +19223,8 @@ paths:
       summary: Read AI administration status (ai_diagnostics and ai_budget read).
       description: |
         Requires both diagnostics and allowance read permissions. Without ai_routing
-        read, features and unused_tiers are empty and routing_version is an empty
+        read, features, unused_tiers and lanes_needing_a_key are empty and
+        routing_version is an empty
         string; routing settings are not read. Deferred-work counts cover the company.
       responses:
         '200':
@@ -36019,6 +36020,19 @@ components:
             Work waiting for the AI provider to answer, not for the budget. It resumes by
             itself at the provider's next probe, and a budget raise does not change it;
             `count` holds only what a raise would resume.
+    AiLaneNeedingAKey:
+      type: object
+      required: [lane, provider, key_env]
+      description: 'One saved binding whose vendor needs a key that is not held.'
+      properties:
+        lane:
+          type: string
+          description: 'The lane the binding sits on, named as the router names it: a tier name, `embed` or `decide`.'
+        provider: { type: string }
+        model: { type: string }
+        key_env:
+          type: string
+          description: 'The environment variable that would supply the key, named so an operator can act without looking it up.'
     AiStatus:
       type: object
       required: [observed_at, budget, routing_version, task_contract_hash, features, deferred_work, deferred_work_coverage]
@@ -36031,6 +36045,10 @@ components:
         deferred_work: { type: array, items: { $ref: '#/components/schemas/AiDeferredWork' } }
         deferred_work_coverage: { type: string }
         unused_tiers: { type: array, items: { type: string } }
+        lanes_needing_a_key:
+          type: array
+          items: { $ref: '#/components/schemas/AiLaneNeedingAKey' }
+          description: 'The saved bindings that cannot run, because the vendor they name holds no key. The router keeps serving whatever it served before such a save, so without this the screen names a model that is not answering.'
     AiBudgetPreview:
       type: object
       required: [current, proposed, features, deferred_work]

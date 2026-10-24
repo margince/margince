@@ -13078,7 +13078,8 @@ export interface paths {
         /**
          * Read AI administration status (ai_diagnostics and ai_budget read).
          * @description Requires both diagnostics and allowance read permissions. Without ai_routing
-         *     read, features and unused_tiers are empty and routing_version is an empty
+         *     read, features, unused_tiers and lanes_needing_a_key are empty and
+         *     routing_version is an empty
          *     string; routing settings are not read. Deferred-work counts cover the company.
          */
         get: operations["getAiStatus"];
@@ -25243,6 +25244,15 @@ export interface components {
              */
             waiting_on_provider?: number;
         };
+        /** @description One saved binding whose vendor needs a key that is not held. */
+        AiLaneNeedingAKey: {
+            /** @description The lane the binding sits on, named as the router names it: a tier name, `embed` or `decide`. */
+            lane: string;
+            provider: string;
+            model?: string;
+            /** @description The environment variable that would supply the key, named so an operator can act without looking it up. */
+            key_env: string;
+        };
         AiStatus: {
             /** Format: date-time */
             observed_at: string;
@@ -25253,6 +25263,8 @@ export interface components {
             deferred_work: components["schemas"]["AiDeferredWork"][];
             deferred_work_coverage: string;
             unused_tiers?: string[];
+            /** @description The saved bindings that cannot run, because the vendor they name holds no key. The router keeps serving whatever it served before such a save, so without this the screen names a model that is not answering. */
+            lanes_needing_a_key?: components["schemas"]["AiLaneNeedingAKey"][];
         };
         AiBudgetPreview: {
             current: components["schemas"]["AiBudgetSnapshot"];

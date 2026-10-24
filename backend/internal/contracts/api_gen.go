@@ -25912,6 +25912,17 @@ type AiHealth struct {
 	WindowHours int `json:"window_hours"`
 }
 
+// AiLaneNeedingAKey One saved binding whose vendor needs a key that is not held.
+type AiLaneNeedingAKey struct {
+	// KeyEnv The environment variable that would supply the key, named so an operator can act without looking it up.
+	KeyEnv string `json:"key_env"`
+
+	// Lane The lane the binding sits on, named as the router names it: a tier name, `embed` or `decide`.
+	Lane     string  `json:"lane"`
+	Model    *string `json:"model,omitempty"`
+	Provider string  `json:"provider"`
+}
+
 // AiModelRate One effective-dated model price. The four buckets are USD per 1M tokens as decimal strings (the server stores µUSD integers). Transparency-only — never gates routing.
 type AiModelRate struct {
 	CacheReadPerMtok  string             `json:"cache_read_per_mtok"`
@@ -26502,10 +26513,13 @@ type AiStatus struct {
 	DeferredWork         []AiDeferredWork `json:"deferred_work"`
 	DeferredWorkCoverage string           `json:"deferred_work_coverage"`
 	Features             []AiFeatureRoute `json:"features"`
-	ObservedAt           time.Time        `json:"observed_at"`
-	RoutingVersion       string           `json:"routing_version"`
-	TaskContractHash     string           `json:"task_contract_hash"`
-	UnusedTiers          *[]string        `json:"unused_tiers,omitempty"`
+
+	// LanesNeedingAKey The saved bindings that cannot run, because the vendor they name holds no key. The router keeps serving whatever it served before such a save, so without this the screen names a model that is not answering.
+	LanesNeedingAKey *[]AiLaneNeedingAKey `json:"lanes_needing_a_key,omitempty"`
+	ObservedAt       time.Time            `json:"observed_at"`
+	RoutingVersion   string               `json:"routing_version"`
+	TaskContractHash string               `json:"task_contract_hash"`
+	UnusedTiers      *[]string            `json:"unused_tiers,omitempty"`
 }
 
 // AiTask AI task key from the task catalog, used to localize its display name.
