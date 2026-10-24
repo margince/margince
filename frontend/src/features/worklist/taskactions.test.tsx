@@ -644,8 +644,9 @@ test.each([
   expect(screen.queryByRole("button", { name: en["tasks.snooze"] })).toBeNull();
 });
 
-test("a dialog opened on warm reads puts first focus on Done, not on a link or Call", async () => {
-  stubNextSteps();
+// The task, its call source and its contact already cached when the dialog opens.
+function openWarm({ isDone = false, readOnly = false } = {}) {
+  stubNextSteps({ isDone });
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -655,7 +656,7 @@ test("a dialog opened on warm reads puts first focus on Done, not on a link or C
     subject: "Call back Alice about the renewal",
     body: "Agenda: https://example.com/agenda",
     occurred_at: "2026-09-08T09:00:00Z",
-    is_done: false,
+    is_done: isDone,
     source_activity_id: "src-1",
     links: [{ entity_type: "contact", entity_id: "c-1" }],
   });
@@ -671,7 +672,7 @@ test("a dialog opened on warm reads puts first focus on Done, not on a link or C
       <LocaleProvider initial="en">
         <TaskDetailModal
           activityId="task-1"
-          readOnly={false}
+          readOnly={readOnly}
           onClose={() => {}}
           update={
             {
@@ -683,6 +684,11 @@ test("a dialog opened on warm reads puts first focus on Done, not on a link or C
       </LocaleProvider>
     </QueryClientProvider>,
   );
+  return client;
+}
+
+test("a dialog opened on warm reads puts first focus on Done, not on a link or Call", async () => {
+  const client = openWarm();
 
   const done = screen.getByRole("button", { name: en["tasks.complete"] });
   expect(
@@ -696,3 +702,24 @@ test("a dialog opened on warm reads puts first focus on Done, not on a link or C
   await waitFor(() => expect(client.isFetching()).toBe(0));
   expect(document.activeElement).toBe(done);
 });
+
+test.each([
+  ["a done task", { isDone: true }],
+  ["a read-only dialog", { readOnly: true }],
+])(
+  "%s opened on warm reads puts first focus on the dialog box",
+  async (_, options) => {
+    const client = openWarm(options);
+
+    const box = screen.getByRole("dialog");
+    expect(
+      screen.getByRole("link", { name: en["record.verb.call"] }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("link", { name: "https://example.com/agenda" }),
+    ).toBeTruthy();
+    expect(document.activeElement).toBe(box);
+    await waitFor(() => expect(client.isFetching()).toBe(0));
+    expect(document.activeElement).toBe(box);
+  },
+);
