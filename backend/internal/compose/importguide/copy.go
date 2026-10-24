@@ -43,9 +43,9 @@ var Columns = withActivityColumns(map[string]Column{
 		Vi: "Tên pháp lý đã đăng ký, nếu khác tên hiển thị.",
 	}, Example: same("Acme Industries GmbH & Co. KG")},
 	"industry": {Description: langcopy.Phrase{
-		En: "The industry, as free text.",
-		De: "Die Branche als freier Text.",
-		Vi: "Ngành, dạng văn bản tự do.",
+		En: "One of the industries Margince lists, or text that names one. Text that names none leaves Industry empty and is kept in the description.",
+		De: "Eine der Branchen, die Margince führt, oder ein Text, der eine nennt. Ein Text ohne passende Branche lässt Branche leer und bleibt in der Beschreibung erhalten.",
+		Vi: "Một trong các ngành Margince liệt kê, hoặc văn bản gọi tên một ngành. Văn bản không khớp ngành nào để trống ngành và được giữ trong mô tả.",
 	}, Example: langcopy.Phrase{En: "Manufacturing", De: "Maschinenbau", Vi: "Sản xuất"}},
 	"size_band": {Description: langcopy.Phrase{
 		En: "Number of employees, as one of the bands Margince uses.",

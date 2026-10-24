@@ -3388,7 +3388,7 @@ export const de = {
   "industry.manufacturing": "Fertigung",
   "industry.marketingAdvertising": "Marketing und Werbung",
   "industry.miningMetals": "Bergbau und Metalle",
-  "industry.nonprofit": "Gemeinnützige Organisation",
+  "industry.nonprofit": "Gemeinnützige Einrichtung",
   "industry.pharmaBiotech": "Pharma und Biotechnologie",
   "industry.realEstate": "Immobilien",
   "industry.telecommunications": "Telekommunikation",

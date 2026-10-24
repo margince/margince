@@ -18,6 +18,7 @@ import (
 	"context"
 	"net/http"
 	"slices"
+	"strconv"
 	"testing"
 	"time"
 
@@ -91,7 +92,7 @@ func TestGrowthFitAbstainsAndNamesWhatToGather(t *testing.T) {
 	// The stale one is still OUTSTANDING, so it must still be named as
 	// something to go and get. A value too old to rest a judgment on is a gap,
 	// not a fact we hold.
-	if !namesMissingInput(enriched.DataCompleteness.Missing, "their industry") {
+	if !namesMissingInput(enriched.DataCompleteness.Missing, "industry") {
 		t.Errorf("missing = %v, want it to still name the stale industry value",
 			enriched.DataCompleteness.Missing)
 	}
@@ -105,7 +106,7 @@ func TestGrowthFitAbstainsAndNamesWhatToGather(t *testing.T) {
 		t.Errorf("band = %q, want unknown — two of seven is below the abstention floor", enriched.Band)
 	}
 	for _, named := range enriched.DataCompleteness.Missing {
-		if named == "what they offer" || named == "who they sell to" {
+		if named == "offer_summary" || named == "icp" {
 			t.Errorf("missing still names %q, which was just recorded", named)
 		}
 	}
@@ -188,6 +189,65 @@ func cachedGrowthFitReaders(t *testing.T, e *apptest.AppEnv, companyID string) [
 		t.Fatalf("reading the cached growth-fit rows: %v", err)
 	}
 	return readers
+}
+
+// A company whose column shows an industry is never listed as missing it, and
+// the figure moves with the real write that set it: the PATCH changes the
+// fingerprint, so the next read re-assesses, while a read with no write between
+// serves the cache.
+func TestAnIndustryTheCompanyShowsIsNotListedAsMissing(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	companyID := createBareCompany(t, e)
+
+	var before growthFitResponse
+	if status := e.Call(t, "GET", "/v1/companies/"+companyID+"/growth-fit", nil, nil, &before); status != http.StatusOK {
+		t.Fatalf("GET growth-fit = %d, want 200", status)
+	}
+	if !namesMissingInput(before.DataCompleteness.Missing, "industry") {
+		t.Fatalf("missing = %v, want industry named for a company that shows none", before.DataCompleteness.Missing)
+	}
+	generatedAt := cachedGrowthFitGeneratedAt(t, e, companyID)
+
+	var cached growthFitResponse
+	e.Call(t, "GET", "/v1/companies/"+companyID+"/growth-fit", nil, nil, &cached)
+	if again := cachedGrowthFitGeneratedAt(t, e, companyID); !again.Equal(generatedAt) {
+		t.Error("a read with no write between re-assessed, so the cache is not serving")
+	}
+
+	var company struct {
+		Version int64 `json:"version"`
+	}
+	e.Call(t, "GET", "/v1/companies/"+companyID, nil, nil, &company)
+	status := e.Call(t, "PATCH", "/v1/companies/"+companyID, AnyMap{"industry": "Healthcare"},
+		map[string]string{"If-Match": strconv.FormatInt(company.Version, 10)}, nil)
+	if status != http.StatusOK {
+		t.Fatalf("PATCH industry = %d, want 200", status)
+	}
+
+	var after growthFitResponse
+	if status := e.Call(t, "GET", "/v1/companies/"+companyID+"/growth-fit", nil, nil, &after); status != http.StatusOK {
+		t.Fatalf("GET growth-fit after the patch = %d, want 200", status)
+	}
+	if namesMissingInput(after.DataCompleteness.Missing, "industry") {
+		t.Errorf("missing = %v, but the company shows an industry", after.DataCompleteness.Missing)
+	}
+	if after.DataCompleteness.Present != before.DataCompleteness.Present+1 {
+		t.Errorf("present moved from %d to %d, want one more", before.DataCompleteness.Present, after.DataCompleteness.Present)
+	}
+	if rewritten := cachedGrowthFitGeneratedAt(t, e, companyID); !rewritten.After(generatedAt) {
+		t.Error("the patch did not change the fingerprint, so the read served the old assessment")
+	}
+}
+
+func cachedGrowthFitGeneratedAt(t *testing.T, e *apptest.AppEnv, companyID string) time.Time {
+	t.Helper()
+	var at time.Time
+	if err := e.Owner.QueryRow(context.Background(),
+		`SELECT max(generated_at) FROM company_growth_fit WHERE company_id = $1`, companyID).Scan(&at); err != nil {
+		t.Fatalf("reading the cached assessment's age: %v", err)
+	}
+	return at
 }
 
 func namesMissingInput(missing []string, want string) bool {

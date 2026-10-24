@@ -106,9 +106,15 @@ func previewReadColumns(ctx context.Context, tx pgx.Tx, id ids.CompanyID, curren
 		if value == "" {
 			continue
 		}
-		applies, err := companyColumnWriteApplies(ctx, tx, column, authority, []any{id, value})
-		if err != nil {
-			return nil, err
+		// The preview asks the question the write will ask, with the value the
+		// write will bind: text that names no industry code writes nothing.
+		bound, unmapped := companyColumnArgument(column, value)
+		applies := false
+		if !unmapped {
+			applies, err = companyColumnWriteApplies(ctx, tx, column, authority, []any{id, bound})
+			if err != nil {
+				return nil, err
+			}
 		}
 		before, err := companyReadColumnValue(values[stored])
 		if err != nil {
@@ -116,7 +122,7 @@ func previewReadColumns(ctx context.Context, tx pgx.Tx, id ids.CompanyID, curren
 		}
 		after := before
 		if applies {
-			after = value
+			after = deref(bound)
 		}
 		out = append(out, CompanyReadValue{Field: stored, Before: before, After: after, Proposed: value, Retained: !applies, Quote: field.EvidenceSnippet, SourceURL: field.SourceURL})
 	}
