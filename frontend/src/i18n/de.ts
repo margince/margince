@@ -13874,6 +13874,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Vorstellungsanfrage geschlossen",
   "webhooks.event.intro_request.closed.when":
     "Eine Anfrage endet ohne Vorstellung.",
+  "webhooks.event.intro_request.recorded.label": "Vorstellung erfasst",
+  "webhooks.event.intro_request.recorded.when":
+    "Ein Kollege erfasst eine Vorstellung, die außerhalb von Margince stattfand.",
   "webhooks.eventGroup.consent_privacy": "Einwilligung und Datenschutz",
   "webhooks.event.consent.changed.label": "Einwilligung erfasst",
   "webhooks.event.consent.changed.when":
@@ -14301,6 +14304,14 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contact.intro.recordSubmit": "Vorstellung erfassen",
   "contact.intro.recordFailed":
     "Die Vorstellung wurde nicht erfasst. Du musst eines der beiden Teammitglieder sein. Bitte versuche es erneut.",
+  "contact.intro.recordDuplicate":
+    "Diese Vorstellung ist für diese beiden Teammitglieder bereits erfasst.",
+  "contact.intro.recordGone":
+    "Der Kontakt oder ein Teammitglied wurde nicht gefunden. Lade neu und versuche es erneut.",
+  "contact.intro.recordInvalid":
+    "Prüfe das Datum: es darf nicht in der Zukunft liegen. Versuche es dann erneut.",
+  "contact.intro.recordFailedGeneric":
+    "Die Vorstellung wurde nicht erfasst. Bitte versuche es erneut.",
   "contact.intro.recordedBadge": "Nachträglich erfasst",
   "contact.intro.recordedIntroduced": "hat vorgestellt",
   "contact.intro.cancel": "Abbrechen",

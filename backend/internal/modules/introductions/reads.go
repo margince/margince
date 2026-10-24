@@ -39,12 +39,13 @@ func (s *Store) load(ctx context.Context, tx pgx.Tx, id ids.UUID) (*Request, err
 	if err != nil {
 		return nil, fmt.Errorf("introductions: reading the ask: %w", err)
 	}
-	if s.roleOf(ctx, &r) != "" {
-		return &r, nil
-	}
-	// A recorded introduction is readable by anyone who can read its contact;
-	// an ask is the two colleagues' alone.
+	// A recorded introduction is readable by anyone who can read its contact,
+	// its two colleagues included: losing row scope on the contact closes it.
+	// An ask is the two colleagues' alone.
 	if r.Origin != OriginRecorded {
+		if s.roleOf(ctx, &r) != "" {
+			return &r, nil
+		}
 		return nil, apperrors.ErrNotFound
 	}
 	if err := auth.EnsureVisibleExisting(ctx, tx, "contact", r.ContactID); err != nil {

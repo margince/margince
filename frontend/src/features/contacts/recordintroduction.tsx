@@ -8,7 +8,11 @@
 // plainly incomplete.
 
 import { useId, useState } from "react";
-import { useRoster } from "../../components/roster";
+import {
+  RosterPartialNote,
+  useRoster,
+  useRosterPartial,
+} from "../../components/roster";
 import { Button, Field, Modal } from "../../design-system/atoms";
 import {
   DateInput,
@@ -19,6 +23,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
+import { problemStatus } from "../../lib/problem";
 import { useViewerId } from "../../lib/session";
 import {
   type RecordIntroductionInput,
@@ -41,6 +46,21 @@ const CHANNELS: readonly {
   { value: "other", label: "contact.intro.channelOther" },
 ];
 
+function failureKey(status: number) {
+  switch (status) {
+    case 403:
+      return "contact.intro.recordFailed";
+    case 409:
+      return "contact.intro.recordDuplicate";
+    case 404:
+      return "contact.intro.recordGone";
+    case 422:
+      return "contact.intro.recordInvalid";
+    default:
+      return "contact.intro.recordFailedGeneric";
+  }
+}
+
 /** RecordIntroductionDialog collects the two colleagues, the day and the channel. */
 export function RecordIntroductionDialog({
   contactId,
@@ -57,6 +77,7 @@ export function RecordIntroductionDialog({
   const titleId = useId();
   const viewerId = useViewerId();
   const roster = useRoster("user", open);
+  const rosterPartial = useRosterPartial("user", open);
   const [introducer, setIntroducer] = useState("");
   const [introduced, setIntroduced] = useState(viewerId ?? "");
   const [day, setDay] = useState<ISODate | "">("");
@@ -143,8 +164,9 @@ export function RecordIntroductionDialog({
             />
           )}
         </Field>
+        <RosterPartialNote partial={rosterPartial} />
         {record.isError ? (
-          <ErrorLine>{t("contact.intro.recordFailed")}</ErrorLine>
+          <ErrorLine>{t(failureKey(problemStatus(record.error)))}</ErrorLine>
         ) : null}
       </div>
       <div className="actions">

@@ -13504,6 +13504,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webhooks.event.intro_request.closed.label": "Đã đóng yêu cầu giới thiệu",
   "webhooks.event.intro_request.closed.when":
     "Yêu cầu kết thúc mà không có lời giới thiệu.",
+  "webhooks.event.intro_request.recorded.label": "Đã ghi nhận lời giới thiệu",
+  "webhooks.event.intro_request.recorded.when":
+    "Một đồng nghiệp ghi nhận lời giới thiệu diễn ra bên ngoài Margince.",
   "webhooks.eventGroup.consent_privacy": "Sự đồng ý và quyền riêng tư",
   "webhooks.event.consent.changed.label": "Đã ghi nhận sự đồng ý",
   "webhooks.event.consent.changed.when":
@@ -13914,6 +13917,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.intro.recordSubmit": "Ghi nhận giới thiệu",
   "contact.intro.recordFailed":
     "Không thể ghi nhận lần giới thiệu. Bạn phải là một trong hai đồng nghiệp. Thử lại.",
+  "contact.intro.recordDuplicate":
+    "Lần giới thiệu này đã được ghi nhận cho hai đồng nghiệp này.",
+  "contact.intro.recordGone":
+    "Không tìm thấy liên hệ hoặc một trong các đồng nghiệp. Hãy tải lại và thử lại.",
+  "contact.intro.recordInvalid":
+    "Kiểm tra ngày: không được ở tương lai. Sau đó thử lại.",
+  "contact.intro.recordFailedGeneric":
+    "Không thể ghi nhận lần giới thiệu. Thử lại.",
   "contact.intro.recordedBadge": "Ghi nhận sau khi xảy ra",
   "contact.intro.recordedIntroduced": "đã giới thiệu",
   "contact.intro.cancel": "Hủy",

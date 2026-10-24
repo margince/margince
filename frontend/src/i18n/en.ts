@@ -13836,6 +13836,9 @@ export const en = {
   "webhooks.event.intro_request.closed.label": "Introduction request closed",
   "webhooks.event.intro_request.closed.when":
     "A request ends without an introduction.",
+  "webhooks.event.intro_request.recorded.label": "Introduction recorded",
+  "webhooks.event.intro_request.recorded.when":
+    "A colleague records an introduction that happened outside Margince.",
   "webhooks.eventGroup.consent_privacy": "Consent and privacy",
   "webhooks.event.consent.changed.label": "Consent recorded",
   "webhooks.event.consent.changed.when":
@@ -14247,6 +14250,14 @@ export const en = {
   "contact.intro.recordSubmit": "Record introduction",
   "contact.intro.recordFailed":
     "The introduction was not recorded. You must be one of the two colleagues. Retry.",
+  "contact.intro.recordDuplicate":
+    "This introduction is already recorded for these two colleagues.",
+  "contact.intro.recordGone":
+    "The contact or one of the colleagues could not be found. Reload and retry.",
+  "contact.intro.recordInvalid":
+    "Check the date: it cannot be in the future. Then retry.",
+  "contact.intro.recordFailedGeneric":
+    "The introduction was not recorded. Retry.",
   "contact.intro.recordedBadge": "Recorded after the fact",
   "contact.intro.recordedIntroduced": "introduced",
   "contact.intro.cancel": "Cancel",
