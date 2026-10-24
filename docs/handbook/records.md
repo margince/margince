@@ -198,6 +198,8 @@ To merge two duplicate companies in Margince, open the company you want to remov
 The company you merged away is archived, not deleted. You cannot merge an archived company.
 
 Anyone the merged-away company was shared with can open the company you kept. Of their two shares, the higher access stays. Margince lists two companies as a possible duplicate when one has a domain under the other's, such as `cloud.example.com` under `example.com`. It never merges them by itself.
+
+Margince also lists two companies whose names are the same once the legal form is left out, such as "Fabrikam GmbH" and "Fabrikam". Two names that are only close, such as "Fabrikam GmbH" and "Fabrikam Cloud Services", need one more fact in common. That fact is an address, a phone number or a contact who works at both.
 Also called: combine companies, deduplicate accounts.
 
 ### How do I stop a company coming back from email?
