@@ -92,7 +92,8 @@ func TestACapturedMailStoresItsCredentialsMasked(t *testing.T) {
 	}
 }
 
-func passwordMail(msgID, to, cc, password string) []byte {
+func passwordMail(msgID, cc, password string) []byte {
+	to := captureOwner
 	return plainMail("anna@acme.example", to, cc, msgID, "Passwort: "+password)
 }
 
@@ -112,7 +113,8 @@ func plainMail(from, to, cc, msgID, text string) []byte {
 }
 
 // passwordMailWithFile is passwordMail carrying one file whose bytes are file.
-func passwordMailWithFile(msgID, to, cc, file string) []byte {
+func passwordMailWithFile(msgID, cc, file string) []byte {
+	to := captureOwner
 	return []byte(strings.Join([]string{
 		"From: anna@acme.example",
 		"To: " + to,
@@ -151,9 +153,9 @@ func TestMaskedTextIsNoProofThatTwoMailboxesHoldOneMessage(t *testing.T) {
 	e, sync := env.e, env.sync
 	syncOther := secondMailbox(t, e, e.Rep3)
 
-	sync(t, passwordMail("pw-forged@acme.example", captureOwner, "anna@acme.example", "AlphaSecret"))
+	sync(t, passwordMail("pw-forged@acme.example", "anna@acme.example", "AlphaSecret"))
 	forged := activityIDOf(t, e, "pw-forged@acme.example")
-	syncOther(t, passwordMail("pw-forged@acme.example", captureOwner, secondSeatAddress, "WrongGuess"))
+	syncOther(t, passwordMail("pw-forged@acme.example", secondSeatAddress, "WrongGuess"))
 	if importedBy(t, e, forged, e.Rep3) {
 		t.Error("a forged twin with another password became an importer of the colleague's row")
 	}
@@ -161,13 +163,13 @@ func TestMaskedTextIsNoProofThatTwoMailboxesHoldOneMessage(t *testing.T) {
 		t.Errorf("%d email rows after the forged twin, want 2: the forger keeps a row of their own", n)
 	}
 
-	sync(t, passwordMail("pw-both@acme.example", captureOwner, secondSeatAddress, "AlphaSecret"))
-	syncOther(t, passwordMail("pw-both@acme.example", captureOwner, secondSeatAddress, "AlphaSecret"))
+	sync(t, passwordMail("pw-both@acme.example", secondSeatAddress, "AlphaSecret"))
+	syncOther(t, passwordMail("pw-both@acme.example", secondSeatAddress, "AlphaSecret"))
 	if !importedBy(t, e, activityIDOf(t, e, "pw-both@acme.example"), e.Rep3) {
 		t.Error("a colleague the masked mail was addressed to did not join its row")
 	}
 
-	sync(t, passwordMail("pw-older@acme.example", captureOwner, secondSeatAddress, "AlphaSecret"))
+	sync(t, passwordMail("pw-older@acme.example", secondSeatAddress, "AlphaSecret"))
 	older := activityIDOf(t, e, "pw-older@acme.example")
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
@@ -176,7 +178,7 @@ func TestMaskedTextIsNoProofThatTwoMailboxesHoldOneMessage(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("storing the row as capture stored it before masking: %v", err)
 	}
-	syncOther(t, passwordMail("pw-older@acme.example", captureOwner, secondSeatAddress, "AlphaSecret"))
+	syncOther(t, passwordMail("pw-older@acme.example", secondSeatAddress, "AlphaSecret"))
 	if !importedBy(t, e, older, e.Rep3) {
 		t.Error("a recipient's masked copy did not join a row stored before masking")
 	}
@@ -192,8 +194,8 @@ func TestAMaskedReplayNeedsAnAttestedRecipient(t *testing.T) {
 	syncOther := secondMailbox(t, e, e.Rep3)
 
 	declareIdentity(t, e, e.Rep3, capturemod.IdentityKindAddress, "alias@myco.example")
-	sync(t, passwordMail("pw-alias@acme.example", captureOwner, "alias@myco.example", "AlphaSecret"))
-	syncOther(t, passwordMail("pw-alias@acme.example", captureOwner, "alias@myco.example", "AlphaSecret"))
+	sync(t, passwordMail("pw-alias@acme.example", "alias@myco.example", "AlphaSecret"))
+	syncOther(t, passwordMail("pw-alias@acme.example", "alias@myco.example", "AlphaSecret"))
 	if importedBy(t, e, activityIDOf(t, e, "pw-alias@acme.example"), e.Rep3) {
 		t.Error("a self-declared alias on the Cc line proved a masked replay")
 	}
@@ -222,14 +224,14 @@ func TestAMaskedReplayNeedsTheSameFiles(t *testing.T) {
 	sync := mailboxFor(t, e, e.Rep1, captureOwner, cfg)
 	syncOther := mailboxFor(t, e, e.Rep3, secondSeatAddress, cfg)
 
-	sync(t, passwordMailWithFile("pw-file@acme.example", captureOwner, secondSeatAddress, "the original file"))
-	syncOther(t, passwordMailWithFile("pw-file@acme.example", captureOwner, secondSeatAddress, "another file"))
+	sync(t, passwordMailWithFile("pw-file@acme.example", secondSeatAddress, "the original file"))
+	syncOther(t, passwordMailWithFile("pw-file@acme.example", secondSeatAddress, "another file"))
 	if importedBy(t, e, activityIDOf(t, e, "pw-file@acme.example"), e.Rep3) {
 		t.Error("a masked copy carrying another file joined the row")
 	}
 
-	sync(t, passwordMailWithFile("pw-same-file@acme.example", captureOwner, secondSeatAddress, "the original file"))
-	syncOther(t, passwordMailWithFile("pw-same-file@acme.example", captureOwner, secondSeatAddress, "the original file"))
+	sync(t, passwordMailWithFile("pw-same-file@acme.example", secondSeatAddress, "the original file"))
+	syncOther(t, passwordMailWithFile("pw-same-file@acme.example", secondSeatAddress, "the original file"))
 	if !importedBy(t, e, activityIDOf(t, e, "pw-same-file@acme.example"), e.Rep3) {
 		t.Error("a recipient's masked copy carrying the same file did not join the row")
 	}

@@ -13,6 +13,12 @@ import (
 	"regexp"
 )
 
+// Kinds a finding reports; the AI stripper writes them into its marker.
+const (
+	kindAPIKey               = "api_key"
+	kindCredentialAssignment = "credential_assignment"
+)
+
 // Lane is the form of the text a scan reads.
 type Lane int
 
@@ -140,12 +146,12 @@ func nextLine(labels string) *regexp.Regexp {
 var rules = []rule{
 	// (?s) spans lines; in JSON the line breaks are \n escapes, which .*? crosses too.
 	{kind: "private_key", re: regexp.MustCompile(`(?s)-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----`)},
-	{kind: "api_key", re: regexp.MustCompile(`\bsk-[A-Za-z0-9_-]{16,}`)},
+	{kind: kindAPIKey, re: regexp.MustCompile(`\bsk-[A-Za-z0-9_-]{16,}`)},
 	// Stripe's underscore keys, a shape the hyphen anchor of sk- never reaches.
-	{kind: "api_key", re: regexp.MustCompile(`\b[srp]k_(?:live|test)_[0-9A-Za-z]{16,}`)},
-	{kind: "api_key", re: regexp.MustCompile(`\bgh[pousr]_[A-Za-z0-9]{20,}`)},
-	{kind: "api_key", re: regexp.MustCompile(`\bxox[baprs]-[A-Za-z0-9-]{10,}`)},
-	{kind: "api_key", re: regexp.MustCompile(`\bAIza[0-9A-Za-z_-]{30,}`)},
+	{kind: kindAPIKey, re: regexp.MustCompile(`\b[srp]k_(?:live|test)_[0-9A-Za-z]{16,}`)},
+	{kind: kindAPIKey, re: regexp.MustCompile(`\bgh[pousr]_[A-Za-z0-9]{20,}`)},
+	{kind: kindAPIKey, re: regexp.MustCompile(`\bxox[baprs]-[A-Za-z0-9-]{10,}`)},
+	{kind: kindAPIKey, re: regexp.MustCompile(`\bAIza[0-9A-Za-z_-]{30,}`)},
 	{kind: "aws_access_key", re: regexp.MustCompile(`\b(?:AKIA|ASIA)[0-9A-Z]{16}\b`)},
 	// The 40-character AWS secret has no prefix of its own. Its key name is one
 	// underscore-joined word, so the assignment rule's \b never fires in it.
@@ -164,22 +170,22 @@ var rules = []rule{
 	{kind: "bearer_token", re: regexp.MustCompile(`(?i)\bbearer[ \t]+[A-Za-z0-9._~+/=-]{16,}`)},
 	// The value stops at whitespace, quotes and separators, so only the secret goes.
 	{
-		kind: "credential_assignment", keepPrefix: true, lane: jsonOnly,
+		kind: kindCredentialAssignment, keepPrefix: true, lane: jsonOnly,
 		re: regexp.MustCompile(`(?i)\b((?:` + jsonLabels + `)["']?\s*[:=]\s*["']?)([^\s"'\\,;&]{4,})`),
 	},
 	// A quoted passphrase is masked through its closing quote. An unquoted one, or
 	// one whose quote never closes on its line, is masked to the end of the line.
-	{kind: "credential_assignment", keepPrefix: true, keepSuffix: true, lane: textOnly, re: regexp.MustCompile(labelled(passwordLabels) + `")([^"\r\n]+)(")`)},
-	{kind: "credential_assignment", keepPrefix: true, keepSuffix: true, lane: textOnly, re: regexp.MustCompile(labelled(passwordLabels) + `')([^'\r\n]+)(')`)},
-	{kind: "credential_assignment", keepPrefix: true, keepSuffix: true, lane: textOnly, re: toLineEnd(passwordLabels, `"`, `[^"\r\n]+?`)},
-	{kind: "credential_assignment", keepPrefix: true, keepSuffix: true, lane: textOnly, re: toLineEnd(passwordLabels, `'`, `[^'\r\n]+?`)},
-	{kind: "credential_assignment", keepPrefix: true, keepSuffix: true, lane: textOnly, re: toLineEnd(passwordLabels, ``, `[^\s"'][^\r\n]*?`)},
+	{kind: kindCredentialAssignment, keepPrefix: true, keepSuffix: true, lane: textOnly, re: regexp.MustCompile(labelled(passwordLabels) + `")([^"\r\n]+)(")`)},
+	{kind: kindCredentialAssignment, keepPrefix: true, keepSuffix: true, lane: textOnly, re: regexp.MustCompile(labelled(passwordLabels) + `')([^'\r\n]+)(')`)},
+	{kind: kindCredentialAssignment, keepPrefix: true, keepSuffix: true, lane: textOnly, re: toLineEnd(passwordLabels, `"`, `[^"\r\n]+?`)},
+	{kind: kindCredentialAssignment, keepPrefix: true, keepSuffix: true, lane: textOnly, re: toLineEnd(passwordLabels, `'`, `[^'\r\n]+?`)},
+	{kind: kindCredentialAssignment, keepPrefix: true, keepSuffix: true, lane: textOnly, re: toLineEnd(passwordLabels, ``, `[^\s"'][^\r\n]*?`)},
 	{
-		kind: "credential_assignment", keepPrefix: true, lane: textOnly,
+		kind: kindCredentialAssignment, keepPrefix: true, lane: textOnly,
 		re: regexp.MustCompile(labelled(strongLabels) + `["']?)([^\s"'\\,;&]{4,})`),
 	},
 	{
-		kind: "credential_assignment", keepPrefix: true, lane: textOnly, accept: looksLikeCredential,
+		kind: kindCredentialAssignment, keepPrefix: true, lane: textOnly, accept: looksLikeCredential,
 		re: regexp.MustCompile(labelled(ambiguousLabels) + `["']?)([^\s"'\\,;&]+)`),
 	},
 	{kind: "credential_next_line", keepPrefix: true, keepSuffix: true, lane: textOnly, re: nextLine(passwordLabels + `|` + strongLabels)},
