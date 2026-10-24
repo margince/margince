@@ -6,9 +6,9 @@
 package gates
 
 // Every reader of "whose meeting is this" asks storekit.MeetingResponsibilitySQL
-// or UnclaimedMeetingSQL. A reader that compares the activity's host column by
-// itself credits a captured meeting to whoever imported the calendar, while the
-// Worklist, follow-ups and weekly figures credit the people who took part.
+// or UnclaimedMeetingSQL. A reader that compares the host column by itself
+// credits a captured meeting to whoever imported the calendar. The Worklist,
+// follow-ups and weekly figures credit the colleagues who took part.
 
 import (
 	"go/ast"
@@ -40,6 +40,10 @@ var unqualifiedHostPredicate = regexp.MustCompile(`(?i)(?:^|[^.\w])host_user_id\
 
 var activityTableRead = regexp.MustCompile(`(?i)\b(?:FROM|JOIN)\s+activity(?:\s|$)`)
 
+// hostColumnExpression is the column handed on whole, as a report dimension or
+// as the tail of `alias + ".host_user_id = "`, for a comparison built elsewhere.
+var hostColumnExpression = regexp.MustCompile(`^\s*(?:[a-z_][a-z0-9_]*)?\.host_user_id\b`)
+
 // attendanceRoles is the rule's own evidence list spelled by hand.
 var attendanceRoles = regexp.MustCompile(`(?i)role\s+IN\s*\(\s*'(?:organizer'\s*,\s*'attendee|attendee'\s*,\s*'organizer)'\s*\)`)
 
@@ -54,9 +58,15 @@ var meetingHostReaders = gatekit.Waive(map[string]string{
 		"holds; busy time belongs to the calendar, not to attendance",
 	"internal/modules/capture/participantpastcap.go": "writes the attendance rows the rule reads, and skips a " +
 		"seat that already has one",
-	"internal/compose/metricmeetings.go": "credits each held meeting to one owner, the host recorded at the " +
-		"status change; on a captured meeting that is the importer, so analytics can credit a person the " +
-		"weekly scorecard does not, until a one-owner credit rule built on attendance is chosen",
+	"internal/compose/metricmeetings.go": "asks whose meeting it is and answers differently: it credits the " +
+		"host recorded at the status change, which on a captured meeting is the importer, so analytics can " +
+		"credit a colleague the weekly scorecard does not; a known divergence until a one-owner credit rule " +
+		"built on attendance exists",
+	"internal/compose/reportspecs.go": "asks whose meeting it is and answers differently: the activity and " +
+		"meeting-conversion reports group and filter by the stored host, the same divergence as the " +
+		"meetings-held metric",
+	"internal/modules/activities/activityprojection.go": "reads the host column out so a screen can show who " +
+		"hosted; it decides nothing about whose work the meeting is",
 })
 
 func TestEveryMeetingOwnershipReaderAsksTheAttendanceRule(t *testing.T) {
@@ -76,11 +86,10 @@ func TestEveryMeetingOwnershipReaderAsksTheAttendanceRule(t *testing.T) {
 					break
 				}
 			}
-			findings := hostOwnershipReadsIn(file)
-			if len(findings) == 0 || meetingHostReaders.Waived(t, file.relPath) {
-				continue
-			}
-			for _, finding := range findings {
+			for _, finding := range hostOwnershipReadsIn(file) {
+				if meetingHostReaders.Waived(t, file.relPath) {
+					continue
+				}
 				t.Errorf("%s %s. Whose meeting it is comes from storekit.MeetingResponsibilitySQL (or "+
 					"UnclaimedMeetingSQL for nobody's), which reads the host a human logged, the provider's "+
 					"organizer and attendee rows, and the seat's own invitations. If this file asks another "+
@@ -117,6 +126,8 @@ func hostOwnershipReadsIn(file goFile) []string {
 			out = append(out, "compares the activity's host column without an alias")
 		case attendanceRoles.MatchString(text):
 			out = append(out, "spells the organizer and attendee roles by hand")
+		case hostColumnExpression.MatchString(text):
+			out = append(out, "names the host column as an expression another statement compares or groups by")
 		}
 	}
 	return out
@@ -142,7 +153,7 @@ func activityAliasesIn(literals []string) []string {
 }
 
 func qualifiedHostPredicate(aliases []string) *regexp.Regexp {
-	column := `\b(?:` + strings.Join(aliases, "|") + `)\.host_user_id\b`
+	column := `(?:\b(?:` + strings.Join(aliases, "|") + `)|%(?:\[\d+\])?s)\.host_user_id\b`
 	return regexp.MustCompile(`(?i)` + column + `\s*(?:=|<>|!=|\bIS\b|\bIN\b)` +
 		`|(?:=|<>|!=)\s*` + column +
 		`|\b(?:THEN|ELSE|COALESCE\s*\()\s*` + column)
@@ -156,6 +167,9 @@ func TestTheMeetingOwnershipCensusSeesAPlantedReader(t *testing.T) {
 		"reversed comparison":        "package planted\nvar q = `SELECT 1 FROM activity a JOIN app_user u ON u.id = a.host_user_id`",
 		"unqualified comparison":     "package planted\nvar q = `SELECT 1 FROM activity WHERE host_user_id = $1 AND kind = 'meeting'`",
 		"hand-spelled roles":         "package planted\nvar q = `SELECT 1 FROM activity_participant p WHERE p.role IN ('organizer', 'attendee')`",
+		"formatted alias":            "package planted\nvar q = `(%[1]s.host_user_id = %[2]s)`",
+		"report dimension":           "package planted\nvar dims = map[string]string{\"host\": \"t.host_user_id\"}",
+		"concatenated column":        "package planted\nfunc q(alias string) string { return alias + \".host_user_id = $1\" }",
 	} {
 		parsed, err := parser.ParseFile(token.NewFileSet(), "planted.go", source, 0)
 		if err != nil {
