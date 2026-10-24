@@ -38897,6 +38897,11 @@ export interface components {
         };
         /** @description One enabled extension unit and what it contributes to this binary. */
         ComposedExtension: {
+            /**
+             * @description `ready` once boot finished the unit's install step at this version: its declared settings stored and its objects granted to the admin role. `pending` until then, which also covers an installation that is not bootstrapped yet.
+             * @enum {string}
+             */
+            status: "ready" | "pending";
             /** @description The unit name — its `extensions/<name>` directory, and the namespace token in `ext_<name>_…` objects and `/ext/<name>/…` routes. This is what joins an entry here to a grant in `Role.objects`. */
             name: string;
             /** @description One sentence from the unit's own declaration saying what it is for. The access screen lists every composed unit, and a name alone leaves an operator deciding what to grant to something called `de`; only the unit's author knows the answer, so the declaration is where it comes from. Required at boot — a unit without one does not compose. */

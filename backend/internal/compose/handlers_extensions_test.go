@@ -23,7 +23,7 @@ import (
 // inventoryFixture is the shape a real composed set has: two units, one owning
 // records and running a job, one owning neither — which is the common case and
 // the one whose empty lists must not come back nil.
-func inventoryFixture() ([]extension.Extension, []extension.Verb, []composedJob) {
+func inventoryFixture() ([]extension.Extension, []extension.Verb, []composedJob, map[string]string) {
 	exts := []extension.Extension{
 		{Name: "notes", Version: "1.0.0"},
 		{Name: "de", Version: "0.1.0"},
@@ -42,7 +42,28 @@ func inventoryFixture() ([]extension.Extension, []extension.Verb, []composedJob)
 	jobs := []composedJob{{decl: extension.JobDeclaration{
 		Unit: "notes", Job: "heartbeat", Cadence: time.Minute,
 	}}}
-	return exts, verbs, jobs
+	// notes finished its install step; de has not.
+	return exts, verbs, jobs, map[string]string{"notes": "1.0.0"}
+}
+
+// A unit is ready only at the composed version. No record, or a record for
+// another version, is pending.
+func TestExtensionInventoryReportsReadyOnlyForTheComposedVersion(t *testing.T) {
+	exts, verbs, jobs, _ := inventoryFixture()
+	status := func(activated map[string]string) map[string]crmcontracts.ComposedExtensionStatus {
+		out := map[string]crmcontracts.ComposedExtensionStatus{}
+		for _, u := range composedExtensionInventory(exts, verbs, jobs, activated) {
+			out[u.Name] = u.Status
+		}
+		return out
+	}
+	got := status(map[string]string{"notes": "1.0.0"})
+	if got["notes"] != crmcontracts.ComposedExtensionStatusReady || got["de"] != crmcontracts.ComposedExtensionStatusPending {
+		t.Errorf("status = %v, want notes ready and de pending", got)
+	}
+	if got := status(map[string]string{"notes": "0.9.0"}); got["notes"] != crmcontracts.ComposedExtensionStatusPending {
+		t.Errorf("an older activation reads %q, want pending", got["notes"])
+	}
 }
 
 func TestExtensionInventoryGroupsEveryContributionUnderItsDeclaringUnit(t *testing.T) {
@@ -117,7 +138,7 @@ func TestExtensionInventoryNeverAttributesAnotherUnitsContribution(t *testing.T)
 		{Unit: "crm", Route: "/ext/crm/a", Method: "GET", RbacObject: "ext_crm_demo_widget"},
 		{Unit: "crm-demo", Route: "/ext/crm-demo/b", Method: "GET", RbacObject: "ext_crm_demo_thing"},
 	}
-	got := composedExtensionInventory(exts, verbs, nil)
+	got := composedExtensionInventory(exts, verbs, nil, nil)
 
 	if !slices.Equal(got[0].RbacObjects, []string{"ext_crm_demo_widget"}) {
 		t.Errorf("crm's objects = %v, want only its own", got[0].RbacObjects)
@@ -134,7 +155,7 @@ func TestExtensionInventoryNeverAttributesAnotherUnitsContribution(t *testing.T)
 // answers an empty inventory rather than nil, so the response carries
 // `{"extensions": []}` and a client needs no null branch.
 func TestExtensionInventoryOfAVanillaInstallationIsEmptyNotNull(t *testing.T) {
-	got := composedExtensionInventory(nil, nil, nil)
+	got := composedExtensionInventory(nil, nil, nil, nil)
 	if got == nil {
 		t.Fatal("inventory is nil; an installation with no extensions has an empty set, not an absent one")
 	}
@@ -167,7 +188,7 @@ func TestExtensionListAnswersTheHolderOfTheReadGrantAndRefusesTheRest(t *testing
 			Type: principal.PrincipalHuman, Permissions: principal.Permissions{Objects: grants},
 		})
 		rec := httptest.NewRecorder()
-		extensionsHandlers{}.ListExtensions(rec, httptest.NewRequest(http.MethodGet, "/v1/extensions", nil).WithContext(ctx))
+		extensionsHandlers{activated: func(context.Context) (map[string]string, error) { return map[string]string{}, nil }}.ListExtensions(rec, httptest.NewRequest(http.MethodGet, "/v1/extensions", nil).WithContext(ctx))
 		return rec.Code
 	}
 	if got := as(map[string]principal.ObjectGrant{"extension_access": {Read: true}}); got != http.StatusOK {

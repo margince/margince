@@ -6139,6 +6139,24 @@ func (e CompanyVatCheckStatus) Valid() bool {
 	}
 }
 
+// Defines values for ComposedExtensionStatus.
+const (
+	ComposedExtensionStatusPending ComposedExtensionStatus = "pending"
+	ComposedExtensionStatusReady   ComposedExtensionStatus = "ready"
+)
+
+// Valid indicates whether the value is a known member of the ComposedExtensionStatus enum.
+func (e ComposedExtensionStatus) Valid() bool {
+	switch e {
+	case ComposedExtensionStatusPending:
+		return true
+	case ComposedExtensionStatusReady:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ComputedFieldKind.
 const (
 	ComputedFieldKindCount          ComputedFieldKind = "count"
@@ -32832,9 +32850,15 @@ type ComposedExtension struct {
 	// Routes The unit's published operations, one entry per method+path pair. Sorted by path then method. A bare path would under-report the surface — one path serving GET and DELETE is two capabilities to an operator auditing what a unit can do, and collapsing them hides the destructive one behind the harmless one.
 	Routes []ComposedExtensionRoute `json:"routes"`
 
+	// Status `ready` once boot finished the unit's install step at this version: its declared settings stored and its objects granted to the admin role. `pending` until then, which also covers an installation that is not bootstrapped yet.
+	Status ComposedExtensionStatus `json:"status"`
+
 	// Version The unit's own declared version. It carries NO authority (ADR-0120 §7): operator decisions bind to manifest digests, never to this string. Display only.
 	Version string `json:"version"`
 }
+
+// ComposedExtensionStatus `ready` once boot finished the unit's install step at this version: its declared settings stored and its objects granted to the admin role. `pending` until then, which also covers an installation that is not bootstrapped yet.
+type ComposedExtensionStatus string
 
 // ComposedExtensionRoute One published extension operation.
 type ComposedExtensionRoute struct {

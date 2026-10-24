@@ -1663,6 +1663,7 @@ export const vi = {
   "systemJob.enabled_oidc_providers_read": "Đọc nhà cung cấp đăng nhập",
   "systemJob.client_registration_read": "Đọc cách đăng ký công cụ AI",
   "systemJob.erasure_replay": "Xóa lại dữ liệu sau khi khôi phục",
+  "systemJob.extension_activation": "Thiết lập tiện ích mở rộng",
   "systemJob.extension_inventory": "Kiểm kê tiện ích mở rộng",
   "systemJob.extension_privacy": "Kiểm tra quyền riêng tư của tiện ích mở rộng",
   "systemJob.extraction_activity_reannounce": "Sửa hoạt động đã trích xuất",
@@ -11191,6 +11192,8 @@ export const vi = {
     "Vai trò của bạn xem được trang này. Cần tài khoản đầy đủ quyền để thay đổi phân quyền.",
   "extAccess.empty": "Chưa cài đơn vị tiện ích nào.",
   "extAccess.version": "Phiên bản {version}",
+  "extAccess.statusReady": "Sẵn sàng",
+  "extAccess.statusPending": "Đang thiết lập",
   "extAccess.openUnit": "Đi tới {name}",
   "extAccess.noPage":
     "{name} đã được cài trên API, nhưng bản dựng ứng dụng này không có trang cho tiện ích đó. Có thể ứng dụng cũ hơn máy chủ.",

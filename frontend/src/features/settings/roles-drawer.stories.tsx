@@ -48,6 +48,7 @@ const NOTES: ExtensionUnit = {
   name: "notes",
   description: "Notes on records.",
   version: "1.0.0",
+  status: "ready",
   rbac_objects: ["ext_notes_note"],
   routes: [],
   jobs: [],

@@ -1659,6 +1659,7 @@ export const en = {
   "systemJob.enabled_oidc_providers_read": "Sign-in provider read",
   "systemJob.client_registration_read": "AI tool registration read",
   "systemJob.erasure_replay": "Erasure replay after a restore",
+  "systemJob.extension_activation": "Extension set-up",
   "systemJob.extension_inventory": "Extension inventory",
   "systemJob.extension_privacy": "Extension privacy check",
   "systemJob.extraction_activity_reannounce": "Extracted activity repair",
@@ -11515,6 +11516,8 @@ export const en = {
     "Your role can read this page. Changing a grant requires a full seat.",
   "extAccess.empty": "No extension units are installed.",
   "extAccess.version": "Version {version}",
+  "extAccess.statusReady": "Ready",
+  "extAccess.statusPending": "Setting up",
   "extAccess.openUnit": "Go to {name}",
   "extAccess.noPage":
     "{name} is installed on the API, but this app build has no page for it. The app is probably older than the server.",

@@ -1488,9 +1488,9 @@ DSN names. A deployment asks before the api starts, to know whether it still nee
 credential.
 
 `extension-settings` stores the settings that the composed extensions declare in their `settings.json`,
-under the keys `ext_<name>.<key>`, with each hyphen in the unit name written as an underscore
-(`finance-demo` becomes `ext_finance_demo`). A key that already has a value is kept, so you can run it on every
-deploy. It prints one line per unit with the counts stored and kept. If any file is invalid, it stores nothing.
+under the keys `ext_<name>.<key>`. Each hyphen in the unit name becomes `_` (`finance-demo` becomes
+`ext_finance_demo`). A key that already has a value is kept, so you can run it on every release. It prints one
+line per unit with the counts stored and kept. If any file is wrong, it stores nothing.
 [Add an extension](../how-to/add-an-extension.md#ship-the-units-settings-in-a-file) shows the file.
 
 `scripts/deploy/api-entrypoint.sh` writes the `bootstrap_admin` password file only while the answer

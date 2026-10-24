@@ -395,7 +395,7 @@ func TestTheBootStepRegistersAComposedUnitTransportWithNoCaptureRegistry(t *test
 	// Through RecordComposition, which is what a process role actually calls —
 	// reaching past it to the reconcile alone would leave the step every role
 	// wires untested, and the ordering it owns unproven.
-	if err := RecordComposition(ctx, e.Pool, discardLog(), ComposedExtensions()); err != nil {
+	if err := RecordComposition(ctx, e.Pool, nil, discardLog(), ComposedExtensions()); err != nil {
 		t.Fatalf("the boot step on a role that composes no capture registry: %v", err)
 	}
 	// The inventory half landed too: both facts follow from the same composed
@@ -478,7 +478,7 @@ func TestRecordingTheCompositionFailsTheBootWhenAUnitShadowsACoreTransport(t *te
 		Provider: capture.ProviderTelegram, CredentialModel: extension.CredentialPerMember, Send: (&capturedSend{}).send, Live: answersLive(true, nil),
 	})
 
-	err := RecordComposition(ctx, e.Pool, discardLog(), ComposedExtensions())
+	err := RecordComposition(ctx, e.Pool, nil, discardLog(), ComposedExtensions())
 
 	if err == nil {
 		t.Fatal("a boot whose unit declares the core's own transport was allowed to continue; " +

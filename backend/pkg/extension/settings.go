@@ -13,8 +13,8 @@ import (
 	"regexp"
 )
 
-// SettingsFile is the one spelling of the file a unit's Settings FS holds at
-// its root: a JSON object of setting key to value.
+// SettingsFile names the file a unit's Settings FS holds at its root: a JSON
+// object of setting key to value.
 const SettingsFile = "settings.json"
 
 // settingKeyGrammar is the part of a stored key after the namespace. It is the
@@ -37,8 +37,8 @@ func (n Name) SettingKey(key string) (string, error) {
 }
 
 // SettingsFrom reads the declared settings. It refuses a missing file, a
-// document that is not one JSON object and a key core cannot store, so a bad
-// declaration stops the seed instead of being half applied.
+// document that is not one JSON object and a key core cannot store. A bad
+// declaration then stops the seed instead of being half applied.
 func SettingsFrom(fsys fs.FS) (map[string]json.RawMessage, error) {
 	raw, err := fs.ReadFile(fsys, SettingsFile)
 	if err != nil {

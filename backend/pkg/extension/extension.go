@@ -414,10 +414,10 @@ type Extension struct {
 	Migrations fs.FS
 
 	// Settings holds the unit's own settings as a SettingsFile at its root,
-	// which a unit supplies with `//go:embed settings.json`. An operator
-	// applies them with `migrate extension-settings`: each key is stored once
-	// under the unit's namespace, and a key that already has a value keeps it,
-	// so running the seed again changes nothing and never undoes a later edit.
+	// which a unit supplies with `//go:embed settings.json`. Boot, or an
+	// operator running `migrate extension-settings`, stores each key once under
+	// the unit's namespace. A key that already has a value keeps it, so a repeat
+	// seed changes nothing and never undoes a later edit.
 	Settings fs.FS
 
 	// FailureClasses are the ways this unit's background jobs fail, named in

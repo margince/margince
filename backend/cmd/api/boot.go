@@ -78,9 +78,9 @@ func boundPool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 // read from. It also cannot fail the boot, which is why it is called for effect
 // here and the error handling lives with the phase itself.
 func recordBootFacts(
-	ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger, extensions []extension.Extension,
+	ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault, logger *slog.Logger, extensions []extension.Extension,
 ) error {
-	if err := recordBootLedger(ctx, pool, logger, extensions); err != nil {
+	if err := recordBootLedger(ctx, pool, vault, logger, extensions); err != nil {
 		return err
 	}
 	fileReleaseHandbook(ctx, pool, logger)
@@ -88,7 +88,7 @@ func recordBootFacts(
 }
 
 func recordBootLedger(
-	ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger, extensions []extension.Extension,
+	ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault, logger *slog.Logger, extensions []extension.Extension,
 ) error {
 	if err := compose.RecordInstallationRelease(ctx, pool, logger, buildinfo.ReleaseVersion); err != nil {
 		return err
@@ -96,7 +96,7 @@ func recordBootLedger(
 	if err := compose.WarnOnArchivedPredecessor(ctx, pool, logger); err != nil {
 		return err
 	}
-	return compose.RecordComposition(ctx, pool, logger, extensions)
+	return compose.RecordComposition(ctx, pool, vault, logger, extensions)
 }
 
 // fileReleaseHandbook puts this release's operator handbook into the corpus the

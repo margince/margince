@@ -264,6 +264,11 @@ function UnitCard({
       title={title}
       titleAction={
         <div className="ext-unit-actions">
+          {unit.status === "ready" ? (
+            <Badge tone="success">{t("extAccess.statusReady")}</Badge>
+          ) : (
+            <Badge tone="warning">{t("extAccess.statusPending")}</Badge>
+          )}
           <Badge>{t("extAccess.version", { version: unit.version })}</Badge>
           {page ? (
             // The unit's name is IN the link text: several units share the

@@ -1709,6 +1709,7 @@ export const de = {
   "systemJob.enabled_oidc_providers_read": "Lesen der Anmeldeanbieter",
   "systemJob.client_registration_read": "Lesen der Registrierung von KI-Tools",
   "systemJob.erasure_replay": "Erneute Löschung nach einer Wiederherstellung",
+  "systemJob.extension_activation": "Einrichtung der Erweiterungen",
   "systemJob.extension_inventory": "Bestandsaufnahme der Erweiterungen",
   "systemJob.extension_privacy": "Datenschutzprüfung der Erweiterungen",
   "systemJob.extraction_activity_reannounce":
@@ -11494,6 +11495,8 @@ export const de = {
     "Deine Rolle kann diese Seite lesen. Um eine Berechtigung zu ändern, ist ein voller Platz nötig.",
   "extAccess.empty": "Es sind keine Erweiterungseinheiten installiert.",
   "extAccess.version": "Version {version}",
+  "extAccess.statusReady": "Bereit",
+  "extAccess.statusPending": "Wird eingerichtet",
   "extAccess.openUnit": "Zu {name} wechseln",
   "extAccess.noPage":
     "{name} ist in der API installiert, aber diese App-Version hat keine Seite dafür. Die App ist vermutlich älter als der Server.",

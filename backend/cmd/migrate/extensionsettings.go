@@ -16,7 +16,7 @@ import (
 
 // seedExtensionSettings applies the composed units' declared settings and
 // prints what each unit stored and kept. It is a verb of this process, not a
-// route, so an operator or a deploy script runs it with the owner's DSN and no
+// route. An operator or a deploy script runs it with the owner's DSN and no
 // signed-in member.
 func seedExtensionSettings(ctx context.Context, conn *pgx.Conn, exts []extension.Extension, stdout io.Writer) error {
 	tx, err := conn.Begin(ctx)

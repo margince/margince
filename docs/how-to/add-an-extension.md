@@ -525,16 +525,38 @@ var settings embed.FS
 Settings: settings,
 ```
 
-Keys use lower-case letters, digits and underscores, and start with a letter. An operator then runs
-`margince-migrate extension-settings --dsn <owner-dsn>`, with no signed-in member. Core stores each key as
-`ext_<name>.<key>`, where each hyphen in the unit name becomes an underscore: unit `finance-demo`, key
-`vat_rate` is stored as `ext_finance_demo.vat_rate`. A key that already has a value is kept, so the run can
-repeat and never undoes a later edit.
+Keys use lower-case letters, digits and `_`, and start with a letter. The first boot of a new unit
+version stores them (see [What boot does for a new unit](#what-boot-does-for-a-new-unit)). An operator can
+also run `margince-migrate extension-settings --dsn <owner-dsn>` before that boot, with no signed-in member.
+Core stores each key as `ext_<name>.<key>`, where each hyphen in the unit name becomes `_`: unit
+`finance-demo`, key `vat_rate` is stored as `ext_finance_demo.vat_rate`. A key that already has a value is
+kept, so you can run it again and it never undoes a later edit.
 
 The unit's own code cannot read these values yet. It has no `Runtime` call for them, and its database role
 cannot reach the `setting` table. Today the seed only stores them in core.
-Nothing is stored if any unit's file is invalid. [Configuration](../reference/configuration.md#cmdmigrate-schema-migrations)
+Nothing is stored if any unit's file is wrong. [Configuration](../reference/configuration.md#cmdmigrate-schema-migrations)
 lists the command.
+
+## What boot does for a new unit
+
+There is no install command. Adding the folder, running `make composition` and `make check` is the whole
+install, and the next boot of the API or worker does the set-up. Once per unit version, in the first
+installation boot after bootstrap, it:
+
+| Step | What it does |
+|---|---|
+| Settings | Stores the keys of `settings.json` that have no value yet. |
+| Rights | Gives the `admin` role full access to each RBAC object the unit's operations declare. An object the role already holds an entry for is left as the admin set it. Each grant writes a `role` row in `audit_log`. |
+| Ready | Records `extension.activated` in `system_log`. The Extensions page in settings shows **Ready** for the unit while the recorded version matches the composed one, and **Setting up** otherwise. |
+
+A boot of the same version again writes nothing. Other roles get a unit's rights only when an admin grants
+them on the Extensions page.
+
+A unit that was installed and is no longer composed is taken out on the next boot. Core deletes every secret
+the unit held, at workspace and user scope, and the vault drops what it sealed. Core then records
+`extension.removed`.
+
+The service-member identity a unit could act as is not part of this step yet.
 
 ## Own a screen: `frontend/`
 
@@ -1109,5 +1131,6 @@ under `extensions/`. You must run the `rm -rf` after it. `git rm` takes the trac
 names the folder left behind if you miss this step.
 
 No core file or core test needs an edit. Removing it *turns the unit off* (routes answer 404, the list leaves
-the unit out, migrations skip it), but it does **not erase**. The unit's tables and rows, its `extension_secret`
-rows and any grants of its RBAC objects inside `role.permissions` all stay. There is no tool to erase them.
+the unit out, migrations skip it), but it does **not erase data**. The unit's tables and rows and any grants of
+its RBAC objects inside `role.permissions` stay. There is no tool to erase them. Its secrets do not stay: the
+next boot revokes them (see [What boot does for a new unit](#what-boot-does-for-a-new-unit)).

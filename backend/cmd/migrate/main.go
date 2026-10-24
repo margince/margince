@@ -109,11 +109,7 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	//craft:ignore swallowed-errors close at process exit after the migration outcome is decided — a failed close cannot un-apply schema changes
 	defer func() { _ = conn.Close(ctx) }()
 
-	core, err := migrations.Core()
-	if err != nil {
-		return err
-	}
-	custom, err := migrations.Custom()
+	core, custom, err := embeddedNamespaces()
 	if err != nil {
 		return err
 	}
@@ -158,6 +154,14 @@ func run(ctx context.Context, args []string, stdout, stderr io.Writer) error {
 	default:
 		return fmt.Errorf("migrate: unknown direction %q (want up, down, reset-password, setup-token, recreate-db, drop-db, db-exists, workspace-exists, extension-settings, drill-start or drill-finish)", direction)
 	}
+}
+
+func embeddedNamespaces() (core, custom dbmigrate.Namespace, err error) {
+	if core, err = migrations.Core(); err != nil {
+		return core, custom, err
+	}
+	custom, err = migrations.Custom()
+	return core, custom, err
 }
 
 // up applies the embedded SQL namespaces and the composed extension set's,

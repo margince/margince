@@ -53345,9 +53345,16 @@ components:
     ComposedExtension:
       type: object
       additionalProperties: false
-      required: [name, version, description, rbac_objects, routes, jobs]
+      required: [name, version, description, status, rbac_objects, routes, jobs]
       description: One enabled extension unit and what it contributes to this binary.
       properties:
+        status:
+          type: string
+          enum: [ready, pending]
+          description: >-
+            `ready` once boot finished the unit's install step at this version: its declared
+            settings stored and its objects granted to the admin role. `pending` until then, which
+            also covers an installation that is not bootstrapped yet.
         name:
           type: string
           description: >-

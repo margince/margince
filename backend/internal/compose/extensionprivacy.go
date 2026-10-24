@@ -28,6 +28,7 @@ const extensionPrivacyFact = "extension-privacy"
 const (
 	installationKey = "installation"
 	unitKey         = "name"
+	versionKey      = "version"
 )
 
 // ExtensionData is the registry of this boot's composed units' declared tables.
@@ -97,7 +98,7 @@ func recordPrivacyDeclaration(ctx context.Context, tx pgx.Tx, e extension.Extens
 		return err
 	}
 	_, err = storekit.LogSystem(ctx, tx, extensionPrivacyDeclared, map[string]any{
-		unitKey: string(e.Name), "version": string(e.Version), "digest": digest, installationKey: installationMarker(ctx),
+		unitKey: string(e.Name), versionKey: string(e.Version), "digest": digest, installationKey: installationMarker(ctx),
 	})
 	return err
 }

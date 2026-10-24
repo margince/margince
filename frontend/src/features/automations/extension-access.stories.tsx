@@ -20,6 +20,7 @@ import { ExtensionAccessCard } from "./extension-access";
 const YOGI = {
   name: "yogi",
   version: "0.4.1",
+  status: "ready",
   rbac_objects: ["ext_yogi_briefing"],
   routes: [{ path: "/ext/yogi/brief", method: "GET" }],
   jobs: ["yogi_nightly_brief"],
@@ -28,6 +29,7 @@ const YOGI = {
 const DE = {
   name: "de",
   version: "1.2.0",
+  status: "pending",
   rbac_objects: [],
   routes: [],
   jobs: [],
@@ -43,6 +45,7 @@ const OPENCHANNEL = {
   version: "1.0.0",
   description:
     "An anonymous, signed endpoint an outside party can post to, with its own records.",
+  status: "ready",
   rbac_objects: [
     "ext_openchannel_endpoint",
     "ext_openchannel_inbound",
