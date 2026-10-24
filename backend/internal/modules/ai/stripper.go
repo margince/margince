@@ -68,9 +68,12 @@ func (s secretStripper) Strip(_ context.Context, payload []byte) ([]byte, model.
 // stripSegment runs the shared credential rules for the JSON lane over one
 // scannable stretch of the body.
 func (secretStripper) stripSegment(payload []byte, report *model.StripReport, kinds map[string]bool) []byte {
-	return credentialmask.Replace(payload, credentialmask.JSON, func(kind string) []byte {
-		report.Findings++
-		kinds[kind] = true
-		return []byte("[SECRET-REMOVED:" + kind + "]")
+	stripped, found := credentialmask.Replace(payload, credentialmask.JSON, func(kind string) string {
+		return "[SECRET-REMOVED:" + kind + "]"
 	})
+	report.Findings += len(found)
+	for _, kind := range found {
+		kinds[kind] = true
+	}
+	return stripped
 }

@@ -8,7 +8,10 @@
 // It is not a PII filter: names, addresses and phone numbers pass untouched.
 package credentialmask
 
-import "regexp"
+import (
+	"bytes"
+	"regexp"
+)
 
 // Lane is the form of the text a scan reads.
 type Lane int
@@ -26,37 +29,45 @@ const (
 const Marker = "[masked]"
 
 // MaskText masks every credential in stored text with Marker and keeps the
-// label in front of it. No value class admits "[", so no rule finds a masked
-// value again and masked text masks to itself.
+// label in front of it. Masked text masks to itself.
 func MaskText(s string) string {
-	return string(Replace([]byte(s), Text, func(string) []byte { return []byte(Marker) }))
+	masked, _ := Replace([]byte(s), Text, func(string) string { return Marker })
+	return string(masked)
 }
 
-// Replace puts marker(kind) in place of the value of every credential the rules
-// for lane find in text. The label before the value and the structure after it
-// stay.
-func Replace(text []byte, lane Lane, marker func(kind string) []byte) []byte {
+// Replace puts mark(kind) in place of the value of every credential the rules
+// for lane find in text. It returns the kind of each one it replaced. The
+// label before the value and the structure after it stay. A value that already
+// is its mark is left alone and not counted, so a second pass finds nothing.
+func Replace(text []byte, lane Lane, mark func(kind string) string) ([]byte, []string) {
+	var found []string
 	for _, r := range rules {
 		if r.textOnly && lane != Text {
 			continue
 		}
 		text = r.re.ReplaceAllFunc(text, func(match []byte) []byte {
-			if !r.keepPrefix && !r.keepSuffix {
-				return marker(r.kind)
-			}
 			groups := r.re.FindSubmatch(match)
+			value := groups[0]
+			if r.keepPrefix {
+				value = groups[2]
+			}
+			marker := []byte(mark(r.kind))
+			if bytes.Equal(value, marker) {
+				return match
+			}
+			found = append(found, r.kind)
 			var out []byte
 			if r.keepPrefix {
 				out = append(out, groups[1]...)
 			}
-			out = append(out, marker(r.kind)...)
+			out = append(out, marker...)
 			if r.keepSuffix {
 				out = append(out, groups[len(groups)-1]...)
 			}
 			return out
 		})
 	}
-	return text
+	return text, found
 }
 
 type rule struct {
@@ -80,10 +91,10 @@ const (
 	loginLabels    = `login|user(?:name)?|benutzer(?:name)?`
 )
 
-// assignment matches "label: value" and "label=value" on one line. The value
-// stops at whitespace, quotes and separators, so only the secret goes.
+// assignment matches "label: value" and "label=value". The value stops at
+// whitespace, quotes and separators, so only the secret goes.
 func assignment(labels string) *regexp.Regexp {
-	return regexp.MustCompile(`(?i)\b((?:` + labels + `)["']?[ \t]*[:=][ \t]*["']?)([^\s"'\\,;&\[]{4,})`)
+	return regexp.MustCompile(`(?i)\b((?:` + labels + `)["']?\s*[:=]\s*["']?)([^\s"'\\,;&]{4,})`)
 }
 
 var rules = []rule{
@@ -106,7 +117,7 @@ var rules = []rule{
 	// is never read as user:password.
 	{
 		kind: "url_credential", keepPrefix: true, keepSuffix: true,
-		re: regexp.MustCompile(`(://[^/\s:@"'\\]+:)([^/\s@"'\\\[]{2,})(@)`),
+		re: regexp.MustCompile(`(://[^/\s:@"'\\]+:)([^/\s@"'\\]{2,})(@)`),
 	},
 	// Before the bearer rule, so the kind names what was caught.
 	{kind: "jwt", re: regexp.MustCompile(`\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}`)},
@@ -117,11 +128,11 @@ var rules = []rule{
 	// must be one word, so a heading over a sentence keeps the sentence.
 	{
 		kind: "credential_next_line", keepPrefix: true, keepSuffix: true, textOnly: true,
-		re: regexp.MustCompile(`(?im)^([ \t]*(?:` + secretLabels + `|` + textLabels + `)[ \t]*:?[ \t]*\r?\n[ \t]*)([^\s\[]{4,})([ \t]*\r?)$`),
+		re: regexp.MustCompile(`(?im)^([ \t]*(?:` + secretLabels + `|` + textLabels + `)[ \t]*:?[ \t]*\r?\n[ \t]*)([^\s]{4,})([ \t]*\r?)$`),
 	},
 	// The login on the line above a password line: the pair is the credential.
 	{
 		kind: "login_name", keepPrefix: true, keepSuffix: true, textOnly: true,
-		re: regexp.MustCompile(`(?im)^([ \t]*(?:` + loginLabels + `)[ \t]*[:=][ \t]*)([^\s\[]{2,})([ \t]*\r?\n[ \t]*(?:` + passwordLabels + `)\b)`),
+		re: regexp.MustCompile(`(?im)^([ \t]*(?:` + loginLabels + `)[ \t]*[:=][ \t]*)([^\s]{2,})([ \t]*\r?\n[ \t]*(?:` + passwordLabels + `)\b)`),
 	},
 }

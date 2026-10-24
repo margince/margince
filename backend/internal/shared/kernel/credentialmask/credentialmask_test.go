@@ -14,6 +14,8 @@ func TestMaskTextMasksEveryCredentialShapeAndKeepsTheLabel(t *testing.T) {
 		"passwort":           {"Passwort: Quokka7", "Passwort: [masked]"},
 		"kennwort":           {"Kennwort = Quokka7", "Kennwort = [masked]"},
 		"pin":                {"PIN: 4711", "PIN: [masked]"},
+		"bracket in value":   {"password: ab[cd1234", "password: [masked]"},
+		"value that is [x":   {"password: [hunter2]", "password: [masked]"},
 		"pin code":           {"PIN-Code: 4711", "PIN-Code: [masked]"},
 		"passcode":           {"Passcode: 993311", "Passcode: [masked]"},
 		"token":              {"Token: abcd1234efgh", "Token: [masked]"},
@@ -42,27 +44,27 @@ func TestMaskTextMasksEveryCredentialShapeAndKeepsTheLabel(t *testing.T) {
 // No rule finds a masked value again, so a second pass over stored text changes
 // nothing and reports nothing.
 func TestMaskedTextMasksToItself(t *testing.T) {
-	text := "Login: anna\nPasswort: Quokka7\nPassword:\nQuokka8\nToken: abcd1234\nhttps://u:pw12@h.example/ " + stripeSecret
+	text := "Login: anna\nPasswort: Quokka7\nPassword:\nQuokka8\nToken: abcd1234\npwd: ab[cd1234\nhttps://u:pw12@h.example/ " + stripeSecret
 	once := MaskText(text)
-	found := 0
-	twice := Replace([]byte(once), Text, func(string) []byte { found++; return []byte(Marker) })
-	if string(twice) != once || found != 0 {
-		t.Errorf("a second pass found %d credentials in masked text:\nonce  %q\ntwice %q", found, once, twice)
+	twice, found := Replace([]byte(once), Text, func(string) string { return Marker })
+	if string(twice) != once || len(found) != 0 {
+		t.Errorf("a second pass found %v in masked text:\nonce  %q\ntwice %q", found, once, twice)
 	}
 }
 
 // The JSON lane reads an encoded document. A "pin" or "token" key there is the
 // payload's own, so only the shared rules apply.
 func TestTheJSONLaneSkipsTheTextOnlyRules(t *testing.T) {
-	marker := func(kind string) []byte { return []byte("<" + kind + ">") }
+	marker := func(kind string) string { return "<" + kind + ">" }
 	for name, tc := range map[string]struct{ text, want string }{
 		"pin key":       {`{"pin": true}`, `{"pin": true}`},
 		"token key":     {`{"token": "abcd1234"}`, `{"token": "abcd1234"}`},
 		"password key":  {`{"password": "hunter2"}`, `{"password": "<credential_assignment>"}`},
+		"bracket value": {`{"content": "password: ab[cd1234"}`, `{"content": "password: <credential_assignment>"}`},
 		"escaped break": {`"Password:\nQuokka7"`, `"Password:\nQuokka7"`},
 	} {
 		t.Run(name, func(t *testing.T) {
-			if got := string(Replace([]byte(tc.text), JSON, marker)); got != tc.want {
+			if got, _ := Replace([]byte(tc.text), JSON, marker); string(got) != tc.want {
 				t.Errorf("Replace(%q, JSON) = %q, want %q", tc.text, got, tc.want)
 			}
 		})
