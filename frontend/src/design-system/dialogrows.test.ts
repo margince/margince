@@ -113,6 +113,9 @@ function Boxed({ children }) { return <div className="s">{children}</div>; }
 const B2x = Boxed;
 const Plain = a ? "div" : "section";
 const WMm = memo(Wrapped);
+const WFwd = forwardRef(Wrapped);
+const WAlias = WMm;
+function Shadow({ Wrapped }) { const Glyph = Wrapped; return <Glyph />; }
 function Swap({ className }) { return className ? <div className={className}><p /><div className="m" /></div> : <Swap className="s" />; }
 function Loop() { return <div className="f"><div className="s"><p /><div className="m" /></div><Loop /></div>; }
 function Alt({ k }) { return <div className={k}><div className="s"><p /><div className="m" /></div><Alt k={k === "f" ? "g" : "f"} /></div>; }
@@ -538,7 +541,10 @@ export const Named = Pick;`,
     ${"reads the children box of an aliased component"}                 | ${inModal('<B2x><p /><div className="m" /></B2x>')}                                                                       | ${"doubled"}              | ${`${STACK} ${MARGIN}`}
     ${"keeps the classes of an element a binding names"}                | ${inModal('<div className="s"><p /><Plain className="m" /></div>')}                                                       | ${"doubled"}              | ${`${STACK} ${MARGIN}`}
     ${"keeps the classes of a component it cannot read"}                | ${inModal('<div className="s"><p /><Fwd className="m" /></div>')}                                                         | ${"doubled"}              | ${`${STACK} ${MARGIN}`}
-    ${"keeps the classes of a memo it cannot read"}                     | ${inModal('<div className="s"><p /><WMm className="m" /></div>')}                                                         | ${"doubled"}              | ${`${STACK} ${MARGIN}`}
+    ${"reads the rows inside a memo as well as its own classes"}        | ${inModal('<div className="s"><p /><WMm className="m" /></div>')}                                                         | ${"doubled doubled"}      | ${`${STACK} ${MARGIN}`}
+    ${"reads the rows inside a forwardRef the same way"}                | ${inModal('<div className="s"><p /><WFwd className="m" /></div>')}                                                        | ${"doubled doubled"}      | ${`${STACK} ${MARGIN}`}
+    ${"reads through an alias of a memo to the rows inside it"}         | ${inModal('<div className="s"><p /><WAlias className="m" /></div>')}                                                      | ${"doubled doubled"}      | ${`${STACK} ${MARGIN}`}
+    ${"reads an alias of a prop as unknown, not the file's own name"}   | ${inModal("<Shadow />")}                                                                                                  | ${"no rows"}              | ${`${STACK} ${MARGIN}`}
     ${"judges a component again where it hands itself new props"}       | ${inModal("<Swap />")}                                                                                                    | ${"doubled"}              | ${`${STACK} ${MARGIN}`}
     ${"judges a component that renders only itself once"}               | ${inModal("<Loop />")}                                                                                                    | ${"doubled"}              | ${HOSTED_STACK}
     ${"judges a component that flips its own props and ends"}           | ${inModal('<Alt k="f" />')}                                                                                               | ${"doubled"}              | ${HOSTED_STACK}

@@ -4,8 +4,13 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
-import { classVariants, type Given } from "../../src/testing/classnames";
+import {
+  classVariants,
+  declarationOf,
+  type Given,
+} from "../../src/testing/classnames";
 import { srcDir } from "./dialoglayout.corpus";
+import { bindings, declarations } from "./dialoglayout.names";
 import { resolveRelative, sourceFileAt } from "./source-tree";
 
 export const opening = (n: ts.Node) => {
@@ -91,49 +96,7 @@ export const within = (n: ts.Node, outer: ts.Node) =>
   outer.pos <= n.pos &&
   n.end <= outer.end;
 
-// Every name a module imports or re-exports, with where it comes from. An
-// `export { A as B }` with no `from` points back into the module itself.
-function namedIn(s: ts.Statement) {
-  if (!ts.isImportDeclaration(s) && !ts.isExportDeclaration(s)) return [];
-  const spec = s.moduleSpecifier;
-  const named = ts.isImportDeclaration(s)
-    ? s.importClause?.namedBindings
-    : s.exportClause;
-  if ((spec && !ts.isStringLiteral(spec)) || !named) return [];
-  if (!ts.isNamedImports(named) && !ts.isNamedExports(named)) return [];
-  const from = spec && ts.isStringLiteral(spec) ? spec.text : "";
-  return named.elements.map((e): [string, { spec: string; name: string }] => [
-    e.name.text,
-    { spec: from, name: (e.propertyName ?? e.name).text },
-  ]);
-}
-
-const bound = new WeakMap<
-  ts.SourceFile,
-  Map<string, { spec: string; name: string }>
->();
-
-function bindings(source: ts.SourceFile) {
-  const known =
-    bound.get(source) ?? new Map(source.statements.flatMap(namedIn));
-  bound.set(source, known);
-  return known;
-}
-
-const declared = new WeakMap<ts.SourceFile, Map<string, ts.Node>>();
-
-export function declarations(source: ts.SourceFile) {
-  const known = declared.get(source);
-  if (known) return known;
-  const out = new Map<string, ts.Node>();
-  for (const n of descendants(source)) {
-    const named = ts.isFunctionDeclaration(n) || ts.isVariableDeclaration(n);
-    if (named && n.name && !out.has(n.name.getText()))
-      out.set(n.name.getText(), n);
-  }
-  declared.set(source, out);
-  return out;
-}
+export { declarations } from "./dialoglayout.names";
 
 const frontendDir = join(srcDir, "..");
 
@@ -164,6 +127,51 @@ export function definition(
   return known.get(name);
 }
 
+const PASS_THROUGH = new Set(["memo", "forwardRef"]);
+const called = (x: ts.Expression) =>
+  ts.isIdentifier(x)
+    ? x.text
+    : ts.isPropertyAccessExpression(x)
+      ? x.name.text
+      : "";
+
+// The component a wrapper hands through, when it names one. Both entry points
+// ask, so an alias of a memo resolves as far as the memo itself does.
+function handedThrough(x: ts.Expression): ts.Identifier | undefined {
+  if (!ts.isCallExpression(x) || !PASS_THROUGH.has(called(x.expression))) {
+    return undefined;
+  }
+  const [first] = x.arguments;
+  return first && ts.isIdentifier(first) ? first : undefined;
+}
+
+// What an alias names, read from the scope it sits in.
+//
+// `declarations` keeps one entry per name for a whole file, nested scopes
+// included. Following a name alone answered whichever declaration came first
+// in the text: for `const Glyph = Icon` in a component taking an `Icon` prop,
+// a top-level `Icon`.
+//
+// A name its own scope does not declare is an import, still followable, or a
+// binding this walk cannot enter and answers nothing for.
+function alias(name: ts.Identifier, hops: number): ts.Node | undefined {
+  const scoped = declarationOf(name);
+  if (!scoped) {
+    const source = name.getSourceFile();
+    return bindings(source).has(name.text)
+      ? follow(source, name.text, hops)
+      : undefined;
+  }
+  const next = ts.isVariableDeclaration(scoped)
+    ? scoped.initializer
+    : undefined;
+  const through = next && handedThrough(next);
+  if (through && hops > 0) return alias(through, hops - 1);
+  return next && ts.isIdentifier(next) && hops > 0
+    ? alias(next, hops - 1)
+    : scoped;
+}
+
 function follow(
   source: ts.SourceFile,
   name: string,
@@ -172,9 +180,14 @@ function follow(
   const local = declarations(source).get(name);
   const link = bindings(source).get(name);
   const to = local && ts.isVariableDeclaration(local) && local.initializer;
-  if (to && ts.isIdentifier(to) && hops > 0) {
-    return follow(source, to.text, hops - 1);
-  }
+  if (to && ts.isIdentifier(to) && hops > 0) return alias(to, hops - 1);
+  // `memo(X)` and `forwardRef(X)` hand X's own element tree through, and
+  // reading the binding as an element of its own judged none of X's rows. Only
+  // a named argument is followed, which leaves `lazy` unknown: its loader is
+  // an arrow carrying no component.
+  const handed = to && handedThrough(to);
+  if (handed && hops > 0) return alias(handed, hops - 1);
+
   if (local || hops === 0 || !link) return local;
   const renamed = link.spec === "" && link.name !== name;
   if (link.spec === "" && !renamed) return undefined;
