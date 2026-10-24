@@ -7,13 +7,11 @@ package gates
 
 // Every draft-email route takes the same steering.
 //
-// The reply route once declared only `intent`, so a re-draft with a changed ask
-// could not name the words on screen, and the composer discarded the new draft
-// without a word. Four routes each declared their own steering and the one that
-// lagged was the one nobody had looked at. The obligation is derived from
-// crm.yaml: any operation whose path ends in /draft-email, or whose MCP verb is
-// draft_email, builds its request body on DraftSteering, directly or through
-// allOf.
+// The reply route once declared only `intent`, so a re-draft with a changed
+// ask could not name the words on screen. The obligation is derived from
+// crm.yaml. Any operation whose path ends in /draft-email, or whose MCP verb
+// is draft_email, builds its request body on DraftSteering. It may do so
+// directly or through allOf.
 
 import (
 	"os"

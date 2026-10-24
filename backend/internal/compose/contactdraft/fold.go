@@ -316,13 +316,10 @@ func FoldRecent(activities []crmcontracts.Activity, now time.Time) []ActIn {
 			folded.Record = turn.Text
 		case turn.Kind != crmcontracts.ActivityKindEmail:
 		case folded.Inbound:
-			// The newest INBOUND message, and only that one: a second inbound
-			// invites the draft to answer two conversations at once.
-			//
-			// The flag is set on the newest inbound whether or not it yielded
-			// text, so an empty body reads as "nothing to quote" rather than
-			// falling through to an OLDER message the prompt would then present
-			// as the current one.
+			// Only the newest inbound counts: a second one invites the draft to
+			// answer two conversations at once. The flag is set even when the
+			// body is empty. An empty body then reads as "nothing to quote"
+			// and never falls through to an older message.
 			if !readInbound {
 				readInbound = true
 				folded.Snippet = turn.Text

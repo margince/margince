@@ -492,8 +492,7 @@ func (in Input) String() string {
 // method exists so the shared check reads the same shape from every surface.
 func (Input) Threaded() bool { return false }
 
-// ThreadSubject is false for the same reason: this surface opens a
-// conversation, and its subject is chosen by the draft.
+// ThreadSubject is false: this surface opens a conversation.
 func (Input) ThreadSubject() (string, bool) { return "", false }
 
 // Booked is false: an account draft folds no meeting, so nothing here can

@@ -202,17 +202,17 @@ function steering(intent: string, rewriteOf: string) {
   };
 }
 
-// The words a draft call is asked to revise: the model's own served draft
-// while it is untouched, which is also when the rewrite verbs are offered. Any
-// other body is the rep's work. It goes out as a first draft, and the fill
-// keeps the rep's words.
+// The words a draft call is asked to revise. That is the model's own served
+// draft while it is untouched, the only time the rewrite verbs are offered.
+// Any other body is the rep's work. It goes out as a first draft, and the
+// fill keeps the rep's words.
 function rewriteOfAsk(ask: DraftAsk): string {
   const untouched = ask.body !== "" && ask.body === ask.servedBody;
   return untouched && !hasRepFormatting(ask.html) ? ask.body : "";
 }
 
-// The model's draft is paragraphs and line breaks only, so any other tag is
-// formatting or a link the rep added, which a plain-text rewrite would drop.
+// The model's draft is paragraphs and line breaks only. Any other tag is
+// formatting or a link the rep added, and a plain-text rewrite would drop it.
 function hasRepFormatting(html: string): boolean {
   return /<(?!\/?(?:p|br)\b)[a-z]/i.test(html);
 }

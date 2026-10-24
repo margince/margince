@@ -34,8 +34,8 @@ func (d replyDrafter) replyConversation(ctx context.Context, anchor crmcontracts
 }
 
 // replyConversationText renders the turns the way the reply prompt describes
-// them: where each stands against the selected message, its date, direction
-// and subject, then its text.
+// them. Each shows where it stands against the selected message, its date,
+// direction and subject, then its text.
 func replyConversationText(turns []draftcore.Turn) string {
 	rendered := make([]string, 0, len(turns))
 	for _, turn := range turns {

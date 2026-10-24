@@ -22,8 +22,8 @@ type Turn struct {
 	Direction string
 	At        time.Time
 	Subject   string
-	// Text is the authored opening of the message or the logged note, empty
-	// for a task or a call, which carries a subject and nothing more.
+	// Text is the authored opening of the message or note. A task or a call
+	// has none and carries only a subject.
 	Text string
 	// Logged marks a note or meeting a rep wrote down. It is context for the
 	// draft, never the message being continued.
@@ -37,15 +37,14 @@ func TurnText(body string) string {
 	return textlang.MessageOpening(body, TurnTextRunes)
 }
 
-// Conversation folds newest-first activities into at most limit turns. It is
-// the one place that decides which rows a draft reads and how much of each:
-// the reply drafter hands it a thread, and the contact and lead drafters hand
-// it the record's recent activity.
+// Conversation folds newest-first activities into at most limit turns. It
+// decides which rows a draft reads and how much of each. The reply drafter
+// hands it a thread. The contact and lead drafters hand it recent activity.
 //
-// A row is left out when its content is withheld from this reader, when it is
-// the anchor itself, or when it is a note or meeting that records no contact
-// that happened (see IsLoggedTouch). Our own sent mail carries its text like
-// theirs, because a follow-up has to know what we already asked.
+// A row is left out in three cases. Its content is withheld from this reader.
+// It is the anchor itself. It is a note or meeting that records no contact
+// (see IsLoggedTouch). Our own sent mail keeps its text, so a follow-up knows
+// what we already asked.
 func Conversation(activities []crmcontracts.Activity, anchor *crmcontracts.Activity, now time.Time, limit int) []Turn {
 	var turns []Turn
 	for _, activity := range activities {
