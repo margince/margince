@@ -1,9 +1,9 @@
 {
   "totals": {
     "sites": 48,
-    "sites_best_current": 35,
+    "sites_best_current": 33,
     "sites_best_partial": 0,
-    "sites_best_stale": 11,
+    "sites_best_stale": 13,
     "sites_absent": 2,
     "scenarios": 256,
     "records": 354,
@@ -8352,7 +8352,7 @@
       "ready": 33,
       "usable_with_care": 10,
       "not_reliable_yet": 1,
-      "recheck_pending": 11,
+      "recheck_pending": 13,
       "models": [
         {
           "binding": {
@@ -8361,9 +8361,9 @@
             "env": "cloud_frontier"
           },
           "sites": 41,
-          "sites_current": 31,
+          "sites_current": 29,
           "sites_partial": 0,
-          "sites_stale": 10,
+          "sites_stale": 12,
           "runs": 669,
           "passed": 661,
           "reliability": 0.9880418535127056,
@@ -10415,9 +10415,9 @@
         "env": "cloud_frontier"
       },
       "sites": 44,
-      "sites_current": 33,
+      "sites_current": 31,
       "sites_partial": 0,
-      "sites_stale": 11,
+      "sites_stale": 13,
       "runs": 828,
       "passed": 803,
       "reliability": 0.9698067632850241,

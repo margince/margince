@@ -28,9 +28,9 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 322 |
-| Columns | 3810 |
-| Foreign keys | 529 |
+| Tables | 323 |
+| Columns | 3822 |
+| Foreign keys | 530 |
 | Owning areas | 36 |
 
 ## The 12 records everything else hangs off
@@ -44,7 +44,7 @@ Ranked by how many foreign keys point at them.
 | [`company`](contacts.md#company) | [contacts](contacts.md) | 43 | 43 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 65 | 38 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 43 | 25 |
-| [`lead`](contacts.md#lead) | [contacts](contacts.md) | 38 | 17 |
+| [`lead`](contacts.md#lead) | [contacts](contacts.md) | 40 | 17 |
 | [`project`](projects.md#project) | [projects](projects.md) | 23 | 10 |
 | [`stage`](deals.md#stage) | [deals](deals.md) | 10 | 10 |
 | [`team`](identity.md#team) | [identity](identity.md) | 6 | 9 |
@@ -103,7 +103,7 @@ erDiagram
 | [comms](comms.md) | 1 |
 | [compose](compose.md) | 43 |
 | [consent](consent.md) | 19 |
-| [contacts](contacts.md) | 43 |
+| [contacts](contacts.md) | 44 |
 | [continuity](continuity.md) | 1 |
 | [contracts](contracts.md) | 1 |
 | [customfields](customfields.md) | 1 |
@@ -313,9 +313,10 @@ erDiagram
 | [`knowledge_chunk`](knowledge.md#knowledge_chunk) | knowledge | 11 | 0 |
 | [`knowledge_corpus`](knowledge.md#knowledge_corpus) | knowledge | 12 | 1 |
 | [`knowledge_document`](knowledge.md#knowledge_document) | knowledge | 16 | 1 |
-| [`lead`](contacts.md#lead) | contacts | 38 | 17 |
+| [`lead`](contacts.md#lead) | contacts | 40 | 17 |
 | [`lead_disqualify_reason`](contacts.md#lead_disqualify_reason) | contacts | 8 | 1 |
 | [`lead_manual_signal`](contacts.md#lead_manual_signal) | contacts | 12 | 0 |
+| [`lead_origin`](contacts.md#lead_origin) | contacts | 10 | 1 |
 | [`lead_privacy_notice`](consent.md#lead_privacy_notice) | consent | 12 | 0 |
 | [`lead_score_history`](contacts.md#lead_score_history) | contacts | 9 | 0 |
 | [`lead_source`](contacts.md#lead_source) | contacts | 10 | 0 |
