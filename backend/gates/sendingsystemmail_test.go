@@ -159,7 +159,9 @@ func reachesArm(node ast.Node, carriers map[string]bool) bool {
 	ast.Inspect(node, func(n ast.Node) bool {
 		switch typed := n.(type) {
 		case *ast.BasicLit:
-			if typed.Kind == token.STRING && strings.Contains(typed.Value, machineSenderColumn) {
+			// bool_or(NOT x.sender_is_machine) only reports the flag; it excludes nothing.
+			text, isString := gatekit.LiteralText(typed)
+			if isString && strings.Contains(strings.ReplaceAll(text, "bool_or(NOT", ""), machineSenderColumn) {
 				reached = true
 			}
 		case *ast.CallExpr:

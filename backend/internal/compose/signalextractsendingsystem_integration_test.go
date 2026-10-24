@@ -10,7 +10,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -68,7 +71,19 @@ func TestASendingSystemMessageDoesNotPullAThreadOntoItsCompany(t *testing.T) {
 	notice := seedConversation(t, e, notifier, key, at.Add(time.Minute), "workspace")
 	markSentBySystem(t, notice)
 
-	if !offeredKeys(t, e)[key] {
-		t.Fatal("the notice pulled its own company onto the thread, which now reaches two accounts")
+	as := e.Admin()
+	var due []settledThread
+	if err := database.WithWorkspaceTx(as, e.Pool, func(tx pgx.Tx) error {
+		var err error
+		due, err = dueThreads(as, tx, traceReadClock, 100)
+		return err
+	}); err != nil {
+		t.Fatalf("listing the due threads: %v", err)
+	}
+	if len(due) != 1 || due[0].Key != key {
+		t.Fatalf("due threads = %+v, want only %q: the notice pulled its own company onto the thread", due, key)
+	}
+	if due[0].CompanyID != real {
+		t.Errorf("thread company = %v, want the account the person wrote from (%v)", due[0].CompanyID, real)
 	}
 }
