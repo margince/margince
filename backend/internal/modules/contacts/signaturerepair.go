@@ -16,7 +16,7 @@ import (
 
 // SignatureFieldSource is one field the signature pass wrote, with the stored
 // body of the mail it was read from. Body is nil when that mail is gone,
-// archived or restricted, so nobody can judge the field against it any more.
+// archived, restricted or emptied.
 type SignatureFieldSource struct {
 	ID        ids.UUID
 	ContactID ids.ContactID
@@ -26,12 +26,9 @@ type SignatureFieldSource struct {
 	Body      *string
 }
 
-// repairedSignatureFields leaves out the name parts. A name moves the
-// contact's display name with it (followSignatureDisplay), which no
-// retraction can put back, and the name gate already demands the contact's
-// own name in the block.
-const repairedSignatureFields = `f.source = $1 AND f.field NOT IN ('first_name', 'last_name')
-		   AND f.source_ref LIKE 'activity:%'`
+// repairedSignatureFields are the fields the signature pass wrote off a mail,
+// named by a ref the writer could have written.
+const repairedSignatureFields = `f.source = $1 AND (` + sourceRefActivityID + `) IS NOT NULL`
 
 // SignatureFieldSourcesTx pages, by id, the fields the signature pass wrote off
 // a mail, after the given id.

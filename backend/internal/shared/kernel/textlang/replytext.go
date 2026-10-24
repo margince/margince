@@ -195,7 +195,7 @@ func quoteStart(runes []rune) int {
 }
 
 // unmarkedQuoteStart is quoteStart that reads on past a quote marked line by
-// line. A bottom-posted reply puts the sender's words and signature BELOW the
+// line. A bottom-posted reply puts the sender's words and signature under the
 // ">" lines it answers, so only an unmarked boundary ends the sender's text.
 func unmarkedQuoteStart(runes []rune) int {
 	return quoteBoundary(runes, true)
@@ -352,7 +352,7 @@ func CurrentMessage(text string) string {
 }
 
 // SenderLines are the lines the sender of this message typed, signature
-// included: the stored envelope, every ">" line and its attribution, and all
+// included. The stored envelope, every ">" line with its attribution, and all
 // text from an unmarked quote or forward down are dropped. Every reader that
 // takes a fact about the sender from a mail body reads these lines.
 //

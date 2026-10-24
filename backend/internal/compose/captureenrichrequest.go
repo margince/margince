@@ -63,10 +63,10 @@ func signatureEnrichRequest(cand contacts.SignatureCandidate, lines string) mode
 	}
 }
 
-// signatureBlock returns the trailing signatureLineCount lines the sender of
-// this mail typed (textlang.SenderLines): the §2.9 source window. A quoted
-// reply or a forwarded original carries somebody else's signature, and the
-// stored envelope names the contact, so neither may reach the window.
+// signatureBlock returns the last signatureLineCount lines the sender of this
+// mail typed (textlang.SenderLines). A quoted reply or a forward carries
+// somebody else's signature. The stored envelope names the contact. Neither may
+// reach the window.
 func signatureBlock(body string) string {
 	lines := textlang.SenderLines(body)
 	if len(lines) > signatureLineCount {

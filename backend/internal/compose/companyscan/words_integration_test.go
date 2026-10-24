@@ -66,8 +66,8 @@ func TestACanceledMeetingIsNotAnExchangeTheScanReads(t *testing.T) {
 	}
 }
 
-// The scan reads a reply as what its sender wrote, so a quoted mail under it is
-// neither shown to the model nor quotable as the reply's words.
+// The scan reads only what a reply's sender wrote. A quoted mail under it is not
+// shown to the model, and its words cannot be quoted as the reply's.
 func TestTheScanReadsOnlyWhatTheSenderWrote(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()

@@ -4,6 +4,7 @@
 package textlang_test
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -42,5 +43,13 @@ func TestSenderLinesOfAForwardHoldNoneOfTheOriginal(t *testing.T) {
 	body := "-----Original Message-----\nFrom: Sam Seller <sam@example.org>\n\n" + quotedSellerSignature
 	if got := textlang.SenderLines(body); len(got) != 0 {
 		t.Fatalf("a bare forward kept %q as its sender's words", got)
+	}
+}
+
+func TestSenderLinesCannotReadAnAnswerBelowAnUnmarkedQuote(t *testing.T) {
+	// An unmarked quote has no end, so an answer under it reads as the quoted mail.
+	body := "Hello\n\nFrom: Sam Seller <sam@example.org>\nSent: Monday\n\nCan you confirm?\n\nConfirmed.\n\nBob Contact\nCTO"
+	if got := textlang.SenderLines(body); !slices.Equal(got, []string{"Hello"}) {
+		t.Fatalf("sender lines = %q, want only the line above the quote", got)
 	}
 }

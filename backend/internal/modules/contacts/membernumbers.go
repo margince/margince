@@ -3,14 +3,14 @@
 
 package contacts
 
-// The numbers workspace members sign with. A contact's mail quotes them,
-// forwards them and lists them beside a colleague's name, so a reading of that
-// mail can offer one as the contact's own whatever window it was read from.
+// The numbers workspace members sign with. A contact's mail quotes them and
+// forwards them. A reading of that mail can offer one as the contact's own.
 
 import (
 	"context"
 	"fmt"
 	"regexp"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -23,9 +23,8 @@ import (
 var signedNumber = regexp.MustCompile(`(?:\+|00)\d[\d \t().\-/]{6,}\d`)
 
 // MemberNumbersTx reads the numbers, in E.164, that members' email signatures
-// state in their phone field or their text. A member this contact IS (one of the
-// contact's addresses is the member's login) is left out: their number is
-// theirs to have on their own record.
+// state in their phone field or their text. A member whose login is one of this
+// contact's addresses is left out, because this contact is that member.
 //
 // A removed signature still counts. The number was a colleague's, and that
 // does not make it the contact's.
@@ -57,4 +56,24 @@ func MemberNumbersTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) (m
 		return nil, fmt.Errorf("contacts: reading the numbers members sign with: %w", err)
 	}
 	return numbers, nil
+}
+
+// IsMemberNumber reports whether a number as a signature printed it is one of
+// the members' numbers MemberNumbersTx read. The signature writer and the
+// signature repair both ask it.
+func IsMemberNumber(members map[string]bool, printed string) bool {
+	parsed, err := values.ParsePhone(printed)
+	return err == nil && members[parsed.String()]
+}
+
+// withoutMemberNumbers drops the numbers a signature read that a member signs
+// with. Such a number in a contact's mail is most often our own quoted
+// signature in a quote shape textlang.SenderLines misses. Cost: a switchboard
+// a member shares is never learned from a signature.
+func withoutMemberNumbers(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, fields []SignatureField) ([]SignatureField, error) {
+	members, err := MemberNumbersTx(ctx, tx, contactID)
+	if err != nil {
+		return nil, err
+	}
+	return slices.DeleteFunc(slices.Clone(fields), func(f SignatureField) bool { return IsMemberNumber(members, f.Value) }), nil
 }

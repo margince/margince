@@ -15,15 +15,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// signatureWindowDataTask takes back the signature fields read before the pass
-// read only what the sender wrote: a field whose evidence lies outside today's
-// window (signatureBlock) came from a quoted reply or a forwarded original,
-// and a phone a member signs with was never the contact's. The write gate and
-// this repair both judge the window signatureBlock returns.
+// signatureWindowDataTask takes back signature fields the writer would refuse
+// today. Evidence outside signatureBlock came from a quoted or forwarded mail.
+// A number contacts.IsMemberNumber names is a colleague's. A field whose mail
+// is gone, archived or restricted has no source left to stand on.
 func signatureWindowDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1792842314_signature_fields_outside_the_senders_text", Version: 1,
-		Title: "Taking back contact details read from quoted mail", Requires: []string{"core/1792840942"},
+		Title: "Taking back contact details read from quoted mail", Requires: []string{"core/1792842046"},
 		Steps: []datatask.Step{{
 			Name: "signature_fields", Limit: 200, MinLimit: 10,
 			Audit:    datatask.AuditPolicy{PerRecord: true},
@@ -45,21 +44,25 @@ func retractOutsideSignatureWindowBatch(ctx context.Context, tx pgx.Tx, in datat
 		return datatask.BatchOut{}, err
 	}
 	scanned := make([]ids.UUID, 0, len(page))
-	var quoted, members []ids.UUID
+	var quoted, members, unreadable []ids.UUID
 	memberNumbers := map[ids.ContactID]map[string]bool{}
 	for _, field := range page {
 		scanned = append(scanned, field.ID)
+		if field.Body == nil {
+			unreadable = append(unreadable, field.ID)
+			continue
+		}
 		if field.Field == fieldPhone {
 			numbers, err := memberNumbersOf(ctx, tx, field.ContactID, memberNumbers)
 			if err != nil {
 				return datatask.BatchOut{}, err
 			}
-			if numbers[field.Value] {
+			if contacts.IsMemberNumber(numbers, field.Value) {
 				members = append(members, field.ID)
 				continue
 			}
 		}
-		if field.Body != nil && !evidenceInSignatureWindow(*field.Body, field.Evidence) {
+		if !evidenceInSignatureWindow(*field.Body, field.Evidence) {
 			quoted = append(quoted, field.ID)
 		}
 	}
@@ -70,6 +73,7 @@ func retractOutsideSignatureWindowBatch(ctx context.Context, tx pgx.Tx, in datat
 	}{
 		{quoted, "signature read off text the contact did not write in that mail"},
 		{members, "a number a workspace member signs with"},
+		{unreadable, "the mail it was read from is gone, archived or restricted"},
 	} {
 		removed, err := contacts.RetractSignatureFieldsByIDTx(ctx, tx, retraction.fields, retraction.reason)
 		if err != nil {

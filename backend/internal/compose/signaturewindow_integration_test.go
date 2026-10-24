@@ -5,9 +5,9 @@
 
 package compose
 
-// Which part of a contact's mail the signature pass may read, through the real
-// pass, the real writer and the real data task: only what the contact typed in
-// that mail, and never a number a workspace member signs with.
+// The signature pass reads only what the contact typed in that mail. It never
+// writes a number a workspace member signs with. These tests use the real pass,
+// writer and data task.
 
 import (
 	"context"
@@ -99,9 +99,9 @@ func TestTheMisattributionSweepTakesTheNumberOffTheContact(t *testing.T) {
 	}
 }
 
-// signatureWindowFixture is what the pass wrote before it read only the sender's
-// text: Bob's numbers and Sam's quoted details on Bob, and on Cy Sam's title,
-// which a human has since changed, and Sam's number, which a human had typed.
+// signatureWindowFixture is what the pass wrote before it read only the
+// sender's text. Bob holds his numbers and Sam's quoted details. Cy holds Sam's
+// title, which a human has since changed, and Sam's number, which a human typed.
 type signatureWindowFixture struct{ bob, cy ids.UUID }
 
 func seedSignatureWindowFixture(t *testing.T, e *integration.Env) signatureWindowFixture {

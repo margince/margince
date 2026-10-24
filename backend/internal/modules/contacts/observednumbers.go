@@ -17,7 +17,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"slices"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -69,15 +68,7 @@ type listedNumber struct {
 // row takes over the replaced number's row, so the undo buffer names the one
 // number it is about.
 func applyObservedNumbers(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, s observedNumbers) ([]string, error) {
-	members, err := MemberNumbersTx(ctx, tx, contactID)
-	if err != nil {
-		return nil, err
-	}
-	// A member's number on a contact is our colleague's line on somebody
-	// else's record, whichever part of whose mail it was read from.
-	listed := slices.DeleteFunc(parseListedNumbers(s.Numbers), func(n listedNumber) bool {
-		return members[n.phone.String()]
-	})
+	listed := parseListedNumbers(s.Numbers)
 	if len(listed) == 0 {
 		return nil, nil
 	}
