@@ -34363,6 +34363,9 @@ type Contact360 struct {
 		Page PageInfo               `json:"page"`
 	} `json:"employments,omitempty"`
 
+	// LastContactAt The newest exchange in either direction, a meeting included: the moment "quiet for N days" counts from. Absent when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
+	LastContactAt *time.Time `json:"last_contact_at,omitempty"`
+
 	// LastInboundAt When they last wrote to us. Null means nothing inbound was ever captured — a fact about the relationship, not a missing field. Absent entirely when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
 	LastInboundAt *time.Time `json:"last_inbound_at,omitempty"`
 

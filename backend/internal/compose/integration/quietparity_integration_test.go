@@ -95,6 +95,14 @@ func TestQuietCountStartsFromTheOwnersLastTouchAndIgnoresAColleaguesMessage(t *t
 		t.Errorf("InboundAt = %v, want nil: the contact never wrote", touch.InboundAt)
 	}
 
+	page, err := contactRoomService(e).Assemble(rep, contact)
+	if err != nil {
+		t.Fatalf("Assemble: %v", err)
+	}
+	if page.LastContactAt == nil || !page.LastContactAt.Equal(wantTouch) {
+		t.Errorf("the page prints last_contact_at %v, want the meeting %v", page.LastContactAt, wantTouch)
+	}
+
 	var quiet *relstrength.Change
 	for _, c := range changesOf(rep, t, e, contact, now) {
 		if c.Kind == relstrength.ChangeWentQuiet {

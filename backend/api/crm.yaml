@@ -40971,6 +40971,13 @@ components:
             `last_inbound_at` when nothing imported is newer. The re-engaged suggestion reads this,
             because history that arrived by import is not a reply. Absent when the caller has no
             activity grant, named in `sections_omitted` as `last_touch`.
+        last_contact_at:
+          type: [string, 'null']
+          format: date-time
+          description: >-
+            The newest exchange in either direction, a meeting included: the moment "quiet for N
+            days" counts from. Absent when the caller has no activity grant, named in
+            `sections_omitted` as `last_touch`.
         sections_omitted:
           type: array
           description: The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none".
