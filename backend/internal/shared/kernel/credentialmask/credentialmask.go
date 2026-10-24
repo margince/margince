@@ -120,7 +120,7 @@ func labelled(labels string) string {
 // symbol in it, which a word of prose almost never is.
 func looksLikeCredential(value []byte) bool {
 	return len(value) >= 8 && bytes.ContainsFunc(value, func(r rune) bool {
-		return !('a' <= r && r <= 'z' || 'A' <= r && r <= 'Z')
+		return (r < 'a' || r > 'z') && (r < 'A' || r > 'Z')
 	})
 }
 
