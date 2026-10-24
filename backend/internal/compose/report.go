@@ -302,9 +302,7 @@ type reportOutcome struct {
 	// report's population, "" when it does not (reportownergate.go). A reason
 	// and never a count: how many were left out is the side channel.
 	PopulationNarrowed string
-	// ScopeHoldsDeals says whether the population the figures measured holds
-	// any deal; nil for a report that is not about deals.
-	ScopeHoldsDeals *bool
+	ScopeHoldsDeals    *bool // whether the measured population holds any deal; nil off deals
 	// TotalRows is how many groups matched, which exceeds len(Rows) when the
 	// row limit cut the answer. The handler sends it rather than the page
 	// length, so a reader can tell a whole answer from the top of one.

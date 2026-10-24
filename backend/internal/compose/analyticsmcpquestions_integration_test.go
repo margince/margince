@@ -189,8 +189,8 @@ func proveG01OwnPipeline(t *testing.T) {
 }
 
 // G02: Show me the whole company's pipeline by owner. The company total is
-// open to every seat; the split by owner is cut to the owners the rep may
-// measure and says so, so a small answer is never mistaken for a small pipeline.
+// open to every seat. The split by owner is cut to the owners the rep may
+// measure and says so. A small answer is never mistaken for a small pipeline.
 func proveG02WorkspaceRefused(t *testing.T) {
 	e := setupForecast(t)
 	amount := int64(100_000)

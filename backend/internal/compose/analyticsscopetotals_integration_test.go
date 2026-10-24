@@ -5,8 +5,8 @@
 
 package compose
 
-// A rep who owns no deal reads the company's totals, learns from the server
-// that their own scope is empty, and still cannot assert about the company.
+// A rep who owns no deal reads the company's totals. The server tells them
+// their own scope is empty. They still cannot assert about the company.
 
 import (
 	"context"

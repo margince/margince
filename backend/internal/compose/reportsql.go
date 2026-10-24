@@ -166,7 +166,7 @@ func (e *reportEngine) fetchRows(ctx context.Context, report string, spec report
 }
 
 // reportScopeHoldsDeals asks the population question for a deal report with the
-// population buildReportWhere applied: a spec that measures every readable row
+// population buildReportWhere applied. A spec that measures every readable row
 // and was given no scope covers the whole company. Nil for a report that is not
 // about deals.
 func reportScopeHoldsDeals(ctx context.Context, tx pgx.Tx, spec reportSpec, requested RequestedScope) (*bool, error) {

@@ -5,9 +5,9 @@ package compose
 
 // Whether the population an Analytics answer measured holds any deal at all.
 //
-// An empty figure cannot say it: "no sales won" is true both for a company
-// with deals and none won, and for a rep who owns nothing. The screen needs
-// that difference, and it must come from the same population clause the
+// An empty figure cannot say it. "No sales won" is true for a company with
+// deals and none won, and for a rep who owns nothing. The screen needs that
+// difference, and it must come from the same population clause the
 // figures used, so the notice and the numbers cannot disagree.
 
 import (

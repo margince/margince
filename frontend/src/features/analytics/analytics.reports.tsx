@@ -251,7 +251,7 @@ function ReportRemainder({
   );
 }
 
-// One query per card and scope, shared by every reader of it: a screen that
+// One query per card and scope, shared by every reader of it. A screen that
 // needs the card's population flag asks through the same key and costs no
 // second request.
 export function useReportRun(

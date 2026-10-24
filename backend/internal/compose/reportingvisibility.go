@@ -161,10 +161,10 @@ func reportingSourceScope(ctx context.Context, key reportingVisibilityKey, b *re
 	return clause, nil
 }
 
-// markOwnerWithheld sets OwnerWithheld on every fact whose owner is not one
-// the reader may measure. It is the one rule live readings and frozen
-// editions share: a total counts the fact, an owner breakdown skips it. A fact
-// with no owner names no owner, so nothing is withheld on it.
+// markOwnerWithheld sets OwnerWithheld on every fact whose owner falls
+// outside the owners the reader may measure. Live readings and frozen editions
+// share this rule. A total counts the fact and an owner breakdown skips it. A
+// fact with no owner names no owner, so nothing is withheld on it.
 func markOwnerWithheld(ctx context.Context, tx pgx.Tx, facts []reporting.Fact) error {
 	actor, ok := principal.Actor(ctx)
 	if !ok {

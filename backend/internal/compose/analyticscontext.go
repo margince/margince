@@ -78,8 +78,8 @@ func (h analyticsContextHandlers) GetAnalyticsContext(w http.ResponseWriter, r *
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
-// requireForecastOrDealRead admits a seat that reads forecasts or deals: the
-// picker offers populations for the deal totals too, and a deal reader with no
+// requireForecastOrDealRead admits a seat that reads forecasts or deals.
+// The picker offers populations for the deal totals too. A deal reader with no
 // forecast grant would otherwise get no picker.
 func requireForecastOrDealRead(ctx context.Context) error {
 	err := auth.Require(ctx, objectForecast, principal.ActionRead)

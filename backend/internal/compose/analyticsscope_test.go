@@ -231,7 +231,7 @@ func TestAManagersDefaultIsNotReportedAsTheWorkspace(t *testing.T) {
 	}
 }
 
-// Totals are open to every seat that reads deals: the whole company and any
+// Totals are open to every seat that reads deals. The whole company and any
 // team resolve for a rep, while a named colleague still does not.
 func TestEverySeatMayMeasureTotalsForTheWorkspaceAndAnyTeam(t *testing.T) {
 	team := ids.NewV7()
@@ -251,7 +251,7 @@ func TestEverySeatMayMeasureTotalsForTheWorkspaceAndAnyTeam(t *testing.T) {
 }
 
 // A standing forecast or a share is a commitment about a population, so it
-// keeps the tier rules even though the same seat may read the totals.
+// keeps the tier rules. The same seat may still read the totals.
 func TestAssertingAboutAPopulationKeepsTheTierRules(t *testing.T) {
 	foreign := ids.NewV7()
 	cases := []struct {
@@ -294,11 +294,11 @@ func TestOnlyAnOwnerScopeIsExemptFromTheOwnerBreakdownNarrowing(t *testing.T) {
 	for kind, want := range map[string]bool{
 		"": true, ScopeKindWorkspace: true, ScopeKindTeam: true, ScopeKindOwner: false,
 	} {
-		if got := narrowsOwnerBreakdown(RequestedScope{Kind: kind, ID: &id}, true, false); got != want {
+		if got := narrowsOwnerBreakdown(RequestedScope{Kind: kind, ID: &id}, ownerBreakdown{byOwner: true}); got != want {
 			t.Errorf("kind %q narrows=%v, want %v", kind, got, want)
 		}
 	}
-	if narrowsOwnerBreakdown(RequestedScope{}, true, true) || narrowsOwnerBreakdown(RequestedScope{}, false, false) {
+	if narrowsOwnerBreakdown(RequestedScope{}, ownerBreakdown{true, true}) || narrowsOwnerBreakdown(RequestedScope{}, ownerBreakdown{}) {
 		t.Error("a pinned owner or a non-breakdown must not narrow")
 	}
 }

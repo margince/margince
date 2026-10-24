@@ -321,7 +321,7 @@ func derivationWhere(
 	// the owners its headline counted. A row handle pins its owner, which
 	// requireMeasurableOwners has already judged.
 	owners, narrowed, err := ownerBreakdownClause(ctx, tx, spec, requested,
-		narrowsOwnerBreakdown(requested, breaksDownByOwner(spec, plan.groupBy), pinsOwner(spec, predicateFields(plan.preds))), arg)
+		narrowsOwnerBreakdown(requested, ownerBreakdown{breaksDownByOwner(spec, plan.groupBy), pinsOwner(spec, predicateFields(plan.preds))}), arg)
 	if err != nil {
 		return nil, "", err
 	}

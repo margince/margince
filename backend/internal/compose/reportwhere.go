@@ -107,7 +107,7 @@ func buildReportWhere(
 		}
 	}
 	owners, narrowed, err := ownerBreakdownClause(ctx, tx, spec, requested,
-		narrowsOwnerBreakdown(requested, breaksDownByOwner(spec, req.GroupBy), pinsOwner(spec, filterKeys)), arg)
+		narrowsOwnerBreakdown(requested, ownerBreakdown{breaksDownByOwner(spec, req.GroupBy), pinsOwner(spec, filterKeys)}), arg)
 	if err != nil {
 		return nil, "", err
 	}
@@ -206,7 +206,7 @@ func specNarrowings(
 	// An owner scope already sits inside the caller's lens; any other
 	// request is narrowed further when it splits the answer per owner.
 	owners, narrowed, err := ownerBreakdownClause(ctx, tx, spec, requested,
-		narrowsOwnerBreakdown(requested, breakdown, false), arg)
+		narrowsOwnerBreakdown(requested, ownerBreakdown{byOwner: breakdown}), arg)
 	if err != nil {
 		return nil, "", err
 	}

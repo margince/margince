@@ -100,8 +100,7 @@ scope**. Where you have only one, which is the usual case for a rep, it is a
 plain sentence instead: **"These numbers cover {scope}."**
 
 Every seat is offered **Whole company**, every live team and its own records.
-Totals for won, pipeline, forecast and meetings are the same for everyone. A
-seat whose scope is its teams also gets **My teams** first. Archived teams are
+Totals for won, pipeline, forecast and meetings are the same for everyone. A seat whose scope is its teams also gets **My teams** first. Archived teams are
 never offered. A rep still opens on their own records.
 
 A total counts the whole scope you picked. An owner chart, ranking or list shows

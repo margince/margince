@@ -340,8 +340,8 @@ function SectionBody({
   stages: readonly Stage[];
 }>) {
   const t = useT();
-  // Each deal section hands the notice the population flag of its own answer,
-  // so the message and the figures beside it come from one server evaluation.
+  // Each deal section hands the notice the population flag of its own answer.
+  // The message and the figures beside it then come from one server evaluation.
   const emptyNotice = (holdsDeals: boolean | undefined) =>
     selection && context ? (
       <FirstRunNotice

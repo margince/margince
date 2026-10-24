@@ -20,8 +20,8 @@ package compose
 // Two decisions live here. Totals: every seat that reads deals may measure the
 // whole company or any live team, so the figures agree for all of them.
 // Owners: which owners a seat may measure one by one (resolveOwnerScope) still
-// follows the principal's own row-scope tier, and every owner-keyed output
-// narrows to it through the owner gate. Assertions about a population (a
+// follows the principal's own row-scope tier. Every owner-keyed output narrows
+// to it through the owner gate. Assertions about a population (a
 // forecast call, a share) stay on the strict tier rules in ResolveAssertionScope.
 
 import (
@@ -313,8 +313,8 @@ func resolveTeamScope(id ids.UUID) ResolvedScope {
 
 // ResolveAssertionScope answers the population a caller may ASSERT about
 // (record a forecast, issue a share). Totals are open to every seat that reads
-// deals, but a standing number is a commitment, so the workspace needs row
-// scope all and a team needs membership.
+// deals. A standing number is a commitment, so the workspace needs row scope
+// all and a team needs membership.
 func ResolveAssertionScope(
 	ctx context.Context, tx pgx.Tx, requested RequestedScope,
 ) (ResolvedScope, error) {
