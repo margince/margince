@@ -6395,6 +6395,7 @@ export const vi = {
   "review.noEconomicBuyer": "Chưa xác định ai ký",
   "review.buyerSilent": "Bên mua đã im lặng",
   "review.commitUnpriced": "Commit nhưng chưa có số tiền",
+  "review.stageExitUnmet": "Chưa đạt tiêu chí để rời giai đoạn",
   "review.unknownCheck": "Kiểm tra chưa đặt tên",
   "review.sheetTitle": "Trả lời kiểm tra",
   "review.outcomeLegend": "Loại câu trả lời",

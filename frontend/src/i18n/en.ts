@@ -6614,6 +6614,7 @@ export const en = {
   "review.noEconomicBuyer": "No signer identified",
   "review.buyerSilent": "Buyer has gone quiet",
   "review.commitUnpriced": "Committed with no amount",
+  "review.stageExitUnmet": "Stage exit criteria not met",
   "review.unknownCheck": "Unnamed check",
   "review.sheetTitle": "Answer check",
   "review.outcomeLegend": "Answer type",
