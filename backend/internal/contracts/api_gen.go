@@ -37641,6 +37641,17 @@ type DomainQuestionPage struct {
 	Page PageInfo         `json:"page"`
 }
 
+// DraftSteering What every draft-email route takes to steer a draft: the caller's ask and, for a rewrite, the words on the composer's screen. Each route extends it with the fields its own record needs.
+type DraftSteering struct {
+	// Intent Optional steering in the caller's own words ("shorter", "warmer", "ask for Tuesday"). The one input that is NOT untrusted — the caller typed it — and so the only one outside the fence.
+	Intent *string `json:"intent,omitempty"`
+
+	// RewriteOf The draft the composer is CURRENTLY showing, when the call is a rewrite rather than a first draft. Without it an `intent` of "make it shorter" generates a second grounded draft from the same record and the composer swaps it in — a different email rather than a shorter one, and any edits the rep had made are gone.
+	// Sent by the client because the server stores no draft to resolve: this endpoint writes no record, so there is nothing on file to name. It is UNTRUSTED like every other input but `intent` — it may hold text a contact wrote, pasted in — and is fenced the same way.
+	// Absent or empty is a first draft.
+	RewriteOf *string `json:"rewrite_of,omitempty"`
+}
+
 // EmailAccess Who reads this message, and what this caller may do about that. `can_change` and
 // `change_mode` are decided by the same authority that would execute the write, so a
 // control this block offers is a control the write will accept.
@@ -55401,12 +55412,6 @@ type ClearActivityDispositionParams struct {
 // ClearActivityDispositionParamsScope defines parameters for ClearActivityDisposition.
 type ClearActivityDispositionParamsScope string
 
-// DraftEmailJSONBody defines parameters for DraftEmail.
-type DraftEmailJSONBody struct {
-	// Intent Optional steering, e.g. "polite follow-up referencing Friday".
-	Intent *string `json:"intent,omitempty"`
-}
-
 // GetEmailPresentationParams defines parameters for GetEmailPresentation.
 type GetEmailPresentationParams struct {
 	// ThreadCursor Continue the thread's member page from a previous response's `thread.next_cursor`.
@@ -56781,7 +56786,9 @@ type DraftCompanyEmailJSONBody struct {
 	// ProjectId Which body of work the message is about. When set, the draft is grounded in the 360 scoped to that project — correspondence filed under another project drops out — and the project's name, key, phase and target end date are facts the draft may use. Must be a live project the caller can read; an invisible or archived one is `404`, the same answer a direct read gives.
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
 
-	// RewriteOf The draft the composer is CURRENTLY showing, when the call is a rewrite rather than a first draft. The contact-side mirror carries the same field for the same reason — see `POST /contacts/{id}/draft-email`.
+	// RewriteOf The draft the composer is CURRENTLY showing, when the call is a rewrite rather than a first draft. Without it an `intent` of "make it shorter" generates a second grounded draft from the same record and the composer swaps it in — a different email rather than a shorter one, and any edits the rep had made are gone.
+	// Sent by the client because the server stores no draft to resolve: this endpoint writes no record, so there is nothing on file to name. It is UNTRUSTED like every other input but `intent` — it may hold text a contact wrote, pasted in — and is fenced the same way.
+	// Absent or empty is a first draft.
 	RewriteOf *string `json:"rewrite_of,omitempty"`
 }
 
@@ -57603,7 +57610,7 @@ type DraftContactEmailJSONBody struct {
 
 	// RewriteOf The draft the composer is CURRENTLY showing, when the call is a rewrite rather than a first draft. Without it an `intent` of "make it shorter" generates a second grounded draft from the same record and the composer swaps it in — a different email rather than a shorter one, and any edits the rep had made are gone.
 	// Sent by the client because the server stores no draft to resolve: this endpoint writes no record, so there is nothing on file to name. It is UNTRUSTED like every other input but `intent` — it may hold text a contact wrote, pasted in — and is fenced the same way.
-	// Absent or empty is a first draft, which is the behaviour every caller had before this field existed.
+	// Absent or empty is a first draft.
 	RewriteOf *string `json:"rewrite_of,omitempty"`
 }
 
@@ -59190,12 +59197,6 @@ type DemoteLeadParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
-}
-
-// DraftLeadEmailJSONBody defines parameters for DraftLeadEmail.
-type DraftLeadEmailJSONBody struct {
-	// Intent Optional steering in the caller's own words ("shorter", "warmer", "ask for Tuesday"). The one input that is NOT untrusted — the caller typed it — and so the only one outside the fence.
-	Intent *string `json:"intent,omitempty"`
 }
 
 // PromoteLeadParams defines parameters for PromoteLead.
@@ -62105,7 +62106,7 @@ type SetActivityAudienceJSONRequestBody = SetActivityAudienceRequest
 type SetActivityDispositionJSONRequestBody = SetActivityDispositionRequest
 
 // DraftEmailJSONRequestBody defines body for DraftEmail for application/json ContentType.
-type DraftEmailJSONRequestBody DraftEmailJSONBody
+type DraftEmailJSONRequestBody = DraftSteering
 
 // UndoActivityProjectFilingJSONRequestBody defines body for UndoActivityProjectFiling for application/json ContentType.
 type UndoActivityProjectFilingJSONRequestBody = RetentionOverrideRequest
@@ -62714,7 +62715,7 @@ type UpdateLeadJSONRequestBody = UpdateLeadRequest
 type DemoteLeadJSONRequestBody = DemoteLeadRequest
 
 // DraftLeadEmailJSONRequestBody defines body for DraftLeadEmail for application/json ContentType.
-type DraftLeadEmailJSONRequestBody DraftLeadEmailJSONBody
+type DraftLeadEmailJSONRequestBody = DraftSteering
 
 // SetLeadManualSignalJSONRequestBody defines body for SetLeadManualSignal for application/json ContentType.
 type SetLeadManualSignalJSONRequestBody = SetLeadManualSignalRequest

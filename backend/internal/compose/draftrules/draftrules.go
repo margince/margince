@@ -38,6 +38,10 @@ conversation. That short honest opener is the correct output; a longer one that
 invents a pitch is worse, because the rep has to notice the invention before
 sending.`
 
+// Rewrite binds a surface whose input can carry rewrite_of. It is not in Shared
+// because a surface with no such field has nothing for it to refer to.
+const Rewrite = `rewrite_of, when present, is the draft already on the salesperson's screen, and the ask is to REWRITE it rather than to write again. Keep what it says — its subject, its one ask, the detail it carries — and change only what the ask names. A different message is the one answer that is always wrong, because the salesperson has already read and often edited this one. Everything else still binds: the greeting rule, the sign-off rule, and the refusal to state anything the data does not support, so a claim the old draft invented does not survive the rewrite.`
+
 // Shared is the rules block. One string, imported by all three drafting
 // surfaces, asserted identical by TestEveryDraftingSurfaceCarriesTheSharedRules.
 //
