@@ -63,6 +63,7 @@ function stub(
   graph: ContactGraph,
   allow: GrantSpec = {},
   asks: readonly IntroRequest[] = [],
+  captureGaps: readonly unknown[] = [],
 ) {
   let answered: () => void = () => {};
   const seatAnswered = new Promise<void>((resolve) => {
@@ -74,6 +75,13 @@ function stub(
       const url = String(input instanceof Request ? input.url : input);
       if (url.includes("/graph")) {
         return jsonResponse(graph);
+      }
+      if (url.endsWith("/network")) {
+        return jsonResponse({
+          contact_id: CONTACT,
+          colleagues: [],
+          capture_gaps: captureGaps,
+        });
       }
       if (url.includes("/intro-requests")) {
         return jsonResponse({ data: asks });
@@ -95,9 +103,13 @@ function renderTab(
   // The two reads beside the graph: the asks in flight, and the 360's
   // moments. Absent by default, which is what the older contacts screen
   // hands the tab.
-  beside: Readonly<{ asks?: readonly IntroRequest[]; view?: Moments }> = {},
+  beside: Readonly<{
+    asks?: readonly IntroRequest[];
+    view?: Moments;
+    captureGaps?: readonly unknown[];
+  }> = {},
 ) {
-  const { seatAnswered } = stub(graph, allow, beside.asks);
+  const { seatAnswered } = stub(graph, allow, beside.asks, beside.captureGaps);
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
@@ -122,6 +134,46 @@ const anchor: ContactGraph["nodes"][number] = {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+});
+
+describe("a colleague on the threads with no mailbox", () => {
+  const graph: ContactGraph = {
+    contact_id: CONTACT,
+    nodes: [anchor],
+    edges: [],
+    routes: [],
+  } as ContactGraph;
+
+  it("is named in a notice that later mail may be missing", async () => {
+    renderTab(
+      graph,
+      "en",
+      {},
+      {
+        captureGaps: [
+          {
+            user_id: "u-1",
+            display_name: "Ina Invited",
+            invited: true,
+            last_on_thread_at: "2026-10-01T10:00:00Z",
+          },
+        ],
+      },
+    );
+    expect(
+      await screen.findByText(
+        /Ina Invited \(has not signed in yet\).*later mail may be missing/,
+      ),
+    ).toBeTruthy();
+  });
+
+  it("draws no notice when every colleague on the threads is captured", async () => {
+    const { seatAnswered } = renderTab(graph);
+    await seatAnswered;
+    await waitFor(() =>
+      expect(screen.queryByText(/later mail may be missing/)).toBeNull(),
+    );
+  });
 });
 
 describe("a contact nobody here reaches", () => {

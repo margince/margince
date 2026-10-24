@@ -14221,6 +14221,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Du stehst im Austausch mit {through} im selben Unternehmen.",
   "contact.graph.noRoute":
     "Im Unternehmen steht noch niemand im Austausch mit diesem Kontakt oder dessen Unternehmen.",
+  "contact.network.captureGap_one":
+    "{names} steht in den Threads dieses Kontakts und hat kein Postfach verbunden, daher kann spätere Post hier fehlen.",
+  "contact.network.captureGap_other":
+    "{names} stehen in den Threads dieses Kontakts und haben kein Postfach verbunden, daher kann spätere Post hier fehlen.",
+  "contact.network.captureGapInvited": "{name} (noch nicht angemeldet)",
   "contact.graph.noDirect":
     "Im Unternehmen hat noch niemand mit diesem Kontakt korrespondiert.",
   "contact.graph.sideColumn": "Vorstellungen und Veränderungen",

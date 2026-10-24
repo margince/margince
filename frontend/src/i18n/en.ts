@@ -14167,6 +14167,11 @@ export const en = {
     "You correspond with {through} at the same company.",
   "contact.graph.noRoute":
     "No one in the company corresponds with this contact or their company yet.",
+  "contact.network.captureGap_one":
+    "{names} is on this contact’s threads and has not connected a mailbox, so later mail may be missing here.",
+  "contact.network.captureGap_other":
+    "{names} are on this contact’s threads and have not connected a mailbox, so later mail may be missing here.",
+  "contact.network.captureGapInvited": "{name} (has not signed in yet)",
   "contact.graph.noDirect":
     "No one in the company has corresponded with this contact.",
   // Names the column beside the graph, for a reader who lands in it from the

@@ -13839,6 +13839,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contact.graph.routeViaYou": "Bạn trao đổi với {through} ở cùng công ty.",
   "contact.graph.noRoute":
     "Chưa ai trong công ty trao đổi với liên hệ này hoặc công ty của họ.",
+  "contact.network.captureGap_one":
+    "{names} có trong các cuộc trao đổi với liên hệ này nhưng chưa kết nối hộp thư, nên thư về sau có thể bị thiếu.",
+  "contact.network.captureGap_other":
+    "{names} có trong các cuộc trao đổi với liên hệ này nhưng chưa kết nối hộp thư, nên thư về sau có thể bị thiếu.",
+  "contact.network.captureGapInvited": "{name} (chưa đăng nhập)",
   "contact.graph.noDirect": "Chưa ai trong công ty trao đổi với liên hệ này.",
   "contact.graph.sideColumn": "Giới thiệu và thay đổi",
   "contact.graph.recordWorksWith": "Theo hồ sơ: làm việc cùng {name}",
