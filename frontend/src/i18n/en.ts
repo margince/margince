@@ -1346,7 +1346,6 @@ export const en = {
   "contact.meetings.inDays_one": "In {days} day",
   "contact.meetings.inDays_other": "In {days} days",
   "contact.meetings.waitingOn": "Waiting on {name}",
-  "contact.meetings.waitingOnReply": "Waiting on reply",
   "contact.meetings.personalLink": "Personal link",
   "contact.meetings.offeredTimes": "Offered times",
   "contact.meetings.sentExpires": "Sent {sent} · expires {expires}",

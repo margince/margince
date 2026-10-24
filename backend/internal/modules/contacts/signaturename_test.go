@@ -36,6 +36,14 @@ func TestMapSignatureNameDecidesTheOrderFromWhatThePageShows(t *testing.T) {
 			wantOK: true, first: "Katalin", last: "Nagy", display: "Nagy Katalin",
 		},
 		{
+			name:  "an email address is not a printed name",
+			parts: SignatureNameParts{Family: "Weber", Given: "Anna", Order: SignatureOrderGivenFirst, Evidence: "anna.weber@example.com"},
+		},
+		{
+			name:  "parts split by a slash are not one printed name",
+			parts: SignatureNameParts{Family: "Weber", Given: "Anna", Order: SignatureOrderGivenFirst, Evidence: "Anna / Weber"},
+		},
+		{
 			name:   "German given name first",
 			parts:  SignatureNameParts{Family: "Weber", Given: "Anna", Order: SignatureOrderGivenFirst, Evidence: "Anna Weber, Geschäftsführerin"},
 			wantOK: true, first: "Anna", last: "Weber", display: "Anna Weber",

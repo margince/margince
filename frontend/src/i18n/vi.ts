@@ -1356,7 +1356,6 @@ export const vi = {
   "contact.meetings.inDays_one": "{days} ngày nữa",
   "contact.meetings.inDays_other": "{days} ngày nữa",
   "contact.meetings.waitingOn": "Đang chờ {name}",
-  "contact.meetings.waitingOnReply": "Đang chờ trả lời",
   "contact.meetings.personalLink": "Liên kết cá nhân",
   "contact.meetings.offeredTimes": "Khung giờ đã đề xuất",
   "contact.meetings.sentExpires": "Đã gửi {sent} · hết hạn {expires}",

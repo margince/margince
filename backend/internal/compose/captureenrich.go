@@ -459,11 +459,18 @@ func signatureNamesContact(block string, cand contacts.SignatureCandidate) bool 
 	}) {
 		words[word] = true
 	}
+	// Two tokens when the name has two: a surname alone is shared by relatives
+	// and colleagues, and the name gate writes from this block.
+	var tokens, matched int
 	for token := range strings.FieldsSeq(strings.ToLower(cand.FullName)) {
 		token = strings.Trim(token, ".,;:()<>\"'")
-		if token != "" && words[token] {
-			return true
+		if token == "" {
+			continue
+		}
+		tokens++
+		if words[token] {
+			matched++
 		}
 	}
-	return false
+	return matched > 0 && matched >= min(tokens, 2)
 }

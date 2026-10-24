@@ -16,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/contactcontext"
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -118,11 +119,10 @@ func greetingName(contact crmcontracts.Contact) string {
 	if contact.FirstName != nil && strings.TrimSpace(*contact.FirstName) != "" {
 		return strings.TrimSpace(*contact.FirstName)
 	}
-	full := strings.TrimSpace(contact.FullName)
-	if cut, _, found := strings.Cut(full, " "); found && cut != "" {
-		return cut
+	if first, _, ok := contacts.SplitStoredName(contact.FullName); ok {
+		return first
 	}
-	return full
+	return strings.Join(strings.Fields(contact.FullName), " ")
 }
 
 // surname is what a formal greeting takes: the record's own last name, or what
@@ -140,10 +140,8 @@ func surname(contact crmcontracts.Contact) string {
 	if contact.LastName != nil && strings.TrimSpace(*contact.LastName) != "" {
 		return strings.TrimSpace(*contact.LastName)
 	}
-	if _, rest, found := strings.Cut(strings.TrimSpace(contact.FullName), " "); found {
-		return strings.TrimSpace(rest)
-	}
-	return ""
+	_, last, _ := contacts.SplitStoredName(contact.FullName)
+	return last
 }
 
 // currentEmployer names where this contact works now. The 360 sorts the

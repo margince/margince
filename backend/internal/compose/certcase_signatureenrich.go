@@ -234,12 +234,12 @@ func (c *signatureEnrichCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	// the expected field while fabricating evidence for three others is not the
 	// clean run it would otherwise look like.
 	detail := gateRefusals(dropped)
-	if len(gated) == 0 && len(dropped) > 0 {
+	// The name goes through the pass's own mapper, so what is compared is the
+	// pair the pass would write. The pass writes it whatever the other fields did.
+	nameFields, nameDropped := gateSignatureName(trace.Output, c.lines)
+	if len(gated) == 0 && len(dropped) > 0 && len(nameFields) == 0 {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: strings.Join(detail, "; ")}
 	}
-	// The name goes through the pass's own mapper, so what is compared is the
-	// pair the pass would write.
-	nameFields, nameDropped := gateSignatureName(trace.Output, c.lines)
 	detail = append(detail, gateRefusals(nameDropped)...)
 	proposed := make(map[string][]string, len(gated)+len(nameFields))
 	for _, f := range nameFields {

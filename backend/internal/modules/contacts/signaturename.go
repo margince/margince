@@ -75,11 +75,27 @@ func MapSignatureName(p SignatureNameParts) (SignatureName, bool) {
 
 // nameWords splits folded text into the words a name is made of, dropping the
 // punctuation that surrounds a name in a signature line.
+//
+// Words are whitespace-separated, so an address ("anna.weber@example.com") or
+// parts joined by a slash are one non-name entry that breaks any run through it.
 func nameWords(folded string) []string {
-	return strings.FieldsFunc(folded, func(r rune) bool {
-		return !unicode.IsLetter(r) && !unicode.IsMark(r) && r != '\'' && r != '-'
-	})
+	isNameRune := func(r rune) bool {
+		return unicode.IsLetter(r) || unicode.IsMark(r) || r == '\'' || r == '-'
+	}
+	var words []string
+	for field := range strings.FieldsSeq(folded) {
+		word := strings.TrimFunc(field, func(r rune) bool { return !isNameRune(r) })
+		if word == "" || strings.ContainsFunc(word, func(r rune) bool { return !isNameRune(r) }) {
+			word = nonNameWord
+		}
+		words = append(words, word)
+	}
+	return words
 }
+
+// nonNameWord stands in for a whitespace-delimited entry that is not a name
+// word; it contains a space-free control byte no name part can equal.
+const nonNameWord = "\x00"
 
 // containsRun reports whether run appears in words as consecutive entries.
 func containsRun(words, run []string) bool {
