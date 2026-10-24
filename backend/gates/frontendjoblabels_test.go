@@ -229,28 +229,34 @@ func (c packageConsts) of(dir string) map[string]string {
 		return table
 	}
 	table := gatekit.PackageStringConstants(c.t, dir)
+	// Alias folding resolves through this reader, including back to this package.
+	c.byDir[dir] = table
 	pending := constExprs(c.t, dir)
 	for progress := true; progress; {
 		progress = false
-		for name, expr := range pending {
-			if text, ok := gatekit.StringExpr(expr, table, gatekit.FoldStrict); ok {
+		for name, value := range pending {
+			if text, ok := foldConstant(c, value.parsed, value.expr); ok {
 				table[name] = text
 				delete(pending, name)
 				progress = true
 			}
 		}
 	}
-	c.byDir[dir] = table
 	return table
 }
 
-func constExprs(t *testing.T, dir string) map[string]ast.Expr {
+type declaredString struct {
+	parsed gatekit.ParsedFile
+	expr   ast.Expr
+}
+
+func constExprs(t *testing.T, dir string) map[string]declaredString {
 	t.Helper()
 	sources, err := filepath.Glob(filepath.Join(dir, "*.go"))
 	if err != nil {
 		t.Fatalf("listing %s: %v", dir, err)
 	}
-	out := map[string]ast.Expr{}
+	out := map[string]declaredString{}
 	for _, source := range sources {
 		if strings.HasSuffix(source, "_test.go") {
 			continue
@@ -266,7 +272,7 @@ func constExprs(t *testing.T, dir string) map[string]ast.Expr {
 			}
 			for _, spec := range general.Specs {
 				if value, ok := spec.(*ast.ValueSpec); ok && len(value.Names) == 1 && len(value.Values) == 1 {
-					out[value.Names[0].Name] = value.Values[0]
+					out[value.Names[0].Name] = declaredString{gatekit.ParsedFile{Path: source, File: file}, value.Values[0]}
 				}
 			}
 		}
