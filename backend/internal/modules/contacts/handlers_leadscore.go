@@ -9,7 +9,6 @@ package contacts
 
 import (
 	"net/http"
-	"strings"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -61,13 +60,6 @@ func (h Handlers) SetLeadManualSignal(w http.ResponseWriter, r *http.Request, id
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	// A reason is what separates a scoring input from a number somebody
-	// typed. The column enforces it too; refusing here names the field.
-	if strings.TrimSpace(req.Reason) == "" {
-		httperr.Write(w, r, httperr.Validation(fieldKeyReason, "reason_required",
-			"say why this value is right — a scoring input nobody can account for is worse than none"))
-		return
-	}
 	out, err := h.store.SetLeadManualSignal(r.Context(), pathID[ids.LeadKind](id), SetLeadManualSignalInput{
 		Factor:     string(req.Factor),
 		Band:       req.Band,
@@ -84,10 +76,37 @@ func (h Handlers) SetLeadManualSignal(w http.ResponseWriter, r *http.Request, id
 
 // ClearLeadManualSignal serves DELETE
 // /leads/{id}/manual-signals/{factor}.
-func (h Handlers) ClearLeadManualSignal(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, factor string) {
-	if err := h.store.ClearLeadManualSignal(r.Context(), pathID[ids.LeadKind](id), factor); err != nil {
+func (h Handlers) ClearLeadManualSignal(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, factor crmcontracts.LeadManualSignalFactor) {
+	if err := h.store.ClearLeadManualSignal(r.Context(), pathID[ids.LeadKind](id), string(factor)); err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// GetLeadSignalCatalog serves GET /lead-signal-catalog: the manual scoring
+// vocabulary, read from the same catalog the store
+// validates against.
+func (h Handlers) GetLeadSignalCatalog(w http.ResponseWriter, r *http.Request) {
+	catalog := LeadSignalCatalog()
+	out := crmcontracts.LeadSignalCatalog{Factors: make([]crmcontracts.LeadSignalCatalogFactor, 0, len(catalog))}
+	for _, f := range catalog {
+		factor := crmcontracts.LeadSignalCatalogFactor{
+			Factor: crmcontracts.LeadManualSignalFactor(f.ID), Bands: make([]crmcontracts.LeadSignalBand, 0, len(f.Bands)),
+		}
+		if f.CompanyField != "" {
+			factor.CompanyField = &f.CompanyField
+		}
+		for _, b := range f.Bands {
+			sizes := b.CompanySizeBands
+			if sizes == nil {
+				sizes = []string{}
+			}
+			factor.Bands = append(factor.Bands, crmcontracts.LeadSignalBand{
+				Id: b.ID, Points: b.Points, Min: b.Min, Max: b.Max, CompanySizeBands: sizes,
+			})
+		}
+		out.Factors = append(out.Factors, factor)
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
 }

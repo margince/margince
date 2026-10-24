@@ -4437,8 +4437,9 @@ export const de = {
   "lead.signalSuperseded": "Zuvor {value}, ersetzt durch {source}",
   "lead.signalAutomaticSource": "eine automatisierte Quelle",
   "lead.signalReason": "Beleg",
-  "lead.signalReasonHint": "Optional. Wird mit dem Score gespeichert.",
-  "lead.signalReasonUnstated": "Kein Beleg angegeben. Manuell erfasst.",
+  "lead.signalReasonHint":
+    "Pflichtfeld. Sag, woher du das weißt. Wird mit dem Score gespeichert.",
+  "lead.signalNoEvidence": "Kein Beleg erfasst",
   "lead.signalSave": "Zum Score hinzufügen",
   "lead.signal.web_traffic": "Website-Traffic",
   "lead.signal.employees": "Beschäftigtenzahl",

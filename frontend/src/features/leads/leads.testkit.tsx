@@ -13,6 +13,7 @@ import { LocaleProvider } from "../../i18n";
 import { meFixture } from "../../testing/mefixture";
 import { RecordShell } from "../../testing/recordshell.testkit";
 import { WriteToHost } from "../settings/writetohost";
+import { SIGNAL_CATALOG } from "./leadsignals.fixture";
 
 // Edit, Share and Disqualify live behind the header's overflow trigger, whose
 // panel mounts on the first open. So a test wanting one opens the menu first.
@@ -125,6 +126,9 @@ export function stubFetch(
     if (request.method === "GET" && request.url.endsWith("/v1/connectors")) {
       return jsonResponse({ data: [] });
     }
+    if (new URL(request.url).pathname.endsWith("/lead-signal-catalog")) {
+      return jsonResponse(SIGNAL_CATALOG);
+    }
     // The administered vocabularies, as a fresh installation ships them:
     // the screens read their labels and pick lists off these.
     if (request.method === "GET" && request.url.endsWith("/v1/lead-sources")) {
@@ -221,6 +225,9 @@ export function stubFetchWithMe(
           anchor: { type: "lead", id: "l-1" },
           sections: [],
         });
+      }
+      if (new URL(request.url).pathname.endsWith("/lead-signal-catalog")) {
+        return jsonResponse(SIGNAL_CATALOG);
       }
       if (
         request.method === "GET" &&

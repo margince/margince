@@ -14,6 +14,7 @@ import { LeadBoard, StatusBadge } from "./leadpresentation";
 import { LeadScreen } from "./leads";
 import { LeadsScreen } from "./leads.list";
 import { LeadManualSignals } from "./leadsignals";
+import { SIGNAL_CATALOG } from "./leadsignals.fixture";
 
 // LeadsScreen (list, accent-tinted "segregated" surface) and LeadScreen (its
 // own 360 — never contact.html, per the §3.5 segregation gap) both read
@@ -49,6 +50,7 @@ const lead = {
 export const LeadsList: Story = {
   render: () => {
     installFetchStub({
+      "GET /lead-signal-catalog": () => jsonResponse(SIGNAL_CATALOG),
       "GET /me": meRoute({ lead: ["read", "update"] }),
       "GET /leads": () =>
         jsonResponse({
@@ -68,6 +70,7 @@ export const LeadsList: Story = {
 export const LeadOverview: Story = {
   render: () => {
     installFetchStub({
+      "GET /lead-signal-catalog": () => jsonResponse(SIGNAL_CATALOG),
       "GET /leads/l-1": () => jsonResponse(lead),
       "GET /me": () =>
         jsonResponse({
@@ -91,6 +94,7 @@ export const LeadOverview: Story = {
 export const LeadScoringZero: Story = {
   render: () => {
     installFetchStub({
+      "GET /lead-signal-catalog": () => jsonResponse(SIGNAL_CATALOG),
       "GET /leads/l-1": () =>
         jsonResponse({ ...lead, score: 0, title: "Boss", source: "manual" }),
       "GET /leads/l-1/score": () =>
@@ -115,6 +119,7 @@ export const LeadScoringZero: Story = {
 export const LeadScoreExplained: Story = {
   render: () => {
     installFetchStub({
+      "GET /lead-signal-catalog": () => jsonResponse(SIGNAL_CATALOG),
       "GET /leads/l-1": () => jsonResponse(lead),
       "GET /leads/l-1/score": () =>
         jsonResponse({
@@ -195,6 +200,7 @@ export const LeadEngagedMeetingBooked: Story = {
       updated_at: at,
     });
     installFetchStub({
+      "GET /lead-signal-catalog": () => jsonResponse(SIGNAL_CATALOG),
       "GET /leads/l-1": () => jsonResponse(engaged),
       "GET /activities": () =>
         jsonResponse({
@@ -292,6 +298,7 @@ export const LeadEngagedMeetingBooked: Story = {
 export const LeadDisqualified: Story = {
   render: () => {
     installFetchStub({
+      "GET /lead-signal-catalog": () => jsonResponse(SIGNAL_CATALOG),
       "GET /leads/l-1": () =>
         jsonResponse({
           ...lead,
@@ -322,6 +329,7 @@ export const LeadDisqualified: Story = {
 export const LeadPromotedAfterMerge: Story = {
   render: () => {
     installFetchStub({
+      "GET /lead-signal-catalog": () => jsonResponse(SIGNAL_CATALOG),
       "GET /leads/l-1": () =>
         jsonResponse({
           ...lead,
@@ -388,6 +396,7 @@ export const LeadPromotedDemoting: Story = {
 export const LeadsBoard: Story = {
   render: () => {
     installFetchStub({
+      "GET /lead-signal-catalog": () => jsonResponse(SIGNAL_CATALOG),
       "GET /leads": () =>
         jsonResponse({
           data: [
@@ -450,6 +459,7 @@ export const LeadPresentationComponents: Story = {
 export const ManualQualificationEvidence: Story = {
   render: () => {
     installFetchStub({
+      "GET /lead-signal-catalog": () => jsonResponse(SIGNAL_CATALOG),
       "GET /leads/l-1/manual-signals": () =>
         jsonResponse({
           data: [
@@ -497,6 +507,7 @@ export const SharedRecordViews: Story = {
 export const LeadArrivedToLogACall: Story = {
   render: () => {
     installFetchStub({
+      "GET /lead-signal-catalog": () => jsonResponse(SIGNAL_CATALOG),
       "GET /leads/l-1": () => jsonResponse(lead),
       "GET /me": () =>
         jsonResponse({

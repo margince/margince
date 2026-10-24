@@ -16,7 +16,11 @@ import { formatDateTime, formatNumber } from "../../format/format";
 import { viewerZone } from "../../format/timezone";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import { leadManualSignalsKey, leadWriteKeys } from "../../lib/leadkeys";
+import {
+  leadManualSignalsKey,
+  leadSignalCatalogKey,
+  leadWriteKeys,
+} from "../../lib/leadkeys";
 import { unwrap } from "../../lib/problem";
 import "./leadsignals.css";
 
@@ -25,17 +29,21 @@ type SignalFactor = SetSignalRequest["factor"];
 type SignalKind = SetSignalRequest["signal_kind"];
 type ManualSignal = components["schemas"]["LeadManualSignal"];
 
-// The §24 catalog the server enforces (leadmanualsignal.go): the three
-// factors a human may supply and the bands each accepts. Spelled here so the
-// form offers only what the server will take; the server's 422 remains the
-// last word. Closed by construction on both sides — no endpoint serves this
-// vocabulary, so there is nothing to read it from at runtime.
-const SIGNAL_BANDS: Readonly<Record<SignalFactor, readonly string[]>> = {
-  web_traffic: ["low", "medium", "high"],
-  employees: ["1-10", "11-50", "51-200", "201+"],
-  budget_hint: ["none", "unknown", "some", "confirmed"],
-};
-export const SIGNAL_FACTORS = Object.keys(SIGNAL_BANDS) as SignalFactor[];
+type SignalCatalogFactor = components["schemas"]["LeadSignalCatalogFactor"];
+
+/**
+ * The factors a human may supply and the bands each accepts, as the server
+ * validates them. Read from `/lead-signal-catalog`, so the form offers
+ * what the store will take and the band list is spelled in one place.
+ */
+export function useLeadSignalCatalog() {
+  return useQuery({
+    queryKey: leadSignalCatalogKey,
+    staleTime: 60 * 60 * 1000,
+    queryFn: async () => unwrap(await api.GET("/lead-signal-catalog")).factors,
+  });
+}
+
 const SIGNAL_KINDS: readonly SignalKind[] = ["fact", "assumption", "judgement"];
 
 const CONFIDENCE_LEVELS = ["0.5", "0.7", "0.9", "1"] as const;
@@ -62,15 +70,28 @@ const CONFIDENCE_LEVELS = ["0.5", "0.7", "0.9", "1"] as const;
 const DEFAULT_SIGNAL_KIND: SignalKind = "assumption";
 const CONFIDENCE_UNSTATED = "";
 
-// One band per factor, "" for a question the rep left alone. Only answered
+/**
+ * What a stored signal holds once its stock sentence was taken away. The
+ * server writes it (contacts.ManualSignalNoEvidence) and refuses it as input,
+ * so the screen shows a translated label instead of the English constant.
+ */
+export const MANUAL_SIGNAL_NO_EVIDENCE = "No evidence recorded";
+
+/** The evidence line of a stored signal, with the marker translated. */
+export function evidenceText(
+  reason: string,
+  t: (key: MessageKey) => string,
+): string {
+  return reason === MANUAL_SIGNAL_NO_EVIDENCE
+    ? t("lead.signalNoEvidence")
+    : reason;
+}
+
+// One band per factor, absent for a question the rep left alone. Only answered
 // questions are written: filling these in from what is already stored would
 // re-stamp `set_by`/`set_at` on factors nobody touched.
-type Answers = Readonly<Record<SignalFactor, string>>;
-const NO_ANSWERS: Answers = {
-  web_traffic: "",
-  employees: "",
-  budget_hint: "",
-};
+type Answers = Readonly<Partial<Record<SignalFactor, string>>>;
+const NO_ANSWERS: Answers = {};
 
 /** Every manual signal on the lead, live and superseded. */
 export function useManualSignals(id: string) {
@@ -114,6 +135,8 @@ export function LeadManualSignals({
   const zone = viewerZone();
   const queryClient = useQueryClient();
   const signals = useManualSignals(id);
+  const catalog = useLeadSignalCatalog();
+  const factors: readonly SignalCatalogFactor[] = catalog.data ?? [];
   const [answers, setAnswers] = useState<Answers>(NO_ANSWERS);
   const [note, setNote] = useState("");
   const [kind, setKind] = useState<SignalKind>(DEFAULT_SIGNAL_KIND);
@@ -150,7 +173,7 @@ export function LeadManualSignals({
         // `set_by`/`set_at` on a factor nobody touched the second time and
         // appends a history row recording no change. What stays on the form
         // is exactly what is still outstanding.
-        setAnswers((prev) => ({ ...prev, [body.factor]: "" }));
+        setAnswers((prev) => ({ ...prev, [body.factor]: undefined }));
       }
     },
     onSuccess: () => {
@@ -176,23 +199,19 @@ export function LeadManualSignals({
   });
   const busy = set.isPending || clear.isPending;
   const canEdit = !readOnlyReason && !busy;
-  const answered = SIGNAL_FACTORS.filter((name) => answers[name] !== "");
+  const answered = factors.filter((entry) => !!answers[entry.factor]);
   const label = (key: string) => t(`lead.signal.${key}` as MessageKey);
 
-  // "How do you know?" is optional on screen, while `reason` is required and
-  // non-empty on the wire — a scoring input nobody can account for is what
-  // this feature exists to end. A blank line therefore sends a sentence
-  // saying exactly that, never an invented justification, and it is
-  // translated because every other reason on this list is written in the
-  // language its author used.
+  // `reason` is what the rep typed and nothing else: the store refuses a
+  // blank one, so the form never invents a sentence to get past it.
   const writes = (): readonly SetSignalRequest[] =>
-    answered.map((name) => ({
-      factor: name,
-      band: answers[name],
+    answered.map((entry) => ({
+      factor: entry.factor,
+      band: answers[entry.factor] ?? "",
       signal_kind: kind,
       confidence:
         confidence === CONFIDENCE_UNSTATED ? null : Number(confidence),
-      reason: note.trim() === "" ? t("lead.signalReasonUnstated") : note.trim(),
+      reason: note.trim(),
     }));
 
   return (
@@ -201,10 +220,10 @@ export function LeadManualSignals({
           loading, failed, or not yet retained (ADR-0105 §1), nothing here can
           say what is set, so nothing here claims "not entered". */}
       {signals.isPending && <span>{t("lead.scoreLoading")}</span>}
-      <ErrorLine error={signals.error} />
-      {signals.isSuccess && (
+      <ErrorLine error={signals.error ?? catalog.error} />
+      {signals.isSuccess && catalog.isSuccess && (
         <ul className="leadsignals-list">
-          {SIGNAL_FACTORS.map((name) => {
+          {factors.map(({ factor: name }) => {
             const entries = signals.data.filter(
               (entry: ManualSignal) => entry.factor === name,
             );
@@ -231,7 +250,9 @@ export function LeadManualSignals({
                         })}
                       </span>
                     )}
-                    <span className="t-caption">{live.reason}</span>
+                    <span className="t-caption">
+                      {evidenceText(live.reason, t)}
+                    </span>
                     <span className="t-caption">
                       <EntityRef kind="user" id={live.set_by} />
                     </span>
@@ -273,18 +294,18 @@ export function LeadManualSignals({
         <span>{readOnlyReason}</span>
       ) : (
         <div className="form-stack">
-          {SIGNAL_FACTORS.map((name) => (
+          {factors.map(({ factor: name, bands }) => (
             <Field key={name} label={label(`ask.${name}`)}>
               {(control) => (
                 <Select
                   {...control}
-                  value={answers[name]}
+                  value={answers[name] ?? ""}
                   disabled={!canEdit}
                   placeholder={t("lead.signalBandPick")}
                   onChange={(next) =>
                     setAnswers((prev) => ({ ...prev, [name]: next }))
                   }
-                  options={SIGNAL_BANDS[name].map((value) => ({
+                  options={bands.map(({ id: value }) => ({
                     value,
                     label: label(`${name}.${value}`),
                   }))}
@@ -295,6 +316,7 @@ export function LeadManualSignals({
           <Field
             label={t("lead.signalReason")}
             hint={t("lead.signalReasonHint")}
+            required
           >
             {(control) => (
               <Textarea
@@ -364,7 +386,7 @@ export function LeadManualSignals({
           <div className="form-actions">
             <Button
               variant="primary"
-              disabled={!canEdit || answered.length === 0}
+              disabled={!canEdit || answered.length === 0 || note.trim() === ""}
               onClick={() => set.mutate(writes())}
             >
               {t("lead.signalSave")}

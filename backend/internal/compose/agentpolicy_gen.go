@@ -422,6 +422,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/knowledge/corpora/{id}/documents":                              {Op: "listCorpusDocuments", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/knowledge/documents/{id}":                                      {Op: "downloadCorpusDocument", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/lead-disqualify-reasons":                                       {Op: "listLeadDisqualifyReasons", Access: "tool", Tool: "read_view", RecordType: "", Tier: "auto_execute", Scope: "read"},
+	"GET /v1/lead-signal-catalog":                                           {Op: "getLeadSignalCatalog", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/lead-sources":                                                  {Op: "listLeadSources", Access: "tool", Tool: "read_view", RecordType: "", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/leads":                                                         {Op: "listLeads", Access: "tool", Tool: "list_records", RecordType: "lead", Tier: "auto_execute", Scope: "read"},
 	"GET /v1/leads/settings":                                                {Op: "getLeadSettings", Access: "tool", Tool: "read_view", RecordType: "", Tier: "auto_execute", Scope: "read"},
