@@ -91,7 +91,8 @@ func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *a
 	// never heard.
 	svc.WithDeclinedEffect(linkedInMatchKind, linkedInMatchDeclineEffect(store))
 	svc.WithEffect(lifecycleProposalKind, lifecycleAcceptEffect(svc, store, time.Now))
-	svc.WithEffect(vcardCreateKind, vcardCreateAcceptEffect(svc, contacts.NewStore(InstallationDB(pool))))
+	svc.WithEffect(vcardCreateKind, vcardCreateAcceptEffect(svc,
+		contacts.NewStore(InstallationDB(pool)).WithShareRequests(contactShareRequests(pool))))
 	svc.WithEffect(contactShareKind, contactShareAcceptEffect(svc, identity.NewServiceFor(InstallationDB(pool))))
 	svc.WithPrecheck(vcardCreateKind, vcardCreatePrecheck())
 	// A held message is the one kind with BOTH halves registered, because its

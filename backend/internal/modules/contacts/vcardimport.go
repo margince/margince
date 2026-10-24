@@ -182,7 +182,7 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 			// Reported as a skip rather than skipped silently: an import that
 			// quietly leaves one card out is an import nobody can audit, and
 			// the reader can act on "you may not write this one".
-			return s.updateMatchedByCard(ctx, tx, decision.ContactID, entry, source, &result)
+			return s.updateMatchedByCard(ctx, tx, decision, entry, source, &result)
 		case shown != nil:
 			// Named, not merged, and not created either: creating beside a
 			// near-match is how a file of forty cards quietly doubles a
@@ -220,6 +220,11 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 	// rollback was reached.
 	if errors.Is(err, errCardSourceNarrowed) {
 		return result, nil
+	}
+	// A colleague's contact holds the card's address. tx has already asked
+	// them to share it; the card is skipped with the refusal's own words.
+	if held, ok := errors.AsType[*ContactHeldByColleagueError](err); ok {
+		return VCardResult{Index: index, FullName: result.FullName, Outcome: VCardSkipped, Reason: held.Error()}, nil
 	}
 	if err != nil {
 		return VCardResult{}, fmt.Errorf("contacts: importing card %d: %w", index+1, err)

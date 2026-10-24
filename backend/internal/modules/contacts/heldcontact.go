@@ -61,6 +61,11 @@ func IsClaimedEmail(err error) bool {
 	return ok
 }
 
+func isDuplicateEmail(err error) bool {
+	_, ok := errors.AsType[*DuplicateEmailError](err)
+	return ok
+}
+
 // claimedEmailRefusal answers an address that contact `existing` holds. A
 // caller who can read it gets its id; one who cannot gets the held refusal.
 func claimedEmailRefusal(ctx context.Context, tx pgx.Tx, email string, existing ids.ContactID) error {

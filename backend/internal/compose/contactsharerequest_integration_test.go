@@ -11,8 +11,11 @@ package compose
 // server mounts.
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"maps"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -28,6 +31,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -222,6 +226,47 @@ func TestEveryCreateDoorAsksTheColleagueWhoHoldsTheAddress(t *testing.T) {
 			})
 			return err
 		},
+		"vcard import": func(t *testing.T, e *integration.Env) error {
+			var body bytes.Buffer
+			form := multipart.NewWriter(&body)
+			part, err := form.CreateFormFile("file", "cards.vcf")
+			if err != nil {
+				return err
+			}
+			card := "BEGIN:VCARD\r\nVERSION:3.0\r\nFN:Pat Example\r\nEMAIL;TYPE=work:" + heldAddress + "\r\nEND:VCARD\r\n"
+			if _, err := part.Write([]byte(card)); err != nil {
+				return err
+			}
+			if err := form.Close(); err != nil {
+				return err
+			}
+			req := httptest.NewRequest(http.MethodPost, "/v1/contacts/vcard-import", &body).WithContext(rep2(e))
+			req.Header.Set("Content-Type", form.FormDataContentType())
+			rec := httptest.NewRecorder()
+			newContactsHandlers(e.Pool).ImportVCards(rec, req)
+			if rec.Code != http.StatusOK || !strings.Contains(rec.Body.String(), "a colleague already has this contact") {
+				t.Errorf("the vCard import answered %d %s, want the card skipped as held", rec.Code, rec.Body.String())
+			}
+			return nil
+		},
+		"vcard review accept": func(t *testing.T, e *integration.Env) error {
+			reviewer := e.As(e.Rep2, []ids.UUID{e.Team1}, vcardReviewerPerms())
+			card := contacts.VCardEntry{FullName: "Pat Example", Emails: []contacts.VCardChannel{{Value: heldAddress, Kind: "work"}}}
+			if err := vcardCreateStager(e.Pool)(reviewer, card, nil); err != nil {
+				return err
+			}
+			svc := approvalsServiceWithEffects(e.Pool)
+			status, kind := "pending", vcardCreateKind
+			rows, _, err := svc.ListWire(reviewer, approvals.ListInput{Status: &status, Kind: &kind, Limit: 10})
+			if err != nil || len(rows) != 1 {
+				t.Fatalf("the staged card review: %d rows, %v", len(rows), err)
+			}
+			_, err = svc.Decide(reviewer, ids.From[ids.ApprovalKind](ids.UUID(rows[0].Id)), true, nil)
+			if !strings.Contains(errorText(err), "a colleague already has this contact") {
+				t.Errorf("approving the card answered %v, want the held refusal", err)
+			}
+			return nil
+		},
 		"csv import": func(t *testing.T, e *integration.Env) error {
 			w := newCSVWriters(e.DB(), ids.NewV7(), migration.PartMapping{Object: migration.ObjectContact},
 				runOptions{}, &linkResolver{sourceSystem: "csv:held"}, importColumns{})
@@ -268,6 +313,15 @@ func TestAutomaticWorkFilesNoShareRequest(t *testing.T) {
 	if n := countIn(t, e, `SELECT count(*) FROM approval WHERE kind = 'contact_share' AND target_entity_id = $1`, held); n != 0 {
 		t.Errorf("a connector create filed %d share requests, want none", n)
 	}
+}
+
+// vcardReviewerPerms is a rep who may decide a card review: its release can
+// create the employer and the employment edge as well as the contact.
+func vcardReviewerPerms() principal.Permissions {
+	perms := integration.RepPerms
+	perms.Objects = maps.Clone(integration.RepPerms.Objects)
+	perms.Objects["company"] = principal.ObjectGrant{Create: true, Read: true, Update: true}
+	return perms
 }
 
 func errorText(err error) string {

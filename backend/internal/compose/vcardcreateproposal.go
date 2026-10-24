@@ -250,9 +250,11 @@ func vcardCreateAcceptEffect(svc *approvals.Service, store *contacts.Store) appr
 		if err := json.Unmarshal(proposedChange, &proposal); err != nil {
 			return fmt.Errorf("compose: decoding the vCard create proposal: %w", err)
 		}
-		return svc.RedeemAndApply(ctx, approvalID, vcardCreateKind, diffHash, func(tx pgx.Tx) error {
+		// The approval owns this transaction, so a colleague holding the card's
+		// address is asked to share it only after the transaction rolled back.
+		return store.AskHolderToShare(ctx, svc.RedeemAndApply(ctx, approvalID, vcardCreateKind, diffHash, func(tx pgx.Tx) error {
 			_, err := store.CreateFromVCardReviewTx(ctx, tx, proposal.Entry)
 			return err
-		})
+		}))
 	}
 }
