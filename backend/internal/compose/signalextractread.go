@@ -154,7 +154,7 @@ func (t settledThread) firstReadHere(m threadMessage) bool {
 	if t.ReadTo == nil {
 		return true
 	}
-	// Not After: newly imported mail can share ReadTo exactly, and a message
+	// Not After: newly imported mail can share the ReadTo instant, and a message
 	// already read at that instant is cited or harmlessly re-judged.
 	if !m.At.Before(*t.ReadTo) {
 		return true

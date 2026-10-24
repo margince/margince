@@ -315,15 +315,15 @@ func threadMessagesStillOpen(ctx context.Context, tx pgx.Tx, thread settledThrea
 	for _, message := range thread.Messages {
 		shown = append(shown, message.ID.String())
 	}
-	var withheld bool
+	var open int
 	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (SELECT 1 FROM activity
-		                WHERE id = ANY($1::uuid[])
-		                  AND NOT (`+activities.AutomaticMailContent+`))`,
-		shown).Scan(&withheld); err != nil {
+		SELECT count(*) FROM activity
+		 WHERE id = ANY($1::uuid[]) AND archived_at IS NULL
+		   AND `+activities.AutomaticMailContent,
+		shown).Scan(&open); err != nil {
 		return false, fmt.Errorf("signal extract: re-checking the messages read: %w", err)
 	}
-	return !withheld, nil
+	return open == len(shown), nil
 }
 
 // recordExtractedEvent raises one event as a signal against the account,
