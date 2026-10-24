@@ -118,7 +118,7 @@ Also called: combine, deduplicate, remove a duplicate.
 
 ### How do I call a contact?
 To call a contact from Margince, press **Call** in its header, or click a phone number. It dials the main number, or else the first, in your phone app; Margince does not make or record calls.
-**Call** is refused with no phone number, or on an archived contact; the first says "No phone number on this contact." under the buttons. **More actions** → **Full history** opens **History**, where **Log activity** → **Call** logs the call. A logged call in **What was said** or on **History** offers **Call**; so does the next-task bar when its task came from a call.
+**Call** is refused with no phone number, or on an archived contact; the first says "No phone number on this contact." under the buttons. **More actions** → **Full history** opens **History**, where **Log activity** → **Call** logs the call. A logged call in **What was said** or on **History** offers **Call**; so does the top bar of **Overview** when a call made its task.
 Also called: phone a contact, click to call, dial.
 
 ### Can I add a photo to a contact, or change a company's logo?
