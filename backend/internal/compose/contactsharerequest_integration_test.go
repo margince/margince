@@ -5,9 +5,9 @@
 
 package compose
 
-// A colleague creates a person whose contact capture is keeping to its mailbox
+// A colleague creates a contact that capture is keeping to its mailbox
 // owner. Each test captures the mail through the real sink, so the contact is
-// owner-scoped the way production leaves it, and drives a create door the
+// owner-scoped as production leaves it. Then it drives a create door the
 // server mounts.
 
 import (
@@ -31,17 +31,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
-const heldPerson = "person@company-a.example"
+const heldAddress = "pat@company-a.example"
 
-// heldByRep1 captures one exchange with the person into Rep1's mailbox and
+// heldByRep1 captures one exchange with the address into Rep1's mailbox and
 // returns the contact it left private to Rep1.
 func heldByRep1(t *testing.T) (*integration.Env, ids.ContactID) {
 	t.Helper()
 	e := setupWithOwnMailbox(t)
-	seedAttestedOutbound(t, e, "held-out", heldPerson, "thr-held-person")
-	captureInboundThroughRealSink(t, e, e.Rep1, "held-in", heldPerson, "thr-held-person")
-	requireNarrowed(t, e, heldPerson, contacts.NarrowedAwaitingVerdict)
-	return e, contactIDFor(t, e, heldPerson)
+	seedAttestedOutbound(t, e, "held-out", heldAddress, "thr-held-address")
+	captureInboundThroughRealSink(t, e, e.Rep1, "held-in", heldAddress, "thr-held-address")
+	requireNarrowed(t, e, heldAddress, contacts.NarrowedAwaitingVerdict)
+	return e, contactIDFor(t, e, heldAddress)
 }
 
 func rep2(e *integration.Env) context.Context {
@@ -52,7 +52,7 @@ func rep2(e *integration.Env) context.Context {
 // and returns the status and the problem body.
 func createAsRep2(t *testing.T, e *integration.Env) (int, map[string]any) {
 	t.Helper()
-	body := `{"full_name":"Pat Example","source":"manual","emails":[{"email":"` + heldPerson + `","email_type":"work","is_primary":true}]}`
+	body := `{"full_name":"Pat Example","source":"manual","emails":[{"email":"` + heldAddress + `","email_type":"work","is_primary":true}]}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/contacts", strings.NewReader(body)).WithContext(rep2(e))
 	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
@@ -107,7 +107,7 @@ func openShareRequest(t *testing.T, e *integration.Env, held ids.ContactID) ids.
 	return ids.From[ids.ApprovalKind](id)
 }
 
-func shareRequestsInInbox(t *testing.T, e *integration.Env, reader context.Context) int {
+func shareRequestsInInbox(reader context.Context, t *testing.T, e *integration.Env) int {
 	t.Helper()
 	kind := contactShareKind
 	rows, _, err := approvalsServiceWithEffects(e.Pool).ListWire(reader, approvals.ListInput{Kind: &kind})
@@ -133,10 +133,10 @@ func TestACreateOfAColleaguesCapturedContactAsksThemOnce(t *testing.T) {
 	if n := shareRequests(t, e, held, "pending"); n != 1 {
 		t.Fatalf("%d open share requests for Rep1, want 1", n)
 	}
-	if n := shareRequestsInInbox(t, e, e.As(e.Rep1, []ids.UUID{e.Team1}, integration.RepPerms)); n != 1 {
+	if n := shareRequestsInInbox(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.RepPerms), t, e); n != 1 {
 		t.Errorf("Rep1's Review queue shows %d share requests, want 1", n)
 	}
-	if n := shareRequestsInInbox(t, e, rep2(e)); n != 0 {
+	if n := shareRequestsInInbox(rep2(e), t, e); n != 0 {
 		t.Errorf("Rep2's Review queue shows %d share requests about a contact they cannot see", n)
 	}
 
@@ -145,7 +145,7 @@ func TestACreateOfAColleaguesCapturedContactAsksThemOnce(t *testing.T) {
 	if n := countIn(t, e, `SELECT count(*) FROM approval WHERE kind = 'contact_share'`); n != 1 {
 		t.Errorf("a second attempt left %d share requests, want 1", n)
 	}
-	if n := countIn(t, e, `SELECT count(*) FROM contact_email WHERE email = $1`, heldPerson); n != 1 {
+	if n := countIn(t, e, `SELECT count(*) FROM contact_email WHERE email = $1`, heldAddress); n != 1 {
 		t.Errorf("%d contacts hold the address, want the one Rep1 holds", n)
 	}
 }
@@ -177,7 +177,7 @@ func TestAnAcceptedShareRequestLetsTheColleagueEditTheContact(t *testing.T) {
 	if _, err := e.Contacts.GetContact(rep3, held, storekit.LiveOnly); err == nil {
 		t.Error("a third seat can read a contact shared with Rep2 alone")
 	}
-	if visibility, _ := contactVisibility(t, e, heldPerson); visibility != "owner" {
+	if visibility, _ := contactVisibility(t, e, heldAddress); visibility != "owner" {
 		t.Errorf("accepting a share changed the contact's visibility to %q", visibility)
 	}
 }
@@ -203,7 +203,7 @@ func TestEveryCreateDoorAsksTheColleagueWhoHoldsTheAddress(t *testing.T) {
 	doors := map[string]func(t *testing.T, e *integration.Env) error{
 		"quick capture": func(t *testing.T, e *integration.Env) error {
 			req := httptest.NewRequest(http.MethodPost, "/v1/contacts/quick-capture",
-				strings.NewReader(`{"full_name":"Pat Example","email":"`+heldPerson+`"}`)).WithContext(rep2(e))
+				strings.NewReader(`{"full_name":"Pat Example","email":"`+heldAddress+`"}`)).WithContext(rep2(e))
 			req.Header.Set("Content-Type", "application/json")
 			rec := httptest.NewRecorder()
 			newContactsHandlers(e.Pool).QuickCaptureContact(rec, req, crmcontracts.QuickCaptureContactParams{})
@@ -217,15 +217,19 @@ func TestEveryCreateDoorAsksTheColleagueWhoHoldsTheAddress(t *testing.T) {
 			_, err := NewProviderFor(e.DB()).Create(agent, datasource.CreateInput{
 				EntityType: datasource.EntityContact, Source: "agent",
 				Fields: map[string]any{"full_name": "Pat Example", "emails": []map[string]any{
-					{"email": heldPerson, "email_type": "work", "is_primary": true}}},
+					{"email": heldAddress, "email_type": "work", "is_primary": true},
+				}},
 			})
 			return err
 		},
 		"csv import": func(t *testing.T, e *integration.Env) error {
 			w := newCSVWriters(e.DB(), ids.NewV7(), migration.PartMapping{Object: migration.ObjectContact},
 				runOptions{}, &linkResolver{sourceSystem: "csv:held"}, importColumns{})
-			result, err := w.createContact(rep2(e), migration.Row{ExternalID: "row-1",
-				Fields: map[string]any{"full_name": "Pat Example", fieldEmail: heldPerson}}, nil)
+			row := migration.Row{
+				ExternalID: "row-1",
+				Fields:     map[string]any{"full_name": "Pat Example", fieldEmail: heldAddress},
+			}
+			result, err := w.createContact(rep2(e), row, nil)
 			if err == nil && (!result.Skipped || result.SkipWhy.Code != migration.ReasonContactEmailHeld) {
 				t.Errorf("the import landed %+v, want the row skipped as held", result)
 			}
@@ -239,7 +243,7 @@ func TestEveryCreateDoorAsksTheColleagueWhoHoldsTheAddress(t *testing.T) {
 			if name != "agent" && err != nil {
 				t.Fatalf("the %s door failed: %v", name, err)
 			}
-			if name == "agent" && !strings.Contains(errorText(err), "a colleague already has this person") {
+			if name == "agent" && !strings.Contains(errorText(err), "a colleague already has this contact") {
 				t.Errorf("the %s door answered %v, want the held refusal", name, err)
 			}
 			if n := shareRequests(t, e, held, "pending"); n != 1 {
@@ -256,9 +260,9 @@ func TestAutomaticWorkFilesNoShareRequest(t *testing.T) {
 
 	_, err := store.CreateContact(mailboxOwnerCtx(e, e.Rep2), contacts.CreateContactInput{
 		FullName: "Pat Example",
-		Emails:   []contacts.ContactEmailInput{{Email: heldPerson, EmailType: "work", IsPrimary: true}},
+		Emails:   []contacts.ContactEmailInput{{Email: heldAddress, EmailType: "work", IsPrimary: true}},
 	})
-	if !strings.Contains(errorText(err), "a colleague already has this person") {
+	if !strings.Contains(errorText(err), "a colleague already has this contact") {
 		t.Fatalf("a connector create answered %v, want the held refusal", err)
 	}
 	if n := countIn(t, e, `SELECT count(*) FROM approval WHERE kind = 'contact_share' AND target_entity_id = $1`, held); n != 0 {

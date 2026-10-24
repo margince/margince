@@ -174,7 +174,7 @@ func (s *Store) WithVatCheckEnqueue(enqueue VatCheckEnqueue) *Store {
 }
 
 // tx runs fn in one transaction. A write refused because a colleague holds
-// the address asks that colleague to share it here, so every door this store
+// the address asks that colleague to share it here. So every door this store
 // opens a transaction for asks.
 func (s *Store) tx(ctx context.Context, fn func(pgx.Tx) error) error {
 	return s.AskHolderToShare(ctx, s.db.Tx(ctx, fn))

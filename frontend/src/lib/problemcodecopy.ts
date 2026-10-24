@@ -34,7 +34,7 @@ export const PROBLEM_CODE_COPY = new Map<string, MessageKey>([
 ]);
 
 // The held refusal names no record; its words depend only on whether the
-// colleague who holds the person was asked to share them.
+// colleague who holds the contact was asked to share it.
 export function heldByColleagueCopy(problem: unknown): MessageKey | undefined {
   if (problemCode(problem) !== "contact_held_by_colleague") return undefined;
   return problemDetails(problem)?.share_requested === true

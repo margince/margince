@@ -1783,6 +1783,7 @@ export const en = {
   "agentJob.capture_counterparty_verdict": "Mail sender check",
   "agentJob.coldstart": "First approach",
   "agentJob.company_name_promotion": "Company name update",
+  "agentJob.contact_share": "Contact share request",
   "agentJob.deal_scout": "Deal Scout",
   "agentJob.dealscout": "Deal Scout",
   "agentJob.deepread": "Website reader",
@@ -2536,9 +2537,9 @@ export const en = {
   "common.duplicate.email":
     "Another contact or lead already has this email address, so it was not saved here.",
   "common.heldByColleague":
-    "A colleague already has this person.",
+    "A colleague already has this contact.",
   "common.heldByColleague.asked":
-    "A colleague already has this person. We asked them to share the contact.",
+    "A colleague already has this contact. We asked them to share it with you.",
   "common.duplicate.domain":
     "Another company already has this domain, so it was not saved here.",
   "common.duplicate.linkedinUrl":

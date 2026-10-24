@@ -5,10 +5,10 @@ package contacts
 
 // A create whose address belongs to a contact the caller cannot read.
 //
-// The refusal stays: two records of one person are the defect the address key
+// The refusal stays: two records of one contact are the defect the address key
 // exists to prevent. The private contact is capture's holding state, not a
 // confidentiality boundary, because inside one workspace everyone reads every
-// record except mail. So the refusal says that a colleague holds the person,
+// record except mail. So the refusal says that a colleague holds the contact,
 // and the holder is asked to share the contact with the caller.
 //
 // That is why this answers 409 and not the 404 a row-scope miss gives. The 409
@@ -46,9 +46,9 @@ type ContactHeldByColleagueError struct {
 
 func (e *ContactHeldByColleagueError) Error() string {
 	if e.ShareRequested {
-		return "a colleague already has this person; they were asked to share the contact"
+		return "a colleague already has this contact; they were asked to share it"
 	}
-	return "a colleague already has this person"
+	return "a colleague already has this contact"
 }
 
 // Is keeps the refusal a conflict for every caller that asks only that.
@@ -64,9 +64,8 @@ func IsClaimedEmail(err error) bool {
 	return ok
 }
 
-// claimedEmailRefusal is the answer to an address contact `existing` holds:
-// the incumbent's id for a caller who can read it, the held refusal for one
-// who cannot.
+// claimedEmailRefusal answers an address that contact `existing` holds. A
+// caller who can read it gets its id; one who cannot gets the held refusal.
 func claimedEmailRefusal(ctx context.Context, tx pgx.Tx, email string, existing ids.ContactID) error {
 	visible, err := auth.VisibleTo(ctx, tx, entityContact, existing.UUID)
 	if err != nil {
@@ -122,13 +121,13 @@ func (p *Provider) WithShareRequests(file ShareRequestFiler) *Provider {
 	return p
 }
 
-// AskHolderToShare is the one follow-up to a held refusal: it files the share
+// AskHolderToShare is the one follow-up to a held refusal. It files the share
 // request in a transaction of its own and returns err with the outcome on it.
 // Any other error passes through.
 //
-// Its own transaction, after the refused one rolled back: the refusal aborts
-// the write it answers, and on the race path a unique violation has already
-// poisoned that transaction. Store-owned writes reach it through tx; a door
+// It runs after the refused transaction rolled back. The refusal aborts the
+// write it answers, and on the race path a unique violation has already
+// poisoned that transaction. Store-owned writes reach it through tx. A door
 // that owns its transaction calls it after that transaction ends.
 func (s *Store) AskHolderToShare(ctx context.Context, err error) error {
 	held, ok := errors.AsType[*ContactHeldByColleagueError](err)

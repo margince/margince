@@ -292,8 +292,8 @@ func TestTheChokepointRefusalHidesARecordTheCallerCannotRead(t *testing.T) {
 		})
 		return cerr
 	})
-	// Still refused — the duplicate is real — but as the held refusal, which
-	// carries no pointer to a record this caller was never allowed to read.
+	// Still refused, because the duplicate is real. The held refusal carries no
+	// pointer to a record this caller was never allowed to read.
 	if _, held := errors.AsType[*ContactHeldByColleagueError](err); !held {
 		t.Fatalf("refusal = %v, want ContactHeldByColleagueError", err)
 	}

@@ -480,7 +480,7 @@ describe("ContactsScreen — dedupe view-existing link (P-16)", () => {
   });
 });
 
-describe("ContactsScreen — a colleague holds the person", () => {
+describe("ContactsScreen — a colleague holds the contact", () => {
   async function createHeld(shareRequested: boolean) {
     stubFetch(async (url, method) => {
       if (method === "POST" && url.includes("/contacts")) {
@@ -488,7 +488,7 @@ describe("ContactsScreen — a colleague holds the person", () => {
           {
             type: "about:blank",
             title: "Conflict",
-            detail: "a colleague already has this person",
+            detail: "a colleague already has this contact",
             code: "contact_held_by_colleague",
             details: { share_requested: shareRequested },
           },
@@ -501,7 +501,7 @@ describe("ContactsScreen — a colleague holds the person", () => {
     await userEvent.click(screen.getByTestId("new-record"));
     await userEvent.type(screen.getByLabelText("Full name *"), "Pat Example");
     await userEvent.click(screen.getByText("Add email"));
-    await userEvent.type(screen.getByLabelText("Email *"), "person@example.test");
+    await userEvent.type(screen.getByLabelText("Email *"), "pat@example.test");
     await userEvent.click(screen.getByRole("button", { name: "Create" }));
   }
 
@@ -510,7 +510,7 @@ describe("ContactsScreen — a colleague holds the person", () => {
     await waitFor(() =>
       expect(
         screen.getByText(
-          "A colleague already has this person. We asked them to share the contact.",
+          "A colleague already has this contact. We asked them to share it with you.",
         ),
       ).toBeTruthy(),
     );
@@ -521,7 +521,7 @@ describe("ContactsScreen — a colleague holds the person", () => {
     await createHeld(false);
     await waitFor(() =>
       expect(
-        screen.getByText("A colleague already has this person."),
+        screen.getByText("A colleague already has this contact."),
       ).toBeTruthy(),
     );
   });

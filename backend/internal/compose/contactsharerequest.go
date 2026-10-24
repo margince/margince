@@ -30,9 +30,9 @@ import (
 
 const (
 	contactShareKind = approvalsubject.KindContactShare
-	// contactShareActor stages the request. The server files it for the
-	// requester, who may be an agent's colleague: staged under that agent, a
-	// proposal for a different member is refused (payloadNamesItsOwner).
+	// contactShareActor stages the request, which the server files for the
+	// requester. Staged under an agent working for the requester, a proposal
+	// for a different member is refused (payloadNamesItsOwner).
 	contactShareActor = "agent:" + contactShareKind
 )
 
@@ -52,7 +52,7 @@ func contactShareRequests(pool *pgxpool.Pool) contacts.ShareRequestFiler {
 			return false, fmt.Errorf("compose: encoding the share request: %w", err)
 		}
 		identityKey, err := json.Marshal(map[string]ids.UUID{
-			"contact_id": req.ContactID.UUID, "requester_id": req.RequesterID,
+			companionContactField: req.ContactID.UUID, "requester_id": req.RequesterID,
 		})
 		if err != nil {
 			return false, fmt.Errorf("compose: encoding the share request's identity: %w", err)
@@ -102,7 +102,7 @@ func contactShareAcceptEffect(svc *approvals.Service, grants *identity.Service) 
 			return fmt.Errorf("compose: decoding the share request: %w", err)
 		}
 		// Executed as the deciding owner, whose grants the share is checked
-		// against exactly as if they pressed Share.
+		// against as if they pressed Share.
 		return svc.RedeemAndApply(ctx, approvalID, contactShareKind, diffHash, func(tx pgx.Tx) error {
 			access, err := identity.ShareAccessForTx(ctx, tx, req.RequesterID)
 			if err != nil {
@@ -111,7 +111,7 @@ func contactShareAcceptEffect(svc *approvals.Service, grants *identity.Service) 
 			return grants.CreateRecordGrantTx(ctx, tx, identity.CreateGrantInput{
 				RecordType:  string(recordTypeContact),
 				RecordID:    req.ContactID,
-				SubjectType: "user",
+				SubjectType: entityUser,
 				SubjectID:   req.RequesterID,
 				Access:      access,
 			})

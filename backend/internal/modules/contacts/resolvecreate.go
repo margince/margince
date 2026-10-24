@@ -197,12 +197,10 @@ func createContact(ctx context.Context, tx pgx.Tx, match ContactResolution, spec
 // id (data-model §3.2), never an opaque failure just because a different guard
 // caught it. Every other lane has no such contract and stays a conflict.
 //
-// The id is echoed ONLY when the caller could have read that record. The
-// resolver deliberately matches across the whole workspace — a duplicate the
-// caller cannot see is still a duplicate — so the answer would otherwise
-// confirm the existence of a record outside their row scope, and confirm it
-// by a chosen address at that. The refusal still stands either way; a caller
-// who cannot see the record gets the held refusal (heldcontact.go).
+// The id is echoed only when the caller could have read that record. The
+// resolver matches across the whole workspace, because a duplicate the caller
+// cannot see is still a duplicate. A caller who cannot see the record gets the
+// held refusal (heldcontact.go), which names no record.
 func refusedContactCreate(ctx context.Context, tx pgx.Tx, match ContactResolution, spec ContactSpec) error {
 	if match.MatchedLane == LaneEmail && len(spec.Emails) > 0 {
 		return claimedEmailRefusal(ctx, tx, spec.Emails[0].Email, match.ContactID)

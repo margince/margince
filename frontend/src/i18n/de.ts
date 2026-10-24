@@ -1838,6 +1838,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agentJob.capture_counterparty_verdict": "Prüfung der Absendeadressen",
   "agentJob.coldstart": "Erstansprache",
   "agentJob.company_name_promotion": "Aktualisierung des Firmennamens",
+  "agentJob.contact_share": "Anfrage zum Teilen eines Kontakts",
   "agentJob.deal_scout": "Deal Scout",
   "agentJob.dealscout": "Deal Scout",
   "agentJob.deepread": "Website-Analyse",
@@ -2578,9 +2579,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "common.duplicate.email":
     "Die E-Mail-Adresse wurde hier nicht gespeichert, da ein anderer Kontakt oder Lead sie schon hat.",
   "common.heldByColleague":
-    "Eine Kollegin oder ein Kollege hat diese Person schon.",
+    "Eine Kollegin oder ein Kollege hat diesen Kontakt schon.",
   "common.heldByColleague.asked":
-    "Eine Kollegin oder ein Kollege hat diese Person schon. Wir haben sie gebeten, den Kontakt mit dir zu teilen.",
+    "Eine Kollegin oder ein Kollege hat diesen Kontakt schon. Wir haben sie gebeten, ihn mit dir zu teilen.",
   "common.duplicate.domain":
     "Die Domain wurde hier nicht gespeichert, da ein anderes Unternehmen sie schon hat.",
   "common.duplicate.linkedinUrl":

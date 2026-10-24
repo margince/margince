@@ -1465,7 +1465,7 @@ paths:
                     title: Conflict
                     status: 409
                     code: contact_held_by_colleague
-                    detail: a colleague already has this person; they were asked to share the contact
+                    detail: a colleague already has this contact; they were asked to share it
                     details:
                       share_requested: true
         '422': { $ref: '#/components/responses/ValidationError' }

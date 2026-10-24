@@ -7,11 +7,10 @@ package compose
 
 // What an inbound reply may publish.
 //
-// A contact kept to its owner records why, and a reply from the address ends
-// exactly one of those reasons: mail we sent that nobody had answered. A reply
-// to any seat ends it, the owner's or a colleague's. Each test narrows a
-// contact through the writer that production uses, then lands a reply through
-// the real capture sink.
+// A contact kept to its owner records why. A reply from the address ends one
+// of those reasons: mail we sent that nobody had answered. A reply to any seat
+// ends it, the owner's or a colleague's. Each test narrows a contact through
+// the writer that production uses, then lands a reply through the real sink.
 
 import (
 	"context"
@@ -66,7 +65,7 @@ func TestAReplyOnAHeldThreadDoesNotPublish(t *testing.T) {
 	requireStillNarrowed(t, e, email, contacts.NarrowedOutboundNoAnswer)
 }
 
-// The person the owner wrote to answers a colleague instead. The workspace is
+// The address the owner wrote to answers a colleague instead. The workspace is
 // working with them, so the contact the verdict judged a business counterparty
 // is published by that reply, in the colleague's own mailbox.
 func TestAReplyToAColleaguePublishesAContactNobodyHadAnswered(t *testing.T) {
@@ -85,8 +84,8 @@ func TestAReplyToAColleaguePublishesAContactNobodyHadAnswered(t *testing.T) {
 }
 
 // A colleague's reply that the live hook lost is published by the verdict
-// worker's pass, which is also what repairs a contact narrowed before a reply
-// to a colleague counted.
+// worker's pass. The same pass repairs a contact narrowed before a reply to a
+// colleague counted.
 func TestTheVerdictPassPublishesAContactWhoseAddressAnsweredAColleague(t *testing.T) {
 	e := setupWithSecondMailbox(t)
 	const email = "buyer@colleaguesreply.example"
@@ -362,7 +361,7 @@ func setupWithOwnMailbox(t *testing.T) *integration.Env {
 }
 
 // setupWithSecondMailbox also connects Rep2's mailbox, the colleague whose
-// own correspondence with the person the tests above are about.
+// own correspondence with the address the tests above are about.
 func setupWithSecondMailbox(t *testing.T) *integration.Env {
 	t.Helper()
 	e := setupWithOwnMailbox(t)

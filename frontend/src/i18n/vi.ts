@@ -1788,6 +1788,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "agentJob.capture_counterparty_verdict": "Kiểm tra bên gửi thư",
   "agentJob.coldstart": "Tiếp cận đầu tiên",
   "agentJob.company_name_promotion": "Cập nhật tên công ty",
+  "agentJob.contact_share": "Yêu cầu chia sẻ liên hệ",
   "agentJob.deal_scout": "Trinh sát deal",
   "agentJob.dealscout": "Trinh sát deal",
   "agentJob.deepread": "Trình đọc trang web",
@@ -2503,9 +2504,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "common.duplicate.email":
     "Một liên hệ hoặc lead khác đã có địa chỉ email này, nên email chưa được lưu ở đây.",
   "common.heldByColleague":
-    "Một đồng nghiệp đã có người này.",
+    "Một đồng nghiệp đã có liên hệ này.",
   "common.heldByColleague.asked":
-    "Một đồng nghiệp đã có người này. Chúng tôi đã đề nghị họ chia sẻ liên hệ với bạn.",
+    "Một đồng nghiệp đã có liên hệ này. Chúng tôi đã đề nghị họ chia sẻ liên hệ với bạn.",
   "common.duplicate.domain":
     "Một công ty khác đã có tên miền này, nên tên miền chưa được lưu ở đây.",
   "common.duplicate.linkedinUrl":

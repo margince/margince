@@ -34,6 +34,9 @@ var shareableRecordTypes = map[string]bool{
 	"contact": true, "company": true, "deal": true, "lead": true, "project": true,
 }
 
+// grantSubjectTeam is the subject type naming a team, and the table it lives in.
+const grantSubjectTeam = "team"
+
 const grantColumns = `id, record_type, record_id, subject_type, subject_id, access, granted_by, reason, expires_at, created_at, version`
 
 type grantRow struct {
@@ -186,8 +189,8 @@ func createRecordGrantInTx(ctx context.Context, tx pgx.Tx, in CreateGrantInput) 
 		return grantRow{}, err
 	}
 	subjectTable := "app_user"
-	if in.SubjectType == "team" {
-		subjectTable = "team"
+	if in.SubjectType == grantSubjectTeam {
+		subjectTable = grantSubjectTeam
 	}
 	var subjectExists bool
 	if err := tx.QueryRow(ctx,
@@ -198,32 +201,26 @@ func createRecordGrantInTx(ctx context.Context, tx pgx.Tx, in CreateGrantInput) 
 	if !subjectExists {
 		return grantRow{}, apperrors.ErrNotFound
 	}
-	// Two rules bind a grant and they judge different contacts.
+	// Two rules bind a grant, and they judge different seats.
 	//
-	// Scope-intersection (ADR-0039) judges the GRANTOR, at every access
-	// level. EnsureLinkTarget above is satisfied by the grant arm, so a
-	// caller whose only claim is a share passes IT — which is why the
-	// authority question is asked separately here. It is asked whatever
-	// access is asserted, because the upsert restates the whole grant: its
-	// TERM as well as its width, so a `read` assertion rewrites an existing
-	// grant's expiry, reason and access just as a `write` one does.
+	// Scope-intersection (ADR-0039) judges the grantor at every access level.
+	// EnsureLinkTarget above admits a caller whose only claim is a share, so
+	// authority is asked separately here. The upsert restates the whole grant,
+	// its term and its width, so a `read` assertion needs it as a `write` does.
 	//
-	// The seat ceiling (AAD-AC-4) judges the RECIPIENT, and it reads the
-	// asserted access — a `read` grant to a read seat is fine.
-	//
-	// Both bind a re-assert exactly as they bind a first share: the upsert
-	// makes the second call a real write where the unique constraint used
-	// to end it.
+	// The seat ceiling (AAD-AC-4) judges the recipient by the asserted access.
+	// A `read` grant to a read seat is fine. Both rules bind a re-assert as they
+	// bind a first share.
 	if err := auth.EnsureCanGrant(ctx, tx, in.RecordType, in.RecordID); err != nil {
 		return grantRow{}, err
 	}
 	if err := refuseWriteGrantToReadSeat(ctx, tx, in); err != nil {
 		return grantRow{}, err
 	}
-	// The precondition read and the write it feeds must run under one lock:
-	// FOR UPDATE cannot order two callers CREATING this grant at once,
-	// because an absent row locks nothing, and the loser would then audit a
-	// first share over a row it actually displaced.
+	// The precondition read and the write it feeds run under one lock. FOR
+	// UPDATE cannot order two callers creating this grant at once, because an
+	// absent row locks nothing. The loser would then audit a first share over a
+	// row it displaced.
 	if err := storekit.LockWriteIdentity(ctx, tx, "record_grant", grantIdentity(in)); err != nil {
 		return grantRow{}, err
 	}
@@ -235,12 +232,10 @@ func createRecordGrantInTx(ctx context.Context, tx pgx.Tx, in CreateGrantInput) 
 	if replaced {
 		before = grantImage(prior)
 	}
-	// A grant is identified by its natural key, not by its id, so a
-	// re-assert restates the SAME row: `expires_at` takes the proposed
-	// value even when that value is NULL (the contract says a re-assert
-	// resets it, and a COALESCE here would make an expiry unclearable), and
-	// `granted_by` moves to the caller, who is accountable for the access
-	// now in force.
+	// A grant is identified by its natural key, so a re-assert restates the
+	// same row. `expires_at` takes the proposed value even when it is NULL: the
+	// contract says a re-assert resets it, and a COALESCE would make an expiry
+	// unclearable. `granted_by` moves to the caller, who is now accountable.
 	out, err := scanGrant(tx.QueryRow(ctx, `
 		INSERT INTO record_grant (record_type, record_id, subject_type, subject_id,
 		                          access, granted_by, reason, expires_at)
@@ -257,11 +252,10 @@ func createRecordGrantInTx(ctx context.Context, tx pgx.Tx, in CreateGrantInput) 
 	if err != nil {
 		return grantRow{}, fmt.Errorf("upsert record_grant: %w", err)
 	}
-	// `record_share` in both directions, downgrades included: the contract
-	// pins the verb, and `record_unshare` belongs to revocation. Which way
-	// the access moved is the image pair's job to say, so both images
-	// render the PERSISTED row through one shape — an image omitting a
-	// field the upsert can change would report nothing moved when it did.
+	// `record_share` in both directions, downgrades included: the contract pins
+	// the verb, and `record_unshare` belongs to revocation. Both images render
+	// the persisted row through one shape. An image that omitted a field the
+	// upsert can change would report that nothing moved when it did.
 	if _, err := storekit.Audit(ctx, tx, "record_share",
 		in.RecordType, in.RecordID, before, grantImage(out)); err != nil {
 		return grantRow{}, fmt.Errorf("audit record_share: %w", err)
@@ -344,7 +338,7 @@ func grantImage(g grantRow) map[string]any {
 // to skip the revocation — data that states the opposite of the rule is a
 // defect the next reader inherits.
 func refuseWriteGrantToReadSeat(ctx context.Context, tx pgx.Tx, in CreateGrantInput) error {
-	if in.Access != string(crmcontracts.RecordGrantAccessRecordGrantAccessWrite) || in.SubjectType == "team" {
+	if in.Access != string(crmcontracts.RecordGrantAccessRecordGrantAccessWrite) || in.SubjectType == grantSubjectTeam {
 		return nil
 	}
 	seat, err := seatOf(ctx, tx, in.SubjectID)
@@ -358,8 +352,8 @@ func refuseWriteGrantToReadSeat(ctx context.Context, tx pgx.Tx, in CreateGrantIn
 	return nil
 }
 
-// ShareAccessForTx is the widest access a share may give this member under the
-// seat ceiling: write for a seat that may write, read for one that may not.
+// ShareAccessForTx is the widest access the seat ceiling lets a share give this
+// member. It is write for a seat that may write, and read otherwise.
 func ShareAccessForTx(ctx context.Context, tx pgx.Tx, member ids.UUID) (string, error) {
 	seat, err := seatOf(ctx, tx, member)
 	if err != nil {

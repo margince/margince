@@ -229,9 +229,8 @@ func TestActivityReadsAreScopedThroughLinks(t *testing.T) {
 }
 
 // A duplicate-email conflict hands back the existing id so a client can open
-// the record — unless the caller may not read it, which answers the held
-// refusal instead. The contact they may not read is a capture-private one of
-// another rep's.
+// the record. A caller who may not read it gets the held refusal instead. The
+// contact they may not read is a capture-private one of another rep's.
 func TestDuplicate409DoesNotDiscloseOutOfScopeIDs(t *testing.T) {
 	e := Setup(t)
 	admin := e.Admin()

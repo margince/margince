@@ -6,15 +6,15 @@ package capture
 // Whether an address has answered the workspace in a way that may publish the
 // contact capture is keeping to one seat.
 //
-// One question with two askers: the verdict, which decides whether a `contact`
-// answer stays the owner's for want of a reply, and the reply hook and its
-// reconciling pass, which publish such a contact once a reply exists. Both read
-// AddressAnsweredTx, so a reply counts the same whichever of them sees it first.
+// One question has two askers. The verdict decides whether a `contact` answer
+// stays the owner's for want of a reply. The reply hook and its reconciling
+// pass publish such a contact once a reply exists. Both read AddressAnsweredTx,
+// so a reply counts the same whichever of them sees it first.
 //
 // A reply to any seat counts, not only to the seat that owns the record. A
-// colleague who corresponds with the person is the workspace working with them,
-// and the narrowing it lifts exists only to keep a rep's unanswered prospecting
-// quiet. A reply on a held thread never counts.
+// colleague who corresponds with the address is the workspace working with it.
+// The narrowing it lifts only keeps a rep's unanswered prospecting quiet. A
+// reply on a held thread never counts.
 
 import (
 	"context"
@@ -70,9 +70,8 @@ type AnsweredContact struct {
 }
 
 // AnsweredContactsTx lists owner-scoped contacts narrowed for `reason` whose
-// address has answered, so a reconciling pass can publish what the live
-// capture hook missed — including rows narrowed before a colleague's reply
-// counted.
+// address has answered. A reconciling pass publishes what the live capture
+// hook missed, and rows narrowed before a colleague's reply counted.
 //
 // The reason is the caller's value, not spelled here: the vocabulary belongs to
 // the contacts module. The evidence is addressAnswered, the fragment the live

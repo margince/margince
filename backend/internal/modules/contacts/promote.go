@@ -319,11 +319,10 @@ func (s *Store) promoteTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.
 		if match.ContactID != locked {
 			return ids.ContactID{}, nil, &promoteTargetMovedError{}
 		}
-		// Merging CHANGES the matched contact — the lead's fields land on it —
-		// and returns it, so the probe asks for write authority and the refusal
-		// still discloses nothing: a match the promoter cannot change answers a
-		// bare conflict, not the record. One they cannot see is a colleague's,
-		// and answers the held refusal.
+		// Merging changes the matched contact (the lead's fields land on it) and
+		// returns it, so the probe asks for write authority. A match the
+		// promoter cannot change answers a bare conflict, not the record. One
+		// they cannot see is a colleague's, and answers the held refusal.
 		writable, verr := auth.WritableBy(ctx, tx, "contact", match.ContactID.UUID)
 		if verr != nil {
 			return ids.ContactID{}, nil, verr
@@ -417,8 +416,8 @@ func carryLeadPhone(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, cont
 }
 
 // unwritablePromotionTarget answers a promotion whose exact match the promoter
-// may not change: the held refusal when they cannot see it either, and a bare
-// conflict when they can.
+// may not change. It is the held refusal when they cannot see the match, and a
+// bare conflict when they can.
 func unwritablePromotionTarget(ctx context.Context, tx pgx.Tx, match ContactResolution, candidate ContactCandidate) error {
 	if match.MatchedLane != LaneEmail || len(candidate.Emails) == 0 {
 		return apperrors.ErrConflict

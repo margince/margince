@@ -6,7 +6,7 @@ package approvalsubject
 import "github.com/margince/margince/backend/internal/shared/kernel/ids"
 
 // KindContactShare asks the owner of a contact a colleague cannot see to share
-// it with that colleague. The colleague tried to create the same person.
+// it with that colleague, who tried to create the same contact.
 const KindContactShare = "contact_share"
 
 // ContactShare is that request. OwnerID decides it, under the key every
