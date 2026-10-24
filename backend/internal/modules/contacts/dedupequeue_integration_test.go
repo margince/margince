@@ -255,22 +255,11 @@ func TestDedupeQueuePagesByConfidence(t *testing.T) {
 	}
 }
 
-// An over-cap page ask is CLAMPED to the maximum, not reset to the default.
-//
-// One condition covering both ends answered the default of twenty-five rows to
-// a caller asking for more than the page maximum. The ranked queue on Home asks
-// for a census of two hundred, so it saw the twenty-five highest-confidence
-// pairs and no others — and because the cut falls on the confidence order, the
-// ones that stayed hidden were the low-confidence pairs nothing else on the
-// surface would ever mention.
-//
-// The seed is read back through the store's own count rather than assumed: a
-// fuzzy create records what it scores, so the case guards that it really did
-// leave more open pairs than one default page holds.
-//
-// Each employer is named after its surname alone. Employers named "Company Kim
-// <surname>" score as near-duplicates of each other on their shared "Kim", so
-// the count would depend on the company lane rather than the page under test.
+// A page ask past the maximum is clamped to it, not reset to the default.
+// Home asks for more than the maximum and must see every open pair. The seed
+// must leave more open pairs than a default page and at most the maximum.
+// Each employer is named after its surname alone. Employers that share a
+// leading name score as each other's duplicates, which would move the count.
 func TestAnOverCapPageAskIsClampedRatherThanResetToTheDefault(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
