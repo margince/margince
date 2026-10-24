@@ -307,9 +307,8 @@ func TestCompanyContextProviderRejectsUndeclaredTask(t *testing.T) {
 }
 
 // Only a task whose policy is offering_selectable may read another offering.
-// The set of such tasks is derived from the registry, so a task that opts in
-// later is covered and a task that does not stays on the main offering even
-// when a caller sets the field by mistake.
+// The tasks come from the registry, so a later opt-in is covered. A task that
+// has not opted in stays on the main offering even if a caller sets the field.
 func TestOnlyAnOfferingSelectableTaskReadsTheChosenOffering(t *testing.T) {
 	chosen := ids.New[ids.LegalEntityKind]()
 	selectable := 0

@@ -126,8 +126,8 @@ func setCompanyIndustry(p *storekit.Patch, current crmcontracts.Company, in Upda
 }
 
 // setCompanyAssessAgainst stages the offering a company is judged against. The
-// entity must be a live one; the default entity's id is the main offering,
-// which the column spells as NULL so one meaning has one stored form.
+// entity must be live. The default entity's id means the main offering, which
+// the column spells as NULL so that one meaning has one stored form.
 func setCompanyAssessAgainst(ctx context.Context, tx pgx.Tx, p *storekit.Patch, current crmcontracts.Company, in UpdateCompanyInput) error {
 	if in.AssessAgainstEntityID == nil {
 		return nil

@@ -16,26 +16,16 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
-// offeringConfirmed reports whether the offering a company is judged against
-// is described well enough for a growth fit to be measured against it
-// (DOSS-AC-13), and digests what it says so a cached fit is invalidated when
-// that changes.
+// offeringConfirmed reads the offering a company is judged against: whether it
+// is confirmed (DOSS-AC-13) and a digest of what it says, so a cached fit is
+// invalidated when that changes.
 //
-// "Confirmed" and the fingerprint both come from ONE read of the company
-// context the growth-fit task sends, so they cannot describe two different
-// states of the offering. Confirmed is the bar onboarding uses to decide the
-// installation has finished describing itself: a name, an offer summary and an
-// ideal-customer profile. The main offering is the anchor company's profile; a
-// legal entity named by entityID carries its own.
+// Confirmed and the digest come from one read of the context the growth-fit task
+// sends, so they cannot describe two states. The content never leaves as text:
+// a fit derived from what we sell must still cite their records (DOSS-AC-6).
 //
-// The content never leaves as text — a fit derived from what WE sell is an
-// assessment about THEM and must still cite their records (DOSS-AC-6). Only the
-// digest travels, onto a cache key nothing renders.
-//
-// An offering that does not exist yet (an installation that has never saved its
-// company, or an entity archived since it was chosen) reads as NOT confirmed
-// rather than as an error: a workspace mid-onboarding should still get capped
-// bands with the reason spelled out, not a broken panel.
+// An offering that does not exist yet reads as not confirmed instead of as an
+// error, so a workspace mid-onboarding still gets capped bands with the reason.
 func offeringConfirmed(store *contacts.Store) companydossier.SelfOffering {
 	return func(ctx context.Context, entityID string) (companydossier.Offering, error) {
 		return readOffering(ctx, store, entityID)
