@@ -156,7 +156,7 @@ func candidateSuggestions(
 	// what to do next: acting on a stage that is wrong is worse than not acting.
 	found = appendIf(found, lifecycleConflict(companyID, in))
 	if in.timeline && in.hasNewest {
-		found = appendIf(found, said.staleThread(companyID, now, in.newest))
+		found = appendIf(found, said.staleThread(companyID, now, in.loc, in.newest))
 	}
 	if in.pipeline {
 		found = append(found, said.stalledDealSuggestions(in.open.Stalled)...)
@@ -266,7 +266,7 @@ func NewSuggestionAction(kind crmcontracts.Company360SuggestionActionKind) *stru
 // problem with a different action, and conflating the two would tell a rep to
 // chase someone who is waiting for their reply.
 func (said suggestionCopy) staleThread(
-	companyID ids.CompanyID, now time.Time, newest lastMessage,
+	companyID ids.CompanyID, now time.Time, loc *time.Location, newest lastMessage,
 ) *crmcontracts.Company360Suggestion {
 	// An unrecorded direction cannot support advice about who owes a reply: a
 	// capture that never said who spoke is not evidence that we did.
@@ -279,7 +279,7 @@ func (said suggestionCopy) staleThread(
 	// day count a reader compares against dates on their screen, so it is
 	// counted the way they count: shared/kernel/elapsed, same as every other
 	// day count a reader reads.
-	waitedDays := elapsed.Days(newest.At, now)
+	waitedDays := elapsed.Days(newest.At, now, loc)
 	if waited < noReplyDays*24*time.Hour {
 		return nil
 	}

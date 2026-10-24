@@ -72,12 +72,12 @@ func (said briefCopy) phaseOrUnnamed(phase string) string {
 // is placing it against today, and a date makes them do the arithmetic. The
 // subject rides along because "three weeks ago" alone does not tell them which
 // conversation they are being reminded of.
-func (said briefCopy) priorMeetingLine(prior PriorMeetingIn, now time.Time) string {
+func (said briefCopy) priorMeetingLine(prior PriorMeetingIn, now time.Time, loc *time.Location) string {
 	subject := prior.Subject
 	if subject == "" {
 		subject = said.Say(touchWords.Meeting)
 	}
-	days := elapsed.Days(prior.StartsAt, now)
+	days := elapsed.Days(prior.StartsAt, now, loc)
 	switch {
 	case days <= 0:
 		return fmt.Sprintf(said.Say(touchWords.MetToday), subject)

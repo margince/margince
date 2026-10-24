@@ -76,7 +76,7 @@ func TestOnlyElapsedCountsDaysOfSilence(t *testing.T) {
 	for _, where := range found {
 		t.Errorf("%s divides a duration by 24 to count days. That is the second spelling of a rule "+
 			"shared/kernel/elapsed owns, and the two last disagreed by a day on one screen. "+
-			"Call elapsed.Days(from, to) instead", where)
+			"Call elapsed.Days(from, to, loc) with the reader zone instead", where)
 	}
 }
 

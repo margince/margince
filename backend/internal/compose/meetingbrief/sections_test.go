@@ -235,7 +235,7 @@ func TestTheHeaderSaysHowManyDaysTheRoomHasBeenQuiet(t *testing.T) {
 // Nothing here is cached, so a brief describing a room nobody has ever spoken
 // to still renders its header rather than blanking.
 func TestAColdRoomStillGetsAHeader(t *testing.T) {
-	in := Input{ActivityID: meetingID, Subject: "Intro call", StartsAt: at(12), Now: at(10)}
+	in := Input{ActivityID: meetingID, Subject: "Intro call", StartsAt: at(12), Now: at(10), Zone: time.UTC}
 	header := sectionOf(t, Deterministic(in), crmcontracts.MeetingBriefSectionKindHeader)
 	if len(header.Sentences) != 2 {
 		t.Fatalf("got %d header sentences, want the meeting line and the quiet line", len(header.Sentences))

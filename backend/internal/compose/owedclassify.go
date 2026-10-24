@@ -36,7 +36,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 	"github.com/margince/margince/backend/internal/shared/schema"
@@ -119,11 +118,7 @@ func NewOwedClassifier(pool *pgxpool.Pool, brain completer, now func() time.Time
 
 // installationZoneTx is the zone the installation's calendar days end in.
 func installationZoneTx(ctx context.Context, tx pgx.Tx) (*time.Location, error) {
-	name, err := identity.TimezoneAppliedTx(ctx, tx)
-	if err != nil {
-		return nil, err
-	}
-	return storekit.LoadZone(name)
+	return identity.ZoneAppliedTx(ctx, tx)
 }
 
 // owedCandidate is one backlog row as the prompt sees it.

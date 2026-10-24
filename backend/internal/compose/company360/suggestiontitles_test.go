@@ -46,14 +46,14 @@ func TestTheFingerprintIgnoresTheTitleAndTheDate(t *testing.T) {
 		Direction: string(crmcontracts.ActivityDirectionOutbound),
 	}
 
-	first := englishSuggestions.staleThread(companyID, now, msg)
+	first := englishSuggestions.staleThread(companyID, now, time.UTC, msg)
 	if first == nil || first.Title == nil || first.DueAt == nil {
 		t.Fatalf("the no-reply rule produced no title or date: %+v", first)
 	}
 	// A day later the SENTENCE changes (31 days, not 30) and the date is the
 	// same evidence's. The fingerprint must not move: nothing about the account
 	// changed, so a dismissal must still hold.
-	later := englishSuggestions.staleThread(companyID, now.Add(24*time.Hour), msg)
+	later := englishSuggestions.staleThread(companyID, now.Add(24*time.Hour), time.UTC, msg)
 	if later == nil {
 		t.Fatal("the rule stopped firing on a thread that is quieter than before")
 	}
@@ -71,7 +71,7 @@ func TestTheFingerprintIgnoresTheTitleAndTheDate(t *testing.T) {
 func TestATitleSaysWhatTheRuleKnows(t *testing.T) {
 	now := time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC)
 	companyID := ids.CompanyID{UUID: ids.NewV7()}
-	out := englishSuggestions.staleThread(companyID, now, lastMessage{
+	out := englishSuggestions.staleThread(companyID, now, time.UTC, lastMessage{
 		ID:        ids.NewV7(),
 		At:        now.Add(-24 * 24 * time.Hour),
 		Direction: string(crmcontracts.ActivityDirectionOutbound),

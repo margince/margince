@@ -44,7 +44,7 @@ func commercialStrip(open, stalled int) *crmcontracts.Company360StateStrip {
 
 func TestRelationshipIsAbsentOnAnAccountNobodyHasReached(t *testing.T) {
 	health := crmcontracts.Company360Health{ActiveContacts: new(0)}
-	rateHealthDimensions(&health, nil, relstrength.ReadInTouch(nil, nil, nil, healthNow))
+	rateHealthDimensions(&health, nil, relstrength.ReadInTouch(nil, nil, nil, healthNow, time.UTC))
 
 	// Not "at risk": an unstarted relationship is not a failing one, and rating
 	// it would put a verdict on something that has not begun.
@@ -132,7 +132,7 @@ func TestRelationshipReadsWhetherWeAreInTouch(t *testing.T) {
 				ActiveContacts: new(tc.activeContacts),
 				SingleThreaded: new(tc.singleThreaded),
 			}
-			touch := relstrength.ReadInTouch(tc.lastInbound, tc.lastMeeting, tc.nextMeeting, healthNow)
+			touch := relstrength.ReadInTouch(tc.lastInbound, tc.lastMeeting, tc.nextMeeting, healthNow, time.UTC)
 			rateHealthDimensions(&health, nil, touch)
 
 			got := health.Relationship
@@ -158,7 +158,7 @@ func TestRelationshipReadsWhetherWeAreInTouch(t *testing.T) {
 // translation has nothing to say.
 func TestRelationshipReasonCarriesTheValuesItNames(t *testing.T) {
 	health := crmcontracts.Company360Health{ActiveContacts: new(2), SingleThreaded: new(false)}
-	rateHealthDimensions(&health, nil, relstrength.ReadInTouch(healthDaysAgo(77), nil, healthDaysAgo(-2), healthNow))
+	rateHealthDimensions(&health, nil, relstrength.ReadInTouch(healthDaysAgo(77), nil, healthDaysAgo(-2), healthNow, time.UTC))
 
 	params := health.Relationship.ReasonParams
 	if params == nil || params.At == nil || !params.At.Equal(*healthDaysAgo(-2)) {
@@ -241,5 +241,43 @@ func TestHealthIsAssembledAfterTheStateStripItReads(t *testing.T) {
 	}
 	if strip > health {
 		t.Fatal("health is assembled BEFORE the state strip it reads — commercial would be absent on every account, and absent renders as \"nothing open\"")
+	}
+}
+
+// The last-met count follows the zone the dates are drawn in. East of UTC a
+// meeting at 15:00 local the day before, read at 01:00 local, is one day ago
+// while UTC still says zero; west of UTC the same silent UTC midnight makes a
+// same-evening meeting read "1 day ago" instead of today.
+func TestLastMetCountsDaysInTheInstallationZone(t *testing.T) {
+	bangkok := time.FixedZone("UTC+7", 7*3600)
+	winterNewYork := time.FixedZone("UTC-5", -5*3600)
+	cases := []struct {
+		name     string
+		loc      *time.Location
+		met, now time.Time
+		days     int
+		sentence string
+	}{
+		{"east: yesterday afternoon at 01:00 local", bangkok,
+			time.Date(2026, 10, 6, 8, 0, 0, 0, time.UTC), time.Date(2026, 10, 6, 18, 0, 0, 0, time.UTC),
+			1, "Last met them 1 days ago."},
+		{"the same pair counted in UTC", time.UTC,
+			time.Date(2026, 10, 6, 8, 0, 0, 0, time.UTC), time.Date(2026, 10, 6, 18, 0, 0, 0, time.UTC),
+			0, "Last met them today."},
+		{"west: this evening after the UTC midnight", winterNewYork,
+			time.Date(2026, 12, 5, 23, 0, 0, 0, time.UTC), time.Date(2026, 12, 6, 1, 0, 0, 0, time.UTC),
+			0, "Last met them today."},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			touch := relstrength.ReadInTouch(nil, &tc.met, nil, tc.now, tc.loc)
+			if touch.Days != tc.days {
+				t.Fatalf("days = %d, want %d", touch.Days, tc.days)
+			}
+			got := rateRelationship(touch, 2, false)
+			if got.Reason != tc.sentence {
+				t.Fatalf("reason = %q, want %q", got.Reason, tc.sentence)
+			}
+		})
 	}
 }

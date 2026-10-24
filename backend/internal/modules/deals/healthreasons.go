@@ -31,11 +31,11 @@ type HealthReason struct {
 }
 
 // HealthReasons renders the four factors in the order they weigh.
-func HealthReasons(h DealHealth, now time.Time, language string) []HealthReason {
+func HealthReasons(h DealHealth, now time.Time, loc *time.Location, language string) []HealthReason {
 	ev := h.Evidence
 	said := langcopy.For(language)
 	return []HealthReason{
-		{Key: "activity_recency", Value: h.Factors.ActivityRecency, Reason: recencyReason(ev.LastActivityAt, ev.Stalled, now, said)},
+		{Key: "activity_recency", Value: h.Factors.ActivityRecency, Reason: recencyReason(ev.LastActivityAt, ev.Stalled, now, loc, said)},
 		{
 			Key: "stage_velocity", Value: h.Factors.StageVelocity,
 			Reason: fmt.Sprintf(said.Say(healthWords.Stage), int(ev.DaysInStage), int(ev.ExpectedDaysInStage)),
@@ -49,7 +49,7 @@ func HealthReasons(h DealHealth, now time.Time, language string) []HealthReason 
 //
 // Not by elapsed hours, and the difference is one a reader can catch the
 // product in. The deal status card is cached on a fingerprint that includes the
-// UTC day, so a sentence whose words change on the elapsed clock changes while
+// day in the installation zone, so a sentence whose words change on the elapsed clock changes while
 // the key stands still: last activity at 14:00 on the 20th, a card written at
 // 09:00 on the 22nd says "1 days ago", and at 14:00 that afternoon the sentence
 // is wrong and stays wrong until midnight because nothing has invalidated it.
@@ -62,11 +62,11 @@ func HealthReasons(h DealHealth, now time.Time, language string) []HealthReason 
 // (health.daysBetween). A number that measures how stale a deal is should move
 // continuously; a sentence a reader can check against a timestamp should not
 // move between cache writes.
-func recencyReason(last *time.Time, stalled bool, now time.Time, said langcopy.Spoken) string {
+func recencyReason(last *time.Time, stalled bool, now time.Time, loc *time.Location, said langcopy.Spoken) string {
 	if last == nil {
 		return said.Say(healthWords.NoActivity)
 	}
-	days := elapsed.Days(*last, now)
+	days := elapsed.Days(*last, now, loc)
 	when := fmt.Sprintf(said.Say(healthWords.DaysAgo), days)
 	switch {
 	case days <= 0:

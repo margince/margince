@@ -12,7 +12,7 @@
 // the two drifted apart for most of every day and agreed only around midnight.
 //
 // The calendar count is the correct one, and not as a matter of taste. The
-// deal card is cached on the UTC day: counting elapsed hours would flip
+// deal card is cached on the day in the installation zone: counting elapsed hours would flip
 // "today" to "yesterday" twenty-four hours after the contact — mid-afternoon,
 // say — while the cache key waits for midnight, and the card would spend the
 // gap saying something the records do not support with nothing to notice.
@@ -30,16 +30,26 @@ import "time"
 // bare 24 in `d.Hours()/24` is exactly what made the old count look correct.
 const hoursPerDay = 24
 
-// Days counts whole days between two moments BY THE CALENDAR, in UTC.
+// CalendarDay is the calendar day t falls on in loc, as a DATE: the local
+// year-month-day re-anchored at UTC midnight.
+//
+// Re-anchoring is what makes two such days a whole number of 24h apart even
+// across a DST change, and what a `date` column reads back unchanged. A nil
+// loc panics: defaulting to UTC would be the bug this package ends.
+func CalendarDay(t time.Time, loc *time.Location) time.Time {
+	local := t.In(loc)
+	return time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, time.UTC)
+}
+
+// Days counts whole days between two moments BY THE CALENDAR of loc, the zone
+// the sentence is drawn in.
 //
 // Not by elapsed duration: 23:00 Monday to 01:00 Tuesday is one day here and
 // zero by the clock, and a reader looking at two dates counts it the way this
 // does. Negative when `to` precedes `from`, which callers reading a future
 // timestamp rely on to tell a plan from an event.
-func Days(from, to time.Time) int {
-	fromDay := from.UTC().Truncate(hoursPerDay * time.Hour)
-	toDay := to.UTC().Truncate(hoursPerDay * time.Hour)
-	return int(toDay.Sub(fromDay).Hours() / hoursPerDay)
+func Days(from, to time.Time, loc *time.Location) int {
+	return int(CalendarDay(to, loc).Sub(CalendarDay(from, loc)).Hours() / hoursPerDay)
 }
 
 // FullDaysUntil counts whole days of REMAINING TIME from now to a future

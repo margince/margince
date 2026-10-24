@@ -72,7 +72,7 @@ func rateRelationship(touch relstrength.InTouch, active int, single bool) *crmco
 		}
 		return dimension(rating, crmcontracts.HealthDimensionReasonCodeLastMet,
 			crmcontracts.HealthDimensionReasonParams{Days: &touch.Days},
-			fmt.Sprintf("Last met them %d days ago.", touch.Days))
+			lastMetSentence(touch.Days))
 	case single:
 		return dimension(crmcontracts.HealthDimensionRatingGood, crmcontracts.HealthDimensionReasonCodeSingleThreaded,
 			crmcontracts.HealthDimensionReasonParams{}, "In contact, but one contact carries the whole account.")
@@ -81,6 +81,16 @@ func rateRelationship(touch relstrength.InTouch, active int, single bool) *crmco
 			crmcontracts.HealthDimensionReasonParams{Count: &active},
 			fmt.Sprintf("%d contacts here are in touch.", active))
 	}
+}
+
+// lastMetSentence is the English fallback of the last-met count. A count of
+// zero reads "today": "0 days ago" is not a sentence. The quiet reason needs no
+// such branch, because it only fires past the in-touch window.
+func lastMetSentence(days int) string {
+	if days <= 0 {
+		return "Last met them today."
+	}
+	return fmt.Sprintf("Last met them %d days ago.", days)
 }
 
 // rateCommercial: is work moving?

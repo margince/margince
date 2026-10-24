@@ -103,7 +103,7 @@ func whatChangedSection(in Input, ranked *rankedClaims) []Sentence {
 	}
 	since := *in.LastSpokeAt
 	out := []Sentence{{
-		Text:     said.lastDealtLine(in.Now, since),
+		Text:     said.lastDealtLine(in.Now, since, in.Zone),
 		Evidence: []Evidence{{EntityType: citeActivity, EntityID: in.ActivityID}},
 	}}
 	// After the baseline and not after now: a claim on a future-dated row

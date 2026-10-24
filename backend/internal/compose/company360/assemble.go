@@ -226,6 +226,7 @@ type assembly struct {
 	baseCurrency     string
 	baseCurrencyRead bool
 	baseLanguage     textlang.Lang
+	loc              *time.Location
 
 	contacts      []contacts.ContactStrength
 	contactsRead  bool
@@ -352,8 +353,12 @@ func (a *assembly) suggestionInputsOnce() (suggestionInputs, error) {
 			if base, a.adviceErr = a.installationBaseCurrency(); a.adviceErr != nil {
 				return a.advice, a.adviceErr
 			}
+			var loc *time.Location
+			if loc, a.adviceErr = a.zone(); a.adviceErr != nil {
+				return a.advice, a.adviceErr
+			}
 			a.advice, a.adviceErr = gatherSuggestionInputs(
-				a.ctx, a.tx, a.companyID, a.now, facts, heading, base, a.opts, a.recordLanguage())
+				a.ctx, a.tx, a.companyID, a.now, facts, heading, base, a.opts, a.recordLanguage(), loc)
 		}
 		a.adviceRead = true
 	}
@@ -482,6 +487,19 @@ func (a *assembly) installationBaseCurrency() (string, error) {
 	}
 	a.baseCurrency, a.baseCurrencyRead = base, true
 	return base, nil
+}
+
+// zone is the installation zone every day count on the page is reckoned in,
+// read once per assembly like the language.
+func (a *assembly) zone() (*time.Location, error) {
+	if a.loc == nil {
+		loc, err := identity.ZoneAppliedTx(a.ctx, a.tx)
+		if err != nil {
+			return nil, err
+		}
+		a.loc = loc
+	}
+	return a.loc, nil
 }
 
 // One assembly uses one language even if the setting changes during its reads.

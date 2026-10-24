@@ -7,6 +7,7 @@ import (
 	"maps"
 	"reflect"
 	"testing"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -31,20 +32,20 @@ func TestStatusLanguageKeepsTheSameActionAndDismissal(t *testing.T) {
 	closed := openDeal()
 	closed.Status = crmcontracts.DealStatusWon
 	for name, f := range map[string]facts{
-		"empty":             {deal: openDeal(), now: testNow},
-		"quiet":             {deal: openDeal(), now: testNow, timeline: []crmcontracts.Activity{last}},
-		"named meeting":     {deal: openDeal(), now: testNow, timeline: []crmcontracts.Activity{last}, seats: []Seat{seat(roleChampion, "Original Name")}},
-		"opening":           {deal: openDeal(), now: testNow, seats: []Seat{seat(roleEconomicBuyer, "Original Name")}},
-		"task":              {deal: openDeal(), now: testNow, openTasks: []activities.OpenTask{{ID: ids.NewV7(), Subject: "Original task"}}},
-		"booked":            {deal: openDeal(), now: testNow, nextMeeting: booked(testNow.AddDate(0, 0, 2))},
-		"far meeting":       {deal: openDeal(), now: testNow, nextMeeting: booked(testNow.AddDate(0, 0, 30))},
-		"follow up":         {deal: openDeal(), now: testNow, followUps: []activities.AwaitingReply{owedAfter(ids.NewV7())}},
-		"request review":    {deal: openDeal(), now: testNow, requests: []crmcontracts.Activity{request}},
-		"reply owed":        {deal: openDeal(), now: testNow, requests: []crmcontracts.Activity{owed}},
-		"reminder":          {deal: openDeal(), now: testNow, requests: []crmcontracts.Activity{reminded}},
-		"unnamed request":   {deal: openDeal(), now: testNow, requests: []crmcontracts.Activity{unnamed}},
-		"role-only meeting": {deal: openDeal(), now: testNow, timeline: []crmcontracts.Activity{last}, seats: []Seat{roleOnly}},
-		"closed":            {deal: closed, now: testNow},
+		"empty":             {deal: openDeal(), now: testNow, loc: time.UTC},
+		"quiet":             {deal: openDeal(), now: testNow, loc: time.UTC, timeline: []crmcontracts.Activity{last}},
+		"named meeting":     {deal: openDeal(), now: testNow, loc: time.UTC, timeline: []crmcontracts.Activity{last}, seats: []Seat{seat(roleChampion, "Original Name")}},
+		"opening":           {deal: openDeal(), now: testNow, loc: time.UTC, seats: []Seat{seat(roleEconomicBuyer, "Original Name")}},
+		"task":              {deal: openDeal(), now: testNow, loc: time.UTC, openTasks: []activities.OpenTask{{ID: ids.NewV7(), Subject: "Original task"}}},
+		"booked":            {deal: openDeal(), now: testNow, loc: time.UTC, nextMeeting: booked(testNow.AddDate(0, 0, 2))},
+		"far meeting":       {deal: openDeal(), now: testNow, loc: time.UTC, nextMeeting: booked(testNow.AddDate(0, 0, 30))},
+		"follow up":         {deal: openDeal(), now: testNow, loc: time.UTC, followUps: []activities.AwaitingReply{owedAfter(ids.NewV7())}},
+		"request review":    {deal: openDeal(), now: testNow, loc: time.UTC, requests: []crmcontracts.Activity{request}},
+		"reply owed":        {deal: openDeal(), now: testNow, loc: time.UTC, requests: []crmcontracts.Activity{owed}},
+		"reminder":          {deal: openDeal(), now: testNow, loc: time.UTC, requests: []crmcontracts.Activity{reminded}},
+		"unnamed request":   {deal: openDeal(), now: testNow, loc: time.UTC, requests: []crmcontracts.Activity{unnamed}},
+		"role-only meeting": {deal: openDeal(), now: testNow, loc: time.UTC, timeline: []crmcontracts.Activity{last}, seats: []Seat{roleOnly}},
+		"closed":            {deal: closed, now: testNow, loc: time.UTC},
 	} {
 		t.Run(name, func(t *testing.T) {
 			baseline := decideMove(f)

@@ -47,7 +47,7 @@ func followUpMove(f facts, met activities.AwaitingReply) crmcontracts.DealStatus
 	}
 	held := met.SentAt
 	return move(ActionDraftEmail,
-		fmt.Sprintf(said.Say(statusWords.FollowUp), said.since(f.now, met.SentAt)),
+		fmt.Sprintf(said.Say(statusWords.FollowUp), said.since(f.now, met.SentAt, f.loc)),
 		map[string]any{argActivityID: meetingID, argLinks: links},
 		crmcontracts.DealNextBestActionEvidence{ActivityId: &meetingID, OccurredAt: &held, Text: fmt.Sprintf(said.Say(statusWords.Met), subject)})
 }

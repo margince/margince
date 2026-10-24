@@ -6,6 +6,7 @@ package dealstatus
 import (
 	"strings"
 	"testing"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
@@ -24,7 +25,7 @@ func TestADealWithNoContactIsNotToldNothingWasLogged(t *testing.T) {
 		"a canceled meeting": {called},
 	} {
 		t.Run(name, func(t *testing.T) {
-			f := facts{deal: openDeal(), now: testNow, timeline: timeline}
+			f := facts{deal: openDeal(), now: testNow, loc: time.UTC, timeline: timeline}
 			texts := []string{nextStepReason(f)}
 			for _, l := range storyLines(f) {
 				texts = append(texts, l.Text)

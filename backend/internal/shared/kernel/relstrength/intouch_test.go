@@ -31,7 +31,7 @@ func TestReadInTouchCountsMeetingsAsContact(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			got := ReadInTouch(optionalDaysAgo(tc.inbound), optionalDaysAgo(tc.met), optionalDaysAhead(tc.booked), now)
+			got := ReadInTouch(optionalDaysAgo(tc.inbound), optionalDaysAgo(tc.met), optionalDaysAhead(tc.booked), now, time.UTC)
 			if got.Basis != tc.wantBasis || got.Days != tc.wantDays {
 				t.Fatalf("reading = %s after %d days, want %s after %d", got.Basis, got.Days, tc.wantBasis, tc.wantDays)
 			}
@@ -49,7 +49,7 @@ func TestReadInTouchCountsMeetingsAsContact(t *testing.T) {
 // anybody yet and must not keep a quiet account off "at risk".
 func TestAMessageDatedAheadIsNotContact(t *testing.T) {
 	t.Parallel()
-	got := ReadInTouch(optionalDaysAhead(3), nil, nil, now)
+	got := ReadInTouch(optionalDaysAhead(3), nil, nil, now, time.UTC)
 	if got.Basis != InTouchNever || got.Current() {
 		t.Fatalf("reading = %s (current %v), want never — the message has not been sent yet", got.Basis, got.Current())
 	}
@@ -59,7 +59,7 @@ func TestAMessageDatedAheadIsNotContact(t *testing.T) {
 // counts only as the booking the caller passes separately.
 func TestAMeetingAheadIsNotOneHeld(t *testing.T) {
 	t.Parallel()
-	got := ReadInTouch(daysAgo(77), optionalDaysAhead(3), nil, now)
+	got := ReadInTouch(daysAgo(77), optionalDaysAhead(3), nil, now, time.UTC)
 	if got.Basis != InTouchQuiet {
 		t.Fatalf("basis = %s, want %s — a meeting that has not happened yet is not contact we had", got.Basis, InTouchQuiet)
 	}

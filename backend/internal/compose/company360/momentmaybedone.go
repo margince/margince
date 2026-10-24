@@ -21,7 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -44,11 +43,7 @@ func doneQuestions(ctx context.Context, tx pgx.Tx, now time.Time, said momentCop
 	}
 	// The zone only dates a question that exists, so a card with none reads it
 	// not at all.
-	zone, err := identity.TimezoneAppliedTx(ctx, tx)
-	if err != nil {
-		return nil, err
-	}
-	loc, err := storekit.LoadZone(zone)
+	loc, err := identity.ZoneAppliedTx(ctx, tx)
 	if err != nil {
 		return nil, err
 	}

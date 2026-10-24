@@ -24,10 +24,10 @@ func TestHealthReasonsKeepFactorsAcrossLanguages(t *testing.T) {
 		Factors:  DealHealthFactors{ActivityRecency: 0.1, StageVelocity: 0.2, Engagement: 0.3, Commitments: 0.4},
 		Evidence: DealHealthEvidence{LastActivityAt: &last, Stalled: true, DaysInStage: 20, ExpectedDaysInStage: 10},
 	}
-	english := HealthReasons(health, now, "en")
+	english := HealthReasons(health, now, time.UTC, "en")
 	for _, language := range textlang.Shipped {
 		t.Run(string(language), func(t *testing.T) {
-			got := HealthReasons(health, now, string(language))
+			got := HealthReasons(health, now, time.UTC, string(language))
 			if len(got) != len(english) {
 				t.Fatal("language changed the factor count")
 			}

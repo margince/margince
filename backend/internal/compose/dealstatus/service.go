@@ -106,6 +106,9 @@ type facts struct {
 	// which is the honest answer for both.
 	seats []Seat
 	now   time.Time
+	// loc is the installation zone every day count on the card is reckoned in,
+	// the zone the reader sees the dates in.
+	loc *time.Location
 	// lang is the installation's base language, which the card is written in.
 	// A status card is filed on the deal and read by anyone who opens it, so it
 	// takes the shared language rather than the reader's — the same rule that
@@ -213,7 +216,7 @@ func (s *Service) cardAndTimeline(
 	}
 	mv := decideMove(f)
 	in := project(f, mv)
-	fingerprint, err := Fingerprint(in, userID.UUID, s.routingVersion, f.now, f.lang)
+	fingerprint, err := Fingerprint(in, userID.UUID, s.routingVersion, f.now, f.loc, f.lang)
 	if err != nil {
 		return crmcontracts.DealStatusCard{}, nil, err
 	}
@@ -405,6 +408,13 @@ func (s *Service) gather(ctx context.Context, dealID ids.DealID) (facts, error) 
 		f.seats = seats
 	}
 	f.lang = identity.BaseLanguageForPrompt(ctx, s.pool)
+	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+		f.loc, err = identity.ZoneAppliedTx(ctx, tx)
+		return err
+	})
+	if err != nil {
+		return facts{}, fmt.Errorf("deal status: reading the installation's timezone: %w", err)
+	}
 	return f, nil
 }
 
