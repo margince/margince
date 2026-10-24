@@ -114,8 +114,8 @@ type UpsertPartnerInput struct {
 	FitOverrideReason *string
 	IfVersion         *int64
 	// MustCreate makes the write a set-up. It refuses a company with a live
-	// program. It starts the program with no margin tier, even when it revives
-	// an archived row that kept one.
+	// program. It starts the program from the column defaults, even when it
+	// revives an archived row that kept a tier, metrics, segments or a fit override.
 	MustCreate bool
 }
 
@@ -223,7 +223,7 @@ func (s *Store) UpsertPartner(ctx context.Context, in UpsertPartnerInput) (crmco
 			if err := checkPartnerSetUp(ctx, tx, in.CompanyID); err != nil {
 				return err
 			}
-			in.Cleared = withoutMarginTier(in.Cleared)
+			in = asFreshProgram(in)
 		}
 		// Before the upsert and under the lock: the statement coalesces every
 		// absent field onto its current value, so what the request actually
@@ -277,6 +277,9 @@ func resolvePartnerFit(ctx context.Context, tx pgx.Tx, in UpsertPartnerInput) (p
 	}
 	if in.IfVersion != nil && currentVersion != nil && *currentVersion != *in.IfVersion {
 		return partnerFitState{}, apperrors.ErrVersionSkew
+	}
+	if in.MustCreate {
+		current = partnerFitState{}
 	}
 	return applyPartnerFitOverride(current, in.FitScore, in.FitOverrideReason)
 }

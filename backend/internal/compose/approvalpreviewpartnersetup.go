@@ -4,7 +4,10 @@
 package compose
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -19,6 +22,41 @@ type partnerSetUpPreviewRequest struct {
 	RelationshipStage *string `json:"relationship_stage"`
 	NextStep          *string `json:"next_step"`
 	NextStepDueAt     *string `json:"next_step_due_at"`
+	CompanyID         *string `json:"company_id"`
+	ApprovalID        *string `json:"approval_id"`
+}
+
+// decodePartnerSetUpPreview reads an approval's edited payload by the tool's own
+// rules: a closed set of members, the contract's vocabularies and a real date.
+// An edit that adds a margin tier, or says what execution would refuse, is not
+// a payload the preview may call ready.
+func decodePartnerSetUpPreview(approval crmcontracts.Approval) (partnerSetUpPreviewRequest, bool, error) {
+	var request partnerSetUpPreviewRequest
+	args, err := commercialArguments(approval)
+	if err != nil {
+		return request, false, err
+	}
+	raw, err := json.Marshal(args)
+	if err != nil {
+		return request, false, err
+	}
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&request); err != nil {
+		return request, false, nil
+	}
+	if !crmcontracts.SetUpPartnerRequestPartnerRole(request.PartnerRole).Valid() {
+		return request, false, nil
+	}
+	if stage := request.RelationshipStage; stage != nil && !crmcontracts.SetUpPartnerRequestRelationshipStage(*stage).Valid() {
+		return request, false, nil
+	}
+	if due := request.NextStepDueAt; due != nil {
+		if _, err := time.Parse(time.DateOnly, *due); err != nil {
+			return request, false, nil
+		}
+	}
+	return request, true, nil
 }
 
 // partnerSetUpPreview shows the terms a program would start with. The margin
@@ -31,8 +69,8 @@ func (r approvalPreviewReader) partnerSetUpPreview(ctx context.Context, approval
 	if approval.TargetEntityId == nil || approval.TargetVersion == nil {
 		return out, nil
 	}
-	request, err := commercialRequest[partnerSetUpPreviewRequest](approval)
-	if previewUnavailable(err) || (err == nil && request.PartnerRole == "") {
+	request, valid, err := decodePartnerSetUpPreview(approval)
+	if previewUnavailable(err) || (err == nil && !valid) {
 		return out, nil
 	}
 	if err != nil {
@@ -59,11 +97,14 @@ func (r approvalPreviewReader) partnerSetUpPreview(ctx context.Context, approval
 		return nil, err
 	}
 	details := []crmcontracts.ApprovalPreviewDetail{previewDetail("partner_role", request.PartnerRole)}
-	for field, value := range map[string]*string{
-		"partner_stage": request.RelationshipStage, "partner_next_step": request.NextStep, "partner_next_step_due_at": request.NextStepDueAt,
+	for _, optional := range []struct {
+		field string
+		value *string
+	}{
+		{"partner_stage", request.RelationshipStage}, {"partner_next_step", request.NextStep}, {"partner_next_step_due_at", request.NextStepDueAt},
 	} {
-		if value != nil {
-			details = append(details, previewDetail(field, *value))
+		if optional.value != nil {
+			details = append(details, previewDetail(optional.field, *optional.value))
 		}
 	}
 	out.Details, out.Effects, out.State = &details, &[]string{"partner_margin_tier_unset"}, previewReadyState

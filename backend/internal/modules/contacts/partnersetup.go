@@ -69,12 +69,31 @@ func requirePartnerWriteGrants(ctx context.Context) error {
 	return auth.Require(ctx, "company", principal.ActionUpdate)
 }
 
-// withoutMarginTier appends the margin tier to the fields the write sets to
-// NULL, after the caller's mask has been applied. A revived archived row then
-// starts with no tier.
-func withoutMarginTier(cleared []string) []string {
-	if slices.Contains(cleared, partnerFieldMarginTier) {
-		return cleared
+// asFreshProgram makes a set-up start from the column defaults even when it
+// revives an archived row: no margin tier, no gate metrics, no served
+// segments, certification "applied". Terms the caller sent stay; the rest must
+// not carry over from a program a human once approved.
+func asFreshProgram(in UpsertPartnerInput) UpsertPartnerInput {
+	cleared := slices.Clone(in.Cleared)
+	cleared = append(cleared, partnerFieldMarginTier)
+	if in.CertifiedStaff == nil && in.RetentionRate == nil {
+		cleared = append(cleared, "gate_metrics")
 	}
-	return append(slices.Clone(cleared), partnerFieldMarginTier)
+	if in.ServedSegments == nil {
+		cleared = append(cleared, "served_segments")
+	}
+	if in.NextStep == nil {
+		cleared = append(cleared, "next_step")
+	}
+	if in.NextStepDueAt == nil {
+		cleared = append(cleared, partnerFieldNextStepDue)
+	}
+	in.Cleared = cleared
+	if in.CertStatus == nil {
+		in.CertStatus = new("applied")
+	}
+	if in.RelationshipStage == nil {
+		in.RelationshipStage = new("research")
+	}
+	return in
 }
