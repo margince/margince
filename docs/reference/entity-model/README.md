@@ -28,8 +28,8 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 324 |
-| Columns | 3833 |
+| Tables | 325 |
+| Columns | 3836 |
 | Foreign keys | 531 |
 | Owning areas | 36 |
 
