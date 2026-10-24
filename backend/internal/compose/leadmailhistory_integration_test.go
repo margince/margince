@@ -11,16 +11,21 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"log/slog"
 	"testing"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -120,11 +125,47 @@ func assertFilesOnlySince(t *testing.T, l *leadMailEnv, address string, lead ids
 	}
 }
 
+// importedLead creates a lead the way the import job does: under an import
+// run, which its create audit row carries as its batch.
+func (l *leadMailEnv) importedLead(t *testing.T, address string) ids.LeadID {
+	t.Helper()
+	var run ids.UUID
+	if err := database.WithWorkspaceTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `
+			INSERT INTO import_run (connector, status, mapping, source_ref, source, captured_by)
+			VALUES ('csv', 'running', '{}'::jsonb, 'leads.csv', 'upload', 'human:test') RETURNING id`).Scan(&run)
+	}); err != nil {
+		t.Fatalf("opening the import run: %v", err)
+	}
+	ctx := storekit.WithImportRun(storekit.WithBatch(l.e.Admin(), run), run)
+	created, _, err := l.e.Contacts.CreateLead(ctx, contacts.CreateLeadInput{
+		FullName: new("Imported Prospect"), Email: new(address), Source: "import",
+	})
+	if err != nil {
+		t.Fatalf("importing the lead for %s: %v", address, err)
+	}
+	return ids.From[ids.LeadKind](ids.UUID(created.Id))
+}
+
+// A lead created by hand, by capture or by the API gets no mail from before it
+// existed. History from before a lead is filed only for one an import created.
+func TestOnlyAnImportedLeadGetsMailFromBeforeIt(t *testing.T) {
+	l := setupLeadMail(t)
+	byHand := l.lead(t, "hand@prospect.example")
+	old := l.mail(t, owedMail{from: "hand@prospect.example", to: l.seat, subject: "Prices?", at: l.at.AddDate(0, 0, -30)}, true)
+	if l.filedUnderLead(t, old, byHand) {
+		t.Error("mail from before a lead created by hand was filed under it")
+	}
+	if since := l.mail(t, owedMail{from: "hand@prospect.example", to: l.seat, subject: "Again"}, true); !l.filedUnderLead(t, since, byHand) {
+		t.Error("mail since the hand-made lead was created was not filed under it")
+	}
+}
+
 // An imported lead keeps its history, and the history does not move its reply
 // clock before the lead existed.
 func TestALeadsEarlierHistoryIsFiledAndItsClockStartsAtCreation(t *testing.T) {
 	l := setupLeadMail(t)
-	lead := l.lead(t, "lena@prospect.example")
+	lead := l.importedLead(t, "lena@prospect.example")
 	asked := l.mail(t, owedMail{from: "lena@prospect.example", to: l.seat, subject: "Prices?", at: l.at.AddDate(0, 0, -30)}, true)
 	answered := l.mail(t, owedMail{from: l.seat, to: "lena@prospect.example", subject: "Re: Prices?", at: l.at.AddDate(0, 0, -29)}, true)
 	for name, activity := range map[string]ids.UUID{"the question": asked, "the answer": answered} {
@@ -227,5 +268,58 @@ func TestAMeetingKeepsASeatForItsProject(t *testing.T) {
 	}
 	if n := l.e.WsCount(t, `SELECT count(*) FROM activity_link WHERE activity_id = $1`, meeting); n != 25 {
 		t.Errorf("the meeting is filed under %d records, want the 24 attendees and the project", n)
+	}
+}
+
+// A personal sender verdict takes off the lead links capture filed for that
+// sender's mail to the seat, each with its audit row. A link a colleague filed
+// by hand stays.
+func TestAPersonalSenderVerdictTakesTheSendersMailOffItsLead(t *testing.T) {
+	l := setupLeadMail(t)
+	const sister = "sister@family.example"
+	lead := l.lead(t, sister)
+	machine := l.mail(t, owedMail{from: sister, to: l.seat, subject: "Holiday photos"}, true)
+	byHand := l.mail(t, owedMail{from: sister, to: l.seat, subject: "Flight times"}, false)
+	if _, err := l.e.Activities.RelinkActivity(l.e.Admin(), ids.From[ids.ActivityKind](byHand),
+		activities.RelinkActivityInput{EntityType: "lead", EntityID: lead.UUID}); err != nil {
+		t.Fatalf("filing the second mail under the lead by hand: %v", err)
+	}
+	if !l.filedUnderLead(t, machine, lead) || !l.filedUnderLead(t, byHand, lead) {
+		t.Fatal("both mails must be on the lead before the verdict, or this test proves nothing")
+	}
+
+	l.settleSenderVerdict(t, sister, machine, capture.KindPersonal)
+
+	if l.filedUnderLead(t, machine, lead) {
+		t.Error("a personal sender verdict left the lead link capture filed for that sender's mail")
+	}
+	if n := l.e.WsCount(t, `SELECT count(*) FROM audit_log WHERE action = 'activity_relink' AND entity_id = $1
+		AND before->>'entity_type' = 'lead' AND evidence->>'reason' = 'personal_sender_verdict'`, machine); n != 1 {
+		t.Errorf("taking the lead link off wrote %d audit rows, want one naming the verdict", n)
+	}
+	if !l.filedUnderLead(t, byHand, lead) {
+		t.Error("a personal sender verdict took off a lead link a colleague filed by hand")
+	}
+}
+
+// settleSenderVerdict runs the real sender verdict engine on the seat's open
+// question about the address, answering kind.
+func (l *leadMailEnv) settleSenderVerdict(t *testing.T, address string, mail ids.UUID, kind string) {
+	t.Helper()
+	var question ids.UUID
+	err := database.WithWorkspaceTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `SELECT id FROM capture_pending_counterparty
+			WHERE email = $1 AND owner_id = $2`, address, l.owner).Scan(&question)
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		question = seedPendingDisposition(t, l.e, address, "family.example", mail)
+	} else if err != nil {
+		t.Fatalf("reading the open sender question: %v", err)
+	}
+	l.e.WsExec(t, `UPDATE capture_pending_counterparty SET status = 'pending', next_attempt_at = now() WHERE id = $1`, question)
+	brain := &scriptedVerdictBrain{verdicts: map[string]string{question.String(): kind}}
+	engine := NewCounterpartyVerdictEngine(l.e.Pool, brain, CaptureConfig{}, slog.Default())
+	if err := engine.RunWorkspace(principal.WithWorkspaceID(context.Background(), l.e.WS), 0); err != nil {
+		t.Fatalf("verdict pass: %v", err)
 	}
 }

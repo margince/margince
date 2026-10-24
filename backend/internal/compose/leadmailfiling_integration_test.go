@@ -40,7 +40,9 @@ type leadMailEnv struct {
 
 func setupLeadMail(t *testing.T) *leadMailEnv {
 	t.Helper()
-	return &leadMailEnv{owedEnv: setupOwed(t), at: clocktest.Now(t)}
+	// An hour ahead, so mail dated at l.at follows every lead the test creates,
+	// whichever of the two clocks is ahead.
+	return &leadMailEnv{owedEnv: setupOwed(t), at: clocktest.Now(t).Add(time.Hour)}
 }
 
 // connectorCtx is the seat's connector, with or without the lead read grant.
@@ -60,8 +62,7 @@ func (l *leadMailEnv) connectorCtx(t *testing.T, name string, readsLeads bool) c
 	return principal.WithActor(ctx, actor)
 }
 
-// lead creates a live lead holding the address, after the mail these tests
-// date at l.at, as an imported lead arrives after its history.
+// lead creates a live lead holding the address by hand.
 func (l *leadMailEnv) lead(t *testing.T, address string) ids.LeadID {
 	t.Helper()
 	created, _, err := l.e.Contacts.CreateLead(l.e.Admin(), contacts.CreateLeadInput{

@@ -96,7 +96,7 @@ func TestTheLeadFilingTaskFilesEarlierMailOnceAndReplaysSafely(t *testing.T) {
 	roleMail := l.mail(t, owedMail{from: "info@prospect.example", to: l.seat, subject: "Enquiry", at: l.at.AddDate(0, 0, -30)}, true)
 	l.moveAddress(t, "info@prospect.example", "bob@prospect.example")
 	carol := l.lead(t, "info@prospect.example")
-	lead := l.lead(t, "lena@prospect.example")
+	lead := l.importedLead(t, "lena@prospect.example")
 	infrastructure := l.lead(t, "dse@eu.docusign.net")
 	asLeadReadingSeat(t, l)
 

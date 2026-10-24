@@ -271,37 +271,56 @@ func (s *PendingStore) SettledPersonalThreads(ctx context.Context, limit int) ([
 	return out, nil
 }
 
-// PrivateThreadLeadLink is one lead link capture derived for a message that a
+// PrivateLeadLink is one lead link capture derived for a message that a
 // personal verdict has since made private to the only seat that imported it.
-type PrivateThreadLeadLink struct {
+type PrivateLeadLink struct {
 	ActivityID ids.ActivityID
 	LeadID     ids.UUID
 }
 
 // LeadLinksOrphanedByPrivacyTx answers the lead links on a thread's messages
-// that the seat's verdict now makes private, by the rule that refuses them at
-// capture (storedMessageIsPrivateTx). A message a colleague also imported
-// stays filed: their copy is not private to them.
-func LeadLinksOrphanedByPrivacyTx(ctx context.Context, tx pgx.Tx, threadKey string, user ids.UUID) ([]PrivateThreadLeadLink, error) {
-	if threadKey == "" || user == ids.Nil {
+// that the seat's thread verdict now makes private.
+func LeadLinksOrphanedByPrivacyTx(ctx context.Context, tx pgx.Tx, threadKey string, user ids.UUID) ([]PrivateLeadLink, error) {
+	if threadKey == "" {
+		return nil, nil
+	}
+	return privateLeadLinksTx(ctx, tx, `a.thread_key = $1`, threadKey, user)
+}
+
+// LeadLinksOfPersonalSenderTx answers the lead links on a sender's messages
+// that the seat's personal sender verdict now makes private.
+func LeadLinksOfPersonalSenderTx(ctx context.Context, tx pgx.Tx, address string, user ids.UUID) ([]PrivateLeadLink, error) {
+	address = normalizeEmail(address)
+	if address == "" {
+		return nil, nil
+	}
+	return privateLeadLinksTx(ctx, tx, `a.counterparty_email = $1`, address, user)
+}
+
+// privateLeadLinksTx answers the lead links on the messages scope selects
+// that are private to the seat, by the rule that refuses them at capture
+// (storedMessageIsPrivateTx). A message a colleague also imported stays filed:
+// their copy is not private to them. scope is a compile-time literal over $1.
+func privateLeadLinksTx(ctx context.Context, tx pgx.Tx, scope, key string, user ids.UUID) ([]PrivateLeadLink, error) {
+	if user == ids.Nil {
 		return nil, nil
 	}
 	rows, err := tx.Query(ctx, `
 		SELECT l.activity_id, l.lead_id
 		  FROM activity a
 		  JOIN activity_link l ON l.activity_id = a.id AND l.entity_type = 'lead'
-		 WHERE a.thread_key = $1 AND a.archived_at IS NULL AND a.restricted_at IS NULL
+		 WHERE `+scope+` AND a.archived_at IS NULL AND a.restricted_at IS NULL
 		   AND EXISTS (SELECT 1 FROM capture_import ci WHERE ci.activity_id = a.id AND ci.user_id = $2)
 		   AND NOT EXISTS (SELECT 1 FROM capture_import o WHERE o.activity_id = a.id AND o.user_id <> $2)
-		 ORDER BY l.activity_id, l.lead_id`, threadKey, user)
+		 ORDER BY l.activity_id, l.lead_id`, key, user)
 	if err != nil {
-		return nil, fmt.Errorf("capture: reading the lead links on a private thread: %w", err)
+		return nil, fmt.Errorf("capture: reading the lead links on private mail: %w", err)
 	}
-	links, err := pgx.CollectRows(rows, pgx.RowToStructByPos[PrivateThreadLeadLink])
+	links, err := pgx.CollectRows(rows, pgx.RowToStructByPos[PrivateLeadLink])
 	if err != nil {
-		return nil, fmt.Errorf("capture: reading the lead links on a private thread: %w", err)
+		return nil, fmt.Errorf("capture: reading the lead links on private mail: %w", err)
 	}
-	var out []PrivateThreadLeadLink
+	var out []PrivateLeadLink
 	for _, link := range links {
 		private, err := storedMessageIsPrivateTx(ctx, tx, link.ActivityID, user)
 		if err != nil {

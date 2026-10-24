@@ -51,17 +51,20 @@ func LeadEmailMatchClause(alias, address string) string {
 
 // LeadEmailHeldAtClause asks that address was already the lead's at the moment
 // at. The lead's first change of email after that moment must start from its
-// current address. Mail from before the lead was created is its history only
-// while no other lead, live or retired, holds or ever held the address. That
-// keeps an imported lead's history, and fails closed on an address that moved.
+// current address.
+//
+// Mail from before the lead was created is its history only for a lead an
+// import run created. Even then no other lead, live or retired, may hold or
+// have held the address. Erasure nulls an address without recording it, so
+// the import rule bounds what the history cannot see.
 func LeadEmailHeldAtClause(alias, address, at string) string {
 	folded := "lower(btrim(" + address + "))"
-	return `(` + at + ` >= ` + alias + `.created_at OR NOT (
+	return `(` + at + ` >= ` + alias + `.created_at OR (` + leadImportedClause(alias) + ` AND NOT (
 		EXISTS (SELECT 1 FROM lead other_holder
 		         WHERE other_holder.id <> ` + alias + `.id AND other_holder.email = ` + folded + `)
 		OR EXISTS (SELECT 1 FROM audit_log given_up
 		         WHERE given_up.entity_type = 'lead' AND given_up.entity_id <> ` + alias + `.id
-		           AND given_up.before ? 'email' AND lower(given_up.before->>'email') = ` + folded + `)))
+		           AND given_up.before ? 'email' AND lower(given_up.before->>'email') = ` + folded + `))))
 	   AND NOT EXISTS (SELECT 1 FROM (
 		SELECT email_change.before->>'email' AS held FROM audit_log email_change
 		 WHERE email_change.entity_type = 'lead' AND email_change.entity_id = ` + alias + `.id
@@ -69,6 +72,13 @@ func LeadEmailHeldAtClause(alias, address, at string) string {
 		   AND email_change.occurred_at > ` + at + `
 		 ORDER BY email_change.occurred_at, email_change.id LIMIT 1) first_change
 		 WHERE lower(first_change.held) IS DISTINCT FROM ` + alias + `.email)`
+}
+
+// leadImportedClause asks whether an import run created the lead: its create
+// audit row carries the run as its batch, which only the import job sets.
+func leadImportedClause(alias string) string {
+	return `EXISTS (SELECT 1 FROM audit_log created JOIN import_run run ON run.id = created.batch_id
+		 WHERE created.entity_type = 'lead' AND created.entity_id = ` + alias + `.id AND created.action = 'create')`
 }
 
 // LiveLeadByEmail reports the live lead holding this address, if any.
