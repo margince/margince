@@ -36,10 +36,31 @@ type copiedMail struct {
 // one of our seats with the subject in To or Cc, unless the fields say otherwise.
 func (e *resolveEnv) capturedMail(t *testing.T, threadKey, subjectRole string, withOurSide bool) ids.UUID {
 	t.Helper()
-	return e.plantCopiedMail(t, copiedMail{
+	id := e.plantCopiedMail(t, copiedMail{
 		threadKey: threadKey, subjectRole: subjectRole, direction: "inbound",
 		ourRecipient: withOurSide, capturedBy: "connector:gmail",
 	})
+	if withOurSide {
+		e.plantCopiedMail(t, copiedMail{
+			threadKey: threadKey, subjectRole: "to", direction: "outbound",
+			ourAuthor: true, capturedBy: "connector:gmail",
+		})
+	}
+	return id
+}
+
+func TestAForgedThreadKeyWithNoMailFromOurSeatEarnsNoCopiedStanding(t *testing.T) {
+	e := setupResolve(t)
+	e.plantCopiedMail(t, copiedMail{
+		threadKey: "thread-forged", subjectRole: "cc", direction: "inbound",
+		ourRecipient: true, capturedBy: "connector:gmail",
+	})
+
+	d := e.decide(t, commsauthz.Request{ThreadKey: "thread-forged"})
+
+	if d.Verdict == commsauthz.VerdictAllow {
+		t.Fatalf("decision = %+v, want no allow: our seat only received mail on this thread", d)
+	}
 }
 
 func (e *resolveEnv) plantCopiedMail(t *testing.T, m copiedMail) ids.UUID {

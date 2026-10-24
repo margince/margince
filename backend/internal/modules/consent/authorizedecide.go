@@ -117,12 +117,11 @@ func contradictsClaim(claimed, resolved commsauthz.Category) bool {
 	return claimed != "" && claimed != resolved
 }
 
-// claimYieldsToEvidence reports whether a claim that the record's evidence
-// contradicts gives way to that evidence. Every claim does except marketing: a
-// rep who picked "requested follow-up" while writing from the recipient's own
-// open deal is sent as the deal follow-up, and the claim stays in Requested. A
-// marketing claim never yields, because the objection to marketing binds the
-// category the sender named and was never put to the evidence's category.
+// claimYieldsToEvidence reports whether a claim the evidence contradicts gives
+// way to that evidence. Every claim does except marketing. A "requested
+// follow-up" written from the recipient's own open deal is sent as the deal
+// follow-up, and the claim stays in Requested. A marketing claim never yields:
+// an objection to marketing binds the category the sender named.
 func claimYieldsToEvidence(claimed commsauthz.Category) bool {
 	return claimed != commsauthz.CategoryMarketing
 }
@@ -130,7 +129,7 @@ func claimYieldsToEvidence(claimed commsauthz.Category) bool {
 // putClaimToEvidence puts the caller's claim to the category the evidence
 // resolved. A contradicted claim is kept in Requested; denied is true when the
 // claim does not yield. The contact and the lead arm both call it, so a
-// marketing claim binds a lead exactly as it binds a contact.
+// marketing claim binds a lead as it binds a contact.
 func putClaimToEvidence(d commsauthz.Decision, claimed, resolved commsauthz.Category) (commsauthz.Decision, bool) {
 	if !contradictsClaim(claimed, resolved) {
 		return d, false
@@ -143,8 +142,8 @@ func putClaimToEvidence(d commsauthz.Decision, claimed, resolved commsauthz.Cate
 }
 
 // unsupportedClaimAwaitsAnswer reports whether an unsupported claim is a
-// question for the sender rather than a purpose nothing defines: the claim is in
-// the vocabulary and the caller named no legacy purpose key to fall back on.
+// question for the sender rather than a purpose nothing defines. That holds when
+// the claim is in the vocabulary and the caller named no legacy purpose key.
 // Both subject arms ask it, so a lead and a contact get the same answer.
 func unsupportedClaimAwaitsAnswer(claimed commsauthz.Category, purposeKey string) bool {
 	return purposeKey == "" && claimed != "" && claimed.Valid()

@@ -144,18 +144,17 @@ func wroteIntoThread(ctx context.Context, tx pgx.Tx, threadKey string, subject s
 	return found, nil
 }
 
-// copiedOnThisMatter reports whether the recipient was a To or Cc participant of
-// a captured mail someone outside our side sent onto this message's thread,
-// with our side on the thread too.
+// copiedOnThisMatter reports whether the recipient was To or Cc on a captured
+// mail an outside sender wrote onto this message's thread. Our side must be on
+// the thread too.
 //
-// It supports business correspondence about THIS thread's matter only: the
-// thread key scopes the query, and recordBasis keys the basis row by the same
-// thread, so it never becomes standing permission for the contact. Being copied
-// is not authorship (repliesToTheSubject asks for that); this is the weaker
-// ground that makes a reply-all or a follow-up on the thread's subject
-// writable, and a marketing claim against it is still denied by
-// putClaimToEvidence. The legal reading of the rule goes to counsel before
-// release, which is why it lives in this one function.
+// It supports correspondence about this thread's matter only. The thread key
+// scopes the query, and recordBasis keys the basis row by the same thread. So
+// it never becomes standing permission for the contact. Being copied is not
+// authorship, which repliesToTheSubject asks for. It is the weaker ground that
+// lets a rep reply to all or follow up on the thread's subject. A marketing
+// claim against it is still denied by putClaimToEvidence. Counsel reviews the
+// rule before release, so it lives in this one function.
 //
 // The copying mail must be inbound with an author who is not one of our seats,
 // or a rep could make the evidence by copying the contact on their own mail.
@@ -202,7 +201,9 @@ func copiedOnThisMatter(ctx context.Context, tx pgx.Tx, req commsauthz.Request, 
 			          AND ours.kind = a.kind
 			          AND ours.channel_provider IS NOT DISTINCT FROM a.channel_provider
 			          AND ours.archived_at IS NULL
+			          AND ours.direction = 'outbound'
 			          AND ours.captured_by LIKE 'connector:%'
+			          AND op.role = 'from'
 			          AND op.user_id IS NOT NULL)
 		)`, subject.Kind, subject.ID, subject.Address, subject.ChannelProvider, subject.ChannelUserID, threadKey).Scan(&found)
 	if err != nil {
@@ -272,8 +273,8 @@ const authorIsTheSubject = `(p.role = 'from' AND ` + participantIsTheSubject + `
 // participantIsTheSubject is the identity half of authorIsTheSubject, without
 // the role: the participant row p names this recipient, by record, by bare
 // address or by channel account. copiedOnThisMatter reads it with the
-// recipient roles, so both roles read "this row is the recipient" from the same text. Same
-// placeholders as authorIsTheSubject.
+// recipient roles. So both roles read "this row is the recipient" from one
+// text. Same placeholders as authorIsTheSubject.
 const participantIsTheSubject = `(
 			            ($1 = 'contact' AND p.contact_id = $2::uuid)
 			         OR ($3 <> '' AND p.contact_id IS NULL AND lower(p.address) = lower($3))
