@@ -28,6 +28,9 @@ type Input struct {
 	// touch" is arithmetic on one clock rather than on time.Now() called from
 	// several places that could straddle a midnight.
 	Now time.Time
+	// Zone is the installation zone every "N days ago" in the brief is counted
+	// in: the zone the reader sees the dates in.
+	Zone *time.Location
 
 	Company string
 	Deal    *DealIn

@@ -49,7 +49,6 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -320,7 +319,7 @@ func (said momentCopy) reEngagedMoment(_ context.Context, now time.Time, page *c
 	if page.LastOutboundAt == nil {
 		return crmcontracts.ContactMoment{}, false
 	}
-	sinceWeWrote := elapsed.Days(*page.LastOutboundAt, inbound)
+	sinceWeWrote := elapsed.Days(*page.LastOutboundAt, inbound, said.zone)
 	if sinceWeWrote < reEngagedQuietDays {
 		return crmcontracts.ContactMoment{}, false
 	}
@@ -372,13 +371,13 @@ func (said momentCopy) goneQuietMoment(_ context.Context, now time.Time, page *c
 		// They answered. Silence is not the story.
 		return crmcontracts.ContactMoment{}, false
 	}
-	waiting := elapsed.Days(outbound, now)
+	waiting := elapsed.Days(outbound, now, said.zone)
 	if waiting < goneQuietAfterDays {
 		return crmcontracts.ContactMoment{}, false
 	}
 	quietFor := waiting
 	if page.LastInboundAt != nil {
-		quietFor = elapsed.Days(*page.LastInboundAt, now)
+		quietFor = elapsed.Days(*page.LastInboundAt, now, said.zone)
 	}
 	evidence := said.outboundEvidence(page, outbound)
 	return crmcontracts.ContactMoment{
@@ -480,9 +479,5 @@ func (said momentCopy) nothingNeededMoment(_ context.Context, now time.Time, pag
 }
 
 func recordZone(ctx context.Context, tx pgx.Tx) (*time.Location, error) {
-	name, err := identity.TimezoneAppliedTx(ctx, tx)
-	if err != nil {
-		return nil, err
-	}
-	return storekit.LoadZone(name)
+	return identity.ZoneAppliedTx(ctx, tx)
 }

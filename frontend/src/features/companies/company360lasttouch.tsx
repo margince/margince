@@ -45,7 +45,7 @@ export function LastTouchStat({
       />
     );
   }
-  const days = daysAgo(last.at, view.as_of);
+  const days = daysAgo(last.at, view.as_of, recordZone);
   return (
     <StatCard
       onOpen={onOpen}

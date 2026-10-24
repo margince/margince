@@ -34685,6 +34685,17 @@ export interface components {
         RequestAccessResponse: {
             requested: boolean;
         };
+        /** @description What every draft-email route takes to steer a draft: the caller's ask and, for a rewrite, the words on the composer's screen. Each route extends it with the fields its own record needs. */
+        DraftSteering: {
+            /** @description Optional steering in the caller's own words ("shorter", "warmer", "ask for Tuesday"). The one input that is NOT untrusted — the caller typed it — and so the only one outside the fence. */
+            intent?: string | null;
+            /**
+             * @description The draft the composer is CURRENTLY showing, when the call is a rewrite rather than a first draft. Without it an `intent` of "make it shorter" generates a second grounded draft from the same record and the composer swaps it in — a different email rather than a shorter one, and any edits the rep had made are gone.
+             *     Sent by the client because the server stores no draft to resolve: this endpoint writes no record, so there is nothing on file to name. It is UNTRUSTED like every other input but `intent` — it may hold text a contact wrote, pasted in — and is fenced the same way.
+             *     Absent or empty is a first draft.
+             */
+            rewrite_of?: string | null;
+        };
         /** @description A drafted email (never sent by drafting). Send via /activities/{id}/send-email (🟡). */
         EmailDraft: {
             subject: string;
@@ -51212,9 +51223,7 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json": {
-                    /** @description Optional steering in the caller's own words ("shorter", "warmer", "ask for Tuesday"). The one input that is NOT untrusted — the caller typed it — and so the only one outside the fence. */
-                    intent?: string | null;
+                "application/json": components["schemas"]["DraftSteering"] & {
                     /**
                      * Format: uuid
                      * @description Which body of work the message is about. When set, the draft is grounded in the 360 scoped to that project — correspondence filed under another project drops out — and the project's name, key, phase and target end date are facts the draft may use. Must be a live project the caller can read; an invisible or archived one is `404`, the same answer a direct read gives.
@@ -51227,12 +51236,6 @@ export interface operations {
                     about_activity_id?: string | null;
                     /** @description Further contacts the same message goes to, such as everyone at a meeting the draft follows up. The draft's `to` then lists each one's address after this contact's, and the writer is told the message has several readers. Each must be a live contact the caller may read; one that is not refuses the whole request with `422` `recipient_not_on_file`, the code `POST /emails` answers for an address nobody on file holds. */
                     also_to?: string[];
-                    /**
-                     * @description The draft the composer is CURRENTLY showing, when the call is a rewrite rather than a first draft. Without it an `intent` of "make it shorter" generates a second grounded draft from the same record and the composer swaps it in — a different email rather than a shorter one, and any edits the rep had made are gone.
-                     *     Sent by the client because the server stores no draft to resolve: this endpoint writes no record, so there is nothing on file to name. It is UNTRUSTED like every other input but `intent` — it may hold text a contact wrote, pasted in — and is fenced the same way.
-                     *     Absent or empty is a first draft, which is the behaviour every caller had before this field existed.
-                     */
-                    rewrite_of?: string | null;
                 };
             };
         };
@@ -53411,7 +53414,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
+                "application/json": components["schemas"]["DraftSteering"] & {
                     /**
                      * Format: uuid
                      * @description Who the draft is addressed to. Required: a draft with no recipient has no relationship to ground itself in, and the one thing this endpoint adds over an empty compose box is that it knows who it is writing to. Must be a contact the caller can see on this account.
@@ -53427,10 +53430,6 @@ export interface operations {
                      * @description Which body of work the message is about. When set, the draft is grounded in the 360 scoped to that project — correspondence filed under another project drops out — and the project's name, key, phase and target end date are facts the draft may use. Must be a live project the caller can read; an invisible or archived one is `404`, the same answer a direct read gives.
                      */
                     project_id?: string | null;
-                    /** @description Optional steering in the caller's own words ("shorter", "warmer", "ask for Tuesday"). The one input that is NOT untrusted — the caller typed it — and so the only one outside the fence. */
-                    intent?: string | null;
-                    /** @description The draft the composer is CURRENTLY showing, when the call is a rewrite rather than a first draft. The contact-side mirror carries the same field for the same reason — see `POST /contacts/{id}/draft-email`. */
-                    rewrite_of?: string | null;
                 };
             };
         };
@@ -58228,10 +58227,7 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json": {
-                    /** @description Optional steering, e.g. "polite follow-up referencing Friday". */
-                    intent?: string;
-                };
+                "application/json": components["schemas"]["DraftSteering"];
             };
         };
         responses: {
@@ -61545,10 +61541,7 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json": {
-                    /** @description Optional steering in the caller's own words ("shorter", "warmer", "ask for Tuesday"). The one input that is NOT untrusted — the caller typed it — and so the only one outside the fence. */
-                    intent?: string | null;
-                };
+                "application/json": components["schemas"]["DraftSteering"];
             };
         };
         responses: {

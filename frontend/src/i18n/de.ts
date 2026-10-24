@@ -2947,6 +2947,7 @@ export const de = {
   "co.health.reason.quiet_other":
     "Seit {days} Tagen keine Antwort und kein Termin.",
   "co.health.reason.meetingBooked": "Ein Termin ist für den {at} angesetzt.",
+  "co.health.reason.lastMetToday": "Heute getroffen.",
   "co.health.reason.lastMet_one": "Zuletzt vor {days} Tag getroffen.",
   "co.health.reason.lastMet_other": "Zuletzt vor {days} Tagen getroffen.",
   "co.health.reason.singleThreaded":

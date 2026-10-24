@@ -15,7 +15,11 @@ export const WITHHELD_READING: MessageKey = "reading.restricted";
 // reader's clock. `undefined` is TODAY, decided here and nowhere else: zero
 // days is today, and a NEGATIVE span is skew between a timestamp and the read
 // instant, which no slot may print.
-export function daysAgo(at: string, asOf: string): number | undefined {
-  const days = calendarDaysBetween(new Date(at), new Date(asOf));
+export function daysAgo(
+  at: string,
+  asOf: string,
+  zone: string,
+): number | undefined {
+  const days = calendarDaysBetween(new Date(at), new Date(asOf), zone);
   return days > 0 ? days : undefined;
 }

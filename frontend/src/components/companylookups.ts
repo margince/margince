@@ -9,7 +9,13 @@ import {
   type HealthRating,
 } from "../design-system/readingtone";
 import { formatDateAbbrev, formatNumber } from "../format/format";
-import { type PluralBase, useLocale, usePlural, useT } from "../i18n";
+import {
+  type Locale,
+  type PluralBase,
+  useLocale,
+  usePlural,
+  useT,
+} from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useRecordZone } from "../lib/recordzone";
 import { useFinanceSummary } from "./financesummary";
@@ -88,14 +94,19 @@ type HealthReasonCode = components["schemas"]["HealthDimensionReasonCode"];
 type ReasonParam = "days" | "count" | "total" | "at";
 type ReasonMessage = { needs: readonly ReasonParam[] } & (
   | { key: MessageKey }
-  | { plural: PluralBase; by: "days" | "count" }
+  | { plural: PluralBase; by: "days" | "count"; today?: MessageKey }
 );
 
 const HEALTH_REASON: Record<HealthReasonCode, ReasonMessage> = {
   never_written: { needs: [], key: "co.health.reason.neverWritten" },
   quiet: { needs: ["days"], plural: "co.health.reason.quiet", by: "days" },
   meeting_booked: { needs: ["at"], key: "co.health.reason.meetingBooked" },
-  last_met: { needs: ["days"], plural: "co.health.reason.lastMet", by: "days" },
+  last_met: {
+    needs: ["days"],
+    plural: "co.health.reason.lastMet",
+    by: "days",
+    today: "co.health.reason.lastMetToday",
+  },
   single_threaded: { needs: [], key: "co.health.reason.singleThreaded" },
   several_contacts: {
     needs: ["count"],
@@ -119,6 +130,23 @@ const HEALTH_REASON: Record<HealthReasonCode, ReasonMessage> = {
   },
 };
 
+const REASON_NUMBERS = ["days", "count", "total"] as const;
+
+/** The numbers a reason names, grouped for this reader. */
+function reasonParams(
+  values: NonNullable<HealthDimension["reason_params"]>,
+  locale: Locale,
+): Record<string, string> {
+  const params: Record<string, string> = {};
+  for (const name of REASON_NUMBERS) {
+    const value = values[name];
+    if (value != null) {
+      params[name] = formatNumber(value, locale);
+    }
+  }
+  return params;
+}
+
 /** Says a health dimension's reason in the reader's language. */
 export function useHealthReason(): (
   dimension: Pick<HealthDimension, "reason" | "reason_code" | "reason_params">,
@@ -134,20 +162,18 @@ export function useHealthReason(): (
     if (!message || message.needs.some((name) => values[name] == null)) {
       return dimension.reason;
     }
-    const params: Record<string, string> = {};
-    for (const name of ["days", "count", "total"] as const) {
-      const value = values[name];
-      if (value != null) {
-        params[name] = formatNumber(value, locale);
-      }
-    }
+    const params = reasonParams(values, locale);
     if (values.at) {
       params.at = formatDateAbbrev(values.at, locale, zone);
     }
     if ("key" in message) {
       return t(message.key, params);
     }
-    return plural(message.plural, values[message.by] ?? 0, params);
+    const counted = values[message.by] ?? 0;
+    if (counted === 0 && message.today) {
+      return t(message.today, params);
+    }
+    return plural(message.plural, counted, params);
   };
 }
 

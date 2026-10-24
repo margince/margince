@@ -121,6 +121,10 @@ type DealCoverage struct {
 	// as "do not judge" exactly as it reads a zero LastTouchAt: a fixture that
 	// never described a clock has not described a cold deal either.
 	TouchedAsOf time.Time
+	// Zone is the installation zone going-cold counts its days in, the zone the
+	// reader sees the touch date in. Unset on a coverage built by hand, which
+	// goingCold reads as "do not judge" like a zero TouchedAsOf.
+	Zone *time.Location
 	// EverTouched says a touch has actually been captured, as opposed to
 	// LastTouchAt standing in with the deal's creation. The engagement rules
 	// read it to tell a deal nobody has worked from one that is simply new:
@@ -213,6 +217,9 @@ func CoverageFor(ctx context.Context, tx pgx.Tx, dealID ids.DealID, now time.Tim
 	}
 	out.Status, out.LastTouchAt, out.EverTouched = facts.status, facts.lastTouchAt, facts.everTouched
 	out.TouchedAsOf = facts.asOf
+	if out.Zone, err = identity.ZoneAppliedTx(ctx, tx); err != nil {
+		return out, err
+	}
 
 	stakeholders, err := deals.Stakeholders(ctx, tx, dealID, now)
 	if err != nil {
@@ -383,10 +390,10 @@ func departureRisks(c DealCoverage, say langcopy.Spoken) []Risk {
 // TouchedAsOf is the same "do not judge" a zero LastTouchAt is — a coverage
 // built by hand described no clock, so it described no silence either.
 func goingCold(c DealCoverage, say langcopy.Spoken) (Risk, bool) {
-	if c.Status != dealStatusOpen || c.LastTouchAt.IsZero() || c.TouchedAsOf.IsZero() {
+	if c.Status != dealStatusOpen || c.LastTouchAt.IsZero() || c.TouchedAsOf.IsZero() || c.Zone == nil {
 		return Risk{}, false
 	}
-	days := elapsed.Days(c.LastTouchAt, c.TouchedAsOf)
+	days := elapsed.Days(c.LastTouchAt, c.TouchedAsOf, c.Zone)
 	if days < goingColdDays {
 		return Risk{}, false
 	}

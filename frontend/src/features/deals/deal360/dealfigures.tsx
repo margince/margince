@@ -196,13 +196,13 @@ export function DealTimeline({
 
 function timelineGap(
   { card, activities, asOf }: DealStandingInputs,
-  { t, plural, locale }: Words,
+  { t, plural, locale, zone }: Words,
 ): TimelineGap | undefined {
   const waiting = card ? waitingSince(card, activities) : null;
   if (!waiting) {
     return undefined;
   }
-  const days = calendarDaysBetween(new Date(waiting.at), new Date(asOf));
+  const days = calendarDaysBetween(new Date(waiting.at), new Date(asOf), zone);
   return {
     from: waiting.at,
     title: plural("standing.days", days, {

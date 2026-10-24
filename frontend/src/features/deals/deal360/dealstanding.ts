@@ -214,11 +214,13 @@ export function stageTimes({
   currentId,
   entries,
   asOf,
+  zone,
 }: Readonly<{
   stages: readonly Pick<Stage, "id">[];
   currentId: string | null;
   entries: ReadonlyMap<string, string>;
   asOf: string;
+  zone: string;
 }>): ReadonlyMap<string, StageTime> {
   const times = new Map<string, StageTime>();
   const dated = stages
@@ -233,7 +235,7 @@ export function stageTimes({
       return;
     }
     times.set(stage.id, {
-      days: calendarDaysBetween(new Date(stage.at), new Date(end)),
+      days: calendarDaysBetween(new Date(stage.at), new Date(end), zone),
       current,
     });
   });

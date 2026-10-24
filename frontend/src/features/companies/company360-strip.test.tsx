@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
+import { RecordZoneProvider } from "../../lib/recordzone";
 import { StandingFigures } from "./companystanding.figures";
 import type { CompanyTab } from "./companytab";
 
@@ -86,15 +87,23 @@ afterEach(() => {
 async function renderFigures(
   three60: Company360,
   onOpenTab?: (tab: CompanyTab) => void,
+  zone?: string,
 ): Promise<HTMLElement> {
   stubFinance();
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+  const figures = (
+    <StandingFigures companyId="o-1" view={three60} onOpenTab={onOpenTab} />
+  );
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <StandingFigures companyId="o-1" view={three60} onOpenTab={onOpenTab} />
+        {zone ? (
+          <RecordZoneProvider zone={zone}>{figures}</RecordZoneProvider>
+        ) : (
+          figures
+        )}
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -269,6 +278,29 @@ describe("the last-contact cell", () => {
 
     expect(cellOf(plate).textContent).toContain("5 d");
     expect(cellOf(plate).textContent).toContain(en["co.spine.kind.meeting"]);
+  });
+
+  // 15:00 the day before, read at 01:00 in UTC+7: yesterday for the reader,
+  // the same day for UTC. The count follows the zone the date beside it is
+  // drawn in.
+  it.each([
+    ["Asia/Bangkok", "1 d"],
+    ["UTC", en["co.strip.lastTouch.today"]],
+  ])("counts the day in %s", async (zone, shown) => {
+    const plate = await renderFigures(
+      view({
+        as_of: "2026-08-17T18:00:00Z",
+        last_contact: {
+          at: "2026-08-17T08:00:00Z",
+          kind: "meeting",
+          activity_id: "00000000-0000-4000-8000-0000000000aa",
+        },
+      }),
+      undefined,
+      zone,
+    );
+
+    expect(within(cellOf(plate)).getByText(shown)).toBeTruthy();
   });
 
   it("says none when the server names no last contact", async () => {

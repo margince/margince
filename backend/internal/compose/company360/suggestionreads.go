@@ -186,6 +186,8 @@ func hasOpenTask(
 // dismissal would silently match nothing.
 type suggestionInputs struct {
 	language textlang.Lang
+	// loc is the installation zone the advice counts its days in.
+	loc *time.Location
 	// timeline and pipeline are the two grants that decide which rules run at
 	// all. They are the object grants, which is exactly what makes a 360 section
 	// absent — row scope narrows a section, it does not withhold it.
@@ -242,12 +244,12 @@ func (in suggestionInputs) advisable() bool { return in.timeline || in.pipeline 
 func gatherSuggestionInputs(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now time.Time,
 	facts signalFacts, heading companyHeading, baseCurrency string,
-	opts AssembleOptions, language textlang.Lang,
+	opts AssembleOptions, language textlang.Lang, loc *time.Location,
 ) (suggestionInputs, error) {
 	timeline := auth.ReadGranted(ctx, "activity")
 	pipeline := auth.ReadGranted(ctx, "deal")
 	contractsGranted := auth.ReadGranted(ctx, "contract")
-	in := suggestionInputs{timeline: timeline, pipeline: pipeline, contracts: contractsGranted, language: language}
+	in := suggestionInputs{timeline: timeline, pipeline: pipeline, contracts: contractsGranted, language: language, loc: loc}
 	if in.contracts {
 		strip, err := readContractStrip(ctx, tx, companyID, now, baseCurrency)
 		if err != nil {

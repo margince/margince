@@ -7,7 +7,12 @@
 // same way in a member table's filter columns, so the two never disagree.
 
 import { Check, CircleHelp, X } from "lucide-react";
-import { calendarDaysBetween, formatNumber } from "../../format/format";
+import { isRealCalendarDay } from "../../format/calendarday";
+import {
+  calendarDaysBetween,
+  displayDay,
+  formatNumber,
+} from "../../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
 import {
   type FilterVocabulary,
@@ -21,6 +26,7 @@ import type {
   ListRecordType,
 } from "../../lib/lists.queries";
 import { useMemberNames } from "../../lib/membernames";
+import { useRecordZone } from "../../lib/recordzone";
 import type { FilterOp } from "../../lib/segmentpredicate";
 import { clauseWords, moneyText, useSentenceWords } from "./filtersentence";
 
@@ -174,13 +180,14 @@ export function useFieldValueText(
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
+  const zone = useRecordZone();
   const vocabulary = useFilterVocabulary(entityType, enabled);
   const users = useMemberNames(enabled ? userIds : []);
   return (name: string, raw: string): string => {
     const field = vocabularyField(vocabulary.data, name);
     switch (field?.type) {
       case "date":
-        return dayText(raw, plural, t, locale) ?? raw;
+        return dayText(raw, plural, t, locale, zone) ?? raw;
       case "boolean":
         return raw === "true" ? t("filters.yes") : t("filters.no");
       case "currency":
@@ -219,12 +226,13 @@ function dayText(
   plural: ReturnType<typeof usePlural>,
   t: ReturnType<typeof useT>,
   locale: Locale,
+  zone: string,
 ): string | undefined {
-  const day = new Date(`${raw.slice(0, 10)}T00:00:00Z`);
-  if (Number.isNaN(day.getTime())) {
+  const named = raw.slice(0, 10);
+  if (!isRealCalendarDay(named)) {
     return undefined;
   }
-  const days = calendarDaysBetween(day, new Date());
+  const days = calendarDaysBetween(displayDay(named, zone), new Date(), zone);
   if (days === 0) {
     return t("lists.why.today");
   }

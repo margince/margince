@@ -275,7 +275,9 @@ function lastTouchFigure(
     key: "last-touch",
     label: t("lead.figure.lastTouch"),
     value: at ? formatDayMonth(at, locale, zone) : t("standing.noneYet"),
-    detail: at ? relativeDays(at, t, locale, new Date(ctx.asOf)) : undefined,
+    detail: at
+      ? relativeDays(at, t, locale, zone, new Date(ctx.asOf))
+      : undefined,
   };
 }
 

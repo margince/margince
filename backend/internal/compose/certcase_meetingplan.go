@@ -211,6 +211,7 @@ func meetingPlanInput(f meetingPlanFixture) (meetingbrief.Input, map[string]stri
 		Subject:    f.Subject,
 		StartsAt:   now.Add(24 * time.Hour),
 		Now:        now,
+		Zone:       time.UTC,
 		Company:    f.Company,
 		Attendees: []meetingbrief.AttendeeIn{
 			{ContactID: contact, FullName: f.Attendee},

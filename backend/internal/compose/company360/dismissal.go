@@ -176,7 +176,11 @@ func (s *Service) raisesSuggestion(
 	if err != nil {
 		return false, err
 	}
-	in, err := gatherSuggestionInputs(ctx, tx, companyID, now, facts, heading, base, AssembleOptions{ProjectID: within}, identity.BaseLanguageForRecord(ctx, tx))
+	loc, err := identity.ZoneAppliedTx(ctx, tx)
+	if err != nil {
+		return false, err
+	}
+	in, err := gatherSuggestionInputs(ctx, tx, companyID, now, facts, heading, base, AssembleOptions{ProjectID: within}, identity.BaseLanguageForRecord(ctx, tx), loc)
 	if err != nil {
 		return false, err
 	}

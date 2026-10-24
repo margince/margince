@@ -23,7 +23,7 @@ func TestTheNoReplyCitationCarriesTheMessagesOwnWords(t *testing.T) {
 	newest.Subject = "Slots for the pilot review"
 	newest.Excerpt = "Hi Anna, two slots next week would work on our side."
 
-	got := englishSuggestions.staleThread(testCompanyID(t), suggestNow, newest)
+	got := englishSuggestions.staleThread(testCompanyID(t), suggestNow, time.UTC, newest)
 	if got == nil {
 		t.Fatal("the rule did not fire on a 10-day-old unanswered email")
 	}
@@ -49,7 +49,7 @@ func TestTheNoReplyCitationWithholdsWordsTheReaderMayNotRead(t *testing.T) {
 	newest := sentAgo(10, crmcontracts.ActivityDirectionOutbound)
 	newest.Kind = string(crmcontracts.ActivityKindCall)
 
-	got := englishSuggestions.staleThread(testCompanyID(t), suggestNow, newest)
+	got := englishSuggestions.staleThread(testCompanyID(t), suggestNow, time.UTC, newest)
 	if got == nil {
 		t.Fatal("the rule went silent on a message whose words are withheld")
 	}
@@ -115,7 +115,7 @@ func TestTheCitationsWordsNeverReachTheFingerprint(t *testing.T) {
 	worded := bare
 	worded.Kind, worded.Subject, worded.Excerpt = "email", "Re: pilot", "Two slots next week."
 
-	if a, b := englishSuggestions.staleThread(companyID, suggestNow, bare), englishSuggestions.staleThread(companyID, suggestNow, worded); a.Fingerprint != b.Fingerprint {
+	if a, b := englishSuggestions.staleThread(companyID, suggestNow, time.UTC, bare), englishSuggestions.staleThread(companyID, suggestNow, time.UTC, worded); a.Fingerprint != b.Fingerprint {
 		t.Errorf("the no-reply fingerprint moved with the words:\n  %s\n  %s", a.Fingerprint, b.Fingerprint)
 	}
 

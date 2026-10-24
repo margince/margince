@@ -38,11 +38,7 @@ func reconcileContinuity(ctx context.Context, tx pgx.Tx, company ids.CompanyID, 
 	if err != nil || !Actionable(finding) {
 		return finding, err
 	}
-	zone, err := identity.TimezoneAppliedTx(ctx, tx)
-	if err != nil {
-		return Finding{}, err
-	}
-	location, err := storekit.LoadZone(zone)
+	location, err := identity.ZoneAppliedTx(ctx, tx)
 	if err != nil {
 		return Finding{}, err
 	}

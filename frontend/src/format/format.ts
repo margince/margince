@@ -404,12 +404,13 @@ export function relativeDays(
   at: string | null | undefined,
   t: Translator,
   locale: Locale,
+  zone: string,
   now: Date = new Date(),
 ): string {
   if (!at) {
     return t("contact.strip.never");
   }
-  const days = calendarDaysBetween(new Date(at), now);
+  const days = calendarDaysBetween(new Date(at), now, zone);
   if (days <= 0) {
     return t("contact.strip.today");
   }

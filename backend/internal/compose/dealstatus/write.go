@@ -63,7 +63,7 @@ func storyLines(f facts) []sentence {
 	lines := []sentence{plain(fmt.Sprintf(said.Say(statusWords.Story), f.deal.Name, said.dealStatus(string(f.deal.Status))))}
 	if last, ok := lastContact(f); ok {
 		lines = append(lines, said.cited(
-			fmt.Sprintf(said.Say(statusWords.LastContact), said.since(f.now, last.OccurredAt), said.subjectOf(last)),
+			fmt.Sprintf(said.Say(statusWords.LastContact), said.since(f.now, last.OccurredAt, f.loc), said.subjectOf(last)),
 			last))
 	} else {
 		lines = append(lines, plain(said.Say(statusWords.NoContact)))
@@ -97,7 +97,7 @@ func blockerLines(f facts) []sentence {
 		return nil
 	}
 	var lines []sentence
-	for _, r := range deals.HealthReasons(*f.health, f.now, f.lang) {
+	for _, r := range deals.HealthReasons(*f.health, f.now, f.loc, f.lang) {
 		if r.Value >= atRiskFactor {
 			continue
 		}

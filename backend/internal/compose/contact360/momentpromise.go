@@ -280,7 +280,7 @@ func (said momentCopy) overdueClaimCard(now time.Time, claim crmcontracts.Conver
 	// SPEAKER promised, so its sentence keeps that framing, and its count is
 	// elapsed calendar days rather than whole days behind.
 	whyNow := said.Say(momentWords.PromisedToday)
-	if overdue := elapsed.Days(*claim.DueAt, now); overdue > 0 {
+	if overdue := elapsed.Days(*claim.DueAt, now, said.zone); overdue > 0 {
 		whyNow = fmt.Sprintf(said.Say(momentWords.PromisedAgo), overdue)
 		if overdue == 1 {
 			whyNow = said.Say(momentWords.PromisedYesterday)

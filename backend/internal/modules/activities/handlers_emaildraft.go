@@ -17,6 +17,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -51,7 +52,7 @@ type DraftResult struct {
 // preferred over the plain EmailDrafter shape; the plain seam stays for
 // consumers (agents, automation) whose surfaces carry text only.
 type ProvenanceEmailDrafter interface {
-	DraftEmailWithProvenance(ctx context.Context, anchor ids.UUID, intent string) (DraftResult, error)
+	DraftEmailWithProvenance(ctx context.Context, anchor ids.UUID, steering draftfloor.Steering) (DraftResult, error)
 }
 
 // DraftEmail serves a reply draft for the anchored activity, with its
@@ -59,18 +60,12 @@ type ProvenanceEmailDrafter interface {
 // whether the sender's voice was lost on the way (voice_degraded). Drafting
 // never sends; the send endpoint stays a separate consent-gated operation.
 func (h Handlers) DraftEmail(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
-	var req struct {
-		Intent *string `json:"intent"`
-	}
+	var req crmcontracts.DraftEmailJSONRequestBody
 	if r.ContentLength > 0 && !httperr.Decode(w, r, &req) {
 		return
 	}
-	intent := ""
-	if req.Intent != nil {
-		intent = *req.Intent
-	}
 	ctx := r.Context()
-	result, err := h.prepareEmailDraft(ctx, ids.UUID(id), intent)
+	result, err := h.prepareEmailDraft(ctx, ids.UUID(id), draftfloor.NewSteering(req.Intent, req.RewriteOf))
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
@@ -90,12 +85,12 @@ func (h Handlers) DraftEmail(w http.ResponseWriter, r *http.Request, id crmcontr
 	})
 }
 
-func (h Handlers) prepareEmailDraft(ctx context.Context, anchor ids.UUID, intent string) (DraftResult, error) {
+func (h Handlers) prepareEmailDraft(ctx context.Context, anchor ids.UUID, steering draftfloor.Steering) (DraftResult, error) {
 	activity, err := h.store.GetActivityContent(ctx, ids.From[ids.ActivityKind](anchor), storekit.LiveOnly)
 	if err != nil {
 		return DraftResult{}, err
 	}
-	result, err := h.draftForActivity(ctx, anchor, activity, intent)
+	result, err := h.draftForActivity(ctx, anchor, activity, steering)
 	if err != nil {
 		return DraftResult{}, err
 	}
@@ -107,12 +102,12 @@ func (h Handlers) prepareEmailDraft(ctx context.Context, anchor ids.UUID, intent
 	return result, nil
 }
 
-func (h Handlers) draftForActivity(ctx context.Context, anchor ids.UUID, activity crmcontracts.Activity, intent string) (DraftResult, error) {
+func (h Handlers) draftForActivity(ctx context.Context, anchor ids.UUID, activity crmcontracts.Activity, steering draftfloor.Steering) (DraftResult, error) {
 	if provenance, ok := h.emailDrafter.(ProvenanceEmailDrafter); ok {
-		return provenance.DraftEmailWithProvenance(ctx, anchor, intent)
+		return provenance.DraftEmailWithProvenance(ctx, anchor, steering)
 	}
 	if h.emailDrafter != nil {
-		subject, body, err := h.emailDrafter.DraftEmail(ctx, anchor, intent)
+		subject, body, err := h.emailDrafter.DraftEmail(ctx, anchor, steering.Intent)
 		return DraftResult{Subject: subject, Body: body}, err
 	}
 	subject, body := h.store.FloorDraft(ctx, anchor, activity)

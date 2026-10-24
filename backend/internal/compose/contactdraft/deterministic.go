@@ -52,15 +52,13 @@ func Deterministic(in Input) Draft {
 // does not exist.
 func deterministicSubject(in Input) string {
 	lang, band := in.Envelope.Lang(), in.Envelope.Band()
+	topic := in.Recipient.Employer
 	if in.Deal != nil {
-		return draftfloor.Subject(lang, band, in.Deal.Name, false)
+		topic = in.Deal.Name
 	}
-	// Only a message THEY sent us is a thread to reply to. Our own last
-	// outbound carries a subject too, and "Re:" on it replies to ourselves.
-	if mail, ok := in.threadMail(); ok {
-		return draftfloor.Subject(lang, band, mail.Subject, mail.Inbound)
-	}
-	return draftfloor.Subject(lang, band, in.Recipient.Employer, false)
+	// A thread outranks the deal and the employer, whoever wrote last, and the
+	// model's draft gets the same subject from the same call.
+	return draftcore.ContinueThread(draftfloor.Subject(lang, band, topic, false), in)
 }
 
 // The body: a greeting, where the conversation stands, the one thing there is

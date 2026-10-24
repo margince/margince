@@ -31,11 +31,12 @@ import (
 func FromLead(
 	lead crmcontracts.Lead,
 	activities []crmcontracts.Activity,
-	intent string,
+	req Request,
 	envelope draftfloor.Envelope,
 ) contactdraft.Input {
 	return contactdraft.Input{
-		Intent:    strings.TrimSpace(intent),
+		Intent:    strings.TrimSpace(req.Intent),
+		RewriteOf: strings.TrimSpace(req.RewriteOf),
 		Envelope:  envelope,
 		Recipient: recipientOf(lead, activities),
 		Recent:    contactdraft.FoldRecent(activities, envelope.At()),

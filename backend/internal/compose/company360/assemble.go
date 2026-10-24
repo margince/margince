@@ -226,6 +226,7 @@ type assembly struct {
 	baseCurrency     string
 	baseCurrencyRead bool
 	baseLanguage     textlang.Lang
+	loc              *time.Location
 
 	contacts      []contacts.ContactStrength
 	contactsRead  bool
@@ -352,8 +353,12 @@ func (a *assembly) suggestionInputsOnce() (suggestionInputs, error) {
 			if base, a.adviceErr = a.installationBaseCurrency(); a.adviceErr != nil {
 				return a.advice, a.adviceErr
 			}
+			var loc *time.Location
+			if loc, a.adviceErr = a.zone(); a.adviceErr != nil {
+				return a.advice, a.adviceErr
+			}
 			a.advice, a.adviceErr = gatherSuggestionInputs(
-				a.ctx, a.tx, a.companyID, a.now, facts, heading, base, a.opts, a.recordLanguage())
+				a.ctx, a.tx, a.companyID, a.now, facts, heading, base, a.opts, a.recordLanguage(), loc)
 		}
 		a.adviceRead = true
 	}
