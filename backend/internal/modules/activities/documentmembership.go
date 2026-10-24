@@ -43,9 +43,10 @@ func documentMembership(holder string, pos int) string {
 			 WHERE l.activity_id = a.id AND l.entity_type = '%[1]s' AND l.%[1]s_id = $%[2]d)`, holder, pos)
 	case holderCompany:
 		// An upload keeps the company it was stamped with. A mail file is read
-		// through the employment walk the account timeline uses.
+		// through the links and employment walk, without participants: a Cc'd
+		// employee does not make the mail a document of their employer.
 		own = fmt.Sprintf("at.entity_type <> '%s' AND at.company_id = $%d", linkEntityActivity, pos)
-		linked = CompanyLinkedActivityExists(pos)
+		linked = CompanyFiledActivityExists(pos)
 	default:
 		panic("activities: no document membership for holder " + holder)
 	}

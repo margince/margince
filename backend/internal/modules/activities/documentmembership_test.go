@@ -30,9 +30,9 @@ func TestEveryHolderKindRendersTheSharedFileRules(t *testing.T) {
 
 func TestOnlyTheCompanyReadsMailFilesThroughTheEmploymentWalk(t *testing.T) {
 	t.Parallel()
-	walk := CompanyLinkedActivityExists(1)
+	walk := CompanyFiledActivityExists(1)
 	if !strings.Contains(documentMembership(holderCompany, 1), walk) {
-		t.Error("the company membership does not use the account timeline's walk")
+		t.Error("the company membership does not use the links walk without participants")
 	}
 	for _, holder := range []string{holderDeal, holderContact} {
 		if !strings.Contains(documentMembership(holder, 1), "l."+holder+"_id = $1") {

@@ -250,3 +250,42 @@ func TestALimitedAudienceMailFileStaysWithItsAudience(t *testing.T) {
 		t.Errorf("an admin outside the audience sees the file: contact=%v company=%v", c[file], co[file])
 	}
 }
+
+func TestACcdEmployeesEmployerDoesNotListTheMailFile(t *testing.T) {
+	e := Setup(t)
+	pipeline, stage, _ := DealFixture(t, e)
+	subject := e.SeedCompany(t, "Subject", &e.Rep1)
+	employer := e.SeedCompany(t, "CcEmployer", &e.Rep1)
+	deal := e.SeedDeal(t, "D", pipeline, stage, &e.Rep1)
+	about := e.SeedContact(t, "Ada", &e.Rep1)
+	cc := e.SeedContact(t, "Bob", &e.Rep1)
+	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
+		VALUES ('employment', $1, $2, 'manual', 'human:test')`, about, subject)
+	e.WsExec(t, `INSERT INTO relationship (kind, contact_id, company_id, source, captured_by)
+		VALUES ('employment', $1, $2, 'manual', 'human:test')`, cc, employer)
+	mail := seedActivityWithContact(t, e, about)
+	e.WsExec(t, `INSERT INTO activity_participant (id, activity_id, role, contact_id, address)
+		VALUES ($1, $2, 'cc', $3, 'bob@example.com')`, ids.NewV7(), mail, cc)
+	file := captureMailFile(t, e, mail, "cc.pdf", "application/pdf", []byte("%PDF-1.4"))
+
+	_, _, bySubject := documentIDs(t, e, e.Admin(), deal, about, subject)
+	_, _, byEmployer := documentIDs(t, e, e.Admin(), deal, about, employer)
+	if !bySubject[file] || byEmployer[file] {
+		t.Errorf("subject lists it = %v, Cc'd employer lists it = %v; want true, false", bySubject[file], byEmployer[file])
+	}
+}
+
+func TestAMailFileWithoutAContentTypeStaysOnTheDealList(t *testing.T) {
+	e := Setup(t)
+	pipeline, stage, _ := DealFixture(t, e)
+	deal := e.SeedDeal(t, "D", pipeline, stage, &e.Rep1)
+	contact := e.SeedContact(t, "Ada", &e.Rep1)
+	mail := seedActivityWithContact(t, e, contact)
+	linkMail(t, e, mail, "deal_id", deal)
+	file := captureMailFile(t, e, mail, "untyped.bin", "application/pdf", []byte("%PDF-1.4"))
+	e.WsExec(t, `UPDATE attachment SET content_type = NULL, byte_size = NULL WHERE id = $1`, file)
+
+	if d, c, _ := documentIDs(t, e, e.Admin(), deal, contact, e.SeedCompany(t, "Acme", &e.Rep1)); !d[file] || !c[file] {
+		t.Errorf("a file with no content type left a list: deal=%v contact=%v", d[file], c[file])
+	}
+}
