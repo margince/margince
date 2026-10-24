@@ -92,3 +92,42 @@ func TestAMaskedImageMasksToItself(t *testing.T) {
 		t.Errorf("a second pass stored %q, want %q", twice["body"], once["body"])
 	}
 }
+
+func TestAScheduledSendAndAMailDraftImageAreStoredMasked(t *testing.T) {
+	for _, entityType := range []string{"scheduled_send", "mail_draft"} {
+		if got := maskedImage(t, entityType, map[string]any{"subject": maskableLine}); got["subject"] != maskedLine {
+			t.Errorf("%s subject = %q, want %q", entityType, got["subject"], maskedLine)
+		}
+	}
+}
+
+// Evidence is context about the write, such as a reason, and lands in the same
+// append-only row as the images.
+func TestEveryColumnOfAnAuditRowIsMasked(t *testing.T) {
+	encoded := []byte(`{"reason":"` + maskableLine + `"}`)
+	before, after, evidence := encoded, encoded, encoded
+	if err := maskAuditColumns("activity", &before, &after, &evidence); err != nil {
+		t.Fatalf("maskAuditColumns: %v", err)
+	}
+	for name, column := range map[string][]byte{"before": before, "after": after, "evidence": evidence} {
+		if strings.Contains(string(column), "Hunter2") {
+			t.Errorf("%s still holds the password: %s", name, column)
+		}
+	}
+}
+
+func TestAnAbsentColumnStaysAbsent(t *testing.T) {
+	var evidence []byte
+	if err := maskAuditColumns("activity", &evidence); err != nil || evidence != nil {
+		t.Errorf("an absent evidence became %q (err %v), want SQL NULL", evidence, err)
+	}
+}
+
+func TestOnlyAMaskedTypeHoldsMaskedText(t *testing.T) {
+	if !HoldsMaskedText("activity", maskedLine) {
+		t.Error("an activity value with the marker does not read as masked")
+	}
+	if HoldsMaskedText("contact", maskedLine) || HoldsMaskedText("activity", maskableLine) {
+		t.Error("a contact value, or one without the marker, reads as masked")
+	}
+}

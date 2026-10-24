@@ -12,6 +12,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strconv"
 
 	"github.com/jackc/pgx/v5"
@@ -22,6 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -58,6 +60,7 @@ func NewRestoreSeam(pool *pgxpool.Pool, provider *Provider, corrections *deals.S
 			Unwritable:    valuesNoLongerWritable,
 			EdgeFacts:     edges.EdgeFactsForReverse,
 			EdgeWritable:  edgeIsWritableByCaller(edges),
+			MaskedText:    maskedTextTheRecordKeepsTyped,
 		},
 	}
 }
@@ -77,6 +80,28 @@ func recordIsArchived(ctx context.Context, tx pgx.Tx, entityType string, id ids.
 		return false, err
 	}
 	return archived, nil
+}
+
+// maskedTextTheRecordKeepsTyped names the patch keys holding masked text on a
+// record that stores text as its member typed it. A mail is stored masked, so
+// putting its masked text back writes what the row held.
+func maskedTextTheRecordKeepsTyped(ctx context.Context, tx pgx.Tx, row AuditRow, patch map[string]json.RawMessage) ([]string, error) {
+	var masked []string
+	for key, value := range patch {
+		var text string
+		if json.Unmarshal(value, &text) == nil && storekit.HoldsMaskedText(row.EntityType, text) {
+			masked = append(masked, key)
+		}
+	}
+	if len(masked) == 0 || row.EntityType != entityTypeActivity {
+		return nil, nil
+	}
+	keeps, err := activities.KeepsTypedTextTx(ctx, tx, row.EntityID)
+	if err != nil || !keeps {
+		return nil, err
+	}
+	sort.Strings(masked)
+	return masked, nil
 }
 
 // recordVersionUnmoved refuses a decision taken from a screen the record has

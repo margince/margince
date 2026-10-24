@@ -70,12 +70,6 @@ func writeAuditRow(ctx context.Context, tx pgx.Tx, action, entityType string, en
 	if err != nil {
 		return ids.Nil, err
 	}
-	if beforeJSON, err = maskAuditImage(entityType, beforeJSON); err != nil {
-		return ids.Nil, err
-	}
-	if afterJSON, err = maskAuditImage(entityType, afterJSON); err != nil {
-		return ids.Nil, err
-	}
 	evidence, err = withExtensionAttribution(ctx, withReversalLink(ctx, entityType, entityID, evidence))
 	if err != nil {
 		return ids.Nil, err
@@ -86,6 +80,9 @@ func writeAuditRow(ctx context.Context, tx pgx.Tx, action, entityType string, en
 		if err != nil {
 			return ids.Nil, err
 		}
+	}
+	if err := maskAuditColumns(entityType, &beforeJSON, &afterJSON, &evidenceJSON); err != nil {
+		return ids.Nil, err
 	}
 
 	id := ids.NewV7()

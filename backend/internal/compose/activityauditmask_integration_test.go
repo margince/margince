@@ -11,11 +11,15 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"slices"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -28,12 +32,27 @@ const (
 
 func noteWithBody(ctx context.Context, t *testing.T, e *integration.Env, body string) ids.UUID {
 	t.Helper()
+	return activityWithBody(ctx, t, e, activities.LogActivityInput{Kind: "note", Body: &body})
+}
+
+func activityWithBody(ctx context.Context, t *testing.T, e *integration.Env, in activities.LogActivityInput) ids.UUID {
+	t.Helper()
 	subject := "Kickoff"
-	note, _, err := e.Activities.LogActivity(ctx, activities.LogActivityInput{Kind: "note", Subject: &subject, Body: &body, Source: "manual"})
+	in.Subject, in.Source = &subject, "manual"
+	logged, _, err := e.Activities.LogActivity(ctx, in)
 	if err != nil {
-		t.Fatalf("seed note: %v", err)
+		t.Fatalf("seed %s: %v", in.Kind, err)
 	}
-	return ids.UUID(note.Id)
+	return ids.UUID(logged.Id)
+}
+
+func storedBody(t *testing.T, e *integration.Env, id ids.UUID) string {
+	t.Helper()
+	activity, err := e.Activities.GetActivity(e.Admin(), ids.From[ids.ActivityKind](id), storekit.LiveOnly)
+	if err != nil || activity.Body == nil {
+		t.Fatalf("read the activity back: %v", err)
+	}
+	return *activity.Body
 }
 
 func setNoteBody(ctx context.Context, t *testing.T, e *integration.Env, id ids.UUID, body string) {
@@ -90,5 +109,81 @@ func TestANoteBodysFieldHistoryShowsThePasswordMasked(t *testing.T) {
 	}
 	if newest.NewValue == nil || *newest.NewValue != notePlain {
 		t.Errorf("new value = %v, want %q", newest.NewValue, notePlain)
+	}
+}
+
+// The trail keeps the password only masked, so putting the edit back would
+// overwrite the note's text with the marker.
+func TestANoteEditThatRemovedAPasswordCannotBePutBack(t *testing.T) {
+	e := integration.Setup(t)
+	admin := e.Admin()
+	id := noteWithBody(admin, t, e, noteSecret)
+	setNoteBody(admin, t, e, id, notePlain)
+	entry := latestAuditRowID(t, e, "activity", id, "update")
+
+	if got := advisoryAnswer(admin, t, e, "activity", id, entry); got.Undoable || got.Reason != string(ReasonCredentialNotKept) {
+		t.Errorf("the edit reads %+v, want refused as %s", got, ReasonCredentialNotKept)
+	}
+	_, err := restoreSeamFor(e).Restore(admin, "activity", id, entry, currentVersion(t, e, "activity", id))
+	var refused RefusedRestore
+	if !errors.As(err, &refused) || refused.Reason != ReasonCredentialNotKept {
+		t.Fatalf("Restore answered %v, want a %s refusal", err, ReasonCredentialNotKept)
+	}
+	if got := storedBody(t, e, id); got != notePlain {
+		t.Errorf("the refused undo left body %q, want %q", got, notePlain)
+	}
+}
+
+// A mail is stored masked, so the masked text the trail kept is what it held.
+func TestAMailEditThatRemovedAPasswordCanBePutBack(t *testing.T) {
+	e := integration.Setup(t)
+	admin := e.Admin()
+	body, direction := noteSecret, "inbound"
+	id := activityWithBody(admin, t, e, activities.LogActivityInput{Kind: "email", Body: &body, Direction: &direction})
+	setNoteBody(admin, t, e, id, notePlain)
+	entry := latestAuditRowID(t, e, "activity", id, "update")
+
+	if _, err := restoreSeamFor(e).Restore(admin, "activity", id, entry, currentVersion(t, e, "activity", id)); err != nil {
+		t.Fatalf("Restore: %v", err)
+	}
+	if got := storedBody(t, e, id); got != noteMasked {
+		t.Errorf("the undo left body %q, want %q", got, noteMasked)
+	}
+}
+
+func agentConflicts(t *testing.T, e *integration.Env, id ids.UUID, body string) []string {
+	t.Helper()
+	patch, err := json.Marshal(map[string]string{"body": body})
+	if err != nil {
+		t.Fatal(err)
+	}
+	conflicts, err := fieldOwnership{pool: e.Pool}.HumanOwnedConflicts(e.Admin(), "activity", id, patch)
+	if err != nil {
+		t.Fatalf("HumanOwnedConflicts: %v", err)
+	}
+	return conflicts
+}
+
+// The human's image holds the marker, so the marker itself is not what the
+// human typed and proposing it overwrites their text.
+func TestProposingTheMaskedTextOfAHumansNoteIsAConflict(t *testing.T) {
+	e := integration.Setup(t)
+	admin := e.Admin()
+	id := noteWithBody(admin, t, e, notePlain)
+	setNoteBody(admin, t, e, id, noteSecret)
+
+	if got := agentConflicts(t, e, id, noteMasked); !slices.Contains(got, "body") {
+		t.Errorf("conflicts = %v, want body: the proposal replaces the human's password with the marker", got)
+	}
+}
+
+func TestRestatingTheTextAHumanTypedIsNoConflict(t *testing.T) {
+	e := integration.Setup(t)
+	admin := e.Admin()
+	id := noteWithBody(admin, t, e, notePlain)
+	setNoteBody(admin, t, e, id, noteSecret)
+
+	if got := agentConflicts(t, e, id, noteSecret); slices.Contains(got, "body") {
+		t.Errorf("conflicts = %v, want none: the proposal is the text the human typed", got)
 	}
 }

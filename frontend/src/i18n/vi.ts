@@ -1846,6 +1846,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Công ty hoặc dữ kiện của công ty đã thay đổi sau lần tra cứu này, nên hoàn tác sẽ ghi đè thay đổi sau đó.",
   "history.undo.noRestoreSnapshot":
     "Lần tra cứu này được ghi lại trước khi các dữ kiện cũ được lưu giữ, nên không thể hoàn tác.",
+  "history.undo.credentialNotKept":
+    "Văn bản trước đó chứa mật khẩu, và lịch sử chỉ lưu mật khẩu ở dạng đã che, nên không thể hoàn tác thay đổi này.",
   "history.reversal.collapsed": "Thay đổi của {actor}, {undoer} đã hoàn tác",
   "history.reversal.collapsedSelf":
     "{actor} đã hoàn tác thay đổi của chính mình",

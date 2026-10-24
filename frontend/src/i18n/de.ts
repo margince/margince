@@ -1899,6 +1899,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Das Unternehmen oder seine Angaben haben sich nach dieser Abfrage geändert. Ein Rückgängigmachen würde diese spätere Änderung überschreiben.",
   "history.undo.noRestoreSnapshot":
     "Diese Abfrage wurde gespeichert, bevor die früheren Angaben aufbewahrt wurden. Darum lässt sie sich nicht rückgängig machen.",
+  "history.undo.credentialNotKept":
+    "Der frühere Text enthielt ein Passwort, und der Verlauf bewahrt Passwörter nur maskiert auf. Darum lässt sich diese Änderung nicht rückgängig machen.",
   "history.reversal.collapsed":
     "Änderung von {actor}, rückgängig gemacht von {undoer}",
   "history.reversal.collapsedSelf":

@@ -12,7 +12,11 @@ import (
 	"context"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -25,16 +29,15 @@ const (
 	callNotes     = "Call notes"
 )
 
-// auditHoldsPlain reports whether any audit row of the activity holds the
-// password in either image.
-func auditHoldsPlain(t *testing.T, e *sendEnv, activityID ids.UUID) bool {
+// auditHoldsPlain reports whether any audit row, of any record type, holds the
+// password in clear in its before, after or evidence.
+func auditHoldsPlain(t *testing.T, e *sendEnv) bool {
 	t.Helper()
 	var holds bool
 	if err := e.owner.QueryRow(context.Background(), `
 		SELECT EXISTS (SELECT 1 FROM audit_log
-		  WHERE entity_type = 'activity' AND entity_id = $1
-		    AND (coalesce(before::text, '') || coalesce(after::text, '')) LIKE '%' || $2 || '%')`,
-		activityID, maskablePlain).Scan(&holds); err != nil {
+		  WHERE concat_ws(' ', before::text, after::text, evidence::text) LIKE '%' || $1 || '%')`,
+		maskablePlain).Scan(&holds); err != nil {
 		t.Fatalf("reading the audit rows: %v", err)
 	}
 	return holds
@@ -90,7 +93,7 @@ func TestAnEditThatRemovesAPasswordRecordsTheReplacedTextMasked(t *testing.T) {
 	if after["body"] != callNotes {
 		t.Errorf("after[body] = %q, want %q", after["body"], callNotes)
 	}
-	if auditHoldsPlain(t, e, id) {
+	if auditHoldsPlain(t, e) {
 		t.Error("an audit row of the note still holds the password in clear")
 	}
 }
@@ -109,7 +112,7 @@ func TestANoteKeepsThePasswordItsMemberTypedAndItsAuditDoesNot(t *testing.T) {
 	if want := callNotes + "\n" + maskedLine; after["body"] != want {
 		t.Errorf("after[body] = %q, want %q", after["body"], want)
 	}
-	if auditHoldsPlain(t, e, id) {
+	if auditHoldsPlain(t, e) {
 		t.Error("an audit row of the note holds the password in clear")
 	}
 }
@@ -132,7 +135,7 @@ func TestAnEditToAMailStoresItsPasswordMasked(t *testing.T) {
 	if want := callNotes + "\n" + maskedLine; storedBody != want {
 		t.Errorf("the mail's body = %q, want %q", storedBody, want)
 	}
-	if auditHoldsPlain(t, e, id) {
+	if auditHoldsPlain(t, e) {
 		t.Error("an audit row of the mail holds the password in clear")
 	}
 }
@@ -161,5 +164,26 @@ func TestResendingAMailsPasswordChangesNothing(t *testing.T) {
 	}
 	if updated.Body == nil || *updated.Body != maskedLine {
 		t.Errorf("the second edit answered a body other than %q", maskedLine)
+	}
+}
+
+// Every writer of these record types reaches audit_log through storekit, so
+// the row is written here through it directly, with the text in every column.
+func TestEveryColumnOfAMailTextAuditRowIsStoredMasked(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	for _, entityType := range []string{"activity", "scheduled_send", "mail_draft"} {
+		image := map[string]any{"subject": maskableLine}
+		err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+			_, err := storekit.AuditWithEvidence(ctx, tx, "update", entityType, ids.NewV7(), image, image,
+				map[string]any{"reason": maskableLine})
+			return err
+		})
+		if err != nil {
+			t.Fatalf("auditing a %s: %v", entityType, err)
+		}
+	}
+	if auditHoldsPlain(t, e) {
+		t.Error("an audit row holds the password in clear")
 	}
 }

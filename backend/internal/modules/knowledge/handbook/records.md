@@ -319,9 +319,8 @@ Not every entry can be put back, and the history says which and why before you p
   so you can look at what happened in between and decide.
 - **The record was archived.** A change cannot be put back on an archived
   record; bring a contact, company or deal back first with **Undo** on its archive entry.
-- **You cannot make that change by hand.** Some entries record changes no edit
-  can make, such as clearing a field that must not be empty. They show as
-  history only.
+- **You cannot make that change by hand.** Some entries record changes no edit can make, such as clearing a field that must not be empty. They show as history only.
+- **The earlier text held a password.** History keeps a password, an access key or a token only masked. A note still holds the text you typed, so putting the masked text back would overwrite it, and the change is refused. An email is stored masked anyway, so an email change can still be put back.
 
 If someone else edits the record between your reading the screen and pressing the button, the change is refused and nothing is written. Read the reason, look at the record again, and decide from what is there now.
 

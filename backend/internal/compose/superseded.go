@@ -171,12 +171,21 @@ func columnsThatMoved(ctx context.Context, tx pgx.Tx, row AuditRow, asked []byte
 		if timestamp && sameInstant(live, stated) {
 			continue
 		}
-		if !rewritten && sameOnceAudited(row.EntityType, live, stated) {
+		if liveStandsInForImage(row.EntityType, stated, rewritten) && sameOnceAudited(row.EntityType, live, stated) {
 			continue
 		}
 		moved = append(moved, key)
 	}
 	return moved, rows.Err()
+}
+
+// liveStandsInForImage reports whether an image value is text the trail keeps
+// masked and no later audit row wrote its key. The record's live column then
+// holds what that write left, unmasked, and a comparison with the value reads
+// the column instead of the image.
+func liveStandsInForImage(entityType string, stated json.RawMessage, rewritten bool) bool {
+	var image string
+	return !rewritten && json.Unmarshal(stated, &image) == nil && storekit.HoldsMaskedText(entityType, image)
 }
 
 // sameOnceAudited reports whether a live text column is the image's text once

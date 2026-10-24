@@ -1842,6 +1842,8 @@ export const en = {
     "The company or its facts changed after this lookup, so undoing it would overwrite that later change.",
   "history.undo.noRestoreSnapshot":
     "This lookup was recorded before the earlier facts were kept, so it cannot be undone.",
+  "history.undo.credentialNotKept":
+    "The earlier text held a password, and history keeps passwords only masked, so this change cannot be undone.",
   "history.reversal.collapsed": "{actor}’s change, undone by {undoer}",
   "history.reversal.collapsedSelf": "{actor} undid their own change",
   "history.reversal.partly": "{actor}’s change, partly undone by {undoer}",

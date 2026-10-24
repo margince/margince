@@ -46,6 +46,26 @@ func newRecordTypeSet(names ...string) map[string]bool {
 	return set
 }
 
+// humanValueMoved reports whether a proposal changes the value a human's
+// latest write left. The trail keeps typed text masked, so where the image holds
+// masked text the proposal is compared with the live column, and with no
+// table to read the tie goes to asking the human.
+func humanValueMoved(entityType, table string, image json.RawMessage, differsFromImage, differsFromLive bool) bool {
+	if !liveStandsInForImage(entityType, image, false) {
+		return differsFromImage
+	}
+	return table == "" || differsFromLive
+}
+
+// liveValueOf renders the record's current value of latest.key, or NULL
+// without a table to read it from.
+func liveValueOf(table string) string {
+	if table == "" {
+		return "NULL::jsonb"
+	}
+	return `(SELECT to_jsonb(t) -> latest.key FROM ` + table + ` t WHERE t.id = $2)`
+}
+
 // unauditedHolder renders the predicate deciding whether an UNAUDITED patch
 // key is human-owned. With a table to read, the answer is "only if the row
 // holds a value there that is not the column's own default" — filling an
@@ -171,10 +191,13 @@ func (f fieldOwnership) HumanOwnedConflicts(ctx context.Context, entityType stri
 			      AND a.action = 'create' AND a.actor_type = 'human'
 			  ) AS yes
 			)
-			SELECT key FROM latest
-			WHERE actor_type = 'human' AND proposed_value IS DISTINCT FROM current_value
-			UNION
-			SELECT p.key FROM proposed p, human_created h
+			SELECT key, true, current_value,
+			       proposed_value IS DISTINCT FROM current_value,
+			       proposed_value IS DISTINCT FROM `+liveValueOf(table)+`
+			FROM latest
+			WHERE actor_type = 'human'
+			UNION ALL
+			SELECT p.key, false, NULL::jsonb, true, true FROM proposed p, human_created h
 			WHERE h.yes
 			  AND NOT EXISTS (SELECT 1 FROM latest l WHERE l.key = p.key)
 			  AND `+unauditedHolder(table)+`
@@ -186,10 +209,14 @@ func (f fieldOwnership) HumanOwnedConflicts(ctx context.Context, entityType stri
 		defer rows.Close()
 		for rows.Next() {
 			var field string
-			if err := rows.Scan(&field); err != nil {
+			var audited, differsFromImage, differsFromLive bool
+			var image json.RawMessage
+			if err := rows.Scan(&field, &audited, &image, &differsFromImage, &differsFromLive); err != nil {
 				return err
 			}
-			conflicts = append(conflicts, field)
+			if !audited || humanValueMoved(entityType, table, image, differsFromImage, differsFromLive) {
+				conflicts = append(conflicts, field)
+			}
 		}
 		return rows.Err()
 	})
