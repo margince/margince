@@ -173,9 +173,8 @@ func TestTheSenderTaskRollsBackWithItsBatch(t *testing.T) {
 	}
 }
 
-// An installation that finished version 1 of the task keeps its ledger row, so
-// only a higher version makes the cursor start over and stamp the notices the
-// first run did not recognise.
+// An installation that finished version 1 keeps its ledger row. Only a higher
+// version restarts the cursor, so the notices the first run missed get stamped.
 func TestTheSenderTaskRunsAgainOverAFinishedFirstVersion(t *testing.T) {
 	f := newSenderTaskFixture(t)
 	ctx := principal.SystemActing(f.e.Admin(), "system:datatask-test")

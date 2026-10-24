@@ -169,9 +169,8 @@ func TestTheMachineAddressTaskRollsItsTagsBackWithItsProgress(t *testing.T) {
 	}
 }
 
-// An installation that finished version 1 of the task keeps its ledger row, so
-// only a higher version makes the cursor start over and tag the contacts the
-// first run did not know to tag.
+// An installation that finished version 1 keeps its ledger row. Only a higher
+// version restarts the cursor, so the contacts the first run missed get tagged.
 func TestTheMachineAddressTaskRunsAgainOverAFinishedFirstVersion(t *testing.T) {
 	e := integration.Setup(t)
 	conn := integration.OwnerConn(t)
