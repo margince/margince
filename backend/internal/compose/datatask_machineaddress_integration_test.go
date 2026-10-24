@@ -168,3 +168,25 @@ func TestTheMachineAddressTaskRollsItsTagsBackWithItsProgress(t *testing.T) {
 		t.Error("a malformed cursor was read as a position")
 	}
 }
+
+// An installation that finished version 1 of the task keeps its ledger row, so
+// only a higher version makes the cursor start over and tag the contacts the
+// first run did not know to tag.
+func TestTheMachineAddressTaskRunsAgainOverAFinishedFirstVersion(t *testing.T) {
+	e := integration.Setup(t)
+	conn := integration.OwnerConn(t)
+	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
+
+	finished := machineAddressDataTask()
+	finished.Version = 1
+	runMachineAddressTask(ctx, t, e, finished)
+	token := machineAddressContact(t, e, conn, "D", "d+"+strings.Repeat("aorgb9", 34)+"@docs.google.com")
+	if got := machineTagged(t, e, token); got != 0 {
+		t.Fatalf("contact tagged before the second run: %d", got)
+	}
+
+	runMachineAddressTask(ctx, t, e, machineAddressDataTask())
+	if got := machineTagged(t, e, token); got != 1 {
+		t.Errorf("token-address contact carries the tag %d times after the version bump, want once", got)
+	}
+}

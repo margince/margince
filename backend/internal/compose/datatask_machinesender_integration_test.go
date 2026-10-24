@@ -172,3 +172,23 @@ func TestTheSenderTaskRollsBackWithItsBatch(t *testing.T) {
 		t.Errorf("the estimate capped at 1 reads (%d, more=%v), want (1, true) over two received mails", count, more)
 	}
 }
+
+// An installation that finished version 1 of the task keeps its ledger row, so
+// only a higher version makes the cursor start over and stamp the notices the
+// first run did not recognise.
+func TestTheSenderTaskRunsAgainOverAFinishedFirstVersion(t *testing.T) {
+	f := newSenderTaskFixture(t)
+	ctx := principal.SystemActing(f.e.Admin(), "system:datatask-test")
+
+	finished := machineSenderDataTask()
+	finished.Version = 1
+	runMachineAddressTask(ctx, t, f.e, finished)
+	if _, err := integration.OwnerConn(t).Exec(ctx, `UPDATE activity SET sender_is_machine = false WHERE id = $1`, f.notice); err != nil {
+		t.Fatal(err)
+	}
+
+	runMachineAddressTask(ctx, t, f.e, machineSenderDataTask())
+	if !f.stamped(t, f.notice) {
+		t.Error("the notice stayed unmarked after the version bump")
+	}
+}
