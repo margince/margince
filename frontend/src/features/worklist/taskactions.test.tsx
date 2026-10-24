@@ -644,7 +644,7 @@ test.each([
   expect(screen.queryByRole("button", { name: en["tasks.snooze"] })).toBeNull();
 });
 
-test("a dialog opened on warm reads puts first focus on the task, not on Call", async () => {
+test("a dialog opened on warm reads puts first focus on Done, not on a link or Call", async () => {
   stubNextSteps();
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
@@ -653,6 +653,7 @@ test("a dialog opened on warm reads puts first focus on the task, not on Call", 
     id: "task-1",
     kind: "task",
     subject: "Call back Alice about the renewal",
+    body: "Agenda: https://example.com/agenda",
     occurred_at: "2026-09-08T09:00:00Z",
     is_done: false,
     source_activity_id: "src-1",
@@ -684,6 +685,9 @@ test("a dialog opened on warm reads puts first focus on the task, not on Call", 
   );
 
   const done = screen.getByRole("button", { name: en["tasks.complete"] });
+  expect(
+    screen.getByRole("link", { name: "https://example.com/agenda" }),
+  ).toBeTruthy();
   expect(
     screen.getByRole("link", { name: en["record.verb.call"] }),
   ).toBeTruthy();

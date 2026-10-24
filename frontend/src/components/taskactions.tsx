@@ -321,13 +321,11 @@ export function TaskDetailDialog({
   const query = useActivity(activityId);
   const task: Activity | undefined = query.data;
   const body = useRef<HTMLDivElement>(null);
-  const nextSteps = useRef<HTMLDivElement>(null);
-  // Not the next steps: Enter on a first-focused Call would start a call.
+  const verbs = useRef<HTMLDivElement>(null);
+  // The task's own verbs, else the box: Enter on a first-focused link or Call
+  // would leave the dialog or start a call.
   const firstFocus = () =>
-    (body.current &&
-      focusableWithin(body.current).find(
-        (stop) => !nextSteps.current?.contains(stop),
-      )) ??
+    (verbs.current && focusableWithin(verbs.current)[0]) ??
     body.current?.closest<HTMLElement>('[role="dialog"]') ??
     null;
   return (
@@ -395,11 +393,10 @@ export function TaskDetailDialog({
             </div>
             <TaskNextSteps
               task={task}
-              ref={nextSteps}
               className="form-actions task-detail-actions"
             />
             {!task.is_done && !readOnly && (
-              <div className="form-actions task-detail-actions">
+              <div ref={verbs} className="form-actions task-detail-actions">
                 <TaskQuickActions
                   activityId={task.id}
                   version={task.version}

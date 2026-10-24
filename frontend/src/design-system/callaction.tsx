@@ -72,7 +72,7 @@ export function CallAction(props: Readonly<CallActionProps>) {
 }
 
 // A labelled verb that goes somewhere: `Button`'s ghost look on an anchor, which
-// `Button` cannot render. CallAction and ContactLink's email verb share it.
+// `Button` cannot render.
 export function linkVerb(href: string, glyph: ReactNode, label: string) {
   return (
     <a className="btn btn-ghost" href={href}>

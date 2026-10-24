@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Mail } from "lucide-react";
-import { type Ref, useId } from "react";
+import { useId } from "react";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { CallAction, linkVerb } from "../design-system/callaction";
@@ -31,19 +31,13 @@ export function TaskCallAction({
 
 /**
  * Call, Email and Open contact. `className` wraps them in a row of their own,
- * which `ref` names and which is left out when there is no contact to act on.
+ * which is left out when there is no contact to act on.
  */
 export function TaskNextSteps({
   task,
   offerOpen = true,
   className,
-  ref,
-}: Readonly<{
-  task: Activity;
-  offerOpen?: boolean;
-  className?: string;
-  ref?: Ref<HTMLDivElement>;
-}>) {
+}: Readonly<{ task: Activity; offerOpen?: boolean; className?: string }>) {
   const t = useT();
   const reasonId = useId();
   const { contact, fromCall } = useTaskContact(task);
@@ -73,13 +67,7 @@ export function TaskNextSteps({
       )}
     </>
   );
-  return className ? (
-    <div ref={ref} className={className}>
-      {steps}
-    </div>
-  ) : (
-    steps
-  );
+  return className ? <div className={className}>{steps}</div> : steps;
 }
 
 /** Why Email is refused. `mailbox` is the test ContactLink applies. */
