@@ -79,7 +79,7 @@ var listRecordFilters = map[string][]listFilter{
 		{Name: "id", Type: "array"},
 		{Name: "include_anchor", Type: "boolean"},
 		{Name: "include_archived", Type: "boolean"},
-		{Name: "industry", Type: "string"},
+		{Name: "industry", Type: "string", Enum: []string{"agriculture", "automotive", "aerospace_defense", "chemicals_materials", "construction", "consumer_goods_retail", "education", "energy_utilities", "entertainment_media", "financial_services", "food_beverage", "government_public_sector", "healthcare", "hospitality_tourism", "insurance", "it_services", "software", "legal_professional_services", "logistics_transport", "manufacturing", "marketing_advertising", "mining_metals", "nonprofit", "pharma_biotech", "real_estate", "telecommunications"}},
 		{Name: "lifecycle", Type: "string", Enum: []string{"unknown", "target", "prospect", "opportunity", "customer", "former_customer", "disqualified"}},
 		{Name: "list_id", Type: "string"},
 		{Name: "owner_id", Type: "string"},

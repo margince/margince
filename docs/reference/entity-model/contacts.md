@@ -25,7 +25,7 @@ The 43 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `geocode_provider` | `text` |  |  |
 | `geocode_status` | `text` |  | One of `ok`, `failed`, `no_match`, `stale`. |
 | `geocoded_at` | `timestamp with time zone` |  |  |
-| `industry` | `text` |  |  |
+| `industry` | `text` |  | One of the fixed industry codes, or null. |
 | `is_anchor` | `boolean`, default `false` | yes | True only for this installation's own company. |
 | `last_activity_at` | `timestamp with time zone` |  | When something last happened with this account: the newest `occurred_at` at or before now of a workspace-audience activity linked to it, so a booked meeting counts once it starts, maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). |
 | `legal_name` | `text` |  |  |

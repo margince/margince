@@ -4519,6 +4519,96 @@ func (e CommunicationReviewState) Valid() bool {
 	}
 }
 
+// Defines values for CompanyIndustry.
+const (
+	CompanyIndustryAerospaceDefense          CompanyIndustry = "aerospace_defense"
+	CompanyIndustryAgriculture               CompanyIndustry = "agriculture"
+	CompanyIndustryAutomotive                CompanyIndustry = "automotive"
+	CompanyIndustryChemicalsMaterials        CompanyIndustry = "chemicals_materials"
+	CompanyIndustryConstruction              CompanyIndustry = "construction"
+	CompanyIndustryConsumerGoodsRetail       CompanyIndustry = "consumer_goods_retail"
+	CompanyIndustryEducation                 CompanyIndustry = "education"
+	CompanyIndustryEnergyUtilities           CompanyIndustry = "energy_utilities"
+	CompanyIndustryEntertainmentMedia        CompanyIndustry = "entertainment_media"
+	CompanyIndustryFinancialServices         CompanyIndustry = "financial_services"
+	CompanyIndustryFoodBeverage              CompanyIndustry = "food_beverage"
+	CompanyIndustryGovernmentPublicSector    CompanyIndustry = "government_public_sector"
+	CompanyIndustryHealthcare                CompanyIndustry = "healthcare"
+	CompanyIndustryHospitalityTourism        CompanyIndustry = "hospitality_tourism"
+	CompanyIndustryInsurance                 CompanyIndustry = "insurance"
+	CompanyIndustryItServices                CompanyIndustry = "it_services"
+	CompanyIndustryLegalProfessionalServices CompanyIndustry = "legal_professional_services"
+	CompanyIndustryLogisticsTransport        CompanyIndustry = "logistics_transport"
+	CompanyIndustryManufacturing             CompanyIndustry = "manufacturing"
+	CompanyIndustryMarketingAdvertising      CompanyIndustry = "marketing_advertising"
+	CompanyIndustryMiningMetals              CompanyIndustry = "mining_metals"
+	CompanyIndustryNonprofit                 CompanyIndustry = "nonprofit"
+	CompanyIndustryPharmaBiotech             CompanyIndustry = "pharma_biotech"
+	CompanyIndustryRealEstate                CompanyIndustry = "real_estate"
+	CompanyIndustrySoftware                  CompanyIndustry = "software"
+	CompanyIndustryTelecommunications        CompanyIndustry = "telecommunications"
+)
+
+// Valid indicates whether the value is a known member of the CompanyIndustry enum.
+func (e CompanyIndustry) Valid() bool {
+	switch e {
+	case CompanyIndustryAerospaceDefense:
+		return true
+	case CompanyIndustryAgriculture:
+		return true
+	case CompanyIndustryAutomotive:
+		return true
+	case CompanyIndustryChemicalsMaterials:
+		return true
+	case CompanyIndustryConstruction:
+		return true
+	case CompanyIndustryConsumerGoodsRetail:
+		return true
+	case CompanyIndustryEducation:
+		return true
+	case CompanyIndustryEnergyUtilities:
+		return true
+	case CompanyIndustryEntertainmentMedia:
+		return true
+	case CompanyIndustryFinancialServices:
+		return true
+	case CompanyIndustryFoodBeverage:
+		return true
+	case CompanyIndustryGovernmentPublicSector:
+		return true
+	case CompanyIndustryHealthcare:
+		return true
+	case CompanyIndustryHospitalityTourism:
+		return true
+	case CompanyIndustryInsurance:
+		return true
+	case CompanyIndustryItServices:
+		return true
+	case CompanyIndustryLegalProfessionalServices:
+		return true
+	case CompanyIndustryLogisticsTransport:
+		return true
+	case CompanyIndustryManufacturing:
+		return true
+	case CompanyIndustryMarketingAdvertising:
+		return true
+	case CompanyIndustryMiningMetals:
+		return true
+	case CompanyIndustryNonprofit:
+		return true
+	case CompanyIndustryPharmaBiotech:
+		return true
+	case CompanyIndustryRealEstate:
+		return true
+	case CompanyIndustrySoftware:
+		return true
+	case CompanyIndustryTelecommunications:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CompanyLifecycle.
 const (
 	CompanyLifecycleCustomer       CompanyLifecycle = "customer"
@@ -10888,6 +10978,66 @@ func (e GrowthFitBand) Valid() bool {
 	case GrowthFitBandUnknown:
 		return true
 	case GrowthFitBandWeak:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GrowthFitInput.
+const (
+	GrowthFitInputBuyingCenter  GrowthFitInput = "buying_center"
+	GrowthFitInputBuyingIntents GrowthFitInput = "buying_intents"
+	GrowthFitInputEmployeeRange GrowthFitInput = "employee_range"
+	GrowthFitInputIcp           GrowthFitInput = "icp"
+	GrowthFitInputIndustry      GrowthFitInput = "industry"
+	GrowthFitInputOfferSummary  GrowthFitInput = "offer_summary"
+	GrowthFitInputTechnology    GrowthFitInput = "technology"
+)
+
+// Valid indicates whether the value is a known member of the GrowthFitInput enum.
+func (e GrowthFitInput) Valid() bool {
+	switch e {
+	case GrowthFitInputBuyingCenter:
+		return true
+	case GrowthFitInputBuyingIntents:
+		return true
+	case GrowthFitInputEmployeeRange:
+		return true
+	case GrowthFitInputIcp:
+		return true
+	case GrowthFitInputIndustry:
+		return true
+	case GrowthFitInputOfferSummary:
+		return true
+	case GrowthFitInputTechnology:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for GrowthFitNextStep.
+const (
+	GrowthFitNextStepConfigureModel  GrowthFitNextStep = "configure_model"
+	GrowthFitNextStepConfirmOffering GrowthFitNextStep = "confirm_offering"
+	GrowthFitNextStepGatherInputs    GrowthFitNextStep = "gather_inputs"
+	GrowthFitNextStepRecordProfile   GrowthFitNextStep = "record_profile"
+	GrowthFitNextStepRetryLater      GrowthFitNextStep = "retry_later"
+)
+
+// Valid indicates whether the value is a known member of the GrowthFitNextStep enum.
+func (e GrowthFitNextStep) Valid() bool {
+	switch e {
+	case GrowthFitNextStepConfigureModel:
+		return true
+	case GrowthFitNextStepConfirmOffering:
+		return true
+	case GrowthFitNextStepGatherInputs:
+		return true
+	case GrowthFitNextStepRecordProfile:
+		return true
+	case GrowthFitNextStepRetryLater:
 		return true
 	default:
 		return false
@@ -22285,6 +22435,96 @@ func (e ListCompaniesParamsRelationshipType) Valid() bool {
 	}
 }
 
+// Defines values for ListCompaniesParamsIndustry.
+const (
+	ListCompaniesParamsIndustryAerospaceDefense          ListCompaniesParamsIndustry = "aerospace_defense"
+	ListCompaniesParamsIndustryAgriculture               ListCompaniesParamsIndustry = "agriculture"
+	ListCompaniesParamsIndustryAutomotive                ListCompaniesParamsIndustry = "automotive"
+	ListCompaniesParamsIndustryChemicalsMaterials        ListCompaniesParamsIndustry = "chemicals_materials"
+	ListCompaniesParamsIndustryConstruction              ListCompaniesParamsIndustry = "construction"
+	ListCompaniesParamsIndustryConsumerGoodsRetail       ListCompaniesParamsIndustry = "consumer_goods_retail"
+	ListCompaniesParamsIndustryEducation                 ListCompaniesParamsIndustry = "education"
+	ListCompaniesParamsIndustryEnergyUtilities           ListCompaniesParamsIndustry = "energy_utilities"
+	ListCompaniesParamsIndustryEntertainmentMedia        ListCompaniesParamsIndustry = "entertainment_media"
+	ListCompaniesParamsIndustryFinancialServices         ListCompaniesParamsIndustry = "financial_services"
+	ListCompaniesParamsIndustryFoodBeverage              ListCompaniesParamsIndustry = "food_beverage"
+	ListCompaniesParamsIndustryGovernmentPublicSector    ListCompaniesParamsIndustry = "government_public_sector"
+	ListCompaniesParamsIndustryHealthcare                ListCompaniesParamsIndustry = "healthcare"
+	ListCompaniesParamsIndustryHospitalityTourism        ListCompaniesParamsIndustry = "hospitality_tourism"
+	ListCompaniesParamsIndustryInsurance                 ListCompaniesParamsIndustry = "insurance"
+	ListCompaniesParamsIndustryItServices                ListCompaniesParamsIndustry = "it_services"
+	ListCompaniesParamsIndustryLegalProfessionalServices ListCompaniesParamsIndustry = "legal_professional_services"
+	ListCompaniesParamsIndustryLogisticsTransport        ListCompaniesParamsIndustry = "logistics_transport"
+	ListCompaniesParamsIndustryManufacturing             ListCompaniesParamsIndustry = "manufacturing"
+	ListCompaniesParamsIndustryMarketingAdvertising      ListCompaniesParamsIndustry = "marketing_advertising"
+	ListCompaniesParamsIndustryMiningMetals              ListCompaniesParamsIndustry = "mining_metals"
+	ListCompaniesParamsIndustryNonprofit                 ListCompaniesParamsIndustry = "nonprofit"
+	ListCompaniesParamsIndustryPharmaBiotech             ListCompaniesParamsIndustry = "pharma_biotech"
+	ListCompaniesParamsIndustryRealEstate                ListCompaniesParamsIndustry = "real_estate"
+	ListCompaniesParamsIndustrySoftware                  ListCompaniesParamsIndustry = "software"
+	ListCompaniesParamsIndustryTelecommunications        ListCompaniesParamsIndustry = "telecommunications"
+)
+
+// Valid indicates whether the value is a known member of the ListCompaniesParamsIndustry enum.
+func (e ListCompaniesParamsIndustry) Valid() bool {
+	switch e {
+	case ListCompaniesParamsIndustryAerospaceDefense:
+		return true
+	case ListCompaniesParamsIndustryAgriculture:
+		return true
+	case ListCompaniesParamsIndustryAutomotive:
+		return true
+	case ListCompaniesParamsIndustryChemicalsMaterials:
+		return true
+	case ListCompaniesParamsIndustryConstruction:
+		return true
+	case ListCompaniesParamsIndustryConsumerGoodsRetail:
+		return true
+	case ListCompaniesParamsIndustryEducation:
+		return true
+	case ListCompaniesParamsIndustryEnergyUtilities:
+		return true
+	case ListCompaniesParamsIndustryEntertainmentMedia:
+		return true
+	case ListCompaniesParamsIndustryFinancialServices:
+		return true
+	case ListCompaniesParamsIndustryFoodBeverage:
+		return true
+	case ListCompaniesParamsIndustryGovernmentPublicSector:
+		return true
+	case ListCompaniesParamsIndustryHealthcare:
+		return true
+	case ListCompaniesParamsIndustryHospitalityTourism:
+		return true
+	case ListCompaniesParamsIndustryInsurance:
+		return true
+	case ListCompaniesParamsIndustryItServices:
+		return true
+	case ListCompaniesParamsIndustryLegalProfessionalServices:
+		return true
+	case ListCompaniesParamsIndustryLogisticsTransport:
+		return true
+	case ListCompaniesParamsIndustryManufacturing:
+		return true
+	case ListCompaniesParamsIndustryMarketingAdvertising:
+		return true
+	case ListCompaniesParamsIndustryMiningMetals:
+		return true
+	case ListCompaniesParamsIndustryNonprofit:
+		return true
+	case ListCompaniesParamsIndustryPharmaBiotech:
+		return true
+	case ListCompaniesParamsIndustryRealEstate:
+		return true
+	case ListCompaniesParamsIndustrySoftware:
+		return true
+	case ListCompaniesParamsIndustryTelecommunications:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListCompaniesParamsSizeBand.
 const (
 	ListCompaniesParamsSizeBandN10015000 ListCompaniesParamsSizeBand = "1001-5000"
@@ -30900,7 +31140,9 @@ type Company struct {
 
 	// ImportedFrom Which import wrote this record, so a screen can say "Imported from <name>" instead of "Typed by you". Null when no import wrote it. The name is the source the import was run for (`bundle`); an empty string is an import that was given none. Derived from `source_system`, whose reserved `mirror:` prefix is never shown.
 	ImportedFrom *string `json:"imported_from,omitempty"`
-	Industry     *string `json:"industry,omitempty"`
+
+	// Industry One of the fixed industry codes, or null. The server maps imported, read and typed text onto a code; text that names no code stores none.
+	Industry *CompanyIndustry `json:"industry,omitempty"`
 
 	// IsAnchor True only for this installation's own company.
 	// It is one ordinary company, reachable by id everywhere, but the surfaces that answer
@@ -30975,6 +31217,9 @@ type Company struct {
 	Writable             *bool                  `json:"writable,omitempty"`
 	AdditionalProperties map[string]interface{} `json:"-"`
 }
+
+// CompanyIndustry One of the fixed industry codes, or null. The server maps imported, read and typed text onto a code; text that names no code stores none.
+type CompanyIndustry string
 
 // CompanyLifecycle Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it.
 type CompanyLifecycle string
@@ -32627,14 +32872,11 @@ type CompanyGrowthFit struct {
 	// NegativeFactors What argues against it.
 	NegativeFactors *[]CompanyBriefSentence `json:"negative_factors,omitempty"`
 
-	// NextStep The one named thing to do that would most improve this answer, or null when
-	// nothing is holding it back.
-	//
-	// When the band is `unknown` this is offered INSTEAD of a score and names the
-	// missing inputs to go and find. When the band was capped it names the other
-	// fix — confirming our own offering. Always a concrete action, never a
-	// restatement that data is missing.
-	NextStep *string `json:"next_step,omitempty"`
+	// NextStep The one thing to do that would most improve a growth-fit answer. The client words it.
+	// `gather_inputs` is to find the inputs in `data_completeness.missing`, `record_profile`
+	// is to record our own profile, `confirm_offering` is to confirm our own offering,
+	// `configure_model` is to set up a model and `retry_later` is to try the read again.
+	NextStep *GrowthFitNextStep `json:"next_step,omitempty"`
 
 	// Objections What this company is likely to push back with, each with its evidence.
 	Objections *[]CompanyBriefSentence `json:"objections,omitempty"`
@@ -35420,9 +35662,11 @@ type CreateCompanyRequest struct {
 	Address *Address `json:"address,omitempty"`
 
 	// Description One human-written line saying what the company does.
-	Description     *string                       `json:"description,omitempty"`
-	DisplayName     string                        `json:"display_name"`
-	Domains         *[]CompanyDomainInput         `json:"domains,omitempty"`
+	Description *string               `json:"description,omitempty"`
+	DisplayName string                `json:"display_name"`
+	Domains     *[]CompanyDomainInput `json:"domains,omitempty"`
+
+	// Industry An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.
 	Industry        *string                       `json:"industry,omitempty"`
 	LegalName       *string                       `json:"legal_name,omitempty"`
 	OwnerId         *openapi_types.UUID           `json:"owner_id,omitempty"`
@@ -36382,9 +36626,9 @@ type DataCompleteness struct {
 	// proportion without its denominator is not a completeness figure.
 	Expected int `json:"expected"`
 
-	// Missing Which required inputs are missing, named in the reader's words. This is what
-	// the "next data-gathering step" is built from, so it is never an opaque code.
-	Missing *[]string `json:"missing,omitempty"`
+	// Missing Which required inputs are missing, as codes. The client words them in the
+	// reader's language, so the server sends no sentence here.
+	Missing *[]GrowthFitInput `json:"missing,omitempty"`
 
 	// Present Required inputs available and not stale.
 	Present int `json:"present"`
@@ -39096,6 +39340,15 @@ type FxRateListResponse struct {
 // next step. A reader must never have to guess whether `unknown` means "poor fit" or
 // "we could not tell" — those are opposite conclusions.
 type GrowthFitBand string
+
+// GrowthFitInput One input the growth-fit assessment needs about a company. The client words it.
+type GrowthFitInput string
+
+// GrowthFitNextStep The one thing to do that would most improve a growth-fit answer. The client words it.
+// `gather_inputs` is to find the inputs in `data_completeness.missing`, `record_profile`
+// is to record our own profile, `confirm_offering` is to confirm our own offering,
+// `configure_model` is to set up a model and `retry_later` is to try the read again.
+type GrowthFitNextStep string
 
 // GrowthFitSubScore One dimension of the growth-fit assessment, with the reason for its score.
 //
@@ -51132,9 +51385,11 @@ type UpdateCompanyRequest struct {
 	DisplayName *string `json:"display_name,omitempty"`
 
 	// Domains Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains.
-	Domains   *[]CompanyDomainInput `json:"domains,omitempty"`
-	Industry  *string               `json:"industry,omitempty"`
-	LegalName *string               `json:"legal_name,omitempty"`
+	Domains *[]CompanyDomainInput `json:"domains,omitempty"`
+
+	// Industry An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.
+	Industry  *string `json:"industry,omitempty"`
+	LegalName *string `json:"legal_name,omitempty"`
 
 	// Lifecycle Where the account stands with us (ADR-0079). Absent = untouched.
 	Lifecycle *UpdateCompanyRequestLifecycle `json:"lifecycle,omitempty"`
@@ -56522,9 +56777,9 @@ type ListCompaniesParams struct {
 	// Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
 	Unassigned *bool `form:"unassigned,omitempty" json:"unassigned,omitempty"`
 
-	// Industry Accounts in one industry, matched exactly (DM-VOCAB-2). The column is free text rather
-	// than an enum, so this is the value as it was written.
-	Industry *string `form:"industry,omitempty" json:"industry,omitempty"`
+	// Industry Accounts in one industry, matched exactly on the code (DM-VOCAB-2). A value outside the
+	// list is `422`.
+	Industry *ListCompaniesParamsIndustry `form:"industry,omitempty" json:"industry,omitempty"`
 
 	// SizeBand How many contacts work there (DM-VOCAB-2).
 	SizeBand *ListCompaniesParamsSizeBand `form:"size_band,omitempty" json:"size_band,omitempty"`
@@ -56558,6 +56813,9 @@ type ListCompaniesParamsLifecycle string
 
 // ListCompaniesParamsRelationshipType defines parameters for ListCompanies.
 type ListCompaniesParamsRelationshipType string
+
+// ListCompaniesParamsIndustry defines parameters for ListCompanies.
+type ListCompaniesParamsIndustry string
 
 // ListCompaniesParamsSizeBand defines parameters for ListCompanies.
 type ListCompaniesParamsSizeBand string

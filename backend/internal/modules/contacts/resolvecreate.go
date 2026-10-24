@@ -292,11 +292,12 @@ func createCompany(ctx context.Context, tx pgx.Tx, match CompanyMatch, spec Comp
 	}
 	id := ids.New[ids.CompanyKind]()
 	addr := addressColumns(spec.Address)
+	industry, description := CompanyIndustryColumns(spec.Industry, spec.Description)
 	if err := storekit.RefuseUnknownSeat(ctx, tx, spec.Author); err != nil {
 		return ids.CompanyID{}, err
 	}
 	authorCols, authorHolders, base := storekit.AuthorInsertFragments(spec.Author, []any{
-		id, spec.DisplayName, spec.LegalName, spec.Description, spec.Industry, spec.SizeBand, spec.OwnerID, spec.ParentCompanyID,
+		id, spec.DisplayName, spec.LegalName, description, industry, spec.SizeBand, spec.OwnerID, spec.ParentCompanyID,
 		addr.Line1, addr.Line2, addr.City, addr.Region, addr.PostalCode, addr.Country,
 		spec.Source, spec.CapturedBy, spec.NameSource, spec.Visibility, spec.IsAnchor,
 		spec.SourceSystem, spec.LinkedInURL,
@@ -326,4 +327,19 @@ func createCompany(ctx context.Context, tx pgx.Tx, match CompanyMatch, spec Comp
 		return ids.CompanyID{}, err
 	}
 	return id, nil
+}
+
+// CompanyIndustryColumns decides the industry and description a new company
+// row stores: the code the text names, and for text that names none the
+// description with the source note added. A note alone never claims the
+// description, because the caller's own description is stamped from the input.
+func CompanyIndustryColumns(raw, description *string) (industry, desc *string) {
+	write := resolveIndustryWrite(raw)
+	if write.note == "" {
+		return write.code, description
+	}
+	if next, changed := withIndustrySource(description, *raw); changed {
+		return nil, &next
+	}
+	return nil, description
 }

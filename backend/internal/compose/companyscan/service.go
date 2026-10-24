@@ -332,7 +332,7 @@ func (s *Service) assemble(ctx context.Context, companyID ids.CompanyID, languag
 	if err != nil {
 		return Input{}, "", err
 	}
-	in := Input{Account: companybrief.FromView(view)}
+	in := Input{Account: companybrief.FromView(view).WordedIn(language)}
 	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		words, err := readWords(ctx, tx, companyID, s.now().UTC())
 		if errors.Is(err, apperrors.ErrPermissionDenied) {

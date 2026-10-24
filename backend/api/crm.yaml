@@ -3050,10 +3050,12 @@ paths:
             Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
         - name: industry
           in: query
-          schema: { type: string }
+          schema:
+            type: string
+            enum: [agriculture, automotive, aerospace_defense, chemicals_materials, construction, consumer_goods_retail, education, energy_utilities, entertainment_media, financial_services, food_beverage, government_public_sector, healthcare, hospitality_tourism, insurance, it_services, software, legal_professional_services, logistics_transport, manufacturing, marketing_advertising, mining_metals, nonprofit, pharma_biotech, real_estate, telecommunications]
           description: |
-            Accounts in one industry, matched exactly (DM-VOCAB-2). The column is free text rather
-            than an enum, so this is the value as it was written.
+            Accounts in one industry, matched exactly on the code (DM-VOCAB-2). A value outside the
+            list is `422`.
         - name: size_band
           in: query
           description: How many contacts work there (DM-VOCAB-2).
@@ -38503,7 +38505,12 @@ components:
             company page. A column rather than a governed custom field for the same reason
             `linkedin_url` is one: it is part of what a company IS and every installation wants
             it. Distinct from `industry` (a category) and from the dossier (agent-written prose).
-        industry: { type: [string, 'null'] }
+        industry:
+          type: [string, 'null']
+          description: >-
+            One of the fixed industry codes, or null. The server maps imported, read and typed text
+            onto a code; text that names no code stores none.
+          enum: [null, agriculture, automotive, aerospace_defense, chemicals_materials, construction, consumer_goods_retail, education, energy_utilities, entertainment_media, financial_services, food_beverage, government_public_sector, healthcare, hospitality_tourism, insurance, it_services, software, legal_professional_services, logistics_transport, manufacturing, marketing_advertising, mining_metals, nonprofit, pharma_biotech, real_estate, telecommunications]
         size_band:
           type: [string, 'null']
           enum: [null, '1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+']
@@ -38681,7 +38688,7 @@ components:
         display_name: { type: string }
         legal_name: { type: [string, 'null'] }
         description: { type: [string, 'null'], maxLength: 500, description: One human-written line saying what the company does. }
-        industry: { type: [string, 'null'] }
+        industry: { type: [string, 'null'], maxLength: 2000, description: 'An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.' }
         size_band: { type: [string, 'null'], enum: [null, '1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+'] }
         address: { $ref: '#/components/schemas/Address' }
         owner_id: { type: [string, 'null'], format: uuid }
@@ -38706,7 +38713,7 @@ components:
         display_name: { type: string }
         legal_name: { type: [string, 'null'] }
         description: { type: [string, 'null'], maxLength: 500, description: 'One human-written line saying what the company does. Absent leaves it untouched; an empty string clears it, the same spelling every other nullable text field on this record uses.' }
-        industry: { type: [string, 'null'] }
+        industry: { type: [string, 'null'], maxLength: 2000, description: 'An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.' }
         size_band: { type: [string, 'null'], enum: [null, '1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+'] }
         address: { $ref: '#/components/schemas/Address' }
         owner_id: { type: [string, 'null'], format: uuid }
@@ -39032,9 +39039,23 @@ components:
         missing:
           type: array
           description: |
-            Which required inputs are missing, named in the reader's words. This is what
-            the "next data-gathering step" is built from, so it is never an opaque code.
-          items: { type: string }
+            Which required inputs are missing, as codes. The client words them in the
+            reader's language, so the server sends no sentence here.
+          items: { $ref: '#/components/schemas/GrowthFitInput' }
+
+    GrowthFitInput:
+      type: string
+      enum: [offer_summary, icp, industry, buying_center, buying_intents, employee_range, technology]
+      description: One input the growth-fit assessment needs about a company. The client words it.
+
+    GrowthFitNextStep:
+      type: string
+      enum: [gather_inputs, record_profile, confirm_offering, configure_model, retry_later]
+      description: |
+        The one thing to do that would most improve a growth-fit answer. The client words it.
+        `gather_inputs` is to find the inputs in `data_completeness.missing`, `record_profile`
+        is to record our own profile, `confirm_offering` is to confirm our own offering,
+        `configure_model` is to set up a model and `retry_later` is to try the read again.
 
     CompanyGrowthFit:
       type: object
@@ -39058,15 +39079,14 @@ components:
             caps it at `moderate` (DOSS-AC-13). Null when nothing capped it.
         data_completeness: { $ref: '#/components/schemas/DataCompleteness' }
         next_step:
-          type: [string, 'null']
+          $ref: '#/components/schemas/GrowthFitNextStep'
           description: |
-            The one named thing to do that would most improve this answer, or null when
+            The one named thing to do that would most improve this answer, or absent when
             nothing is holding it back.
 
-            When the band is `unknown` this is offered INSTEAD of a score and names the
-            missing inputs to go and find. When the band was capped it names the other
-            fix — confirming our own offering. Always a concrete action, never a
-            restatement that data is missing.
+            When the band is `unknown` this is offered INSTEAD of a score: `gather_inputs`
+            when inputs are missing. When the band was capped it names the other fix,
+            `confirm_offering`. A code, worded by the client.
         sub_scores:
           type: array
           description: |

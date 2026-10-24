@@ -12,6 +12,7 @@ package companydossier
 
 import (
 	"context"
+	"strings"
 
 	"github.com/margince/margince/backend/internal/compose/claims"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -37,9 +38,9 @@ import (
 type Facts interface {
 	ListCompanyProfileFields(ctx context.Context, id ids.CompanyID) ([]crmcontracts.CompanyProfileField, error)
 	ListCompanyFacts(ctx context.Context, id ids.CompanyID) ([]crmcontracts.CompanyFact, error)
-	// GetCompany is read for the company's NAME and nothing else: the
-	// dossier is written from the sidecars above, but the rail that narrates
-	// the writing has to say which company, and neither sidecar carries that.
+	// GetCompany is read for the company's name and its industry column. The
+	// rail that narrates the writing has to say which company, and the column
+	// is the industry the record shows, so the assessment counts it as known.
 	GetCompany(ctx context.Context, id ids.CompanyID, archived storekit.ArchivedFilter) (crmcontracts.Company, error)
 }
 
@@ -54,7 +55,12 @@ type Input struct {
 	// Name is withheld from the model for the id's reason — it grounds
 	// nothing — and from the fingerprint because a rename is not a change in
 	// what the company IS. It exists so the rail can say whose dossier this is.
-	Name          string `json:"-"`
+	Name string `json:"-"`
+	// Industry is the company column's stored value, an industry code. It is
+	// omitted when empty so a company without one keeps the fingerprint it
+	// had. The model is shown the code worded in the prompt language
+	// (encodeInput), which the language component of the fingerprint covers.
+	Industry      string `json:"industry,omitempty"`
 	ProfileFields []crmcontracts.CompanyProfileField
 	Facts         []crmcontracts.CompanyFact
 }
@@ -90,6 +96,7 @@ func BuildInput(ctx context.Context, facts Facts, id ids.CompanyID) (Input, erro
 	return Input{
 		CompanyID:     id.String(),
 		Name:          company.DisplayName,
+		Industry:      companyIndustry(company),
 		ProfileFields: fields,
 		Facts:         extracted,
 	}, nil
@@ -129,4 +136,12 @@ func KnownRecords(in Input) map[claims.Evidence]string {
 		known[claims.Evidence{EntityType: citeFact, EntityID: fact.Id.String()}] = claims.Source(fact)
 	}
 	return known
+}
+
+// companyIndustry is the trimmed industry column, or "" when the company has none.
+func companyIndustry(company crmcontracts.Company) string {
+	if company.Industry == nil {
+		return ""
+	}
+	return strings.TrimSpace(string(*company.Industry))
 }

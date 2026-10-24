@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/contactbrief"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -269,7 +270,7 @@ const briefInputActivities = 12
 func FromView(view crmcontracts.Company360) Input {
 	in := Input{ID: view.Company.Id.String(), Name: view.Company.DisplayName}
 	if view.Company.Industry != nil {
-		in.Industry = *view.Company.Industry
+		in.Industry = string(*view.Company.Industry)
 	}
 	if view.Company.SizeBand != nil {
 		in.SizeBand = string(*view.Company.SizeBand)
@@ -470,4 +471,10 @@ func profileValue(raw string) string {
 	// rather than pushing past it. Without it the card shows an approved
 	// sentence that stops mid-thought, as though the author wrote it that way.
 	return textcut.Runes(value, briefProfileValueMax-1) + "…"
+}
+
+// WordedIn words the industry code in the language the brief is written in.
+func (in Input) WordedIn(lang string) Input {
+	in.Industry = contacts.IndustryWords(in.Industry, textlang.Lang(lang))
+	return in
 }

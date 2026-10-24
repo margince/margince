@@ -54,9 +54,6 @@ func setCompanyPlainFields(p *storekit.Patch, current crmcontracts.Company, in U
 	if in.Description != nil {
 		p.Set("description", current.Description, *in.Description)
 	}
-	if in.Industry != nil {
-		p.Set("industry", current.Industry, *in.Industry)
-	}
 	if in.OwnerID != nil {
 		p.Set(ownerIDColumn, current.OwnerId, *in.OwnerID)
 	}
@@ -66,6 +63,7 @@ func setCompanyPlainFields(p *storekit.Patch, current crmcontracts.Company, in U
 // vocabulary, a normalisation, or a link target that must be visible before the
 // edge lands.
 func setCompanyCheckedFields(ctx context.Context, tx pgx.Tx, p *storekit.Patch, current crmcontracts.Company, in UpdateCompanyInput) error {
+	setCompanyIndustry(p, current, in)
 	if in.SizeBand != nil {
 		if err := checkSizeBand(*in.SizeBand); err != nil {
 			return err
@@ -95,4 +93,28 @@ func setCompanyCheckedFields(ctx context.Context, tx pgx.Tx, p *storekit.Patch, 
 		p.Set(fieldVisibility, current.Visibility, *in.Visibility)
 	}
 	return nil
+}
+
+// setCompanyIndustry stages the industry column through the vocabulary owner. A
+// text that names no code leaves a standing code alone, so a bad cell cannot
+// erase a good value, and keeps the raw text in the description instead.
+func setCompanyIndustry(p *storekit.Patch, current crmcontracts.Company, in UpdateCompanyInput) {
+	if in.Industry == nil {
+		return
+	}
+	write := resolveIndustryWrite(in.Industry)
+	switch {
+	case write.code != nil:
+		p.Set("industry", current.Industry, *write.code)
+	case !write.given:
+		p.Set("industry", current.Industry, nil)
+	default:
+		base := current.Description
+		if in.Description != nil {
+			base = in.Description
+		}
+		if next, changed := withIndustrySource(base, *in.Industry); changed {
+			p.Set("description", current.Description, next)
+		}
+	}
 }

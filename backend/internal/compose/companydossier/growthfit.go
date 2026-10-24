@@ -56,42 +56,56 @@ const (
 // toward the completeness a band is allowed to rest on.
 const freshness = 30 * 24 * time.Hour
 
-// The label on each required input is the reader's own words, because it
-// becomes the next-step sentence. A contact told to go and gather
-// `buying_center` has been told nothing.
+// requiredInput is one input the assessment needs: the code the client words,
+// and the one rule that says whether the company has it.
 //
-// Both field types are the CONTRACT's, so a required input naming a field the
-// contract does not have fails to compile. Spelled as strings, such an input
-// would simply never be found — and the completeness figure would then be
+// The fields inside counts are the CONTRACT's, so a required input naming a
+// field the contract does not have fails to compile. Spelled as strings, such an
+// input would simply never be found, and the completeness figure would then be
 // permanently short by one, reported with total confidence.
-type (
-	requiredProfileInput struct {
-		field crmcontracts.CompanyProfileFieldField
-		label string
-	}
-	requiredFactInput struct {
-		field crmcontracts.CompanyFactField
-		label string
-	}
-)
+type requiredInput struct {
+	code   crmcontracts.GrowthFitInput
+	counts func(in Input, now time.Time) (bool, time.Time)
+}
 
-// The seven required inputs, covering the five things a fit is judged on: what
-// they offer, the market they serve, their size, the technology they run, and
-// who does the buying. The prose halves are profile fields; size and technology
-// are extracted facts, because that is where this system records them.
-var (
-	requiredProfileInputs = []requiredProfileInput{
-		{field: crmcontracts.CompanyProfileFieldFieldOfferSummary, label: "what they offer"},
-		{field: crmcontracts.CompanyProfileFieldFieldIcp, label: "who they sell to"},
-		{field: crmcontracts.CompanyProfileFieldFieldIndustry, label: "their industry"},
-		{field: crmcontracts.CompanyProfileFieldFieldBuyingCenter, label: "who does the buying"},
-		{field: crmcontracts.CompanyProfileFieldFieldBuyingIntents, label: "what they buy for"},
+func profileInput(code crmcontracts.GrowthFitInput, field crmcontracts.CompanyProfileFieldField) requiredInput {
+	return requiredInput{code: code, counts: func(in Input, now time.Time) (bool, time.Time) {
+		return freshProfileField(in, field, now)
+	}}
+}
+
+func factInput(code crmcontracts.GrowthFitInput, field crmcontracts.CompanyFactField) requiredInput {
+	return requiredInput{code: code, counts: func(in Input, now time.Time) (bool, time.Time) {
+		return freshFact(in, field, now)
+	}}
+}
+
+// requiredInputs are the seven inputs covering the five things a fit is judged
+// on: what they offer, the market they serve, their size, the technology they
+// run, and who does the buying. The prose halves are profile fields; size and
+// technology are extracted facts, because that is where this system records them.
+var requiredInputs = []requiredInput{
+	profileInput(crmcontracts.GrowthFitInputOfferSummary, crmcontracts.CompanyProfileFieldFieldOfferSummary),
+	profileInput(crmcontracts.GrowthFitInputIcp, crmcontracts.CompanyProfileFieldFieldIcp),
+	{code: crmcontracts.GrowthFitInputIndustry, counts: industryKnown},
+	profileInput(crmcontracts.GrowthFitInputBuyingCenter, crmcontracts.CompanyProfileFieldFieldBuyingCenter),
+	profileInput(crmcontracts.GrowthFitInputBuyingIntents, crmcontracts.CompanyProfileFieldFieldBuyingIntents),
+	factInput(crmcontracts.GrowthFitInputEmployeeRange, crmcontracts.CompanyFactFieldEmployeeRange),
+	factInput(crmcontracts.GrowthFitInputTechnology, crmcontracts.CompanyFactFieldTechnology),
+}
+
+// industryKnown is the one place that decides whether a company's industry is
+// known, so the screen, the model input and the completeness figure agree.
+//
+// The company column is the record's own field, set by hand or by import, and
+// carries no read time, so it counts like a human value and never expires. The
+// sidecar profile field holds what a site read wrote and ages out.
+func industryKnown(in Input, now time.Time) (bool, time.Time) {
+	if strings.TrimSpace(in.Industry) != "" {
+		return true, time.Time{}
 	}
-	requiredFactInputs = []requiredFactInput{
-		{field: crmcontracts.CompanyFactFieldEmployeeRange, label: "how big they are"},
-		{field: crmcontracts.CompanyFactFieldTechnology, label: "the technology they run"},
-	}
-)
+	return freshProfileField(in, crmcontracts.CompanyProfileFieldFieldIndustry, now)
+}
 
 // Offering is what this workspace knows about ITSELF, as the growth fit needs
 // it: whether it is confirmed, and a fingerprint of the content.
@@ -131,33 +145,25 @@ func Completeness(in Input, now time.Time) crmcontracts.DataCompleteness {
 // were fresh would keep serving that band forever.
 func completenessAt(in Input, now time.Time) (crmcontracts.DataCompleteness, time.Time) {
 	present := 0
-	missing := []string{}
+	missing := []crmcontracts.GrowthFitInput{}
 	var earliest time.Time
-	note := func(counts bool, expires time.Time, label string) {
+	for _, want := range requiredInputs {
+		counts, expires := want.counts(in, now)
 		if !counts {
-			missing = append(missing, label)
-			return
+			missing = append(missing, want.code)
+			continue
 		}
 		present++
 		if expires.IsZero() {
-			return
+			continue
 		}
 		if earliest.IsZero() || expires.Before(earliest) {
 			earliest = expires
 		}
 	}
-	for _, want := range requiredProfileInputs {
-		counts, expires := freshProfileField(in, want.field, now)
-		note(counts, expires, want.label)
-	}
-	for _, want := range requiredFactInputs {
-		counts, expires := freshFact(in, want.field, now)
-		note(counts, expires, want.label)
-	}
-	expected := len(requiredProfileInputs) + len(requiredFactInputs)
 	return crmcontracts.DataCompleteness{
 		Present:  present,
-		Expected: expected,
+		Expected: len(requiredInputs),
 		Missing:  &missing,
 	}, earliest
 }
@@ -304,7 +310,7 @@ func BandIsJudgeable(band crmcontracts.GrowthFitBand) bool {
 type Assessment struct {
 	Band         crmcontracts.GrowthFitBand
 	CappedReason string
-	NextStep     string
+	NextStep     crmcontracts.GrowthFitNextStep
 	Completeness crmcontracts.DataCompleteness
 	Claims       GrowthFitClaims
 	// StaleAt is when this completeness figure stops being true on the clock
@@ -378,8 +384,7 @@ func Assess(in Input, proposed crmcontracts.GrowthFitBand, selfConfirmed bool,
 			"so a stronger fit than moderate cannot be justified"
 	}
 	if !selfConfirmed {
-		out.NextStep = "confirm your own company profile, so a fit is measured against " +
-			"what you actually sell rather than a guess"
+		out.NextStep = crmcontracts.GrowthFitNextStepConfirmOffering
 	}
 	return out
 }
@@ -387,13 +392,11 @@ func Assess(in Input, proposed crmcontracts.GrowthFitBand, selfConfirmed bool,
 // abstentionNextStep names the thing that would actually unblock the answer.
 // Telling an administrator to configure a model they already configured sends
 // them to check a binding that is correct, which is worse than saying nothing.
-func abstentionNextStep(why AbstentionReason) string {
+func abstentionNextStep(why AbstentionReason) crmcontracts.GrowthFitNextStep {
 	if why == AbstainedLaneFailed {
-		return "the facts needed are all recorded, but the assessment could not be " +
-			"written this time — try again in a few minutes"
+		return crmcontracts.GrowthFitNextStepRetryLater
 	}
-	return "the facts needed are all recorded, but nothing is configured to " +
-		"judge them — ask an administrator to configure the AI model"
+	return crmcontracts.GrowthFitNextStepConfigureModel
 }
 
 // aboveFloor cross-multiplies rather than dividing, so the comparison is exact
@@ -409,27 +412,12 @@ func aboveFloor(c crmcontracts.DataCompleteness) bool {
 	return c.Present*abstentionFloorDen >= c.Expected*abstentionFloorNum
 }
 
-// gatherNextStep turns the missing inputs into the one sentence DOSS-AC-12 asks
-// for: a named thing to go and find, not a restatement that data is missing.
-func gatherNextStep(c crmcontracts.DataCompleteness) string {
+// gatherNextStep is the named thing to go and find that DOSS-AC-12 asks for.
+// Below the floor with nothing named is a contradiction the counting cannot
+// produce, so the reader is pointed at the record instead.
+func gatherNextStep(c crmcontracts.DataCompleteness) crmcontracts.GrowthFitNextStep {
 	if c.Missing == nil || len(*c.Missing) == 0 {
-		// Below the floor with nothing named is a contradiction the counting
-		// cannot produce, and a next step naming nothing would be worse than
-		// none — so the reader is pointed at the record instead.
-		return "record more of this company's profile before a fit can be judged"
+		return crmcontracts.GrowthFitNextStepRecordProfile
 	}
-	return "find out " + joinReadably(*c.Missing) + " before this fit can be judged"
-}
-
-// joinReadably renders a list the way a contact would say it, so the next step
-// reads as a sentence rather than as a serialized array.
-func joinReadably(items []string) string {
-	switch len(items) {
-	case 1:
-		return items[0]
-	case 2:
-		return items[0] + " and " + items[1]
-	default:
-		return strings.Join(items[:len(items)-1], ", ") + " and " + items[len(items)-1]
-	}
+	return crmcontracts.GrowthFitNextStepGatherInputs
 }

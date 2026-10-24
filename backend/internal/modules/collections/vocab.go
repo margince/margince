@@ -211,6 +211,34 @@ var (
 	sizeBandValues = []string{
 		"1-10", "11-50", "51-200", "201-500", "501-1000", "1001-5000", "5000+",
 	}
+	industryValues = []string{
+		"agriculture",
+		"automotive",
+		"aerospace_defense",
+		"chemicals_materials",
+		"construction",
+		"consumer_goods_retail",
+		"education",
+		"energy_utilities",
+		"entertainment_media",
+		"financial_services",
+		"food_beverage",
+		"government_public_sector",
+		"healthcare",
+		"hospitality_tourism",
+		"insurance",
+		"it_services",
+		"software",
+		"legal_professional_services",
+		"logistics_transport",
+		"manufacturing",
+		"marketing_advertising",
+		"mining_metals",
+		"nonprofit",
+		"pharma_biotech",
+		"real_estate",
+		"telecommunications",
+	}
 	relationshipTypeValues = []string{
 		"customer", "partner", "supplier", "investor",
 		"portfolio_company", "competitor", "other",
@@ -258,7 +286,7 @@ var segmentEngines = map[string]storekit.Query{
 		Fields: withFields(standardFields[typeCompany], map[string]storekit.Field{
 			ownerIDField:     {Expr: colOwnerID, Type: storekit.FieldID, References: storekit.RefAppUser},
 			ownerTeamIDField: ownerTeamField,
-			"industry":       {Expr: "t.industry", Type: storekit.FieldText},
+			"industry":       {Expr: "t.industry", Type: storekit.FieldPicklist, Options: industryValues},
 			"size_band":      {Expr: "t.size_band", Type: storekit.FieldPicklist, Options: sizeBandValues},
 			"lifecycle":      {Expr: "t.lifecycle", Type: storekit.FieldPicklist, Options: lifecycleValues},
 			// RETIRED with the column (ADR-0079/A124), and kept here for the one
@@ -304,7 +332,7 @@ var segmentEngines = map[string]storekit.Query{
 			// and survives on the company engine only so segments already
 			// written against it keep evaluating — a NEW way to name it would be
 			// a fresh dependency on a column that is going away.
-			"company_industry":  customerField("industry", storekit.FieldText),
+			"company_industry":  customerField("industry", storekit.FieldPicklist, industryValues...),
 			"company_size_band": customerField("size_band", storekit.FieldPicklist, sizeBandValues...),
 			"company_lifecycle": customerField("lifecycle", storekit.FieldPicklist, lifecycleValues...),
 		}),
