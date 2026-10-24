@@ -27,7 +27,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
 // ContactHeldByColleagueError refuses an address a contact the caller cannot
@@ -38,10 +37,8 @@ type ContactHeldByColleagueError struct {
 	// contact with the caller. False after the holder declined one, and when
 	// nobody can be asked.
 	ShareRequested bool
-	// The held contact and its live owner, for the request alone. They never
-	// reach the caller.
+	// The held contact, for the request alone. It never reaches the caller.
 	contactID ids.ContactID
-	holderID  ids.UUID
 }
 
 func (e *ContactHeldByColleagueError) Error() string {
@@ -74,20 +71,7 @@ func claimedEmailRefusal(ctx context.Context, tx pgx.Tx, email string, existing 
 	if visible {
 		return &DuplicateEmailError{Email: email, ExistingID: existing}
 	}
-	held := &ContactHeldByColleagueError{Email: email, contactID: existing}
-	// Only a live owner can decide a request. A contact with none still
-	// refuses, and nobody is asked.
-	var owner *ids.UUID
-	if err := tx.QueryRow(ctx, `
-		SELECT p.owner_id FROM contact p
-		  JOIN app_user u ON u.id = p.owner_id AND `+workforce.LiveMemberSQL("u")+`
-		 WHERE p.id = $1`, existing).Scan(&owner); err != nil && !errors.Is(err, pgx.ErrNoRows) {
-		return fmt.Errorf("contacts: reading who holds a claimed address: %w", err)
-	}
-	if owner != nil {
-		held.holderID = *owner
-	}
-	return held
+	return &ContactHeldByColleagueError{Email: email, contactID: existing}
 }
 
 // ShareRequest asks the holder of a contact to share it with the requester.
@@ -97,27 +81,51 @@ type ShareRequest struct {
 	RequesterID ids.UUID
 }
 
-// ShareRequestFiler files req on the caller's transaction and reports whether
-// a request is open. It answers false when the holder declined one before, and
-// files nothing then. Compose binds it to the approvals queue.
-type ShareRequestFiler func(ctx context.Context, tx pgx.Tx, req ShareRequest) (bool, error)
+// ShareRequests is the approvals queue's side of a share request. Compose
+// binds it.
+type ShareRequests interface {
+	// FileTx files req on the caller's transaction and reports whether a
+	// request is open. It answers false when the holder declined one before,
+	// and files nothing then.
+	FileTx(ctx context.Context, tx pgx.Tx, req ShareRequest) (bool, error)
+	// FollowOwnerTx withdraws the pending requests on a contact whose owner
+	// is no longer the one they name. to is nil for a contact nobody owns.
+	FollowOwnerTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, to *ids.UUID) error
+}
 
-// WithShareRequests wires the filer. Unwired, a held address still refuses
+// WithShareRequests wires the queue. Unwired, a held address still refuses
 // and nobody is asked.
-func (s *Store) WithShareRequests(file ShareRequestFiler) *Store {
-	s.shareRequests = file
+func (s *Store) WithShareRequests(requests ShareRequests) *Store {
+	s.shareRequests = requests
 	return s
 }
 
+// followShareOwnerTx keeps the contact's pending share requests with its
+// current owner. Every writer that changes a contact's owner calls it on its
+// own transaction.
+func (s *Store) followShareOwnerTx(ctx context.Context, tx pgx.Tx, id ids.ContactID, from, to *ids.UUID) error {
+	if s.shareRequests == nil || sameOwner(from, to) {
+		return nil
+	}
+	return s.shareRequests.FollowOwnerTx(ctx, tx, id, to)
+}
+
+func sameOwner(a, b *ids.UUID) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return *a == *b
+}
+
 // WithShareRequests mirrors the store option for the HTTP surface.
-func (h Handlers) WithShareRequests(file ShareRequestFiler) Handlers {
-	h.store = h.store.WithShareRequests(file)
+func (h Handlers) WithShareRequests(requests ShareRequests) Handlers {
+	h.store = h.store.WithShareRequests(requests)
 	return h
 }
 
 // WithShareRequests mirrors the store option for the agent surface.
-func (p *Provider) WithShareRequests(file ShareRequestFiler) *Provider {
-	p.store = p.store.WithShareRequests(file)
+func (p *Provider) WithShareRequests(requests ShareRequests) *Provider {
+	p.store = p.store.WithShareRequests(requests)
 	return p
 }
 
@@ -131,22 +139,47 @@ func (p *Provider) WithShareRequests(file ShareRequestFiler) *Provider {
 // that owns its transaction calls it after that transaction ends.
 func (s *Store) AskHolderToShare(ctx context.Context, err error) error {
 	held, ok := errors.AsType[*ContactHeldByColleagueError](err)
-	if !ok || s.shareRequests == nil || held.holderID.IsZero() {
+	if !ok || s.shareRequests == nil {
 		return err
 	}
 	requester, ok := shareRequesterOf(ctx)
-	if !ok || requester == held.holderID {
+	if !ok {
 		return err
 	}
-	req := ShareRequest{ContactID: held.contactID, HolderID: held.holderID, RequesterID: requester}
 	if fileErr := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		open, fileErr := s.shareRequests(ctx, tx, req)
+		holder, owned, err := lockHolder(ctx, tx, held.contactID)
+		if err != nil || !owned || holder == requester {
+			return err
+		}
+		open, err := s.shareRequests.FileTx(ctx, tx, ShareRequest{
+			ContactID: held.contactID, HolderID: holder, RequesterID: requester,
+		})
 		held.ShareRequested = open
-		return fileErr
+		return err
 	}); fileErr != nil {
 		return fmt.Errorf("contacts: asking a colleague to share a contact: %w", fileErr)
 	}
 	return err
+}
+
+// lockHolder reads the contact's owner on the request's own transaction and
+// holds the contact row. An owner change either lands first and is the owner
+// read here, or waits and then withdraws the request it finds
+// (ShareRequests.FollowOwnerTx). A contact with no owner refuses and nobody is
+// asked; an owner who left is refused by the approvals queue, which asks only
+// a member who may still decide.
+func lockHolder(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) (ids.UUID, bool, error) {
+	var owner *ids.UUID
+	err := tx.QueryRow(ctx, `
+		SELECT owner_id FROM contact WHERE id = $1 AND archived_at IS NULL FOR UPDATE`,
+		contactID).Scan(&owner)
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && owner == nil) {
+		return ids.Nil, false, nil
+	}
+	if err != nil {
+		return ids.Nil, false, fmt.Errorf("contacts: reading who holds a claimed address: %w", err)
+	}
+	return *owner, true, nil
 }
 
 // shareRequesterOf is the human a request is filed for: the seat itself, or

@@ -159,7 +159,7 @@ func (s *Store) updateContactInTx(
 	if out, err = readContact(ctx, tx, id, storekit.LiveOnly, active); err != nil {
 		return out, fmt.Errorf("read updated contact: %w", err)
 	}
-	return out, nil
+	return out, s.followShareOwnerTx(ctx, tx, id, (*ids.UUID)(current.OwnerId), (*ids.UUID)(out.OwnerId))
 }
 
 // Child sets are separate rows, so their audit images supplement the column patch.

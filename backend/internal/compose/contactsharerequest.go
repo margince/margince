@@ -36,48 +36,59 @@ const (
 	contactShareActor = "agent:" + contactShareKind
 )
 
-// contactShareRequests files one request per contact and requester. A repeat
-// joins the open one; after the owner declined, nothing is filed and the
-// answer is false.
+// contactShareRequests is the approvals queue behind contacts' share
+// requests.
+func contactShareRequests(pool *pgxpool.Pool) contacts.ShareRequests {
+	return contactShareQueue{pool: pool}
+}
+
+type contactShareQueue struct{ pool *pgxpool.Pool }
+
+// FollowOwnerTx withdraws the contact's requests that name another owner.
+func (q contactShareQueue) FollowOwnerTx(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, to *ids.UUID) error {
+	_, err := approvals.FollowContactOwnerInTx(ctx, tx, contactID.UUID, to)
+	return err
+}
+
+// FileTx files one request per contact and requester. A repeat joins the open
+// one; after the owner declined, nothing is filed and the answer is false.
 //
-// The approvals service is built per request, not with the filer: its preview
-// reader composes the contacts provider, which composes this filer.
-func contactShareRequests(pool *pgxpool.Pool) contacts.ShareRequestFiler {
-	return func(ctx context.Context, tx pgx.Tx, req contacts.ShareRequest) (bool, error) {
-		svc := NewApprovalsService(InstallationDB(pool))
-		body, err := json.Marshal(approvalsubject.ContactShare{
-			ContactID: req.ContactID.UUID, OwnerID: req.HolderID, RequesterID: req.RequesterID,
-		})
-		if err != nil {
-			return false, fmt.Errorf("compose: encoding the share request: %w", err)
-		}
-		identityKey, err := json.Marshal(map[string]ids.UUID{
-			companionContactField: req.ContactID.UUID, "requester_id": req.RequesterID,
-		})
-		if err != nil {
-			return false, fmt.Errorf("compose: encoding the share request's identity: %w", err)
-		}
-		summary, err := contactShareSummary(ctx, tx, req.RequesterID)
-		if err != nil {
-			return false, err
-		}
-		digest := sha256.Sum256(body)
-		_, open, err := svc.StageUnlessDeclinedTx(principal.SystemActing(ctx, contactShareActor), tx, approvals.StageInput{
-			Kind:           contactShareKind,
-			ProposedChange: body,
-			DiffHash:       hex.EncodeToString(digest[:]),
-			TargetType:     string(recordTypeContact),
-			TargetID:       req.ContactID.UUID,
-			Summary:        summary,
-			JoinPending:    true,
-			Identity:       identityKey,
-		})
-		if errors.Is(err, approvals.ErrNoDecider) {
-			// The owner left between the refusal and this request.
-			return false, nil
-		}
-		return open, err
+// The approvals service is built per request, not with the queue: its preview
+// reader composes the contacts provider, which composes this queue.
+func (q contactShareQueue) FileTx(ctx context.Context, tx pgx.Tx, req contacts.ShareRequest) (bool, error) {
+	svc := NewApprovalsService(InstallationDB(q.pool))
+	body, err := json.Marshal(approvalsubject.ContactShare{
+		ContactID: req.ContactID.UUID, OwnerID: req.HolderID, RequesterID: req.RequesterID,
+	})
+	if err != nil {
+		return false, fmt.Errorf("compose: encoding the share request: %w", err)
 	}
+	identityKey, err := json.Marshal(map[string]ids.UUID{
+		companionContactField: req.ContactID.UUID, "requester_id": req.RequesterID,
+	})
+	if err != nil {
+		return false, fmt.Errorf("compose: encoding the share request's identity: %w", err)
+	}
+	summary, err := contactShareSummary(ctx, tx, req.RequesterID)
+	if err != nil {
+		return false, err
+	}
+	digest := sha256.Sum256(body)
+	_, open, err := svc.StageUnlessDeclinedTx(principal.SystemActing(ctx, contactShareActor), tx, approvals.StageInput{
+		Kind:           contactShareKind,
+		ProposedChange: body,
+		DiffHash:       hex.EncodeToString(digest[:]),
+		TargetType:     string(recordTypeContact),
+		TargetID:       req.ContactID.UUID,
+		Summary:        summary,
+		JoinPending:    true,
+		Identity:       identityKey,
+	})
+	if errors.Is(err, approvals.ErrNoDecider) {
+		// The owner left after the contact row was read.
+		return false, nil
+	}
+	return open, err
 }
 
 // contactShareSummary is the card's sentence, naming the colleague who asked.

@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/projects"
@@ -189,6 +190,11 @@ func (s handoverSeam) handOverInTx(
 		return crmcontracts.UserHandoverResult{}, err
 	}
 	moved.Project = projectsMoved
+	// Whoever now owns the contacts decides who may see them; a share request
+	// put to the member who handed them over is withdrawn with the handover.
+	if _, err := approvals.WithdrawSharesDecidedByInTx(ctx, tx, member); err != nil {
+		return crmcontracts.UserHandoverResult{}, err
+	}
 	left, err := countOwned(ctx, tx, member)
 	return crmcontracts.UserHandoverResult{Moved: moved, Left: left}, err
 }
