@@ -413,6 +413,13 @@ type Extension struct {
 	// not to walk through, because such a unit has better roads.
 	Migrations fs.FS
 
+	// Settings holds the unit's own settings as a SettingsFile at its root,
+	// which a unit supplies with `//go:embed settings.json`. An operator
+	// applies them with `migrate extension-settings`: each key is stored once
+	// under the unit's namespace, and a key that already has a value keeps it,
+	// so running the seed again changes nothing and never undoes a later edit.
+	Settings fs.FS
+
 	// FailureClasses are the ways this unit's background jobs fail, named in
 	// the unit's own vocabulary, each with what an operator does about it.
 	//

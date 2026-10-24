@@ -513,6 +513,29 @@ key, err := rt.Secrets().Get(ctx, "signing") // errors.Is(err, extension.ErrSecr
 A declaration grants and stores nothing; it is a request written in the manifest. Keys are your unit's own bare
 names, and the core keeps them apart from other units. No method takes another unit's name.
 
+## Ship the unit's settings in a file
+
+Put the unit's settings in `settings.json` at the unit's root, as one JSON object of key to value, and embed it:
+
+```go
+//go:embed settings.json
+var settings embed.FS
+
+// in New():
+Settings: settings,
+```
+
+Keys use lower-case letters, digits and underscores, and start with a letter. An operator then runs
+`margince-migrate extension-settings --dsn <owner-dsn>`, with no signed-in member. Core stores each key as
+`ext_<name>.<key>`, where each hyphen in the unit name becomes an underscore: unit `finance-demo`, key
+`vat_rate` is stored as `ext_finance_demo.vat_rate`. A key that already has a value is kept, so the run can
+repeat and never undoes a later edit.
+
+The unit's own code cannot read these values yet. It has no `Runtime` call for them, and its database role
+cannot reach the `setting` table. Today the seed only stores them in core.
+Nothing is stored if any unit's file is invalid. [Configuration](../reference/configuration.md#cmdmigrate-schema-migrations)
+lists the command.
+
 ## Own a screen: `frontend/`
 
 Ship `extensions/<name>/frontend/package.json` and the module it names. The package may use its own

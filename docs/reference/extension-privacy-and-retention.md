@@ -15,7 +15,7 @@ through core's own verbs. Core then applies retention and legal hold to the decl
 | 1. Privacy declaration for extension data | Declare each table's personal data. Core clears, exports and guards it. | [Add an extension](../how-to/add-an-extension.md#declare-the-personal-data-in-your-tables) and [privacy and consent](../explanation/privacy-and-consent.md#extension-tables) | Done |
 | 2. Limit raw database access | Run SQL in `Tx` on the extension's own tables only. A core table is refused with `ErrCoreTableRefused`; core records are reached through `Tx.Core()`, the read calls and `Ingest`. | [Add an extension](../how-to/add-an-extension.md) and [what the tier does not guard against](../explanation/extensibility.md#what-the-tier-does-not-guard-against) | Done |
 | 3. Retention sweep and legal hold | Name a date column in the declaration. A `retention_policy` row for `extension/<table>` then makes core delete old rows, but never a row inside its retention class floor. Hold a row, and release the hold. A hold blocks erasure and the sweep. Core writes the audit entries and events. | [Privacy and consent](../explanation/privacy-and-consent.md#extension-tables) and [Add an extension](../how-to/add-an-extension.md#declare-the-personal-data-in-your-tables) | Done |
-| 4. Set-up from files | Nothing yet. | None yet | Planned |
+| 4. Set-up from files | Ship the unit's settings in `settings.json`. An operator runs `migrate extension-settings` to store them once under `ext_<name>.<key>` (hyphens in the name become underscores), with no signed-in member. A repeat run changes nothing. The unit's code cannot read them yet. | [Add an extension](../how-to/add-an-extension.md#ship-the-units-settings-in-a-file) and [configuration](../reference/configuration.md#cmdmigrate-schema-migrations) | Done |
 | 5. Extension activation step | Nothing yet. | None yet | Planned |
 
 ## How the features connect
@@ -40,6 +40,11 @@ The settings screen and the retention policy API list a fixed set of scopes. The
 table is the table's own name. So a policy row for `extension/<table>` is added to `retention_policy`
 directly, and none exists by default. A core rule that strips a contact of its name keeps the contact while
 one of its extension rows is held. It picks the contact again on each pass.
+
+## What feature 4 leaves open
+
+Core stores the seeded values and does not yet hand them to the unit's code. A unit has no `Runtime` call that
+reads them, and its database role cannot reach the `setting` table. The settings screen does not list them either.
 
 ## How to read this page
 
