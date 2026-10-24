@@ -3,15 +3,16 @@
 
 package capture
 
-// The one rule that files a captured activity under the people who were on it,
-// beyond the refs its connector named and the counterparty the ladder judged.
+// The one rule that files a captured activity under the records of those who
+// were on it, beyond the refs its connector named and the counterparty the
+// ladder judged.
 //
-// A participant row names a person two ways: a contact it resolved to, or an
+// A participant row names a record two ways: a contact it resolved to, or an
 // address. A contact is filed under through the resolved row. A LEAD is never
 // resolved onto a participant row, because a lead is not a contact (ADR-0008),
 // so it is filed under through the address: a live lead whose email is exactly
 // the participant's address. No fuzzy match: the address is the lead's only
-// identity this path can trust, and a near miss is a different person.
+// identity this path can trust, and a near miss names someone else.
 //
 // Mail, meetings and calendar events read this one rule, and so does the lead
 // backfill (leadfilingrepair.go). They differ only in the budget they pass and

@@ -102,9 +102,9 @@ Colleagues see the pair only once the sender has been judged a business contact.
 
 ### Mail with a lead on it
 
-A captured email, meeting or calendar event goes on the timeline of each open lead whose exact email address is on it, as sender, recipient, Cc or attendee. Case does not matter, and `lena@acme.example.org` is not `lena@acme.example`.
-Some mail goes on no lead: mail from before the lead was created, mail from a mail system or from a sender already judged a newsletter or spam, and mail for a lead that was qualified or disqualified. One message goes on at most 25 records, contacts first.
-Putting mail on a lead does not change who may read it. A colleague who opens the lead sees that a limited email exists, not what it says.
+A captured email or meeting goes on the timeline of each open lead whose exact email address is on it. Case does not matter, and `lena@acme.example.org` is not `lena@acme.example`.
+Mail from before the lead was created goes on no lead, and nor does mail for a qualified or disqualified lead. Mail from a mail system, or from a sender judged a newsletter or spam, goes on no lead either. One message goes on at most 25 records, contacts first.
+It does not change who may read the mail: a colleague on the lead sees that a limited email exists, not what it says.
 
 ## When nothing matches
 
