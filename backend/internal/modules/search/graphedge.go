@@ -228,10 +228,8 @@ func recomputePairs(ctx context.Context, tx pgx.Tx, pairs []pair) error {
 // readable by everyone would disclose who talked to whom and when. The
 // graph-edge consumer already refolds on activity.updated, which is the event
 // a Limit emits, so an edge whose last evidence is limited is re-folded away.
-var audienceWorkspaceOnly = " AND " + relstrength.WorkspaceAudienceSQL("a")
+const audienceWorkspaceOnly = ` AND a.audience = 'workspace'`
 
-// Invited seats stay out of these joins on purpose; capture.SeatsWithoutMailbox
-// reports them as information.
 // liveMemberJoin and laterMemberJoin join app_user on the shared definition of
 // "still works here". laterMemberJoin asks it of a SECOND edge in one
 // statement: has any live colleague spoken to this contact since.

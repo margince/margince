@@ -15,8 +15,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
-// UncapturedSeat is a colleague who is on a contact's threads and has no
-// connected mailbox, so mail they alone receive from that contact is not here.
+// UncapturedSeat is a colleague on a contact's threads with no connected
+// mailbox. Mail they alone receive from that contact is not captured here.
 type UncapturedSeat struct {
 	UserID       ids.UUID
 	DisplayName  string
@@ -24,22 +24,21 @@ type UncapturedSeat struct {
 	LastOnThread time.Time
 }
 
-// SeatsWithoutMailbox lists the colleagues who appear on this contact's threads
-// and have no connected mailbox, most recent first, at most limit.
+// SeatsWithoutMailbox lists the colleagues on this contact's threads who have
+// no connected mailbox, most recent first, at most limit.
 //
-// A seat counts when a participant row names it by user_id (calendar
-// attendees, own sent mail) or, for an unattested To/Cc list, by an address
-// equal to its login email, on a To or Cc line only, for a seat that existed
-// when the activity was captured. Only counted, workspace-audience, unarchived
-// activities qualify, the same terms the interaction graph folds, so a limited
-// message discloses nothing here. Invited seats are included because they may
-// receive mail before they sign in.
+// A seat counts when a participant row names it by user_id (calendar attendees,
+// own sent mail). It also counts when an unattested To or Cc address equals its
+// login email and the seat existed when the activity was captured. Only
+// counted, workspace-audience, unarchived activities qualify, the terms the
+// interaction graph folds, so a limited message discloses nothing here.
+// Invited seats are included because they may receive mail before they sign in.
 //
-// This is information only. It must never feed graph_interaction_edge, an
-// assignment or a send check: an address on a sender's Cc line is the sender's
-// text, which is why StampFurtherParticipants does not bind it to a user_id.
-// mailProviders names the connection providers that deliver mail; a
-// calendar-only connection does not make a seat's mail visible.
+// This is information only. It never feeds graph_interaction_edge, an
+// assignment or a send check, because an address on a Cc line is the sender's
+// text. StampFurtherParticipants does not bind it to a user_id for that reason.
+// mailProviders names the providers that deliver mail; a calendar-only
+// connection does not make a seat's mail visible.
 //
 // The caller must already have passed the contact read gates.
 func SeatsWithoutMailbox(

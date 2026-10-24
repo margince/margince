@@ -24,9 +24,9 @@ function useContactCaptureGaps(id: string) {
 
 /**
  * CaptureGapsNotice says that later mail may be missing because a colleague on
- * the threads has not connected a mailbox. It draws nothing when there is none,
- * and nothing while the read is in flight or refused: a missing notice is
- * silence, and the routes above it do not depend on it.
+ * the threads has not connected a mailbox. It draws nothing when there is none.
+ * It also draws nothing while the read is in flight or refused, because the
+ * routes above it do not depend on it.
  */
 export function CaptureGapsNotice({
   contactId,

@@ -94,7 +94,7 @@ func TestACappedColleagueListSaysSo(t *testing.T) {
 }
 
 // A colleague on the threads with no mailbox is reported beside the list, never
-// inside it, and the answer warns that later mail may be missing. Without the
+// inside it. The answer also warns that later mail may be missing. Without the
 // warning a model reads an empty "who knows them" as a complete record.
 func TestAnUncapturedColleagueIsNoticedAndNotListedAsKnowingThem(t *testing.T) {
 	invited := ids.NewV7()

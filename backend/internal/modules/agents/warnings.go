@@ -71,7 +71,7 @@ const (
 	// safe.
 	warningUntrustedContent = "untrusted_content"
 	// warningCaptureGap marks an answer about a contact whose threads include a
-	// colleague with no connected mailbox, so replies only they receive are
+	// colleague with no connected mailbox. Replies only that colleague gets are
 	// absent from the record.
 	warningCaptureGap = "capture_gap"
 )

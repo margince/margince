@@ -7,9 +7,9 @@ package capture
 
 // Which colleagues are on a contact's threads without a connected mailbox.
 //
-// Against real Postgres because the answer is one statement over six tables,
-// and the participant rows are written by StampFurtherParticipants, the writer
-// capture uses, so the test sees the user_id binding rule as production does.
+// Against real Postgres because the answer is one statement over six tables.
+// The participant rows come from StampFurtherParticipants, the writer capture
+// uses, so the test sees the user_id binding rule as production does.
 
 import (
 	"context"
