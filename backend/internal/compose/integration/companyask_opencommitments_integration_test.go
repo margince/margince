@@ -89,7 +89,7 @@ func TestWhatIsOpenNamesThePromiseEvenWhenTheModelNamesOnlyTheTask(t *testing.T)
 		t.Errorf("answer %q does not name both the task and the promise", text)
 	}
 	if strings.Contains(text, "Carol") {
-		t.Errorf("answer %q names a person for a promise our side made", text)
+		t.Errorf("answer %q names an individual for a promise our side made", text)
 	}
 	if chip != "Send the security audit" {
 		t.Errorf("the promise's chip is named %q, want the claim text", chip)
