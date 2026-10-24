@@ -145,10 +145,7 @@ func setCompanyColumn(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, s
 	if spec.column == columnAddress {
 		return setCompanyAddress(ctx, tx, companyID, spec, value)
 	}
-	var stored *string
-	if value != "" {
-		stored = &value
-	}
+	stored, _ := companyColumnArgument(spec.column, value)
 	write, ok := companyColumnWrites[spec.column]
 	if !ok {
 		// A field the form declares a column for that the shared table does not

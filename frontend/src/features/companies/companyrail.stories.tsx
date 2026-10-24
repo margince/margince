@@ -38,7 +38,7 @@ const company: Company = {
   legal_name: "Brandt Automotive GmbH",
   lifecycle: "customer",
   owner_id: "u-1",
-  industry: "Automotive",
+  industry: "automotive",
   size_band: "51-200",
   linkedin_url: "https://linkedin.com/company/brandt",
   address: { city: "Munich", country: "DE" },

@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/margince/margince/backend/internal/platform/freemail"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 )
 
 var transactionalBaseline = map[string]struct{}{
@@ -29,18 +30,55 @@ var transactionalBaseline = map[string]struct{}{
 	"docusign.net":      {}, // DocuSign envelope infrastructure
 }
 
+// foldLocalpart lowercases a local part and drops the separators that spell
+// the same mailbox several ways (mailer-daemon, mailer_daemon, mailer.daemon).
+func foldLocalpart(localpart string) string {
+	local := strings.ToLower(strings.TrimSpace(localpart))
+	return strings.NewReplacer(".", "", "-", "", "_", "").Replace(local)
+}
+
+// deliverySystemNames are the folded local parts the message-transport system
+// itself writes from.
+var deliverySystemNames = map[string]bool{
+	"mailerdaemon": true, "postmaster": true, "bounce": true, "bounces": true,
+}
+
 // IsMachineLocalpart recognizes address local parts that cannot hold a human reply.
 func IsMachineLocalpart(localpart string) bool {
-	local := strings.ToLower(strings.TrimSpace(localpart))
-	local = strings.ReplaceAll(local, ".", "")
-	local = strings.ReplaceAll(local, "-", "")
-	local = strings.ReplaceAll(local, "_", "")
+	local := foldLocalpart(localpart)
+	if deliverySystemNames[local] {
+		return true
+	}
 	switch local {
-	case "noreply", "donotreply", "nreply", "mailerdaemon", "postmaster",
-		"bounce", "bounces", "notifications", "notification", "mailer", "newsletter":
+	case "noreply", "donotreply", "nreply", "notifications", "notification", "mailer", "newsletter":
 		return true
 	}
 	return false
+}
+
+// IsDeliverySystemSender flags mail from the message-transport system itself:
+// a bounce, a DSN, a postmaster notice. There is no correspondent behind it, so
+// capture drops it and the import write door refuses it as received mail.
+//
+// Narrower than "looks automated". A no-reply or notifications address is a
+// real company writing to the workspace (a signed envelope, an invoice). Such a
+// message keeps its place on the timeline. The tier gate suppresses the contact
+// and company derivation.
+func IsDeliverySystemSender(address string) bool {
+	local, _, found := strings.Cut(strings.ToLower(address), "@")
+	if !found {
+		return false
+	}
+	// BATV/prvs tags sit before any separator a fold would strip. The scheme
+	// signs the return path, which this never sees. A relay that rewrites From
+	// with a tag has its mail dropped: a timeline row lost, nothing granted.
+	if strings.HasPrefix(local, "prvs=") || strings.HasPrefix(local, "msprvs1=") {
+		return true
+	}
+	// VERP encodes the original recipient into the bounce address
+	// (bounces-12345@, bounce+tag@), so the plus tag and trailing digits go first.
+	local = foldLocalpart(correspondence.LocalPartBase(local))
+	return deliverySystemNames[strings.TrimRight(local, "0123456789")]
 }
 
 var machineMarkers = map[string]bool{

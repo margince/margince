@@ -48,6 +48,10 @@ type companyBriefFixture struct {
 	Contacts int                       `json:"contact_count"`
 	Deals    []companyBriefDealFixture `json:"open_deals"`
 	Recent   []companyBriefActFixture  `json:"recent"`
+	// Commitments are the promises read out of conversations. A scenario that
+	// asks what is open must be able to carry them, or the certified request
+	// would differ from the one production sends.
+	Commitments []companyBriefCommitmentFixture `json:"open_commitments"`
 	// SectionsOmitted is what this reader was NOT allowed to see. Without it
 	// no scenario could describe a restricted reader, so the per-viewer
 	// guarantee — the brief must stay silent about a withheld section rather
@@ -62,6 +66,16 @@ type companyBriefDealFixture struct {
 	AmountMinor int64  `json:"amount_minor"`
 	Currency    string `json:"currency"`
 	Stalled     bool   `json:"stalled"`
+}
+
+type companyBriefCommitmentFixture struct {
+	// Label names the message the promise was read from, which is what a
+	// citation opens.
+	Label  string `json:"label"`
+	Claim  string `json:"claim"`
+	Side   string `json:"side"`
+	Holder string `json:"holder"`
+	Due    string `json:"due"`
 }
 
 type companyBriefActFixture struct {
@@ -180,6 +194,21 @@ func companyBriefInput(f companyBriefFixture) (companybrief.Input, map[string]st
 			folded.Speaker = contactbrief.SpeakerFor(direction)
 		}
 		in.Recent = append(in.Recent, folded)
+	}
+	for _, promise := range f.Commitments {
+		if err := refuseUnnameable(promise.Label, "commitment", label); err != nil {
+			return in, nil, err
+		}
+		if side := crmcontracts.Company360CommitmentKind(promise.Side); side != crmcontracts.Company360CommitmentKindOurs &&
+			side != crmcontracts.Company360CommitmentKindTheirs {
+			return in, nil, fmt.Errorf("commitment %q has side %q, which the contract does not carry", promise.Label, promise.Side)
+		}
+		activity := ids.NewV7().String()
+		label[promise.Label] = activity
+		in.OpenCommitments = append(in.OpenCommitments, companybrief.CommitmentIn{
+			ID: ids.NewV7().String(), ActivityID: activity,
+			Claim: promise.Claim, Side: promise.Side, Holder: promise.Holder, Due: promise.Due,
+		})
 	}
 	return in, label, nil
 }

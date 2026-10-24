@@ -13,6 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/modelfailure"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -76,11 +77,7 @@ func requestFrom(body crmcontracts.DraftCompanyEmailJSONRequestBody) (Request, e
 		project := ids.From[ids.ProjectKind](ids.UUID(*body.ProjectId))
 		req.ProjectID = &project
 	}
-	if body.Intent != nil {
-		req.Intent = *body.Intent
-	}
-	if body.RewriteOf != nil {
-		req.RewriteOf = *body.RewriteOf
-	}
+	steering := draftfloor.NewSteering(body.Intent, body.RewriteOf)
+	req.Intent, req.RewriteOf = steering.Intent, steering.RewriteOf
 	return req, nil
 }

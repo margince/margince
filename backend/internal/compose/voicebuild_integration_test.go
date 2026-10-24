@@ -29,6 +29,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
@@ -608,7 +609,7 @@ func TestReplyDraftCarriesVoiceProvenanceEndToEnd(t *testing.T) {
 	drafter := newReplyDrafter(env.e.Pool, &voicedDraftBrain{judgeScore: 0.9}, slog.New(slog.DiscardHandler))
 
 	draftCtx := env.e.As(env.e.Rep1, []ids.UUID{env.e.Team1}, voiceDraftPerms)
-	result, err := drafter.DraftEmailWithProvenance(draftCtx, activity, "confirm the plan")
+	result, err := drafter.DraftEmailWithProvenance(draftCtx, activity, draftfloor.Steering{Intent: "confirm the plan"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -641,7 +642,7 @@ func TestReplyDraftFallsBackAndRecordsRejectionWhenTheFloorHolds(t *testing.T) {
 	}, slog.New(slog.DiscardHandler))
 
 	draftCtx := env.e.As(env.e.Rep1, []ids.UUID{env.e.Team1}, voiceDraftPerms)
-	result, err := drafter.DraftEmailWithProvenance(draftCtx, activity, "confirm the plan")
+	result, err := drafter.DraftEmailWithProvenance(draftCtx, activity, draftfloor.Steering{Intent: "confirm the plan"})
 	if err != nil {
 		t.Fatal(err)
 	}

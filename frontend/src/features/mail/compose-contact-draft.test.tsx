@@ -249,9 +249,9 @@ describe("drafting to a contact", () => {
     expect(first?.body).toEqual({ intent: "Follow up on our discussion" });
   });
 
-  // A rep who wrote a body and asked for a draft wants those words improved.
-  // The model is sent them, and its answer takes their place.
-  it("revises the body the reader wrote when asked for a draft", async () => {
+  // Words the rep typed before any draft are the rep's work. They go out with
+  // no rewrite_of, and the draft is dropped with a notice.
+  it("keeps the body the reader wrote and says the draft was dropped", async () => {
     const sent = stubRoutes({
       "POST /contacts/c-1/draft-email": () => jsonResponse(CONTACT_DRAFT),
     });
@@ -270,15 +270,12 @@ describe("drafting to a contact", () => {
 
     await userEvent.click(draftButton());
 
-    await waitFor(() =>
-      expect(messageText("Body")).toContain("brauchen wir zwei Produkte"),
-    );
-    expect(messageText("Body")).not.toContain("pls send");
+    expect(
+      await screen.findByText("Your edits were kept. Draft again when ready."),
+    ).toBeTruthy();
+    expect(messageText("Body")).toBe("hi, two products missing. pls send");
     const ask = sent.find((c) => c.key === "POST /contacts/c-1/draft-email");
-    expect(ask?.body).toEqual({
-      intent: "Make this nicer",
-      rewrite_of: "hi, two products missing. pls send",
-    });
+    expect(ask?.body).toEqual({ intent: "Make this nicer" });
   });
 
   // The deterministic floor writes from the record and never reads the body.

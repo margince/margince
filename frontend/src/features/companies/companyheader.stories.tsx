@@ -45,7 +45,7 @@ const company: Company = {
   // as NOT writable, so the stage would draw as a read-only badge throughout.
   writable: true,
   visibility: "workspace",
-  industry: "Automotive",
+  industry: "automotive",
   size_band: "51-200",
   description: "Retrofits commercial fleets for zero-emission depots.",
   domains: [

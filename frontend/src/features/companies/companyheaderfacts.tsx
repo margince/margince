@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { EntityRef } from "../../components/entityref";
 import { formatNumber } from "../../format/format";
+import { industryWords } from "../../format/industry";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { routeHash } from "../../lib/router";
 import { companyWebsite, displayHost } from "./companyheader";
@@ -41,7 +42,7 @@ export function CompanyHeadLines({
   );
   return (
     <>
-      {company.industry && <span>{company.industry}</span>}
+      {company.industry && <span>{industryWords(t, company.industry)}</span>}
       {website && (
         <a className="entity-link" href={website}>
           {displayHost(website)}

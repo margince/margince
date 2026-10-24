@@ -17,7 +17,8 @@ import {
   type DetailSection,
   RecordDetails,
 } from "../../design-system/recorddetails";
-import { useT } from "../../i18n";
+import { INDUSTRY_CODES, industryOptions } from "../../format/industry";
+import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCanWriteRecord } from "../../lib/capability";
 import { useListsAvailable, useRecordLists } from "../../lib/lists.queries";
@@ -163,7 +164,7 @@ export function useRowBuilders(company: Company, edit: Edit) {
     ),
   });
   const choice = (
-    key: "size_band" | "lifecycle",
+    key: "size_band" | "lifecycle" | "industry",
     label: MessageKey,
     options: readonly { value: string; label: string }[],
   ): DetailRow => ({
@@ -208,6 +209,18 @@ export function useRowBuilders(company: Company, edit: Edit) {
   return { text, choice, compound };
 }
 
+// The fixed list in the reader's order. A value that is no code, from a row not
+// yet repaired, is offered as it is stored so the row never reads as unset.
+function useIndustryOptions(company: Company) {
+  const t = useT();
+  const { locale } = useLocale();
+  const options = industryOptions(t, locale);
+  const stored = company.industry;
+  return stored && !INDUSTRY_CODES.some((code) => code === stored)
+    ? [{ value: stored, label: stored }, ...options]
+    : options;
+}
+
 // The rows the design reads under About: each set one shows, each empty one
 // folds behind "Show N empty fields". The account's other fields live on the
 // Profile tab (companyprofiledetails.tsx).
@@ -218,13 +231,14 @@ function useAboutRows(
   edit: Edit,
 ): DetailRow[] {
   const t = useT();
-  const { text, choice, compound } = useRowBuilders(company, edit);
+  const { choice, compound } = useRowBuilders(company, edit);
+  const industryOptions = useIndustryOptions(company);
   const website = companyWebsite(company);
   const wayIn = useWayIn(company, view, loading);
   return [
     // The head already links the site; here the value opens the domains form.
     compound("domains", t("field.domain"), website && displayHost(website)),
-    text("industry", "create.industry"),
+    choice("industry", "create.industry", industryOptions),
     choice(
       "size_band",
       "co.aside.size",

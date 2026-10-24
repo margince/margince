@@ -27355,7 +27355,11 @@ export interface components {
             legal_name?: string | null;
             /** @description One human-written line saying what the company does, shown under the title on the company page. A column rather than a governed custom field for the same reason `linkedin_url` is one: it is part of what a company IS and every installation wants it. Distinct from `industry` (a category) and from the dossier (agent-written prose). */
             description?: string | null;
-            industry?: string | null;
+            /**
+             * @description One of the fixed industry codes, or null. The server maps imported, read and typed text onto a code; text that names no code stores none.
+             * @enum {string|null}
+             */
+            industry?: null | "agriculture" | "automotive" | "aerospace_defense" | "chemicals_materials" | "construction" | "consumer_goods_retail" | "education" | "energy_utilities" | "entertainment_media" | "financial_services" | "food_beverage" | "government_public_sector" | "healthcare" | "hospitality_tourism" | "insurance" | "it_services" | "software" | "legal_professional_services" | "logistics_transport" | "manufacturing" | "marketing_advertising" | "mining_metals" | "nonprofit" | "pharma_biotech" | "real_estate" | "telecommunications";
             /** @enum {string|null} */
             size_band?: null | "1-10" | "11-50" | "51-200" | "201-500" | "501-1000" | "1001-5000" | "5000+";
             address?: components["schemas"]["Address"];
@@ -27447,6 +27451,7 @@ export interface components {
             legal_name?: string | null;
             /** @description One human-written line saying what the company does. */
             description?: string | null;
+            /** @description An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description. */
             industry?: string | null;
             /** @enum {string|null} */
             size_band?: null | "1-10" | "11-50" | "51-200" | "201-500" | "501-1000" | "1001-5000" | "5000+";
@@ -27476,6 +27481,7 @@ export interface components {
             legal_name?: string | null;
             /** @description One human-written line saying what the company does. Absent leaves it untouched; an empty string clears it, the same spelling every other nullable text field on this record uses. */
             description?: string | null;
+            /** @description An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description. */
             industry?: string | null;
             /** @enum {string|null} */
             size_band?: null | "1-10" | "11-50" | "51-200" | "201-500" | "501-1000" | "1001-5000" | "5000+";
@@ -27766,11 +27772,24 @@ export interface components {
              */
             expected: number;
             /**
-             * @description Which required inputs are missing, named in the reader's words. This is what
-             *     the "next data-gathering step" is built from, so it is never an opaque code.
+             * @description Which required inputs are missing, as codes. The client words them in the
+             *     reader's language, so the server sends no sentence here.
              */
-            missing?: string[];
+            missing?: components["schemas"]["GrowthFitInput"][];
         };
+        /**
+         * @description One input the growth-fit assessment needs about a company. The client words it.
+         * @enum {string}
+         */
+        GrowthFitInput: "offer_summary" | "icp" | "industry" | "buying_center" | "buying_intents" | "employee_range" | "technology";
+        /**
+         * @description The one thing to do that would most improve a growth-fit answer. The client words it.
+         *     `gather_inputs` is to find the inputs in `data_completeness.missing`, `record_profile`
+         *     is to record our own profile, `confirm_offering` is to confirm our own offering,
+         *     `configure_model` is to set up a model and `retry_later` is to try the read again.
+         * @enum {string}
+         */
+        GrowthFitNextStep: "gather_inputs" | "record_profile" | "confirm_offering" | "configure_model" | "retry_later";
         /**
          * @description Cached per reader (DOSS-DDL-2), because it folds seat-dependent workspace context
          *     and makes recommendations.
@@ -27792,15 +27811,14 @@ export interface components {
             band_capped_reason?: string | null;
             data_completeness: components["schemas"]["DataCompleteness"];
             /**
-             * @description The one named thing to do that would most improve this answer, or null when
+             * @description The one named thing to do that would most improve this answer, or absent when
              *     nothing is holding it back.
              *
-             *     When the band is `unknown` this is offered INSTEAD of a score and names the
-             *     missing inputs to go and find. When the band was capped it names the other
-             *     fix — confirming our own offering. Always a concrete action, never a
-             *     restatement that data is missing.
+             *     When the band is `unknown` this is offered INSTEAD of a score: `gather_inputs`
+             *     when inputs are missing. When the band was capped it names the other fix,
+             *     `confirm_offering`. A code, worded by the client.
              */
-            next_step?: string | null;
+            next_step?: components["schemas"]["GrowthFitNextStep"];
             /**
              * @description The band, taken apart (DOSS-AC-17..20, ADR-0095). Four named dimensions over the
              *     same evidence the band is assessed from, each with a 0-100 score and the reason for
@@ -27893,7 +27911,8 @@ export interface components {
          * @description The prepared questions. Fixed, because each one names the records its answer is
          *     written from — which is what makes the answer citable.
          *
-         *     `whats_open` — the open deals and the open tasks. Deliberately not approvals: an
+         *     `whats_open` — the open deals, the open tasks and the open commitments (promises
+         *     read out of conversations, not tasks). Deliberately not approvals: an
          *     approval is not a citable record type here, and an answer that named one could
          *     not be checked the way every other sentence can.
          *     `meeting_prep` — who to talk to, where the pipeline stands, what is unanswered.
@@ -28511,6 +28530,12 @@ export interface components {
             overdue: boolean;
             /** Format: uuid */
             assignee_id?: string | null;
+            /**
+             * @description The assignee's name while they are a live workspace member. Null when the task has no
+             *     assignee or the name cannot be given, so a reader says nothing about who holds it
+             *     instead of printing an id.
+             */
+            assignee_name?: string | null;
             /** Format: uuid */
             linked_deal_id?: string | null;
             /** Format: uuid */
@@ -28521,6 +28546,33 @@ export interface components {
              *     from has to name the row it will act on, or every press is last-write-wins.
              */
             version?: components["schemas"]["RowVersion"];
+        };
+        /**
+         * @description One open promise read out of a conversation with a contact at this account, in the order
+         *     overdue, then dated, then undated.
+         *
+         *     `kind` says whose promise it is. An `ours` commitment was made by our side and names no
+         *     owner: nothing on file says who holds it, so the reader says it is ours and nothing
+         *     more. A `theirs` commitment names the contact who made it.
+         */
+        Company360Commitment: {
+            /** Format: uuid */
+            claim_id: string;
+            /**
+             * Format: uuid
+             * @description The message the promise was read from, which is what a citation opens.
+             */
+            activity_id: string;
+            /** @enum {string} */
+            kind: "ours" | "theirs";
+            /** @description The promise, verbatim. */
+            body: string;
+            /** Format: uuid */
+            contact_id: string;
+            contact_name: string;
+            /** Format: date-time */
+            due_at?: string | null;
+            overdue: boolean;
         };
         /**
          * @description The next meeting with this account that has not happened yet, and who is in it.
@@ -28783,7 +28835,7 @@ export interface components {
             next_meeting?: components["schemas"]["Company360NextMeeting"];
             health?: components["schemas"]["Company360Health"];
             /** @description The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none". */
-            sections_omitted: ("contacts" | "deals" | "projects" | "strength" | "activities" | "tags" | "list_memberships" | "pending_approvals" | "next_steps" | "since_last_visit" | "suggestions" | "last_touch" | "state_strip" | "health" | "next_meeting" | "moments" | "billing_contacts")[];
+            sections_omitted: ("contacts" | "deals" | "projects" | "strength" | "activities" | "tags" | "list_memberships" | "pending_approvals" | "next_steps" | "since_last_visit" | "suggestions" | "last_touch" | "state_strip" | "health" | "next_meeting" | "moments" | "billing_contacts" | "commitments")[];
             contacts?: {
                 data: components["schemas"]["Company360Contact"][];
                 page: components["schemas"]["PageInfo"];
@@ -28808,6 +28860,17 @@ export interface components {
             };
             next_steps?: {
                 data: components["schemas"]["Company360NextStep"][];
+                page: components["schemas"]["PageInfo"];
+            };
+            /**
+             * @description The promises read out of conversations that are still open, ours and theirs. Absent,
+             *     with `commitments` named in `sections_omitted`, when the caller lacks the contact or
+             *     activity grant. Never an empty list standing in for a refusal. Claims carry no
+             *     project, so a project-narrowed page lists them account-wide. `attention_withheld` is
+             *     set when the caller's row scope hid some.
+             */
+            open_commitments?: {
+                data: components["schemas"]["Company360Commitment"][];
                 page: components["schemas"]["PageInfo"];
             };
             since_last_visit?: components["schemas"]["Company360SinceLastVisit"];
@@ -34328,7 +34391,7 @@ export interface components {
             raw?: {
                 [key: string]: unknown;
             } | null;
-            /** @description The message's own address headers, for mail this installation never captured. Email only — any other kind returns `422 code: field_not_valid_for_kind` — and `direction` is required alongside it, because the counterparty is derived from the two together: an inbound message is with its sender, an outbound one with the first recipient who is not the sending mailbox. */
+            /** @description The message's own address headers, for mail this installation never captured. Email only — any other kind returns `422 code: field_not_valid_for_kind` — and `direction` is required alongside it, because the counterparty is derived from the two together: an inbound message is with its sender, an outbound one with the first recipient who is not the sending mailbox. An inbound message whose `from` is the mail system itself (postmaster, mailer-daemon, a bounce address) is a delivery report and returns `422` on `participants.from`. */
             participants?: {
                 from?: string | null;
                 to?: string[];
@@ -34705,6 +34768,17 @@ export interface components {
         };
         RequestAccessResponse: {
             requested: boolean;
+        };
+        /** @description What every draft-email route takes to steer a draft: the caller's ask and, for a rewrite, the words on the composer's screen. Each route extends it with the fields its own record needs. */
+        DraftSteering: {
+            /** @description Optional steering in the caller's own words ("shorter", "warmer", "ask for Tuesday"). The one input that is NOT untrusted — the caller typed it — and so the only one outside the fence. */
+            intent?: string | null;
+            /**
+             * @description The draft the composer is CURRENTLY showing, when the call is a rewrite rather than a first draft. Without it an `intent` of "make it shorter" generates a second grounded draft from the same record and the composer swaps it in — a different email rather than a shorter one, and any edits the rep had made are gone.
+             *     Sent by the client because the server stores no draft to resolve: this endpoint writes no record, so there is nothing on file to name. It is UNTRUSTED like every other input but `intent` — it may hold text a contact wrote, pasted in — and is fenced the same way.
+             *     Absent or empty is a first draft.
+             */
+            rewrite_of?: string | null;
         };
         /** @description A drafted email (never sent by drafting). Send via /activities/{id}/send-email (🟡). */
         EmailDraft: {
@@ -51233,9 +51307,7 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json": {
-                    /** @description Optional steering in the caller's own words ("shorter", "warmer", "ask for Tuesday"). The one input that is NOT untrusted — the caller typed it — and so the only one outside the fence. */
-                    intent?: string | null;
+                "application/json": components["schemas"]["DraftSteering"] & {
                     /**
                      * Format: uuid
                      * @description Which body of work the message is about. When set, the draft is grounded in the 360 scoped to that project — correspondence filed under another project drops out — and the project's name, key, phase and target end date are facts the draft may use. Must be a live project the caller can read; an invisible or archived one is `404`, the same answer a direct read gives.
@@ -51248,12 +51320,6 @@ export interface operations {
                     about_activity_id?: string | null;
                     /** @description Further contacts the same message goes to, such as everyone at a meeting the draft follows up. The draft's `to` then lists each one's address after this contact's, and the writer is told the message has several readers. Each must be a live contact the caller may read; one that is not refuses the whole request with `422` `recipient_not_on_file`, the code `POST /emails` answers for an address nobody on file holds. */
                     also_to?: string[];
-                    /**
-                     * @description The draft the composer is CURRENTLY showing, when the call is a rewrite rather than a first draft. Without it an `intent` of "make it shorter" generates a second grounded draft from the same record and the composer swaps it in — a different email rather than a shorter one, and any edits the rep had made are gone.
-                     *     Sent by the client because the server stores no draft to resolve: this endpoint writes no record, so there is nothing on file to name. It is UNTRUSTED like every other input but `intent` — it may hold text a contact wrote, pasted in — and is fenced the same way.
-                     *     Absent or empty is a first draft, which is the behaviour every caller had before this field existed.
-                     */
-                    rewrite_of?: string | null;
                 };
             };
         };
@@ -52342,10 +52408,10 @@ export interface operations {
                  */
                 unassigned?: boolean;
                 /**
-                 * @description Accounts in one industry, matched exactly (DM-VOCAB-2). The column is free text rather
-                 *     than an enum, so this is the value as it was written.
+                 * @description Accounts in one industry, matched exactly on the code (DM-VOCAB-2). A value outside the
+                 *     list is `422`.
                  */
-                industry?: string;
+                industry?: "agriculture" | "automotive" | "aerospace_defense" | "chemicals_materials" | "construction" | "consumer_goods_retail" | "education" | "energy_utilities" | "entertainment_media" | "financial_services" | "food_beverage" | "government_public_sector" | "healthcare" | "hospitality_tourism" | "insurance" | "it_services" | "software" | "legal_professional_services" | "logistics_transport" | "manufacturing" | "marketing_advertising" | "mining_metals" | "nonprofit" | "pharma_biotech" | "real_estate" | "telecommunications";
                 /** @description How many contacts work there (DM-VOCAB-2). */
                 size_band?: "1-10" | "11-50" | "51-200" | "201-500" | "501-1000" | "1001-5000" | "5000+";
                 q?: string;
@@ -53432,7 +53498,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": {
+                "application/json": components["schemas"]["DraftSteering"] & {
                     /**
                      * Format: uuid
                      * @description Who the draft is addressed to. Required: a draft with no recipient has no relationship to ground itself in, and the one thing this endpoint adds over an empty compose box is that it knows who it is writing to. Must be a contact the caller can see on this account.
@@ -53448,10 +53514,6 @@ export interface operations {
                      * @description Which body of work the message is about. When set, the draft is grounded in the 360 scoped to that project — correspondence filed under another project drops out — and the project's name, key, phase and target end date are facts the draft may use. Must be a live project the caller can read; an invisible or archived one is `404`, the same answer a direct read gives.
                      */
                     project_id?: string | null;
-                    /** @description Optional steering in the caller's own words ("shorter", "warmer", "ask for Tuesday"). The one input that is NOT untrusted — the caller typed it — and so the only one outside the fence. */
-                    intent?: string | null;
-                    /** @description The draft the composer is CURRENTLY showing, when the call is a rewrite rather than a first draft. The contact-side mirror carries the same field for the same reason — see `POST /contacts/{id}/draft-email`. */
-                    rewrite_of?: string | null;
                 };
             };
         };
@@ -58249,10 +58311,7 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json": {
-                    /** @description Optional steering, e.g. "polite follow-up referencing Friday". */
-                    intent?: string;
-                };
+                "application/json": components["schemas"]["DraftSteering"];
             };
         };
         responses: {
@@ -61566,10 +61625,7 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json": {
-                    /** @description Optional steering in the caller's own words ("shorter", "warmer", "ask for Tuesday"). The one input that is NOT untrusted — the caller typed it — and so the only one outside the fence. */
-                    intent?: string | null;
-                };
+                "application/json": components["schemas"]["DraftSteering"];
             };
         };
         responses: {

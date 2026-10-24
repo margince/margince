@@ -55,6 +55,8 @@ type Request struct {
 	// Intent is the caller's own steering ("shorter", "ask for Tuesday"). The
 	// one input they typed, and the one input outside the fence.
 	Intent string
+	// RewriteOf is the draft the composer is showing; empty is a first draft.
+	RewriteOf string
 }
 
 // Service writes one draft per call.
@@ -126,9 +128,9 @@ func (s *Service) Draft(
 		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}
 	envelope := s.envelope.Resolve(ctx,
-		draftfloor.Written{Body: contactdraft.CorrespondenceTextOf(activities), Purpose: req.Intent},
+		draftfloor.Written{Body: contactdraft.CorrespondenceTextOf(activities), Rewrite: req.RewriteOf, Purpose: req.Intent},
 		ConversationState(activities, s.envelope.Now()))
-	in := FromLead(lead, activities, req.Intent, envelope)
+	in := FromLead(lead, activities, req, envelope)
 	grounding, err := in.Grounding()
 	if err != nil {
 		return crmcontracts.CompanyEmailDraft{}, nil, err

@@ -19,6 +19,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -221,7 +222,7 @@ func FromView(
 		Commitment: foldCommitment(view),
 	}
 	if view.Company.Industry != nil {
-		in.Industry = *view.Company.Industry
+		in.Industry = contacts.IndustryWords(string(*view.Company.Industry), req.Envelope.Lang())
 	}
 	if view.Company.Description != nil {
 		in.Description = *view.Company.Description
@@ -308,39 +309,6 @@ func recipientOf(contact crmcontracts.Company360Contact) RecipientIn {
 }
 
 const rfc3339 = "2006-01-02T15:04:05Z"
-
-// firstName is what the greeting uses. Everything before the first space, or
-// the whole name when it has none — a one-word name is a name, not a mistake.
-func firstName(full string) string {
-	if cut, _, found := strings.Cut(strings.TrimSpace(full), " "); found && cut != "" {
-		return cut
-	}
-	return strings.TrimSpace(full)
-}
-
-// lastName is what follows the FIRST space in the display name, which is the
-// surname for a two-word name and not always one otherwise: "Dr. Anne Weiss"
-// yields "Anne Weiss", a given name inside the result. No rule over display
-// names gets every name right, and this input carries no name columns to
-// consult — the 360 contact it folds has a full name and nothing else.
-//
-// A single-word name yields empty, which sends the greeting to the familiar
-// form rather than to a formal one addressed to a first name.
-//
-// contactdraft.surname answers the same question from a Contact record and
-// prefers that record's own last_name, which is the better answer where it
-// exists. The two are not shared because their INPUTS differ, not their
-// answer: unifying them would mean passing a Contact into a fold that has none.
-//
-// The prompt rule is what protects the output where this is wrong: a formal
-// greeting is used only where a surname was given, and the model is told never
-// to complete or invent one.
-func lastName(full string) string {
-	if _, rest, found := strings.Cut(strings.TrimSpace(full), " "); found {
-		return strings.TrimSpace(rest)
-	}
-	return ""
-}
 
 // foldCommitment takes the soonest open task. `next_steps.data` arrives
 // ordered overdue → due → undated, so the head is it and this makes no
@@ -491,6 +459,9 @@ func (in Input) String() string {
 // new conversation, so no subject it writes can be a reply to anything. The
 // method exists so the shared check reads the same shape from every surface.
 func (Input) Threaded() bool { return false }
+
+// ThreadSubject is false: this surface opens a conversation.
+func (Input) ThreadSubject() (string, bool) { return "", false }
 
 // Booked is false: an account draft folds no meeting, so nothing here can
 // support a day. A surface that gains one answers from it rather than here.

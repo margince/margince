@@ -5,7 +5,8 @@ info:
   version: 1.0.0-draft
   summary: AI-native, source-available CRM core — contacts, companies, deals, pipelines, activities, leads, plus the agent/AI surface.
   description: |-
-    The V1 core CRM contract.
+    The V1 core CRM contract: contacts, companies, deals, pipelines, activities
+    and leads, with the agent and AI surface beside them.
   license:
     name: BUSL-1.1
     identifier: BUSL-1.1
@@ -487,10 +488,12 @@ paths:
             Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
         - name: industry
           in: query
-          schema: {type: string}
+          schema:
+            type: string
+            enum: [agriculture, automotive, aerospace_defense, chemicals_materials, construction, consumer_goods_retail, education, energy_utilities, entertainment_media, financial_services, food_beverage, government_public_sector, healthcare, hospitality_tourism, insurance, it_services, software, legal_professional_services, logistics_transport, manufacturing, marketing_advertising, mining_metals, nonprofit, pharma_biotech, real_estate, telecommunications]
           description: |-
-            Accounts in one industry, matched exactly. The column is free text rather
-            than an enum, so this is the value as it was written.
+            Accounts in one industry, matched exactly on the code. A value outside the
+            list is `422`.
         - name: size_band
           in: query
           description: How many contacts work there.
@@ -2865,12 +2868,7 @@ paths:
         required: false
         content:
           application/json:
-            schema:
-              type: object
-              properties:
-                intent:
-                  type: string
-                  description: Optional steering, e.g. "polite follow-up referencing Friday".
+            schema: {$ref: '#/components/schemas/DraftSteering'}
       responses:
         '200':
           description: A drafted email (never sent).
@@ -9777,7 +9775,11 @@ components:
           maxLength: 500
           description: >-
             One human-written line saying what the company does, shown under the title on the company page. A column rather than a governed custom field for the same reason `linkedin_url` is one: it is part of what a company IS and every installation wants it. Distinct from `industry` (a category) and from the dossier (agent-written prose).
-        industry: {type: [string, 'null']}
+        industry:
+          type: [string, 'null']
+          description: >-
+            One of the fixed industry codes, or null. The server maps imported, read and typed text onto a code; text that names no code stores none.
+          enum: [null, agriculture, automotive, aerospace_defense, chemicals_materials, construction, consumer_goods_retail, education, energy_utilities, entertainment_media, financial_services, food_beverage, government_public_sector, healthcare, hospitality_tourism, insurance, it_services, software, legal_professional_services, logistics_transport, manufacturing, marketing_advertising, mining_metals, nonprofit, pharma_biotech, real_estate, telecommunications]
         size_band:
           type: [string, 'null']
           enum: [null, '1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+']
@@ -9883,7 +9885,7 @@ components:
         display_name: {type: string}
         legal_name: {type: [string, 'null']}
         description: {type: [string, 'null'], maxLength: 500, description: One human-written line saying what the company does.}
-        industry: {type: [string, 'null']}
+        industry: {type: [string, 'null'], maxLength: 2000, description: 'An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.'}
         size_band: {type: [string, 'null'], enum: [null, '1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+']}
         address: {$ref: '#/components/schemas/Address'}
         owner_id: {type: [string, 'null'], format: uuid}
@@ -9906,7 +9908,7 @@ components:
         display_name: {type: string}
         legal_name: {type: [string, 'null']}
         description: {type: [string, 'null'], maxLength: 500, description: 'One human-written line saying what the company does. Absent leaves it untouched; an empty string clears it, the same spelling every other nullable text field on this record uses.'}
-        industry: {type: [string, 'null']}
+        industry: {type: [string, 'null'], maxLength: 2000, description: 'An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.'}
         size_band: {type: [string, 'null'], enum: [null, '1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+']}
         address: {$ref: '#/components/schemas/Address'}
         owner_id: {type: [string, 'null'], format: uuid}
@@ -10526,6 +10528,12 @@ components:
         due_at: {type: [string, 'null'], format: date-time}
         overdue: {type: boolean}
         assignee_id: {type: [string, 'null'], format: uuid}
+        assignee_name:
+          type: [string, 'null']
+          description: |-
+            The assignee's name while they are a live workspace member. Null when the task has no
+            assignee or the name cannot be given, so a reader says nothing about who holds it
+            instead of printing an id.
         linked_deal_id: {type: [string, 'null'], format: uuid}
         linked_contact_id: {type: [string, 'null'], format: uuid}
         version:
@@ -10534,6 +10542,24 @@ components:
             The task's version, carried so the tick and the snooze beside this row can write with
             `If-Match`. The same reason `EmailSummary` carries one: a projection a reader can act
             from has to name the row it will act on, or every press is last-write-wins.
+    Company360Commitment:
+      type: object
+      description: |-
+        One open promise read out of a conversation with a contact at this account, in the order
+        overdue, then dated, then undated.
+      required: [claim_id, activity_id, kind, body, contact_id, contact_name, overdue]
+      properties:
+        claim_id: {type: string, format: uuid}
+        activity_id:
+          type: string
+          format: uuid
+          description: The message the promise was read from, which is what a citation opens.
+        kind: {type: string, enum: [ours, theirs]}
+        body: {type: string, description: 'The promise, verbatim.'}
+        contact_id: {type: string, format: uuid}
+        contact_name: {type: string}
+        due_at: {type: [string, 'null'], format: date-time}
+        overdue: {type: boolean}
     Company360NextMeeting:
       type: object
       description: |-
@@ -10731,7 +10757,7 @@ components:
           description: The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none".
           items:
             type: string
-            enum: [contacts, deals, projects, strength, activities, tags, list_memberships, pending_approvals, next_steps, since_last_visit, suggestions, last_touch, state_strip, health, next_meeting, moments, billing_contacts]
+            enum: [contacts, deals, projects, strength, activities, tags, list_memberships, pending_approvals, next_steps, since_last_visit, suggestions, last_touch, state_strip, health, next_meeting, moments, billing_contacts, commitments]
         contacts:
           type: object
           required: [data, page]
@@ -10776,6 +10802,18 @@ components:
           required: [data, page]
           properties:
             data: {type: array, items: {$ref: '#/components/schemas/Company360NextStep'}}
+            page: {$ref: '#/components/schemas/PageInfo'}
+        open_commitments:
+          type: object
+          required: [data, page]
+          description: |-
+            The promises read out of conversations that are still open, ours and theirs. Absent,
+            with `commitments` named in `sections_omitted`, when the caller lacks the contact or
+            activity grant. Never an empty list standing in for a refusal. Claims carry no
+            project, so a project-narrowed page lists them account-wide. `attention_withheld` is
+            set when the caller's row scope hid some.
+          properties:
+            data: {type: array, items: {$ref: '#/components/schemas/Company360Commitment'}}
             page: {$ref: '#/components/schemas/PageInfo'}
         since_last_visit: {$ref: '#/components/schemas/Company360SinceLastVisit'}
         suggestions:
@@ -14973,7 +15011,7 @@ components:
           type: [object, 'null']
           additionalProperties: false
           description: >-
-            The message's own address headers, for mail this installation never captured. Email only — any other kind returns `422 code: field_not_valid_for_kind` — and `direction` is required alongside it, because the counterparty is derived from the two together: an inbound message is with its sender, an outbound one with the first recipient who is not the sending mailbox.
+            The message's own address headers, for mail this installation never captured. Email only — any other kind returns `422 code: field_not_valid_for_kind` — and `direction` is required alongside it, because the counterparty is derived from the two together: an inbound message is with its sender, an outbound one with the first recipient who is not the sending mailbox. An inbound message whose `from` is the mail system itself (postmaster, mailer-daemon, a bounce address) is a delivery report and returns `422` on `participants.from`.
           properties:
             from: {type: [string, 'null']}
             to: {type: array, items: {type: string}}
@@ -15128,6 +15166,21 @@ components:
       properties:
         data: {type: array, items: {$ref: '#/components/schemas/DealDocument'}}
         page: {$ref: '#/components/schemas/PageInfo'}
+    DraftSteering:
+      type: object
+      description: >-
+        What every draft-email route takes to steer a draft: the caller's ask and, for a rewrite, the words on the composer's screen. Each route extends it with the fields its own record needs.
+      properties:
+        intent:
+          type: [string, 'null']
+          maxLength: 400
+          description: >-
+            Optional steering in the caller's own words ("shorter", "warmer", "ask for Tuesday"). The one input that is NOT untrusted — the caller typed it — and so the only one outside the fence.
+        rewrite_of:
+          type: [string, 'null']
+          maxLength: 20000
+          description: >-
+            The draft the composer is CURRENTLY showing, when the call is a rewrite rather than a first draft. Without it an `intent` of "make it shorter" generates a second grounded draft from the same record and the composer swaps it in — a different email rather than a shorter one, and any edits the rep had made are gone.
     EmailDraft:
       type: object
       description: A drafted email (never sent by drafting). Send via /activities/{id}/send-email ().

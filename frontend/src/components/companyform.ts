@@ -19,6 +19,8 @@ import { ifMatch, requireVersion } from "../api/version";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { RecordPickerCandidate } from "../design-system/recordpicker";
+import { industryOptions } from "../format/industry";
+import type { Locale } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { unwrap } from "../lib/problem";
 import {
@@ -235,25 +237,35 @@ export function addressPatch(
   };
 }
 
-export const companyCreateFields: CreateField[] = [
-  { key: "display_name", label: "create.displayName", required: true },
-  { key: "legal_name", label: "create.legalName" },
-  { key: "industry", label: "create.industry" },
-  {
-    key: "size_band",
-    label: "create.sizeBand",
-    type: "select",
-    options: SIZE_BAND_OPTIONS.map((band) => ({ value: band, label: band })),
-  },
-  {
-    key: "domains",
-    label: "company.domains",
-    type: "repeatable",
-    addLabel: "field.addDomain",
-    rowFields: [{ key: "domain", label: "field.domain", required: true }],
-    primaryKey: "is_primary",
-  },
-];
+export function companyCreateFields(
+  t: (key: MessageKey) => string,
+  locale: Locale,
+): CreateField[] {
+  return [
+    { key: "display_name", label: "create.displayName", required: true },
+    { key: "legal_name", label: "create.legalName" },
+    {
+      key: "industry",
+      label: "create.industry",
+      type: "select",
+      options: industryOptions(t, locale),
+    },
+    {
+      key: "size_band",
+      label: "create.sizeBand",
+      type: "select",
+      options: SIZE_BAND_OPTIONS.map((band) => ({ value: band, label: band })),
+    },
+    {
+      key: "domains",
+      label: "company.domains",
+      type: "repeatable",
+      addLabel: "field.addDomain",
+      rowFields: [{ key: "domain", label: "field.domain", required: true }],
+      primaryKey: "is_primary",
+    },
+  ];
+}
 
 // The edit form, built per-render because the owner options are the live user
 // roster.
@@ -283,11 +295,17 @@ export function companyEditFields(
   owners: readonly { id: string; display_name: string }[],
   hasOwner: boolean,
   t: (key: MessageKey) => string,
+  locale: Locale,
 ): CreateField[] {
   return [
     { key: "display_name", label: "create.displayName", required: true },
     { key: "legal_name", label: "create.legalName" },
-    { key: "industry", label: "create.industry" },
+    {
+      key: "industry",
+      label: "create.industry",
+      type: "select",
+      options: industryOptions(t, locale),
+    },
     {
       key: "size_band",
       label: "create.sizeBand",
