@@ -19933,6 +19933,36 @@ func (e UpdateRoleRequestRowScope) Valid() bool {
 	}
 }
 
+// Defines values for UpdateSignalRequestKind.
+const (
+	UpdateSignalRequestKindBuyingIntent UpdateSignalRequestKind = "buying_intent"
+	UpdateSignalRequestKindChampionLeft UpdateSignalRequestKind = "champion_left"
+	UpdateSignalRequestKindOther        UpdateSignalRequestKind = "other"
+	UpdateSignalRequestKindReengagement UpdateSignalRequestKind = "reengagement"
+	UpdateSignalRequestKindRisk         UpdateSignalRequestKind = "risk"
+	UpdateSignalRequestKindStalledDeal  UpdateSignalRequestKind = "stalled_deal"
+)
+
+// Valid indicates whether the value is a known member of the UpdateSignalRequestKind enum.
+func (e UpdateSignalRequestKind) Valid() bool {
+	switch e {
+	case UpdateSignalRequestKindBuyingIntent:
+		return true
+	case UpdateSignalRequestKindChampionLeft:
+		return true
+	case UpdateSignalRequestKindOther:
+		return true
+	case UpdateSignalRequestKindReengagement:
+		return true
+	case UpdateSignalRequestKindRisk:
+		return true
+	case UpdateSignalRequestKindStalledDeal:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateSignalRequestSeverity.
 const (
 	UpdateSignalRequestSeverityInfo   UpdateSignalRequestSeverity = "info"
@@ -54414,15 +54444,24 @@ type UpdateSavedViewRequest struct {
 	Query *map[string]interface{} `json:"query,omitempty"`
 }
 
-// UpdateSignalRequest Triage. A `status` move to acknowledged/resolved/dismissed appends the human-outcome
+// UpdateSignalRequest Triage and correction. A `status` move to acknowledged/resolved/dismissed appends the human-outcome
 // `signal_resolution` row; `note` travels with that outcome. `resolution_state` and the
 // resolved ids are resolver-owned and not writable here.
 type UpdateSignalRequest struct {
+	// Evidence Replaces the signal's evidence. The audit row keeps the old evidence.
+	Evidence *[]SignalEvidence `json:"evidence,omitempty"`
+
+	// Kind Corrects the signal's type. Only the kinds a human files by hand are accepted. The audit row keeps the old kind.
+	Kind *UpdateSignalRequestKind `json:"kind,omitempty"`
+
 	// Note Optional outcome note recorded with a status change.
 	Note     *string                      `json:"note,omitempty"`
 	Severity *UpdateSignalRequestSeverity `json:"severity,omitempty"`
 	Status   *UpdateSignalRequestStatus   `json:"status,omitempty"`
 }
+
+// UpdateSignalRequestKind Corrects the signal's type. Only the kinds a human files by hand are accepted. The audit row keeps the old kind.
+type UpdateSignalRequestKind string
 
 // UpdateSignalRequestSeverity defines model for UpdateSignalRequest.Severity.
 type UpdateSignalRequestSeverity string

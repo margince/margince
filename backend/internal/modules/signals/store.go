@@ -100,6 +100,23 @@ func SignalEntityTables() []string {
 	return slices.Sorted(maps.Keys(signalEntityTables))
 }
 
+// correctableKinds are the kinds filed by hand, the only ones an edit
+// may set. The store pins them because UpdateSignal is reached by more than the
+// transport enum.
+var correctableKinds = []string{"stalled_deal", "champion_left", "reengagement", "buying_intent", "risk", "other"}
+
+// InvalidSignalKindError answers 422: the kind is not one an edit may set.
+type InvalidSignalKindError struct{}
+
+func (e *InvalidSignalKindError) Error() string {
+	return "kind must be one of " + strings.Join(correctableKinds, ", ")
+}
+
+// FieldFault names the allowed kinds, as the entity-type refusal does.
+func (e *InvalidSignalKindError) FieldFault() (field, code, message string) {
+	return signalKindArg, "invalid_kind", e.Error()
+}
+
 // InvalidSignalEntityTypeError answers 422: the subject type is outside
 // the signal_entity_type set.
 type InvalidSignalEntityTypeError struct{ EntityType string }

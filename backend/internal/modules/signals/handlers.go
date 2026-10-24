@@ -116,6 +116,8 @@ func (h Handlers) UpdateSignal(w http.ResponseWriter, r *http.Request, id crmcon
 		Status:    (*string)(req.Status),
 		Note:      req.Note,
 		Severity:  (*string)(req.Severity),
+		Kind:      (*string)(req.Kind),
+		Evidence:  req.Evidence,
 		IfVersion: ifVersion,
 	}
 	sig, err := h.store.UpdateSignal(r.Context(), pathID[ids.SignalKind](id), in)
