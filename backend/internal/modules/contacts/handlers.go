@@ -217,6 +217,15 @@ func writeStoreErr(w http.ResponseWriter, r *http.Request, err error) {
 		httperr.Write(w, r, httperr.Duplicate("duplicate_email", duplicateID(dupEmail.ExistingID.UUID)))
 		return
 	}
+	if held, ok := errors.AsType[*ContactHeldByColleagueError](err); ok {
+		// No id and no owner: the caller learns the address is taken and
+		// whether its holder was asked, nothing about the record.
+		httperr.Write(w, r, &httperr.DetailedError{
+			Status: http.StatusConflict, Code: "contact_held_by_colleague", Detail: held.Error(),
+			Details: map[string]any{"share_requested": held.ShareRequested},
+		})
+		return
+	}
 	if dupDomain, ok := errors.AsType[*DuplicateDomainError](err); ok {
 		httperr.Write(w, r, httperr.Duplicate("duplicate_domain", duplicateID(dupDomain.ExistingID.UUID)))
 		return

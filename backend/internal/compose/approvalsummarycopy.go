@@ -35,6 +35,8 @@ type approvalSummaryCopy struct {
 	draftedReplyWaiting string
 	// counterpartyWorthKeeping asks about an unresolved sender. %s is the address.
 	counterpartyWorthKeeping string
+	// contactShareAsked: %s is the colleague asking for the contact.
+	contactShareAsked string
 	// companyRename: %s is the current name, then the proposed one.
 	companyRename string
 	// siteLeadFound: %s is the site's host, then the contact's name, then role.
@@ -99,6 +101,7 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 		draftedReplyWaiting: "A reply to %q is drafted and waiting to be sent — " +
 			"the conversation left no next step planned",
 		counterpartyWorthKeeping: "Is %s a contact worth keeping?",
+		contactShareAsked:        "%s asks you to share this contact.",
 		companyRename:            "Rename %s to %s?",
 		siteLeadFound:            "Found on %s: %s — %s",
 		enrichmentOf:             "Enrichment of %s",
@@ -138,6 +141,7 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 		draftedReplyWaiting: "Eine Antwort auf %q ist entworfen und wartet auf den Versand: " +
 			"Das Gespräch endete ohne geplanten nächsten Schritt",
 		counterpartyWorthKeeping: "Lohnt es sich, %s als Kontakt zu behalten?",
+		contactShareAsked:        "%s bittet dich, diesen Kontakt zu teilen.",
 		companyRename:            "%s in %s umbenennen?",
 		siteLeadFound:            "Gefunden auf %s: %s (%s)",
 		enrichmentOf:             "Anreicherung aus %s",
@@ -178,6 +182,7 @@ var approvalSummaryByLang = map[textlang.Lang]approvalSummaryCopy{
 		draftedReplyWaiting: "Một thư trả lời cho %q đã được soạn và đang chờ gửi: " +
 			"cuộc trò chuyện không để lại bước tiếp theo nào được lên kế hoạch",
 		counterpartyWorthKeeping: "%s có phải là một liên hệ đáng giữ lại không?",
+		contactShareAsked:        "%s đề nghị bạn chia sẻ liên hệ này.",
 		companyRename:            "Đổi tên %s thành %s?",
 		siteLeadFound:            "Tìm thấy trên %s: %s (%s)",
 		enrichmentOf:             "Bổ sung thông tin từ %s",

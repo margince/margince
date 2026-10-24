@@ -73,7 +73,7 @@ func (s *Store) UpdateContact(ctx context.Context, id ids.ContactID, in UpdateCo
 		out, err = s.updateContactInTx(ctx, tx, id, in, active)
 		return err
 	})
-	return out, err
+	return out, s.AskHolderToShare(ctx, err)
 }
 
 // updateContactInTx is the edit itself, on the caller's transaction: the write
@@ -159,7 +159,7 @@ func (s *Store) updateContactInTx(
 	if out, err = readContact(ctx, tx, id, storekit.LiveOnly, active); err != nil {
 		return out, fmt.Errorf("read updated contact: %w", err)
 	}
-	return out, nil
+	return out, s.followShareOwnerTx(ctx, tx, id, (*ids.UUID)(current.OwnerId), (*ids.UUID)(out.OwnerId))
 }
 
 // Child sets are separate rows, so their audit images supplement the column patch.

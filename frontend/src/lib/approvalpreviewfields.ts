@@ -34,6 +34,8 @@ const PREVIEW_DETAIL_LABELS: Record<string, MessageKey> = {
   creation_acquired_at: "approval.preview.acquiredAt",
   creation_promoted_lead: "approval.preview.promotedLead",
   creation_source_activity: "approval.preview.sourceActivity",
+  creation_source_withheld_activities:
+    "approval.preview.sourceWithheldActivities",
   creation_source_consent: "approval.preview.sourceConsent",
   creation_email_type: "field.emailType",
   creation_phone_type: "field.phoneType",
@@ -119,6 +121,8 @@ const PREVIEW_DETAIL_LABELS: Record<string, MessageKey> = {
   promotion_move_activity: "approval.preview.promotionMoveActivity",
   promotion_remove_duplicate_activity_link:
     "approval.preview.promotionDuplicateActivity",
+  promotion_move_withheld_activities:
+    "approval.preview.promotionWithheldActivities",
   promotion_consent_before: "approval.preview.promotionConsentBefore",
   promotion_restriction: "approval.preview.promotionRestriction",
   promotion_restriction_authority:

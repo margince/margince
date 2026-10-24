@@ -217,14 +217,14 @@ func relinkActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Rel
 	if tag.RowsAffected() == 0 {
 		return false, held, nil
 	}
-	return true, held, finalizeRelinkedActivity(ctx, tx, id, in)
+	return true, held, finalizeRelinkedActivity(ctx, tx, id, in, displaced)
 }
 
 // finalizeRelinkedActivity is the bookkeeping relinkActivityRow's own write
 // earns once the link itself is written: the version bump a staged approval
 // re-checks, the project correspondence stamp, and the audit row + outbox
 // event — split out so the guard chain above it reads as one shape.
-func finalizeRelinkedActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in RelinkActivityInput) error {
+func finalizeRelinkedActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in RelinkActivityInput, removed []ids.UUID) error {
 	// Touch the activity ROW itself, not just its link table: a staged
 	// approval pins activity.version (versionTables includes objectActivity),
 	// and that pin is the only defense between an approved "send this body on
@@ -244,7 +244,7 @@ func finalizeRelinkedActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID,
 			return err
 		}
 	}
-	auditID, err := storekit.AuditWithEvidence(ctx, tx, "activity_relink", "activity", id.UUID, nil, map[string]any{
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, "activity_relink", "activity", id.UUID, relinkBefore(in.EntityType, removed), map[string]any{
 		"entity_type": in.EntityType, "entity_id": in.EntityID, "replaced": in.ReplaceExistingOfType,
 	}, in.evidence)
 	if err != nil {
@@ -253,6 +253,16 @@ func finalizeRelinkedActivity(ctx context.Context, tx pgx.Tx, id ids.ActivityID,
 	return storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventActivityUpdated{
 		ChangedFields: relinkedChangedFields(in.EntityType, in.EntityID),
 	})
+}
+
+// relinkBefore is the audit row's restore image: the links of the destination's
+// type that a replacing relink removed. It is nil when nothing was removed, so
+// an additive relink keeps the empty before it always had.
+func relinkBefore(entityType string, removed []ids.UUID) map[string]any {
+	if len(removed) == 0 {
+		return nil
+	}
+	return map[string]any{"entity_type": entityType, "entity_ids": removed}
 }
 
 // relinkedChangedFields is RelinkActivity's activity.updated builder: the

@@ -111,7 +111,7 @@ func (s *Store) CreateContact(ctx context.Context, in CreateContactInput) (crmco
 		out, err = s.createContactInTx(ctx, tx, in, by, active)
 		return err
 	})
-	return out, err
+	return out, s.AskHolderToShare(ctx, err)
 }
 
 // CreateContactTx is CreateContact for a caller that already opened a
@@ -309,7 +309,7 @@ func (s *Store) EnsureContactByEmail(ctx context.Context, fullName, email, sourc
 	}
 	// A concurrent capture of the same email won the race: its row IS
 	// the idempotent answer.
-	if _, ok := errors.AsType[*DuplicateEmailError](err); ok {
+	if IsClaimedEmail(err) {
 		if id, found, lookupErr := lookup(); lookupErr == nil && found {
 			return id, nil
 		}

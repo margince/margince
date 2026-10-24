@@ -88,7 +88,10 @@ func (e *CounterpartyVerdictEngine) apply(
 			// hideNoise is deliberately NOT called. Its scope excludes every
 			// address the workspace has written to, which is every address this
 			// kind is ever about, so it would be a no-op that read like a hide.
-			return e.retractSendersContacts(ctx, tx, row, retractOwnersOnly)
+			if err := e.retractSendersContacts(ctx, tx, row, retractOwnersOnly); err != nil {
+				return err
+			}
+			return retractPersonalSenderLeadLinksTx(ctx, tx, row.Email, row.OwnerID)
 		}
 		return fmt.Errorf("verdict: no effect defined for sender kind %q", kind)
 	})

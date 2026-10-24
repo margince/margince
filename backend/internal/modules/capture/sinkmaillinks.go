@@ -39,13 +39,9 @@ package capture
 
 import (
 	"context"
-	"errors"
-	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/platform/auth"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -56,104 +52,25 @@ import (
 const postCommitLinkReservation = 3
 
 // linkResolvedMailParticipants files a captured message under every participant
-// the workspace already has a live contact for.
+// who is a live contact or a live lead (participantfiling.go).
 //
-// It answers nothing, and that is the point. The meeting arm returns a count
-// because the audience limiter reads it: a meeting filed under an attendee has
-// a record standing behind it, so it is not the link-less mail the limiter
-// holds. A cc'd contact is not that claim — the message may still be filed
-// under nobody the ladder judged — so this arm must not feed that decision.
-// Returning a count is how a later reader wires it in by accident, so there is
-// none to wire.
+// It answers no count, unlike the meeting arm. The audience limiter reads that
+// count, and a copied contact or a lead does not make a message filed. A count
+// here would let a later reader wire it into the limiter and open held mail.
 //
 // Held by: TestASuppressedMessageIsFiledUnderNobodyItCopies and
 // TestFilingAConfidentialMessageDoesNotWidenWhoMayReadIt
 // (backend/internal/compose/integration/capture/capture_participantlink_integration_test.go)
 func (s *Sink) linkResolvedMailParticipants(
-	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, existing int,
+	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, existing int, private bool,
 ) error {
-	contacts, err := mailParticipantsWithContacts(ctx, tx, activityID)
-	if err != nil {
-		return err
-	}
-	// The budget is what the row can still take rather than a fresh 25: the
-	// ceiling is on the ACTIVITY, whatever wrote the links.
-	//
-	// Two seats are reserved on top of what the row already carries, because two
-	// writers still run AFTER this transaction commits and neither consults this
-	// budget: ensureCounterparty files the party the ladder judged, and the
-	// project ladder files the project it belongs to (sink.go). Spending the
-	// whole ceiling here would let a message with 25 resolved participants end
-	// up at 27, quietly breaking the invariant this constant exists to state.
-	budget := max(maxDerivedMeetingLinks-existing-postCommitLinkReservation, 0)
-	written := 0
-	for _, contact := range contacts {
-		if written >= budget {
-			break
-		}
-		// A connector may not plant a link to a record its granting human could
-		// not see (H1). Not-found and denied are skipped rather than failed: the
-		// message happened, the participant row already records that this contact
-		// was on it, and refusing the capture over a filing decision would throw
-		// away a message we read successfully.
-		if err := auth.EnsureLinkTarget(ctx, tx, "contact", contact.UUID); err != nil {
-			if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
-				continue
-			}
-			return fmt.Errorf("capture: mail link target %s: %w", contact, err)
-		}
-		tag, err := tx.Exec(ctx, `
-			INSERT INTO activity_link (activity_id, entity_type, contact_id)
-			VALUES ($1, 'contact', $2)
-			ON CONFLICT DO NOTHING`, activityID, contact)
-		if err != nil {
-			return fmt.Errorf("capture: filing a message under its participant: %w", err)
-		}
-		written += int(tag.RowsAffected())
-	}
-	return nil
-}
-
-// mailParticipantsWithContacts answers the contacts this message's participant rows
-// resolved to, ordered by id.
-//
-// No role ordering, unlike the meeting arm: a meeting's organizer is the most
-// useful filing when the cap cuts the list, and mail has no equivalent — the
-// sender is already filed by the ladder, and a To is not worth more than a Cc.
-// The order is still deterministic so a replay files the same message the same
-// way.
-//
-// The id is settled against a merge here, for the reason every writer of
-// activity_link settles it: no reader walks merged_into_id, so a link written
-// to a retired contact leaves the message on a record nobody opens. The redirect
-// is followed BEFORE liveness is judged, because a merge archives the source and
-// points it at the survivor in one write — testing the source's own archived_at
-// would drop a participant whose record simply moved.
-func mailParticipantsWithContacts(
-	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID,
-) ([]ids.ContactID, error) {
-	rows, err := tx.Query(ctx, `
-		SELECT DISTINCT survivor.id AS contact_id
-		  FROM activity_participant ap
-		  JOIN contact p ON p.id = ap.contact_id
-		  JOIN contact survivor ON survivor.id = coalesce(p.merged_into_id, p.id)
-		 WHERE ap.activity_id = $1 AND ap.contact_id IS NOT NULL
-		   AND survivor.archived_at IS NULL
-		 ORDER BY contact_id`, activityID)
-	if err != nil {
-		return nil, fmt.Errorf("capture: reading a message's resolved participants: %w", err)
-	}
-	defer rows.Close()
-	var out []ids.ContactID
-	for rows.Next() {
-		var contact ids.ContactID
-		if err := rows.Scan(&contact); err != nil {
-			return nil, fmt.Errorf("capture: reading a message's resolved participants: %w", err)
-		}
-		out = append(out, contact)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("capture: reading a message's resolved participants: %w", err)
-	}
-	return out, nil
+	// The ceiling is on the activity, so the budget is what the row can still
+	// take, less the seats kept for the writers after commit.
+	_, err := fileUnderParticipants(tx, activityID, participantFiling{
+		decider: ctx,
+		budget:  max(maxDerivedMeetingLinks-existing-postCommitLinkReservation, 0),
+		private: private,
+		write:   insertParticipantLink(ctx, tx, activityID),
+	})
+	return err
 }

@@ -9,6 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -56,6 +57,45 @@ func (e *ConfidentialityVerdictEngine) retractPrivateContactsTx(
 		}
 		e.log.InfoContext(ctx, "confidentiality: retracted a contact a private thread orphaned",
 			"contact", contact.ContactID.String())
+	}
+	return retractPrivateLeadLinksTx(ctx, tx, row.ThreadKey, row.UserID)
+}
+
+// The evidence a lead link taken off private mail records, by the verdict that
+// made it private.
+const (
+	privateThreadLeadReason  = "personal_thread_verdict"
+	personalSenderLeadReason = "personal_sender_verdict"
+)
+
+// retractPrivateLeadLinksTx takes off the lead links capture filed for messages
+// a personal thread verdict has made private.
+func retractPrivateLeadLinksTx(ctx context.Context, tx pgx.Tx, threadKey string, user ids.UUID) error {
+	links, err := capture.LeadLinksOrphanedByPrivacyTx(ctx, tx, threadKey, user)
+	if err != nil {
+		return err
+	}
+	return retractLeadLinksTx(ctx, tx, links, user, privateThreadLeadReason)
+}
+
+// retractPersonalSenderLeadLinksTx takes off the lead links capture filed for
+// a sender's messages that a personal sender verdict has made private.
+func retractPersonalSenderLeadLinksTx(ctx context.Context, tx pgx.Tx, address string, user ids.UUID) error {
+	links, err := capture.LeadLinksOfPersonalSenderTx(ctx, tx, address, user)
+	if err != nil {
+		return err
+	}
+	return retractLeadLinksTx(ctx, tx, links, user, personalSenderLeadReason)
+}
+
+// retractLeadLinksTx writes each removal through the activities writer, so it
+// lands its audit row. A link a human filed stays.
+func retractLeadLinksTx(ctx context.Context, tx pgx.Tx, links []capture.PrivateLeadLink, user ids.UUID, reason string) error {
+	for _, link := range links {
+		if _, err := activities.RetractMachineLeadTx(ctx, tx, link.ActivityID, link.LeadID,
+			map[string]any{"reason": reason, "decided_as": user}); err != nil {
+			return err
+		}
 	}
 	return nil
 }

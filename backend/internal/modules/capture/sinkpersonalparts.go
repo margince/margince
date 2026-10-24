@@ -56,6 +56,27 @@ func messageIsPrivateTx(
 	return true, verdictPersonalSender, nil
 }
 
+// storedMessageIsPrivateTx is messageIsPrivateTx for a message already stored,
+// judged for one seat that imported it. The repair and the retraction ask it.
+func storedMessageIsPrivateTx(ctx context.Context, tx pgx.Tx, activity ids.ActivityID, seat ids.UUID) (bool, error) {
+	var threadKey, sender, kind, direction string
+	var attested, authenticated bool
+	if err := tx.QueryRow(ctx, `
+		SELECT coalesce(thread_key, ''), coalesce(counterparty_email, ''), kind, coalesce(direction, ''),
+		       counterparty_outbound_attested, coalesce(inbound_sender_authenticated, false)
+		  FROM activity WHERE id = $1`, activity).Scan(&threadKey, &sender, &kind, &direction, &attested, &authenticated); err != nil {
+		return false, fmt.Errorf("capture: reading a stored message to judge its privacy: %w", err)
+	}
+	private, _, err := threadIsPrivateForTx(ctx, tx, seat, threadKey, sender)
+	if err != nil || private {
+		return private, err
+	}
+	if kind != kindEmail || direction != connector.DirectionInbound || attested {
+		return false, nil
+	}
+	return senderIsPersonalForTx(ctx, tx, seat, sender, IsGoogleMeetingMail(sender, authenticated))
+}
+
 // senderIsPersonalTx reports whether this seat's settled verdict judged the
 // sender a personal correspondent, and still reaches mail arriving now.
 //
@@ -70,10 +91,17 @@ func messageIsPrivateTx(
 func senderIsPersonalTx(
 	ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord, fields ActivityFields,
 ) (bool, error) {
-	seat := actorUserID(ctx)
-	address := normalizeEmail(rec.Counterparty.Email)
-	if seat == ids.Nil || address == "" || fields.Kind != "email" || fields.Direction != "inbound" ||
-		rec.Counterparty.SentByOwner() {
+	if fields.Kind != kindEmail || fields.Direction != connector.DirectionInbound || rec.Counterparty.SentByOwner() {
+		return false, nil
+	}
+	return senderIsPersonalForTx(ctx, tx, actorUserID(ctx), rec.Counterparty.Email, recordIsGoogleMeetingMail(rec, fields))
+}
+
+// senderIsPersonalForTx is senderIsPersonalTx for one seat and the sender of
+// an inbound mail, so a stored message is judged by the same rule.
+func senderIsPersonalForTx(ctx context.Context, tx pgx.Tx, seat ids.UUID, sender string, meetingMail bool) (bool, error) {
+	address := normalizeEmail(sender)
+	if seat == ids.Nil || address == "" {
 		return false, nil
 	}
 	// Locked, through the reader the verdict engine uses: a `business` override
@@ -86,7 +114,6 @@ func senderIsPersonalTx(
 	// address a personal verdict. A contact the workspace corresponds with at
 	// that address outranks it, as it does for noiseMailScope. So does
 	// authenticated Google meeting mail, unless the seat itself chose personal.
-	meetingMail := recordIsGoogleMeetingMail(rec, fields)
 	var personal bool
 	if err := tx.QueryRow(ctx, `
 		SELECT EXISTS (

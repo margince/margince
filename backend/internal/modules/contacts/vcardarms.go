@@ -33,9 +33,10 @@ import (
 // hold the subject before it holds anything else or the two deadlock and an
 // Art. 17 fulfilment fails on a path an ordinary seat can drive.
 func (s *Store) updateMatchedByCard(
-	ctx context.Context, tx pgx.Tx, contactID ids.ContactID,
+	ctx context.Context, tx pgx.Tx, match ContactResolution,
 	entry VCardEntry, source ids.UUID, result *VCardResult,
 ) error {
+	contactID := match.ContactID
 	// The card names somebody who exists, so the caller's authority over THAT
 	// ROW decides whether this card may touch it — the contact:create grant that
 	// let them start the import says nothing about a record they cannot see.
@@ -44,6 +45,13 @@ func (s *Store) updateMatchedByCard(
 	// leaves one card out is an import nobody can audit, and the reader can act
 	// on "you may not write this one".
 	if err := auth.HoldWritableLive(ctx, tx, entityContact, contactID.UUID); err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) && match.MatchedLane == LaneEmail && len(entry.Emails) > 0 {
+			// A colleague's contact the importer cannot see holds the address:
+			// the held refusal, which fails this card's transaction.
+			if refusal := claimedEmailRefusal(ctx, tx, entry.Emails[0].Value, contactID); !isDuplicateEmail(refusal) {
+				return refusal
+			}
+		}
 		if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
 			// Deliberately says nothing about WHAT was matched. The two refusals
 			// are one sentence because telling them apart would confirm that the
@@ -137,4 +145,15 @@ func vcardRecordAddress(entry VCardEntry) *crmcontracts.Address {
 		return &split
 	}
 	return &crmcontracts.Address{Line1: &line}
+}
+
+// skipHeldCard answers a card whose address a colleague's contact holds. The
+// colleague is asked to share it, and the card is skipped with the refusal's
+// own words. Any other error passes through.
+func (s *Store) skipHeldCard(ctx context.Context, err error, index int, name string) (VCardResult, error) {
+	err = s.AskHolderToShare(ctx, err)
+	if held, ok := errors.AsType[*ContactHeldByColleagueError](err); ok {
+		return VCardResult{Index: index, FullName: name, Outcome: VCardSkipped, Reason: held.Error()}, nil
+	}
+	return VCardResult{}, err
 }

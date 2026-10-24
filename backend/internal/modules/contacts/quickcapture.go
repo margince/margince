@@ -91,7 +91,7 @@ func (s *Store) QuickCapture(ctx context.Context, in QuickCaptureInput) (QuickCa
 		out, err = s.quickCaptureInTx(ctx, tx, in)
 		return err
 	})
-	if err != nil {
+	if err = s.AskHolderToShare(ctx, err); err != nil {
 		return QuickCaptureResult{}, err
 	}
 	return out, nil

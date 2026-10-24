@@ -395,6 +395,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.preview.acquiredAt": "Erfasst am",
   "approval.preview.promotedLead": "Zu übernehmender Lead",
   "approval.preview.sourceActivity": "Verlauf dieses Quell-Leads",
+  "approval.preview.sourceWithheldActivities":
+    "Weiterer Verlauf dieses Quell-Leads, den du nicht lesen kannst",
   "approval.preview.sourceConsent": "Einwilligung dieses Quell-Leads",
   "approval.preview.channelPosition": "Position in der Liste",
   "approval.preview.emailCorrespondence":
@@ -623,6 +625,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Zum Kontakt zu verschiebende Aktivität",
   "approval.preview.promotionDuplicateActivity":
     "Aktivität bereits am Kontakt; Lead-Verknüpfung entfernen",
+  "approval.preview.promotionWithheldActivities":
+    "Weitere mitverschobene Aktivitäten, die du nicht lesen kannst",
   "approval.preview.promotionConsentBefore":
     "Einwilligung vor der Qualifizierung",
   "approval.preview.promotionRestriction": "Zu übernehmende Einschränkung",
@@ -1838,6 +1842,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "agentJob.capture_counterparty_verdict": "Prüfung der Absendeadressen",
   "agentJob.coldstart": "Erstansprache",
   "agentJob.company_name_promotion": "Aktualisierung des Firmennamens",
+  "agentJob.contact_share": "Anfrage zum Teilen eines Kontakts",
   "agentJob.deal_scout": "Deal Scout",
   "agentJob.dealscout": "Deal Scout",
   "agentJob.deepread": "Website-Analyse",
@@ -2577,6 +2582,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Dieser Datensatz wurde geändert, nachdem du ihn geöffnet hast. Lade ihn neu, um die Änderung zu sehen, und nimm deine dann erneut vor.",
   "common.duplicate.email":
     "Die E-Mail-Adresse wurde hier nicht gespeichert, da ein anderer Kontakt oder Lead sie schon hat.",
+  "common.heldByColleague": "Ein anderes Mitglied hat diesen Kontakt schon.",
+  "common.heldByColleague.asked":
+    "Ein anderes Mitglied hat diesen Kontakt schon. Margince hat es gebeten, ihn mit dir zu teilen.",
   "common.duplicate.domain":
     "Die Domain wurde hier nicht gespeichert, da ein anderes Unternehmen sie schon hat.",
   "common.duplicate.linkedinUrl":
@@ -3515,6 +3523,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "approval.kind.linkedin_match": "LinkedIn-Treffer",
   "approval.kind.site_lead": "Kontakt von der Website erstellen",
   "approval.kind.capture_counterparty": "Kontakt aus E-Mail erstellen",
+  "approval.kind.contact_share": "Kontakt teilen",
   "approval.kind.company_name_promotion": "Unternehmen umbenennen",
   "approval.kind.vcard_create": "Kontakt aus Visitenkarte erstellen",
   "approval.kind.lifecycle_change": "Lebenszyklusphase",

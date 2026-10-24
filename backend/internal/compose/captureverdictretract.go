@@ -191,7 +191,7 @@ func (w *linkReconcileWorker) retractPrivateThreadContacts(ctx context.Context) 
 					retracted++
 				}
 			}
-			return nil
+			return retractPrivateLeadLinksTx(ctx, tx, thread.ThreadKey, thread.UserID)
 		}); err != nil {
 			failed = errors.Join(failed, fmt.Errorf("retracting the contacts of %s: %w", thread.ThreadKey, err))
 		}

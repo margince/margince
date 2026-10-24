@@ -182,7 +182,7 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 			// Reported as a skip rather than skipped silently: an import that
 			// quietly leaves one card out is an import nobody can audit, and
 			// the reader can act on "you may not write this one".
-			return s.updateMatchedByCard(ctx, tx, decision.ContactID, entry, source, &result)
+			return s.updateMatchedByCard(ctx, tx, decision, entry, source, &result)
 		case shown != nil:
 			// Named, not merged, and not created either: creating beside a
 			// near-match is how a file of forty cards quietly doubles a
@@ -222,13 +222,14 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry,
 		return result, nil
 	}
 	if err != nil {
-		return VCardResult{}, fmt.Errorf("contacts: importing card %d: %w", index+1, err)
+		skipped, err := s.skipHeldCard(ctx, err, index, result.FullName)
+		if err != nil {
+			return VCardResult{}, fmt.Errorf("contacts: importing card %d: %w", index+1, err)
+		}
+		return skipped, nil
 	}
-	// After the card's transaction, and a failure does not undo the card or
-	// stop the file: the card is committed by here, and this function's caller
-	// aborts the whole run on an error — a file of forty cards with one
-	// unraisable review would import nothing, against the per-card design
-	// ImportVCards states. raiseCardSplit carries the rest of the reasoning.
+	// After the card's transaction, and a failure undoes neither the card nor
+	// the file. raiseCardSplit carries the reasoning.
 	if split != nil {
 		s.raiseCardSplit(ctx, *split)
 	}

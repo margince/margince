@@ -14,10 +14,13 @@ import (
 
 // LeadPromotionCarry collects dependent records that must move with a promotion.
 type LeadPromotionCarry struct {
-	Activities   []LeadPromotionActivity
-	Consent      []ConsentCarryChange
-	Stops        []commsauthz.CarriedStop
-	ConsentLinks commsauthz.CarriedConsentLinks
+	Activities []LeadPromotionActivity
+	// WithheldActivities counts the lead's activities that move too but that
+	// the reader may not read, so the preview names how many without them.
+	WithheldActivities int
+	Consent            []ConsentCarryChange
+	Stops              []commsauthz.CarriedStop
+	ConsentLinks       commsauthz.CarriedConsentLinks
 }
 
 type stopPreviewer interface {
@@ -58,7 +61,7 @@ func (s *Store) previewCarriedConsentLinks(ctx context.Context, tx pgx.Tx, from,
 
 func (s *Store) previewPromotionCarry(ctx context.Context, tx pgx.Tx, lead ids.LeadID, contact ids.ContactID, out *LeadPromotionCarry) error {
 	var err error
-	out.Activities, err = previewPromotionActivities(ctx, tx, lead, contact)
+	out.Activities, out.WithheldActivities, err = previewPromotionActivities(ctx, tx, lead, contact)
 	if err != nil {
 		return err
 	}

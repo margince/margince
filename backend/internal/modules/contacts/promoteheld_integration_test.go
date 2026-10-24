@@ -241,7 +241,7 @@ func TestPublishingAContactOnReplyPromotesTheLead(t *testing.T) {
 		t.Fatal("an owner-scoped contact took the lead")
 	}
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		moved, err := e.store.PromoteOnReplyTx(ctx, tx, res.ContactID, e.rep)
+		moved, err := e.store.PromoteOnReplyTx(ctx, tx, res.ContactID)
 		if err != nil || !moved {
 			t.Fatalf("publish on reply: moved=%t err=%v", moved, err)
 		}

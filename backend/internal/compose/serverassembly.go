@@ -87,6 +87,7 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 		WithProfileVerdictReader(profileverdicts.MergeReader(InstallationDB(pool))).
 		WithFeedbackCarryReader(ai.NewFeedbackStore(InstallationDB(pool))).
 		WithGrantCarrier(identity.NewServiceFor(InstallationDB(pool))).
+		WithShareRequests(contactShareRequests(pool)).
 		WithInstallationRenamer(installationRenamer(pool))
 }
 
