@@ -375,7 +375,7 @@ export function StagedEditor({
 }>) {
   const t = useT();
   return (
-    <div className="form-stack approval-editor">
+    <div className="form-stack approval-editor" data-date-scope>
       {fields.map((entry) => (
         <Field
           key={entry.field}

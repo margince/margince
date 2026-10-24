@@ -13,6 +13,7 @@ import {
   TextInput,
 } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
+import { refuseUnreadableField } from "../../design-system/formvalidity";
 import { Heading } from "../../design-system/heading";
 import { Modal } from "../../design-system/modal";
 import { Select } from "../../design-system/select";
@@ -162,7 +163,7 @@ export function SaveReportingDialog({
         className="form-stack"
         onSubmit={(event) => {
           event.preventDefault();
-          save(draftOpen);
+          if (!refuseUnreadableField(event.currentTarget)) save(draftOpen);
         }}
       >
         <Field label={t("reporting.name")} required>
@@ -287,7 +288,9 @@ export function SaveReportingDialog({
           <Button
             variant="ghost"
             disabled={incomplete || metadataChanged}
-            onClick={() => save(true)}
+            onClick={(event) => {
+              if (!refuseUnreadableField(event.currentTarget)) save(true);
+            }}
           >
             {t("reporting.saveDraft")}
           </Button>

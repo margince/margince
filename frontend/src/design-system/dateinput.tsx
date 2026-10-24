@@ -23,6 +23,7 @@ import {
 } from "../format/datepattern";
 import { useDateTimePreferences } from "../format/preferences";
 import { type Locale, useLocale, useT } from "../i18n";
+import { useUnsavedGuard } from "../lib/unsavedclaims";
 import { useAnchoredToTrigger } from "./anchored";
 import { useDismissOnOutsidePress } from "./anchoredpopup";
 import { Button } from "./button";
@@ -87,6 +88,7 @@ export function DateInput({
   placeholder,
   onBlur,
   onKeyDown,
+  onInvalid,
   ref,
   "aria-invalid": ariaInvalid,
   "aria-describedby": ariaDescribedBy,
@@ -114,6 +116,8 @@ export function DateInput({
   useLayoutEffect(() => {
     input.current?.setCustomValidity(problem ?? "");
   }, [problem]);
+  // A typed day the caller has not heard yet is still a draft a close would lose.
+  useUnsavedGuard(draft !== null && draft.text !== shown(current, pattern));
 
   const report = (next: ISODate | "") => {
     if (value === undefined) {
@@ -183,6 +187,18 @@ export function DateInput({
               settleTyped();
             }
             onKeyDown?.(event);
+          }}
+          onInvalid={(event) => {
+            if (problem !== undefined) {
+              // Its ErrorLine says it, so the browser draws no bubble on top.
+              event.preventDefault();
+              setDraft((held) =>
+                held && held.refused === undefined
+                  ? { ...held, refused: problem }
+                  : held,
+              );
+            }
+            onInvalid?.(event);
           }}
         />
         <IconAction

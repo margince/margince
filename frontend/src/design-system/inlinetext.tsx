@@ -278,6 +278,11 @@ export function InlineText({
   // deliberately does NOT set it: the reader is already somewhere else, and
   // dragging focus back here would undo the move they just made.
   const restoreFocus = useRef(false);
+  // Not a dependency below: a parent that re-renders on dirty would take focus back.
+  const editingHeard = useRef(onEditingChange);
+  useEffect(() => {
+    editingHeard.current = onEditingChange;
+  }, [onEditingChange]);
 
   // The click that opened this asked to TYPE here, so the caret belongs in the
   // field without a second click. It is also what makes every exit rule below
@@ -286,7 +291,7 @@ export function InlineText({
   // them — the box would then sit open until it was clicked into, including
   // after the reader had moved on to another field.
   useEffect(() => {
-    onEditingChange?.(editing);
+    editingHeard.current?.(editing);
     if (editing) {
       field.current?.focus();
       return;
@@ -295,7 +300,7 @@ export function InlineText({
       restoreFocus.current = false;
       trigger.current?.focus();
     }
-  }, [editing, onEditingChange]);
+  }, [editing]);
 
   if (!canEdit || !editing) {
     const shown = (value && display) || value || suggested || placeholder;

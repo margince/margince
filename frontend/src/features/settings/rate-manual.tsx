@@ -345,7 +345,7 @@ function NewPriceIdentity({
 // gap on top of its own margin.
 function inlineFrame(fields: ReactNode, actions: ReactNode) {
   return (
-    <div>
+    <div data-date-scope>
       {fields}
       <div className="actions rates-manual-actions">{actions}</div>
     </div>

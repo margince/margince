@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type ReactNode, useId } from "react";
+import { type ReactNode, type Ref, useId } from "react";
 import { opensRow } from "./datatable";
 import { Heading, type HeadingElement } from "./heading";
 import {
@@ -201,9 +201,17 @@ export function PanelGroupHead({
 export function PanelBody({
   children,
   className,
-}: Readonly<{ children: ReactNode; className?: string }>) {
+  ref,
+}: Readonly<{
+  children: ReactNode;
+  className?: string;
+  ref?: Ref<HTMLDivElement>;
+}>) {
   return (
-    <div className={["panel-body", className ?? ""].filter(Boolean).join(" ")}>
+    <div
+      ref={ref}
+      className={["panel-body", className ?? ""].filter(Boolean).join(" ")}
+    >
       {children}
     </div>
   );

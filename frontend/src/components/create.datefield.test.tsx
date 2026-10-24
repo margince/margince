@@ -87,4 +87,35 @@ describe("a date field in a create form", () => {
       expected_close_date: "2026-06-03",
     });
   });
+
+  it("asks before Escape throws away a typed day it has not read yet", async () => {
+    const user = userEvent.setup();
+    renderNewDeal();
+    await user.click(screen.getByText("New deal"));
+    await user.type(
+      screen.getByRole("textbox", { name: "Expected close" }),
+      "01/03/2027",
+    );
+
+    await user.keyboard("{Escape}");
+
+    await screen.findByRole("dialog", { name: "Discard unsaved changes?" });
+    expect(
+      screen.getByRole<HTMLInputElement>("textbox", { name: "Expected close" })
+        .value,
+    ).toBe("01/03/2027");
+  });
+
+  it("closes on Escape when the box holds the day it was given", async () => {
+    const user = userEvent.setup();
+    renderNewDeal();
+    await user.click(screen.getByText("New deal"));
+    const box = screen.getByRole("textbox", { name: "Expected close" });
+    await user.type(box, "x");
+    await user.type(box, "{Backspace}");
+
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
 });

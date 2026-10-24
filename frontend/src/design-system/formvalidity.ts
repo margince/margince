@@ -2,24 +2,18 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 // DateInput reports text it cannot read as "", so a save past it erases the day.
-// Not checkValidity(): native step and required rules belong to the caller and server.
+// Not checkValidity() on all: native step and required rules belong to the caller and server.
 export function refuseUnreadableField(from: Element): boolean {
-  const unread = Array.from(scopeOf(from).querySelectorAll("input")).find(
+  const scope =
+    from.closest('form, [role="dialog"], [data-date-scope]') ?? from;
+  const unread = Array.from(scope.querySelectorAll("input")).find(
     (field) => field.validity.customError,
   );
-  unread?.reportValidity();
-  return unread !== undefined;
-}
-
-// Outside a form or dialog, the nearest box around `from` that holds a date field.
-function scopeOf(from: Element): Element {
-  const bounded = from.closest('form, [role="dialog"]');
-  if (bounded) {
-    return bounded;
+  if (unread === undefined) {
+    return false;
   }
-  let scope = from;
-  while (!scope.querySelector(".date-input") && scope.parentElement) {
-    scope = scope.parentElement;
-  }
-  return scope;
+  // The invalid event shows DateInput's own refusal. Not reportValidity(): it adds a browser bubble.
+  unread.checkValidity();
+  unread.focus();
+  return true;
 }

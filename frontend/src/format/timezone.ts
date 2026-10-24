@@ -129,20 +129,8 @@ export function zoneNameAndOffset(
     .join(" · ");
 }
 
-/**
- * The zone the reader's own browser is in, or `UTC` when it will not say.
- *
- * A function, not a constant, on purpose. A module-level constant is evaluated
- * once at import time, which is before the app has rendered anything — so it
- * would freeze the answer for the whole session, outlive a reader who changed
- * their machine's zone or crossed one, and be captured before a test that
- * pretends to be elsewhere had installed its own answer. Constructing an
- * `Intl.DateTimeFormat` per call is cheap next to the render it feeds.
- *
- * A runtime with no zone to report leaves `timeZone` empty, and an empty string
- * is not a zone Intl accepts — it throws. `UTC` is the honest fallback: it
- * names a real zone, and it is the one every wire instant is already stored in.
- */
+// A function, so a change of zone is read on the next call. A runtime that
+// reports no zone gets UTC, since Intl throws on an empty one.
 export function viewerZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || UTC_ZONE;
 }

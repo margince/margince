@@ -62,7 +62,8 @@
 // parser drops for free, and that is where select.tsx and its neighbours cite
 // the thing they exist to remove.
 
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
@@ -849,6 +850,48 @@ describe("the native-control detector sees what it claims to", () => {
       [...dateHosts.opaque].sort(),
       "a component spreads a value of unknown shape onto an input: make the spread resolvable, or clear it in clearedSpreads with its reason",
     ).toEqual(clearedSpreads);
+  });
+
+  it.each([
+    [
+      "a rest spread before its type",
+      "({ type, ...rest }) => <input {...rest} type={type} />",
+      true,
+    ],
+    [
+      "a rest spread after its type",
+      "({ type, ...rest }) => <input type={type} {...rest} />",
+      true,
+    ],
+    [
+      "a local object holding its type",
+      "(p) => { const extra = { type: p.type }; return <input {...extra} />; }",
+      true,
+    ],
+    [
+      "a let holding its type",
+      "({ type }) => { let held = type; return <input type={held} />; }",
+      true,
+    ],
+    [
+      "a const holding its type",
+      "({ type }) => { const held = type; return <input type={held} />; }",
+      true,
+    ],
+    [
+      "a local object with a type of its own",
+      '({ type }) => { const extra = { type: "text" }; return <input {...extra} />; }',
+      false,
+    ],
+    [
+      "a let holding a type of its own",
+      '({ type }) => { let held = "text"; return <input type={held} />; }',
+      false,
+    ],
+  ])("finds a host through %s", (_shape, component, host) => {
+    const file = join(mkdtempSync(join(tmpdir(), "date-host-")), "probe.tsx");
+    writeFileSync(file, `export const Probe = ${component};\n`);
+    expect(deriveDateHosts([file], new Set()).names.has("Probe")).toBe(host);
   });
 
   // The line between what is derived and what is hand-written, which is the

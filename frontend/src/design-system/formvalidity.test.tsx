@@ -9,14 +9,17 @@ import { LocaleProvider } from "../i18n";
 import { DateInput } from "./dateinput";
 import { refuseUnreadableField } from "./formvalidity";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 function InlineEditor({
   name,
   onSave,
 }: Readonly<{ name: string; onSave: (refused: boolean) => void }>) {
   return (
-    <section>
+    <section data-date-scope>
       <DateInput aria-label={name} defaultValue="2026-05-04" />
       <div className="form-actions">
         <button
@@ -32,7 +35,7 @@ function InlineEditor({
   );
 }
 
-it("reads the box around a save outside any form, and only that box", async () => {
+it("reads only the marked box around a save outside any form", async () => {
   const onSave = vi.fn();
   render(
     <LocaleProvider initial="en">
@@ -75,4 +78,40 @@ it("reads every field of the form it is handed", async () => {
   await user.click(screen.getByRole("button", { name: "Save" }));
 
   expect(onSubmit).toHaveBeenCalledWith(true);
+});
+
+it("shows the field's own refusal, and no browser bubble, for a save before the day is settled", async () => {
+  const bubble = vi.spyOn(HTMLInputElement.prototype, "reportValidity");
+  const onSubmit = vi.fn();
+  render(
+    <LocaleProvider initial="en">
+      <form
+        noValidate
+        onKeyDown={(event) => {
+          if (event.ctrlKey && event.key === "s") {
+            event.currentTarget.requestSubmit();
+          }
+        }}
+        onSubmit={(event) => {
+          event.preventDefault();
+          onSubmit(refuseUnreadableField(event.currentTarget));
+        }}
+      >
+        <DateInput aria-label="Signed" />
+      </form>
+    </LocaleProvider>,
+  );
+  const user = userEvent.setup();
+  const signed = screen.getByRole("textbox", { name: "Signed" });
+  await user.type(signed, "99/99");
+  expect(screen.queryByRole("alert")).toBeNull();
+
+  await user.keyboard("{Control>}s{/Control}");
+
+  expect(onSubmit).toHaveBeenCalledWith(true);
+  expect(screen.getAllByRole("alert").map((line) => line.textContent)).toEqual([
+    "Enter a date as DD/MM/YYYY.",
+  ]);
+  expect(document.activeElement).toBe(signed);
+  expect(bubble).not.toHaveBeenCalled();
 });

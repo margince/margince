@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button, Field, TextInput } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import { DateInput, type ISODate } from "../../design-system/dateinput";
@@ -30,9 +30,10 @@ export function AddCommitment({ onDone }: Readonly<{ onDone: () => void }>) {
   const type = record ? kindOf(record.id) : null;
   const [label, setLabel] = useState("");
   const [dueOn, setDueOn] = useState<ISODate | "">("");
+  const fields = useRef<HTMLDivElement>(null);
 
   return (
-    <PanelBody>
+    <PanelBody ref={fields}>
       <RecordPicker
         label={t("brief.plan.select")}
         searchTargets={search}
@@ -78,7 +79,7 @@ export function AddCommitment({ onDone }: Readonly<{ onDone: () => void }>) {
         </Button>
         <Button
           onClick={(event) => {
-            if (refuseUnreadableField(event.currentTarget)) {
+            if (refuseUnreadableField(fields.current ?? event.currentTarget)) {
               return;
             }
             add.mutate(

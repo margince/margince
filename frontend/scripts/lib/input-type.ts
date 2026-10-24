@@ -118,8 +118,45 @@ export const renderedName = (node: ts.Node): string | undefined => {
 
 type Source = "props" | "own" | "opaque";
 
+/** What an expression reads, following each local name to the value it is
+ * declared with. A later assignment to a `let` is not followed. */
+function readsOf(node: ts.Node, seen = new Set<ts.Node>()): ts.Node[] {
+  return [node, ...descendants(node)].flatMap((read) => {
+    const declared = ts.isIdentifier(read) ? declarationOf(read) : undefined;
+    const init =
+      declared && ts.isVariableDeclaration(declared)
+        ? declared.initializer
+        : undefined;
+    if (!init || seen.has(init)) return [read];
+    seen.add(init);
+    return [read, ...readsOf(init, seen)];
+  });
+}
+
+const readsTypeProp = (node: ts.Node, fn: ts.Node) =>
+  readsOf(node).some((read) => givenTo(fn)(read, "type"));
+
+// A local object whose `type` reads the caller's `type` prop.
+const objectPassesType = (spread: ts.Expression, fn: ts.Node) =>
+  readsOf(spread).some(
+    (node) =>
+      ts.isObjectLiteralExpression(node) &&
+      node.properties.some((property) => {
+        if (!namedType(property.name)) return false;
+        if (ts.isShorthandPropertyAssignment(property)) {
+          return readsTypeProp(property.name, fn);
+        }
+        return (
+          ts.isPropertyAssignment(property) &&
+          readsTypeProp(property.initializer, fn)
+        );
+      }),
+  );
+
 function spreadSource(spread: ts.Expression, fn: ts.Node, before: Source) {
-  if (spreads(fn, spread, "type")) return "props";
+  if (spreads(fn, spread, "type") || objectPassesType(spread, fn)) {
+    return "props";
+  }
   if (typeInObject(spread).length > 0) return "own";
   const known = leavesOf(spread).every(ts.isObjectLiteralExpression);
   return known || before !== "own" ? before : "opaque";
@@ -128,15 +165,13 @@ function spreadSource(spread: ts.Expression, fn: ts.Node, before: Source) {
 // Decided by the last attribute that can write `type`: the caller's `type`
 // prop, a value of the component's own, or a spread of unknown shape.
 function typeSource(tag: ts.JsxOpeningLikeElement, fn: ts.Node): Source {
-  const given = givenTo(fn);
   let source: Source = "own";
   for (const attribute of tag.attributes.properties) {
     if (ts.isJsxSpreadAttribute(attribute)) {
       source = spreadSource(attribute.expression, fn, source);
     } else if (attribute.name.getText() === "type") {
       const init = attribute.initializer;
-      const reads = init && [init, ...descendants(init)];
-      source = reads?.some((node) => given(node, "type")) ? "props" : "own";
+      source = init && readsTypeProp(init, fn) ? "props" : "own";
     }
   }
   return source;
@@ -208,8 +243,8 @@ export function namesHost(
   return def !== undefined && hosts.keys.has(keyOf(def));
 }
 
-/** Components whose `type` prop reaches a native input's `type`, at any depth.
- * `notHosts` names those a reading of the code clears. */
+/** Components whose own `type` prop reaches an input's `type` at any depth, also
+ * through a spread or a local name or object. `notHosts` are cleared by reading. */
 export function deriveDateHosts(
   files: readonly string[],
   notHosts: ReadonlySet<string>,

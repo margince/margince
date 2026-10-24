@@ -12,6 +12,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import "@testing-library/jest-dom/vitest";
+import { useCallback, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
 import { InlineText } from "./inlinetext";
@@ -206,4 +207,44 @@ describe("editing a day where it is read", () => {
 
     await waitFor(() => expect(onSave).toHaveBeenCalledWith("2026-04-15"));
   });
+
+  it("moves to the calendar button in one Tab when the parent re-renders on the draft", async () => {
+    const user = userEvent.setup();
+    render(
+      <LocaleProvider initial="en">
+        <DirtyHeardParent />
+      </LocaleProvider>,
+    );
+    await user.click(trigger());
+    await user.clear(dayBox());
+    await user.type(dayBox(), "22/12/2026");
+
+    await user.tab();
+
+    expect(screen.getByRole("button", { name: /^Choose date/ })).toHaveFocus();
+    expect(dayBox().value).toBe("22/12/2026");
+  });
 });
+
+// Hands InlineText a new onEditingChange each time the draft turns dirty.
+function DirtyHeardParent() {
+  const [dirty, setDirty] = useState(false);
+  const onEditingChange = useCallback(
+    (editing: boolean) => {
+      if (!editing && dirty) setDirty(false);
+    },
+    [dirty],
+  );
+  return (
+    <InlineText
+      label="Expected close"
+      value="2026-03-01"
+      type="date"
+      placeholder="Add a date"
+      canEdit
+      onEditingChange={onEditingChange}
+      onDirtyChange={setDirty}
+      onSave={async () => {}}
+    />
+  );
+}

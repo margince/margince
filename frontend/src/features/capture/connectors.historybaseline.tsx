@@ -51,7 +51,7 @@ export function HistoryBaselineRow({
       }
       layout="stack"
       control={(controlProps) => (
-        <div className="form-stack">
+        <div className="form-stack" data-date-scope>
           <div className="connector-baseline">
             <DateInput
               {...controlProps}
