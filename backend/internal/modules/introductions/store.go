@@ -164,9 +164,9 @@ func (s *Store) Create(ctx context.Context, req NewRequest) (ids.UUID, error) {
 		}
 		auditID, err := storekit.AuditEvent(ctx, tx, "create", "intro_request", id,
 			map[string]any{
-				"contact_id":         req.ContactID.String(),
-				"introducer_user_id": req.IntroducerUser.String(),
-				"route_type":         req.RouteType,
+				"contact_id":          req.ContactID.String(),
+				fieldIntroducerUserID: req.IntroducerUser.String(),
+				"route_type":          req.RouteType,
 			})
 		if err != nil {
 			return err

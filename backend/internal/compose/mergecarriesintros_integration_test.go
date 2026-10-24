@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/introductions"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -375,7 +376,7 @@ func (c *carryEnv) record(t *testing.T, contact ids.ContactID, introducer, intro
 	perms.Objects["introduction"] = principal.ObjectGrant{Create: true, Read: true, Update: true}
 	id, err := c.intros.Record(c.e.As(introducer, nil, perms), introductions.NewRecorded{
 		ContactID: contact.UUID, IntroducerUser: introducer, IntroducedUser: introduced,
-		On: time.Now().AddDate(0, 0, -daysAgo), Channel: "call",
+		On: clocktest.Now(t).AddDate(0, 0, -daysAgo), Channel: "call",
 	})
 	if err != nil {
 		t.Fatalf("recording the introduction: %v", err)

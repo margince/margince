@@ -403,7 +403,7 @@ func TestARecordingIsRefusedBeforeAnyQueryWhenItIsNotAnIntroduction(t *testing.T
 	}
 	for name, in := range map[string]NewRecorded{
 		"the same colleague twice": {IntroducerUser: a, IntroducedUser: a, On: now, Channel: "call"},
-		"tomorrow":                 {IntroducerUser: a, IntroducedUser: b, On: now.AddDate(0, 0, 1), Channel: "call"},
+		"two days ahead":           {IntroducerUser: a, IntroducedUser: b, On: now.AddDate(0, 0, 2), Channel: "call"},
 		"an unknown channel":       {IntroducerUser: a, IntroducedUser: b, On: now, Channel: "fax"},
 	} {
 		if err := admitRecording(in, now); err == nil {

@@ -89,8 +89,8 @@ func EveryOrigin() []Origin {
 
 // MayRecord reports whether this actor may record an introduction that already
 // happened. Only the colleague who introduced and the colleague who was
-// introduced can vouch for it; anyone else would be making a claim about two
-// other people's relationship.
+// introduced can vouch for it; anyone else would be making a claim about
+// the relationship of two other colleagues.
 func MayRecord(by Actor) error {
 	if by == ActorIntroducer || by == ActorRequester {
 		return nil

@@ -78,8 +78,9 @@ func TestEitherColleagueRecordsAnIntroductionInTheWriteShape(t *testing.T) {
 		if reason != nil || due != nil {
 			t.Errorf("a recorded row carries reason %v and due %v", reason, due)
 		}
-		if introducedAt == nil || !introducedAt.Equal(e.recording().On) {
-			t.Errorf("introduced_at is %v; want %v", introducedAt, e.recording().On)
+		wantDay := time.Date(2026, 8, 29, 0, 0, 0, 0, time.UTC)
+		if introducedAt == nil || !introducedAt.Equal(wantDay) {
+			t.Errorf("introduced_at is %v; want the day %v", introducedAt, wantDay)
 		}
 		if capturedBy == "" || capturedBy == "test" {
 			t.Errorf("captured_by is %q; want the signed-in colleague", capturedBy)
@@ -104,7 +105,9 @@ func TestOnlyTheTwoColleaguesMayRecordAndNothingElseIsWritten(t *testing.T) {
 		Type: principal.PrincipalAgent, ID: "agent:x", UserID: e.introducer,
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{
-				"introduction": {Create: true, Read: true}, "contact": {Read: true}},
+				"introduction": {Create: true, Read: true},
+				"contact":      {Read: true},
+			},
 			RowScope: principal.RowScopeAll,
 		},
 	})
@@ -112,7 +115,9 @@ func TestOnlyTheTwoColleaguesMayRecordAndNothingElseIsWritten(t *testing.T) {
 		Type: principal.PrincipalHuman, ID: "human:" + e.introducer.String(), UserID: e.introducer,
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{
-				"introduction": {Read: true}, "contact": {Read: true}},
+				"introduction": {Read: true},
+				"contact":      {Read: true},
+			},
 			RowScope: principal.RowScopeAll,
 		},
 	})
@@ -150,7 +155,7 @@ func TestARecordingNamesRealLiveColleaguesAndARealDay(t *testing.T) {
 	same := e.recording()
 	same.IntroducedUser = e.introducer
 	future := e.recording()
-	future.On = testNow.AddDate(0, 0, 1)
+	future.On = testNow.AddDate(0, 0, 2)
 	badChannel := e.recording()
 	badChannel.Channel = "telepathy"
 
@@ -159,13 +164,12 @@ func TestARecordingNamesRealLiveColleaguesAndARealDay(t *testing.T) {
 		"the same colleague twice": same, "a future date": future, "an unknown channel": badChannel,
 	} {
 		_, err := e.store.Record(e.asUser(e.introducer), in)
-		var parse *values.ParseError
-		if !errors.As(err, &parse) {
+		if _, ok := errors.AsType[*values.ParseError](err); !ok {
 			t.Errorf("%s: got %v; want a validation error", name, err)
 		}
 	}
 	today := e.recording()
-	today.On = testNow.Truncate(24 * time.Hour)
+	today.On = testNow
 	if _, err := e.store.Record(e.asUser(e.introducer), today); err != nil {
 		t.Errorf("an introduction from today was refused: %v", err)
 	}

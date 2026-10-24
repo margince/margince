@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/introductions"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -114,12 +115,12 @@ func TestErasingASubjectLeavesARecordedIntroductionIntroduced(t *testing.T) {
 	ctx := e.As(e.AdminUser, nil, introErasureAdmin)
 	subject := e.SeedContact(t, "Rita Reviewer", &e.Rep1)
 
-	intros := introductions.NewStore(e.DB(), time.Now)
+	intros := introductions.NewStore(e.DB(), func() time.Time { return clocktest.Now(t) })
 	recordedID, err := intros.Record(e.As(e.Rep2, nil, introErasureAdmin), introductions.NewRecorded{
 		ContactID:      subject,
 		IntroducerUser: e.Rep2,
 		IntroducedUser: e.Rep1,
-		On:             time.Now().AddDate(0, 0, -2),
+		On:             clocktest.Now(t).AddDate(0, 0, -2),
 		Channel:        "email",
 	})
 	if err != nil {

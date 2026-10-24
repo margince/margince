@@ -28,6 +28,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/workforce"
 )
 
+// fieldIntroducerUserID is the audit key naming the colleague who introduced.
+const fieldIntroducerUserID = "introducer_user_id"
+
 // NewRecorded is an introduction that already happened. The introduced seat is
 // stored as the row's requester, the seat the introduction was made for.
 type NewRecorded struct {
@@ -43,18 +46,9 @@ type NewRecorded struct {
 // The caller must be the introducer or the introduced colleague: either can
 // vouch for it, nobody else can. The caller is never a field on the input.
 func (s *Store) Record(ctx context.Context, in NewRecorded) (ids.UUID, error) {
-	if err := auth.Require(ctx, "introduction", principal.ActionCreate); err != nil {
+	actor, err := recorderOf(ctx)
+	if err != nil {
 		return ids.UUID{}, err
-	}
-	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
-		return ids.UUID{}, err
-	}
-	if err := auth.RequireHuman(ctx); err != nil {
-		return ids.UUID{}, err
-	}
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.UserID.IsZero() {
-		return ids.UUID{}, apperrors.ErrPermissionDenied
 	}
 	if err := admitRecording(in, s.now()); err != nil {
 		return ids.UUID{}, err
@@ -84,7 +78,7 @@ func (s *Store) Record(ctx context.Context, in NewRecorded) (ids.UUID, error) {
 				origin, recorded_channel, status, introduced_at, captured_by)
 			VALUES ($1,$2,$3,$4,'direct','recorded',$5,'introduced',$6,$7)`,
 			id, in.ContactID, in.IntroducedUser, in.IntroducerUser,
-			in.Channel, in.On, capturedBy)
+			in.Channel, storekit.AsDate(in.On), capturedBy)
 		if err != nil {
 			if storekit.IsUniqueViolation(err) {
 				return fmt.Errorf(
@@ -95,11 +89,11 @@ func (s *Store) Record(ctx context.Context, in NewRecorded) (ids.UUID, error) {
 		}
 		auditID, err := storekit.AuditEvent(ctx, tx, "create", "intro_request", id,
 			map[string]any{
-				"contact_id":         in.ContactID.String(),
-				"introducer_user_id": in.IntroducerUser.String(),
-				"introduced_user_id": in.IntroducedUser.String(),
-				"origin":             string(OriginRecorded),
-				"recorded_channel":   in.Channel,
+				"contact_id":          in.ContactID.String(),
+				fieldIntroducerUserID: in.IntroducerUser.String(),
+				"introduced_user_id":  in.IntroducedUser.String(),
+				"origin":              string(OriginRecorded),
+				"recorded_channel":    in.Channel,
 			})
 		if err != nil {
 			return err
@@ -116,6 +110,25 @@ func (s *Store) Record(ctx context.Context, in NewRecorded) (ids.UUID, error) {
 		return ids.UUID{}, err
 	}
 	return id, nil
+}
+
+// recorderOf answers the human recording, refusing a caller without the grants
+// to name a contact and create an introduction, and any agent.
+func recorderOf(ctx context.Context) (principal.Principal, error) {
+	if err := auth.Require(ctx, "introduction", principal.ActionCreate); err != nil {
+		return principal.Principal{}, err
+	}
+	if err := auth.Require(ctx, "contact", principal.ActionRead); err != nil {
+		return principal.Principal{}, err
+	}
+	if err := auth.RequireHuman(ctx); err != nil {
+		return principal.Principal{}, err
+	}
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.UserID.IsZero() {
+		return principal.Principal{}, apperrors.ErrPermissionDenied
+	}
+	return actor, nil
 }
 
 // recorderRole names which of the two colleagues the caller is, or "" for
@@ -142,8 +155,9 @@ func admitRecording(in NewRecorded, now time.Time) error {
 	if !crmcontracts.IntroRecordedChannel(in.Channel).Valid() {
 		return notAllowed("channel", "in_person, email, call or other")
 	}
-	today := now.UTC().Truncate(24 * time.Hour)
-	if in.On.UTC().Truncate(24 * time.Hour).After(today) {
+	// A day ahead of the UTC date is allowed: a colleague east of UTC saying
+	// "today" is already on tomorrow's UTC date.
+	if storekit.AsDate(in.On).After(storekit.AsDate(now).AddDate(0, 0, 1)) {
 		return &values.ParseError{
 			Field: "introduced_on", Code: "in_future",
 			Message: "an introduction that already happened cannot be dated in the future",
@@ -165,7 +179,7 @@ func requireLiveSeats(ctx context.Context, tx pgx.Tx, introducer, introduced ids
 	}
 	if live != 2 {
 		return &values.ParseError{
-			Field: "introducer_user_id", Code: "unknown_colleague",
+			Field: fieldIntroducerUserID, Code: "unknown_colleague",
 			Message: "both colleagues must be current members of the workspace",
 		}
 	}

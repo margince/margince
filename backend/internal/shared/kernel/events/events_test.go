@@ -132,6 +132,7 @@ func TestCatalogTypesObeyNamingConvention(t *testing.T) {
 		// and a lent name — and naming the type for one of them would leave the
 		// other with no way to be reported.
 		"completed": true,
+		"recorded":  true,
 		// The contact answered. It is a verb of its own because nothing a contact
 		// presses produces it: the fact is observed from captured activity.
 		"replied": true,

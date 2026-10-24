@@ -21,6 +21,7 @@ package introductions
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -53,8 +54,15 @@ func (s *Store) CarryIntrosTx(ctx context.Context, tx pgx.Tx, from, to ids.Conta
 	if err := s.closeMergedDuplicates(ctx, tx, from, to); err != nil {
 		return err
 	}
-	if err := s.archiveMergedRecordedDuplicates(ctx, tx, from, to); err != nil {
+	archived, archivedAt, err := s.archiveMergedRecordedDuplicates(ctx, tx, from, to)
+	if err != nil {
 		return err
+	}
+	for _, id := range archived {
+		if _, err := storekit.Audit(ctx, tx, "update", "intro_request", id,
+			map[string]any{fieldArchivedAt: nil}, map[string]any{fieldArchivedAt: archivedAt}); err != nil {
+			return err
+		}
 	}
 	rows, err := tx.Query(ctx, `
 		WITH prior AS (
@@ -100,6 +108,7 @@ func (s *Store) CarryIntrosTx(ctx context.Context, tx pgx.Tx, from, to ids.Conta
 const (
 	fieldContactID        = "contact_id"
 	fieldThroughContactID = "through_contact_id"
+	fieldArchivedAt       = "archived_at"
 )
 
 // closeMergedDuplicates cancels every open ask naming the retired contact that
@@ -152,9 +161,12 @@ func (s *Store) closeMergedDuplicates(ctx context.Context, tx pgx.Tx, from, to i
 }
 
 // archiveMergedRecordedDuplicates archives the newer of two recorded
-// introductions the merge would put on one pair, and audits each. closeMergedDuplicates
-// has already locked every row of both contacts.
-func (s *Store) archiveMergedRecordedDuplicates(ctx context.Context, tx pgx.Tx, from, to ids.ContactID) error {
+// introductions the merge would put on one pair, and answers which and when so
+// the caller audits them with the re-home. closeMergedDuplicates has already
+// locked every row of both contacts.
+func (s *Store) archiveMergedRecordedDuplicates(
+	ctx context.Context, tx pgx.Tx, from, to ids.ContactID,
+) ([]ids.UUID, time.Time, error) {
 	archivedAt := s.now().UTC()
 	rows, err := tx.Query(ctx, `
 		UPDATE intro_request r
@@ -163,19 +175,13 @@ func (s *Store) archiveMergedRecordedDuplicates(ctx context.Context, tx pgx.Tx, 
 		RETURNING r.id`,
 		pgx.NamedArgs{"source": from, "target": to, "archived_at": archivedAt})
 	if err != nil {
-		return fmt.Errorf("introductions: archiving recorded introductions the merge made duplicates: %w", err)
+		return nil, time.Time{}, fmt.Errorf("introductions: archiving recorded introductions the merge made duplicates: %w", err)
 	}
 	archived, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 	if err != nil {
-		return fmt.Errorf("introductions: archiving recorded introductions the merge made duplicates: %w", err)
+		return nil, time.Time{}, fmt.Errorf("introductions: archiving recorded introductions the merge made duplicates: %w", err)
 	}
-	for _, id := range archived {
-		if _, err := storekit.Audit(ctx, tx, "update", "intro_request", id,
-			map[string]any{"archived_at": nil}, map[string]any{"archived_at": archivedAt}); err != nil {
-			return err
-		}
-	}
-	return nil
+	return archived, archivedAt, nil
 }
 
 // auditMergeClosedAsk lands the write shape a cancellation lands: the status
