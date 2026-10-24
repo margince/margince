@@ -29,7 +29,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 323 |
-| Columns | 3816 |
+| Columns | 3817 |
 | Foreign keys | 530 |
 | Owning areas | 36 |
 
@@ -252,7 +252,7 @@ erDiagram
 | [`contact_phone`](contacts.md#contact_phone) | contacts | 14 | 1 |
 | [`contact_profile_field`](contacts.md#contact_profile_field) | contacts | 17 | 0 |
 | [`contact_provider_claim`](contacts.md#contact_provider_claim) | contacts | 16 | 1 |
-| [`contact_signature_enrich_state`](contacts.md#contact_signature_enrich_state) | contacts | 4 | 0 |
+| [`contact_signature_enrich_state`](contacts.md#contact_signature_enrich_state) | contacts | 5 | 0 |
 | [`contact_social`](contacts.md#contact_social) | contacts | 5 | 0 |
 | [`contract`](contracts.md#contract) | contracts | 29 | 3 |
 | [`conversation_claim`](contacts.md#conversation_claim) | contacts | 21 | 0 |

@@ -814,13 +814,14 @@ The 43 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact_signature_enrich_state
 
-4 columns · primary key `(contact_id)` · referenced by 0 foreign keys
+5 columns · primary key `(contact_id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `activity_id` | `uuid` | yes | Points at `activity.id`. |
 | `attempted_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `contact_id` | `uuid` | yes | Points at `contact.id`. |
+| `history_depth` | `smallint` |  |  |
 | `last_activity_at` | `timestamp with time zone` | yes |  |
 
 **Points at**

@@ -126,7 +126,7 @@ func (e *dedupeEnv) as() context.Context {
 // a contact every seat can read. A fixture handing it a fabricated id is
 // therefore describing a refusal, not the apply — so the fixtures seed the
 // message the production caller always has.
-func (e *dedupeEnv) openSignatureSource(ctx context.Context, t *testing.T) ids.UUID {
+func (e *dedupeEnv) openSignatureSource(ctx context.Context, t *testing.T, contactID ids.ContactID) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
@@ -138,13 +138,14 @@ func (e *dedupeEnv) openSignatureSource(ctx context.Context, t *testing.T) ids.U
 	}); err != nil {
 		t.Fatalf("seed the signature source: %v", err)
 	}
+	e.writtenBy(ctx, t, contactID, id)
 	return id
 }
 
 // agedSignatureSource is the same message dated a year back — a re-delivery, or
 // mail a connector backfilled long after it was sent. What it states is older
 // than what the record holds, so the pass must leave the record alone.
-func (e *dedupeEnv) agedSignatureSource(ctx context.Context, t *testing.T) ids.UUID {
+func (e *dedupeEnv) agedSignatureSource(ctx context.Context, t *testing.T, contactID ids.ContactID) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
@@ -157,7 +158,25 @@ func (e *dedupeEnv) agedSignatureSource(ctx context.Context, t *testing.T) ids.U
 	}); err != nil {
 		t.Fatalf("seed the aged signature source: %v", err)
 	}
+	e.writtenBy(ctx, t, contactID, id)
 	return id
+}
+
+// writtenBy files the mail under the contact and names them its sender, as
+// capture does, so the apply's source check finds the contact wrote it.
+func (e *dedupeEnv) writtenBy(ctx context.Context, t *testing.T, contactID ids.ContactID, activityID ids.UUID) {
+	t.Helper()
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, `INSERT INTO activity_link (activity_id, entity_type, contact_id) VALUES ($1, 'contact', $2)`,
+			activityID, contactID); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `INSERT INTO activity_participant (activity_id, contact_id, role) VALUES ($1, $2, 'from')`,
+			activityID, contactID)
+		return err
+	}); err != nil {
+		t.Fatalf("filing the signature source under its sender: %v", err)
+	}
 }
 
 func (e *dedupeEnv) seedEmployedContact(ctx context.Context, t *testing.T, name, email, companyName, domain string) (ids.ContactID, ids.CompanyID) {
