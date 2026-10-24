@@ -51,7 +51,7 @@ func leadFilingPass(ctx context.Context, t *testing.T, l *leadMailEnv, rollback 
 		}
 		return nil
 	})
-	if err != nil && !(rollback && errors.Is(err, undo)) {
+	if err != nil && (!rollback || !errors.Is(err, undo)) {
 		t.Fatalf("running the lead filing: %v", err)
 	}
 	return changed

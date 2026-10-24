@@ -20,12 +20,11 @@ package capture
 // links are derived from those rows rather than re-resolved, and a meeting whose
 // attendee is a contact is filed under that contact.
 //
-// Contact and lead links only. A lead attendee is matched by exact address,
-// because no participant row ever resolves to a lead. A meeting may never link straight to a company
-// (activities.refuseACompanyMeeting, and a trigger behind it): the account is
-// reached through the attendee's employment, which is exactly what the company
-// reach walk's third arm does. Filing the meeting under the contact is therefore
-// enough to put it on the company page too.
+// Contact and lead links only. A lead attendee is matched by exact address.
+// A meeting may never link straight to a company
+// (activities.refuseACompanyMeeting, and a trigger behind it). The company
+// reach walk finds the account through the attendee's employment, so the
+// contact link puts the meeting on the company page too.
 //
 // Nothing is CREATED from an invite. An attendee with no contact record stays an
 // address here; an invitation is not correspondence, and one all-hands with
@@ -53,32 +52,22 @@ const meetingKind = "meeting"
 // maxDerivedMeetingLinks bounds how many records one captured activity is filed
 // under through its participants.
 //
-// The ceiling is activities.maxActivityLinks — an activity may be filed under
-// at most 25 records, for every transport including a human's own. It is spelled
-// again here rather than shared because a module never imports a sibling; what
-// must not drift is the NUMBER, and a meeting that reached the cap has stopped
-// being a meeting and become a broadcast, where the attendee list is the record
-// and the filing is not.
+// It mirrors activities.maxActivityLinks, because a module never imports a
+// sibling. An activity is filed under at most 25 records on every transport.
 //
 // Held by: TestTheLinkCeilingHasOneValue (backend/gates/linkceilingparity_test.go)
 const maxDerivedMeetingLinks = 25
 
 // linkResolvedMeetingParticipants files a captured meeting under each attendee
-// who is a live contact or a live lead (participantfiling.go), organizer first,
-// and answers how many links it wrote.
+// who is a live contact or a live lead (participantfiling.go), organizer first.
 //
-// The count is what the audience limiter reads: a meeting that lands with links
-// is not a link-less record and must not be held to its participants. It counts
-// links actually WRITTEN — a conflict, a cap or an invisible target all mean no
-// link — because the limiter's write is deterministic, and claiming a link that
-// does not exist would leave the meeting workspace-readable with nothing filing
-// it anywhere.
+// It answers the links written, which the audience limiter reads. A meeting
+// with links is not held to its participants. A claimed link that was never
+// written would open a meeting that nothing files.
 func (s *Sink) linkResolvedMeetingParticipants(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, existing int,
 ) (int, error) {
-	// The budget is what the row can still take, not a fresh 25: a connector
-	// record may already carry links of its own, and the ceiling is on the
-	// activity rather than on this step.
+	// The ceiling is on the activity, so a connector's own links count.
 	return fileUnderParticipants(tx, activityID, participantFiling{
 		decider: ctx,
 		budget:  maxDerivedMeetingLinks - existing,

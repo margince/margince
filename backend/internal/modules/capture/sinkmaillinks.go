@@ -54,13 +54,9 @@ const postCommitLinkReservation = 3
 // linkResolvedMailParticipants files a captured message under every participant
 // who is a live contact or a live lead (participantfiling.go).
 //
-// It answers nothing, and that is the point. The meeting arm returns a count
-// because the audience limiter reads it: a meeting filed under an attendee has
-// a record standing behind it, so it is not the link-less mail the limiter
-// holds. A cc'd contact or a lead is not that claim — the message may still be
-// filed under nobody the ladder judged — so this arm must not feed that
-// decision. Returning a count is how a later reader wires it in by accident, so
-// there is none to wire.
+// It answers no count, unlike the meeting arm. The audience limiter reads that
+// count, and a copied contact or a lead does not make a message filed. A count
+// here would let a later reader wire it into the limiter and open held mail.
 //
 // Held by: TestASuppressedMessageIsFiledUnderNobodyItCopies and
 // TestFilingAConfidentialMessageDoesNotWidenWhoMayReadIt
@@ -68,10 +64,8 @@ const postCommitLinkReservation = 3
 func (s *Sink) linkResolvedMailParticipants(
 	ctx context.Context, tx pgx.Tx, activityID ids.ActivityID, existing int,
 ) error {
-	// The budget is what the row can still take rather than a fresh 25: the
-	// ceiling is on the ACTIVITY, whatever wrote the links. The seats reserved
-	// on top are for the writers that run after this transaction commits
-	// without consulting this budget (postCommitLinkReservation).
+	// The ceiling is on the activity, so the budget is what the row can still
+	// take, less the seats kept for the writers after commit.
 	_, err := fileUnderParticipants(tx, activityID, participantFiling{
 		decider: ctx,
 		budget:  max(maxDerivedMeetingLinks-existing-postCommitLinkReservation, 0),

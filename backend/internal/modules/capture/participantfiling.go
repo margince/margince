@@ -3,21 +3,15 @@
 
 package capture
 
-// The one rule that files a captured activity under the records of those who
-// were on it, beyond the refs its connector named and the counterparty the
-// ladder judged.
+// The one rule that files a captured activity under the records of those on
+// it, beyond the connector's refs and the counterparty the ladder judged.
 //
-// A participant row names a record two ways: a contact it resolved to, or an
-// address. A contact is filed under through the resolved row. A LEAD is never
-// resolved onto a participant row, because a lead is not a contact (ADR-0008),
-// so it is filed under through the address: a live lead whose email is exactly
-// the participant's address. No fuzzy match: the address is the lead's only
-// identity this path can trust, and a near miss names someone else.
+// A participant row names a contact it resolved to, or an address. A lead is
+// never resolved onto a participant row (ADR-0008), so a lead is matched by
+// its exact address. A near miss names someone else, so nothing fuzzy matches.
 //
-// Mail, meetings and calendar events read this one rule, and so does the lead
-// backfill (leadfilingrepair.go). They differ only in the budget they pass and
-// in how a link is written; the candidates, their order and the admission of
-// each are decided here once.
+// Mail, meetings and the lead backfill (leadfilingrepair.go) all read this rule.
+// They differ only in their budget and in how a link is written.
 
 import (
 	"context"
@@ -46,17 +40,15 @@ var participantLinkColumns = map[datasource.EntityType]string{
 	datasource.EntityLead:    "lead_id",
 }
 
-// participantRecordsSQL answers every record the activity's participant rows
-// name, in the order the link ceiling cuts them: the organizer first, then
-// contacts before leads, then by id. A replay files the same way.
+// participantRecordsSQL answers the records the participant rows name, in the
+// order the link ceiling cuts them. The organizer comes first, then contacts
+// before leads, then ids, so a replay files the same way.
 //
-// A contact is settled against a merge before its liveness is judged, because
-// a merge archives the source and points it at the survivor in one write, and
-// no reader of activity_link walks merged_into_id.
+// A contact is followed through a merge before its liveness is judged. A merge
+// archives the source, and no reader of activity_link walks merged_into_id.
 //
-// A lead counts only if it already existed when the activity happened. Mail
-// from before the lead would start its reply clock and its first response
-// from a time before anyone worked it, so a backlog import files none of it.
+// A lead counts only if it existed when the activity happened. Older mail
+// would start its reply clock before anyone worked it.
 var participantRecordsSQL = `
 	SELECT entity_type, id FROM (
 		SELECT 'contact' AS entity_type, 0 AS rank, survivor.id,
@@ -97,11 +89,10 @@ func participantRecords(ctx context.Context, tx pgx.Tx, activityID ids.ActivityI
 	return out, nil
 }
 
-// mayFileUnder asks whether decider may file an activity under record: it
-// holds the object's read grant and may see the row (H1), so a connector cannot
-// plant a link to a record its granting human could not see. Not-found and
-// denied answer false rather than fail: the activity happened, and refusing it
-// over a filing decision would throw away a message we read successfully.
+// mayFileUnder asks whether decider holds the record's read grant and may see
+// its row (H1). A connector may not plant a link its granting human could not
+// see. A refusal answers false rather than failing the capture of a message
+// that was read successfully.
 func mayFileUnder(decider context.Context, tx pgx.Tx, record participantRecord) (bool, error) {
 	if !auth.ReadGranted(decider, string(record.entity)) {
 		return false, nil
@@ -116,8 +107,8 @@ func mayFileUnder(decider context.Context, tx pgx.Tx, record participantRecord) 
 	return true, nil
 }
 
-// participantFiling is how one caller spends the rule: who decides, how many
-// links it may still write, which records it is asked about, and the write.
+// participantFiling is how one caller spends the rule. It names who decides,
+// the links left, the records asked about, and the write.
 type participantFiling struct {
 	decider context.Context
 	budget  int
@@ -129,8 +120,7 @@ type participantFiling struct {
 }
 
 // fileUnderParticipants files the activity under each record its participants
-// name, in order, until the budget is spent. It answers how many links it wrote;
-// a conflict, a refusal or a cut all write none.
+// name, in order, until the budget is spent. It answers how many links landed.
 func fileUnderParticipants(tx pgx.Tx, activityID ids.ActivityID, f participantFiling) (int, error) {
 	records, err := participantRecords(f.decider, tx, activityID)
 	if err != nil {
@@ -162,8 +152,8 @@ func fileUnderParticipants(tx pgx.Tx, activityID ids.ActivityID, f participantFi
 	return written, nil
 }
 
-// insertParticipantLink is the capture transaction's own write: the activity
-// was minted in this transaction, and its create audit row covers its filing.
+// insertParticipantLink is the capture transaction's own write. The activity
+// was minted in this transaction, and its create audit row covers the filing.
 func insertParticipantLink(ctx context.Context, tx pgx.Tx, activityID ids.ActivityID) func(participantRecord) (bool, error) {
 	return func(record participantRecord) (bool, error) {
 		column, ok := participantLinkColumns[record.entity]

@@ -6,9 +6,8 @@
 package compose
 
 // Captured mail and meetings are filed under a live lead whose address is on
-// them, by the same participant rule that files them under contacts: the same
-// ceiling, the same order, the same admission for the capturing seat. Filing
-// never widens who may read the message.
+// them. The participant rule for contacts decides it, with its ceiling, order
+// and admission. Filing never widens who may read the message.
 
 import (
 	"context"
@@ -219,7 +218,7 @@ func TestAHeldMailFiledUnderALeadStaysUnreadableThroughTheLead(t *testing.T) {
 		t.Fatalf("the held mail is audience %q (%s) after filing, want participants: filing must not widen it", audience, reason)
 	}
 	colleague := l.e.As(l.e.Rep2, nil, integration.AdminPerms)
-	timeline := l.leadTimeline(t, colleague, lead)
+	timeline := l.leadTimeline(colleague, t, lead)
 	if len(timeline) != 1 {
 		t.Fatalf("the lead timeline lists %d rows for a colleague, want the held mail as one withheld row", len(timeline))
 	}
@@ -228,12 +227,12 @@ func TestAHeldMailFiledUnderALeadStaysUnreadableThroughTheLead(t *testing.T) {
 		t.Errorf("a colleague outside the mail's audience reads it through the lead: %+v", row)
 	}
 	seat := l.e.As(l.owner, nil, integration.AdminPerms)
-	if own := l.leadTimeline(t, seat, lead); len(own) != 1 || own[0].Subject == nil {
+	if own := l.leadTimeline(seat, t, lead); len(own) != 1 || own[0].Subject == nil {
 		t.Errorf("the seat that received the mail cannot read it through the lead: %+v", own)
 	}
 }
 
-func (l *leadMailEnv) leadTimeline(t *testing.T, ctx context.Context, lead ids.LeadID) []crmcontracts.Activity {
+func (l *leadMailEnv) leadTimeline(ctx context.Context, t *testing.T, lead ids.LeadID) []crmcontracts.Activity {
 	t.Helper()
 	rows, _, err := l.e.Activities.ListActivities(ctx, activities.ListActivitiesInput{EntityType: new("lead"), EntityID: &lead.UUID})
 	if err != nil {

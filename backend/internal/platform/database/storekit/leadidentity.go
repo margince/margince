@@ -37,15 +37,14 @@ type LeadSourceKey struct {
 }
 
 // LiveLeadClause is what makes a lead a live identity. Promotion,
-// disqualification and a lead merge all archive the lead they retire, so this
-// one column is the whole lifecycle test, and uq_lead_email_dedupe is built on it.
+// disqualification and a lead merge all archive the lead they retire. So this
+// one column is the whole lifecycle test, as in uq_lead_email_dedupe.
 func LiveLeadClause(alias string) string {
 	return alias + ".archived_at IS NULL"
 }
 
 // LeadEmailMatchClause is an exact address match against a lead. The address
-// is folded the way lead_email_norm stores it and capture stamps a participant
-// row, so a caller that has not normalized still compares like for like.
+// is folded the way lead_email_norm stores it and capture stamps a participant.
 func LeadEmailMatchClause(alias, address string) string {
 	return alias + ".email = lower(btrim(" + address + "))"
 }

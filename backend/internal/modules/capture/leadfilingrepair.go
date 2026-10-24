@@ -32,14 +32,12 @@ type LeadFiler interface {
 // leadFilingReason is the evidence every repair write records.
 const leadFilingReason = "captured_activity_filed_under_lead"
 
-// leadFilingCandidatesSQL selects the activities the repair inspects: live
-// connector captures with a participant address that a live lead holds, under
-// participantRecordsSQL's own match and age rule, and that are not yet filed
-// under that lead. Callers append the cursor and order.
+// leadFilingCandidatesSQL selects live connector captures that a live lead's
+// address is on and that are not yet filed under it. It applies
+// participantRecordsSQL's match and age rule. Callers append the cursor.
 //
-// A message the ladder suppressed is never a candidate, as capture files it
-// under nobody: its no_record hold says so durably, and its ladder trace says
-// so where a later audience change replaced the hold.
+// A message the ladder suppressed is filed under nobody. Its no_record hold
+// says so, and its ladder trace says so once a later audience replaced the hold.
 var leadFilingCandidatesSQL = `
 	SELECT a.id FROM activity a
 	 WHERE a.captured_by LIKE 'connector:%'
@@ -57,8 +55,8 @@ var leadFilingCandidatesSQL = `
 
 // LeadFilingRepair files activities captured before capture knew leads under
 // the live leads their participants' addresses name. It runs the capture rule
-// (participantfiling.go) as each mailbox that imported the activity, with that
-// seat's live authority, and writes as its own actor with its reason.
+// (participantfiling.go) as each mailbox that imported the activity. It writes
+// as its own actor, with its reason.
 type LeadFilingRepair struct {
 	Authority authz.Resolver
 	Filer     LeadFiler
