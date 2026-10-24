@@ -136,7 +136,7 @@ export function CompaniesScreen() {
                 createCompany(values, rows, cf.toBody(values), t, key)
               }
               resolveExisting={(_code, id) => ({ screen: "companies", id })}
-              fields={[...companyCreateFields, ...cf.formFields]}
+              fields={[...companyCreateFields(t, locale), ...cf.formFields]}
             />
           </>
         }
