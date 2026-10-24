@@ -357,7 +357,8 @@ func wirePage(page storekit.Page) crmcontracts.PageInfo {
 }
 
 // wireLinked maps the values behind a link field; nil where the field is not
-// read back, so the key is absent rather than an empty list.
+// read back.
+// The key is then absent, not an empty list.
 func wireLinked(linked []storekit.LinkedValue) *[]crmcontracts.ListLinkedValue {
 	if linked == nil {
 		return nil

@@ -139,9 +139,10 @@ function scalarValueText(
 }
 
 /**
- * What a link field holds on a record: the names of the rows it links, a
- * hidden entry as the hidden word, and an empty link as empty. The member
- * table reads a link cell through this too, so the two screens agree.
+ * What a link field holds on a record.
+ * It shows the names of the rows it links, a hidden entry as the hidden word,
+ * and an empty link as empty. The member table reads a link cell through this
+ * too, so the two screens agree.
  */
 export function linkedText(
   linked: readonly ListLinkedValue[],

@@ -6,7 +6,8 @@
 package integration
 
 // A Live List's tag clause names the tags a record carries, in the why and in
-// the member table alike, and hides them only from a seat without the tag grant.
+// the member table alike.
+// Only a seat without the tag grant does not see them.
 
 import (
 	"testing"

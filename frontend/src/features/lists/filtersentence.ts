@@ -334,9 +334,9 @@ function typedOperandText(
 }
 
 /**
- * The names of a tag clause's tags, or undefined when any tag has no name to
- * give: the catalog is withheld from this seat, or lacks the tag. The caller
- * then counts them, which never names one tag and miscounts another.
+ * The names of a tag clause's tags, or undefined when any tag has no name.
+ * The catalog may be withheld from this seat, or lack the tag. The caller then
+ * counts the tags instead. That never names one tag and miscounts another.
  */
 function tagNamesText(
   operand: unknown,

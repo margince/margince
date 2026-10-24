@@ -77,8 +77,9 @@ func (q Query) readField(ctx context.Context, name string, field Field, arg func
 var linkLabelTables = map[Reference]string{RefTag: "tag", RefTeam: "team"}
 
 // linkedLookup answers, for each raw value behind a link field, what this
-// reader may see of it: a row they may not open is Hidden, one they may open is
-// named. Several records share one lookup, so a page reads each table once.
+// reader may see of it.
+// A row they may not open is Hidden, and one they may open is named.
+// Several records share one lookup, so a page reads each table once.
 func linkedLookup(ctx context.Context, tx pgx.Tx, ref Reference, values []string) (map[string]LinkedValue, error) {
 	found := make(map[string]LinkedValue, len(values))
 	if len(values) == 0 {
