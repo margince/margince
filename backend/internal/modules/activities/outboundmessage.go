@@ -85,7 +85,7 @@ func (m outboundMessage) activity(chain threading) LogActivityInput {
 		// nobody can read: it is a record that looks complete.
 		recorded += "\n\n[" + htmlAlternativeNote + "]"
 	}
-	return sentRecord(LogActivityInput{
+	return SentRecord(LogActivityInput{
 		Kind:         "email",
 		Subject:      &m.in.Subject,
 		Body:         &recorded,
@@ -106,12 +106,12 @@ func (m outboundMessage) activity(chain threading) LogActivityInput {
 	})
 }
 
-// sentRecord is the timeline row a send stores, with the credentials in its
+// SentRecord is the timeline row a send stores, with the credentials in its
 // subject and body masked by the rules capture masks every copy it reads with.
 // The row is served to every seat that may read the mail, and the provider's
 // echo then joins a row that already reads as a captured copy would. Every send
 // builds its row here; the delivery keeps the text as typed.
-func sentRecord(in LogActivityInput) LogActivityInput {
+func SentRecord(in LogActivityInput) LogActivityInput {
 	in.Subject = maskedText(in.Subject)
 	in.Body = maskedText(in.Body)
 	return in

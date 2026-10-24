@@ -7,8 +7,11 @@ package compose
 
 import (
 	"context"
+	"io"
+	"log/slog"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -16,7 +19,9 @@ import (
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/mailmap"
+	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/credentialmask"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -105,5 +110,53 @@ func assertCaptureMasksAsTheSendDid(t *testing.T, raw []byte, mailbox, subject, 
 	}
 	if fields.Subject != subject || !strings.HasSuffix(fields.Body, "\n\n"+body) {
 		t.Fatalf("capture would store %q / %q for the echo, want %q / ...%q", fields.Subject, fields.Body, subject, body)
+	}
+}
+
+// The installation's own mail is a sent row too, so its timeline copy is masked
+// while the delivery keeps the words it sends.
+func TestControllerMailStoresItsTimelineRowMasked(t *testing.T) {
+	l := setupConfirmLane(t)
+	inserter, err := jobs.NewInserter(l.e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		t.Fatalf("jobs.NewInserter: %v", err)
+	}
+	// The live link is the engine's evidence for a record confirmation.
+	if _, err := l.store.IssueConfirmToken(l.ctx, ids.From[ids.ContactKind](l.contact)); err != nil {
+		t.Fatalf("IssueConfirmToken: %v", err)
+	}
+	var link ids.UUID
+	if err := l.e.Pool.QueryRow(l.ctx, `SELECT id FROM confirm_token WHERE contact_id = $1`, l.contact).Scan(&link); err != nil {
+		t.Fatalf("reading the confirm link: %v", err)
+	}
+	rendered, category, err := consent.RenderControllerTemplate(consent.TemplateRecordConfirmation, time.Now().Add(time.Hour), "")
+	if err != nil {
+		t.Fatalf("rendering the template: %v", err)
+	}
+	const secret = "Hunter2-Example!"
+	rendered.Subject += " Passwort: " + secret
+	rendered.Body += "\nPasswort: " + secret
+	var deliveredSubject, deliveredBody, storedSubject, storedBody string
+	if err := database.WithWorkspaceTx(l.ctx, l.e.Pool, func(tx pgx.Tx) error {
+		delivery, err := NewControllerMailQueue(l.e.Pool, inserter).QueueConfirmationTx(l.ctx, tx, consent.ConfirmationSend{
+			ContactID: ids.From[ids.ContactKind](l.contact), Recipient: "subject@example.test", Category: category,
+			LinkID: link, LinkRef: "sealed-ref", ExpiresAt: time.Now().Add(time.Hour),
+			MessageID: "controller-mask@margince.test", Rendered: rendered,
+		})
+		if err != nil {
+			return err
+		}
+		return tx.QueryRow(context.Background(), `
+			SELECT o.subject, o.body, a.subject, a.body
+			  FROM comms_outbound o JOIN activity a ON a.id = o.activity_id
+			 WHERE o.id = $1`, delivery).Scan(&deliveredSubject, &deliveredBody, &storedSubject, &storedBody)
+	}); err != nil {
+		t.Fatalf("queueing the controller mail: %v", err)
+	}
+	if !strings.Contains(deliveredSubject, secret) || !strings.Contains(deliveredBody, secret) {
+		t.Fatalf("the delivery carries %q / %q, want the words as rendered", deliveredSubject, deliveredBody)
+	}
+	if storedSubject != credentialmask.MaskText(deliveredSubject) || storedBody != credentialmask.MaskText(deliveredBody) {
+		t.Fatalf("the timeline row stores %q / %q, want the delivered text masked", storedSubject, storedBody)
 	}
 }

@@ -428,7 +428,7 @@ type outboundChannelMessage struct {
 // where the receipt is recorded.
 func (m outboundChannelMessage) activity() LogActivityInput {
 	direction := "outbound"
-	return sentRecord(LogActivityInput{
+	return SentRecord(LogActivityInput{
 		// The two axes, stated separately (ADR-0107/A158). The reply IS a
 		// message; what carries it is the anchor's own transport. Capture's
 		// reply-match reads the PAIR — kind to separate mail from channel,
