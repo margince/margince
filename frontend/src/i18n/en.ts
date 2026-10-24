@@ -3760,6 +3760,7 @@ export const en = {
   "compose.reason.verdict": "Held by classification",
   "compose.reason.counterparty": "Held: counterparty mail",
   "compose.reason.explicitlyConfidential": "Marked confidential",
+  "compose.reason.membersOnly": "Held: mail between colleagues",
   "compose.reason.noCounterparty": "Held: no counterparty",
   "compose.audience": "Change visibility",
   "compose.audienceTitle": "Who may read this message?",

@@ -198,7 +198,7 @@ func (s *Service) sections(contactID ids.ContactID, now time.Time, opts Assemble
 			return s.strengthSection(ctx, tx, contactID, now, opts.ProjectID, out)
 		}},
 		{name: crmcontracts.Contact360SectionsOmittedContact360SectionsOmittedRelationshipChanges, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Contact360) error {
-			return s.relationshipChangesSection(ctx, tx, contactID, now, opts.ProjectID, out)
+			return s.relationshipChangesSection(ctx, tx, contactID, now, opts, out)
 		}},
 		{name: crmcontracts.Contact360SectionsOmittedContact360SectionsOmittedEmployments, read: func(ctx context.Context, tx pgx.Tx, out *crmcontracts.Contact360) error {
 			return s.employmentsSection(ctx, tx, contactID, out)

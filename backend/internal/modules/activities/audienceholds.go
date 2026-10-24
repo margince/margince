@@ -5,9 +5,9 @@ package activities
 
 // Letting go of a hold this module put on an activity's audience.
 //
-// Both are scoped by the reason VALUE and not by id alone: `audience_reason`
-// has several writers and each may clear only its own, which is why these are
-// two writers rather than one un-hold.
+// Each is scoped by the reason value and not by id alone. `audience_reason`
+// has several writers and each may clear only its own. So these are separate
+// writers rather than one un-hold.
 
 import (
 	"context"
@@ -96,6 +96,25 @@ func ClearConfidentialityVerdictHoldTx(
 		 WHERE id = ANY($1) AND audience_reason = $2`,
 		activityIDs, ReasonConfidentialMarker); err != nil {
 		return fmt.Errorf("activities: clearing a confidentiality verdict the owner has shared past: %w", err)
+	}
+	return nil
+}
+
+// ClearMembersOnlyHoldTx lifts the members-only hold from the messages a
+// mailbox owner just shared. The hold stops automatic promotion only; a
+// member sharing their own thread is the decision it waits for. Another
+// importing seat that still holds the message keeps it held through its own
+// import row, which the recompute after this reads.
+func ClearMembersOnlyHoldTx(ctx context.Context, tx pgx.Tx, activityIDs []ids.ActivityID) error {
+	if len(activityIDs) == 0 {
+		return nil
+	}
+	if _, err := tx.Exec(ctx, `
+		UPDATE activity
+		   SET audience_reason = NULL
+		 WHERE id = ANY($1) AND audience_reason = $2`,
+		activityIDs, ReasonMembersOnly); err != nil {
+		return fmt.Errorf("activities: clearing the members-only hold from shared mail: %w", err)
 	}
 	return nil
 }

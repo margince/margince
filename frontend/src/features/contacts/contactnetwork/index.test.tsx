@@ -522,6 +522,7 @@ describe("the handoff with an ask open", () => {
     name_drop_allowed: false,
     fallback_policy: "none",
     status: "requested",
+    origin: "asked",
     requested_at: "2026-09-03T09:00:00Z",
     due_at: "2026-09-08T09:00:00Z",
     version: 1,

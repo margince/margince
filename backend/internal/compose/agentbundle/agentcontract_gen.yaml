@@ -11087,6 +11087,11 @@ components:
           format: date-time
           description: >-
             When they last wrote to us, leaving out email an import brought in as history. Equal to `last_inbound_at` when nothing imported is newer. The re-engaged suggestion reads this, because history that arrived by import is not a reply. Absent when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
+        last_contact_at:
+          type: [string, 'null']
+          format: date-time
+          description: >-
+            The newest exchange in either direction, a meeting included: the moment "quiet for N days" counts from. Absent when the caller has no activity grant, named in `sections_omitted` as `last_touch`.
         sections_omitted:
           type: array
           description: The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none".
@@ -14808,7 +14813,7 @@ components:
           type: [string, 'null']
           readOnly: true
           description: >-
-            Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the workspace turned mail sharing off), `no_record` (the message is filed under no record), `pending_verdict` (nothing has judged the message yet), `manual` (a human said so). Null on a row nothing derived. WITHHELD with the content — the reason describes what the message is about, so a colleague who may not read a held message does not learn why it is held either; it is absent whenever `content_state` is `withheld`.
+            Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the workspace turned mail sharing off), `no_record` (the message is filed under no record), `no_counterparty` (the message named nobody a record could be filed under), `pending_verdict` (nothing has judged the message yet), `verdict` (a classifier held the thread), `counterparty` (the importing seat holds mail with one of its parties), `explicitly_confidential` (the subject marks it confidential), `members_only` (every party is a member of the workspace; no verdict opens it, the mailbox owner sharing the thread does), `manual` (a human said so). A classifier's own kind, such as `legal`, may stand in for `verdict`. Null on a row nothing derived. WITHHELD with the content — the reason describes what the message is about, so a colleague who may not read a held message does not learn why it is held either; it is absent whenever `content_state` is `withheld`.
         content_state:
           type: string
           enum: [available, withheld]
