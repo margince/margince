@@ -98,7 +98,11 @@ func TestAMorningReservationWaitsForAConcurrentChangeToItsWork(t *testing.T) {
 			return nil
 		})
 	}()
-	<-held
+	select {
+	case <-held:
+	case err := <-writer:
+		t.Fatalf("the concurrent change ended before it held the work: %v", err)
+	}
 	sent := make(chan struct{})
 	go func() {
 		b.worker.sendMorning(ctx, candidate, morning)

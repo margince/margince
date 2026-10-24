@@ -382,7 +382,11 @@ func TestTakingTheRecipientOffATeamWaitsForTheReservation(t *testing.T) {
 			return nil
 		})
 	}()
-	<-held
+	select {
+	case <-held:
+	case err := <-reserved:
+		t.Fatalf("the reservation ended before it held the memberships: %v", err)
+	}
 	removed, returned := make(chan error, 1), make(chan struct{})
 	go func() {
 		defer close(returned)
