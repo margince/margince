@@ -17,7 +17,7 @@ import (
 func TestPrincipalAttributionMirrorsTheAuditHistoryEntry(t *testing.T) {
 	audit := reflect.TypeFor[crmcontracts.AuditHistoryEntry]()
 	for field := range reflect.TypeFor[crmcontracts.PrincipalAttribution]().Fields() {
-		name := strings.Split(field.Tag.Get("json"), ",")[0]
+		name, _, _ := strings.Cut(field.Tag.Get("json"), ",")
 		var twin *reflect.StructField
 		for candidate := range audit.Fields() {
 			if strings.Split(candidate.Tag.Get("json"), ",")[0] == name {
