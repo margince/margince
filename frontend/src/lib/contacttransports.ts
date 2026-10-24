@@ -50,7 +50,7 @@ export function transportsFor(
   t: ReturnType<typeof useT>,
 ): Transport[] {
   const out: Transport[] = [];
-  if (view.contact.emails?.[0]?.email) {
+  if (view.contact.primary_email) {
     out.push({ id: "email", label: t("compose.transportEmail") });
   }
   const reachable = new Set(

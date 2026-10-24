@@ -117,8 +117,7 @@ list of next steps.
 it fails: "Task was not completed. Retry." Also called: tick off, mark done, close a task.
 
 ### What can I do from a task?
-A task linked to one contact offers **Email** and **Open contact**. It offers **Call** only when a logged call made the task and the contact has a phone number. A task you typed never gets **Call**; a done task offers the same. **Email** is refused with a reason when the contact has no email address or is archived. An archived contact gets no **Call**, and **Open contact** stays.
-The **First** card on **Home** offers **Call** and **Email** the same way, with no **Open contact**.
+A task linked to one contact offers **Email** and **Open contact**. It offers **Call** only when a logged call made the task and the contact has a phone number, not for a typed task. A done or read-only task offers the same steps. **Email** is refused with a reason when the contact has no email address or is archived. An archived contact gets no **Call**, and **Open contact** stays. The **First** card on **Home** offers **Call** and **Email** the same way, with no **Open contact**.
 
 ### How do I plan my week?
 To plan your week in Margince, open **Home**, switch the view to **Weekly** and add items under
@@ -278,6 +277,7 @@ Being copied alone does not assign a reply. Team shows shared work under the acc
 Old automatic findings without a current check stay with their source for review.
 On a contact, **Review conversation findings** shows their words, source and date without calling them overdue.
 Tasks you typed, changed or reopened keep their own state. An import does not count as such a change.
+An email on another subject does not mean a promise was kept.
 
 ### Why an item needs attention
 Each item shows its record, the current facts that call for action, and the action it offers.
