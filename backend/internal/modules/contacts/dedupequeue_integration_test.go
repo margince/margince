@@ -267,23 +267,31 @@ func TestDedupeQueuePagesByConfidence(t *testing.T) {
 // The seed is read back through the store's own count rather than assumed: a
 // fuzzy create records what it scores, so the case guards that it really did
 // leave more open pairs than one default page holds.
+//
+// Each employer is named after its surname alone. Employers named "Company Kim
+// <surname>" score as near-duplicates of each other on their shared "Kim", so
+// the count would depend on the company lane rather than the page under test.
 func TestAnOverCapPageAskIsClampedRatherThanResetToTheDefault(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	for _, name := range surnamesPastOnePage {
 		lower := strings.ToLower(name)
-		_, _ = seedContactPair(ctx, t, e,
-			"Kim "+name, "kim@"+lower+".test",
-			"Kym "+name, "kym@"+lower+".test", lower+".test")
+		e.seedEmployedContact(ctx, t, "Kim "+name, "kim@"+lower+".test", name, lower+".test")
+		if _, err := e.store.CreateContact(ctx, CreateContactInput{
+			FullName: "Kym " + name, Source: "manual",
+			Emails: []ContactEmailInput{{Email: "kym@" + lower + ".test", EmailType: "work", IsPrimary: true}},
+		}); err != nil {
+			t.Fatalf("create the near-duplicate of Kim %s: %v", name, err)
+		}
 	}
 
 	open, err := e.store.CountOpenDedupeCandidates(ctx)
 	if err != nil {
 		t.Fatalf("counting open pairs: %v", err)
 	}
-	if open <= dedupeQueueDefaultLimit {
-		t.Fatalf("the seed left %d open pairs, and this case needs more than one default page of %d",
-			open, dedupeQueueDefaultLimit)
+	if open <= dedupeQueueDefaultLimit || open > dedupeQueueMaxLimit {
+		t.Fatalf("the seed left %d open pairs, and this case needs more than one default page of %d and at most the maximum of %d",
+			open, dedupeQueueDefaultLimit, dedupeQueueMaxLimit)
 	}
 
 	rows, _, err := e.store.ListDedupeCandidates(ctx, DedupeQueueInput{Limit: dedupeQueueMaxLimit + 1})
