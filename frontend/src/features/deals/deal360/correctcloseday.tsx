@@ -56,6 +56,8 @@ export function CorrectCloseDayAction({
       queryClient.invalidateQueries({ queryKey: ["deals"] });
     },
   });
+  const today = calendarDay(new Date(), zone);
+  const latestDay = isISODate(today) ? today : undefined;
   return (
     <>
       <Button
@@ -92,7 +94,7 @@ export function CorrectCloseDayAction({
               {...control}
               data-testid="correct-close-day-input"
               value={isISODate(day) ? day : ""}
-              max={calendarDay(new Date(), zone)}
+              max={latestDay}
               onChange={(event) => setDay(event.target.value)}
             />
           )}

@@ -184,8 +184,7 @@ func TestAnOpenDealHasNoCloseDayToCorrect(t *testing.T) {
 	})
 	deal := seedDealInStage(t, e, openStage(t, e, SemanticOpen))
 	_, err := e.store.CorrectCloseDay(e.asDealWriter(), deal, CorrectCloseDayInput{ClosedOn: clocktest.Now(t).UTC()})
-	var open *CloseDayOpenDealError
-	if !errors.As(err, &open) {
+	if _, ok := errors.AsType[*CloseDayOpenDealError](err); !ok {
 		t.Fatalf("an open deal answered %v, want deal_not_closed", err)
 	}
 }
