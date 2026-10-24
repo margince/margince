@@ -278,7 +278,7 @@ func (p *TranscriptProposer) stage(
 			continue
 		}
 		switch outcome {
-		case CommitmentProposed:
+		case CommitmentProposed, CommitmentHistoricalProposed:
 			out.proposals = append(out.proposals, id)
 		case CommitmentTaskWritten:
 			out.tasks++

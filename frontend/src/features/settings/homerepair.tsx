@@ -50,6 +50,7 @@ export const HOME_REPAIR_REASON_LABELS: Record<string, MessageKey> = {
   source_rule_not_verified: "homeRepair.reason.unverified",
   source_unavailable: "homeRepair.reason.unavailable",
   historical_without_current_deadline: "homeRepair.reason.historical",
+  historical_proposed: "homeRepair.reason.lateProposed",
   before_mailbox_history_baseline: "homeRepair.reason.baseline",
   meeting_cancelled: "homeRepair.reason.cancelled",
   request_past_waiting_horizon: "homeRepair.reason.requestAge",

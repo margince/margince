@@ -105,12 +105,16 @@ func applyHomeRepairProposal(ctx context.Context, tx pgx.Tx, expected homeRepair
 }
 
 func homeRepairCommitmentAdmissionTx(ctx context.Context, tx pgx.Tx, commitment Commitment, due *time.Time, retire homeRepairAction, forDecision bool) (homeRepairAction, string, error) {
-	reason, err := readCommitmentAdmission(ctx, tx, commitment, due, forDecision)
+	read, err := readCommitmentEvidence(ctx, tx, commitment, due, forDecision)
+	reason := read.Reason
 	if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
 		return repairHumanReview, string(activities.CommitmentSourceUnavailable), nil
 	}
 	if err != nil {
 		return "", "", err
+	}
+	if retire == repairWithdrawProposal && read.proposeLate() {
+		return repairLeaveCurrent, string(CommitmentHistoricalProposed), nil
 	}
 	switch reason {
 	case activities.CommitmentCurrent:

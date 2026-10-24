@@ -68,6 +68,8 @@ export const en = {
     "The source cannot be checked with your current access.",
   "homeRepair.reason.historical":
     "Historical source without a current deadline.",
+  "homeRepair.reason.lateProposed":
+    "Logged by a colleague after the 30-day window; it stays proposed for the promiser.",
   "homeRepair.reason.baseline":
     "The source predates the mailbox history baseline.",
   "homeRepair.reason.cancelled": "The source meeting was canceled.",

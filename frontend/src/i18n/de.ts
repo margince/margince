@@ -70,6 +70,8 @@ export const de = {
   "homeRepair.reason.unavailable":
     "Die Quelle kann mit deinem aktuellen Zugriff nicht geprüft werden.",
   "homeRepair.reason.historical": "Historische Quelle ohne aktuelle Frist.",
+  "homeRepair.reason.lateProposed":
+    "Von einem Teammitglied nach Ablauf der 30 Tage erfasst; der Vorschlag bleibt beim Zusagenden.",
   "homeRepair.reason.baseline":
     "Die Quelle liegt vor dem gewählten Beginn des Postfachverlaufs.",
   "homeRepair.reason.cancelled": "Der zugrunde liegende Termin wurde abgesagt.",

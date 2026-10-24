@@ -123,7 +123,7 @@ func (d *CommitmentDispatcher) reconcileTaskRecipients(ctx context.Context, tx p
 	return CommitmentRemembered, ids.Nil, nil
 }
 
-func (d *CommitmentDispatcher) reconcilePendingRecipients(ctx context.Context, tx pgx.Tx, c Commitment, held approvals.Offer, bundleID ids.UUID) (CommitmentOutcome, ids.UUID, error) {
+func (d *CommitmentDispatcher) reconcilePendingRecipients(ctx context.Context, tx pgx.Tx, c Commitment, held approvals.Offer, bundleID ids.UUID, late bool) (CommitmentOutcome, ids.UUID, error) {
 	if !held.Pending() || c.Theirs != nil || c.Meaning.withheldOutcome() != "" || len(commitmentRecipients(c)) == 0 {
 		return CommitmentRemembered, ids.Nil, nil
 	}
@@ -160,7 +160,7 @@ func (d *CommitmentDispatcher) reconcilePendingRecipients(ctx context.Context, t
 			return CommitmentRemembered, ids.Nil, err
 		}
 	}
-	return d.stageCommitmentProposal(ctx, tx, c, proposal, bundleID, asked, commitmentWindow(state))
+	return d.stageCommitmentProposal(ctx, tx, c, proposal, bundleID, asked, commitmentWindow(state, late))
 }
 
 func (d *CommitmentDispatcher) recipientTaskTarget(ctx context.Context, tx pgx.Tx, c Commitment) (activities.CommitmentTaskTarget, ids.UUID, error) {
