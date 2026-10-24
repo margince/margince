@@ -111,11 +111,12 @@ describe("DealHistoryTab", () => {
     expect(screen.queryByLabelText("Activity kind")).toBeNull();
   });
 
-  // Mail is answered and a call or a meeting is written about. A task opens
-  // instead, and a system task offers no email either.
-  it("offers Reply only on mail, Write email on a call or a meeting, and neither on a task", async () => {
+  // Mail is answered. Any other row is written about when it links one contact
+  // with an address, and a task the product filed offers no email at all.
+  it("offers Reply on mail and Write email only where the row names someone to write to", async () => {
+    const anna = [{ entity_type: "contact", entity_id: "c-1" }];
     const rows = [
-      CALL_ACTIVITY,
+      { ...CALL_ACTIVITY, links: anna },
       { ...CALL_ACTIVITY, id: "a-2", kind: "meeting", subject: "Site visit" },
       {
         ...CALL_ACTIVITY,
@@ -125,10 +126,19 @@ describe("DealHistoryTab", () => {
         is_done: false,
         captured_by: "system",
         automatic_kind: "product",
+        links: anna,
       },
       {
         ...CALL_ACTIVITY,
         id: "a-4",
+        kind: "task",
+        subject: "Send the revised quote",
+        is_done: false,
+        links: anna,
+      },
+      {
+        ...CALL_ACTIVITY,
+        id: "a-5",
         kind: "email",
         subject: "Revised quote",
         direction: "inbound",
@@ -138,18 +148,25 @@ describe("DealHistoryTab", () => {
       {
         "GET /activities": () =>
           jsonResponse({ data: rows, page: { has_more: false } }),
+        "GET /contacts/c-1": () =>
+          jsonResponse({
+            id: "c-1",
+            full_name: "Anna Weber",
+            primary_email: "anna@example.test",
+          }),
       },
       {},
     );
     withProviders(<DealHistoryTab deal={DEAL} onOpenEmail={() => {}} />);
 
-    await screen.findByText("1 forecast input needs attention");
-    expect(screen.getAllByRole("button", { name: "Write email" })).toHaveLength(
-      2,
+    await waitFor(() =>
+      expect(
+        screen.getAllByRole("button", { name: "Write email" }),
+      ).toHaveLength(2),
     );
     expect(screen.getAllByRole("button", { name: "Reply" })).toHaveLength(1);
     expect(screen.getAllByRole("button", { name: "Open task" })).toHaveLength(
-      1,
+      2,
     );
   });
 

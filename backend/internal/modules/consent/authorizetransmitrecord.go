@@ -197,7 +197,7 @@ func reasonForSuppressionKind(kind string) string {
 		return commsauthz.ReasonRestricted
 	case "subject_request":
 		return commsauthz.ReasonSubjectRequest
-	case "hard_bounce":
+	case kindHardBounce:
 		return commsauthz.ReasonHardBounce
 	default:
 		return "unrecognised_suppression:" + kind

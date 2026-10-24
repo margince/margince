@@ -38,7 +38,42 @@ function Harness({ onClose = vi.fn() }: Readonly<{ onClose?: () => void }>) {
   );
 }
 
+// The verb that opened the window gets focus back when it closes.
+function Opener() {
+  const [open, setOpen] = useState(false);
+  return (
+    <LocaleProvider initial="en">
+      <button type="button" onClick={() => setOpen(true)}>
+        Write email
+      </button>
+      {open && (
+        <DockedWindow
+          title="Re: Budget"
+          state="open"
+          onStateChange={() => undefined}
+          onClose={() => setOpen(false)}
+        >
+          <input aria-label="Words" />
+        </DockedWindow>
+      )}
+    </LocaleProvider>
+  );
+}
+
 describe("a window docked beside the page", () => {
+  it("hands focus back to the verb that opened it when it closes", async () => {
+    const user = userEvent.setup();
+    render(<Opener />);
+    const verb = screen.getByRole("button", { name: "Write email" });
+    await user.click(verb);
+    expect(screen.getByRole("dialog").contains(document.activeElement)).toBe(
+      true,
+    );
+    await user.click(screen.getByRole("button", { name: "Close" }));
+    expect(screen.queryByRole("dialog")).toBeNull();
+    expect(document.activeElement).toBe(verb);
+  });
+
   it("is a dialog that leaves the page behind it in reach", async () => {
     const user = userEvent.setup();
     render(<Harness />);

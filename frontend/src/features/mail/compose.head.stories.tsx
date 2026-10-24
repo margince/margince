@@ -9,7 +9,6 @@ import {
   ProjectPicker,
 } from "../../design-system/projectpicker";
 import { StoryProviders } from "../../testing/story-utils";
-import { stripSubjectTag, withSubjectTag } from "../projects/projectrecord";
 import { ReplyStandingNotice, SubjectTagSwitch } from "./compose.head";
 import { SubjectRow } from "./composehead";
 
@@ -43,12 +42,14 @@ function Head({
   offThread?: boolean;
   owner?: string;
 }>) {
-  const [subject, setSubject] = useState(withSubjectTag(initialSubject, KEY));
+  const [subject, setSubject] = useState(`${KEY} ${initialSubject}`);
   const [tagged, setTagged] = useState(true);
+  // The catalog shows the switch and the field moving together; the tagging
+  // rules themselves are composefiling's, and its tests hold them.
   const turn = (next: boolean) => {
     setTagged(next);
     setSubject((current) =>
-      next ? withSubjectTag(current, KEY) : stripSubjectTag(current, KEY),
+      next ? `${KEY} ${current}` : current.replace(`${KEY} `, ""),
     );
   };
   return (
@@ -75,13 +76,7 @@ function Head({
           }
           under={
             <SubjectTagSwitch
-              filing={{
-                projectId: "pr-9",
-                setProjectId: () => {},
-                ownTag: KEY,
-                tagged,
-                setTagged: turn,
-              }}
+              filing={{ tagged, setTagged: turn }}
               disabled={false}
             />
           }
@@ -150,11 +145,24 @@ export const NotOnThread: Story = {
 /** Nobody's mailbox took it, so the off-thread fact stands on its own. */
 export const NotOnThreadAlone: Story = {
   render: () => <Head offThread owner="Charlotte Weber" />,
+  play: async () => {
+    await screen.findByRole("switch", SWITCH);
+    await expect(screen.getByText("You are not on this thread")).toBeVisible();
+    await expect(
+      screen.getByText("Charlotte Weber owns this deal."),
+    ).toBeVisible();
+    await expect(screen.queryByText(/mailbox/)).toBeNull();
+  },
 };
 
 /** A deal with no owner the roster can name says only the first fact. */
 export const NotOnThreadOwnerUnknown: Story = {
   render: () => <Head seats={["u-charlotte"]} offThread />,
+  play: async () => {
+    await screen.findByRole("switch", SWITCH);
+    await expect(screen.getByText("You are not on this thread.")).toBeVisible();
+    await expect(screen.queryByText(/owns this deal|u-charlotte/)).toBeNull();
+  },
 };
 
 /** Long names in a phone-wide head: every line wraps, nothing is cut. */

@@ -273,6 +273,46 @@ describe("what a rep is shown", () => {
   });
 });
 
+// Each code in the state the preview really sends it in: the three a recorded
+// reason can lift arrive overrulable, the other two do not.
+describe("every refusal says what is wrong and what to do", () => {
+  it.each([
+    ["no_compatible_evidence", true, "sendPermission.unprovenHint"],
+    ["no_marketing_consent", true, "sendPermission.reason.noMarketingConsent"],
+    [
+      "legacy_transactional_unevidenced",
+      true,
+      "sendPermission.reason.legacyPurpose",
+    ],
+    ["unknown_purpose", false, "sendPermission.reason.unknownPurpose"],
+    [
+      "claim_contradicts_resolution",
+      false,
+      "sendPermission.reason.claimContradicts",
+    ],
+  ] as const)("%s", (code, overrulable, key) => {
+    draw(
+      preview(
+        answer({
+          reason_code: code,
+          decided_by: "machine",
+          would_refuse: true,
+          can_be_overruled: overrulable,
+        }),
+      ),
+      () => {},
+    );
+    expect(screen.getByText(translate("en", key))).toBeInTheDocument();
+    expect(
+      screen.queryByText(translate("en", "sendPermission.reason.other")),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /record reason for contact/i }) !==
+        null,
+    ).toBe(overrulable);
+  });
+});
+
 describe("what the hint tells a rep to do", () => {
   // With the control, the hint says how to answer. Without it, "say so" would
   // be the dead button in prose: an instruction the surface cannot take.

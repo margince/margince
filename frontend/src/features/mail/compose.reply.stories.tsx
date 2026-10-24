@@ -1,6 +1,8 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { useQuery } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { expect, within } from "storybook/test";
+import { contactQuery } from "../../lib/contact.queries";
 import {
   installFetchStub,
   jsonResponse,
@@ -162,6 +164,19 @@ function contactWithAddress(address: string | null) {
     });
 }
 
+const ON_JANE = [{ entity_type: "contact" as const, entity_id: "p-1" }];
+
+// The contact read the verb asks, drawn so a reader sees why nothing is offered.
+function AddressOnFile() {
+  const contact = useQuery(contactQuery("p-1"));
+  if (!contact.data) return null;
+  return (
+    <p className="t-caption">
+      {contact.data.primary_email ?? "No email address on file"}
+    </p>
+  );
+}
+
 /** A logged call: the verb writes a new email about it, never a reply to it. */
 export const CallWritesEmail: Story = {
   render: () => {
@@ -177,6 +192,7 @@ export const CallWritesEmail: Story = {
           <ChannelReplyAction
             activityId="a-6"
             kind="call"
+            links={ON_JANE}
             entityType="contact"
             entityId="p-1"
             contactId="p-1"
@@ -201,17 +217,20 @@ export const NoteWithoutAddressOffersNothing: Story = {
           <ChannelReplyAction
             activityId="a-7"
             kind="note"
+            links={ON_JANE}
             entityType="contact"
             entityId="p-1"
             contactId="p-1"
           />
         </Row>
+        <AddressOnFile />
       </StoryProviders>
     );
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await canvas.findByText("Asked for the revised annex.");
+    // The read the verb waits on has answered, so the absence is its answer.
+    await canvas.findByText("No email address on file");
     await expect(canvas.queryByRole("button")).toBeNull();
   },
 };

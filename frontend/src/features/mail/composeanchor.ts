@@ -118,29 +118,59 @@ function answeringLineOf(
   replying: boolean,
   t: ReturnType<typeof useT>,
   locale: Locale,
-): string {
+): { line: string; when?: string } {
   if (!answering) {
-    return t("compose.newEmail");
+    return { line: t("compose.newEmail") };
   }
   const anchor = anchorRead.activity;
   if (!anchor?.occurred_at || anchor.content_state === "withheld") {
-    return t(
-      anchorRead.failed ? "compose.threadFailed" : "compose.threadPending",
-    );
+    return {
+      line: t(
+        anchorRead.failed ? "compose.threadFailed" : "compose.threadPending",
+      ),
+    };
   }
   const named = {
     subject: anchor.subject || t("email.noSubject"),
     when: formatDateTime(anchor.occurred_at, locale, viewerZone()),
   };
+  // Apart, so a narrow bar cuts the subject and still shows when it happened.
   if (!replying) {
-    return t("compose.aboutRow", named);
+    return {
+      line: t("compose.aboutRow", named),
+      when: t("compose.aboutWhen", named),
+    };
   }
-  return t(
+  const key =
     anchor.direction === "outbound"
       ? "compose.followingUp"
-      : "compose.replyingTo",
-    named,
-  );
+      : "compose.replyingTo";
+  return { line: t(key, named) };
+}
+
+// The window's name: the subject as typed, or what the message answers, or
+// whom a new one is to. A bare project tag is not a subject anybody typed.
+export function windowTitle(
+  input: Readonly<{
+    isChannelReply: boolean;
+    wordingTitle: string;
+    replying: boolean;
+    anchorSubject: string | null | undefined;
+    subject: string;
+    recordName: string | undefined;
+    t: ReturnType<typeof useT>;
+  }>,
+): string {
+  const { t } = input;
+  // A channel reply keeps the send's own title.
+  if (input.isChannelReply) return input.wordingTitle;
+  if (stripEveryKeyTag(input.subject).trim()) return input.subject.trim();
+  if (input.replying) {
+    return replySubject(input.anchorSubject?.trim() || t("email.noSubject"));
+  }
+  return input.recordName
+    ? t("compose.newEmailTo", { name: input.recordName })
+    : t("compose.newEmail");
 }
 
 // Whether the thread pane rides beside the form. It holds its place while the
@@ -254,6 +284,7 @@ export function useComposeThread({
     searched,
   );
   useReplySubject(answering, anchorActivity, setSubject);
+  const answered = answeringLineOf(answering, anchorRead, replying, t, locale);
   const showConversation = conversationShown({
     isChannelReply,
     answering,
@@ -279,7 +310,8 @@ export function useComposeThread({
     search,
     setSearch,
     replying,
-    answeringLine: answeringLineOf(answering, anchorRead, replying, t, locale),
+    answeringLine: answered.line,
+    answeringWhen: answered.when,
     splitColumns: showConversation || offered,
   };
 }

@@ -5,11 +5,8 @@
 
 package integration
 
-// Whether the colleague replying belongs to the conversation, read through the
-// reply-recipient endpoint the composer opens with.
-//
-// Rep1 replies throughout. The client wrote to Rep2, so every case varies
-// only where Rep1 stands: on the thread, on the deal's team, or on neither.
+// Rep1 replies throughout to a client who wrote to Rep2. Each case varies only
+// where Rep1 stands: on the thread, on the deal's team, or on neither.
 
 import (
 	"context"

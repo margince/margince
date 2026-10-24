@@ -6033,7 +6033,8 @@ export const en = {
   "compose.newEmail": "New email",
   "compose.replyingTo": "Replying to “{subject}” · {when}",
   "compose.followingUp": "Following up on your email “{subject}” · {when}",
-  "compose.aboutRow": "About: {subject} · {when}",
+  "compose.aboutRow": "About: {subject}",
+  "compose.aboutWhen": "· {when}",
   "compose.draftContextHint":
     "Describe the purpose. Margince uses the record context.",
   "compose.draftEmail": "Draft email",
@@ -6217,8 +6218,6 @@ export const en = {
     "Several records share this address, so the recipient cannot be identified. Merge the records to resolve this.",
   "sendPermission.reason.unconfirmed":
     "The recipient has not confirmed they want to receive messages. Only the recipient can confirm.",
-  "sendPermission.reason.noEvidence":
-    "Nothing on record supports a reason to contact this recipient. If a reason exists, record it under your name.",
   "sendPermission.reason.noMarketingConsent":
     "Marketing needs the recipient’s consent, and none is on record. If this message is not marketing, pick the contact reason that fits.",
   "sendPermission.reason.legacyPurpose":

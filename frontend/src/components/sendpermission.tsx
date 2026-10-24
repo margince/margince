@@ -195,9 +195,10 @@ export function SendPermission({
           the message goes as it stands. Telling a reader to "say so" beside no
           control would be the dead button in prose. */}
       {t(
-        override || onOverride
-          ? "sendPermission.unprovenHint"
-          : "sendPermission.unprovenRefuses",
+        sendPermissionReasonKey(
+          recipient?.reason_code,
+          Boolean(override || onOverride),
+        ),
       )}
     </Callout>
   );

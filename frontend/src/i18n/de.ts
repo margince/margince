@@ -5977,7 +5977,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.newEmail": "Neue E-Mail",
   "compose.replyingTo": "Antwort auf „{subject}“ · {when}",
   "compose.followingUp": "Follow-up zu deiner E-Mail „{subject}“ · {when}",
-  "compose.aboutRow": "Bezug: {subject} · {when}",
+  "compose.aboutRow": "Bezug: {subject}",
+  "compose.aboutWhen": "· {when}",
   "compose.draftContextHint":
     "Beschreibe den Zweck. Margince nutzt den Kontext des Datensatzes.",
   "compose.draftEmail": "E-Mail entwerfen",
@@ -6168,8 +6169,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Es lässt sich nicht feststellen, wer die Nachricht erhält, da mehrere Datensätze diese Adresse teilen. Führe die Datensätze zusammen, um das zu lösen.",
   "sendPermission.reason.unconfirmed":
     "Die empfangende Person hat nicht bestätigt, dass sie Nachrichten erhalten möchte. Nur die empfangende Person selbst kann das bestätigen.",
-  "sendPermission.reason.noEvidence":
-    "Nichts im Datensatz belegt einen Kontaktgrund für diese Empfangsadresse. Wenn es einen Grund gibt, erfasse ihn unter deinem Namen.",
   "sendPermission.reason.noMarketingConsent":
     "Marketing braucht die Einwilligung der empfangenden Person, und keine ist erfasst. Wenn diese Nachricht kein Marketing ist, wähle den passenden Kontaktgrund.",
   "sendPermission.reason.legacyPurpose":

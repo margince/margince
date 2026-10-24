@@ -49,15 +49,11 @@ type AudienceMember = components["schemas"]["AudienceMember"];
 // The per-row action cluster the 360 timelines mount in each entry's action
 // slot.
 //
-// rowAnswer picks Reply for mail and Write email for a call, note or meeting.
-// A send anchored to a row that was never mail starts a new conversation. So a
-// workspace whose only rows are logged notes can still send. useAnswerReachable
-// withholds the verb where the contact cannot be reached.
+// rowAnswer picks the verb: Reply on mail, Write email on any other row with a
+// contact to write to. useAnswerReachable withholds it where nobody can receive it.
 //
-// Relink, because an activity shown on a 360 timeline is by construction already
-// linked to the entity whose timeline renders it, so re-associating it to the
-// right record is always meaningful — and the Activity list payload carries no
-// `links` to gate on regardless. It is offered unconditionally.
+// Relink, because a row on a 360 timeline is already linked to the entity whose
+// timeline renders it. Re-filing it to the right record always means something.
 //
 // It owns the two open states so the timeline mapper stays presentational.
 //
@@ -80,27 +76,26 @@ export function TimelineActions({
   const [relink, setRelink] = useState(false);
   return (
     <>
-      {activity.kind === "task" ? (
-        activity.content_state !== "withheld" && (
-          <MoveButton
-            move={{
-              action: "open_task",
-              arguments: { activity_id: activity.id },
-            }}
-            taskRefreshKeys={taskWriteKeys(entityType, entityId)}
-          />
-        )
-      ) : (
-        <ChannelReplyAction
-          activityId={activity.id}
-          kind={activity.kind}
-          channelProvider={activity.channel_provider ?? undefined}
-          entityType={entityType}
-          entityId={entityId}
-          contactId={contactId}
-          contentWithheld={activity.content_state === "withheld"}
+      {activity.kind === "task" && activity.content_state !== "withheld" && (
+        <MoveButton
+          move={{
+            action: "open_task",
+            arguments: { activity_id: activity.id },
+          }}
+          taskRefreshKeys={taskWriteKeys(entityType, entityId)}
         />
       )}
+      <ChannelReplyAction
+        activityId={activity.id}
+        kind={activity.kind}
+        links={activity.links}
+        automaticKind={activity.automatic_kind}
+        channelProvider={activity.channel_provider ?? undefined}
+        entityType={entityType}
+        entityId={entityId}
+        contactId={contactId}
+        contentWithheld={activity.content_state === "withheld"}
+      />
       {activity.invitation_status && activity.content_state !== "withheld" && (
         <Button
           onClick={() =>

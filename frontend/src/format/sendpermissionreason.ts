@@ -1,5 +1,9 @@
 // Unknown refusal codes retain the generic refusal instead of exposing a code.
-export function sendPermissionReasonKey(reason: string | undefined) {
+// `recordable`: the surface offers a reason to record, so the sentence may ask for one.
+export function sendPermissionReasonKey(
+  reason: string | undefined,
+  recordable = false,
+) {
   switch (reason) {
     case "marketing_objection":
       return "sendPermission.reason.objected" as const;
@@ -18,7 +22,9 @@ export function sendPermissionReasonKey(reason: string | undefined) {
     case "unconfirmed_double_opt_in":
       return "sendPermission.reason.unconfirmed" as const;
     case "no_compatible_evidence":
-      return "sendPermission.reason.noEvidence" as const;
+      return recordable
+        ? ("sendPermission.unprovenHint" as const)
+        : ("sendPermission.unprovenRefuses" as const);
     case "no_marketing_consent":
       return "sendPermission.reason.noMarketingConsent" as const;
     case "legacy_transactional_unevidenced":

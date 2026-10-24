@@ -3,10 +3,7 @@
 
 package commsauthz
 
-// RefusalCodes lists the reason codes a deny or review decision can hand a client.
-// A client that words refusals mirrors it, so a new code is not shown as a generic
-// refusal. It leaves out the two allow codes, ReasonAllowed and ReasonAllowedByOverride.
-//
+// RefusalCodes lists the codes a deny or review hands a client; the frontend mirrors it.
 // Held by: TestEveryReasonIsARefusalOrAnAllow (refusalcodes_test.go)
 func RefusalCodes() []string {
 	return []string{

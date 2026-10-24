@@ -26,6 +26,8 @@ type Activity = components["schemas"]["Activity"];
 export function ChannelReplyAction({
   activityId,
   kind,
+  links,
+  automaticKind,
   channelProvider,
   entityType,
   entityId,
@@ -36,6 +38,9 @@ export function ChannelReplyAction({
 }: Readonly<{
   activityId: string;
   kind: Activity["kind"];
+  /** Where the row is filed: a new email about it goes to its one contact. */
+  links?: Activity["links"];
+  automaticKind?: Activity["automatic_kind"];
   channelProvider?: string;
   entityType: RelinkKind;
   entityId: string;
@@ -73,8 +78,11 @@ export function ChannelReplyAction({
   const [reply, setReply] = useState<{ seq: number; open: boolean } | null>(
     null,
   );
-  const reachable = useAnswerReachable(kind, contactId, channelProvider);
-  const answer = rowAnswer(kind);
+  const reachable = useAnswerReachable(
+    { kind, links, automaticKind, provider: channelProvider },
+    contactId,
+  );
+  const answer = rowAnswer(kind, automaticKind);
   if (!reachable || answer === null) {
     return null;
   }

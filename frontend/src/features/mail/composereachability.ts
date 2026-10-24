@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { components } from "../../api/schema";
 import { mailbox } from "../../format/contacturi";
 import { contactQuery } from "../../lib/contact.queries";
+import { linkedContactId } from "../../lib/taskcontact";
 import { rowAnswer } from "./rowanswer";
 
 type Activity = components["schemas"]["Activity"];
@@ -67,23 +68,30 @@ export function deadRecipientsAmong(
 // pre-existing behaviour of always offering the reply — this only ever turns
 // the action OFF, never on, for a row it cannot verify.
 export function useAnswerReachable(
-  kind: Activity["kind"],
-  contactId: string | undefined,
-  provider: string | undefined,
+  row: Readonly<{
+    kind: Activity["kind"];
+    links?: Activity["links"];
+    automaticKind?: Activity["automatic_kind"];
+    provider?: string;
+  }>,
+  pageContactId: string | undefined,
 ) {
-  const isChannel = kind === "message";
-  const writesEmail = rowAnswer(kind) === "about";
+  const isChannel = row.kind === "message";
+  const writesEmail = rowAnswer(row.kind, row.automaticKind) === "about";
+  // A new email fills To from the row's own contact, which a deal or company
+  // timeline does not name for it.
+  const contactId = writesEmail
+    ? linkedContactId(row, pageContactId)
+    : pageContactId;
   const contact = useQuery({
     ...contactQuery(contactId),
     enabled: isChannel || writesEmail,
   });
-  if (contactId == null) return true;
-  // A new email about a call or a note fills To with this address. Without one
-  // the rep would get an empty To field, so nothing is offered.
+  // Without an address the rep would get an empty To field, so nothing is offered.
   if (writesEmail) {
     return mailbox(contact.data?.primary_email ?? "") !== null;
   }
-  if (!isChannel) return true;
+  if (!isChannel || contactId == null) return true;
   // Matched against the row's OWN transport. A hardcoded "telegram" here would
   // withhold the reply on every other transport's rows and offer it on a
   // Telegram-reachable contact's rows whatever carried the conversation — the
@@ -91,6 +99,6 @@ export function useAnswerReachable(
   // carried by any provider — so only the row itself can say which one this
   // conversation used (ADR-0107).
   return (contact.data?.reachability ?? []).some(
-    (channel) => channel.provider === provider && channel.reachable,
+    (channel) => channel.provider === row.provider && channel.reachable,
   );
 }

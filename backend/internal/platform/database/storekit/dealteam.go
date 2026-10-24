@@ -5,12 +5,8 @@ package storekit
 
 import "fmt"
 
-// DealTeamSQL is true when user is on the deal's team. The team is its owner,
-// the seats assigned to it, and the members of live teams assigned to it.
-//
-// deal is the deal table's alias and user a uuid expression, both compile-time
-// literals or placeholders. Every reader that asks who works a deal composes
-// this predicate. So an extension and the composer name the same seats.
+// DealTeamSQL is true when user owns the deal, is assigned to it, or is in a live team
+// assigned to it. One predicate, so every reader of a deal's team names the same seats.
 func DealTeamSQL(deal, user string) string {
 	return fmt.Sprintf(`(coalesce(%[2]s = %[1]s.owner_id, false)
 	 OR EXISTS (SELECT 1 FROM record_assignment team_seat

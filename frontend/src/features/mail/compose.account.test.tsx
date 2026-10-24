@@ -14,9 +14,11 @@ import {
   jsonResponse,
   NO_VOICE_PROFILE,
   PURPOSES,
+  pickWhy,
   render,
   stubRoutes,
   WHY_ASK,
+  WHY_LABEL,
 } from "./compose.testkit";
 
 afterEach(() => {
@@ -465,7 +467,22 @@ describe("ComposeModal started from an account", () => {
 
   // The key reaches the client's inbox, so whether it goes is a switch the rep
   // sees beside the subject. It is on by default, because it files the answer.
-  const KEY_SWITCH = { name: "Add project key to subject (helps filing)" };
+  const KEY_SWITCH = "Add project key to subject (helps filing)";
+  const savedReply = (subject: string) => ({
+    id: "md-1",
+    anchor_type: "activity",
+    anchor_id: "act-1",
+    to: ["kunde@netcare.test"],
+    cc: [],
+    bcc: [],
+    subject,
+    body: "Hallo",
+    html_body: "<p>Hallo</p>",
+    version: 1,
+    agent_drafted: false,
+    created_at: "2026-08-09T09:00:00Z",
+    updated_at: "2026-08-09T09:05:00Z",
+  });
 
   it("shows the key switch on while a project is chosen, and none without one", async () => {
     const user = userEvent.setup();
@@ -475,13 +492,13 @@ describe("ComposeModal started from an account", () => {
     );
     const subject = await openReply();
 
-    const key = await screen.findByRole("switch", KEY_SWITCH);
+    const key = await screen.findByRole("switch", { name: KEY_SWITCH });
     expect(key.getAttribute("aria-checked")).toBe("true");
     await waitFor(() => expect(subject().value).toBe("[N2P-1]"));
 
     await pickOption(user, screen.getByLabelText("Project"), "No project");
     await waitFor(() =>
-      expect(screen.queryByRole("switch", KEY_SWITCH)).toBeNull(),
+      expect(screen.queryByRole("switch", { name: KEY_SWITCH })).toBeNull(),
     );
   });
 
@@ -493,12 +510,14 @@ describe("ComposeModal started from an account", () => {
       {
         "POST /activities/act-1/draft-email": () =>
           jsonResponse({ subject: "[N2P-1] Re: Angebot", body: "Hallo" }),
+        "PUT /mail-drafts": () => jsonResponse(savedReply("Re: ohne Tag"), 200),
+        "POST /activities/act-1/send-email": () => jsonResponse({}, 202),
       },
     );
     const subject = await openReply();
     await waitFor(() => expect(subject().value).toBe("[N2P-1]"));
 
-    await user.click(await screen.findByRole("switch", KEY_SWITCH));
+    await user.click(await screen.findByRole("switch", { name: KEY_SWITCH }));
     await waitFor(() => expect(subject().value).toBe(""));
 
     await user.click(draftButton());
@@ -513,9 +532,48 @@ describe("ComposeModal started from an account", () => {
     await user.type(subject(), "Re: ohne Tag");
     await waitFor(() => expect(subject().value).toBe("Re: ohne Tag"));
     expect(
-      screen.getByRole("switch", KEY_SWITCH).getAttribute("aria-checked"),
+      screen
+        .getByRole("switch", { name: KEY_SWITCH })
+        .getAttribute("aria-checked"),
     ).toBe("false");
+
+    await user.type(screen.getByLabelText("To"), "kunde@netcare.test");
+    await user.tab();
+    await pickWhy(WHY_LABEL.requestedFollowup);
+    await user.click(screen.getByRole("button", { name: /^Send$/ }));
+    await waitFor(() =>
+      expect(
+        sent.find((s) => s.key === "POST /activities/act-1/send-email")?.body,
+      ).toMatchObject({ subject: "Re: ohne Tag" }),
+    );
   });
+
+  // A draft saved with the key off comes back off, and the key stays out. One
+  // saved with the key comes back with the switch on.
+  it.each([
+    ["Re: Angebot", "false"],
+    ["[N2P-1] Re: Angebot", "true"],
+  ])(
+    "takes the switch from a restored draft's subject %s",
+    async (saved, on) => {
+      replyBackend(
+        [{ entity_type: "deal", entity_id: "d-1" }],
+        [{ project_id: "pr-9", name: "Netcare 2 project", key: "N2P-1" }],
+        { "GET /mail-drafts": () => jsonResponse(savedReply(saved)) },
+      );
+      const subject = await openReply();
+      await screen.findByText("Saved draft restored");
+
+      await waitFor(() =>
+        expect(
+          screen
+            .getByRole("switch", { name: KEY_SWITCH })
+            .getAttribute("aria-checked"),
+        ).toBe(on),
+      );
+      expect(subject().value).toBe(saved);
+    },
+  );
 
   it("puts the tag back when the switch is turned on again", async () => {
     const user = userEvent.setup();
@@ -525,12 +583,12 @@ describe("ComposeModal started from an account", () => {
     );
     const subject = await openReply();
     await waitFor(() => expect(subject().value).toBe("[N2P-1]"));
-    await user.click(await screen.findByRole("switch", KEY_SWITCH));
+    await user.click(await screen.findByRole("switch", { name: KEY_SWITCH }));
     await user.type(subject(), "Re: ohne Tag");
     await waitFor(() => expect(subject().value).toBe("Re: ohne Tag"));
 
     // Turned on again, the tag comes back in front of what the rep wrote.
-    await user.click(screen.getByRole("switch", KEY_SWITCH));
+    await user.click(screen.getByRole("switch", { name: KEY_SWITCH }));
     await waitFor(() => expect(subject().value).toBe("[N2P-1] Re: ohne Tag"));
   });
 });

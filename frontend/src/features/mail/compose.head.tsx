@@ -77,7 +77,10 @@ function ChannelReplyFiling({ activityId }: Readonly<{ activityId?: string }>) {
 export function SubjectTagSwitch({
   filing,
   disabled,
-}: Readonly<{ filing: ComposeRecords["projectFiling"]; disabled: boolean }>) {
+}: Readonly<{
+  filing: Pick<ComposeRecords["projectFiling"], "tagged" | "setTagged">;
+  disabled: boolean;
+}>) {
   const t = useT();
   return (
     <Switch

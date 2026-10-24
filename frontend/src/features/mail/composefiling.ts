@@ -15,6 +15,7 @@ import { unwrap } from "../../lib/problem";
 import { useCompany360 } from "../companies/company360";
 import { useContact360 } from "../contacts/contact360";
 import {
+  stripEveryKeyTag,
   stripSubjectTag,
   subjectTag,
   useProjectRecord,
@@ -155,6 +156,14 @@ function useProjectFiling(input: {
     },
     [filingKey],
   );
+  // A restored draft's subject says what the rep chose when it was saved. The
+  // project read may still be out, so any leading key counts.
+  const adoptSavedSubject = useCallback(
+    (saved: string) => {
+      setTagged(leadsWithKey(saved));
+    },
+    [setTagged],
+  );
   const tag = tagged ? ownTag : "";
   const setSubject = input.setSubject;
   const subject = input.subject;
@@ -181,7 +190,13 @@ function useProjectFiling(input: {
     ownTag,
     tagged,
     setTagged,
+    adoptSavedSubject,
   };
+}
+
+function leadsWithKey(subject: string): boolean {
+  const lead = /^\[[^\]]*\]/.exec(subject)?.[0];
+  return lead !== undefined && stripEveryKeyTag(lead) === "";
 }
 
 /**

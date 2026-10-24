@@ -26,10 +26,10 @@ To start an email in Margince, use any of these:
 - **Send email** on a deal
 - **New email** or **Write email** on Home
 - **Reply** on any message in a timeline
-- **Write email** on a call, note or meeting in a timeline, when the contact has an email address.
+- **Write email** on a call, note, meeting or task in a timeline, when it names one contact with an email address. A task Margince filed itself offers none.
 
 Every one of these opens the same composer, so the fields, checks and send times are the same from each.
-From a call, note or meeting, it opens a new email that names the entry as "About: {subject}", not a reply.
+From a call, note, meeting or task, it opens a new email that names the entry as "About: {subject}", not a reply.
 A company page opens the composer with the company's contacts to choose from. With none on file it says "No contacts at this company yet. Write the message manually, or add a contact first."
 Also called: compose, new message, reply to an email.
 

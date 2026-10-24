@@ -3,11 +3,8 @@
 
 package activities
 
-// Whether the colleague replying already belongs to a conversation.
-//
-// Anyone who may read a deal's thread may answer it, and the send stays open.
-// A composer owes the rep one sentence: they are writing into a conversation
-// they were never part of, and this is who to ask.
+// Anyone who may read a deal's thread may answer it. The composer still tells a
+// rep who was never on the conversation, and who owns its deal.
 
 import (
 	"context"
@@ -33,11 +30,8 @@ type ConversationStanding struct {
 	DealOwner *ids.UUID
 }
 
-// ConversationStandingFor answers the caller's standing on the message's thread.
-//
-// The thread is every message sharing the anchor's thread key, kind and
-// channel that the caller may read. A message they may not read says nothing,
-// even when it names them.
+// ConversationStandingFor reads only thread messages the caller may read, so a
+// hidden message that names them says nothing.
 func (s *Store) ConversationStandingFor(ctx context.Context, id ids.ActivityID) (ConversationStanding, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return ConversationStanding{}, err

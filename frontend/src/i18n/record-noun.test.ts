@@ -440,7 +440,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "sendPermission.unproven",
     "sendPermission.reason.ambiguous",
     "sendPermission.reason.askedUsToStop",
-    "sendPermission.reason.noEvidence",
     "sendPermission.reason.noMarketingConsent",
     "sendPermission.reason.objected",
     "sendPermission.reason.restricted",

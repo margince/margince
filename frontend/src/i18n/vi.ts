@@ -5821,7 +5821,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.newEmail": "Email mới",
   "compose.replyingTo": "Trả lời “{subject}” · {when}",
   "compose.followingUp": "Liên hệ lại sau email “{subject}” đã gửi · {when}",
-  "compose.aboutRow": "Về: {subject} · {when}",
+  "compose.aboutRow": "Về: {subject}",
+  "compose.aboutWhen": "· {when}",
   "compose.draftContextHint":
     "Mô tả mục đích. Margince dùng ngữ cảnh của hồ sơ.",
   "compose.draftEmail": "Soạn email",
@@ -6003,8 +6004,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Nhiều hồ sơ dùng chung địa chỉ này nên không thể xác định người nhận. Gộp các hồ sơ để xử lý.",
   "sendPermission.reason.unconfirmed":
     "Người nhận chưa xác nhận muốn nhận tin nhắn. Chỉ người nhận mới có thể xác nhận.",
-  "sendPermission.reason.noEvidence":
-    "Không có dữ liệu nào cho thấy lý do liên hệ người nhận này. Nếu có lý do, ghi lại lý do đó dưới tên bạn.",
   "sendPermission.reason.noMarketingConsent":
     "Tin tiếp thị cần sự đồng ý của người nhận, nhưng chưa có sự đồng ý nào được ghi nhận. Nếu đây không phải tin tiếp thị, chọn lý do liên hệ phù hợp.",
   "sendPermission.reason.legacyPurpose":
