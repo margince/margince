@@ -111,7 +111,7 @@ func TestNearMatchesRunOnlyOnAPlainEmptyFirstPage(t *testing.T) {
 	cursor := first.NextCursor
 	for what, in := range map[string]search.Input{
 		"a cursor":         {Query: "kowalcyka", Cursor: cursor},
-		"operator syntax":  {Query: "kowalcyka OR zzz"},
+		"operator syntax":  {Query: "\"kowalcyka\""},
 		"a bound":          {Query: "kowalcyka", Within: []ids.UUID{}},
 		"another type set": {Query: "kowalcyka", Types: []string{"deal"}},
 	} {
@@ -132,7 +132,10 @@ func TestEveryNearMatchPredicateReadsItsTrigramIndex(t *testing.T) {
 	e := SetupSearch(t)
 	ctx := context.Background()
 	for _, entity := range search.NearNamedBranches() {
-		table, expr, _ := search.NearNameExpr(entity, "t")
+		table, predicate := search.NearPredicate(entity, "t", 1)
+		if table == "" {
+			t.Fatalf("%s is listed as near-named but has no near-match predicate", entity)
+		}
 		tx, err := e.Owner.Begin(ctx)
 		if err != nil {
 			t.Fatal(err)
@@ -141,7 +144,7 @@ func TestEveryNearMatchPredicateReadsItsTrigramIndex(t *testing.T) {
 			t.Fatal(err)
 		}
 		var plan string
-		rows, err := tx.Query(ctx, `EXPLAIN SELECT t.id FROM `+table+` t WHERE f_fold_apostrophes(lower($1::text)) <% `+expr, "kowalcyk")
+		rows, err := tx.Query(ctx, `EXPLAIN SELECT t.id FROM `+table+` t WHERE `+predicate, "kowalcyk")
 		if err != nil {
 			t.Fatal(err)
 		}

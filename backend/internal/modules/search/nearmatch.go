@@ -38,15 +38,21 @@ func NearNamedBranches() []string {
 	return entities
 }
 
-// NearNameExpr returns the table and the indexed name expression, for the given
-// alias, that an entity's near-match pass matches on.
-func NearNameExpr(entity, alias string) (table, expr string, ok bool) {
+// nearNeedle is the folded query the near-match pass compares names with.
+func nearNeedle(queryPos int) string {
+	return fmt.Sprintf("f_fold_apostrophes(lower($%d::text))", queryPos)
+}
+
+// NearPredicate returns the table and the WHERE predicate, for the given alias
+// and query placeholder number, that an entity's near-match pass filters on.
+// It is empty for an entity with no near-match branch.
+func NearPredicate(entity, alias string, queryPos int) (table, predicate string) {
 	for _, branch := range searchBranches {
 		if branch.entity == entity && branch.nearName != "" {
-			return branch.table, fmt.Sprintf(branch.nearName, alias), true
+			return branch.table, nearNeedle(queryPos) + " <% " + fmt.Sprintf(branch.nearName, alias)
 		}
 	}
-	return "", "", false
+	return "", ""
 }
 
 // wantsNearMatches says whether an answer is the empty first page of a plain
@@ -66,7 +72,7 @@ func nearMatches(ctx context.Context, tx pgx.Tx, types []string, query string) (
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	queryPos := arg(query)
-	needle := fmt.Sprintf("f_fold_apostrophes(lower($%d::text))", queryPos)
+	needle := nearNeedle(queryPos)
 
 	var branches []string
 	for _, branch := range searchBranches {
@@ -85,19 +91,14 @@ func nearMatches(ctx context.Context, tx pgx.Tx, types []string, query string) (
 			return nil, err
 		}
 		name := fmt.Sprintf(branch.nearName, "t")
-		where := []string{"t.archived_at IS NULL", needle + " <% " + name}
-		if narrowing := branch.narrowing("t"); narrowing != "" {
-			where = append(where, narrowing)
-		}
-		if scope != "" {
-			where = append(where, scope)
-		}
+		_, predicate := NearPredicate(branch.entity, "t", queryPos)
+		where := conjunction("t.archived_at IS NULL", predicate, branch.narrowing("t"), scope)
 		branches = append(branches, fmt.Sprintf(
 			`SELECT '%s'::text AS rtype, t.id, %s AS title, %s AS snippet,
 			        word_similarity(%s, %s) AS word_sim, similarity(%s, %s) AS sim
 			 FROM %s t WHERE %s`,
 			branch.entity, branch.title, snippet, needle, name, needle, name,
-			branch.table, strings.Join(where, " AND ")))
+			branch.table, where))
 	}
 	if len(branches) == 0 {
 		return nil, nil

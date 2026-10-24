@@ -163,9 +163,8 @@ type Input struct {
 	// through a company the query matches. GET /v1/search and search_records ask
 	// for it; the retrieval and plan lanes keep matching by own text alone.
 	WithEmployees bool
-	// NearMatches asks an empty first page to offer close names. Only the
-	// search route and search_records set it; anchor resolution and retrieval
-	// must never resolve to a guess.
+	// NearMatches asks an empty first page to offer close names. Anchor
+	// resolution and retrieval leave it unset: they must never resolve to a guess.
 	NearMatches bool
 }
 
