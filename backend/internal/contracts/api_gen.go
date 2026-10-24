@@ -5467,6 +5467,27 @@ func (e CompanyHierarchyRollupScope) Valid() bool {
 	}
 }
 
+// Defines values for CompanyOfferedValueField.
+const (
+	CompanyOfferedValueFieldDescription CompanyOfferedValueField = "description"
+	CompanyOfferedValueFieldIndustry    CompanyOfferedValueField = "industry"
+	CompanyOfferedValueFieldLegalName   CompanyOfferedValueField = "legal_name"
+)
+
+// Valid indicates whether the value is a known member of the CompanyOfferedValueField enum.
+func (e CompanyOfferedValueField) Valid() bool {
+	switch e {
+	case CompanyOfferedValueFieldDescription:
+		return true
+	case CompanyOfferedValueFieldIndustry:
+		return true
+	case CompanyOfferedValueFieldLegalName:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for CompanyProfileFieldField.
 const (
 	CompanyProfileFieldFieldBuyingCenter      CompanyProfileFieldField = "buying_center"
@@ -32235,6 +32256,19 @@ type CompanyListResponse struct {
 	Data []Company `json:"data"`
 	Page PageInfo  `json:"page"`
 }
+
+// CompanyOfferedValue The value one source last offered for one company field.
+type CompanyOfferedValue struct {
+	Field     CompanyOfferedValueField `json:"field"`
+	OfferedAt time.Time                `json:"offered_at"`
+
+	// SourceSystem The source that offered it, as named in the company's outside id.
+	SourceSystem string `json:"source_system"`
+	Value        string `json:"value"`
+}
+
+// CompanyOfferedValueField defines model for CompanyOfferedValue.Field.
+type CompanyOfferedValueField string
 
 // CompanyProfile The installation's own company. The flat properties remain compatibility aliases for the
 // existing form; `fields` and `facts` are the provenance-bearing source records used by new
@@ -73656,6 +73690,9 @@ type ServerInterface interface {
 	// Merge this company into a target (non-lossy).
 	// (POST /companies/{id}/merge)
 	MergeCompany(w http.ResponseWriter, r *http.Request, id Id, params MergeCompanyParams)
+	// What each source last offered for the company's fields, to show beside the value on the record.
+	// (GET /companies/{id}/offered-values)
+	ListCompanyOfferedValues(w http.ResponseWriter, r *http.Request, id Id)
 	// Read the partner extension on a company (404 if the company is not a partner).
 	// (GET /companies/{id}/partner)
 	GetPartner(w http.ResponseWriter, r *http.Request, id Id)
@@ -77151,6 +77188,12 @@ func (_ Unimplemented) GetCompanyLogoIcon(w http.ResponseWriter, r *http.Request
 // Merge this company into a target (non-lossy).
 // (POST /companies/{id}/merge)
 func (_ Unimplemented) MergeCompany(w http.ResponseWriter, r *http.Request, id Id, params MergeCompanyParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What each source last offered for the company's fields, to show beside the value on the record.
+// (GET /companies/{id}/offered-values)
+func (_ Unimplemented) ListCompanyOfferedValues(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -92396,6 +92439,38 @@ func (siw *ServerInterfaceWrapper) MergeCompany(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.MergeCompany(w, r, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListCompanyOfferedValues operation middleware
+func (siw *ServerInterfaceWrapper) ListCompanyOfferedValues(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCompanyOfferedValues(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -119470,6 +119545,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/companies/{id}/merge", wrapper.MergeCompany)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/companies/{id}/offered-values", wrapper.ListCompanyOfferedValues)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/companies/{id}/partner", wrapper.GetPartner)

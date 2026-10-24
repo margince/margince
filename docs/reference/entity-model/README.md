@@ -28,9 +28,9 @@ module to put a change in, read [modules.md](../modules.md).
 
 | | |
 |---|--:|
-| Tables | 321 |
-| Columns | 3802 |
-| Foreign keys | 525 |
+| Tables | 322 |
+| Columns | 3807 |
+| Foreign keys | 526 |
 | Owning areas | 36 |
 
 ## The 12 records everything else hangs off
@@ -41,7 +41,7 @@ Ranked by how many foreign keys point at them.
 |---|---|--:|--:|
 | [`app_user`](identity.md#app_user) | [identity](identity.md) | 31 | 138 |
 | [`contact`](contacts.md#contact) | [contacts](contacts.md) | 33 | 45 |
-| [`company`](contacts.md#company) | [contacts](contacts.md) | 44 | 42 |
+| [`company`](contacts.md#company) | [contacts](contacts.md) | 44 | 43 |
 | [`activity`](activities.md#activity) | [activities](activities.md) | 63 | 38 |
 | [`deal`](deals.md#deal) | [deals](deals.md) | 44 | 26 |
 | [`lead`](contacts.md#lead) | [contacts](contacts.md) | 38 | 17 |
@@ -103,7 +103,7 @@ erDiagram
 | [comms](comms.md) | 1 |
 | [compose](compose.md) | 43 |
 | [consent](consent.md) | 19 |
-| [contacts](contacts.md) | 42 |
+| [contacts](contacts.md) | 43 |
 | [continuity](continuity.md) | 1 |
 | [contracts](contracts.md) | 1 |
 | [customfields](customfields.md) | 1 |
@@ -219,7 +219,7 @@ erDiagram
 | [`communication_override`](consent.md#communication_override) | consent | 10 | 1 |
 | [`communication_review`](consent.md#communication_review) | consent | 11 | 2 |
 | [`communication_suppression`](consent.md#communication_suppression) | consent | 12 | 1 |
-| [`company`](contacts.md#company) | contacts | 44 | 42 |
+| [`company`](contacts.md#company) | contacts | 44 | 43 |
 | [`company_brief`](compose.md#company_brief) | compose | 7 | 0 |
 | [`company_domain`](contacts.md#company_domain) | contacts | 10 | 0 |
 | [`company_domain_disposition`](contacts.md#company_domain_disposition) | contacts | 22 | 1 |
@@ -228,6 +228,7 @@ erDiagram
 | [`company_fact`](contacts.md#company_fact) | contacts | 18 | 0 |
 | [`company_geocode_state`](contacts.md#company_geocode_state) | contacts | 5 | 0 |
 | [`company_growth_fit`](compose.md#company_growth_fit) | compose | 6 | 0 |
+| [`company_offered_value`](contacts.md#company_offered_value) | contacts | 5 | 0 |
 | [`company_profile_field`](contacts.md#company_profile_field) | contacts | 15 | 0 |
 | [`company_relationship_type`](contacts.md#company_relationship_type) | contacts | 9 | 0 |
 | [`company_scan`](compose.md#company_scan) | compose | 16 | 0 |

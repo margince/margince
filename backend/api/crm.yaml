@@ -3215,6 +3215,32 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /companies/{id}/offered-values:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Companies]
+      operationId: listCompanyOfferedValues
+      security: [ { cookieAuth: [] } ]   # shown beside the typed value on the record page, not an agent surface
+      x-agent-access: human-only
+      summary: What each source last offered for the company's fields, to show beside the value on the record.
+      description: |
+        One entry per source and field, for the fields a source offered through its feed. The
+        offered value is kept whether the record took it or kept a user's edit, so the two
+        can be compared. Needs read on companies and row visibility of the company. An archived
+        company answers 404.
+      responses:
+        '200':
+          description: The offered values, ordered by source and field; empty when no source offered any.
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/CompanyOfferedValue' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /companies/{id}/logo:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -38536,6 +38562,16 @@ components:
       properties:
         data: { type: array, items: { $ref: '#/components/schemas/Company' } }
         page: { $ref: '#/components/schemas/PageInfo' }
+
+    CompanyOfferedValue:
+      type: object
+      description: The value one source last offered for one company field.
+      required: [source_system, field, value, offered_at]
+      properties:
+        source_system: { type: string, description: "The source that offered it, as named in the company's outside id." }
+        field: { type: string, enum: [legal_name, industry, description] }
+        value: { type: string }
+        offered_at: { type: string, format: date-time }
 
     CompanyHierarchyRollup:
       type: object

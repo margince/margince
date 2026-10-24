@@ -34,6 +34,7 @@ import (
 // events.md gains the missing event types, wiring storekit.Emit into
 // these mutations removes the entries.
 var auditOnlyWrites = gatekit.Waive(map[string]string{
+	"internal/modules/contacts:RecordOfferedValues":  "the last value a feed offered for a company field, kept beside the record's own value. The closed catalog has no type for it, and company.updated would announce a change the record did not undergo, since the record keeps its value whenever a user edited it. Nothing downstream is left stale: the read serves the table on every request. The audit row names the source and the fields and never the values, which may hold personal data",
 	"internal/modules/contacts:RelabelHeldMailTx":    "acquisition provenance is corrected with its privacy notice in one transaction; the closed event catalog carries no acquisition-evidence event, and privacy-notice decisions remain audit-only",
 	"internal/modules/consent:mintLeadNoticeTokenTx": "a website lead's privacy-notice link, the lead arm of the confirm_token mint. Audit-only like the contact mint it mirrors: the closed catalog defines no confirm_token.* type, and the mail that carries the link emits its own events in this same transaction (the activity and the queued delivery). The audit row leaves the address out, because a failed notice deletes the lead and the audit row would outlive it",
 	// A run skipped inside a contact merge, in its own block so the map's

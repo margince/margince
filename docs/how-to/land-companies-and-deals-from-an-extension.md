@@ -61,6 +61,21 @@ An admin decides this for each extension. The default is to leave edited fields 
 | Stored as | one setting, `identity.extension_overwrites_edited_fields`, a map from unit name to true or false; a unit not in the map reads false |
 | Audit | each change writes an `update` entry on `installation_settings` with the old and new map |
 
+## See what a unit offered
+
+The core keeps the last value each unit offered for a company's `legal_name`, `industry` and `description`. It keeps the value whether the record took it or kept a user's edit, so a screen can read both. The record page does not show the offered value yet.
+
+| What | Value |
+|---|---|
+| Read | `GET /v1/companies/{id}/offered-values`, for a signed-in user. Needs read on companies and the right to see that company, else 403 or 404. An archived company answers 404. |
+| Answer | One entry per source and field: `source_system`, `field`, `value`, `offered_at`. Empty when nothing was offered. |
+| Replaced | A unit that offers a field again replaces its own earlier value. Another unit's value for the same field stays. |
+| Not kept | A field the unit leaves empty. Deals are not covered. |
+| Stored in | `company_offered_value`. The values may hold personal data. |
+| Erased | Erasing or anonymizing a contact deletes the offered values of every company that contact was employed by, because the text can quote an employee. The next feed run offers the current values again. The table is not in the access report, which holds data about the subject and not about the company. |
+| Removed | When the company row is deleted outright. Archiving keeps them for a restore and stops serving them. |
+| Audit | Each write adds an `update` entry on the company that names the source and the fields, never the values. No event is sent. |
+
 ## Run it twice
 
 Landing the same record again finds the same row. Two calls that carry one outside id at the same moment leave one row and one create entry in the audit log. The loser of the race finds the winner and updates it.

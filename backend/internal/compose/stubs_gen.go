@@ -1111,6 +1111,10 @@ func (stubs) MergeCompany(w nethttp.ResponseWriter, r *nethttp.Request, id crmco
 	httperr.NotImplemented(w, r, "MergeCompany")
 }
 
+func (stubs) ListCompanyOfferedValues(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ListCompanyOfferedValues")
+}
+
 func (stubs) GetPartner(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "GetPartner")
 }

@@ -69,6 +69,7 @@ var tableOwners = map[string]string{
 	"conversation_claim":        "internal/modules/contacts",
 	"company":                   "internal/modules/contacts",
 	"company_domain":            "internal/modules/contacts",
+	"company_offered_value":     "internal/modules/contacts",
 	"company_relationship_type": "internal/modules/contacts",
 	"signal_thread_scan":        "internal/compose",
 	// One reader's frozen walk through their worklist. Owned by the compose

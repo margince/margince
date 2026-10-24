@@ -165,9 +165,24 @@ func (l crmLanding) company(ctx context.Context, key string, f extension.Company
 	}
 	id, err := upsertByOutsideID(find, create, update)
 	if err == nil {
+		err = l.contacts.RecordOfferedValues(ctx, ids.From[ids.CompanyKind](id), l.system, offeredCompanyFields(f))
+	}
+	if err == nil {
 		err = l.relink(ctx, f.RelinkActivities, string(recordTypeCompany), id)
 	}
 	return extension.Ref{Type: string(recordTypeCompany), ID: id.String()}, skipped, err
+}
+
+// offeredCompanyFields is what the unit offers for the fields a user may
+// also type, kept whether or not the record takes it.
+func offeredCompanyFields(f extension.CompanyFields) map[string]string {
+	offered := map[string]string{}
+	for key, v := range map[string]string{fieldLegalName: f.LegalName, fieldIndustry: f.Industry, descriptionField: f.Description} {
+		if v != "" {
+			offered[key] = v
+		}
+	}
+	return offered
 }
 
 // companyByDomain answers the one company that lists the domain, or none. A

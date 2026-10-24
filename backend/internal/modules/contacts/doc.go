@@ -14,7 +14,8 @@
 // contact_provider_claim, provider_applied_field, company_vat_check,
 // relationship_nudge_dismissal, sdr_handoff, sdr_handoff_event,
 // sdr_handoff_reason.
-// Also owned: company_domain_disposition, company_domain_question_reader.
+// Also owned: company_domain_disposition, company_domain_question_reader,
+// company_offered_value.
 // It also owns legal_entity and legal_entity_member. A legal entity is a company
 // the installation trades as. It lives beside the anchor company, because the
 // default entity reads its identity from it. legal_entity_member is which entity

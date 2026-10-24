@@ -2607,6 +2607,16 @@ BEGIN
   RETURN NEW;
 END;
 
+public.company_offered_value acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.company_offered_value.company_id uuid NOT NULL gen=- def=-
+public.company_offered_value.company_offered_value_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
+public.company_offered_value.company_offered_value_field_known CHECK ((field_key = ANY (ARRAY['legal_name'::text, 'industry'::text, 'description'::text])))
+public.company_offered_value.company_offered_value_pkey PRIMARY KEY (company_id, source_system, field_key)
+public.company_offered_value.field_key text NOT NULL gen=- def=-
+public.company_offered_value.offered_at timestamp with time zone NOT NULL gen=- def=now()
+public.company_offered_value.offered_value text NOT NULL gen=- def=-
+public.company_offered_value.source_system text NOT NULL gen=- def=-
+public.company_offered_value_pkey CREATE UNIQUE INDEX company_offered_value_pkey ON public.company_offered_value USING btree (company_id, source_system, field_key)
 public.company_open_pipeline_rollup(as_of date) secdef=false cfg=- acl==X/margince_owner,margince_owner=X/margince_owner,margince_app=X/margince_owner 
  SELECT d.company_id,
     -- The SUM is bounded too, and separately from its summands. sum(bigint)
