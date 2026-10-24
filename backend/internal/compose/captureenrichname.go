@@ -53,12 +53,12 @@ var signatureNameOrders = []string{
 func signatureNameSchema() schema.Node {
 	return schema.Object(
 		map[string]schema.Node{
-			"family_name":      schema.String().Describe("The family name as printed; empty when the order is unclear."),
-			"given_names":      schema.String().Describe("The given names as printed; empty when the order is unclear."),
-			"middle":           schema.String().Describe("Any words between them as printed; empty when there are none."),
-			"order":            schema.Enum(signatureNameOrders...).Describe("Which part the signature prints first; unclear when the page does not show it."),
-			"evidence_snippet": schema.String().Describe("The printed line that holds the name, copied verbatim."),
-			"confidence":       schema.Number(),
+			"family_name":           schema.String().Describe("The family name as printed; empty when the order is unclear."),
+			"given_names":           schema.String().Describe("The given names as printed; empty when the order is unclear."),
+			"middle":                schema.String().Describe("Any words between them as printed; empty when there are none."),
+			"order":                 schema.Enum(signatureNameOrders...).Describe("Which part the signature prints first; unclear when the page does not show it."),
+			extractionEvidenceKey:   schema.String().Describe("The printed line that holds the name, copied verbatim."),
+			extractionConfidenceKey: schema.Number(),
 		},
 		"family_name", "given_names", "middle", "order", "evidence_snippet", "confidence",
 	)

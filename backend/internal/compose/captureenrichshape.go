@@ -47,9 +47,9 @@ func signatureEnrichSchema() json.RawMessage {
 				map[string]schema.Node{
 					extractionFieldKey: schema.Enum(signatureFieldNames...).
 						Describe("phone once per number the signature lists; every other field at most once"),
-					"value":            schema.String(),
-					"evidence_snippet": schema.String(),
-					"confidence":       schema.Number(),
+					extractionValueKey:      schema.String(),
+					extractionEvidenceKey:   schema.String(),
+					extractionConfidenceKey: schema.Number(),
 				},
 				"field", "value", "evidence_snippet", "confidence",
 			)),

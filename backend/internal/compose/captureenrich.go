@@ -69,7 +69,7 @@ var enrichFieldNames = nameSet(signatureFieldNames)
 // offers it. The name is not a field: the reading reports its parts under
 // "name", and contacts.MapSignatureName decides which becomes first_name and
 // last_name.
-var signatureFieldNames = []string{fieldTitle, "phone", "linkedin", companyNameField, "address", "website"}
+var signatureFieldNames = []string{fieldTitle, fieldPhone, "linkedin", companyNameField, "address", "website"}
 
 func nameSet(names []string) map[string]bool {
 	set := make(map[string]bool, len(names))
