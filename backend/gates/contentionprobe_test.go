@@ -223,6 +223,7 @@ func pausesInsideStatements(fset *token.FileSet, file *ast.File) []int {
 		// FoldTotal: a statement mixing literals with a variable is judged on
 		// what it shows. A match stops the walk, so one statement reports once.
 		text, isString := gatekit.StringExpr(node, nil, gatekit.FoldTotal)
+		text = withoutComments(text)
 		if isString && pauseCall.MatchString(text) && pauseSkipper.MatchString(text) {
 			lines = append(lines, fset.Position(node.Pos()).Line)
 			return false
@@ -337,13 +338,15 @@ func TestAPauseThePlannerMaySkipIsRefused(t *testing.T) {
 		query   string
 		refused bool
 	}{
-		"joined to a row read":            {"`SELECT count(*) FROM pg_stat_activity, PAUSE(0.05) WHERE wait_event_type = 'Lock'`", true},
-		"pg_sleep_for joined to a read":   {"`SELECT 1 FROM pg_stat_activity, PAUSE_for('50ms')`", true},
-		"pg_sleep_until joined to a read": {"`SELECT 1 FROM pg_stat_activity, PAUSE_until(now())`", true},
-		"behind a filter":                 {"`SELECT PAUSE(1) WHERE $1`", true},
-		"split over a +":                  {`"SELECT count(*) FROM pg_stat_activity, " + "PAUSE(0.05)"`, true},
-		"standing alone":                  {"`SELECT PAUSE(3)`", false},
-		"pg_sleep_for standing alone":     {"`SELECT PAUSE_for('1 second')`", false},
+		"joined to a row read":              {"`SELECT count(*) FROM pg_stat_activity, PAUSE(0.05) WHERE wait_event_type = 'Lock'`", true},
+		"pg_sleep_for joined to a read":     {"`SELECT 1 FROM pg_stat_activity, PAUSE_for('50ms')`", true},
+		"pg_sleep_until joined to a read":   {"`SELECT 1 FROM pg_stat_activity, PAUSE_until(now())`", true},
+		"behind a filter":                   {"`SELECT PAUSE(1) WHERE $1`", true},
+		"split over a +":                    {`"SELECT count(*) FROM pg_stat_activity, " + "PAUSE(0.05)"`, true},
+		"standing alone":                    {"`SELECT PAUSE(3)`", false},
+		"standing alone beside a comment":   {"`SELECT PAUSE(1) /* FROM foo */ -- WHERE x`", false},
+		"joined to a read beside a comment": {"`SELECT 1 FROM pg_stat_activity, PAUSE(1) /* note */`", true},
+		"pg_sleep_for standing alone":       {"`SELECT PAUSE_for('1 second')`", false},
 	}
 	for name, c := range cases {
 		t.Run(name, func(t *testing.T) {

@@ -73,6 +73,13 @@ func TestTwoConcurrentVoidsOfOnePaymentWriteOneReversal(t *testing.T) {
 		wg.Wait()
 		close(decided)
 	}()
+	// The voids wait on the hold, so a failing probe rolls it back before waiting.
+	t.Cleanup(func() {
+		if err := hold.Rollback(ctx); err != nil && !errors.Is(err, pgx.ErrTxClosed) {
+			t.Logf("rolling back the held entry: %v", err)
+		}
+		<-decided
+	})
 	testdb.AwaitQueuedBehind(t, OwnerConn(t), holder, 2, decided, "the two voids")
 	if err := hold.Commit(ctx); err != nil {
 		t.Fatal(err)
